@@ -43,7 +43,7 @@ export class PublisherConnection
     PersistSQLResults
 {
   public readonly name: string;
-  public readonly projectName: string;
+  public readonly environmentName: string;
   private connectionsApi: ConnectionsApi;
   private connectionsTestApi: ConnectionsTestApi;
   private connectionAttributes: ConnectionAttributes;
@@ -54,14 +54,15 @@ export class PublisherConnection
     const url = new URL(options.connectionUri);
     const urlParts = url.pathname.split('/');
     if (urlParts.length !== 7) {
-      const fmt = '/api/v0/projects/{projectName}/connections/{connectionName}';
+      const fmt =
+        '/api/v0/environments/{environmentName}/connections/{connectionName}';
       throw new Error(
         `Invalid connection URI: ${options.connectionUri}. Expected format: ${fmt}`
       );
     }
     const apiTag = urlParts[1];
     const versionTag = urlParts[2];
-    const projectName = urlParts[4];
+    const environmentName = urlParts[4];
     const connectionName = urlParts[6];
 
     if (name !== connectionName) {
@@ -73,17 +74,17 @@ export class PublisherConnection
     const configuration = new Configuration({
       basePath: apiUrl,
       baseOptions: {
-        timeout: 600000,
+        timeout: 3600000,
       },
     });
     const connectionsApi = new ConnectionsApi(configuration);
     const connectionsTestApi = new ConnectionsTestApi(configuration);
-    const response = await connectionsApi.getConnection(projectName, name, {
+    const response = await connectionsApi.getConnection(environmentName, name, {
       headers: PublisherConnection.getAuthHeaders(options.accessToken),
     });
     if (!response || !response.data) {
       throw new Error(
-        `Failed to get connection: ${name} from project: ${projectName}`
+        `Failed to get connection: ${name} from environment: ${environmentName}`
       );
     }
     const connectionData = response.data as Connection;
@@ -91,7 +92,7 @@ export class PublisherConnection
       connectionData.attributes as ConnectionAttributes;
     const connection = new PublisherConnection(
       name,
-      projectName,
+      environmentName,
       connectionsApi,
       connectionsTestApi,
       connectionAttributes,
@@ -112,7 +113,7 @@ export class PublisherConnection
 
   private constructor(
     name: string,
-    projectName: string,
+    environmentName: string,
     connectionsApi: ConnectionsApi,
     connectionsTestApi: ConnectionsTestApi,
     connectionAttributes: ConnectionAttributes,
@@ -121,7 +122,7 @@ export class PublisherConnection
   ) {
     super();
     this.name = name;
-    this.projectName = projectName;
+    this.environmentName = environmentName;
     this.connectionsApi = connectionsApi;
     this.connectionsTestApi = connectionsTestApi;
     this.connectionAttributes = connectionAttributes;
@@ -146,7 +147,7 @@ export class PublisherConnection
   }
 
   public getDigest(): string {
-    const data = `publisher:${this.projectName}:${this.name}`;
+    const data = `publisher:${this.environmentName}:${this.name}`;
     return makeDigest(data);
   }
 
@@ -157,7 +158,7 @@ export class PublisherConnection
     let result = {} as TableSourceDef;
     try {
       const response = await this.connectionsApi.getTable(
-        this.projectName,
+        this.environmentName,
         this.name,
         tablePath.split('.')[0],
         tablePath,
@@ -184,7 +185,7 @@ export class PublisherConnection
         sqlStatement: sqlRef.selectStr,
       };
       const response = await this.connectionsApi.postSqlsource(
-        this.projectName,
+        this.environmentName,
         this.name,
         request,
         {
@@ -218,7 +219,7 @@ export class PublisherConnection
         sqlStatement: sql,
       };
       const response = await this.connectionsApi.postQuerydata(
-        this.projectName,
+        this.environmentName,
         this.name,
         request,
         JSON.stringify(options),
@@ -245,7 +246,7 @@ export class PublisherConnection
         sqlStatement: sqlCommand,
       };
       const response = await this.connectionsApi.postQuerydata(
-        this.projectName,
+        this.environmentName,
         this.name,
         request,
         JSON.stringify(options),
@@ -288,7 +289,7 @@ export class PublisherConnection
         sqlStatement: sqlCommand,
       };
       const response = await this.connectionsApi.postTemporarytable(
-        this.projectName,
+        this.environmentName,
         this.name,
         request,
         {

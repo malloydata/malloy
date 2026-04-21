@@ -65,15 +65,93 @@ export interface AttachedDatabase {
      * @memberof AttachedDatabase
      */
     'postgresConnection'?: PostgresConnection;
+    /**
+     * 
+     * @type {GCSConnection}
+     * @memberof AttachedDatabase
+     */
+    'gcsConnection'?: GCSConnection;
+    /**
+     * 
+     * @type {S3Connection}
+     * @memberof AttachedDatabase
+     */
+    's3Connection'?: S3Connection;
+    /**
+     * 
+     * @type {AzureConnection}
+     * @memberof AttachedDatabase
+     */
+    'azureConnection'?: AzureConnection;
 }
 
 export const AttachedDatabaseTypeEnum = {
     Bigquery: 'bigquery',
     Snowflake: 'snowflake',
-    Postgres: 'postgres'
+    Postgres: 'postgres',
+    Gcs: 'gcs',
+    S3: 's3',
+    Azure: 'azure'
 } as const;
 
 export type AttachedDatabaseTypeEnum = typeof AttachedDatabaseTypeEnum[keyof typeof AttachedDatabaseTypeEnum];
+
+/**
+ * Azure Data Lake Storage (ADLS Gen2) / Blob Storage connection configuration Supports https://, http://, abfss://, and az:// URL schemes. 
+ * @export
+ * @interface AzureConnection
+ */
+export interface AzureConnection {
+    /**
+     * Authentication method for Azure Storage
+     * @type {string}
+     * @memberof AzureConnection
+     */
+    'authType': AzureConnectionAuthTypeEnum;
+    /**
+     * Full SAS URL including token; required for sas_token auth. Supports single file, directory glob (*.ext), or recursive (**) patterns. Example: https://account.blob.core.windows.net/container/path/_*.parquet?sp=rl&st=... 
+     * @type {string}
+     * @memberof AzureConnection
+     */
+    'sasUrl'?: string;
+    /**
+     * Azure AD tenant ID (required for service_principal)
+     * @type {string}
+     * @memberof AzureConnection
+     */
+    'tenantId'?: string;
+    /**
+     * Azure AD application (client) ID (required for service_principal)
+     * @type {string}
+     * @memberof AzureConnection
+     */
+    'clientId'?: string;
+    /**
+     * Azure AD client secret (required for service_principal)
+     * @type {string}
+     * @memberof AzureConnection
+     */
+    'clientSecret'?: string;
+    /**
+     * Azure Storage account name (required for service_principal)
+     * @type {string}
+     * @memberof AzureConnection
+     */
+    'accountName'?: string;
+    /**
+     * Azure file URL to query; required for service_principal auth. Supports single file, directory glob (*.ext), or recursive (**) patterns. Example: https://account.blob.core.windows.net/container/path/_** 
+     * @type {string}
+     * @memberof AzureConnection
+     */
+    'fileUrl'?: string;
+}
+
+export const AzureConnectionAuthTypeEnum = {
+    ServicePrincipal: 'service_principal',
+    SasToken: 'sas_token'
+} as const;
+
+export type AzureConnectionAuthTypeEnum = typeof AzureConnectionAuthTypeEnum[keyof typeof AzureConnectionAuthTypeEnum];
 
 /**
  * Google BigQuery database connection configuration
@@ -119,6 +197,25 @@ export interface BigqueryConnection {
     'queryTimeoutMilliseconds'?: string;
 }
 /**
+ * Manifest mapping BuildIDs to materialized table names
+ * @export
+ * @interface BuildManifest
+ */
+export interface BuildManifest {
+    /**
+     * Map of BuildID to manifest entry
+     * @type {{ [key: string]: ManifestEntry; }}
+     * @memberof BuildManifest
+     */
+    'entries'?: { [key: string]: ManifestEntry; };
+    /**
+     * Whether the manifest is in strict mode
+     * @type {boolean}
+     * @memberof BuildManifest
+     */
+    'strict'?: boolean;
+}
+/**
  * Database column definition
  * @export
  * @interface Column
@@ -137,6 +234,117 @@ export interface Column {
      */
     'type'?: string;
 }
+/**
+ * A compilation problem reported by the Malloy compiler
+ * @export
+ * @interface CompileProblem
+ */
+export interface CompileProblem {
+    /**
+     * Human-readable problem description
+     * @type {string}
+     * @memberof CompileProblem
+     */
+    'message'?: string;
+    /**
+     * Severity level of the problem
+     * @type {string}
+     * @memberof CompileProblem
+     */
+    'severity'?: CompileProblemSeverityEnum;
+    /**
+     * Machine-readable error code
+     * @type {string}
+     * @memberof CompileProblem
+     */
+    'code'?: string;
+    /**
+     * 
+     * @type {CompileProblemAt}
+     * @memberof CompileProblem
+     */
+    'at'?: CompileProblemAt;
+}
+
+export const CompileProblemSeverityEnum = {
+    Error: 'error',
+    Warn: 'warn',
+    Debug: 'debug'
+} as const;
+
+export type CompileProblemSeverityEnum = typeof CompileProblemSeverityEnum[keyof typeof CompileProblemSeverityEnum];
+
+/**
+ * Source location of the problem
+ * @export
+ * @interface CompileProblemAt
+ */
+export interface CompileProblemAt {
+    /**
+     * URL of the source file
+     * @type {string}
+     * @memberof CompileProblemAt
+     */
+    'url'?: string;
+    /**
+     * Character range within the source file
+     * @type {object}
+     * @memberof CompileProblemAt
+     */
+    'range'?: object;
+}
+/**
+ * Request body for compiling Malloy source code
+ * @export
+ * @interface CompileRequest
+ */
+export interface CompileRequest {
+    /**
+     * Malloy source code to compile
+     * @type {string}
+     * @memberof CompileRequest
+     */
+    'source': string;
+    /**
+     * If true, returns the generated SQL alongside compilation results (only available when compilation succeeds and the source contains a runnable query).
+     * @type {boolean}
+     * @memberof CompileRequest
+     */
+    'includeSql'?: boolean;
+}
+/**
+ * Result of a Malloy source compilation check
+ * @export
+ * @interface CompileResult
+ */
+export interface CompileResult {
+    /**
+     * Overall compilation status — \"error\" if any problems have error severity
+     * @type {string}
+     * @memberof CompileResult
+     */
+    'status'?: CompileResultStatusEnum;
+    /**
+     * List of compilation problems (errors and warnings)
+     * @type {Array<CompileProblem>}
+     * @memberof CompileResult
+     */
+    'problems'?: Array<CompileProblem>;
+    /**
+     * Generated SQL for the compiled query. Only present when includeSql is true and compilation succeeds with a runnable query.
+     * @type {string}
+     * @memberof CompileResult
+     */
+    'sql'?: string;
+}
+
+export const CompileResultStatusEnum = {
+    Success: 'success',
+    Error: 'error'
+} as const;
+
+export type CompileResultStatusEnum = typeof CompileResultStatusEnum[keyof typeof CompileResultStatusEnum];
+
 /**
  * Compiled Malloy model with sources, queries, and metadata
  * @export
@@ -185,43 +393,12 @@ export interface CompiledModel {
      * @memberof CompiledModel
      */
     'queries'?: Array<Query>;
-}
-/**
- * Compiled Malloy notebook with cells, results, and execution data
- * @export
- * @interface CompiledNotebook
- */
-export interface CompiledNotebook {
     /**
-     * Resource path to the notebook
-     * @type {string}
-     * @memberof CompiledNotebook
+     * Sources defined in this model
+     * @type {Array<Source>}
+     * @memberof CompiledModel
      */
-    'resource'?: string;
-    /**
-     * Name of the package containing this notebook
-     * @type {string}
-     * @memberof CompiledNotebook
-     */
-    'packageName'?: string;
-    /**
-     * Relative path to the notebook file within its package directory
-     * @type {string}
-     * @memberof CompiledNotebook
-     */
-    'path'?: string;
-    /**
-     * Version of the Malloy compiler used to generate the notebook data
-     * @type {string}
-     * @memberof CompiledNotebook
-     */
-    'malloyVersion'?: string;
-    /**
-     * Array of notebook cells containing code, markdown, and execution results
-     * @type {Array<NotebookCell>}
-     * @memberof CompiledNotebook
-     */
-    'notebookCells'?: Array<NotebookCell>;
+    'sources'?: Array<Source>;
 }
 /**
  * Database connection configuration and metadata
@@ -295,6 +472,12 @@ export interface Connection {
      * @memberof Connection
      */
     'motherduckConnection'?: MotherDuckConnection;
+    /**
+     * 
+     * @type {DucklakeConnection}
+     * @memberof Connection
+     */
+    'ducklakeConnection'?: DucklakeConnection;
 }
 
 export const ConnectionTypeEnum = {
@@ -304,7 +487,8 @@ export const ConnectionTypeEnum = {
     Trino: 'trino',
     Mysql: 'mysql',
     Duckdb: 'duckdb',
-    Motherduck: 'motherduck'
+    Motherduck: 'motherduck',
+    Ducklake: 'ducklake'
 } as const;
 
 export type ConnectionTypeEnum = typeof ConnectionTypeEnum[keyof typeof ConnectionTypeEnum];
@@ -368,6 +552,51 @@ export const ConnectionStatusStatusEnum = {
 export type ConnectionStatusStatusEnum = typeof ConnectionStatusStatusEnum[keyof typeof ConnectionStatusStatusEnum];
 
 /**
+ * 
+ * @export
+ * @interface CreateConnection201Response
+ */
+export interface CreateConnection201Response {
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateConnection201Response
+     */
+    'message'?: string;
+}
+/**
+ * 
+ * @export
+ * @interface CreateConnection409Response
+ */
+export interface CreateConnection409Response {
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateConnection409Response
+     */
+    'error'?: string;
+}
+/**
+ * Options for creating a materialization
+ * @export
+ * @interface CreateMaterializationRequest
+ */
+export interface CreateMaterializationRequest {
+    /**
+     * If true, forces rebuild of all sources even if their BuildID is unchanged
+     * @type {boolean}
+     * @memberof CreateMaterializationRequest
+     */
+    'forceRefresh'?: boolean;
+    /**
+     * If true, automatically reloads the manifest into the Malloy Runtime after a successful materialization
+     * @type {boolean}
+     * @memberof CreateMaterializationRequest
+     */
+    'autoLoadManifest'?: boolean;
+}
+/**
  * Embedded database within a Malloy package
  * @export
  * @interface Database
@@ -419,6 +648,374 @@ export interface DuckdbConnection {
      */
     'attachedDatabases'?: Array<AttachedDatabase>;
 }
+/**
+ * DuckLake lakehouse connection configuration
+ * @export
+ * @interface DucklakeConnection
+ */
+export interface DucklakeConnection {
+    /**
+     * 
+     * @type {DucklakeConnectionStorage}
+     * @memberof DucklakeConnection
+     */
+    'storage': DucklakeConnectionStorage;
+    /**
+     * 
+     * @type {DucklakeConnectionCatalog}
+     * @memberof DucklakeConnection
+     */
+    'catalog': DucklakeConnectionCatalog;
+}
+/**
+ * Catalog metadata connection configuration
+ * @export
+ * @interface DucklakeConnectionCatalog
+ */
+export interface DucklakeConnectionCatalog {
+    /**
+     * PostgreSQL connection for DuckLake metadata catalog
+     * @type {PostgresConnection}
+     * @memberof DucklakeConnectionCatalog
+     */
+    'postgresConnection': PostgresConnection;
+}
+/**
+ * Data storage connection configuration (S3 or GCS)
+ * @export
+ * @interface DucklakeConnectionStorage
+ */
+export interface DucklakeConnectionStorage {
+    /**
+     * URL of the storage bucket (e.g. s3://my-bucket/path or gs://my-bucket/path)
+     * @type {string}
+     * @memberof DucklakeConnectionStorage
+     */
+    'bucketUrl': string;
+    /**
+     * AWS S3 connection configuration for data storage
+     * @type {S3Connection}
+     * @memberof DucklakeConnectionStorage
+     */
+    's3Connection'?: S3Connection;
+    /**
+     * Google Cloud Storage connection configuration for data storage
+     * @type {GCSConnection}
+     * @memberof DucklakeConnectionStorage
+     */
+    'gcsConnection'?: GCSConnection;
+}
+/**
+ * Represents a Malloy environment containing packages, connections, and other resources
+ * @export
+ * @interface Environment
+ */
+export interface Environment {
+    /**
+     * Resource path to the environment
+     * @type {string}
+     * @memberof Environment
+     */
+    'resource'?: string;
+    /**
+     * Environment name
+     * @type {string}
+     * @memberof Environment
+     */
+    'name'?: string;
+    /**
+     * Environment README content
+     * @type {string}
+     * @memberof Environment
+     */
+    'readme'?: string;
+    /**
+     * Environment location, can be an absolute path or URI (e.g. github, s3, gcs, etc.)
+     * @type {string}
+     * @memberof Environment
+     */
+    'location'?: string;
+    /**
+     * List of database connections configured for this environment
+     * @type {Array<Connection>}
+     * @memberof Environment
+     */
+    'connections'?: Array<Connection>;
+    /**
+     * List of Malloy packages in this environment
+     * @type {Array<Package>}
+     * @memberof Environment
+     */
+    'packages'?: Array<Package>;
+    /**
+     * 
+     * @type {EnvironmentMaterializationStorage}
+     * @memberof Environment
+     */
+    'materializationStorage'?: EnvironmentMaterializationStorage;
+}
+/**
+ * Optional DuckLake-backed storage for materialization manifests (orchestrated mode). When set, manifests are stored in a shared DuckLake catalog instead of the local DuckDB database.
+ * @export
+ * @interface EnvironmentMaterializationStorage
+ */
+export interface EnvironmentMaterializationStorage {
+    /**
+     * PostgreSQL connection URL for the DuckLake catalog metadata store
+     * @type {string}
+     * @memberof EnvironmentMaterializationStorage
+     */
+    'catalogUrl'?: string;
+    /**
+     * Cloud storage path (s3:// or gs://) for DuckLake data files
+     * @type {string}
+     * @memberof EnvironmentMaterializationStorage
+     */
+    'dataPath'?: string;
+}
+/**
+ * A filter declared via
+ * @export
+ * @interface Filter
+ */
+export interface Filter {
+    /**
+     * Display name of the filter
+     * @type {string}
+     * @memberof Filter
+     */
+    'name'?: string;
+    /**
+     * Dimension this filter targets
+     * @type {string}
+     * @memberof Filter
+     */
+    'dimension'?: string;
+    /**
+     * Comparator type
+     * @type {string}
+     * @memberof Filter
+     */
+    'type'?: FilterTypeEnum;
+    /**
+     * Whether this filter is hidden from users
+     * @type {boolean}
+     * @memberof Filter
+     */
+    'implicit'?: boolean;
+    /**
+     * Whether a value must be provided
+     * @type {boolean}
+     * @memberof Filter
+     */
+    'required'?: boolean;
+    /**
+     * Malloy data type of the dimension (e.g. string, number, boolean, date, timestamp)
+     * @type {string}
+     * @memberof Filter
+     */
+    'dimensionType'?: string;
+}
+
+export const FilterTypeEnum = {
+    Equal: 'equal',
+    In: 'in',
+    Like: 'like',
+    GreaterThan: 'greater_than',
+    LessThan: 'less_than'
+} as const;
+
+export type FilterTypeEnum = typeof FilterTypeEnum[keyof typeof FilterTypeEnum];
+
+/**
+ * Google Cloud Storage connection configuration for DuckDB
+ * @export
+ * @interface GCSConnection
+ */
+export interface GCSConnection {
+    /**
+     * GCS HMAC access key ID
+     * @type {string}
+     * @memberof GCSConnection
+     */
+    'keyId': string;
+    /**
+     * GCS HMAC secret key
+     * @type {string}
+     * @memberof GCSConnection
+     */
+    'secret': string;
+}
+/**
+ * A log message from render tag validation
+ * @export
+ * @interface LogMessage
+ */
+export interface LogMessage {
+    /**
+     * URL of the source file related to this message
+     * @type {string}
+     * @memberof LogMessage
+     */
+    'url'?: string;
+    /**
+     * 
+     * @type {LogMessageRange}
+     * @memberof LogMessage
+     */
+    'range'?: LogMessageRange;
+    /**
+     * Severity level of the log message
+     * @type {string}
+     * @memberof LogMessage
+     */
+    'severity'?: LogMessageSeverityEnum;
+    /**
+     * Human-readable log message
+     * @type {string}
+     * @memberof LogMessage
+     */
+    'message'?: string;
+}
+
+export const LogMessageSeverityEnum = {
+    Debug: 'debug',
+    Info: 'info',
+    Warn: 'warn',
+    Error: 'error'
+} as const;
+
+export type LogMessageSeverityEnum = typeof LogMessageSeverityEnum[keyof typeof LogMessageSeverityEnum];
+
+/**
+ * Source location range for this message
+ * @export
+ * @interface LogMessageRange
+ */
+export interface LogMessageRange {
+    /**
+     * 
+     * @type {LogMessageRangeStart}
+     * @memberof LogMessageRange
+     */
+    'start'?: LogMessageRangeStart;
+    /**
+     * 
+     * @type {LogMessageRangeStart}
+     * @memberof LogMessageRange
+     */
+    'end'?: LogMessageRangeStart;
+}
+/**
+ * 
+ * @export
+ * @interface LogMessageRangeStart
+ */
+export interface LogMessageRangeStart {
+    /**
+     * 
+     * @type {number}
+     * @memberof LogMessageRangeStart
+     */
+    'line'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof LogMessageRangeStart
+     */
+    'character'?: number;
+}
+/**
+ * A single entry in the build manifest
+ * @export
+ * @interface ManifestEntry
+ */
+export interface ManifestEntry {
+    /**
+     * Name of the materialized table
+     * @type {string}
+     * @memberof ManifestEntry
+     */
+    'tableName'?: string;
+}
+/**
+ * A record of a package materialization
+ * @export
+ * @interface Materialization
+ */
+export interface Materialization {
+    /**
+     * 
+     * @type {string}
+     * @memberof Materialization
+     */
+    'id'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Materialization
+     */
+    'projectId'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Materialization
+     */
+    'packageName'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Materialization
+     */
+    'status'?: MaterializationStatusEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof Materialization
+     */
+    'startedAt'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Materialization
+     */
+    'completedAt'?: string | null;
+    /**
+     * Error message if the materialization failed
+     * @type {string}
+     * @memberof Materialization
+     */
+    'error'?: string | null;
+    /**
+     * Materialization metadata including build options, source counts, and durations
+     * @type {object}
+     * @memberof Materialization
+     */
+    'metadata'?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Materialization
+     */
+    'createdAt'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Materialization
+     */
+    'updatedAt'?: string;
+}
+
+export const MaterializationStatusEnum = {
+    Pending: 'PENDING',
+    Running: 'RUNNING',
+    Success: 'SUCCESS',
+    Failed: 'FAILED',
+    Cancelled: 'CANCELLED'
+} as const;
+
+export type MaterializationStatusEnum = typeof MaterializationStatusEnum[keyof typeof MaterializationStatusEnum];
+
 /**
  * Malloy model metadata and status information
  * @export
@@ -569,23 +1166,23 @@ export interface NotebookCell {
      */
     'type'?: NotebookCellTypeEnum;
     /**
-     * Text contents of the notebook cell
+     * Text contents of the notebook cell (either markdown or Malloy code)
      * @type {string}
      * @memberof NotebookCell
      */
     'text'?: string;
-    /**
-     * JSON string containing the execution result for this cell
-     * @type {string}
-     * @memberof NotebookCell
-     */
-    'result'?: string;
     /**
      * Array of JSON strings containing SourceInfo objects made available in this cell
      * @type {Array<string>}
      * @memberof NotebookCell
      */
     'newSources'?: Array<string>;
+    /**
+     * JSON string containing QueryInfo object for the query in this cell (if the cell contains a query)
+     * @type {string}
+     * @memberof NotebookCell
+     */
+    'queryInfo'?: string;
 }
 
 export const NotebookCellTypeEnum = {
@@ -594,6 +1191,45 @@ export const NotebookCellTypeEnum = {
 } as const;
 
 export type NotebookCellTypeEnum = typeof NotebookCellTypeEnum[keyof typeof NotebookCellTypeEnum];
+
+/**
+ * Result of executing a notebook cell
+ * @export
+ * @interface NotebookCellResult
+ */
+export interface NotebookCellResult {
+    /**
+     * Type of notebook cell
+     * @type {string}
+     * @memberof NotebookCellResult
+     */
+    'type'?: NotebookCellResultTypeEnum;
+    /**
+     * Text contents of the notebook cell
+     * @type {string}
+     * @memberof NotebookCellResult
+     */
+    'text'?: string;
+    /**
+     * JSON string containing the execution result for this cell
+     * @type {string}
+     * @memberof NotebookCellResult
+     */
+    'result'?: string;
+    /**
+     * Array of JSON strings containing SourceInfo objects made available in this cell
+     * @type {Array<string>}
+     * @memberof NotebookCellResult
+     */
+    'newSources'?: Array<string>;
+}
+
+export const NotebookCellResultTypeEnum = {
+    Markdown: 'markdown',
+    Code: 'code'
+} as const;
+
+export type NotebookCellResultTypeEnum = typeof NotebookCellResultTypeEnum[keyof typeof NotebookCellResultTypeEnum];
 
 /**
  * Represents a Malloy package containing models, notebooks, and embedded databases
@@ -683,49 +1319,6 @@ export interface PostgresConnection {
     'connectionString'?: string;
 }
 /**
- * Represents a Malloy project containing packages, connections, and other resources
- * @export
- * @interface Project
- */
-export interface Project {
-    /**
-     * Resource path to the project
-     * @type {string}
-     * @memberof Project
-     */
-    'resource'?: string;
-    /**
-     * Project name
-     * @type {string}
-     * @memberof Project
-     */
-    'name'?: string;
-    /**
-     * Project README content
-     * @type {string}
-     * @memberof Project
-     */
-    'readme'?: string;
-    /**
-     * Project location, can be an absolute path or URI (e.g. github, s3, gcs, etc.)
-     * @type {string}
-     * @memberof Project
-     */
-    'location'?: string;
-    /**
-     * List of database connections configured for this project
-     * @type {Array<Connection>}
-     * @memberof Project
-     */
-    'connections'?: Array<Connection>;
-    /**
-     * List of Malloy packages in this project
-     * @type {Array<Package>}
-     * @memberof Project
-     */
-    'packages'?: Array<Package>;
-}
-/**
  * Named model query definition
  * @export
  * @interface Query
@@ -794,12 +1387,36 @@ export interface QueryRequest {
      */
     'queryName'?: string;
     /**
+     * If true, returns a simple JSON array of row objects in the form {\"columnName\": value}. If false (default), returns the full Malloy result with type metadata for rendering.
+     * @type {boolean}
+     * @memberof QueryRequest
+     */
+    'compactJson'?: boolean;
+    /**
      * Version ID
      * @type {string}
      * @memberof QueryRequest
      */
     'versionId'?: string;
+    /**
+     * Filter parameter values keyed by filter name. Used with sources that declare
+     * @type {{ [key: string]: QueryRequestFilterParamsValue; }}
+     * @memberof QueryRequest
+     */
+    'filterParams'?: { [key: string]: QueryRequestFilterParamsValue; };
+    /**
+     * When true, skip server-side
+     * @type {boolean}
+     * @memberof QueryRequest
+     */
+    'bypassFilters'?: boolean;
 }
+/**
+ * @type QueryRequestFilterParamsValue
+ * @export
+ */
+export type QueryRequestFilterParamsValue = Array<string> | string;
+
 /**
  * Results from executing a Malloy query
  * @export
@@ -818,6 +1435,98 @@ export interface QueryResult {
      * @memberof QueryResult
      */
     'resource'?: string;
+    /**
+     * Render tag validation messages (errors, warnings) detected during query preparation
+     * @type {Array<LogMessage>}
+     * @memberof QueryResult
+     */
+    'renderLogs'?: Array<LogMessage>;
+}
+/**
+ * Raw Malloy notebook with unexecuted cell contents
+ * @export
+ * @interface RawNotebook
+ */
+export interface RawNotebook {
+    /**
+     * Resource path to the notebook
+     * @type {string}
+     * @memberof RawNotebook
+     */
+    'resource'?: string;
+    /**
+     * Name of the package containing this notebook
+     * @type {string}
+     * @memberof RawNotebook
+     */
+    'packageName'?: string;
+    /**
+     * Relative path to the notebook file within its package directory
+     * @type {string}
+     * @memberof RawNotebook
+     */
+    'path'?: string;
+    /**
+     * Version of the Malloy compiler used to generate the notebook data
+     * @type {string}
+     * @memberof RawNotebook
+     */
+    'malloyVersion'?: string;
+    /**
+     * Array of notebook cells containing raw markdown and code content
+     * @type {Array<NotebookCell>}
+     * @memberof RawNotebook
+     */
+    'notebookCells'?: Array<NotebookCell>;
+    /**
+     * Array of file-level (##) annotations attached to the notebook
+     * @type {Array<string>}
+     * @memberof RawNotebook
+     */
+    'annotations'?: Array<string>;
+    /**
+     * Sources defined in the notebook\'s model
+     * @type {Array<Source>}
+     * @memberof RawNotebook
+     */
+    'sources'?: Array<Source>;
+}
+/**
+ * AWS S3 connection configuration for DuckDB
+ * @export
+ * @interface S3Connection
+ */
+export interface S3Connection {
+    /**
+     * AWS access key ID
+     * @type {string}
+     * @memberof S3Connection
+     */
+    'accessKeyId': string;
+    /**
+     * AWS secret access key
+     * @type {string}
+     * @memberof S3Connection
+     */
+    'secretAccessKey': string;
+    /**
+     * AWS region (e.g., us-east-1)
+     * @type {string}
+     * @memberof S3Connection
+     */
+    'region'?: string;
+    /**
+     * Custom S3-compatible endpoint URL (optional, for MinIO, etc.)
+     * @type {string}
+     * @memberof S3Connection
+     */
+    'endpoint'?: string;
+    /**
+     * AWS session token for temporary credentials (optional)
+     * @type {string}
+     * @memberof S3Connection
+     */
+    'sessionToken'?: string;
 }
 /**
  * A schema name in a Connection.
@@ -863,18 +1572,39 @@ export interface ServerStatus {
      */
     'timestamp'?: number;
     /**
-     * List of available projects
-     * @type {Array<Project>}
+     * List of available environments
+     * @type {Array<Environment>}
      * @memberof ServerStatus
      */
-    'projects'?: Array<Project>;
+    'environments'?: Array<Environment>;
     /**
      * Whether the server is fully initialized and ready to serve requests
      * @type {boolean}
      * @memberof ServerStatus
      */
     'initialized'?: boolean;
+    /**
+     * Status of the server; initializing when the server is loading environments, packages and connections, serving when the server is initialized and ready to serve requests, and draining when the server is going to shut down
+     * @type {string}
+     * @memberof ServerStatus
+     */
+    'operationalState'?: ServerStatusOperationalStateEnum;
+    /**
+     * Whether the server configuration is frozen (read-only mode). When true, all mutation operations are disabled.
+     * @type {boolean}
+     * @memberof ServerStatus
+     */
+    'frozenConfig'?: boolean;
 }
+
+export const ServerStatusOperationalStateEnum = {
+    Initializing: 'initializing',
+    Serving: 'serving',
+    Draining: 'draining'
+} as const;
+
+export type ServerStatusOperationalStateEnum = typeof ServerStatusOperationalStateEnum[keyof typeof ServerStatusOperationalStateEnum];
+
 /**
  * Snowflake database connection configuration
  * @export
@@ -943,6 +1673,37 @@ export interface SnowflakeConnection {
     'responseTimeoutMilliseconds'?: number;
 }
 /**
+ * A Malloy source defined in a model
+ * @export
+ * @interface Source
+ */
+export interface Source {
+    /**
+     * Name of the source
+     * @type {string}
+     * @memberof Source
+     */
+    'name'?: string;
+    /**
+     * Annotations attached to the source
+     * @type {Array<string>}
+     * @memberof Source
+     */
+    'annotations'?: Array<string>;
+    /**
+     * Views defined in this source
+     * @type {Array<View>}
+     * @memberof Source
+     */
+    'views'?: Array<View>;
+    /**
+     * Filters declared on this source via
+     * @type {Array<Filter>}
+     * @memberof Source
+     */
+    'filters'?: Array<Filter>;
+}
+/**
  * 
  * @export
  * @interface SqlSource
@@ -962,7 +1723,7 @@ export interface SqlSource {
     'source'?: string;
 }
 /**
- * Request to start file watching for a project
+ * Request to start file watching for a project or environment
  * @export
  * @interface StartWatchRequest
  */
@@ -972,7 +1733,13 @@ export interface StartWatchRequest {
      * @type {string}
      * @memberof StartWatchRequest
      */
-    'projectName': string;
+    'projectName'?: string;
+    /**
+     * Name of the environment to start watching for file changes
+     * @type {string}
+     * @memberof StartWatchRequest
+     */
+    'environmentName'?: string;
 }
 /**
  * 
@@ -1118,6 +1885,61 @@ export interface TrinoConnection {
     'peakaKey'?: string;
 }
 /**
+ * 
+ * @export
+ * @interface UpdateConnectionRequest
+ */
+export interface UpdateConnectionRequest {
+    /**
+     * 
+     * @type {PostgresConnection}
+     * @memberof UpdateConnectionRequest
+     */
+    'postgresConnection'?: PostgresConnection;
+    /**
+     * 
+     * @type {MysqlConnection}
+     * @memberof UpdateConnectionRequest
+     */
+    'mysqlConnection'?: MysqlConnection;
+    /**
+     * 
+     * @type {BigqueryConnection}
+     * @memberof UpdateConnectionRequest
+     */
+    'bigqueryConnection'?: BigqueryConnection;
+    /**
+     * 
+     * @type {SnowflakeConnection}
+     * @memberof UpdateConnectionRequest
+     */
+    'snowflakeConnection'?: SnowflakeConnection;
+    /**
+     * 
+     * @type {DuckdbConnection}
+     * @memberof UpdateConnectionRequest
+     */
+    'duckdbConnection'?: DuckdbConnection;
+    /**
+     * 
+     * @type {MotherDuckConnection}
+     * @memberof UpdateConnectionRequest
+     */
+    'motherduckConnection'?: MotherDuckConnection;
+    /**
+     * 
+     * @type {TrinoConnection}
+     * @memberof UpdateConnectionRequest
+     */
+    'trinoConnection'?: TrinoConnection;
+    /**
+     * 
+     * @type {DucklakeConnection}
+     * @memberof UpdateConnectionRequest
+     */
+    'ducklakeConnection'?: DucklakeConnection;
+}
+/**
  * Named model view definition
  * @export
  * @interface View
@@ -1147,19 +1969,25 @@ export interface WatchStatus {
      * @type {boolean}
      * @memberof WatchStatus
      */
-    'enabled'?: boolean;
+    'enabled': boolean;
     /**
      * Name of the project being watched for file changes
      * @type {string}
      * @memberof WatchStatus
      */
-    'projectName'?: string;
+    'projectName': string;
+    /**
+     * Name of the environment being watched for file changes
+     * @type {string}
+     * @memberof WatchStatus
+     */
+    'environmentName'?: string;
     /**
      * The file system path being monitored for changes, null if not watching
      * @type {string}
      * @memberof WatchStatus
      */
-    'watchingPath'?: string;
+    'watchingPath': string;
 }
 
 /**
@@ -1169,20 +1997,102 @@ export interface WatchStatus {
 export const ConnectionsApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Retrieves detailed information about a specific database connection within a project. This includes connection configuration, credentials (if accessible), and metadata. Useful for inspecting connection settings and troubleshooting connectivity issues. 
+         * Creates a new database connection in the specified environment. 
+         * @summary Create a new database connection
+         * @param {string} environmentName Name of the environment
+         * @param {string} connectionName Name of the connection
+         * @param {Connection} connection 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createConnection: async (environmentName: string, connectionName: string, connection: Connection, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('createConnection', 'environmentName', environmentName)
+            // verify required parameter 'connectionName' is not null or undefined
+            assertParamExists('createConnection', 'connectionName', connectionName)
+            // verify required parameter 'connection' is not null or undefined
+            assertParamExists('createConnection', 'connection', connection)
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(connection, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Permanently deletes a database connection from the environment. 
+         * @summary Delete a database connection
+         * @param {string} environmentName Name of the environment
+         * @param {string} connectionName Name of the connection to delete
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteConnection: async (environmentName: string, connectionName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('deleteConnection', 'environmentName', environmentName)
+            // verify required parameter 'connectionName' is not null or undefined
+            assertParamExists('deleteConnection', 'connectionName', connectionName)
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Retrieves detailed information about a specific database connection within an environment. This includes connection configuration, credentials (if accessible), and metadata. Useful for inspecting connection settings and troubleshooting connectivity issues. 
          * @summary Get connection details
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getConnection: async (projectName: string, connectionName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getConnection', 'projectName', projectName)
+        getConnection: async (environmentName: string, connectionName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getConnection', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('getConnection', 'connectionName', connectionName)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1209,7 +2119,7 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
         /**
          * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Executes a SQL statement against the specified database connection and returns the results. The query results include data, metadata, and execution information. 
          * @summary Execute SQL query (deprecated)
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} [sqlStatement] SQL statement
          * @param {string} [_options] Options
@@ -1217,13 +2127,13 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
          * @deprecated
          * @throws {RequiredError}
          */
-        getQuerydata: async (projectName: string, connectionName: string, sqlStatement?: string, _options?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getQuerydata', 'projectName', projectName)
+        getQuerydata: async (environmentName: string, connectionName: string, sqlStatement?: string, _options?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getQuerydata', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('getQuerydata', 'connectionName', connectionName)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/queryData`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}/queryData`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1258,20 +2168,20 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
         /**
          * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Creates a Malloy source from a SQL statement using the specified connection. The SQL statement is executed to generate a source definition that can be used in Malloy models. 
          * @summary Get SQL source (deprecated)
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} [sqlStatement] SQL statement
          * @param {*} [options] Override http request option.
          * @deprecated
          * @throws {RequiredError}
          */
-        getSqlsource: async (projectName: string, connectionName: string, sqlStatement?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getSqlsource', 'projectName', projectName)
+        getSqlsource: async (environmentName: string, connectionName: string, sqlStatement?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getSqlsource', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('getSqlsource', 'connectionName', connectionName)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/sqlSource`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}/sqlSource`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1302,24 +2212,24 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
         /**
          * Retrieves a table from the specified database schema. This endpoint is useful for discovering available data sources and exploring the database structure. The schema must exist in the connection for this operation to succeed. The tablePath is the full path to the table, including the schema name. 
          * @summary Get table details from database
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} schemaName Name of the schema
          * @param {string} tablePath Full path to the table
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTable: async (projectName: string, connectionName: string, schemaName: string, tablePath: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getTable', 'projectName', projectName)
+        getTable: async (environmentName: string, connectionName: string, schemaName: string, tablePath: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getTable', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('getTable', 'connectionName', connectionName)
             // verify required parameter 'schemaName' is not null or undefined
             assertParamExists('getTable', 'schemaName', schemaName)
             // verify required parameter 'tablePath' is not null or undefined
             assertParamExists('getTable', 'tablePath', tablePath)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/schemas/{schemaName}/tables/{tablePath}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}/schemas/{schemaName}/tables/{tablePath}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)))
                 .replace(`{${"schemaName"}}`, encodeURIComponent(String(schemaName)))
                 .replace(`{${"tablePath"}}`, encodeURIComponent(String(tablePath)));
@@ -1346,71 +2256,22 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
             };
         },
         /**
-         * Retrieves information about a specific table or view from the database connection. This includes table schema, column definitions, and metadata. The table can be specified by either tableKey or tablePath parameters, depending on the database type. 
-         * @summary Get table source information
-         * @param {string} projectName Name of the project
-         * @param {string} connectionName Name of the connection
-         * @param {string} [tableKey] Table key
-         * @param {string} [tablePath] Table path
-         * @param {*} [options] Override http request option.
-         * @deprecated
-         * @throws {RequiredError}
-         */
-        getTablesource: async (projectName: string, connectionName: string, tableKey?: string, tablePath?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getTablesource', 'projectName', projectName)
-            // verify required parameter 'connectionName' is not null or undefined
-            assertParamExists('getTablesource', 'connectionName', connectionName)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/tableSource`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
-                .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            if (tableKey !== undefined) {
-                localVarQueryParameter['tableKey'] = tableKey;
-            }
-
-            if (tablePath !== undefined) {
-                localVarQueryParameter['tablePath'] = tablePath;
-            }
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
          * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Creates a temporary table from a SQL statement using the specified connection. Temporary tables are useful for storing intermediate results during complex queries. 
          * @summary Create temporary table (deprecated)
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} [sqlStatement] SQL statement
          * @param {*} [options] Override http request option.
          * @deprecated
          * @throws {RequiredError}
          */
-        getTemporarytable: async (projectName: string, connectionName: string, sqlStatement?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getTemporarytable', 'projectName', projectName)
+        getTemporarytable: async (environmentName: string, connectionName: string, sqlStatement?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getTemporarytable', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('getTemporarytable', 'connectionName', connectionName)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/temporaryTable`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}/temporaryTable`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1439,17 +2300,17 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
             };
         },
         /**
-         * Retrieves a list of all database connections configured for the specified project. Each connection includes its configuration, type, and status information. This endpoint is useful for discovering available data sources within a project. 
-         * @summary List project database connections
-         * @param {string} projectName Name of the project
+         * Retrieves a list of all database connections configured for the specified environment. Each connection includes its configuration, type, and status information. This endpoint is useful for discovering available data sources within an environment. 
+         * @summary List environment database connections
+         * @param {string} environmentName Name of the environment
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listConnections: async (projectName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('listConnections', 'projectName', projectName)
-            const localVarPath = `/projects/{projectName}/connections`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)));
+        listConnections: async (environmentName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('listConnections', 'environmentName', environmentName)
+            const localVarPath = `/environments/{environmentName}/connections`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -1475,18 +2336,18 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
         /**
          * Retrieves a list of all schemas (databases) available in the specified connection. Each schema includes metadata such as name, description, and whether it\'s the default schema. This endpoint is useful for exploring the database structure and discovering available data sources. 
          * @summary List database schemas
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listSchemas: async (projectName: string, connectionName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('listSchemas', 'projectName', projectName)
+        listSchemas: async (environmentName: string, connectionName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('listSchemas', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('listSchemas', 'connectionName', connectionName)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/schemas`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}/schemas`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1513,21 +2374,22 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
         /**
          * Retrieves a list of all tables and views available in the specified database schema. This endpoint is useful for discovering available data sources and exploring the database structure. The schema must exist in the connection for this operation to succeed. 
          * @summary List tables in database
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} schemaName Name of the schema
+         * @param {Array<string>} [tableNames] List of table names to filter results. When provided, only returns metadata for the specified tables. When omitted, returns all tables in the schema. 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listTables: async (projectName: string, connectionName: string, schemaName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('listTables', 'projectName', projectName)
+        listTables: async (environmentName: string, connectionName: string, schemaName: string, tableNames?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('listTables', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('listTables', 'connectionName', connectionName)
             // verify required parameter 'schemaName' is not null or undefined
             assertParamExists('listTables', 'schemaName', schemaName)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/schemas/{schemaName}/tables`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}/schemas/{schemaName}/tables`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)))
                 .replace(`{${"schemaName"}}`, encodeURIComponent(String(schemaName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -1540,6 +2402,10 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
             const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            if (tableNames) {
+                localVarQueryParameter['tableNames'] = tableNames;
+            }
 
 
     
@@ -1555,22 +2421,22 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
         /**
          * Executes a SQL statement against the specified database connection and returns the results. The results include data, metadata, and execution information. 
          * @summary Execute SQL query
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to execute
          * @param {string} [_options] Options
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        postQuerydata: async (projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, _options?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('postQuerydata', 'projectName', projectName)
+        postQuerydata: async (environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, _options?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('postQuerydata', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('postQuerydata', 'connectionName', connectionName)
             // verify required parameter 'postSqlsourceRequest' is not null or undefined
             assertParamExists('postQuerydata', 'postSqlsourceRequest', postSqlsourceRequest)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/sqlQuery`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}/sqlQuery`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1604,21 +2470,21 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
         /**
          * Creates a Malloy source from a SQL statement using the specified database connection. The SQL statement is executed to generate a source definition that can be used in Malloy models. 
          * @summary Create SQL source from statement
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to fetch the SQL source
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        postSqlsource: async (projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('postSqlsource', 'projectName', projectName)
+        postSqlsource: async (environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('postSqlsource', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('postSqlsource', 'connectionName', connectionName)
             // verify required parameter 'postSqlsourceRequest' is not null or undefined
             assertParamExists('postSqlsource', 'postSqlsourceRequest', postSqlsourceRequest)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/sqlSource`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}/sqlSource`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1648,21 +2514,21 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
         /**
          * Creates a temporary table from a SQL statement using the specified database connection. Temporary tables are useful for storing intermediate results during complex queries and data processing workflows. 
          * @summary Create temporary table
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to create the temporary table
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        postTemporarytable: async (projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('postTemporarytable', 'projectName', projectName)
+        postTemporarytable: async (environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('postTemporarytable', 'environmentName', environmentName)
             // verify required parameter 'connectionName' is not null or undefined
             assertParamExists('postTemporarytable', 'connectionName', connectionName)
             // verify required parameter 'postSqlsourceRequest' is not null or undefined
             assertParamExists('postTemporarytable', 'postSqlsourceRequest', postSqlsourceRequest)
-            const localVarPath = `/projects/{projectName}/connections/{connectionName}/sqlTemporaryTable`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}/sqlTemporaryTable`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -1683,6 +2549,50 @@ export const ConnectionsApiAxiosParamCreator = function (configuration?: Configu
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
             localVarRequestOptions.data = serializeDataIfNeeded(postSqlsourceRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Updates the configuration of an existing database connection. 
+         * @summary Update an existing database connection
+         * @param {string} environmentName Name of the environment
+         * @param {string} connectionName Name of the connection to update
+         * @param {UpdateConnectionRequest} updateConnectionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateConnection: async (environmentName: string, connectionName: string, updateConnectionRequest: UpdateConnectionRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('updateConnection', 'environmentName', environmentName)
+            // verify required parameter 'connectionName' is not null or undefined
+            assertParamExists('updateConnection', 'connectionName', connectionName)
+            // verify required parameter 'updateConnectionRequest' is not null or undefined
+            assertParamExists('updateConnection', 'updateConnectionRequest', updateConnectionRequest)
+            const localVarPath = `/environments/{environmentName}/connections/{connectionName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"connectionName"}}`, encodeURIComponent(String(connectionName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(updateConnectionRequest, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -1700,15 +2610,44 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = ConnectionsApiAxiosParamCreator(configuration)
     return {
         /**
-         * Retrieves detailed information about a specific database connection within a project. This includes connection configuration, credentials (if accessible), and metadata. Useful for inspecting connection settings and troubleshooting connectivity issues. 
+         * Creates a new database connection in the specified environment. 
+         * @summary Create a new database connection
+         * @param {string} environmentName Name of the environment
+         * @param {string} connectionName Name of the connection
+         * @param {Connection} connection 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createConnection(environmentName: string, connectionName: string, connection: Connection, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CreateConnection201Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createConnection(environmentName, connectionName, connection, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.createConnection']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Permanently deletes a database connection from the environment. 
+         * @summary Delete a database connection
+         * @param {string} environmentName Name of the environment
+         * @param {string} connectionName Name of the connection to delete
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deleteConnection(environmentName: string, connectionName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CreateConnection201Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteConnection(environmentName, connectionName, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.deleteConnection']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Retrieves detailed information about a specific database connection within an environment. This includes connection configuration, credentials (if accessible), and metadata. Useful for inspecting connection settings and troubleshooting connectivity issues. 
          * @summary Get connection details
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getConnection(projectName: string, connectionName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Connection>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getConnection(projectName, connectionName, options);
+        async getConnection(environmentName: string, connectionName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Connection>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getConnection(environmentName, connectionName, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getConnection']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1716,7 +2655,7 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
         /**
          * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Executes a SQL statement against the specified database connection and returns the results. The query results include data, metadata, and execution information. 
          * @summary Execute SQL query (deprecated)
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} [sqlStatement] SQL statement
          * @param {string} [_options] Options
@@ -1724,8 +2663,8 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
          * @deprecated
          * @throws {RequiredError}
          */
-        async getQuerydata(projectName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryData>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getQuerydata(projectName, connectionName, sqlStatement, _options, options);
+        async getQuerydata(environmentName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryData>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getQuerydata(environmentName, connectionName, sqlStatement, _options, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getQuerydata']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1733,15 +2672,15 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
         /**
          * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Creates a Malloy source from a SQL statement using the specified connection. The SQL statement is executed to generate a source definition that can be used in Malloy models. 
          * @summary Get SQL source (deprecated)
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} [sqlStatement] SQL statement
          * @param {*} [options] Override http request option.
          * @deprecated
          * @throws {RequiredError}
          */
-        async getSqlsource(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SqlSource>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getSqlsource(projectName, connectionName, sqlStatement, options);
+        async getSqlsource(environmentName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SqlSource>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getSqlsource(environmentName, connectionName, sqlStatement, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getSqlsource']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1749,61 +2688,44 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
         /**
          * Retrieves a table from the specified database schema. This endpoint is useful for discovering available data sources and exploring the database structure. The schema must exist in the connection for this operation to succeed. The tablePath is the full path to the table, including the schema name. 
          * @summary Get table details from database
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} schemaName Name of the schema
          * @param {string} tablePath Full path to the table
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getTable(projectName: string, connectionName: string, schemaName: string, tablePath: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Table>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getTable(projectName, connectionName, schemaName, tablePath, options);
+        async getTable(environmentName: string, connectionName: string, schemaName: string, tablePath: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Table>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getTable(environmentName, connectionName, schemaName, tablePath, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getTable']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Retrieves information about a specific table or view from the database connection. This includes table schema, column definitions, and metadata. The table can be specified by either tableKey or tablePath parameters, depending on the database type. 
-         * @summary Get table source information
-         * @param {string} projectName Name of the project
-         * @param {string} connectionName Name of the connection
-         * @param {string} [tableKey] Table key
-         * @param {string} [tablePath] Table path
-         * @param {*} [options] Override http request option.
-         * @deprecated
-         * @throws {RequiredError}
-         */
-        async getTablesource(projectName: string, connectionName: string, tableKey?: string, tablePath?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TableSource>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getTablesource(projectName, connectionName, tableKey, tablePath, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getTablesource']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
          * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Creates a temporary table from a SQL statement using the specified connection. Temporary tables are useful for storing intermediate results during complex queries. 
          * @summary Create temporary table (deprecated)
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} [sqlStatement] SQL statement
          * @param {*} [options] Override http request option.
          * @deprecated
          * @throws {RequiredError}
          */
-        async getTemporarytable(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TemporaryTable>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getTemporarytable(projectName, connectionName, sqlStatement, options);
+        async getTemporarytable(environmentName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TemporaryTable>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getTemporarytable(environmentName, connectionName, sqlStatement, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getTemporarytable']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Retrieves a list of all database connections configured for the specified project. Each connection includes its configuration, type, and status information. This endpoint is useful for discovering available data sources within a project. 
-         * @summary List project database connections
-         * @param {string} projectName Name of the project
+         * Retrieves a list of all database connections configured for the specified environment. Each connection includes its configuration, type, and status information. This endpoint is useful for discovering available data sources within an environment. 
+         * @summary List environment database connections
+         * @param {string} environmentName Name of the environment
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listConnections(projectName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Connection>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listConnections(projectName, options);
+        async listConnections(environmentName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Connection>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listConnections(environmentName, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.listConnections']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1811,13 +2733,13 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
         /**
          * Retrieves a list of all schemas (databases) available in the specified connection. Each schema includes metadata such as name, description, and whether it\'s the default schema. This endpoint is useful for exploring the database structure and discovering available data sources. 
          * @summary List database schemas
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listSchemas(projectName: string, connectionName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Schema>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listSchemas(projectName, connectionName, options);
+        async listSchemas(environmentName: string, connectionName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Schema>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listSchemas(environmentName, connectionName, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.listSchemas']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1825,14 +2747,15 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
         /**
          * Retrieves a list of all tables and views available in the specified database schema. This endpoint is useful for discovering available data sources and exploring the database structure. The schema must exist in the connection for this operation to succeed. 
          * @summary List tables in database
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} schemaName Name of the schema
+         * @param {Array<string>} [tableNames] List of table names to filter results. When provided, only returns metadata for the specified tables. When omitted, returns all tables in the schema. 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listTables(projectName: string, connectionName: string, schemaName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Table>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listTables(projectName, connectionName, schemaName, options);
+        async listTables(environmentName: string, connectionName: string, schemaName: string, tableNames?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Table>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listTables(environmentName, connectionName, schemaName, tableNames, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.listTables']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1840,15 +2763,15 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
         /**
          * Executes a SQL statement against the specified database connection and returns the results. The results include data, metadata, and execution information. 
          * @summary Execute SQL query
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to execute
          * @param {string} [_options] Options
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async postQuerydata(projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, _options?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryData>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.postQuerydata(projectName, connectionName, postSqlsourceRequest, _options, options);
+        async postQuerydata(environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, _options?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryData>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.postQuerydata(environmentName, connectionName, postSqlsourceRequest, _options, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.postQuerydata']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1856,14 +2779,14 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
         /**
          * Creates a Malloy source from a SQL statement using the specified database connection. The SQL statement is executed to generate a source definition that can be used in Malloy models. 
          * @summary Create SQL source from statement
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to fetch the SQL source
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async postSqlsource(projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SqlSource>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.postSqlsource(projectName, connectionName, postSqlsourceRequest, options);
+        async postSqlsource(environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SqlSource>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.postSqlsource(environmentName, connectionName, postSqlsourceRequest, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.postSqlsource']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1871,16 +2794,31 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
         /**
          * Creates a temporary table from a SQL statement using the specified database connection. Temporary tables are useful for storing intermediate results during complex queries and data processing workflows. 
          * @summary Create temporary table
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to create the temporary table
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async postTemporarytable(projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TemporaryTable>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.postTemporarytable(projectName, connectionName, postSqlsourceRequest, options);
+        async postTemporarytable(environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TemporaryTable>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.postTemporarytable(environmentName, connectionName, postSqlsourceRequest, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.postTemporarytable']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Updates the configuration of an existing database connection. 
+         * @summary Update an existing database connection
+         * @param {string} environmentName Name of the environment
+         * @param {string} connectionName Name of the connection to update
+         * @param {UpdateConnectionRequest} updateConnectionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateConnection(environmentName: string, connectionName: string, updateConnectionRequest: UpdateConnectionRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CreateConnection201Response>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateConnection(environmentName, connectionName, updateConnectionRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.updateConnection']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
@@ -1894,20 +2832,43 @@ export const ConnectionsApiFactory = function (configuration?: Configuration, ba
     const localVarFp = ConnectionsApiFp(configuration)
     return {
         /**
-         * Retrieves detailed information about a specific database connection within a project. This includes connection configuration, credentials (if accessible), and metadata. Useful for inspecting connection settings and troubleshooting connectivity issues. 
+         * Creates a new database connection in the specified environment. 
+         * @summary Create a new database connection
+         * @param {string} environmentName Name of the environment
+         * @param {string} connectionName Name of the connection
+         * @param {Connection} connection 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createConnection(environmentName: string, connectionName: string, connection: Connection, options?: RawAxiosRequestConfig): AxiosPromise<CreateConnection201Response> {
+            return localVarFp.createConnection(environmentName, connectionName, connection, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Permanently deletes a database connection from the environment. 
+         * @summary Delete a database connection
+         * @param {string} environmentName Name of the environment
+         * @param {string} connectionName Name of the connection to delete
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteConnection(environmentName: string, connectionName: string, options?: RawAxiosRequestConfig): AxiosPromise<CreateConnection201Response> {
+            return localVarFp.deleteConnection(environmentName, connectionName, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Retrieves detailed information about a specific database connection within an environment. This includes connection configuration, credentials (if accessible), and metadata. Useful for inspecting connection settings and troubleshooting connectivity issues. 
          * @summary Get connection details
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getConnection(projectName: string, connectionName: string, options?: RawAxiosRequestConfig): AxiosPromise<Connection> {
-            return localVarFp.getConnection(projectName, connectionName, options).then((request) => request(axios, basePath));
+        getConnection(environmentName: string, connectionName: string, options?: RawAxiosRequestConfig): AxiosPromise<Connection> {
+            return localVarFp.getConnection(environmentName, connectionName, options).then((request) => request(axios, basePath));
         },
         /**
          * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Executes a SQL statement against the specified database connection and returns the results. The query results include data, metadata, and execution information. 
          * @summary Execute SQL query (deprecated)
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} [sqlStatement] SQL statement
          * @param {string} [_options] Options
@@ -1915,131 +2876,130 @@ export const ConnectionsApiFactory = function (configuration?: Configuration, ba
          * @deprecated
          * @throws {RequiredError}
          */
-        getQuerydata(projectName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig): AxiosPromise<QueryData> {
-            return localVarFp.getQuerydata(projectName, connectionName, sqlStatement, _options, options).then((request) => request(axios, basePath));
+        getQuerydata(environmentName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig): AxiosPromise<QueryData> {
+            return localVarFp.getQuerydata(environmentName, connectionName, sqlStatement, _options, options).then((request) => request(axios, basePath));
         },
         /**
          * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Creates a Malloy source from a SQL statement using the specified connection. The SQL statement is executed to generate a source definition that can be used in Malloy models. 
          * @summary Get SQL source (deprecated)
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} [sqlStatement] SQL statement
          * @param {*} [options] Override http request option.
          * @deprecated
          * @throws {RequiredError}
          */
-        getSqlsource(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): AxiosPromise<SqlSource> {
-            return localVarFp.getSqlsource(projectName, connectionName, sqlStatement, options).then((request) => request(axios, basePath));
+        getSqlsource(environmentName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): AxiosPromise<SqlSource> {
+            return localVarFp.getSqlsource(environmentName, connectionName, sqlStatement, options).then((request) => request(axios, basePath));
         },
         /**
          * Retrieves a table from the specified database schema. This endpoint is useful for discovering available data sources and exploring the database structure. The schema must exist in the connection for this operation to succeed. The tablePath is the full path to the table, including the schema name. 
          * @summary Get table details from database
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} schemaName Name of the schema
          * @param {string} tablePath Full path to the table
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTable(projectName: string, connectionName: string, schemaName: string, tablePath: string, options?: RawAxiosRequestConfig): AxiosPromise<Table> {
-            return localVarFp.getTable(projectName, connectionName, schemaName, tablePath, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Retrieves information about a specific table or view from the database connection. This includes table schema, column definitions, and metadata. The table can be specified by either tableKey or tablePath parameters, depending on the database type. 
-         * @summary Get table source information
-         * @param {string} projectName Name of the project
-         * @param {string} connectionName Name of the connection
-         * @param {string} [tableKey] Table key
-         * @param {string} [tablePath] Table path
-         * @param {*} [options] Override http request option.
-         * @deprecated
-         * @throws {RequiredError}
-         */
-        getTablesource(projectName: string, connectionName: string, tableKey?: string, tablePath?: string, options?: RawAxiosRequestConfig): AxiosPromise<TableSource> {
-            return localVarFp.getTablesource(projectName, connectionName, tableKey, tablePath, options).then((request) => request(axios, basePath));
+        getTable(environmentName: string, connectionName: string, schemaName: string, tablePath: string, options?: RawAxiosRequestConfig): AxiosPromise<Table> {
+            return localVarFp.getTable(environmentName, connectionName, schemaName, tablePath, options).then((request) => request(axios, basePath));
         },
         /**
          * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Creates a temporary table from a SQL statement using the specified connection. Temporary tables are useful for storing intermediate results during complex queries. 
          * @summary Create temporary table (deprecated)
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} [sqlStatement] SQL statement
          * @param {*} [options] Override http request option.
          * @deprecated
          * @throws {RequiredError}
          */
-        getTemporarytable(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): AxiosPromise<TemporaryTable> {
-            return localVarFp.getTemporarytable(projectName, connectionName, sqlStatement, options).then((request) => request(axios, basePath));
+        getTemporarytable(environmentName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): AxiosPromise<TemporaryTable> {
+            return localVarFp.getTemporarytable(environmentName, connectionName, sqlStatement, options).then((request) => request(axios, basePath));
         },
         /**
-         * Retrieves a list of all database connections configured for the specified project. Each connection includes its configuration, type, and status information. This endpoint is useful for discovering available data sources within a project. 
-         * @summary List project database connections
-         * @param {string} projectName Name of the project
+         * Retrieves a list of all database connections configured for the specified environment. Each connection includes its configuration, type, and status information. This endpoint is useful for discovering available data sources within an environment. 
+         * @summary List environment database connections
+         * @param {string} environmentName Name of the environment
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listConnections(projectName: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Connection>> {
-            return localVarFp.listConnections(projectName, options).then((request) => request(axios, basePath));
+        listConnections(environmentName: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Connection>> {
+            return localVarFp.listConnections(environmentName, options).then((request) => request(axios, basePath));
         },
         /**
          * Retrieves a list of all schemas (databases) available in the specified connection. Each schema includes metadata such as name, description, and whether it\'s the default schema. This endpoint is useful for exploring the database structure and discovering available data sources. 
          * @summary List database schemas
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listSchemas(projectName: string, connectionName: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Schema>> {
-            return localVarFp.listSchemas(projectName, connectionName, options).then((request) => request(axios, basePath));
+        listSchemas(environmentName: string, connectionName: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Schema>> {
+            return localVarFp.listSchemas(environmentName, connectionName, options).then((request) => request(axios, basePath));
         },
         /**
          * Retrieves a list of all tables and views available in the specified database schema. This endpoint is useful for discovering available data sources and exploring the database structure. The schema must exist in the connection for this operation to succeed. 
          * @summary List tables in database
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {string} schemaName Name of the schema
+         * @param {Array<string>} [tableNames] List of table names to filter results. When provided, only returns metadata for the specified tables. When omitted, returns all tables in the schema. 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listTables(projectName: string, connectionName: string, schemaName: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Table>> {
-            return localVarFp.listTables(projectName, connectionName, schemaName, options).then((request) => request(axios, basePath));
+        listTables(environmentName: string, connectionName: string, schemaName: string, tableNames?: Array<string>, options?: RawAxiosRequestConfig): AxiosPromise<Array<Table>> {
+            return localVarFp.listTables(environmentName, connectionName, schemaName, tableNames, options).then((request) => request(axios, basePath));
         },
         /**
          * Executes a SQL statement against the specified database connection and returns the results. The results include data, metadata, and execution information. 
          * @summary Execute SQL query
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to execute
          * @param {string} [_options] Options
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        postQuerydata(projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, _options?: string, options?: RawAxiosRequestConfig): AxiosPromise<QueryData> {
-            return localVarFp.postQuerydata(projectName, connectionName, postSqlsourceRequest, _options, options).then((request) => request(axios, basePath));
+        postQuerydata(environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, _options?: string, options?: RawAxiosRequestConfig): AxiosPromise<QueryData> {
+            return localVarFp.postQuerydata(environmentName, connectionName, postSqlsourceRequest, _options, options).then((request) => request(axios, basePath));
         },
         /**
          * Creates a Malloy source from a SQL statement using the specified database connection. The SQL statement is executed to generate a source definition that can be used in Malloy models. 
          * @summary Create SQL source from statement
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to fetch the SQL source
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        postSqlsource(projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig): AxiosPromise<SqlSource> {
-            return localVarFp.postSqlsource(projectName, connectionName, postSqlsourceRequest, options).then((request) => request(axios, basePath));
+        postSqlsource(environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig): AxiosPromise<SqlSource> {
+            return localVarFp.postSqlsource(environmentName, connectionName, postSqlsourceRequest, options).then((request) => request(axios, basePath));
         },
         /**
          * Creates a temporary table from a SQL statement using the specified database connection. Temporary tables are useful for storing intermediate results during complex queries and data processing workflows. 
          * @summary Create temporary table
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} connectionName Name of the connection
          * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to create the temporary table
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        postTemporarytable(projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig): AxiosPromise<TemporaryTable> {
-            return localVarFp.postTemporarytable(projectName, connectionName, postSqlsourceRequest, options).then((request) => request(axios, basePath));
+        postTemporarytable(environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig): AxiosPromise<TemporaryTable> {
+            return localVarFp.postTemporarytable(environmentName, connectionName, postSqlsourceRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Updates the configuration of an existing database connection. 
+         * @summary Update an existing database connection
+         * @param {string} environmentName Name of the environment
+         * @param {string} connectionName Name of the connection to update
+         * @param {UpdateConnectionRequest} updateConnectionRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateConnection(environmentName: string, connectionName: string, updateConnectionRequest: UpdateConnectionRequest, options?: RawAxiosRequestConfig): AxiosPromise<CreateConnection201Response> {
+            return localVarFp.updateConnection(environmentName, connectionName, updateConnectionRequest, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -2052,22 +3012,49 @@ export const ConnectionsApiFactory = function (configuration?: Configuration, ba
  */
 export class ConnectionsApi extends BaseAPI {
     /**
-     * Retrieves detailed information about a specific database connection within a project. This includes connection configuration, credentials (if accessible), and metadata. Useful for inspecting connection settings and troubleshooting connectivity issues. 
+     * Creates a new database connection in the specified environment. 
+     * @summary Create a new database connection
+     * @param {string} environmentName Name of the environment
+     * @param {string} connectionName Name of the connection
+     * @param {Connection} connection 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConnectionsApi
+     */
+    public createConnection(environmentName: string, connectionName: string, connection: Connection, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).createConnection(environmentName, connectionName, connection, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Permanently deletes a database connection from the environment. 
+     * @summary Delete a database connection
+     * @param {string} environmentName Name of the environment
+     * @param {string} connectionName Name of the connection to delete
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConnectionsApi
+     */
+    public deleteConnection(environmentName: string, connectionName: string, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).deleteConnection(environmentName, connectionName, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Retrieves detailed information about a specific database connection within an environment. This includes connection configuration, credentials (if accessible), and metadata. Useful for inspecting connection settings and troubleshooting connectivity issues. 
      * @summary Get connection details
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public getConnection(projectName: string, connectionName: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).getConnection(projectName, connectionName, options).then((request) => request(this.axios, this.basePath));
+    public getConnection(environmentName: string, connectionName: string, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).getConnection(environmentName, connectionName, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Executes a SQL statement against the specified database connection and returns the results. The query results include data, metadata, and execution information. 
      * @summary Execute SQL query (deprecated)
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {string} [sqlStatement] SQL statement
      * @param {string} [_options] Options
@@ -2076,14 +3063,14 @@ export class ConnectionsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public getQuerydata(projectName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).getQuerydata(projectName, connectionName, sqlStatement, _options, options).then((request) => request(this.axios, this.basePath));
+    public getQuerydata(environmentName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).getQuerydata(environmentName, connectionName, sqlStatement, _options, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Creates a Malloy source from a SQL statement using the specified connection. The SQL statement is executed to generate a source definition that can be used in Malloy models. 
      * @summary Get SQL source (deprecated)
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {string} [sqlStatement] SQL statement
      * @param {*} [options] Override http request option.
@@ -2091,14 +3078,14 @@ export class ConnectionsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public getSqlsource(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).getSqlsource(projectName, connectionName, sqlStatement, options).then((request) => request(this.axios, this.basePath));
+    public getSqlsource(environmentName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).getSqlsource(environmentName, connectionName, sqlStatement, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Retrieves a table from the specified database schema. This endpoint is useful for discovering available data sources and exploring the database structure. The schema must exist in the connection for this operation to succeed. The tablePath is the full path to the table, including the schema name. 
      * @summary Get table details from database
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {string} schemaName Name of the schema
      * @param {string} tablePath Full path to the table
@@ -2106,30 +3093,14 @@ export class ConnectionsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public getTable(projectName: string, connectionName: string, schemaName: string, tablePath: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).getTable(projectName, connectionName, schemaName, tablePath, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Retrieves information about a specific table or view from the database connection. This includes table schema, column definitions, and metadata. The table can be specified by either tableKey or tablePath parameters, depending on the database type. 
-     * @summary Get table source information
-     * @param {string} projectName Name of the project
-     * @param {string} connectionName Name of the connection
-     * @param {string} [tableKey] Table key
-     * @param {string} [tablePath] Table path
-     * @param {*} [options] Override http request option.
-     * @deprecated
-     * @throws {RequiredError}
-     * @memberof ConnectionsApi
-     */
-    public getTablesource(projectName: string, connectionName: string, tableKey?: string, tablePath?: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).getTablesource(projectName, connectionName, tableKey, tablePath, options).then((request) => request(this.axios, this.basePath));
+    public getTable(environmentName: string, connectionName: string, schemaName: string, tablePath: string, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).getTable(environmentName, connectionName, schemaName, tablePath, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * **DEPRECATED**: This endpoint is deprecated and may be removed in future versions. Use the POST version instead for better security and functionality.  Creates a temporary table from a SQL statement using the specified connection. Temporary tables are useful for storing intermediate results during complex queries. 
      * @summary Create temporary table (deprecated)
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {string} [sqlStatement] SQL statement
      * @param {*} [options] Override http request option.
@@ -2137,53 +3108,54 @@ export class ConnectionsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public getTemporarytable(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).getTemporarytable(projectName, connectionName, sqlStatement, options).then((request) => request(this.axios, this.basePath));
+    public getTemporarytable(environmentName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).getTemporarytable(environmentName, connectionName, sqlStatement, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * Retrieves a list of all database connections configured for the specified project. Each connection includes its configuration, type, and status information. This endpoint is useful for discovering available data sources within a project. 
-     * @summary List project database connections
-     * @param {string} projectName Name of the project
+     * Retrieves a list of all database connections configured for the specified environment. Each connection includes its configuration, type, and status information. This endpoint is useful for discovering available data sources within an environment. 
+     * @summary List environment database connections
+     * @param {string} environmentName Name of the environment
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public listConnections(projectName: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).listConnections(projectName, options).then((request) => request(this.axios, this.basePath));
+    public listConnections(environmentName: string, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).listConnections(environmentName, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Retrieves a list of all schemas (databases) available in the specified connection. Each schema includes metadata such as name, description, and whether it\'s the default schema. This endpoint is useful for exploring the database structure and discovering available data sources. 
      * @summary List database schemas
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public listSchemas(projectName: string, connectionName: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).listSchemas(projectName, connectionName, options).then((request) => request(this.axios, this.basePath));
+    public listSchemas(environmentName: string, connectionName: string, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).listSchemas(environmentName, connectionName, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Retrieves a list of all tables and views available in the specified database schema. This endpoint is useful for discovering available data sources and exploring the database structure. The schema must exist in the connection for this operation to succeed. 
      * @summary List tables in database
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {string} schemaName Name of the schema
+     * @param {Array<string>} [tableNames] List of table names to filter results. When provided, only returns metadata for the specified tables. When omitted, returns all tables in the schema. 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public listTables(projectName: string, connectionName: string, schemaName: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).listTables(projectName, connectionName, schemaName, options).then((request) => request(this.axios, this.basePath));
+    public listTables(environmentName: string, connectionName: string, schemaName: string, tableNames?: Array<string>, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).listTables(environmentName, connectionName, schemaName, tableNames, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Executes a SQL statement against the specified database connection and returns the results. The results include data, metadata, and execution information. 
      * @summary Execute SQL query
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to execute
      * @param {string} [_options] Options
@@ -2191,36 +3163,50 @@ export class ConnectionsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public postQuerydata(projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, _options?: string, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).postQuerydata(projectName, connectionName, postSqlsourceRequest, _options, options).then((request) => request(this.axios, this.basePath));
+    public postQuerydata(environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, _options?: string, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).postQuerydata(environmentName, connectionName, postSqlsourceRequest, _options, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Creates a Malloy source from a SQL statement using the specified database connection. The SQL statement is executed to generate a source definition that can be used in Malloy models. 
      * @summary Create SQL source from statement
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to fetch the SQL source
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public postSqlsource(projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).postSqlsource(projectName, connectionName, postSqlsourceRequest, options).then((request) => request(this.axios, this.basePath));
+    public postSqlsource(environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).postSqlsource(environmentName, connectionName, postSqlsourceRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Creates a temporary table from a SQL statement using the specified database connection. Temporary tables are useful for storing intermediate results during complex queries and data processing workflows. 
      * @summary Create temporary table
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} connectionName Name of the connection
      * @param {PostSqlsourceRequest} postSqlsourceRequest SQL statement to create the temporary table
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ConnectionsApi
      */
-    public postTemporarytable(projectName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig) {
-        return ConnectionsApiFp(this.configuration).postTemporarytable(projectName, connectionName, postSqlsourceRequest, options).then((request) => request(this.axios, this.basePath));
+    public postTemporarytable(environmentName: string, connectionName: string, postSqlsourceRequest: PostSqlsourceRequest, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).postTemporarytable(environmentName, connectionName, postSqlsourceRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Updates the configuration of an existing database connection. 
+     * @summary Update an existing database connection
+     * @param {string} environmentName Name of the environment
+     * @param {string} connectionName Name of the connection to update
+     * @param {UpdateConnectionRequest} updateConnectionRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConnectionsApi
+     */
+    public updateConnection(environmentName: string, connectionName: string, updateConnectionRequest: UpdateConnectionRequest, options?: RawAxiosRequestConfig) {
+        return ConnectionsApiFp(this.configuration).updateConnection(environmentName, connectionName, updateConnectionRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
@@ -2345,19 +3331,19 @@ export const DatabasesApiAxiosParamCreator = function (configuration?: Configura
         /**
          * Retrieves a list of all embedded databases within the specified package. These are typically DuckDB databases stored as .parquet files that provide local data storage for the package. Each database entry includes metadata about the database structure and content. 
          * @summary List embedded databases
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listDatabases: async (projectName: string, packageName: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('listDatabases', 'projectName', projectName)
+        listDatabases: async (environmentName: string, packageName: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('listDatabases', 'environmentName', environmentName)
             // verify required parameter 'packageName' is not null or undefined
             assertParamExists('listDatabases', 'packageName', packageName)
-            const localVarPath = `/projects/{projectName}/packages/{packageName}/databases`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}/databases`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2398,14 +3384,14 @@ export const DatabasesApiFp = function(configuration?: Configuration) {
         /**
          * Retrieves a list of all embedded databases within the specified package. These are typically DuckDB databases stored as .parquet files that provide local data storage for the package. Each database entry includes metadata about the database structure and content. 
          * @summary List embedded databases
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listDatabases(projectName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Database>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listDatabases(projectName, packageName, versionId, options);
+        async listDatabases(environmentName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Database>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listDatabases(environmentName, packageName, versionId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['DatabasesApi.listDatabases']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -2423,14 +3409,14 @@ export const DatabasesApiFactory = function (configuration?: Configuration, base
         /**
          * Retrieves a list of all embedded databases within the specified package. These are typically DuckDB databases stored as .parquet files that provide local data storage for the package. Each database entry includes metadata about the database structure and content. 
          * @summary List embedded databases
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listDatabases(projectName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Database>> {
-            return localVarFp.listDatabases(projectName, packageName, versionId, options).then((request) => request(axios, basePath));
+        listDatabases(environmentName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Database>> {
+            return localVarFp.listDatabases(environmentName, packageName, versionId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -2445,18 +3431,1103 @@ export class DatabasesApi extends BaseAPI {
     /**
      * Retrieves a list of all embedded databases within the specified package. These are typically DuckDB databases stored as .parquet files that provide local data storage for the package. Each database entry includes metadata about the database structure and content. 
      * @summary List embedded databases
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} packageName Name of the package
      * @param {string} [versionId] Version identifier for the package
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof DatabasesApi
      */
-    public listDatabases(projectName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig) {
-        return DatabasesApiFp(this.configuration).listDatabases(projectName, packageName, versionId, options).then((request) => request(this.axios, this.basePath));
+    public listDatabases(environmentName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig) {
+        return DatabasesApiFp(this.configuration).listDatabases(environmentName, packageName, versionId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
+
+
+/**
+ * EnvironmentsApi - axios parameter creator
+ * @export
+ */
+export const EnvironmentsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Creates a new Malloy environment with the specified configuration. An environment serves as a container for packages, connections, and other resources. The environment will be initialized with the provided metadata and can immediately accept packages and connections. 
+         * @summary Create a new environment
+         * @param {Environment} environment 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createEnvironment: async (environment: Environment, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environment' is not null or undefined
+            assertParamExists('createEnvironment', 'environment', environment)
+            const localVarPath = `/environments`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(environment, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Permanently deletes an environment and all its associated resources including packages, connections, and metadata. This operation cannot be undone, so use with caution. The environment must exist and be accessible for deletion. 
+         * @summary Delete an environment
+         * @param {string} environmentName Name of the environment
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteEnvironment: async (environmentName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('deleteEnvironment', 'environmentName', environmentName)
+            const localVarPath = `/environments/{environmentName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Retrieves detailed information about a specific environment, including its packages, connections, configuration, and metadata. The reload parameter can be used to refresh the environment state from disk before returning the information. 
+         * @summary Get environment details and metadata
+         * @param {string} environmentName Name of the environment
+         * @param {boolean} [reload] Load / reload the environment before returning result
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getEnvironment: async (environmentName: string, reload?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getEnvironment', 'environmentName', environmentName)
+            const localVarPath = `/environments/{environmentName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (reload !== undefined) {
+                localVarQueryParameter['reload'] = reload;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Retrieves a list of all environments currently hosted on this Malloy Publisher server. Each environment contains metadata about its packages, connections, and configuration. This endpoint is typically used to discover available environments and their basic information. 
+         * @summary List all available environments
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listEnvironments: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/environments`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Updates the configuration and metadata of an existing environment. This allows you to modify environment settings, update the README, change the location, or update other environment-level properties. The environment must exist and be accessible. 
+         * @summary Update environment configuration
+         * @param {string} environmentName Name of the environment
+         * @param {Environment} environment 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateEnvironment: async (environmentName: string, environment: Environment, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('updateEnvironment', 'environmentName', environmentName)
+            // verify required parameter 'environment' is not null or undefined
+            assertParamExists('updateEnvironment', 'environment', environment)
+            const localVarPath = `/environments/{environmentName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(environment, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * EnvironmentsApi - functional programming interface
+ * @export
+ */
+export const EnvironmentsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = EnvironmentsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Creates a new Malloy environment with the specified configuration. An environment serves as a container for packages, connections, and other resources. The environment will be initialized with the provided metadata and can immediately accept packages and connections. 
+         * @summary Create a new environment
+         * @param {Environment} environment 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createEnvironment(environment: Environment, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Environment>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createEnvironment(environment, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EnvironmentsApi.createEnvironment']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Permanently deletes an environment and all its associated resources including packages, connections, and metadata. This operation cannot be undone, so use with caution. The environment must exist and be accessible for deletion. 
+         * @summary Delete an environment
+         * @param {string} environmentName Name of the environment
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deleteEnvironment(environmentName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Environment>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteEnvironment(environmentName, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EnvironmentsApi.deleteEnvironment']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Retrieves detailed information about a specific environment, including its packages, connections, configuration, and metadata. The reload parameter can be used to refresh the environment state from disk before returning the information. 
+         * @summary Get environment details and metadata
+         * @param {string} environmentName Name of the environment
+         * @param {boolean} [reload] Load / reload the environment before returning result
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getEnvironment(environmentName: string, reload?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Environment>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getEnvironment(environmentName, reload, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EnvironmentsApi.getEnvironment']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Retrieves a list of all environments currently hosted on this Malloy Publisher server. Each environment contains metadata about its packages, connections, and configuration. This endpoint is typically used to discover available environments and their basic information. 
+         * @summary List all available environments
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async listEnvironments(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Environment>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listEnvironments(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EnvironmentsApi.listEnvironments']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Updates the configuration and metadata of an existing environment. This allows you to modify environment settings, update the README, change the location, or update other environment-level properties. The environment must exist and be accessible. 
+         * @summary Update environment configuration
+         * @param {string} environmentName Name of the environment
+         * @param {Environment} environment 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateEnvironment(environmentName: string, environment: Environment, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Environment>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateEnvironment(environmentName, environment, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['EnvironmentsApi.updateEnvironment']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * EnvironmentsApi - factory interface
+ * @export
+ */
+export const EnvironmentsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = EnvironmentsApiFp(configuration)
+    return {
+        /**
+         * Creates a new Malloy environment with the specified configuration. An environment serves as a container for packages, connections, and other resources. The environment will be initialized with the provided metadata and can immediately accept packages and connections. 
+         * @summary Create a new environment
+         * @param {Environment} environment 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createEnvironment(environment: Environment, options?: RawAxiosRequestConfig): AxiosPromise<Environment> {
+            return localVarFp.createEnvironment(environment, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Permanently deletes an environment and all its associated resources including packages, connections, and metadata. This operation cannot be undone, so use with caution. The environment must exist and be accessible for deletion. 
+         * @summary Delete an environment
+         * @param {string} environmentName Name of the environment
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteEnvironment(environmentName: string, options?: RawAxiosRequestConfig): AxiosPromise<Environment> {
+            return localVarFp.deleteEnvironment(environmentName, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Retrieves detailed information about a specific environment, including its packages, connections, configuration, and metadata. The reload parameter can be used to refresh the environment state from disk before returning the information. 
+         * @summary Get environment details and metadata
+         * @param {string} environmentName Name of the environment
+         * @param {boolean} [reload] Load / reload the environment before returning result
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getEnvironment(environmentName: string, reload?: boolean, options?: RawAxiosRequestConfig): AxiosPromise<Environment> {
+            return localVarFp.getEnvironment(environmentName, reload, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Retrieves a list of all environments currently hosted on this Malloy Publisher server. Each environment contains metadata about its packages, connections, and configuration. This endpoint is typically used to discover available environments and their basic information. 
+         * @summary List all available environments
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listEnvironments(options?: RawAxiosRequestConfig): AxiosPromise<Array<Environment>> {
+            return localVarFp.listEnvironments(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Updates the configuration and metadata of an existing environment. This allows you to modify environment settings, update the README, change the location, or update other environment-level properties. The environment must exist and be accessible. 
+         * @summary Update environment configuration
+         * @param {string} environmentName Name of the environment
+         * @param {Environment} environment 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateEnvironment(environmentName: string, environment: Environment, options?: RawAxiosRequestConfig): AxiosPromise<Environment> {
+            return localVarFp.updateEnvironment(environmentName, environment, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * EnvironmentsApi - object-oriented interface
+ * @export
+ * @class EnvironmentsApi
+ * @extends {BaseAPI}
+ */
+export class EnvironmentsApi extends BaseAPI {
+    /**
+     * Creates a new Malloy environment with the specified configuration. An environment serves as a container for packages, connections, and other resources. The environment will be initialized with the provided metadata and can immediately accept packages and connections. 
+     * @summary Create a new environment
+     * @param {Environment} environment 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnvironmentsApi
+     */
+    public createEnvironment(environment: Environment, options?: RawAxiosRequestConfig) {
+        return EnvironmentsApiFp(this.configuration).createEnvironment(environment, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Permanently deletes an environment and all its associated resources including packages, connections, and metadata. This operation cannot be undone, so use with caution. The environment must exist and be accessible for deletion. 
+     * @summary Delete an environment
+     * @param {string} environmentName Name of the environment
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnvironmentsApi
+     */
+    public deleteEnvironment(environmentName: string, options?: RawAxiosRequestConfig) {
+        return EnvironmentsApiFp(this.configuration).deleteEnvironment(environmentName, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Retrieves detailed information about a specific environment, including its packages, connections, configuration, and metadata. The reload parameter can be used to refresh the environment state from disk before returning the information. 
+     * @summary Get environment details and metadata
+     * @param {string} environmentName Name of the environment
+     * @param {boolean} [reload] Load / reload the environment before returning result
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnvironmentsApi
+     */
+    public getEnvironment(environmentName: string, reload?: boolean, options?: RawAxiosRequestConfig) {
+        return EnvironmentsApiFp(this.configuration).getEnvironment(environmentName, reload, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Retrieves a list of all environments currently hosted on this Malloy Publisher server. Each environment contains metadata about its packages, connections, and configuration. This endpoint is typically used to discover available environments and their basic information. 
+     * @summary List all available environments
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnvironmentsApi
+     */
+    public listEnvironments(options?: RawAxiosRequestConfig) {
+        return EnvironmentsApiFp(this.configuration).listEnvironments(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Updates the configuration and metadata of an existing environment. This allows you to modify environment settings, update the README, change the location, or update other environment-level properties. The environment must exist and be accessible. 
+     * @summary Update environment configuration
+     * @param {string} environmentName Name of the environment
+     * @param {Environment} environment 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnvironmentsApi
+     */
+    public updateEnvironment(environmentName: string, environment: Environment, options?: RawAxiosRequestConfig) {
+        return EnvironmentsApiFp(this.configuration).updateEnvironment(environmentName, environment, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * ManifestsApi - axios parameter creator
+ * @export
+ */
+export const ManifestsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Returns the current build manifest containing buildId-to-tableName mappings for all materialized sources in the package. 
+         * @summary Get the build manifest for a package
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getManifest: async (environmentName: string, packageName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getManifest', 'environmentName', environmentName)
+            // verify required parameter 'packageName' is not null or undefined
+            assertParamExists('getManifest', 'packageName', packageName)
+            const localVarPath = `//{projectName}/packages/{packageName}/manifest`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Performs an action on the package manifest. The action is specified via the `action` query parameter:   * `reload` - Reads the build manifest from the shared store (DuckLake     in orchestrated mode, local DuckDB in standalone mode) and recompiles     every model in the package so subsequent queries resolve persisted     sources to their materialized tables. Intended for orchestrated     workers that did not themselves run the build; the endpoint does     not write anything *into* storage. 
+         * @summary Perform an action on the package manifest
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {ManifestActionActionEnum} action Action to perform on the manifest
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        manifestAction: async (environmentName: string, packageName: string, action: ManifestActionActionEnum, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('manifestAction', 'environmentName', environmentName)
+            // verify required parameter 'packageName' is not null or undefined
+            assertParamExists('manifestAction', 'packageName', packageName)
+            // verify required parameter 'action' is not null or undefined
+            assertParamExists('manifestAction', 'action', action)
+            const localVarPath = `//{projectName}/packages/{packageName}/manifest`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (action !== undefined) {
+                localVarQueryParameter['action'] = action;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * ManifestsApi - functional programming interface
+ * @export
+ */
+export const ManifestsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = ManifestsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Returns the current build manifest containing buildId-to-tableName mappings for all materialized sources in the package. 
+         * @summary Get the build manifest for a package
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getManifest(environmentName: string, packageName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<BuildManifest>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getManifest(environmentName, packageName, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ManifestsApi.getManifest']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Performs an action on the package manifest. The action is specified via the `action` query parameter:   * `reload` - Reads the build manifest from the shared store (DuckLake     in orchestrated mode, local DuckDB in standalone mode) and recompiles     every model in the package so subsequent queries resolve persisted     sources to their materialized tables. Intended for orchestrated     workers that did not themselves run the build; the endpoint does     not write anything *into* storage. 
+         * @summary Perform an action on the package manifest
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {ManifestActionActionEnum} action Action to perform on the manifest
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async manifestAction(environmentName: string, packageName: string, action: ManifestActionActionEnum, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<BuildManifest>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.manifestAction(environmentName, packageName, action, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ManifestsApi.manifestAction']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * ManifestsApi - factory interface
+ * @export
+ */
+export const ManifestsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = ManifestsApiFp(configuration)
+    return {
+        /**
+         * Returns the current build manifest containing buildId-to-tableName mappings for all materialized sources in the package. 
+         * @summary Get the build manifest for a package
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getManifest(environmentName: string, packageName: string, options?: RawAxiosRequestConfig): AxiosPromise<BuildManifest> {
+            return localVarFp.getManifest(environmentName, packageName, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Performs an action on the package manifest. The action is specified via the `action` query parameter:   * `reload` - Reads the build manifest from the shared store (DuckLake     in orchestrated mode, local DuckDB in standalone mode) and recompiles     every model in the package so subsequent queries resolve persisted     sources to their materialized tables. Intended for orchestrated     workers that did not themselves run the build; the endpoint does     not write anything *into* storage. 
+         * @summary Perform an action on the package manifest
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {ManifestActionActionEnum} action Action to perform on the manifest
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        manifestAction(environmentName: string, packageName: string, action: ManifestActionActionEnum, options?: RawAxiosRequestConfig): AxiosPromise<BuildManifest> {
+            return localVarFp.manifestAction(environmentName, packageName, action, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * ManifestsApi - object-oriented interface
+ * @export
+ * @class ManifestsApi
+ * @extends {BaseAPI}
+ */
+export class ManifestsApi extends BaseAPI {
+    /**
+     * Returns the current build manifest containing buildId-to-tableName mappings for all materialized sources in the package. 
+     * @summary Get the build manifest for a package
+     * @param {string} environmentName Name of the environment
+     * @param {string} packageName Name of the package
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ManifestsApi
+     */
+    public getManifest(environmentName: string, packageName: string, options?: RawAxiosRequestConfig) {
+        return ManifestsApiFp(this.configuration).getManifest(environmentName, packageName, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Performs an action on the package manifest. The action is specified via the `action` query parameter:   * `reload` - Reads the build manifest from the shared store (DuckLake     in orchestrated mode, local DuckDB in standalone mode) and recompiles     every model in the package so subsequent queries resolve persisted     sources to their materialized tables. Intended for orchestrated     workers that did not themselves run the build; the endpoint does     not write anything *into* storage. 
+     * @summary Perform an action on the package manifest
+     * @param {string} environmentName Name of the environment
+     * @param {string} packageName Name of the package
+     * @param {ManifestActionActionEnum} action Action to perform on the manifest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ManifestsApi
+     */
+    public manifestAction(environmentName: string, packageName: string, action: ManifestActionActionEnum, options?: RawAxiosRequestConfig) {
+        return ManifestsApiFp(this.configuration).manifestAction(environmentName, packageName, action, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+/**
+ * @export
+ */
+export const ManifestActionActionEnum = {
+    Reload: 'reload'
+} as const;
+export type ManifestActionActionEnum = typeof ManifestActionActionEnum[keyof typeof ManifestActionActionEnum];
+
+
+/**
+ * MaterializationsApi - axios parameter creator
+ * @export
+ */
+export const MaterializationsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * Creates a new materialization in PENDING state for all persist sources across all models in the package. Use POST .../materializations/{materializationId}?action=start to begin execution. 
+         * @summary Create a materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {CreateMaterializationRequest} [createMaterializationRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMaterialization: async (environmentName: string, packageName: string, createMaterializationRequest?: CreateMaterializationRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('createMaterialization', 'environmentName', environmentName)
+            // verify required parameter 'packageName' is not null or undefined
+            assertParamExists('createMaterialization', 'packageName', packageName)
+            const localVarPath = `/projects/{projectName}/packages/{packageName}/materializations`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(createMaterializationRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Deletes a terminal (SUCCESS, FAILED, or CANCELLED) materialization record.
+         * @summary Delete a materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} materializationId ID of the materialization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteMaterialization: async (environmentName: string, packageName: string, materializationId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('deleteMaterialization', 'environmentName', environmentName)
+            // verify required parameter 'packageName' is not null or undefined
+            assertParamExists('deleteMaterialization', 'packageName', packageName)
+            // verify required parameter 'materializationId' is not null or undefined
+            assertParamExists('deleteMaterialization', 'materializationId', materializationId)
+            const localVarPath = `/projects/{projectName}/packages/{packageName}/materializations/{materializationId}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)))
+                .replace(`{${"materializationId"}}`, encodeURIComponent(String(materializationId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Get a specific materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} materializationId ID of the materialization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMaterialization: async (environmentName: string, packageName: string, materializationId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getMaterialization', 'environmentName', environmentName)
+            // verify required parameter 'packageName' is not null or undefined
+            assertParamExists('getMaterialization', 'packageName', packageName)
+            // verify required parameter 'materializationId' is not null or undefined
+            assertParamExists('getMaterialization', 'materializationId', materializationId)
+            const localVarPath = `/projects/{projectName}/packages/{packageName}/materializations/{materializationId}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)))
+                .replace(`{${"materializationId"}}`, encodeURIComponent(String(materializationId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Returns the materialization history for the package, ordered by most recent first.
+         * @summary List materializations for a package
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {number} [limit] Maximum number of materializations to return
+         * @param {number} [offset] Number of materializations to skip
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listMaterializations: async (environmentName: string, packageName: string, limit?: number, offset?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('listMaterializations', 'environmentName', environmentName)
+            // verify required parameter 'packageName' is not null or undefined
+            assertParamExists('listMaterializations', 'packageName', packageName)
+            const localVarPath = `/projects/{projectName}/packages/{packageName}/materializations`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (limit !== undefined) {
+                localVarQueryParameter['limit'] = limit;
+            }
+
+            if (offset !== undefined) {
+                localVarQueryParameter['offset'] = offset;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Performs an action on a materialization. The action is specified via the `action` query parameter:   * `start` - Transitions a PENDING materialization to RUNNING and begins execution in the background. Returns 202.   * `stop` - Cancels a PENDING or RUNNING materialization. Returns 200. 
+         * @summary Perform an action on a materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} materializationId ID of the materialization
+         * @param {MaterializationActionActionEnum} action Action to perform on the materialization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        materializationAction: async (environmentName: string, packageName: string, materializationId: string, action: MaterializationActionActionEnum, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('materializationAction', 'environmentName', environmentName)
+            // verify required parameter 'packageName' is not null or undefined
+            assertParamExists('materializationAction', 'packageName', packageName)
+            // verify required parameter 'materializationId' is not null or undefined
+            assertParamExists('materializationAction', 'materializationId', materializationId)
+            // verify required parameter 'action' is not null or undefined
+            assertParamExists('materializationAction', 'action', action)
+            const localVarPath = `/projects/{projectName}/packages/{packageName}/materializations/{materializationId}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)))
+                .replace(`{${"materializationId"}}`, encodeURIComponent(String(materializationId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (action !== undefined) {
+                localVarQueryParameter['action'] = action;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * MaterializationsApi - functional programming interface
+ * @export
+ */
+export const MaterializationsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = MaterializationsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * Creates a new materialization in PENDING state for all persist sources across all models in the package. Use POST .../materializations/{materializationId}?action=start to begin execution. 
+         * @summary Create a materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {CreateMaterializationRequest} [createMaterializationRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async createMaterialization(environmentName: string, packageName: string, createMaterializationRequest?: CreateMaterializationRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Materialization>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createMaterialization(environmentName, packageName, createMaterializationRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MaterializationsApi.createMaterialization']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Deletes a terminal (SUCCESS, FAILED, or CANCELLED) materialization record.
+         * @summary Delete a materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} materializationId ID of the materialization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async deleteMaterialization(environmentName: string, packageName: string, materializationId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteMaterialization(environmentName, packageName, materializationId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MaterializationsApi.deleteMaterialization']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @summary Get a specific materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} materializationId ID of the materialization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getMaterialization(environmentName: string, packageName: string, materializationId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Materialization>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getMaterialization(environmentName, packageName, materializationId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MaterializationsApi.getMaterialization']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Returns the materialization history for the package, ordered by most recent first.
+         * @summary List materializations for a package
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {number} [limit] Maximum number of materializations to return
+         * @param {number} [offset] Number of materializations to skip
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async listMaterializations(environmentName: string, packageName: string, limit?: number, offset?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Materialization>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listMaterializations(environmentName, packageName, limit, offset, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MaterializationsApi.listMaterializations']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Performs an action on a materialization. The action is specified via the `action` query parameter:   * `start` - Transitions a PENDING materialization to RUNNING and begins execution in the background. Returns 202.   * `stop` - Cancels a PENDING or RUNNING materialization. Returns 200. 
+         * @summary Perform an action on a materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} materializationId ID of the materialization
+         * @param {MaterializationActionActionEnum} action Action to perform on the materialization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async materializationAction(environmentName: string, packageName: string, materializationId: string, action: MaterializationActionActionEnum, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Materialization>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.materializationAction(environmentName, packageName, materializationId, action, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MaterializationsApi.materializationAction']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * MaterializationsApi - factory interface
+ * @export
+ */
+export const MaterializationsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = MaterializationsApiFp(configuration)
+    return {
+        /**
+         * Creates a new materialization in PENDING state for all persist sources across all models in the package. Use POST .../materializations/{materializationId}?action=start to begin execution. 
+         * @summary Create a materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {CreateMaterializationRequest} [createMaterializationRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        createMaterialization(environmentName: string, packageName: string, createMaterializationRequest?: CreateMaterializationRequest, options?: RawAxiosRequestConfig): AxiosPromise<Materialization> {
+            return localVarFp.createMaterialization(environmentName, packageName, createMaterializationRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Deletes a terminal (SUCCESS, FAILED, or CANCELLED) materialization record.
+         * @summary Delete a materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} materializationId ID of the materialization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        deleteMaterialization(environmentName: string, packageName: string, materializationId: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.deleteMaterialization(environmentName, packageName, materializationId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Get a specific materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} materializationId ID of the materialization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getMaterialization(environmentName: string, packageName: string, materializationId: string, options?: RawAxiosRequestConfig): AxiosPromise<Materialization> {
+            return localVarFp.getMaterialization(environmentName, packageName, materializationId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Returns the materialization history for the package, ordered by most recent first.
+         * @summary List materializations for a package
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {number} [limit] Maximum number of materializations to return
+         * @param {number} [offset] Number of materializations to skip
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        listMaterializations(environmentName: string, packageName: string, limit?: number, offset?: number, options?: RawAxiosRequestConfig): AxiosPromise<Array<Materialization>> {
+            return localVarFp.listMaterializations(environmentName, packageName, limit, offset, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Performs an action on a materialization. The action is specified via the `action` query parameter:   * `start` - Transitions a PENDING materialization to RUNNING and begins execution in the background. Returns 202.   * `stop` - Cancels a PENDING or RUNNING materialization. Returns 200. 
+         * @summary Perform an action on a materialization
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} materializationId ID of the materialization
+         * @param {MaterializationActionActionEnum} action Action to perform on the materialization
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        materializationAction(environmentName: string, packageName: string, materializationId: string, action: MaterializationActionActionEnum, options?: RawAxiosRequestConfig): AxiosPromise<Materialization> {
+            return localVarFp.materializationAction(environmentName, packageName, materializationId, action, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * MaterializationsApi - object-oriented interface
+ * @export
+ * @class MaterializationsApi
+ * @extends {BaseAPI}
+ */
+export class MaterializationsApi extends BaseAPI {
+    /**
+     * Creates a new materialization in PENDING state for all persist sources across all models in the package. Use POST .../materializations/{materializationId}?action=start to begin execution. 
+     * @summary Create a materialization
+     * @param {string} environmentName Name of the environment
+     * @param {string} packageName Name of the package
+     * @param {CreateMaterializationRequest} [createMaterializationRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MaterializationsApi
+     */
+    public createMaterialization(environmentName: string, packageName: string, createMaterializationRequest?: CreateMaterializationRequest, options?: RawAxiosRequestConfig) {
+        return MaterializationsApiFp(this.configuration).createMaterialization(environmentName, packageName, createMaterializationRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Deletes a terminal (SUCCESS, FAILED, or CANCELLED) materialization record.
+     * @summary Delete a materialization
+     * @param {string} environmentName Name of the environment
+     * @param {string} packageName Name of the package
+     * @param {string} materializationId ID of the materialization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MaterializationsApi
+     */
+    public deleteMaterialization(environmentName: string, packageName: string, materializationId: string, options?: RawAxiosRequestConfig) {
+        return MaterializationsApiFp(this.configuration).deleteMaterialization(environmentName, packageName, materializationId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Get a specific materialization
+     * @param {string} environmentName Name of the environment
+     * @param {string} packageName Name of the package
+     * @param {string} materializationId ID of the materialization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MaterializationsApi
+     */
+    public getMaterialization(environmentName: string, packageName: string, materializationId: string, options?: RawAxiosRequestConfig) {
+        return MaterializationsApiFp(this.configuration).getMaterialization(environmentName, packageName, materializationId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Returns the materialization history for the package, ordered by most recent first.
+     * @summary List materializations for a package
+     * @param {string} environmentName Name of the environment
+     * @param {string} packageName Name of the package
+     * @param {number} [limit] Maximum number of materializations to return
+     * @param {number} [offset] Number of materializations to skip
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MaterializationsApi
+     */
+    public listMaterializations(environmentName: string, packageName: string, limit?: number, offset?: number, options?: RawAxiosRequestConfig) {
+        return MaterializationsApiFp(this.configuration).listMaterializations(environmentName, packageName, limit, offset, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Performs an action on a materialization. The action is specified via the `action` query parameter:   * `start` - Transitions a PENDING materialization to RUNNING and begins execution in the background. Returns 202.   * `stop` - Cancels a PENDING or RUNNING materialization. Returns 200. 
+     * @summary Perform an action on a materialization
+     * @param {string} environmentName Name of the environment
+     * @param {string} packageName Name of the package
+     * @param {string} materializationId ID of the materialization
+     * @param {MaterializationActionActionEnum} action Action to perform on the materialization
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MaterializationsApi
+     */
+    public materializationAction(environmentName: string, packageName: string, materializationId: string, action: MaterializationActionActionEnum, options?: RawAxiosRequestConfig) {
+        return MaterializationsApiFp(this.configuration).materializationAction(environmentName, packageName, materializationId, action, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+/**
+ * @export
+ */
+export const MaterializationActionActionEnum = {
+    Start: 'start',
+    Stop: 'stop'
+} as const;
+export type MaterializationActionActionEnum = typeof MaterializationActionActionEnum[keyof typeof MaterializationActionActionEnum];
 
 
 /**
@@ -2466,26 +4537,74 @@ export class DatabasesApi extends BaseAPI {
 export const ModelsApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
+         * Compiles Malloy source code in the context of a specific model file. The submitted source is appended to the full model content, giving it access to all sources, imports, and queries defined in the model. Relative imports resolve correctly against sibling model files. Returns compilation status and any problems (errors or warnings) found. 
+         * @summary Compile Malloy source code
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} path Path to the model within the package (used to resolve relative imports)
+         * @param {CompileRequest} compileRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        compileModelSource: async (environmentName: string, packageName: string, path: string, compileRequest: CompileRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('compileModelSource', 'environmentName', environmentName)
+            // verify required parameter 'packageName' is not null or undefined
+            assertParamExists('compileModelSource', 'packageName', packageName)
+            // verify required parameter 'path' is not null or undefined
+            assertParamExists('compileModelSource', 'path', path)
+            // verify required parameter 'compileRequest' is not null or undefined
+            assertParamExists('compileModelSource', 'compileRequest', compileRequest)
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}/models/{path}/compile`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)))
+                .replace(`{${"path"}}`, encodeURIComponent(String(path)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(compileRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Executes a Malloy query against a model and returns the results. The query can be specified as a raw Malloy query string or by referencing a named query within the model. This endpoint supports both ad-hoc queries and predefined model queries, making it flexible for various use cases including data exploration, reporting, and application integration. 
          * @summary Execute Malloy query
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} path Path to the model within the package
          * @param {QueryRequest} queryRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        executeQueryModel: async (projectName: string, packageName: string, path: string, queryRequest: QueryRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('executeQueryModel', 'projectName', projectName)
+        executeQueryModel: async (environmentName: string, packageName: string, path: string, queryRequest: QueryRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('executeQueryModel', 'environmentName', environmentName)
             // verify required parameter 'packageName' is not null or undefined
             assertParamExists('executeQueryModel', 'packageName', packageName)
             // verify required parameter 'path' is not null or undefined
             assertParamExists('executeQueryModel', 'path', path)
             // verify required parameter 'queryRequest' is not null or undefined
             assertParamExists('executeQueryModel', 'queryRequest', queryRequest)
-            const localVarPath = `/projects/{projectName}/packages/{packageName}/models/{path}/query`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}/models/{path}/query`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)))
                 .replace(`{${"path"}}`, encodeURIComponent(String(path)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -2516,22 +4635,22 @@ export const ModelsApiAxiosParamCreator = function (configuration?: Configuratio
         /**
          * Retrieves a compiled Malloy model with its source information, queries, and metadata. The model is compiled using the specified version of the Malloy compiler. This endpoint provides access to the model\'s structure, sources, and named queries for use in applications. 
          * @summary Get compiled Malloy model
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} path Path to the model within the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getModel: async (projectName: string, packageName: string, path: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getModel', 'projectName', projectName)
+        getModel: async (environmentName: string, packageName: string, path: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getModel', 'environmentName', environmentName)
             // verify required parameter 'packageName' is not null or undefined
             assertParamExists('getModel', 'packageName', packageName)
             // verify required parameter 'path' is not null or undefined
             assertParamExists('getModel', 'path', path)
-            const localVarPath = `/projects/{projectName}/packages/{packageName}/models/{path}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}/models/{path}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)))
                 .replace(`{${"path"}}`, encodeURIComponent(String(path)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -2563,19 +4682,19 @@ export const ModelsApiAxiosParamCreator = function (configuration?: Configuratio
         /**
          * Retrieves a list of all Malloy models within the specified package. Each model entry includes the relative path, package name, and any compilation errors. This endpoint is useful for discovering available models and checking their status. 
          * @summary List package models
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listModels: async (projectName: string, packageName: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('listModels', 'projectName', projectName)
+        listModels: async (environmentName: string, packageName: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('listModels', 'environmentName', environmentName)
             // verify required parameter 'packageName' is not null or undefined
             assertParamExists('listModels', 'packageName', packageName)
-            const localVarPath = `/projects/{projectName}/packages/{packageName}/models`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}/models`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2614,17 +4733,33 @@ export const ModelsApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = ModelsApiAxiosParamCreator(configuration)
     return {
         /**
+         * Compiles Malloy source code in the context of a specific model file. The submitted source is appended to the full model content, giving it access to all sources, imports, and queries defined in the model. Relative imports resolve correctly against sibling model files. Returns compilation status and any problems (errors or warnings) found. 
+         * @summary Compile Malloy source code
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} path Path to the model within the package (used to resolve relative imports)
+         * @param {CompileRequest} compileRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async compileModelSource(environmentName: string, packageName: string, path: string, compileRequest: CompileRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CompileResult>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.compileModelSource(environmentName, packageName, path, compileRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ModelsApi.compileModelSource']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Executes a Malloy query against a model and returns the results. The query can be specified as a raw Malloy query string or by referencing a named query within the model. This endpoint supports both ad-hoc queries and predefined model queries, making it flexible for various use cases including data exploration, reporting, and application integration. 
          * @summary Execute Malloy query
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} path Path to the model within the package
          * @param {QueryRequest} queryRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async executeQueryModel(projectName: string, packageName: string, path: string, queryRequest: QueryRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryResult>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.executeQueryModel(projectName, packageName, path, queryRequest, options);
+        async executeQueryModel(environmentName: string, packageName: string, path: string, queryRequest: QueryRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryResult>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.executeQueryModel(environmentName, packageName, path, queryRequest, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ModelsApi.executeQueryModel']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -2632,15 +4767,15 @@ export const ModelsApiFp = function(configuration?: Configuration) {
         /**
          * Retrieves a compiled Malloy model with its source information, queries, and metadata. The model is compiled using the specified version of the Malloy compiler. This endpoint provides access to the model\'s structure, sources, and named queries for use in applications. 
          * @summary Get compiled Malloy model
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} path Path to the model within the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getModel(projectName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CompiledModel>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getModel(projectName, packageName, path, versionId, options);
+        async getModel(environmentName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CompiledModel>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getModel(environmentName, packageName, path, versionId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ModelsApi.getModel']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -2648,14 +4783,14 @@ export const ModelsApiFp = function(configuration?: Configuration) {
         /**
          * Retrieves a list of all Malloy models within the specified package. Each model entry includes the relative path, package name, and any compilation errors. This endpoint is useful for discovering available models and checking their status. 
          * @summary List package models
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listModels(projectName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Model>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listModels(projectName, packageName, versionId, options);
+        async listModels(environmentName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Model>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listModels(environmentName, packageName, versionId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ModelsApi.listModels']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -2671,42 +4806,55 @@ export const ModelsApiFactory = function (configuration?: Configuration, basePat
     const localVarFp = ModelsApiFp(configuration)
     return {
         /**
+         * Compiles Malloy source code in the context of a specific model file. The submitted source is appended to the full model content, giving it access to all sources, imports, and queries defined in the model. Relative imports resolve correctly against sibling model files. Returns compilation status and any problems (errors or warnings) found. 
+         * @summary Compile Malloy source code
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} path Path to the model within the package (used to resolve relative imports)
+         * @param {CompileRequest} compileRequest 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        compileModelSource(environmentName: string, packageName: string, path: string, compileRequest: CompileRequest, options?: RawAxiosRequestConfig): AxiosPromise<CompileResult> {
+            return localVarFp.compileModelSource(environmentName, packageName, path, compileRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
          * Executes a Malloy query against a model and returns the results. The query can be specified as a raw Malloy query string or by referencing a named query within the model. This endpoint supports both ad-hoc queries and predefined model queries, making it flexible for various use cases including data exploration, reporting, and application integration. 
          * @summary Execute Malloy query
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} path Path to the model within the package
          * @param {QueryRequest} queryRequest 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        executeQueryModel(projectName: string, packageName: string, path: string, queryRequest: QueryRequest, options?: RawAxiosRequestConfig): AxiosPromise<QueryResult> {
-            return localVarFp.executeQueryModel(projectName, packageName, path, queryRequest, options).then((request) => request(axios, basePath));
+        executeQueryModel(environmentName: string, packageName: string, path: string, queryRequest: QueryRequest, options?: RawAxiosRequestConfig): AxiosPromise<QueryResult> {
+            return localVarFp.executeQueryModel(environmentName, packageName, path, queryRequest, options).then((request) => request(axios, basePath));
         },
         /**
          * Retrieves a compiled Malloy model with its source information, queries, and metadata. The model is compiled using the specified version of the Malloy compiler. This endpoint provides access to the model\'s structure, sources, and named queries for use in applications. 
          * @summary Get compiled Malloy model
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} path Path to the model within the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getModel(projectName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<CompiledModel> {
-            return localVarFp.getModel(projectName, packageName, path, versionId, options).then((request) => request(axios, basePath));
+        getModel(environmentName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<CompiledModel> {
+            return localVarFp.getModel(environmentName, packageName, path, versionId, options).then((request) => request(axios, basePath));
         },
         /**
          * Retrieves a list of all Malloy models within the specified package. Each model entry includes the relative path, package name, and any compilation errors. This endpoint is useful for discovering available models and checking their status. 
          * @summary List package models
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listModels(projectName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Model>> {
-            return localVarFp.listModels(projectName, packageName, versionId, options).then((request) => request(axios, basePath));
+        listModels(environmentName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Model>> {
+            return localVarFp.listModels(environmentName, packageName, versionId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -2719,9 +4867,24 @@ export const ModelsApiFactory = function (configuration?: Configuration, basePat
  */
 export class ModelsApi extends BaseAPI {
     /**
+     * Compiles Malloy source code in the context of a specific model file. The submitted source is appended to the full model content, giving it access to all sources, imports, and queries defined in the model. Relative imports resolve correctly against sibling model files. Returns compilation status and any problems (errors or warnings) found. 
+     * @summary Compile Malloy source code
+     * @param {string} environmentName Name of the environment
+     * @param {string} packageName Name of the package
+     * @param {string} path Path to the model within the package (used to resolve relative imports)
+     * @param {CompileRequest} compileRequest 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ModelsApi
+     */
+    public compileModelSource(environmentName: string, packageName: string, path: string, compileRequest: CompileRequest, options?: RawAxiosRequestConfig) {
+        return ModelsApiFp(this.configuration).compileModelSource(environmentName, packageName, path, compileRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * Executes a Malloy query against a model and returns the results. The query can be specified as a raw Malloy query string or by referencing a named query within the model. This endpoint supports both ad-hoc queries and predefined model queries, making it flexible for various use cases including data exploration, reporting, and application integration. 
      * @summary Execute Malloy query
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} packageName Name of the package
      * @param {string} path Path to the model within the package
      * @param {QueryRequest} queryRequest 
@@ -2729,14 +4892,14 @@ export class ModelsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ModelsApi
      */
-    public executeQueryModel(projectName: string, packageName: string, path: string, queryRequest: QueryRequest, options?: RawAxiosRequestConfig) {
-        return ModelsApiFp(this.configuration).executeQueryModel(projectName, packageName, path, queryRequest, options).then((request) => request(this.axios, this.basePath));
+    public executeQueryModel(environmentName: string, packageName: string, path: string, queryRequest: QueryRequest, options?: RawAxiosRequestConfig) {
+        return ModelsApiFp(this.configuration).executeQueryModel(environmentName, packageName, path, queryRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Retrieves a compiled Malloy model with its source information, queries, and metadata. The model is compiled using the specified version of the Malloy compiler. This endpoint provides access to the model\'s structure, sources, and named queries for use in applications. 
      * @summary Get compiled Malloy model
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} packageName Name of the package
      * @param {string} path Path to the model within the package
      * @param {string} [versionId] Version identifier for the package
@@ -2744,22 +4907,22 @@ export class ModelsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ModelsApi
      */
-    public getModel(projectName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig) {
-        return ModelsApiFp(this.configuration).getModel(projectName, packageName, path, versionId, options).then((request) => request(this.axios, this.basePath));
+    public getModel(environmentName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig) {
+        return ModelsApiFp(this.configuration).getModel(environmentName, packageName, path, versionId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Retrieves a list of all Malloy models within the specified package. Each model entry includes the relative path, package name, and any compilation errors. This endpoint is useful for discovering available models and checking their status. 
      * @summary List package models
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} packageName Name of the package
      * @param {string} [versionId] Version identifier for the package
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ModelsApi
      */
-    public listModels(projectName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig) {
-        return ModelsApiFp(this.configuration).listModels(projectName, packageName, versionId, options).then((request) => request(this.axios, this.basePath));
+    public listModels(environmentName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig) {
+        return ModelsApiFp(this.configuration).listModels(environmentName, packageName, versionId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
@@ -2772,24 +4935,85 @@ export class ModelsApi extends BaseAPI {
 export const NotebooksApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Retrieves a compiled Malloy notebook with its cells, results, and metadata. The notebook is compiled using the specified version of the Malloy compiler. This endpoint provides access to the notebook\'s structure, cells, and execution results for use in applications. 
-         * @summary Get compiled Malloy notebook
-         * @param {string} projectName Name of the project
+         * Executes a specific cell in a Malloy notebook by index. For code cells, this compiles and runs the Malloy code, returning query results and any new sources defined. For markdown cells, this simply returns the cell content. 
+         * @summary Execute a specific notebook cell
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} path Path to notebook within the package
+         * @param {number} cellIndex Index of the cell to execute (0-based)
+         * @param {string} [versionId] Version identifier for the package
+         * @param {string} [filterParams] JSON-encoded filter parameter values keyed by filter name
+         * @param {ExecuteNotebookCellBypassFiltersEnum} [bypassFilters] When true, skip filter injection entirely
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        executeNotebookCell: async (environmentName: string, packageName: string, path: string, cellIndex: number, versionId?: string, filterParams?: string, bypassFilters?: ExecuteNotebookCellBypassFiltersEnum, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('executeNotebookCell', 'environmentName', environmentName)
+            // verify required parameter 'packageName' is not null or undefined
+            assertParamExists('executeNotebookCell', 'packageName', packageName)
+            // verify required parameter 'path' is not null or undefined
+            assertParamExists('executeNotebookCell', 'path', path)
+            // verify required parameter 'cellIndex' is not null or undefined
+            assertParamExists('executeNotebookCell', 'cellIndex', cellIndex)
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}/notebooks/{path}/cells/{cellIndex}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
+                .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)))
+                .replace(`{${"path"}}`, encodeURIComponent(String(path)))
+                .replace(`{${"cellIndex"}}`, encodeURIComponent(String(cellIndex)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (versionId !== undefined) {
+                localVarQueryParameter['versionId'] = versionId;
+            }
+
+            if (filterParams !== undefined) {
+                localVarQueryParameter['filter_params'] = filterParams;
+            }
+
+            if (bypassFilters !== undefined) {
+                localVarQueryParameter['bypass_filters'] = bypassFilters;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Retrieves a Malloy notebook with its raw cell contents (markdown and code). Cell execution should be done separately via the execute-notebook-cell endpoint. 
+         * @summary Get Malloy notebook cells
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} path Path to notebook within the package.
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getNotebook: async (projectName: string, packageName: string, path: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getNotebook', 'projectName', projectName)
+        getNotebook: async (environmentName: string, packageName: string, path: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getNotebook', 'environmentName', environmentName)
             // verify required parameter 'packageName' is not null or undefined
             assertParamExists('getNotebook', 'packageName', packageName)
             // verify required parameter 'path' is not null or undefined
             assertParamExists('getNotebook', 'path', path)
-            const localVarPath = `/projects/{projectName}/packages/{packageName}/notebooks/{path}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}/notebooks/{path}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)))
                 .replace(`{${"path"}}`, encodeURIComponent(String(path)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -2821,19 +5045,19 @@ export const NotebooksApiAxiosParamCreator = function (configuration?: Configura
         /**
          * Retrieves a list of all Malloy notebooks within the specified package. Each notebook entry includes the relative path, package name, and any compilation errors. This endpoint is useful for discovering available notebooks and checking their status. 
          * @summary List package notebooks
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listNotebooks: async (projectName: string, packageName: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('listNotebooks', 'projectName', projectName)
+        listNotebooks: async (environmentName: string, packageName: string, versionId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('listNotebooks', 'environmentName', environmentName)
             // verify required parameter 'packageName' is not null or undefined
             assertParamExists('listNotebooks', 'packageName', packageName)
-            const localVarPath = `/projects/{projectName}/packages/{packageName}/notebooks`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}/notebooks`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -2872,17 +5096,36 @@ export const NotebooksApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = NotebooksApiAxiosParamCreator(configuration)
     return {
         /**
-         * Retrieves a compiled Malloy notebook with its cells, results, and metadata. The notebook is compiled using the specified version of the Malloy compiler. This endpoint provides access to the notebook\'s structure, cells, and execution results for use in applications. 
-         * @summary Get compiled Malloy notebook
-         * @param {string} projectName Name of the project
+         * Executes a specific cell in a Malloy notebook by index. For code cells, this compiles and runs the Malloy code, returning query results and any new sources defined. For markdown cells, this simply returns the cell content. 
+         * @summary Execute a specific notebook cell
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} path Path to notebook within the package
+         * @param {number} cellIndex Index of the cell to execute (0-based)
+         * @param {string} [versionId] Version identifier for the package
+         * @param {string} [filterParams] JSON-encoded filter parameter values keyed by filter name
+         * @param {ExecuteNotebookCellBypassFiltersEnum} [bypassFilters] When true, skip filter injection entirely
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async executeNotebookCell(environmentName: string, packageName: string, path: string, cellIndex: number, versionId?: string, filterParams?: string, bypassFilters?: ExecuteNotebookCellBypassFiltersEnum, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<NotebookCellResult>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.executeNotebookCell(environmentName, packageName, path, cellIndex, versionId, filterParams, bypassFilters, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['NotebooksApi.executeNotebookCell']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Retrieves a Malloy notebook with its raw cell contents (markdown and code). Cell execution should be done separately via the execute-notebook-cell endpoint. 
+         * @summary Get Malloy notebook cells
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} path Path to notebook within the package.
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getNotebook(projectName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CompiledNotebook>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getNotebook(projectName, packageName, path, versionId, options);
+        async getNotebook(environmentName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<RawNotebook>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getNotebook(environmentName, packageName, path, versionId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['NotebooksApi.getNotebook']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -2890,14 +5133,14 @@ export const NotebooksApiFp = function(configuration?: Configuration) {
         /**
          * Retrieves a list of all Malloy notebooks within the specified package. Each notebook entry includes the relative path, package name, and any compilation errors. This endpoint is useful for discovering available notebooks and checking their status. 
          * @summary List package notebooks
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listNotebooks(projectName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Notebook>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listNotebooks(projectName, packageName, versionId, options);
+        async listNotebooks(environmentName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Notebook>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listNotebooks(environmentName, packageName, versionId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['NotebooksApi.listNotebooks']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -2913,29 +5156,45 @@ export const NotebooksApiFactory = function (configuration?: Configuration, base
     const localVarFp = NotebooksApiFp(configuration)
     return {
         /**
-         * Retrieves a compiled Malloy notebook with its cells, results, and metadata. The notebook is compiled using the specified version of the Malloy compiler. This endpoint provides access to the notebook\'s structure, cells, and execution results for use in applications. 
-         * @summary Get compiled Malloy notebook
-         * @param {string} projectName Name of the project
+         * Executes a specific cell in a Malloy notebook by index. For code cells, this compiles and runs the Malloy code, returning query results and any new sources defined. For markdown cells, this simply returns the cell content. 
+         * @summary Execute a specific notebook cell
+         * @param {string} environmentName Name of the environment
+         * @param {string} packageName Name of the package
+         * @param {string} path Path to notebook within the package
+         * @param {number} cellIndex Index of the cell to execute (0-based)
+         * @param {string} [versionId] Version identifier for the package
+         * @param {string} [filterParams] JSON-encoded filter parameter values keyed by filter name
+         * @param {ExecuteNotebookCellBypassFiltersEnum} [bypassFilters] When true, skip filter injection entirely
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        executeNotebookCell(environmentName: string, packageName: string, path: string, cellIndex: number, versionId?: string, filterParams?: string, bypassFilters?: ExecuteNotebookCellBypassFiltersEnum, options?: RawAxiosRequestConfig): AxiosPromise<NotebookCellResult> {
+            return localVarFp.executeNotebookCell(environmentName, packageName, path, cellIndex, versionId, filterParams, bypassFilters, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Retrieves a Malloy notebook with its raw cell contents (markdown and code). Cell execution should be done separately via the execute-notebook-cell endpoint. 
+         * @summary Get Malloy notebook cells
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} path Path to notebook within the package.
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getNotebook(projectName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<CompiledNotebook> {
-            return localVarFp.getNotebook(projectName, packageName, path, versionId, options).then((request) => request(axios, basePath));
+        getNotebook(environmentName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<RawNotebook> {
+            return localVarFp.getNotebook(environmentName, packageName, path, versionId, options).then((request) => request(axios, basePath));
         },
         /**
          * Retrieves a list of all Malloy notebooks within the specified package. Each notebook entry includes the relative path, package name, and any compilation errors. This endpoint is useful for discovering available notebooks and checking their status. 
          * @summary List package notebooks
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {string} [versionId] Version identifier for the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listNotebooks(projectName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Notebook>> {
-            return localVarFp.listNotebooks(projectName, packageName, versionId, options).then((request) => request(axios, basePath));
+        listNotebooks(environmentName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Notebook>> {
+            return localVarFp.listNotebooks(environmentName, packageName, versionId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -2948,9 +5207,27 @@ export const NotebooksApiFactory = function (configuration?: Configuration, base
  */
 export class NotebooksApi extends BaseAPI {
     /**
-     * Retrieves a compiled Malloy notebook with its cells, results, and metadata. The notebook is compiled using the specified version of the Malloy compiler. This endpoint provides access to the notebook\'s structure, cells, and execution results for use in applications. 
-     * @summary Get compiled Malloy notebook
-     * @param {string} projectName Name of the project
+     * Executes a specific cell in a Malloy notebook by index. For code cells, this compiles and runs the Malloy code, returning query results and any new sources defined. For markdown cells, this simply returns the cell content. 
+     * @summary Execute a specific notebook cell
+     * @param {string} environmentName Name of the environment
+     * @param {string} packageName Name of the package
+     * @param {string} path Path to notebook within the package
+     * @param {number} cellIndex Index of the cell to execute (0-based)
+     * @param {string} [versionId] Version identifier for the package
+     * @param {string} [filterParams] JSON-encoded filter parameter values keyed by filter name
+     * @param {ExecuteNotebookCellBypassFiltersEnum} [bypassFilters] When true, skip filter injection entirely
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof NotebooksApi
+     */
+    public executeNotebookCell(environmentName: string, packageName: string, path: string, cellIndex: number, versionId?: string, filterParams?: string, bypassFilters?: ExecuteNotebookCellBypassFiltersEnum, options?: RawAxiosRequestConfig) {
+        return NotebooksApiFp(this.configuration).executeNotebookCell(environmentName, packageName, path, cellIndex, versionId, filterParams, bypassFilters, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Retrieves a Malloy notebook with its raw cell contents (markdown and code). Cell execution should be done separately via the execute-notebook-cell endpoint. 
+     * @summary Get Malloy notebook cells
+     * @param {string} environmentName Name of the environment
      * @param {string} packageName Name of the package
      * @param {string} path Path to notebook within the package.
      * @param {string} [versionId] Version identifier for the package
@@ -2958,25 +5235,33 @@ export class NotebooksApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof NotebooksApi
      */
-    public getNotebook(projectName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig) {
-        return NotebooksApiFp(this.configuration).getNotebook(projectName, packageName, path, versionId, options).then((request) => request(this.axios, this.basePath));
+    public getNotebook(environmentName: string, packageName: string, path: string, versionId?: string, options?: RawAxiosRequestConfig) {
+        return NotebooksApiFp(this.configuration).getNotebook(environmentName, packageName, path, versionId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Retrieves a list of all Malloy notebooks within the specified package. Each notebook entry includes the relative path, package name, and any compilation errors. This endpoint is useful for discovering available notebooks and checking their status. 
      * @summary List package notebooks
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} packageName Name of the package
      * @param {string} [versionId] Version identifier for the package
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof NotebooksApi
      */
-    public listNotebooks(projectName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig) {
-        return NotebooksApiFp(this.configuration).listNotebooks(projectName, packageName, versionId, options).then((request) => request(this.axios, this.basePath));
+    public listNotebooks(environmentName: string, packageName: string, versionId?: string, options?: RawAxiosRequestConfig) {
+        return NotebooksApiFp(this.configuration).listNotebooks(environmentName, packageName, versionId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
+/**
+ * @export
+ */
+export const ExecuteNotebookCellBypassFiltersEnum = {
+    True: 'true',
+    False: 'false'
+} as const;
+export type ExecuteNotebookCellBypassFiltersEnum = typeof ExecuteNotebookCellBypassFiltersEnum[keyof typeof ExecuteNotebookCellBypassFiltersEnum];
 
 
 /**
@@ -2986,20 +5271,21 @@ export class NotebooksApi extends BaseAPI {
 export const PackagesApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Creates a new Malloy package within the specified project. A package serves as a container for models, notebooks, embedded databases, and other resources. The package will be initialized with the provided metadata and can immediately accept content. 
+         * Creates a new Malloy package within the specified environment. A package serves as a container for models, notebooks, embedded databases, and other resources. The package will be initialized with the provided metadata and can immediately accept content. 
          * @summary Create a new package
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {Package} _package 
+         * @param {boolean} [autoLoadManifest] When true, automatically loads any existing build manifest for the package so materialized table references resolve immediately. Defaults to false. 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createPackage: async (projectName: string, _package: Package, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('createPackage', 'projectName', projectName)
+        createPackage: async (environmentName: string, _package: Package, autoLoadManifest?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('createPackage', 'environmentName', environmentName)
             // verify required parameter '_package' is not null or undefined
             assertParamExists('createPackage', '_package', _package)
-            const localVarPath = `/projects/{projectName}/packages`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)));
+            const localVarPath = `/environments/{environmentName}/packages`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -3010,6 +5296,10 @@ export const PackagesApiAxiosParamCreator = function (configuration?: Configurat
             const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            if (autoLoadManifest !== undefined) {
+                localVarQueryParameter['autoLoadManifest'] = autoLoadManifest;
+            }
 
 
     
@@ -3028,18 +5318,18 @@ export const PackagesApiAxiosParamCreator = function (configuration?: Configurat
         /**
          * Permanently deletes a package and all its associated resources including models, notebooks, databases, and metadata. This operation cannot be undone, so use with caution. The package must exist and be accessible for deletion. 
          * @summary Delete a package
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deletePackage: async (projectName: string, packageName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('deletePackage', 'projectName', projectName)
+        deletePackage: async (environmentName: string, packageName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('deletePackage', 'environmentName', environmentName)
             // verify required parameter 'packageName' is not null or undefined
             assertParamExists('deletePackage', 'packageName', packageName)
-            const localVarPath = `/projects/{projectName}/packages/{packageName}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3066,20 +5356,20 @@ export const PackagesApiAxiosParamCreator = function (configuration?: Configurat
         /**
          * Retrieves detailed information about a specific package, including its models, notebooks, databases, and metadata. The reload parameter can be used to refresh the package state from disk before returning the information. The versionId parameter allows access to specific package versions. 
          * @summary Get package details and metadata
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Package name
          * @param {string} [versionId] Version identifier for the package
          * @param {boolean} [reload] Load / reload the package before returning result
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getPackage: async (projectName: string, packageName: string, versionId?: string, reload?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getPackage', 'projectName', projectName)
+        getPackage: async (environmentName: string, packageName: string, versionId?: string, reload?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('getPackage', 'environmentName', environmentName)
             // verify required parameter 'packageName' is not null or undefined
             assertParamExists('getPackage', 'packageName', packageName)
-            const localVarPath = `/projects/{projectName}/packages/{packageName}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3112,17 +5402,17 @@ export const PackagesApiAxiosParamCreator = function (configuration?: Configurat
             };
         },
         /**
-         * Retrieves a list of all Malloy packages within the specified project. Each package contains models, notebooks, databases, and other resources. This endpoint is useful for discovering available packages and their basic metadata. 
-         * @summary List project packages
-         * @param {string} projectName Name of the project
+         * Retrieves a list of all Malloy packages within the specified environment. Each package contains models, notebooks, databases, and other resources. This endpoint is useful for discovering available packages and their basic metadata. 
+         * @summary List environment packages
+         * @param {string} environmentName Name of the environment
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listPackages: async (projectName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('listPackages', 'projectName', projectName)
-            const localVarPath = `/projects/{projectName}/packages`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)));
+        listPackages: async (environmentName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('listPackages', 'environmentName', environmentName)
+            const localVarPath = `/environments/{environmentName}/packages`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -3148,21 +5438,21 @@ export const PackagesApiAxiosParamCreator = function (configuration?: Configurat
         /**
          * Updates the configuration and metadata of an existing package. This allows you to modify package settings, update the description, change the location, or update other package-level properties. The package must exist and be accessible. 
          * @summary Update package configuration
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {Package} _package 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        updatePackage: async (projectName: string, packageName: string, _package: Package, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('updatePackage', 'projectName', projectName)
+        updatePackage: async (environmentName: string, packageName: string, _package: Package, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'environmentName' is not null or undefined
+            assertParamExists('updatePackage', 'environmentName', environmentName)
             // verify required parameter 'packageName' is not null or undefined
             assertParamExists('updatePackage', 'packageName', packageName)
             // verify required parameter '_package' is not null or undefined
             assertParamExists('updatePackage', '_package', _package)
-            const localVarPath = `/projects/{projectName}/packages/{packageName}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)))
+            const localVarPath = `/environments/{environmentName}/packages/{packageName}`
+                .replace(`{${"environmentName"}}`, encodeURIComponent(String(environmentName)))
                 .replace(`{${"packageName"}}`, encodeURIComponent(String(packageName)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -3200,15 +5490,16 @@ export const PackagesApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = PackagesApiAxiosParamCreator(configuration)
     return {
         /**
-         * Creates a new Malloy package within the specified project. A package serves as a container for models, notebooks, embedded databases, and other resources. The package will be initialized with the provided metadata and can immediately accept content. 
+         * Creates a new Malloy package within the specified environment. A package serves as a container for models, notebooks, embedded databases, and other resources. The package will be initialized with the provided metadata and can immediately accept content. 
          * @summary Create a new package
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {Package} _package 
+         * @param {boolean} [autoLoadManifest] When true, automatically loads any existing build manifest for the package so materialized table references resolve immediately. Defaults to false. 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async createPackage(projectName: string, _package: Package, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Package>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.createPackage(projectName, _package, options);
+        async createPackage(environmentName: string, _package: Package, autoLoadManifest?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Package>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.createPackage(environmentName, _package, autoLoadManifest, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['PackagesApi.createPackage']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -3216,13 +5507,13 @@ export const PackagesApiFp = function(configuration?: Configuration) {
         /**
          * Permanently deletes a package and all its associated resources including models, notebooks, databases, and metadata. This operation cannot be undone, so use with caution. The package must exist and be accessible for deletion. 
          * @summary Delete a package
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deletePackage(projectName: string, packageName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Package>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deletePackage(projectName, packageName, options);
+        async deletePackage(environmentName: string, packageName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Package>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deletePackage(environmentName, packageName, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['PackagesApi.deletePackage']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -3230,28 +5521,28 @@ export const PackagesApiFp = function(configuration?: Configuration) {
         /**
          * Retrieves detailed information about a specific package, including its models, notebooks, databases, and metadata. The reload parameter can be used to refresh the package state from disk before returning the information. The versionId parameter allows access to specific package versions. 
          * @summary Get package details and metadata
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Package name
          * @param {string} [versionId] Version identifier for the package
          * @param {boolean} [reload] Load / reload the package before returning result
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getPackage(projectName: string, packageName: string, versionId?: string, reload?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Package>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getPackage(projectName, packageName, versionId, reload, options);
+        async getPackage(environmentName: string, packageName: string, versionId?: string, reload?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Package>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getPackage(environmentName, packageName, versionId, reload, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['PackagesApi.getPackage']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Retrieves a list of all Malloy packages within the specified project. Each package contains models, notebooks, databases, and other resources. This endpoint is useful for discovering available packages and their basic metadata. 
-         * @summary List project packages
-         * @param {string} projectName Name of the project
+         * Retrieves a list of all Malloy packages within the specified environment. Each package contains models, notebooks, databases, and other resources. This endpoint is useful for discovering available packages and their basic metadata. 
+         * @summary List environment packages
+         * @param {string} environmentName Name of the environment
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listPackages(projectName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Package>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listPackages(projectName, options);
+        async listPackages(environmentName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Package>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listPackages(environmentName, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['PackagesApi.listPackages']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -3259,14 +5550,14 @@ export const PackagesApiFp = function(configuration?: Configuration) {
         /**
          * Updates the configuration and metadata of an existing package. This allows you to modify package settings, update the description, change the location, or update other package-level properties. The package must exist and be accessible. 
          * @summary Update package configuration
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {Package} _package 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async updatePackage(projectName: string, packageName: string, _package: Package, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Package>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.updatePackage(projectName, packageName, _package, options);
+        async updatePackage(environmentName: string, packageName: string, _package: Package, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Package>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updatePackage(environmentName, packageName, _package, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['PackagesApi.updatePackage']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -3282,61 +5573,62 @@ export const PackagesApiFactory = function (configuration?: Configuration, baseP
     const localVarFp = PackagesApiFp(configuration)
     return {
         /**
-         * Creates a new Malloy package within the specified project. A package serves as a container for models, notebooks, embedded databases, and other resources. The package will be initialized with the provided metadata and can immediately accept content. 
+         * Creates a new Malloy package within the specified environment. A package serves as a container for models, notebooks, embedded databases, and other resources. The package will be initialized with the provided metadata and can immediately accept content. 
          * @summary Create a new package
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {Package} _package 
+         * @param {boolean} [autoLoadManifest] When true, automatically loads any existing build manifest for the package so materialized table references resolve immediately. Defaults to false. 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        createPackage(projectName: string, _package: Package, options?: RawAxiosRequestConfig): AxiosPromise<Package> {
-            return localVarFp.createPackage(projectName, _package, options).then((request) => request(axios, basePath));
+        createPackage(environmentName: string, _package: Package, autoLoadManifest?: boolean, options?: RawAxiosRequestConfig): AxiosPromise<Package> {
+            return localVarFp.createPackage(environmentName, _package, autoLoadManifest, options).then((request) => request(axios, basePath));
         },
         /**
          * Permanently deletes a package and all its associated resources including models, notebooks, databases, and metadata. This operation cannot be undone, so use with caution. The package must exist and be accessible for deletion. 
          * @summary Delete a package
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deletePackage(projectName: string, packageName: string, options?: RawAxiosRequestConfig): AxiosPromise<Package> {
-            return localVarFp.deletePackage(projectName, packageName, options).then((request) => request(axios, basePath));
+        deletePackage(environmentName: string, packageName: string, options?: RawAxiosRequestConfig): AxiosPromise<Package> {
+            return localVarFp.deletePackage(environmentName, packageName, options).then((request) => request(axios, basePath));
         },
         /**
          * Retrieves detailed information about a specific package, including its models, notebooks, databases, and metadata. The reload parameter can be used to refresh the package state from disk before returning the information. The versionId parameter allows access to specific package versions. 
          * @summary Get package details and metadata
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Package name
          * @param {string} [versionId] Version identifier for the package
          * @param {boolean} [reload] Load / reload the package before returning result
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getPackage(projectName: string, packageName: string, versionId?: string, reload?: boolean, options?: RawAxiosRequestConfig): AxiosPromise<Package> {
-            return localVarFp.getPackage(projectName, packageName, versionId, reload, options).then((request) => request(axios, basePath));
+        getPackage(environmentName: string, packageName: string, versionId?: string, reload?: boolean, options?: RawAxiosRequestConfig): AxiosPromise<Package> {
+            return localVarFp.getPackage(environmentName, packageName, versionId, reload, options).then((request) => request(axios, basePath));
         },
         /**
-         * Retrieves a list of all Malloy packages within the specified project. Each package contains models, notebooks, databases, and other resources. This endpoint is useful for discovering available packages and their basic metadata. 
-         * @summary List project packages
-         * @param {string} projectName Name of the project
+         * Retrieves a list of all Malloy packages within the specified environment. Each package contains models, notebooks, databases, and other resources. This endpoint is useful for discovering available packages and their basic metadata. 
+         * @summary List environment packages
+         * @param {string} environmentName Name of the environment
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listPackages(projectName: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Package>> {
-            return localVarFp.listPackages(projectName, options).then((request) => request(axios, basePath));
+        listPackages(environmentName: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<Package>> {
+            return localVarFp.listPackages(environmentName, options).then((request) => request(axios, basePath));
         },
         /**
          * Updates the configuration and metadata of an existing package. This allows you to modify package settings, update the description, change the location, or update other package-level properties. The package must exist and be accessible. 
          * @summary Update package configuration
-         * @param {string} projectName Name of the project
+         * @param {string} environmentName Name of the environment
          * @param {string} packageName Name of the package
          * @param {Package} _package 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        updatePackage(projectName: string, packageName: string, _package: Package, options?: RawAxiosRequestConfig): AxiosPromise<Package> {
-            return localVarFp.updatePackage(projectName, packageName, _package, options).then((request) => request(axios, basePath));
+        updatePackage(environmentName: string, packageName: string, _package: Package, options?: RawAxiosRequestConfig): AxiosPromise<Package> {
+            return localVarFp.updatePackage(environmentName, packageName, _package, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -3349,35 +5641,36 @@ export const PackagesApiFactory = function (configuration?: Configuration, baseP
  */
 export class PackagesApi extends BaseAPI {
     /**
-     * Creates a new Malloy package within the specified project. A package serves as a container for models, notebooks, embedded databases, and other resources. The package will be initialized with the provided metadata and can immediately accept content. 
+     * Creates a new Malloy package within the specified environment. A package serves as a container for models, notebooks, embedded databases, and other resources. The package will be initialized with the provided metadata and can immediately accept content. 
      * @summary Create a new package
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {Package} _package 
+     * @param {boolean} [autoLoadManifest] When true, automatically loads any existing build manifest for the package so materialized table references resolve immediately. Defaults to false. 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof PackagesApi
      */
-    public createPackage(projectName: string, _package: Package, options?: RawAxiosRequestConfig) {
-        return PackagesApiFp(this.configuration).createPackage(projectName, _package, options).then((request) => request(this.axios, this.basePath));
+    public createPackage(environmentName: string, _package: Package, autoLoadManifest?: boolean, options?: RawAxiosRequestConfig) {
+        return PackagesApiFp(this.configuration).createPackage(environmentName, _package, autoLoadManifest, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Permanently deletes a package and all its associated resources including models, notebooks, databases, and metadata. This operation cannot be undone, so use with caution. The package must exist and be accessible for deletion. 
      * @summary Delete a package
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} packageName Name of the package
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof PackagesApi
      */
-    public deletePackage(projectName: string, packageName: string, options?: RawAxiosRequestConfig) {
-        return PackagesApiFp(this.configuration).deletePackage(projectName, packageName, options).then((request) => request(this.axios, this.basePath));
+    public deletePackage(environmentName: string, packageName: string, options?: RawAxiosRequestConfig) {
+        return PackagesApiFp(this.configuration).deletePackage(environmentName, packageName, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Retrieves detailed information about a specific package, including its models, notebooks, databases, and metadata. The reload parameter can be used to refresh the package state from disk before returning the information. The versionId parameter allows access to specific package versions. 
      * @summary Get package details and metadata
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} packageName Package name
      * @param {string} [versionId] Version identifier for the package
      * @param {boolean} [reload] Load / reload the package before returning result
@@ -3385,430 +5678,34 @@ export class PackagesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof PackagesApi
      */
-    public getPackage(projectName: string, packageName: string, versionId?: string, reload?: boolean, options?: RawAxiosRequestConfig) {
-        return PackagesApiFp(this.configuration).getPackage(projectName, packageName, versionId, reload, options).then((request) => request(this.axios, this.basePath));
+    public getPackage(environmentName: string, packageName: string, versionId?: string, reload?: boolean, options?: RawAxiosRequestConfig) {
+        return PackagesApiFp(this.configuration).getPackage(environmentName, packageName, versionId, reload, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
-     * Retrieves a list of all Malloy packages within the specified project. Each package contains models, notebooks, databases, and other resources. This endpoint is useful for discovering available packages and their basic metadata. 
-     * @summary List project packages
-     * @param {string} projectName Name of the project
+     * Retrieves a list of all Malloy packages within the specified environment. Each package contains models, notebooks, databases, and other resources. This endpoint is useful for discovering available packages and their basic metadata. 
+     * @summary List environment packages
+     * @param {string} environmentName Name of the environment
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof PackagesApi
      */
-    public listPackages(projectName: string, options?: RawAxiosRequestConfig) {
-        return PackagesApiFp(this.configuration).listPackages(projectName, options).then((request) => request(this.axios, this.basePath));
+    public listPackages(environmentName: string, options?: RawAxiosRequestConfig) {
+        return PackagesApiFp(this.configuration).listPackages(environmentName, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
      * Updates the configuration and metadata of an existing package. This allows you to modify package settings, update the description, change the location, or update other package-level properties. The package must exist and be accessible. 
      * @summary Update package configuration
-     * @param {string} projectName Name of the project
+     * @param {string} environmentName Name of the environment
      * @param {string} packageName Name of the package
      * @param {Package} _package 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof PackagesApi
      */
-    public updatePackage(projectName: string, packageName: string, _package: Package, options?: RawAxiosRequestConfig) {
-        return PackagesApiFp(this.configuration).updatePackage(projectName, packageName, _package, options).then((request) => request(this.axios, this.basePath));
-    }
-}
-
-
-
-/**
- * ProjectsApi - axios parameter creator
- * @export
- */
-export const ProjectsApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Creates a new Malloy project with the specified configuration. A project serves as a container for packages, connections, and other resources. The project will be initialized with the provided metadata and can immediately accept packages and connections. 
-         * @summary Create a new project
-         * @param {Project} project 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        createProject: async (project: Project, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'project' is not null or undefined
-            assertParamExists('createProject', 'project', project)
-            const localVarPath = `/projects`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-    
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(project, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Permanently deletes a project and all its associated resources including packages, connections, and metadata. This operation cannot be undone, so use with caution. The project must exist and be accessible for deletion. 
-         * @summary Delete a project
-         * @param {string} projectName Name of the project
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        deleteProject: async (projectName: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('deleteProject', 'projectName', projectName)
-            const localVarPath = `/projects/{projectName}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Retrieves detailed information about a specific project, including its packages, connections, configuration, and metadata. The reload parameter can be used to refresh the project state from disk before returning the information. 
-         * @summary Get project details and metadata
-         * @param {string} projectName Name of the project
-         * @param {boolean} [reload] Load / reload the project before returning result
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getProject: async (projectName: string, reload?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('getProject', 'projectName', projectName)
-            const localVarPath = `/projects/{projectName}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            if (reload !== undefined) {
-                localVarQueryParameter['reload'] = reload;
-            }
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Retrieves a list of all projects currently hosted on this Malloy Publisher server. Each project contains metadata about its packages, connections, and configuration. This endpoint is typically used to discover available projects and their basic information. 
-         * @summary List all available projects
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        listProjects: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/projects`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Updates the configuration and metadata of an existing project. This allows you to modify project settings, update the README, change the location, or update other project-level properties. The project must exist and be accessible. 
-         * @summary Update project configuration
-         * @param {string} projectName Name of the project
-         * @param {Project} project 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        updateProject: async (projectName: string, project: Project, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectName' is not null or undefined
-            assertParamExists('updateProject', 'projectName', projectName)
-            // verify required parameter 'project' is not null or undefined
-            assertParamExists('updateProject', 'project', project)
-            const localVarPath = `/projects/{projectName}`
-                .replace(`{${"projectName"}}`, encodeURIComponent(String(projectName)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-    
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(project, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
-
-/**
- * ProjectsApi - functional programming interface
- * @export
- */
-export const ProjectsApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = ProjectsApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Creates a new Malloy project with the specified configuration. A project serves as a container for packages, connections, and other resources. The project will be initialized with the provided metadata and can immediately accept packages and connections. 
-         * @summary Create a new project
-         * @param {Project} project 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async createProject(project: Project, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Project>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.createProject(project, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['ProjectsApi.createProject']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * Permanently deletes a project and all its associated resources including packages, connections, and metadata. This operation cannot be undone, so use with caution. The project must exist and be accessible for deletion. 
-         * @summary Delete a project
-         * @param {string} projectName Name of the project
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async deleteProject(projectName: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Project>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteProject(projectName, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['ProjectsApi.deleteProject']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * Retrieves detailed information about a specific project, including its packages, connections, configuration, and metadata. The reload parameter can be used to refresh the project state from disk before returning the information. 
-         * @summary Get project details and metadata
-         * @param {string} projectName Name of the project
-         * @param {boolean} [reload] Load / reload the project before returning result
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async getProject(projectName: string, reload?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Project>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getProject(projectName, reload, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['ProjectsApi.getProject']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * Retrieves a list of all projects currently hosted on this Malloy Publisher server. Each project contains metadata about its packages, connections, and configuration. This endpoint is typically used to discover available projects and their basic information. 
-         * @summary List all available projects
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async listProjects(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Project>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listProjects(options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['ProjectsApi.listProjects']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * Updates the configuration and metadata of an existing project. This allows you to modify project settings, update the README, change the location, or update other project-level properties. The project must exist and be accessible. 
-         * @summary Update project configuration
-         * @param {string} projectName Name of the project
-         * @param {Project} project 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async updateProject(projectName: string, project: Project, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Project>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.updateProject(projectName, project, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['ProjectsApi.updateProject']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-    }
-};
-
-/**
- * ProjectsApi - factory interface
- * @export
- */
-export const ProjectsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = ProjectsApiFp(configuration)
-    return {
-        /**
-         * Creates a new Malloy project with the specified configuration. A project serves as a container for packages, connections, and other resources. The project will be initialized with the provided metadata and can immediately accept packages and connections. 
-         * @summary Create a new project
-         * @param {Project} project 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        createProject(project: Project, options?: RawAxiosRequestConfig): AxiosPromise<Project> {
-            return localVarFp.createProject(project, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Permanently deletes a project and all its associated resources including packages, connections, and metadata. This operation cannot be undone, so use with caution. The project must exist and be accessible for deletion. 
-         * @summary Delete a project
-         * @param {string} projectName Name of the project
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        deleteProject(projectName: string, options?: RawAxiosRequestConfig): AxiosPromise<Project> {
-            return localVarFp.deleteProject(projectName, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Retrieves detailed information about a specific project, including its packages, connections, configuration, and metadata. The reload parameter can be used to refresh the project state from disk before returning the information. 
-         * @summary Get project details and metadata
-         * @param {string} projectName Name of the project
-         * @param {boolean} [reload] Load / reload the project before returning result
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getProject(projectName: string, reload?: boolean, options?: RawAxiosRequestConfig): AxiosPromise<Project> {
-            return localVarFp.getProject(projectName, reload, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Retrieves a list of all projects currently hosted on this Malloy Publisher server. Each project contains metadata about its packages, connections, and configuration. This endpoint is typically used to discover available projects and their basic information. 
-         * @summary List all available projects
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        listProjects(options?: RawAxiosRequestConfig): AxiosPromise<Array<Project>> {
-            return localVarFp.listProjects(options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Updates the configuration and metadata of an existing project. This allows you to modify project settings, update the README, change the location, or update other project-level properties. The project must exist and be accessible. 
-         * @summary Update project configuration
-         * @param {string} projectName Name of the project
-         * @param {Project} project 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        updateProject(projectName: string, project: Project, options?: RawAxiosRequestConfig): AxiosPromise<Project> {
-            return localVarFp.updateProject(projectName, project, options).then((request) => request(axios, basePath));
-        },
-    };
-};
-
-/**
- * ProjectsApi - object-oriented interface
- * @export
- * @class ProjectsApi
- * @extends {BaseAPI}
- */
-export class ProjectsApi extends BaseAPI {
-    /**
-     * Creates a new Malloy project with the specified configuration. A project serves as a container for packages, connections, and other resources. The project will be initialized with the provided metadata and can immediately accept packages and connections. 
-     * @summary Create a new project
-     * @param {Project} project 
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ProjectsApi
-     */
-    public createProject(project: Project, options?: RawAxiosRequestConfig) {
-        return ProjectsApiFp(this.configuration).createProject(project, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Permanently deletes a project and all its associated resources including packages, connections, and metadata. This operation cannot be undone, so use with caution. The project must exist and be accessible for deletion. 
-     * @summary Delete a project
-     * @param {string} projectName Name of the project
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ProjectsApi
-     */
-    public deleteProject(projectName: string, options?: RawAxiosRequestConfig) {
-        return ProjectsApiFp(this.configuration).deleteProject(projectName, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Retrieves detailed information about a specific project, including its packages, connections, configuration, and metadata. The reload parameter can be used to refresh the project state from disk before returning the information. 
-     * @summary Get project details and metadata
-     * @param {string} projectName Name of the project
-     * @param {boolean} [reload] Load / reload the project before returning result
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ProjectsApi
-     */
-    public getProject(projectName: string, reload?: boolean, options?: RawAxiosRequestConfig) {
-        return ProjectsApiFp(this.configuration).getProject(projectName, reload, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Retrieves a list of all projects currently hosted on this Malloy Publisher server. Each project contains metadata about its packages, connections, and configuration. This endpoint is typically used to discover available projects and their basic information. 
-     * @summary List all available projects
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ProjectsApi
-     */
-    public listProjects(options?: RawAxiosRequestConfig) {
-        return ProjectsApiFp(this.configuration).listProjects(options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Updates the configuration and metadata of an existing project. This allows you to modify project settings, update the README, change the location, or update other project-level properties. The project must exist and be accessible. 
-     * @summary Update project configuration
-     * @param {string} projectName Name of the project
-     * @param {Project} project 
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ProjectsApi
-     */
-    public updateProject(projectName: string, project: Project, options?: RawAxiosRequestConfig) {
-        return ProjectsApiFp(this.configuration).updateProject(projectName, project, options).then((request) => request(this.axios, this.basePath));
+    public updatePackage(environmentName: string, packageName: string, _package: Package, options?: RawAxiosRequestConfig) {
+        return PackagesApiFp(this.configuration).updatePackage(environmentName, packageName, _package, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
