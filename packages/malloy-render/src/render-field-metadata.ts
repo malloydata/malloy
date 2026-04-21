@@ -204,7 +204,7 @@ export class RenderFieldMetadata {
     for (const tagName of nestOnly) {
       if (tag.has(tagName) && !nestTypes.includes(fieldType)) {
         log.error(
-          `Invalid # ${tagName} on '${field.name}': expected a nested query, got ${fieldType}. Fix: move this tag to a nest (view) field.`,
+          `Tag '${tagName}' on field '${field.name}' requires a nested query, but field is ${fieldType}. Try moving the tag to the line above the query, run, nest, or view declaration.`,
           tag.tag(tagName)
         );
       }
@@ -212,14 +212,14 @@ export class RenderFieldMetadata {
 
     if (tag.has('link') && fieldType !== FieldType.String) {
       log.error(
-        `Invalid # link on '${field.name}': expected a string field, got ${fieldType}. Fix: use on a string dimension or cast with ::string.`,
+        `Tag 'link' on field '${field.name}' requires a string field, but field is ${fieldType}`,
         tag.tag('link')
       );
     }
 
     if (tag.has('image') && fieldType !== FieldType.String) {
       log.error(
-        `Invalid # image on '${field.name}': expected a string field, got ${fieldType}. Fix: use on a string dimension containing URLs.`,
+        `Tag 'image' on field '${field.name}' requires a string field, but field is ${fieldType}`,
         tag.tag('image')
       );
     }
@@ -237,7 +237,7 @@ export class RenderFieldMetadata {
         )
       ) {
         log.error(
-          `Invalid # ${tagName} on '${field.name}': expected a numeric field, got ${fieldType}. Fix: use on a numeric measure or dimension.`,
+          `Tag '${tagName}' on field '${field.name}' requires a numeric field, but field is ${fieldType}`,
           tag.tag(tagName)
         );
       }
@@ -247,7 +247,7 @@ export class RenderFieldMetadata {
     const numberValTag = tag.tag('number');
     if (numberValTag?.scalarType() === 'number') {
       log.error(
-        `Invalid # number on '${field.name}': expected a format string, got a bare number. Fix: # number="#,##0.00" (quote the format string).`,
+        `Tag 'number' on field '${field.name}' has a bare numeric value. Use a quoted format string instead, e.g. # number="#,##0.00"`,
         numberValTag
       );
     }
@@ -259,7 +259,7 @@ export class RenderFieldMetadata {
       const validVizTypes = ['bar', 'line', 'table', 'dashboard'];
       if (!validVizTypes.includes(vizType)) {
         log.error(
-          `Invalid # viz on '${field.name}': expected one of [${validVizTypes.join(', ')}], got '${vizType}'. Fix: # viz=bar (or line, table, dashboard).`,
+          `Invalid viz type '${vizType}' on field '${field.name}'. Valid types: ${validVizTypes.join(', ')}`,
           tag.tag('viz')
         );
       }
@@ -271,7 +271,7 @@ export class RenderFieldMetadata {
       // Only validate if it's a string preset, not a custom { width, height }
       if (!validSizes.includes(sizeVal) && !tag.tag('size')?.has('width')) {
         log.warn(
-          `Invalid # size on '${field.name}': expected one of [${validSizes.join(', ')}], got '${sizeVal}'. Fix: # size=md (or use # size { width=N height=N }).`,
+          `Unknown size '${sizeVal}' on field '${field.name}'. Valid presets: ${validSizes.join(', ')}`,
           tag.tag('size')
         );
       }
@@ -285,7 +285,7 @@ export class RenderFieldMetadata {
         const codeMatch = currencyVal.match(/^(euro|pound|usd|eur|gbp)/i);
         if (!codeMatch) {
           log.error(
-            `Invalid # currency on '${field.name}': expected a code starting with [${validCodes.join(', ')}], got '${currencyVal}'. Fix: # currency=usd (or # currency for default USD).`,
+            `Unknown currency '${currencyVal}' on field '${field.name}'. Valid codes: ${validCodes.join(', ')}`,
             tag.tag('currency')
           );
         }
@@ -306,7 +306,7 @@ export class RenderFieldMetadata {
         ];
         if (!validUnits.includes(durationVal)) {
           log.error(
-            `Invalid # duration on '${field.name}': expected one of [${validUnits.join(', ')}], got '${durationVal}'. Fix: # duration=seconds.`,
+            `Unknown duration unit '${durationVal}' on field '${field.name}'. Valid units: ${validUnits.join(', ')}`,
             tag.tag('duration')
           );
         }
@@ -331,7 +331,7 @@ export class RenderFieldMetadata {
             const child = childByName.get(ref);
             if (!child) {
               log.error(
-                `Invalid viz.${channelName} on '${field.name}': expected a child field name, got '${ref}'. Fix: use one of [${[...childByName.keys()].join(', ')}].`,
+                `Chart field reference '${ref}' for '${channelName}' on '${field.name}' does not match any field. Available fields: ${[...childByName.keys()].join(', ')}`,
                 vizTag.tag(channelName)
               );
               continue;
@@ -343,7 +343,7 @@ export class RenderFieldMetadata {
               !child.wasCalculation()
             ) {
               log.error(
-                `Invalid viz.y on '${field.name}': child field '${ref}' is not numeric or a measure (got ${getFieldType(child)}). Fix: reference a measure or numeric dimension.`,
+                `Chart y-channel field '${ref}' on '${field.name}' must be numeric or a measure; got ${getFieldType(child)}.`,
                 vizTag.tag(channelName)
               );
             }
@@ -383,7 +383,7 @@ export class RenderFieldMetadata {
           !validWidthNames.includes(widthText)
         ) {
           log.warn(
-            `Invalid # column.width on '${field.name}': expected a number or one of [${validWidthNames.join(', ')}], got '${widthText}'. Fix: # column { width=md } (or width=128).`,
+            `Unknown column width '${widthText}' on field '${field.name}'. Valid presets: ${validWidthNames.join(', ')}`,
             columnTag.tag('width')
           );
         }
@@ -392,7 +392,7 @@ export class RenderFieldMetadata {
       const wordBreakVal = columnTag.text('word_break');
       if (wordBreakVal !== undefined && wordBreakVal !== 'break_all') {
         log.error(
-          `Invalid # column.word_break on '${field.name}': expected 'break_all', got '${wordBreakVal}'. Fix: # column { word_break=break_all }.`,
+          `Unknown column word_break '${wordBreakVal}' on field '${field.name}'. Valid values: break_all`,
           columnTag.tag('word_break')
         );
       }
@@ -409,7 +409,7 @@ export class RenderFieldMetadata {
           const validModes = ['normal', 'yoy'];
           if (!validModes.includes(modeVal)) {
             log.error(
-              `Invalid viz.mode on '${field.name}': expected one of [${validModes.join(', ')}], got '${modeVal}'. Fix: # bar_chart { mode=yoy }.`,
+              `Invalid chart mode '${modeVal}' on field '${field.name}'. Valid modes: ${validModes.join(', ')}`,
               vizTag.tag('mode')
             );
           }
@@ -425,7 +425,7 @@ export class RenderFieldMetadata {
         const validBvSizes = ['sm', 'md', 'lg'];
         if (!validBvSizes.includes(bvSize)) {
           log.error(
-            `Invalid # big_value.size on '${field.name}': expected one of [${validBvSizes.join(', ')}], got '${bvSize}'. Fix: # big_value { size=md }.`,
+            `Invalid big_value size '${bvSize}' on field '${field.name}'. Valid sizes: ${validBvSizes.join(', ')}`,
             bigValueTag.tag('size')
           );
         }
@@ -436,7 +436,7 @@ export class RenderFieldMetadata {
         const validFormats = ['pct', 'ppt'];
         if (!validFormats.includes(compFormat)) {
           log.error(
-            `Invalid # big_value.comparison_format on '${field.name}': expected one of [${validFormats.join(', ')}], got '${compFormat}'. Fix: # big_value { comparison_format=pct }.`,
+            `Invalid big_value comparison_format '${compFormat}' on field '${field.name}'. Valid formats: ${validFormats.join(', ')}`,
             bigValueTag.tag('comparison_format')
           );
         }
@@ -478,7 +478,7 @@ export class RenderFieldMetadata {
       if (dimensionFields.length > 0) {
         const dimNames = dimensionFields.map(f => f.name).join(', ');
         log.error(
-          `Invalid # big_value on '${field.name}': expected only aggregate fields, got group_by dimensions [${dimNames}]. Fix: remove the group_by fields or use # dashboard instead.`,
+          `Tag 'big_value' on field '${field.name}' does not support group_by fields. Found dimensions: ${dimNames}`,
           tag.tag('big_value')
         );
       }
@@ -533,7 +533,7 @@ export class RenderFieldMetadata {
         const validScales = ['k', 'm', 'b', 't', 'q', 'auto'];
         if (!validScales.includes(scaleVal)) {
           log.error(
-            `Invalid # number.scale on '${field.name}': expected one of [${validScales.join(', ')}], got '${scaleVal}'. Fix: # number { scale=auto }.`,
+            `Invalid number scale '${scaleVal}' on field '${field.name}'. Valid scales: ${validScales.join(', ')}`,
             numberTag.tag('scale')
           );
         }
@@ -552,7 +552,7 @@ export class RenderFieldMetadata {
         ];
         if (!validSuffixes.includes(suffixVal)) {
           log.error(
-            `Invalid # number.suffix on '${field.name}': expected one of [${validSuffixes.join(', ')}], got '${suffixVal}'. Fix: # number { suffix=lower }.`,
+            `Invalid number suffix '${suffixVal}' on field '${field.name}'. Valid suffixes: ${validSuffixes.join(', ')}`,
             numberTag.tag('suffix')
           );
         }
