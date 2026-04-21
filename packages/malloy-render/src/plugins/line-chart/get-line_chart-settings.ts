@@ -201,11 +201,17 @@ export function getLineChartSettings(
   if (vizTag.text('x')) {
     xChannel.fields.push(getField(vizTag.text('x')!));
   }
+  const isValidYField = (path: string) => {
+    const f = explore.fieldAt(path);
+    return f.isNumber() || f.wasCalculation();
+  };
   if (vizTag.text('y')) {
-    yChannel.fields.push(getField(vizTag.text('y')!));
+    const path = getField(vizTag.text('y')!);
+    if (isValidYField(path)) yChannel.fields.push(path);
   } else if (vizTag.textArray('y')) {
     vizTag.textArray('y')!.forEach(ref => {
-      yChannel.fields.push(getField(ref));
+      const path = getField(ref);
+      if (isValidYField(path)) yChannel.fields.push(path);
     });
   }
   if (vizTag.text('series')) {
@@ -225,7 +231,7 @@ export function getLineChartSettings(
       if (tag.has('x')) {
         embeddedX.push(pathTo);
       }
-      if (tag.has('y')) {
+      if (tag.has('y') && (field.isNumber() || field.wasCalculation())) {
         embeddedY.push(pathTo);
       }
       if (tag.has('series')) {
