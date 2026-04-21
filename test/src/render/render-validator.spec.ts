@@ -385,6 +385,91 @@ describe('render tag validation', () => {
     });
   });
 
+  describe('dashboard', () => {
+    it('errors when # span is out of range (too high)', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=15
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'span');
+    });
+
+    it('errors when # span is out of range (zero)', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=0
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'span');
+    });
+
+    it('errors when # dashboard.columns is non-positive', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard { columns=0 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate: a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'dashboard.columns');
+    });
+
+    it('errors when # dashboard.gap is negative', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard { gap=-5 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate: a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'dashboard.gap');
+    });
+
+    it('warns when # span is set alongside # dashboard.columns', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=6
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const warnings = logs.filter(l => l.severity === 'warn');
+      expect(warnings.length).toBeGreaterThan(0);
+      expect(
+        warnings.some(
+          w => w.message.includes('span') && w.message.includes('columns mode')
+        )
+      ).toBe(true);
+    });
+  });
+
   describe('chart y-channel must be numeric', () => {
     it('errors when # y is on a non-numeric dimension in a bar chart', async () => {
       const logs = await getValidationLogs(`
