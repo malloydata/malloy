@@ -22,6 +22,11 @@ import {
 } from '@/plugins/line-chart/get-line_chart-settings';
 import {generateLineChartVegaSpecV2} from '@/plugins/line-chart/generate-line_chart-vega-spec';
 import {type VegaChartProps} from '@/component/types';
+import {
+  resolveChartDisplayConfig,
+  type ChartDisplayConfig,
+} from '@/component/chart/resolve-chart-display';
+import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {type Config, parse, type Runtime} from 'vega';
 import 'vega-interpreter';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
@@ -52,6 +57,7 @@ interface SeriesStats {
 interface LineChartPluginInstance
   extends CoreVizPluginInstance<LineChartPluginMetadata> {
   field: NestField;
+  chartDisplay: ChartDisplayConfig;
   seriesStats: Map<string, SeriesStats>;
   getTopNSeries: (maxSeries: number) => (string | number | boolean)[];
   syntheticSeriesField?: Field;
@@ -114,11 +120,19 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
         throw new Error(`Line chart settings error: ${error.message}`);
       }
 
+      // Resolve chart display tags (title, subtitle, size) at setup time so
+      // chart.tsx and chart-layout-settings.ts don't need to read tags at
+      // render time.
+      const normalizedTag = convertLegacyToVizTag(field.tag);
+      const vizTag = normalizedTag.tag('viz')!;
+      const chartDisplay = resolveChartDisplayConfig(field, vizTag);
+
       const pluginInstance: LineChartPluginInstance = {
         name: 'line',
         field,
         renderMode: 'solidjs',
         sizingStrategy: 'fill',
+        chartDisplay,
         seriesStats,
 
         renderComponent: (props: RenderProps): JSXElement => {
@@ -145,7 +159,8 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
               plotHeight={vegaProps.plotHeight}
               totalWidth={vegaProps.totalWidth}
               totalHeight={vegaProps.totalHeight}
-              chartTag={vegaProps.chartTag}
+              title={vegaProps.title}
+              subtitle={vegaProps.subtitle}
               getTooltipData={vegaProps.getTooltipData}
               isDataLimited={mappedData.isDataLimited}
               dataLimitMessage={mappedData.dataLimitMessage}
@@ -321,20 +336,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
  * Tag paths read by the line chart plugin during render/interaction.
  */
 const LINE_CHART_TAG_PATHS: string[][] = [
-  ['viz', 'title'],
-  ['viz', 'subtitle'],
-  ['viz', 'mode'],
-  ['viz', 'size'],
-  ['viz', 'zero_baseline'],
-  ['viz', 'disableEmbedded'],
-  ['viz', 'disable_embedded'],
-  ['viz', 'x'],
-  ['viz', 'x', 'independent'],
-  ['viz', 'y'],
-  ['viz', 'y', 'independent'],
-  ['viz', 'series'],
-  ['viz', 'series', 'independent'],
-  ['viz', 'series', 'limit'],
+  // Legacy tag form (read by convertLegacyToVizTag)
   ['line_chart'],
 ];
 

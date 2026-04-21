@@ -101,5 +101,10 @@ export function barChartSettingsToTag(settings: BarChartSettings): Tag {
     );
   }
 
+  // Add x-axis limit if different from default
+  if (settings.xChannel?.limit !== defaultBarChartSettings.xChannel.limit) {
+    tag = tag.set(['viz', 'x', 'limit'], settings.xChannel.limit.toString());
+  }
+
   return tag;
 }

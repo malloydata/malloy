@@ -43,7 +43,8 @@ export type ChartV2Props = {
   plotHeight: number;
   totalWidth: number;
   totalHeight: number;
-  chartTag?: {text?: (key: string) => string | undefined}; // For title/subtitle support
+  title?: string;
+  subtitle?: string;
   getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
   isDataLimited?: boolean;
   dataLimitMessage?: string;
@@ -183,8 +184,8 @@ export function ChartV2Inner(props: ChartV2Props) {
 
   const showTooltip = createMemo(() => Boolean(tooltipData()));
 
-  const chartTitle = props.chartTag?.text?.('title');
-  const chartSubtitle = props.chartTag?.text?.('subtitle');
+  const chartTitle = props.title;
+  const chartSubtitle = props.subtitle;
   const isDataLimited = props.isDataLimited || false;
   const dataLimitMessage = props.dataLimitMessage || 'Showing limited results';
   const hasTitleBar = chartTitle || chartSubtitle || isDataLimited;

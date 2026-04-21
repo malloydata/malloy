@@ -22,10 +22,18 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
+import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
+import {
+  createTestRuntime,
+  describeIfDatabaseAvailable,
+  mkTestModel,
+} from '@malloydata/malloy/test';
 import '@malloydata/malloy/test/matchers';
+import crypto from 'crypto';
 import {SnowflakeConnection} from './snowflake_connection';
 import {SnowflakeExecutor} from './snowflake_executor';
+
+const [describeSnowflakeExecutor] = describeIfDatabaseAvailable(['snowflake']);
 
 describe('db:Snowflake', () => {
   const connOptions =
@@ -126,6 +134,59 @@ describe('db:Snowflake', () => {
     ]);
   });
 
+  it('discovers variant schema through a view', async () => {
+    // Create a view with a variant column, then fetch its schema.
+    // This exercises the TABLESAMPLE fallback path — TABLESAMPLE fails
+    // on views, so the code should fall back to a plain LIMIT sample.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_view_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"a": 1, "b": "hello"}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      // Should have discovered the inner structure, not fallen back to sql native
+      expect(dataField!.type).toBe('record');
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
+  it('preserves top-level array shape when sample rows have no descendants', async () => {
+    // ARRAY comes from DESCRIBE TABLE, so even if recursive flatten sees no
+    // element paths we should still return an array<variant> field.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_array_seed_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT ARRAY_CONSTRUCT() AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toEqual({
+        type: 'array',
+        name: 'DATA',
+        join: 'many',
+        elementTypeDef: {type: 'sql native', rawType: 'variant'},
+        fields: [
+          {name: 'value', type: 'sql native', rawType: 'variant'},
+          {
+            name: 'each',
+            type: 'sql native',
+            rawType: 'variant',
+            e: {node: 'field', path: ['value']},
+          },
+        ],
+      });
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
   it('maps integer types to bigint', async () => {
     const x: malloy.SQLSourceDef = {
       type: 'sql_select',
@@ -147,6 +208,178 @@ describe('db:Snowflake', () => {
       {name: 'BIGINT_VAL', type: 'number', numberType: 'bigint'},
       {name: 'NUMBER_VAL', type: 'number', numberType: 'bigint'},
     ]);
+  });
+
+  it('degrades scalar-vs-object field to sql native without losing siblings', async () => {
+    // data.foo is an object in one row and a scalar in another. Honest
+    // policy: foo becomes sql native variant (caller must cast with
+    // `foo :: {bar :: number}` to query bar). The enclosing record is
+    // unaffected — sibling fields keep their inferred types.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_conflict_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"foo": {"bar": 1}, "sib": "hello"}') AS data
+       UNION ALL
+       SELECT parse_json('{"foo": "oops", "sib": "world"}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        const fooField = dataField!.fields.find(f => f.name === 'foo');
+        expect(fooField).toEqual({
+          type: 'sql native',
+          rawType: 'variant',
+          name: 'foo',
+        });
+        const sibField = dataField!.fields.find(f => f.name === 'sib');
+        expect(sibField).toEqual({type: 'string', name: 'sib'});
+      }
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
+  it('degrades scalar-vs-object inside an array element without losing the array', async () => {
+    // Array analogue: items[*].foo is an object in one row and a scalar
+    // in another. foo degrades to variant; items stays array<record>.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_array_obj_conflict_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"items": [{"foo": {"bar": 1}, "sib": "a"}]}') AS data
+       UNION ALL
+       SELECT parse_json('{"items": [{"foo": "oops", "sib": "b"}]}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        const itemsField = dataField!.fields.find(f => f.name === 'items');
+        expect(itemsField).toBeDefined();
+        expect(itemsField!.type).toBe('array');
+        if (itemsField!.type === 'array') {
+          expect(itemsField!.elementTypeDef).toEqual({
+            type: 'record_element',
+          });
+          const fooField = itemsField!.fields.find(f => f.name === 'foo');
+          expect(fooField).toEqual({
+            type: 'sql native',
+            rawType: 'variant',
+            name: 'foo',
+          });
+          const sibField = itemsField!.fields.find(f => f.name === 'sib');
+          expect(sibField).toEqual({type: 'string', name: 'sib'});
+        }
+      }
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
+  it('full-scans a small base table with variant columns under the byte threshold', async () => {
+    // Base table (not view) small enough that BYTES lands under the
+    // default 100 MB schemaSampleFullScanMaxBytes. The probe sees the
+    // size and the code takes the full-scan branch — no TABLESAMPLE,
+    // no LIMIT. Every row contributes to the (path, type) histogram,
+    // so rare fields are caught.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const tableName = `malloytest.test_variant_fullscan_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE TABLE ${tableName} AS
+       SELECT parse_json('{"foo": 1, "bar": "hi"}') AS data
+       UNION ALL
+       SELECT parse_json('{"foo": 2, "bar": "bye"}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(tableName, tableName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        expect(dataField!.fields.find(f => f.name === 'foo')).toEqual({
+          name: 'foo',
+          type: 'number',
+          numberType: 'bigint',
+        });
+        expect(dataField!.fields.find(f => f.name === 'bar')).toEqual({
+          name: 'bar',
+          type: 'string',
+        });
+      }
+    } finally {
+      await conn.runSQL(`DROP TABLE IF EXISTS ${tableName}`);
+    }
+  });
+
+  it('degrades when same path is object in one row and array in another', async () => {
+    // foo is an object in one row and an array in another.
+    // foo should degrade to sql native.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_obj_array_conflict_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"foo": {"bar": 1}}') AS data
+       UNION ALL
+       SELECT parse_json('{"foo": [1, 2, 3]}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        const fooField = dataField!.fields.find(f => f.name === 'foo');
+        expect(fooField).toEqual({
+          type: 'sql native',
+          rawType: 'variant',
+          name: 'foo',
+        });
+      }
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
+  it('preserves sibling fields when one field degrades to variant', async () => {
+    // foo is scalar in one row and object in another, while stable is
+    // always consistent. The degradation should stay local to foo and
+    // keep stable untouched.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_sibling_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"foo": {"bar": 1}, "stable": 7}') AS data
+       UNION ALL
+       SELECT parse_json('{"foo": "oops", "stable": 8}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        const fooField = dataField!.fields.find(f => f.name === 'foo');
+        expect(fooField).toEqual({
+          type: 'sql native',
+          rawType: 'variant',
+          name: 'foo',
+        });
+        const stableField = dataField!.fields.find(f => f.name === 'stable');
+        expect(stableField).toEqual({
+          type: 'number',
+          numberType: 'bigint',
+          name: 'stable',
+        });
+      }
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
   });
 });
 
@@ -195,5 +428,311 @@ describe('numeric value reading', () => {
         ).toMatchResult(testModel, {F: 10.5});
       }
     );
+  });
+});
+
+class SnowflakeExecutorTestSetup {
+  private executor_: SnowflakeExecutor;
+  constructor(executor: SnowflakeExecutor) {
+    this.executor_ = executor;
+  }
+
+  async runBatch(
+    sqlText: string,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<QueryData> {
+    let ret: QueryData = [];
+    await (async () => {
+      const rows = await this.executor_.batch(sqlText, options, timeoutMs);
+      return rows;
+    })().then((rows: QueryData) => {
+      ret = rows;
+    });
+    return ret;
+  }
+
+  async runStreaming(sqlText: string, queryOptions?: RunSQLOptions) {
+    const rows: QueryData = [];
+    await (async () => {
+      for await (const row of await this.executor_.stream(
+        sqlText,
+        queryOptions
+      )) {
+        rows.push(row);
+      }
+    })();
+    return rows;
+  }
+
+  async done() {
+    await this.executor_.done();
+  }
+}
+
+describeSnowflakeExecutor('db:SnowflakeExecutor', () => {
+  let db: SnowflakeExecutorTestSetup;
+  let query: string;
+
+  beforeAll(() => {
+    const connOptions =
+      SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+      SnowflakeExecutor.getConnectionOptionsFromToml();
+    const executor = new SnowflakeExecutor(connOptions);
+    db = new SnowflakeExecutorTestSetup(executor);
+    query = `
+    select
+    *
+  from
+    (
+      values
+        (1, 'one'),
+        (2, 'two'),
+        (3, 'three'),
+        (4, 'four'),
+        (5, 'five')
+    );
+    `;
+  });
+
+  afterAll(async () => {
+    await db.done();
+  });
+
+  it('verifies batch execute', async () => {
+    const rows = await db.runBatch(query);
+    expect(rows.length).toBe(5);
+  });
+
+  it('verifies stream iterable', async () => {
+    const rows = await db.runStreaming(query, {rowLimit: 2});
+    expect(rows.length).toBe(2);
+  });
+
+  it('aborts batch immediately when signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      db.runBatch('select 1 as one', {abortSignal: controller.signal})
+    ).rejects.toThrow('Query aborted');
+  });
+
+  it('aborts stream immediately when signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      db.runStreaming('select 1 as one', {abortSignal: controller.signal})
+    ).rejects.toThrow('Query aborted');
+  });
+
+  it('cancels long-running batch on timeout and does not hang', async () => {
+    // Use a long-running statement so the client-side timeout triggers
+    // rather than the query finishing first.
+    const longRunningSql = 'CALL SYSTEM$WAIT(60)';
+    const start = Date.now();
+    await expect(db.runBatch(longRunningSql, {}, 500)).rejects.toBeInstanceOf(
+      Error
+    );
+    const elapsed = Date.now() - start;
+    // Should fail well before the Jest 100s timeout; give a generous upper bound.
+    expect(elapsed).toBeLessThan(30_000);
+    // Subsequent queries should still work after a timeout-induced cancel.
+    const rows = await db.runBatch('select 1 as one');
+    expect(rows.length).toBe(1);
+  });
+
+  describe('abort-under-contention', () => {
+    it('aborted stream() settles immediately and does not block subsequent queries', async () => {
+      // Use a dedicated executor with pool size 1 so contention is guaranteed.
+      const connOptions =
+        SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+        SnowflakeExecutor.getConnectionOptionsFromToml();
+      const executor = new SnowflakeExecutor(connOptions, {min: 1, max: 1});
+
+      try {
+        // Step 1: start a slow query that holds the only connection.
+        const slowQueryPromise = executor.batch(
+          "SELECT SYSTEM$WAIT(4, 'SECONDS')"
+        );
+
+        // Give the slow query a moment to acquire the connection.
+        await new Promise(r => setTimeout(r, 500));
+
+        // Step 2: start a second stream() with an AbortController.
+        const tag = `abort_test_${Date.now()}`;
+        const abortController = new AbortController();
+
+        const streamPromise = executor
+          .stream(`SELECT '${tag}' AS tag`, {
+            abortSignal: abortController.signal,
+          })
+          .then(async (iter: AsyncIterableIterator<QueryRecord>) => {
+            const rows: QueryRecord[] = [];
+            for await (const row of iter) {
+              rows.push(row);
+            }
+            return rows;
+          });
+
+        // Step 3: abort while still blocked on pool acquisition.
+        await new Promise(r => setTimeout(r, 200));
+        abortController.abort();
+
+        // Step 4: let the slow query finish.
+        await slowQueryPromise;
+
+        // The aborted stream should settle promptly.
+        const settleStart = Date.now();
+        const streamResult = await Promise.race([
+          streamPromise,
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('stream did not settle in time')),
+              3000
+            )
+          ),
+        ]).catch(() => undefined);
+        const settleMs = Date.now() - settleStart;
+
+        if (streamResult !== undefined) {
+          expect(streamResult.length).toBe(0);
+        }
+        expect(settleMs).toBeLessThan(3000);
+
+        // Step 5: a third trivial query should run right away.
+        const thirdStart = Date.now();
+        const rows = await executor.batch('SELECT 1 AS val');
+        const thirdMs = Date.now() - thirdStart;
+
+        expect(rows.length).toBe(1);
+        expect(thirdMs).toBeLessThan(5000);
+
+        // Step 6: verify the tagged query never executed.
+        try {
+          const history = await executor.batch(
+            `SELECT COUNT(*) AS cnt
+             FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY_BY_USER())
+             WHERE QUERY_TEXT LIKE '%${tag}%'
+               AND QUERY_TEXT NOT LIKE '%INFORMATION_SCHEMA%'`
+          );
+          const cnt = Number(history[0]['CNT']);
+          expect(cnt).toBe(0);
+        } catch {
+          // QUERY_HISTORY_BY_USER may not be available in all environments.
+        }
+      } finally {
+        await executor.done();
+      }
+    });
+  });
+
+  /**
+   * test that abort fires after the connection is acquired and
+   * `conn.execute()` has been entered, but before Snowflake invokes the
+   * `complete` callback. This is distinct from `abort-under-contention`,
+   * which aborts while still waiting on `pool.acquire()`.
+   */
+  describe('abort-mid-execute', () => {
+    it('batch: abort cancels in-flight execute and returns the pool', async () => {
+      const connOptions =
+        SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+        SnowflakeExecutor.getConnectionOptionsFromToml();
+      const executor = new SnowflakeExecutor(connOptions, {min: 1, max: 1});
+
+      try {
+        const slowSql = "SELECT SYSTEM$WAIT(30, 'SECONDS')";
+        const abortController = new AbortController();
+        const batchPromise = executor.batch(slowSql, {
+          abortSignal: abortController.signal,
+        });
+
+        // Past session init + pool handoff; the long statement should be in flight.
+        await new Promise(r => setTimeout(r, 1000));
+        abortController.abort();
+
+        const settleStart = Date.now();
+        await expect(batchPromise).rejects.toBeInstanceOf(Error);
+        expect(Date.now() - settleStart).toBeLessThan(20_000);
+
+        const rows = await executor.batch('SELECT 1 AS val');
+        expect(rows.length).toBe(1);
+      } finally {
+        await executor.done();
+      }
+    });
+
+    it('stream: abort cancels in-flight execute and returns the pool', async () => {
+      const connOptions =
+        SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+        SnowflakeExecutor.getConnectionOptionsFromToml();
+      const executor = new SnowflakeExecutor(connOptions, {min: 1, max: 1});
+
+      try {
+        const slowSql = "SELECT SYSTEM$WAIT(30, 'SECONDS')";
+        const abortController = new AbortController();
+        const streamPromise = executor.stream(slowSql, {
+          abortSignal: abortController.signal,
+        });
+
+        await new Promise(r => setTimeout(r, 800));
+        abortController.abort();
+
+        const settleStart = Date.now();
+        await expect(streamPromise).rejects.toBeInstanceOf(Error);
+        expect(Date.now() - settleStart).toBeLessThan(20_000);
+
+        const rows = await executor.batch('SELECT 1 AS val');
+        expect(rows.length).toBe(1);
+      } finally {
+        await executor.done();
+      }
+    });
+  });
+});
+
+describe('setupSQL', () => {
+  const connOptions =
+    SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+    SnowflakeExecutor.getConnectionOptionsFromToml();
+  const uid = crypto.randomBytes(4).toString('hex');
+  const connections: SnowflakeConnection[] = [];
+
+  function makeConn(name: string, setupSQL: string): SnowflakeConnection {
+    const conn = new SnowflakeConnection(name, {connOptions, setupSQL});
+    connections.push(conn);
+    return conn;
+  }
+
+  afterAll(async () => {
+    await Promise.all(connections.map(c => c.close()));
+  });
+
+  it('runs a single setup statement', async () => {
+    const conn = makeConn(
+      'snowflake_setup_single',
+      `SET setup_test_${uid} = 42`
+    );
+    const result = await conn.runSQL(`SELECT $setup_test_${uid} AS V`);
+    expect(malloy.API.rowDataToNumber(result.rows[0]['V'])).toBe(42);
+  });
+
+  it('runs multiple semicolon-newline-separated statements', async () => {
+    const conn = makeConn(
+      'snowflake_setup_multi',
+      [`SET setup_a_${uid} = 10`, `SET setup_b_${uid} = 20`].join(';\n')
+    );
+    const result = await conn.runSQL(
+      `SELECT $setup_a_${uid} + $setup_b_${uid} AS V`
+    );
+    expect(malloy.API.rowDataToNumber(result.rows[0]['V'])).toBe(30);
+  });
+
+  it('handles multi-line statements', async () => {
+    const conn = makeConn(
+      'snowflake_setup_multiline',
+      `SET\n  setup_ml_${uid} = 99`
+    );
+    const result = await conn.runSQL(`SELECT $setup_ml_${uid} AS V`);
+    expect(malloy.API.rowDataToNumber(result.rows[0]['V'])).toBe(99);
   });
 });

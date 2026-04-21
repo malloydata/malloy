@@ -114,6 +114,9 @@ export class Runtime {
   private _cacheManager: CacheManager | undefined;
   private _config: MalloyConfig | undefined;
   private _buildManifest: BuildManifest | undefined;
+  private _resolvedBuildManifestPromise:
+    | Promise<BuildManifest | undefined>
+    | undefined;
   private _virtualMap: VirtualMap | undefined;
 
   constructor({
@@ -121,10 +124,12 @@ export class Runtime {
     connections,
     connection,
     config,
+    buildManifest,
     eventStream,
     cacheManager,
   }: {
     urlReader?: URLReader;
+    buildManifest?: BuildManifest;
     eventStream?: EventStream;
     cacheManager?: CacheManager;
   } & Connectionable) {
@@ -146,6 +151,7 @@ export class Runtime {
     }
     this._urlReader = urlReader;
     this._connections = connections;
+    this._buildManifest = buildManifest;
     this._eventStream = eventStream;
     this._cacheManager = cacheManager;
   }
@@ -179,21 +185,84 @@ export class Runtime {
   }
 
   /**
-   * The build manifest for persist source substitution.
-   * When set, compiled queries automatically resolve persist sources
-   * against this manifest. Can be overridden per-query via
-   * CompileQueryOptions.buildManifest.
+   * Setter — install an explicit build manifest for persist source
+   * substitution. From this point on, compiled queries resolve persist
+   * sources against `manifest` (still overridable per-query via
+   * `CompileQueryOptions.buildManifest`). Pass `undefined` to clear.
    *
-   * When constructed with a MalloyConfig, falls through to
-   * config.manifest.buildManifest (a live reference — builder
-   * mutations are visible automatically).
+   * This wins over the auto-read path: an explicit value here takes
+   * precedence over whatever `config.manifestURL` would have resolved
+   * to. Setting also drops any cached auto-read promise so a subsequent
+   * compile sees the new value rather than a stale soft-miss.
+   *
+   * No getter is provided — call `_resolveBuildManifest()` to materialize
+   * the value the next compile will actually use (explicit > auto-read >
+   * undefined).
    */
-  public get buildManifest(): BuildManifest | undefined {
-    return this._buildManifest ?? this._config?.manifest.buildManifest;
-  }
-
   public set buildManifest(manifest: BuildManifest | undefined) {
     this._buildManifest = manifest;
+    this._resolvedBuildManifestPromise = undefined;
+  }
+
+  /**
+   * Resolve the build manifest for the next compile. Called from inside
+   * the async query-compile path (`QueryMaterializer.loadPreparedResult`).
+   *
+   * Precedence:
+   *   1. Explicit `_buildManifest` (from constructor option or setter) → use it.
+   *   2. `config.manifestURL` present → lazily read it via `_urlReader`,
+   *      parse as JSON, cache the promise.
+   *      - Read failure (file not present, permission denied, etc.) →
+   *        soft miss to `undefined`. The common "no manifest yet" case
+   *        for projects that don't use persistence.
+   *      - File present but unparseable → return `{entries: {}, loadError}`
+   *        instead of `undefined`. Non-strict compiles still fall through
+   *        to inline SQL (entries is empty), but strict compiles can
+   *        include the load error in their "not found in manifest" throw,
+   *        so the user sees *why* the manifest looks empty.
+   *   3. No URL → `undefined`.
+   *
+   * The cached promise means concurrent compiles share one IO round-trip;
+   * `buildManifest = ...` (setter) clears the cache so subsequent compiles
+   * see the new value.
+   *
+   * @internal Accessed from the Materializer classes in this file. Not part
+   * of the public API — the leading underscore + `@internal` marks intent.
+   */
+  public _resolveBuildManifest(): Promise<BuildManifest | undefined> {
+    if (this._buildManifest) {
+      return Promise.resolve(this._buildManifest);
+    }
+    const url = this._config?.manifestURL;
+    if (!url) return Promise.resolve(undefined);
+    if (!this._resolvedBuildManifestPromise) {
+      this._resolvedBuildManifestPromise = (async () => {
+        let text: string;
+        try {
+          const result = await this._urlReader.readURL(url);
+          text = typeof result === 'string' ? result : result.contents;
+        } catch {
+          // Read failure (no file, permission, etc.) — treat as "no
+          // manifest, no substitution." Strict mode is silently inactive
+          // here, matching the soloist case where there's nothing to
+          // strict-check against.
+          return undefined;
+        }
+        try {
+          return JSON.parse(text) as BuildManifest;
+        } catch (e) {
+          // File was present but couldn't be parsed. Return an empty
+          // manifest carrying the load error so a strict-mode compile can
+          // surface the real reason in its throw.
+          const msg = e instanceof Error ? e.message : String(e);
+          return {
+            entries: {},
+            loadError: `Manifest file at ${url.toString()} could not be parsed: ${msg}`,
+          };
+        }
+      })();
+    }
+    return this._resolvedBuildManifestPromise;
   }
 
   /**
@@ -211,6 +280,22 @@ export class Runtime {
 
   public set virtualMap(map: VirtualMap | undefined) {
     this._virtualMap = map;
+  }
+
+  /**
+   * Notify every connection this runtime's config has handed out that it
+   * is time to release its resources (pools, sockets, file handles,
+   * in-process databases). A no-op for runtimes constructed without a
+   * MalloyConfig — in that case the caller owns the connections they
+   * passed in and is responsible for closing them.
+   *
+   * The expected contract is one MalloyConfig per Runtime. Long-running
+   * hosts (Publisher, a VS Code extension tearing down a project) should
+   * call this when a runtime goes out of scope; one-shot CLIs can skip it
+   * and let process exit clean up.
+   */
+  public async releaseConnections(): Promise<void> {
+    await this._config?.releaseConnections();
   }
 
   /**
@@ -852,11 +937,13 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         ...options,
       };
 
-      // Use manifest from options if provided, otherwise fall back to Runtime's manifest.
+      // Use manifest from options if provided, otherwise fall back to
+      // Runtime's manifest (explicit or lazily-read from config.manifestURL).
       // Pass EMPTY_BUILD_MANIFEST in options to explicitly suppress manifest substitution.
       const explicitManifest = mergedOptions.buildManifest !== undefined;
       let buildManifest =
-        mergedOptions.buildManifest ?? this.runtime.buildManifest;
+        mergedOptions.buildManifest ??
+        (await this.runtime._resolveBuildManifest());
 
       // If we have a manifest with entries, compute connectionDigests for lookups.
       // TODO: This is inefficient - we call getBuildPlan just to find connection names.

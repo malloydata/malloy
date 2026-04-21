@@ -33,7 +33,7 @@ registerConnectionType('mysql', {
       displayName: 'Port',
       type: 'number',
       optional: true,
-      default: '3306',
+      default: 3306,
     },
     {name: 'database', displayName: 'Database', type: 'string', optional: true},
     {name: 'user', displayName: 'User', type: 'string', optional: true},

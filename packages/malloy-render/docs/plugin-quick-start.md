@@ -97,3 +97,7 @@ const renderer = new MalloyRenderer({
   plugins: [MinimalPluginFactory],
 });
 ```
+
+## Next steps
+
+Once your plugin reads tags beyond just the one that triggers `matches()`, read [validation.md](validation.md). It covers when to throw (red error tile), when to log (source-located validation error), and how to declare tag ownership so valid tag uses don't trigger unread-tag warnings.

@@ -3,19 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {URLReader} from '../../runtime_types';
 import type {Connection, LookupConnection} from '../../connection/types';
-import type {
-  ConnectionConfigEntry,
-  ManagedConnectionLookup,
-} from '../../connection/registry';
-import {
-  createConnectionsFromConfig,
-  getConnectionProperties,
-  getRegisteredConnectionTypes,
-  isConnectionConfigEntry,
-  isValueRef,
-} from '../../connection/registry';
+import type {ManagedConnectionLookup} from '../../connection/registry';
 import type {LogMessage} from '../../lang/parse-log';
 import type {
   BuildID,
@@ -23,71 +12,33 @@ import type {
   BuildManifestEntry,
   VirtualMap,
 } from '../../model/malloy_types';
-
-const DEFAULT_MANIFEST_PATH = 'MANIFESTS';
-const MANIFEST_FILENAME = 'malloy-manifest.json';
-
-/**
- * The parsed contents of a malloy-config.json file.
- */
-export interface MalloyProjectConfig {
-  connections?: Record<string, ConnectionConfigEntry>;
-  manifestPath?: string;
-  virtualMap?: VirtualMap;
-}
+import {compileConfig} from './config_compile';
+import {prepareConfig} from './config_resolve';
+import {buildManagedLookup} from './config_lookup';
+import {defaultConfigOverlays} from './config_overlays';
+import type {ConfigOverlays} from './config_overlays';
 
 /**
  * In-memory manifest store. Reads, updates, and serializes manifest data.
  *
- * Always valid — starts empty, call load() to populate from a file.
- * The BuildManifest object returned by `buildManifest` is stable: load()
- * and update() mutate the same entries object, so any reference obtained
- * via `buildManifest` stays current without re-assignment.
+ * Always valid — starts empty. Populate by calling `loadText(jsonText)` with
+ * the manifest file contents, which the caller reads themselves (typically
+ * through a `URLReader` they already have). The `Manifest` class deliberately
+ * does no IO — it exists so that applications that want to build or mutate
+ * manifest state have a typed handle with a stable `buildManifest` reference.
  *
- * The `strict` flag controls what happens when a persist source's BuildID
- * is not found in the manifest. When strict, the compiler throws an error
- * instead of falling through to inline SQL. The flag is loaded from the
- * manifest file and can be overridden by the application before creating
- * a Runtime.
+ * The `BuildManifest` returned by `buildManifest` is stable: `loadText()` and
+ * `update()` mutate the same entries object, so any reference obtained via
+ * `buildManifest` stays current without re-assignment.
+ *
+ * The `strict` flag controls what happens when a persist source's BuildID is
+ * not found in the manifest. When strict, the compiler throws an error
+ * instead of falling through to inline SQL. Loaded from the manifest file by
+ * `loadText()`; applications may override it at any time.
  */
 export class Manifest {
-  private readonly _urlReader?: URLReader;
   private readonly _manifest: BuildManifest = {entries: {}, strict: false};
   private readonly _touched = new Set<BuildID>();
-
-  constructor(urlReader?: URLReader) {
-    this._urlReader = urlReader;
-  }
-
-  /**
-   * Load manifest data from a manifest root directory.
-   * Reads `<manifestRoot>/malloy-manifest.json` via the URLReader.
-   * Replaces any existing data. If the file doesn't exist or no URLReader
-   * is available, clears to empty.
-   */
-  async load(manifestRoot: URL): Promise<void> {
-    this._clearEntries();
-    this._touched.clear();
-    this._manifest.strict = false;
-
-    if (!this._urlReader) return;
-
-    const dir = manifestRoot.toString().endsWith('/')
-      ? manifestRoot.toString()
-      : manifestRoot.toString() + '/';
-    const manifestURL = new URL(MANIFEST_FILENAME, dir);
-
-    let contents: string;
-    try {
-      const result = await this._urlReader.readURL(manifestURL);
-      contents = typeof result === 'string' ? result : result.contents;
-    } catch {
-      // No manifest file — stay empty
-      return;
-    }
-
-    this._loadParsed(JSON.parse(contents));
-  }
 
   /**
    * Load manifest data from a JSON string.
@@ -101,9 +52,9 @@ export class Manifest {
   }
 
   /**
-   * The live BuildManifest. This is a stable reference — load() and update()
-   * mutate the same object, so passing this to a Runtime means the Runtime
-   * always sees current data including the strict flag.
+   * The live BuildManifest. This is a stable reference — `loadText()` and
+   * `update()` mutate the same object, so passing this to a Runtime means
+   * the Runtime always sees current data including the strict flag.
    */
   get buildManifest(): BuildManifest {
     return this._manifest;
@@ -174,467 +125,304 @@ export class Manifest {
 }
 
 /**
- * Loads and holds a Malloy project configuration (connections + manifest +
- * virtualMap). Pass directly to Runtime — everything flows automatically.
+ * A resolved Malloy runtime configuration. The constructor takes either a
+ * JSON string (legacy/compat) or a POJO plus an optional `ConfigOverlays`
+ * dict, compiles the input into a typed tree, resolves all overlay
+ * references, and builds the connection lookup via the connection registry.
  *
- *   // From a URL — reads config + manifest via URLReader
- *   const config = new MalloyConfig(urlReader, configURL);
- *   await config.load();
+ * After construction:
+ *   - `connections` — the `LookupConnection` runtime consumes. Starts as the
+ *     lookup created from the resolved connections; `wrapConnections()` replaces
+ *     it with a wrapped version for host-specific behavior.
+ *   - `virtualMap` — extracted from the POJO as-is.
+ *   - `manifestPath` — extracted from the POJO as-is (the raw string).
+ *   - `manifestURL` — resolved URL of `malloy-manifest.json`, computed from
+ *     `manifestPath` + the `configURL` carried on the `config` overlay (if
+ *     any). `undefined` when no `configURL` is available. Runtime uses this
+ *     to lazily read the manifest on the first persistence query. Builders
+ *     that want to construct or mutate manifest state use the standalone
+ *     `Manifest` class directly — they don't go through MalloyConfig.
+ *   - `log` — validation warnings and overlay-resolution warnings.
  *
- *   // From text you already have
- *   const config = new MalloyConfig(configText);
+ * Typical usage:
  *
- *   // Either way, pass to Runtime — connections, buildManifest, virtualMap
- *   // all come from the config. No manual wiring needed.
+ *   // From a pre-loaded POJO (e.g. from `discoverConfig` or Publisher):
+ *   const config = new MalloyConfig(pojo);
  *   const runtime = new Runtime({config, urlReader});
  *
- * To override specific fields, mutate the config before passing:
- *   config.connectionMap = myCustomConnections;
+ *   // From a JSON string:
+ *   const config = new MalloyConfig(configText);
+ *
+ *   // With host-supplied overlays (local hosts after discovery):
+ *   const config = new MalloyConfig(pojo, {
+ *     config: contextOverlay({rootDirectory: ceilingURL}),
+ *   });
+ *
+ *   // Wrap the connection lookup for host-specific behavior:
+ *   config.wrapConnections(base => name => base(name) ?? fallback(name));
+ *
+ * The old async `new MalloyConfig(urlReader, configURL)` form has been
+ * removed. Callers that need to load from a URL should pre-load via
+ * `urlReader.readURL()` / `JSON.parse()` and pass the POJO, or use the
+ * sync string form after reading the file.
  */
 export class MalloyConfig {
-  private readonly _urlReader?: URLReader;
-  private readonly _configURL?: string;
-  private _data: MalloyProjectConfig | undefined;
-  private _log: LogMessage[] = [];
-  private _connectionMap: Record<string, ConnectionConfigEntry> | undefined;
-  private readonly _manifest: Manifest;
-  private _managedLookup: ManagedConnectionLookup | undefined;
-  private _connectionLookupOverride: LookupConnection<Connection> | undefined;
-  private _onConnectionCreated:
-    | ((name: string, connection: Connection) => void)
-    | undefined;
-
-  constructor(configText: string);
-  constructor(urlReader: URLReader, configURL: string);
-  constructor(urlReaderOrText: URLReader | string, configURL?: string) {
-    if (typeof urlReaderOrText === 'string') {
-      const {config, log} = parseConfigText(urlReaderOrText);
-      this._data = config;
-      this._log = log;
-      this._connectionMap = this._data.connections
-        ? {...this._data.connections}
-        : undefined;
-      this._manifest = new Manifest();
-    } else {
-      this._urlReader = urlReaderOrText;
-      this._configURL = configURL;
-      this._manifest = new Manifest(urlReaderOrText);
-    }
-  }
-
+  readonly virtualMap?: VirtualMap;
+  readonly manifestPath?: string;
   /**
-   * Load everything: parse config file, then load the default manifest.
-   * No-op if created from text.
+   * Resolved URL of the manifest file (`malloy-manifest.json`), if a
+   * `configURL` was provided in the `config` overlay. Computed once in the
+   * constructor from `manifestPath` (default `'MANIFESTS'`) joined to
+   * `configURL`. Stays `undefined` for callers that didn't supply a
+   * `configURL` — Runtime treats that as "no auto-read."
    */
-  async load(): Promise<void> {
-    await this.loadConfig();
-    if (this._configURL) {
-      const manifestPath = this._data?.manifestPath ?? DEFAULT_MANIFEST_PATH;
-      const manifestRoot = new URL(manifestPath, this._configURL);
-      await this._manifest.load(manifestRoot);
-    }
-  }
+  readonly manifestURL?: URL;
+  readonly log: readonly LogMessage[];
 
-  /**
-   * Load only the config file. Does not load the manifest.
-   * No-op if created from text.
-   */
-  async loadConfig(): Promise<void> {
-    if (!this._urlReader || !this._configURL) return;
-    const result = await this._urlReader.readURL(new URL(this._configURL));
-    const contents = typeof result === 'string' ? result : result.contents;
-    const parsed = parseConfigText(contents);
-    this._data = parsed.config;
-    this._log = parsed.log;
-    this._connectionMap = this._data.connections
-      ? {...this._data.connections}
-      : undefined;
-  }
+  private _connections: LookupConnection<Connection>;
+  private readonly _managedLookup: ManagedConnectionLookup;
+  private readonly _overlays: ConfigOverlays;
 
-  /**
-   * The parsed config data. Undefined if created from URL and not yet loaded.
-   */
-  get data(): MalloyProjectConfig | undefined {
-    return this._data;
-  }
+  constructor(source: string);
+  constructor(pojo: object, overlays?: ConfigOverlays);
+  constructor(sourceOrPojo: string | object, overlays?: ConfigOverlays) {
+    const log: LogMessage[] = [];
 
-  /**
-   * The active connection entries. Set this to override which connections
-   * are used before constructing a Runtime.
-   */
-  get connectionMap(): Record<string, ConnectionConfigEntry> | undefined {
-    return this._connectionMap;
-  }
-
-  set connectionMap(map: Record<string, ConnectionConfigEntry>) {
-    this._connectionMap = map;
-    // Invalidate cached managed lookup — new map means new connections
-    this._managedLookup = undefined;
-  }
-
-  /**
-   * A LookupConnection built from the current connectionMap via the
-   * connection type registry. The result is cached — repeated access
-   * returns the same object (and the same underlying connections).
-   *
-   * If `connectionLookup` has been set, returns the override instead.
-   *
-   * Changing `connectionMap` invalidates the cache; the next access
-   * creates a fresh ManagedConnectionLookup.
-   */
-  get connections(): LookupConnection<Connection> {
-    if (this._connectionLookupOverride) {
-      return this._connectionLookupOverride;
-    }
-    if (!this._connectionMap) {
-      throw new Error('Config not loaded. Call load() or loadConfig() first.');
-    }
-    if (!this._managedLookup) {
-      this._managedLookup = createConnectionsFromConfig(
-        {connections: this._connectionMap},
-        this._onConnectionCreated
-      );
-    }
-    return this._managedLookup;
-  }
-
-  /**
-   * Override the connection lookup entirely. When set, the `connections`
-   * getter returns this instead of building from `connectionMap`.
-   * Use this when you need to merge config connections with other sources.
-   */
-  get connectionLookup(): LookupConnection<Connection> | undefined {
-    return this._connectionLookupOverride;
-  }
-
-  set connectionLookup(lookup: LookupConnection<Connection> | undefined) {
-    this._connectionLookupOverride = lookup;
-  }
-
-  /**
-   * Callback invoked once per connection immediately after factory creation.
-   * Use for post-creation setup (e.g., registering WASM file handlers).
-   * Must be set before the first connection is looked up.
-   */
-  set onConnectionCreated(
-    cb: ((name: string, connection: Connection) => void) | undefined
-  ) {
-    this._onConnectionCreated = cb;
-  }
-
-  /**
-   * Close all connections created by this config's internal managed lookup.
-   * Does nothing if connections were overridden via `connectionLookup`.
-   */
-  async close(): Promise<void> {
-    if (this._managedLookup) {
-      await this._managedLookup.close();
-      this._managedLookup = undefined;
-    }
-  }
-
-  /**
-   * The Manifest object. Always exists, may be empty if not yet loaded.
-   */
-  get manifest(): Manifest {
-    return this._manifest;
-  }
-
-  /**
-   * The VirtualMap parsed from config, if present.
-   */
-  get virtualMap(): VirtualMap | undefined {
-    return this._data?.virtualMap;
-  }
-
-  /**
-   * Errors and warnings from parsing and validating the config.
-   * Includes JSON parse errors (severity 'error') and schema validation
-   * warnings (severity 'warn') such as unknown keys, unknown connection
-   * types, wrong value types, and missing environment variables.
-   */
-  get log(): LogMessage[] {
-    return this._log;
-  }
-}
-
-interface ParseResult {
-  config: MalloyProjectConfig;
-  log: LogMessage[];
-}
-
-/**
- * Parse a config JSON string into a MalloyProjectConfig.
- * Invalid connection entries (missing `is`) are silently dropped.
- * Returns the processed config and validation log.
- */
-function parseConfigText(jsonText: string): ParseResult {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonText);
-  } catch (e) {
-    return {
-      config: {},
-      log: [
-        {
+    // Normalize input to a POJO.
+    let pojo: unknown;
+    if (typeof sourceOrPojo === 'string') {
+      try {
+        pojo = JSON.parse(sourceOrPojo);
+      } catch (e) {
+        log.push({
           message: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
           severity: 'error',
           code: 'config-validation',
-        },
-      ],
-    };
-  }
-
-  if (!isRecord(parsed)) {
-    return {
-      config: {},
-      log: [
-        {
-          message: 'config is not a JSON object',
-          severity: 'error',
-          code: 'config-validation',
-        },
-      ],
-    };
-  }
-
-  const rawConnections = parsed['connections'];
-  const connectionEntries = Object.entries(
-    isRecord(rawConnections) ? rawConnections : {}
-  ).filter((entry): entry is [string, ConnectionConfigEntry] =>
-    isConnectionConfigEntry(entry[1])
-  );
-  const connections: Record<string, ConnectionConfigEntry> =
-    Object.fromEntries(connectionEntries);
-  const result: MalloyProjectConfig = {...parsed, connections};
-  const virtualMap = parsed['virtualMap'];
-  if (
-    virtualMap &&
-    typeof virtualMap === 'object' &&
-    !Array.isArray(virtualMap)
-  ) {
-    const outer = new Map<string, Map<string, string>>();
-    for (const [connName, inner] of Object.entries(virtualMap)) {
-      if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
-        const innerMap = new Map<string, string>();
-        for (const [virtualName, tablePath] of Object.entries(
-          inner as Record<string, unknown>
-        )) {
-          if (typeof tablePath === 'string') {
-            innerMap.set(virtualName, tablePath);
-          }
-        }
-        outer.set(connName, innerMap);
+        });
+        pojo = {};
       }
+    } else {
+      pojo = sourceOrPojo;
     }
-    result.virtualMap = outer;
+
+    // Compile → typed tree + validation warnings.
+    const compiled = compileConfig(pojo);
+    log.push(...compiled.log);
+
+    // Merge the host-supplied overlays onto the defaults. Same-named
+    // entries replace defaults; new keys are added.
+    const mergedOverlays: ConfigOverlays = {
+      ...defaultConfigOverlays(),
+      ...overlays,
+    };
+
+    // Synchronous prep: extract literal sections (manifestPath, virtualMap),
+    // pull out compiled connection subtrees, fabricate bare entries for
+    // missing registered types when `includeDefaultConnections` is set.
+    // Reference resolution for connection properties is *not* done here —
+    // it happens async at `lookupConnection` time, so overlays that touch
+    // IO (secret stores, session reads) have a natural async seam.
+    const prepared = prepareConfig(compiled.compiled, log);
+
+    this._managedLookup = buildManagedLookup(
+      prepared.compiledConnections,
+      mergedOverlays,
+      log
+    );
+    this._connections = this._managedLookup;
+
+    this._overlays = mergedOverlays;
+    this.virtualMap = toVirtualMap(prepared.virtualMap);
+    this.manifestPath = prepared.manifestPath;
+    this.manifestURL = computeManifestURL(
+      prepared.manifestPath,
+      mergedOverlays,
+      log
+    );
+    this.log = log;
   }
-  return {config: result, log: validateConfig(parsed)};
+
+  /**
+   * The live `LookupConnection` consumed by Runtime. Stable until
+   * `wrapConnections()` is called; after that, returns the wrapped lookup.
+   */
+  get connections(): LookupConnection<Connection> {
+    return this._connections;
+  }
+
+  /**
+   * Wrap the current connection lookup with a host-supplied wrapper.
+   * Mutates in place — subsequent `connections` accesses return the new
+   * wrapped lookup. Runtime never needs to know whether wrapping happened.
+   *
+   * Typical uses:
+   *   - VS Code layers settings + defaults below the config lookup
+   *   - Publisher attaches session-specific behavior to resolved connections
+   */
+  wrapConnections(
+    wrapper: (
+      base: LookupConnection<Connection>
+    ) => LookupConnection<Connection>
+  ): void {
+    this._connections = wrapper(this._connections);
+  }
+
+  /**
+   * Notify every connection this config has handed out that it is time to
+   * release its resources, then drop them from the internal cache.
+   *
+   * Most callers should use `Runtime.releaseConnections()` instead — the
+   * expected contract is one MalloyConfig per Runtime, and the runtime is
+   * the natural handle for lifecycle. This method exists because Runtime
+   * forwards to it, and for the rare case of a MalloyConfig constructed
+   * without an accompanying Runtime.
+   *
+   * MalloyConfig does not own any connection resources itself — pools,
+   * sockets, file handles, and in-process databases all live inside the
+   * individual Connection objects. What the managed lookup owns is a cache
+   * of `name → Connection` populated lazily as callers request connections.
+   * This method walks that cache and calls `Connection.close()` on each
+   * entry, which is the signal each connection uses to shut down whatever
+   * resources it actually holds.
+   *
+   * Connections that were never looked up were never constructed and have
+   * nothing to release; they are skipped. Wrapping lookups installed via
+   * `wrapConnections()` do not interfere — the managed lookup under the
+   * wrap is the one holding the cache.
+   */
+  async releaseConnections(): Promise<void> {
+    await this._managedLookup.close();
+  }
+
+  /**
+   * Query a value from the overlays used to resolve this config.
+   *
+   * Returns the value the named overlay produces for the given path,
+   * or `undefined` if the overlay doesn't exist or the path has no value.
+   * Async because overlays may be async (secret stores, session readers);
+   * `await` tolerates both sync and Promise return types.
+   *
+   *   await config.readOverlay('config', 'rootDirectory')
+   *   await config.readOverlay('config', 'configURL')
+   *   await config.readOverlay('env', 'PG_PASSWORD')
+   */
+  async readOverlay(overlayName: string, ...path: string[]): Promise<unknown> {
+    return await this._overlays[overlayName]?.(path);
+  }
 }
 
-const KNOWN_TOP_LEVEL_KEYS = new Set([
-  'connections',
-  'manifestPath',
-  'virtualMap',
-]);
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Default directory (relative to the config file) where the manifest lives
+ * when `manifestPath` is not explicitly set. ALL CAPS signals a generated
+ * artifact, not a hand-authored file. No dot prefix — visible and
+ * discoverable in `ls`.
+ */
+const DEFAULT_MANIFEST_PATH = 'MANIFESTS';
+
+/**
+ * The filename inside the manifest directory.
+ */
+const MANIFEST_FILENAME = 'malloy-manifest.json';
+
+/**
+ * Compute the resolved URL of the manifest file from the raw `manifestPath`
+ * string and the merged overlays (which may carry a `configURL`).
+ *
+ * Rules:
+ *   - If there's no `configURL` in the `config` overlay → undefined.
+ *   - **The `config` overlay MUST resolve `configURL` synchronously.** This
+ *     is the one construction-time overlay call; it runs before the first
+ *     `lookupConnection` and must return a plain string (or undefined). If
+ *     it returns a Promise, `manifestURL` would be `undefined` — persistence
+ *     would silently stop working. To avoid the silent failure, we warn on
+ *     Promise returns so hosts discover the mistake. Other fields inside the
+ *     `config` overlay (`rootDirectory`, etc.) can still be async; only
+ *     `configURL` is sync-only.
+ *   - `manifestPath` defaults to `'MANIFESTS'`.
+ *   - `new URL(manifestPath, configURL)` handles three shapes uniformly:
+ *       "MANIFESTS"               → relative to configURL's directory
+ *       "../shared/MANIFESTS"     → parent-relative
+ *       "/project/malloy/MANIFESTS" → absolute path within configURL's scheme
+ *       "file:///elsewhere/stuff" → full URL, ignores configURL base
+ *   - A trailing slash is forced onto the directory portion so that the
+ *     final `new URL(MANIFEST_FILENAME, dir)` joins correctly.
+ */
+function computeManifestURL(
+  manifestPath: string | undefined,
+  overlays: ConfigOverlays,
+  log: LogMessage[]
+): URL | undefined {
+  const configOverlay = overlays['config'];
+  const configURLValue = configOverlay?.(['configURL']);
+  if (isThenable(configURLValue)) {
+    log.push({
+      message:
+        'the `config` overlay returned a Promise for `configURL`; `configURL` must be resolved synchronously. manifestURL will be undefined and persistence will not work.',
+      severity: 'warn',
+      code: 'config-overlay',
+    });
+    return undefined;
+  }
+  if (typeof configURLValue !== 'string') return undefined;
+
+  let configURL: URL;
+  try {
+    configURL = new URL(configURLValue);
+  } catch {
+    return undefined;
+  }
+
+  const path = manifestPath ?? DEFAULT_MANIFEST_PATH;
+  let manifestRoot: URL;
+  try {
+    manifestRoot = new URL(path, configURL);
+  } catch {
+    return undefined;
+  }
+
+  const asString = manifestRoot.toString();
+  const dirURL = asString.endsWith('/')
+    ? manifestRoot
+    : new URL(asString + '/');
+  return new URL(MANIFEST_FILENAME, dirURL);
+}
+
+/**
+ * Convert the raw virtualMap POJO shape (a dict of dicts of strings) into
+ * the runtime Map-of-Maps representation that Runtime consumes.
+ */
+function toVirtualMap(raw: unknown): VirtualMap | undefined {
+  if (!isRecord(raw)) return undefined;
+  const outer = new Map<string, Map<string, string>>();
+  for (const [connName, inner] of Object.entries(raw)) {
+    if (!isRecord(inner)) continue;
+    const innerMap = new Map<string, string>();
+    for (const [virtualName, tablePath] of Object.entries(inner)) {
+      if (typeof tablePath === 'string') {
+        innerMap.set(virtualName, tablePath);
+      }
+    }
+    if (innerMap.size > 0) outer.set(connName, innerMap);
+  }
+  return outer.size > 0 ? outer : undefined;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as {then?: unknown}).then === 'function'
+  );
+}
+
 function isBuildManifestEntry(value: unknown): value is BuildManifestEntry {
   return isRecord(value) && typeof value['tableName'] === 'string';
-}
-
-function makeWarning(path: string, message: string): LogMessage {
-  return {
-    message: `${path}: ${message}`,
-    severity: 'warn',
-    code: 'config-validation',
-  };
-}
-
-/**
- * Validate a parsed config object against the connection type registry.
- * Returns LogMessage[] — does not throw.
- */
-function validateConfig(data: Record<string, unknown>): LogMessage[] {
-  const log: LogMessage[] = [];
-
-  for (const key of Object.keys(data)) {
-    if (!KNOWN_TOP_LEVEL_KEYS.has(key)) {
-      const suggestion = closestMatch(key, [...KNOWN_TOP_LEVEL_KEYS]);
-      const hint = suggestion ? `. Did you mean "${suggestion}"?` : '';
-      log.push(makeWarning(key, `unknown config key "${key}"${hint}`));
-    }
-  }
-
-  if (
-    data['manifestPath'] !== undefined &&
-    typeof data['manifestPath'] !== 'string'
-  ) {
-    log.push(makeWarning('manifestPath', '"manifestPath" should be a string'));
-  }
-
-  const connections = data['connections'];
-  if (connections === undefined) return log;
-
-  if (!isRecord(connections)) {
-    log.push(makeWarning('connections', '"connections" should be an object'));
-    return log;
-  }
-
-  const registeredTypes = new Set(getRegisteredConnectionTypes());
-
-  for (const [name, rawEntry] of Object.entries(connections)) {
-    const prefix = `connections.${name}`;
-
-    if (!isRecord(rawEntry)) {
-      log.push(makeWarning(prefix, 'should be an object'));
-      continue;
-    }
-
-    if (!rawEntry['is']) {
-      log.push(
-        makeWarning(prefix, 'missing required "is" field (connection type)')
-      );
-      continue;
-    }
-
-    if (typeof rawEntry['is'] !== 'string') {
-      log.push(makeWarning(`${prefix}.is`, '"is" should be a string'));
-      continue;
-    }
-
-    const typeName = rawEntry['is'];
-
-    if (!registeredTypes.has(typeName)) {
-      const suggestion = closestMatch(typeName, [...registeredTypes]);
-      const hint = suggestion ? ` Did you mean "${suggestion}"?` : '';
-      log.push(
-        makeWarning(
-          `${prefix}.is`,
-          `unknown connection type "${typeName}".${hint} Available types: ${[...registeredTypes].join(', ')}`
-        )
-      );
-      continue;
-    }
-
-    const props = getConnectionProperties(typeName);
-    if (!props) continue;
-
-    const knownProps = new Map(props.map(p => [p.name, p]));
-
-    for (const [key, value] of Object.entries(rawEntry)) {
-      if (key === 'is') continue;
-
-      const propDef = knownProps.get(key);
-      if (!propDef) {
-        const suggestion = closestMatch(key, [...knownProps.keys()]);
-        const hint = suggestion ? `. Did you mean "${suggestion}"?` : '';
-        log.push(
-          makeWarning(
-            `${prefix}.${key}`,
-            `unknown property "${key}" for connection type "${typeName}"${hint}`
-          )
-        );
-        continue;
-      }
-
-      // For env var references on non-json props, check the variable exists.
-      if (propDef.type !== 'json' && isValueRef(value)) {
-        const env = value.env;
-        if (process.env[env] === undefined) {
-          log.push(
-            makeWarning(
-              `${prefix}.${key}`,
-              `environment variable "${env}" is not set`
-            )
-          );
-        }
-        continue;
-      }
-
-      const typeError = checkValueType(value, propDef.type);
-      if (typeError) {
-        log.push(
-          makeWarning(
-            `${prefix}.${key}`,
-            `${typeError} (expected ${propDef.type})`
-          )
-        );
-      }
-    }
-  }
-
-  return log;
-}
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  const dp: number[][] = Array.from({length: m + 1}, () =>
-    Array(n + 1).fill(0)
-  );
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
-      );
-    }
-  }
-  return dp[m][n];
-}
-
-function closestMatch(input: string, candidates: string[]): string | undefined {
-  if (candidates.length === 0) return undefined;
-  let best = candidates[0];
-  let bestDist = Infinity;
-  for (const c of candidates) {
-    const dist = levenshtein(input.toLowerCase(), c.toLowerCase());
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = c;
-    }
-  }
-  const maxDist = Math.max(
-    1,
-    Math.floor(Math.max(input.length, best.length) / 3)
-  );
-  return bestDist <= maxDist ? best : undefined;
-}
-
-function checkValueType(
-  value: unknown,
-  expectedType: string
-): string | undefined {
-  if (value === undefined || value === null) return undefined;
-
-  switch (expectedType) {
-    case 'number':
-      if (typeof value !== 'number')
-        return `should be a number, got ${typeof value}`;
-      break;
-    case 'boolean':
-      if (typeof value !== 'boolean')
-        return `should be a boolean, got ${typeof value}`;
-      break;
-    case 'string':
-    case 'password':
-    case 'secret':
-    case 'file':
-    case 'text':
-      if (typeof value !== 'string')
-        return `should be a string, got ${typeof value}`;
-      break;
-    case 'json':
-      break;
-  }
-
-  return undefined;
 }

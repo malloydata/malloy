@@ -197,7 +197,18 @@ export function generateBarChartVegaSpec(
   //   - determine x axis available space
   //   - get max string (this is where data limits code comes in to play? is it just a callback fn for getMaxString() to be passed in?)
   //   - calculate xAxisSettings correctly
-  const chartSettings = getChartLayoutSettings(explore, chartTag, {
+  const chartSettings = getChartLayoutSettings(explore, {
+    size: {
+      width:
+        chartTag.numeric('size', 'width') ??
+        explore.tag.numeric('size', 'width') ??
+        undefined,
+      height:
+        chartTag.numeric('size', 'height') ??
+        explore.tag.numeric('size', 'height') ??
+        undefined,
+      preset: chartTag.text('size') ?? explore.tag.text('size') ?? undefined,
+    },
     metadata,
     xField,
     yField,
@@ -956,7 +967,8 @@ export function generateBarChartVegaSpec(
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar',
-    chartTag,
+    title: chartTag.text('title'),
+    subtitle: chartTag.text('subtitle'),
     mapMalloyDataToChartData,
     getTooltipData: (item: Item, view: View) => {
       if (tooltipEntryMemo.has(item)) {

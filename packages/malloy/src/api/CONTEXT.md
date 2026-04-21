@@ -94,6 +94,8 @@ These are the actual compiler internals that do the work. Not a public API.
 
 The fluent object-oriented API. The primary way to work with Malloy programmatically.
 
+For the configuration pipeline internals (three states, section compilers, overlay resolution, failure modes), see [foundation/CONTEXT.md](foundation/CONTEXT.md). For the user-facing view of configuration, see [../doc/configuration.md](../doc/configuration.md).
+
 ### File Structure
 
 | File | Contents |
@@ -107,6 +109,10 @@ The fluent object-oriented API. The primary way to work with Malloy programmatic
 | `writers.ts` | `WriteStream`, `DataWriter`, `JSONWriter`, `CSVWriter` |
 | `runtime.ts` | `Runtime`, Materializers, `FluentState` |
 | `config.ts` | `MalloyConfig`, `Manifest` |
+| `config_overlays.ts` | `Overlay`, `ConfigOverlays`, `envOverlay`, `contextOverlay`, `defaultConfigOverlays` |
+| `config_compile.ts` | Schema-directed compiler: POJO → `ConfigDict`/`ConfigLiteral`/`ConfigReference` tree |
+| `config_resolve.ts` | Walks the compiled tree against a `ConfigOverlays` dict → `ResolvedConfig` POJO |
+| `config_discover.ts` | URL-walking `discoverConfig()` helper for local hosts — returns a built `MalloyConfig` |
 | `compile.ts` | `Malloy` static class, `MalloyError` |
 | `index.ts` | Barrel file re-exporting everything |
 
@@ -151,20 +157,27 @@ runtime.loadModel(url)
 const runtime = new Runtime({connection: myConnection});
 ```
 
-**With config** — load connections + manifest from a project config file:
+**With config** — build a `MalloyConfig` directly, or use `discoverConfig()` for filesystem-style discovery. `discoverConfig()` walks up from a start URL to a ceiling, finds `malloy-config.json` (and optional `malloy-config-local.json`), and returns a fully-constructed `MalloyConfig` with the right `config` overlay already wired:
 ```typescript
-import '@malloydata/malloy-connections'; // registers connection factory
+import '@malloydata/malloy-connections'; // registers connection factories
+import {
+  MalloyConfig,
+  Runtime,
+  discoverConfig,
+} from '@malloydata/malloy';
 
-const config = new MalloyConfig(urlReader, configURL);
-await config.load(); // reads config JSON + manifest
+const config = await discoverConfig(startURL, ceilingURL, urlReader);
+if (!config) throw new Error('No malloy-config.json found');
 
-const runtime = new Runtime({
-  urlReader,
-  connections: config.connections,
-  buildManifest: config.manifest.buildManifest,
-});
+// Or purely sync from a JSON string (no discovery, no overlays):
+// const config = new MalloyConfig(configJsonText);
 
-// Queries automatically resolve persist sources against the manifest
+const runtime = new Runtime({config, urlReader});
+
+// Queries automatically resolve persist sources against the manifest.
+// The first persistence query lazily reads MANIFESTS/malloy-manifest.json
+// (relative to the discovered config file) via `urlReader`. A missing or
+// malformed file is a soft miss — no substitution happens, no error thrown.
 const result = await runtime.loadQuery(modelURL).run();
 
 // Pass empty manifest to get unsubstituted SQL
@@ -172,27 +185,36 @@ import {EMPTY_BUILD_MANIFEST} from '@malloydata/malloy';
 const rawSQL = await runtime.loadQuery(modelURL, {buildManifest: EMPTY_BUILD_MANIFEST}).getSQL();
 ```
 
-**Manifest can also be set after construction:**
+**Layering extra overlays on discovery** — pass a `session` (or any other) overlay to `discoverConfig` and it merges on top of the `config` overlay discovery built. Replacing the `config` entry directly clobbers `rootDirectory`/`configURL`, so callers that want both should skip discovery and build `MalloyConfig` by hand.
+
 ```typescript
-const runtime = new Runtime({urlReader, connections});
-// ... later, after loading manifest data ...
-runtime.buildManifest = manifest.buildManifest;
+const config = await discoverConfig(startURL, ceilingURL, urlReader, {
+  session: sessionOverlay(request),
+});
 ```
+
+**Manifest can also be set explicitly** — bypass the auto-read entirely by passing `buildManifest:` to the `Runtime` constructor or via the setter after construction:
+```typescript
+const runtime = new Runtime({config, urlReader, buildManifest: explicitManifest});
+// ... or later ...
+runtime.buildManifest = explicitManifest;
+```
+Explicit `buildManifest` always wins over the auto-read.
 
 ### Config and Manifest Classes
 
 | Class | Purpose |
 |-------|---------|
-| `MalloyConfig` | Loads `malloy-config.json` (connections + manifest path). Two construction modes: from URL (async `load()`) or from text (sync). |
-| `Manifest` | In-memory manifest store. `load(url)` reads via URLReader, `loadText(json)` parses directly. `update()` and `touch()` for builders, `activeEntries` for writing. The `buildManifest` getter returns a stable `BuildManifest` reference (`{entries, strict}`) — mutations are visible to the Runtime without re-assignment. The `strict` flag is loaded from the manifest file and can be overridden via `manifest.strict = value`. |
+| `MalloyConfig` | Synchronous wrapper around a config POJO or JSON string. Constructor pipeline: normalize input → compile to typed tree → merge config overlays → `prepareConfig()` extracts top-level sections and fabricates default-connection entries → `buildManagedLookup()` packages the compiled connection subtrees plus overlays into a `ManagedConnectionLookup`. **Reference resolution and property-default application are deferred to `lookupConnection()`** (async), so overlays that touch IO (secret stores, session reads) have a natural async seam. Construction stays sync and zero-IO. Exposes `connections`, `virtualMap`, `manifestPath`, `manifestURL`, and validation `log` (populated incrementally as lookups occur). `wrapConnections()` decorates the connection lookup in place. `releaseConnections()` tells every cached connection to release its resources — most callers should use `Runtime.releaseConnections()`, which forwards here. |
+| `Manifest` | Standalone in-memory manifest store with no IO, used by builders. `loadText(json)` parses a manifest JSON string directly. `update()` and `touch()` for builders, `activeEntries` for writing. The `buildManifest` getter returns a stable `BuildManifest` reference (`{entries, strict}`) — mutations are visible without re-assignment. Not attached to `MalloyConfig`; the Runtime reads manifest files directly via `config.manifestURL`. |
 
-`MalloyConfig` is the standard entry point for both the CLI (`malloydata/malloy-cli`) and the VS Code extension. The config file determines connections, and the manifest is resolved relative to the config file's location:
+**Config overlays.** Config references such as `{env: "PG_PASSWORD"}`, `{config: "rootDirectory"}`, or `{session: ["credentials", "token"]}` are resolved through a `ConfigOverlays` dict at **`lookupConnection()` time** (not at construction). The constructor merges the host-supplied overlays on top of `defaultConfigOverlays()` (which wires `env` to `process.env` and leaves `config` as a no-op) via plain spread, giving Add / Replace / Disable semantics for any overlay slot. Overlays may be sync or async (`(path) => unknown | Promise<unknown>`) — the resolver `await`s every result. References on `json`-typed connection properties are **never** interpreted — the value passes through literally. One sync-only carve-out: `config.configURL` is peeked synchronously at construction time to compute `manifestURL`; an async `configURL` triggers a loud warning on `config.log` rather than silently dropping persistence.
 
-```
-<configDir>/<manifestPath>/malloy-manifest.json
-```
+**Discovery.** Local hosts can use `discoverConfig(startURL, ceilingURL, urlReader, extraOverlays?)` to walk up from `startURL` toward `ceilingURL`, trying `malloy-config-local.json` and `malloy-config.json` at each level. It returns a fully-constructed `MalloyConfig` (with a `config` overlay carrying `rootDirectory` and `configURL`) or `null`. Extra overlays are merged on top via plain spread — replacing the `config` entry clobbers what discovery built, so callers that want both should read discovery's context keys back off or build `MalloyConfig` by hand. Because it takes a `URLReader`, it is browser-safe as long as the host provides a URL reader that understands its filesystem substitute.
 
-`manifestPath` defaults to `"MANIFESTS"`. Calling `config.load()` reads both the config and the manifest in one step. The `Manifest` class can also be used standalone (e.g. in builder sketches), but in practice config and manifest are almost always tied — you read the config to find the manifest.
+**Manifest handling.** `MalloyConfig` stays synchronous and does no IO. It exposes `manifestURL`, computed from `manifestPath` (default: `MANIFESTS`) resolved against the `configURL` context value and joined with `malloy-manifest.json`. The `Runtime` lazily reads that URL on the first persistence query via its `URLReader`, caches the resolved promise, and soft-misses to `undefined` on missing or malformed files. Explicit `buildManifest` (constructor option or setter) always wins over the auto-read; the setter clears the cached promise so a later compile sees the new value.
+
+`MalloyConfig` is the standard entry point for both the CLI (`malloydata/malloy-cli`) and the VS Code extension.
 
 ---
 

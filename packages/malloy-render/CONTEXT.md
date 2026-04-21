@@ -211,127 +211,14 @@ getLogs()
 
 For headless validation workflows, `setResult()` + `getLogs()` can be used without rendering.
 
-### Error Handling: Renderable vs Loggable
+### Validation
 
-Plugins produce two kinds of errors. The distinction is simple: **can the component still produce output?**
+Renderer tags are validated during `setResult()` and the resulting log messages drive the VS Code Problems panel and the headless `@malloydata/render-validator` package. **Before adding tags, validation rules, or plugin error throws, read [docs/validation.md](docs/validation.md).** It covers what validation is, how it works, where new checks go, and the pre-PR checklist that keeps the validator honest.
 
-#### Renderable Errors (throw in `matches()` or `create()`)
-
-The component **cannot render** — the data is fundamentally incompatible. Throw an error and the `ErrorPlugin` will replace the visualization with an error message in its place.
-
-Use for:
-- Missing required fields (e.g. bar chart has no x dimension)
-- Wrong data shape (e.g. chart tag on a scalar field that isn't a nested query)
-- Too many/few dimensions for the chart type
-
-```typescript
-matches: (field, fieldTag, fieldType) => {
-  const hasTag = fieldTag.has('my_chart');
-  if (hasTag && fieldType !== FieldType.RepeatedRecord) {
-    // Can't render — show error where the chart would be
-    throw new Error('My Chart: field must be a nested query');
-  }
-  return hasTag;
-},
-```
-
-#### Loggable Errors (via `logCollector`)
-
-The component **can still render** but a tag was wrong, ignored, or didn't do what the author intended. The visualization degrades gracefully (falls back to defaults). The log tells the author what to fix.
-
-Use for:
-- Invalid enum values (e.g. `# currency=yen` — unknown code, ignored)
-- Tags on wrong field types (e.g. `# link` on a number — ignored)
-- Misspelled tag properties (detected automatically via unread tag tracking)
-- Invalid combinations (e.g. `# big_value` with `group_by` fields)
-
-Loggable validation is centralized in `RenderFieldMetadata.validateFieldTags()` in `render-field-metadata.ts`, not in individual plugins. This keeps validation consistent and runs during `setResult()`, before rendering.
-
-### Tag Validation
-
-Tag validation runs in `validateFieldTags()` during `setResult()`. To add new validations:
-
-```typescript
-// In render-field-metadata.ts, inside validateFieldTags():
-
-// 1. Tag on wrong field type
-if (tag.has('my_tag') && fieldType !== FieldType.String) {
-  log.error(
-    `Tag 'my_tag' on field '${field.name}' requires a string field, but field is ${fieldType}`,
-    tag.tag('my_tag')  // pass the tag for source location
-  );
-}
-
-// 2. Invalid enum value
-const modeVal = tag.text('my_tag', 'mode');
-if (modeVal !== undefined) {
-  const validModes = ['a', 'b', 'c'];
-  if (!validModes.includes(modeVal)) {
-    log.error(
-      `Invalid my_tag mode '${modeVal}' on field '${field.name}'. Valid modes: ${validModes.join(', ')}`,
-      tag.tag('my_tag')
-    );
-  }
-}
-
-// 3. Detect original literal type (e.g. bare number vs quoted string)
-const myTag = tag.tag('my_tag');
-if (myTag?.scalarType() === 'number') {
-  log.error(
-    `Tag 'my_tag' expects a quoted string, not a bare number`,
-    myTag
-  );
-}
-```
-
-Always pass the relevant `Tag` object as the second argument to `log.error()` / `log.warn()` — it carries source location information that helps the author find the problem in their Malloy source.
-
-### Tag Read Pattern for Components (Important)
-
-Unread-tag warnings are part of typo/unknown-tag detection, so tag access patterns matter.
-
-Preferred pattern:
-1. Read/resolve tags during `setResult()` setup (for built-ins, use `resolveBuiltInTags()` in `tag-configs.ts` and/or `validateFieldTags()` in `render-field-metadata.ts`).
-2. Store resolved values on fields (`setTagConfig`, `setResolvedLabel`, `setColumnConfig`).
-3. In components, read resolved values (`getTagConfig`, `getLabel`, `getColumnConfig`) instead of reading `field.tag.*` directly at render time.
-
-If a renderer owns tags that may only be read later during render/interaction, declare them in `getValidationSpec()` so they are marked as consumed based on ownership.
-
-`getDeclaredTagPaths()` still exists only as a compatibility fallback for older plugins. Using it now emits a warning during validation so plugin authors migrate to `getValidationSpec()`.
-
-This is intentionally not a full read schema. `RendererValidationSpec` is for semantic ownership:
-- tags this renderer gives meaning to
-- tags this renderer validates
-- tags that should not trigger unknown-tag warnings when this renderer is active
-
-It is not for:
-- every incidental `field.tag.*` read in implementation code
-- globally meaningful tags that many renderers may read
-
-### Unread Tag Detection
-
-Tags track whether they've been accessed. Unread properties are logged as warnings to catch misspellings and unknown tags.
-
-Current lifecycle:
-1. `setResult()` builds `RenderFieldMetadata`, which runs setup-time resolution/validation and marks renderer-owned paths via `RendererValidationSpec`.
-2. `getLogs()` and `onReady` both trigger unread-tag collection in `MalloyViz` (collection is one-time and idempotent).
-3. Logs include semantic validation messages plus unread-tag warnings.
-
-Notes:
-- For built-in renderer tags, prefer setup-time reads in `resolveBuiltInTags()` over component-time reads.
-- Child-owned paths are applied during the parent field's registration pass, before recursing into children. This lets a parent renderer claim direct-child tags like dashboard `break` or chart child `tooltip`.
-- `onReady` is useful for UI flow completeness, but it is not strictly required to include unread-tag warnings in logs.
-
-### Error Message Pattern (LLM-Friendly Guideline)
-
-For validation errors, include explicit fix hints when possible. A useful guideline:
-
-`Invalid <tag-path> on '<field>': expected <constraint>, got <value>. Fix: <example> (or <fallback>).`
-
-Example:
-- `Invalid # dashboard.gap on 'sales_dashboard': expected number >= 0, got -2. Fix: use '# dashboard { gap = 0 }' (or remove 'gap').`
-
-Keep using `log.error(..., tagRef)` / `log.warn(..., tagRef)` with the relevant `Tag` object so source locations are preserved.
+The short version for plugin authors:
+- Tag-quality errors (wrong type, invalid enum, structural rule) belong in `validateFieldTags()` with `log.error(msg, tagRef)` so source locations survive.
+- `throw` from `matches()` / `create()` only when the plugin literally cannot produce output; throws are wrapped and **lose the `Tag` reference**.
+- Any tag read after `setResult()` returns must be in a setup-time resolver (`tag-configs.ts`) or in `getValidationSpec().ownedPaths` / `childOwnedPaths`, or it will trigger false unread-tag warnings.
 
 ### Rendering Modes
 
