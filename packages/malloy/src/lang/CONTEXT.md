@@ -1,6 +1,8 @@
 # Malloy Translator
 
-The translator is the first phase of the Malloy compiler. It transforms Malloy source code into an Intermediate Representation (IR) that is independent of any specific SQL dialect.
+Malloy compilation has two phases: the **translator** (this document — `src/lang/`, source → IR) and the **compiler** ([`../model/CONTEXT.md`](../model/CONTEXT.md) — `src/model/`, IR → SQL). They live in sibling directories and communicate only through the IR.
+
+This document covers the translator: it transforms Malloy source code into an Intermediate Representation (IR) that is independent of any specific SQL dialect.
 
 ## Translation Pipeline
 
@@ -102,7 +104,7 @@ src/lang/
 
 ## Important Notes
 
-- The translator produces IR but does NOT generate SQL - that's the compiler's job
+- The translator produces IR but does NOT generate SQL — that's the job of the [compiler](../model/CONTEXT.md)
 - IR is deliberately database-agnostic
 - The translator handles all language-level semantics (scoping, type checking, name resolution)
 - Error messages and warnings are generated during translation
