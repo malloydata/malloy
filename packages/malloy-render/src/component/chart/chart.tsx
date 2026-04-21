@@ -217,8 +217,8 @@ export function ChartInner(props: {
 
   const showTooltip = createMemo(() => Boolean(tooltipData()));
 
-  const chartTitle = props.chartProps.chartTag.text('title');
-  const chartSubtitle = props.chartProps.chartTag.text('subtitle');
+  const chartTitle = props.chartProps.title;
+  const chartSubtitle = props.chartProps.subtitle;
   const hasTitleBar = chartTitle || chartSubtitle || isDataLimited;
 
   const [chartSpace, setChartSpace] = createSignal({

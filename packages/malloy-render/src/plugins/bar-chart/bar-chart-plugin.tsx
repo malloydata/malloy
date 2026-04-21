@@ -21,6 +21,11 @@ import {
 } from '@/plugins/bar-chart/get-bar_chart-settings';
 import {generateBarChartVegaSpecV2} from '@/plugins/bar-chart/generate-bar_chart-vega-spec';
 import {type VegaChartProps} from '@/component/types';
+import {
+  resolveChartDisplayConfig,
+  type ChartDisplayConfig,
+} from '@/component/chart/resolve-chart-display';
+import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {type Config, parse, type Runtime} from 'vega';
 import 'vega-interpreter';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
@@ -40,6 +45,7 @@ export interface BarChartPluginInstance
   extends CoreVizPluginInstance<BarChartPluginMetadata> {
   getTopNSeries?: (maxSeries: number) => (string | number | boolean)[];
   field: NestField;
+  chartDisplay: ChartDisplayConfig;
   syntheticSeriesField?: Field;
   hasMultipleSeriesFields?: boolean;
 }
@@ -96,11 +102,19 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
       const settings = getBarChartSettings(field);
       const hasMultipleSeriesFields = settings.seriesChannel.fields.length > 1;
 
+      // Resolve chart display tags (title, subtitle, size) at setup time so
+      // chart.tsx and chart-layout-settings.ts don't need to read tags at
+      // render time.
+      const normalizedTag = convertLegacyToVizTag(field.tag);
+      const vizTag = normalizedTag.tag('viz')!;
+      const chartDisplay = resolveChartDisplayConfig(field, vizTag);
+
       const pluginInstance: BarChartPluginInstance = {
         name: 'bar',
         field,
         renderMode: 'solidjs',
         sizingStrategy: 'fill',
+        chartDisplay,
         hasMultipleSeriesFields,
 
         renderComponent: (props: RenderProps): JSXElement => {
@@ -127,7 +141,8 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
               plotHeight={vegaProps.plotHeight}
               totalWidth={vegaProps.totalWidth}
               totalHeight={vegaProps.totalHeight}
-              chartTag={vegaProps.chartTag}
+              title={vegaProps.title}
+              subtitle={vegaProps.subtitle}
               getTooltipData={vegaProps.getTooltipData}
               isDataLimited={mappedData.isDataLimited}
               dataLimitMessage={mappedData.dataLimitMessage}
@@ -279,23 +294,6 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
  * time, preventing false-positive unread-tag warnings.
  */
 const BAR_CHART_TAG_PATHS: string[][] = [
-  // viz sub-properties read by chart.tsx and spec generators
-  ['viz', 'title'],
-  ['viz', 'subtitle'],
-  ['viz', 'mode'],
-  ['viz', 'size'],
-  ['viz', 'stack'],
-  ['viz', 'disable_embedded'],
-  ['viz', 'disableEmbedded'],
-  // Channel settings
-  ['viz', 'x'],
-  ['viz', 'x', 'independent'],
-  ['viz', 'x', 'limit'],
-  ['viz', 'y'],
-  ['viz', 'y', 'independent'],
-  ['viz', 'series'],
-  ['viz', 'series', 'independent'],
-  ['viz', 'series', 'limit'],
-  // Legacy tag equivalents (read by convertLegacyToVizTag)
+  // Legacy tag form (read by convertLegacyToVizTag)
   ['bar_chart'],
 ];

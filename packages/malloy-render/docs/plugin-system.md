@@ -249,7 +249,7 @@ source: users is table('users') {
 ## Best Practices
 
 ### 1. Field Type Validation
-Always validate field types in `matches()` to prevent runtime errors:
+Throw from `matches()` when the user asked for this plugin (tag present) but the field cannot support it — the user sees a red error tile in place of the visualization:
 
 ```typescript
 matches: (field, fieldTag, fieldType) => {
@@ -259,6 +259,8 @@ matches: (field, fieldTag, fieldType) => {
   return fieldTag.has('my_chart') && fieldType === FieldType.RepeatedRecord;
 }
 ```
+
+For tag-setting errors that shouldn't fail the whole render (e.g. invalid enum value, wrong field type for one setting), use `validateFieldTags()` with `log.error(msg, tagRef)` instead so the user gets a source-located error and the plugin still renders with defaults. See [validation.md](validation.md) for the full throw-vs-log rule.
 
 ### 2. Efficient Data Processing
 Use `processData()` for expensive computations to avoid re-processing during re-renders:
@@ -275,7 +277,7 @@ processData: (field, cell) => {
 - Use `'fill'` for plugins that adapt to container size
 
 ### 4. Error Handling
-Implement robust error handling to prevent breaking the entire visualization:
+The right place to catch tag/configuration mistakes is setup time (in `create()` or in a resolver), not render time. A try/catch in `renderComponent()` is a last resort for defensive coverage of unexpected runtime failures — see [validation.md](validation.md) for the setup-time pattern.
 
 ```typescript
 renderComponent: (props) => {
@@ -308,12 +310,7 @@ These serve as excellent examples for creating custom plugins.
 
 ## Debugging
 
-Enable console warnings to see plugin matching and instantiation issues:
-
-```typescript
-// Plugin instantiation failures are logged to console
-console.warn(`Plugin ${factory.name} failed to instantiate for field ${field.key}:`, error);
-```
+Plugin throws from `matches()` and `create()` are caught by `RenderFieldMetadata.instantiatePluginsForField` and rendered as red error tiles (via `ErrorPlugin`). They also appear in `MalloyViz.getLogs()` as errors. Tag validation errors emitted via `log.error(msg, tagRef)` appear in the same log stream with source locations. See [validation.md](validation.md) for the full error flow.
 
 ## Future Considerations
 

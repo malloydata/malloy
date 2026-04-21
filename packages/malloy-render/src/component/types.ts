@@ -6,7 +6,6 @@
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import type {Tag} from '@malloydata/malloy-tag';
 import type {Item, Spec, View} from 'vega';
 import type {JSX} from 'solid-js';
 import type {
@@ -41,7 +40,8 @@ export type VegaChartProps = {
   totalWidth: number;
   totalHeight: number;
   chartType: string;
-  chartTag: Tag;
+  title?: string;
+  subtitle?: string;
   mapMalloyDataToChartData: MalloyDataToChartDataHandler;
   getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
 };
@@ -89,6 +89,10 @@ export type Channel = {
   fields: string[];
   type: ScaleType | null;
   independent: boolean | 'auto';
+};
+
+export type XChannel = Channel & {
+  limit: number | 'auto';
 };
 
 export type YChannel = {

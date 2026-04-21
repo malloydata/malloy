@@ -41,9 +41,7 @@ import {getMarkName} from '@/component/vega/vega-utils';
 import type {CellValue, RecordCell} from '@/data_tree';
 import {Field} from '@/data_tree';
 import {NULL_SYMBOL} from '@/util';
-import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
-import type {Tag} from '@malloydata/malloy-tag';
 import type {BarChartPluginInstance} from './bar-chart-plugin';
 
 type BarDataRecord = {
@@ -74,7 +72,8 @@ function getLimitedData({
   maxSizePerBar,
   isGrouping,
   chartSettings,
-  chartTag,
+  seriesLimitSetting,
+  xLimitSetting,
 }: {
   xField: Field;
   seriesField?: Field | null;
@@ -82,12 +81,14 @@ function getLimitedData({
   maxSizePerBar?: number;
   isGrouping: boolean;
   chartSettings: ChartLayoutSettings;
-  chartTag: Tag;
+  seriesLimitSetting: number | 'auto';
+  xLimitSetting: number | 'auto';
 }) {
   // Limit series values shown
   const seriesLimit =
-    chartTag.numeric('series', 'limit') ??
-    Math.min(maxSeries, seriesField?.valueSet.size ?? 1);
+    typeof seriesLimitSetting === 'number'
+      ? seriesLimitSetting
+      : Math.min(maxSeries, seriesField?.valueSet.size ?? 1);
   const seriesValuesToPlot = seriesField
     ? [...seriesField.valueSet.values()].slice(0, seriesLimit)
     : [];
@@ -100,9 +101,10 @@ function getLimitedData({
   const maxSizePerXGroup = chartSettings.isSpark
     ? 2
     : Math.floor(refinedMaxSizePerBar * subGroupBars);
-  const barLimitTag = chartTag.numeric('x', 'limit');
   const barLimit =
-    barLimitTag ?? Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
+    typeof xLimitSetting === 'number'
+      ? xLimitSetting
+      : Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
   const barValuesToPlot = [...xField.valueSet.values()].slice(0, barLimit);
 
   return {
@@ -121,12 +123,6 @@ export function generateBarChartVegaSpecV2(
   const pluginMetadata = plugin.getMetadata();
   const settings = pluginMetadata.settings;
   const {getTopNSeries, field: explore} = plugin;
-  const tag = convertLegacyToVizTag(explore.tag);
-  const chartTag = tag.tag('viz');
-  if (!chartTag)
-    throw new Error(
-      'Malloy Bar Chart: Tried to render a bar chart, but no viz=bar tag was found'
-    );
 
   /**************************************
    *
@@ -201,18 +197,22 @@ export function generateBarChartVegaSpecV2(
   const yDomainMin = Math.min(0, yMin);
   const yDomainMax = Math.max(0, yMax);
 
-  const maxSeries = chartTag.numeric('series', 'limit') ?? DEFAULT_MAX_SERIES;
+  const maxSeries =
+    typeof settings.seriesChannel.limit === 'number'
+      ? settings.seriesChannel.limit
+      : DEFAULT_MAX_SERIES;
   const isLimitingSeries = Boolean(
     seriesField && seriesField.valueSet.size > maxSeries
   );
 
-  const chartSettings = getChartLayoutSettings(explore, chartTag, {
+  const chartSettings = getChartLayoutSettings(explore, {
+    size: plugin.chartDisplay.size,
     metadata,
     xField,
     yField,
     chartType: 'bar',
     getYMinMax: () => [yDomainMin, yDomainMax],
-    independentY: chartTag.has('y', 'independent') || isLimitingSeries,
+    independentY: settings.yChannel.independent || isLimitingSeries,
     vegaConfig,
   });
 
@@ -222,7 +222,8 @@ export function generateBarChartVegaSpecV2(
     seriesField,
     isGrouping,
     chartSettings,
-    chartTag,
+    seriesLimitSetting: settings.seriesChannel.limit,
+    xLimitSetting: settings.xChannel.limit,
   });
 
   let maxString = '';
@@ -246,17 +247,18 @@ export function generateBarChartVegaSpecV2(
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
   const autoSharedX = dataLimits.barValuesToPlot.length <= 20;
-  const forceSharedX = chartTag.text('x', 'independent') === 'false';
-  const forceIndependentX = chartTag.has('x', 'independent') && !forceSharedX;
+  const forceSharedX = settings.xChannel.independent === false;
+  const forceIndependentX =
+    settings.xChannel.independent === true && !forceSharedX;
   const shouldShareXDomain =
     forceSharedX || (autoSharedX && !forceIndependentX);
 
   // series legends across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
   const autoSharedSeries =
     seriesField && dataLimits.seriesValuesToPlot.length <= 20;
-  const forceSharedSeries = chartTag.text('series', 'independent') === 'false';
+  const forceSharedSeries = settings.seriesChannel.independent === false;
   const forceIndependentSeries =
-    chartTag.has('series', 'independent') && !forceSharedSeries;
+    settings.seriesChannel.independent === true && !forceSharedSeries;
   const shouldShareSeriesDomain =
     forceSharedSeries || (autoSharedSeries && !forceIndependentSeries);
 
@@ -979,7 +981,8 @@ export function generateBarChartVegaSpecV2(
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar',
-    chartTag,
+    title: plugin.chartDisplay.title,
+    subtitle: plugin.chartDisplay.subtitle,
     mapMalloyDataToChartData,
     getTooltipData: (item: Item, view: View) => {
       if (tooltipEntryMemo.has(item)) {
