@@ -296,6 +296,4 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
 const BAR_CHART_TAG_PATHS: string[][] = [
   // Legacy tag form (read by convertLegacyToVizTag)
   ['bar_chart'],
-  // Legacy camelCase alias for disable_embedded
-  ['viz', 'disableEmbedded'],
 ];

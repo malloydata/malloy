@@ -40,10 +40,6 @@ export function resolveChartDisplayConfig(
   return {
     title: chartTag.text('title'),
     subtitle: chartTag.text('subtitle'),
-    size: {
-      width: width ?? undefined,
-      height: height ?? undefined,
-      preset: preset ?? undefined,
-    },
+    size: {width, height, preset},
   };
 }

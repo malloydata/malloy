@@ -338,8 +338,6 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
 const LINE_CHART_TAG_PATHS: string[][] = [
   // Legacy tag form (read by convertLegacyToVizTag)
   ['line_chart'],
-  // Legacy snake_case alias for disableEmbedded
-  ['viz', 'disable_embedded'],
 ];
 
 export type {LineChartPluginInstance};
