@@ -268,7 +268,7 @@ describe('db:Publisher', () => {
           expect.objectContaining({
             basePath: 'http://test.com/api/v0',
             baseOptions: expect.objectContaining({
-              timeout: 600000, // 10 minutes in milliseconds
+              timeout: 3600000, // 1 hour in milliseconds
             }),
           })
         );
