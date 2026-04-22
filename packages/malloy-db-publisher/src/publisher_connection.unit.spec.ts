@@ -122,7 +122,7 @@ describe('db:Publisher', () => {
 
         expect(connection).toBeInstanceOf(PublisherConnection);
         expect(connection.name).toBe('test-connection');
-        expect(connection.projectName).toBe('test-project');
+        expect(connection.environmentName).toBe('test-project');
         expect(connection.dialectName).toBe('bigquery');
         expect(connection.isPool()).toBe(false);
         expect(connection.canPersist()).toBe(true);
