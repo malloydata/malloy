@@ -15,6 +15,32 @@ import styles from './dashboard.css?raw';
 import {useConfig} from '../render';
 import type {DashboardNestConfig} from '@/component/tag-configs';
 
+// Per-item minimum widths. Used for:
+//   - bucket assignment (minRowWidth -> row-collapse-{sm,md,lg})
+//   - flex-mode min-width in dashboard.css (keep those values in sync)
+const MIN_WIDTH_MEASURE = 120;
+const MIN_WIDTH_ITEM = 300;
+
+// Default gap. Must match the CSS fallback in dashboard.css
+// (var(--malloy-render--dashboard-gap, 16px)).
+const DEFAULT_GAP_PX = 16;
+
+// Responsive collapse buckets. A row is assigned the first bucket whose
+// threshold is ≥ its minRowWidth; that same bucket's threshold is the
+// @container max-width at which it stacks — see dashboard.css.
+const COLLAPSE_BUCKETS = [
+  {className: 'row-collapse-sm', threshold: 400},
+  {className: 'row-collapse-md', threshold: 600},
+  {className: 'row-collapse-lg', threshold: 900},
+] as const;
+
+const bucketFor = (minRowWidth: number): string => {
+  for (const {className, threshold} of COLLAPSE_BUCKETS) {
+    if (minRowWidth <= threshold) return className;
+  }
+  return COLLAPSE_BUCKETS[COLLAPSE_BUCKETS.length - 1].className;
+};
+
 function DashboardItem(props: {
   field: Field;
   row: RecordCell;
@@ -103,7 +129,7 @@ export function Dashboard(props: {
     dashConfig !== undefined ? dashConfig.maxTableHeight : 361;
   const columns = dashConfig?.columns;
   const gap = dashConfig?.gap;
-  const gapPx = gap ?? 16;
+  const gapPx = gap ?? DEFAULT_GAP_PX;
 
   const dashboardStyle = () => {
     const style: Record<string, string> = {};
@@ -126,10 +152,16 @@ export function Dashboard(props: {
     return {'grid-template-columns': `repeat(${columns}, 1fr)`};
   };
 
-  // Minimum container width for columns mode: 120px per column + gaps
-  const columnsMinWidth = columns !== undefined
-    ? columns * 120 + (columns - 1) * gapPx
-    : 0;
+  const itemMinWidth = (f: Field): number =>
+    f.isBasic() && f.wasCalculation() ? MIN_WIDTH_MEASURE : MIN_WIDTH_ITEM;
+
+  // In columns mode every cell is the same width (repeat(N, 1fr)), so each
+  // column must be wide enough for the group's worst case.
+  const getColumnsMinWidth = (group: Field[]): number => {
+    if (columns === undefined || group.length === 0) return 0;
+    const maxItemMin = Math.max(...group.map(itemMinWidth));
+    return columns * maxItemMin + (columns - 1) * gapPx;
+  };
 
   // Compute the effective span for a field
   const computeSpan = (f: Field): number => {
@@ -155,25 +187,20 @@ export function Dashboard(props: {
     const spans = group.map(f => computeSpan(f));
     const totalSpan = spans.reduce((a, b) => a + b, 0);
 
-    // Fractional template preserves proportions.
-    // When totalSpan < 12, use percentage caps so items don't stretch to fill.
+    // When the row fills 12 cols, use `fr` so items split the full row in
+    // proportion to their spans. When it doesn't, use `minmax(0, N%)` so
+    // items take exactly their share of 12 (span 3 of 12 = 25% width) —
+    // otherwise two span=3 items in a half-full row would each stretch to
+    // 50% and lose the sizing intent.
     const frTemplate = totalSpan >= 12
       ? spans.map(s => `${s}fr`).join(' ')
       : spans.map(s => `minmax(0, ${((s / 12) * 100).toFixed(1)}%)`).join(' ');
 
-    // Minimum width per item based on content type
-    const minWidths = group.map(f => {
-      if (f.isBasic() && f.wasCalculation()) return 120;
-      return 200;
-    });
+    const minWidths = group.map(itemMinWidth);
     const minRowWidth = minWidths.reduce((a, b) => a + b, 0)
       + (group.length - 1) * gapPx;
 
-    const collapseClass = minRowWidth <= 400 ? 'row-collapse-sm'
-      : minRowWidth <= 600 ? 'row-collapse-md'
-      : 'row-collapse-lg';
-
-    return {frTemplate, collapseClass};
+    return {frTemplate, collapseClass: bucketFor(minRowWidth)};
   };
 
   const getRowStyle = (group: Field[]) => {
@@ -191,11 +218,7 @@ export function Dashboard(props: {
       classes[getRowConfig(group).collapseClass] = true;
     }
     if (columns !== undefined) {
-      // Bucket the columns collapse threshold
-      const cls = columnsMinWidth <= 400 ? 'row-collapse-sm'
-        : columnsMinWidth <= 600 ? 'row-collapse-md'
-        : 'row-collapse-lg';
-      classes[cls] = true;
+      classes[bucketFor(getColumnsMinWidth(group))] = true;
     }
     return classes;
   };

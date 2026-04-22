@@ -70,6 +70,17 @@
     overflow: hidden;
   }
 
+  /* Flex mode: without a min-width, fit-content lets items shrink
+     indefinitely and flex-wrap never triggers. These values must match
+     MIN_WIDTH_ITEM / MIN_WIDTH_MEASURE in dashboard.tsx. */
+  .dashboard-row-body:not(.dashboard-grid) .dashboard-item {
+    min-width: 300px;
+  }
+
+  .dashboard-row-body:not(.dashboard-grid) .dashboard-item-measure {
+    min-width: 120px;
+  }
+
   .dashboard-item:hover {
     box-shadow:
       rgb(255, 255, 255) 0px 0px 0px 0px,
@@ -243,9 +254,10 @@
   }
 }
 
-/* Responsive: per-row collapse based on content-aware size classes.
-   Each row independently collapses to single column when the container
-   is too narrow for its items. Columns mode is not affected. */
+/* Per-row responsive collapse. Each threshold here must match the
+   corresponding COLLAPSE_BUCKETS entry in dashboard.tsx — a bucket's
+   threshold is both its minRowWidth ceiling AND the container width at
+   which it stacks. */
 @container (max-width: 400px) {
   .malloy-dashboard .row-collapse-sm {
     grid-template-columns: 1fr !important;
