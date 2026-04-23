@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-tag",
-  "version": "0.0.382",
+  "version": "0.0.383",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
