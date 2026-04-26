@@ -114,6 +114,17 @@ Each `ConnectionPropertyDefinition` has a `type` field that determines UI render
 | `json` | JSON object (structured config like SSL options, headers) |
 | `text` | Multi-line text input |
 
+## Cross-Repo: User-Facing Docs
+
+The user-facing list of connection types and their parameters lives in a
+separate repository: [`malloydata/malloydata.github.io`](https://github.com/malloydata/malloydata.github.io)
+at `src/documentation/setup/config.malloynb`. When you add, remove, or rename
+a registered property — or change its semantics — open a companion PR there
+so the docs site stays in sync. Add to the PR checklist:
+
+- [ ] Updated `malloydata.github.io/src/documentation/setup/config.malloynb`
+      if any registered connection property changed.
+
 ## Per-Backend Properties
 
 **DuckDB** (`displayName: "DuckDB"`):
@@ -126,8 +137,8 @@ Each `ConnectionPropertyDefinition` has a `type` field that determines UI render
 `host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string), `setupSQL` (text)
 
 **Snowflake** (`displayName: "Snowflake"`):
-`account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number), `setupSQL` (text)
-Factory extracts `name`, `setupSQL`, `timeoutMs`; passes remaining properties as snowflake-sdk `ConnectionOptions`.
+`account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number), `setupSQL` (text), `poolMin` (number, advanced), `poolMax` (number, advanced), `poolTestOnBorrow` (boolean, advanced)
+Factory extracts `name`, `setupSQL`, `timeoutMs`, and the three pool fields; passes remaining properties as snowflake-sdk `ConnectionOptions`. The pool fields are assembled into a `generic-pool` options object via `buildPoolOptions()` and shallow-merged with `SnowflakeExecutor.defaultPoolOptions_` (`{min: 1, max: 1, testOnBorrow: true, testOnReturn: true}`); omitting all three preserves the defaults.
 
 **Trino** (`displayName: "Trino"`):
 `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text), `source` (string), `ssl` (json), `session` (json), `extraCredential` (json), `extraHeaders` (json)
@@ -154,6 +165,10 @@ interface ConnectionPropertyDefinition {
   displayName: string;
   type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text';
   optional?: true;
+  // Advisory hint to editors: this property is not part of typical
+  // configuration and may be hidden, folded under an "advanced" toggle, or
+  // ignored entirely. Has no effect on the registry or factory.
+  advanced?: boolean;
   // Literal default, or a single-key reference-shaped object that the
   // MalloyConfig resolver expands against the config overlays
   // (e.g. {config: 'rootDirectory'}).
