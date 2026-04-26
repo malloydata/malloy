@@ -114,6 +114,17 @@ Each `ConnectionPropertyDefinition` has a `type` field that determines UI render
 | `json` | JSON object (structured config like SSL options, headers) |
 | `text` | Multi-line text input |
 
+## Cross-Repo: User-Facing Docs
+
+The user-facing list of connection types and their parameters lives in a
+separate repository: [`malloydata/malloydata.github.io`](https://github.com/malloydata/malloydata.github.io)
+at `src/documentation/setup/config.malloynb`. When you add, remove, or rename
+a registered property — or change its semantics — open a companion PR there
+so the docs site stays in sync. Add to the PR checklist:
+
+- [ ] Updated `malloydata.github.io/src/documentation/setup/config.malloynb`
+      if any registered connection property changed.
+
 ## Per-Backend Properties
 
 **DuckDB** (`displayName: "DuckDB"`):
