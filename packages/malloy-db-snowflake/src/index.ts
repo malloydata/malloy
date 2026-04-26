@@ -22,11 +22,13 @@
  */
 
 export {SnowflakeConnection} from './snowflake_connection';
+export {buildPoolOptions} from './snowflake_pool_options';
 
 import {registerConnectionType} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import type {ConnectionOptions} from 'snowflake-sdk';
 import {SnowflakeConnection} from './snowflake_connection';
+import {buildPoolOptions} from './snowflake_pool_options';
 
 registerConnectionType('snowflake', {
   displayName: 'Snowflake',
@@ -39,6 +41,9 @@ registerConnectionType('snowflake', {
       schemaSampleTimeoutMs,
       schemaSampleRowLimit,
       schemaSampleFullScanMaxBytes,
+      poolMin,
+      poolMax,
+      poolTestOnBorrow,
       ...props
     } = config;
     // ConnectionConfig values are trusted to match ConnectionOptions fields
@@ -74,6 +79,7 @@ registerConnectionType('snowflake', {
           : typeof schemaSampleFullScanMaxBytes === 'string'
             ? parseInt(schemaSampleFullScanMaxBytes, 10)
             : undefined,
+      poolOptions: buildPoolOptions({poolMin, poolMax, poolTestOnBorrow}),
     });
   },
   properties: [
@@ -155,6 +161,33 @@ registerConnectionType('snowflake', {
       type: 'text',
       optional: true,
       description: 'SQL statements to run when the connection is established',
+    },
+    {
+      name: 'poolMin',
+      displayName: 'Pool Min',
+      type: 'number',
+      optional: true,
+      advanced: true,
+      description:
+        'Minimum number of pooled snowflake-sdk connections kept warm. Defaults to 1.',
+    },
+    {
+      name: 'poolMax',
+      displayName: 'Pool Max',
+      type: 'number',
+      optional: true,
+      advanced: true,
+      description:
+        'Maximum number of pooled snowflake-sdk connections. Defaults to 1.',
+    },
+    {
+      name: 'poolTestOnBorrow',
+      displayName: 'Test On Borrow',
+      type: 'boolean',
+      optional: true,
+      advanced: true,
+      description:
+        'If true, the pool validates each connection when checked out. Defaults to true.',
     },
   ],
 });

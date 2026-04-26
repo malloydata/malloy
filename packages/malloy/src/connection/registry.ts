@@ -42,6 +42,12 @@ export interface ConnectionPropertyDefinition {
   optional?: true;
   default?: string | number | boolean | {[source: string]: string | string[]};
   description?: string;
+  /**
+   * Advisory hint to editors that this property is not part of typical
+   * configuration and may be hidden, folded under an "advanced" toggle, or
+   * ignored. Does not affect registry or factory behavior — purely UI guidance.
+   */
+  advanced?: boolean;
   /** For type 'file': extension filters for picker dialogs. */
   fileFilters?: Record<string, string[]>;
   /**
