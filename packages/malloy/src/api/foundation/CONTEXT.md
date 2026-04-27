@@ -118,51 +118,31 @@ Plain spread. This gives callers three moves without any extra API:
 
 ### Three Failure Modes
 
-Three cases, handled differently on purpose:
+Cases and observed behavior: [configuration.md → Failure Modes](../../doc/configuration.md#failure-modes). Why each behaves the way it does — the rationale that matters when you're tempted to "improve" them in code:
 
-| Case | Example | Behavior | Why |
-|---|---|---|---|
-| Unknown overlay source | `{zzz: "x"}`, no `zzz` registered | Warning to `config.log` at lookup time; property dropped | Almost always a typo or host/config mismatch — silent drop would hide real bugs |
-| Known overlay returns `undefined` | `{env: "PG_PASSWORD"}`, var unset | Silent drop | Legitimate "value not present"; matches env-var behavior. Required-field violations surface at connection-build time, not here |
-| Unresolved reference in a `default` | DuckDB `workingDirectory: {default: {config: "rootDirectory"}}` with no-op `config` overlay | Silent drop | A default is a hint, not a requirement — "no default" is fine |
+| Case | Why it behaves this way |
+|---|---|
+| Unknown overlay source → warning + drop | Almost always a typo or host/config mismatch. Silent-dropping would hide real bugs; throwing would punish a host that hasn't yet registered an optional overlay. The `config.log` warning splits the difference. |
+| Known overlay returns `undefined` → silent drop | Legitimate "value not present" state, matching env-var semantics. A required-field violation surfaces at connection-build time (lazy, at lookup), not here — keeping the resolver out of policy decisions about what's required. |
+| Unresolved reference in a `default` → silent drop | A default is a hint, not a requirement. "No default applicable" is a normal terminal state, not a failure. |
 
-A consequence: cases 2 and 3 make "typo'd env var" and "legitimately unset env var" indistinguishable. Matches today's behavior. Typo detection would need to cross the line between resolver and connection factory — not worth it.
+Consequence: cases 2 and 3 make "typo'd env var" and "legitimately unset env var" indistinguishable. Matches today's behavior. Typo detection would need the resolver to know which properties are required by which factory — not worth crossing that line.
 
 ## Property Defaults vs. `includeDefaultConnections`
 
-Two mechanisms, orthogonal by design. Casually both feel like "defaults," but they answer different questions.
+User-facing description of both mechanisms is in [configuration.md → Defaults](../../doc/configuration.md#defaults). Internals notes that don't belong in the user doc:
 
-**Property defaults** — "if this connection entry doesn't set this property, what fills in?" Registry declares `default` on each property; the resolver applies it to *every* entry, uniformly. Reference-shaped defaults resolve through the same overlays as inline refs (and silent-drop if unresolved — case 3 above).
+- **Orthogonality.** Two mechanisms answering different questions ("what fills in a missing property" vs. "what fills in a missing connection"). Don't conflate them in code — they share neither state nor a code path. Property defaults run *after* fabrication and apply uniformly, so a fabricated entry and a user-written one are indistinguishable downstream.
 
-**`includeDefaultConnections`** — "should we fabricate entries for backends the user didn't mention?" A boolean flag at the top of the POJO. When `true`, fabricate one entry per registered backend type not already represented. Fabricated entries then flow through property defaults just like user-written ones.
+- **Pipeline order.** `prepareConfig` fabricates first (`config_resolve.ts`), then `lookupConnection` applies property defaults (`config_lookup.ts`). The fabricator never reads `default` fields; the resolver doesn't care whether an entry was fabricated.
 
-Composition:
-
-```typescript
-// Soloist: both mechanisms work together
-new MalloyConfig({includeDefaultConnections: true})
-// → fabricator adds duckdb, bigquery, postgres, etc.
-// → property defaults fill in each entry's properties (databasePath: ':memory:',
-//   workingDirectory: {config: 'rootDirectory'} → resolved or dropped, etc.)
-```
-
-**Fabricator skip rules** — skip a type `T` if:
-- **Rule A** — some existing entry has `is: "T"` (user already told us what duckdb looks like).
-- **Rule B** — some existing entry is *named* `T`, even if its `is` is something else. Covers the case where a user writes `{duckdb: {is: 'postgres', ...}}` — entry named `duckdb` but pointing at a different backend. Without Rule B, the fabricator would add a second `duckdb`-named entry and clobber this one. Worth a dedicated test, because the most common user convention ("I have a duckdb, I'll call it `duckdb`") makes the fabricator's natural target name frequently equal to the user's chosen name.
-
-Both flags live in the POJO, so any host reading that file respects them without needing to pass anything in.
+- **Fabricator invariant.** *A phantom default named T exists iff no user entry is named T.* The skip is purely name-based; the `is` of user entries is irrelevant. This is what `lookupConnection` and host UIs (e.g. the VS Code connections sidebar) agree on — UI lists defaults by name, runtime must resolve those same names. An earlier version also skipped on type-already-in-use, which broke the agreement: a user with `{dankdb: {is: 'duckdb'}}` saw `duckdb` in the sidebar but got "No connection named 'duckdb'" at runtime.
 
 ## DuckDB rootDirectory — The Contract
 
-DuckDB resolves relative file paths against a connection-level anchor (`workingDirectory`). Without a stable answer, the same Malloy source can mean different things depending on which file imported it — a referential-transparency hole. The config system handles this with a contract rather than DuckDB-specific code:
+User-facing description: [configuration.md → DuckDB Working Directory](../../doc/configuration.md#duckdb-working-directory).
 
-- DuckDB declares `workingDirectory: {default: {config: 'rootDirectory'}}` in the registry.
-- Hosts that know where the project lives populate `config.rootDirectory` in the overlay (VS Code → workspace root; CLI → directory of discovered/explicit config file; Publisher → `project.metadata.location`).
-- Property defaults do the rest. No DuckDB-specific branch anywhere in the config system.
-
-The entire policy lives in one `default` field on one property in one registry entry. This is the template for backend quirks: declare the property, declare the default, let the host populate the overlay.
-
-`rootDirectory` is the **ceiling** (project root), not the directory where the config file happens to live. This matters when the config file is deep inside a project but data files live at the project root. Hosts that care expose `configURL` separately under a different key.
+The internals point: there is **no DuckDB-specific code anywhere in the config system**. The entire policy lives in one `default` field on one property in one registry entry — `workingDirectory: {default: {config: 'rootDirectory'}}`. Property defaults + the `config` overlay do the rest. This is the template for any backend quirk: declare the property, declare the default, let hosts populate the overlay. If you find yourself reaching for a DuckDB-shaped branch in the resolver, you're solving it wrong.
 
 ## Manifest URL — State Table
 
@@ -202,11 +182,14 @@ VS Code uses this to layer settings connections below the config layer. Publishe
 
 ## `releaseConnections`
 
-Preferred public call site is `runtime.releaseConnections()`, which forwards to `config.releaseConnections()`. The runtime is the natural lifecycle handle; one `MalloyConfig` per `Runtime`.
+User-facing description: [configuration.md → Releasing connections](../../doc/configuration.md#releasing-connections).
 
-`MalloyConfig` itself owns no connection resources — pools, sockets, file handles live inside individual `Connection` objects. What the managed lookup owns is a `name → Connection` cache populated lazily on lookup. `releaseConnections()` walks the cache and calls `Connection.close()` on each. Connections that were never looked up were never constructed and are skipped. Wrappers installed via `wrapConnections()` don't interfere — the managed lookup under the wrap still holds the cache.
+Implementation specifics:
 
-A Runtime constructed without a `MalloyConfig` (legacy `connections`/`connection` constructor forms) has nothing to forward to; `releaseConnections()` is a no-op and the caller owns whatever they passed in.
+- `MalloyConfig` owns no connection resources directly — pools, sockets, file handles all live inside individual `Connection` objects. What the managed lookup owns is a lazily-populated `name → Connection` cache.
+- `releaseConnections()` walks that cache and calls `Connection.close()` on each. Connections that were never looked up were never constructed and are skipped.
+- Wrappers installed via `wrapConnections()` don't interfere — the managed lookup under the wrap still holds the cache, and `runtime.releaseConnections()` forwards through to `config.releaseConnections()` directly, not through the wrap.
+- Legacy constructor forms (`new Runtime({connections})` / `new Runtime({connection})`) build a Runtime with no `MalloyConfig` to forward to; `releaseConnections()` is a no-op and the caller owns whatever they passed in.
 
 ## Discovery
 
@@ -232,7 +215,7 @@ URL-based (not filesystem-based) so the helper works in browser-safe environment
 
 ## Testing Notes
 
-- `config.spec.ts` covers the constructor pipeline, section compilers, overlay resolution, property defaults, `includeDefaultConnections` fabrication including Rule B, reference failure modes, and the manifest URL state table.
+- `config.spec.ts` covers the constructor pipeline, section compilers, overlay resolution, property defaults, `includeDefaultConnections` fabrication (name-based skip), reference failure modes, and the manifest URL state table.
 - `runtime.spec.ts` covers the manifest lazy-read, explicit `buildManifest` wins, `EMPTY_BUILD_MANIFEST`, and `releaseConnections` forwarding.
 - When adding a new backend with a registry default that references an overlay, add a test that the default is dropped (not errored) when the overlay is the no-op.
 

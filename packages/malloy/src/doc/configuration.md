@@ -103,7 +103,7 @@ A soloist can get working connections with nothing but:
 
 …which yields `duckdb`, `bigquery`, `postgres`, etc. — each with registry defaults applied. A host with no config file at all typically does the same thing by constructing `new MalloyConfig({includeDefaultConnections: true})` as a fallback.
 
-The fabricator skips a type `T` if some existing entry either has `is: "T"` or is *named* `T`. The second rule lets a user write `{duckdb: {is: 'postgres', ...}}` — naming an entry `duckdb` but pointing it at a different backend — without the fabricator silently adding a second entry of the same name.
+The fabricator skips a type `T` only if some existing entry is *named* `T`. The `is` of user entries doesn't enter into it: writing `{dankdb: {is: 'duckdb'}}` leaves the slot named `duckdb` free, so a phantom `duckdb` is still added and both are reachable. Writing `{duckdb: {is: 'postgres', ...}}` does occupy the `duckdb` slot — naming wins, regardless of the backend it points at.
 
 ## Discovery
 
