@@ -127,6 +127,7 @@ registerConnectionType('snowflake', {
       displayName: 'Timeout (ms)',
       type: 'number',
       optional: true,
+      advanced: true,
       default: 600000,
     },
     {
@@ -134,6 +135,7 @@ registerConnectionType('snowflake', {
       displayName: 'Schema Sample Timeout (ms)',
       type: 'number',
       optional: true,
+      advanced: true,
       default: 15000,
       description:
         'Timeout for the query that samples variant columns to detect their schema.',
@@ -143,6 +145,7 @@ registerConnectionType('snowflake', {
       displayName: 'Schema Sample Row Limit',
       type: 'number',
       optional: true,
+      advanced: true,
       default: 1000,
       description:
         'Row limit for the variant schema sample. Ignored for tables small enough to full-scan.',
@@ -152,6 +155,7 @@ registerConnectionType('snowflake', {
       displayName: 'Schema Full-Scan Max Bytes',
       type: 'number',
       optional: true,
+      advanced: true,
       description:
         'Tables with BYTES at or below this value are full-scanned during variant schema inference instead of sampled. When unset, the connection uses an internal threshold; picking a value here is a policy choice tied to the size-probe behavior.',
     },
@@ -160,6 +164,7 @@ registerConnectionType('snowflake', {
       displayName: 'Setup SQL',
       type: 'text',
       optional: true,
+      advanced: true,
       description: 'SQL statements to run when the connection is established',
     },
     {
