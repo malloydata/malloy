@@ -128,27 +128,27 @@ so the docs site stays in sync. Add to the PR checklist:
 ## Per-Backend Properties
 
 **DuckDB** (`displayName: "DuckDB"`):
-`databasePath` (file), `workingDirectory` (string), `motherDuckToken` (secret), `additionalExtensions` (string — comma-separated, factory parses to array), `readOnly` (boolean), `setupSQL` (text)
+`databasePath` (file), `workingDirectory` (string), `motherDuckToken` (secret), `additionalExtensions` (string — comma-separated, factory parses to array), `readOnly` (boolean), `setupSQL` (text, advanced). The remaining properties — `securityPolicy`, `allowedDirectories`, `enableExternalAccess`, `lockConfiguration`, `autoloadKnownExtensions`, `autoinstallKnownExtensions`, `allowCommunityExtensions`, `allowUnsignedExtensions`, `tempFileEncryption`, `threads`, `memoryLimit`, `tempDirectory`, `extensionDirectory` — are all `advanced: true` (security policy, extension policy, and resource tuning).
 
 **BigQuery** (`displayName: "BigQuery"`):
-`projectId` (string), `serviceAccountKeyPath` (file), `location` (string), `maximumBytesBilled` (string), `timeoutMs` (string), `billingProjectId` (string), `setupSQL` (text)
+`projectId` (string), `serviceAccountKeyPath` (file), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `setupSQL` (text, advanced)
 
 **PostgreSQL** (`displayName: "PostgreSQL"`):
-`host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string), `setupSQL` (text)
+`host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string, advanced), `setupSQL` (text, advanced)
 
 **Snowflake** (`displayName: "Snowflake"`):
-`account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number), `setupSQL` (text), `poolMin` (number, advanced), `poolMax` (number, advanced), `poolTestOnBorrow` (boolean, advanced)
+`account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number, advanced), `schemaSampleTimeoutMs` (number, advanced), `schemaSampleRowLimit` (number, advanced), `schemaSampleFullScanMaxBytes` (number, advanced), `setupSQL` (text, advanced), `poolMin` (number, advanced), `poolMax` (number, advanced), `poolTestOnBorrow` (boolean, advanced)
 Factory extracts `name`, `setupSQL`, `timeoutMs`, and the three pool fields; passes remaining properties as snowflake-sdk `ConnectionOptions`. The pool fields are assembled into a `generic-pool` options object via `buildPoolOptions()` and shallow-merged with `SnowflakeExecutor.defaultPoolOptions_` (`{min: 1, max: 1, testOnBorrow: true, testOnReturn: true}`); omitting all three preserves the defaults.
 
 **Trino** (`displayName: "Trino"`):
-`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text), `source` (string), `ssl` (json), `session` (json), `extraCredential` (json), `extraHeaders` (json)
+`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced), `source` (string, advanced), `ssl` (json, advanced), `session` (json, advanced), `extraCredential` (json, advanced), `extraHeaders` (json, advanced)
 The json-typed properties pass through to `trino-client`'s `ConnectionOptions` via `extraConfig`.
 
 **Presto** (`displayName: "Presto"`):
-`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text)
+`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
 
 **MySQL** (`displayName: "MySQL"`):
-`host` (string), `port` (number), `database` (string), `user` (string), `password` (password), `setupSQL` (text)
+`host` (string), `port` (number), `database` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
 
 **Publisher** (`displayName: "Malloy Publisher"`):
 `connectionUri` (string, required), `accessToken` (secret)
