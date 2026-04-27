@@ -106,33 +106,26 @@ function extractCompiledConnections(
 }
 
 /**
- * Add a bare `{is: typeName}` compiled entry for each registered connection
- * type not already represented in `compiledConnections`. Only runs when the
- * POJO sets `includeDefaultConnections: true`. Property values (including
- * reference-shaped defaults like DuckDB's `{config: 'rootDirectory'}`) are
- * *not* filled in here — that is the job of the async lookup resolver.
+ * For each registered connection type T, add a bare `{is: T}` compiled
+ * entry named T unless one already exists under that name. Only runs when
+ * the POJO sets `includeDefaultConnections: true`. Property values
+ * (including reference-shaped defaults like DuckDB's
+ * `{config: 'rootDirectory'}`) are filled in later by the async lookup
+ * resolver, not here.
  *
- * Skip rules:
- *   - Type already in use: some existing entry has `is: typeName`.
- *   - Name already taken: some existing entry is *named* `typeName`, even
- *     if its `is` points elsewhere. This protects a user who writes
- *     `{duckdb: {is: 'postgres', ...}}` — naming an entry after a type but
- *     pointing at a different backend — from being clobbered.
+ * The skip is purely name-based: the `is` of a user entry is irrelevant.
+ * `{duckdb: {is: 'postgres'}}` shadows the duckdb phantom (slot taken);
+ * `{dankdb: {is: 'duckdb'}}` does not (slot `duckdb` is still free, and
+ * both end up reachable). This name-only rule is the contract hosts rely
+ * on — e.g. the VS Code connections sidebar advertises defaults by name,
+ * and the runtime must resolve them under those same names.
  *
  * Mutates `compiledConnections` in place.
  */
 function fabricateMissingConnections(
   compiledConnections: Record<string, ConfigDict>
 ): void {
-  const presentTypes = new Set<string>();
-  for (const entry of Object.values(compiledConnections)) {
-    const isNode = entry.entries['is'];
-    if (isNode?.kind === 'value' && typeof isNode.value === 'string') {
-      presentTypes.add(isNode.value);
-    }
-  }
   for (const typeName of getRegisteredConnectionTypes()) {
-    if (presentTypes.has(typeName)) continue;
     if (compiledConnections[typeName]) continue;
     compiledConnections[typeName] = {
       kind: 'dict',

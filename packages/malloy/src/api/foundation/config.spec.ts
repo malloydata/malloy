@@ -411,9 +411,7 @@ describe('MalloyConfig overlay resolution', () => {
       }
     );
     expect(config.log).toEqual([]);
-    const conn = (await config.connections.lookupConnection(
-      'mydb'
-    )) as unknown as {name: string};
+    const conn = await config.connections.lookupConnection('mydb');
     expect(conn.name).toBe('mydb');
   });
 
@@ -437,9 +435,7 @@ describe('MalloyConfig overlay resolution', () => {
     });
     expect(config.log).toEqual([]);
     // ssl is json-typed — the object passes through literally, no env lookup.
-    const conn = (await config.connections.lookupConnection(
-      'mydb'
-    )) as unknown as {name: string};
+    const conn = await config.connections.lookupConnection('mydb');
     expect(conn.name).toBe('mydb');
   });
 });
@@ -622,17 +618,20 @@ describe('MalloyConfig property defaults and includeDefaultConnections', () => {
     expect(conn.dialectName).toBe('mockdb-dialect');
   });
 
-  it('does not fabricate when the type is already used', async () => {
+  it('still fabricates the type-named phantom when a user entry shares the type', async () => {
     const config = new MalloyConfig({
       connections: {mydb: {is: 'mockdb'}},
       includeDefaultConnections: true,
     });
-    // mockdb is used by 'mydb', so no auto-added connection named 'mockdb'.
-    await expect(
-      config.connections.lookupConnection('mockdb')
-    ).rejects.toThrow();
-    const conn = await config.connections.lookupConnection('mydb');
-    expect(conn.name).toBe('mydb');
+    // The user entry 'mydb' uses type mockdb, but the slot named 'mockdb'
+    // is unoccupied — the phantom default must still be fabricated so that
+    // hosts advertising 'mockdb' by name can resolve it at runtime.
+    const phantom = await config.connections.lookupConnection('mockdb');
+    expect(phantom.name).toBe('mockdb');
+    expect(phantom.dialectName).toBe('mockdb-dialect');
+    const userConn = await config.connections.lookupConnection('mydb');
+    expect(userConn.name).toBe('mydb');
+    expect(userConn.dialectName).toBe('mockdb-dialect');
   });
 
   it('does not clobber a user-named connection that collides with a type name', async () => {
