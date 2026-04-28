@@ -10,8 +10,7 @@
  * section-list rewriting): they're part of the expression.
  */
 
-import type {ParserRuleContext} from 'antlr4ts';
-import {TerminalNode} from 'antlr4ts/tree';
+import {ParserRuleContext} from 'antlr4ts';
 import type * as parser from '../lib/Malloy/MalloyParser';
 import type {Formatter} from './formatter';
 import {L, LINE_BUDGET} from './tokens';
@@ -50,10 +49,10 @@ export function formatFieldProperties(
   f.lastEmittedIdx = startIdx;
   for (let i = 0; i < ctx.childCount; i++) {
     const c = ctx.getChild(i);
-    if (c instanceof TerminalNode) continue; // skip OCURLY / CCURLY / SEMI
+    // Skip OCURLY / CCURLY / SEMI; only inner statement contexts get walked.
+    if (!(c instanceof ParserRuleContext)) continue;
     f.o.nl();
-    const child = c as ParserRuleContext;
-    formatTokenRange(f, child._start.tokenIndex, child._stop!.tokenIndex);
+    formatTokenRange(f, c._start.tokenIndex, c._stop!.tokenIndex);
   }
   // Flush any tail hidden tokens between the last inner statement and the
   // closing `}` so trailing comments emit at the inner indent rather than

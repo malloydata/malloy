@@ -15,16 +15,17 @@
  * We deliberately do NOT break at comparison operators — see prettify header.
  */
 
-import type {ParserRuleContext} from 'antlr4ts';
-import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
+import {ParserRuleContext} from 'antlr4ts';
+import type {ParseTree} from 'antlr4ts/tree';
+import {TerminalNode} from 'antlr4ts/tree';
 import type {Formatter} from './formatter';
 import {LINE_BUDGET} from './tokens';
 import {approxInlineSpan} from './leaf';
 
 export function formatBinaryChain(f: Formatter, ctx: ParserRuleContext): void {
-  const ChainCtor = ctx.constructor as Function;
-  if (ctx.parent instanceof ChainCtor) {
-    // Inner chain — let the outer one emit.
+  // Same chain class as our parent? Then we're an inner node of the chain —
+  // let the outermost one collect all operands and emit.
+  if (ctx.parent && ctx.parent.constructor === ctx.constructor) {
     for (let i = 0; i < ctx.childCount; i++) f.format(ctx.getChild(i));
     return;
   }
@@ -32,11 +33,14 @@ export function formatBinaryChain(f: Formatter, ctx: ParserRuleContext): void {
   const operands: ParseTree[] = [];
   const operators: TerminalNode[] = [];
   const collect = (n: ParseTree): void => {
-    if (n instanceof ChainCtor) {
-      const r = n as ParserRuleContext;
-      collect(r.getChild(0));
-      operators.push(r.getChild(1) as TerminalNode);
-      operands.push(r.getChild(2));
+    if (n instanceof ParserRuleContext && n.constructor === ctx.constructor) {
+      // Inner same-class chain node. Grammar guarantees getChild(1) is a
+      // TerminalNode (the operator); the guard makes that explicit without
+      // a cast.
+      collect(n.getChild(0));
+      const op = n.getChild(1);
+      if (op instanceof TerminalNode) operators.push(op);
+      operands.push(n.getChild(2));
     } else {
       operands.push(n);
     }

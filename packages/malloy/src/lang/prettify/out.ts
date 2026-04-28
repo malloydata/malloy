@@ -52,8 +52,8 @@ export class Out {
     this.buf = this.buf.replace(/ +$/, '');
   }
 
-  lastChar(): string | null {
-    return this.buf.length === 0 ? null : this.buf[this.buf.length - 1];
+  trimTrailingNewlines(): void {
+    this.buf = this.buf.replace(/\n+$/, '');
   }
 
   // The column the next emit will land at. When the buffer ends with a

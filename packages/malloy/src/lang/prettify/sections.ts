@@ -81,7 +81,8 @@ function listItems(
   listCtx: ParserRuleContext,
   itemKind: ItemKind
 ): ParserRuleContext[] {
-  const matches = (c: ParseTree): boolean => {
+  // Type predicate (`c is ParserRuleContext`) so callers don't need a cast.
+  const matches = (c: ParseTree): c is ParserRuleContext => {
     if (!(c instanceof ParserRuleContext)) return false;
     switch (itemKind) {
       case 'fieldEntry':
@@ -103,7 +104,7 @@ function listItems(
   const out: ParserRuleContext[] = [];
   for (let i = 0; i < listCtx.childCount; i++) {
     const c = listCtx.getChild(i);
-    if (matches(c)) out.push(c as ParserRuleContext);
+    if (matches(c)) out.push(c);
   }
   return out;
 }
@@ -253,7 +254,7 @@ function flushSameLineTail(f: Formatter, lastTok: Token): void {
     // newline back for EOL comments). Without this, the comment lands on a
     // new line, and a re-parse sees it as a different-line comment, breaking
     // idempotence.
-    f.o.buf = f.o.buf.replace(/\n+$/, '');
+    f.o.trimTrailingNewlines();
     flushHiddenBefore(f, j);
   }
 }
