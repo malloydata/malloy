@@ -5,9 +5,13 @@
  * RULE: BLOCK BODY
  *
  * A `{ … }` body containing statements (extend body, view body, etc.). Walks
- * children; between adjacent statements, preserves a single user-supplied
- * blank line *only if the kinds differ*. Same-kind adjacent statements never
- * get a blank.
+ * children; between adjacent statements:
+ *   - `view:` definitions always get a blank line before them (and after
+ *     the previous one), regardless of whether the source had a blank or
+ *     what kind preceded — view definitions read as their own sections.
+ *   - For other kinds: preserve a single user-supplied blank line only if
+ *     the kinds differ. Same-kind adjacent statements (consecutive
+ *     dimensions, measures, etc.) never get a blank.
  *
  * Also: top-level body — forces a blank line before each statement after the
  * first, regardless of source spacing (top-level statements should breathe).
@@ -58,8 +62,17 @@ export function formatBlockBody(f: Formatter, ctx: ParserRuleContext): void {
     if (c instanceof ParserRuleContext) {
       if (lastChild !== null) {
         const userHadBlank = c._start.line - lastChildEndLine > 1;
-        const sameKind = statementKind(lastChild) === statementKind(c);
-        if (userHadBlank && !sameKind) f.o.blank();
+        const lastKind = statementKind(lastChild);
+        const curKind = statementKind(c);
+        const sameKind = lastKind === curKind;
+        // `view:` definitions always breathe — blank line above each one
+        // (and after the previous one) regardless of the user's source
+        // spacing or what kind preceded.
+        if (curKind === 'view' || lastKind === 'view') {
+          f.o.blank();
+        } else if (userHadBlank && !sameKind) {
+          f.o.blank();
+        }
       }
       f.format(c);
       lastChild = c;

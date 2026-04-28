@@ -134,6 +134,17 @@ export function hasCommentsInRange(
   return false;
 }
 
+// Index of the next non-hidden, non-EOF token strictly after `idx`, or -1.
+function nextVisibleAfter(f: Formatter, idx: number): number {
+  for (let j = idx + 1; j < f.tokens.length; j++) {
+    const t = f.tokens[j];
+    if (t.channel === Token.HIDDEN_CHANNEL) continue;
+    if (t.type === Token.EOF) return -1;
+    return j;
+  }
+  return -1;
+}
+
 // Does the paren-pair at [openIdx, closeIdx] have any COMMA at its own depth?
 // (Used to distinguish "function call with multiple args" from "single-arg
 // call" / "empty parens".)
@@ -199,6 +210,15 @@ export function emitVisibleToken(f: Formatter, t: Token, idx: number): void {
   if (t.type === L.OCURLY) {
     f.o.space();
     f.o.text('{');
+    // Empty `{}`: peek the next visible token. If it's the matching close,
+    // emit it inline so we get `extend {}` not `extend {\n}`.
+    const nextVisible = nextVisibleAfter(f, idx);
+    if (nextVisible !== -1 && f.tokens[nextVisible].type === L.CCURLY) {
+      f.o.text('}');
+      if (f.o.indent === 0) f.needBlank = true;
+      note(f, L.CCURLY, nextVisible, f.tokens[nextVisible]);
+      return;
+    }
     f.o.indent++;
     f.o.nl();
     note(f, t.type, idx, t);

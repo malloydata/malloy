@@ -31,6 +31,7 @@ import {
   formatPickStatement,
 } from './pick-case';
 import {formatBinaryChain} from './binary-chain';
+import {formatImportSelect} from './import-select';
 
 export class Formatter {
   o = new Out();
@@ -105,6 +106,11 @@ export class Formatter {
       if (node instanceof rule.ctxClass) {
         return formatSectionStatement(this, node, rule);
       }
+    }
+
+    // RULE: IMPORT SELECT — `import {a, b} from 'x'` stays compact.
+    if (node instanceof parser.ImportSelectContext) {
+      return formatImportSelect(this, node);
     }
 
     // RULE: PICK / CASE / BINARY CHAIN.

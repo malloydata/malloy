@@ -28,7 +28,10 @@ export type ItemKind =
   | 'fieldName'
   | 'collectionMember'
   | 'orderBySpec'
-  | 'fieldExpr';
+  | 'fieldExpr'
+  | 'joinDef'
+  | 'includeField'
+  | 'indexElement';
 
 // One row per `keyword: items` rule we handle. The `list` accessor returns
 // the list-context child; the `keywordTypes` are the lexer token types that
@@ -126,6 +129,29 @@ export const SECTION_STATEMENT_RULES: SectionRule[] = [
     [L.HAVING],
     c => c.filterClauseList(),
     'fieldExpr'
+  ),
+  rule(parser.DefJoinOneContext, [L.JOIN_ONE], c => c.joinList(), 'joinDef'),
+  rule(parser.DefJoinManyContext, [L.JOIN_MANY], c => c.joinList(), 'joinDef'),
+  rule(
+    parser.DefJoinCrossContext,
+    [L.JOIN_CROSS],
+    c => c.joinList(),
+    'joinDef'
+  ),
+  // include block items: `public: a, b`, `internal: x, y, z`. The keyword
+  // (PUBLIC/PRIVATE/INTERNAL) lives one level down inside accessLabelProp;
+  // findKeyword in ./sections handles that nested case.
+  rule(
+    parser.IncludeItemContext,
+    [L.PUBLIC, L.PRIVATE, L.INTERNAL],
+    c => c.includeList(),
+    'includeField'
+  ),
+  rule(
+    parser.IndexStatementContext,
+    [L.INDEX],
+    c => c.indexFields(),
+    'indexElement'
   ),
 ];
 

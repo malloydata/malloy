@@ -12,11 +12,21 @@
  *
  * formatSectionList rule (locked in with the user):
  *   - All bare items + total fits ≤ LINE_BUDGET → inline `kw: a, b, c`.
- *   - Single item that fits (even if it has `is`) → inline.
+ *   - Single item that fits (even if it has `is`) → inline. Items containing
+ *     a `{...}` body with more than one section statement are excluded —
+ *     view bodies don't read on one line regardless of length.
+ *   - Single is-item that doesn't fit inline → keep keyword and item on the
+ *     same line (`nest: name is { …wrapped body… }`); the body's `{...}`
+ *     wraps internally. Annotated items still take the keyword-on-own-line
+ *     form so the annotation lands above its item.
  *   - Otherwise → wrapped: keyword on its own line; items at +1 indent;
  *       bare items flow-fill ≤ LINE_BUDGET, comma-separated intra-line,
  *       no trailing commas; `is` items each on own line; annotated items
  *       each on own line, annotation on the line above.
+ *
+ * After the last item, trailing comments that sit between the section and
+ * the enclosing `}` are also emitted at the inner indent — they belong to
+ * the section the user just wrote, not the parent block.
  */
 
 import {ParserRuleContext, Token} from 'antlr4ts';
@@ -25,7 +35,14 @@ import {TerminalNode} from 'antlr4ts/tree';
 import * as parser from '../lib/Malloy/MalloyParser';
 import type {Formatter} from './formatter';
 import type {ItemKind, SectionRule} from './rules';
-import {INDENT_STR, L, LINE_BUDGET, endLineOf} from './tokens';
+import {
+  INDENT_STR,
+  L,
+  LINE_BUDGET,
+  SECTION_TOKENS,
+  endLineOf,
+  findMatching,
+} from './tokens';
 import {
   flushHiddenBefore,
   formatTokenRange,
@@ -48,7 +65,10 @@ export function formatSectionStatement(
   }
   for (let i = 0; i < stmt.childCount; i++) {
     const c = stmt.getChild(i);
-    if (c instanceof TerminalNode && c.symbol === keywordTok) {
+    const isKeywordChild =
+      (c instanceof TerminalNode && c.symbol === keywordTok) ||
+      (c instanceof ParserRuleContext && childContainsToken(c, keywordTok));
+    if (isKeywordChild) {
       flushHiddenBefore(f, keywordTok.tokenIndex);
       if (f.o.indent > 0) f.o.nl();
       else startStatementLine(f);
@@ -58,21 +78,42 @@ export function formatSectionStatement(
     }
     if (c === listCtx) {
       const items = listItems(listCtx, rule.itemKind);
-      if (items.length > 0) formatSectionList(f, items);
+      if (items.length > 0) formatSectionList(f, items, rule.itemKind);
       continue;
     }
     f.format(c);
   }
 }
 
+function childContainsToken(node: ParserRuleContext, tok: Token): boolean {
+  for (let i = 0; i < node.childCount; i++) {
+    const c = node.getChild(i);
+    if (c instanceof TerminalNode && c.symbol === tok) return true;
+  }
+  return false;
+}
+
 function findKeyword(
   node: ParserRuleContext,
   types: number[]
 ): Token | undefined {
+  // Direct terminal children — fast path, the common case.
   for (let i = 0; i < node.childCount; i++) {
     const c = node.getChild(i);
     if (c instanceof TerminalNode && types.includes(c.symbol.type))
       return c.symbol;
+  }
+  // Fallback: descend one level. Some rules wrap the keyword in a small
+  // nested rule (e.g. includeItem → accessLabelProp → INTERNAL).
+  for (let i = 0; i < node.childCount; i++) {
+    const c = node.getChild(i);
+    if (c instanceof ParserRuleContext) {
+      for (let j = 0; j < c.childCount; j++) {
+        const g = c.getChild(j);
+        if (g instanceof TerminalNode && types.includes(g.symbol.type))
+          return g.symbol;
+      }
+    }
   }
   return undefined;
 }
@@ -99,6 +140,12 @@ function listItems(
         return c instanceof parser.OrderBySpecContext;
       case 'fieldExpr':
         return c instanceof parser.FieldExprContext;
+      case 'joinDef':
+        return c instanceof parser.JoinDefContext;
+      case 'includeField':
+        return c instanceof parser.IncludeFieldContext;
+      case 'indexElement':
+        return c instanceof parser.IndexElementContext;
     }
   };
   const out: ParserRuleContext[] = [];
@@ -111,9 +158,12 @@ function listItems(
 
 function classifyItem(
   f: Formatter,
-  ctx: ParserRuleContext
+  ctx: ParserRuleContext,
+  itemKind: ItemKind
 ): {ctx: ParserRuleContext; hasIs: boolean; hasAnnotation: boolean} {
-  let hasIs = false;
+  // joinDef items always wrap onto their own line. They use `with` / `on`
+  // instead of `is`, but they're structurally one-per-line like is-items.
+  let hasIs = itemKind === 'joinDef';
   let hasAnnotation = false;
   for (let i = ctx._start.tokenIndex; i <= ctx._stop!.tokenIndex; i++) {
     const t = f.tokens[i];
@@ -129,8 +179,12 @@ function classifyItem(
   return {ctx, hasIs, hasAnnotation};
 }
 
-function formatSectionList(f: Formatter, items: ParserRuleContext[]): void {
-  const itemInfos = items.map(it => classifyItem(f, it));
+function formatSectionList(
+  f: Formatter,
+  items: ParserRuleContext[],
+  itemKind: ItemKind
+): void {
+  const itemInfos = items.map(it => classifyItem(f, it, itemKind));
   const noAnnotations = itemInfos.every(info => !info.hasAnnotation);
   const allBare = itemInfos.every(info => !info.hasIs && !info.hasAnnotation);
   const firstItem = items[0];
@@ -138,14 +192,22 @@ function formatSectionList(f: Formatter, items: ParserRuleContext[]): void {
 
   // Inline candidate: no annotations, no hidden-channel comments anywhere in
   // the items' span (renderItemInline drops them), AND either all bare or
-  // exactly one item.
+  // exactly one item. Items containing a `{...}` body with multiple inner
+  // statements are also excluded — collapsing a view body onto one line is
+  // hostile to read regardless of length.
   const itemsHaveComments = hasCommentsInRange(
     f,
     firstItem._start.tokenIndex,
     lastItem._stop!.tokenIndex
   );
+  const itemsHaveMultiStatementBody = itemInfos.some(info =>
+    hasMultiStatementCurlyBody(f, info.ctx)
+  );
   const inlineEligible =
-    noAnnotations && !itemsHaveComments && (allBare || items.length === 1);
+    noAnnotations &&
+    !itemsHaveComments &&
+    !itemsHaveMultiStatementBody &&
+    (allBare || items.length === 1);
 
   if (inlineEligible) {
     const renderedItems = itemInfos.map(info => renderItemInline(f, info.ctx));
@@ -163,6 +225,23 @@ function formatSectionList(f: Formatter, items: ParserRuleContext[]): void {
       );
       return;
     }
+  }
+
+  // Single is-item that doesn't fit inline: keep the keyword on the same
+  // line as the item (`nest: name is { …wrapped body… }`) instead of
+  // breaking before the name. The body's `{...}` will wrap on its own.
+  // Annotated items still need the keyword-on-own-line form so the
+  // annotation can land between them.
+  if (
+    items.length === 1 &&
+    itemInfos[0].hasIs &&
+    !itemInfos[0].hasAnnotation &&
+    !itemsHaveComments
+  ) {
+    f.o.text(' ');
+    f.format(itemInfos[0].ctx);
+    f.lastEmittedType = lastItem._stop!.type;
+    return;
   }
 
   // Wrapped form. Two paths:
@@ -232,14 +311,58 @@ function formatSectionList(f: Formatter, items: ParserRuleContext[]): void {
   f.lastEmittedType = lastItem._stop!.type;
 }
 
-// After the last item of a wrapped section list, flush any trailing comments
-// on the SAME source line as the last item — those are tail comments belong-
-// ing to the last item and should emit at the section's inner indent.
-// Different-line comments are leading comments for the next statement; leave
-// them for the parent context to emit at the outer indent.
+// Does any `{...}` block inside this item contain more than one section
+// keyword (group_by:, aggregate:, where:, …) at its top level? Used to gate
+// the section-list inline form: a view body with multiple statements never
+// reads well on a single line, even when it fits. Single-statement bodies
+// like `{ where: x = 1 }` may still inline.
+function hasMultiStatementCurlyBody(
+  f: Formatter,
+  ctx: ParserRuleContext
+): boolean {
+  const fromIdx = ctx._start.tokenIndex;
+  const toIdx = ctx._stop!.tokenIndex;
+  for (let i = fromIdx; i <= toIdx; i++) {
+    if (f.tokens[i].type !== L.OCURLY) continue;
+    const close = findMatching(f.tokens, i, L.OCURLY, L.CCURLY);
+    let count = 0;
+    let depth = 0;
+    for (let j = i + 1; j < close; j++) {
+      const t = f.tokens[j];
+      if (t.type === L.OCURLY || t.type === L.OPAREN || t.type === L.OBRACK) {
+        depth++;
+      } else if (
+        t.type === L.CCURLY ||
+        t.type === L.CPAREN ||
+        t.type === L.CBRACK
+      ) {
+        depth--;
+      } else if (depth === 0 && SECTION_TOKENS.has(t.type)) {
+        count++;
+        if (count > 1) return true;
+      }
+    }
+    i = close;
+  }
+  return false;
+}
+
+// After the last item of a wrapped section list, flush trailing comments
+// belonging to the section. There are two cases:
+//
+//   1. Same-line tail: a comment on the SAME source line as the last item.
+//      Always belongs to the last item; emit at the section's inner indent.
+//
+//   2. Different-line trailing comments that sit between the last item and
+//      the closing `}` of the enclosing block (no other statement follows).
+//      These visually belong to the section the user just wrote, not the
+//      block. Emit them at the inner indent so they stay associated with
+//      the section. If a real statement follows the comments, leave them
+//      for the parent — they're leading comments for that statement.
 function flushSameLineTail(f: Formatter, lastTok: Token): void {
   const lastEndLine = endLineOf(lastTok);
   let j = lastTok.tokenIndex + 1;
+  // Phase 1: same-line tail comments.
   while (j < f.tokens.length) {
     const t = f.tokens[j];
     if (t.channel !== Token.HIDDEN_CHANNEL) break;
@@ -247,14 +370,29 @@ function flushSameLineTail(f: Formatter, lastTok: Token): void {
     j++;
   }
   if (j > lastTok.tokenIndex + 1) {
-    // The wrapping loop emitted a per-item newline after the last item, but
-    // a same-line tail comment should attach to that item's line — not float
-    // on a fresh one. Drop the trailing newline so emitHiddenToken's
-    // same-line branch reattaches the comment correctly (and adds a trailing
-    // newline back for EOL comments). Without this, the comment lands on a
-    // new line, and a re-parse sees it as a different-line comment, breaking
-    // idempotence.
+    // Same-line comments: drop the wrapping loop's per-item newline so
+    // emitHiddenToken's same-line branch reattaches the comment correctly
+    // (and adds a trailing newline back for EOL comments). Otherwise a
+    // re-parse sees a different-line comment, breaking idempotence.
     f.o.trimTrailingNewlines();
     flushHiddenBefore(f, j);
+  }
+  // Phase 2: own-line comments before the next visible token. If the next
+  // visible token is a closing `}`, the comments visually belong to this
+  // section — emit them at the inner indent. Otherwise leave them for the
+  // parent (they're leading comments for whatever follows).
+  let k = j;
+  let trailingHidden = 0;
+  while (k < f.tokens.length) {
+    const t = f.tokens[k];
+    if (t.channel !== Token.HIDDEN_CHANNEL) break;
+    trailingHidden++;
+    k++;
+  }
+  if (trailingHidden > 0 && k < f.tokens.length) {
+    const next = f.tokens[k];
+    if (next.type === L.CCURLY) {
+      flushHiddenBefore(f, k);
+    }
   }
 }
