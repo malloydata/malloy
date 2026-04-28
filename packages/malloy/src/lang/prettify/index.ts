@@ -78,10 +78,9 @@
  *   paren-wrap decisions, compact-inline `, ` / `; `) live in the walker.
  */
 
-import {CharStreams, CommonTokenStream, Token} from 'antlr4ts';
-import {MalloyLexer} from '../lib/Malloy/MalloyLexer';
+import {Token} from 'antlr4ts';
 import type * as parser from '../lib/Malloy/MalloyParser';
-import {MalloyParser} from '../lib/Malloy/MalloyParser';
+import {makeMalloyParser} from '../run-malloy-parser';
 
 import {CollectingErrorListener} from './error-listener';
 import {Formatter} from './formatter';
@@ -107,21 +106,17 @@ export type {PrettifyError, PrettifyResult} from './types';
  * @experimental
  */
 export function prettify(src: string): PrettifyResult {
-  const inputStream = CharStreams.fromString(src);
-  const lexer = new MalloyLexer(inputStream);
   const lexerErrors = new CollectingErrorListener();
-  lexer.removeErrorListeners();
-  lexer.addErrorListener(lexerErrors);
-  const tokenStream = new CommonTokenStream(lexer);
+  const parserErrors = new CollectingErrorListener();
+  const {tokenStream, parser: malloyParser} = makeMalloyParser(src, {
+    lexerErrorListener: lexerErrors,
+    parserErrorListener: parserErrors,
+  });
   tokenStream.fill();
   const tokens = tokenStream.getTokens();
 
   let root: parser.MalloyDocumentContext | null = null;
-  const parserErrors = new CollectingErrorListener();
   try {
-    const malloyParser = new MalloyParser(tokenStream);
-    malloyParser.removeErrorListeners();
-    malloyParser.addErrorListener(parserErrors);
     root = malloyParser.malloyDocument();
   } catch {
     root = null;
