@@ -16,13 +16,20 @@
  *   3. The leaf walker handles per-token spacing/indentation/comments. It is
  *      v1's behaviour and is also the fallback when parsing fails.
  *
+ * File layout
+ * -----------
+ *   - ./out             — Out buffer (indent, newlines, single-space coalescing).
+ *   - ./tokens          — LINE_BUDGET, INDENT_STR; classification sets
+ *                         (SECTION_TOKENS, BINARY_OPS, CALL_HUG_AFTER, etc.);
+ *                         findMatching, endLineOf.
+ *   - ./rules           — SECTION_STATEMENT_RULES + STATEMENT_KIND_BY_CTX.
+ *                         A maintainer adding a new section keyword lands here.
+ *   - ./error-listener  — CollectingErrorListener.
+ *   - ./types           — PrettifyError, PrettifyResult.
+ *   - ./index (this)    — Formatter class + prettify() entry point.
+ *
  * Where rules live
  * ----------------
- *   - LINE_BUDGET, INDENT_STR  — global config (just below this header).
- *   - Token-classification sets (SECTION_TOKENS, BINARY_OPS, CALL_HUG_AFTER) —
- *     the small sets of tokens that need named handling.
- *   - SECTION_STATEMENT_RULES   — table of "section-statement" rules (one row
- *     per kind of `keyword: items` block). Add a row to support a new section.
  *   - emitVisibleToken          — RULE: PER-TOKEN. Spacing, structural
  *     punctuation, comment placement.
  *   - formatSectionList         — RULE: SECTION-LIST. inline vs. wrapped,
@@ -57,9 +64,13 @@
  *
  * Adding a new section-statement
  * ------------------------------
- *   Add a row to SECTION_STATEMENT_RULES with the rule's context class, the
- *   keyword token type(s), the list-context accessor, and the item-kind tag.
- *   Add a corresponding entry to listItems(). That's it.
+ *   Add a row to SECTION_STATEMENT_RULES (./rules) with the rule's context
+ *   class, the keyword token type(s), the list-context accessor, and the
+ *   item-kind tag. Add a corresponding entry to listItems(). That's it.
+ *
+ *   Note: section keywords NOT in the table fall through to the leaf walker
+ *   (which produces correct-but-plain output). Add a row only when the default
+ *   isn't good enough — flow-fill, alignment, or annotation handling.
  */
 
 import {
@@ -68,354 +79,30 @@ import {
   Token,
   ParserRuleContext,
 } from 'antlr4ts';
-import type {
-  ANTLRErrorListener,
-  RecognitionException,
-  Recognizer,
-} from 'antlr4ts';
 import type {ParseTree} from 'antlr4ts/tree';
 import {TerminalNode} from 'antlr4ts/tree';
-import {MalloyLexer} from './lib/Malloy/MalloyLexer';
-import * as parser from './lib/Malloy/MalloyParser';
-import {MalloyParser} from './lib/Malloy/MalloyParser';
+import {MalloyLexer} from '../lib/Malloy/MalloyLexer';
+import * as parser from '../lib/Malloy/MalloyParser';
+import {MalloyParser} from '../lib/Malloy/MalloyParser';
 
-export interface PrettifyError {
-  message: string;
-  line: number;
-  column: number;
-}
+import {Out} from './out';
+import {
+  L,
+  LINE_BUDGET,
+  INDENT_STR,
+  SECTION_TOKENS,
+  TOP_LEVEL_STARTERS,
+  CALL_HUG_AFTER,
+  BINARY_OPS,
+  endLineOf,
+  findMatching,
+} from './tokens';
+import type {ItemKind} from './rules';
+import {SECTION_STATEMENT_RULES, STATEMENT_KIND_BY_CTX} from './rules';
+import {CollectingErrorListener} from './error-listener';
+import type {PrettifyResult} from './types';
 
-export interface PrettifyResult {
-  result: string;
-  errors: PrettifyError[];
-}
-
-// ---------- Global formatting config ----------
-
-const L = MalloyLexer;
-const LINE_BUDGET = 100;
-const INDENT_STR = '  '; // two spaces per indent level
-
-// ---------- Token classification ----------
-
-// Section keywords that introduce a `keyword: items` block (or a single value
-// for some). Used by the leaf walker as a fallback newline rule when no
-// explicit section-statement handler caught us.
-const SECTION_TOKENS = new Set<number>([
-  L.ACCEPT,
-  L.AGGREGATE,
-  L.CALCULATE,
-  L.CALCULATION,
-  L.CONNECTION,
-  L.DECLARE,
-  L.DIMENSION,
-  L.DRILL,
-  L.EXCEPT,
-  L.EXTENDQ,
-  L.GROUP_BY,
-  L.GROUPED_BY,
-  L.HAVING,
-  L.INDEX,
-  L.INTERNAL,
-  L.JOIN_CROSS,
-  L.JOIN_ONE,
-  L.JOIN_MANY,
-  L.LIMIT,
-  L.MEASURE,
-  L.NEST,
-  L.ORDER_BY,
-  L.PARTITION_BY,
-  L.PRIMARY_KEY,
-  L.PRIVATE,
-  L.PROJECT,
-  L.PUBLIC,
-  L.QUERY,
-  L.RENAME,
-  L.RUN,
-  L.SAMPLE,
-  L.SELECT,
-  L.SOURCE,
-  L.TYPE,
-  L.TOP,
-  L.WHERE,
-  L.VIEW,
-  L.TIMEZONE,
-]);
-
-// Top-level statement starters. At column 0 each gets a blank line before it
-// when introducing a new statement (subject to the same-kind-no-blank rule).
-const TOP_LEVEL_STARTERS = new Set<number>([
-  L.SOURCE,
-  L.QUERY,
-  L.RUN,
-  L.IMPORT,
-]);
-
-// Token types after which an immediately following `(` or `[` is a call /
-// subscript and should hug (no leading space). Anything else (binary ops,
-// IS/AS/EXTEND/ON/WHEN/PICK/etc.) gets a space — the `(` is grouping.
-const CALL_HUG_AFTER = new Set<number>([
-  L.IDENTIFIER,
-  L.CPAREN,
-  L.CBRACK,
-  // Aggregate / built-in callable keywords commonly used as function names.
-  L.COUNT,
-  L.SUM,
-  L.AVG,
-  L.MIN,
-  L.MAX,
-  L.TABLE,
-  L.SQL,
-  L.COMPOSE,
-  L.CAST,
-  L.NOW,
-  L.LAST,
-]);
-
-// Binary operators that get spaces on both sides at the leaf level.
-// (Chain wrapping for and/or/??/+/- happens at parse-tree level — see
-// formatBinaryChain.)
-const BINARY_OPS = new Set<number>([
-  L.PLUS,
-  L.MINUS,
-  L.STAR,
-  L.SLASH,
-  L.PERCENT,
-  L.STARSTAR,
-  L.EQ,
-  L.NE,
-  L.LT,
-  L.GT,
-  L.LTE,
-  L.GTE,
-  L.AND,
-  L.OR,
-  L.MATCH,
-  L.NOT_MATCH,
-  L.ARROW,
-  L.FAT_ARROW,
-  L.BAR,
-  L.AMPER,
-]);
-
-// ---------- Output buffer ----------
-
-// Append-only buffer with helpers for indentation, single-space coalescing,
-// and newlines. Knows nothing about Malloy; the formatting rules call into it.
-class Out {
-  buf = '';
-  indent = 0;
-
-  // Append text. If the buffer ended with a newline, prepend the current
-  // indent first so the new text starts at the right column.
-  text(s: string): void {
-    if (this.buf.endsWith('\n')) this.buf += INDENT_STR.repeat(this.indent);
-    this.buf += s;
-  }
-
-  // Append at most one space. No-op at start of buffer, after newline, or
-  // after `(`, `[`, `.` (so `f(x` stays glued).
-  space(): void {
-    if (this.buf.length === 0) return;
-    const last = this.buf[this.buf.length - 1];
-    if (
-      last === ' ' ||
-      last === '\n' ||
-      last === '(' ||
-      last === '[' ||
-      last === '.'
-    )
-      return;
-    this.buf += ' ';
-  }
-
-  // Force the next emit onto a new line. Trailing spaces are stripped.
-  nl(): void {
-    if (this.buf.length === 0) return;
-    this.buf = this.buf.replace(/ +$/, '');
-    if (!this.buf.endsWith('\n')) this.buf += '\n';
-  }
-
-  // Force a blank line before the next emit. No-op at start of buffer.
-  blank(): void {
-    if (this.buf.length === 0) return;
-    this.nl();
-    if (!this.buf.endsWith('\n\n')) this.buf += '\n';
-  }
-
-  trimTrailingSpace(): void {
-    this.buf = this.buf.replace(/ +$/, '');
-  }
-
-  lastChar(): string | null {
-    return this.buf.length === 0 ? null : this.buf[this.buf.length - 1];
-  }
-
-  // The column the next emit will land at. When the buffer ends with a
-  // newline the indent isn't yet in `buf`, so we have to add the pending
-  // indent width to predict where the next text will appear.
-  lineLengthSoFar(): number {
-    if (this.buf.length === 0 || this.buf.endsWith('\n')) {
-      return this.indent * INDENT_STR.length;
-    }
-    const lastNl = this.buf.lastIndexOf('\n');
-    return this.buf.length - (lastNl + 1);
-  }
-
-  toString(): string {
-    return this.buf.replace(/\n*$/, '\n');
-  }
-}
-
-// ---------- Token utilities ----------
-
-function endLineOf(t: Token): number {
-  const text = t.text ?? '';
-  const newlines = (text.match(/\n/g) ?? []).length;
-  return t.line + newlines;
-}
-
-// Find the index of the closing token that matches the opener at startIdx.
-// Counts nested begin/end pairs of the same types.
-function findMatching(
-  tokens: Token[],
-  startIdx: number,
-  beginType: number,
-  endType: number
-): number {
-  let depth = 1;
-  for (let j = startIdx + 1; j < tokens.length; j++) {
-    if (tokens[j].type === beginType) depth++;
-    else if (tokens[j].type === endType) {
-      depth--;
-      if (depth === 0) return j;
-    }
-  }
-  return tokens.length - 1;
-}
-
-// ---------- Section-statement dispatch table ----------
-
-type ItemKind =
-  | 'fieldEntry'
-  | 'nestEntry'
-  | 'fieldDef'
-  | 'fieldName'
-  | 'collectionMember'
-  | 'orderBySpec'
-  | 'fieldExpr';
-
-// One row per `keyword: items` rule we handle. Add a row to support a new
-// section. The `list` accessor returns the list-context child; the
-// `keywordTypes` are the lexer token types that could appear as the
-// statement's keyword (most have one; ACCEPT/EXCEPT share a rule).
-//
-// A maintainer changing what counts as a "section list" lands here first.
-interface SectionRule {
-  ctxClass: new (...args: never[]) => ParserRuleContext;
-  keywordTypes: number[];
-  list: (ctx: ParserRuleContext) => ParserRuleContext | undefined;
-  itemKind: ItemKind;
-}
-
-const SECTION_STATEMENT_RULES: SectionRule[] = [
-  {
-    ctxClass: parser.AggregateStatementContext,
-    keywordTypes: [L.AGGREGATE],
-    list: c => (c as parser.AggregateStatementContext).queryFieldList(),
-    itemKind: 'fieldEntry',
-  },
-  {
-    ctxClass: parser.GroupByStatementContext,
-    keywordTypes: [L.GROUP_BY],
-    list: c => (c as parser.GroupByStatementContext).queryFieldList(),
-    itemKind: 'fieldEntry',
-  },
-  {
-    ctxClass: parser.CalculateStatementContext,
-    keywordTypes: [L.CALCULATE],
-    list: c => (c as parser.CalculateStatementContext).queryFieldList(),
-    itemKind: 'fieldEntry',
-  },
-  {
-    ctxClass: parser.NestStatementContext,
-    keywordTypes: [L.NEST],
-    list: c => (c as parser.NestStatementContext).nestedQueryList(),
-    itemKind: 'nestEntry',
-  },
-  {
-    ctxClass: parser.DeclareStatementContext,
-    keywordTypes: [L.DECLARE],
-    list: c => (c as parser.DeclareStatementContext).defList(),
-    itemKind: 'fieldDef',
-  },
-  {
-    ctxClass: parser.DefMeasuresContext,
-    keywordTypes: [L.MEASURE],
-    list: c => (c as parser.DefMeasuresContext).defList(),
-    itemKind: 'fieldDef',
-  },
-  {
-    ctxClass: parser.DefDimensionsContext,
-    keywordTypes: [L.DIMENSION],
-    list: c => (c as parser.DefDimensionsContext).defList(),
-    itemKind: 'fieldDef',
-  },
-  {
-    ctxClass: parser.DefExploreEditFieldContext,
-    keywordTypes: [L.ACCEPT, L.EXCEPT],
-    list: c => (c as parser.DefExploreEditFieldContext).fieldNameList(),
-    itemKind: 'fieldName',
-  },
-  {
-    ctxClass: parser.ProjectStatementContext,
-    keywordTypes: [L.SELECT],
-    list: c => (c as parser.ProjectStatementContext).fieldCollection(),
-    itemKind: 'collectionMember',
-  },
-  {
-    ctxClass: parser.OrderByStatementContext,
-    keywordTypes: [L.ORDER_BY],
-    list: c => (c as parser.OrderByStatementContext).ordering(),
-    itemKind: 'orderBySpec',
-  },
-  {
-    ctxClass: parser.WhereStatementContext,
-    keywordTypes: [L.WHERE],
-    list: c => (c as parser.WhereStatementContext).filterClauseList(),
-    itemKind: 'fieldExpr',
-  },
-  {
-    ctxClass: parser.HavingStatementContext,
-    keywordTypes: [L.HAVING],
-    list: c => (c as parser.HavingStatementContext).filterClauseList(),
-    itemKind: 'fieldExpr',
-  },
-];
-
-// Coarse statement-kind labels for the same-kind-no-blank rule in block
-// bodies. Different kinds preserve a single user-supplied blank line.
-const STATEMENT_KIND_BY_CTX: Array<{
-  ctxClass: new (...args: never[]) => ParserRuleContext;
-  kind: string;
-}> = [
-  {ctxClass: parser.JoinStatementContext, kind: 'join'},
-  {ctxClass: parser.QueryJoinStatementContext, kind: 'join'},
-  {ctxClass: parser.DefMeasuresContext, kind: 'measure'},
-  {ctxClass: parser.DefDimensionsContext, kind: 'dimension'},
-  {ctxClass: parser.DeclareStatementContext, kind: 'declare'},
-  {ctxClass: parser.AggregateStatementContext, kind: 'aggregate'},
-  {ctxClass: parser.GroupByStatementContext, kind: 'group_by'},
-  {ctxClass: parser.CalculateStatementContext, kind: 'calculate'},
-  {ctxClass: parser.NestStatementContext, kind: 'nest'},
-  {ctxClass: parser.WhereStatementContext, kind: 'where'},
-  {ctxClass: parser.HavingStatementContext, kind: 'having'},
-  {ctxClass: parser.OrderByStatementContext, kind: 'order_by'},
-  {ctxClass: parser.ProjectStatementContext, kind: 'select'},
-  {ctxClass: parser.DefExploreEditFieldContext, kind: 'edit_field'},
-  {ctxClass: parser.DefExploreRenameContext, kind: 'rename'},
-  {ctxClass: parser.DefExploreQueryContext, kind: 'view'},
-];
+export type {PrettifyError, PrettifyResult} from './types';
 
 // ---------- Formatter ----------
 
@@ -776,7 +463,6 @@ class Formatter {
     const savedOut = this.o;
     const savedLastIdx = this.lastEmittedIdx;
     const savedLastType = this.lastEmittedType;
-    const savedPrevLine = this.prevTokenEndLine;
     const savedNeedBlank = this.needBlank;
     const savedDepth = this.parenDepth;
     const savedBreaks = this.parenBreaks;
@@ -1065,9 +751,7 @@ class Formatter {
       lastItem._stop!.tokenIndex
     );
     const inlineEligible =
-      noAnnotations &&
-      !itemsHaveComments &&
-      (allBare || items.length === 1);
+      noAnnotations && !itemsHaveComments && (allBare || items.length === 1);
 
     if (inlineEligible) {
       const renderedItems = itemInfos.map(info =>
@@ -1582,24 +1266,6 @@ class Formatter {
   }
 }
 
-// ---------- Error listener ----------
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-class CollectingErrorListener implements ANTLRErrorListener<any> {
-  errors: PrettifyError[] = [];
-  syntaxError<T>(
-    _recognizer: Recognizer<T, any>,
-    _offendingSymbol: T | undefined,
-    line: number,
-    charPositionInLine: number,
-    msg: string,
-    _e: RecognitionException | undefined
-  ): void {
-    this.errors.push({message: msg, line, column: charPositionInLine});
-  }
-}
-/* eslint-enable @typescript-eslint/no-explicit-any */
-
 // ---------- Entry point ----------
 
 /**
@@ -1611,9 +1277,10 @@ class CollectingErrorListener implements ANTLRErrorListener<any> {
  * fix in a single PR.
  *
  * Parses the input, walks the parse tree, and emits a reformatted string.
- * Parse errors (from both the lexer and parser) are returned alongside the
- * result; if parsing fails entirely the result still comes out via a
- * token-level fallback.
+ *
+ * `errors` surfaces parse errors only (lexer + parser). Semantic / compile
+ * errors aren't checked here. If `errors.length > 0` you have a bigger problem
+ * than formatting — output is best-effort and not guaranteed to round-trip.
  *
  * @experimental
  */
