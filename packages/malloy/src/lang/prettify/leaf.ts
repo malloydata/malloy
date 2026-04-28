@@ -210,10 +210,17 @@ export function emitVisibleToken(f: Formatter, t: Token, idx: number): void {
   if (t.type === L.OCURLY) {
     f.o.space();
     f.o.text('{');
-    // Empty `{}`: peek the next visible token. If it's the matching close,
-    // emit it inline so we get `extend {}` not `extend {\n}`.
+    // Empty `{}`: peek the next visible token. If it's the matching close
+    // AND nothing hidden sits between them (no comments to preserve), emit
+    // inline so we get `extend {}` not `extend {\n}`. With a comment in the
+    // gap (`extend { /* keep */ }`), fall through to the wrapping form so
+    // the leaf walker's comment placement runs.
     const nextVisible = nextVisibleAfter(f, idx);
-    if (nextVisible !== -1 && f.tokens[nextVisible].type === L.CCURLY) {
+    if (
+      nextVisible !== -1 &&
+      f.tokens[nextVisible].type === L.CCURLY &&
+      !hasCommentsInRange(f, idx + 1, nextVisible - 1)
+    ) {
       f.o.text('}');
       if (f.o.indent === 0) f.needBlank = true;
       note(f, L.CCURLY, nextVisible, f.tokens[nextVisible]);

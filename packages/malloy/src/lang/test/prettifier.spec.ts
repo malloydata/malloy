@@ -646,6 +646,12 @@ describe('prettify — empty {} stays one line', () => {
         '}'
     );
   });
+  test('comment inside otherwise-empty {} is preserved (does not collapse)', () => {
+    // Empty-body inline collapse drops the comment if applied here, so the
+    // inline shortcut must be skipped when hidden tokens sit in the gap.
+    const out = pp('source: x is users extend { /* keep */ }');
+    expect(out).toContain('/* keep */');
+  });
 });
 
 describe('prettify — import select', () => {
@@ -665,6 +671,17 @@ describe('prettify — import select', () => {
     const out = pp(`import {${names}} from 'x.malloy'`);
     expect(out).toMatch(/^import \{\n/);
     expect(out).toMatch(/\n\} from 'x\.malloy'/);
+  });
+  test('block comment between import and select brace is preserved', () => {
+    const out = pp("import /* tag */ {a} from 'x.malloy'");
+    expect(out).toContain('/* tag */');
+  });
+  test('block comment between import items is preserved', () => {
+    // The inline form would drop the comment (renderItemInline strips
+    // hidden tokens). When any comment is present in the items' span the
+    // formatter must fall back to a comment-safe wrapped form.
+    const out = pp("import {a, /* keep */ b} from 'x.malloy'");
+    expect(out).toContain('/* keep */');
   });
 });
 
