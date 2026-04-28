@@ -102,6 +102,14 @@ src/lang/
 └── test/                      # Translator tests
 ```
 
+## Prettifier (`prettify.ts`)
+
+A pretty-printer for Malloy source. **This is a placeholder** — the long-term intention is a full-featured `@malloydata/syntax` module that would own a proper concrete-syntax tree, formatter, and lint engine. Until that exists, `prettify.ts` is a pragmatic implementation we can use today in the CLI and MCP servers.
+
+It is exposed *only* via `@malloydata/malloy/internal` as `prettify(src) → { result, errors }` and is explicitly experimental — the API may vanish or change without notice when the syntax module lands. Don't depend on it from anything you can't fix in a single PR.
+
+How it works: lex + parse, then walk the parse tree and dispatch a per-rule formatter (`formatPickStatement`, `formatSectionList`, `formatBinaryChain`, etc.); rules without an explicit handler fall through to a per-token leaf walker. The top of `prettify.ts` has an index of the rules and where each one lives. Tests live at [`test/prettifier.spec.ts`](test/prettifier.spec.ts), one `describe` per rule.
+
 ## Important Notes
 
 - The translator produces IR but does NOT generate SQL — that's the job of the [compiler](../model/CONTEXT.md)
