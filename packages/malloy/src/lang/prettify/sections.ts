@@ -155,7 +155,12 @@ function formatSectionList(f: Formatter, items: ParserRuleContext[]): void {
     if (candidateLen <= LINE_BUDGET) {
       f.o.text(' ');
       f.o.text(inlineBody);
-      note(f, L.IDENTIFIER, lastItem._stop!.tokenIndex, lastItem._stop!);
+      note(
+        f,
+        lastItem._stop!.type,
+        lastItem._stop!.tokenIndex,
+        lastItem._stop!
+      );
       return;
     }
   }
@@ -185,7 +190,7 @@ function formatSectionList(f: Formatter, items: ParserRuleContext[]): void {
     // Tail comments after the last item.
     flushHiddenBefore(f, lastItem._stop!.tokenIndex + 1);
     f.o.indent--;
-    note(f, L.IDENTIFIER, lastItem._stop!.tokenIndex, lastItem._stop!);
+    note(f, lastItem._stop!.type, lastItem._stop!.tokenIndex, lastItem._stop!);
     return;
   }
 
@@ -219,5 +224,5 @@ function formatSectionList(f: Formatter, items: ParserRuleContext[]): void {
   }
   flushBare();
   f.o.indent--;
-  note(f, L.IDENTIFIER, lastItem._stop!.tokenIndex, lastItem._stop!);
+  note(f, lastItem._stop!.type, lastItem._stop!.tokenIndex, lastItem._stop!);
 }

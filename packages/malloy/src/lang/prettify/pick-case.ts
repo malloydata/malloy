@@ -113,7 +113,7 @@ function formatPickAligned(
     // Aligned form: emit as a single pre-rendered string so the spacing
     // between value and `when` is exact regardless of padding width.
     f.o.text(aligned);
-    note(f, L.IDENTIFIER, pick._stop!.tokenIndex, pick._stop!);
+    note(f, pick._stop!.type, pick._stop!.tokenIndex, pick._stop!);
     return;
   }
   // Doesn't fit even aligned — break at WHEN, no padding.
@@ -207,7 +207,7 @@ function formatCaseWhen(
 
   if (!hasComments && f.o.lineLengthSoFar() + aligned.length <= LINE_BUDGET) {
     f.o.text(aligned);
-    note(f, L.IDENTIFIER, ctx._stop!.tokenIndex, ctx._stop!);
+    note(f, ctx._stop!.type, ctx._stop!.tokenIndex, ctx._stop!);
     return;
   }
   // Doesn't fit aligned — break at THEN.

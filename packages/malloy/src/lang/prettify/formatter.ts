@@ -56,6 +56,12 @@ export class Formatter {
   // lines? Stack matches parenDepth.
   parenBreaks: boolean[] = [];
 
+  // Set when format() is invoked at the top level (a MalloyDocument). Guards
+  // against accidental reuse of a Formatter instance — the Out buffer
+  // accumulates and would emit garbage on a second call. Construct a fresh
+  // Formatter per top-level call.
+  private rootFormatted = false;
+
   constructor(
     readonly src: string,
     readonly tokens: Token[]
@@ -71,6 +77,12 @@ export class Formatter {
 
     // RULE: TOP-LEVEL BODY — one blank line between adjacent statements.
     if (node instanceof parser.MalloyDocumentContext) {
+      if (this.rootFormatted) {
+        throw new Error(
+          'Formatter is single-use; construct a new instance per top-level format call'
+        );
+      }
+      this.rootFormatted = true;
       return formatTopLevel(this, node);
     }
 

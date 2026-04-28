@@ -17,9 +17,12 @@
 
 import {prettify} from '../prettify';
 
-// Run prettify and assert there are no parse errors. Returns the formatted
-// string with one trailing newline trimmed for convenient template-literal
-// comparison.
+// Run prettify and assert:
+//   - no parse errors on input
+//   - idempotence: prettify(prettify(src)) === prettify(src)
+//   - no new parse errors on the second pass
+// Returns the formatted string with one trailing newline trimmed for
+// convenient template-literal comparison.
 function pp(src: string): string {
   const {result, errors} = prettify(src);
   if (errors.length > 0) {
@@ -27,6 +30,19 @@ function pp(src: string): string {
       `prettify produced ${errors.length} parse error(s):\n` +
         errors.map(e => `  ${e.line}:${e.column}  ${e.message}`).join('\n') +
         `\n--- input ---\n${src}\n--- output ---\n${result}`
+    );
+  }
+  const second = prettify(result);
+  if (second.result !== result) {
+    throw new Error(
+      `prettify is not idempotent:\n--- input ---\n${src}\n` +
+        `--- first pass ---\n${result}\n--- second pass ---\n${second.result}`
+    );
+  }
+  if (second.errors.length > errors.length) {
+    throw new Error(
+      `prettify introduced ${second.errors.length - errors.length} new parse ` +
+        `error(s) on second pass:\n--- input ---\n${src}\n--- output ---\n${result}`
     );
   }
   return result.replace(/\n$/, '');

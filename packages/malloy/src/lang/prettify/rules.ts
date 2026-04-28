@@ -41,79 +41,92 @@ export interface SectionRule {
   itemKind: ItemKind;
 }
 
+// Constructs a SectionRule with the list-accessor closure typed against the
+// concrete context class. The single internal narrowing is justified: the
+// dispatcher only invokes `rule.list(node)` after `node instanceof
+// rule.ctxClass`, so at runtime the parameter really is of type `C`.
+function rule<C extends ParserRuleContext>(
+  ctxClass: new (...args: never[]) => C,
+  keywordTypes: number[],
+  list: (c: C) => ParserRuleContext | undefined,
+  itemKind: ItemKind
+): SectionRule {
+  return {
+    ctxClass,
+    keywordTypes,
+    list: ctx => list(ctx as C),
+    itemKind,
+  };
+}
+
 export const SECTION_STATEMENT_RULES: SectionRule[] = [
-  {
-    ctxClass: parser.AggregateStatementContext,
-    keywordTypes: [L.AGGREGATE],
-    list: c => (c as parser.AggregateStatementContext).queryFieldList(),
-    itemKind: 'fieldEntry',
-  },
-  {
-    ctxClass: parser.GroupByStatementContext,
-    keywordTypes: [L.GROUP_BY],
-    list: c => (c as parser.GroupByStatementContext).queryFieldList(),
-    itemKind: 'fieldEntry',
-  },
-  {
-    ctxClass: parser.CalculateStatementContext,
-    keywordTypes: [L.CALCULATE],
-    list: c => (c as parser.CalculateStatementContext).queryFieldList(),
-    itemKind: 'fieldEntry',
-  },
-  {
-    ctxClass: parser.NestStatementContext,
-    keywordTypes: [L.NEST],
-    list: c => (c as parser.NestStatementContext).nestedQueryList(),
-    itemKind: 'nestEntry',
-  },
-  {
-    ctxClass: parser.DeclareStatementContext,
-    keywordTypes: [L.DECLARE],
-    list: c => (c as parser.DeclareStatementContext).defList(),
-    itemKind: 'fieldDef',
-  },
-  {
-    ctxClass: parser.DefMeasuresContext,
-    keywordTypes: [L.MEASURE],
-    list: c => (c as parser.DefMeasuresContext).defList(),
-    itemKind: 'fieldDef',
-  },
-  {
-    ctxClass: parser.DefDimensionsContext,
-    keywordTypes: [L.DIMENSION],
-    list: c => (c as parser.DefDimensionsContext).defList(),
-    itemKind: 'fieldDef',
-  },
-  {
-    ctxClass: parser.DefExploreEditFieldContext,
-    keywordTypes: [L.ACCEPT, L.EXCEPT],
-    list: c => (c as parser.DefExploreEditFieldContext).fieldNameList(),
-    itemKind: 'fieldName',
-  },
-  {
-    ctxClass: parser.ProjectStatementContext,
-    keywordTypes: [L.SELECT],
-    list: c => (c as parser.ProjectStatementContext).fieldCollection(),
-    itemKind: 'collectionMember',
-  },
-  {
-    ctxClass: parser.OrderByStatementContext,
-    keywordTypes: [L.ORDER_BY],
-    list: c => (c as parser.OrderByStatementContext).ordering(),
-    itemKind: 'orderBySpec',
-  },
-  {
-    ctxClass: parser.WhereStatementContext,
-    keywordTypes: [L.WHERE],
-    list: c => (c as parser.WhereStatementContext).filterClauseList(),
-    itemKind: 'fieldExpr',
-  },
-  {
-    ctxClass: parser.HavingStatementContext,
-    keywordTypes: [L.HAVING],
-    list: c => (c as parser.HavingStatementContext).filterClauseList(),
-    itemKind: 'fieldExpr',
-  },
+  rule(
+    parser.AggregateStatementContext,
+    [L.AGGREGATE],
+    c => c.queryFieldList(),
+    'fieldEntry'
+  ),
+  rule(
+    parser.GroupByStatementContext,
+    [L.GROUP_BY],
+    c => c.queryFieldList(),
+    'fieldEntry'
+  ),
+  rule(
+    parser.CalculateStatementContext,
+    [L.CALCULATE],
+    c => c.queryFieldList(),
+    'fieldEntry'
+  ),
+  rule(
+    parser.NestStatementContext,
+    [L.NEST],
+    c => c.nestedQueryList(),
+    'nestEntry'
+  ),
+  rule(
+    parser.DeclareStatementContext,
+    [L.DECLARE],
+    c => c.defList(),
+    'fieldDef'
+  ),
+  rule(parser.DefMeasuresContext, [L.MEASURE], c => c.defList(), 'fieldDef'),
+  rule(
+    parser.DefDimensionsContext,
+    [L.DIMENSION],
+    c => c.defList(),
+    'fieldDef'
+  ),
+  rule(
+    parser.DefExploreEditFieldContext,
+    [L.ACCEPT, L.EXCEPT],
+    c => c.fieldNameList(),
+    'fieldName'
+  ),
+  rule(
+    parser.ProjectStatementContext,
+    [L.SELECT],
+    c => c.fieldCollection(),
+    'collectionMember'
+  ),
+  rule(
+    parser.OrderByStatementContext,
+    [L.ORDER_BY],
+    c => c.ordering(),
+    'orderBySpec'
+  ),
+  rule(
+    parser.WhereStatementContext,
+    [L.WHERE],
+    c => c.filterClauseList(),
+    'fieldExpr'
+  ),
+  rule(
+    parser.HavingStatementContext,
+    [L.HAVING],
+    c => c.filterClauseList(),
+    'fieldExpr'
+  ),
 ];
 
 // Coarse statement-kind labels for the same-kind-no-blank rule in block
