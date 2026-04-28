@@ -18,14 +18,14 @@
 import {Token} from 'antlr4ts';
 import type {Formatter} from './formatter';
 import {
+  BINARY_OPS,
   L,
   LINE_BUDGET,
   SECTION_TOKENS,
   TOP_LEVEL_STARTERS,
-  CALL_HUG_AFTER,
-  BINARY_OPS,
   endLineOf,
   findMatching,
+  leadingAction,
 } from './tokens';
 
 // Update per-token state after emitting a token (or a token-like span).
@@ -94,11 +94,6 @@ export function startStatementLine(f: Formatter): void {
   } else {
     f.o.nl();
   }
-}
-
-// Should `(` or `[` hug the previous token (no leading space)?
-function hugsCallParen(f: Formatter): boolean {
-  return f.lastEmittedType !== null && CALL_HUG_AFTER.has(f.lastEmittedType);
 }
 
 // Approximate length of the inline form of tokens [fromIdx, toIdx]: sum of
@@ -244,19 +239,22 @@ export function emitVisibleToken(f: Formatter, t: Token, idx: number): void {
 
   // ---- Open paren / bracket: decide call-hug vs grouping, decide wrap ----
   if (t.type === L.OPAREN || t.type === L.OBRACK) {
-    const isCall = hugsCallParen(f);
-    if (!isCall) f.o.space();
+    const action = leadingAction(f.lastEmittedType, t.type);
+    if (action === 'space') f.o.space();
     f.o.text(text);
 
     // Decide whether the contents will exceed the line budget when laid out
     // inline. Break only if there's somewhere useful to break:
-    //   - call/subscript parens: must have ≥ 2 args (commas at this depth);
-    //   - grouping parens: any overflow — content's own rules will wrap.
+    //   - call/subscript parens (action='hug'): must have ≥ 2 args (commas at
+    //     this depth);
+    //   - grouping parens (action='space'): any overflow — content's own
+    //     rules will wrap.
     const closeType = t.type === L.OPAREN ? L.CPAREN : L.CBRACK;
     const matchIdx = findMatching(f.tokens, idx, t.type, closeType);
     const inlineLen = approxInlineSpan(f, idx, matchIdx);
     const wouldOverflow = f.o.lineLengthSoFar() + inlineLen > LINE_BUDGET;
     const hasArgCommas = hasCommaAtDepth1(f, idx, matchIdx);
+    const isCall = action === 'hug';
     const willBreak = wouldOverflow && (hasArgCommas || !isCall);
     f.parenBreaks.push(willBreak);
     f.parenDepth++;
@@ -277,20 +275,6 @@ export function emitVisibleToken(f: Formatter, t: Token, idx: number): void {
     }
     f.o.text(text);
     f.parenDepth = Math.max(0, f.parenDepth - 1);
-    note(f, t.type, idx, t);
-    return;
-  }
-
-  // ---- Glued punctuation ----
-  if (t.type === L.DOT) {
-    f.o.trimTrailingSpace();
-    f.o.text('.');
-    note(f, t.type, idx, t);
-    return;
-  }
-  if (t.type === L.COLON || t.type === L.TRIPLECOLON) {
-    f.o.trimTrailingSpace();
-    f.o.text(text);
     note(f, t.type, idx, t);
     return;
   }
@@ -317,18 +301,15 @@ export function emitVisibleToken(f: Formatter, t: Token, idx: number): void {
     return;
   }
 
-  // ---- Binary operator: spaces both sides ----
-  if (BINARY_OPS.has(t.type)) {
-    f.o.space();
-    f.o.text(text);
-    f.o.space();
-    note(f, t.type, idx, t);
-    return;
-  }
-
-  // ---- Default: identifier, literal, keyword. Single space, then text. ----
-  f.o.space();
+  // ---- Default: identifier / literal / keyword / DOT / COLON / TRIPLECOLON
+  //      / binary op. Leading separator from the classifier; binary ops also
+  //      get a trailing space.
+  const action = leadingAction(f.lastEmittedType, t.type);
+  if (action === 'glue') f.o.trimTrailingSpace();
+  else if (action === 'space') f.o.space();
+  // 'hug' — emit nothing before
   f.o.text(text);
+  if (BINARY_OPS.has(t.type)) f.o.space();
   note(f, t.type, idx, t);
 }
 

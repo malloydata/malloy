@@ -32,8 +32,8 @@
  *                            and the small read-only helpers used by rule
  *                            formatters (approxInlineSpan, hasCommentsInRange,
  *                            formatTokenRange).
- *   - ./inline-renderer    — renderItemInline (flat-string mirror of
- *                            emitVisibleToken; see header in that file).
+ *   - ./inline-renderer    — renderItemInline (flat-string form for budget
+ *                            measurement and column alignment).
  *   - ./block-body         — formatBlockBody, formatTopLevel.
  *   - ./sections           — formatSectionStatement / formatSectionList.
  *   - ./field-properties   — formatFieldProperties (postfix `{…}`).
@@ -67,12 +67,15 @@
  *   (which produces correct-but-plain output). Add a row only when the default
  *   isn't good enough — flow-fill, alignment, or annotation handling.
  *
- * !!! emitVisibleToken / renderItemInline duplication !!!
- *   The leaf walker (./leaf) and the inline renderer (./inline-renderer) both
- *   encode per-token spacing rules. They have to agree on inter-token spacing
- *   for inline measurements to predict actual emission. If you change a
- *   per-token rule in one (e.g. add a token type that hugs `(`), update the
- *   other.
+ * Inter-token spacing
+ * -------------------
+ *   The classifier `leadingAction(prev, next)` in ./tokens is the single
+ *   source of truth for what separator (glue, hug, or coalescing space) goes
+ *   between two adjacent tokens. Both walkers — emitVisibleToken in ./leaf
+ *   and renderItemInline in ./inline-renderer — consult it, so a change to
+ *   `leadingAction` (e.g. adding a token type that hugs `(`) takes effect in
+ *   both paths automatically. Walker-specific concerns (newlines, indent,
+ *   paren-wrap decisions, compact-inline `, ` / `; `) live in the walker.
  */
 
 import {CharStreams, CommonTokenStream, Token} from 'antlr4ts';

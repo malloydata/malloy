@@ -118,6 +118,50 @@ export const BINARY_OPS = new Set<number>([
   L.AMPER,
 ]);
 
+// ---------- Inter-token spacing ----------
+
+// What separator should appear before a token of `nextType` given the last
+// emitted token's type? Single source of truth for inter-token spacing —
+// consulted by both the leaf walker (./leaf) and the inline renderer
+// (./inline-renderer) so they agree on what space (or lack of it) goes
+// between any two adjacent tokens.
+//
+//   'glue'  — strip trailing space, then emit (for `.`, `,`, `;`, `:`, `::`,
+//              `)`, `]`).
+//   'hug'   — emit nothing before (for `(` and `[` immediately after a known
+//              callable token in CALL_HUG_AFTER).
+//   'space' — coalescing single space; the buffer's own space() may further
+//              suppress it when the last char already provides separation.
+//
+// To add a new token type that should hug or glue, edit this function — both
+// walkers pick up the change automatically.
+export type LeadingAction = 'glue' | 'hug' | 'space';
+
+export function leadingAction(
+  prevType: number | null,
+  nextType: number
+): LeadingAction {
+  if (
+    nextType === L.DOT ||
+    nextType === L.COMMA ||
+    nextType === L.SEMI ||
+    nextType === L.COLON ||
+    nextType === L.TRIPLECOLON ||
+    nextType === L.CPAREN ||
+    nextType === L.CBRACK
+  ) {
+    return 'glue';
+  }
+  if (
+    (nextType === L.OPAREN || nextType === L.OBRACK) &&
+    prevType !== null &&
+    CALL_HUG_AFTER.has(prevType)
+  ) {
+    return 'hug';
+  }
+  return 'space';
+}
+
 // ---------- Token utilities ----------
 
 export function endLineOf(t: Token): number {
