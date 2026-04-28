@@ -28,12 +28,16 @@
  * at THEN onto two lines.
  */
 
-import {Token} from 'antlr4ts';
 import {TerminalNode} from 'antlr4ts/tree';
 import * as parser from '../lib/Malloy/MalloyParser';
 import type {Formatter} from './formatter';
 import {L, LINE_BUDGET} from './tokens';
-import {approxInlineSpan, hasCommentsInRange, note} from './leaf';
+import {
+  approxInlineSpan,
+  flushHiddenBefore,
+  hasCommentsInRange,
+  note,
+} from './leaf';
 import {renderItemInline} from './inline-renderer';
 
 export function formatPickStatement(
@@ -57,34 +61,22 @@ export function formatPickStatement(
   );
   const maxValueLen = valueStrs.reduce((m, s) => Math.max(m, s.length), 0);
 
-  // formatPickAligned emits a pre-rendered string and skips flushHiddenBefore,
-  // so any comments between picks would be lost. Walk the gaps explicitly and
-  // emit hidden-channel comments on their own line.
-  let prevEndIdx = ctx._start.tokenIndex - 1;
-  const flushBetween = (target: number): void => {
-    for (let j = prevEndIdx + 1; j < target; j++) {
-      const t = f.tokens[j];
-      if (t.channel !== Token.HIDDEN_CHANNEL) continue;
-      f.o.nl();
-      f.o.text((t.text ?? '').replace(/\s+$/, ''));
-    }
-  };
-
+  // Use flushHiddenBefore (the leaf walker's emitter) to flush gap comments
+  // between picks. Critical: it advances f.lastEmittedIdx, so when the next
+  // pick takes the broken-at-WHEN form (which goes through f.format → emit-
+  // VisibleToken → flushHiddenBefore), the gap won't be re-emitted.
   f.o.indent++;
   for (let i = 0; i < picks.length; i++) {
-    flushBetween(picks[i]._start.tokenIndex);
+    flushHiddenBefore(f, picks[i]._start.tokenIndex);
     f.o.nl();
     formatPickAligned(f, picks[i], maxValueLen);
-    prevEndIdx = picks[i]._stop!.tokenIndex;
   }
   if (elseTok && elseExpr) {
-    flushBetween(elseTok.symbol.tokenIndex);
+    flushHiddenBefore(f, elseTok.symbol.tokenIndex);
     f.o.nl();
     f.format(elseTok);
     f.format(elseExpr);
-    prevEndIdx = elseExpr._stop!.tokenIndex;
   }
-  flushBetween(stopIdx + 1);
   f.o.indent--;
 }
 
@@ -119,6 +111,10 @@ function formatPickAligned(
   // Doesn't fit even aligned — break at WHEN, no padding.
   f.format(pick.PICK());
   if (pick._pickValue) f.format(pick._pickValue);
+  // Flush hidden tokens between value and WHEN BEFORE the line break, so
+  // same-line comments stay attached to the value's line and the formatted
+  // output is idempotent on a re-parse.
+  flushHiddenBefore(f, pick.WHEN().symbol.tokenIndex);
   f.o.nl();
   f.format(pick.WHEN());
   f.format(pick._pickWhen);
@@ -139,7 +135,12 @@ export function formatPick(f: Formatter, ctx: parser.PickContext): void {
   }
   for (let i = 0; i < ctx.childCount; i++) {
     const c = ctx.getChild(i);
-    if (c instanceof TerminalNode && c.symbol.type === L.WHEN) f.o.nl();
+    if (c instanceof TerminalNode && c.symbol.type === L.WHEN) {
+      // Flush any hidden tokens between the previous child and WHEN before
+      // the line break, so same-line comments stay attached.
+      flushHiddenBefore(f, c.symbol.tokenIndex);
+      f.o.nl();
+    }
     f.format(c);
   }
 }
@@ -165,11 +166,13 @@ export function formatCaseStatement(
   for (let i = 0; i < ctx.childCount; i++) {
     const c = ctx.getChild(i);
     if (c instanceof parser.CaseWhenContext) {
+      flushHiddenBefore(f, c._start.tokenIndex);
       f.o.nl();
       formatCaseWhen(f, c, maxCondLen);
       continue;
     }
     if (c instanceof TerminalNode && c.symbol.type === L.ELSE) {
+      flushHiddenBefore(f, c.symbol.tokenIndex);
       f.o.nl();
       f.format(c);
       // emit the else expression on the same line
@@ -178,6 +181,7 @@ export function formatCaseStatement(
       continue;
     }
     if (c instanceof TerminalNode && c.symbol.type === L.END) {
+      flushHiddenBefore(f, c.symbol.tokenIndex);
       f.o.indent--;
       f.o.nl();
       f.format(c);
@@ -210,9 +214,11 @@ function formatCaseWhen(
     note(f, ctx._stop!.type, ctx._stop!.tokenIndex, ctx._stop!);
     return;
   }
-  // Doesn't fit aligned — break at THEN.
+  // Doesn't fit aligned — break at THEN. Flush comments between condition
+  // and THEN before the break for same-line attachment.
   f.format(ctx.WHEN());
   f.format(ctx._condition);
+  flushHiddenBefore(f, ctx.THEN().symbol.tokenIndex);
   f.o.nl();
   f.format(ctx.THEN());
   f.format(ctx._result);

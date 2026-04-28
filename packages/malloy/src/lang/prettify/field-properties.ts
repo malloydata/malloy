@@ -15,7 +15,12 @@ import {TerminalNode} from 'antlr4ts/tree';
 import type * as parser from '../lib/Malloy/MalloyParser';
 import type {Formatter} from './formatter';
 import {L, LINE_BUDGET} from './tokens';
-import {formatTokenRange, hasCommentsInRange, note} from './leaf';
+import {
+  flushHiddenBefore,
+  formatTokenRange,
+  hasCommentsInRange,
+  note,
+} from './leaf';
 import {renderItemInline} from './inline-renderer';
 
 export function formatFieldProperties(
@@ -50,6 +55,10 @@ export function formatFieldProperties(
     const child = c as ParserRuleContext;
     formatTokenRange(f, child._start.tokenIndex, child._stop!.tokenIndex);
   }
+  // Flush any tail hidden tokens between the last inner statement and the
+  // closing `}` so trailing comments emit at the inner indent rather than
+  // disappearing.
+  flushHiddenBefore(f, stopIdx);
   f.o.indent--;
   f.o.nl();
   f.o.text('}');

@@ -473,3 +473,46 @@ describe('prettify — invariants', () => {
     expect(typeof r.result).toBe('string');
   });
 });
+
+// Regressions caught by external review. Each was a comment-handling bug:
+// dropped, duplicated, or landing at the wrong indent. Idempotence (asserted
+// inside `pp()`) is the load-bearing property here — these all originally
+// failed it.
+describe('prettify — repro', () => {
+  test('tail comment in wrapped postfix `{...}` is preserved', () => {
+    eq(
+      "source: x is duckdb.table('t') extend { measure: c is count() { where: a = 1 /* keep1 */ } }",
+      "source: x is duckdb.table('t') extend {\n" +
+        '  measure:\n' +
+        '    c is count() {\n' +
+        '      where: a = 1 /* keep1 */\n' +
+        '    }\n' +
+        '}'
+    );
+  });
+
+  test('gap + internal pick comments emit once, idempotently', () => {
+    eq(
+      "source: x is duckdb.table('t') extend { dimension: c is title ? pick 'A' when ~ r'a' /* gap */ pick 'B' /* internal */ when ~ r'b' else 'O' }",
+      "source: x is duckdb.table('t') extend {\n" +
+        '  dimension:\n' +
+        '    c is title ?\n' +
+        "      pick 'A' when ~ r'a' /* gap */\n" +
+        "      pick 'B' /* internal */\n" +
+        "      when ~ r'b'\n" +
+        "      else 'O'\n" +
+        '}'
+    );
+  });
+
+  test('EOL tail comment in wrapped section list stays at inner indent', () => {
+    eq(
+      "source: x is duckdb.table('t') extend { measure: a is sum(x), b is avg(x) // keep3\n}",
+      "source: x is duckdb.table('t') extend {\n" +
+        '  measure:\n' +
+        '    a is sum(x)\n' +
+        '    b is avg(x) // keep3\n' +
+        '}'
+    );
+  });
+});

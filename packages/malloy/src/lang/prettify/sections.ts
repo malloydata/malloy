@@ -19,14 +19,13 @@
  *       each on own line, annotation on the line above.
  */
 
-import type {Token} from 'antlr4ts';
-import {ParserRuleContext} from 'antlr4ts';
+import {ParserRuleContext, Token} from 'antlr4ts';
 import type {ParseTree} from 'antlr4ts/tree';
 import {TerminalNode} from 'antlr4ts/tree';
 import * as parser from '../lib/Malloy/MalloyParser';
 import type {Formatter} from './formatter';
 import type {ItemKind, SectionRule} from './rules';
-import {INDENT_STR, L, LINE_BUDGET} from './tokens';
+import {INDENT_STR, L, LINE_BUDGET, endLineOf} from './tokens';
 import {
   flushHiddenBefore,
   formatTokenRange,
@@ -187,10 +186,12 @@ function formatSectionList(f: Formatter, items: ParserRuleContext[]): void {
       f.o.nl();
       f.format(info.ctx);
     }
-    // Tail comments after the last item.
-    flushHiddenBefore(f, lastItem._stop!.tokenIndex + 1);
+    flushSameLineTail(f, lastItem._stop!);
     f.o.indent--;
-    note(f, lastItem._stop!.type, lastItem._stop!.tokenIndex, lastItem._stop!);
+    // Update lastEmittedType for leading-action decisions, but DO NOT reset
+    // lastEmittedIdx — flushSameLineTail may have advanced it past tail
+    // comments, and rolling it back would let the parent re-emit them.
+    f.lastEmittedType = lastItem._stop!.type;
     return;
   }
 
@@ -223,6 +224,36 @@ function formatSectionList(f: Formatter, items: ParserRuleContext[]): void {
     }
   }
   flushBare();
+  flushSameLineTail(f, lastItem._stop!);
   f.o.indent--;
-  note(f, lastItem._stop!.type, lastItem._stop!.tokenIndex, lastItem._stop!);
+  // See comment in the with-comments branch: keep the advanced
+  // lastEmittedIdx so tail comments aren't re-emitted by the parent.
+  f.lastEmittedType = lastItem._stop!.type;
+}
+
+// After the last item of a wrapped section list, flush any trailing comments
+// on the SAME source line as the last item — those are tail comments belong-
+// ing to the last item and should emit at the section's inner indent.
+// Different-line comments are leading comments for the next statement; leave
+// them for the parent context to emit at the outer indent.
+function flushSameLineTail(f: Formatter, lastTok: Token): void {
+  const lastEndLine = endLineOf(lastTok);
+  let j = lastTok.tokenIndex + 1;
+  while (j < f.tokens.length) {
+    const t = f.tokens[j];
+    if (t.channel !== Token.HIDDEN_CHANNEL) break;
+    if (t.line !== lastEndLine) break;
+    j++;
+  }
+  if (j > lastTok.tokenIndex + 1) {
+    // The wrapping loop emitted a per-item newline after the last item, but
+    // a same-line tail comment should attach to that item's line — not float
+    // on a fresh one. Drop the trailing newline so emitHiddenToken's
+    // same-line branch reattaches the comment correctly (and adds a trailing
+    // newline back for EOL comments). Without this, the comment lands on a
+    // new line, and a re-parse sees it as a different-line comment, breaking
+    // idempotence.
+    f.o.buf = f.o.buf.replace(/\n+$/, '');
+    flushHiddenBefore(f, j);
+  }
 }
