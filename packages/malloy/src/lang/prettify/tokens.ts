@@ -90,6 +90,26 @@ export const CALL_HUG_AFTER = new Set<number>([
   L.CAST,
   L.NOW,
   L.LAST,
+  // Ungrouped / level-modifier function-style calls.
+  L.ALL,
+  L.EXCLUDE,
+  // Timeframe truncation keywords used as functions: year(x), month(x), …
+  L.YEAR,
+  L.QUARTER,
+  L.MONTH,
+  L.WEEK,
+  L.DAY,
+  L.HOUR,
+  L.MINUTE,
+  L.SECOND,
+  // Type-cast keyword names: timestamp(x), date(x), number(x), string(x), …
+  L.TIMESTAMP,
+  L.TIMESTAMPTZ,
+  L.DATE,
+  L.NUMBER,
+  L.STRING,
+  L.BOOLEAN,
+  L.JSON,
 ]);
 
 // Binary operators that get spaces on both sides at the leaf level.
@@ -147,11 +167,15 @@ export function leadingAction(
     nextType === L.SEMI ||
     nextType === L.COLON ||
     nextType === L.TRIPLECOLON ||
+    nextType === L.EXCLAM ||
     nextType === L.CPAREN ||
     nextType === L.CBRACK
   ) {
     return 'glue';
   }
+  // After the `!` cast operator (`epoch_ms!timestamp(x)`), the next token
+  // glues to it like the `.` operator does.
+  if (prevType === L.EXCLAM) return 'glue';
   if (
     (nextType === L.OPAREN || nextType === L.OBRACK) &&
     prevType !== null &&

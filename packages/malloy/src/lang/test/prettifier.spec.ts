@@ -474,6 +474,247 @@ describe('prettify — invariants', () => {
   });
 });
 
+describe('prettify — keyword-named function calls hug `(`', () => {
+  // Names that lex as keywords (ALL, EXCLUDE, YEAR, MONTH, …) but are
+  // commonly used as function calls. Without the explicit hug rule the
+  // prettifier inserts a space — `all (x)`, `year (created_at)` — which
+  // neither idiomatic Malloy nor the lexer expects.
+  const callableKeywords = [
+    ['all', 'all(population)'],
+    ['exclude', 'exclude(population, name)'],
+    ['year', 'year(created_at)'],
+    ['month', 'month(created_at)'],
+    ['day', 'day(created_at)'],
+    ['hour', 'hour(created_at)'],
+    ['minute', 'minute(created_at)'],
+    ['second', 'second(created_at)'],
+    ['week', 'week(created_at)'],
+    ['quarter', 'quarter(created_at)'],
+  ];
+  test.each(callableKeywords)('%s hugs its (', (_name, call) => {
+    const out = pp(
+      `source: x is duckdb.table('t') extend { measure: r is ${call} }`
+    );
+    expect(out).toContain(call);
+    // No space inserted before the open paren — the call hugs.
+    expect(out).not.toMatch(/\b\w+ \(/);
+  });
+
+  // Type names (TIMESTAMP, DATE, NUMBER, STRING, BOOLEAN, JSON) appear as
+  // function-call targets only via the `!` cast operator (`epoch_ms!timestamp(x)`).
+  // Confirm that form hugs.
+  const castTypes = ['timestamp', 'date', 'number', 'string', 'boolean'];
+  test.each(castTypes)('event_ms!%s(x) hugs', typeName => {
+    const out = pp(
+      `source: x is duckdb.table('t') extend { dimension: t is event_ms!${typeName}(x) }`
+    );
+    expect(out).toContain(`event_ms!${typeName}(x)`);
+  });
+
+  test('`!` cast operator with a 0-arg call form glues both sides', () => {
+    eq(
+      "source: x is duckdb.table('t') extend { dimension: t is event_ms!timestamp(x) }",
+      "source: x is duckdb.table('t') extend {\n" +
+        '  dimension: t is event_ms!timestamp(x)\n' +
+        '}'
+    );
+  });
+});
+
+describe('prettify — join_one / index / include sections', () => {
+  test('multi-item join_one wraps one per line', () => {
+    eq(
+      'source: x is users extend {\n' +
+        '  join_one: orders with user_id, profiles with id, prefs with id\n' +
+        '}',
+      'source: x is users extend {\n' +
+        '  join_one:\n' +
+        '    orders with user_id\n' +
+        '    profiles with id\n' +
+        '    prefs with id\n' +
+        '}'
+    );
+  });
+
+  test('single join_one stays inline if short', () => {
+    eq(
+      'source: x is users extend { join_one: orders with user_id }',
+      'source: x is users extend {\n  join_one: orders with user_id\n}'
+    );
+  });
+
+  test('long index list wraps with continuation indented past keyword', () => {
+    const fields = Array.from({length: 20}, (_, i) => `field_${i}`).join(', ');
+    const out = pp(
+      `source: x is duckdb.table('t') extend { view: i is { index: ${fields} } }`
+    );
+    // Wrapped index list lines must be indented further than the `index:`
+    // keyword itself.
+    const lines = out.split('\n');
+    const indexLine = lines.find(l => l.match(/^\s*index:\s*$/));
+    expect(indexLine).toBeDefined();
+    const indexCol = indexLine!.length - indexLine!.trimStart().length;
+    const fieldLines = lines.filter(l => l.match(/^\s+field_\d+/));
+    expect(fieldLines.length).toBeGreaterThan(0);
+    for (const line of fieldLines) {
+      const col = line.length - line.trimStart().length;
+      expect(col).toBeGreaterThan(indexCol);
+    }
+  });
+
+  test('include block items wrap with continuation indented past keyword', () => {
+    const fields = Array.from({length: 12}, (_, i) => `_field_${i}`).join(', ');
+    const out = pp(
+      'source: x is base include {\n' + `  internal: ${fields}\n` + '}'
+    );
+    const lines = out.split('\n');
+    const internalLine = lines.find(l => l.match(/^\s*internal:\s*$/));
+    expect(internalLine).toBeDefined();
+    const internalCol = internalLine!.length - internalLine!.trimStart().length;
+    const itemLines = lines.filter(l => l.match(/^\s+_field_/));
+    expect(itemLines.length).toBeGreaterThan(0);
+    for (const line of itemLines) {
+      const col = line.length - line.trimStart().length;
+      expect(col).toBeGreaterThan(internalCol);
+    }
+  });
+});
+
+describe('prettify — view: blank-line policy', () => {
+  test('forces blank between two view: definitions even without user blank', () => {
+    const out = pp(
+      "source: x is duckdb.table('t') extend {\n" +
+        '  view: a is { aggregate: c is count() }\n' +
+        '  view: b is { aggregate: c is count() }\n' +
+        '}'
+    );
+    // A blank line must sit between the two `view:` definitions. The body
+    // shape itself is the block-body rule's call — only the inter-view
+    // blank is what this test asserts.
+    expect(out).toMatch(/^ {2}}\n\n {2}view: b is/m);
+  });
+
+  test('inserts blank between non-view and following view: even without user blank', () => {
+    const out = pp(
+      "source: x is duckdb.table('t') extend {\n" +
+        '  measure: c is count()\n' +
+        '  view: a is { aggregate: c }\n' +
+        '}'
+    );
+    expect(out).toMatch(/measure: c is count\(\)\n\n {2}view: a is/);
+  });
+});
+
+describe('prettify — multi-statement {…} bodies do not collapse inline', () => {
+  test('nest with multi-statement body wraps even when it fits', () => {
+    const out = pp(
+      'source: x is t -> { nest: by_y is { group_by: y aggregate: c is count() } }'
+    );
+    // The body has two statements (group_by + aggregate); even if it would
+    // fit on one line, force the wrapped form.
+    expect(out).toMatch(
+      /nest: by_y is \{\n\s+group_by: y\n\s+aggregate: c is count\(\)\n\s+\}/
+    );
+  });
+
+  test('nest with single-statement body still inlines if it fits', () => {
+    const out = pp('source: x is t -> { nest: by_y is { group_by: y } }');
+    expect(out).toContain('nest: by_y is { group_by: y }');
+  });
+});
+
+describe('prettify — single-item nest: NAME stays on same line as nest:', () => {
+  test('single nest with multi-line body opens with `nest: name is {`', () => {
+    const out = pp(
+      'source: x is t -> { nest: dash is { group_by: y aggregate: c is count() } }'
+    );
+    // Opener is on one line — name is NOT broken onto its own line.
+    expect(out).not.toMatch(/nest:\s*\n\s+dash is \{/);
+    expect(out).toMatch(/nest: dash is \{/);
+  });
+});
+
+describe('prettify — empty {} stays one line', () => {
+  test('empty extend block', () => {
+    eq('source: x is users extend {}', 'source: x is users extend {}');
+  });
+  test('empty body in a join target', () => {
+    eq(
+      'source: x is users extend { join_one: o is orders extend {} on user_id = o.user_id }',
+      'source: x is users extend {\n' +
+        '  join_one: o is orders extend {} on user_id = o.user_id\n' +
+        '}'
+    );
+  });
+  test('comment inside otherwise-empty {} is preserved (does not collapse)', () => {
+    // Empty-body inline collapse drops the comment if applied here, so the
+    // inline shortcut must be skipped when hidden tokens sit in the gap.
+    const out = pp('source: x is users extend { /* keep */ }');
+    expect(out).toContain('/* keep */');
+  });
+});
+
+describe('prettify — import select', () => {
+  test('single-name import stays on one line', () => {
+    eq(
+      "import {flights_cube_base} from 'flights_cube.malloy'",
+      "import {flights_cube_base} from 'flights_cube.malloy'"
+    );
+  });
+  test('few-name import stays on one line', () => {
+    eq("import {a, b, c} from 'x.malloy'", "import {a, b, c} from 'x.malloy'");
+  });
+  test('long import wraps each item on its own line', () => {
+    const names = Array.from({length: 12}, (_, i) => `name_number_${i}`).join(
+      ', '
+    );
+    const out = pp(`import {${names}} from 'x.malloy'`);
+    expect(out).toMatch(/^import \{\n/);
+    expect(out).toMatch(/\n\} from 'x\.malloy'/);
+  });
+  test('block comment between import and select brace is preserved', () => {
+    const out = pp("import /* tag */ {a} from 'x.malloy'");
+    expect(out).toContain('/* tag */');
+  });
+  test('block comment between import items is preserved', () => {
+    // The inline form would drop the comment (renderItemInline strips
+    // hidden tokens). When any comment is present in the items' span the
+    // formatter must fall back to a comment-safe wrapped form.
+    const out = pp("import {a, /* keep */ b} from 'x.malloy'");
+    expect(out).toContain('/* keep */');
+  });
+});
+
+describe('prettify — comment placement inside aggregate/measure blocks', () => {
+  test('trailing comment inside aggregate stays at item indent (not hoisted out)', () => {
+    const out = pp(
+      'source: x is t -> { aggregate: a is count() // keep here\n}'
+    );
+    // The comment should sit on the line of `a is count()` (same-line tail).
+    expect(out).toContain('a is count() // keep here');
+  });
+
+  test('own-line comment between last aggregate item and `}` stays inside aggregate', () => {
+    const out = pp(
+      'source: x is t extend {\n' +
+        '  measure:\n' +
+        '    a is count()\n' +
+        '    b is sum(a)\n' +
+        '    // belongs to the measure block\n' +
+        '}'
+    );
+    // The comment line should be indented at the measure items level (4
+    // spaces under the source body), not flush with the closing `}`.
+    const lines = out.split('\n');
+    const commentLine = lines.find(l => l.includes('// belongs to'));
+    expect(commentLine).toBeDefined();
+    const itemLine = lines.find(l => l.includes('a is count()'));
+    const itemIndent = itemLine!.length - itemLine!.trimStart().length;
+    const commentIndent = commentLine!.length - commentLine!.trimStart().length;
+    expect(commentIndent).toBe(itemIndent);
+  });
+});
+
 // Regressions caught by external review. Each was a comment-handling bug:
 // dropped, duplicated, or landing at the wrong indent. Idempotence (asserted
 // inside `pp()`) is the load-bearing property here — these all originally

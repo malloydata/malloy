@@ -56,6 +56,30 @@
  *   - Single-arg function calls don't wrap (no point — nowhere useful to break).
  *   - `(` hugs only after a known-callable token (CALL_HUG_AFTER); after `is`,
  *     `as`, `extend`, `on`, `when`, etc. the `(` is grouping and gets a space.
+ *     CALL_HUG_AFTER includes the keyword-named built-ins that are commonly
+ *     used as functions: ALL, EXCLUDE, the timeframe truncation keywords
+ *     (YEAR/MONTH/DAY/…), and the cast-target type names
+ *     (TIMESTAMP/DATE/NUMBER/STRING/BOOLEAN/JSON).
+ *   - `!` is the cast operator (`epoch_ms!timestamp(x)`); it glues to both
+ *     sides like `.` does.
+ *   - Empty `{}` collapses inline (`extend {}`, not `extend {\n}`).
+ *   - `import {a, b, c} from 'x'` formats as a flat list when it fits on the
+ *     line; otherwise one item per line at +1 indent.
+ *   - `view:` definitions in a block body always have a blank line before
+ *     each one (after the first), even when no blank was in the source. The
+ *     same-kind-no-blank rule still applies to other statement kinds.
+ *   - `{...}` bodies that contain more than one section statement never
+ *     collapse onto a single line, even when they would fit. Reading two
+ *     `group_by:` clauses jammed on one line is hostile.
+ *   - Single is-item section lists keep the keyword and item on the same
+ *     line (`nest: name is { … }`), so the body wraps naturally instead of
+ *     forcing a `nest:\n  name is {` opener split.
+ *   - join_one / join_many / join_cross multi-item lists always wrap one
+ *     item per line — items use `with`/`on` instead of `is` but are
+ *     structurally is-like.
+ *   - Trailing comments between the last item of a section list and the
+ *     enclosing `}` are emitted at the section's inner indent, so they
+ *     stay associated with the section the user wrote them in.
  *
  * Adding a new section-statement
  * ------------------------------
