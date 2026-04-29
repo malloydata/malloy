@@ -4,6 +4,7 @@
     "skipLibCheck": true,
     "downlevelIteration": true,
     "moduleResolution": "node",
+    "ignoreDeprecations": "5.0",
     "noPropertyAccessFromIndexSignature": false,
     "lib": ["ES2021.String", "dom"],
     "target": "es6",

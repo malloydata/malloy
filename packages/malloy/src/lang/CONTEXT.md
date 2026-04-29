@@ -61,6 +61,10 @@ The AST is a tree of `MalloyElement` objects that represents the semantic struct
 - Uses visitor pattern to traverse parse tree
 - Creates appropriate MalloyElement instances for each parse tree node
 
+**Method naming convention in `malloy-to-ast.ts`:**
+- `visitX(pcx: XContext)` — visits a parse-tree node and returns the AST node for it (a `MalloyElement` subclass). Use this even if the method is only ever called from one parent visitor; the name signals "this is the parse-tree-to-AST mapping for rule `X`."
+- `getX(pcx: XContext)` — transforms a parse-tree fragment into something that is *not* an AST node (a typeDef, a primitive, a list of notes, etc.), or is a shared helper used from multiple callers. Distinct from `visitX` so a reader can tell at a glance whether the return is an AST node or a piece of supporting data.
+
 ### 3. Translator (`parse-malloy.ts`)
 
 The translator defines the interface for transforming AST into IR.

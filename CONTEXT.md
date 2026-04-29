@@ -166,6 +166,8 @@ If you're editing code and running tests **in the same package**, you don't need
 
 If you make changes **in a different package** than the test (or you're running tests from `test/` and change any package), run `npm run dev` at the repo root first. It's fast — codegen is content-hash cached and tsc is incremental.
 
+If you edit a codegen input (`.g4` grammar, `.peggy`, `.pegjs`), run `npm run dev` from the affected package's directory. Don't invoke `scripts/femto-build.js` directly — going through the package's npm script gets the working directory and digest paths right.
+
 ### Codegen and femto-build
 
 Some packages have codegen steps that generate source files from grammars or configs:

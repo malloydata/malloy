@@ -537,6 +537,16 @@ export type ParameterTypeDef =
 export type Parameter = ParameterTypeDef & ParameterInfo;
 export type Argument = Parameter;
 
+/**
+ * Type of a given declaration. The grammar's `malloyType` already excludes
+ * `json` and `sql native`, so any value of this union is a legal given type.
+ *
+ * The fully-narrowed recursive form described in `~/ctx/mp/implementation.md`
+ * (a fresh union over a smaller atomic base) lands with the IR work; the
+ * shape here is the conservative "not yet narrowed" version.
+ */
+export type GivenTypeDef = AtomicTypeDef | FilterExpressionParamTypeDef;
+
 export function paramHasValue(p: Parameter): boolean {
   return p.value !== null;
 }

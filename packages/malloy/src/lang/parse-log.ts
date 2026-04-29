@@ -324,6 +324,9 @@ type MessageParameterTypes = {
   'time-offset-type-mismatch': string;
   'unexpected-binary-operator': string;
   'illegal-reference-in-parameter-default': string;
+  'given-reference-not-implemented': string;
+  'given-no-tags-after-is': string;
+  'illegal-filter-type': string;
   'aggregate-analytic-in-select': string;
   'refinement-of-raw-query': string;
   'illegal-multistage-refinement-operation': string;

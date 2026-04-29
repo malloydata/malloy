@@ -94,6 +94,8 @@ export * from './statements/import-statement';
 export * from './query-properties/extend';
 export * from './parameters/argument';
 export * from './parameters/has-parameter';
+export * from './statements/define-given';
+export * from './expressions/expr-given';
 export * from './query-elements/anonymous-query';
 export * from './query-elements/query-refine';
 export * from './query-elements/query-arrow';

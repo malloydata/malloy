@@ -17,6 +17,7 @@
     "module": "commonjs",
     "esModuleInterop": true,
     "moduleResolution": "node",
+    "ignoreDeprecations": "5.0",
     "isolatedModules": true,
     "target": "es2019",
     "experimentalDecorators": true,

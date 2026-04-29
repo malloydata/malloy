@@ -31,6 +31,7 @@ malloyStatement
   : defineSourceStatement
   | defineUserTypeStatement
   | defineQuery
+  | defineGivenStatement
   | importStatement
   | runStatement
   | docAnnotations
@@ -80,6 +81,25 @@ userTypeFieldType
 
 defineQuery
   : topLevelQueryDefs                 # use_top_level_query_defs
+  ;
+
+defineGivenStatement
+  : tags GIVEN givenDefList
+  ;
+
+givenDefList
+  : givenDef (COMMA? givenDef)* COMMA?
+  ;
+
+givenDef
+  : tags givenNameDef DOUBLECOLON givenType (isDefine fieldExpr)?
+  ;
+
+givenNameDef: id;
+
+givenType
+  : malloyType
+  | FILTER LT malloyBasicType GT
   ;
 
 topLevelAnonQueryDef
@@ -690,6 +710,7 @@ malloyOrSQLType
 
 fieldExpr
   : fieldPath                                              # exprFieldPath
+  | GIVEN_REF                                              # exprGivenRef
   | literal                                                # exprLiteral
   | OBRACK fieldExpr (COMMA fieldExpr)* COMMA? CBRACK      # exprArrayLiteral
   | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
