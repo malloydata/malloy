@@ -15,7 +15,6 @@ import {typeDefToString} from '../../../model/utils';
 import type {ConstantExpression} from '../expressions/constant-expression';
 import {checkFilterExpression} from '../types/expression-def';
 import type {ExprValue} from '../types/expr-value';
-import type {ModelDataRequest} from '../../translate-response';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {DocStatementList, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
@@ -144,14 +143,5 @@ export class DefineGivens extends DocStatementList {
   constructor(givens: GivenDeclaration[]) {
     super(givens);
     this.givens = givens;
-  }
-
-  executeList(doc: Document): ModelDataRequest {
-    if (!this.inExperiment('givens', true)) {
-      // Log once per block instead of once per declaration.
-      this.logError('experiment-not-enabled', {experimentId: 'givens'});
-      return undefined;
-    }
-    return super.executeList(doc);
   }
 }

@@ -12,8 +12,23 @@ import {
   GivenDeclaration,
   GivenReference,
 } from '../ast';
-import {TestTranslator, errorMessage, expr} from './test-translator';
+import {
+  BetaExpression,
+  TestTranslator,
+  errorMessage,
+  markSource,
+} from './test-translator';
 import './parse-expects';
+
+// BetaExpression compiles a single expression; the source has no room
+// for `##!` annotations. Seed the translator's compilerFlagSrc directly
+// so the AST-build-time `inExperiment('givens', ...)` check passes.
+function givenExpr(unmarked: TemplateStringsArray, ...marked: string[]) {
+  const ms = markSource(unmarked, ...marked);
+  const translator = new BetaExpression(ms.code);
+  translator.compilerFlagSrc = ['##! experimental.givens\n'];
+  return {...ms, translator};
+}
 
 function parseDocument(src: string): Document {
   const t = new TestTranslator(src);
@@ -35,7 +50,11 @@ function findDefineGivens(doc: Document): DefineGivens[] {
 }
 
 function onlyGivens(src: string): GivenDeclaration[] {
-  const blocks = findDefineGivens(parseDocument(src));
+  // Most AST-shape tests don't bother spelling the flag every time;
+  // the flag check fires at AST-build time, so we prepend it here.
+  const blocks = findDefineGivens(
+    parseDocument(`##! experimental.givens\n${src}`)
+  );
   return blocks.flatMap(b => b.givens);
 }
 
@@ -194,7 +213,7 @@ describe('given: declarations', () => {
 
 describe('$NAME references in expressions', () => {
   test('parses as a GivenReference at top of the expression', () => {
-    const e = expr`$TENANT`.translator.ast();
+    const e = givenExpr`$TENANT`.translator.ast();
     expect(e).toBeInstanceOf(GivenReference);
     if (e instanceof GivenReference) {
       expect(e.name).toEqual('TENANT');
@@ -202,7 +221,7 @@ describe('$NAME references in expressions', () => {
   });
 
   test('participates in larger expressions', () => {
-    const e = expr`$X + 1`.translator.ast();
+    const e = givenExpr`$X + 1`.translator.ast();
     expect(e).toBeInstanceOf(ExprAddSub);
     const left = e?.children['left'];
     const right = e?.children['right'];
@@ -214,14 +233,14 @@ describe('$NAME references in expressions', () => {
   });
 
   test('two references in one expression', () => {
-    const e = expr`$A + $B`.translator.ast();
+    const e = givenExpr`$A + $B`.translator.ast();
     expect(e).toBeInstanceOf(ExprAddSub);
     expect(e?.children['left']).toBeInstanceOf(GivenReference);
     expect(e?.children['right']).toBeInstanceOf(GivenReference);
   });
 
   test('underscores and digits in given name', () => {
-    const e = expr`$MAX_ROWS_2`.translator.ast();
+    const e = givenExpr`$MAX_ROWS_2`.translator.ast();
     expect(e).toBeInstanceOf(GivenReference);
     if (e instanceof GivenReference) {
       expect(e.name).toEqual('MAX_ROWS_2');
@@ -229,7 +248,7 @@ describe('$NAME references in expressions', () => {
   });
 
   test('lowercase given name parses (uppercase is convention, not enforced)', () => {
-    const e = expr`$tenant`.translator.ast();
+    const e = givenExpr`$tenant`.translator.ast();
     expect(e).toBeInstanceOf(GivenReference);
     if (e instanceof GivenReference) {
       expect(e.name).toEqual('tenant');
@@ -238,7 +257,7 @@ describe('$NAME references in expressions', () => {
 
   test('works on right side of comparison', () => {
     // String literal compared to $TENANT, parsed as a comparison expression.
-    const e = expr`astr = $TENANT`.translator.ast();
+    const e = givenExpr`astr = $TENANT`.translator.ast();
     expect(e?.children['right']).toBeInstanceOf(GivenReference);
   });
 
@@ -274,6 +293,7 @@ describe('given: parse-time errors', () => {
 
   test('annotation after `is` is rejected with a targeted error', () => {
     expect(`
+      ##! experimental.givens
       given:
         X :: number is
           # not_allowed
@@ -500,5 +520,152 @@ describe('given: IR generation', () => {
       source: TENANT is a
       given: TENANT :: string
     `).toLog(errorMessage(/Cannot redefine 'TENANT'/));
+  });
+});
+
+describe('given: imports', () => {
+  // Helper: child file `child` is the imported module, parent `code` is
+  // the importer. Returns the parent translator after compile.
+  function importTest(parent: string, child: string): TestTranslator {
+    const t = new TestTranslator(parent);
+    t.unresolved();
+    t.update({urls: {'internal://test/langtests/child': child}});
+    t.compile();
+    return t;
+  }
+
+  test('selective import surfaces a given by name', () => {
+    const t = importTest(
+      `
+        ##! experimental.givens
+        import { MAX_ROWS } from "child"
+      `,
+      `
+        ##! experimental.givens
+        given: MAX_ROWS :: number is 100
+      `
+    );
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    expect(md.contents['MAX_ROWS']?.type).toBe('given');
+  });
+
+  test('selective import with rename', () => {
+    const t = importTest(
+      `
+        ##! experimental.givens
+        import { CAP is MAX_ROWS } from "child"
+      `,
+      `
+        ##! experimental.givens
+        given: MAX_ROWS :: number is 100
+      `
+    );
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    // Surface name is the renamed one; underlying GivenID is unchanged.
+    expect(md.contents['CAP']?.type).toBe('given');
+    expect(md.contents['MAX_ROWS']).toBeUndefined();
+    const cap = md.contents['CAP'];
+    if (cap?.type === 'given') {
+      // The id format matches the original module's mkGivenID output —
+      // we don't assert the exact string, just that it's reachable in
+      // the local givens map.
+      expect(md.givens?.[cap.id]).toBeDefined();
+      expect(md.givens?.[cap.id].type).toEqual({type: 'number'});
+    }
+  });
+
+  test('non-selective import does NOT auto-surface givens', () => {
+    // Per design, `import "child"` brings sources/queries but not givens.
+    expect(
+      importTest(
+        `
+        ##! experimental.givens
+        import "child"
+        run: a -> { where: astr = $TENANT; select: * }
+      `,
+        `
+        ##! experimental.givens
+        given: TENANT :: string is "acme"
+      `
+      )
+    ).toLog(errorMessage(/`\$TENANT` is not a declared given/));
+  });
+
+  test('imported source can reference its own given via $ at use site', () => {
+    // childSrc references $TENANT from child. When parent uses childSrc,
+    // SQL emission needs to resolve $TENANT to child's given declaration —
+    // which works because we copy child.givens into parent.documentGivens.
+    expect(
+      importTest(
+        `
+        ##! experimental.givens
+        import { childSrc } from "child"
+        run: childSrc -> { select: * }
+      `,
+        `
+        ##! experimental.givens
+        given: TENANT :: string is "acme"
+        source: childSrc is a extend {
+          where: astr = $TENANT
+        }
+      `
+      )
+    ).toTranslate();
+  });
+
+  test('non-existent imported given errors with did-you-mean style message', () => {
+    expect(
+      importTest(
+        `
+        ##! experimental.givens
+        import { NOT_A_GIVEN } from "child"
+      `,
+        `
+        ##! experimental.givens
+        given: TENANT :: string
+      `
+      )
+    ).toLog(errorMessage(/Cannot find 'NOT_A_GIVEN'/));
+  });
+
+  test('importing the same given under two names: both surface, same id', () => {
+    const t = importTest(
+      `
+        ##! experimental.givens
+        import { MAX_ROWS } from "child"
+        import { CAP is MAX_ROWS } from "child"
+      `,
+      `
+        ##! experimental.givens
+        given: MAX_ROWS :: number is 100
+      `
+    );
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    const a = md.contents['MAX_ROWS'];
+    const b = md.contents['CAP'];
+    expect(a?.type).toBe('given');
+    expect(b?.type).toBe('given');
+    if (a?.type === 'given' && b?.type === 'given') {
+      expect(a.id).toEqual(b.id);
+    }
+  });
+
+  test('selective import name collision with local given errors', () => {
+    expect(
+      importTest(
+        `
+        ##! experimental.givens
+        given: MAX_ROWS :: number is 50
+        import { MAX_ROWS } from "child"
+      `,
+        `
+        ##! experimental.givens
+        given: MAX_ROWS :: number is 100
+      `
+      )
+    ).toLog(errorMessage(/Cannot redefine 'MAX_ROWS'/));
   });
 });

@@ -25,12 +25,6 @@ export class GivenReference extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    if (!this.inExperiment('givens', true)) {
-      return this.loggedErrorExpr('experiment-not-enabled', {
-        experimentId: 'givens',
-      });
-    }
-
     const doc = this.document();
     const entry = doc?.getEntry(this.name)?.entry;
     if (entry === undefined) {

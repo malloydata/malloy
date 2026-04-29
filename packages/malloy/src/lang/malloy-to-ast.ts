@@ -411,6 +411,7 @@ export class MalloyToAST
   visitDefineGivenStatement(
     pcx: parse.DefineGivenStatementContext
   ): ast.DefineGivens {
+    this.inExperiment('givens', pcx);
     const defsCx = pcx.givenDefList().givenDef();
     const givens = defsCx.map(dcx => this.visitGivenDef(dcx));
     const blockNotes = this.getNotes(pcx.tags());
@@ -1598,6 +1599,7 @@ export class MalloyToAST
   }
 
   visitExprGivenRef(pcx: parse.ExprGivenRefContext): ast.GivenReference {
+    this.inExperiment('givens', pcx);
     // GIVEN_REF token text is `$NAME`; strip the leading `$`.
     const name = pcx.GIVEN_REF().text.slice(1);
     return this.astAt(new ast.GivenReference(name), pcx);

@@ -24,7 +24,7 @@
 import type {ModelDataRequest} from '../../translate-response';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {ListOf, MalloyElement} from '../types/malloy-element';
-import type {SourceID} from '../../../model/malloy_types';
+import type {GivenEntry, SourceID} from '../../../model/malloy_types';
 import {
   isSourceDef,
   isPersistableSourceDef,
@@ -147,8 +147,19 @@ export class ImportStatement
                 importedModel.contents,
                 srcName
               );
-              // Givens don't ride through import yet — Stage 3 work.
-              if (sourceEntry?.type === 'given') continue;
+              if (sourceEntry?.type === 'given') {
+                // Per design: givens do NOT auto-surface through
+                // non-selective `import "..."`. They only land in the
+                // importer's namespace via explicit `import { NAME }`.
+                if (!pickedNames) continue;
+                const givenEntry: GivenEntry = {
+                  type: 'given',
+                  name: dstName,
+                  id: sourceEntry.id,
+                };
+                doc.setEntry(dstName, {entry: givenEntry, exported: false});
+                continue;
+              }
               const importMe = {...sourceEntry!};
               importMe.as = dstName;
               doc.setEntry(dstName, {entry: importMe, exported: false});
@@ -160,6 +171,21 @@ export class ImportStatement
                   importedModel
                 );
                 collectSourceIDs(deps, neededSourceIDs);
+              }
+            }
+          }
+
+          // Always copy the imported model's given declarations into the
+          // local givens map, regardless of whether each given is surfaced
+          // into the namespace. This guarantees that any givenRef in
+          // imported IR (sources/queries that reference `$X`) resolves to
+          // a declaration at SQL-emission time. The import-time
+          // satisfiability check that catches unsatisfiable refs lands
+          // with the refSummary work.
+          if (importedModel.givens) {
+            for (const [id, given] of Object.entries(importedModel.givens)) {
+              if (!doc.documentGivens.has(id)) {
+                doc.documentGivens.set(id, given);
               }
             }
           }
