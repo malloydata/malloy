@@ -33,6 +33,8 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
     }
     case 'parameter':
       return `{parameter ${e.path}}`;
+    case 'given':
+      return `{$${e.refName}}`;
     case '()':
       return `(${subExpr(e.e)})`;
     case 'numberLiteral':

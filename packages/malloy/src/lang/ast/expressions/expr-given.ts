@@ -3,17 +3,20 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type {GivenRefNode} from '../../../model/malloy_types';
 import {ExpressionDef} from '../types/expression-def';
 import type {ExprValue} from '../types/expr-value';
+import {literalExprValue} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
 
 /**
  * Reference to a given inside an expression: `$NAME`.
  *
- * IR generation (resolving to a givenRef node and looking up the type)
- * lands with the IR work. For the AST-only stage this records the name
- * and reports an explicit error if used in an expression that asks for
- * a translation, so callers see a clear message rather than a crash.
+ * Resolution bypasses `fs.lookup` (which is source-scoped) and goes
+ * straight to the document's given namespace — that lets `$NAME` work
+ * even inside a `ConstantFieldSpace`, which is how default values
+ * (`given: B :: number is $A + 1`) refuse field references but accept
+ * other givens.
  */
 export class GivenReference extends ExpressionDef {
   elementType = 'givenReference';
@@ -22,9 +25,38 @@ export class GivenReference extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    return this.loggedErrorExpr(
-      'given-reference-not-implemented',
-      `Reference to given $${this.name}: given references are not yet implemented`
-    );
+    if (!this.inExperiment('givens', true)) {
+      return this.loggedErrorExpr('experiment-not-enabled', {
+        experimentId: 'givens',
+      });
+    }
+
+    const doc = this.document();
+    const entry = doc?.getEntry(this.name)?.entry;
+    if (entry === undefined) {
+      return this.loggedErrorExpr(
+        'given-not-found',
+        `\`$${this.name}\` is not a declared given`
+      );
+    }
+    if (entry.type !== 'given') {
+      return this.loggedErrorExpr(
+        'given-not-found',
+        `\`$${this.name}\` is not a given (found ${entry.type})`
+      );
+    }
+    const given = doc?.documentGivens.get(entry.id);
+    if (given === undefined) {
+      return this.loggedErrorExpr(
+        'given-not-found',
+        `Internal error: given \`$${this.name}\` is in the namespace but has no declaration. Likely a compiler bug.`
+      );
+    }
+    const refNode: GivenRefNode = {
+      node: 'given',
+      id: entry.id,
+      refName: this.name,
+    };
+    return literalExprValue({value: refNode, dataType: given.type});
   }
 }

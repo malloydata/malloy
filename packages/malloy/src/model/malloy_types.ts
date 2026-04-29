@@ -101,6 +101,7 @@ export type Expr =
   | FieldnameNode
   | SourceReferenceNode
   | ParameterNode
+  | GivenRefNode
   | NowNode
   | MeasureTimeExpr
   | TimeExtractExpr
@@ -254,6 +255,12 @@ export interface SourceReferenceNode extends ExprLeaf {
 export interface ParameterNode extends ExprLeaf {
   node: 'parameter';
   path: string[];
+}
+
+export interface GivenRefNode extends ExprLeaf {
+  node: 'given';
+  id: GivenID;
+  refName: string;
 }
 
 export interface NowNode extends ExprLeaf {
@@ -491,7 +498,7 @@ export interface Expression {
   drillExpression?: Malloy.Expression;
 }
 
-type ConstantExpr = Expr;
+export type ConstantExpr = Expr;
 
 interface ParameterInfo {
   name: string;
@@ -547,6 +554,18 @@ export type Argument = Parameter;
  */
 export type GivenTypeDef = AtomicTypeDef | FilterExpressionParamTypeDef;
 
+export interface Given extends HasLocation, HasAnnotation {
+  type: GivenTypeDef;
+  /** Non-optional so the no-default case is explicit at every read site. */
+  default: ConstantExpr | undefined;
+}
+
+export interface GivenEntry {
+  type: 'given';
+  name: string;
+  id: GivenID;
+}
+
 export function paramHasValue(p: Parameter): boolean {
   return p.value !== null;
 }
@@ -583,10 +602,8 @@ export interface DocumentLocation {
  * the references, and in that case, this should include something like an
  * index or pointer to the full definition elsewhere in the model.
  */
-export interface LightweightDefinition {
+export interface LightweightDefinition extends HasLocation, HasAnnotation {
   type: string;
-  annotation?: Annotation;
-  location?: DocumentLocation;
 }
 
 interface DocumentReferenceBase {
@@ -625,6 +642,10 @@ export type DocumentReference =
 /** put location into the parse tree. */
 export interface HasLocation {
   location?: DocumentLocation;
+}
+
+export interface HasAnnotation {
+  annotation?: Annotation;
 }
 
 /** All names have their source names and how they will appear in the symbol table that owns them */
@@ -811,8 +832,11 @@ export function canOrderBy(s: string) {
  * which might have an annotation.
  */
 
-export interface FieldBase extends NamedObject, Expression, ResultMetadata {
-  annotation?: Annotation;
+export interface FieldBase
+  extends NamedObject,
+    Expression,
+    ResultMetadata,
+    HasAnnotation {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
@@ -1182,12 +1206,11 @@ export interface TurtleSegment extends Filtered {
 export interface Pipeline {
   pipeline: PipeSegment[];
 }
-export interface Query extends Pipeline, Filtered, HasLocation {
+export interface Query extends Pipeline, Filtered, HasLocation, HasAnnotation {
   type?: 'query';
   name?: string;
   structRef: StructRef;
   sourceArguments?: SafeRecord<Argument>;
-  annotation?: Annotation;
   modelAnnotation?: Annotation;
   compositeResolvedSourceDef?: SourceDef;
 }
@@ -1346,9 +1369,8 @@ export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
 export type AccessModifierLabel = NonDefaultAccessModifierLabel | 'public';
 
-export interface TurtleDef extends NamedObject, Pipeline {
+export interface TurtleDef extends NamedObject, Pipeline, HasAnnotation {
   type: 'turtle';
-  annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
@@ -1356,9 +1378,8 @@ export interface TurtleDef extends NamedObject, Pipeline {
 
 export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
-interface StructDefBase extends HasLocation, NamedObject {
+interface StructDefBase extends HasLocation, NamedObject, HasAnnotation {
   type: string;
-  annotation?: Annotation;
   modelAnnotation?: ModelAnnotation;
   fields: FieldDef[];
   /** Marker for error placeholder structs created by ErrorFactory */
@@ -1419,6 +1440,9 @@ export function isSegmentSource(
 
 /** Format: "name@modelUrl" - uniquely identifies a source for persistence */
 export type SourceID = string;
+
+/** Created with `mkGivenID`. */
+export type GivenID = string;
 
 /** Hash of (connectionDigest, sql) - uniquely identifies a built artifact */
 export type BuildID = string;
@@ -1819,10 +1843,9 @@ export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
 // Queries have fields like this ..
 
-export interface RefToField {
+export interface RefToField extends HasAnnotation {
   type: 'fieldref';
   path: string[];
-  annotation?: Annotation;
   at?: DocumentLocation;
   drillExpression?: Malloy.Expression | undefined;
 }
@@ -1844,16 +1867,14 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export interface UserTypeFieldDef {
+export interface UserTypeFieldDef extends HasAnnotation {
   name: string;
   typeDef: AtomicTypeDef;
-  annotation?: Annotation;
 }
 
-export interface UserTypeDef extends NamedObject {
+export interface UserTypeDef extends NamedObject, HasAnnotation {
   type: 'userType';
   fields: UserTypeFieldDef[];
-  annotation?: Annotation;
 }
 
 export function isUserTypeDef(sd: NamedModelObject): sd is UserTypeDef {
@@ -1865,7 +1886,8 @@ export type NamedModelObject =
   | NamedQueryDef
   | FunctionDef
   | ConnectionDef
-  | UserTypeDef;
+  | UserTypeDef
+  | GivenEntry;
 
 export interface DependencyTree {
   [url: string]: DependencyTree;
@@ -1883,6 +1905,7 @@ export interface ModelDef {
    * Each entry includes a lazily-computed persist flag.
    */
   sourceRegistry: Record<SourceID, SourceRegistryValue>;
+  givens?: Record<GivenID, Given>;
   annotation?: ModelAnnotation;
   queryList: Query[];
   dependencies: DependencyTree;
@@ -1955,7 +1978,7 @@ export interface DrillSource {
   sourceArguments?: SafeRecord<Argument>;
 }
 
-export interface CompiledQuery extends DrillSource {
+export interface CompiledQuery extends DrillSource, HasAnnotation {
   structs: SourceDef[];
   sql: string;
   lastStageName: string;
@@ -1963,7 +1986,6 @@ export interface CompiledQuery extends DrillSource {
   queryName?: string | undefined;
   connectionName: string;
   queryTimezone?: string;
-  annotation?: Annotation;
   defaultRowLimitAdded?: number;
 }
 

@@ -25,9 +25,12 @@ import {v5 as uuidv5} from 'uuid';
 import {sha256} from '@noble/hashes/sha256';
 import {bytesToHex} from '@noble/hashes/utils';
 import type {
+  AtomicTypeDef,
   Expr,
   ExprWithKids,
+  FieldDef,
   GenericSQLExpr,
+  GivenTypeDef,
   ModelDef,
   StructDef,
 } from './malloy_types';
@@ -39,6 +42,50 @@ import {
   mkSafeRecord,
 } from './malloy_types';
 import type {DialectFieldList} from '../dialect';
+
+/**
+ * Format a typeDef as user-readable Malloy type syntax. Used in error
+ * messages where we want to echo a compound type back to the user in the
+ * same form they wrote it.
+ *
+ *   `string`               → `string`
+ *   `string[]`             → `string[]`
+ *   `{a::string, b::number}` → `{a :: string, b :: number}`
+ *   `{a::string}[]`        → `{a :: string}[]`
+ *   `filter<string>`       → `filter<string>`
+ *   sql-native rawType     → `sql native: jsonb`
+ */
+export function typeDefToString(
+  td: AtomicTypeDef | GivenTypeDef | FieldDef
+): string {
+  switch (td.type) {
+    case 'array':
+      // Repeated record (`elementTypeDef.type === 'record_element'`) carries
+      // its schema in `fields` on the array itself; basic arrays carry it
+      // in `elementTypeDef`.
+      if (td.elementTypeDef.type === 'record_element' && 'fields' in td) {
+        return `${recordFieldsToString(td.fields)}[]`;
+      }
+      if (td.elementTypeDef.type !== 'record_element') {
+        return `${typeDefToString(td.elementTypeDef)}[]`;
+      }
+      return 'array';
+    case 'record':
+      return recordFieldsToString(td.fields);
+    case 'filter expression':
+      return `filter<${td.filterType}>`;
+    case 'sql native':
+      return td.rawType ? `sql native: ${td.rawType}` : 'sql native';
+    default:
+      return td.type;
+  }
+}
+
+function recordFieldsToString(fields: FieldDef[]): string {
+  return `{${fields
+    .map(f => `${f.name} :: ${typeDefToString(f)}`)
+    .join(', ')}}`;
+}
 
 /** simple indent function */
 export function indent(s: string): string {

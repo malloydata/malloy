@@ -303,6 +303,7 @@ type MessageParameterTypes = {
   'query-definition-from-non-query': string;
   'source-definition-name-conflict': string;
   'user-type-definition-name-conflict': string;
+  'given-definition-name-conflict': string;
   'virtual-source-not-yet-implemented': string;
   'virtual-source-missing-user-type-refs': string;
   'virtual-source-unknown-dialect': string;
@@ -325,8 +326,10 @@ type MessageParameterTypes = {
   'unexpected-binary-operator': string;
   'illegal-reference-in-parameter-default': string;
   'given-reference-not-implemented': string;
+  'given-not-found': string;
   'given-no-tags-after-is': string;
   'illegal-filter-type': string;
+  'invalid-source-from-given': string;
   'aggregate-analytic-in-select': string;
   'refinement-of-raw-query': string;
   'illegal-multistage-refinement-operation': string;

@@ -293,33 +293,212 @@ describe('given: parse-time errors', () => {
   });
 });
 
-describe('given: translates without errors at the AST stage', () => {
-  // The model should compile without error when a `given:` block is
-  // present but no `$` references are used. (IR generation is a no-op.)
-  test('declarations only', () => {
+describe('given: experimental flag', () => {
+  test('declarations require the experimental flag', () => {
     expect(`
+      given:
+        TENANT :: string
+    `).toLog(errorMessage(/Experimental flag .givens. is not set/));
+  });
+
+  test('$NAME references require the experimental flag', () => {
+    // The given declaration is gated; the reference site is gated too,
+    // so a file that uses $NAME without declaring givens still errors.
+    expect(`
+      run: a -> { where: astr = $T; select: * }
+    `).toLog(errorMessage(/Experimental flag .givens. is not set/));
+  });
+});
+
+describe('given: IR generation', () => {
+  test('declarations populate ModelDef.givens and contents', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
       given:
         TENANT :: string
         MAX_ROWS :: number is 1000
+    `);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    expect(md.givens).toBeDefined();
+    expect(Object.keys(md.givens!)).toHaveLength(2);
+    // ModelDef.contents has surface-name pointers
+    expect(md.contents['TENANT']?.type).toBe('given');
+    expect(md.contents['MAX_ROWS']?.type).toBe('given');
+  });
+
+  test('GivenEntry id matches a Given declaration', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      given: TENANT :: string
+    `);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    const entry = md.contents['TENANT'];
+    expect(entry?.type).toBe('given');
+    if (entry?.type === 'given') {
+      expect(md.givens?.[entry.id]).toBeDefined();
+      expect(md.givens?.[entry.id].type).toEqual({type: 'string'});
+    }
+  });
+
+  test('default value lands on Given.default as IR expression', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      given: MAX_VAL :: number is 100
+    `);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    const id = (md.contents['MAX_VAL'] as {id: string}).id;
+    const given = md.givens![id];
+    expect(given.default).toBeDefined();
+    expect(given.default).toMatchObject({node: 'numberLiteral'});
+  });
+
+  test('absent default is `undefined` (explicit, not missing key)', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      given: TENANT :: string
+    `);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    const id = (md.contents['TENANT'] as {id: string}).id;
+    expect(md.givens![id]).toHaveProperty('default');
+    expect(md.givens![id].default).toBeUndefined();
+  });
+
+  test('$NAME inside a where clause produces a GivenRefNode in IR', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      given: TENANT :: string
+      run: a -> { where: astr = $TENANT; select: * }
+    `);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    const id = (md.contents['TENANT'] as {id: string}).id;
+    let found: {id: string; refName: string} | undefined;
+    function walk(n: unknown) {
+      if (n && typeof n === 'object') {
+        const node = n as {node?: string; id?: string; refName?: string};
+        if (node.node === 'given') {
+          found = {id: node.id!, refName: node.refName!};
+        }
+        for (const v of Object.values(n)) walk(v);
+      }
+    }
+    walk(md.queryList);
+    expect(found).toEqual({id, refName: 'TENANT'});
+  });
+
+  test('unknown $NAME errors at compile time', () => {
+    expect(`
+      ##! experimental.givens
+      run: a -> { where: astr = $UNKNOWN; select: * }
+    `).toLog(errorMessage(/`\$UNKNOWN` is not a declared given/));
+  });
+
+  test('non-given namespace entry rejected with the same name', () => {
+    // `a` is a pre-declared source in the test fixture; `$a` resolves to
+    // the source entry, not a given, so it errors.
+    expect(`
+      ##! experimental.givens
+      run: a -> { where: astr = $a; select: * }
+    `).toLog(errorMessage(/`\$a` is not a given/));
+  });
+
+  test('default may reference another given', () => {
+    expect(`
+      ##! experimental.givens
+      given:
+        BASE :: number is 10
+        SCALED :: number is $BASE
     `).toTranslate();
   });
 
-  test('declarations alongside a normal source', () => {
+  test('default may not reference a field (constant-only enforcement)', () => {
     expect(`
+      ##! experimental.givens
+      source: x is a extend {
+        dimension: y is 5
+      }
+      given: BAD :: number is x.y
+    `).toLog(errorMessage(/Only constants allowed/));
+  });
+
+  test('default value type-checked against declared type', () => {
+    expect(`
+      ##! experimental.givens
+      given: BAD :: number is "not a number"
+    `).toLog(
+      errorMessage(
+        'Default value of type `string` does not match declared type `number`'
+      )
+    );
+  });
+
+  test('compound declared type echoes back in type-mismatch error', () => {
+    expect(`
+      ##! experimental.givens
+      given: BAD :: string[] is 1
+    `).toLog(
+      errorMessage(
+        'Default value of type `number` does not match declared type `string[]`'
+      )
+    );
+  });
+
+  test('array element-type mismatch is caught (deep equality via TD.eq)', () => {
+    expect(`
+      ##! experimental.givens
+      given: BAD :: string[] is [1, 2, 3]
+    `).toLog(
+      errorMessage(
+        /Default value of type `number\[\]` does not match declared type `string\[\]`/
+      )
+    );
+  });
+
+  test('filter<T> declared with non-filter default is caught', () => {
+    expect(`
+      ##! experimental.givens
+      given: BAD :: filter<string> is "not-a-filter"
+    `).toLog(
+      errorMessage(
+        /Default value of type `string` does not match declared type `filter<string>`/
+      )
+    );
+  });
+
+  test('filter<T> default with valid filter literal translates', () => {
+    expect(`
+      ##! experimental.givens
+      given: TENANT_FILTER :: filter<string> is f'acme | beta'
+    `).toTranslate();
+  });
+
+  test('filter<T> default with bad filter syntax errors at declaration', () => {
+    // We know T at the declaration site, so the filter literal is
+    // validated against T here, not just at use sites.
+    expect(`
+      ##! experimental.givens
+      given: BAD :: filter<number> is f'not a number'
+    `).toLog(errorMessage(/Filter syntax error/));
+  });
+
+  test('redeclaring a given name errors', () => {
+    expect(`
+      ##! experimental.givens
       given:
         TENANT :: string
-      source: x is a
-    `).toTranslate();
+        TENANT :: number
+    `).toLog(errorMessage(/Cannot redefine 'TENANT'/));
   });
 
-  test('using $NAME at the AST stage logs a not-implemented error', () => {
-    // Until IR generation lands, any expression that consults $NAME's
-    // value must produce an explicit error.
+  test('given name colliding with a source errors', () => {
     expect(`
-      given: T :: string
-      source: x is a extend {
-        where: astr = $T
-      }
-    `).toLog(errorMessage(/given references are not yet implemented/));
+      ##! experimental.givens
+      source: TENANT is a
+      given: TENANT :: string
+    `).toLog(errorMessage(/Cannot redefine 'TENANT'/));
   });
 });

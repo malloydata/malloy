@@ -58,9 +58,11 @@ export class SQReference extends SourceQueryElement {
         this.has({query});
         return query;
       } else {
+        const label =
+          entry.type === 'given' ? entry.name : entry.as || entry.name;
         this.sqLog(
           'cannot-use-as-query',
-          `Illegal reference to '${entry.as || entry.name}', query expected`
+          `Illegal reference to '${label}', query expected`
         );
       }
     } else {

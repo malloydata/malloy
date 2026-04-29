@@ -143,9 +143,13 @@ export class ImportStatement
             const pickedNames = explicitImport[srcName];
             const dstNames = pickedNames || (importAll ? [srcName] : []);
             for (const dstName of dstNames) {
-              const importMe = {
-                ...safeRecordGet(importedModel.contents, srcName)!,
-              };
+              const sourceEntry = safeRecordGet(
+                importedModel.contents,
+                srcName
+              );
+              // Givens don't ride through import yet — Stage 3 work.
+              if (sourceEntry?.type === 'given') continue;
+              const importMe = {...sourceEntry!};
               importMe.as = dstName;
               doc.setEntry(dstName, {entry: importMe, exported: false});
 

@@ -26,6 +26,8 @@ import type {
   Annotation,
   DocumentLocation,
   DocumentReference,
+  Given,
+  GivenID,
   ModelDef,
   ModelAnnotation,
   NamedModelObject,
@@ -301,7 +303,7 @@ export abstract class MalloyElement {
     }
   }
 
-  private varInfo(): string {
+  protected varInfo(): string {
     let extra = '';
     for (const [key, value] of Object.entries(this)) {
       if (key !== 'elementType') {
@@ -513,6 +515,7 @@ export class Document extends MalloyElement implements NameSpace {
   globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
+  documentGivens = new Map<GivenID, Given>();
   queryList: Query[] = [];
   statements: DocStatementList;
   didInitModel = false;
@@ -532,6 +535,7 @@ export class Document extends MalloyElement implements NameSpace {
     }
     this.documentModel = new Map<string, ModelEntry>();
     this.documentSrcRegistry = {};
+    this.documentGivens = new Map<GivenID, Given>();
     this.queryList = [];
     if (extendingModelDef) {
       if (extendingModelDef.annotation) {
@@ -543,10 +547,16 @@ export class Document extends MalloyElement implements NameSpace {
           isSourceDef(entry) ||
           entry.type === 'query' ||
           entry.type === 'function' ||
-          entry.type === 'userType'
+          entry.type === 'userType' ||
+          entry.type === 'given'
         ) {
           const exported = extendingModelDef.exports.includes(nm);
           this.setEntry(nm, {entry, exported});
+        }
+      }
+      if (extendingModelDef.givens) {
+        for (const [id, given] of Object.entries(extendingModelDef.givens)) {
+          this.documentGivens.set(id, given);
         }
       }
     }
@@ -623,10 +633,21 @@ export class Document extends MalloyElement implements NameSpace {
           }
           def.contents[name] = newEntry;
         }
+      } else if (entryDef.type === 'given') {
+        if (modelEntry.exported) {
+          def.exports.push(name);
+        }
+        def.contents[name] = {...entryDef};
       }
     }
     // Copy the accumulated sourceRegistry
     def.sourceRegistry = {...this.documentSrcRegistry};
+    if (this.documentGivens.size > 0) {
+      def.givens = {};
+      for (const [id, given] of this.documentGivens) {
+        def.givens[id] = given;
+      }
+    }
     return def;
   }
 
