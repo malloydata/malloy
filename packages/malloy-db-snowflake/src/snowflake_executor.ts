@@ -35,6 +35,7 @@ import * as path from 'path';
 import type {Readable} from 'stream';
 import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
 import {toAsyncGenerator} from '@malloydata/malloy';
+import {normalizeSnowflakePrivateKey} from './snowflake_private_key';
 
 // Disable snowflake-sdk logging by default (issue #2565)
 snowflake.configure({logLevel: 'OFF'});
@@ -82,6 +83,12 @@ export class SnowflakeExecutor {
     setupSQL?: string
   ) {
     this.setupSQL = setupSQL;
+    if (connOptions.privateKey) {
+      connOptions = {
+        ...connOptions,
+        privateKey: normalizeSnowflakePrivateKey(connOptions.privateKey),
+      };
+    }
     this.pool_ = snowflake.createPool(connOptions, {
       ...SnowflakeExecutor.defaultPoolOptions_,
       ...(poolOptions ?? {}),

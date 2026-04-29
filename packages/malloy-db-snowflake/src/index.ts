@@ -23,6 +23,7 @@
 
 export {SnowflakeConnection} from './snowflake_connection';
 export {buildPoolOptions} from './snowflake_pool_options';
+export {normalizeSnowflakePrivateKey} from './snowflake_private_key';
 
 import {registerConnectionType} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
