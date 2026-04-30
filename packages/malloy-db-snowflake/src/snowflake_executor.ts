@@ -86,7 +86,10 @@ export class SnowflakeExecutor {
     if (connOptions.privateKey) {
       connOptions = {
         ...connOptions,
-        privateKey: normalizeSnowflakePrivateKey(connOptions.privateKey),
+        privateKey: normalizeSnowflakePrivateKey(
+          connOptions.privateKey,
+          connOptions.privateKeyPass
+        ),
       };
     }
     this.pool_ = snowflake.createPool(connOptions, {

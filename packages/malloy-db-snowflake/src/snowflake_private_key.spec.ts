@@ -80,15 +80,57 @@ describe('normalizeSnowflakePrivateKey', () => {
     );
   });
 
-  it('does not flag PKCS#8 encrypted keys (BEGIN ENCRYPTED PRIVATE KEY)', () => {
-    // The PKCS#8-encrypted format does NOT use the Proc-Type header;
-    // make sure we let it through (snowflake-sdk accepts it directly).
-    const pkcs8Encrypted =
-      '-----BEGIN ENCRYPTED PRIVATE KEY-----\n' +
-      'MIIFHzBJBgkqhkiG9w0BBQ0wPDAbBgkqhkiG9w0BBQwwDgQI\n' +
-      '-----END ENCRYPTED PRIVATE KEY-----\n';
-    const result = normalizeSnowflakePrivateKey(pkcs8Encrypted);
-    expect(result).toContain('-----BEGIN ENCRYPTED PRIVATE KEY-----');
+  // snowflake-sdk's in-memory privateKey path only accepts unencrypted
+  // PKCS#8 — passing through "BEGIN ENCRYPTED PRIVATE KEY" would be
+  // rejected by util.js's BEGIN-PRIVATE-KEY check before auth. So we
+  // decrypt to unencrypted PKCS#8 here.
+  const encryptedPassphrase = 'test-passphrase';
+  const {privateKey: encryptedPkcs8Pem} = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    privateKeyEncoding: {
+      type: 'pkcs8',
+      format: 'pem',
+      cipher: 'aes-256-cbc',
+      passphrase: encryptedPassphrase,
+    },
+    publicKeyEncoding: {type: 'spki', format: 'pem'},
+  });
+
+  it('decrypts encrypted PKCS#8 to unencrypted PKCS#8 with valid passphrase', () => {
+    expect(encryptedPkcs8Pem).toContain(
+      '-----BEGIN ENCRYPTED PRIVATE KEY-----'
+    );
+    const result = normalizeSnowflakePrivateKey(
+      encryptedPkcs8Pem,
+      encryptedPassphrase
+    );
+    expect(result).toContain('-----BEGIN PRIVATE KEY-----');
+    expect(result).not.toContain('ENCRYPTED PRIVATE KEY');
+    expect(result.endsWith('\n')).toBe(true);
+  });
+
+  it('throws when encrypted PKCS#8 has no passphrase', () => {
+    expect(() => normalizeSnowflakePrivateKey(encryptedPkcs8Pem)).toThrow(
+      /no privateKeyPass was supplied/
+    );
+  });
+
+  it('throws a clear error when encrypted PKCS#8 passphrase is wrong', () => {
+    expect(() =>
+      normalizeSnowflakePrivateKey(encryptedPkcs8Pem, 'wrong-passphrase')
+    ).toThrow(/Failed to decrypt.*privateKeyPass/);
+  });
+
+  it('decrypts a single-line encrypted PKCS#8 key with valid passphrase', () => {
+    // Flattened (e.g. pasted from JSON without literal newlines) — the
+    // single-line reconstruction path must rewrap before decrypt.
+    const singleLine = encryptedPkcs8Pem.replace(/\n/g, '');
+    const result = normalizeSnowflakePrivateKey(
+      singleLine,
+      encryptedPassphrase
+    );
+    expect(result).toContain('-----BEGIN PRIVATE KEY-----');
+    expect(result).not.toContain('ENCRYPTED PRIVATE KEY');
     expect(result.endsWith('\n')).toBe(true);
   });
 });

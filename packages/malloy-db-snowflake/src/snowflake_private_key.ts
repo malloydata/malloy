@@ -29,19 +29,27 @@ const PEM_PATTERNS = [
 /**
  * Normalize a Snowflake private key so snowflake-sdk accepts it.
  *
- * Two transformations:
- *   1. If the PEM was flattened to a single line (e.g. pasted from JSON),
- *      reinsert newlines so it parses.
- *   2. snowflake-sdk requires PKCS#8 ("BEGIN PRIVATE KEY"). If the input is
- *      PKCS#1 ("BEGIN RSA PRIVATE KEY"), convert it.
+ * snowflake-sdk's in-memory `ConnectionOptions.privateKey` path only
+ * accepts unencrypted PKCS#8 ("BEGIN PRIVATE KEY"). Anything else gets
+ * rejected with `Invalid private key. The specified value must be a string
+ * in pem format of type pkcs8`. This helper massages the common variants
+ * customers paste into config so they reach the SDK in that exact shape:
+ *
+ *   1. Flattened single-line PEM (no newlines) → re-wrap to 64-char lines.
+ *   2. PKCS#1 ("BEGIN RSA PRIVATE KEY") → convert to PKCS#8.
+ *   3. Encrypted PKCS#8 ("BEGIN ENCRYPTED PRIVATE KEY") → decrypt with
+ *      the supplied passphrase and re-export as unencrypted PKCS#8.
+ *   4. Legacy OpenSSL-encrypted PKCS#1 ("Proc-Type: 4,ENCRYPTED") →
+ *      rejected with guidance, since modern toolchains don't produce it.
  */
-export function normalizeSnowflakePrivateKey(privateKey: string): string {
+export function normalizeSnowflakePrivateKey(
+  privateKey: string,
+  passphrase?: string
+): string {
   let content = privateKey.trim();
 
   // Reject legacy OpenSSL-encrypted PKCS#1 keys ("BEGIN RSA PRIVATE KEY"
-  // with a "Proc-Type: 4,ENCRYPTED" header). Modern toolchains produce
-  // PKCS#8-encrypted keys ("BEGIN ENCRYPTED PRIVATE KEY") which we accept
-  // and pass through to snowflake-sdk. We detect this before any newline
+  // with a "Proc-Type: 4,ENCRYPTED" header). Detected before any newline
   // reconstruction because flattening a single-line key would erase the
   // header and turn this into a confusing downstream parse error.
   if (/Proc-Type\s*:\s*4\s*,\s*ENCRYPTED/i.test(content)) {
@@ -76,7 +84,37 @@ export function normalizeSnowflakePrivateKey(privateKey: string): string {
     content += '\n';
   }
 
-  if (/-----BEGIN\s+RSA\s+PRIVATE\s+KEY-----/i.test(content)) {
+  const isEncryptedPkcs8 = /-----BEGIN\s+ENCRYPTED\s+PRIVATE\s+KEY-----/i.test(
+    content
+  );
+  const isPkcs1 = /-----BEGIN\s+RSA\s+PRIVATE\s+KEY-----/i.test(content);
+
+  if (isEncryptedPkcs8) {
+    if (!passphrase) {
+      throw new Error(
+        'Snowflake private key is encrypted (BEGIN ENCRYPTED PRIVATE KEY) ' +
+          'but no privateKeyPass was supplied. snowflake-sdk requires an ' +
+          'unencrypted key on the in-memory privateKey path; provide the ' +
+          'key passphrase via privateKeyPass, or re-export the key without ' +
+          'a passphrase.'
+      );
+    }
+    try {
+      content = createPrivateKey({key: content, format: 'pem', passphrase})
+        .export({type: 'pkcs8', format: 'pem'})
+        .toString();
+    } catch (err) {
+      throw new Error(
+        'Failed to decrypt Snowflake encrypted PKCS#8 private key — check ' +
+          `that privateKeyPass is correct: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+      );
+    }
+    if (!content.endsWith('\n')) {
+      content += '\n';
+    }
+  } else if (isPkcs1) {
     try {
       content = createPrivateKey({key: content, format: 'pem'})
         .export({type: 'pkcs8', format: 'pem'})
