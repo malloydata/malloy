@@ -30,20 +30,20 @@ export class GivenReference extends ExpressionDef {
     if (entry === undefined) {
       return this.loggedErrorExpr(
         'given-not-found',
-        `\`$${this.name}\` is not a declared given`
+        `\`$${this.name}\` references a given named \`${this.name}\`, which is not declared in this model`
       );
     }
     if (entry.type !== 'given') {
       return this.loggedErrorExpr(
         'given-not-found',
-        `\`$${this.name}\` is not a given (found ${entry.type})`
+        `\`$${this.name}\` expects a given named \`${this.name}\`, but \`${this.name}\` is a ${entry.type}`
       );
     }
     const given = doc?.documentGivens.get(entry.id);
     if (given === undefined) {
       return this.loggedErrorExpr(
         'given-not-found',
-        `Internal error: given \`$${this.name}\` is in the namespace but has no declaration. Likely a compiler bug.`
+        `Internal error: given \`${this.name}\` is in the namespace but has no declaration. Likely a compiler bug.`
       );
     }
     const refNode: GivenRefNode = {

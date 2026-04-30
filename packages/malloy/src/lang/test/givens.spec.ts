@@ -414,7 +414,11 @@ describe('given: IR generation', () => {
     expect(`
       ##! experimental.givens
       run: a -> { where: astr = $UNKNOWN; select: * }
-    `).toLog(errorMessage(/`\$UNKNOWN` is not a declared given/));
+    `).toLog(
+      errorMessage(
+        /`\$UNKNOWN` references a given named `UNKNOWN`, which is not declared/
+      )
+    );
   });
 
   test('non-given namespace entry rejected with the same name', () => {
@@ -423,7 +427,7 @@ describe('given: IR generation', () => {
     expect(`
       ##! experimental.givens
       run: a -> { where: astr = $a; select: * }
-    `).toLog(errorMessage(/`\$a` is not a given/));
+    `).toLog(errorMessage(/`\$a` expects a given named `a`, but `a` is a/));
   });
 
   test('default may reference another given', () => {
@@ -550,7 +554,7 @@ describe('given: imports', () => {
     expect(md.contents['MAX_ROWS']?.type).toBe('given');
   });
 
-  test('selective import with rename', () => {
+  test('selective import with rename: id stays the source-side id', () => {
     const t = importTest(
       `
         ##! experimental.givens
@@ -563,14 +567,18 @@ describe('given: imports', () => {
     );
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
-    // Surface name is the renamed one; underlying GivenID is unchanged.
     expect(md.contents['CAP']?.type).toBe('given');
     expect(md.contents['MAX_ROWS']).toBeUndefined();
     const cap = md.contents['CAP'];
-    if (cap?.type === 'given') {
-      // The id format matches the original module's mkGivenID output —
-      // we don't assert the exact string, just that it's reachable in
-      // the local givens map.
+    expect(cap?.type).toBe('given');
+    // Whatever id child assigned to MAX_ROWS, A's CAP must carry it.
+    // Looking up by name in child's modelDef avoids any dependence on
+    // the GivenID format (today readable, possibly a UUID later).
+    const childT = t.childTranslators.get('internal://test/langtests/child');
+    const childMaxRows = childT?.modelDef.contents['MAX_ROWS'];
+    expect(childMaxRows?.type).toBe('given');
+    if (cap?.type === 'given' && childMaxRows?.type === 'given') {
+      expect(cap.id).toEqual(childMaxRows.id);
       expect(md.givens?.[cap.id]).toBeDefined();
       expect(md.givens?.[cap.id].type).toEqual({type: 'number'});
     }
@@ -590,7 +598,45 @@ describe('given: imports', () => {
         given: TENANT :: string is "acme"
       `
       )
-    ).toLog(errorMessage(/`\$TENANT` is not a declared given/));
+    ).toLog(
+      errorMessage(
+        /`\$TENANT` references a given named `TENANT`, which is not declared/
+      )
+    );
+  });
+
+  test('non-selective import DOES copy givens into the local map', () => {
+    // The complement of the namespace test: even though `import "child"`
+    // doesn't surface givens to the namespace, every given declaration
+    // from child is copied into the importer's givens map. This is what
+    // lets imported sources/queries that reference `$X` resolve at SQL
+    // emission time.
+    const t = importTest(
+      `
+        ##! experimental.givens
+        import "child"
+      `,
+      `
+        ##! experimental.givens
+        given:
+          TENANT :: string is "acme"
+          MAX_ROWS :: number is 1000
+      `
+    );
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    // Namespace stays clean (proven by the test above; spot-checked here).
+    expect(md.contents['TENANT']).toBeUndefined();
+    expect(md.contents['MAX_ROWS']).toBeUndefined();
+    // But every given declared in child appears in the importer's
+    // givens map under the same id child assigned.
+    const childT = t.childTranslators.get('internal://test/langtests/child');
+    const childGivens = childT?.modelDef.givens ?? {};
+    expect(Object.keys(childGivens).length).toBeGreaterThan(0);
+    for (const id of Object.keys(childGivens)) {
+      expect(md.givens?.[id]).toBeDefined();
+      expect(md.givens?.[id]).toEqual(childGivens[id]);
+    }
   });
 
   test('imported source can reference its own given via $ at use site', () => {
@@ -651,6 +697,45 @@ describe('given: imports', () => {
     if (a?.type === 'given' && b?.type === 'given') {
       expect(a.id).toEqual(b.id);
     }
+  });
+
+  test("chained imports: C's given flows through B into A", () => {
+    // A imports B. B imports C and uses C's $TENANT in a source. A uses
+    // B's source. SQL emission in A needs C's given declaration —
+    // verifies the documentGivens copy is chainable: B's modelDef.givens
+    // already contains C's givens (because B copied them at B's import
+    // time), so A reading B's givens map transitively pulls C's in.
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      import { bSrc } from "b"
+      run: bSrc -> { select: * }
+    `);
+    t.unresolved();
+    t.update({
+      urls: {
+        'internal://test/langtests/b': `
+          ##! experimental.givens
+          import { TENANT } from "c"
+          source: bSrc is a extend { where: astr = $TENANT }
+        `,
+        'internal://test/langtests/c': `
+          ##! experimental.givens
+          given: TENANT :: string is "acme"
+        `,
+      },
+    });
+    t.compile();
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    // A.modelDef.givens should contain TENANT (C's declaration) even
+    // though A only directly imports from B.
+    expect(md.givens).toBeDefined();
+    expect(Object.keys(md.givens!).length).toBeGreaterThanOrEqual(1);
+    // The given's id should encode C's URL, not B's or A's.
+    const ids = Object.keys(md.givens!);
+    expect(ids.some(id => id.includes('TENANT') && id.includes('/c'))).toBe(
+      true
+    );
   });
 
   test('selective import name collision with local given errors', () => {
