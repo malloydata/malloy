@@ -23,7 +23,7 @@
 
 import type {PipeSegment, QueryFieldDef} from '../../../model';
 import {isQuerySegment, isRawSegment} from '../../../model';
-import {mergeFieldUsage} from '../../composite-source-utils';
+import {mergeRefSummaries} from '../../composite-source-utils';
 import {nameFromDef} from '../../field-utils';
 import type {MalloyElement} from '../types/malloy-element';
 
@@ -129,7 +129,7 @@ export function refine(
           `missing output fields in refinement: ${missingOut.join(', ')}`
         );
       }
-      to.fieldUsage = mergeFieldUsage(to.fieldUsage, from.fieldUsage);
+      to.refSummary = mergeRefSummaries(to.refSummary, from.refSummary);
     } else if (from.type === 'index' && to.type === 'index') {
       to.indexFields = [...from.indexFields, ...to.indexFields];
     }

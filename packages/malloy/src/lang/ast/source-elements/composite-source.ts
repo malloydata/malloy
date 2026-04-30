@@ -130,9 +130,11 @@ function composeSources(
             name: fieldName,
             as: undefined,
             e: {node: 'compositeField'},
-            fieldUsage: [
-              {path: [fieldName], at: compositeCodeSource.codeLocation},
-            ],
+            refSummary: {
+              fieldUsage: [
+                {path: [fieldName], at: compositeCodeSource.codeLocation},
+              ],
+            },
             code: undefined,
             location: compositeCodeSource.codeLocation,
             // A composite field's grouping may differ from slice to slice

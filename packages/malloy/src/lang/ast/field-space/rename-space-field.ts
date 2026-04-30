@@ -26,6 +26,7 @@ import type {
   DocumentLocation,
   FieldDef,
 } from '../../../model/malloy_types';
+import {mapFieldUsage} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
 
@@ -58,7 +59,7 @@ export class RenameSpaceField extends SpaceField {
       ...returnFieldDef,
       as: this.newName,
       location: this.location,
-      fieldUsage: returnFieldDef.fieldUsage?.map(u => ({
+      refSummary: mapFieldUsage(returnFieldDef.refSummary, u => ({
         ...u,
         path:
           u.path[0] === (returnFieldDef.as ?? returnFieldDef.name)

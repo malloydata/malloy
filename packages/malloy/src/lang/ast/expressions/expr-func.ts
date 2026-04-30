@@ -40,6 +40,7 @@ import type {
   RecordFunctionReturnTypeDef,
   RecordTypeDef,
   FieldUsage,
+  FieldUsageEntry,
   FunctionOrderBy as ModelFunctionOrderBy,
   AggregateUngrouping,
 } from '../../../model/malloy_types';
@@ -55,6 +56,7 @@ import {
   isBasicArray,
   maxOfExpressionTypes,
   mergeEvalSpaces,
+  mkRefSummary,
   TD,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
@@ -72,7 +74,7 @@ import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
 import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
-import {mergeFieldUsage} from '../../composite-source-utils';
+import {mergeRefSummaries} from '../../composite-source-utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
 
 export class ExprFunc extends ExpressionDef {
@@ -190,7 +192,9 @@ export class ExprFunc extends ExpressionDef {
               at: this.source.location,
             },
             evalSpace: footType.evalSpace,
-            fieldUsage: [{path: this.source.path, at: this.source.location}],
+            refSummary: {
+              fieldUsage: [{path: this.source.path, at: this.source.location}],
+            },
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -305,7 +309,7 @@ export class ExprFunc extends ExpressionDef {
     let funcCall: Expr = frag;
     const isAnalytic = expressionIsAnalytic(overload.returnType.expressionType);
     const isAsymmetric = !overload.isSymmetric;
-    const orderByUsage: FieldUsage[] = [];
+    const orderByUsage: FieldUsage = [];
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins
     // TODO add in an error if you use an illegal join pattern
@@ -373,7 +377,7 @@ export class ExprFunc extends ExpressionDef {
       }
       frag.partitionBy = partitionByFields;
     }
-    const sqlFunctionFieldUsage: FieldUsage[] = [];
+    const sqlFunctionFieldUsage: FieldUsage = [];
     if (
       [
         'sql_number',
@@ -455,18 +459,21 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
           ? maxEvalSpace
           : 'output';
-    const aggregateFunctionUsage: FieldUsage[] = [];
+    const aggregateFunctionUsage: FieldUsage = [];
     if (isAsymmetric || isAnalytic) {
-      const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
+      const funcUsage: FieldUsageEntry = {
+        path: structPath || [],
+        at: this.location,
+      };
       if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
       if (isAnalytic) funcUsage.analyticFunctionUse = true;
       aggregateFunctionUsage.push(funcUsage);
     }
-    const fieldUsage = mergeFieldUsage(
-      ...argExprs.map(ae => ae.fieldUsage),
-      orderByUsage,
-      sqlFunctionFieldUsage,
-      aggregateFunctionUsage
+    const refSummary = mergeRefSummaries(
+      ...argExprs.map(ae => ae.refSummary),
+      mkRefSummary({fieldUsage: orderByUsage}),
+      mkRefSummary({fieldUsage: sqlFunctionFieldUsage}),
+      mkRefSummary({fieldUsage: aggregateFunctionUsage})
     );
     const ungroupings = argExprs.reduce(
       (ug: AggregateUngrouping[], a) => a.ungroupings ?? ug,
@@ -481,7 +488,7 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      fieldUsage,
+      refSummary,
       ungroupings,
     };
   }

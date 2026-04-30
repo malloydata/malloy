@@ -134,7 +134,7 @@ export abstract class AtomicFieldDeclaration
         value: exprValue.value,
         expressionType: exprValue.expressionType,
         evalSpace: exprValue.evalSpace,
-        fieldUsage: exprValue.fieldUsage,
+        refSummary: exprValue.refSummary,
         requiresGroupBy: exprValue.requiresGroupBy,
       };
       exprValue = nullAsNumber;
@@ -164,7 +164,7 @@ export abstract class AtomicFieldDeclaration
         ret.e = exprValue.value;
       }
       ret.drillExpression = this.expr.drillExpression();
-      ret.fieldUsage = exprValue.fieldUsage;
+      ret.refSummary = exprValue.refSummary;
       ret.ungroupings = exprValue.ungroupings;
       ret.requiresGroupBy = exprValue.requiresGroupBy;
       if (exprValue.expressionType) {

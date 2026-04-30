@@ -29,7 +29,11 @@ import type {
   FieldUsage,
   SourceDef,
 } from '../../../model/malloy_types';
-import {expressionIsScalar, TD} from '../../../model/malloy_types';
+import {
+  expressionIsScalar,
+  fieldUsageFrom,
+  TD,
+} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
 import {
   FieldReference,
@@ -91,12 +95,12 @@ export class IndexFieldSpace extends QueryOperationSpace {
     const indexFields: IndexFieldDef[] = [];
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
-        let nextFieldUsage: FieldUsage[] | undefined = undefined;
+        let nextFieldUsage: FieldUsage | undefined = undefined;
         const wild = this.expandedWild.get(name);
         if (wild) {
           indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
           fieldUsage.push({path: wild.path});
-          nextFieldUsage = wild.entry.typeDesc().fieldUsage;
+          nextFieldUsage = fieldUsageFrom(wild.entry.typeDesc().refSummary);
         } else if (field instanceof ReferenceField) {
           // attempt to cause a type check
           const fieldRef = field.fieldRef;
@@ -105,7 +109,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
             fieldRef.logError(check.error.code, check.error.message);
           } else {
             indexFields.push(fieldRef.refToField);
-            nextFieldUsage = check.found.typeDesc().fieldUsage;
+            nextFieldUsage = fieldUsageFrom(check.found.typeDesc().refSummary);
             fieldUsage.push({path: fieldRef.path});
           }
         }

@@ -46,7 +46,7 @@ import {ErrorFactory} from '../error-factory';
 import type {ParameterSpace} from '../field-space/parameter-space';
 import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {LegalRefinementStage} from '../types/query-property-interface';
-import {mergeFieldUsage} from '../../composite-source-utils';
+import {mergeRefSummaries} from '../../composite-source-utils';
 
 export abstract class Join
   extends MalloyElement
@@ -143,9 +143,9 @@ export class KeyJoin extends Join {
               right: exprX.value,
             },
           };
-          inStruct.fieldUsage = mergeFieldUsage(exprX.fieldUsage, [
-            {path: keyPath},
-          ]);
+          inStruct.refSummary = mergeRefSummaries(exprX.refSummary, {
+            fieldUsage: [{path: keyPath}],
+          });
           return;
         } else {
           this.logError(
@@ -202,7 +202,7 @@ export class ExpressionJoin extends Join {
       return;
     }
     inStruct.onExpression = exprX.value;
-    inStruct.fieldUsage = exprX.fieldUsage;
+    inStruct.refSummary = exprX.refSummary;
   }
 
   getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {

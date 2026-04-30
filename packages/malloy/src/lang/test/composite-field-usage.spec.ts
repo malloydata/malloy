@@ -906,7 +906,7 @@ function pathToKey(path: string[]): string {
  */
 function checkForFieldUsage(
   query: Query | undefined,
-  ...refs: FieldUsage[]
+  ...refs: FieldUsage
 ): [boolean, string] {
   if (!query) {
     return [false, 'Query not found'];

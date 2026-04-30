@@ -177,7 +177,7 @@ export interface FilterCondition extends ExprE {
   node: 'filterCondition';
   code: string;
   expressionType: ExpressionType;
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   // Attached to filters which come from a view rather than direct in the query
   // allows the renderer to know which filters should NOT be included in drill queries
   filterView?: string;
@@ -492,7 +492,7 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   expressionType?: ExpressionType;
   code?: string;
   drillExpression?: Malloy.Expression;
@@ -1082,7 +1082,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }
 
@@ -1319,8 +1319,8 @@ export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
  */
 
 export interface SegmentUsageSummary {
-  activeJoins?: FieldUsage[];
-  expandedFieldUsage?: FieldUsage[];
+  activeJoins?: FieldUsage;
+  expandedFieldUsage?: FieldUsage;
   expandedUngroupings?: AggregateUngrouping[];
 }
 
@@ -1331,7 +1331,7 @@ export interface IndexSegment extends Filtered, SegmentUsageSummary {
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
   alwaysJoins?: string[];
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   referencedAt?: DocumentLocation;
   outputStruct: SourceDef;
 }
@@ -1339,18 +1339,110 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
-export interface FieldUsage {
+export interface FieldUsageEntry {
   path: string[];
   at?: DocumentLocation;
   uniqueKeyRequirement?: UniqueKeyRequirement;
   analyticFunctionUse?: boolean;
 }
 
-export function bareFieldUsage(fu: FieldUsage): boolean {
+/** Plural alias — most "field usage" data is a collection of entries. */
+export type FieldUsage = FieldUsageEntry[];
+
+export function bareFieldUsage(fu: FieldUsageEntry): boolean {
   return (
     fu.uniqueKeyRequirement === undefined &&
     fu.analyticFunctionUse === undefined
   );
+}
+
+/**
+ * What a `givenRef` IR node references, accumulated while walking IR.
+ * `id` is the global GivenID; `at` carries the reference site for diagnostics.
+ */
+export interface GivenUsageEntry {
+  id: GivenID;
+  at?: DocumentLocation;
+}
+
+/** Plural alias — most "given usage" data is a collection of entries. */
+export type GivenUsage = GivenUsageEntry[];
+
+/**
+ * `refSummary` is the IR-level reference-tracking field — what fields and
+ * givens does this IR fragment reference. `fieldUsage` carries source-rooted
+ * field paths (paths-rooted-in-source invariant unchanged); `givenUsage`
+ * carries GivenIDs reachable from this fragment, populated by the same
+ * walker that populates `fieldUsage`.
+ *
+ * Read sites use `fieldUsageFrom` / `givenUsageFrom` accessors so callers
+ * don't have to handle the optional-`refSummary` case.
+ */
+export interface RefSummary {
+  fieldUsage: FieldUsage;
+  givenUsage?: GivenUsage;
+}
+
+export function fieldUsageFrom(rs: RefSummary | undefined): FieldUsage {
+  return rs?.fieldUsage ?? [];
+}
+
+export function givenUsageFrom(rs: RefSummary | undefined): GivenUsage {
+  return rs?.givenUsage ?? [];
+}
+
+/**
+ * Construct a `RefSummary` from optionally-supplied component arrays. Returns
+ * undefined when no component is supplied (matching the IR convention that an
+ * absent `refSummary` means "I never set this"). An explicitly-empty array
+ * is preserved (e.g. `{fieldUsage: []}` mirrors the pre-rename "I checked,
+ * found nothing" state distinct from "I never set the field").
+ *
+ * Object-arg shape is the forward-compatible seam for `givenUsage` and any
+ * future RefSummary slots — they get added as additional optional keys on
+ * the destructured param without touching call sites that don't supply them.
+ */
+export function mkRefSummary({
+  fieldUsage,
+}: {
+  fieldUsage?: FieldUsage;
+}): RefSummary | undefined {
+  return fieldUsage && {fieldUsage};
+}
+
+/**
+ * Apply `fn` to each `FieldUsageEntry` in a `RefSummary`, preserving all other
+ * RefSummary fields. Returns undefined when `rs` is undefined. The site that
+ * needs to rewrite usage paths (e.g. rename, location-rebrand) goes through
+ * here so future RefSummary fields like `givenUsage` are carried along
+ * untouched without each call site having to know about them.
+ */
+export function mapFieldUsage(
+  rs: RefSummary | undefined,
+  fn: (u: FieldUsageEntry) => FieldUsageEntry
+): RefSummary | undefined {
+  return rs && {...rs, fieldUsage: rs.fieldUsage.map(fn)};
+}
+
+/**
+ * Mutating setter for a node's `fieldUsage`. When the node already has a
+ * `refSummary`, replaces just the `fieldUsage` slice (preserving `givenUsage`
+ * and any future RefSummary fields). When it doesn't, creates a fresh
+ * `refSummary` with the supplied usages.
+ *
+ * Use at sites that mutate an already-constructed IR node; for sites that
+ * build a node from a literal, write `{fieldUsage: [...]}` directly or use
+ * `mkRefSummary` for possibly-undefined inputs.
+ */
+export function setFieldUsage(
+  target: {refSummary?: RefSummary},
+  usages: FieldUsage
+): void {
+  if (target.refSummary) {
+    target.refSummary.fieldUsage = usages;
+  } else {
+    target.refSummary = {fieldUsage: usages};
+  }
 }
 
 export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
@@ -1360,7 +1452,7 @@ export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   limit?: number;
   queryTimezone?: string;
   alwaysJoins?: string[];
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   referencedAt?: DocumentLocation;
   outputStruct: SourceDef;
   isRepeated: boolean;
@@ -1372,7 +1464,7 @@ export type AccessModifierLabel = NonDefaultAccessModifierLabel | 'public';
 export interface TurtleDef extends NamedObject, Pipeline, HasAnnotation {
   type: 'turtle';
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   requiredGroupBys?: string[][];
 }
 
@@ -1620,14 +1712,14 @@ export type BasicExpressionType = Exclude<
 >;
 
 export interface RequiredGroupBy {
-  fieldUsage?: FieldUsage;
+  fieldUsage?: FieldUsageEntry;
   at?: DocumentLocation;
   path: string[];
 }
 
 export interface AggregateUngrouping {
   ungroupedFields: string[][] | '*';
-  fieldUsage: FieldUsage[];
+  fieldUsage: FieldUsage;
   requiresGroupBy?: RequiredGroupBy[];
   exclude: boolean;
   path: string[];
@@ -1637,7 +1729,7 @@ export interface AggregateUngrouping {
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
-  fieldUsage: FieldUsage[];
+  refSummary?: RefSummary;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
 };

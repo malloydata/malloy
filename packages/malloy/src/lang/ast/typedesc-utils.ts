@@ -43,7 +43,6 @@ function mkTypeDesc(
     type: dataType,
     expressionType,
     evalSpace,
-    fieldUsage: [],
   };
 }
 
@@ -199,6 +198,5 @@ export function parameterTypeDesc(
     ...theType,
     expressionType: 'scalar',
     evalSpace,
-    fieldUsage: [],
   };
 }

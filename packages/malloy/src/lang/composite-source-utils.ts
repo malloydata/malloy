@@ -20,8 +20,10 @@ import {
 import type {MalloyElement} from './ast';
 import type {
   FieldUsage,
+  FieldUsageEntry,
   FieldDef,
   PipeSegment,
+  RefSummary,
   SourceDef,
   Expr,
   AggregateUngrouping,
@@ -34,6 +36,7 @@ import type {
 } from '../model/malloy_types';
 import {
   expressionIsScalar,
+  fieldUsageFrom,
   isAtomic,
   isIndexSegment,
   isJoinable,
@@ -42,6 +45,7 @@ import {
   isSourceDef,
   isTimeLiteral,
   isTurtle,
+  mkRefSummary,
 } from '../model/malloy_types';
 import {isNotUndefined} from './utils';
 import {pathToKey} from '../model/utils';
@@ -49,7 +53,7 @@ import {annotationToTag} from '../annotation';
 
 type CompositeCouldNotFindFieldError = {
   code: 'could_not_find_field';
-  data: {field: FieldUsage};
+  data: {field: FieldUsageEntry};
 };
 
 type CompositeError =
@@ -60,7 +64,7 @@ type CompositeError =
   | {code: 'composite_source_is_not_joinable'; data: {path: string[]}}
   | {
       code: 'no_suitable_composite_source_input';
-      data: {failures: CompositeFailure[]; path: string[]; usage: FieldUsage[]};
+      data: {failures: CompositeFailure[]; path: string[]; usage: FieldUsage};
     };
 
 type CompositeIssue =
@@ -68,9 +72,9 @@ type CompositeIssue =
       type: 'join-failed';
       failures: CompositeFailure[];
       path: string[];
-      firstUsage: FieldUsage;
+      firstUsage: FieldUsageEntry;
     }
-  | {type: 'missing-field'; field: FieldUsage}
+  | {type: 'missing-field'; field: FieldUsageEntry}
   | {
       type: 'missing-required-group-by';
       requiredGroupBy: RequiredGroupBy;
@@ -86,7 +90,7 @@ function _resolveCompositeSources(
   source: SourceDef,
   rootFields: FieldDef[],
   nests: NestLevels | undefined,
-  fieldUsage: FieldUsage[],
+  fieldUsage: FieldUsage,
   // for resolving nested composites; the list of sources to try
   sources?: SourceDef[]
 ):
@@ -328,7 +332,7 @@ function _resolveCompositeSources(
   };
 }
 
-function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
+function onlyCompositeUsage(fieldUsage: FieldUsage, fields: FieldDef[]) {
   return fieldUsage.filter(f => {
     try {
       return isCompositeField(lookup(f.path, fields));
@@ -392,7 +396,7 @@ export function getExpandedSegment(
 
   const allFieldUsage = mergeFieldUsage(
     getFieldUsageFromFilterList(inputSource),
-    segment.fieldUsage
+    fieldUsageFrom(segment.refSummary)
   );
   const expanded = expandFieldUsage(allFieldUsage || [], fields);
 
@@ -426,8 +430,8 @@ function getJoin(
 
 function findActiveJoins(
   dependencies: Record<string, JoinDependency>
-): FieldUsage[] {
-  const sorted: FieldUsage[] = [];
+): FieldUsage {
+  const sorted: FieldUsage = [];
   const visited = new Set<string>();
   const visiting = new Set<string>();
 
@@ -472,21 +476,21 @@ function findActiveJoins(
  * - `activeJoins`: Topologically sorted list of joins needed to resolve these uses
  */
 function expandFieldUsage(
-  fieldUsage: FieldUsage[],
+  fieldUsage: FieldUsage,
   fields: FieldDef[]
 ): {
-  result: FieldUsage[];
-  missingFields: FieldUsage[];
-  activeJoins: FieldUsage[];
+  result: FieldUsage;
+  missingFields: FieldUsage;
+  activeJoins: FieldUsage;
   ungroupings: AggregateUngrouping[];
 } {
-  const seen: Record<string, FieldUsage> = {};
-  const missingFields: FieldUsage[] = [];
-  const toProcess: FieldUsage[] = [];
+  const seen: Record<string, FieldUsageEntry> = {};
+  const missingFields: FieldUsage = [];
+  const toProcess: FieldUsage = [];
   const activeJoinGraph: Record<string, JoinDependency> = {};
   const ungroupings: AggregateUngrouping[] = [];
 
-  function mergeIntoSeen(usage: FieldUsage): boolean {
+  function mergeIntoSeen(usage: FieldUsageEntry): boolean {
     const key = pathToKey('field', usage.path);
     if (!seen[key]) {
       seen[key] = {...usage};
@@ -525,7 +529,7 @@ function expandFieldUsage(
     }
 
     if (isAtomic(def)) {
-      const fieldUsage = def.fieldUsage ?? [];
+      const fieldUsage = fieldUsageFrom(def.refSummary);
       // Add the atomic field's dependencies to the queue
       const refPath = reference.path.slice(0, -1);
       for (const usage of joinedFieldUsage(refPath, fieldUsage)) {
@@ -584,11 +588,11 @@ function expandFieldUsage(
 }
 
 interface CategorizedFieldUsage {
-  sourceUsage: FieldUsage[];
-  joinUsage: {[joinName: string]: FieldUsage[]};
+  sourceUsage: FieldUsage;
+  joinUsage: {[joinName: string]: FieldUsage};
 }
 
-function categorizeFieldUsage(fieldUsage: FieldUsage[]): CategorizedFieldUsage {
+function categorizeFieldUsage(fieldUsage: FieldUsage): CategorizedFieldUsage {
   const categorized: CategorizedFieldUsage = {
     sourceUsage: [],
     joinUsage: {},
@@ -611,7 +615,7 @@ function categorizeFieldUsage(fieldUsage: FieldUsage[]): CategorizedFieldUsage {
 
 function getPartitionCompositePartition(
   partitionComposite: PartitionCompositeDesc,
-  fieldUsage: FieldUsage[]
+  fieldUsage: FieldUsage
 ):
   | {partitionId: string; issues: undefined}
   | {issues: CompositeIssue[][]; partitionId: undefined} {
@@ -638,7 +642,7 @@ function getPartitionCompositePartition(
 
 function getPartitionCompositeFilter(
   partitionComposite: PartitionCompositeDesc,
-  fieldUsage: FieldUsage[]
+  fieldUsage: FieldUsage
 ):
   | {partitionFilter: FilterCondition; issues: undefined}
   | {issues: CompositeIssue[][]; partitionFilter: undefined} {
@@ -808,12 +812,12 @@ function processJoins(
   nests: NestLevels | undefined,
   categorizedFieldUsage: CategorizedFieldUsage
 ): {
-  errors: {error: CompositeError; firstUsage: FieldUsage}[];
+  errors: {error: CompositeError; firstUsage: FieldUsageEntry}[];
   anyComposites: boolean;
 } {
   let anyComposites = false;
   const fieldsByName: {[name: string]: FieldDef} = {};
-  const errors: {error: CompositeError; firstUsage: FieldUsage}[] = [];
+  const errors: {error: CompositeError; firstUsage: FieldUsageEntry}[] = [];
   for (const field of base.fields) {
     fieldsByName[field.as ?? field.name] = field;
   }
@@ -898,16 +902,16 @@ export interface NarrowedCompositeFieldResolution {
   joined: NarrowedCompositeFieldResolutionByJoinName;
 }
 
-function segmentFieldUsage(segment: PipeSegment): FieldUsage[] {
-  return (
-    (isQuerySegment(segment) || isIndexSegment(segment)
-      ? segment.fieldUsage
-      : undefined) ?? emptyFieldUsage()
-  );
+function segmentFieldUsage(segment: PipeSegment): FieldUsage {
+  return isQuerySegment(segment) || isIndexSegment(segment)
+    ? fieldUsageFrom(segment.refSummary)
+    : emptyFieldUsage();
 }
 
 function getFieldUsageFromFilterList(source: SourceDef) {
-  return (source.filterList ?? []).flatMap(filter => filter.fieldUsage ?? []);
+  return (source.filterList ?? []).flatMap(filter =>
+    fieldUsageFrom(filter.refSummary)
+  );
 }
 
 export function resolveCompositeSources(
@@ -940,7 +944,7 @@ export function resolveCompositeSources(
   return {sourceDef: undefined, error: result.error};
 }
 
-export function fieldUsagePaths(fieldUsage: FieldUsage[]): string[][] {
+export function fieldUsagePaths(fieldUsage: FieldUsage): string[][] {
   return fieldUsage.map(u => u.path);
 }
 
@@ -983,11 +987,11 @@ function commaAndList(strs: string[], combinator = 'and') {
   }
 }
 
-export function formatFieldUsages(fieldUsage: FieldUsage[]) {
+export function formatFieldUsages(fieldUsage: FieldUsage) {
   return formatPaths(fieldUsage.map(u => u.path));
 }
 
-function countFieldUsage(fieldUsage: FieldUsage[]): number {
+function countFieldUsage(fieldUsage: FieldUsage): number {
   const paths: string[][] = [];
   for (const usage of fieldUsage) {
     if (!paths.some(p => pathEq(p, usage.path))) {
@@ -997,11 +1001,11 @@ function countFieldUsage(fieldUsage: FieldUsage[]): number {
   return paths.length;
 }
 
-export function isEmptyFieldUsage(fieldUsage: FieldUsage[]): boolean {
+export function isEmptyFieldUsage(fieldUsage: FieldUsage): boolean {
   return countFieldUsage(fieldUsage) === 0;
 }
 
-export function fieldUsageIsPlural(fieldUsage: FieldUsage[]): boolean {
+export function fieldUsageIsPlural(fieldUsage: FieldUsage): boolean {
   return countFieldUsage(fieldUsage) > 1;
 }
 
@@ -1013,14 +1017,14 @@ export function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
 
-export function mergeFieldUsage(...usages: FieldUsage[][]): FieldUsage[];
+export function mergeFieldUsage(...usages: FieldUsage[]): FieldUsage;
 export function mergeFieldUsage(
-  ...usages: (FieldUsage[] | undefined)[]
-): FieldUsage[] | undefined;
+  ...usages: (FieldUsage | undefined)[]
+): FieldUsage | undefined;
 export function mergeFieldUsage(
-  ...usages: (FieldUsage[] | undefined)[]
-): FieldUsage[] | undefined {
-  const usage: FieldUsage[] = [];
+  ...usages: (FieldUsage | undefined)[]
+): FieldUsage | undefined {
+  const usage: FieldUsage = [];
   for (const oneUsage of usages) {
     if (oneUsage === undefined) continue;
     usage.push(...oneUsage);
@@ -1029,22 +1033,36 @@ export function mergeFieldUsage(
   return usage;
 }
 
-export function fieldUsageDifference(a: FieldUsage[], b: FieldUsage[]) {
+/**
+ * Combine N `RefSummary` values into one. Currently merges `fieldUsage`
+ * via `mergeFieldUsage`; when more reference-tracking slots land on
+ * `RefSummary` (e.g. `givenUsage` from the walker phase), their merge logic
+ * lands here instead of being duplicated at every call site.
+ */
+export function mergeRefSummaries(
+  ...rss: (RefSummary | undefined)[]
+): RefSummary | undefined {
+  return mkRefSummary({
+    fieldUsage: mergeFieldUsage(...rss.map(rs => fieldUsageFrom(rs))),
+  });
+}
+
+export function fieldUsageDifference(a: FieldUsage, b: FieldUsage) {
   return a.filter(u1 => !b.some(u2 => pathEq(u1.path, u2.path)));
 }
 
-export function emptyFieldUsage(): FieldUsage[] {
+export function emptyFieldUsage(): FieldUsage {
   return [];
 }
 
 export function joinedFieldUsage(
   joinPath: string[],
-  fieldUsage: FieldUsage[]
-): FieldUsage[] {
+  fieldUsage: FieldUsage
+): FieldUsage {
   return fieldUsage.map(u => ({...u, path: [...joinPath, ...u.path]}));
 }
 
-export function fieldUsageJoinPaths(fieldUsage: FieldUsage[]): string[][] {
+export function fieldUsageJoinPaths(fieldUsage: FieldUsage): string[][] {
   const joinPaths: string[][] = [];
   for (const usage of fieldUsage) {
     const joinPath = usage.path.slice(0, -1);
@@ -1068,8 +1086,8 @@ function getNonCompositeFields(source: SourceDef): FieldDef[] {
 }
 
 interface NestLevels {
-  fieldsReferencedDirectly: FieldUsage[];
-  fieldsReferenced: FieldUsage[];
+  fieldsReferencedDirectly: FieldUsage;
+  fieldsReferenced: FieldUsage;
   requiredGroupBys: RequiredGroupBy[];
   nested: NestLevels[];
   ungroupings: AggregateUngrouping[];
@@ -1088,7 +1106,7 @@ function nestLevelsAt(nests: NestLevels, at?: DocumentLocation): NestLevels {
   };
 }
 
-function fieldUsageAt(fieldUsage: FieldUsage[], at?: DocumentLocation) {
+function fieldUsageAt(fieldUsage: FieldUsage, at?: DocumentLocation) {
   if (at === undefined) return fieldUsage;
   return fieldUsage.map(f => ({...f, at}));
 }
@@ -1141,8 +1159,8 @@ function joinedUngroupings(
 }
 
 function extractNestLevels(segment: PipeSegment): NestLevels {
-  const fieldsReferencedDirectly: FieldUsage[] = [];
-  const fieldsReferenced: FieldUsage[] = [];
+  const fieldsReferencedDirectly: FieldUsage = [];
+  const fieldsReferenced: FieldUsage = [];
   const nested: NestLevels[] = [];
   const ungroupings: AggregateUngrouping[] = [];
   const requiredGroupBys: RequiredGroupBy[] = [];
@@ -1171,8 +1189,9 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         );
 
         // Also check the head segment's fieldUsage directly
-        if (isQuerySegment(head) && head.fieldUsage) {
-          const hasDirectUniqueKeyReqs = head.fieldUsage.some(
+        if (isQuerySegment(head)) {
+          const headFieldUsages = fieldUsageFrom(head.refSummary);
+          const hasDirectUniqueKeyReqs = headFieldUsages.some(
             usage => usage.uniqueKeyRequirement
           );
           if (hasDirectUniqueKeyReqs) {
@@ -1204,7 +1223,7 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
           )
         );
       } else {
-        const fieldUsage = field.fieldUsage ?? [];
+        const fieldUsage = fieldUsageFrom(field.refSummary);
         fieldsReferenced.push(...fieldUsage);
         ungroupings.push(...(field.ungroupings ?? []));
         requiredGroupBys.push(...(field.requiresGroupBy ?? []));
@@ -1290,7 +1309,7 @@ function isSingleValueFilterNode(e: Expr): string[] | undefined {
 }
 
 interface ExpandedNestLevels {
-  fieldsReferencedDirectly: FieldUsage[];
+  fieldsReferencedDirectly: FieldUsage;
   requiredGroupBys: RequiredGroupBy[];
   unsatisfiableGroupBys: RequiredGroupBy[];
   nested: ExpandedNestLevels[];
@@ -1301,13 +1320,13 @@ interface ExpandedNestLevels {
 function expandRefs(
   nests: NestLevels,
   fields: FieldDef[]
-): {result: ExpandedNestLevels; missingFields: FieldUsage[] | undefined} {
+): {result: ExpandedNestLevels; missingFields: FieldUsage | undefined} {
   const newNests: NestLevels[] = [];
   const requiredGroupBys: RequiredGroupBy[] = [...nests.requiredGroupBys];
   const allUngroupings: AggregateUngrouping[] = [...nests.ungroupings];
   const references = [...nests.fieldsReferenced];
   const joinPathsProcessed: string[][] = [];
-  const missingFields: FieldUsage[] = [];
+  const missingFields: FieldUsage = [];
   for (let i = 0; i < references.length; i++) {
     if (references[i].path.length === 0) continue;
     const field = references[i];
@@ -1354,7 +1373,7 @@ function expandRefs(
           )
         );
       }
-      const fieldUsage = def.fieldUsage ?? [];
+      const fieldUsage = fieldUsageFrom(def.refSummary);
       const moreReferences = fieldUsageAt(
         joinedFieldUsage(joinPath, fieldUsage),
         field.at
@@ -1415,7 +1434,7 @@ function expandRefs(
   };
 }
 
-function getJoinFieldUsage(join: FieldDef, joinPath: string[]): FieldUsage[] {
+function getJoinFieldUsage(join: FieldDef, joinPath: string[]): FieldUsage {
   return (
     mergeFieldUsage(
       // For `fieldUsage` from join `where`s, we need the path including the join name
@@ -1425,7 +1444,7 @@ function getJoinFieldUsage(join: FieldDef, joinPath: string[]): FieldUsage[] {
       ),
       // For `fieldUsage` from join `on`, we need the path excluding the join name, since it's
       // already rooted at the parent
-      joinedFieldUsage(joinPath.slice(0, -1), join.fieldUsage ?? [])
+      joinedFieldUsage(joinPath.slice(0, -1), fieldUsageFrom(join.refSummary))
     ) ?? []
   );
 }
@@ -1591,7 +1610,7 @@ export function hasCompositesAnywhere(source: SourceDef): boolean {
   return false;
 }
 
-function issueFieldUsage(issue: CompositeIssue): FieldUsage | undefined {
+function issueFieldUsage(issue: CompositeIssue): FieldUsageEntry | undefined {
   if (issue.type === 'missing-field') {
     return issue.field;
   } else if (issue.type === 'missing-required-group-by') {

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {mergeFieldUsage} from '../../composite-source-utils';
+import {mergeRefSummaries} from '../../composite-source-utils';
 import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
 import {
   expressionIsScalar,
@@ -29,6 +29,7 @@ import {
   isQuerySegment,
   isRawSegment,
   isTurtle,
+  mapFieldUsage,
   sourceBase,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
@@ -101,9 +102,11 @@ export class ReferenceView extends View {
       const newSegment: PipeSegment = {
         type: 'reduce',
         queryFields: [this.reference.refToField],
-        fieldUsage: mergeFieldUsage(fieldDef.fieldUsage, [
-          {path: this.reference.refToField.path, at: this.reference.location},
-        ]),
+        refSummary: mergeRefSummaries(fieldDef.refSummary, {
+          fieldUsage: [
+            {path: this.reference.refToField.path, at: this.reference.location},
+          ],
+        }),
         outputStruct,
         // An atomic lens results in a array segment if it is a scalar
         isRepeated: expressionIsScalar(fieldDef.expressionType),
@@ -175,7 +178,7 @@ export class ReferenceView extends View {
     if (isRawSegment(segment)) return segment;
     return {
       ...segment,
-      fieldUsage: segment.fieldUsage?.map(u => ({
+      refSummary: mapFieldUsage(segment.refSummary, u => ({
         ...u,
         at: this.reference.location,
       })),

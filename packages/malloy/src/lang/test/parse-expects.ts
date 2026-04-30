@@ -25,6 +25,7 @@
 import type {MalloyTranslator, TranslateResponse} from '..';
 import {
   bareFieldUsage,
+  fieldUsageFrom,
   type DocumentLocation,
   type DocumentRange,
   type Expr,
@@ -314,7 +315,7 @@ expect.extend({
     if (!badRefs.pass) {
       return badRefs;
     }
-    const actual = bx.generated().fieldUsage;
+    const actual = fieldUsageFrom(bx.generated().refSummary);
     const actualPaths = actual.filter(u => bareFieldUsage(u)).map(u => u.path);
     // there is no guarantee of the order of field usage data, so we sort the two lists
     // so i need to compare sorted versions of the two lists... we can sort on path.join('.)
