@@ -80,6 +80,12 @@ export class DuckDBConnection extends DuckDBCommon {
   protected connection: DuckDBNodeConnection | null = null;
   protected setupError: Error | undefined;
   protected isSetup: Promise<void> | undefined;
+  /**
+   * Set by `close()`. Once true, `setup()` throws and no operation will
+   * reattach. This is the "poison pill" that distinguishes terminal close
+   * from reversible idle.
+   */
+  protected closed = false;
 
   static activeDBs: Record<string, ActiveDB> = {};
 
@@ -164,6 +170,9 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   protected async setup(): Promise<void> {
+    if (this.closed) {
+      throw new Error(`DuckDB connection "${this.name}" is closed`);
+    }
     if (this.setupError) {
       throw this.setupError;
     }
@@ -171,6 +180,17 @@ export class DuckDBConnection extends DuckDBCommon {
     await this.connecting;
     if (this.setupError) {
       throw this.setupError;
+    }
+
+    // Lazy reattach after idle(): if our connection was released, re-run
+    // init() now. setupSQL gets replayed below because isSetup was cleared
+    // alongside the connection.
+    if (this.connection === null) {
+      this.connecting = this.init();
+      await this.connecting;
+      if (this.setupError) {
+        throw this.setupError;
+      }
     }
 
     if (!this.isSetup) {
@@ -408,6 +428,33 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   async close(): Promise<void> {
+    this.detachInstance();
+    this.connection = null;
+    this.isSetup = undefined;
+    this.setupError = undefined;
+    this.closed = true;
+  }
+
+  async idle(): Promise<void> {
+    // No-op for in-memory: closing the instance silently destroys state.
+    if (this.normalized.databasePath === ':memory:') return;
+
+    this.detachInstance();
+    this.connection = null;
+    this.isSetup = undefined;
+    this.setupError = undefined;
+    // Reattach is deferred — `setup()` detects the null connection on next
+    // use and runs a fresh init() then. Doing it eagerly here would
+    // re-acquire the lock immediately and defeat the point of idling.
+  }
+
+  /**
+   * Remove this connection from the shared `activeDBs` entry. When the
+   * last connection sharing the entry is removed, close the underlying
+   * `DuckDBInstance` and drop the entry — releasing DuckDB's per-process
+   * file lock.
+   */
+  private detachInstance(): void {
     const activeDB = DuckDBConnection.activeDBs[this.shareKey];
     if (activeDB) {
       activeDB.connections = activeDB.connections.filter(
