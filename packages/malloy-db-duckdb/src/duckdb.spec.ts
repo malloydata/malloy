@@ -141,9 +141,7 @@ describe('DuckDBConnection', () => {
       const conn1 = new DuckDBConnection({name: 'duckdb', keepAlive: false});
       const conn2 = new DuckDBConnection({name: 'duckdb', keepAlive: false});
       try {
-        await conn1.runSQL(
-          'CREATE TABLE __keepalive_test (val INTEGER)'
-        );
+        await conn1.runSQL('CREATE TABLE __keepalive_test (val INTEGER)');
         await conn1.runSQL('INSERT INTO __keepalive_test VALUES (42)');
 
         // conn2 owns a separate DuckDBInstance — it cannot see conn1's table
