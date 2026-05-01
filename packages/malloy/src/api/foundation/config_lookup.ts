@@ -7,6 +7,7 @@ import type {LogMessage} from '../../lang/parse-log';
 import {
   getConnectionProperties,
   getConnectionTypeDef,
+  isConnectionConfigEntry,
   validateConnectionConfigProperties,
 } from '../../connection/registry';
 import type {
@@ -138,12 +139,18 @@ async function resolveCompiledEntry(
   overlays: ConfigOverlays,
   log: LogMessage[]
 ): Promise<ConnectionConfigEntry> {
-  const resolved = (await resolveNode(entry, overlays, log)) as Record<
-    string,
-    unknown
-  >;
+  const resolved = await resolveNode(entry, overlays, log);
+  // resolveNode returns `unknown`. The compileConnections pipeline
+  // guarantees every connection entry is an object dict with `is` set to
+  // a literal string, so this should always pass — but a structured
+  // throw beats a downstream NPE if a compiler bug ever sneaks through.
+  if (!isConnectionConfigEntry(resolved)) {
+    throw new Error(
+      'Connection entry did not resolve to a valid {is: string, ...} dict'
+    );
+  }
   await applyPropertyDefaults(resolved, overlays);
-  return resolved as ConnectionConfigEntry;
+  return resolved;
 }
 
 /**

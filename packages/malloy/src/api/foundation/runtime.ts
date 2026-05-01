@@ -249,7 +249,11 @@ export class Runtime {
           return undefined;
         }
         try {
-          return JSON.parse(text) as BuildManifest;
+          const parsed: unknown = JSON.parse(text);
+          if (!isBuildManifestShape(parsed)) {
+            throw new Error('manifest is not an object with an "entries" map');
+          }
+          return parsed;
         } catch (e) {
           // File was present but couldn't be parsed. Return an empty
           // manifest carrying the load error so a strict-mode compile can
@@ -767,11 +771,16 @@ export class ModelMaterializer extends FluentState<Model> {
     const result = await this.loadQuery(searchMapMalloy, options).run({
       rowLimit: 1000,
     });
-    const rawResult = result._queryResult.result as unknown as {
+    // The query above is fully constrained — its shape is dictated by the
+    // group_by/aggregate/nest we just compiled. Use the public `data`
+    // accessor (a typed `QueryData`) and assert the row shape rather than
+    // reaching into `_queryResult` and laundering through `unknown`.
+    type SearchValueMapRow = {
       fieldName: string;
       cardinality: unknown;
       values: {fieldValue: string; weight: unknown}[];
-    }[];
+    };
+    const rawResult = result.data.toObject() as SearchValueMapRow[];
     return rawResult.map(row => ({
       ...row,
       cardinality: rowDataToNumber(row.cardinality),
@@ -1182,4 +1191,18 @@ export class ExploreMaterializer extends FluentState<Explore> {
   public getExplore(): Promise<Explore> {
     return this.materialize();
   }
+}
+
+/**
+ * Structural check for the `BuildManifest` shape: a non-null object with an
+ * object `entries` field. Doesn't validate every entry — `BuildManifestEntry`
+ * is just `{tableName: string}`, so a stricter walk could come later if we
+ * find malformed entries causing trouble. The current goal is to fail
+ * cleanly on a manifest file that parsed to a string/array/null instead of
+ * leaving a downstream `entries[buildId]` lookup to crash on `undefined`.
+ */
+function isBuildManifestShape(value: unknown): value is BuildManifest {
+  if (typeof value !== 'object' || value === null) return false;
+  const entries = (value as {entries?: unknown}).entries;
+  return typeof entries === 'object' && entries !== null;
 }
