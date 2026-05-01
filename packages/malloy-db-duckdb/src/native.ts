@@ -152,19 +152,6 @@ registerConnectionType('duckdb', {
       optional: true,
     },
     {
-      name: 'autoIdle',
-      displayName: 'Auto Idle',
-      type: 'boolean',
-      optional: true,
-      advanced: true,
-      description:
-        'When true (default), the connection releases its DuckDB instance ' +
-        'and file lock between operations so other processes can write to ' +
-        'the same database file. The next operation lazily reattaches. Set ' +
-        'to false to keep the connection (and file lock) live for the ' +
-        'lifetime of the host process. Ignored for :memory: databases.',
-    },
-    {
       name: 'setupSQL',
       displayName: 'Setup SQL',
       type: 'text',

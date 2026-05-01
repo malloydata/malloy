@@ -332,7 +332,7 @@ DuckDB has a unique pattern: a static `activeDBs` map groups connections by data
 
 `DuckDBConnection.idle()` participates in this scheme: removing the calling connection from the entry's `connections` list, and only closing the underlying `DuckDBInstance` (releasing the OS file lock) when the count hits zero. The connection then nulls out `this.connection` and clears `this.isSetup`; the next call into `setup()` detects the null and runs a fresh `init()`, which rejoins an existing `activeDBs` entry if another connection has since recreated one or creates a new instance.
 
-The per-connection `autoIdle` config flag (default `true`) lets a user opt out of idling — `DuckDBConnection.idle()` is a no-op when `autoIdle` is `false`, and an `autoIdle: false` connection in the `activeDBs` entry will keep the instance alive even when other sharers idle. Forced to `false` for `:memory:` databases (idling them would silently destroy in-memory state).
+`idle()` is a no-op for `:memory:` databases — closing the instance would silently destroy in-memory state.
 
 ## Connection Digest (`getDigest()`)
 

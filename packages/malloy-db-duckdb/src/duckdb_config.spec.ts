@@ -312,28 +312,4 @@ describe('normalizeDuckDBConfig', () => {
     ]);
     expect(keys.size).toBe(3);
   });
-
-  describe('autoIdle', () => {
-    it('defaults to true for on-disk databases', () => {
-      const dbPath = path.join(tempRoot, 'autoidle-default.duckdb');
-      const normalized = normalizeDuckDBConfig(
-        baseConfig({databasePath: dbPath})
-      );
-      expect(normalized.autoIdle).toBe(true);
-    });
-
-    it('passes through false', () => {
-      const dbPath = path.join(tempRoot, 'autoidle-false.duckdb');
-      const normalized = normalizeDuckDBConfig(
-        baseConfig({databasePath: dbPath, autoIdle: false})
-      );
-      expect(normalized.autoIdle).toBe(false);
-    });
-
-    it('is forced to false for :memory: even when user requests true', () => {
-      const normalized = normalizeDuckDBConfig(baseConfig({autoIdle: true}));
-      expect(normalized.databasePath).toBe(':memory:');
-      expect(normalized.autoIdle).toBe(false);
-    });
-  });
 });

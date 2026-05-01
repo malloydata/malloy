@@ -158,21 +158,14 @@ describe('DuckDBConnection', () => {
       }
     });
 
-    it('keeps the file lock when a sibling connection has autoIdle: false', async () => {
-      const dbPath = path.join(tempRoot, 'idle-mixed-refcount.duckdb');
+    it('idle on one of two connections sharing an instance keeps the instance alive', async () => {
+      const dbPath = path.join(tempRoot, 'idle-shared-instance.duckdb');
       // Construct sequentially so the second connection's init() finds
       // and reuses the first's activeDBs entry instead of racing it.
-      const idler = new DuckDBConnection({
-        name: 'duckdb_idler',
-        databasePath: dbPath,
-      });
-      await idler.runSQL('SELECT 1');
-      const holder = new DuckDBConnection({
-        name: 'duckdb_holder',
-        databasePath: dbPath,
-        autoIdle: false,
-      });
-      await holder.runSQL('SELECT 1');
+      const a = new DuckDBConnection({name: 'duckdb_a', databasePath: dbPath});
+      await a.runSQL('SELECT 1');
+      const b = new DuckDBConnection({name: 'duckdb_b', databasePath: dbPath});
+      await b.runSQL('SELECT 1');
 
       try {
         // Find the activeDBs entry these two connections share. The parent
@@ -184,30 +177,30 @@ describe('DuckDBConnection', () => {
         );
         expect(sharedKey).toBeDefined();
 
-        await idler.idle();
+        await a.idle();
 
-        // holder still holds the instance — refcount went 2 → 1, not 2 → 0.
-        // The activeDBs entry survives, which means the underlying
-        // DuckDBInstance was NOT closed (and therefore the file lock is
-        // still held by holder for any other process). Same-process
-        // verification of the OS lock is unreliable — DuckDB allows
-        // multiple DuckDBInstances in one process — so we assert on the
-        // refcount + shared-instance bookkeeping instead.
+        // Refcount went 2 → 1, not 2 → 0. The activeDBs entry survives,
+        // which means the underlying DuckDBInstance was NOT closed and
+        // b's queries continue working. (Same-process verification of
+        // the OS lock is unreliable — DuckDB allows multiple
+        // DuckDBInstances in one process — so we assert on the refcount
+        // bookkeeping instead.)
         expect(DuckDBConnection.activeDBs[sharedKey!].connections.length).toBe(
           1
         );
+        const stillWorks = await b.runSQL('SELECT 99 AS v');
+        expect(stillWorks.rows).toEqual([{v: 99}]);
 
-        // idler can still reattach lazily — joins the same instance.
-        const result = await idler.runSQL('SELECT 2 AS v');
-        expect(result.rows).toEqual([{v: 2}]);
-        // After reattach, refcount is back to 2 and idler joined holder's
-        // activeDBs entry rather than creating a new one.
+        // a can lazy-reattach, joining the same instance rather than
+        // creating a new one.
+        const reattached = await a.runSQL('SELECT 2 AS v');
+        expect(reattached.rows).toEqual([{v: 2}]);
         expect(DuckDBConnection.activeDBs[sharedKey!].connections.length).toBe(
           2
         );
       } finally {
-        await idler.close();
-        await holder.close();
+        await a.close();
+        await b.close();
       }
     });
 
@@ -239,25 +232,6 @@ describe('DuckDBConnection', () => {
         // and the table would no longer exist. State must survive.
         const result = await conn.runSQL('SELECT val FROM m');
         expect(result.rows).toEqual([{val: 7}]);
-      } finally {
-        await conn.close();
-      }
-    });
-
-    it('idle is a no-op when autoIdle is false', async () => {
-      const dbPath = path.join(tempRoot, 'idle-disabled.duckdb');
-      const conn = new DuckDBConnection({
-        name: 'duckdb_no_autoidle',
-        databasePath: dbPath,
-        autoIdle: false,
-      });
-      try {
-        await conn.runSQL('SELECT 1');
-        const before = Object.keys(DuckDBConnection.activeDBs).length;
-        await conn.idle();
-        // activeDBs entry should still be present — idle did nothing.
-        const after = Object.keys(DuckDBConnection.activeDBs).length;
-        expect(after).toBe(before);
       } finally {
         await conn.close();
       }

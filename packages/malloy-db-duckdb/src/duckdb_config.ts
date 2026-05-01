@@ -48,16 +48,6 @@ export interface NormalizedDuckDBConfig {
   motherDuckToken?: string;
   additionalExtensions: string[];
   setupSQL?: string;
-  /**
-   * When true (default), the connection releases its DuckDB instance and
-   * file lock when the host calls `idle()` on it. The next operation
-   * lazily reattaches. When false, `idle()` is a no-op for this connection
-   * and the file lock is held until `close()`.
-   *
-   * Forced to false for `:memory:` — idling an in-memory database would
-   * silently destroy state.
-   */
-  autoIdle: boolean;
 }
 
 export class DuckDBConfigValidationError extends Error {
@@ -94,7 +84,6 @@ export function normalizeDuckDBConfig(
     readOptionalString(config, 'motherDuckToken')
   );
   const readOnly = readOptionalBoolean(config, 'readOnly') ?? false;
-  const autoIdle = readOptionalBoolean(config, 'autoIdle') ?? true;
   const additionalExtensions = normalizeExtensions(
     config['additionalExtensions'],
     'additionalExtensions'
@@ -338,7 +327,6 @@ export function normalizeDuckDBConfig(
     motherDuckToken: rawMotherDuckToken,
     additionalExtensions,
     setupSQL: rawSetupSQL,
-    autoIdle: databasePath === ':memory:' ? false : autoIdle,
   };
 }
 

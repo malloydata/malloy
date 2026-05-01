@@ -48,13 +48,6 @@ export interface DuckDBConnectionOptions extends ConnectionConfig {
   workingDirectory?: string;
   readOnly?: boolean;
   setupSQL?: string;
-  /**
-   * When true (default), `idle()` releases the DuckDB instance and file
-   * lock; the next operation lazily reattaches. When false, `idle()` is a
-   * no-op for this connection and the lock is held until `close()`.
-   * Forced to false for `:memory:`.
-   */
-  autoIdle?: boolean;
   securityPolicy?: 'none' | 'local' | 'sandboxed';
   allowedDirectories?: string[];
   enableExternalAccess?: boolean;
@@ -445,8 +438,6 @@ export class DuckDBConnection extends DuckDBCommon {
   async idle(): Promise<void> {
     // No-op for in-memory: closing the instance silently destroys state.
     if (this.normalized.databasePath === ':memory:') return;
-    // No-op when the user opted this connection out of automatic idling.
-    if (!this.normalized.autoIdle) return;
 
     this.detachInstance();
     this.connection = null;
