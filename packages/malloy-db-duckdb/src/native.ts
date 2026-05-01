@@ -152,6 +152,15 @@ registerConnectionType('duckdb', {
       optional: true,
     },
     {
+      name: 'keepAlive',
+      displayName: 'Keep Alive',
+      type: 'boolean',
+      optional: true,
+      description:
+        'When false, opens a fresh database instance for each connection and fully closes it on close(). ' +
+        'Useful when another process needs to write to the file between queries. Defaults to true.',
+    },
+    {
       name: 'setupSQL',
       displayName: 'Setup SQL',
       type: 'text',

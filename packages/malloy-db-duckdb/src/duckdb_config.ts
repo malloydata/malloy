@@ -29,6 +29,7 @@ export interface NormalizedDuckDBConfig {
   name: string;
   databasePath: string;
   readOnly: boolean;
+  keepAlive: boolean;
   workingDirectory?: string;
   securityPolicy: DuckDBSecurityPolicy;
   safetyPolicy?: NormalizedDuckDBSafetyPolicy;
@@ -84,6 +85,7 @@ export function normalizeDuckDBConfig(
     readOptionalString(config, 'motherDuckToken')
   );
   const readOnly = readOptionalBoolean(config, 'readOnly') ?? false;
+  const keepAlive = readOptionalBoolean(config, 'keepAlive') ?? true;
   const additionalExtensions = normalizeExtensions(
     config['additionalExtensions'],
     'additionalExtensions'
@@ -304,6 +306,7 @@ export function normalizeDuckDBConfig(
     name: config.name,
     databasePath,
     readOnly: databasePath === ':memory:' ? false : readOnly,
+    keepAlive,
     workingDirectory,
     securityPolicy,
     safetyPolicy,

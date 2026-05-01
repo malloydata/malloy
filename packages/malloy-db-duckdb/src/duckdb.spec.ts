@@ -127,6 +127,36 @@ describe('DuckDBConnection', () => {
     });
   });
 
+  describe('keepAlive', () => {
+    it('keepAlive: false does not register the instance in activeDBs', async () => {
+      const before = Object.keys(DuckDBConnection.activeDBs).length;
+      const conn = new DuckDBConnection({name: 'duckdb', keepAlive: false});
+      await conn.runSQL('SELECT 1');
+      expect(Object.keys(DuckDBConnection.activeDBs).length).toBe(before);
+      await conn.close();
+      expect(Object.keys(DuckDBConnection.activeDBs).length).toBe(before);
+    });
+
+    it('keepAlive: false gives each connection an independent in-memory database', async () => {
+      const conn1 = new DuckDBConnection({name: 'duckdb', keepAlive: false});
+      const conn2 = new DuckDBConnection({name: 'duckdb', keepAlive: false});
+      try {
+        await conn1.runSQL(
+          'CREATE TABLE __keepalive_test (val INTEGER)'
+        );
+        await conn1.runSQL('INSERT INTO __keepalive_test VALUES (42)');
+
+        // conn2 owns a separate DuckDBInstance — it cannot see conn1's table
+        await expect(
+          conn2.runSQL('SELECT * FROM __keepalive_test')
+        ).rejects.toThrow();
+      } finally {
+        await conn1.close();
+        await conn2.close();
+      }
+    });
+  });
+
   describe('setupSQL', () => {
     it('runs a single setup statement', async () => {
       const conn = new DuckDBConnection({

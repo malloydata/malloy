@@ -312,4 +312,16 @@ describe('normalizeDuckDBConfig', () => {
     ]);
     expect(keys.size).toBe(3);
   });
+
+  describe('keepAlive', () => {
+    it('defaults to true', () => {
+      const normalized = normalizeDuckDBConfig(baseConfig());
+      expect(normalized.keepAlive).toBe(true);
+    });
+
+    it('passes through false', () => {
+      const normalized = normalizeDuckDBConfig(baseConfig({keepAlive: false}));
+      expect(normalized.keepAlive).toBe(false);
+    });
+  });
 });

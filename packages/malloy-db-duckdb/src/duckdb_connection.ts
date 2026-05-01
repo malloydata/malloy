@@ -47,6 +47,7 @@ export interface DuckDBConnectionOptions extends ConnectionConfig {
   motherDuckToken?: string;
   workingDirectory?: string;
   readOnly?: boolean;
+  keepAlive?: boolean;
   setupSQL?: string;
   securityPolicy?: 'none' | 'local' | 'sandboxed';
   allowedDirectories?: string[];
@@ -80,6 +81,8 @@ export class DuckDBConnection extends DuckDBCommon {
   protected connection: DuckDBNodeConnection | null = null;
   protected setupError: Error | undefined;
   protected isSetup: Promise<void> | undefined;
+  // Owned by this instance when keepAlive is false (not shared via activeDBs)
+  private privateInstance?: DuckDBInstance;
 
   static activeDBs: Record<string, ActiveDB> = {};
 
@@ -141,6 +144,18 @@ export class DuckDBConnection extends DuckDBCommon {
 
   private async init(): Promise<void> {
     try {
+      if (!this.normalized.keepAlive) {
+        // keepAlive: false — always open a fresh, private instance for this
+        // connection so close() fully releases the database file.
+        const instance = await DuckDBInstance.create(
+          this.normalized.databasePath,
+          this.buildInstanceOptions()
+        );
+        this.privateInstance = instance;
+        this.connection = await instance.connect();
+        return;
+      }
+
       const cached = DuckDBConnection.activeDBs[this.shareKey];
       if (cached) {
         this.connection = await cached.instance.connect();
@@ -408,6 +423,18 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   async close(): Promise<void> {
+    if (!this.normalized.keepAlive) {
+      if (this.privateInstance) {
+        try {
+          this.privateInstance.closeSync();
+        } catch {
+          // Ignore errors during close
+        }
+        this.privateInstance = undefined;
+      }
+      return;
+    }
+
     const activeDB = DuckDBConnection.activeDBs[this.shareKey];
     if (activeDB) {
       activeDB.connections = activeDB.connections.filter(
