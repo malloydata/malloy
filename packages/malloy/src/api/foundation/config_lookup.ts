@@ -117,6 +117,14 @@ export function buildManagedLookup(
         await conn.close();
       }
     },
+
+    async idle(): Promise<void> {
+      // Cache is preserved — same Connection objects are reused so that
+      // schema cache and other in-process state survive the idle.
+      for (const conn of cache.values()) {
+        await conn.idle();
+      }
+    },
   };
 }
 

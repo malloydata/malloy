@@ -8,7 +8,7 @@ This file is about the parts that are fragile and easy to break.
 
 | File | Contents |
 |---|---|
-| `config.ts` | `MalloyConfig` class (constructor pipeline, `wrapConnections`, `releaseConnections`, `readOverlay`) and standalone `Manifest` |
+| `config.ts` | `MalloyConfig` class (constructor pipeline, `wrapConnections`, `shutdown`, `readOverlay`) and standalone `Manifest` |
 | `config_overlays.ts` | `Overlay` (sync-or-async), `ConfigOverlays`, `envOverlay()`, `contextOverlay()`, `defaultConfigOverlays()` |
 | `config_compile.ts` | Schema-directed POJO → typed tree. Section compilers. The **security boundary**. |
 | `config_resolve.ts` | `prepareConfig()` — synchronous extraction of top-level sections; fabricates default-connection entries. No overlay IO. |
@@ -180,16 +180,34 @@ This is why `MalloyConfig.connections` is defined as a getter, not a readonly fi
 
 VS Code uses this to layer settings connections below the config layer. Publisher uses it to attach session-specific behavior to resolved connections.
 
-## `releaseConnections`
+## `shutdown`
 
 User-facing description: [configuration.md → Releasing connections](../../doc/configuration.md#releasing-connections).
+
+`Runtime.shutdown(connections)` and `MalloyConfig.shutdown(connections)` apply
+one of two policies to every connection in the lazy `name → Connection`
+cache:
+
+- `'close'` (default) — destructive. Walks the cache and calls
+  `Connection.close()` on each, then drops the cache. Subsequent operations
+  on those Connection objects may fail. Use at real shutdown: process exit,
+  extension deactivate, config-file change.
+
+- `'idle'` — reversible. Walks the cache and calls `Connection.idle()` on
+  each. The cache is preserved so the same Connection objects are reused on
+  next lookup; schema cache and other in-process state survive. The next
+  operation transparently reattaches whatever backend resources `idle()`
+  released. Use this between operations in long-lived hosts (a VS Code
+  extension, an MCP server, anything that builds Runtimes per request) so
+  that other writers can claim resources during idle gaps.
 
 Implementation specifics:
 
 - `MalloyConfig` owns no connection resources directly — pools, sockets, file handles all live inside individual `Connection` objects. What the managed lookup owns is a lazily-populated `name → Connection` cache.
-- `releaseConnections()` walks that cache and calls `Connection.close()` on each. Connections that were never looked up were never constructed and are skipped.
-- Wrappers installed via `wrapConnections()` don't interfere — the managed lookup under the wrap still holds the cache, and `runtime.releaseConnections()` forwards through to `config.releaseConnections()` directly, not through the wrap.
-- Legacy constructor forms (`new Runtime({connections})` / `new Runtime({connection})`) build a Runtime with no `MalloyConfig` to forward to; `releaseConnections()` is a no-op and the caller owns whatever they passed in.
+- Connections that were never looked up were never constructed and are skipped by both modes.
+- Wrappers installed via `wrapConnections()` don't interfere — the managed lookup under the wrap still holds the cache, and `runtime.shutdown(...)` forwards through to `config.shutdown(...)` directly, not through the wrap.
+- Legacy constructor forms (`new Runtime({connections})` / `new Runtime({connection})`) build a Runtime with no `MalloyConfig` to forward to; `shutdown()` is a no-op and the caller owns whatever they passed in.
+- `releaseConnections()` is preserved as a deprecated alias for `shutdown('close')`. Existing callers continue to work; new code should call `shutdown(...)` directly.
 
 ## Discovery
 
@@ -216,7 +234,7 @@ URL-based (not filesystem-based) so the helper works in browser-safe environment
 ## Testing Notes
 
 - `config.spec.ts` covers the constructor pipeline, section compilers, overlay resolution, property defaults, `includeDefaultConnections` fabrication (name-based skip), reference failure modes, and the manifest URL state table.
-- `runtime.spec.ts` covers the manifest lazy-read, explicit `buildManifest` wins, `EMPTY_BUILD_MANIFEST`, and `releaseConnections` forwarding.
+- `runtime.spec.ts` covers the manifest lazy-read, explicit `buildManifest` wins, `EMPTY_BUILD_MANIFEST`, and `shutdown` forwarding (close + idle modes; deprecated `releaseConnections` alias).
 - When adding a new backend with a registry default that references an overlay, add a test that the default is dropped (not errored) when the overlay is the no-op.
 
 ## Things That Look Like They Should Be Simple But Aren't

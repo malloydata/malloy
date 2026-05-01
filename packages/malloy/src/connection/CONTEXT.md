@@ -225,7 +225,23 @@ abstract fetchTableSchema(tableName: string, tablePath: string): Promise<TableSo
 abstract fetchSelectSchema(sqlSource: SQLSourceRequest): Promise<SQLSourceDef | string>;
 ```
 
-BaseConnection provides default no-op implementations for: `close()`, `estimateQueryCost()`, `fetchMetadata()`, `fetchTableMetadata()`. The type guards `isPool()`, `canPersist()`, `canStream()` all default to `false`.
+BaseConnection provides default no-op implementations for: `close()`, `idle()`, `estimateQueryCost()`, `fetchMetadata()`, `fetchTableMetadata()`. The type guards `isPool()`, `canPersist()`, `canStream()` all default to `false`.
+
+### Connection Lifecycle: `close` vs `idle`
+
+`Connection` exposes two release methods with different post-conditions. Backends can override both, just `close()`, or neither.
+
+| Method | Post-condition | Use case |
+|---|---|---|
+| `close()` | Connection is destroyed. Subsequent operations may fail. | Real shutdown: process exit, extension deactivate, config-file change. |
+| `idle()` | Connection is logically valid; backend resources released. Schema cache and other in-process state survive. Next operation transparently reattaches. | Per-operation pause in long-lived hosts (VS Code, MCP servers) so other writers can claim resources during idle gaps. |
+
+The default `idle()` is a no-op for backends that hold no release-able resources between operations. Override when your backend holds something the host might want to release temporarily — most commonly an OS-level file lock (DuckDB) or a persistent socket pool.
+
+When implementing `idle()`:
+- Don't eagerly reattach inside `idle()` itself — that defeats the purpose. Mark internal state for "needs reattach" and let the next `runSQL()` / schema fetch trigger init lazily.
+- Make sure `setupSQL` and any other init-time work replays cleanly on reattach. The schema cache in `BaseConnection.schemaCache` survives across an idle/reattach cycle (cache keys are content-addressable: `tablePath`, `sqlKey(connection.name, selectStr)`), so don't redundantly invalidate it.
+- Hosts that share a connection across concurrent operations should not call `idle()` while an operation is in flight. The current implementations don't refcount in-flight operations.
 
 ### Schema Caching (BaseConnection)
 
@@ -312,7 +328,11 @@ After getting raw database types, map them to Malloy types via `dialect.sqlTypeT
 
 ### DuckDB Instance Sharing
 
-DuckDB has a unique pattern: a static `activeDBs` map groups connections by database path. Multiple `DuckDBConnection` instances pointing to the same path share one `DuckDBInstance` but each get their own connection handle. The instance is closed only when the last connection to it calls `close()`. This is not traditional pooling — `isPool()` returns `false`.
+DuckDB has a unique pattern: a static `activeDBs` map groups connections by database path. Multiple `DuckDBConnection` instances pointing to the same path share one `DuckDBInstance` but each get their own connection handle. The instance is closed only when the last connection to it calls `close()` (or `idle()`). This is not traditional pooling — `isPool()` returns `false`.
+
+`DuckDBConnection.idle()` participates in this scheme: removing the calling connection from the entry's `connections` list, and only closing the underlying `DuckDBInstance` (releasing the OS file lock) when the count hits zero. The connection then nulls out `this.connection` and clears `this.isSetup`; the next call into `setup()` detects the null and runs a fresh `init()`, which rejoins an existing `activeDBs` entry if another connection has since recreated one or creates a new instance.
+
+The per-connection `autoIdle` config flag (default `true`) lets a user opt out of idling — `DuckDBConnection.idle()` is a no-op when `autoIdle` is `false`, and an `autoIdle: false` connection in the `activeDBs` entry will keep the instance alive even when other sharers idle. Forced to `false` for `:memory:` databases (idling them would silently destroy in-memory state).
 
 ## Connection Digest (`getDigest()`)
 

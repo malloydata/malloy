@@ -3,20 +3,34 @@
  * SPDX-License-Identifier: MIT
  */
 
+import {BaseConnection} from '../../connection/base_connection';
 import {MalloyConfig} from './config';
 import {contextOverlay} from './config_overlays';
 import {Runtime} from './runtime';
 import {registerConnectionType} from '../../connection/registry';
-import type {ConnectionConfig, Connection} from '../../connection/types';
+import type {ConnectionConfig} from '../../connection/types';
 import type {URLReader} from '../../runtime_types';
 import type {BuildManifest} from '../../model/malloy_types';
 
-function mockConnection(name: string): Connection {
-  return {
-    name,
-    dialectName: 'mock',
-    getDigest: () => 'mock-digest',
-  } as unknown as Connection;
+class MockConnection extends BaseConnection {
+  constructor(public readonly name: string) {
+    super();
+  }
+  get dialectName() {
+    return 'mock';
+  }
+  getDigest() {
+    return 'mock-digest';
+  }
+  runSQL = jest.fn(async () => ({rows: [], totalRows: 0}));
+  fetchTableSchema = jest.fn();
+  fetchSelectSchema = jest.fn();
+  close = jest.fn(async () => undefined);
+  idle = jest.fn(async () => undefined);
+}
+
+function mockConnection(name: string): MockConnection {
+  return new MockConnection(name);
 }
 
 beforeEach(() => {
@@ -174,5 +188,130 @@ describe('Runtime build manifest resolution', () => {
     runtime.buildManifest = explicit;
     const second = await runtime._resolveBuildManifest();
     expect(second).toBe(explicit);
+  });
+});
+
+describe('Runtime.shutdown / MalloyConfig.shutdown', () => {
+  function buildRuntimeWithMockConnections(): {
+    runtime: Runtime;
+    config: MalloyConfig;
+  } {
+    const config = new MalloyConfig({
+      connections: {a: {is: 'mockdb'}, b: {is: 'mockdb'}},
+    });
+    const runtime = new Runtime({config});
+    return {runtime, config};
+  }
+
+  it("shutdown('close') walks the cache and calls close() on each looked-up connection", async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const a = await config.connections.lookupConnection('a');
+    const b = await config.connections.lookupConnection('b');
+
+    await runtime.shutdown('close');
+
+    expect(a.close).toHaveBeenCalledTimes(1);
+    expect(b.close).toHaveBeenCalledTimes(1);
+    expect(a.idle).not.toHaveBeenCalled();
+    expect(b.idle).not.toHaveBeenCalled();
+  });
+
+  it("shutdown('idle') walks the cache and calls idle() on each looked-up connection", async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const a = await config.connections.lookupConnection('a');
+    const b = await config.connections.lookupConnection('b');
+
+    await runtime.shutdown('idle');
+
+    expect(a.idle).toHaveBeenCalledTimes(1);
+    expect(b.idle).toHaveBeenCalledTimes(1);
+    expect(a.close).not.toHaveBeenCalled();
+    expect(b.close).not.toHaveBeenCalled();
+  });
+
+  it('shutdown() defaults to close', async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const a = await config.connections.lookupConnection('a');
+
+    await runtime.shutdown();
+
+    expect(a.close).toHaveBeenCalledTimes(1);
+    expect(a.idle).not.toHaveBeenCalled();
+  });
+
+  it('shutdown skips connections that were never looked up', async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    // Look up only 'a'. 'b' is never instantiated.
+    const a = await config.connections.lookupConnection('a');
+
+    await runtime.shutdown('close');
+
+    expect(a.close).toHaveBeenCalledTimes(1);
+    // No way to assert on b — it never got constructed. The fact that
+    // shutdown didn't throw despite b's absence is the test.
+  });
+
+  it('idle preserves the cache — same Connection instance returned on next lookup', async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const before = await config.connections.lookupConnection('a');
+
+    await runtime.shutdown('idle');
+
+    const after = await config.connections.lookupConnection('a');
+    expect(after).toBe(before);
+  });
+
+  it('close drops the cache — fresh Connection instance on next lookup', async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const before = await config.connections.lookupConnection('a');
+
+    await runtime.shutdown('close');
+
+    const after = await config.connections.lookupConnection('a');
+    expect(after).not.toBe(before);
+  });
+
+  it("releaseConnections() is a deprecated alias for shutdown('close')", async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const a = await config.connections.lookupConnection('a');
+
+    await runtime.releaseConnections();
+
+    expect(a.close).toHaveBeenCalledTimes(1);
+    expect(a.idle).not.toHaveBeenCalled();
+    // And the cache was dropped.
+    const after = await config.connections.lookupConnection('a');
+    expect(after).not.toBe(a);
+  });
+
+  it('shutdown is a no-op for runtimes built without a MalloyConfig', async () => {
+    const conn = mockConnection('legacy');
+    const runtime = new Runtime({connection: conn});
+    await runtime.shutdown('close');
+    await runtime.shutdown('idle');
+    expect(conn.close).not.toHaveBeenCalled();
+    expect(conn.idle).not.toHaveBeenCalled();
+  });
+});
+
+describe('BaseConnection default idle', () => {
+  it('is a no-op (does not throw) for backends that do not override it', async () => {
+    // Use the genuine inheritance path: a Connection that doesn't override
+    // idle. MockConnection above sets idle to a jest.fn so it doesn't
+    // exercise the default — this trivial subclass leaves it inherited.
+    class Inheriting extends BaseConnection {
+      get name() {
+        return 'trivial';
+      }
+      get dialectName() {
+        return 'trivial';
+      }
+      getDigest = () => 'trivial';
+      runSQL = jest.fn();
+      fetchTableSchema = jest.fn();
+      fetchSelectSchema = jest.fn();
+    }
+    const c = new Inheriting();
+    await expect(c.idle()).resolves.toBeUndefined();
   });
 });

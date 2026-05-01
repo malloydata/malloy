@@ -283,19 +283,35 @@ export class Runtime {
   }
 
   /**
-   * Notify every connection this runtime's config has handed out that it
-   * is time to release its resources (pools, sockets, file handles,
-   * in-process databases). A no-op for runtimes constructed without a
-   * MalloyConfig — in that case the caller owns the connections they
-   * passed in and is responsible for closing them.
+   * Tell this runtime's connections what to do with their backend
+   * resources now that the host is done with this Runtime. Two policies:
    *
-   * The expected contract is one MalloyConfig per Runtime. Long-running
-   * hosts (Publisher, a VS Code extension tearing down a project) should
-   * call this when a runtime goes out of scope; one-shot CLIs can skip it
-   * and let process exit clean up.
+   * - `'close'` (default) — destructive shutdown. Connections release
+   *   resources and become unusable. Use at real shutdown: process exit,
+   *   extension deactivate, config-file change.
+   *
+   * - `'idle'` — reversible release. Connections release expensive
+   *   resources (DuckDB file locks, socket pools) but stay logically
+   *   valid. The same Connection objects are reused on next lookup;
+   *   schema cache and other in-process state survive. Use between
+   *   operations in long-lived hosts (a VSCode extension, an MCP server,
+   *   any host that builds Runtimes per request) so that other writers
+   *   can claim resources during idle gaps.
+   *
+   * A no-op for runtimes constructed without a MalloyConfig — in that
+   * case the caller owns the connections they passed in.
+   */
+  public async shutdown(
+    connections: 'close' | 'idle' = 'close'
+  ): Promise<void> {
+    await this._config?.shutdown(connections);
+  }
+
+  /**
+   * @deprecated Use `shutdown('close')` instead.
    */
   public async releaseConnections(): Promise<void> {
-    await this._config?.releaseConnections();
+    await this.shutdown('close');
   }
 
   /**

@@ -21,6 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import {DuckDBInstance} from '@duckdb/node-api';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
@@ -124,6 +128,195 @@ describe('DuckDBConnection', () => {
 
       await connection1.close();
       await connection2.close();
+    });
+  });
+
+  describe('idle', () => {
+    let tempRoot: string;
+
+    beforeAll(() => {
+      tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'malloy-duckdb-idle-'));
+    });
+
+    afterAll(() => {
+      fs.rmSync(tempRoot, {recursive: true, force: true});
+    });
+
+    it('idle releases the file lock for an on-disk database', async () => {
+      const dbPath = path.join(tempRoot, 'idle-release.duckdb');
+      const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
+      try {
+        await conn.runSQL('SELECT 1');
+        await conn.idle();
+        // After idle, opening the same path from a fresh instance succeeds —
+        // the file lock has been released. Use the duckdb-node-api directly
+        // so we are not affected by activeDBs sharing.
+        const probe = await DuckDBInstance.create(dbPath);
+        probe.closeSync();
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('keeps the file lock when a sibling connection has autoIdle: false', async () => {
+      const dbPath = path.join(tempRoot, 'idle-mixed-refcount.duckdb');
+      // Construct sequentially so the second connection's init() finds
+      // and reuses the first's activeDBs entry instead of racing it.
+      const idler = new DuckDBConnection({
+        name: 'duckdb_idler',
+        databasePath: dbPath,
+      });
+      await idler.runSQL('SELECT 1');
+      const holder = new DuckDBConnection({
+        name: 'duckdb_holder',
+        databasePath: dbPath,
+        autoIdle: false,
+      });
+      await holder.runSQL('SELECT 1');
+
+      try {
+        // Find the activeDBs entry these two connections share. The parent
+        // describe also has a `:memory:` entry; we want the one for our
+        // dbPath. Two connections to the same path share one entry, so
+        // looking for `connections.length === 2` reliably picks it out.
+        const sharedKey = Object.keys(DuckDBConnection.activeDBs).find(
+          k => DuckDBConnection.activeDBs[k].connections.length === 2
+        );
+        expect(sharedKey).toBeDefined();
+
+        await idler.idle();
+
+        // holder still holds the instance — refcount went 2 → 1, not 2 → 0.
+        // The activeDBs entry survives, which means the underlying
+        // DuckDBInstance was NOT closed (and therefore the file lock is
+        // still held by holder for any other process). Same-process
+        // verification of the OS lock is unreliable — DuckDB allows
+        // multiple DuckDBInstances in one process — so we assert on the
+        // refcount + shared-instance bookkeeping instead.
+        expect(DuckDBConnection.activeDBs[sharedKey!].connections.length).toBe(
+          1
+        );
+
+        // idler can still reattach lazily — joins the same instance.
+        const result = await idler.runSQL('SELECT 2 AS v');
+        expect(result.rows).toEqual([{v: 2}]);
+        // After reattach, refcount is back to 2 and idler joined holder's
+        // activeDBs entry rather than creating a new one.
+        expect(DuckDBConnection.activeDBs[sharedKey!].connections.length).toBe(
+          2
+        );
+      } finally {
+        await idler.close();
+        await holder.close();
+      }
+    });
+
+    it('next operation transparently reattaches after idle', async () => {
+      const dbPath = path.join(tempRoot, 'idle-reattach.duckdb');
+      const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
+      try {
+        await conn.runSQL('CREATE TABLE t (val INTEGER)');
+        await conn.runSQL('INSERT INTO t VALUES (42)');
+        await conn.idle();
+        // No explicit reattach call — the next runSQL should just work.
+        const result = await conn.runSQL('SELECT val FROM t');
+        expect(result.rows).toEqual([{val: 42}]);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('idle is a no-op for :memory: (state preserved)', async () => {
+      const conn = new DuckDBConnection({
+        name: 'duckdb_memory_idle',
+        databasePath: ':memory:',
+      });
+      try {
+        await conn.runSQL('CREATE TABLE m (val INTEGER)');
+        await conn.runSQL('INSERT INTO m VALUES (7)');
+        await conn.idle();
+        // If idle had run, the in-memory database would have been destroyed
+        // and the table would no longer exist. State must survive.
+        const result = await conn.runSQL('SELECT val FROM m');
+        expect(result.rows).toEqual([{val: 7}]);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('idle is a no-op when autoIdle is false', async () => {
+      const dbPath = path.join(tempRoot, 'idle-disabled.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_no_autoidle',
+        databasePath: dbPath,
+        autoIdle: false,
+      });
+      try {
+        await conn.runSQL('SELECT 1');
+        const before = Object.keys(DuckDBConnection.activeDBs).length;
+        await conn.idle();
+        // activeDBs entry should still be present — idle did nothing.
+        const after = Object.keys(DuckDBConnection.activeDBs).length;
+        expect(after).toBe(before);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('schema cache survives idle', async () => {
+      const dbPath = path.join(tempRoot, 'idle-schema-cache.duckdb');
+      const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
+      try {
+        await conn.runSQL('CREATE TABLE cached (x INTEGER, y VARCHAR)');
+        // Prime the schema cache.
+        const first = await conn.fetchSchemaForTables({'cached': 'cached'}, {});
+        expect(first.schemas['cached']).toBeDefined();
+
+        const fetchSpy = jest.spyOn(
+          DuckDBConnection.prototype,
+          'fetchTableSchema'
+        );
+
+        await conn.idle();
+        // Re-request — should hit the cache and not call fetchTableSchema.
+        const second = await conn.fetchSchemaForTables(
+          {'cached': 'cached'},
+          {}
+        );
+        expect(second.schemas['cached']).toBeDefined();
+        expect(fetchSpy).not.toHaveBeenCalled();
+        fetchSpy.mockRestore();
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('close() is terminal — subsequent operations fail with a clear error', async () => {
+      const dbPath = path.join(tempRoot, 'close-terminal.duckdb');
+      const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
+      await conn.runSQL('SELECT 1');
+      await conn.close();
+      await expect(conn.runSQL('SELECT 2')).rejects.toThrow(/closed/);
+    });
+
+    it('setupSQL replays after idle reattach', async () => {
+      const dbPath = path.join(tempRoot, 'idle-setupsql.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_idle_setup',
+        databasePath: dbPath,
+        setupSQL: 'CREATE OR REPLACE MACRO triple(x) AS x * 3',
+      });
+      try {
+        const a = await conn.runSQL('SELECT triple(2) AS v');
+        expect(a.rows).toEqual([{v: 6}]);
+        await conn.idle();
+        // After idle, the DuckDBInstance is closed and the macro is gone.
+        // The reattach must replay setupSQL so the macro exists again.
+        const b = await conn.runSQL('SELECT triple(5) AS v');
+        expect(b.rows).toEqual([{v: 15}]);
+      } finally {
+        await conn.close();
+      }
     });
   });
 
