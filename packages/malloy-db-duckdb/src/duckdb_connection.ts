@@ -449,24 +449,36 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   /**
-   * Dispose this connection's stake in the underlying `DuckDBInstance`:
-   *   1. Disconnect the per-connection C++ `Connection` so its
-   *      `ClientContext` stops pinning the `DatabaseInstance`.
-   *   2. Drop our entry from the shared `activeDBs` bookkeeping.
-   *   3. If we were the last sharer, close the instance — which releases
-   *      DuckDB's per-process file lock.
+   * Drop our entry from the shared `activeDBs` bookkeeping. If we were
+   * the last sharer, close the underlying `DuckDBInstance`.
    *
-   * Step 1 is required even though step 3 calls `instance.closeSync()`.
-   * The C-API `duckdb_close` only decrements the `shared_ptr<DatabaseInstance>`
-   * refcount; live `Connection` objects keep that refcount above zero via
-   * their `ClientContext`, so the file handle (and `fcntl` lock) survive
-   * the `closeSync` call. Disconnecting first guarantees the `closeSync`
-   * is the last ref and the lock is actually released.
+   * NOTE: this does NOT fully release the OS file lock when other
+   * processes try to open the same path. `duckdb_close` (= `closeSync`)
+   * is a refcount-decrement on `shared_ptr<DatabaseInstance>`; the
+   * `fcntl(F_SETLK)` lock on the storage manager's `UnixFileHandle`
+   * survives until the last `shared_ptr` ref is gone, and live C++
+   * `Connection` objects keep that refcount above zero via their
+   * `ClientContext`. To force the lock release we'd need to also
+   * `disconnectSync()` the per-connection node-api Connection — but
+   * doing so unconditionally (as 0.0.389 did) crashes the language
+   * server because malloy's translate/persistence layer retains
+   * weak_ptrs to the destroyed C++ Connection. See the commented-out
+   * code below and PR #2793 / the revert PR for context.
+   *
+   * Proper fix needs to coordinate disconnect with invalidation of
+   * whatever caches survive idle (manifest reader is the main suspect).
    */
   private detachInstance(): void {
-    if (this.connection) {
-      this.connection.disconnectSync();
-    }
+    // [PR #2793, reverted] Adding `this.connection?.disconnectSync()`
+    // here releases the OS file lock — but it also destroys C++ state
+    // that malloy-internal caches (manifest reader, etc.) hold
+    // weak_ptrs to. Result: SIGSEGV in the language server during
+    // translate, or `bad_weak_ptr` exceptions surfacing as model
+    // problems on next op. Left here as a marker for the proper fix.
+    //
+    // if (this.connection) {
+    //   this.connection.disconnectSync();
+    // }
     const activeDB = DuckDBConnection.activeDBs[this.shareKey];
     if (activeDB) {
       activeDB.connections = activeDB.connections.filter(
