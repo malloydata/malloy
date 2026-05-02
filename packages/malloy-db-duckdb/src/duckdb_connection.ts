@@ -476,14 +476,6 @@ export class DuckDBConnection extends DuckDBCommon {
     // translate, or `bad_weak_ptr` exceptions surfacing as model
     // problems on next op. Left here as a marker for the proper fix.
     //
-    // Note: no try/catch around disconnectSync is intentional. An
-    // earlier iteration wrapped it and warned on failure; that was
-    // removed in 0.0.389 (commit e012fa55e) because swallowing the
-    // error makes the subsequent `closeSync` silently fail to release
-    // the lock, surfacing later as a confusing "could not acquire
-    // lock" on the next op. If the proper fix re-enables this block,
-    // keep the bare call — let disconnect failures throw.
-    //
     // if (this.connection) {
     //   this.connection.disconnectSync();
     // }
