@@ -61,7 +61,10 @@ export interface DuckDBConnectionOptions extends ConnectionConfig {
   memoryLimit?: string;
   tempDirectory?: string;
   extensionDirectory?: string;
+  shareable?: boolean;
 }
+
+const SHAREABLE_ATTACH_ALIAS = 'malloy_db';
 
 interface ActiveDB {
   instance: DuckDBInstance;
@@ -86,6 +89,31 @@ export class DuckDBConnection extends DuckDBCommon {
    * from reversible idle.
    */
   protected closed = false;
+
+  /**
+   * Shareable mode only. The DuckDBInstance backing this connection's
+   * `:memory:` primary database. Not shared via `activeDBs` because each
+   * shareable connection independently ATTACHes/DETACHes the real file —
+   * there is nothing to pool. Closed in `close()`.
+   */
+  private ownedInstance: DuckDBInstance | null = null;
+
+  /**
+   * Shareable mode only. True between a successful ATTACH (in
+   * `setupOnce()`) and the matching DETACH (in `idle()` / `close()`).
+   */
+  private attached = false;
+
+  /**
+   * Shareable mode only. True after the first successful run of the
+   * once-per-connection portion of `setupOnce()` (baseline `SET`s,
+   * extension `LOAD`s, user `setupSQL`, `lockConfiguration`). Those run
+   * against the persistent `:memory:` primary and must NOT re-run on
+   * later wake-ups: user `setupSQL` may be non-idempotent, and any later
+   * `SET` would fail under `lockConfiguration=true`. Wake-ups still
+   * re-ATTACH the real file because that's the bit DETACH released.
+   */
+  private connectionSetupRan = false;
 
   static activeDBs: Record<string, ActiveDB> = {};
 
@@ -147,6 +175,19 @@ export class DuckDBConnection extends DuckDBCommon {
 
   private async init(): Promise<void> {
     try {
+      if (this.normalized.effectiveShareable) {
+        // Shareable mode: own private :memory: primary, no activeDBs
+        // sharing. The real database file is opened lazily via ATTACH in
+        // setupOnce() and released via DETACH in idle().
+        const instance = await DuckDBInstance.create(
+          ':memory:',
+          this.buildInstanceOptions({forShareablePrimary: true})
+        );
+        this.connection = await instance.connect();
+        this.ownedInstance = instance;
+        return;
+      }
+
       const cached = DuckDBConnection.activeDBs[this.shareKey];
       if (cached) {
         this.connection = await cached.instance.connect();
@@ -200,20 +241,63 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   private async setupOnce(): Promise<void> {
-    await this.applyFinalBaseline();
+    // In non-shareable mode this whole method runs on every wake because
+    // the underlying DuckDBInstance was destroyed by `idle()`/`close()`,
+    // so the connection-level state (SETs, LOADs, user setupSQL effects)
+    // is gone and must be replayed.
+    //
+    // In shareable mode the `:memory:` primary survives idle and so does
+    // its connection-level state. Replaying the baseline + user setupSQL
+    // on a second wake would re-execute non-idempotent user statements
+    // (CREATE TABLE, INSERT, ...) and would also fail outright under
+    // `lockConfiguration=true` because subsequent `SET`s are rejected
+    // once configuration is locked. Gate everything except the ATTACH on
+    // `connectionSetupRan` so it only runs the first time.
+    const reattachOnly =
+      this.normalized.effectiveShareable && this.connectionSetupRan;
 
-    if (this.normalized.setupSQL) {
-      for (const statement of splitSetupSQL(this.normalized.setupSQL)) {
-        await this.runDuckDBQuery(statement);
-      }
+    if (!reattachOnly) {
+      await this.applyFinalBaseline();
     }
+    await this.attachIfShareable();
 
-    if (this.normalized.lockConfiguration) {
-      await this.runDuckDBQuery('SET lock_configuration=true');
+    if (!reattachOnly) {
+      if (this.normalized.setupSQL) {
+        for (const statement of splitSetupSQL(this.normalized.setupSQL)) {
+          await this.runDuckDBQuery(statement);
+        }
+      }
+      if (this.normalized.lockConfiguration) {
+        await this.runDuckDBQuery('SET lock_configuration=true');
+      }
+      this.connectionSetupRan = true;
     }
   }
 
-  private buildInstanceOptions(): Record<string, string> {
+  /**
+   * Shareable mode: ATTACH the real database file into the in-memory
+   * primary and `USE` it, so unqualified table refs resolve into the
+   * attached file. Idempotent — guarded by `this.attached`. Runs after
+   * `applyFinalBaseline()` so the corresponding `SET allowed_directories`
+   * (sandboxed mode) has already been applied.
+   */
+  private async attachIfShareable(): Promise<void> {
+    if (!this.normalized.effectiveShareable) return;
+    if (this.attached) return;
+    const readOnlyClause = this.normalized.readOnly ? ' (READ_ONLY)' : '';
+    await this.runDuckDBQuery(
+      `ATTACH ${sqlStringLiteral(
+        this.normalized.databasePath
+      )} AS ${SHAREABLE_ATTACH_ALIAS}${readOnlyClause}`
+    );
+    await this.runDuckDBQuery(`USE ${SHAREABLE_ATTACH_ALIAS}.main`);
+    this.attached = true;
+  }
+
+  private buildInstanceOptions(opts?: {
+    forShareablePrimary?: boolean;
+  }): Record<string, string> {
+    const forShareablePrimary = opts?.forShareablePrimary === true;
     const options: Record<string, string> = {
       custom_user_agent: `Malloy/${packageJson.version}`,
     };
@@ -221,7 +305,11 @@ export class DuckDBConnection extends DuckDBCommon {
     if (this.normalized.motherDuckToken !== undefined) {
       options['motherduck_token'] = this.normalized.motherDuckToken;
     }
-    if (this.normalized.readOnly) {
+    // In shareable mode the primary is :memory: and must stay writable —
+    // temp tables, manifestTemporaryTable, and search-index work all live
+    // there. The user's `readOnly` applies to the ATTACHed real file via
+    // `(READ_ONLY)` in attachIfShareable().
+    if (this.normalized.readOnly && !forShareablePrimary) {
       options['access_mode'] = 'READ_ONLY';
     }
     if (this.normalized.autoloadKnownExtensions !== undefined) {
@@ -428,16 +516,39 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   async close(): Promise<void> {
-    this.detachInstance();
+    if (this.normalized.effectiveShareable) {
+      await this.detachShareableFile();
+      if (this.ownedInstance) {
+        try {
+          this.ownedInstance.closeSync();
+        } catch {
+          // Best effort during shutdown.
+        }
+        this.ownedInstance = null;
+      }
+    } else {
+      this.detachInstance();
+    }
     this.connection = null;
     this.isSetup = undefined;
     this.setupError = undefined;
+    this.attached = false;
     this.closed = true;
   }
 
   async idle(): Promise<void> {
     // No-op for in-memory: closing the instance silently destroys state.
     if (this.normalized.databasePath === ':memory:') return;
+
+    if (this.normalized.effectiveShareable) {
+      // Shareable mode: keep the in-memory primary (and its temp tables,
+      // schema cache, etc.) alive; just DETACH the real file so the OS
+      // file lock is released. Next `setup()` re-runs `setupOnce()`, which
+      // re-ATTACHes lazily on first use.
+      await this.detachShareableFile();
+      this.isSetup = undefined;
+      return;
+    }
 
     this.detachInstance();
     this.connection = null;
@@ -446,6 +557,21 @@ export class DuckDBConnection extends DuckDBCommon {
     // Reattach is deferred — `setup()` detects the null connection on next
     // use and runs a fresh init() then. Doing it eagerly here would
     // re-acquire the lock immediately and defeat the point of idling.
+  }
+
+  private async detachShareableFile(): Promise<void> {
+    if (!this.normalized.effectiveShareable) return;
+    if (!this.attached || !this.connection) return;
+    try {
+      await this.connection.run('USE memory.main');
+      await this.connection.run(`DETACH ${SHAREABLE_ATTACH_ALIAS}`);
+      this.attached = false;
+    } catch {
+      // If DETACH fails the lock stays held; surfacing this error would
+      // mask the user's original op error. We leave `this.attached` as
+      // `true` so a later `attachIfShareable()` doesn't try to ATTACH on
+      // top of a still-attached alias.
+    }
   }
 
   /**

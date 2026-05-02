@@ -152,6 +152,17 @@ registerConnectionType('duckdb', {
       optional: true,
     },
     {
+      name: 'shareable',
+      displayName: 'Shareable',
+      type: 'boolean',
+      optional: true,
+      description:
+        'When true, release the database file between operations so other ' +
+        'tools (malloy-cli, the duckdb CLI, another malloy host) can use ' +
+        'the same file while this connection is open. Adds a small ' +
+        'per-operation overhead. Default false.',
+    },
+    {
       name: 'setupSQL',
       displayName: 'Setup SQL',
       type: 'text',
