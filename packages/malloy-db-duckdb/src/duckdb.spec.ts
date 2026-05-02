@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {spawnSync} from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import {DuckDBInstance} from '@duckdb/node-api';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
@@ -148,11 +148,31 @@ describe('DuckDBConnection', () => {
       try {
         await conn.runSQL('SELECT 1');
         await conn.idle();
-        // After idle, opening the same path from a fresh instance succeeds —
-        // the file lock has been released. Use the duckdb-node-api directly
-        // so we are not affected by activeDBs sharing.
-        const probe = await DuckDBInstance.create(dbPath);
-        probe.closeSync();
+
+        // The OS file lock (fcntl) is per-process — opening the same path
+        // from the same Node process succeeds even when the lock is held
+        // by another DuckDBInstance in this process. To verify the lock
+        // is genuinely released to other processes (the actual user
+        // scenario: VS Code has the file open, CLI tries to write), we
+        // probe from a child process.
+        const result = spawnSync(
+          process.execPath,
+          [
+            '-e',
+            `(async () => {
+              const {DuckDBInstance} = require('@duckdb/node-api');
+              try {
+                const inst = await DuckDBInstance.create(${JSON.stringify(dbPath)});
+                inst.closeSync();
+                process.stdout.write('FREE');
+              } catch (e) {
+                process.stdout.write('HELD: ' + (e && e.message ? e.message.split('\\n')[0] : String(e)));
+              }
+            })();`,
+          ],
+          {encoding: 'utf8', timeout: 10000}
+        );
+        expect(result.stdout).toBe('FREE');
       } finally {
         await conn.close();
       }

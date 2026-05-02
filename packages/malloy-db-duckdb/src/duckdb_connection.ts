@@ -449,12 +449,32 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   /**
-   * Remove this connection from the shared `activeDBs` entry. When the
-   * last connection sharing the entry is removed, close the underlying
-   * `DuckDBInstance` and drop the entry — releasing DuckDB's per-process
-   * file lock.
+   * Dispose this connection's stake in the underlying `DuckDBInstance`:
+   *   1. Disconnect the per-connection C++ `Connection` so its
+   *      `ClientContext` stops pinning the `DatabaseInstance`.
+   *   2. Drop our entry from the shared `activeDBs` bookkeeping.
+   *   3. If we were the last sharer, close the instance — which releases
+   *      DuckDB's per-process file lock.
+   *
+   * Step 1 is required even though step 3 calls `instance.closeSync()`.
+   * The C-API `duckdb_close` only decrements the `shared_ptr<DatabaseInstance>`
+   * refcount; live `Connection` objects keep that refcount above zero via
+   * their `ClientContext`, so the file handle (and `fcntl` lock) survive
+   * the `closeSync` call. Disconnecting first guarantees the `closeSync`
+   * is the last ref and the lock is actually released.
    */
   private detachInstance(): void {
+    if (this.connection) {
+      try {
+        this.connection.disconnectSync();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `DuckDBConnection "${this.name}": disconnectSync failed:`,
+          err
+        );
+      }
+    }
     const activeDB = DuckDBConnection.activeDBs[this.shareKey];
     if (activeDB) {
       activeDB.connections = activeDB.connections.filter(
