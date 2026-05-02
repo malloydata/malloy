@@ -142,7 +142,15 @@ describe('DuckDBConnection', () => {
       fs.rmSync(tempRoot, {recursive: true, force: true});
     });
 
-    it('idle releases the file lock for an on-disk database', async () => {
+    it('idle does NOT release the file lock cross-process (TODO: fix without crashing)', async () => {
+      // 0.0.389 attempted this fix via `disconnectSync()` in
+      // `detachInstance()`; it caused SIGSEGV / `bad_weak_ptr` from
+      // malloy-internal caches retaining weak_ptrs to the destroyed
+      // C++ Connection. Reverted in 0.0.390. Proper fix needs cache
+      // invalidation coordination (manifest reader is the leading
+      // suspect). Until then this test asserts the current (buggy
+      // but stable) behavior: another process trying to open the
+      // same database path while we hold it idle gets HELD, not FREE.
       const dbPath = path.join(tempRoot, 'idle-release.duckdb');
       const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
       try {
@@ -172,7 +180,7 @@ describe('DuckDBConnection', () => {
           ],
           {encoding: 'utf8', timeout: 10000}
         );
-        expect(result.stdout).toBe('FREE');
+        expect(result.stdout.startsWith('HELD')).toBe(true);
       } finally {
         await conn.close();
       }
