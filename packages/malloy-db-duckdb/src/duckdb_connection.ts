@@ -465,15 +465,7 @@ export class DuckDBConnection extends DuckDBCommon {
    */
   private detachInstance(): void {
     if (this.connection) {
-      try {
-        this.connection.disconnectSync();
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `DuckDBConnection "${this.name}": disconnectSync failed:`,
-          err
-        );
-      }
+      this.connection.disconnectSync();
     }
     const activeDB = DuckDBConnection.activeDBs[this.shareKey];
     if (activeDB) {
