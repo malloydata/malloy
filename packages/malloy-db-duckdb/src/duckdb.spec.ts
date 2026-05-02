@@ -301,6 +301,71 @@ describe('DuckDBConnection', () => {
       await expect(conn.runSQL('SELECT 2')).rejects.toThrow(/closed/);
     });
 
+    it('shareable: idle releases the OS file lock cross-process', async () => {
+      // The whole point of shareable mode: another process can open the
+      // file while this connection is idled. Verified from a child node
+      // process because fcntl locks are per-process on POSIX.
+      const dbPath = path.join(tempRoot, 'shareable-idle-release.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      try {
+        await conn.runSQL('CREATE TABLE t (val INTEGER)');
+        await conn.runSQL('INSERT INTO t VALUES (1)');
+        await conn.idle();
+        const result = spawnSync(
+          process.execPath,
+          [
+            '-e',
+            `(async () => {
+              const {DuckDBInstance} = require('@duckdb/node-api');
+              try {
+                const inst = await DuckDBInstance.create(${JSON.stringify(dbPath)});
+                inst.closeSync();
+                process.stdout.write('FREE');
+              } catch (e) {
+                process.stdout.write('HELD: ' + (e && e.message ? e.message.split('\\n')[0] : String(e)));
+              }
+            })();`,
+          ],
+          {encoding: 'utf8', timeout: 10000}
+        );
+        expect(result.stdout).toBe('FREE');
+
+        // Reattach transparently and the persisted row is still there.
+        const round = await conn.runSQL('SELECT val FROM t');
+        expect(round.rows).toEqual([{val: 1}]);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('shareable: setupSQL does NOT replay on wake (in-memory primary persists)', async () => {
+      // The in-memory primary survives idle in shareable mode, so user
+      // setupSQL with non-idempotent side effects would fail on a second
+      // wake if it re-ran. Use a bare `CREATE TABLE` (no OR REPLACE) so
+      // any replay would throw "table already exists".
+      const dbPath = path.join(tempRoot, 'shareable-setupsql-once.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_setup',
+        databasePath: dbPath,
+        shareable: true,
+        setupSQL: 'CREATE TABLE memory.main.session (n INTEGER)',
+      });
+      try {
+        await conn.runSQL('SELECT 1');
+        await conn.idle();
+        // If setupSQL replayed, this next runSQL would throw "table
+        // already exists" during the wake-time setupOnce.
+        const result = await conn.runSQL('SELECT 2 AS v');
+        expect(result.rows).toEqual([{v: 2}]);
+      } finally {
+        await conn.close();
+      }
+    });
+
     it('setupSQL replays after idle reattach', async () => {
       const dbPath = path.join(tempRoot, 'idle-setupsql.duckdb');
       const conn = new DuckDBConnection({
