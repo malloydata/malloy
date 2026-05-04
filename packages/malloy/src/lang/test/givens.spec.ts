@@ -1445,3 +1445,153 @@ describe('given: PreparedQuery.givens introspection', () => {
     // attempts at compile time; not asserted here at runtime.
   });
 });
+
+describe('given: Model.givens introspection', () => {
+  function modelFromSource(src: string): {model: Model; md: ModelDef} {
+    const t = new TestTranslator(src);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    return {model: new Model(md, [], []), md};
+  }
+
+  test('returns every surfaced given keyed by surface name', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given:
+        A :: number is 1
+        B :: string is "hi"
+        C :: boolean
+    `);
+    const givens = model.givens;
+    expect([...givens.keys()].sort()).toEqual(['A', 'B', 'C']);
+  });
+
+  test('empty Map when no givens declared', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      run: a -> { group_by: ai }
+    `);
+    expect(model.givens.size).toBe(0);
+  });
+
+  test('Given wrapper exposes type, default, location, name, id', () => {
+    const {model, md} = modelFromSource(`
+      ##! experimental.givens
+      given: TENANT :: string is "acme"
+    `);
+    const t = model.givens.get('TENANT');
+    expect(t).toBeDefined();
+    expect(t?.name).toBe('TENANT');
+    expect(t?.type).toEqual({type: 'string'});
+    expect(t?.default).toMatchObject({node: 'stringLiteral'});
+    expect(t?.location).toBeDefined();
+    expect(t?.id).toBe((md.contents['TENANT'] as {id: string}).id);
+  });
+
+  test('undefaulted given has default === undefined', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given: REQUIRED :: number
+    `);
+    expect(model.givens.get('REQUIRED')?.default).toBeUndefined();
+  });
+
+  test('imported given uses its imported surface name', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      import { CAP is MAX_ROWS } from "child"
+    `);
+    t.unresolved();
+    t.update({
+      urls: {
+        'internal://test/langtests/child': `
+          ##! experimental.givens
+          given: MAX_ROWS :: number is 100
+        `,
+      },
+    });
+    expect(t).toTranslate();
+    const model = new Model(t.translate().modelDef!, [], []);
+    const givens = model.givens;
+    expect([...givens.keys()]).toEqual(['CAP']);
+    expect(givens.get('CAP')?.name).toBe('CAP');
+  });
+
+  test('two surface aliases to the same id appear as two entries with shared id', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      import { MAX_ROWS } from "child"
+      import { CAP is MAX_ROWS } from "child"
+    `);
+    t.unresolved();
+    t.update({
+      urls: {
+        'internal://test/langtests/child': `
+          ##! experimental.givens
+          given: MAX_ROWS :: number is 100
+        `,
+      },
+    });
+    expect(t).toTranslate();
+    const model = new Model(t.translate().modelDef!, [], []);
+    const givens = model.givens;
+    expect([...givens.keys()].sort()).toEqual(['CAP', 'MAX_ROWS']);
+    expect(givens.get('MAX_ROWS')?.id).toBe(givens.get('CAP')?.id);
+  });
+
+  test('annotations on given declarations surface via tagParse / getTaglines', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given:
+        # label="Tenant"
+        TENANT :: string is "acme"
+    `);
+    const t = model.givens.get('TENANT');
+    expect(t?.getTaglines()).toEqual(
+      expect.arrayContaining(['# label="Tenant"\n'])
+    );
+    expect(t?.tagParse().tag.text('label')).toBe('Tenant');
+  });
+
+  test('non-selectively-imported (auto-surface skipped) given does NOT appear', () => {
+    // Per design: `import "child"` does not auto-surface givens. The
+    // declaration is still in `documentGivens` (so internal references
+    // resolve), but it is not callable from the importer's surface,
+    // so it is not in `model.givens`.
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      import "child"
+    `);
+    t.unresolved();
+    t.update({
+      urls: {
+        'internal://test/langtests/child': `
+          ##! experimental.givens
+          given: TENANT :: string is "acme"
+        `,
+      },
+    });
+    expect(t).toTranslate();
+    const model = new Model(t.translate().modelDef!, [], []);
+    expect(model.givens.size).toBe(0);
+  });
+
+  test('PreparedQuery.givens is the per-query subset of Model.givens', () => {
+    // The two introspection accessors return Given wrappers from the
+    // same underlying records, with PreparedQuery.givens being a strict
+    // subset filtered by the query's `givenUsage`.
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given:
+        USED :: number is 1
+        UNUSED :: number is 2
+      query: q is a -> { where: ai = $USED; group_by: ai }
+    `);
+    const all = model.givens;
+    expect([...all.keys()].sort()).toEqual(['UNUSED', 'USED']);
+    const perQuery = model.getPreparedQueryByName('q').givens;
+    expect([...perQuery.keys()]).toEqual(['USED']);
+    // Same id on both sides for the shared given.
+    expect(all.get('USED')?.id).toBe(perQuery.get('USED')?.id);
+  });
+});

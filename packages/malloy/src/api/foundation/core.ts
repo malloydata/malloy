@@ -1046,6 +1046,33 @@ export class Model implements Taggable {
     return this._queryModel;
   }
 
+  /**
+   * The givens this model surfaces, keyed by caller-facing surface name.
+   * Used by whole-model parameter-editor UIs to render input widgets for
+   * every given the model can accept.
+   *
+   * Surface-name keying means renames-on-import appear under their local
+   * alias. Two surface names that alias to the same `GivenID` (e.g. an
+   * import bringing the same given in twice under different names) appear
+   * as two map entries with shared `.id`.
+   *
+   * Internal-only givens (declared but never surfaced into the namespace,
+   * resolved purely via defaults) are NOT in this map — the caller has no
+   * way to set them, so listing them would mislead a UI.
+   */
+  public get givens(): ReadonlyMap<string, Given> {
+    const out = new Map<string, Given>();
+    const givens = this.modelDef.givens;
+    if (!givens) return out;
+    for (const [surfaceName, entry] of this.contentsMap) {
+      if (entry.type !== 'given') continue;
+      const decl = givens[entry.id];
+      if (!decl) continue;
+      out.set(surfaceName, new Given(surfaceName, entry.id, decl));
+    }
+    return out;
+  }
+
   tagParse(spec?: TagParseSpec): MalloyTagParse {
     return annotationToTag(this.modelDef.annotation, spec);
   }
@@ -1591,29 +1618,20 @@ export class PreparedQuery implements Taggable {
    * givens this query actually touches, not every given declared in the
    * model.
    *
-   * Filtered to namespace-resident givens — internal-only givens
-   * (referenced but never surfaced) are not exposed; the caller has no
-   * way to set them. If two surface names alias to the same GivenID,
-   * both keys appear and their `Given` values share `.id`.
+   * Computed as `model.givens` filtered by `query.givenUsage` — i.e. the
+   * intersection of "what the model surfaces" with "what this query
+   * needs." Internal-only givens (referenced but never surfaced) stay
+   * invisible because they're not in `model.givens` to begin with.
    */
   public get givens(): ReadonlyMap<string, Given> {
     const out = new Map<string, Given>();
     const usage = this._query.givenUsage;
     if (!usage || usage.length === 0) return out;
     const referenced = new Set(usage.map(g => g.id));
-    const givens = this._modelDef.givens;
-    if (!givens) return out;
-    // Walk the model's namespace once to find every surface name that
-    // points at a referenced GivenID. Multiple surface names can map to
-    // the same id (aliased imports); each yields its own map entry.
-    for (const [surfaceName, entry] of Object.entries(
-      this._modelDef.contents
-    )) {
-      if (entry.type !== 'given') continue;
-      if (!referenced.has(entry.id)) continue;
-      const decl = givens[entry.id];
-      if (!decl) continue;
-      out.set(surfaceName, new Given(surfaceName, entry.id, decl));
+    for (const [name, given] of this._model.givens) {
+      if (referenced.has(given.id)) {
+        out.set(name, given);
+      }
     }
     return out;
   }
