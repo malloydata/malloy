@@ -366,6 +366,61 @@ describe('DuckDBConnection', () => {
       }
     });
 
+    it('shareable: CREATE TABLE on a fresh connection lands in the attached file, not :memory:', async () => {
+      // The cli build path: lookupConnection → conn.runSQL('CREATE TABLE …').
+      // No prior runSQL, no idle. The persistence builder expects the table
+      // to be written to the attached file so that another process can read
+      // it from the file. If `attachIfShareable` were skipped (or somehow the
+      // session still had `memory.main` as default), the unqualified CREATE
+      // would land in the in-memory primary and the file would stay empty.
+      const dbPath = path.join(
+        tempRoot,
+        'shareable-create-lands-in-file.duckdb'
+      );
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_persist',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      try {
+        // Mirror cli/build.ts createTableFromSelect: DROP IF EXISTS then CREATE.
+        await conn.runSQL('DROP TABLE IF EXISTS persisted');
+        await conn.runSQL('CREATE TABLE persisted AS SELECT 42 AS v');
+
+        // Assert on the catalog the table actually lives in. `duckdb_tables()`
+        // exposes the database (catalog) name, which is what would distinguish
+        // memory.main.persisted from malloy_db.main.persisted.
+        const where = await conn.runSQL(
+          "SELECT database_name FROM duckdb_tables() WHERE table_name='persisted'"
+        );
+        expect(where.rows).toEqual([{database_name: 'malloy_db'}]);
+
+        // And: after DETACH, the data must actually be in the file. Idle to
+        // release the lock, then open the file from a child process and
+        // count the rows. If CREATE went to :memory:, the file is empty and
+        // this read returns no rows / the table doesn't exist.
+        await conn.idle();
+        const probe = spawnSync(
+          process.execPath,
+          [
+            '-e',
+            `(async () => {
+              const {DuckDBInstance} = require('@duckdb/node-api');
+              const inst = await DuckDBInstance.create(${JSON.stringify(dbPath)});
+              const c = await inst.connect();
+              const r = await (await c.run("SELECT v FROM persisted")).getRowObjectsJson();
+              process.stdout.write(JSON.stringify(r));
+              inst.closeSync();
+            })().catch(e => { process.stdout.write('ERR:' + (e && e.message ? e.message.split('\\n')[0] : String(e))); });`,
+          ],
+          {encoding: 'utf8', timeout: 10000}
+        );
+        expect(probe.stdout).toBe('[{"v":42}]');
+      } finally {
+        await conn.close();
+      }
+    });
+
     it('setupSQL replays after idle reattach', async () => {
       const dbPath = path.join(tempRoot, 'idle-setupsql.duckdb');
       const conn = new DuckDBConnection({
