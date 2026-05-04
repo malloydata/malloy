@@ -630,8 +630,8 @@ export class Document extends MalloyElement implements NameSpace {
       if (m.entry.type === 'query') checkOne(m.entry, `Query '${name}'`);
     }
     // `run:` statements.
-    for (let i = 0; i < this.queryList.length; i++) {
-      checkOne(this.queryList[i], `Query at run statement #${i + 1}`);
+    for (const q of this.queryList) {
+      checkOne(q, 'run: statement');
     }
   }
 

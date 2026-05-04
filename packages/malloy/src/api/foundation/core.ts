@@ -7,12 +7,16 @@ import type {LogMessage} from '../../lang';
 import type {
   BuildID,
   CompiledQuery,
+  ConstantExpr,
   DocumentLocation,
   BooleanFieldDef,
   JSONFieldDef,
   NumberFieldDef,
   StringFieldDef,
   FilterCondition,
+  Given as InternalGiven,
+  GivenID,
+  GivenTypeDef,
   Query as InternalQuery,
   ModelDef,
   DocumentPosition as ModelDocumentPosition,
@@ -1462,6 +1466,47 @@ export class PersistSource implements Taggable {
 // PreparedQuery
 // =============================================================================
 
+/**
+ * Foundation API wrapper for a given declaration. Parallel to Explore /
+ * PreparedQuery — exposes a stable, callerable surface over the internal
+ * `Given` IR record. Returned from `PreparedQuery.givens`.
+ */
+export class Given implements Taggable {
+  /**
+   * @param name        Caller-facing surface name in the model (post-rename
+   *                    on import). The key by which the caller passes a
+   *                    value to `.run({givens: {[name]: ...}})`.
+   * @param id          Global GivenID. Stable across imports and renames.
+   * @param _internal   The internal Given declaration record.
+   */
+  constructor(
+    readonly name: string,
+    readonly id: GivenID,
+    private readonly _internal: InternalGiven
+  ) {}
+
+  get type(): GivenTypeDef {
+    return this._internal.type;
+  }
+
+  /** `undefined` when no default — the caller must supply at run time. */
+  get default(): ConstantExpr | undefined {
+    return this._internal.default;
+  }
+
+  get location(): DocumentLocation | undefined {
+    return this._internal.location;
+  }
+
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this._internal.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp): string[] {
+    return annotationToTaglines(this._internal.annotation, prefix);
+  }
+}
+
 export class PreparedQuery implements Taggable {
   public _query: InternalQuery | NamedQueryDef;
 
@@ -1538,6 +1583,39 @@ export class PreparedQuery implements Taggable {
    */
   public get model(): Model {
     return this._model;
+  }
+
+  /**
+   * The givens this specific query references, keyed by caller-facing
+   * surface name. Used by "run this query" UIs to prompt only for the
+   * givens this query actually touches, not every given declared in the
+   * model.
+   *
+   * Filtered to namespace-resident givens — internal-only givens
+   * (referenced but never surfaced) are not exposed; the caller has no
+   * way to set them. If two surface names alias to the same GivenID,
+   * both keys appear and their `Given` values share `.id`.
+   */
+  public get givens(): ReadonlyMap<string, Given> {
+    const out = new Map<string, Given>();
+    const usage = this._query.givenUsage;
+    if (!usage || usage.length === 0) return out;
+    const referenced = new Set(usage.map(g => g.id));
+    const givens = this._modelDef.givens;
+    if (!givens) return out;
+    // Walk the model's namespace once to find every surface name that
+    // points at a referenced GivenID. Multiple surface names can map to
+    // the same id (aliased imports); each yields its own map entry.
+    for (const [surfaceName, entry] of Object.entries(
+      this._modelDef.contents
+    )) {
+      if (entry.type !== 'given') continue;
+      if (!referenced.has(entry.id)) continue;
+      const decl = givens[entry.id];
+      if (!decl) continue;
+      out.set(surfaceName, new Given(surfaceName, entry.id, decl));
+    }
+    return out;
   }
 }
 

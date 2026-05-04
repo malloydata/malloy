@@ -20,6 +20,7 @@ import {
 } from './test-translator';
 import './parse-expects';
 import type {ModelDef, Query} from '../..';
+import {Model, type Given} from '../../api/foundation/core';
 
 // BetaExpression compiles a single expression; the source has no room
 // for `##!` annotations. Seed the translator's compilerFlagSrc directly
@@ -1282,5 +1283,165 @@ describe('given: query satisfiability check', () => {
         )
       );
     });
+  });
+});
+
+describe('given: PreparedQuery.givens introspection', () => {
+  // Compile a Malloy source through TestTranslator and return a Model
+  // wrapper plus the raw modelDef. Throws if the source has problems.
+  function modelFromSource(src: string): {model: Model; md: ModelDef} {
+    const t = new TestTranslator(src);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    return {model: new Model(md, [], []), md};
+  }
+
+  test('returns the givens this query references, keyed by surface name', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given:
+        A :: number is 1
+        B :: number is 2
+        C :: number is 3
+      query: q is a -> { where: ai = $A and ai = $B; group_by: ai }
+    `);
+    const givens = model.getPreparedQueryByName('q').givens;
+    expect([...givens.keys()].sort()).toEqual(['A', 'B']);
+    expect(givens.has('C')).toBe(false);
+  });
+
+  test('empty Map for a query that uses no givens', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given: A :: number is 1
+      query: q is a -> { group_by: ai }
+    `);
+    const givens = model.getPreparedQueryByName('q').givens;
+    expect(givens.size).toBe(0);
+  });
+
+  test('Given wrapper exposes name, id, type, default, location', () => {
+    const {model, md} = modelFromSource(`
+      ##! experimental.givens
+      given: TENANT :: string is "acme"
+      query: q is a -> { where: astr = $TENANT; group_by: astr }
+    `);
+    const givens = model.getPreparedQueryByName('q').givens;
+    const t = givens.get('TENANT');
+    expect(t).toBeDefined();
+    expect(t?.name).toBe('TENANT');
+    expect(t?.type).toEqual({type: 'string'});
+    // Default is the IR ConstantExpr; we just check shape (it's the
+    // string literal "acme") rather than full IR equality.
+    expect(t?.default).toMatchObject({node: 'stringLiteral'});
+    expect(t?.location).toBeDefined();
+    // id matches what the model recorded for TENANT.
+    const expectedId = (md.contents['TENANT'] as {id: string}).id;
+    expect(t?.id).toBe(expectedId);
+  });
+
+  test('undefaulted given has default === undefined (not missing)', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given: REQUIRED :: number
+      query: q is a -> { where: ai = $REQUIRED; group_by: ai }
+    `);
+    const givens = model.getPreparedQueryByName('q').givens;
+    const r = givens.get('REQUIRED');
+    expect(r).toBeDefined();
+    expect(r?.default).toBeUndefined();
+  });
+
+  test('renamed-on-import: surface name is the importer rename', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      import { CAP is MAX_ROWS } from "child"
+      query: q is a -> { where: ai = $CAP; group_by: ai }
+    `);
+    t.unresolved();
+    t.update({
+      urls: {
+        'internal://test/langtests/child': `
+          ##! experimental.givens
+          given: MAX_ROWS :: number is 100
+        `,
+      },
+    });
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    const model = new Model(md, [], []);
+    const givens = model.getPreparedQueryByName('q').givens;
+    expect([...givens.keys()]).toEqual(['CAP']);
+    // Under the rename, the GivenID stays the imported file's id, but
+    // the surface name in the importer is `CAP`.
+    expect(givens.get('CAP')?.name).toBe('CAP');
+  });
+
+  test('two surface aliases to the same id appear as two map entries with shared id', () => {
+    // `import { MAX_ROWS } from "child"` plus `import { CAP is MAX_ROWS }`
+    // surfaces the same underlying given under two surface names.
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      import { MAX_ROWS } from "child"
+      import { CAP is MAX_ROWS } from "child"
+      query: q is a -> { where: ai = $MAX_ROWS and ai > $CAP; group_by: ai }
+    `);
+    t.unresolved();
+    t.update({
+      urls: {
+        'internal://test/langtests/child': `
+          ##! experimental.givens
+          given: MAX_ROWS :: number is 100
+        `,
+      },
+    });
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    const model = new Model(md, [], []);
+    const givens = model.getPreparedQueryByName('q').givens;
+    expect([...givens.keys()].sort()).toEqual(['CAP', 'MAX_ROWS']);
+    expect(givens.get('MAX_ROWS')?.id).toBe(givens.get('CAP')?.id);
+  });
+
+  test('annotations on the given declaration surface via tagParse / getTaglines', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given:
+        # label="Tenant"
+        TENANT :: string is "acme"
+      query: q is a -> { where: astr = $TENANT; group_by: astr }
+    `);
+    const givens = model.getPreparedQueryByName('q').givens;
+    const t = givens.get('TENANT');
+    expect(t).toBeDefined();
+    const taglines = t?.getTaglines();
+    expect(taglines).toEqual(expect.arrayContaining(['# label="Tenant"\n']));
+    // tagParse returns a structured Tag — confirm the label is parseable.
+    const parsed = t?.tagParse();
+    expect(parsed?.tag.text('label')).toBe('Tenant');
+  });
+
+  test('run: statement (no name) — getPreparedQueryByIndex works the same way', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given: X :: number is 1
+      run: a -> { where: ai = $X; group_by: ai }
+    `);
+    const pq = model.getPreparedQueryByIndex(0);
+    const givens = pq.givens;
+    expect([...givens.keys()]).toEqual(['X']);
+  });
+
+  test('Given is the right shape (compile-time type sanity)', () => {
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given: X :: number is 1
+      query: q is a -> { where: ai = $X; group_by: ai }
+    `);
+    const givens = model.getPreparedQueryByName('q').givens;
+    const x: Given | undefined = givens.get('X');
+    expect(x).toBeDefined();
+    // The map is read-only; no `.set` or `.delete`. TypeScript catches
+    // attempts at compile time; not asserted here at runtime.
   });
 });
