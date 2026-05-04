@@ -66,6 +66,8 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         /* TODO */
       } else if (s.type === 'userType') {
         // User type definitions are metadata only, not queryable
+      } else if (s.type === 'given') {
+        // Givens are metadata in the namespace, not queryable structures.
       } else {
         throw new Error('Internal Error: Unknown structure type');
       }

@@ -1271,6 +1271,83 @@ describe('given: query satisfiability check', () => {
       );
     });
 
+    test('default that references an unsatisfiable given is itself unsatisfiable', () => {
+      // A is satisfied by its default `$B + 1`, BUT B has no default and
+      // (in the importer below) is not surfaced. The runtime needs B's
+      // value to evaluate A's default, so the chain is unsatisfiable
+      // end-to-end. The check must follow the chain, not stop at "A has
+      // a default."
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+          run: childSrc -> { select: * }
+        `,
+          `
+          ##! experimental.givens
+          given:
+            B :: number
+            A :: number is $B + 1
+          source: childSrc is a extend { where: ai = $A }
+        `
+        )
+      ).toLog(
+        errorMessage(
+          /references given `B`.*not surfaced in this model and has no default/
+        )
+      );
+    });
+
+    test('default chain that bottoms out in a surfaced given is satisfiable', () => {
+      // A has default `$B + 1`; B has no default but IS in the importer's
+      // namespace (caller can supply). The chain A → B is satisfiable.
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { B, childSrc } from "child"
+          run: childSrc -> { select: * }
+        `,
+          `
+          ##! experimental.givens
+          given:
+            B :: number
+            A :: number is $B + 1
+          source: childSrc is a extend { where: ai = $A }
+        `
+        )
+      ).toTranslate();
+    });
+
+    test('3-deep default chain: only the bottom unsatisfiable id surfaces', () => {
+      // Q references A. A defaults to $B + 1. B defaults to $C * 2.
+      // C has no default. None of A, B, C are surfaced in the importer.
+      // The chain A → B → C is unsatisfiable BECAUSE OF C — A and B both
+      // have defaults; C is the missing link. Only C should error.
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+          run: childSrc -> { select: * }
+        `,
+          `
+          ##! experimental.givens
+          given:
+            C :: number
+            B :: number is $C * 2
+            A :: number is $B + 1
+          source: childSrc is a extend { where: ai = $A }
+        `
+        )
+      ).toLog(
+        errorMessage(
+          /references given `C`.*not surfaced in this model and has no default/
+        )
+      );
+    });
+
     test('view invoked via run: surfaces the unsatisfiable given', () => {
       // The same view that's silently OK when not invoked becomes a
       // translate-time error when used.
@@ -1586,6 +1663,26 @@ describe('given: Model.givens introspection', () => {
     expect(t).toTranslate();
     const model = new Model(t.translate().modelDef!, [], []);
     expect(model.givens.size).toBe(0);
+  });
+
+  test('Model.queryModel loads cleanly when contents has given entries', () => {
+    // Regression: ModelDef.contents can hold GivenEntry rows; the
+    // QueryModel loader needs to know how to skip them. Before the fix
+    // it threw 'Internal Error: Unknown structure type' on any model
+    // that declared a given, even if no query referenced one.
+    const {model} = modelFromSource(`
+      ##! experimental.givens
+      given:
+        TENANT :: string is "acme"
+        MAX_ROWS :: number is 1000
+      query: q is a -> { group_by: ai }
+    `);
+    // Force lazy QueryModel construction.
+    expect(() => model.queryModel).not.toThrow();
+    // And the actual query still resolves.
+    expect(
+      () => model.getPreparedQueryByName('q').preparedResult
+    ).not.toThrow();
   });
 
   test('PreparedQuery.givens is the per-query subset of Model.givens', () => {

@@ -9,7 +9,7 @@ import type {
   GivenEntry,
   GivenTypeDef,
 } from '../../../model/malloy_types';
-import {TD} from '../../../model/malloy_types';
+import {givenUsageFrom, TD} from '../../../model/malloy_types';
 import {mkGivenID} from '../../../model/source_def_utils';
 import {typeDefToString} from '../../../model/utils';
 import type {ConstantExpression} from '../expressions/constant-expression';
@@ -84,6 +84,7 @@ export class GivenDeclaration
     // GivenReference.getExpression) so given-to-given refs in defaults
     // are allowed.
     let defaultExpr: Given['default'];
+    let givenUsage: Given['givenUsage'];
     if (this.default) {
       const constVal = this.default.constantValue();
       if (constVal.type !== 'error') {
@@ -117,6 +118,33 @@ export class GivenDeclaration
           );
         }
         defaultExpr = constVal.value;
+        // Build the transitive closure of givens reachable through this
+        // default's expression. We only include direct refs PLUS each
+        // referenced given's already-precomputed transitive (which is
+        // present because Malloy requires `$X` to resolve to a given
+        // declared earlier or imported). The satisfiability check then
+        // becomes a flat iteration — no recursion at check time.
+        //
+        // For `A :: number is $B + 1` where `B :: number is $C`:
+        //   - B's givenUsage was computed when B was declared = [C]
+        //   - A's givenUsage = [B] ∪ B.givenUsage = [B, C]
+        const directRefs = givenUsageFrom(constVal.refSummary);
+        if (directRefs.length > 0) {
+          const seen = new Set<string>();
+          const closure: typeof directRefs = [];
+          for (const g of directRefs) {
+            if (seen.has(g.id)) continue;
+            seen.add(g.id);
+            closure.push(g);
+            const refDecl = doc.documentGivens.get(g.id);
+            for (const t of refDecl?.givenUsage ?? []) {
+              if (seen.has(t.id)) continue;
+              seen.add(t.id);
+              closure.push(t);
+            }
+          }
+          givenUsage = closure;
+        }
       }
     }
 
@@ -125,6 +153,7 @@ export class GivenDeclaration
       name: this.name,
       type: this.typeDef,
       default: defaultExpr,
+      givenUsage,
       location: this.location,
       annotation: this.note,
     };

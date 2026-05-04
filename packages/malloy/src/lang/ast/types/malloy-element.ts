@@ -634,13 +634,23 @@ export class Document extends MalloyElement implements NameSpace {
     const checkOne = (q: Query, label: string): void => {
       const usage = q.givenUsage;
       if (!usage || usage.length === 0) return;
+      // Build the full set of ids the query transitively needs: each id
+      // in Q.givenUsage, plus each id's precomputed default-chain closure
+      // (Given.givenUsage). Since the closure is already transitive, no
+      // recursion at check time.
+      const allIds = new Set<GivenID>();
       for (const g of usage) {
-        if (namespaceGivens.has(g.id)) continue;
+        allIds.add(g.id);
         const decl = this.documentGivens.get(g.id);
+        for (const t of decl?.givenUsage ?? []) allIds.add(t.id);
+      }
+      for (const id of allIds) {
+        if (namespaceGivens.has(id)) continue;
+        const decl = this.documentGivens.get(id);
         if (decl?.default !== undefined) continue;
         this.logError(
           'unsatisfied-given-in-query',
-          unsatisfiedGivenMessage(label, decl, g.id),
+          unsatisfiedGivenMessage(label, decl, id),
           {at: q.location}
         );
       }

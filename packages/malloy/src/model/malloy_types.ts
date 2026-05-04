@@ -561,6 +561,15 @@ export interface Given extends HasLocation, HasAnnotation {
   type: GivenTypeDef;
   /** Non-optional so the no-default case is explicit at every read site. */
   default: ConstantExpr | undefined;
+  /** Transitive closure of givens this declaration references — only
+   *  reachable through the default's expression chain (a Given has no
+   *  other given-referencing surface). Precomputed at declaration time.
+   *  For `A is $B + 1` where `B is $C`: A's `givenUsage` is `[B, C]`.
+   *  The satisfiability check expands each Query.givenUsage entry
+   *  through this closure and verifies each id is in-namespace or has
+   *  its own default. Empty/undefined when the default is a closed
+   *  literal. */
+  givenUsage?: GivenUsage;
 }
 
 export interface GivenEntry {
