@@ -22,13 +22,13 @@
  */
 
 import type {
-  FieldUsage,
   FilterCondition,
   PartialSegment,
   PipeSegment,
   QueryFieldDef,
   QuerySegment,
   ReduceSegment,
+  RefSummary,
 } from '../../../model/malloy_types';
 import {
   canOrderBy,
@@ -102,8 +102,8 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
 
-  get fieldUsage(): FieldUsage {
-    return this.resultFS.fieldUsage;
+  get refSummary(): RefSummary | undefined {
+    return this.resultFS.refSummary;
   }
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
@@ -139,9 +139,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
     const fromRefSummary =
       from && isQuerySegment(from) ? from.refSummary : undefined;
-    to.refSummary = mergeRefSummaries(fromRefSummary, {
-      fieldUsage: this.fieldUsage,
-    });
+    to.refSummary = mergeRefSummaries(fromRefSummary, this.refSummary);
   }
 }
 

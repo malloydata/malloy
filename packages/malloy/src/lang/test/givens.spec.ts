@@ -19,6 +19,7 @@ import {
   markSource,
 } from './test-translator';
 import './parse-expects';
+import type {ModelDef, Query} from '../..';
 
 // BetaExpression compiles a single expression; the source has no room
 // for `##!` annotations. Seed the translator's compilerFlagSrc directly
@@ -752,5 +753,230 @@ describe('given: imports', () => {
       `
       )
     ).toLog(errorMessage(/Cannot redefine 'MAX_ROWS'/));
+  });
+});
+
+describe('given: per-Query givenUsage summary', () => {
+  // Given a translated model and a list of surface names, return the set of
+  // GivenIDs those names resolve to via ModelDef.contents.
+  function givenIds(md: ModelDef, ...names: string[]): Set<string> {
+    return new Set(
+      names.map(n => {
+        const e = md.contents[n];
+        if (!e || e.type !== 'given') {
+          throw new Error(`No given named '${n}' in model contents`);
+        }
+        return e.id;
+      })
+    );
+  }
+  function queryGivenIds(q: Query | undefined): Set<string> {
+    return new Set((q?.givenUsage ?? []).map(g => g.id));
+  }
+  function translateOK(src: string): ModelDef {
+    const t = new TestTranslator(src);
+    expect(t).toTranslate();
+    return t.translate().modelDef!;
+  }
+
+  describe('union across segments', () => {
+    test('givens in two pipeline segments unioned into Query.givenUsage', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given:
+          A :: number is 1
+          B :: number is 2
+        run: a -> { where: ai = $A; group_by: ai }
+            -> { where: ai = $B; group_by: ai }
+      `);
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'A', 'B'));
+    });
+
+    test('same given referenced twice deduplicates to one entry', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given: A :: number is 1
+        run: a -> { where: ai = $A; group_by: ai }
+            -> { where: ai = $A; group_by: ai }
+      `);
+      const usage = md.queryList[0].givenUsage ?? [];
+      expect(usage).toHaveLength(1);
+      expect(usage[0].id).toEqual([...givenIds(md, 'A')][0]);
+    });
+
+    test('given inside a nested turtle pipeline reaches outer Query', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given:
+          A :: number is 1
+          B :: number is 2
+        run: a -> {
+          where: ai = $A
+          group_by: ai
+          nest: x is { where: ai = $B; group_by: ai }
+        }
+      `);
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'A', 'B'));
+    });
+  });
+
+  describe('givens hidden inside a query-source', () => {
+    test('input source is a QuerySourceDef wrapping a query that uses $X', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given: X :: number is 1
+        query: q is a -> { where: ai = $X; group_by: ai }
+        source: q_src is q
+        run: q_src -> { group_by: ai }
+      `);
+      // The outer run never names $X, but its input source embeds q which does.
+      // givenUsageOfSource(q_src) routes into q.givenUsage.
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'X'));
+    });
+
+    test('join target is a QuerySourceDef wrapping a query that uses $X', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given: X :: number is 1
+        query: q is a -> { where: ai = $X; group_by: ai }
+        source: q_src is q
+        run: a extend {
+          join_one: jq is q_src on ai = jq.ai
+        } -> { group_by: ai, jq_ai is jq.ai }
+      `);
+      // getJoinGivenUsage on jq's SourceDef routes into givenUsageOfSource
+      // → q.givenUsage.
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'X'));
+    });
+
+    test('chained query sources: q1 wraps q2 wraps $X — outer still sees $X', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given: X :: number is 1
+        query: q2 is a -> { where: ai = $X; group_by: ai }
+        source: q2_src is q2
+        query: q1 is q2_src -> { group_by: ai }
+        source: q1_src is q1
+        run: q1_src -> { group_by: ai }
+      `);
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'X'));
+    });
+  });
+
+  describe('composite sources (best-effort, not the focus)', () => {
+    // Composite-source support across the codebase is partially implemented;
+    // we're not chasing full coverage in the givens work. What we do verify:
+    // when composite resolution DOES run before expandRefUsage (the
+    // query-arrow `source ->` path passes `compositeResolvedSourceDef` in),
+    // the walker sees only the chosen branch and Query.givenUsage is the
+    // minimal set for that branch. Cases where composite resolution doesn't
+    // run (e.g. composites as join targets) are not exercised here — the
+    // defensive `composite` arm of `givenUsageOfSource` would conservatively
+    // union over branches if it were ever reached. See "Composite sources
+    // — partial coverage" in ~/ctx/mp/implementation.md.
+    test('non-discriminating query picks the first branch', () => {
+      const md = translateOK(`
+        ##! experimental {composite_sources, givens}
+        given:
+          X :: number is 1
+          Y :: number is 2
+        source: c is compose(
+          a extend { where: ai = $X },
+          a extend { where: ai = $Y }
+        )
+        run: c -> { group_by: ai }
+      `);
+      // group_by ai works against either branch; resolution picks branch 1.
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'X'));
+    });
+
+    test('query references a branch-2-only field → only branch-2 givens', () => {
+      const md = translateOK(`
+        ##! experimental {composite_sources, givens}
+        given:
+          X :: number is 1
+          Y :: number is 2
+        source: c is compose(
+          a extend {
+            dimension: foo_a is 1
+            where: ai = $X
+          },
+          a extend {
+            dimension: foo_b is 1
+            where: ai = $Y
+          }
+        )
+        run: c -> { group_by: foo_b }
+      `);
+      // group_by foo_b only exists on branch 2; resolution forces branch 2.
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'Y'));
+    });
+  });
+
+  describe('givens reached via joins', () => {
+    test('given in a join `on:` clause flows into Query.givenUsage', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given: X :: number is 1
+        run: a extend {
+          join_one: b on b.ai = $X
+        } -> { group_by: b.ai }
+      `);
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'X'));
+    });
+
+    test('given in a join target source `where:` flows into Query.givenUsage', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given: X :: number is 1
+        run: a extend {
+          join_one: b is a extend { where: ai = $X } on true
+        } -> { group_by: b.ai }
+      `);
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'X'));
+    });
+
+    test('segment-level `extend: { join_one: ... }` — conditional, used: collected', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given: X :: number is 1
+        run: a -> {
+          extend: { join_one: b on b.ai = $X }
+          group_by: b.ai
+        }
+      `);
+      // Conditional join activates because b.ai is referenced; on-clause $X
+      // flows in via the walker's join-activation path.
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'X'));
+    });
+
+    test('segment-level `extend: { join_one: ... }` — conditional, not used: not collected', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given: X :: number is 1
+        run: a -> {
+          extend: { join_one: b on b.ai = $X }
+          group_by: ai
+        }
+      `);
+      // Conditional join is declared but nothing reaches through b, so it is
+      // never activated. Its $X should NOT appear in Query.givenUsage.
+      expect(queryGivenIds(md.queryList[0])).toEqual(new Set());
+    });
+
+    test('segment-level direct `join_one:` — always-on join: collected', () => {
+      const md = translateOK(`
+        ##! experimental.givens
+        given: X :: number is 1
+        run: a -> {
+          join_one: b on b.ai = $X
+          group_by: ai
+        }
+      `);
+      // Direct segment-level joins are always activated (they affect the
+      // result via filtering/cardinality even without a field reference).
+      // The on-clause $X should be collected regardless.
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'X'));
+    });
   });
 });

@@ -51,6 +51,12 @@ export class GivenReference extends ExpressionDef {
       id: entry.id,
       refName: this.name,
     };
-    return literalExprValue({value: refNode, dataType: given.type});
+    return {
+      ...literalExprValue({value: refNode, dataType: given.type}),
+      refSummary: {
+        fieldUsage: [],
+        givenUsage: [{id: entry.id, at: this.location}],
+      },
+    };
   }
 }

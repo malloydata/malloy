@@ -26,9 +26,12 @@ import type {MalloyTranslator, TranslateResponse} from '..';
 import {
   bareFieldUsage,
   fieldUsageFrom,
+  isIndexSegment,
+  isQuerySegment,
   type DocumentLocation,
   type DocumentRange,
   type Expr,
+  type PipeSegment,
 } from '../../model';
 import {exprToStr} from './expr-to-str';
 import type {MarkedSource} from './test-translator';
@@ -82,6 +85,7 @@ declare global {
       compilesTo(exprString: string): R;
       toBeExpr(exprString: string): R;
       hasFieldUsage(paths: string[][]): R;
+      hasExpandedFieldUsage(paths: string[][]): R;
     }
   }
 }
@@ -317,19 +321,39 @@ expect.extend({
     }
     const actual = fieldUsageFrom(bx.generated().refSummary);
     const actualPaths = actual.filter(u => bareFieldUsage(u)).map(u => u.path);
-    // there is no guarantee of the order of field usage data, so we sort the two lists
-    // so i need to compare sorted versions of the two lists... we can sort on path.join('.)
-    // maybe make a lambda for that and pass it to sort
-    const pass = this.equals(
-      actualPaths.sort((a, b) => a.join('.').localeCompare(b.join('.'))),
-      paths.sort((a, b) => a.join('.').localeCompare(b.join('.')))
-    );
-    const msg = pass
-      ? `Matched: ${actual}`
-      : this.utils.diff(paths, actualPaths);
-    return {pass, message: () => `${msg}`};
+    return comparePathSets(this, actualPaths, paths);
+  },
+  hasExpandedFieldUsage: function (segment: PipeSegment, paths: string[][]) {
+    if (!isQuerySegment(segment) && !isIndexSegment(segment)) {
+      return {
+        pass: false,
+        message: () =>
+          'hasExpandedFieldUsage: receiver is not a query or index segment',
+      };
+    }
+    const actualPaths = (segment.expandedFieldUsage ?? [])
+      .filter(u => bareFieldUsage(u))
+      .map(u => u.path);
+    return comparePathSets(this, actualPaths, paths);
   },
 });
+
+// Field-usage entries have no order or duplication guarantee. Compare as
+// sets of `path.join('.')` strings so equality is purely set membership.
+function comparePathSets(
+  ctx: jest.MatcherContext,
+  actualPaths: string[][],
+  expectedPaths: string[][]
+): jest.CustomMatcherResult {
+  const toKey = (p: string[]) => p.join('.');
+  const actualSet = new Set(actualPaths.map(toKey));
+  const expectedSet = new Set(expectedPaths.map(toKey));
+  const pass = ctx.equals(actualSet, expectedSet);
+  const msg = pass
+    ? `Matched: ${[...actualSet].sort().join(', ')}`
+    : ctx.utils.diff([...expectedSet].sort(), [...actualSet].sort());
+  return {pass, message: () => `${msg}`};
+}
 
 function problemSpecSummary(s: ProblemSpec): string {
   return `${s.severity} '${'message' in s ? s.message : s.code}' ${

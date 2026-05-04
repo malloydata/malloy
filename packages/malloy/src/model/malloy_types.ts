@@ -1213,6 +1213,13 @@ export interface Query extends Pipeline, Filtered, HasLocation, HasAnnotation {
   sourceArguments?: SafeRecord<Argument>;
   modelAnnotation?: Annotation;
   compositeResolvedSourceDef?: SourceDef;
+  // Dedup'd union of every segment's `expandedGivenUsage` (and nested turtle
+  // stages'). Populated when the Query is finalized; consumers that need the
+  // per-query given set (PreparedQuery.givens, satisfiability check) read it
+  // here instead of re-walking segments. The encapsulation point that lets
+  // outer walkers see givens hidden inside `QuerySourceDef.query` etc. — see
+  // `givenUsageOfSource` in composite-source-utils.ts.
+  givenUsage?: GivenUsage;
 }
 
 export type NamedQueryDef = Query & NamedObject;
@@ -1321,6 +1328,7 @@ export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
 export interface SegmentUsageSummary {
   activeJoins?: FieldUsage;
   expandedFieldUsage?: FieldUsage;
+  expandedGivenUsage?: GivenUsage;
   expandedUngroupings?: AggregateUngrouping[];
 }
 
@@ -1404,10 +1412,16 @@ export function givenUsageFrom(rs: RefSummary | undefined): GivenUsage {
  */
 export function mkRefSummary({
   fieldUsage,
+  givenUsage,
 }: {
   fieldUsage?: FieldUsage;
+  givenUsage?: GivenUsage;
 }): RefSummary | undefined {
-  return fieldUsage && {fieldUsage};
+  if (fieldUsage === undefined && givenUsage === undefined) return undefined;
+  return {
+    fieldUsage: fieldUsage ?? [],
+    ...(givenUsage && {givenUsage}),
+  };
 }
 
 /**

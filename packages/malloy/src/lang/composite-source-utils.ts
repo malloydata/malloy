@@ -22,6 +22,8 @@ import type {
   FieldUsage,
   FieldUsageEntry,
   FieldDef,
+  GivenID,
+  GivenUsage,
   PipeSegment,
   RefSummary,
   SourceDef,
@@ -37,11 +39,14 @@ import type {
 import {
   expressionIsScalar,
   fieldUsageFrom,
+  givenUsageFrom,
   isAtomic,
   isIndexSegment,
   isJoinable,
   isJoined,
   isQuerySegment,
+  isSegmentSource,
+  isSegmentSQL,
   isSourceDef,
   isTimeLiteral,
   isTurtle,
@@ -105,7 +110,7 @@ function _resolveCompositeSources(
   let joinsProcessed = false;
   const nonCompositeFields = getNonCompositeFields(source);
   const expandedForError = onlyCompositeUsage(
-    expandFieldUsage(fieldUsage, rootFields).result,
+    expandRefUsage({fieldUsage}, rootFields).fieldUsage,
     source.fields
   );
   if (source.type === 'composite') {
@@ -138,7 +143,10 @@ function _resolveCompositeSources(
         [];
 
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      const expanded = expandFieldUsage(fieldUsageWithWheres, fieldsForLookup);
+      const expanded = expandRefUsage(
+        {fieldUsage: fieldUsageWithWheres},
+        fieldsForLookup
+      );
       if (expanded.missingFields.length > 0) {
         // A lookup failed while expanding, which means this source certainly won't work
         for (const missingField of expanded.missingFields) {
@@ -154,7 +162,7 @@ function _resolveCompositeSources(
         continue overSources;
       }
 
-      const expandedCategorized = categorizeFieldUsage(expanded.result);
+      const expandedCategorized = categorizeFieldUsage(expanded.fieldUsage);
       const compositeUsageInThisSource = onlyCompositeUsage(
         expandedCategorized.sourceUsage,
         source.fields
@@ -275,7 +283,7 @@ function _resolveCompositeSources(
     }
   } else if (source.partitionComposite !== undefined) {
     anyComposites = true;
-    const expanded = expandFieldUsage(fieldUsage, rootFields).result;
+    const expanded = expandRefUsage({fieldUsage}, rootFields).fieldUsage;
     // TODO possibly abort if expanded has missing fields...
     const expandedCategorized = categorizeFieldUsage(expanded);
     const {partitionFilter, issues} = getPartitionCompositeFilter(
@@ -301,8 +309,8 @@ function _resolveCompositeSources(
   }
 
   if (!joinsProcessed) {
-    const expanded = expandFieldUsage(
-      fieldUsage,
+    const expanded = expandRefUsage(
+      {fieldUsage},
       getJoinFields(rootFields, path)
     );
     if (expanded.missingFields.length > 0) {
@@ -318,7 +326,7 @@ function _resolveCompositeSources(
       base,
       rootFields,
       nests,
-      categorizeFieldUsage(expanded.result)
+      categorizeFieldUsage(expanded.fieldUsage)
     );
     if (joinResult.errors.length > 0) {
       return {error: joinResult.errors[0].error};
@@ -394,18 +402,33 @@ export function getExpandedSegment(
     updatedSegment = {...segment, queryFields: updatedQueryFields};
   }
 
-  const allFieldUsage = mergeFieldUsage(
-    getFieldUsageFromFilterList(inputSource),
-    fieldUsageFrom(segment.refSummary)
-  );
-  const expanded = expandFieldUsage(allFieldUsage || [], fields);
+  // Seed for the walker:
+  //   - segment.refSummary: everything the segment names directly.
+  //   - getFieldUsageFromFilterList(inputSource): field paths in the input
+  //     source's `where:` clauses, so the walker can expand them through joins.
+  //   - givenUsageOfSource(inputSource): every given the input source needs,
+  //     including any hiding inside an embedded Query / SQL segments /
+  //     composite branches.
+  // Plus segment.alwaysJoins for the walker to unconditionally activate
+  // (segment-level direct `join_one:` etc., where activation isn't driven
+  // by any field reference).
+  const seed = mergeRefSummaries(segment.refSummary, {
+    fieldUsage: getFieldUsageFromFilterList(inputSource),
+    givenUsage: givenUsageOfSource(inputSource),
+  });
+  const alwaysJoinNames =
+    isQuerySegment(segment) || isIndexSegment(segment)
+      ? segment.alwaysJoins ?? []
+      : [];
+  const expanded = expandRefUsage(seed, fields, alwaysJoinNames);
 
   // Merge ungroupings from direct collection and field expansion
   const allUngroupings = [...collectedUngroupings, ...expanded.ungroupings];
 
   return {
     ...updatedSegment,
-    expandedFieldUsage: expanded.result,
+    expandedFieldUsage: expanded.fieldUsage,
+    expandedGivenUsage: expanded.givenUsage,
     activeJoins: expanded.activeJoins,
     expandedUngroupings: allUngroupings,
   };
@@ -467,19 +490,27 @@ function findActiveJoins(
 }
 
 /**
- * Given a list of field usage requests, expand to include all the join on and join filter expressions
- * needed to be able to reference those fields.
+ * Given a seed `RefSummary` (field usage + given usage referenced directly by
+ * the caller), expand to include everything reachable through the join graph:
+ *
+ *   - field usage: the seed fields plus any field usage on `on:` and `where:`
+ *     clauses of joins activated to reach them, recursively.
+ *   - given usage: the seed given usage plus the given usage of every
+ *     atomic-field def the walker dequeues and every join it activates.
  *
  * @returns An object containing:
- * - `result`: The expanded field usage, including usages from necessary joins
+ * - `fieldUsage`: The expanded field usage, including usages from necessary joins
+ * - `givenUsage`: The expanded given usage, seed plus every traversed def/join
  * - `missingFields`: References to fields which could not be resolved
  * - `activeJoins`: Topologically sorted list of joins needed to resolve these uses
  */
-function expandFieldUsage(
-  fieldUsage: FieldUsage,
-  fields: FieldDef[]
+function expandRefUsage(
+  seed: RefSummary | undefined,
+  fields: FieldDef[],
+  alwaysJoinNames: string[] = []
 ): {
-  result: FieldUsage;
+  fieldUsage: FieldUsage;
+  givenUsage: GivenUsage;
   missingFields: FieldUsage;
   activeJoins: FieldUsage;
   ungroupings: AggregateUngrouping[];
@@ -489,6 +520,16 @@ function expandFieldUsage(
   const toProcess: FieldUsage = [];
   const activeJoinGraph: Record<string, JoinDependency> = {};
   const ungroupings: AggregateUngrouping[] = [];
+  const givenUsage: GivenUsage = [];
+  const seenGivens = new Set<GivenID>();
+  function addGivens(items: GivenUsage): void {
+    for (const g of items) {
+      if (seenGivens.has(g.id)) continue;
+      seenGivens.add(g.id);
+      givenUsage.push(g);
+    }
+  }
+  addGivens(givenUsageFrom(seed));
 
   function mergeIntoSeen(usage: FieldUsageEntry): boolean {
     const key = pathToKey('field', usage.path);
@@ -511,13 +552,53 @@ function expandFieldUsage(
   }
 
   // Initialize: mark original inputs and add them to processing queue
-  for (const usage of fieldUsage) {
+  for (const usage of fieldUsageFrom(seed)) {
     mergeIntoSeen(usage);
     toProcess.push(usage);
   }
 
   // Process the expanding queue
   const fieldNameSpace = buildNamespace(fields);
+
+  // Mark `joinDef` as activated and harvest everything it brings in: its
+  // on-clause field usage onto the queue, and its on-clause + filterList
+  // given usage into the accumulator. Used both in-loop (joins reached
+  // via reference paths) and upfront (always-on segment-level joins).
+  function activateJoin(joinDef: FieldDef, joinPath: string[]): void {
+    const joinKey = pathToKey('join', joinPath);
+    const thisDep = getJoin(activeJoinGraph, joinKey, joinPath);
+    if (!isJoined(joinDef) || thisDep.checked) return;
+    thisDep.checked = true;
+    const joinFieldUsage = getJoinFieldUsage(joinDef, joinPath);
+    addGivens(getJoinGivenUsage(joinDef));
+
+    for (const usage of joinFieldUsage) {
+      const key = pathToKey('field', usage.path);
+      if (!seen[key]) {
+        seen[key] = usage;
+        toProcess.push(usage);
+      }
+      const isInternalReference =
+        usage.path.length === joinPath.length + 1 &&
+        pathBegins(usage.path, joinPath);
+      if (!isInternalReference && usage.path.length > 1) {
+        const dependencyPath = usage.path.slice(0, -1);
+        const dependencyKey = pathToKey('join', dependencyPath);
+        getJoin(activeJoinGraph, dependencyKey, dependencyPath);
+        thisDep.dependsOn.add(dependencyKey);
+      }
+    }
+  }
+
+  // Always-on joins (segment-level direct `join_one:` etc.) are activated
+  // unconditionally — no field reference is needed. Compiler-side activation
+  // happens via `addAlwaysJoins` in query_query.ts; here we ensure their
+  // on-clause field/given usage flows into the expanded summaries.
+  for (const joinName of alwaysJoinNames) {
+    const joinDef = inNamespace([joinName], fieldNameSpace);
+    if (joinDef) activateJoin(joinDef, [joinName]);
+  }
+
   for (let i = 0; i < toProcess.length; i++) {
     const reference = toProcess[i];
     if (reference.path.length === 0) continue;
@@ -530,6 +611,7 @@ function expandFieldUsage(
 
     if (isAtomic(def)) {
       const fieldUsage = fieldUsageFrom(def.refSummary);
+      addGivens(givenUsageFrom(def.refSummary));
       // Add the atomic field's dependencies to the queue
       const refPath = reference.path.slice(0, -1);
       for (const usage of joinedFieldUsage(refPath, fieldUsage)) {
@@ -548,39 +630,13 @@ function expandFieldUsage(
       const joinPath = reference.path.slice(0, joinLen);
       const joinDef = inNamespace(joinPath, fieldNameSpace);
       if (!joinDef) break;
-
-      const joinKey = pathToKey('join', joinPath);
-      const thisDep = getJoin(activeJoinGraph, joinKey, joinPath);
-
-      if (isJoined(joinDef) && !thisDep.checked) {
-        thisDep.checked = true;
-        const joinFieldUsage = getJoinFieldUsage(joinDef, joinPath);
-
-        // Add join's field dependencies to the queue
-        for (const usage of joinFieldUsage) {
-          const key = pathToKey('field', usage.path);
-          if (!seen[key]) {
-            seen[key] = usage;
-            toProcess.push(usage);
-          }
-
-          // Track join-to-join dependencies
-          const isInternalReference =
-            usage.path.length === joinPath.length + 1 &&
-            pathBegins(usage.path, joinPath);
-          if (!isInternalReference && usage.path.length > 1) {
-            const dependencyPath = usage.path.slice(0, -1);
-            const dependencyKey = pathToKey('join', dependencyPath);
-            getJoin(activeJoinGraph, dependencyKey, dependencyPath);
-            thisDep.dependsOn.add(dependencyKey);
-          }
-        }
-      }
+      activateJoin(joinDef, joinPath);
     }
   }
 
   return {
-    result: Object.values(seen),
+    fieldUsage: Object.values(seen),
+    givenUsage,
     missingFields,
     activeJoins: findActiveJoins(activeJoinGraph),
     ungroupings,
@@ -1034,16 +1090,34 @@ export function mergeFieldUsage(
 }
 
 /**
- * Combine N `RefSummary` values into one. Currently merges `fieldUsage`
- * via `mergeFieldUsage`; when more reference-tracking slots land on
- * `RefSummary` (e.g. `givenUsage` from the walker phase), their merge logic
- * lands here instead of being duplicated at every call site.
+ * Concat-merge of `GivenUsage` arrays. Same shape as `mergeFieldUsage`:
+ * undefined inputs are skipped, all-empty result returns undefined,
+ * duplicates by id are kept (each carries its own `at` for diagnostics).
+ */
+export function mergeGivenUsage(
+  ...usages: (GivenUsage | undefined)[]
+): GivenUsage | undefined {
+  const usage: GivenUsage = [];
+  for (const oneUsage of usages) {
+    if (oneUsage === undefined) continue;
+    usage.push(...oneUsage);
+  }
+  if (usage.length === 0) return undefined;
+  return usage;
+}
+
+/**
+ * Combine N `RefSummary` values into one. Merges both `fieldUsage` and
+ * `givenUsage`; when more reference-tracking slots land on `RefSummary`,
+ * their merge logic lands here instead of being duplicated at every call
+ * site.
  */
 export function mergeRefSummaries(
   ...rss: (RefSummary | undefined)[]
 ): RefSummary | undefined {
   return mkRefSummary({
     fieldUsage: mergeFieldUsage(...rss.map(rs => fieldUsageFrom(rs))),
+    givenUsage: mergeGivenUsage(...rss.map(rs => givenUsageFrom(rs))),
   });
 }
 
@@ -1447,6 +1521,92 @@ function getJoinFieldUsage(join: FieldDef, joinPath: string[]): FieldUsage {
       joinedFieldUsage(joinPath.slice(0, -1), fieldUsageFrom(join.refSummary))
     ) ?? []
   );
+}
+
+// Givens have no path — `joinedFieldUsage`'s path-rerooting has no analog here.
+// The `on:` clause lives on `join.refSummary` for every join shape; everything
+// else (filterList, plus any givens hiding inside the source's embedded Query)
+// is collected by `givenUsageOfSource` for source-typed joins.
+function getJoinGivenUsage(join: FieldDef): GivenUsage {
+  const onClause = givenUsageFrom(join.refSummary);
+  if (isSourceDef(join)) {
+    return [...givenUsageOfSource(join), ...onClause];
+  }
+  return onClause;
+}
+
+// Dedup'd union of `expandedGivenUsage` across every segment in a Query's
+// finalized pipeline, recursing through nested turtle pipelines. This is the
+// per-Query summary that consumers (PreparedQuery.givens, satisfiability
+// check, `givenUsageOfSource` for QuerySourceDef) read instead of re-walking
+// segments.
+export function computeQueryGivenUsage(pipeline: PipeSegment[]): GivenUsage {
+  const seen = new Set<GivenID>();
+  const result: GivenUsage = [];
+  function add(items: GivenUsage | undefined): void {
+    if (!items) return;
+    for (const g of items) {
+      if (seen.has(g.id)) continue;
+      seen.add(g.id);
+      result.push(g);
+    }
+  }
+  function visit(segment: PipeSegment): void {
+    if (isQuerySegment(segment) || isIndexSegment(segment)) {
+      add(segment.expandedGivenUsage);
+    }
+    if (isQuerySegment(segment)) {
+      for (const field of segment.queryFields) {
+        if (isTurtle(field)) {
+          field.pipeline.forEach(visit);
+        }
+      }
+    }
+  }
+  pipeline.forEach(visit);
+  return result;
+}
+
+// Returns every given a SourceDef references — its own filterList plus any
+// givens hiding inside an embedded Query. The single point of knowledge for
+// "where can a Query embed in a SourceDef" — when a future SourceDef variant
+// grows an embedded Query, teach this helper.
+//
+// Composite sources: composite-source support across the codebase is
+// partial; the givens work isn't chasing it. The `composite` arm here is
+// defensive — for the top-level `run: composite ->` path it never fires
+// because composite resolution runs first and `expandRefUsage` is seeded
+// with the resolved branch. If an unresolved `CompositeSourceDef` ever
+// reaches here (e.g. composites in join positions if/when those work),
+// the conservative union over all branches is the safe fallback. See
+// ~/ctx/mp/implementation.md "Composite sources — partial coverage".
+export function givenUsageOfSource(sd: SourceDef): GivenUsage {
+  const fromFilters = (sd.filterList ?? []).flatMap(f =>
+    givenUsageFrom(f.refSummary)
+  );
+  switch (sd.type) {
+    case 'query_source':
+      return [...fromFilters, ...(sd.query.givenUsage ?? [])];
+    case 'sql_select': {
+      const fromSegments = (sd.selectSegments ?? []).flatMap(seg => {
+        if (isSegmentSQL(seg)) return [];
+        if (isSegmentSource(seg)) return givenUsageOfSource(seg);
+        // Remaining variant of SQLPhraseSegment is `Query`
+        return seg.givenUsage ?? [];
+      });
+      return [...fromFilters, ...fromSegments];
+    }
+    case 'composite':
+      return [
+        ...fromFilters,
+        ...sd.sources.flatMap(s => givenUsageOfSource(s)),
+      ];
+    default:
+      // table, query_result, finalize, nest_source, virtual — no embedded Query.
+      // (query_result/finalize/nest_source are pipeline-internal and only seen
+      // within a Query whose segments are walked anyway. virtual is opaque.)
+      return fromFilters;
+  }
 }
 
 function isUngroupedBy(ungrouping: AggregateUngrouping, groupedBy: string[]) {

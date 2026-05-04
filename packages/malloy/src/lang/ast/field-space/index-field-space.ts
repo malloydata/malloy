@@ -21,19 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {emptyFieldUsage, mergeFieldUsage} from '../../composite-source-utils';
+import {mergeRefSummaries} from '../../composite-source-utils';
 import type {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
-  FieldUsage,
+  RefSummary,
   SourceDef,
 } from '../../../model/malloy_types';
-import {
-  expressionIsScalar,
-  fieldUsageFrom,
-  TD,
-} from '../../../model/malloy_types';
+import {expressionIsScalar, TD} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
 import {
   FieldReference,
@@ -91,32 +87,35 @@ export class IndexFieldSpace extends QueryOperationSpace {
       );
       return ErrorFactory.indexSegment;
     }
-    let fieldUsage = emptyFieldUsage();
     const indexFields: IndexFieldDef[] = [];
+    let refSummary: RefSummary | undefined = undefined;
     for (const [name, field] of this.entries()) {
-      if (field instanceof SpaceField) {
-        let nextFieldUsage: FieldUsage | undefined = undefined;
-        const wild = this.expandedWild.get(name);
-        if (wild) {
-          indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
-          fieldUsage.push({path: wild.path});
-          nextFieldUsage = fieldUsageFrom(wild.entry.typeDesc().refSummary);
-        } else if (field instanceof ReferenceField) {
-          // attempt to cause a type check
-          const fieldRef = field.fieldRef;
-          const check = fieldRef.getField(this.exprSpace);
-          if (check.error) {
-            fieldRef.logError(check.error.code, check.error.message);
-          } else {
-            indexFields.push(fieldRef.refToField);
-            nextFieldUsage = fieldUsageFrom(check.found.typeDesc().refSummary);
-            fieldUsage.push({path: fieldRef.path});
-          }
+      if (!(field instanceof SpaceField)) continue;
+      const wild = this.expandedWild.get(name);
+      if (wild) {
+        indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
+        refSummary = mergeRefSummaries(
+          refSummary,
+          {fieldUsage: [{path: wild.path}]},
+          wild.entry.typeDesc().refSummary
+        );
+      } else if (field instanceof ReferenceField) {
+        // attempt to cause a type check
+        const fieldRef = field.fieldRef;
+        const check = fieldRef.getField(this.exprSpace);
+        if (check.error) {
+          fieldRef.logError(check.error.code, check.error.message);
+        } else {
+          indexFields.push(fieldRef.refToField);
+          refSummary = mergeRefSummaries(
+            refSummary,
+            {fieldUsage: [{path: fieldRef.path}]},
+            check.found.typeDesc().refSummary
+          );
         }
-        fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
       }
     }
-    this._fieldUsage = fieldUsage;
+    this.refSummary = refSummary;
     const outputStruct = this.structDef();
     return {type: 'index', indexFields, outputStruct};
   }
