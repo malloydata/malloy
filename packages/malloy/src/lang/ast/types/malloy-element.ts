@@ -565,6 +565,13 @@ export class Document extends MalloyElement implements NameSpace {
 
   compile(): DocumentCompileResult {
     const needs = this.statements.executeList(this);
+    if (needs === undefined) {
+      // All statements have run; the namespace is final. Verify every
+      // Query that survives into the model can have its given references
+      // satisfied — either by a name in this model's namespace or by a
+      // default at the declaration site.
+      this.checkQueryGivenSatisfiability();
+    }
     const modelDef = this.modelDef();
     if (needs === undefined) {
       for (const q of this.queryList) {
@@ -592,6 +599,40 @@ export class Document extends MalloyElement implements NameSpace {
   private modelAnnotationTodoList: StructDef[] = [];
   rememberToAddModelAnnotations(sd: StructDef) {
     this.modelAnnotationTodoList.push(sd);
+  }
+
+  private checkQueryGivenSatisfiability(): void {
+    // Always runs at end-of-compile, not gated on imports — a notebook cell
+    // that calls `extendModel` with a prior modelDef inherits that model's
+    // queries and givens, and a query inherited from cell N can become
+    // unsatisfiable in cell N+1 if the satisfying given is removed (or
+    // never re-supplied). Cheap when there's nothing to check.
+    const namespaceGivens = new Set<GivenID>();
+    for (const m of this.documentModel.values()) {
+      if (m.entry.type === 'given') namespaceGivens.add(m.entry.id);
+    }
+    const checkOne = (q: Query, label: string): void => {
+      const usage = q.givenUsage;
+      if (!usage || usage.length === 0) return;
+      for (const g of usage) {
+        if (namespaceGivens.has(g.id)) continue;
+        const decl = this.documentGivens.get(g.id);
+        if (decl?.default !== undefined) continue;
+        this.logError(
+          'unsatisfied-given-in-query',
+          `${label} references given '${g.id}' which is not surfaced in this model and has no default. Either import the given by name (e.g. \`import { ${g.id.split(/[:@]/)[1] ?? g.id}, ... } from "..."\`) or supply a default at the declaration site.`,
+          {at: q.location}
+        );
+      }
+    };
+    // Named queries in the namespace (locally defined OR imported).
+    for (const [name, m] of this.documentModel) {
+      if (m.entry.type === 'query') checkOne(m.entry, `Query '${name}'`);
+    }
+    // `run:` statements.
+    for (let i = 0; i < this.queryList.length; i++) {
+      checkOne(this.queryList[i], `Query at run statement #${i + 1}`);
+    }
   }
 
   hasAnnotation(): boolean {

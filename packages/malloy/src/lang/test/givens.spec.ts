@@ -980,3 +980,307 @@ describe('given: per-Query givenUsage summary', () => {
     });
   });
 });
+
+describe('given: query satisfiability check', () => {
+  // The check fires at end of every translate (Document.compile), regardless
+  // of imports. The shape: every Query reachable in the final model — `run:`
+  // statements plus named `query: q is ...` entries (local or imported) —
+  // has its `query.givenUsage` checked.
+  //
+  // Two terms worth keeping straight:
+  //   - "satisfiable": the given is in this model's namespace (caller can
+  //     supply at runtime via .run({givens: {...}})) or has a default.
+  //   - "unsatisfiable": neither — there's no path for the value to ever
+  //     arrive. That's the translate-time error case.
+  //
+  // It is OK for a query to have UNSATISFIED givens (no value bound yet,
+  // caller will supply at run). It is NOT OK for a query to have
+  // UNSATISFIABLE givens (no surface for the caller to bind through).
+  //
+  // Run-time still has the case-3 throw as a backup if a query somehow
+  // makes it past translate with an unbindable given.
+
+  function importTest(parent: string, child: string): TestTranslator {
+    const t = new TestTranslator(parent);
+    t.unresolved();
+    t.update({urls: {'internal://test/langtests/child': child}});
+    t.compile();
+    return t;
+  }
+
+  describe('satisfiable (no error)', () => {
+    test('local run: with given in namespace — caller will supply', () => {
+      // X is in namespace (the local `given:` declaration surfaces it).
+      // No default is required: the caller can bind it via .run({givens}).
+      // This is "unsatisfied at translate, satisfiable at runtime" — fine.
+      expect(`
+        ##! experimental.givens
+        given: X :: number
+        run: a -> { where: ai = $X; group_by: ai }
+      `).toTranslate();
+    });
+
+    test('local run: with defaulted given — always satisfied', () => {
+      expect(`
+        ##! experimental.givens
+        given: X :: number is 10
+        run: a -> { where: ai = $X; group_by: ai }
+      `).toTranslate();
+    });
+
+    test('imported source used in a run; given imported by name', () => {
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { TENANT, childSrc } from "child"
+          run: childSrc -> { select: * }
+        `,
+          `
+          ##! experimental.givens
+          given: TENANT :: string
+          source: childSrc is a extend { where: astr = $TENANT }
+        `
+        )
+      ).toTranslate();
+    });
+
+    test('imported source used in a run; given has default in child', () => {
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+          run: childSrc -> { select: * }
+        `,
+          `
+          ##! experimental.givens
+          given: TENANT :: string is "acme"
+          source: childSrc is a extend { where: astr = $TENANT }
+        `
+        )
+      ).toTranslate();
+    });
+
+    test('imported source NOT used in any query is fine (latent)', () => {
+      // The source has an unsatisfiable given but is never run.
+      // No Query references it → no Query.givenUsage names that given →
+      // nothing to check. Importing latent things is always OK.
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+        `,
+          `
+          ##! experimental.givens
+          given: TENANT :: string
+          source: childSrc is a extend { where: astr = $TENANT }
+        `
+        )
+      ).toTranslate();
+    });
+
+    test('imported source with view referencing unsatisfiable given is OK if view is never invoked', () => {
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+          run: childSrc -> { select: * }
+        `,
+          `
+          ##! experimental.givens
+          given: X :: number
+          source: childSrc is a extend {
+            view: v is { where: ai = $X; group_by: ai }
+          }
+        `
+        )
+      ).toTranslate();
+    });
+
+    test('imported source with dimension referencing unsatisfiable given is OK if dimension is never selected', () => {
+      // `select: *` on `a` doesn't touch the extension's `d`, only a's
+      // own columns; the dimension's $X is never reached.
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+          run: childSrc -> { group_by: ai }
+        `,
+          `
+          ##! experimental.givens
+          given: X :: number
+          source: childSrc is a extend { dimension: d is ai + $X }
+        `
+        )
+      ).toTranslate();
+    });
+  });
+
+  describe('unsatisfiable (translate-time error)', () => {
+    test('local run: references a given with no default and not in namespace: error', () => {
+      // The given is declared in some imported child but never surfaced
+      // here, so the local run statement has no path to a value.
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+          run: childSrc -> { select: * }
+        `,
+          `
+          ##! experimental.givens
+          given: TENANT :: string
+          source: childSrc is a extend { where: astr = $TENANT }
+        `
+        )
+      ).toLog(
+        errorMessage(
+          /references given .* which is not surfaced in this model and has no default/
+        )
+      );
+    });
+
+    test('local query: with unsatisfiable given errors at translate', () => {
+      // Same shape via a named query rather than a run.
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+          query: q is childSrc -> { select: * }
+        `,
+          `
+          ##! experimental.givens
+          given: TENANT :: string
+          source: childSrc is a extend { where: astr = $TENANT }
+        `
+        )
+      ).toLog(
+        errorMessage(
+          /references given .* which is not surfaced in this model and has no default/
+        )
+      );
+    });
+
+    test('imported named query that is unsatisfiable in importer errors', () => {
+      // child has the given, child has the named query. importer pulls in
+      // the named query without surfacing the given → unsatisfiable here.
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childQuery } from "child"
+        `,
+          `
+          ##! experimental.givens
+          given: MAX_ROWS :: number
+          query: childQuery is a -> { where: ai = $MAX_ROWS; group_by: ai }
+        `
+        )
+      ).toLog(
+        errorMessage(
+          /references given .* which is not surfaced in this model and has no default/
+        )
+      );
+    });
+
+    test('local given with same surface NAME does NOT satisfy (ids are file-scoped)', () => {
+      // A's local `given: TENANT` has id `TENANT@A`, child's has id
+      // `TENANT@child`. Different givens. To bridge, import child's
+      // TENANT explicitly (optionally with rename).
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+          given: TENANT :: string is "local-default"
+          run: childSrc -> { select: * }
+        `,
+          `
+          ##! experimental.givens
+          given: TENANT :: string
+          source: childSrc is a extend { where: astr = $TENANT }
+        `
+        )
+      ).toLog(
+        errorMessage(
+          /references given .* which is not surfaced in this model and has no default/
+        )
+      );
+    });
+
+    test('cross-cell: import source in cell 1 (no use), use in cell 2 errors in cell 2', () => {
+      // Mirrors what a notebook does via extendModel: cell 1 produces a
+      // modelDef, cell 2 translates with that modelDef inherited. The
+      // unsatisfiable reference never fires in cell 1 (no Query touches
+      // it) but DOES fire in cell 2 once a run statement uses the
+      // imported source. TestTranslator's optional `internalModel`
+      // constructor arg is the test-side equivalent of extendModel.
+      const cell1 = new TestTranslator(`
+        ##! experimental.givens
+        import { childSrc } from "child"
+      `);
+      cell1.unresolved();
+      cell1.update({
+        urls: {
+          'internal://test/langtests/child': `
+            ##! experimental.givens
+            given: TENANT :: string
+            source: childSrc is a extend { where: astr = $TENANT }
+          `,
+        },
+      });
+      cell1.translate();
+      expect(cell1).toTranslate();
+      const cell1Model = cell1.modelDef;
+      // Cell 2 has no imports of its own; childSrc comes through the
+      // inherited modelDef. The new run is the first thing that surfaces
+      // the unsatisfiable given.
+      const cell2 = new TestTranslator(
+        `
+        ##! experimental.givens
+        run: childSrc -> { select: * }
+      `,
+        null,
+        null,
+        'malloyDocument',
+        cell1Model
+      );
+      cell2.translate();
+      expect(cell2).toLog(
+        errorMessage(
+          /references given .* which is not surfaced in this model and has no default/
+        )
+      );
+    });
+
+    test('view invoked via run: surfaces the unsatisfiable given', () => {
+      // The same view that's silently OK when not invoked becomes a
+      // translate-time error when used.
+      expect(
+        importTest(
+          `
+          ##! experimental.givens
+          import { childSrc } from "child"
+          run: childSrc -> v
+        `,
+          `
+          ##! experimental.givens
+          given: X :: number
+          source: childSrc is a extend {
+            view: v is { where: ai = $X; group_by: ai }
+          }
+        `
+        )
+      ).toLog(
+        errorMessage(
+          /references given .* which is not surfaced in this model and has no default/
+        )
+      );
+    });
+  });
+});

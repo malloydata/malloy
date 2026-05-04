@@ -1539,7 +1539,8 @@ function getJoinGivenUsage(join: FieldDef): GivenUsage {
 // finalized pipeline, recursing through nested turtle pipelines. This is the
 // per-Query summary that consumers (PreparedQuery.givens, satisfiability
 // check, `givenUsageOfSource` for QuerySourceDef) read instead of re-walking
-// segments.
+// segments. Called only from the query-arrow / query-refine construction
+// sites where every segment has been through getExpandedSegment.
 export function computeQueryGivenUsage(pipeline: PipeSegment[]): GivenUsage {
   const seen = new Set<GivenID>();
   const result: GivenUsage = [];

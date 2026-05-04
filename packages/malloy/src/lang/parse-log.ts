@@ -318,6 +318,7 @@ type MessageParameterTypes = {
   'selective-import-not-found': string;
   'name-conflict-on-indiscriminate-import': string;
   'failed-import': string;
+  'unsatisfied-given-in-query': string;
   'failed-to-compute-output-schema': string;
   'invalid-timeframe-for-time-offset': string;
   'time-comparison-type-mismatch': string;
