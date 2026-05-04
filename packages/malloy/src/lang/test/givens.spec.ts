@@ -60,6 +60,17 @@ function onlyGivens(src: string): GivenDeclaration[] {
   return blocks.flatMap(b => b.givens);
 }
 
+// Lookup a given's id by surface name in a translated modelDef. Throws
+// (rather than coalescing to undefined) so test failures point at the
+// real cause when the given is missing.
+function givenId(md: ModelDef, name: string): string {
+  const entry = md.contents[name];
+  if (!entry || entry.type !== 'given') {
+    throw new Error(`Expected '${name}' to be a given in modelDef.contents`);
+  }
+  return entry.id;
+}
+
 describe('given: declarations', () => {
   test('single declaration with no default', () => {
     const givens = onlyGivens('given: TENANT :: string');
@@ -371,7 +382,7 @@ describe('given: IR generation', () => {
     `);
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
-    const id = (md.contents['MAX_VAL'] as {id: string}).id;
+    const id = givenId(md, 'MAX_VAL');
     const given = md.givens![id];
     expect(given.default).toBeDefined();
     expect(given.default).toMatchObject({node: 'numberLiteral'});
@@ -384,7 +395,7 @@ describe('given: IR generation', () => {
     `);
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
-    const id = (md.contents['TENANT'] as {id: string}).id;
+    const id = givenId(md, 'TENANT');
     expect(md.givens![id]).toHaveProperty('default');
     expect(md.givens![id].default).toBeUndefined();
   });
@@ -397,16 +408,14 @@ describe('given: IR generation', () => {
     `);
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
-    const id = (md.contents['TENANT'] as {id: string}).id;
+    const id = givenId(md, 'TENANT');
     let found: {id: string; refName: string} | undefined;
-    function walk(n: unknown) {
-      if (n && typeof n === 'object') {
-        const node = n as {node?: string; id?: string; refName?: string};
-        if (node.node === 'given') {
-          found = {id: node.id!, refName: node.refName!};
-        }
-        for (const v of Object.values(n)) walk(v);
+    function walk(n: unknown): void {
+      if (n === null || typeof n !== 'object') return;
+      if ('node' in n && n.node === 'given' && 'id' in n && 'refName' in n) {
+        found = {id: String(n.id), refName: String(n.refName)};
       }
+      for (const v of Object.values(n)) walk(v);
     }
     walk(md.queryList);
     expect(found).toEqual({id, refName: 'TENANT'});
@@ -1124,7 +1133,9 @@ describe('given: query satisfiability check', () => {
   describe('unsatisfiable (translate-time error)', () => {
     test('local run: references a given with no default and not in namespace: error', () => {
       // The given is declared in some imported child but never surfaced
-      // here, so the local run statement has no path to a value.
+      // here, so the local run statement has no path to a value. Error
+      // message mentions the given's readable surface name (TENANT), not
+      // the opaque GivenID.
       expect(
         importTest(
           `
@@ -1140,7 +1151,7 @@ describe('given: query satisfiability check', () => {
         )
       ).toLog(
         errorMessage(
-          /references given .* which is not surfaced in this model and has no default/
+          /run: statement references given `TENANT`.*not surfaced in this model and has no default/
         )
       );
     });
@@ -1336,7 +1347,7 @@ describe('given: PreparedQuery.givens introspection', () => {
     expect(t?.default).toMatchObject({node: 'stringLiteral'});
     expect(t?.location).toBeDefined();
     // id matches what the model recorded for TENANT.
-    const expectedId = (md.contents['TENANT'] as {id: string}).id;
+    const expectedId = givenId(md, 'TENANT');
     expect(t?.id).toBe(expectedId);
   });
 
@@ -1485,7 +1496,7 @@ describe('given: Model.givens introspection', () => {
     expect(t?.type).toEqual({type: 'string'});
     expect(t?.default).toMatchObject({node: 'stringLiteral'});
     expect(t?.location).toBeDefined();
-    expect(t?.id).toBe((md.contents['TENANT'] as {id: string}).id);
+    expect(t?.id).toBe(givenId(md, 'TENANT'));
   });
 
   test('undefaulted given has default === undefined', () => {
