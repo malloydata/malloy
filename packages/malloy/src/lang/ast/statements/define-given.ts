@@ -122,6 +122,7 @@ export class GivenDeclaration
 
     const id = mkGivenID(this.name, this.location?.url);
     const givenIR: Given = {
+      name: this.name,
       type: this.typeDef,
       default: defaultExpr,
       location: this.location,

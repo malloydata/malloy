@@ -1201,9 +1201,10 @@ describe('given: query satisfiability check', () => {
     });
 
     test('local given with same surface NAME does NOT satisfy (ids are file-scoped)', () => {
-      // A's local `given: TENANT` has id `TENANT@A`, child's has id
-      // `TENANT@child`. Different givens. To bridge, import child's
-      // TENANT explicitly (optionally with rename).
+      // A's local `given: TENANT` and child's `given: TENANT` are
+      // different givens — the GivenID is per-file, so sharing a surface
+      // name doesn't merge them. To bridge, import child's TENANT
+      // explicitly (optionally with rename).
       expect(
         importTest(
           `

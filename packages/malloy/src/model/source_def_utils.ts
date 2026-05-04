@@ -46,35 +46,6 @@ export function mkGivenID(name: string, url: string | undefined): GivenID {
 }
 
 /**
- * Inverse of `mkGivenID`. Returns the parsed `{name, url}` for a GivenID
- * produced by this codebase, or `undefined` if the id doesn't match the
- * expected format. Useful for diagnostics that want a readable surface
- * name out of an opaque id.
- */
-export function parseGivenID(
-  id: GivenID
-): {name: string; url: string} | undefined {
-  // Format from pathToKey: "given/<nameLen>:<name>,<urlLen>:<url>"
-  const slash = id.indexOf('/');
-  if (slash < 0) return undefined;
-  const fields = id.slice(slash + 1);
-  const comma = fields.indexOf(',');
-  if (comma < 0) return undefined;
-  const nameField = fields.slice(0, comma);
-  const urlField = fields.slice(comma + 1);
-  const name = stripLengthPrefix(nameField);
-  const url = stripLengthPrefix(urlField);
-  if (name === undefined || url === undefined) return undefined;
-  return {name, url};
-}
-
-function stripLengthPrefix(field: string): string | undefined {
-  const colon = field.indexOf(':');
-  if (colon < 0) return undefined;
-  return field.slice(colon + 1);
-}
-
-/**
  * Create a BuildID from connection digest and SQL.
  * BuildID is a hash that uniquely identifies a build artifact.
  */

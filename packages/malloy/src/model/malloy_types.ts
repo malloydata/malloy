@@ -555,6 +555,9 @@ export type Argument = Parameter;
 export type GivenTypeDef = AtomicTypeDef | FilterExpressionParamTypeDef;
 
 export interface Given extends HasLocation, HasAnnotation {
+  /** The name as written at the declaration site. Used by diagnostics
+   *  that need a readable surface name out of an opaque GivenID. */
+  name: string;
   type: GivenTypeDef;
   /** Non-optional so the no-default case is explicit at every read site. */
   default: ConstantExpr | undefined;

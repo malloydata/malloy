@@ -37,7 +37,6 @@ import type {
   StructDef,
 } from '../../../model/malloy_types';
 import {isSourceDef, isPersistableSourceDef} from '../../../model/malloy_types';
-import {parseGivenID} from '../../../model/source_def_utils';
 import {mkModelDef} from '../../../model/utils';
 import {Tag} from '@malloydata/malloy-tag';
 import type {
@@ -511,10 +510,18 @@ function annotationID(a: Annotation): string {
  * that can be tomorrow
  */
 
-function unsatisfiedGivenMessage(label: string, id: GivenID): string {
-  const parsed = parseGivenID(id);
-  const surface = parsed?.name ?? id;
-  const where = parsed ? ` (declared in ${parsed.url})` : '';
+function unsatisfiedGivenMessage(
+  label: string,
+  decl: Given | undefined,
+  id: GivenID
+): string {
+  // We always have the GivenID; we may or may not have the declaration
+  // (we should — every given referenced should have been copied into
+  // documentGivens at import time — but defend against it being absent).
+  const surface = decl?.name ?? id;
+  const where = decl?.location?.url
+    ? ` (declared in ${decl.location.url})`
+    : '';
   return (
     `${label} references given \`${surface}\`${where}, ` +
     'which is not surfaced in this model and has no default. ' +
@@ -633,7 +640,7 @@ export class Document extends MalloyElement implements NameSpace {
         if (decl?.default !== undefined) continue;
         this.logError(
           'unsatisfied-given-in-query',
-          unsatisfiedGivenMessage(label, g.id),
+          unsatisfiedGivenMessage(label, decl, g.id),
           {at: q.location}
         );
       }
