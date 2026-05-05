@@ -2188,6 +2188,17 @@ export interface SearchValueMapResult {
  */
 export type VirtualMap = Map<string, Map<string, string>>;
 
+/** JS-side accepted shapes for caller-supplied given values. */
+export type GivenValue =
+  | string
+  | number
+  | bigint
+  | boolean
+  | Date
+  | null
+  | GivenValue[]
+  | {[key: string]: GivenValue};
+
 export interface PrepareResultOptions {
   defaultRowLimit?: number;
   isPartialQuery?: boolean; // Query is being used as a sql_block
@@ -2198,6 +2209,8 @@ export interface PrepareResultOptions {
   connectionDigests?: SafeRecord<string>;
   /** Map from connectionName → virtualName → tablePath for virtual source resolution */
   virtualMap?: VirtualMap;
+  givens?: Record<string, GivenValue>;
+  resolvedGivens?: Map<GivenID, Expr>;
 }
 
 type UTD =

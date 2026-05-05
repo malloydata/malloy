@@ -4,10 +4,12 @@
  */
 
 import {QueryQuery} from './query_query';
+import {resolveSuppliedGivens} from './given_binding';
 import type {
   ModelDef,
   StructRef,
   Argument,
+  Given,
   PrepareResultOptions,
   Query,
   SourceDef,
@@ -35,6 +37,10 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
+
+  get givens(): Record<string, Given> {
+    return this.modelDef?.givens ?? {};
+  }
 
   constructor(modelDef: ModelDef | undefined) {
     if (modelDef) {
@@ -214,10 +220,18 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     );
     query = addDefaultRowLimit.query;
     const addedDefaultRowLimit = addDefaultRowLimit.addedDefaultRowLimit;
+    const resolvedGivens = resolveSuppliedGivens(
+      prepareResultOptions?.givens,
+      this.modelDef
+    );
+    const optionsWithGivens: PrepareResultOptions = {
+      ...prepareResultOptions,
+      resolvedGivens,
+    };
     const ret = this.loadQuery(
       query,
       undefined,
-      prepareResultOptions,
+      optionsWithGivens,
       finalize,
       false
     );

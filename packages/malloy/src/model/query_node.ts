@@ -15,6 +15,8 @@ import type {
   NativeUnsupportedFieldDef,
   JoinFieldDef,
   Argument,
+  Given,
+  GivenID,
   PrepareResultOptions,
   AtomicFieldDef,
   BasicAtomicDef,
@@ -254,6 +256,7 @@ export interface ParentQueryStruct {
 // Interface for model - provides struct lookup capability
 export interface ModelRootInterface {
   structs: Map<string, QueryStruct>;
+  givens: Record<GivenID, Given>;
 }
 
 export interface ParentQueryModel {

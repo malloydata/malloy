@@ -113,6 +113,7 @@ class ConstantQueryStruct extends QueryStruct {
     // Create minimal model with empty structs map
     const minimalModel: ModelRootInterface = {
       structs: new Map(),
+      givens: {},
     };
 
     // Create minimal prepare result options with eventStream

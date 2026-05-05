@@ -7,12 +7,19 @@ This directory contains the test infrastructure for Malloy, including cross-data
 Tests are organized into several categories:
 
 ### Core Tests (`test/src/core/`)
-Tests for core Malloy functionality that don't require database execution:
-- AST generation
-- IR generation
-- Model semantics
-- Type checking
-- Error handling
+Tests for core Malloy functionality. The directory holds two flavors:
+
+- **Pure translator/IR tests** — AST generation, IR generation, type checking, error handling (no SQL execution).
+- **End-to-end query tests** — single-dialect tests (almost always DuckDB) that load a Malloy model, run a query, and assert on results. They exercise the full Foundation API path (`runtime.loadModel(...).loadQueryByName(...).run(...)`) including SQL generation and execution against the loaded test database.
+
+Both live here. The end-to-end ones use `runtimeFor('duckdb')` and read from the `malloytest.*` tables (e.g. `state_facts`, `aircraft`, `flights`) loaded into `test/data/duckdb/duckdb_test.db` by `npm run build-duckdb-db`. They follow the dialect-gating pattern with `MALLOY_DATABASE` so they auto-skip when DuckDB isn't selected:
+
+```ts
+let describe = globalThis.describe;
+if (!envDatabases.includes('duckdb')) describe = describe.skip;
+```
+
+This is the right home for any feature test that requires SQL execution but only needs to verify *language behavior* (not dialect-specific quirks). For features whose behavior must hold across every dialect, write a cross-database test in `test/src/databases/all/` instead.
 
 ### Database-Specific Tests (`test/src/databases/{database}/`)
 Tests that verify database-specific behavior:

@@ -986,7 +986,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       // Use virtualMap from options if provided, otherwise fall back to Runtime's.
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
 
-      // Build PrepareResultOptions from CompileQueryOptions + connectionDigests
+      // Build PrepareResultOptions from CompileQueryOptions + connectionDigests.
       const prepareResultOptions: PrepareResultOptions = {
         defaultRowLimit: mergedOptions.defaultRowLimit,
         buildManifest,
