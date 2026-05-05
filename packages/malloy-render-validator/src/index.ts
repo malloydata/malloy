@@ -22,11 +22,9 @@
 // making it impossible to run code between two imports. With require()
 // the calls stay in source order: install shim, load renderer, remove shim.
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const {installFakeDom, removeFakeDom} = require('./fake-dom');
 installFakeDom();
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const {MalloyRenderer} = require('@malloydata/render');
 removeFakeDom();
 

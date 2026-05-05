@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-/* eslint-disable n/no-process-exit */
-
 /**
  * Simple builder for testing the source persist API.
  *

@@ -84,7 +84,7 @@ export function getResultMetadata(
     sizingStrategy:
       renderAs === 'table'
         ? 'fixed'
-        : chartSizingStrategy ?? rootSizingStrategy,
+        : (chartSizingStrategy ?? rootSizingStrategy),
     renderFieldMetadata: options.renderFieldMetadata,
     styleOverrides: {},
   };

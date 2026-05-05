@@ -94,7 +94,7 @@ function getLimitedData({
     : [];
 
   const refinedMaxSizePerBar =
-    maxSizePerBar ?? (seriesField && isGrouping) ? 8 : 8;
+    (maxSizePerBar ?? (seriesField && isGrouping)) ? 8 : 8;
 
   // Limit x axis values shown
   const subGroupBars = seriesField && isGrouping ? seriesLimit : 1;
@@ -686,7 +686,7 @@ export function generateBarChartVegaSpecV2(
         range: 'height',
         domain: settings.isStack
           ? {data: 'values', field: 'y1'}
-          : chartSettings.yScale.domain ?? {data: 'values', field: 'y'},
+          : (chartSettings.yScale.domain ?? {data: 'values', field: 'y'}),
       },
       {
         name: 'color',
@@ -918,7 +918,7 @@ export function generateBarChartVegaSpecV2(
             })
             .join(' - ')
         : seriesField
-          ? row.column(seriesField.name).value ?? NULL_SYMBOL
+          ? (row.column(seriesField.name).value ?? NULL_SYMBOL)
           : null;
 
       return (
@@ -946,7 +946,7 @@ export function generateBarChartVegaSpecV2(
             })
             .join(' - ')
         : seriesField
-          ? row.column(seriesField.name).value ?? NULL_SYMBOL
+          ? (row.column(seriesField.name).value ?? NULL_SYMBOL)
           : yField.name;
 
       if (skipRecord(row)) continue;

@@ -23,7 +23,7 @@
 
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 import {DuckDBConnection} from '../packages/malloy-db-duckdb';
 
 import fs from 'fs';

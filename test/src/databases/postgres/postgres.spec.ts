@@ -21,8 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* eslint-disable no-console */
-
 import {DateTime} from 'luxon';
 import {RuntimeList} from '../../runtimes';
 import type {Runtime} from '@malloydata/malloy';
