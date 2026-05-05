@@ -38,6 +38,7 @@ import type {
   SourceComponentInfo,
   DocumentReference,
   PersistableSourceDef,
+  PrepareResultOptions,
 } from '../../model';
 import {
   fieldIsIntrinsic,
@@ -60,6 +61,7 @@ import {
   minimalBuildGraph,
 } from '../../model/persist_utils';
 import {resolveSourceID, mkBuildID} from '../../model/source_def_utils';
+import {resolveSuppliedGivens} from '../../model/given_binding';
 import {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
 import {annotationToTag, annotationToTaglines} from '../../annotation';
@@ -1575,7 +1577,16 @@ export class PreparedQuery implements Taggable {
    */
   public getPreparedResult(options?: CompileQueryOptions): PreparedResult {
     const queryModel = this._model.queryModel;
-    const translatedQuery = queryModel.compileQuery(this._query, options);
+    const prepareResultOptions: PrepareResultOptions = {
+      ...options,
+      resolvedGivens: options?.givens
+        ? resolveSuppliedGivens(options.givens, this._modelDef)
+        : undefined,
+    };
+    const translatedQuery = queryModel.compileQuery(
+      this._query,
+      prepareResultOptions
+    );
     return new PreparedResult(
       {
         ...translatedQuery,

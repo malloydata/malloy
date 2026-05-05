@@ -2209,7 +2209,6 @@ export interface PrepareResultOptions {
   connectionDigests?: SafeRecord<string>;
   /** Map from connectionName → virtualName → tablePath for virtual source resolution */
   virtualMap?: VirtualMap;
-  givens?: Record<string, GivenValue>;
   resolvedGivens?: Map<GivenID, Expr>;
 }
 

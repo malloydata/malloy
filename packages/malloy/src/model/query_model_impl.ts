@@ -4,7 +4,6 @@
  */
 
 import {QueryQuery} from './query_query';
-import {resolveSuppliedGivens} from './given_binding';
 import type {
   ModelDef,
   StructRef,
@@ -220,18 +219,10 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     );
     query = addDefaultRowLimit.query;
     const addedDefaultRowLimit = addDefaultRowLimit.addedDefaultRowLimit;
-    const resolvedGivens = resolveSuppliedGivens(
-      prepareResultOptions?.givens,
-      this.modelDef
-    );
-    const optionsWithGivens: PrepareResultOptions = {
-      ...prepareResultOptions,
-      resolvedGivens,
-    };
     const ret = this.loadQuery(
       query,
       undefined,
-      optionsWithGivens,
+      prepareResultOptions,
       finalize,
       false
     );
