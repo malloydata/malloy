@@ -8,11 +8,11 @@
     "jsx": "react-jsx",
     "jsxImportSource": "solid-js",
     "lib": ["dom", "es2021"],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noUncheckedSideEffectImports": false
   },
   "include": ["./src", "./src/**/*.d.ts", "node_modules/us-atlas"],
   "references": [

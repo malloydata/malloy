@@ -138,7 +138,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     }
 
     const fromFieldUsage =
-      from && isQuerySegment(from) ? from.fieldUsage ?? [] : [];
+      from && isQuerySegment(from) ? (from.fieldUsage ?? []) : [];
     to.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
   }
 }

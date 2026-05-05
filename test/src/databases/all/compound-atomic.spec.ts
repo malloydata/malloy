@@ -27,7 +27,7 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
  * so fix that one first if the tests are failing.
  */
 
-function literalNum(num: Number): Expr {
+function literalNum(num: number): Expr {
   const literal = num.toString();
   return {node: 'numberLiteral', literal, sql: literal};
 }
@@ -40,7 +40,7 @@ describe.each(runtimes.runtimeList)(
     const quote = runtime.dialect.sqlMaybeQuoteIdentifier;
 
     const empty = `${conName}.sql("SELECT 0 as z")`;
-    function arraySelectVal(...val: Number[]): string {
+    function arraySelectVal(...val: number[]): string {
       const literal: ArrayLiteralNode = {
         node: 'arrayLiteral',
         typeDef: {

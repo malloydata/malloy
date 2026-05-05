@@ -1029,7 +1029,7 @@ export function generateLineChartVegaSpecV2(
 
       // Normal mode processing
       let seriesVal = seriesField
-        ? row.column(seriesField.name).value ?? NULL_SYMBOL
+        ? (row.column(seriesField.name).value ?? NULL_SYMBOL)
         : yField.name;
       // Limit # of series
       if (skipSeries(seriesVal)) {

@@ -60,7 +60,6 @@ import {
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
-// eslint-disable-next-line no-restricted-imports
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -526,7 +525,7 @@ export class BigQueryConnection
     });
 
     // if creating this job didn't throw, there's an ID.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
     return job.id!;
   }
 

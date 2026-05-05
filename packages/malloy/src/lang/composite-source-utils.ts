@@ -344,7 +344,7 @@ export function getExpandedSegment(
 ): PipeSegment {
   if (segment.type === 'raw') return segment;
   const sourceExtensions = isQuerySegment(segment)
-    ? segment.extendSource ?? []
+    ? (segment.extendSource ?? [])
     : [];
   const fields = mergeFields(inputSource.fields, sourceExtensions);
 
@@ -918,7 +918,7 @@ export function resolveCompositeSources(
   | {error: CompositeError; sourceDef: undefined} {
   const fieldUsage = segmentFieldUsage(segment);
   const sourceExtensions = isQuerySegment(segment)
-    ? segment.extendSource ?? []
+    ? (segment.extendSource ?? [])
     : [];
   const nestLevels = extractNestLevels(segment);
   const fields = mergeFields(source.fields, sourceExtensions);
@@ -1450,7 +1450,7 @@ export function checkRequiredGroupBys(
 ): RequiredGroupBy[] {
   const nests = extractNestLevels(segment);
   const sourceExtensions = isQuerySegment(segment)
-    ? segment.extendSource ?? []
+    ? (segment.extendSource ?? [])
     : [];
   const unsatisfied = _checkRequiredGroupBys(
     nests,

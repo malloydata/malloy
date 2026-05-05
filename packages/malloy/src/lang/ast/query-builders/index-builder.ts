@@ -142,7 +142,7 @@ export class IndexBuilder implements QueryBuilder {
 
     const fromFieldUsage =
       from && from.type === 'index'
-        ? from.fieldUsage ?? emptyFieldUsage()
+        ? (from.fieldUsage ?? emptyFieldUsage())
         : emptyFieldUsage();
     indexSegment.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
 

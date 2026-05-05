@@ -1,9 +1,10 @@
 import path from 'path';
-import {PluginOption} from 'vite';
+import type {PluginOption} from 'vite';
 import type {IndexInput, Indexer} from '@storybook/types';
 import fs from 'fs';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
-import {Model, SingleConnectionRuntime, URLReader} from '@malloydata/malloy';
+import type {Model, URLReader} from '@malloydata/malloy';
+import {SingleConnectionRuntime} from '@malloydata/malloy';
 
 const STORY_MODEL_PREFIX = /##\(story\)\s/;
 const STORY_PREFIX = /#\(story\)\s/;
@@ -39,7 +40,7 @@ type ModelIndexInput = IndexInput & {
 };
 
 function fileNameToComponentName(fileName: string) {
-  const regex = /\/([^\/]+)\.stories\.malloy$/;
+  const regex = /\/([^/]+)\.stories\.malloy$/;
   const match = fileName.match(regex);
   const name = match && match[1];
   if (name) {
@@ -54,7 +55,7 @@ function fileNameToComponentName(fileName: string) {
 
 function getModelStories(materializedModel: Model, fileName: string) {
   const models = materializedModel.explores;
-  let modelStories: ModelIndexInput[] = [];
+  const modelStories: ModelIndexInput[] = [];
 
   const isLegacy = materializedModel.tagParse().tag.has('renderer_legacy');
   const componentName =

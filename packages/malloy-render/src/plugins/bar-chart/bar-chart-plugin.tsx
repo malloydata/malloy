@@ -41,8 +41,7 @@ import {
 } from './bar-chart-settings';
 import {barChartSettingsToTag} from './settings-to-tag';
 
-export interface BarChartPluginInstance
-  extends CoreVizPluginInstance<BarChartPluginMetadata> {
+export interface BarChartPluginInstance extends CoreVizPluginInstance<BarChartPluginMetadata> {
   getTopNSeries?: (maxSeries: number) => (string | number | boolean)[];
   field: NestField;
   chartDisplay: ChartDisplayConfig;
@@ -177,7 +176,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
                       row.column(seriesField.name).value ?? NULL_SYMBOL
                   )
                   .join(' - ')
-              : row.column(seriesFields[0].name).value ?? NULL_SYMBOL;
+              : (row.column(seriesFields[0].name).value ?? NULL_SYMBOL);
 
             if (hasMultipleSeriesFields) {
               concatenatedValues.add(seriesValue);

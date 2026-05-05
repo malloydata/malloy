@@ -282,9 +282,8 @@ export class MySQLConnection
       return jsonArray;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filteredArray = jsonArray
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       .filter(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (element: any) =>

@@ -92,7 +92,7 @@ import {readFile, writeFile, mkdir} from 'fs/promises';
 import * as path from 'path';
 import type {Connection} from '@malloydata/malloy';
 import {Malloy, Manifest} from '@malloydata/malloy';
-// eslint-disable-next-line n/no-extraneous-import
+
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import type {BuilderLog, BuildLogEntry} from './log_types';
 import {logFileName} from './log_types';

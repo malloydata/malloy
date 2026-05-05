@@ -30,7 +30,7 @@ import {DuckDBConnection} from '../packages/malloy-db-duckdb';
 import {readFile} from 'fs/promises';
 import {readFileSync} from 'fs';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function pretty(thing: any): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
 }

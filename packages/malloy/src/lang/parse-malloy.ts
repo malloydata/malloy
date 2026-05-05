@@ -110,10 +110,7 @@ interface TranslationStep {
 }
 
 interface ParseData
-  extends ResponseBase,
-    ProblemResponse,
-    NeedURLData,
-    FinalResponse {
+  extends ResponseBase, ProblemResponse, NeedURLData, FinalResponse {
   parse: MalloyParseInfo;
 }
 
@@ -1089,11 +1086,7 @@ export interface ConnectionDialects {
   connectionDialects: ZoneData<string>;
 }
 export interface UpdateData
-  extends URLData,
-    SchemaData,
-    SQLSources,
-    ModelData,
-    ConnectionDialects {
+  extends URLData, SchemaData, SQLSources, ModelData, ConnectionDialects {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;

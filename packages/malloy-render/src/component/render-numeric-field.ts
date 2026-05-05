@@ -285,7 +285,7 @@ export function renderDateTimeField(
 
   // Get the effective query timezone for timestamp fields (not date fields)
   const effectiveTimezone = !options.isDate
-    ? options.timezone ?? f.getEffectiveQueryTimezone()
+    ? (options.timezone ?? f.getEffectiveQueryTimezone())
     : undefined;
 
   const optionsWithTimezone = {
