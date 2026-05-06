@@ -40,8 +40,7 @@ interface BigValuePluginMetadata {
  * Big Value plugin instance type
  * Extends CoreVizPluginInstance for storybook compatibility
  */
-export interface BigValuePluginInstance
-  extends CoreVizPluginInstance<BigValuePluginMetadata> {
+export interface BigValuePluginInstance extends CoreVizPluginInstance<BigValuePluginMetadata> {
   field: NestField;
 }
 

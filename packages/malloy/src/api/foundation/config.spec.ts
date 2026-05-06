@@ -352,6 +352,67 @@ describe('MalloyConfig manifestURL resolution', () => {
   });
 });
 
+describe('MalloyConfig top-level string references', () => {
+  const configURL = 'file:///home/user/project/malloy-config.json';
+
+  it('resolves an env reference for manifestPath', () => {
+    process.env['TEST_MANIFEST_PATH'] = 'custom/build';
+    try {
+      const config = new MalloyConfig(
+        {manifestPath: {env: 'TEST_MANIFEST_PATH'}},
+        {config: contextOverlay({configURL})}
+      );
+      expect(config.log).toEqual([]);
+      expect(config.manifestPath).toBe('custom/build');
+      expect(config.manifestURL?.toString()).toBe(
+        'file:///home/user/project/custom/build/malloy-manifest.json'
+      );
+    } finally {
+      delete process.env['TEST_MANIFEST_PATH'];
+    }
+  });
+
+  it('falls back to the default when the env reference is unset', () => {
+    delete process.env['DEFINITELY_NOT_SET_98765'];
+    const config = new MalloyConfig(
+      {manifestPath: {env: 'DEFINITELY_NOT_SET_98765'}},
+      {config: contextOverlay({configURL})}
+    );
+    expect(config.log).toEqual([]);
+    expect(config.manifestPath).toBeUndefined();
+    expect(config.manifestURL?.toString()).toBe(
+      'file:///home/user/project/MANIFESTS/malloy-manifest.json'
+    );
+  });
+
+  it('warns and drops on unknown overlay source', () => {
+    const config = new MalloyConfig(
+      {manifestPath: {nosuch: 'whatever'}},
+      {config: contextOverlay({configURL})}
+    );
+    const warnings = config.log.filter(l => l.code === 'config-overlay');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain('unknown overlay source "nosuch"');
+    expect(warnings[0].message).toContain('manifestPath');
+    expect(config.manifestPath).toBeUndefined();
+  });
+
+  it('warns and drops when the overlay returns a Promise', () => {
+    const config = new MalloyConfig(
+      {manifestPath: {async: 'manifestPath'}},
+      {
+        config: contextOverlay({configURL}),
+        async: async () => 'something',
+      }
+    );
+    const warnings = config.log.filter(l => l.code === 'config-overlay');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain('Promise');
+    expect(warnings[0].message).toContain('manifestPath');
+    expect(config.manifestPath).toBeUndefined();
+  });
+});
+
 describe('MalloyConfig overlay resolution', () => {
   it('resolves env references via the default stack', async () => {
     process.env['TEST_DB_PATH_ENV'] = '/tmp/test.db';

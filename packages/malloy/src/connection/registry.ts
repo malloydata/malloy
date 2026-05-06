@@ -211,11 +211,14 @@ export function writeConnectionsConfig(config: ConnectionsConfig): string {
 
 /**
  * A LookupConnection with lifecycle management: close() shuts down all
- * cached connections, and an optional onConnectionCreated callback fires
- * once per connection after factory creation (before caching).
+ * cached connections, idle() releases their backend resources but keeps
+ * the cache so the same connection objects are reused on next lookup, and
+ * an optional onConnectionCreated callback fires once per connection after
+ * factory creation (before caching).
  */
 export interface ManagedConnectionLookup extends LookupConnection<Connection> {
   close(): Promise<void>;
+  idle(): Promise<void>;
 }
 
 /**
@@ -289,6 +292,14 @@ export function createConnectionsFromConfig(
       cache.clear();
       for (const conn of connections) {
         await conn.close();
+      }
+    },
+
+    async idle(): Promise<void> {
+      // Cache is preserved — the same Connection objects are reused so that
+      // schema cache and other in-process state survive the idle.
+      for (const conn of cache.values()) {
+        await conn.idle();
       }
     },
   };

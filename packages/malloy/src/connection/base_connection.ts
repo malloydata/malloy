@@ -167,6 +167,8 @@ export abstract class BaseConnection implements Connection {
 
   async close(): Promise<void> {}
 
+  async idle(): Promise<void> {}
+
   async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
     return {};
   }

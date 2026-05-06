@@ -15,7 +15,7 @@ import type {
 import {compileConfig} from './config_compile';
 import {prepareConfig} from './config_resolve';
 import {buildManagedLookup} from './config_lookup';
-import {defaultConfigOverlays} from './config_overlays';
+import {defaultConfigOverlays, isThenable} from './config_overlays';
 import type {ConfigOverlays} from './config_overlays';
 
 /**
@@ -222,7 +222,7 @@ export class MalloyConfig {
     // Reference resolution for connection properties is *not* done here —
     // it happens async at `lookupConnection` time, so overlays that touch
     // IO (secret stores, session reads) have a natural async seam.
-    const prepared = prepareConfig(compiled.compiled, log);
+    const prepared = prepareConfig(compiled.compiled, mergedOverlays, log);
 
     this._managedLookup = buildManagedLookup(
       prepared.compiledConnections,
@@ -268,30 +268,52 @@ export class MalloyConfig {
   }
 
   /**
-   * Notify every connection this config has handed out that it is time to
-   * release its resources, then drop them from the internal cache.
+   * Notify every connection this config has handed out that the host is
+   * done with it, applying the requested disposition to its backend
+   * resources. Two policies:
    *
-   * Most callers should use `Runtime.releaseConnections()` instead — the
-   * expected contract is one MalloyConfig per Runtime, and the runtime is
-   * the natural handle for lifecycle. This method exists because Runtime
+   * - `'close'` (default) — destructive. Calls `Connection.close()` on each
+   *   cached entry and drops the cache. Subsequent operations on those
+   *   connection objects may fail. Use this at real shutdown: process
+   *   exit, extension deactivate, config-file change.
+   *
+   * - `'idle'` — reversible. Calls `Connection.idle()` on each cached entry
+   *   without dropping the cache. The same Connection objects are reused
+   *   on next lookup; schema cache and other in-process state survive.
+   *   The next operation transparently reattaches any backend resources
+   *   that were released. Use this between operations in long-lived hosts
+   *   (VSCode, MCP servers, anything that builds Runtimes per request) to
+   *   release file locks / pooled sockets while the host is otherwise
+   *   idle.
+   *
+   * Most callers should use `Runtime.shutdown(...)` instead — the expected
+   * contract is one MalloyConfig per Runtime, and the runtime is the
+   * natural handle for lifecycle. This method exists because Runtime
    * forwards to it, and for the rare case of a MalloyConfig constructed
    * without an accompanying Runtime.
    *
    * MalloyConfig does not own any connection resources itself — pools,
    * sockets, file handles, and in-process databases all live inside the
    * individual Connection objects. What the managed lookup owns is a cache
-   * of `name → Connection` populated lazily as callers request connections.
-   * This method walks that cache and calls `Connection.close()` on each
-   * entry, which is the signal each connection uses to shut down whatever
-   * resources it actually holds.
-   *
-   * Connections that were never looked up were never constructed and have
-   * nothing to release; they are skipped. Wrapping lookups installed via
-   * `wrapConnections()` do not interfere — the managed lookup under the
-   * wrap is the one holding the cache.
+   * of `name → Connection` populated lazily as callers request
+   * connections. Connections that were never looked up were never
+   * constructed and have nothing to release; they are skipped. Wrapping
+   * lookups installed via `wrapConnections()` do not interfere — the
+   * managed lookup under the wrap is the one holding the cache.
+   */
+  async shutdown(connections: 'close' | 'idle' = 'close'): Promise<void> {
+    if (connections === 'idle') {
+      await this._managedLookup.idle();
+    } else {
+      await this._managedLookup.close();
+    }
+  }
+
+  /**
+   * @deprecated Use `shutdown('close')` instead.
    */
   async releaseConnections(): Promise<void> {
-    await this._managedLookup.close();
+    await this.shutdown('close');
   }
 
   /**
@@ -413,14 +435,6 @@ function toVirtualMap(raw: unknown): VirtualMap | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as {then?: unknown}).then === 'function'
-  );
 }
 
 function isBuildManifestEntry(value: unknown): value is BuildManifestEntry {

@@ -80,3 +80,17 @@ export function defaultConfigOverlays(): ConfigOverlays {
     config: () => undefined,
   };
 }
+
+/**
+ * Type guard for "looks like a Promise." Used by sync-peek call sites
+ * (`computeManifestURL`, `resolveSyncStringSetting`) to detect when a host
+ * mistakenly wired an async overlay into a slot that's read synchronously.
+ */
+export function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'then' in value &&
+    typeof value.then === 'function'
+  );
+}

@@ -120,7 +120,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
       ...this.expandRefUsage(
         this.source instanceof Source
           ? // If `source ->` then use the composite resolved struct,
-            compositeResolvedSourceDef ?? inputStruct
+            (compositeResolvedSourceDef ?? inputStruct)
           : // Otherwise just use the `inputStruct`
             inputStruct,
         rhsPipeline

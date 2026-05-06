@@ -140,7 +140,7 @@ export async function compileModel(
 ): Promise<Malloy.CompileModelResponse> {
   const timer = new Timer('compile_model');
   const state = Core.newCompileModelState(request);
-  // eslint-disable-next-line no-constant-condition
+
   while (true) {
     const result = Core.statedCompileModel(state);
     timer.incorporate(result.timing_info);
@@ -162,7 +162,7 @@ export async function compileSource(
 ): Promise<Malloy.CompileSourceResponse> {
   const timer = new Timer('compile_source');
   const state = Core.newCompileSourceState(request);
-  // eslint-disable-next-line no-constant-condition
+
   while (true) {
     const result = Core.statedCompileSource(state, request.name);
     timer.incorporate(result.timing_info);
@@ -184,7 +184,7 @@ export async function compileQuery(
 ): Promise<Malloy.CompileQueryResponse> {
   const timer = new Timer('compile_query');
   const state = Core.newCompileQueryState(request);
-  // eslint-disable-next-line no-constant-condition
+
   while (true) {
     const result = Core.statedCompileQuery(state);
     timer.incorporate(result.timing_info);

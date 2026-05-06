@@ -16,8 +16,7 @@
     ],
     "module": "commonjs",
     "esModuleInterop": true,
-    "moduleResolution": "node",
-    "ignoreDeprecations": "5.0",
+    "moduleResolution": "bundler",
     "isolatedModules": true,
     "target": "es2019",
     "experimentalDecorators": true,
@@ -25,6 +24,7 @@
     "useUnknownInCatchVariables": false,
     "forceConsistentCasingInFileNames": true,
     "noPropertyAccessFromIndexSignature": true,
+    "ignoreDeprecations": "6.0",
     "types": ["node", "jest", "jest-expect-message"],
     // TODO: Remove this when we have a better project solution
     "paths": {

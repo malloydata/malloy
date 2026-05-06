@@ -91,8 +91,7 @@ const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
 export interface PostgresConnectionOptions
-  extends ConnectionConfig,
-    PostgresConnectionConfiguration {}
+  extends ConnectionConfig, PostgresConnectionConfiguration {}
 
 export class PostgresConnection
   extends BaseConnection

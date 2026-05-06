@@ -1,4 +1,3 @@
-/* eslint-disable n/no-process-exit */
 /*
  * Copyright 2023 Google LLC
  *
@@ -22,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 /* eslint-disable no-console */
-/* eslint-disable no-process-exit */
 
 import {runtimeFor} from '../src/runtimes';
 

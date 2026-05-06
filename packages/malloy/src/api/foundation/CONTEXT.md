@@ -8,10 +8,10 @@ This file is about the parts that are fragile and easy to break.
 
 | File | Contents |
 |---|---|
-| `config.ts` | `MalloyConfig` class (constructor pipeline, `wrapConnections`, `releaseConnections`, `readOverlay`) and standalone `Manifest` |
+| `config.ts` | `MalloyConfig` class (constructor pipeline, `wrapConnections`, `shutdown`, `readOverlay`) and standalone `Manifest` |
 | `config_overlays.ts` | `Overlay` (sync-or-async), `ConfigOverlays`, `envOverlay()`, `contextOverlay()`, `defaultConfigOverlays()` |
 | `config_compile.ts` | Schema-directed POJO → typed tree. Section compilers. The **security boundary**. |
-| `config_resolve.ts` | `prepareConfig()` — synchronous extraction of top-level sections; fabricates default-connection entries. No overlay IO. |
+| `config_resolve.ts` | `prepareConfig()` — synchronous extraction of top-level sections; fabricates default-connection entries. Sync-peeks overlays for top-level string references (e.g. `manifestPath: {env: "X"}`); async overlays warn + drop. |
 | `config_lookup.ts` | `buildManagedLookup()` — async, per-lookup reference resolution + property defaults + factory invocation. Where overlay calls actually happen. |
 | `config_discover.ts` | `discoverConfig()` URL walk; returns a fully-built `MalloyConfig` or `null` |
 | `runtime.ts` | `Runtime`, materializers, lazy manifest read |
@@ -33,6 +33,8 @@ compiled (typed tree: ConfigDict | ConfigLiteral | ConfigReference)
    │  3. merge overlays onto defaults ({...defaultConfigOverlays(), ...passed})
    │  4. prepareConfig: extract non-connection sections (manifestPath,
    │     virtualMap); pull out compiled connection subtrees untouched.
+   │     Sync-peek overlays for top-level string references (manifestPath
+   │     can be {env: "X"} etc.); async returns warn + drop.
    │     If includeDefaultConnections: fabricate bare {is: typeName}
    │     compiled entries for registered types not already present.
    │  5. buildManagedLookup: package compiled connection subtrees + overlays
@@ -59,9 +61,14 @@ The compiled tree exists from step 2 onward and is held by `ManagedConnectionLoo
 
 - An `Overlay` is `(path: string[]) => unknown | Promise<unknown>`. The resolver `await`s every overlay result, so sync and async overlays are interchangeable from the caller's perspective.
 - `readOverlay()` on `MalloyConfig` is async for the same reason.
-- `computeManifestURL` is the one construction-time exception — it sync-peeks the `config` overlay for `configURL`. **The `config` overlay MUST resolve `configURL` synchronously**; other keys (`rootDirectory`, etc.) may be async. If the peek sees a Promise, `computeManifestURL` pushes a loud warning to `config.log` and sets `manifestURL = undefined` — failing audibly instead of silently dropping persistence. Hosts that build a `config` overlay from mixed sync/async sources should branch on the key.
+- Construction-time overlay peeks are the exception to the deferred-resolution rule. Two cases peek synchronously: (1) `computeManifestURL` reads `configURL` from the `config` overlay; (2) `prepareConfig`'s `resolveSyncStringSetting` resolves top-level string references like `manifestPath: {env: "X"}`. **All sync-peek overlays MUST return synchronously**; if any returns a Promise, the resolver pushes a loud warning to `config.log` and drops the value — failing audibly instead of silently breaking persistence or losing the setting. Inside the `config` overlay, only `configURL` is sync-only; other keys (`rootDirectory`, etc.) can still be async because they're consumed at lookup time. Hosts that build overlays from mixed sync/async sources should branch on the key.
 
-**Log timing.** Warnings about unknown overlay sources fire at lookup time, not construction time. The `log` array is mutable and shared — callers that read `config.log` before any connection lookup won't see resolution warnings; reading after a lookup will. This is an intentional consequence of deferred resolution: we don't pay for warnings on connections nobody asks about.
+**Log timing.** The `log` array is mutable and shared — entries arrive in waves matching the resolution timeline:
+
+1. *Construction* — compile-time validation warnings, plus resolution warnings for the two sync-only slots (top-level string references and `configURL`).
+2. *First lookup of each connection* — resolution warnings for that connection's property references and reference-shaped defaults.
+
+Callers that read `config.log` before any connection lookup see only the construction-time entries; warnings for a never-used connection never appear. This is an intentional consequence of deferred resolution — we don't pay for warnings on connections nobody asks about.
 
 Manifest reading happens lazily in the Runtime; discovery (which does IO) is a separate helper that *builds* a `MalloyConfig`, it's not part of the constructor.
 
@@ -80,7 +87,8 @@ const TOP_LEVEL_SECTIONS: Record<string, SectionCompiler> = {
 ```
 
 - `compileConnections` is the **only** dynamic section. For each entry, it looks up `is` in the connection registry, walks the declared properties, and at each *non-`json`* property (the reference slots) accepts either a literal or a single-key `{source: path}` reference. At each `json`-typed property it passes raw data through as `ConfigLiteral` — no reference interpretation.
-- `compileVirtualMap`, `compileManifestPath`, `compileIncludeDefaultConnections` are pass-through. `{env: "X"}` *inside* `virtualMap` is literal JSON, not a reference.
+- `compileManifestPath` accepts either a literal string or a reference shape. Resolution happens synchronously in `prepareConfig` — see the sync-peek discussion under [Sync/async boundary](#the-pipeline) above.
+- `compileVirtualMap`, `compileIncludeDefaultConnections` are pass-through. `{env: "X"}` *inside* `virtualMap` is literal JSON, not a reference.
 
 Consequences:
 
@@ -116,7 +124,7 @@ Plain spread. This gives callers three moves without any extra API:
 - **Replace** — passing an existing key clobbers the default (`config` → discovery-populated or Publisher's).
 - **Disable** — omit; the default is already a no-op for `config`.
 
-### Three Failure Modes
+### Four Failure Modes
 
 Cases and observed behavior: [configuration.md → Failure Modes](../../doc/configuration.md#failure-modes). Why each behaves the way it does — the rationale that matters when you're tempted to "improve" them in code:
 
@@ -125,8 +133,11 @@ Cases and observed behavior: [configuration.md → Failure Modes](../../doc/conf
 | Unknown overlay source → warning + drop | Almost always a typo or host/config mismatch. Silent-dropping would hide real bugs; throwing would punish a host that hasn't yet registered an optional overlay. The `config.log` warning splits the difference. |
 | Known overlay returns `undefined` → silent drop | Legitimate "value not present" state, matching env-var semantics. A required-field violation surfaces at connection-build time (lazy, at lookup), not here — keeping the resolver out of policy decisions about what's required. |
 | Unresolved reference in a `default` → silent drop | A default is a hint, not a requirement. "No default applicable" is a normal terminal state, not a failure. |
+| Async overlay used in a sync-only slot → loud warning + drop | A construction-time peek can't `await`. This is misuse rather than absence, so silent drop would hide a wiring bug; throwing would brittly couple to a stack the host might still be assembling. The loud warning gets the host's attention while keeping construction infallible. Applies to `configURL` and to top-level string references like `manifestPath`. |
 
 Consequence: cases 2 and 3 make "typo'd env var" and "legitimately unset env var" indistinguishable. Matches today's behavior. Typo detection would need the resolver to know which properties are required by which factory — not worth crossing that line.
+
+Case 1 fires at *construction time* for top-level references (resolved in `prepareConfig`) and at *first lookup* for connection-property references (resolved in `buildManagedLookup`). This is a consequence of when each kind is consumed — not a behavior to "unify."
 
 ## Property Defaults vs. `includeDefaultConnections`
 
@@ -180,16 +191,34 @@ This is why `MalloyConfig.connections` is defined as a getter, not a readonly fi
 
 VS Code uses this to layer settings connections below the config layer. Publisher uses it to attach session-specific behavior to resolved connections.
 
-## `releaseConnections`
+## `shutdown`
 
 User-facing description: [configuration.md → Releasing connections](../../doc/configuration.md#releasing-connections).
+
+`Runtime.shutdown(connections)` and `MalloyConfig.shutdown(connections)` apply
+one of two policies to every connection in the lazy `name → Connection`
+cache:
+
+- `'close'` (default) — destructive. Walks the cache and calls
+  `Connection.close()` on each, then drops the cache. Subsequent operations
+  on those Connection objects may fail. Use at real shutdown: process exit,
+  extension deactivate, config-file change.
+
+- `'idle'` — reversible. Walks the cache and calls `Connection.idle()` on
+  each. The cache is preserved so the same Connection objects are reused on
+  next lookup; schema cache and other in-process state survive. The next
+  operation transparently reattaches whatever backend resources `idle()`
+  released. Use this between operations in long-lived hosts (a VS Code
+  extension, an MCP server, anything that builds Runtimes per request) so
+  that other writers can claim resources during idle gaps.
 
 Implementation specifics:
 
 - `MalloyConfig` owns no connection resources directly — pools, sockets, file handles all live inside individual `Connection` objects. What the managed lookup owns is a lazily-populated `name → Connection` cache.
-- `releaseConnections()` walks that cache and calls `Connection.close()` on each. Connections that were never looked up were never constructed and are skipped.
-- Wrappers installed via `wrapConnections()` don't interfere — the managed lookup under the wrap still holds the cache, and `runtime.releaseConnections()` forwards through to `config.releaseConnections()` directly, not through the wrap.
-- Legacy constructor forms (`new Runtime({connections})` / `new Runtime({connection})`) build a Runtime with no `MalloyConfig` to forward to; `releaseConnections()` is a no-op and the caller owns whatever they passed in.
+- Connections that were never looked up were never constructed and are skipped by both modes.
+- Wrappers installed via `wrapConnections()` don't interfere — the managed lookup under the wrap still holds the cache, and `runtime.shutdown(...)` forwards through to `config.shutdown(...)` directly, not through the wrap.
+- Legacy constructor forms (`new Runtime({connections})` / `new Runtime({connection})`) build a Runtime with no `MalloyConfig` to forward to; `shutdown()` is a no-op and the caller owns whatever they passed in.
+- `releaseConnections()` is preserved as a deprecated alias for `shutdown('close')`. Existing callers continue to work; new code should call `shutdown(...)` directly.
 
 ## Discovery
 
@@ -216,7 +245,7 @@ URL-based (not filesystem-based) so the helper works in browser-safe environment
 ## Testing Notes
 
 - `config.spec.ts` covers the constructor pipeline, section compilers, overlay resolution, property defaults, `includeDefaultConnections` fabrication (name-based skip), reference failure modes, and the manifest URL state table.
-- `runtime.spec.ts` covers the manifest lazy-read, explicit `buildManifest` wins, `EMPTY_BUILD_MANIFEST`, and `releaseConnections` forwarding.
+- `runtime.spec.ts` covers the manifest lazy-read, explicit `buildManifest` wins, `EMPTY_BUILD_MANIFEST`, and `shutdown` forwarding (close + idle modes; deprecated `releaseConnections` alias).
 - When adding a new backend with a registry default that references an overlay, add a test that the default is dropped (not errored) when the overlay is the no-op.
 
 ## Things That Look Like They Should Be Simple But Aren't
@@ -224,5 +253,5 @@ URL-based (not filesystem-based) so the helper works in browser-safe environment
 - **A single-key object isn't always a reference.** In `json`-typed slots and in `virtualMap`, it's literal data. The section-compiler boundary is what makes this safe.
 - **`manifestURL` computation uses `configURL`, not `rootDirectory`.** The manifest hangs off the config file's directory, not the project root. These are different URLs when the config file lives in a subdirectory.
 - **Property defaults run *after* overlay resolution of explicit values**, so a user who sets a property to a reference that resolves to `undefined` gets the same silent-drop as if they'd omitted the property — and then the default fills in. This is intentional and composes cleanly; don't "fix" it by conflating the phases.
-- **Reference resolution is deferred to `lookupConnection`.** `MalloyConfig`'s constructor stays sync and zero-IO so it's safe to build anywhere. Overlays with async dependencies (secret stores, session reads) get a natural async seam at lookup. A consequence: `config.log` is populated incrementally as connections are looked up — warnings for a never-used connection never appear.
+- **Connection-property reference resolution is deferred to `lookupConnection`.** `MalloyConfig`'s constructor stays sync and does no overlay IO for connection properties, so it's safe to build anywhere. Overlays with async dependencies (secret stores, session reads) get a natural async seam at lookup. A consequence: warnings about connection-property references arrive in `config.log` incrementally as connections are looked up — warnings for a never-used connection never appear. Top-level string references and `configURL` are the exceptions: they resolve synchronously at construction time and any warnings about them appear immediately.
 - **`wrapConnections` can be called multiple times.** Each wrap sees the previous wrap's result as `base`. Hosts that need ordered layering (VS Code's three-level resolution) rely on this.

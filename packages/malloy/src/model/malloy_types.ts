@@ -845,10 +845,7 @@ export function canOrderBy(s: string) {
  */
 
 export interface FieldBase
-  extends NamedObject,
-    Expression,
-    ResultMetadata,
-    HasAnnotation {
+  extends NamedObject, Expression, ResultMetadata, HasAnnotation {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
@@ -895,10 +892,7 @@ export interface BasicArrayTypeDef {
   elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef>;
 }
 export interface BasicArrayDef
-  extends BasicArrayTypeDef,
-    StructDefBase,
-    JoinBase,
-    FieldBase {
+  extends BasicArrayTypeDef, StructDefBase, JoinBase, FieldBase {
   type: 'array';
   join: 'many';
 }
@@ -988,10 +982,7 @@ export interface RecordTypeDef {
   fields: FieldDef[];
 }
 export interface RecordDef
-  extends RecordTypeDef,
-    StructDefBase,
-    JoinBase,
-    FieldBase {
+  extends RecordTypeDef, StructDefBase, JoinBase, FieldBase {
   type: 'record';
   join: 'one';
   queryTimezone?: string;
@@ -1020,10 +1011,7 @@ export interface RepeatedRecordTypeDef {
   fields: FieldDef[];
 }
 export interface RepeatedRecordDef
-  extends RepeatedRecordTypeDef,
-    StructDefBase,
-    JoinBase,
-    FieldBase {
+  extends RepeatedRecordTypeDef, StructDefBase, JoinBase, FieldBase {
   type: 'array';
   join: 'many';
   queryTimezone?: string;
@@ -1605,16 +1593,14 @@ export interface PersistableSourceProperties {
 }
 
 export interface SQLSourceDef
-  extends SourceDefBase,
-    PersistableSourceProperties {
+  extends SourceDefBase, PersistableSourceProperties {
   type: 'sql_select';
   selectStr: string;
   selectSegments?: SQLPhraseSegment[];
 }
 
 export interface QuerySourceDef
-  extends SourceDefBase,
-    PersistableSourceProperties {
+  extends SourceDefBase, PersistableSourceProperties {
   type: 'query_source';
   query: Query;
 }
@@ -2127,8 +2113,8 @@ export function isAtomic(
 }
 
 export interface SearchResultRow {
-  field_name: string; // eslint-disable-line camelcase
-  field_value: string; // eslint-disable-line camelcase
+  field_name: string;
+  field_value: string;
   weight: number;
 }
 

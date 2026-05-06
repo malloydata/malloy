@@ -464,7 +464,7 @@ export function attachDrillPaths(
           return updateNestedDrillPaths(f, nestName);
         }
         const fieldName =
-          f.type === 'fieldref' ? f.path[f.path.length - 1] : f.as ?? f.name;
+          f.type === 'fieldref' ? f.path[f.path.length - 1] : (f.as ?? f.name);
 
         return {
           ...f,

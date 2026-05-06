@@ -39,8 +39,7 @@ export function isStringCondition(sc: StringFilter): sc is StringCondition {
 }
 
 export interface StringCondition
-  extends FilterOperator<StringConditionOperator>,
-    Negatable {
+  extends FilterOperator<StringConditionOperator>, Negatable {
   values: string[];
 }
 
@@ -101,8 +100,7 @@ export function isBooleanFilter(bc: unknown): bc is BooleanFilter {
 export type NumberOperator = '<=' | '>=' | '!=' | '=' | '>' | '<';
 
 export interface NumberCondition
-  extends FilterOperator<NumberOperator>,
-    Negatable {
+  extends FilterOperator<NumberOperator>, Negatable {
   values: string[];
 }
 
@@ -226,15 +224,11 @@ export interface For extends FilterOperator<'for'>, Negatable, Duration {
 
 // N units starting in the past, including this one
 export interface in_last
-  extends FilterOperator<'in_last'>,
-    Negatable,
-    Duration {}
+  extends FilterOperator<'in_last'>, Negatable, Duration {}
 
 // Nunits starting in the past, not including this one
 export interface JustUnits
-  extends FilterOperator<'last' | 'next'>,
-    Negatable,
-    Duration {}
+  extends FilterOperator<'last' | 'next'>, Negatable, Duration {}
 
 export interface InMoment extends FilterOperator<'in'>, Negatable {
   in: Moment;

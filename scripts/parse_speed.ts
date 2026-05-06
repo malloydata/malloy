@@ -43,12 +43,11 @@ async function translate(fileSrc: string, fileURL: string) {
     const src = await readFile(filePath, {encoding: 'utf-8'});
     return src;
   };
-  const compiled = await Malloy.compile({
+  await Malloy.compile({
     urlReader: {readURL},
     connections: {lookupConnection},
     parse,
   });
-  compiled._modelDef;
 }
 
 function fullPath(fn: string): string {

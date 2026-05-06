@@ -112,6 +112,21 @@ export interface Connection extends InfoConnection {
 
   close(): Promise<void>;
 
+  /**
+   * Release expensive backend resources (file locks, sockets, sub-processes,
+   * pooled connections) but remain logically valid. The next operation
+   * transparently reattaches whatever was released; schema cache and other
+   * in-process state survive.
+   *
+   * The default is a no-op for backends that hold no release-able resources
+   * between operations. Backends that hold OS-level resources (DuckDB file
+   * locks, persistent socket pools) should override.
+   *
+   * Hosts that share a connection across concurrent operations should not
+   * call `idle()` while an operation is in flight.
+   */
+  idle(): Promise<void>;
+
   estimateQueryCost(sqlCommand: string): Promise<QueryRunStats>;
 
   fetchMetadata: () => Promise<ConnectionMetadata>;

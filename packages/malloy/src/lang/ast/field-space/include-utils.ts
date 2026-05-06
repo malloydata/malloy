@@ -176,7 +176,7 @@ export function processIncludeList(
       for (const f of item.fields) {
         const joinPath =
           f.name instanceof WildcardFieldReference
-            ? f.name.joinPath?.path ?? []
+            ? (f.name.joinPath?.path ?? [])
             : f.name.path.slice(0, -1);
         const joinState = getOrCreateIncludeStateForJoin(
           joinPath,
@@ -280,7 +280,7 @@ export function processIncludeList(
       for (const f of item.fields) {
         const joinPath =
           f instanceof WildcardFieldReference
-            ? f.joinPath?.path ?? []
+            ? (f.joinPath?.path ?? [])
             : f.path.slice(0, -1);
         const joinState = getOrCreateIncludeStateForJoin(
           joinPath,
