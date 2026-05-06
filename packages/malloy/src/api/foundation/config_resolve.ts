@@ -5,7 +5,9 @@
 
 import type {LogMessage} from '../../lang/parse-log';
 import {getRegisteredConnectionTypes} from '../../connection/registry';
-import type {ConfigDict} from './config_compile';
+import type {ConfigDict, ConfigNode} from './config_compile';
+import {isThenable} from './config_overlays';
+import type {ConfigOverlays} from './config_overlays';
 
 /**
  * The synchronous slice of config preparation. What the `MalloyConfig`
@@ -46,7 +48,8 @@ export interface PreparedConfig {
  */
 export function prepareConfig(
   compiled: ConfigDict,
-  _log: LogMessage[]
+  overlays: ConfigOverlays,
+  log: LogMessage[]
 ): PreparedConfig {
   let compiledConnections: Record<string, ConfigDict> = {};
   let manifestPath: string | undefined;
@@ -61,9 +64,12 @@ export function prepareConfig(
         break;
       }
       case 'manifestPath': {
-        if (node.kind === 'value' && typeof node.value === 'string') {
-          manifestPath = node.value;
-        }
+        manifestPath = resolveSyncStringSetting(
+          node,
+          overlays,
+          log,
+          'manifestPath'
+        );
         break;
       }
       case 'virtualMap': {
@@ -134,4 +140,50 @@ function fabricateMissingConnections(
       },
     };
   }
+}
+
+/**
+ * Resolve a top-level string setting that may be a literal or an overlay
+ * reference. Top-level scalars are read at construction time, so the overlay
+ * MUST resolve synchronously — same rule that applies to `configURL`. An
+ * overlay returning a Promise is a hard misuse: warn loudly and drop, so the
+ * application notices instead of silently losing the setting.
+ *
+ * Failure modes mirror connection-property resolution otherwise:
+ *   - unknown overlay source → warn + drop (case 1)
+ *   - overlay returns undefined → silent drop (case 2; falls back to default)
+ *   - non-string literal node → returns undefined (compile-time validation
+ *     already warned)
+ */
+function resolveSyncStringSetting(
+  node: ConfigNode,
+  overlays: ConfigOverlays,
+  log: LogMessage[],
+  settingName: string
+): string | undefined {
+  if (node.kind === 'value') {
+    return typeof node.value === 'string' ? node.value : undefined;
+  }
+  if (node.kind === 'reference') {
+    const overlay = overlays[node.source];
+    if (!overlay) {
+      log.push({
+        message: `unknown overlay source "${node.source}" for "${settingName}"`,
+        severity: 'warn',
+        code: 'config-overlay',
+      });
+      return undefined;
+    }
+    const v = overlay(node.path);
+    if (isThenable(v)) {
+      log.push({
+        message: `the \`${node.source}\` overlay returned a Promise for "${settingName}"; top-level string settings must resolve synchronously`,
+        severity: 'warn',
+        code: 'config-overlay',
+      });
+      return undefined;
+    }
+    return typeof v === 'string' ? v : undefined;
+  }
+  return undefined;
 }

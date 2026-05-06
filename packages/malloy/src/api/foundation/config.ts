@@ -15,7 +15,7 @@ import type {
 import {compileConfig} from './config_compile';
 import {prepareConfig} from './config_resolve';
 import {buildManagedLookup} from './config_lookup';
-import {defaultConfigOverlays} from './config_overlays';
+import {defaultConfigOverlays, isThenable} from './config_overlays';
 import type {ConfigOverlays} from './config_overlays';
 
 /**
@@ -222,7 +222,7 @@ export class MalloyConfig {
     // Reference resolution for connection properties is *not* done here —
     // it happens async at `lookupConnection` time, so overlays that touch
     // IO (secret stores, session reads) have a natural async seam.
-    const prepared = prepareConfig(compiled.compiled, log);
+    const prepared = prepareConfig(compiled.compiled, mergedOverlays, log);
 
     this._managedLookup = buildManagedLookup(
       prepared.compiledConnections,
@@ -435,14 +435,6 @@ function toVirtualMap(raw: unknown): VirtualMap | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as {then?: unknown}).then === 'function'
-  );
 }
 
 function isBuildManifestEntry(value: unknown): value is BuildManifestEntry {

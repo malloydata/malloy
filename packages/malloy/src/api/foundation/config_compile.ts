@@ -263,8 +263,15 @@ function compileManifestPath(
   value: unknown,
   log: LogMessage[]
 ): ConfigNode | undefined {
+  const ref = asReferenceShape(value);
+  if (ref !== undefined) return ref;
   if (typeof value !== 'string') {
-    log.push(makeWarning('manifestPath', '"manifestPath" should be a string'));
+    log.push(
+      makeWarning(
+        'manifestPath',
+        '"manifestPath" should be a string or an overlay reference'
+      )
+    );
     return undefined;
   }
   return {kind: 'value', value};

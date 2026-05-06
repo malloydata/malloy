@@ -40,11 +40,11 @@ Top-level keys:
 | Key | Purpose |
 |---|---|
 | `connections` | Named connection entries. Each has an `is` field naming a registered backend, plus backend-specific properties. |
-| `manifestPath` | Directory where the build manifest lives, relative to the config file. Defaults to `MANIFESTS`. |
+| `manifestPath` | Directory where the build manifest lives, relative to the config file. Defaults to `MANIFESTS`. May be a string literal or a sync-resolving overlay reference (e.g. `{"env": "MALLOY_MANIFEST_PATH"}`). |
 | `virtualMap` | URL rewrite rules for sources that reference virtual locations. Literal — no overlay expansion. |
 | `includeDefaultConnections` | If `true`, fabricate one entry per registered backend type not already listed. See below. |
 
-Any non-`json`-typed property value may be a reference instead of a literal (see [Overlay References](#overlay-references)).
+Any non-`json`-typed property value — both inside `connections` and at the top level (currently just `manifestPath`) — may be a reference instead of a literal. See [Overlay References](#overlay-references). Top-level references carry one extra constraint: the overlay must resolve synchronously, because these values are read at construction time.
 
 ## Overlay References
 
@@ -67,17 +67,25 @@ Hosts can register additional overlays — VS Code adds a `secret` overlay backe
 
 Overlays may be synchronous or asynchronous — an overlay's return type is `unknown | Promise<unknown>`. Use sync for purely in-memory sources (env vars, context dicts); use async for anything that touches IO (secret stores, session fetches, enterprise-injected values). Reference resolution is deferred to connection-lookup time (already async), so async overlays don't force the host to change anything else.
 
-**One exception.** The `config` overlay must resolve the `configURL` key synchronously. `manifestURL` is computed once in the `MalloyConfig` constructor from `configURL` + `manifestPath`, and that single peek is the one place overlay IO can't be awaited. If a host's `config` overlay returns a Promise for `configURL`, `MalloyConfig` pushes a warning to `config.log` and leaves `manifestURL` undefined (persistence silently stops working otherwise). Other keys in the `config` overlay — `rootDirectory`, host-specific context — can still be async; only `configURL` is sync-only.
+**Sync-only at the top level.** Two construction-time peeks are exempt from the deferred-resolution rule and must resolve synchronously:
+
+- Any top-level string setting written as a reference (currently `manifestPath: {env: "..."}` or similar).
+- The `configURL` key on the `config` overlay (set by the host, not by the user — see [`rootDirectory` vs. `configURL`](#rootdirectory-vs-configurl)).
+
+Both feed into `manifestURL`, which is computed once in the `MalloyConfig` constructor — and constructors can't `await`. If an overlay returns a Promise for one of these, `MalloyConfig` pushes a loud warning to `config.log` and drops the value; without the warning, persistence would silently stop working. Inside the `config` overlay, only `configURL` is sync-only — other keys (`rootDirectory`, host-specific context) can still be async because they're consumed at lookup time.
 
 ### Failure Modes
 
-References fail in three distinguishable ways, each handled differently:
+References fail in four distinguishable ways, each handled differently:
 
-1. **Unknown overlay source** (`{zzz: "foo"}` when no `zzz` overlay is registered) — logged as a warning to `config.log` when the affected connection is looked up (not at construction time); the property is dropped. Almost always a typo or host/config mismatch.
+1. **Unknown overlay source** (`{zzz: "foo"}` when no `zzz` overlay is registered) — logged as a warning to `config.log`; the property is dropped. Almost always a typo or host/config mismatch.
 2. **Known overlay returns `undefined`** (`{env: "MISSING_VAR"}` — env var unset) — silently dropped. Legitimate "value not present" state. If the dropped property was required, the connection factory complains when the connection is built (lazy, at lookup time), not at config-build time.
 3. **Unresolved reference inside a default** — silently dropped. Defaults are hints, not requirements.
+4. **Async overlay used in a sync-only slot** (e.g. `manifestPath: {secret: "X"}` when `secret` returns a Promise) — logged as a loud warning to `config.log` and dropped. Top-level string settings are read at construction time and can't `await`; this is misuse, not a missing value. The same rule applies to `configURL` on the host-supplied `config` overlay.
 
 A consequence: a typo'd env var and an unset env var are indistinguishable. This matches established behavior.
+
+Mode 1 fires at construction time for top-level references and at first lookup for connection-property references — a consequence of when each is resolved. Mode 4 only fires at construction time, since it's specific to the sync-only slots. Modes 2 and 3 are silent in both cases.
 
 ### The `json` Property Type
 
