@@ -102,6 +102,7 @@ export {
 export {Manifest, MalloyConfig} from './config';
 export type {FilesystemContext, MalloyConfigOptions} from './config';
 export type {Overlay, ConfigOverlays} from './config_overlays';
+export type {RuntimeContext} from './core';
 export {
   envOverlay,
   contextOverlay,

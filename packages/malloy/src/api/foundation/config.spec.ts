@@ -199,6 +199,22 @@ describe('MalloyConfig.log validation warnings', () => {
     expect(log[0].message).toContain('should be a string or an overlay');
   });
 
+  it('accepts valid finalizeGivens', () => {
+    expect(configLog({finalizeGivens: ['TENANT', 'USER_ROLE']})).toEqual([]);
+  });
+
+  it('warns when finalizeGivens is not an array of strings', () => {
+    const log = configLog({finalizeGivens: 'TENANT'});
+    expect(log).toHaveLength(1);
+    expect(log[0].message).toContain('should be an array of given names');
+  });
+
+  it('warns when finalizeGivens contains non-string entries', () => {
+    const log = configLog({finalizeGivens: ['TENANT', 42]});
+    expect(log).toHaveLength(1);
+    expect(log[0].message).toContain('should be an array of given names');
+  });
+
   it('returns no warnings for empty config', () => {
     expect(configLog({})).toEqual([]);
   });
@@ -255,6 +271,13 @@ describe('MalloyConfig constructor forms', () => {
   it('exposes givensPath as a readonly field', () => {
     const config = new MalloyConfig({givensPath: './givens.json'});
     expect(config.givensPath).toBe('./givens.json');
+  });
+
+  it('exposes finalizeGivens as a readonly field', () => {
+    const config = new MalloyConfig({
+      finalizeGivens: ['TENANT', 'REGION'],
+    });
+    expect(config.finalizeGivens).toEqual(['TENANT', 'REGION']);
   });
 
   it('exposes virtualMap converted to Map-of-Maps', () => {

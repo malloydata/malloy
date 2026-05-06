@@ -28,6 +28,7 @@ export interface PreparedConfig {
   compiledConnections: Record<string, ConfigDict>;
   manifestPath?: string;
   givensPath?: string;
+  finalizeGivens?: ReadonlyArray<string>;
   virtualMap?: unknown;
 }
 
@@ -55,6 +56,7 @@ export function prepareConfig(
   let compiledConnections: Record<string, ConfigDict> = {};
   let manifestPath: string | undefined;
   let givensPath: string | undefined;
+  let finalizeGivens: ReadonlyArray<string> | undefined;
   let virtualMap: unknown;
   let includeDefaultConnections = false;
 
@@ -83,6 +85,12 @@ export function prepareConfig(
         );
         break;
       }
+      case 'finalizeGivens': {
+        if (node.kind === 'value' && isStringArray(node.value)) {
+          finalizeGivens = node.value;
+        }
+        break;
+      }
       case 'virtualMap': {
         // virtualMap is a literal dict slot — compileVirtualMap never
         // produces a reference node. MalloyConfig converts the raw POJO
@@ -103,7 +111,17 @@ export function prepareConfig(
     fabricateMissingConnections(compiledConnections);
   }
 
-  return {compiledConnections, manifestPath, givensPath, virtualMap};
+  return {
+    compiledConnections,
+    manifestPath,
+    givensPath,
+    finalizeGivens,
+    virtualMap,
+  };
+}
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every(x => typeof x === 'string');
 }
 
 /**

@@ -59,6 +59,7 @@ const TOP_LEVEL_SECTIONS: Record<string, SectionCompiler> = {
   connections: compileConnections,
   manifestPath: compileManifestPath,
   givensPath: compileGivensPath,
+  finalizeGivens: compileFinalizeGivens,
   virtualMap: compileVirtualMap,
   includeDefaultConnections: compileIncludeDefaultConnections,
 };
@@ -290,6 +291,22 @@ function compileGivensPath(
       makeWarning(
         'givensPath',
         '"givensPath" should be a string or an overlay reference'
+      )
+    );
+    return undefined;
+  }
+  return {kind: 'value', value};
+}
+
+function compileFinalizeGivens(
+  value: unknown,
+  log: LogMessage[]
+): ConfigNode | undefined {
+  if (!Array.isArray(value) || !value.every(v => typeof v === 'string')) {
+    log.push(
+      makeWarning(
+        'finalizeGivens',
+        '"finalizeGivens" should be an array of given names'
       )
     );
     return undefined;

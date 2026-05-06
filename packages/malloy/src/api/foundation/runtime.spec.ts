@@ -269,6 +269,54 @@ describe('Runtime givens resolution', () => {
   });
 });
 
+describe('Runtime constructor givens + runtime.givens getter', () => {
+  it('runtime.givens reflects the constructor `givens:` option', () => {
+    const runtime = new Runtime({
+      connection: mockConnection('mock'),
+      givens: {TENANT: 'acme', MAX_ROWS: 100},
+    });
+    expect([...runtime.givens.entries()]).toEqual([
+      ['TENANT', 'acme'],
+      ['MAX_ROWS', 100],
+    ]);
+  });
+
+  it('runtime.givens is empty when no constructor option is supplied', () => {
+    const runtime = new Runtime({connection: mockConnection('mock')});
+    expect(runtime.givens.size).toBe(0);
+  });
+
+  it('runtime.givens does NOT include file-loaded values', async () => {
+    // The getter is the constructor-supplied diagnostic surface only.
+    // File values are accessed via `_resolveGivens()` (async) and merged
+    // into each compile, but they are not surfaced via `runtime.givens`.
+    const configURL = 'file:///home/user/project/malloy-config.json';
+    const givensURL = 'file:///home/user/project/local-givens.json';
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL}
+    );
+    const {reader} = countingReader({[givensURL]: {TENANT: 'acme'}});
+    const conn = mockConnection('mock');
+    const runtime = new Runtime({
+      config,
+      urlReader: reader,
+      connections: {lookupConnection: () => Promise.resolve(conn)},
+      givens: {USER_ROLE: 'admin'},
+    });
+
+    // Constructor-only.
+    expect([...runtime.givens.entries()]).toEqual([['USER_ROLE', 'admin']]);
+
+    // File-loaded values appear via the async resolve path.
+    const fileResolved = await runtime._resolveGivens();
+    expect(fileResolved).toEqual({TENANT: 'acme'});
+
+    // The getter is unaffected by the file read.
+    expect([...runtime.givens.entries()]).toEqual([['USER_ROLE', 'admin']]);
+  });
+});
+
 describe('Runtime.shutdown / MalloyConfig.shutdown', () => {
   function buildRuntimeWithMockConnections(): {
     runtime: Runtime;

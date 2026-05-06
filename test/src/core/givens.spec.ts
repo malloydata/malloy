@@ -498,3 +498,286 @@ describe('givens — per-runtime supply via givensPath (Stage 4b)', () => {
     );
   });
 });
+
+describe('givens — Runtime constructor `givens:` option (Stage 4c/4d)', () => {
+  test('constructor givens supply values when no per-query supply is given', async () => {
+    const r = new Runtime({
+      connections: {
+        lookupConnection: () => Promise.resolve(runtime.connection),
+      },
+      givens: {STATE: 'CA'},
+    });
+    const result = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given: STATE :: string
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .run();
+    expect(result.data.path(0, 'state').value).toBe('CA');
+  });
+
+  test('per-query supply wins over constructor givens (per-key)', async () => {
+    const r = new Runtime({
+      connections: {
+        lookupConnection: () => Promise.resolve(runtime.connection),
+      },
+      givens: {STATE: 'CA'},
+    });
+    const result = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given: STATE :: string
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .run({givens: {STATE: 'NV'}});
+    expect(result.data.path(0, 'state').value).toBe('NV');
+  });
+
+  test('constructor givens win over file givens (per-key)', async () => {
+    const configURL = 'file:///test-givens/malloy-config.json';
+    const givensURL = 'file:///test-givens/local-givens.json';
+    const reader: URLReader = {
+      async readURL(url: URL): Promise<string> {
+        if (url.toString() !== givensURL) {
+          throw new Error(`Not found: ${url.toString()}`);
+        }
+        return JSON.stringify({STATE: 'CA'});
+      },
+    };
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL}
+    );
+    const r = new Runtime({
+      config,
+      urlReader: reader,
+      connections: {
+        lookupConnection: () => Promise.resolve(runtime.connection),
+      },
+      givens: {STATE: 'NV'}, // overrides file's 'CA'
+    });
+    const result = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given: STATE :: string
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .run();
+    expect(result.data.path(0, 'state').value).toBe('NV');
+  });
+});
+
+describe('givens — finalizeGivens (Stage 4e)', () => {
+  function runtimeWithFinalize(opts: {
+    finalizeGivens: string[];
+    constructorGivens?: Record<string, GivenValue>;
+    fileGivens?: Record<string, GivenValue>;
+  }) {
+    const configURL = 'file:///test-givens/malloy-config.json';
+    const givensURL = 'file:///test-givens/local-givens.json';
+    const reader: URLReader = {
+      async readURL(url: URL): Promise<string> {
+        if (url.toString() !== givensURL) {
+          throw new Error(`Not found: ${url.toString()}`);
+        }
+        return JSON.stringify(opts.fileGivens ?? {});
+      },
+    };
+    const configPojo: Record<string, unknown> = {
+      finalizeGivens: opts.finalizeGivens,
+    };
+    if (opts.fileGivens) {
+      configPojo['givensPath'] = './local-givens.json';
+    }
+    const config = new MalloyConfig(configPojo, {configURL});
+    return new Runtime({
+      config,
+      urlReader: reader,
+      connections: {
+        lookupConnection: () => Promise.resolve(runtime.connection),
+      },
+      givens: opts.constructorGivens,
+    });
+  }
+
+  test('per-query supply for a finalized given throws at API entry', async () => {
+    const r = runtimeWithFinalize({
+      finalizeGivens: ['STATE'],
+      constructorGivens: {STATE: 'CA'},
+    });
+    await expect(
+      r
+        .loadModel(
+          `
+          ##! experimental.givens
+          given: STATE :: string
+          query: q is duckdb.table('malloytest.state_facts') -> {
+            where: state = $STATE
+            group_by: state
+          }
+        `
+        )
+        .loadQueryByName('q')
+        .run({givens: {STATE: 'NV'}})
+    ).rejects.toThrow(
+      /'STATE'.*finalized at the runtime layer.*finalizeGivens/
+    );
+  });
+
+  test('finalized given still drives the query when supplied per-runtime', async () => {
+    const r = runtimeWithFinalize({
+      finalizeGivens: ['STATE'],
+      constructorGivens: {STATE: 'CA'},
+    });
+    const result = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given: STATE :: string
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .run();
+    expect(result.data.path(0, 'state').value).toBe('CA');
+  });
+
+  test('Model.givens filters out finalized names', async () => {
+    const r = runtimeWithFinalize({
+      finalizeGivens: ['STATE'],
+      constructorGivens: {STATE: 'CA'},
+    });
+    const model = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given:
+          STATE :: string
+          MIN_AIRPORTS :: number is 100
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE and airport_count >= $MIN_AIRPORTS
+          group_by: state
+        }
+      `
+      )
+      .getModel();
+    const surfaceNames = [...model.givens.keys()];
+    expect(surfaceNames).toContain('MIN_AIRPORTS');
+    expect(surfaceNames).not.toContain('STATE');
+  });
+
+  test('PreparedQuery.givens filters out finalized names (cascades from Model)', async () => {
+    const r = runtimeWithFinalize({
+      finalizeGivens: ['STATE'],
+      constructorGivens: {STATE: 'CA'},
+    });
+    const pq = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given:
+          STATE :: string
+          MIN_AIRPORTS :: number is 100
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE and airport_count >= $MIN_AIRPORTS
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .getPreparedQuery();
+    const surfaceNames = [...pq.givens.keys()];
+    expect(surfaceNames).toContain('MIN_AIRPORTS');
+    expect(surfaceNames).not.toContain('STATE');
+  });
+
+  test('finalizeGivens with no resolved value throws when a query needs it', async () => {
+    const r = runtimeWithFinalize({
+      finalizeGivens: ['STATE'],
+      // no constructor or file givens — finalize set is unsatisfied
+    });
+    await expect(
+      r
+        .loadModel(
+          `
+          ##! experimental.givens
+          given: STATE :: string is "X"
+          query: q is duckdb.table('malloytest.state_facts') -> {
+            where: state = $STATE
+            group_by: state
+          }
+        `
+        )
+        .loadQueryByName('q')
+        .run()
+    ).rejects.toThrow(/finalized given.*no resolved value.*STATE/);
+  });
+
+  test('unsatisfied finalize entry does NOT block a query that does not reference it', async () => {
+    // The shared-config case: one project's config covers many .malloy
+    // files. Files declare overlapping but distinct given sets. A
+    // finalize entry that some other file needs shouldn't stop a query
+    // here that doesn't touch it.
+    const r = runtimeWithFinalize({
+      finalizeGivens: ['UNUSED_BY_THIS_QUERY'],
+      // no value supplied — but the query below doesn't reference it.
+    });
+    const result = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given: UNUSED_BY_THIS_QUERY :: string is "X"
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .run();
+    // Query just runs. No throw.
+    expect(result.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('finalizeGivens entries can be satisfied by file values', async () => {
+    const r = runtimeWithFinalize({
+      finalizeGivens: ['STATE'],
+      fileGivens: {STATE: 'CA'},
+    });
+    const result = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given: STATE :: string
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .run();
+    expect(result.data.path(0, 'state').value).toBe('CA');
+  });
+});

@@ -228,6 +228,20 @@ export class MalloyConfig {
    * configured; Runtime treats that as "no per-runtime givens layer."
    */
   readonly givensURL?: string;
+  /**
+   * Surface names of givens that the runtime locks. Locked givens cannot
+   * be overridden via per-query supply (`.run({givens: {X: ...}})` for a
+   * locked X throws at API entry) and are filtered out of `Model.givens`
+   * / `PreparedQuery.givens` introspection so UIs don't render editors
+   * for them. Security primitive — multi-tenant deployments lock the
+   * tenant identifier so a downstream endpoint that accidentally accepts
+   * caller-controlled overrides can't leak across tenants.
+   *
+   * Validation that every locked name has a resolved value (file +
+   * constructor) happens lazily at the first compile that needs givens,
+   * since the `givensURL` file read is async.
+   */
+  readonly finalizeGivens?: ReadonlyArray<string>;
   readonly log: readonly LogMessage[];
 
   private _connections: LookupConnection<Connection>;
@@ -325,6 +339,7 @@ export class MalloyConfig {
     this.manifestURL = computeManifestURL(prepared.manifestPath, configURL);
     this.givensPath = prepared.givensPath;
     this.givensURL = computeGivensURL(prepared.givensPath, configURL, log);
+    this.finalizeGivens = prepared.finalizeGivens;
     this.log = log;
   }
 

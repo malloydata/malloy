@@ -1008,6 +1008,22 @@ export class ExploreField extends Explore {
 // Model
 // =============================================================================
 
+/**
+ * Runtime-aware concerns layered onto a `Model` after it leaves the
+ * compiler. `Malloy.compile()` returns a `Model` with no context; a
+ * `Runtime.loadModel()` decoration attaches the runtime's context so
+ * context-sensitive views (currently `Model.givens` filtering finalized
+ * names; in future, tenant overrides / session bindings / etc.) work
+ * correctly. New runtime-aware concerns add a field here rather than a
+ * parallel constructor parameter.
+ */
+export interface RuntimeContext {
+  /** Surface names of givens locked at the runtime layer (from
+   *  `config.finalizeGivens`). Filtered out of `Model.givens` so
+   *  introspection-driven UIs don't render editors for them. */
+  readonly finalizedGivens?: ReadonlySet<string>;
+}
+
 export class Model implements Taggable {
   private readonly references: ReferenceList;
   private _queryModel?: QueryModel;
@@ -1017,7 +1033,13 @@ export class Model implements Taggable {
     private modelDef: ModelDef,
     readonly problems: LogMessage[],
     readonly fromSources: string[],
-    existingQueryModel?: QueryModel
+    existingQueryModel?: QueryModel,
+    /**
+     * Runtime-aware context layered onto this Model. `Malloy.compile()`
+     * leaves it undefined; `Runtime.loadModel()` paths attach the
+     * runtime's context so methods like `Model.givens` filter correctly.
+     */
+    private readonly runtimeContext?: RuntimeContext
   ) {
     this.references = new ReferenceList(
       fromSources[0] ?? '',
@@ -1068,6 +1090,7 @@ export class Model implements Taggable {
     if (!givens) return out;
     for (const [surfaceName, entry] of this.contentsMap) {
       if (entry.type !== 'given') continue;
+      if (this.runtimeContext?.finalizedGivens?.has(surfaceName)) continue;
       const decl = givens[entry.id];
       if (!decl) continue;
       out.set(surfaceName, new Given(surfaceName, entry.id, decl));
