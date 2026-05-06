@@ -152,19 +152,20 @@ export class ImportStatement
                 importedModel.contents,
                 srcName
               );
+              // Non-selective collision: an entry would shadow something
+              // already in the importer's namespace (a local declaration or
+              // an entry brought in by a previous import). Selective
+              // collisions are caught by the per-item check at the top of
+              // the loop; here we re-check because the auto-surface path
+              // bypasses that loop. Applies to every entry kind.
+              if (!pickedNames && doc.getEntry(dstName)) {
+                this.logError(
+                  'name-conflict-on-indiscriminate-import',
+                  `Cannot redefine '${dstName}'`
+                );
+                continue;
+              }
               if (sourceEntry?.type === 'given') {
-                // Non-selective collision: a given would shadow an entry
-                // already in the importer's namespace. Selective collisions
-                // are caught by the per-item check at the top of the loop;
-                // here we re-check because the auto-surface path bypasses
-                // that loop.
-                if (!pickedNames && doc.getEntry(dstName)) {
-                  this.logError(
-                    'name-conflict-on-indiscriminate-import',
-                    `Cannot redefine '${dstName}'`
-                  );
-                  continue;
-                }
                 const givenEntry: GivenEntry = {
                   type: 'given',
                   name: dstName,
