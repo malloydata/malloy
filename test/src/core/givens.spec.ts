@@ -266,6 +266,96 @@ describe('givens — runtime supply path (Stage 4)', () => {
     expect(r.data.path(0, 'ct').value).toBe(1);
   });
 
+  test('string array given accepts a JS array', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: ROLES :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }
+    `);
+    // Binding succeeds; query doesn't reference $ROLES so just runs.
+    const r = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLES: ['admin', 'viewer']}});
+    expect(r.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('record given accepts a JS object with matching keys', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: SESSION :: { user_id :: string, tenant :: string }
+      query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }
+    `);
+    const r = await model
+      .loadQueryByName('q')
+      .run({givens: {SESSION: {user_id: 'alice', tenant: 'acme'}}});
+    expect(r.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('array-of-records given accepts a JS array of objects', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: USERS :: { name :: string, age :: number }[]
+      query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }
+    `);
+    const r = await model.loadQueryByName('q').run({
+      givens: {
+        USERS: [
+          {name: 'alice', age: 30},
+          {name: 'bob', age: 25},
+        ],
+      },
+    });
+    expect(r.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('compound given: type mismatch at depth includes a path', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: SESSION :: { user_id :: string, tenant :: string }
+      query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }
+    `);
+    await expect(
+      model
+        .loadQueryByName('q')
+        .run({givens: {SESSION: {user_id: 42, tenant: 'acme'}}})
+    ).rejects.toThrow(/SESSION\.user_id.*expected string.*got number/);
+  });
+
+  test('record given: missing key throws with the missing path', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: SESSION :: { user_id :: string, tenant :: string }
+      query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }
+    `);
+    await expect(
+      model.loadQueryByName('q').run({givens: {SESSION: {user_id: 'alice'}}})
+    ).rejects.toThrow(/SESSION\.tenant.*missing required key/);
+  });
+
+  test('record given: extra key throws with the unexpected path', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: SESSION :: { user_id :: string, tenant :: string }
+      query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }
+    `);
+    await expect(
+      model.loadQueryByName('q').run({
+        givens: {SESSION: {user_id: 'alice', tenant: 'acme', extra: 'x'}},
+      })
+    ).rejects.toThrow(/SESSION\.extra.*unexpected key/);
+  });
+
+  test('array given: outer-shape mismatch (got string)', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: ROLES :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }
+    `);
+    await expect(
+      model.loadQueryByName('q').run({givens: {ROLES: 'admin'}})
+    ).rejects.toThrow(/ROLES.*expected array.*got string/);
+  });
+
   test('filter<T> given supplies a Malloy filter expression', async () => {
     const model = runtime.loadModel(`
       ##! experimental.givens

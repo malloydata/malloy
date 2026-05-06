@@ -2246,6 +2246,42 @@ export const TD = {
     return isTemporalType(typ);
   },
   isError: (td: UTD): td is ErrorTypeDef => td?.type === 'error',
+  /**
+   * Strip non-type metadata (name, joins, expressionType, evalSpace, ...)
+   * off a typed def, leaving a clean AtomicTypeDef. Used when copying a
+   * field's type onto an Expr's typeDef, where the field metadata would
+   * pollute the IR. Returns `{type: 'error'}` for non-atomic inputs.
+   */
+  atomicDef(td: UTD): AtomicTypeDef {
+    if (!TD.isAtomic(td)) return {type: 'error'};
+    switch (td.type) {
+      case 'array':
+        return isRepeatedRecord(td)
+          ? {
+              type: 'array',
+              elementTypeDef: td.elementTypeDef,
+              fields: td.fields,
+            }
+          : {type: 'array', elementTypeDef: td.elementTypeDef};
+      case 'record':
+        return {type: 'record', fields: td.fields};
+      case 'number':
+        return td.numberType
+          ? {type: 'number', numberType: td.numberType}
+          : {type: 'number'};
+      case 'sql native':
+        return td.rawType
+          ? {type: 'sql native', rawType: td.rawType}
+          : {type: 'sql native'};
+      case 'timestamp':
+      case 'timestamptz':
+        return td.timeframe
+          ? {type: td.type, timeframe: td.timeframe}
+          : {type: td.type};
+      default:
+        return {type: td.type};
+    }
+  },
   eq(x: UTD, y: UTD): boolean {
     if (x === undefined || y === undefined) {
       return false;

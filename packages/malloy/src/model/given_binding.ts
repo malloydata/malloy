@@ -5,12 +5,15 @@
 
 import {DateTime} from 'luxon';
 import {closestMatch} from '../util/closest_match';
+import {isRepeatedRecord, mkSafeRecord, TD} from './malloy_types';
 import type {
+  AtomicTypeDef,
   Expr,
   GivenID,
   GivenTypeDef,
   GivenValue,
   ModelDef,
+  SafeRecord,
 } from './malloy_types';
 
 export function resolveSuppliedGivens(
@@ -49,7 +52,7 @@ export function resolveSuppliedGivens(
 }
 
 function valueToExpr(
-  name: string,
+  path: string,
   type: GivenTypeDef,
   value: GivenValue
 ): Expr {
@@ -60,7 +63,7 @@ function valueToExpr(
     case 'string': {
       if (typeof value !== 'string') {
         throw new TypeError(
-          `givens.${name}: expected string, got ${describeJs(value)}`
+          `givens.${path}: expected string, got ${describeJs(value)}`
         );
       }
       return {node: 'stringLiteral', literal: value};
@@ -70,7 +73,7 @@ function valueToExpr(
       if (typeof value === 'number') {
         if (!Number.isFinite(value)) {
           throw new TypeError(
-            `givens.${name}: number must be finite, got ${value}`
+            `givens.${path}: number must be finite, got ${value}`
           );
         }
         lit = String(value);
@@ -79,13 +82,13 @@ function valueToExpr(
       } else if (typeof value === 'string') {
         if (!/^-?(\d+(\.\d+)?|\.\d+)([eE][+-]?\d+)?$/.test(value)) {
           throw new TypeError(
-            `givens.${name}: number-as-string must be numeric, got '${value}'`
+            `givens.${path}: number-as-string must be numeric, got '${value}'`
           );
         }
         lit = value;
       } else {
         throw new TypeError(
-          `givens.${name}: expected number | bigint | string, got ${describeJs(value)}`
+          `givens.${path}: expected number | bigint | string, got ${describeJs(value)}`
         );
       }
       return {node: 'numberLiteral', literal: lit};
@@ -93,7 +96,7 @@ function valueToExpr(
     case 'boolean': {
       if (typeof value !== 'boolean') {
         throw new TypeError(
-          `givens.${name}: expected boolean, got ${describeJs(value)}`
+          `givens.${path}: expected boolean, got ${describeJs(value)}`
         );
       }
       return {node: value ? 'true' : 'false'};
@@ -101,12 +104,12 @@ function valueToExpr(
     case 'date': {
       if (typeof value !== 'string') {
         throw new TypeError(
-          `givens.${name}: expected ISO date string 'YYYY-MM-DD', got ${describeJs(value)}`
+          `givens.${path}: expected ISO date string 'YYYY-MM-DD', got ${describeJs(value)}`
         );
       }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
         throw new TypeError(
-          `givens.${name}: date must match 'YYYY-MM-DD', got '${value}'`
+          `givens.${path}: date must match 'YYYY-MM-DD', got '${value}'`
         );
       }
       return {node: 'dateLiteral', literal: value, typeDef: {type: 'date'}};
@@ -118,12 +121,12 @@ function valueToExpr(
       // emit canonical "YYYY-MM-DD HH:MM:SS.sss" for the dialect.
       if (typeof value !== 'string') {
         throw new TypeError(
-          `givens.${name}: expected ISO timestamp string (no offset), got ${describeJs(value)}`
+          `givens.${path}: expected ISO timestamp string (no offset), got ${describeJs(value)}`
         );
       }
       if (/Z$|[+-]\d{2}:?\d{2}$/.test(value)) {
         throw new TypeError(
-          `givens.${name}: 'timestamp' is naive — use 'timestamptz' for offset/zoned values, got '${value}'`
+          `givens.${path}: 'timestamp' is naive — use 'timestamptz' for offset/zoned values, got '${value}'`
         );
       }
       // ISO uses T-separator; SQL form uses space. Accept both.
@@ -131,7 +134,7 @@ function valueToExpr(
       if (!dt.isValid) dt = DateTime.fromSQL(value, {zone: 'utc'});
       if (!dt.isValid) {
         throw new TypeError(
-          `givens.${name}: invalid timestamp value '${value}': ${dt.invalidReason ?? 'unknown'}`
+          `givens.${path}: invalid timestamp value '${value}': ${dt.invalidReason ?? 'unknown'}`
         );
       }
       return {
@@ -149,12 +152,12 @@ function valueToExpr(
         if (dt.isValid) dt = dt.toUTC();
       } else {
         throw new TypeError(
-          `givens.${name}: expected JS Date or ISO timestamptz string, got ${describeJs(value)}`
+          `givens.${path}: expected JS Date or ISO timestamptz string, got ${describeJs(value)}`
         );
       }
       if (!dt.isValid) {
         throw new TypeError(
-          `givens.${name}: invalid timestamptz value '${value}': ${dt.invalidReason ?? 'unknown'}`
+          `givens.${path}: invalid timestamptz value '${value}': ${dt.invalidReason ?? 'unknown'}`
         );
       }
       return {
@@ -167,25 +170,72 @@ function valueToExpr(
     case 'filter expression': {
       if (typeof value !== 'string') {
         throw new TypeError(
-          `givens.${name}: filter<T> givens require a JS string of Malloy filter source, got ${describeJs(value)}`
+          `givens.${path}: filter<T> givens require a JS string of Malloy filter source, got ${describeJs(value)}`
         );
       }
       return {node: 'filterLiteral', filterSrc: value};
     }
-    case 'array':
-    case 'record':
-      throw new Error(
-        `givens.${name}: array and record types are not yet supported in the API binding`
+    case 'array': {
+      if (!Array.isArray(value)) {
+        throw new TypeError(
+          `givens.${path}: expected array, got ${describeJs(value)}`
+        );
+      }
+      // RepeatedRecord (array of records) carries `record_element` as its
+      // element type and the record's schema in `fields`. Each element is
+      // a record of that schema. BasicArray carries a non-record element
+      // type directly.
+      const elemType: AtomicTypeDef = isRepeatedRecord(type)
+        ? {type: 'record', fields: type.fields}
+        : type.elementTypeDef;
+      const values = value.map((el, i) =>
+        valueToExpr(`${path}[${i}]`, elemType, el)
       );
+      return {node: 'arrayLiteral', kids: {values}, typeDef: type};
+    }
+    case 'record': {
+      if (
+        typeof value !== 'object' ||
+        Array.isArray(value) ||
+        value instanceof Date
+      ) {
+        throw new TypeError(
+          `givens.${path}: expected object, got ${describeJs(value)}`
+        );
+      }
+      const obj = value;
+      const declared = new Set(type.fields.map(f => f.name));
+      for (const k of Object.keys(obj)) {
+        if (!declared.has(k)) {
+          throw new TypeError(
+            `givens.${path}.${k}: unexpected key (not in record type [${[...declared].join(', ')}])`
+          );
+        }
+      }
+      const kids: SafeRecord<Expr> = mkSafeRecord();
+      for (const field of type.fields) {
+        if (!(field.name in obj)) {
+          throw new TypeError(
+            `givens.${path}.${field.name}: missing required key`
+          );
+        }
+        kids[field.name] = valueToExpr(
+          `${path}.${field.name}`,
+          TD.atomicDef(field),
+          obj[field.name]
+        );
+      }
+      return {node: 'recordLiteral', kids, typeDef: type};
+    }
     case 'json':
     case 'sql native':
     case 'error':
-      throw new Error(`givens.${name}: type '${type.type}' is not bindable`);
+      throw new Error(`givens.${path}: type '${type.type}' is not bindable`);
     default: {
       // Exhaustiveness: future GivenTypeDef additions will trip this.
       const _x: never = type;
       throw new Error(
-        `givens.${name}: unhandled given type ${JSON.stringify(_x)}`
+        `givens.${path}: unhandled given type ${JSON.stringify(_x)}`
       );
     }
   }
