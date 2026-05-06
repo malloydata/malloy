@@ -153,10 +153,18 @@ export class ImportStatement
                 srcName
               );
               if (sourceEntry?.type === 'given') {
-                // Per design: givens do NOT auto-surface through
-                // non-selective `import "..."`. They only land in the
-                // importer's namespace via explicit `import { NAME }`.
-                if (!pickedNames) continue;
+                // Non-selective collision: a given would shadow an entry
+                // already in the importer's namespace. Selective collisions
+                // are caught by the per-item check at the top of the loop;
+                // here we re-check because the auto-surface path bypasses
+                // that loop.
+                if (!pickedNames && doc.getEntry(dstName)) {
+                  this.logError(
+                    'name-conflict-on-indiscriminate-import',
+                    `Cannot redefine '${dstName}'`
+                  );
+                  continue;
+                }
                 const givenEntry: GivenEntry = {
                   type: 'given',
                   name: dstName,

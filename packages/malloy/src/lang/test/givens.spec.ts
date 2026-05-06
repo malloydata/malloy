@@ -595,33 +595,26 @@ describe('given: imports', () => {
     }
   });
 
-  test('non-selective import does NOT auto-surface givens', () => {
-    // Per design, `import "child"` brings sources/queries but not givens.
-    expect(
-      importTest(
-        `
+  test('non-selective import auto-surfaces givens under their original name', () => {
+    // `import "child"` brings child's sources, queries, AND givens — each
+    // surfacing under the name child declared.
+    const t = importTest(
+      `
         ##! experimental.givens
         import "child"
         run: a -> { where: astr = $TENANT; select: * }
       `,
-        `
+      `
         ##! experimental.givens
         given: TENANT :: string is "acme"
       `
-      )
-    ).toLog(
-      errorMessage(
-        /`\$TENANT` references a given named `TENANT`, which is not declared/
-      )
     );
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    expect(md.contents['TENANT']?.type).toBe('given');
   });
 
-  test('non-selective import DOES copy givens into the local map', () => {
-    // The complement of the namespace test: even though `import "child"`
-    // doesn't surface givens to the namespace, every given declaration
-    // from child is copied into the importer's givens map. This is what
-    // lets imported sources/queries that reference `$X` resolve at SQL
-    // emission time.
+  test('non-selective import copies givens into the local map and the namespace', () => {
     const t = importTest(
       `
         ##! experimental.givens
@@ -636,10 +629,10 @@ describe('given: imports', () => {
     );
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
-    // Namespace stays clean (proven by the test above; spot-checked here).
-    expect(md.contents['TENANT']).toBeUndefined();
-    expect(md.contents['MAX_ROWS']).toBeUndefined();
-    // But every given declared in child appears in the importer's
+    // Both givens land in the importer's namespace under their original names.
+    expect(md.contents['TENANT']?.type).toBe('given');
+    expect(md.contents['MAX_ROWS']?.type).toBe('given');
+    // And every given declared in child appears in the importer's
     // givens map under the same id child assigned.
     const childT = t.childTranslators.get('internal://test/langtests/child');
     const childGivens = childT?.modelDef.givens ?? {};
@@ -648,6 +641,22 @@ describe('given: imports', () => {
       expect(md.givens?.[id]).toBeDefined();
       expect(md.givens?.[id]).toEqual(childGivens[id]);
     }
+  });
+
+  test('non-selective import collision with local declaration errors', () => {
+    expect(
+      importTest(
+        `
+          ##! experimental.givens
+          given: TENANT :: string is "local"
+          import "child"
+        `,
+        `
+          ##! experimental.givens
+          given: TENANT :: string is "child"
+        `
+      )
+    ).toLog(errorMessage(/Cannot redefine 'TENANT'/));
   });
 
   test('imported source can reference its own given via $ at use site', () => {
@@ -1642,11 +1651,9 @@ describe('given: Model.givens introspection', () => {
     expect(t?.tagParse().tag.text('label')).toBe('Tenant');
   });
 
-  test('non-selectively-imported (auto-surface skipped) given does NOT appear', () => {
-    // Per design: `import "child"` does not auto-surface givens. The
-    // declaration is still in `documentGivens` (so internal references
-    // resolve), but it is not callable from the importer's surface,
-    // so it is not in `model.givens`.
+  test('non-selectively-imported given appears in Model.givens under its original name', () => {
+    // `import "child"` auto-surfaces child's givens into the importer's
+    // namespace under their original names; Model.givens picks them up.
     const t = new TestTranslator(`
       ##! experimental.givens
       import "child"
@@ -1662,7 +1669,8 @@ describe('given: Model.givens introspection', () => {
     });
     expect(t).toTranslate();
     const model = new Model(t.translate().modelDef!, [], []);
-    expect(model.givens.size).toBe(0);
+    expect(model.givens.size).toBe(1);
+    expect(model.givens.get('TENANT')?.type).toEqual({type: 'string'});
   });
 
   test('Model.queryModel loads cleanly when contents has given entries', () => {
