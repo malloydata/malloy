@@ -146,6 +146,8 @@ function listItems(
         return c instanceof parser.IncludeFieldContext;
       case 'indexElement':
         return c instanceof parser.IndexElementContext;
+      case 'givenDef':
+        return c instanceof parser.GivenDefContext;
     }
   };
   const out: ParserRuleContext[] = [];
