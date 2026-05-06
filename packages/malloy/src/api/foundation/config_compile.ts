@@ -58,6 +58,7 @@ export type SectionCompiler = (
 const TOP_LEVEL_SECTIONS: Record<string, SectionCompiler> = {
   connections: compileConnections,
   manifestPath: compileManifestPath,
+  givensPath: compileGivensPath,
   virtualMap: compileVirtualMap,
   includeDefaultConnections: compileIncludeDefaultConnections,
 };
@@ -271,6 +272,24 @@ function compileManifestPath(
       makeWarning(
         'manifestPath',
         '"manifestPath" should be a string or an overlay reference'
+      )
+    );
+    return undefined;
+  }
+  return {kind: 'value', value};
+}
+
+function compileGivensPath(
+  value: unknown,
+  log: LogMessage[]
+): ConfigNode | undefined {
+  const ref = asReferenceShape(value);
+  if (ref !== undefined) return ref;
+  if (typeof value !== 'string') {
+    log.push(
+      makeWarning(
+        'givensPath',
+        '"givensPath" should be a string or an overlay reference'
       )
     );
     return undefined;

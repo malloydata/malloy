@@ -5,6 +5,9 @@
 
 import {runtimeFor} from '../runtimes';
 import {TestSelect} from '../test-select';
+import {MalloyConfig, Runtime} from '@malloydata/malloy';
+import type {URLReader} from '@malloydata/malloy';
+import type {GivenValue} from '@malloydata/malloy';
 
 const runtime = runtimeFor('duckdb');
 
@@ -371,5 +374,127 @@ describe('givens — runtime supply path (Stage 4)', () => {
       .run({givens: {STATE_F: 'CA, NV'}});
     const states = r.data.toObject().map(row => row['state']);
     expect(states.sort()).toEqual(['CA', 'NV']);
+  });
+});
+
+describe('givens — per-runtime supply via givensPath (Stage 4b)', () => {
+  // Build a Runtime backed by the duckdb test connection, but with a
+  // MalloyConfig pointing at an in-memory JSON file. The config + URLReader
+  // combination is what triggers the auto-read path under test.
+  function runtimeWithGivensFile(givensJSON: Record<string, GivenValue>) {
+    const configURL = 'file:///test-givens/malloy-config.json';
+    const givensURL = 'file:///test-givens/local-givens.json';
+    const reader: URLReader = {
+      async readURL(url: URL): Promise<string> {
+        if (url.toString() !== givensURL) {
+          throw new Error(`Not found: ${url.toString()}`);
+        }
+        return JSON.stringify(givensJSON);
+      },
+    };
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL}
+    );
+    return new Runtime({
+      config,
+      urlReader: reader,
+      connections: {
+        lookupConnection: () => Promise.resolve(runtime.connection),
+      },
+    });
+  }
+
+  test('per-runtime givens supply value when no per-query supply is given', async () => {
+    const r = runtimeWithGivensFile({STATE: 'CA'});
+    const result = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given: STATE :: string
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .run();
+    expect(result.data.path(0, 'state').value).toBe('CA');
+    expect(result.data.toObject().length).toBe(1);
+  });
+
+  test('per-query supply overrides per-runtime supply (per-key)', async () => {
+    const r = runtimeWithGivensFile({STATE: 'CA'});
+    const result = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given: STATE :: string
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .run({givens: {STATE: 'NV'}});
+    expect(result.data.path(0, 'state').value).toBe('NV');
+  });
+
+  test('per-runtime and per-query merge per-key when keys differ', async () => {
+    // The model declares two givens. Per-runtime supplies one, per-query
+    // supplies the other; both should land.
+    const r = runtimeWithGivensFile({STATE: 'CA'});
+    const result = await r
+      .loadModel(
+        `
+        ##! experimental.givens
+        given:
+          STATE :: string
+          MIN_AIRPORTS :: number
+        query: q is duckdb.table('malloytest.state_facts') -> {
+          where: state = $STATE and airport_count >= $MIN_AIRPORTS
+          group_by: state
+        }
+      `
+      )
+      .loadQueryByName('q')
+      .run({givens: {MIN_AIRPORTS: 1}});
+    expect(result.data.path(0, 'state').value).toBe('CA');
+  });
+
+  test('missing givens file throws on first compile with the URL in the message', async () => {
+    const configURL = 'file:///test-givens/malloy-config.json';
+    const reader: URLReader = {
+      async readURL(url: URL): Promise<string> {
+        throw new Error(`Not found: ${url.toString()}`);
+      },
+    };
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL}
+    );
+    const r = new Runtime({
+      config,
+      urlReader: reader,
+      connections: {
+        lookupConnection: () => Promise.resolve(runtime.connection),
+      },
+    });
+    await expect(
+      r
+        .loadModel(
+          `
+          ##! experimental.givens
+          given: STATE :: string is "CA"
+          query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }
+        `
+        )
+        .loadQueryByName('q')
+        .run()
+    ).rejects.toThrow(
+      /failed to read givens file at file:\/\/\/test-givens\/local-givens\.json/
+    );
   });
 });

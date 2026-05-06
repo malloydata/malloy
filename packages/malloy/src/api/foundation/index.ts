@@ -100,6 +100,7 @@ export {
 
 // Config and Manifest
 export {Manifest, MalloyConfig} from './config';
+export type {FilesystemContext, MalloyConfigOptions} from './config';
 export type {Overlay, ConfigOverlays} from './config_overlays';
 export {
   envOverlay,

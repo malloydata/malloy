@@ -170,14 +170,16 @@ if (configURL) {
 | Construction | `manifestURL` |
 |---|---|
 | Built by `discoverConfig` | computed from `configURL` + `manifestPath` |
-| POJO form with `contextOverlay({configURL})` by hand | computed |
-| POJO form with `contextOverlay({rootDirectory})` but no `configURL` | **undefined** |
-| POJO form, no overlays | **undefined** |
+| POJO form with `{configURL}` in options | computed |
+| POJO form with `{rootDirectory}` but no `configURL` | **undefined** |
+| POJO form, no options | **undefined** |
 | String form | **undefined** |
+
+`manifestURL` and `givensURL` are exposed as URL-shaped strings (`URL.toString()`), not `URL` objects — public API stays in string-land. URL parsing is foundation-internal; URLReader plugins still receive `URL` because they're the IO-layer abstraction.
 
 When `manifestURL` is undefined, the Runtime's lazy-read silently does nothing — the caller must pass `buildManifest:` explicitly to get persistence. Not an error.
 
-A subtlety: `configURL` in the overlay doesn't have to be where the config text actually came from. It's the base that `manifestURL` is computed against. A caller reading text from one URL but wanting the manifest to hang off a different directory can pass whatever they want. The semantic is "where do you want the manifest to live," not "where did this text come from."
+A subtlety: `configURL` doesn't have to be where the config text actually came from. It's the base that `manifestURL` and `givensURL` are computed against. A caller reading text from one URL but wanting paths to anchor at a different directory can pass whatever they want. The semantic is "what is the anchor for path settings," not "where did this text come from."
 
 ## `wrapConnections` — In-Place Mutation
 
@@ -231,14 +233,14 @@ Implementation specifics:
 5. On a hit, build:
    ```typescript
    new MalloyConfig(pojo, {
-     ...defaultConfigOverlays(),
-     config: contextOverlay({rootDirectory: ceilingURL.toString(), configURL: matchedURL.toString()}),
-     ...extraOverlays,
+     configURL: matchedURL.toString(),
+     rootDirectory: ceilingURL.toString(),
+     overlays: extraOverlays,
    });
    ```
 6. Return the built `MalloyConfig`, or `null` if the walk reached the ceiling with no match.
 
-`extraOverlays` merge on top via plain spread. A caller who passes `{config: ...}` clobbers the `rootDirectory`/`configURL` that discovery built. Callers who want both should build `MalloyConfig` by hand.
+`overlays` (the third option-bag field) is for non-`config` slots only — `env`, host-defined session/secret slots, etc. The `config` slot is reserved by `MalloyConfig` and built internally from `configURL` + `rootDirectory`. Hosts that pass `overlays: {config: ...}` get a warning + drop, not a silent merge.
 
 URL-based (not filesystem-based) so the helper works in browser-safe environments through `URLReader`.
 

@@ -13,6 +13,7 @@ import type {
   QueryRunStats,
   PrepareResultOptions,
   BuildManifest,
+  GivenValue,
   VirtualMap,
 } from '../../model';
 import {isSourceDef, mkSafeRecord} from '../../model';
@@ -116,6 +117,9 @@ export class Runtime {
   private _buildManifest: BuildManifest | undefined;
   private _resolvedBuildManifestPromise:
     | Promise<BuildManifest | undefined>
+    | undefined;
+  private _resolvedGivensPromise:
+    | Promise<Record<string, GivenValue> | undefined>
     | undefined;
   private _virtualMap: VirtualMap | undefined;
 
@@ -233,13 +237,13 @@ export class Runtime {
     if (this._buildManifest) {
       return Promise.resolve(this._buildManifest);
     }
-    const url = this._config?.manifestURL;
-    if (!url) return Promise.resolve(undefined);
+    const urlStr = this._config?.manifestURL;
+    if (!urlStr) return Promise.resolve(undefined);
     if (!this._resolvedBuildManifestPromise) {
       this._resolvedBuildManifestPromise = (async () => {
         let text: string;
         try {
-          const result = await this._urlReader.readURL(url);
+          const result = await this._urlReader.readURL(new URL(urlStr));
           text = typeof result === 'string' ? result : result.contents;
         } catch {
           // Read failure (no file, permission, etc.) — treat as "no
@@ -261,12 +265,64 @@ export class Runtime {
           const msg = e instanceof Error ? e.message : String(e);
           return {
             entries: {},
-            loadError: `Manifest file at ${url.toString()} could not be parsed: ${msg}`,
+            loadError: `Manifest file at ${urlStr} could not be parsed: ${msg}`,
           };
         }
       })();
     }
     return this._resolvedBuildManifestPromise;
+  }
+
+  /**
+   * Resolve the per-runtime givens map from `config.givensURL` (the file
+   * `givensPath` points at). Lazy and cached as a Promise — first compile
+   * triggers the read, subsequent compiles share the result.
+   *
+   * Stricter error policy than `_resolveBuildManifest`: a missing file or
+   * malformed JSON throws. Per design, the per-runtime givens layer is a
+   * configured contract, not an opportunistic read; a misconfigured path
+   * should fail loudly at the first compile, not silently degrade.
+   *
+   * Returns `undefined` only when no `givensURL` is configured.
+   *
+   * @internal Accessed from QueryMaterializer.
+   */
+  public _resolveGivens(): Promise<Record<string, GivenValue> | undefined> {
+    const urlStr = this._config?.givensURL;
+    if (!urlStr) return Promise.resolve(undefined);
+    if (!this._resolvedGivensPromise) {
+      this._resolvedGivensPromise = (async () => {
+        let text: string;
+        try {
+          const result = await this._urlReader.readURL(new URL(urlStr));
+          text = typeof result === 'string' ? result : result.contents;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          throw new Error(
+            `givens: failed to read givens file at ${urlStr}: ${msg}`
+          );
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          throw new Error(`givens: failed to parse JSON at ${urlStr}: ${msg}`);
+        }
+        if (!isGivensObject(parsed)) {
+          const got = Array.isArray(parsed)
+            ? 'array'
+            : parsed === null
+              ? 'null'
+              : typeof parsed;
+          throw new Error(
+            `givens: file at ${urlStr} must be a JSON object of name → value pairs, got ${got}`
+          );
+        }
+        return parsed;
+      })();
+    }
+    return this._resolvedGivensPromise;
   }
 
   /**
@@ -1011,6 +1067,14 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       // Use virtualMap from options if provided, otherwise fall back to Runtime's.
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
 
+      // Per-runtime givens (from config.givensURL, lazy + cached) merged
+      // under per-query supply; per-query wins per-key.
+      const runtimeGivens = await this.runtime._resolveGivens();
+      const mergedGivens =
+        runtimeGivens || mergedOptions.givens
+          ? {...runtimeGivens, ...mergedOptions.givens}
+          : undefined;
+
       // Build PrepareResultOptions from CompileQueryOptions + connectionDigests.
       const prepareResultOptions: PrepareResultOptions = {
         defaultRowLimit: mergedOptions.defaultRowLimit,
@@ -1022,6 +1086,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       return preparedQuery.getPreparedResult({
         ...mergedOptions,
         ...prepareResultOptions,
+        givens: mergedGivens,
       });
     });
   }
@@ -1205,4 +1270,14 @@ function isBuildManifestShape(value: unknown): value is BuildManifest {
   if (typeof value !== 'object' || value === null) return false;
   const entries = (value as {entries?: unknown}).entries;
   return typeof entries === 'object' && entries !== null;
+}
+
+/**
+ * Shallow shape-check for the givens-values file: must be a non-array
+ * non-null object. Per-value type checking happens later when each
+ * declared given is bound via `resolveSuppliedGivens` — at this layer we
+ * only ensure the top-level shape is a name → value map.
+ */
+function isGivensObject(value: unknown): value is Record<string, GivenValue> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

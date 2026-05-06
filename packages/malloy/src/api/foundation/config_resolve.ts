@@ -27,6 +27,7 @@ import type {ConfigOverlays} from './config_overlays';
 export interface PreparedConfig {
   compiledConnections: Record<string, ConfigDict>;
   manifestPath?: string;
+  givensPath?: string;
   virtualMap?: unknown;
 }
 
@@ -53,6 +54,7 @@ export function prepareConfig(
 ): PreparedConfig {
   let compiledConnections: Record<string, ConfigDict> = {};
   let manifestPath: string | undefined;
+  let givensPath: string | undefined;
   let virtualMap: unknown;
   let includeDefaultConnections = false;
 
@@ -69,6 +71,15 @@ export function prepareConfig(
           overlays,
           log,
           'manifestPath'
+        );
+        break;
+      }
+      case 'givensPath': {
+        givensPath = resolveSyncStringSetting(
+          node,
+          overlays,
+          log,
+          'givensPath'
         );
         break;
       }
@@ -92,7 +103,7 @@ export function prepareConfig(
     fabricateMissingConnections(compiledConnections);
   }
 
-  return {compiledConnections, manifestPath, virtualMap};
+  return {compiledConnections, manifestPath, givensPath, virtualMap};
 }
 
 /**

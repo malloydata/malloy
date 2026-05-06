@@ -128,6 +128,7 @@ export type {
   BuildID,
   BuildManifest,
   BuildManifestEntry,
+  GivenValue,
   VirtualMap,
 } from './model';
 export {
@@ -223,6 +224,7 @@ export type {
   TimestampField,
 } from './api/foundation';
 export type {Overlay, ConfigOverlays} from './api/foundation';
+export type {FilesystemContext, MalloyConfigOptions} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
   EventStream,
