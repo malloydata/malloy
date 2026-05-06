@@ -42,6 +42,7 @@ Top-level keys:
 | `connections` | Named connection entries. Each has an `is` field naming a registered backend, plus backend-specific properties. |
 | `manifestPath` | Directory where the build manifest lives, relative to the config file. Defaults to `MANIFESTS`. May be a string literal or a sync-resolving overlay reference (e.g. `{"env": "MALLOY_MANIFEST_PATH"}`). |
 | `givensPath` | File where per-runtime [given](givens.md) values live, relative to the config file. JSON object of `name → value` pairs. May be a string literal or a sync-resolving overlay reference. |
+| `finalizeGivens` | Array of [given](givens.md) names that are locked at the runtime layer — per-query supply for these names is rejected, and they are filtered out of `Model.givens` / `PreparedQuery.givens` introspection so UIs don't render editors for them. Security primitive for multi-tenant deployments where the tenant identifier must not be caller-overridable. |
 | `virtualMap` | URL rewrite rules for sources that reference virtual locations. Literal — no overlay expansion. |
 | `includeDefaultConnections` | If `true`, fabricate one entry per registered backend type not already listed. See below. |
 

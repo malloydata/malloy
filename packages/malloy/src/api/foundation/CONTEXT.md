@@ -157,13 +157,13 @@ The internals point: there is **no DuckDB-specific code anywhere in the config s
 
 ## Manifest URL — State Table
 
-`MalloyConfig.manifestURL` is computed once in the constructor from the overlay's `configURL` and the resolved `manifestPath`:
+`MalloyConfig.manifestURL` is computed once in the constructor from the typed `configURL` (passed via `MalloyConfigOptions`) and the resolved `manifestPath`. It is exposed as a URL-shaped string, not a `URL` object:
 
 ```typescript
 if (configURL) {
   const path = resolved.manifestPath ?? 'MANIFESTS';
   const dirURL = joinAsDirectory(new URL(path, configURL));
-  this.manifestURL = new URL('malloy-manifest.json', dirURL);
+  this.manifestURL = new URL('malloy-manifest.json', dirURL).toString();
 }
 ```
 
@@ -180,6 +180,20 @@ if (configURL) {
 When `manifestURL` is undefined, the Runtime's lazy-read silently does nothing — the caller must pass `buildManifest:` explicitly to get persistence. Not an error.
 
 A subtlety: `configURL` doesn't have to be where the config text actually came from. It's the base that `manifestURL` and `givensURL` are computed against. A caller reading text from one URL but wanting paths to anchor at a different directory can pass whatever they want. The semantic is "what is the anchor for path settings," not "where did this text come from."
+
+## Givens — per-runtime supply path
+
+The givens feature has substantial foundation-layer surface; the design lives in [`~/ctx/mp/`](../../../../ctx/mp/) and the implementation breadcrumbs in [`implementation-summary.md`](../../../../ctx/mp/implementation-summary.md). The pieces a foundation-layer reader needs to find:
+
+- **`MalloyConfig.givensPath` / `givensURL` / `finalizeGivens`** — config fields. `givensPath` accepts literal string or `{env: "..."}` overlay reference; `givensURL` is the resolved URL-string. `finalizeGivens` is an array of given names locked at the runtime layer.
+- **`Runtime` constructor `givens?` option** — direct in-process supply for hosts that have values in hand (multi-tenant servers, tests). Stored as `_constructorGivens`.
+- **`Runtime.givens` getter** — read-only diagnostic view of constructor-supplied values. Does NOT include file-loaded values (those go through the async `_resolveGivens()`).
+- **`Runtime._resolveGivens()`** — lazy + cached file read of `config.givensURL`. Stricter error policy than `_resolveBuildManifest`: missing file or malformed JSON throws on the first compile, with the URL in the message.
+- **`Runtime._withRuntimeContext(model)`** — re-wraps a Model returned from `Malloy.compile()` with this runtime's `RuntimeContext` (currently `{finalizedGivens?}`). The wart-as-bridge between `Malloy.compile` (runtime-unaware) and the runtime-aware `Model.givens` filtering. New runtime-aware concerns add fields to `RuntimeContext` rather than parallel `_with*` methods.
+- **`QueryMaterializer.loadPreparedResult`** — does the three-layer per-key merge (file → constructor → per-query, higher wins), then per-query rejection for finalized names + query-scoped sanity validation.
+- **`PreparedQuery.getPreparedResult`** — calls `resolveSuppliedGivens(options.givens, this._modelDef)` to convert JS values into `Map<GivenID, Expr>` before handing to `compileQuery`. The compiler trusts the resolved map.
+
+`Model` carries an optional `runtimeContext?: RuntimeContext` constructor parameter. The "Model wears two hats" abstraction violation (compiler artifact + host-facing inspection) is acknowledged as a future structural cleanup; today the `_withRuntimeContext` re-wrap pattern is the tactical bridge.
 
 ## `wrapConnections` — In-Place Mutation
 
