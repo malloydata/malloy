@@ -56,6 +56,16 @@ const unquoteName = (name: string) => {
   return name;
 };
 
+/**
+ * A bare or schema-qualified SQL identifier — `name` or `schema.name`. Anything
+ * else (file paths with dashes, dots-as-extensions, slashes, URL schemes,
+ * globs) is treated as a file-path string by `fetchTableSchema` and wrapped
+ * in single quotes so DuckDB sees it as a string literal rather than parsing
+ * it as a SQL identifier.
+ */
+const SQL_IDENTIFIER_CHAIN =
+  /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
+
 export abstract class DuckDBCommon
   extends BaseConnection
   implements TestableConnection, PersistSQLResults, StreamingConnection
@@ -202,9 +212,9 @@ export abstract class DuckDBCommon
       fields: [],
     };
 
-    const quotedTablePath = tablePath.match(/[:*/]/)
-      ? `'${tablePath}'`
-      : tablePath;
+    const quotedTablePath = SQL_IDENTIFIER_CHAIN.test(tablePath)
+      ? tablePath
+      : `'${tablePath}'`;
     const infoQuery = `DESCRIBE SELECT * FROM ${quotedTablePath}`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;

@@ -102,6 +102,35 @@ describe('DuckDBConnection', () => {
       });
       expect(runRawSQL).toHaveBeenCalledTimes(2);
     });
+
+    it('quotes file-path table names containing dashes', async () => {
+      // Bug repro: `duckdb.table('arrests-latest.parquet')` failed because
+      // the dash made DuckDB parse `arrests-latest.parquet` as subtraction.
+      await connection.fetchSchemaForTables(
+        {'dashed': 'arrests-latest.parquet'},
+        {}
+      );
+      expect(runRawSQL).toHaveBeenCalledWith(
+        "DESCRIBE SELECT * FROM 'arrests-latest.parquet'"
+      );
+    });
+
+    it('leaves bare table identifiers unquoted', async () => {
+      await connection.fetchSchemaForTables({'plain': 'plain_table'}, {});
+      expect(runRawSQL).toHaveBeenCalledWith(
+        'DESCRIBE SELECT * FROM plain_table'
+      );
+    });
+
+    it('leaves schema-qualified identifiers unquoted', async () => {
+      await connection.fetchSchemaForTables(
+        {'qualified': 'main.qualified_table'},
+        {}
+      );
+      expect(runRawSQL).toHaveBeenCalledWith(
+        'DESCRIBE SELECT * FROM main.qualified_table'
+      );
+    });
   });
 
   describe('multiple connections', () => {
