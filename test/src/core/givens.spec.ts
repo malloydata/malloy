@@ -158,6 +158,65 @@ describe('givens — runtime supply path (Stage 4)', () => {
     expect(pq.givens.get('A')?.type.type).toBe('string');
   });
 
+  test('date given filters against a date column', async () => {
+    const ts = new TestSelect(runtime.dialect);
+    const tableSQL = ts.generate(
+      {id: 1, d: ts.mk_date('2024-01-15')},
+      {id: 2, d: ts.mk_date('2024-06-15')}
+    );
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: BEFORE :: date
+      source: rows is duckdb.sql("""${tableSQL}""")
+      query: q is rows -> {
+        where: d < $BEFORE
+        aggregate: ct is count()
+      }
+    `);
+    const r = await model
+      .loadQueryByName('q')
+      .run({givens: {BEFORE: '2024-03-01'}});
+    expect(r.data.path(0, 'ct').value).toBe(1);
+  });
+
+  test('naive timestamp given accepts T-separator and space-separator', async () => {
+    const ts = new TestSelect(runtime.dialect);
+    const tableSQL = ts.generate(
+      {id: 1, t: ts.mk_timestamp('2024-01-01 12:00:00')},
+      {id: 2, t: ts.mk_timestamp('2024-01-01 13:00:00')}
+    );
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: BEFORE :: timestamp
+      source: rows is duckdb.sql("""${tableSQL}""")
+      query: q is rows -> {
+        where: t < $BEFORE
+        aggregate: ct is count()
+      }
+    `);
+    // T-separator form
+    const rT = await model
+      .loadQueryByName('q')
+      .run({givens: {BEFORE: '2024-01-01T12:30:00'}});
+    expect(rT.data.path(0, 'ct').value).toBe(1);
+    // Space-separator form
+    const rSp = await model
+      .loadQueryByName('q')
+      .run({givens: {BEFORE: '2024-01-01 12:30:00'}});
+    expect(rSp.data.path(0, 'ct').value).toBe(1);
+  });
+
+  test('naive timestamp given rejects offset-bearing strings', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: T :: timestamp
+      query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }
+    `);
+    await expect(
+      model.loadQueryByName('q').run({givens: {T: '2024-01-01T12:00:00Z'}})
+    ).rejects.toThrow(/use 'timestamptz'/);
+  });
+
   test('timestamptz given supplied as JS Date filters in UTC', async () => {
     const ts = new TestSelect(runtime.dialect);
     const tableSQL = ts.generate(

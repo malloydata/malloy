@@ -112,9 +112,10 @@ function valueToExpr(
       return {node: 'dateLiteral', literal: value, typeDef: {type: 'date'}};
     }
     case 'timestamp': {
-      // Naive timestamp: ISO without offset (Z/offset variants belong to
-      // timestamptz). Pass the string through; the dialect's
-      // sqlTimestampLiteral handles emission.
+      // Naive timestamp: wall-clock value with no offset. Reject JS Date
+      // (it's a UTC instant — wrong shape) and reject offset-bearing
+      // strings (those want 'timestamptz'). Parse the rest with Luxon and
+      // emit canonical "YYYY-MM-DD HH:MM:SS.sss" for the dialect.
       if (typeof value !== 'string') {
         throw new TypeError(
           `givens.${name}: expected ISO timestamp string (no offset), got ${describeJs(value)}`
@@ -125,16 +126,21 @@ function valueToExpr(
           `givens.${name}: 'timestamp' is naive — use 'timestamptz' for offset/zoned values, got '${value}'`
         );
       }
+      // ISO uses T-separator; SQL form uses space. Accept both.
+      let dt = DateTime.fromISO(value, {zone: 'utc'});
+      if (!dt.isValid) dt = DateTime.fromSQL(value, {zone: 'utc'});
+      if (!dt.isValid) {
+        throw new TypeError(
+          `givens.${name}: invalid timestamp value '${value}': ${dt.invalidReason ?? 'unknown'}`
+        );
+      }
       return {
         node: 'timestampLiteral',
-        literal: value,
+        literal: dt.toFormat('yyyy-MM-dd HH:mm:ss.SSS'),
         typeDef: {type: 'timestamp'},
       };
     }
     case 'timestamptz': {
-      // The supplier's offset (if any) is honored on the way in via Luxon,
-      // then we canonicalize to UTC for the IR. Offset preservation is a
-      // separate question; see implementation.md "Open items".
       let dt: DateTime;
       if (value instanceof Date) {
         dt = DateTime.fromJSDate(value, {zone: 'utc'});
