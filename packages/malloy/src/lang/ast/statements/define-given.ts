@@ -149,10 +149,13 @@ export class GivenDeclaration
     }
 
     const id = mkGivenID(this.name, this.location?.url);
+    const defaultText =
+      defaultExpr !== undefined ? this.default?.code : undefined;
     const givenIR: Given = {
       name: this.name,
       type: this.typeDef,
       default: defaultExpr,
+      defaultText,
       givenUsage,
       location: this.location,
       annotation: this.note,
@@ -161,6 +164,28 @@ export class GivenDeclaration
 
     const entry: GivenEntry = {type: 'given', name: this.name, id};
     doc.setEntry(this.name, {entry, exported: true});
+
+    // Declaration-site reference. `location` covers the whole
+    // declaration; `definition.location` points at the same place.
+    // Self-referential by design — parallel to how fieldReference
+    // behaves on field declarations.
+    this.addReference({
+      type: 'givenReference',
+      text: this.name,
+      location: this.location ?? {
+        url: '',
+        range: {
+          start: {line: 0, character: 0},
+          end: {line: 0, character: 0},
+        },
+      },
+      definition: {
+        type: typeDefToString(this.typeDef),
+        annotation: this.note,
+        location: this.location,
+        defaultText,
+      },
+    });
   }
 }
 

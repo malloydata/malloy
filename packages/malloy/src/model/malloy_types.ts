@@ -561,6 +561,11 @@ export interface Given extends HasLocation, HasAnnotation {
   type: GivenTypeDef;
   /** Non-optional so the no-default case is explicit at every read site. */
   default: ConstantExpr | undefined;
+  /** Pre-rendered source text of the default expression, captured at
+   *  declaration time so hover (`DocumentGivenReference`) can show it
+   *  without re-rendering an Expr back to source. Absent when there's
+   *  no default. */
+  defaultText?: string;
   /** Transitive closure of givens this declaration references — only
    *  reachable through the default's expression chain (a Given has no
    *  other given-referencing surface). Precomputed at declaration time.
@@ -644,12 +649,27 @@ export interface DocumentFieldReference extends DocumentReferenceBase {
   type: 'fieldReference';
 }
 
+/**
+ * Definition info attached to a `DocumentGivenReference`. Extends the
+ * base with `defaultText` — the pre-rendered source of the given's
+ * default expression, if one was declared.
+ */
+export interface GivenLightweightDefinition extends LightweightDefinition {
+  defaultText?: string;
+}
+
+export interface DocumentGivenReference extends DocumentReferenceBase {
+  type: 'givenReference';
+  definition: GivenLightweightDefinition;
+}
+
 export type DocumentReference =
   | DocumentExploreReference
   | DocumentQueryReference
   | DocumentSQLBlockReference
   | DocumentFieldReference
-  | DocumentJoinReference;
+  | DocumentJoinReference
+  | DocumentGivenReference;
 
 /** put location into the parse tree. */
 export interface HasLocation {

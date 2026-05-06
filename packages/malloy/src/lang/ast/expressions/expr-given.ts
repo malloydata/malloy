@@ -4,6 +4,7 @@
  */
 
 import type {GivenRefNode} from '../../../model/malloy_types';
+import {typeDefToString} from '../../../model/utils';
 import {ExpressionDef} from '../types/expression-def';
 import type {ExprValue} from '../types/expr-value';
 import {literalExprValue} from '../types/expr-value';
@@ -46,6 +47,20 @@ export class GivenReference extends ExpressionDef {
         `Internal error: given \`${this.name}\` is in the namespace but has no declaration. Likely a compiler bug.`
       );
     }
+    // Use-site reference. `location` covers `$NAME` at the use site;
+    // `definition.location` points at the canonical `given:`
+    // declaration (in the same file or in an imported file).
+    this.addReference({
+      type: 'givenReference',
+      text: this.name,
+      location: this.location,
+      definition: {
+        type: typeDefToString(given.type),
+        annotation: given.annotation,
+        location: given.location,
+        defaultText: given.defaultText,
+      },
+    });
     const refNode: GivenRefNode = {
       node: 'given',
       id: entry.id,

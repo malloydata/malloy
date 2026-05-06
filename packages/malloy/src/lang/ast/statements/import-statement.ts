@@ -33,6 +33,7 @@ import {
 } from '../../../model/malloy_types';
 import {registerSource} from '../../../model/source_def_utils';
 import {findPersistentDependencies} from '../../../model/persist_utils';
+import {typeDefToString} from '../../../model/utils';
 import type {BuildNode} from '../../../api/foundation/types';
 
 /** Walk BuildNode tree and collect all sourceIDs */
@@ -172,6 +173,31 @@ export class ImportStatement
                   id: sourceEntry.id,
                 };
                 doc.setEntry(dstName, {entry: givenEntry, exported: false});
+                // Selective import-site reference. `location` covers
+                // the `NAME` token in the selective list;
+                // `definition.location` points at the canonical
+                // `given:` declaration in the imported file. Only
+                // emitted on the selective form — non-selective
+                // auto-surface has no per-name source position.
+                if (pickedNames) {
+                  const givenIR = importedModel.givens?.[sourceEntry.id];
+                  const importOne = this.list.find(
+                    item => item.text === dstName
+                  );
+                  if (importOne && givenIR) {
+                    this.addReference({
+                      type: 'givenReference',
+                      text: dstName,
+                      location: importOne.location,
+                      definition: {
+                        type: typeDefToString(givenIR.type),
+                        annotation: givenIR.annotation,
+                        location: givenIR.location,
+                        defaultText: givenIR.defaultText,
+                      },
+                    });
+                  }
+                }
                 continue;
               }
               const importMe = {...sourceEntry!};
