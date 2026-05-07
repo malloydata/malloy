@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question (Slack)
+    url: https://malloydata.github.io/slack
+    about: Usage questions, model design help, and general community conversation
+  - name: Big idea or language design proposal (Discussion)
+    url: https://github.com/malloydata/malloy/discussions/new?category=ideas
+    about: Architectural or language-level proposals — gets better visibility than an issue
+  - name: Formal language change proposal (WN)
+    url: https://github.com/malloydata/whatsnext
+    about: Open a What's Next proposal for compiler or language changes requiring design review
+  - name: Security vulnerability
+    url: https://github.com/malloydata/malloy/security/advisories/new
+    about: Report security issues privately — do not open a public issue
