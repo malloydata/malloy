@@ -471,6 +471,24 @@ describe('given: IR generation', () => {
     );
   });
 
+  test('date literal accepted for declared timestamp (morphic)', () => {
+    expect(`
+      ##! experimental.givens
+      given: X :: timestamp is @2001-02-02
+    `).toTranslate();
+  });
+
+  test('timestamp literal not accepted for declared date (no reverse morph)', () => {
+    expect(`
+      ##! experimental.givens
+      given: BAD :: date is @2001-02-02 12:00:00
+    `).toLog(
+      errorMessage(
+        'Default value of type `timestamp` does not match declared type `date`'
+      )
+    );
+  });
+
   test('compound declared type echoes back in type-mismatch error', () => {
     expect(`
       ##! experimental.givens

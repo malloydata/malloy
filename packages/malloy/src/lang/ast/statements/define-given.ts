@@ -13,20 +13,18 @@ import {givenUsageFrom, TD} from '../../../model/malloy_types';
 import {mkGivenID} from '../../../model/source_def_utils';
 import {typeDefToString} from '../../../model/utils';
 import type {ConstantExpression} from '../expressions/constant-expression';
-import {checkFilterExpression} from '../types/expression-def';
+import {checkFilterExpression, getMorphicValue} from '../types/expression-def';
 import type {ExprValue} from '../types/expr-value';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {DocStatementList, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
 
-/**
- * True when exactly one of `declared` and `constVal` is filter-typed.
- * Catches `filter<T>` declared with a non-filter default (and vice versa)
- * at definition time. Inner-content validation of `filter<T>` defaults
- * (syntax + compatibility with `T`) is the filter machinery's job at the
- * use site; we don't try to do it here.
- */
+// `filter<T>` defaults can't be type-checked via TD.eq — the filter
+// expression value shape doesn't match an atomic typeDef. Catch only
+// the gross kind mismatch here; inner-content validation (filter
+// syntax + T compatibility) belongs to the filter machinery at use
+// site.
 function filterTypeMismatch(
   declared: GivenTypeDef,
   constVal: ExprValue
@@ -37,9 +35,6 @@ function filterTypeMismatch(
   );
 }
 
-/**
- * One named given declaration: `NAME :: TYPE [is EXPR]`.
- */
 export class GivenDeclaration
   extends MalloyElement
   implements DocStatement, Noteable
@@ -88,12 +83,21 @@ export class GivenDeclaration
     if (this.default) {
       const constVal = this.default.constantValue();
       if (constVal.type !== 'error') {
+        // `X :: timestamp is @2024-01-01` works because date literals
+        // carry a morphic.timestamp. Date/timestamp are the only
+        // MorphicType targets — other declared types fall through to
+        // the TD.eq check below.
+        const morphed =
+          this.typeDef.type === 'date' || this.typeDef.type === 'timestamp'
+            ? getMorphicValue(constVal, this.typeDef.type)
+            : undefined;
         // `filter<T>` defaults are filter-expression literals — their
         // shape doesn't match an atomic typeDef, so type-check there is
         // owned by the filter machinery, not us. `null` is implicitly
         // accepted for any declared type.
         if (
           constVal.type !== 'null' &&
+          morphed === undefined &&
           (filterTypeMismatch(this.typeDef, constVal) ||
             !TD.eq(this.typeDef, constVal))
         ) {
@@ -117,7 +121,7 @@ export class GivenDeclaration
             constVal.value
           );
         }
-        defaultExpr = constVal.value;
+        defaultExpr = morphed?.value ?? constVal.value;
         // Build the transitive closure of givens reachable through this
         // default's expression. We only include direct refs PLUS each
         // referenced given's already-precomputed transitive (which is
@@ -189,9 +193,6 @@ export class GivenDeclaration
   }
 }
 
-/**
- * Top-level `given:` block — a sequence of given declarations.
- */
 export class DefineGivens extends DocStatementList {
   elementType = 'defineGivens';
   readonly givens: GivenDeclaration[];
