@@ -209,6 +209,33 @@ describe('givens — runtime supply path (Stage 4)', () => {
     expect(rSp.data.path(0, 'ct').value).toBe(1);
   });
 
+  test('date-literal default morphs to timestamp and filters flights.dep_time', async () => {
+    // Exercises the morphic default path in define-given: the declared
+    // type is `timestamp`, the default `@2003-01-01` is a date literal,
+    // and the AST converts it to a timestamp expression so the default
+    // can drive a timestamp-column comparison at runtime.
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: BEFORE :: timestamp is @2003-01-01
+      query: q is duckdb.table('malloytest.flights') -> {
+        where: dep_time < $BEFORE
+        aggregate: ct is count()
+      }
+    `);
+    // No caller supply — the morphed default drives the cutoff.
+    const def = await model.loadQueryByName('q').run();
+    const defaultCt = def.data.path(0, 'ct').value;
+    expect(typeof defaultCt).toBe('number');
+    expect(defaultCt).toBeGreaterThan(0);
+    // Override with a tighter cutoff — count must drop.
+    const tight = await model
+      .loadQueryByName('q')
+      .run({givens: {BEFORE: '2002-01-01 00:00:00'}});
+    expect(Number(tight.data.path(0, 'ct').value)).toBeLessThan(
+      Number(defaultCt)
+    );
+  });
+
   test('naive timestamp given rejects offset-bearing strings', async () => {
     const model = runtime.loadModel(`
       ##! experimental.givens
