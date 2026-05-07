@@ -61,6 +61,7 @@ export {
   makeDigest,
   mkModelDef,
   pathToKey,
+  typeDefToString,
 } from './utils';
 export {constantExprToSQL} from './constant_expression_compiler';
 export {getCompiledSQL} from './sql_compiled';

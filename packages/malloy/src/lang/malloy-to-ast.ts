@@ -55,6 +55,8 @@ import type {
   BasicAtomicTypeDef,
   DocumentLocation,
   DocumentRange,
+  FilterExprType,
+  GivenTypeDef,
   Note,
   ParameterTypeDef,
 } from '../model/malloy_types';
@@ -95,6 +97,9 @@ function isIndirectUserType(t: UserTypeFieldTypeResult): t is IndirectUserType {
 }
 
 const DEFAULT_COMPILER_FLAGS = [];
+
+const LEGAL_FILTER_TYPES =
+  'string, number, boolean, date, timestamp, timestamptz';
 
 type HasAnnotations = ParserRuleContext & {
   annotation: () => parse.AnnotationContext[];
@@ -403,6 +408,100 @@ export class MalloyToAST
     return defList;
   }
 
+  visitDefineGivenStatement(
+    pcx: parse.DefineGivenStatementContext
+  ): ast.DefineGivens {
+    this.inExperiment('givens', pcx);
+    const defsCx = pcx.givenDefList().givenDef();
+    const givens = defsCx.map(dcx => this.visitGivenDef(dcx));
+    const blockNotes = this.getNotes(pcx.tags());
+    const block = new ast.DefineGivens(givens);
+    for (const g of givens) {
+      g.extendNote({blockNotes});
+    }
+    return this.astAt(block, pcx);
+  }
+
+  visitGivenDef(pcx: parse.GivenDefContext): ast.GivenDeclaration {
+    const name = getId(pcx.givenNameDef());
+    const typeDef = this.getGivenType(pcx.givenType());
+    const defaultCx = pcx.fieldExpr();
+    let defVal: ast.ConstantExpression | undefined;
+    if (defaultCx) {
+      defVal = this.astAt(
+        new ast.ConstantExpression(this.getFieldExpr(defaultCx)),
+        defaultCx
+      );
+    }
+    const isCx = pcx.isDefine();
+    if (isCx) {
+      // We accept the `tags IS tags` shape syntactically so we can give a
+      // targeted error here instead of a confusing parse-level one. Tags
+      // belong above the declaration; nothing should sit between `is` and
+      // the default expression.
+      const afterIs = isCx._afterIs;
+      if (afterIs && afterIs.annotation().length > 0) {
+        this.contextError(
+          afterIs,
+          'given-no-tags-after-is',
+          'Annotations are not allowed between `is` and the default value of a given; place them above the declaration'
+        );
+      }
+    }
+    const decl = new ast.GivenDeclaration(name, typeDef, defVal);
+    decl.extendNote({notes: this.getNotes(pcx.tags())});
+    return this.astAt(decl, pcx);
+  }
+
+  /**
+   * Parse the TYPE inside `filter<TYPE>`. Returns the filter type on
+   * success; logs `illegal-filter-type` and returns undefined when TYPE
+   * is not a filterable type. `getBasicMalloyType` already logs for
+   * invalid basic types, so on its `'error'` path we stay silent and
+   * return undefined.
+   */
+  protected getFilterType(
+    basicCx: parse.MalloyBasicTypeContext
+  ): FilterExprType | undefined {
+    const inner = this.getBasicMalloyType(basicCx);
+    if (inner.type === 'error') return undefined;
+    if (isFilterable(inner.type)) {
+      return inner.type;
+    }
+    this.contextError(
+      basicCx,
+      'illegal-filter-type',
+      `\`filter<${basicCx.text}>\` is not allowed; filtering is only supported for ${LEGAL_FILTER_TYPES}`
+    );
+    return undefined;
+  }
+
+  getGivenType(pcx: parse.GivenTypeContext): GivenTypeDef {
+    if (pcx.FILTER()) {
+      const basicCx = pcx.malloyBasicType();
+      if (basicCx) {
+        const filterType = this.getFilterType(basicCx);
+        if (filterType) return {type: 'filter expression', filterType};
+      }
+      return {type: 'error'};
+    }
+    const mtcx = pcx.malloyType();
+    if (mtcx) {
+      return this.getMalloyType(mtcx);
+    }
+    // Unreachable from valid grammar input: `givenType` is exactly
+    // `malloyType | FILTER LT malloyBasicType GT`, so one of the branches
+    // above must have matched. Surfacing a real error here (rather than
+    // throwing) keeps the translator running and gives any AI or human
+    // reading the log a hint that the parser and AST builder have drifted.
+    this.contextError(
+      pcx,
+      'unexpected-malloy-type',
+      `\`${pcx.text}\` was not recognized as a legal type. This is likely a compiler bug — the grammar admits cases the translator doesn't handle.`
+    );
+    return {type: 'error'};
+  }
+
   visitDefineUserTypeStatement(
     pcx: parse.DefineUserTypeStatementContext
   ): ast.DefineUserTypeList {
@@ -541,26 +640,22 @@ export class MalloyToAST
     let pType: ParameterTypeDef | undefined;
     const typeCx = pcx.legalParamType();
     if (typeCx) {
-      const typeDef = this.getBasicMalloyType(typeCx.malloyBasicType());
-      const t = typeDef.type;
       if (typeCx.FILTER()) {
-        if (isFilterable(t)) {
-          pType = {type: 'filter expression', filterType: t};
-        } else {
+        const filterType = this.getFilterType(typeCx.malloyBasicType());
+        if (filterType) {
+          pType = {type: 'filter expression', filterType};
+        }
+      } else {
+        const t = this.getBasicMalloyType(typeCx.malloyBasicType()).type;
+        if (!isParameterType(t)) {
           this.contextError(
             typeCx,
             'parameter-illegal-default-type',
-            `Unknown filter type ${t}`
+            `Unknown parameter type ${t}`
           );
+        } else {
+          pType = {type: t};
         }
-      } else if (!isParameterType(t)) {
-        this.contextError(
-          typeCx,
-          'parameter-illegal-default-type',
-          `Unknown parameter type ${t}`
-        );
-      } else {
-        pType = {type: t};
       }
     }
 
@@ -1501,6 +1596,13 @@ export class MalloyToAST
       this.getFieldPath(pcx.fieldPath(), ast.ExpressionFieldReference)
     );
     return this.astAt(idRef, pcx);
+  }
+
+  visitExprGivenRef(pcx: parse.ExprGivenRefContext): ast.GivenReference {
+    this.inExperiment('givens', pcx);
+    // GIVEN_REF token text is `$NAME`; strip the leading `$`.
+    const name = pcx.GIVEN_REF().text.slice(1);
+    return this.astAt(new ast.GivenReference(name), pcx);
   }
 
   visitExprNULL(_pcx: parse.ExprNULLContext): ast.ExprNULL {

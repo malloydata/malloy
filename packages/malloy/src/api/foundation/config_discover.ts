@@ -5,7 +5,6 @@
 
 import type {URLReader} from '../../runtime_types';
 import {MalloyConfig} from './config';
-import {contextOverlay} from './config_overlays';
 import type {ConfigOverlays} from './config_overlays';
 
 const SHARED_FILENAME = 'malloy-config.json';
@@ -81,14 +80,11 @@ function buildConfig(
   ceilingURL: URL,
   extraOverlays: ConfigOverlays | undefined
 ): MalloyConfig {
-  const discoveryOverlays: ConfigOverlays = {
-    config: contextOverlay({
-      rootDirectory: ceilingURL.toString(),
-      configURL: hit.configURL.toString(),
-    }),
-  };
-  const merged: ConfigOverlays = {...discoveryOverlays, ...extraOverlays};
-  return new MalloyConfig(hit.pojo, merged);
+  return new MalloyConfig(hit.pojo, {
+    configURL: hit.configURL.toString(),
+    rootDirectory: ceilingURL.toString(),
+    overlays: extraOverlays,
+  });
 }
 
 async function tryReadAtLevel(

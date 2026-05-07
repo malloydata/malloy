@@ -7,12 +7,16 @@ import type {LogMessage} from '../../lang';
 import type {
   BuildID,
   CompiledQuery,
+  ConstantExpr,
   DocumentLocation,
   BooleanFieldDef,
   JSONFieldDef,
   NumberFieldDef,
   StringFieldDef,
   FilterCondition,
+  Given as InternalGiven,
+  GivenID,
+  GivenTypeDef,
   Query as InternalQuery,
   ModelDef,
   DocumentPosition as ModelDocumentPosition,
@@ -34,6 +38,7 @@ import type {
   SourceComponentInfo,
   DocumentReference,
   PersistableSourceDef,
+  PrepareResultOptions,
 } from '../../model';
 import {
   fieldIsIntrinsic,
@@ -56,6 +61,7 @@ import {
   minimalBuildGraph,
 } from '../../model/persist_utils';
 import {resolveSourceID, mkBuildID} from '../../model/source_def_utils';
+import {resolveSuppliedGivens} from '../../model/given_binding';
 import {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
 import {annotationToTag, annotationToTaglines} from '../../annotation';
@@ -1002,6 +1008,22 @@ export class ExploreField extends Explore {
 // Model
 // =============================================================================
 
+/**
+ * Runtime-aware concerns layered onto a `Model` after it leaves the
+ * compiler. `Malloy.compile()` returns a `Model` with no context; a
+ * `Runtime.loadModel()` decoration attaches the runtime's context so
+ * context-sensitive views (currently `Model.givens` filtering finalized
+ * names; in future, tenant overrides / session bindings / etc.) work
+ * correctly. New runtime-aware concerns add a field here rather than a
+ * parallel constructor parameter.
+ */
+export interface RuntimeContext {
+  /** Surface names of givens locked at the runtime layer (from
+   *  `config.finalizeGivens`). Filtered out of `Model.givens` so
+   *  introspection-driven UIs don't render editors for them. */
+  readonly finalizedGivens?: ReadonlySet<string>;
+}
+
 export class Model implements Taggable {
   private readonly references: ReferenceList;
   private _queryModel?: QueryModel;
@@ -1011,7 +1033,13 @@ export class Model implements Taggable {
     private modelDef: ModelDef,
     readonly problems: LogMessage[],
     readonly fromSources: string[],
-    existingQueryModel?: QueryModel
+    existingQueryModel?: QueryModel,
+    /**
+     * Runtime-aware context layered onto this Model. `Malloy.compile()`
+     * leaves it undefined; `Runtime.loadModel()` paths attach the
+     * runtime's context so methods like `Model.givens` filter correctly.
+     */
+    private readonly runtimeContext?: RuntimeContext
   ) {
     this.references = new ReferenceList(
       fromSources[0] ?? '',
@@ -1040,6 +1068,29 @@ export class Model implements Taggable {
    */
   getExistingQueryModel(): QueryModel | undefined {
     return this._queryModel;
+  }
+
+  /**
+   * The givens this model surfaces, keyed by caller-facing surface name.
+   * Used by whole-model parameter-editor UIs to render input widgets for
+   * every given the model can accept.
+   *
+   * Internal-only givens (declared but never surfaced into the namespace,
+   * resolved purely via defaults) are NOT in this map — the caller has no
+   * way to set them, so listing them would mislead a UI.
+   */
+  public get givens(): ReadonlyMap<string, Given> {
+    const out = new Map<string, Given>();
+    const givens = this.modelDef.givens;
+    if (!givens) return out;
+    for (const [surfaceName, entry] of this.contentsMap) {
+      if (entry.type !== 'given') continue;
+      if (this.runtimeContext?.finalizedGivens?.has(surfaceName)) continue;
+      const decl = givens[entry.id];
+      if (!decl) continue;
+      out.set(surfaceName, new Given(surfaceName, entry.id, decl));
+    }
+    return out;
   }
 
   tagParse(spec?: TagParseSpec): MalloyTagParse {
@@ -1462,6 +1513,47 @@ export class PersistSource implements Taggable {
 // PreparedQuery
 // =============================================================================
 
+/**
+ * Foundation API wrapper for a given declaration. Parallel to Explore /
+ * PreparedQuery — exposes a stable, callerable surface over the internal
+ * `Given` IR record. Returned from `PreparedQuery.givens`.
+ */
+export class Given implements Taggable {
+  /**
+   * @param name        Caller-facing surface name in the model (post-rename
+   *                    on import). The key by which the caller passes a
+   *                    value to `.run({givens: {[name]: ...}})`.
+   * @param id          Global GivenID. Stable across imports and renames.
+   * @param _internal   The internal Given declaration record.
+   */
+  constructor(
+    readonly name: string,
+    readonly id: GivenID,
+    private readonly _internal: InternalGiven
+  ) {}
+
+  get type(): GivenTypeDef {
+    return this._internal.type;
+  }
+
+  /** `undefined` when no default — the caller must supply at run time. */
+  get default(): ConstantExpr | undefined {
+    return this._internal.default;
+  }
+
+  get location(): DocumentLocation | undefined {
+    return this._internal.location;
+  }
+
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this._internal.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp): string[] {
+    return annotationToTaglines(this._internal.annotation, prefix);
+  }
+}
+
 export class PreparedQuery implements Taggable {
   public _query: InternalQuery | NamedQueryDef;
 
@@ -1503,7 +1595,16 @@ export class PreparedQuery implements Taggable {
    */
   public getPreparedResult(options?: CompileQueryOptions): PreparedResult {
     const queryModel = this._model.queryModel;
-    const translatedQuery = queryModel.compileQuery(this._query, options);
+    const prepareResultOptions: PrepareResultOptions = {
+      ...options,
+      resolvedGivens: options?.givens
+        ? resolveSuppliedGivens(options.givens, this._modelDef)
+        : undefined,
+    };
+    const translatedQuery = queryModel.compileQuery(
+      this._query,
+      prepareResultOptions
+    );
     return new PreparedResult(
       {
         ...translatedQuery,
@@ -1538,6 +1639,30 @@ export class PreparedQuery implements Taggable {
    */
   public get model(): Model {
     return this._model;
+  }
+
+  /**
+   * The givens this specific query references, keyed by caller-facing
+   * surface name. Used by "run this query" UIs to prompt only for the
+   * givens this query actually touches, not every given declared in the
+   * model.
+   *
+   * Computed as `model.givens` filtered by `query.givenUsage` — i.e. the
+   * intersection of "what the model surfaces" with "what this query
+   * needs." Internal-only givens (referenced but never surfaced) stay
+   * invisible because they're not in `model.givens` to begin with.
+   */
+  public get givens(): ReadonlyMap<string, Given> {
+    const out = new Map<string, Given>();
+    const usage = this._query.givenUsage;
+    if (!usage || usage.length === 0) return out;
+    const referenced = new Set(usage.map(g => g.id));
+    for (const [name, given] of this._model.givens) {
+      if (referenced.has(given.id)) {
+        out.set(name, given);
+      }
+    }
+    return out;
   }
 }
 

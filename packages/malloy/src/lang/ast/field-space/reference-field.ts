@@ -23,7 +23,7 @@
 
 import type {
   Annotation,
-  FieldUsage,
+  FieldUsageEntry,
   QueryFieldDef,
   TypeDesc,
 } from '../../../model/malloy_types';
@@ -112,13 +112,13 @@ export class ReferenceField extends SpaceField {
     if (refTo) {
       const joinPath = this.fieldRef.list.slice(0, -1).map(x => x.refString);
       const typeDesc = refTo.typeDesc();
-      const usage: FieldUsage = {
+      const usage: FieldUsageEntry = {
         path: this.fieldRef.path,
         at: this.fieldRef.location,
       };
       this.memoTypeDesc = {
         ...typeDesc,
-        fieldUsage: [usage],
+        refSummary: {fieldUsage: [usage]},
         requiresGroupBy: typeDesc.requiresGroupBy?.map(gb => ({
           ...gb,
           path: [...joinPath, ...gb.path],

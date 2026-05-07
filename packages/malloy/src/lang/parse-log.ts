@@ -303,6 +303,7 @@ type MessageParameterTypes = {
   'query-definition-from-non-query': string;
   'source-definition-name-conflict': string;
   'user-type-definition-name-conflict': string;
+  'given-definition-name-conflict': string;
   'virtual-source-not-yet-implemented': string;
   'virtual-source-missing-user-type-refs': string;
   'virtual-source-unknown-dialect': string;
@@ -317,6 +318,8 @@ type MessageParameterTypes = {
   'selective-import-not-found': string;
   'name-conflict-on-indiscriminate-import': string;
   'failed-import': string;
+  'unsatisfied-given-in-query': string;
+  'given-alias-collision': string;
   'failed-to-compute-output-schema': string;
   'invalid-timeframe-for-time-offset': string;
   'time-comparison-type-mismatch': string;
@@ -324,6 +327,11 @@ type MessageParameterTypes = {
   'time-offset-type-mismatch': string;
   'unexpected-binary-operator': string;
   'illegal-reference-in-parameter-default': string;
+  'given-reference-not-implemented': string;
+  'given-not-found': string;
+  'given-no-tags-after-is': string;
+  'illegal-filter-type': string;
+  'invalid-source-from-given': string;
   'aggregate-analytic-in-select': string;
   'refinement-of-raw-query': string;
   'illegal-multistage-refinement-operation': string;

@@ -11,6 +11,7 @@ import type {
   ModelDef,
   StructRef,
   Argument,
+  Given,
   PrepareResultOptions,
   CompiledQuery,
   SearchIndexResult,
@@ -35,6 +36,7 @@ export interface QueryModel {
   dialect: Dialect;
   modelDef: ModelDef | undefined;
   structs: Map<string, QueryStruct>;
+  givens: Record<string, Given>;
   eventStream?: EventStream;
   loadModelFromDef(modelDef: ModelDef): void;
   getStructByName(name: string): QueryStruct;

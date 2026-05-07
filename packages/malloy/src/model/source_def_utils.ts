@@ -16,6 +16,7 @@
 import type {
   BuildID,
   FieldDef,
+  GivenID,
   ModelDef,
   PersistableSourceDef,
   Query,
@@ -28,7 +29,7 @@ import type {
   SQLSourceDef,
   TableSourceDef,
 } from './malloy_types';
-import {makeDigest} from './utils';
+import {makeDigest, pathToKey} from './utils';
 import {
   isSourceDef,
   isPersistableSourceDef,
@@ -38,6 +39,10 @@ import {
 
 export function mkSourceID(name: string, url: string | undefined): SourceID {
   return `${name}@${url ?? 'unknown'}`;
+}
+
+export function mkGivenID(name: string, url: string | undefined): GivenID {
+  return pathToKey('given', [name, url ?? 'unknown']);
 }
 
 /**

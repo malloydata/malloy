@@ -53,9 +53,9 @@ export class NestFieldDeclaration
         fs,
         fs.outputSpace()
       );
-      const fieldUsage =
+      const refSummary =
         pipeline[0] && model.isQuerySegment(pipeline[0])
-          ? pipeline[0].fieldUsage
+          ? pipeline[0].refSummary
           : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
       const pipelineWithDrillPaths = attachDrillPaths(
@@ -68,7 +68,7 @@ export class NestFieldDeclaration
         pipeline: pipelineWithDrillPaths,
         annotation: {...this.note, inherits: annotation},
         location: this.location,
-        fieldUsage,
+        refSummary,
       };
       return this.turtleDef;
     }

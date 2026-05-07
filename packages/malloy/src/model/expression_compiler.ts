@@ -19,6 +19,7 @@ import type {
   FunctionOverloadDef,
   FunctionParameterDef,
   FunctionOrderBy,
+  GivenRefNode,
   QuerySegment,
   FieldnameNode,
   OutputFieldNode,
@@ -156,6 +157,8 @@ function compileExpr<T extends Expr>(
         return generateFieldFragment(resultSet, context, expr, state);
       case 'parameter':
         return generateParameterFragment(resultSet, context, expr, state);
+      case 'given':
+        return generateGivenFragment(resultSet, context, expr, state);
       case 'filteredExpr':
         return generateFilterFragment(resultSet, context, expr, state);
       case 'all':
@@ -334,6 +337,20 @@ function generateAppliedFilter(
       throw new Error(
         `Parameter ${name} was expected to be a filter expression`
       );
+    }
+  }
+  if (filterExpr.node === 'given') {
+    const id = filterExpr.id;
+    const supplied = context.prepareResultOptions?.resolvedGivens?.get(id);
+    if (supplied !== undefined) {
+      filterExpr = supplied;
+    } else {
+      const decl = context.getModel().givens[id];
+      if (decl?.default !== undefined) {
+        filterExpr = decl.default;
+      } else {
+        throw new Error(unsatisfiedGivenMessage(filterExpr.refName));
+      }
     }
   }
   if (filterExpr.node !== 'filterLiteral') {
@@ -798,6 +815,35 @@ export function generateParameterFragment(
     return exprToSQL(resultSet, context, argument.value, state);
   }
   throw new Error(`Can't generate SQL, no value for ${expr.path}`);
+}
+
+export function generateGivenFragment(
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: GivenRefNode,
+  state: GenerateState
+): string {
+  const id = expr.id;
+  const supplied = context.prepareResultOptions?.resolvedGivens?.get(id);
+  if (supplied !== undefined) {
+    return exprToSQL(resultSet, context, supplied, state);
+  }
+  // The default may itself be a `$OTHER`-bearing expression — recursive
+  // compile handles default chains.
+  const decl = context.getModel().givens[id];
+  if (decl?.default !== undefined) {
+    return exprToSQL(resultSet, context, decl.default, state);
+  }
+  throw new Error(unsatisfiedGivenMessage(expr.refName));
+}
+
+function unsatisfiedGivenMessage(refName: string): string {
+  return (
+    `Given '${refName}' has no value and no default. ` +
+    `To fix: supply it via \`.run({givens: {${refName}: ...}})\` if it's in scope, ` +
+    'or add a default at its declaration, ' +
+    `or import the given by name so a value can be supplied (e.g. \`import { ${refName} } from "..."\`).`
+  );
 }
 
 export function generateFilterFragment(

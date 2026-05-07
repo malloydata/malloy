@@ -26,6 +26,7 @@ import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
 import type {View} from '../view-elements/view';
 import {QueryBase} from './query-base';
+import {computeQueryGivenUsage} from '../../composite-source-utils';
 
 /**
  * A query operation that consists of an exisitng query with refinements.
@@ -60,7 +61,7 @@ export class QueryRefine extends QueryBase implements QueryElement {
       pipeline
     );
 
-    const pipelineWithExpandedFieldUsage = this.expandFieldUsage(
+    const pipelineWithExpandedFieldUsage = this.expandRefUsage(
       compositeResolvedSourceDef ?? q.inputStruct,
       pipeline
     );
@@ -70,6 +71,7 @@ export class QueryRefine extends QueryBase implements QueryElement {
         ...query,
         compositeResolvedSourceDef,
         pipeline: pipelineWithExpandedFieldUsage,
+        givenUsage: computeQueryGivenUsage(pipelineWithExpandedFieldUsage),
       },
       // TODO bleh
       outputStruct: pipeline[pipeline.length - 1].outputStruct,

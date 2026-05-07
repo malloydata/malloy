@@ -13,6 +13,7 @@ import type {
   QueryRunStats,
   PrepareResultOptions,
   BuildManifest,
+  GivenValue,
   VirtualMap,
 } from '../../model';
 import {isSourceDef, mkSafeRecord} from '../../model';
@@ -117,6 +118,11 @@ export class Runtime {
   private _resolvedBuildManifestPromise:
     | Promise<BuildManifest | undefined>
     | undefined;
+  private _resolvedGivensPromise:
+    | Promise<Record<string, GivenValue> | undefined>
+    | undefined;
+  private _constructorGivensMap: ReadonlyMap<string, GivenValue>;
+  private _finalizedGivensSet: ReadonlySet<string>;
   private _virtualMap: VirtualMap | undefined;
 
   constructor({
@@ -127,11 +133,19 @@ export class Runtime {
     buildManifest,
     eventStream,
     cacheManager,
+    givens,
   }: {
     urlReader?: URLReader;
     buildManifest?: BuildManifest;
     eventStream?: EventStream;
     cacheManager?: CacheManager;
+    /**
+     * Per-runtime givens supplied directly by the host (multi-tenant
+     * server passing JWT-derived values; tests; scripts). Overlaid on top
+     * of `config.givensURL` per-key, then per-query supply via
+     * `.run({givens: ...})` overlays on top of both.
+     */
+    givens?: Record<string, GivenValue>;
   } & Connectionable) {
     if (config !== undefined) {
       this._config = config;
@@ -154,6 +168,21 @@ export class Runtime {
     this._buildManifest = buildManifest;
     this._eventStream = eventStream;
     this._cacheManager = cacheManager;
+    if (givens) {
+      for (const [name, value] of Object.entries(givens)) {
+        if (value === undefined) {
+          throw new Error(
+            `Runtime givens.${name}: explicit undefined is not a valid value. ` +
+              'Omit the key to defer to declaration default or the file layer; ' +
+              'use null for an explicit null value.'
+          );
+        }
+      }
+    }
+    this._constructorGivensMap = givens
+      ? new Map(Object.entries(givens))
+      : new Map();
+    this._finalizedGivensSet = new Set(this._config?.finalizeGivens ?? []);
   }
 
   /**
@@ -182,6 +211,50 @@ export class Runtime {
    */
   public get eventStream(): EventStream | undefined {
     return this._eventStream;
+  }
+
+  /**
+   * Constructor-supplied givens, exposed for the materializer's per-query
+   * merge. Underscore-prefixed because it's the constructor layer only —
+   * use `getGivens()` for the full file+constructor view a caller usually
+   * wants.
+   *
+   * @internal Accessed from QueryMaterializer.
+   */
+  public get _constructorGivens(): ReadonlyMap<string, GivenValue> {
+    return this._constructorGivensMap;
+  }
+
+  /**
+   * The runtime's effective givens — file (from `config.givensPath`,
+   * lazily loaded) merged with the constructor `givens:` option, with
+   * the constructor winning per-key. Per-query supply via
+   * `.run({ givens: ... })` is *not* included; that's a per-call
+   * argument, not runtime state.
+   *
+   * Async because the file may not yet be loaded; subsequent calls share
+   * the cached promise.
+   */
+  public async getGivens(): Promise<ReadonlyMap<string, GivenValue>> {
+    const file = await this._resolveGivens();
+    const merged = new Map<string, GivenValue>();
+    if (file) {
+      for (const [k, v] of Object.entries(file)) merged.set(k, v);
+    }
+    for (const [k, v] of this._constructorGivensMap) merged.set(k, v);
+    return merged;
+  }
+
+  /**
+   * Surface names of givens locked at the runtime layer (the resolved set
+   * the `config.finalizeGivens` directive produced). Per-query supply for
+   * these names throws; `Model.givens` and `PreparedQuery.givens` filter
+   * them out so introspection-driven UIs don't render editors for them.
+   *
+   * @internal Accessed from QueryMaterializer and Model construction.
+   */
+  public get _finalizedGivens(): ReadonlySet<string> {
+    return this._finalizedGivensSet;
   }
 
   /**
@@ -233,13 +306,13 @@ export class Runtime {
     if (this._buildManifest) {
       return Promise.resolve(this._buildManifest);
     }
-    const url = this._config?.manifestURL;
-    if (!url) return Promise.resolve(undefined);
+    const urlStr = this._config?.manifestURL;
+    if (!urlStr) return Promise.resolve(undefined);
     if (!this._resolvedBuildManifestPromise) {
       this._resolvedBuildManifestPromise = (async () => {
         let text: string;
         try {
-          const result = await this._urlReader.readURL(url);
+          const result = await this._urlReader.readURL(new URL(urlStr));
           text = typeof result === 'string' ? result : result.contents;
         } catch {
           // Read failure (no file, permission, etc.) — treat as "no
@@ -261,12 +334,69 @@ export class Runtime {
           const msg = e instanceof Error ? e.message : String(e);
           return {
             entries: {},
-            loadError: `Manifest file at ${url.toString()} could not be parsed: ${msg}`,
+            loadError: `Manifest file at ${urlStr} could not be parsed: ${msg}`,
           };
         }
       })();
     }
     return this._resolvedBuildManifestPromise;
+  }
+
+  /**
+   * Resolve the per-runtime givens map from `config.givensURL` (the file
+   * `givensPath` points at). Lazy and cached as a Promise — first compile
+   * triggers the read, subsequent compiles share the result.
+   *
+   * Stricter error policy than `_resolveBuildManifest`: a missing file or
+   * malformed JSON throws. Per design, the per-runtime givens layer is a
+   * configured contract, not an opportunistic read; a misconfigured path
+   * should fail loudly at the first compile, not silently degrade.
+   *
+   * Returns `undefined` only when no `givensURL` is configured.
+   *
+   * @internal Accessed from QueryMaterializer.
+   */
+  public _resolveGivens(): Promise<Record<string, GivenValue> | undefined> {
+    const urlStr = this._config?.givensURL;
+    if (!urlStr) return Promise.resolve(undefined);
+    if (!this._resolvedGivensPromise) {
+      this._resolvedGivensPromise = (async () => {
+        let text: string;
+        try {
+          const result = await this._urlReader.readURL(new URL(urlStr));
+          text = typeof result === 'string' ? result : result.contents;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          throw new Error(
+            `givens: failed to read givens file at ${urlStr}: ${msg}`
+          );
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          throw new Error(`givens: failed to parse JSON at ${urlStr}: ${msg}`);
+        }
+        if (!isGivensObject(parsed)) {
+          const got = Array.isArray(parsed)
+            ? 'array'
+            : parsed === null
+              ? 'null'
+              : typeof parsed;
+          throw new Error(
+            `givens: file at ${urlStr} must be a JSON object of name → value pairs, got ${got}`
+          );
+        }
+        return parsed;
+      })();
+    }
+    return this._resolvedGivensPromise;
+  }
+
+  /** @internal */
+  public _invalidateGivensCache(): void {
+    this._resolvedGivensPromise = undefined;
   }
 
   /**
@@ -341,7 +471,7 @@ export class Runtime {
     return new ModelMaterializer(
       this,
       async () => {
-        return Malloy.compile({
+        const m = await Malloy.compile({
           ...compilable,
           urlReader: this.urlReader,
           connections: this.connections,
@@ -352,8 +482,31 @@ export class Runtime {
           testEnvironment: options?.testEnvironment,
           cacheManager: this.cacheManager,
         });
+        return this._withRuntimeContext(m);
       },
       options
+    );
+  }
+
+  /**
+   * Re-wrap a `Model` produced by `Malloy.compile` with this runtime's
+   * `RuntimeContext` so context-sensitive Model methods (currently
+   * `Model.givens` filtering finalized names; future runtime-aware
+   * concerns) work correctly. No-op when there's nothing in the context.
+   *
+   * @internal Accessed from `ModelMaterializer.extendModel` and Runtime
+   * loadModel paths.
+   */
+  public _withRuntimeContext(m: Model): Model {
+    if (this._finalizedGivensSet.size === 0) return m;
+    return new Model(
+      m._modelDef,
+      m.problems,
+      m.fromSources,
+      m.getExistingQueryModel(),
+      {
+        finalizedGivens: this._finalizedGivensSet,
+      }
     );
   }
 
@@ -368,7 +521,15 @@ export class Runtime {
     return new ModelMaterializer(
       this,
       async () => {
-        return new Model(modelDef, [], []);
+        return new Model(
+          modelDef,
+          [],
+          [],
+          undefined,
+          this._finalizedGivensSet.size > 0
+            ? {finalizedGivens: this._finalizedGivensSet}
+            : undefined
+        );
       },
       options
     );
@@ -707,7 +868,7 @@ export class ModelMaterializer extends FluentState<Model> {
           testEnvironment: options?.testEnvironment,
           ...this.compileQueryOptions,
         });
-        return queryModel;
+        return this.runtime._withRuntimeContext(queryModel);
       },
       options
     );
@@ -1011,7 +1172,63 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       // Use virtualMap from options if provided, otherwise fall back to Runtime's.
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
 
-      // Build PrepareResultOptions from CompileQueryOptions + connectionDigests
+      // Per-query supply for a finalized given is rejected at API entry
+      // — the finalized-givens set is the runtime's "this can't be
+      // overridden by the caller" guarantee. Fail before any IO so misuse
+      // is loud.
+      const finalizedSet = this.runtime._finalizedGivens;
+      if (finalizedSet.size > 0 && mergedOptions.givens) {
+        for (const name of Object.keys(mergedOptions.givens)) {
+          if (finalizedSet.has(name)) {
+            throw new Error(
+              `Cannot supply '${name}' per-query: it is finalized at the runtime layer (config.finalizeGivens).`
+            );
+          }
+        }
+      }
+
+      // Three layers of givens, merged per-key in precedence order:
+      //   1. config.givensURL file (lazy + cached)
+      //   2. Runtime constructor `givens:` option
+      //   3. Per-query supply via `.run({givens: ...})`
+      // Higher-numbered layers win on collision. Each layer is optional;
+      // the merge collapses to undefined when all three are absent.
+      const fileGivens = await this.runtime._resolveGivens();
+      const constructorGivens = mapToRecord(this.runtime._constructorGivens);
+      const haveAny = fileGivens || constructorGivens || mergedOptions.givens;
+      const mergedGivens = haveAny
+        ? {...fileGivens, ...constructorGivens, ...mergedOptions.givens}
+        : undefined;
+
+      // Query-scoped validation: of the givens THIS query references,
+      // any that are finalized must have a value somewhere (file or
+      // constructor). One config covers a project; individual files
+      // declare overlapping but distinct given sets; an unrelated query
+      // shouldn't fail because some other file's given is in the
+      // finalize list without a value. The per-query rejection above is
+      // the actual security primitive; this check is the sanity net for
+      // "you locked it but forgot to supply it."
+      const queryGivenUsage = preparedQuery._query.givenUsage ?? [];
+      if (finalizedSet.size > 0 && queryGivenUsage.length > 0) {
+        const referencedIds = new Set(queryGivenUsage.map(g => g.id));
+        const missing: string[] = [];
+        for (const [surfaceName, entry] of Object.entries(
+          preparedQuery._modelDef.contents
+        )) {
+          if (entry.type !== 'given') continue;
+          if (!referencedIds.has(entry.id)) continue;
+          if (!finalizedSet.has(surfaceName)) continue;
+          if (mergedGivens && surfaceName in mergedGivens) continue;
+          missing.push(surfaceName);
+        }
+        if (missing.length > 0) {
+          throw new Error(
+            `Query references finalized given(s) with no resolved value: ${missing.join(', ')}. Each finalized given the query needs must have a value in givensPath or in the Runtime constructor's \`givens\`.`
+          );
+        }
+      }
+
+      // Build PrepareResultOptions from CompileQueryOptions + connectionDigests.
       const prepareResultOptions: PrepareResultOptions = {
         defaultRowLimit: mergedOptions.defaultRowLimit,
         buildManifest,
@@ -1022,6 +1239,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       return preparedQuery.getPreparedResult({
         ...mergedOptions,
         ...prepareResultOptions,
+        givens: mergedGivens,
       });
     });
   }
@@ -1205,4 +1423,26 @@ function isBuildManifestShape(value: unknown): value is BuildManifest {
   if (typeof value !== 'object' || value === null) return false;
   const entries = (value as {entries?: unknown}).entries;
   return typeof entries === 'object' && entries !== null;
+}
+
+/**
+ * Shallow shape-check for the givens-values file: must be a non-array
+ * non-null object. Per-value type checking happens later when each
+ * declared given is bound via `resolveSuppliedGivens` — at this layer we
+ * only ensure the top-level shape is a name → value map.
+ */
+function isGivensObject(value: unknown): value is Record<string, GivenValue> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Convert a non-empty `ReadonlyMap` into a plain object for spread-merging
+ * with other given layers. Returns `undefined` for an empty map so the
+ * merge can short-circuit when all layers are absent.
+ */
+function mapToRecord(
+  m: ReadonlyMap<string, GivenValue>
+): Record<string, GivenValue> | undefined {
+  if (m.size === 0) return undefined;
+  return Object.fromEntries(m);
 }

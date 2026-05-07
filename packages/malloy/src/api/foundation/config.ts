@@ -15,7 +15,11 @@ import type {
 import {compileConfig} from './config_compile';
 import {prepareConfig} from './config_resolve';
 import {buildManagedLookup} from './config_lookup';
-import {defaultConfigOverlays, isThenable} from './config_overlays';
+import {
+  contextOverlay,
+  defaultConfigOverlays,
+  isThenable,
+} from './config_overlays';
 import type {ConfigOverlays} from './config_overlays';
 
 /**
@@ -166,26 +170,103 @@ export class Manifest {
  * `urlReader.readURL()` / `JSON.parse()` and pass the POJO, or use the
  * sync string form after reading the file.
  */
+/**
+ * Filesystem context for a `MalloyConfig`: where the config file lives
+ * (`configURL`) and where the project root is (`rootDirectory`).
+ *
+ * Both are URL-shaped strings (e.g. `'file:///path/to/config.json'`).
+ * Hosts in Node convert their paths to file URLs (`url.pathToFileURL(path)
+ * .toString()`); browser hosts pass `https://...` or whatever scheme they
+ * serve from. Foundation never reaches for `process.cwd` — that decision
+ * lives in the host.
+ *
+ *   - `configURL` — anchor for `manifestPath` and `givensPath` resolution.
+ *     Set by `discoverConfig` to the URL of the matched config file. POJO
+ *     callers pass it directly when their config carries any path setting.
+ *   - `rootDirectory` — project root. Consumed by connection-property
+ *     defaults via the `{config: 'rootDirectory'}` overlay-reference shape
+ *     (e.g. DuckDB's `databasePath` default). Set by `discoverConfig` to
+ *     the ceiling of the discovery range; POJO callers pass it when they
+ *     need a project-rooted anchor.
+ */
+export type FilesystemContext = {
+  configURL?: string;
+  rootDirectory?: string;
+};
+
+/**
+ * Second-arg options for `MalloyConfig`. Combines the filesystem context
+ * with non-`config` overlays. The `config` slot in `overlays` is reserved
+ * — pass `configURL` / `rootDirectory` directly instead. A reserved-slot
+ * collision is warned and dropped, not silently merged.
+ */
+export interface MalloyConfigOptions extends FilesystemContext {
+  overlays?: ConfigOverlays;
+}
+
 export class MalloyConfig {
   readonly virtualMap?: VirtualMap;
+  /** URL-shaped string of the config file, or undefined if not supplied. */
+  readonly configURL?: string;
+  /** URL-shaped string of the project root, or undefined if not supplied. */
+  readonly rootDirectory?: string;
   readonly manifestPath?: string;
   /**
-   * Resolved URL of the manifest file (`malloy-manifest.json`), if a
-   * `configURL` was provided in the `config` overlay. Computed once in the
-   * constructor from `manifestPath` (default `'MANIFESTS'`) joined to
-   * `configURL`. Stays `undefined` for callers that didn't supply a
-   * `configURL` — Runtime treats that as "no auto-read."
+   * Resolved URL string of the manifest file (`malloy-manifest.json`), if a
+   * `configURL` was supplied. Computed once in the constructor from
+   * `manifestPath` (default `'MANIFESTS'`) joined to `configURL`. Stays
+   * `undefined` when no `configURL` is available — Runtime treats that as
+   * "no auto-read."
    */
-  readonly manifestURL?: URL;
+  readonly manifestURL?: string;
+  readonly givensPath?: string;
+  /**
+   * Resolved URL string of the givens-values JSON file, if `givensPath`
+   * was set and a `configURL` was supplied. Resolved against `configURL`
+   * so relative paths in the project's `malloy-config.json` work the same
+   * way `manifestPath` does. Stays `undefined` if `givensPath` was not
+   * configured; Runtime treats that as "no per-runtime givens layer."
+   */
+  readonly givensURL?: string;
+  /**
+   * Surface names of givens that the runtime locks. Locked givens cannot
+   * be overridden via per-query supply (`.run({givens: {X: ...}})` for a
+   * locked X throws at API entry) and are filtered out of `Model.givens`
+   * / `PreparedQuery.givens` introspection so UIs don't render editors
+   * for them. Security primitive — multi-tenant deployments lock the
+   * tenant identifier so a downstream endpoint that accidentally accepts
+   * caller-controlled overrides can't leak across tenants.
+   *
+   * Validation that every locked name has a resolved value (file +
+   * constructor) happens lazily at the first compile that needs givens,
+   * since the `givensURL` file read is async.
+   */
+  readonly finalizeGivens?: ReadonlyArray<string>;
   readonly log: readonly LogMessage[];
 
   private _connections: LookupConnection<Connection>;
   private readonly _managedLookup: ManagedConnectionLookup;
   private readonly _overlays: ConfigOverlays;
 
-  constructor(source: string);
-  constructor(pojo: object, overlays?: ConfigOverlays);
-  constructor(sourceOrPojo: string | object, overlays?: ConfigOverlays) {
+  /**
+   * @deprecated Pass `MalloyConfigOptions` (`{configURL, rootDirectory,
+   * overlays}`) instead of a raw `ConfigOverlays` dict. The old shape is
+   * detected at runtime and adapted automatically; remove the
+   * `contextOverlay({...})` wrapping when convenient.
+   */
+  constructor(source: string, overlays: ConfigOverlays);
+  /** Build a `MalloyConfig` from a JSON config string. */
+  constructor(source: string, options?: MalloyConfigOptions);
+  /**
+   * @deprecated See the source-string overload's deprecation note.
+   */
+  constructor(pojo: object, overlays: ConfigOverlays);
+  /** Build a `MalloyConfig` from a parsed POJO. */
+  constructor(pojo: object, options?: MalloyConfigOptions);
+  constructor(
+    sourceOrPojo: string | object,
+    optsOrOverlays?: MalloyConfigOptions | ConfigOverlays
+  ) {
     const log: LogMessage[] = [];
 
     // Normalize input to a POJO.
@@ -209,11 +290,30 @@ export class MalloyConfig {
     const compiled = compileConfig(pojo);
     log.push(...compiled.log);
 
-    // Merge the host-supplied overlays onto the defaults. Same-named
-    // entries replace defaults; new keys are added.
+    // Distinguish the new typed-options form from the legacy
+    // ConfigOverlays-dict form. Legacy dicts have function-valued slots
+    // (`config: () => ...`); new options have string/object fields.
+    const options = normalizeOptions(optsOrOverlays, log);
+
+    // configURL must parse as a URL — foundation joins paths against it
+    // (manifestURL, givensURL). rootDirectory is opaque; foundation just
+    // forwards it via the `config` overlay to whoever consumes it (e.g.
+    // DuckDB's databasePath default), so its shape is the consumer's call.
+    const configURL = validateURLString(options.configURL, 'configURL', log);
+    const rootDirectory = options.rootDirectory;
+
+    // Build the internal `config` overlay from the typed FS context. Other
+    // overlay slots (env, host-defined session/secret) ride alongside as
+    // host-supplied. The `config` slot is reserved here; if the host
+    // supplied one in `options.overlays`, normalizeOptions already warned
+    // and dropped it.
     const mergedOverlays: ConfigOverlays = {
       ...defaultConfigOverlays(),
-      ...overlays,
+      ...options.overlays,
+      config: contextOverlay({
+        configURL,
+        rootDirectory,
+      }),
     };
 
     // Synchronous prep: extract literal sections (manifestPath, virtualMap),
@@ -233,12 +333,13 @@ export class MalloyConfig {
 
     this._overlays = mergedOverlays;
     this.virtualMap = toVirtualMap(prepared.virtualMap);
+    this.configURL = configURL;
+    this.rootDirectory = rootDirectory;
     this.manifestPath = prepared.manifestPath;
-    this.manifestURL = computeManifestURL(
-      prepared.manifestPath,
-      mergedOverlays,
-      log
-    );
+    this.manifestURL = computeManifestURL(prepared.manifestPath, configURL);
+    this.givensPath = prepared.givensPath;
+    this.givensURL = computeGivensURL(prepared.givensPath, configURL, log);
+    this.finalizeGivens = prepared.finalizeGivens;
     this.log = log;
   }
 
@@ -375,42 +476,164 @@ const MANIFEST_FILENAME = 'malloy-manifest.json';
  */
 function computeManifestURL(
   manifestPath: string | undefined,
-  overlays: ConfigOverlays,
+  configURL: string | undefined
+): string | undefined {
+  if (!configURL) return undefined;
+  let baseURL: URL;
+  try {
+    baseURL = new URL(configURL);
+  } catch {
+    return undefined;
+  }
+  const path = manifestPath ?? DEFAULT_MANIFEST_PATH;
+  let manifestRoot: URL;
+  try {
+    manifestRoot = new URL(path, baseURL);
+  } catch {
+    return undefined;
+  }
+  const asString = manifestRoot.toString();
+  const dirURL = asString.endsWith('/')
+    ? manifestRoot
+    : new URL(asString + '/');
+  return new URL(MANIFEST_FILENAME, dirURL).toString();
+}
+
+/**
+ * Resolve `givensPath` to a full URL string, joined against `configURL`
+ * so relative paths anchor at the project's `malloy-config.json`
+ * directory. Returns `undefined` and warns when `givensPath` was set but
+ * resolution can't proceed — silent drop here is unfriendly because
+ * unlike `manifestPath`, `givensPath` has no graceful-fallback story.
+ */
+function computeGivensURL(
+  givensPath: string | undefined,
+  configURL: string | undefined,
   log: LogMessage[]
-): URL | undefined {
-  const configOverlay = overlays['config'];
-  const configURLValue = configOverlay?.(['configURL']);
-  if (isThenable(configURLValue)) {
+): string | undefined {
+  if (!givensPath) return undefined;
+  if (!configURL) {
     log.push({
       message:
-        'the `config` overlay returned a Promise for `configURL`; `configURL` must be resolved synchronously. manifestURL will be undefined and persistence will not work.',
+        'givensPath is set but no configURL is available; per-runtime givens will not be loaded. Pass `configURL` (or use an absolute URL such as `file:///...`).',
       severity: 'warn',
       code: 'config-overlay',
     });
     return undefined;
   }
-  if (typeof configURLValue !== 'string') return undefined;
-
-  let configURL: URL;
+  let baseURL: URL;
   try {
-    configURL = new URL(configURLValue);
+    baseURL = new URL(configURL);
   } catch {
     return undefined;
   }
-
-  const path = manifestPath ?? DEFAULT_MANIFEST_PATH;
-  let manifestRoot: URL;
   try {
-    manifestRoot = new URL(path, configURL);
-  } catch {
+    return new URL(givensPath, baseURL).toString();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    log.push({
+      message: `givensPath '${givensPath}' could not be resolved against configURL '${configURL}': ${msg}`,
+      severity: 'warn',
+      code: 'config-validation',
+    });
     return undefined;
   }
+}
 
-  const asString = manifestRoot.toString();
-  const dirURL = asString.endsWith('/')
-    ? manifestRoot
-    : new URL(asString + '/');
-  return new URL(MANIFEST_FILENAME, dirURL);
+/**
+ * Distinguish the new typed-options form (`{configURL?, rootDirectory?,
+ * overlays?}`) from the legacy `ConfigOverlays`-dict form (`{config: fn,
+ * env: fn, ...}`) by checking for function-valued top-level slots. Legacy
+ * inputs are adapted: extract `configURL` and `rootDirectory` from
+ * `overlays.config?.(['name'])` (sync only — async overlays warn and
+ * drop), preserve the rest as `options.overlays`. New inputs pass
+ * through, but a non-empty `overlays.config` is reserved-slot collision —
+ * warn and drop.
+ */
+function normalizeOptions(
+  optsOrOverlays: MalloyConfigOptions | ConfigOverlays | undefined,
+  log: LogMessage[]
+): MalloyConfigOptions {
+  if (optsOrOverlays === undefined) return {};
+  if (isLegacyOverlays(optsOrOverlays)) {
+    return adaptLegacyOverlays(optsOrOverlays, log);
+  }
+  const opts = optsOrOverlays;
+  if (opts.overlays && 'config' in opts.overlays) {
+    log.push({
+      message:
+        '`config` is reserved by MalloyConfig; pass `configURL` and `rootDirectory` directly instead. Supplied `overlays.config` ignored.',
+      severity: 'warn',
+      code: 'config-overlay',
+    });
+    const {config: _config, ...rest} = opts.overlays;
+    return {...opts, overlays: rest};
+  }
+  return opts;
+}
+
+function isLegacyOverlays(
+  arg: MalloyConfigOptions | ConfigOverlays
+): arg is ConfigOverlays {
+  for (const v of Object.values(arg)) {
+    if (typeof v === 'function') return true;
+  }
+  return false;
+}
+
+function adaptLegacyOverlays(
+  overlays: ConfigOverlays,
+  log: LogMessage[]
+): MalloyConfigOptions {
+  const cfg = overlays['config'];
+  if (!cfg) return {overlays};
+  const configURL = readSyncString(cfg, 'configURL', log);
+  const rootDirectory = readSyncString(cfg, 'rootDirectory', log);
+  // Strip the legacy `config` overlay; its values are now typed fields.
+  // Any other slots (env, host-defined) ride through.
+  const {config: _config, ...rest} = overlays;
+  return {configURL, rootDirectory, overlays: rest};
+}
+
+function readSyncString(
+  overlay: NonNullable<ConfigOverlays['config']>,
+  key: string,
+  log: LogMessage[]
+): string | undefined {
+  const v = overlay([key]);
+  if (isThenable(v)) {
+    log.push({
+      message: `the legacy \`config\` overlay returned a Promise for \`${key}\`; top-level FS context must resolve synchronously. ${key} will be undefined.`,
+      severity: 'warn',
+      code: 'config-overlay',
+    });
+    return undefined;
+  }
+  return typeof v === 'string' ? v : undefined;
+}
+
+/**
+ * Diagnose a URL-shaped string. Returns the string back when valid,
+ * undefined (with a warning) when not. Empty/undefined inputs return
+ * undefined silently — those are the "not supplied" case.
+ */
+function validateURLString(
+  value: string | undefined,
+  fieldName: string,
+  log: LogMessage[]
+): string | undefined {
+  if (value === undefined) return undefined;
+  try {
+    new URL(value);
+    return value;
+  } catch {
+    log.push({
+      message: `${fieldName} must be a URL-shaped string (e.g. 'file:///path/to/...'), got '${value}'. In Node, use \`url.pathToFileURL(path).toString()\`.`,
+      severity: 'warn',
+      code: 'config-validation',
+    });
+    return undefined;
+  }
 }
 
 /**

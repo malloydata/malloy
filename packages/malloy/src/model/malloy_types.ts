@@ -101,6 +101,7 @@ export type Expr =
   | FieldnameNode
   | SourceReferenceNode
   | ParameterNode
+  | GivenRefNode
   | NowNode
   | MeasureTimeExpr
   | TimeExtractExpr
@@ -176,7 +177,7 @@ export interface FilterCondition extends ExprE {
   node: 'filterCondition';
   code: string;
   expressionType: ExpressionType;
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   // Attached to filters which come from a view rather than direct in the query
   // allows the renderer to know which filters should NOT be included in drill queries
   filterView?: string;
@@ -254,6 +255,12 @@ export interface SourceReferenceNode extends ExprLeaf {
 export interface ParameterNode extends ExprLeaf {
   node: 'parameter';
   path: string[];
+}
+
+export interface GivenRefNode extends ExprLeaf {
+  node: 'given';
+  id: GivenID;
+  refName: string;
 }
 
 export interface NowNode extends ExprLeaf {
@@ -485,13 +492,13 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   expressionType?: ExpressionType;
   code?: string;
   drillExpression?: Malloy.Expression;
 }
 
-type ConstantExpr = Expr;
+export type ConstantExpr = Expr;
 
 interface ParameterInfo {
   name: string;
@@ -537,6 +544,45 @@ export type ParameterTypeDef =
 export type Parameter = ParameterTypeDef & ParameterInfo;
 export type Argument = Parameter;
 
+/**
+ * Type of a given declaration. The grammar's `malloyType` already excludes
+ * `json` and `sql native`, so any value of this union is a legal given type.
+ *
+ * The fully-narrowed recursive form described in `~/ctx/mp/implementation.md`
+ * (a fresh union over a smaller atomic base) lands with the IR work; the
+ * shape here is the conservative "not yet narrowed" version.
+ */
+export type GivenTypeDef = AtomicTypeDef | FilterExpressionParamTypeDef;
+
+export interface Given extends HasLocation, HasAnnotation {
+  /** The name as written at the declaration site. Used by diagnostics
+   *  that need a readable surface name out of an opaque GivenID. */
+  name: string;
+  type: GivenTypeDef;
+  /** Non-optional so the no-default case is explicit at every read site. */
+  default: ConstantExpr | undefined;
+  /** Pre-rendered source text of the default expression, captured at
+   *  declaration time so hover (`DocumentGivenReference`) can show it
+   *  without re-rendering an Expr back to source. Absent when there's
+   *  no default. */
+  defaultText?: string;
+  /** Transitive closure of givens this declaration references — only
+   *  reachable through the default's expression chain (a Given has no
+   *  other given-referencing surface). Precomputed at declaration time.
+   *  For `A is $B + 1` where `B is $C`: A's `givenUsage` is `[B, C]`.
+   *  The satisfiability check expands each Query.givenUsage entry
+   *  through this closure and verifies each id is in-namespace or has
+   *  its own default. Empty/undefined when the default is a closed
+   *  literal. */
+  givenUsage?: GivenUsage;
+}
+
+export interface GivenEntry {
+  type: 'given';
+  name: string;
+  id: GivenID;
+}
+
 export function paramHasValue(p: Parameter): boolean {
   return p.value !== null;
 }
@@ -573,10 +619,8 @@ export interface DocumentLocation {
  * the references, and in that case, this should include something like an
  * index or pointer to the full definition elsewhere in the model.
  */
-export interface LightweightDefinition {
+export interface LightweightDefinition extends HasLocation, HasAnnotation {
   type: string;
-  annotation?: Annotation;
-  location?: DocumentLocation;
 }
 
 interface DocumentReferenceBase {
@@ -605,16 +649,35 @@ export interface DocumentFieldReference extends DocumentReferenceBase {
   type: 'fieldReference';
 }
 
+/**
+ * Definition info attached to a `DocumentGivenReference`. Extends the
+ * base with `defaultText` — the pre-rendered source of the given's
+ * default expression, if one was declared.
+ */
+export interface GivenLightweightDefinition extends LightweightDefinition {
+  defaultText?: string;
+}
+
+export interface DocumentGivenReference extends DocumentReferenceBase {
+  type: 'givenReference';
+  definition: GivenLightweightDefinition;
+}
+
 export type DocumentReference =
   | DocumentExploreReference
   | DocumentQueryReference
   | DocumentSQLBlockReference
   | DocumentFieldReference
-  | DocumentJoinReference;
+  | DocumentJoinReference
+  | DocumentGivenReference;
 
 /** put location into the parse tree. */
 export interface HasLocation {
   location?: DocumentLocation;
+}
+
+export interface HasAnnotation {
+  annotation?: Annotation;
 }
 
 /** All names have their source names and how they will appear in the symbol table that owns them */
@@ -801,8 +864,8 @@ export function canOrderBy(s: string) {
  * which might have an annotation.
  */
 
-export interface FieldBase extends NamedObject, Expression, ResultMetadata {
-  annotation?: Annotation;
+export interface FieldBase
+  extends NamedObject, Expression, ResultMetadata, HasAnnotation {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
@@ -1039,7 +1102,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }
 
@@ -1163,14 +1226,20 @@ export interface TurtleSegment extends Filtered {
 export interface Pipeline {
   pipeline: PipeSegment[];
 }
-export interface Query extends Pipeline, Filtered, HasLocation {
+export interface Query extends Pipeline, Filtered, HasLocation, HasAnnotation {
   type?: 'query';
   name?: string;
   structRef: StructRef;
   sourceArguments?: SafeRecord<Argument>;
-  annotation?: Annotation;
   modelAnnotation?: Annotation;
   compositeResolvedSourceDef?: SourceDef;
+  // Dedup'd union of every segment's `expandedGivenUsage` (and nested turtle
+  // stages'). Populated when the Query is finalized; consumers that need the
+  // per-query given set (PreparedQuery.givens, satisfiability check) read it
+  // here instead of re-walking segments. The encapsulation point that lets
+  // outer walkers see givens hidden inside `QuerySourceDef.query` etc. — see
+  // `givenUsageOfSource` in composite-source-utils.ts.
+  givenUsage?: GivenUsage;
 }
 
 export type NamedQueryDef = Query & NamedObject;
@@ -1277,8 +1346,9 @@ export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
  */
 
 export interface SegmentUsageSummary {
-  activeJoins?: FieldUsage[];
-  expandedFieldUsage?: FieldUsage[];
+  activeJoins?: FieldUsage;
+  expandedFieldUsage?: FieldUsage;
+  expandedGivenUsage?: GivenUsage;
   expandedUngroupings?: AggregateUngrouping[];
 }
 
@@ -1289,7 +1359,7 @@ export interface IndexSegment extends Filtered, SegmentUsageSummary {
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
   alwaysJoins?: string[];
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   referencedAt?: DocumentLocation;
   outputStruct: SourceDef;
 }
@@ -1297,18 +1367,116 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
-export interface FieldUsage {
+export interface FieldUsageEntry {
   path: string[];
   at?: DocumentLocation;
   uniqueKeyRequirement?: UniqueKeyRequirement;
   analyticFunctionUse?: boolean;
 }
 
-export function bareFieldUsage(fu: FieldUsage): boolean {
+/** Plural alias — most "field usage" data is a collection of entries. */
+export type FieldUsage = FieldUsageEntry[];
+
+export function bareFieldUsage(fu: FieldUsageEntry): boolean {
   return (
     fu.uniqueKeyRequirement === undefined &&
     fu.analyticFunctionUse === undefined
   );
+}
+
+/**
+ * What a `givenRef` IR node references, accumulated while walking IR.
+ * `id` is the global GivenID; `at` carries the reference site for diagnostics.
+ */
+export interface GivenUsageEntry {
+  id: GivenID;
+  at?: DocumentLocation;
+}
+
+/** Plural alias — most "given usage" data is a collection of entries. */
+export type GivenUsage = GivenUsageEntry[];
+
+/**
+ * `refSummary` is the IR-level reference-tracking field — what fields and
+ * givens does this IR fragment reference. `fieldUsage` carries source-rooted
+ * field paths (paths-rooted-in-source invariant unchanged); `givenUsage`
+ * carries GivenIDs reachable from this fragment, populated by the same
+ * walker that populates `fieldUsage`.
+ *
+ * Read sites use `fieldUsageFrom` / `givenUsageFrom` accessors so callers
+ * don't have to handle the optional-`refSummary` case.
+ */
+export interface RefSummary {
+  fieldUsage: FieldUsage;
+  givenUsage?: GivenUsage;
+}
+
+export function fieldUsageFrom(rs: RefSummary | undefined): FieldUsage {
+  return rs?.fieldUsage ?? [];
+}
+
+export function givenUsageFrom(rs: RefSummary | undefined): GivenUsage {
+  return rs?.givenUsage ?? [];
+}
+
+/**
+ * Construct a `RefSummary` from optionally-supplied component arrays. Returns
+ * undefined when no component is supplied (matching the IR convention that an
+ * absent `refSummary` means "I never set this"). An explicitly-empty array
+ * is preserved (e.g. `{fieldUsage: []}` mirrors the pre-rename "I checked,
+ * found nothing" state distinct from "I never set the field").
+ *
+ * Object-arg shape is the forward-compatible seam for `givenUsage` and any
+ * future RefSummary slots — they get added as additional optional keys on
+ * the destructured param without touching call sites that don't supply them.
+ */
+export function mkRefSummary({
+  fieldUsage,
+  givenUsage,
+}: {
+  fieldUsage?: FieldUsage;
+  givenUsage?: GivenUsage;
+}): RefSummary | undefined {
+  if (fieldUsage === undefined && givenUsage === undefined) return undefined;
+  return {
+    fieldUsage: fieldUsage ?? [],
+    ...(givenUsage && {givenUsage}),
+  };
+}
+
+/**
+ * Apply `fn` to each `FieldUsageEntry` in a `RefSummary`, preserving all other
+ * RefSummary fields. Returns undefined when `rs` is undefined. The site that
+ * needs to rewrite usage paths (e.g. rename, location-rebrand) goes through
+ * here so future RefSummary fields like `givenUsage` are carried along
+ * untouched without each call site having to know about them.
+ */
+export function mapFieldUsage(
+  rs: RefSummary | undefined,
+  fn: (u: FieldUsageEntry) => FieldUsageEntry
+): RefSummary | undefined {
+  return rs && {...rs, fieldUsage: rs.fieldUsage.map(fn)};
+}
+
+/**
+ * Mutating setter for a node's `fieldUsage`. When the node already has a
+ * `refSummary`, replaces just the `fieldUsage` slice (preserving `givenUsage`
+ * and any future RefSummary fields). When it doesn't, creates a fresh
+ * `refSummary` with the supplied usages.
+ *
+ * Use at sites that mutate an already-constructed IR node; for sites that
+ * build a node from a literal, write `{fieldUsage: [...]}` directly or use
+ * `mkRefSummary` for possibly-undefined inputs.
+ */
+export function setFieldUsage(
+  target: {refSummary?: RefSummary},
+  usages: FieldUsage
+): void {
+  if (target.refSummary) {
+    target.refSummary.fieldUsage = usages;
+  } else {
+    target.refSummary = {fieldUsage: usages};
+  }
 }
 
 export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
@@ -1318,7 +1486,7 @@ export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   limit?: number;
   queryTimezone?: string;
   alwaysJoins?: string[];
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   referencedAt?: DocumentLocation;
   outputStruct: SourceDef;
   isRepeated: boolean;
@@ -1327,19 +1495,17 @@ export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
 export type AccessModifierLabel = NonDefaultAccessModifierLabel | 'public';
 
-export interface TurtleDef extends NamedObject, Pipeline {
+export interface TurtleDef extends NamedObject, Pipeline, HasAnnotation {
   type: 'turtle';
-  annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
-  fieldUsage?: FieldUsage[];
+  refSummary?: RefSummary;
   requiredGroupBys?: string[][];
 }
 
 export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
-interface StructDefBase extends HasLocation, NamedObject {
+interface StructDefBase extends HasLocation, NamedObject, HasAnnotation {
   type: string;
-  annotation?: Annotation;
   modelAnnotation?: ModelAnnotation;
   fields: FieldDef[];
   /** Marker for error placeholder structs created by ErrorFactory */
@@ -1400,6 +1566,9 @@ export function isSegmentSource(
 
 /** Format: "name@modelUrl" - uniquely identifies a source for persistence */
 export type SourceID = string;
+
+/** Created with `mkGivenID`. */
+export type GivenID = string;
 
 /** Hash of (connectionDigest, sql) - uniquely identifies a built artifact */
 export type BuildID = string;
@@ -1575,14 +1744,14 @@ export type BasicExpressionType = Exclude<
 >;
 
 export interface RequiredGroupBy {
-  fieldUsage?: FieldUsage;
+  fieldUsage?: FieldUsageEntry;
   at?: DocumentLocation;
   path: string[];
 }
 
 export interface AggregateUngrouping {
   ungroupedFields: string[][] | '*';
-  fieldUsage: FieldUsage[];
+  fieldUsage: FieldUsage;
   requiresGroupBy?: RequiredGroupBy[];
   exclude: boolean;
   path: string[];
@@ -1592,7 +1761,7 @@ export interface AggregateUngrouping {
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
-  fieldUsage: FieldUsage[];
+  refSummary?: RefSummary;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
 };
@@ -1798,10 +1967,9 @@ export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
 // Queries have fields like this ..
 
-export interface RefToField {
+export interface RefToField extends HasAnnotation {
   type: 'fieldref';
   path: string[];
-  annotation?: Annotation;
   at?: DocumentLocation;
   drillExpression?: Malloy.Expression | undefined;
 }
@@ -1823,16 +1991,14 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export interface UserTypeFieldDef {
+export interface UserTypeFieldDef extends HasAnnotation {
   name: string;
   typeDef: AtomicTypeDef;
-  annotation?: Annotation;
 }
 
-export interface UserTypeDef extends NamedObject {
+export interface UserTypeDef extends NamedObject, HasAnnotation {
   type: 'userType';
   fields: UserTypeFieldDef[];
-  annotation?: Annotation;
 }
 
 export function isUserTypeDef(sd: NamedModelObject): sd is UserTypeDef {
@@ -1844,7 +2010,8 @@ export type NamedModelObject =
   | NamedQueryDef
   | FunctionDef
   | ConnectionDef
-  | UserTypeDef;
+  | UserTypeDef
+  | GivenEntry;
 
 export interface DependencyTree {
   [url: string]: DependencyTree;
@@ -1862,6 +2029,7 @@ export interface ModelDef {
    * Each entry includes a lazily-computed persist flag.
    */
   sourceRegistry: Record<SourceID, SourceRegistryValue>;
+  givens?: Record<GivenID, Given>;
   annotation?: ModelAnnotation;
   queryList: Query[];
   dependencies: DependencyTree;
@@ -1934,7 +2102,7 @@ export interface DrillSource {
   sourceArguments?: SafeRecord<Argument>;
 }
 
-export interface CompiledQuery extends DrillSource {
+export interface CompiledQuery extends DrillSource, HasAnnotation {
   structs: SourceDef[];
   sql: string;
   lastStageName: string;
@@ -1942,7 +2110,6 @@ export interface CompiledQuery extends DrillSource {
   queryName?: string | undefined;
   connectionName: string;
   queryTimezone?: string;
-  annotation?: Annotation;
   defaultRowLimitAdded?: number;
 }
 
@@ -2027,6 +2194,17 @@ export interface SearchValueMapResult {
  */
 export type VirtualMap = Map<string, Map<string, string>>;
 
+/** JS-side accepted shapes for caller-supplied given values. */
+export type GivenValue =
+  | string
+  | number
+  | bigint
+  | boolean
+  | Date
+  | null
+  | GivenValue[]
+  | {[key: string]: GivenValue};
+
 export interface PrepareResultOptions {
   defaultRowLimit?: number;
   isPartialQuery?: boolean; // Query is being used as a sql_block
@@ -2037,6 +2215,7 @@ export interface PrepareResultOptions {
   connectionDigests?: SafeRecord<string>;
   /** Map from connectionName → virtualName → tablePath for virtual source resolution */
   virtualMap?: VirtualMap;
+  resolvedGivens?: Map<GivenID, Expr>;
 }
 
 type UTD =
@@ -2073,6 +2252,42 @@ export const TD = {
     return isTemporalType(typ);
   },
   isError: (td: UTD): td is ErrorTypeDef => td?.type === 'error',
+  /**
+   * Strip non-type metadata (name, joins, expressionType, evalSpace, ...)
+   * off a typed def, leaving a clean AtomicTypeDef. Used when copying a
+   * field's type onto an Expr's typeDef, where the field metadata would
+   * pollute the IR. Returns `{type: 'error'}` for non-atomic inputs.
+   */
+  atomicDef(td: UTD): AtomicTypeDef {
+    if (!TD.isAtomic(td)) return {type: 'error'};
+    switch (td.type) {
+      case 'array':
+        return isRepeatedRecord(td)
+          ? {
+              type: 'array',
+              elementTypeDef: td.elementTypeDef,
+              fields: td.fields,
+            }
+          : {type: 'array', elementTypeDef: td.elementTypeDef};
+      case 'record':
+        return {type: 'record', fields: td.fields};
+      case 'number':
+        return td.numberType
+          ? {type: 'number', numberType: td.numberType}
+          : {type: 'number'};
+      case 'sql native':
+        return td.rawType
+          ? {type: 'sql native', rawType: td.rawType}
+          : {type: 'sql native'};
+      case 'timestamp':
+      case 'timestamptz':
+        return td.timeframe
+          ? {type: td.type, timeframe: td.timeframe}
+          : {type: td.type};
+      default:
+        return {type: td.type};
+    }
+  },
   eq(x: UTD, y: UTD): boolean {
     if (x === undefined || y === undefined) {
       return false;

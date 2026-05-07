@@ -5,7 +5,6 @@
 
 import {BaseConnection} from '../../connection/base_connection';
 import {MalloyConfig} from './config';
-import {contextOverlay} from './config_overlays';
 import {Runtime} from './runtime';
 import {registerConnectionType} from '../../connection/registry';
 import type {ConnectionConfig} from '../../connection/types';
@@ -70,11 +69,7 @@ const sampleManifest: BuildManifest = {
 function configWithManifestURL(): MalloyConfig {
   return new MalloyConfig(
     {connections: {mydb: {is: 'mockdb'}}},
-    {
-      config: contextOverlay({
-        configURL: 'file:///home/user/project/malloy-config.json',
-      }),
-    }
+    {configURL: 'file:///home/user/project/malloy-config.json'}
   );
 }
 
@@ -188,6 +183,181 @@ describe('Runtime build manifest resolution', () => {
     runtime.buildManifest = explicit;
     const second = await runtime._resolveBuildManifest();
     expect(second).toBe(explicit);
+  });
+});
+
+describe('Runtime givens resolution', () => {
+  const configURL = 'file:///home/user/project/malloy-config.json';
+  const givensURL = 'file:///home/user/project/local-givens.json';
+
+  function configWithGivensURL(): MalloyConfig {
+    return new MalloyConfig(
+      {
+        connections: {mydb: {is: 'mockdb'}},
+        givensPath: './local-givens.json',
+      },
+      {configURL}
+    );
+  }
+
+  it('lazily reads from config.givensURL on first request', async () => {
+    const config = configWithGivensURL();
+    const {reader, calls} = countingReader({
+      [givensURL]: {TENANT: 'acme', MAX_ROWS: 100},
+    });
+    const runtime = new Runtime({config, urlReader: reader});
+
+    expect(calls).toEqual([]);
+
+    const result = await runtime._resolveGivens();
+    expect(result).toEqual({TENANT: 'acme', MAX_ROWS: 100});
+    expect(calls).toEqual([givensURL]);
+  });
+
+  it('caches the read across multiple calls', async () => {
+    const config = configWithGivensURL();
+    const {reader, calls} = countingReader({
+      [givensURL]: {TENANT: 'acme'},
+    });
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await runtime._resolveGivens();
+    await runtime._resolveGivens();
+    await runtime._resolveGivens();
+    expect(calls).toHaveLength(1);
+  });
+
+  it('_invalidateGivensCache forces a re-read on next call', async () => {
+    const config = configWithGivensURL();
+    const {reader, calls} = countingReader({
+      [givensURL]: {TENANT: 'acme'},
+    });
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await runtime._resolveGivens();
+    await runtime._resolveGivens();
+    expect(calls).toHaveLength(1);
+
+    runtime._invalidateGivensCache();
+    await runtime._resolveGivens();
+    expect(calls).toHaveLength(2);
+  });
+
+  it('throws with the URL in the message when the file is missing', async () => {
+    const config = configWithGivensURL();
+    const {reader} = countingReader({}); // every read throws
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await expect(runtime._resolveGivens()).rejects.toThrow(
+      /failed to read givens file at file:\/\/\/home\/user\/project\/local-givens\.json/
+    );
+  });
+
+  it('throws when the file is malformed JSON', async () => {
+    const config = configWithGivensURL();
+    const {reader} = countingReader({[givensURL]: 'not valid json'});
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await expect(runtime._resolveGivens()).rejects.toThrow(
+      /failed to parse JSON at file:\/\/\/home\/user\/project\/local-givens\.json/
+    );
+  });
+
+  it('throws when the JSON top-level is not an object', async () => {
+    const config = configWithGivensURL();
+    const {reader} = countingReader({[givensURL]: '[1,2,3]'});
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await expect(runtime._resolveGivens()).rejects.toThrow(
+      /must be a JSON object.*got array/
+    );
+  });
+
+  it('returns undefined and does not read when config has no givensURL', async () => {
+    const config = new MalloyConfig({connections: {mydb: {is: 'mockdb'}}});
+    expect(config.givensURL).toBeUndefined();
+    const {reader, calls} = countingReader({});
+    const runtime = new Runtime({config, urlReader: reader});
+
+    const result = await runtime._resolveGivens();
+    expect(result).toBeUndefined();
+    expect(calls).toEqual([]);
+  });
+});
+
+describe('Runtime constructor givens + getGivens()', () => {
+  it('getGivens() reflects the constructor `givens:` option', async () => {
+    const runtime = new Runtime({
+      connection: mockConnection('mock'),
+      givens: {TENANT: 'acme', MAX_ROWS: 100},
+    });
+    const merged = await runtime.getGivens();
+    expect([...merged.entries()]).toEqual([
+      ['TENANT', 'acme'],
+      ['MAX_ROWS', 100],
+    ]);
+  });
+
+  it('getGivens() is empty when no layer is supplied', async () => {
+    const runtime = new Runtime({connection: mockConnection('mock')});
+    const merged = await runtime.getGivens();
+    expect(merged.size).toBe(0);
+  });
+
+  it('getGivens() merges file + constructor, constructor wins per-key', async () => {
+    const configURL = 'file:///home/user/project/malloy-config.json';
+    const givensURL = 'file:///home/user/project/local-givens.json';
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL}
+    );
+    const {reader} = countingReader({
+      [givensURL]: {TENANT: 'file-tenant', MAX_ROWS: 100},
+    });
+    const conn = mockConnection('mock');
+    const runtime = new Runtime({
+      config,
+      urlReader: reader,
+      connections: {lookupConnection: () => Promise.resolve(conn)},
+      givens: {TENANT: 'ctor-tenant', USER_ROLE: 'admin'},
+    });
+
+    const merged = await runtime.getGivens();
+    // Constructor TENANT wins over file TENANT; MAX_ROWS comes from
+    // file, USER_ROLE from constructor.
+    expect(merged.get('TENANT')).toBe('ctor-tenant');
+    expect(merged.get('MAX_ROWS')).toBe(100);
+    expect(merged.get('USER_ROLE')).toBe('admin');
+  });
+
+  it('getGivens() returns just the file layer when no constructor option', async () => {
+    const configURL = 'file:///home/user/project/malloy-config.json';
+    const givensURL = 'file:///home/user/project/local-givens.json';
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL}
+    );
+    const {reader} = countingReader({[givensURL]: {TENANT: 'acme'}});
+    const conn = mockConnection('mock');
+    const runtime = new Runtime({
+      config,
+      urlReader: reader,
+      connections: {lookupConnection: () => Promise.resolve(conn)},
+    });
+
+    const merged = await runtime.getGivens();
+    expect([...merged.entries()]).toEqual([['TENANT', 'acme']]);
+  });
+
+  it('rejects an explicit undefined value at construction time', () => {
+    expect(
+      () =>
+        new Runtime({
+          connection: mockConnection('mock'),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          givens: {TENANT: undefined as any},
+        })
+    ).toThrow(/explicit undefined is not a valid value/);
   });
 });
 

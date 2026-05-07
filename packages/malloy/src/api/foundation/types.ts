@@ -4,7 +4,7 @@
  */
 
 import type {EventStream} from '../../runtime_types';
-import type {BuildManifest, VirtualMap} from '../../model';
+import type {BuildManifest, GivenValue, VirtualMap} from '../../model';
 
 /**
  * An empty BuildManifest with no entries and strict mode off.
@@ -53,6 +53,7 @@ export interface CompileQueryOptions {
   connectionDigests?: Record<string, string>;
   /** Map from connectionName → virtualName → tablePath for virtual source resolution */
   virtualMap?: VirtualMap;
+  givens?: Record<string, GivenValue>;
 }
 
 // =============================================================================

@@ -26,6 +26,8 @@ import type {
   Annotation,
   DocumentLocation,
   DocumentReference,
+  Given,
+  GivenID,
   ModelDef,
   ModelAnnotation,
   NamedModelObject,
@@ -301,7 +303,7 @@ export abstract class MalloyElement {
     }
   }
 
-  private varInfo(): string {
+  protected varInfo(): string {
     let extra = '';
     for (const [key, value] of Object.entries(this)) {
       if (key !== 'elementType') {
@@ -508,11 +510,32 @@ function annotationID(a: Annotation): string {
  * that can be tomorrow
  */
 
+function unsatisfiedGivenMessage(
+  label: string,
+  decl: Given | undefined,
+  id: GivenID
+): string {
+  // We always have the GivenID; we may or may not have the declaration
+  // (we should — every given referenced should have been copied into
+  // documentGivens at import time — but defend against it being absent).
+  const surface = decl?.name ?? id;
+  const where = decl?.location?.url
+    ? ` (declared in ${decl.location.url})`
+    : '';
+  return (
+    `${label} references given \`${surface}\`${where}, ` +
+    'which is not surfaced in this model and has no default. ' +
+    `Either import it (e.g. \`import { ${surface} } from "..."\`) ` +
+    'or supply a default at the declaration site.'
+  );
+}
+
 export class Document extends MalloyElement implements NameSpace {
   elementType = 'document';
   globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
+  documentGivens = new Map<GivenID, Given>();
   queryList: Query[] = [];
   statements: DocStatementList;
   didInitModel = false;
@@ -532,6 +555,7 @@ export class Document extends MalloyElement implements NameSpace {
     }
     this.documentModel = new Map<string, ModelEntry>();
     this.documentSrcRegistry = {};
+    this.documentGivens = new Map<GivenID, Given>();
     this.queryList = [];
     if (extendingModelDef) {
       if (extendingModelDef.annotation) {
@@ -543,10 +567,16 @@ export class Document extends MalloyElement implements NameSpace {
           isSourceDef(entry) ||
           entry.type === 'query' ||
           entry.type === 'function' ||
-          entry.type === 'userType'
+          entry.type === 'userType' ||
+          entry.type === 'given'
         ) {
           const exported = extendingModelDef.exports.includes(nm);
           this.setEntry(nm, {entry, exported});
+        }
+      }
+      if (extendingModelDef.givens) {
+        for (const [id, given] of Object.entries(extendingModelDef.givens)) {
+          this.documentGivens.set(id, given);
         }
       }
     }
@@ -557,6 +587,8 @@ export class Document extends MalloyElement implements NameSpace {
     const needs = this.statements.executeList(this);
     const modelDef = this.modelDef();
     if (needs === undefined) {
+      this.checkGivenAliasCollisions();
+      this.checkQueryGivenSatisfiability();
       for (const q of this.queryList) {
         if (q.modelAnnotation === undefined && modelDef.annotation) {
           q.modelAnnotation = modelDef.annotation;
@@ -582,6 +614,80 @@ export class Document extends MalloyElement implements NameSpace {
   private modelAnnotationTodoList: StructDef[] = [];
   rememberToAddModelAnnotations(sd: StructDef) {
     this.modelAnnotationTodoList.push(sd);
+  }
+
+  private checkGivenAliasCollisions(): void {
+    const byId = new Map<GivenID, string[]>();
+    for (const [name, m] of this.documentModel) {
+      if (m.entry.type !== 'given') continue;
+      const list = byId.get(m.entry.id);
+      if (list) {
+        list.push(name);
+      } else {
+        byId.set(m.entry.id, [name]);
+      }
+    }
+    for (const [id, names] of byId) {
+      if (names.length < 2) continue;
+      const decl = this.documentGivens.get(id);
+      const sourceName = decl?.name ?? names[0];
+      const where = decl?.location?.url
+        ? ` (declared in ${decl.location.url})`
+        : '';
+      const sorted = [...names].sort();
+      this.logError(
+        'given-alias-collision',
+        `Given \`${sourceName}\`${where} is surfaced under multiple names ` +
+          `[${sorted.join(', ')}] in this model. ` +
+          'Surfacing the same given under two names is ambiguous at supply ' +
+          'time. To expose it under a second name, declare a local given ' +
+          `with a default-chain reference: \`given: NEW_NAME :: T is $${sourceName}\`.`
+      );
+    }
+  }
+
+  private checkQueryGivenSatisfiability(): void {
+    // Always runs at end-of-compile, not gated on imports — a notebook cell
+    // that calls `extendModel` with a prior modelDef inherits that model's
+    // queries and givens, and a query inherited from cell N can become
+    // unsatisfiable in cell N+1 if the satisfying given is removed (or
+    // never re-supplied). Cheap when there's nothing to check.
+    const namespaceGivens = new Set<GivenID>();
+    for (const m of this.documentModel.values()) {
+      if (m.entry.type === 'given') namespaceGivens.add(m.entry.id);
+    }
+    const checkOne = (q: Query, label: string): void => {
+      const usage = q.givenUsage;
+      if (!usage || usage.length === 0) return;
+      // Build the full set of ids the query transitively needs: each id
+      // in Q.givenUsage, plus each id's precomputed default-chain closure
+      // (Given.givenUsage). Since the closure is already transitive, no
+      // recursion at check time.
+      const allIds = new Set<GivenID>();
+      for (const g of usage) {
+        allIds.add(g.id);
+        const decl = this.documentGivens.get(g.id);
+        for (const t of decl?.givenUsage ?? []) allIds.add(t.id);
+      }
+      for (const id of allIds) {
+        if (namespaceGivens.has(id)) continue;
+        const decl = this.documentGivens.get(id);
+        if (decl?.default !== undefined) continue;
+        this.logError(
+          'unsatisfied-given-in-query',
+          unsatisfiedGivenMessage(label, decl, id),
+          {at: q.location}
+        );
+      }
+    };
+    // Named queries in the namespace (locally defined OR imported).
+    for (const [name, m] of this.documentModel) {
+      if (m.entry.type === 'query') checkOne(m.entry, `Query '${name}'`);
+    }
+    // `run:` statements.
+    for (const q of this.queryList) {
+      checkOne(q, 'run: statement');
+    }
   }
 
   hasAnnotation(): boolean {
@@ -623,10 +729,21 @@ export class Document extends MalloyElement implements NameSpace {
           }
           def.contents[name] = newEntry;
         }
+      } else if (entryDef.type === 'given') {
+        if (modelEntry.exported) {
+          def.exports.push(name);
+        }
+        def.contents[name] = {...entryDef};
       }
     }
     // Copy the accumulated sourceRegistry
     def.sourceRegistry = {...this.documentSrcRegistry};
+    if (this.documentGivens.size > 0) {
+      def.givens = {};
+      for (const [id, given] of this.documentGivens) {
+        def.givens[id] = given;
+      }
+    }
     return def;
   }
 

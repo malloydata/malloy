@@ -719,6 +719,65 @@ describe('prettify — comment placement inside aggregate/measure blocks', () =>
 // dropped, duplicated, or landing at the wrong indent. Idempotence (asserted
 // inside `pp()`) is the load-bearing property here — these all originally
 // failed it.
+describe('prettify — given:', () => {
+  test('single bare given stays inline', () => {
+    eq('given: A :: number', 'given: A :: number');
+  });
+
+  test('single given with default stays inline', () => {
+    eq('given: A :: number is 1', 'given: A :: number is 1');
+  });
+
+  test('multiple bare givens that fit pack inline', () => {
+    eq('given: A :: number, B :: string', 'given: A :: number, B :: string');
+  });
+
+  test('mixed bare and is-bearing givens wrap, each on its own line', () => {
+    eq(
+      'given: A :: number is 1, B :: string',
+      'given:\n  A :: number is 1\n  B :: string'
+    );
+  });
+
+  test('all is-bearing givens wrap, each on its own line', () => {
+    eq(
+      'given: A :: number is 1, B :: string is "hi"',
+      'given:\n  A :: number is 1\n  B :: string is "hi"'
+    );
+  });
+
+  test('adjacent given: statements get a blank line between them', () => {
+    eq(
+      'given: A :: number\ngiven: B :: string',
+      'given: A :: number\n\ngiven: B :: string'
+    );
+  });
+
+  test('annotation on a given is preserved above the keyword', () => {
+    eq('# label="x"\ngiven: A :: number', '# label="x"\ngiven: A :: number');
+  });
+
+  test('filter<T> given type renders glued', () => {
+    eq('given: F :: filter<string>', 'given: F :: filter<string>');
+  });
+
+  test('filter<T> in inline section list renders glued', () => {
+    eq(
+      'given: A :: number, F :: filter<string>',
+      'given: A :: number, F :: filter<string>'
+    );
+  });
+});
+
+describe('prettify — filter<T> on source parameters', () => {
+  test('filter<T> parameter type renders glued', () => {
+    eq(
+      "source: x(F :: filter<string>) is duckdb.table('t')",
+      "source: x(F :: filter<string>) is duckdb.table('t')"
+    );
+  });
+});
+
 describe('prettify — repro', () => {
   test('tail comment in wrapped postfix `{...}` is preserved', () => {
     eq(

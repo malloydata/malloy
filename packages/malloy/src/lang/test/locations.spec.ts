@@ -753,3 +753,83 @@ describe('source references', () => {
     });
   });
 });
+
+describe('given references', () => {
+  function pos(location: DocumentLocation): DocumentPosition {
+    return location.range.start;
+  }
+
+  test('use-site $NAME points at the declaration', () => {
+    const source = markSource`
+      ##! experimental.givens
+      given: ${'TENANT :: string is "acme"'}
+      source: x is a extend { where: astr = ${'$TENANT'} }
+    `;
+    const m = new TestTranslator(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
+      type: 'givenReference',
+      text: 'TENANT',
+      location: source.locations[1],
+      definition: {
+        type: 'string',
+        defaultText: '"acme"',
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test('declaration site emits a self-referential reference', () => {
+    const source = markSource`
+      ##! experimental.givens
+      given: ${'TENANT :: string'}
+    `;
+    const m = new TestTranslator(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(pos(source.locations[0]))).toMatchObject({
+      type: 'givenReference',
+      text: 'TENANT',
+      definition: {
+        type: 'string',
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test('reference omits defaultText when no default is declared', () => {
+    const source = markSource`
+      ##! experimental.givens
+      given: ${'TENANT :: string'}
+      source: x is a extend { where: astr = ${'$TENANT'} }
+    `;
+    const m = new TestTranslator(source.code);
+    expect(m).toTranslate();
+    const ref = m.referenceAt(pos(source.locations[1]));
+    expect(ref?.type).toBe('givenReference');
+    if (ref?.type === 'givenReference') {
+      expect(ref.definition.defaultText).toBeUndefined();
+    }
+  });
+
+  test('selective import name points at the declaration in the imported file', () => {
+    const child = markSource`
+      ##! experimental.givens
+      given: ${'TENANT :: string is "acme"'}
+    `;
+    const parent = markSource`
+      ##! experimental.givens
+      import { ${'TENANT'} } from "child"
+    `;
+    const m = new TestTranslator(parent.code);
+    m.unresolved();
+    m.update({urls: {'internal://test/langtests/child': child.code}});
+    m.compile();
+    expect(m).toTranslate();
+    const ref = m.referenceAt(pos(parent.locations[0]));
+    expect(ref?.type).toBe('givenReference');
+    expect(ref?.text).toBe('TENANT');
+    expect(ref?.definition.location?.url).toBe(
+      'internal://test/langtests/child'
+    );
+  });
+});

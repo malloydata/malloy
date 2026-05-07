@@ -31,7 +31,8 @@ export type ItemKind =
   | 'fieldExpr'
   | 'joinDef'
   | 'includeField'
-  | 'indexElement';
+  | 'indexElement'
+  | 'givenDef';
 
 // One row per `keyword: items` rule we handle. The `list` accessor returns
 // the list-context child; the `keywordTypes` are the lexer token types that
@@ -152,6 +153,12 @@ export const SECTION_STATEMENT_RULES: SectionRule[] = [
     [L.INDEX],
     c => c.indexFields(),
     'indexElement'
+  ),
+  rule(
+    parser.DefineGivenStatementContext,
+    [L.GIVEN],
+    c => c.givenDefList(),
+    'givenDef'
   ),
 ];
 

@@ -32,6 +32,7 @@ import {
 } from './pick-case';
 import {formatBinaryChain} from './binary-chain';
 import {formatImportSelect} from './import-select';
+import {formatFilterTypeOrFallback} from './filter-type';
 
 export class Formatter {
   o = new Out();
@@ -111,6 +112,14 @@ export class Formatter {
     // RULE: IMPORT SELECT — `import {a, b} from 'x'` stays compact.
     if (node instanceof parser.ImportSelectContext) {
       return formatImportSelect(this, node);
+    }
+
+    // RULE: FILTER TYPE — `filter<T>` rendered glued, not as `filter < T >`.
+    if (
+      node instanceof parser.GivenTypeContext ||
+      node instanceof parser.LegalParamTypeContext
+    ) {
+      return formatFilterTypeOrFallback(this, node);
     }
 
     // RULE: PICK / CASE / BINARY CHAIN.

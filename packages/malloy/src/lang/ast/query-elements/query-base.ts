@@ -42,7 +42,7 @@ import type {QueryComp} from '../types/query-comp';
 export abstract class QueryBase extends MalloyElement {
   abstract queryComp(isRefOk: boolean): QueryComp;
 
-  protected expandFieldUsage(
+  protected expandRefUsage(
     inputSource: SourceDef,
     pipeline: PipeSegment[]
   ): PipeSegment[] {

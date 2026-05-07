@@ -69,6 +69,8 @@ export const TOP_LEVEL_STARTERS = new Set<number>([
   L.QUERY,
   L.RUN,
   L.IMPORT,
+  L.GIVEN,
+  L.TYPE,
 ]);
 
 // Token types after which an immediately following `(` or `[` is a call /

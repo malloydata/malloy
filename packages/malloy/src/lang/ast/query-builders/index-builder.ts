@@ -27,7 +27,12 @@ import type {
   PipeSegment,
   Sampling,
 } from '../../../model/malloy_types';
-import {isIndexSegment, isPartialSegment} from '../../../model/malloy_types';
+import {
+  fieldUsageFrom,
+  isIndexSegment,
+  isPartialSegment,
+  setFieldUsage,
+} from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
 import type {FieldName, SourceFieldSpace} from '../types/field-space';
@@ -96,7 +101,7 @@ export class IndexBuilder implements QueryBuilder {
     }
   }
 
-  get fieldUsage(): FieldUsage[] {
+  get fieldUsage(): FieldUsage {
     return this.resultFS.fieldUsage;
   }
 
@@ -142,17 +147,18 @@ export class IndexBuilder implements QueryBuilder {
 
     const fromFieldUsage =
       from && from.type === 'index'
-        ? (from.fieldUsage ?? emptyFieldUsage())
+        ? fieldUsageFrom(from.refSummary)
         : emptyFieldUsage();
-    indexSegment.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
+    const fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage) ?? [];
 
     // Index queries always compute an aggregate for weight (at minimum COUNT(*)).
     // The compiler needs a uniqueKeyRequirement on the base path so that
     // symmetric aggregation is enabled when joins are present.
-    indexSegment.fieldUsage.push({
+    fieldUsage.push({
       path: [],
       uniqueKeyRequirement: {isCount: true},
     });
+    setFieldUsage(indexSegment, fieldUsage);
 
     return indexSegment;
   }

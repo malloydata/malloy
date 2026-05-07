@@ -8,6 +8,7 @@ import type {
   ModelDef,
   StructRef,
   Argument,
+  Given,
   PrepareResultOptions,
   Query,
   SourceDef,
@@ -35,6 +36,10 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
+
+  get givens(): Record<string, Given> {
+    return this.modelDef?.givens ?? {};
+  }
 
   constructor(modelDef: ModelDef | undefined) {
     if (modelDef) {
@@ -66,6 +71,8 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         /* TODO */
       } else if (s.type === 'userType') {
         // User type definitions are metadata only, not queryable
+      } else if (s.type === 'given') {
+        // Givens are metadata in the namespace, not queryable structures.
       } else {
         throw new Error('Internal Error: Unknown structure type');
       }

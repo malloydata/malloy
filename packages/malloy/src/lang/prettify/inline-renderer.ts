@@ -30,6 +30,10 @@ import {BINARY_OPS, L, findMatching, leadingAction} from './tokens';
 export function renderItemInline(f: Formatter, ctx: ParserRuleContext): string {
   let buf = '';
   let lastType: number | null = null;
+  // True between the LT and matching GT of a `filter<T>` window (LT
+  // immediately follows FILTER). All four tokens render glued; mirrors
+  // formatFilterTypeOrFallback in the leaf walker.
+  let inFilterType = false;
   // Coalescing space: skip if buffer is empty or last char already provides
   // separation. Mirrors Out.space() (./out) minus the newline check, since
   // this renderer never emits a newline.
@@ -78,6 +82,21 @@ export function renderItemInline(f: Formatter, ctx: ParserRuleContext): string {
     if (t.type === L.SEMI) {
       trim();
       buf += '; ';
+      lastType = t.type;
+      continue;
+    }
+    // filter<T>: glue all four tokens.
+    if (t.type === L.LT && lastType === L.FILTER) {
+      trim();
+      buf += '<';
+      inFilterType = true;
+      lastType = t.type;
+      continue;
+    }
+    if (inFilterType) {
+      trim();
+      buf += text;
+      if (t.type === L.GT) inFilterType = false;
       lastType = t.type;
       continue;
     }

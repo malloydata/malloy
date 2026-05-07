@@ -22,11 +22,11 @@
  */
 
 import {maxExpressionType, mergeEvalSpaces} from '../../../model';
+import {mergeRefSummaries} from '../../composite-source-utils';
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
-import {mergeFieldUsage} from '../../composite-source-utils';
 
 export class ExprCoalesce extends ExpressionDef {
   elementType = 'coalesce expression';
@@ -77,8 +77,7 @@ export class ExprCoalesce extends ExpressionDef {
         kids: {left: maybeNull.value, right: whenNull.value},
       },
       evalSpace: mergeEvalSpaces(maybeNull.evalSpace, whenNull.evalSpace),
-      fieldUsage:
-        mergeFieldUsage(maybeNull.fieldUsage, whenNull.fieldUsage) ?? [],
+      refSummary: mergeRefSummaries(maybeNull.refSummary, whenNull.refSummary),
     };
   }
 }

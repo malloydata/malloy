@@ -7,6 +7,7 @@
 
 import {
   mergeFieldUsage,
+  mergeRefSummaries,
   pathBegins,
   pathEq,
 } from '../../composite-source-utils';
@@ -24,8 +25,10 @@ import {
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
+  fieldUsageFrom,
   isAtomic,
   isQuerySegment,
+  mkRefSummary,
 } from '../../../model/malloy_types';
 import {isNotUndefined} from '../../utils';
 import {ExprCompare} from '../expressions/expr-compare';
@@ -85,7 +88,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
     }
     const drillDimensions = fs.outputSpace().drillDimensions;
     let collectedWheres: Expr | undefined = undefined;
-    let collectedWhereFieldUsage: FieldUsage[] | undefined = undefined;
+    let collectedWhereFieldUsage: FieldUsage | undefined = undefined;
     if (reference.list.length === 0) {
       filter.logError('invalid-drill-reference', 'Invalid drill reference`');
       return;
@@ -192,7 +195,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
           if (expressionIsAggregate(filter.expressionType)) continue;
           if (collectedWheres === undefined) {
             collectedWheres = filter.e;
-            collectedWhereFieldUsage = filter.fieldUsage;
+            collectedWhereFieldUsage = fieldUsageFrom(filter.refSummary);
           } else {
             collectedWheres = {
               node: 'and',
@@ -203,7 +206,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
             };
             collectedWhereFieldUsage = mergeFieldUsage(
               collectedWhereFieldUsage,
-              filter.fieldUsage
+              fieldUsageFrom(filter.refSummary)
             );
           }
         }
@@ -352,7 +355,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
       ...fieldDef,
       evalSpace: 'output',
       expressionType: fieldDef.expressionType ?? 'scalar',
-      fieldUsage: fieldDef.fieldUsage ?? [],
+      refSummary: fieldDef.refSummary,
     });
     filter.has({drillField});
     const fExpression = new ExprCompare(drillField, '=', value);
@@ -374,7 +377,10 @@ export class Drill extends Filter implements QueryPropertyInterface {
               kids: {left: collectedWheres, right: fExpr.value},
             },
       expressionType: fExpr.expressionType,
-      fieldUsage: mergeFieldUsage(fExpr.fieldUsage, collectedWhereFieldUsage),
+      refSummary: mergeRefSummaries(
+        fExpr.refSummary,
+        mkRefSummary({fieldUsage: collectedWhereFieldUsage})
+      ),
       stableFilter: {
         kind: 'literal_equality',
         expression: {

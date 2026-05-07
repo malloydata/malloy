@@ -24,7 +24,7 @@
 import type {ModelDataRequest} from '../../translate-response';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {ListOf, MalloyElement} from '../types/malloy-element';
-import type {SourceID} from '../../../model/malloy_types';
+import type {GivenEntry, SourceID} from '../../../model/malloy_types';
 import {
   isSourceDef,
   isPersistableSourceDef,
@@ -33,6 +33,7 @@ import {
 } from '../../../model/malloy_types';
 import {registerSource} from '../../../model/source_def_utils';
 import {findPersistentDependencies} from '../../../model/persist_utils';
+import {typeDefToString} from '../../../model/utils';
 import type {BuildNode} from '../../../api/foundation/types';
 
 /** Walk BuildNode tree and collect all sourceIDs */
@@ -117,7 +118,10 @@ export class ImportStatement
         const importedModel = trans.importModelDef(this.fullURL);
         if (importedModel) {
           const importAll = this.empty();
-          const explicitImport: Record<string, string[]> = {};
+          // `Map` rather than plain object — keys are user-provided names and
+          // a plain object would expose Object.prototype keys (`toString`,
+          // etc.).
+          const explicitImport = new Map<string, string[]>();
           for (const importOne of this.list) {
             const dstName = importOne.text;
             const srcName = importOne.from ? importOne.from.text : dstName;
@@ -132,20 +136,71 @@ export class ImportStatement
                 `Cannot redefine '${dstName}'`
               );
             } else {
-              if (explicitImport[srcName] === undefined) {
-                explicitImport[srcName] = [];
+              const existing = explicitImport.get(srcName);
+              if (existing) {
+                existing.push(dstName);
+              } else {
+                explicitImport.set(srcName, [dstName]);
               }
-              explicitImport[srcName].push(dstName);
             }
           }
           const neededSourceIDs = new Set<SourceID>();
           for (const srcName of importedModel.exports) {
-            const pickedNames = explicitImport[srcName];
-            const dstNames = pickedNames || (importAll ? [srcName] : []);
+            const pickedNames = explicitImport.get(srcName);
+            const dstNames = pickedNames ?? (importAll ? [srcName] : []);
             for (const dstName of dstNames) {
-              const importMe = {
-                ...safeRecordGet(importedModel.contents, srcName)!,
-              };
+              const sourceEntry = safeRecordGet(
+                importedModel.contents,
+                srcName
+              );
+              // Non-selective collision: an entry would shadow something
+              // already in the importer's namespace (a local declaration or
+              // an entry brought in by a previous import). Selective
+              // collisions are caught by the per-item check at the top of
+              // the loop; here we re-check because the auto-surface path
+              // bypasses that loop. Applies to every entry kind.
+              if (!pickedNames && doc.getEntry(dstName)) {
+                this.logError(
+                  'name-conflict-on-indiscriminate-import',
+                  `Cannot redefine '${dstName}'`
+                );
+                continue;
+              }
+              if (sourceEntry?.type === 'given') {
+                const givenEntry: GivenEntry = {
+                  type: 'given',
+                  name: dstName,
+                  id: sourceEntry.id,
+                };
+                doc.setEntry(dstName, {entry: givenEntry, exported: false});
+                // Selective import-site reference. `location` covers
+                // the `NAME` token in the selective list;
+                // `definition.location` points at the canonical
+                // `given:` declaration in the imported file. Only
+                // emitted on the selective form — non-selective
+                // auto-surface has no per-name source position.
+                if (pickedNames) {
+                  const givenIR = importedModel.givens?.[sourceEntry.id];
+                  const importOne = this.list.find(
+                    item => item.text === dstName
+                  );
+                  if (importOne && givenIR) {
+                    this.addReference({
+                      type: 'givenReference',
+                      text: dstName,
+                      location: importOne.location,
+                      definition: {
+                        type: typeDefToString(givenIR.type),
+                        annotation: givenIR.annotation,
+                        location: givenIR.location,
+                        defaultText: givenIR.defaultText,
+                      },
+                    });
+                  }
+                }
+                continue;
+              }
+              const importMe = {...sourceEntry!};
               importMe.as = dstName;
               doc.setEntry(dstName, {entry: importMe, exported: false});
 
@@ -156,6 +211,21 @@ export class ImportStatement
                   importedModel
                 );
                 collectSourceIDs(deps, neededSourceIDs);
+              }
+            }
+          }
+
+          // Always copy the imported model's given declarations into the
+          // local givens map, regardless of whether each given is surfaced
+          // into the namespace. This guarantees that any givenRef in
+          // imported IR (sources/queries that reference `$X`) resolves to
+          // a declaration at SQL-emission time. The import-time
+          // satisfiability check that catches unsatisfiable refs lands
+          // with the refSummary work.
+          if (importedModel.givens) {
+            for (const [id, given] of Object.entries(importedModel.givens)) {
+              if (!doc.documentGivens.has(id)) {
+                doc.documentGivens.set(id, given);
               }
             }
           }

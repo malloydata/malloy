@@ -61,6 +61,10 @@ The AST is a tree of `MalloyElement` objects that represents the semantic struct
 - Uses visitor pattern to traverse parse tree
 - Creates appropriate MalloyElement instances for each parse tree node
 
+**Method naming convention in `malloy-to-ast.ts`:**
+- `visitX(pcx: XContext)` — visits a parse-tree node and returns the AST node for it (a `MalloyElement` subclass). Use this even if the method is only ever called from one parent visitor; the name signals "this is the parse-tree-to-AST mapping for rule `X`."
+- `getX(pcx: XContext)` — transforms a parse-tree fragment into something that is *not* an AST node (a typeDef, a primitive, a list of notes, etc.), or is a shared helper used from multiple callers. Distinct from `visitX` so a reader can tell at a glance whether the return is an AST node or a piece of supporting data.
+
 ### 3. Translator (`parse-malloy.ts`)
 
 The translator defines the interface for transforming AST into IR.
@@ -86,6 +90,17 @@ The translator produces **Intermediate Representation (IR)** - a serializable, d
 - Defined in `packages/malloy/src/model/malloy_types.ts`
 
 For detailed information about IR structure and types, see [../model/CONTEXT.md](../model/CONTEXT.md).
+
+## Givens — translator side
+
+Given resolution itself is split in two — distinct from the translator/compiler split this document opens with. *Phase 1* (this document's scope) turns `$NAME` references into `GivenID`-bearing IR nodes; *Phase 2* binds the id to a value at SQL emission and lives with the compiler.
+
+- **Declaration** — `lang/ast/statements/define-given.ts` produces a `GivenEntry` in the namespace (caller-facing surface name → `GivenID`) and a full `Given` record in `Document.documentGivens` (the IR-side storage). Default expressions are evaluated through a `ConstantFieldSpace` — field references are rejected, but other givens are allowed (default chains).
+- **Use site** — `lang/ast/expressions/expr-given.ts` resolves `$NAME` against the document's namespace, emits a `GivenRefNode` carrying the global `GivenID`. `refSummary.givenUsage` propagates from there through expression evaluation and segment expansion (`composite-source-utils.ts`).
+- **Import** — `lang/ast/statements/import-statement.ts` copies the imported model's full `documentGivens` map into the importing document. IDs are global, so no rewrite is needed; surface names are only added for the entries the importer surfaces (selective + non-selective auto-surface).
+- **End-of-compile validation** — `Document.compile()` calls `checkGivenAliasCollisions()` (one surface name per id) and `checkQueryGivenSatisfiability()` (every reachable `GivenID` is in-namespace or has a default).
+
+For the compiler-side phase and the runtime supply pipeline, see [`../api/foundation/CONTEXT.md`](../api/foundation/CONTEXT.md).
 
 ## File Organization
 

@@ -29,10 +29,12 @@ import type {
 } from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
+  fieldUsageFrom,
   isAtomicFieldType,
   hasExpression,
   isAtomic,
   isJoined,
+  setFieldUsage,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 
@@ -98,7 +100,11 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                       at: this.source.location,
                     },
               evalSpace: footType.evalSpace,
-              fieldUsage: [{path: this.source.path, at: this.source.location}],
+              refSummary: {
+                fieldUsage: [
+                  {path: this.source.path, at: this.source.location},
+                ],
+              },
             };
             structPath = this.source.path.slice(0, -1);
             // Here we handle a special case where you write `foo.agg()` and `foo` is a
@@ -188,13 +194,10 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       }
       const returnExpr = this.returns(exprVal);
       if (!this.isSymmetricFunction()) {
-        if (returnExpr.fieldUsage === undefined) {
-          returnExpr.fieldUsage = [];
-        }
-        returnExpr.fieldUsage.push({
-          path: structPath || [],
-          uniqueKeyRequirement: {isCount: false},
-        });
+        setFieldUsage(returnExpr, [
+          ...fieldUsageFrom(returnExpr.refSummary),
+          {path: structPath || [], uniqueKeyRequirement: {isCount: false}},
+        ]);
       }
       return {
         ...returnExpr,

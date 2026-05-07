@@ -12,6 +12,7 @@ import type {
   ConnectionPropertyDefinition,
   ConnectionPropertyType,
 } from '../../connection/registry';
+import {closestMatch} from '../../util/closest_match';
 
 // =============================================================================
 // Typed dictionary tree
@@ -57,6 +58,8 @@ export type SectionCompiler = (
 const TOP_LEVEL_SECTIONS: Record<string, SectionCompiler> = {
   connections: compileConnections,
   manifestPath: compileManifestPath,
+  givensPath: compileGivensPath,
+  finalizeGivens: compileFinalizeGivens,
   virtualMap: compileVirtualMap,
   includeDefaultConnections: compileIncludeDefaultConnections,
 };
@@ -277,6 +280,40 @@ function compileManifestPath(
   return {kind: 'value', value};
 }
 
+function compileGivensPath(
+  value: unknown,
+  log: LogMessage[]
+): ConfigNode | undefined {
+  const ref = asReferenceShape(value);
+  if (ref !== undefined) return ref;
+  if (typeof value !== 'string') {
+    log.push(
+      makeWarning(
+        'givensPath',
+        '"givensPath" should be a string or an overlay reference'
+      )
+    );
+    return undefined;
+  }
+  return {kind: 'value', value};
+}
+
+function compileFinalizeGivens(
+  value: unknown,
+  log: LogMessage[]
+): ConfigNode | undefined {
+  if (!Array.isArray(value) || !value.every(v => typeof v === 'string')) {
+    log.push(
+      makeWarning(
+        'finalizeGivens',
+        '"finalizeGivens" should be an array of given names'
+      )
+    );
+    return undefined;
+  }
+  return {kind: 'value', value};
+}
+
 function compileVirtualMap(
   value: unknown,
   _log: LogMessage[]
@@ -369,43 +406,4 @@ function checkValueType(
       break;
   }
   return undefined;
-}
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  const dp: number[][] = Array.from({length: m + 1}, () =>
-    Array(n + 1).fill(0)
-  );
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
-      );
-    }
-  }
-  return dp[m][n];
-}
-
-function closestMatch(input: string, candidates: string[]): string | undefined {
-  if (candidates.length === 0) return undefined;
-  let best = candidates[0];
-  let bestDist = Infinity;
-  for (const c of candidates) {
-    const dist = levenshtein(input.toLowerCase(), c.toLowerCase());
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = c;
-    }
-  }
-  const maxDist = Math.max(
-    1,
-    Math.floor(Math.max(input.length, best.length) / 3)
-  );
-  return bestDist <= maxDist ? best : undefined;
 }
