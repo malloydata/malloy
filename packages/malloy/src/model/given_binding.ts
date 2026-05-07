@@ -26,6 +26,13 @@ export function resolveSuppliedGivens(
   // Object.entries skips inherited properties — protects against
   // prototype pollution from e.g. an Object.create(...)-derived input.
   for (const [name, value] of Object.entries(supplied)) {
+    if (value === undefined) {
+      throw new Error(
+        `givens.${name}: explicit undefined is not a valid value. ` +
+          'Omit the key to defer to declaration default or a lower supply ' +
+          'layer; use null for an explicit null value.'
+      );
+    }
     const entry = modelDef.contents[name];
     if (!entry || entry.type !== 'given') {
       const surfaceNames: string[] = [];

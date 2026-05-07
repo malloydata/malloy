@@ -696,7 +696,10 @@ describe('given: imports', () => {
     ).toLog(errorMessage(/Cannot find 'NOT_A_GIVEN'/));
   });
 
-  test('importing the same given under two names: both surface, same id', () => {
+  test('importing the same given under two names is rejected as an alias collision', () => {
+    // The supply-side contract is one surface name per given; aliasing
+    // is ambiguous. Workaround: declare a local given with a default-chain
+    // reference (`given: CAP :: number is $MAX_ROWS`).
     const t = importTest(
       `
         ##! experimental.givens
@@ -708,15 +711,7 @@ describe('given: imports', () => {
         given: MAX_ROWS :: number is 100
       `
     );
-    expect(t).toTranslate();
-    const md = t.translate().modelDef!;
-    const a = md.contents['MAX_ROWS'];
-    const b = md.contents['CAP'];
-    expect(a?.type).toBe('given');
-    expect(b?.type).toBe('given');
-    if (a?.type === 'given' && b?.type === 'given') {
-      expect(a.id).toEqual(b.id);
-    }
+    expect(t).toLog(errorMessage(/surfaced under multiple names/));
   });
 
   test("chained imports: C's given flows through B into A", () => {
@@ -1475,9 +1470,7 @@ describe('given: PreparedQuery.givens introspection', () => {
     expect(givens.get('CAP')?.name).toBe('CAP');
   });
 
-  test('two surface aliases to the same id appear as two map entries with shared id', () => {
-    // `import { MAX_ROWS } from "child"` plus `import { CAP is MAX_ROWS }`
-    // surfaces the same underlying given under two surface names.
+  test('two surface aliases to the same id are rejected as a collision', () => {
     const t = new TestTranslator(`
       ##! experimental.givens
       import { MAX_ROWS } from "child"
@@ -1493,12 +1486,7 @@ describe('given: PreparedQuery.givens introspection', () => {
         `,
       },
     });
-    expect(t).toTranslate();
-    const md = t.translate().modelDef!;
-    const model = new Model(md, [], []);
-    const givens = model.getPreparedQueryByName('q').givens;
-    expect([...givens.keys()].sort()).toEqual(['CAP', 'MAX_ROWS']);
-    expect(givens.get('MAX_ROWS')?.id).toBe(givens.get('CAP')?.id);
+    expect(t).toLog(errorMessage(/surfaced under multiple names/));
   });
 
   test('annotations on the given declaration surface via tagParse / getTaglines', () => {
@@ -1615,7 +1603,7 @@ describe('given: Model.givens introspection', () => {
     expect(givens.get('CAP')?.name).toBe('CAP');
   });
 
-  test('two surface aliases to the same id appear as two entries with shared id', () => {
+  test('two surface aliases to the same id are rejected as a collision', () => {
     const t = new TestTranslator(`
       ##! experimental.givens
       import { MAX_ROWS } from "child"
@@ -1630,11 +1618,7 @@ describe('given: Model.givens introspection', () => {
         `,
       },
     });
-    expect(t).toTranslate();
-    const model = new Model(t.translate().modelDef!, [], []);
-    const givens = model.givens;
-    expect([...givens.keys()].sort()).toEqual(['CAP', 'MAX_ROWS']);
-    expect(givens.get('MAX_ROWS')?.id).toBe(givens.get('CAP')?.id);
+    expect(t).toLog(errorMessage(/surfaced under multiple names/));
   });
 
   test('annotations on given declarations surface via tagParse / getTaglines', () => {

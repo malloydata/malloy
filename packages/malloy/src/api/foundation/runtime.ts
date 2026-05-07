@@ -121,7 +121,7 @@ export class Runtime {
   private _resolvedGivensPromise:
     | Promise<Record<string, GivenValue> | undefined>
     | undefined;
-  private _constructorGivens: ReadonlyMap<string, GivenValue>;
+  private _constructorGivensMap: ReadonlyMap<string, GivenValue>;
   private _finalizedGivensSet: ReadonlySet<string>;
   private _virtualMap: VirtualMap | undefined;
 
@@ -168,7 +168,18 @@ export class Runtime {
     this._buildManifest = buildManifest;
     this._eventStream = eventStream;
     this._cacheManager = cacheManager;
-    this._constructorGivens = givens
+    if (givens) {
+      for (const [name, value] of Object.entries(givens)) {
+        if (value === undefined) {
+          throw new Error(
+            `Runtime givens.${name}: explicit undefined is not a valid value. ` +
+              'Omit the key to defer to declaration default or the file layer; ' +
+              'use null for an explicit null value.'
+          );
+        }
+      }
+    }
+    this._constructorGivensMap = givens
       ? new Map(Object.entries(givens))
       : new Map();
     this._finalizedGivensSet = new Set(this._config?.finalizeGivens ?? []);
@@ -203,18 +214,35 @@ export class Runtime {
   }
 
   /**
-   * Read-only view of the per-runtime givens supplied to the constructor.
-   * Diagnostic surface for hosts that want to inspect "what's wired up"
-   * and for tests that want to assert constructor-supplied values landed.
+   * Constructor-supplied givens, exposed for the materializer's per-query
+   * merge. Underscore-prefixed because it's the constructor layer only —
+   * use `getGivens()` for the full file+constructor view a caller usually
+   * wants.
    *
-   * Does NOT include givens loaded from `config.givensURL` — those are
-   * read async at compile time and exposed via `_resolveGivens()`. The
-   * full layered view (file → constructor → per-query) is what each
-   * compile actually sees, but assembling it requires the file IO and is
-   * the materializer's job.
+   * @internal Accessed from QueryMaterializer.
    */
-  public get givens(): ReadonlyMap<string, GivenValue> {
-    return this._constructorGivens;
+  public get _constructorGivens(): ReadonlyMap<string, GivenValue> {
+    return this._constructorGivensMap;
+  }
+
+  /**
+   * The runtime's effective givens — file (from `config.givensPath`,
+   * lazily loaded) merged with the constructor `givens:` option, with
+   * the constructor winning per-key. Per-query supply via
+   * `.run({ givens: ... })` is *not* included; that's a per-call
+   * argument, not runtime state.
+   *
+   * Async because the file may not yet be loaded; subsequent calls share
+   * the cached promise.
+   */
+  public async getGivens(): Promise<ReadonlyMap<string, GivenValue>> {
+    const file = await this._resolveGivens();
+    const merged = new Map<string, GivenValue>();
+    if (file) {
+      for (const [k, v] of Object.entries(file)) merged.set(k, v);
+    }
+    for (const [k, v] of this._constructorGivensMap) merged.set(k, v);
+    return merged;
   }
 
   /**
@@ -364,6 +392,11 @@ export class Runtime {
       })();
     }
     return this._resolvedGivensPromise;
+  }
+
+  /** @internal */
+  public _invalidateGivensCache(): void {
+    this._resolvedGivensPromise = undefined;
   }
 
   /**
@@ -1161,7 +1194,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       // Higher-numbered layers win on collision. Each layer is optional;
       // the merge collapses to undefined when all three are absent.
       const fileGivens = await this.runtime._resolveGivens();
-      const constructorGivens = mapToRecord(this.runtime.givens);
+      const constructorGivens = mapToRecord(this.runtime._constructorGivens);
       const haveAny = fileGivens || constructorGivens || mergedOptions.givens;
       const mergedGivens = haveAny
         ? {...fileGivens, ...constructorGivens, ...mergedOptions.givens}

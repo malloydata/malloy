@@ -183,14 +183,22 @@ A subtlety: `configURL` doesn't have to be where the config text actually came f
 
 ## Givens — per-runtime supply path
 
-The givens feature has substantial foundation-layer surface; the design lives in [`~/ctx/mp/`](../../../../ctx/mp/) and the implementation breadcrumbs in [`implementation-summary.md`](../../../../ctx/mp/implementation-summary.md). The pieces a foundation-layer reader needs to find:
+**Architectural keystone: `GivenID` is global.** Every given declaration produces a `GivenID` keyed on `(name, source URL)`. `givenRef` IR nodes carry that id, and that id is the only thing any consumer needs. Imported IR is **never rewritten** — a `givenRef` in B's IR pointing at `b.MAX` still says `b.MAX` after B is imported anywhere. This is why the import path can copy declarations untouched and the compiler never walks namespaces.
+
+**Two phases of resolution.**
+- *Phase 1 (translator)*: `$NAME` → `GivenID`, scoped to the current file's visible givens. Bakes the id into the `givenRef` node. Sites: `lang/ast/expressions/expr-given.ts`, `lang/ast/statements/define-given.ts`.
+- *Phase 2 (compiler)*: `GivenID` → bound value. Lookup by id in `prepareResultOptions.resolvedGivens`; fall back to the declaration's default; throw if neither. Sites: `model/expression_compiler.ts:case 'given'`, `generateGivenFragment`.
+
+The `resolvedGivens` map is built **at the foundation boundary** (`PreparedQuery.getPreparedResult`), not inside the compiler. The compiler trusts it.
+
+**Foundation-layer pieces a reader needs to find:**
 
 - **`MalloyConfig.givensPath` / `givensURL` / `finalizeGivens`** — config fields. `givensPath` accepts literal string or `{env: "..."}` overlay reference; `givensURL` is the resolved URL-string. `finalizeGivens` is an array of given names locked at the runtime layer.
-- **`Runtime` constructor `givens?` option** — direct in-process supply for hosts that have values in hand (multi-tenant servers, tests). Stored as `_constructorGivens`.
-- **`Runtime.givens` getter** — read-only diagnostic view of constructor-supplied values. Does NOT include file-loaded values (those go through the async `_resolveGivens()`).
-- **`Runtime._resolveGivens()`** — lazy + cached file read of `config.givensURL`. Stricter error policy than `_resolveBuildManifest`: missing file or malformed JSON throws on the first compile, with the URL in the message.
+- **`Runtime` constructor `givens?` option** — direct in-process supply for hosts that have values in hand (multi-tenant servers, tests).
+- **`Runtime.getGivens()`** — async, returns the merged file+constructor view; constructor wins per-key. The honest "what does this runtime supply?" surface.
+- **`Runtime._resolveGivens()`** — lazy + cached file read of `config.givensURL`. Stricter error policy than `_resolveBuildManifest`: missing file or malformed JSON throws on the first compile, with the URL in the message. `Runtime._invalidateGivensCache()` clears the cached promise (file-watching hosts; tests).
 - **`Runtime._withRuntimeContext(model)`** — re-wraps a Model returned from `Malloy.compile()` with this runtime's `RuntimeContext` (currently `{finalizedGivens?}`). The wart-as-bridge between `Malloy.compile` (runtime-unaware) and the runtime-aware `Model.givens` filtering. New runtime-aware concerns add fields to `RuntimeContext` rather than parallel `_with*` methods.
-- **`QueryMaterializer.loadPreparedResult`** — does the three-layer per-key merge (file → constructor → per-query, higher wins), then per-query rejection for finalized names + query-scoped sanity validation.
+- **`QueryMaterializer.loadPreparedResult`** — does the three-layer per-key merge (file → constructor → per-query, higher wins), then per-query rejection for finalized names + query-scoped sanity validation. Explicit `undefined` values are rejected at the boundary (in `Runtime` constructor and `resolveSuppliedGivens`).
 - **`PreparedQuery.getPreparedResult`** — calls `resolveSuppliedGivens(options.givens, this._modelDef)` to convert JS values into `Map<GivenID, Expr>` before handing to `compileQuery`. The compiler trusts the resolved map.
 
 `Model` carries an optional `runtimeContext?: RuntimeContext` constructor parameter. The "Model wears two hats" abstraction violation (compiler artifact + host-facing inspection) is acknowledged as a future structural cleanup; today the `_withRuntimeContext` re-wrap pattern is the tactical bridge.
@@ -261,7 +269,7 @@ URL-based (not filesystem-based) so the helper works in browser-safe environment
 ## Testing Notes
 
 - `config.spec.ts` covers the constructor pipeline, section compilers, overlay resolution, property defaults, `includeDefaultConnections` fabrication (name-based skip), reference failure modes, and the manifest URL state table.
-- `runtime.spec.ts` covers the manifest lazy-read, explicit `buildManifest` wins, `EMPTY_BUILD_MANIFEST`, and `shutdown` forwarding (close + idle modes; deprecated `releaseConnections` alias).
+- `runtime.spec.ts` covers the manifest lazy-read, explicit `buildManifest` wins, `EMPTY_BUILD_MANIFEST`, `shutdown` forwarding (close + idle modes; deprecated `releaseConnections` alias), and the givens supply path (file resolution, cache invalidation, `getGivens()` merge, undefined rejection at construction).
 - When adding a new backend with a registry default that references an overlay, add a test that the default is dropped (not errored) when the overlay is the no-op.
 
 ## Things That Look Like They Should Be Simple But Aren't

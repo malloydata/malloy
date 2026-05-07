@@ -227,6 +227,22 @@ describe('Runtime givens resolution', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('_invalidateGivensCache forces a re-read on next call', async () => {
+    const config = configWithGivensURL();
+    const {reader, calls} = countingReader({
+      [givensURL]: {TENANT: 'acme'},
+    });
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await runtime._resolveGivens();
+    await runtime._resolveGivens();
+    expect(calls).toHaveLength(1);
+
+    runtime._invalidateGivensCache();
+    await runtime._resolveGivens();
+    expect(calls).toHaveLength(2);
+  });
+
   it('throws with the URL in the message when the file is missing', async () => {
     const config = configWithGivensURL();
     const {reader} = countingReader({}); // every read throws
@@ -269,27 +285,52 @@ describe('Runtime givens resolution', () => {
   });
 });
 
-describe('Runtime constructor givens + runtime.givens getter', () => {
-  it('runtime.givens reflects the constructor `givens:` option', () => {
+describe('Runtime constructor givens + getGivens()', () => {
+  it('getGivens() reflects the constructor `givens:` option', async () => {
     const runtime = new Runtime({
       connection: mockConnection('mock'),
       givens: {TENANT: 'acme', MAX_ROWS: 100},
     });
-    expect([...runtime.givens.entries()]).toEqual([
+    const merged = await runtime.getGivens();
+    expect([...merged.entries()]).toEqual([
       ['TENANT', 'acme'],
       ['MAX_ROWS', 100],
     ]);
   });
 
-  it('runtime.givens is empty when no constructor option is supplied', () => {
+  it('getGivens() is empty when no layer is supplied', async () => {
     const runtime = new Runtime({connection: mockConnection('mock')});
-    expect(runtime.givens.size).toBe(0);
+    const merged = await runtime.getGivens();
+    expect(merged.size).toBe(0);
   });
 
-  it('runtime.givens does NOT include file-loaded values', async () => {
-    // The getter is the constructor-supplied diagnostic surface only.
-    // File values are accessed via `_resolveGivens()` (async) and merged
-    // into each compile, but they are not surfaced via `runtime.givens`.
+  it('getGivens() merges file + constructor, constructor wins per-key', async () => {
+    const configURL = 'file:///home/user/project/malloy-config.json';
+    const givensURL = 'file:///home/user/project/local-givens.json';
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL}
+    );
+    const {reader} = countingReader({
+      [givensURL]: {TENANT: 'file-tenant', MAX_ROWS: 100},
+    });
+    const conn = mockConnection('mock');
+    const runtime = new Runtime({
+      config,
+      urlReader: reader,
+      connections: {lookupConnection: () => Promise.resolve(conn)},
+      givens: {TENANT: 'ctor-tenant', USER_ROLE: 'admin'},
+    });
+
+    const merged = await runtime.getGivens();
+    // Constructor TENANT wins over file TENANT; MAX_ROWS comes from
+    // file, USER_ROLE from constructor.
+    expect(merged.get('TENANT')).toBe('ctor-tenant');
+    expect(merged.get('MAX_ROWS')).toBe(100);
+    expect(merged.get('USER_ROLE')).toBe('admin');
+  });
+
+  it('getGivens() returns just the file layer when no constructor option', async () => {
     const configURL = 'file:///home/user/project/malloy-config.json';
     const givensURL = 'file:///home/user/project/local-givens.json';
     const config = new MalloyConfig(
@@ -302,18 +343,21 @@ describe('Runtime constructor givens + runtime.givens getter', () => {
       config,
       urlReader: reader,
       connections: {lookupConnection: () => Promise.resolve(conn)},
-      givens: {USER_ROLE: 'admin'},
     });
 
-    // Constructor-only.
-    expect([...runtime.givens.entries()]).toEqual([['USER_ROLE', 'admin']]);
+    const merged = await runtime.getGivens();
+    expect([...merged.entries()]).toEqual([['TENANT', 'acme']]);
+  });
 
-    // File-loaded values appear via the async resolve path.
-    const fileResolved = await runtime._resolveGivens();
-    expect(fileResolved).toEqual({TENANT: 'acme'});
-
-    // The getter is unaffected by the file read.
-    expect([...runtime.givens.entries()]).toEqual([['USER_ROLE', 'admin']]);
+  it('rejects an explicit undefined value at construction time', () => {
+    expect(
+      () =>
+        new Runtime({
+          connection: mockConnection('mock'),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          givens: {TENANT: undefined as any},
+        })
+    ).toThrow(/explicit undefined is not a valid value/);
   });
 });
 

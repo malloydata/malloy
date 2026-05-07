@@ -91,6 +91,17 @@ The translator produces **Intermediate Representation (IR)** - a serializable, d
 
 For detailed information about IR structure and types, see [../model/CONTEXT.md](../model/CONTEXT.md).
 
+## Givens — translator side
+
+Given resolution itself is split in two — distinct from the translator/compiler split this document opens with. *Phase 1* (this document's scope) turns `$NAME` references into `GivenID`-bearing IR nodes; *Phase 2* binds the id to a value at SQL emission and lives with the compiler.
+
+- **Declaration** — `lang/ast/statements/define-given.ts` produces a `GivenEntry` in the namespace (caller-facing surface name → `GivenID`) and a full `Given` record in `Document.documentGivens` (the IR-side storage). Default expressions are evaluated through a `ConstantFieldSpace` — field references are rejected, but other givens are allowed (default chains).
+- **Use site** — `lang/ast/expressions/expr-given.ts` resolves `$NAME` against the document's namespace, emits a `GivenRefNode` carrying the global `GivenID`. `refSummary.givenUsage` propagates from there through expression evaluation and segment expansion (`composite-source-utils.ts`).
+- **Import** — `lang/ast/statements/import-statement.ts` copies the imported model's full `documentGivens` map into the importing document. IDs are global, so no rewrite is needed; surface names are only added for the entries the importer surfaces (selective + non-selective auto-surface).
+- **End-of-compile validation** — `Document.compile()` calls `checkGivenAliasCollisions()` (one surface name per id) and `checkQueryGivenSatisfiability()` (every reachable `GivenID` is in-namespace or has a default).
+
+For the compiler-side phase and the runtime supply pipeline, see [`../api/foundation/CONTEXT.md`](../api/foundation/CONTEXT.md).
+
 ## File Organization
 
 ```

@@ -319,6 +319,7 @@ type MessageParameterTypes = {
   'name-conflict-on-indiscriminate-import': string;
   'failed-import': string;
   'unsatisfied-given-in-query': string;
+  'given-alias-collision': string;
   'failed-to-compute-output-schema': string;
   'invalid-timeframe-for-time-offset': string;
   'time-comparison-type-mismatch': string;

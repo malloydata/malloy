@@ -585,15 +585,10 @@ export class Document extends MalloyElement implements NameSpace {
 
   compile(): DocumentCompileResult {
     const needs = this.statements.executeList(this);
-    if (needs === undefined) {
-      // All statements have run; the namespace is final. Verify every
-      // Query that survives into the model can have its given references
-      // satisfied — either by a name in this model's namespace or by a
-      // default at the declaration site.
-      this.checkQueryGivenSatisfiability();
-    }
     const modelDef = this.modelDef();
     if (needs === undefined) {
+      this.checkGivenAliasCollisions();
+      this.checkQueryGivenSatisfiability();
       for (const q of this.queryList) {
         if (q.modelAnnotation === undefined && modelDef.annotation) {
           q.modelAnnotation = modelDef.annotation;
@@ -619,6 +614,36 @@ export class Document extends MalloyElement implements NameSpace {
   private modelAnnotationTodoList: StructDef[] = [];
   rememberToAddModelAnnotations(sd: StructDef) {
     this.modelAnnotationTodoList.push(sd);
+  }
+
+  private checkGivenAliasCollisions(): void {
+    const byId = new Map<GivenID, string[]>();
+    for (const [name, m] of this.documentModel) {
+      if (m.entry.type !== 'given') continue;
+      const list = byId.get(m.entry.id);
+      if (list) {
+        list.push(name);
+      } else {
+        byId.set(m.entry.id, [name]);
+      }
+    }
+    for (const [id, names] of byId) {
+      if (names.length < 2) continue;
+      const decl = this.documentGivens.get(id);
+      const sourceName = decl?.name ?? names[0];
+      const where = decl?.location?.url
+        ? ` (declared in ${decl.location.url})`
+        : '';
+      const sorted = [...names].sort();
+      this.logError(
+        'given-alias-collision',
+        `Given \`${sourceName}\`${where} is surfaced under multiple names ` +
+          `[${sorted.join(', ')}] in this model. ` +
+          'Surfacing the same given under two names is ambiguous at supply ' +
+          'time. To expose it under a second name, declare a local given ' +
+          `with a default-chain reference: \`given: NEW_NAME :: T is $${sourceName}\`.`
+      );
+    }
   }
 
   private checkQueryGivenSatisfiability(): void {

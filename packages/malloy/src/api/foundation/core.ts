@@ -1075,11 +1075,6 @@ export class Model implements Taggable {
    * Used by whole-model parameter-editor UIs to render input widgets for
    * every given the model can accept.
    *
-   * Surface-name keying means renames-on-import appear under their local
-   * alias. Two surface names that alias to the same `GivenID` (e.g. an
-   * import bringing the same given in twice under different names) appear
-   * as two map entries with shared `.id`.
-   *
    * Internal-only givens (declared but never surfaced into the namespace,
    * resolved purely via defaults) are NOT in this map — the caller has no
    * way to set them, so listing them would mislead a UI.
