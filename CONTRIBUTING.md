@@ -51,9 +51,8 @@ use GitHub pull requests for this purpose. Consult
 information on using pull requests.
 
 All pull requests must pass tests. Outside contributors should contact the Malloy
-team via the`#developing` channel on the [Malloy Slack](https://malloydata.github.io/slack).
+team via the `#developing` channel on the [Malloy Slack](https://malloydata.github.io/slack).
 
 ## Code of Conduct
 
-This project follows
-[The Linux Foundation's Code of Conduct](https://lfprojects.org/policies/code-of-conduct/).
+This project follows the [Malloy Code of Conduct](CODE_OF_CONDUCT.md).

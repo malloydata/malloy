@@ -14,8 +14,6 @@ Have a request or idea? [Open an issue](https://github.com/malloydata/malloy/iss
 
 ### Language
 
-- **Timestamp types** — first-class `TIME`, `DATETIME`, and timezone-aware timestamps *(accepted)*
-- **Field properties** — structured metadata and annotations on fields *(accepted)*
 - **The `in` operator** — membership testing: `carrier in ['UA', 'AA']` *(accepted)*
 - **Persistent sources** — `#@ persist` to cache expensive intermediate results as tables *(experimental: `persistence`)*
 - **Type declarations & virtual sources** — abstract source schemas bindable at runtime *(experimental)*
@@ -50,11 +48,11 @@ Full proposal details in [malloydata/whatsnext](https://github.com/malloydata/wh
 
 ### Database Support
 
-Current: BigQuery · Snowflake · DuckDB · PostgreSQL · MySQL · Trino · Presto · Databricks
+Current: BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks · MSSQL (via DuckDB extension)
 
 | Connector | Notes |
 |---|---|
-| **T-SQL** (SQL Server / Azure SQL) | High priority; MS Fabric requires Entra ID auth |
+| **Native T-SQL** (SQL Server / Azure SQL) | High priority; MS Fabric requires Entra ID auth |
 | **Redshift** | Amazon Redshift / Serverless / Spectrum |
 | **ClickHouse** | — |
 | **Oracle** | Oracle Database / Autonomous DB |
@@ -79,7 +77,7 @@ Current: BigQuery · Snowflake · DuckDB · PostgreSQL · MySQL · Trino · Pres
 
 Ideas with varying amounts of design work behind them. Not commitments — [the full list](https://gist.github.com/mtoy-googly-moogly/af3d937033d69e50980a428e36f0a4a3).
 
-- **Language:** Abstract sources, progressive refinement (`source: flights += {...}`), `exists` gesture, lateral joins, correlated sub-queries, expression interpolation in strings, expanded data types (`MAP<T1,T2>`, Durations, Temporal ranges), SQL pipeline elements
+- **Language:** Progressive refinement (`source: flights += {...}`), `exists` gesture, lateral joins, correlated sub-queries, expression interpolation in strings, expanded data types (`MAP<T1,T2>`, Durations, Temporal ranges), SQL pipeline elements
 - **Tooling:** IDE-aware re-written parser, full dialect-native function support, model-level embedded data sources (JSON/CSV)
 - **Publisher:** Fine-grained access control (row/column-level security); Postgres-wire query API; query telemetry and cost tracking
 - **Ecosystem:** R client; data lineage and field-level impact analysis; incremental materialization (append, merge, delete+insert)

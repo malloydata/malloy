@@ -7,6 +7,8 @@
 [![CI](https://github.com/malloydata/malloy/actions/workflows/run-tests.yaml/badge.svg)](https://github.com/malloydata/malloy/actions/workflows/run-tests.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js >=20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+[![npm](https://img.shields.io/npm/v/@malloydata/malloy)](https://www.npmjs.com/package/@malloydata/malloy)
+[![npm downloads](https://img.shields.io/npm/dm/@malloydata/malloy)](https://www.npmjs.com/package/@malloydata/malloy)
 [![GitHub Stars](https://img.shields.io/github/stars/malloydata/malloy?style=social)](https://github.com/malloydata/malloy/stargazers)
 
 [Try in Browser](https://github.dev/malloydata/try-malloy/airports.malloy) · [Quickstart](https://docs.malloydata.dev/documentation/user_guides/basic.html) · [Docs](https://docs.malloydata.dev/documentation/) · [Slack](https://malloydata.github.io/slack) · [YouTube](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg)
@@ -24,21 +26,48 @@
 
 Malloy is an open source language for describing **data relationships and transformations**.
 
-It is both a **semantic modeling layer** and a **query language** that compiles down to SQL and runs on your existing data warehouse. Think of it as "SQL with a type system for your data" — define your metrics, joins, and business logic once, then compose them freely without copy-pasting SQL snippets.
+It is both a **semantic modeling layer** and a **query language** that compiles down to SQL and runs on your existing data warehouse. Think of it as "SQL with a type system for your data" — define your measures, joins, and business logic once, then compose them freely without copy-pasting SQL snippets.
 
-**Supported backends:** BigQuery · Snowflake · DuckDB · PostgreSQL · MySQL · Trino · Presto · Databricks
+**Supported backends:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks · MSSQL (via DuckDB extension)
+
+---
+
+## Who Malloy Is For
+
+- **Analytics engineers and data teams** who want reusable measures, dimensions, joins, and views without scattering business logic across SQL files and dashboards.
+- **SQL users** who need a more composable way to express analysis while still compiling to SQL that runs in their existing warehouse.
+- **Teams working with nested data** who want first-class support for arrays, records, and nested query results instead of repeated unnesting boilerplate.
+- **Developers building data applications or BI experiences** who need a semantic model, query language, and rendering-friendly result shapes in one open source stack.
 
 ---
 
 ## Why Malloy?
 
-| Pain point in SQL | How Malloy solves it |
+SQL gives you maximum freedom but no guardrails — joins get duplicated, aggregations silently fan out, and measures drift across dashboards. Existing semantic layers add safety but lock you into their query model. Malloy gives you both: **the safety of a semantic data model with the full flexibility of a relational query language.**
+
+<p>
+  <em>“This feels like magic.”</em> — Lloyd Tabb
+</p>
+
+
+| Pain point | How Malloy solves it |
 |---|---|
-| Joins duplicated everywhere | Define joins once in a source, reuse everywhere |
-| Aggregation fans out unexpectedly | Symmetric aggregate functions eliminate fan-out bugs |
-| Metrics drift across dashboards | Single source of truth for every measure |
-| Nested data is awkward | First-class support for nested/repeated fields |
-| Pipelines are hard to read | Pipe operator `->` makes multi-step transforms linear |
+| Joins duplicated everywhere | Define joins once in a source, reuse across every query |
+| Aggregation fans out silently | Symmetric aggregates make `count()`, `sum()`, and `avg()` fan-out safe by default |
+| Measures drift across dashboards | Single source of truth — change a measure once, every query updates |
+| Nested data requires boilerplate | First-class support for nested and repeated fields, no unnesting required |
+| Multi-step transforms are hard to read | Pipe operator `->` chains transformations linearly, like a Unix pipeline |
+
+---
+
+## How Does Malloy Compare?
+
+| Tool | Key difference from Malloy |
+|---|---|
+| **Raw SQL** | No semantic layer — measures are copy-pasted into every query; fan-out bugs are silent |
+| **LookML** | Proprietary and locked to Looker; Malloy is open source and targets any SQL warehouse |
+| **dbt metrics / MetricFlow** | Definition-only; you still write SQL to consume metrics — Malloy is a full query language |
+| **Cube** | JavaScript/YAML configuration; Malloy is a typed, composable query language |
 
 ---
 
@@ -93,7 +122,40 @@ GROUP BY carrier
 ORDER BY flight_count DESC  -- Malloy orders by first aggregate automatically
 ```
 
-Malloy's power shows when you **reuse a model** — defining joins, measures, and dimensions once, then composing them freely across many queries. The [language guide](https://docs.malloydata.dev/documentation/user_guides/basic.html) walks through this in depth.
+Malloy's real power is **defining a model once and reusing it everywhere**. Measures, joins, and dimensions live in the source — not scattered across queries:
+
+```malloy
+-- Define once
+source: flights is bigquery.table('malloydata-org.faa.flights') extend {
+  measure:
+    flight_count is count()
+    avg_flight_time is flight_time.avg()
+}
+
+-- Query by carrier — measures reused, no copy-paste
+run: flights -> {
+  group_by: carrier
+  aggregate: flight_count, avg_flight_time
+}
+
+-- Query by origin — same measures, zero duplication
+run: flights -> {
+  group_by: origin
+  aggregate: flight_count, avg_flight_time
+}
+```
+
+Change `avg_flight_time` once in the source and every query that uses it updates automatically. The [language guide](https://docs.malloydata.dev/documentation/user_guides/basic.html) walks through this in depth.
+
+---
+
+## Examples
+
+| Example | What it shows |
+|---|---|
+| [Build a semantic model](https://docs.malloydata.dev/documentation/user_guides/quickstart_modeling) | Define sources, joins, dimensions, and measures once, then reuse them across queries |
+| [Percent of total](https://docs.malloydata.dev/documentation/patterns/percent_of_total) | Express common analytics patterns with reusable calculations instead of window-function-heavy SQL |
+| [Nested subtotals](https://docs.malloydata.dev/documentation/patterns/nested_subtotals) | Drill from high-level totals into nested detail without hand-writing rollups or self-joins |
 
 ---
 
@@ -115,10 +177,13 @@ This monorepo ships the core compiler, database connectors, and rendering utilit
 | Package | Description |
 |---|---|
 | [`@malloydata/malloy`](https://www.npmjs.com/package/@malloydata/malloy) | Core compiler & runtime |
-| [`@malloydata/db-duckdb`](https://www.npmjs.com/package/@malloydata/db-duckdb) | DuckDB connector |
+| [`@malloydata/db-duckdb`](https://www.npmjs.com/package/@malloydata/db-duckdb) | DuckDB connector (also supports MotherDuck and MSSQL via extensions) |
 | [`@malloydata/db-bigquery`](https://www.npmjs.com/package/@malloydata/db-bigquery) | BigQuery connector |
 | [`@malloydata/db-snowflake`](https://www.npmjs.com/package/@malloydata/db-snowflake) | Snowflake connector |
 | [`@malloydata/db-postgres`](https://www.npmjs.com/package/@malloydata/db-postgres) | PostgreSQL connector |
+| [`@malloydata/db-mysql`](https://www.npmjs.com/package/@malloydata/db-mysql) | MySQL connector |
+| [`@malloydata/db-trino`](https://www.npmjs.com/package/@malloydata/db-trino) | Trino / Presto connector |
+| [`@malloydata/db-databricks`](https://www.npmjs.com/package/@malloydata/db-databricks) | Databricks connector |
 | [`@malloydata/render`](https://www.npmjs.com/package/@malloydata/render) | Result rendering / charting |
 
 ---

@@ -8,7 +8,9 @@ Security fixes are applied to the latest published release only. We do not backp
 
 **Do not report security vulnerabilities via public GitHub issues.**
 
-Use [GitHub private vulnerability reporting](https://github.com/malloydata/malloy/security/advisories/new) to file a report confidentially. This is the preferred and only channel.
+Use [GitHub private vulnerability reporting](https://github.com/malloydata/malloy/security/advisories/new) to file a report confidentially. This is the preferred channel.
+
+If private vulnerability reporting is unavailable, email `malloydata@google.com` with the subject line `Malloy security report`. Do not include exploit details in a public issue, discussion, or pull request.
 
 ### What to include
 
