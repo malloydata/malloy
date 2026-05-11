@@ -96,7 +96,7 @@
   <!-- Tab -->
   <rect x="652" y="37" width="116" height="20" rx="4" fill="#1e3451"/>
   <text x="710" y="51" font-family="'Roboto Mono','Courier New',monospace" font-size="11"
-        fill="#6a8fb0" text-anchor="middle">flights.malloy</text>
+        fill="#6a8fb0" text-anchor="middle">airports.malloy</text>
 
   <!-- Malloy→SQL arrow annotation -->
   <text x="1090" y="51" font-family="'Roboto',Arial,sans-serif" font-size="11"

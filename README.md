@@ -28,7 +28,7 @@ Malloy is an open source language for describing **data relationships and transf
 
 It is both a **semantic modeling layer** and a **query language** that compiles down to SQL and runs on your existing data warehouse. Think of it as "SQL with a type system for your data" — define your measures, joins, and business logic once, then compose them freely without copy-pasting SQL snippets.
 
-**Supported backends:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks · MSSQL (via DuckDB extension)
+**Supported backends:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks · MSSQL (experimental)
 
 ---
 
@@ -64,7 +64,7 @@ SQL gives you maximum freedom but no guardrails — joins get duplicated, aggreg
 
 | Tool | Key difference from Malloy |
 |---|---|
-| **Raw SQL** | No semantic layer — measures are copy-pasted into every query; fan-out bugs are silent |
+| **Raw SQL** | No semantic layer - measures are copy-pasted into every query; fan-out bugs are silent |
 | **LookML** | Proprietary and locked to Looker; Malloy is open source and targets any SQL warehouse |
 | **dbt metrics / MetricFlow** | Definition-only; you still write SQL to consume metrics — Malloy is a full query language |
 | **Cube** | JavaScript/YAML configuration; Malloy is a typed, composable query language |
@@ -73,25 +73,57 @@ SQL gives you maximum freedom but no guardrails — joins get duplicated, aggreg
 
 ## Quick Start
 
-### 1. Install the VS Code Extension
+Three independent paths — pick whichever fits your setup:
 
-The fastest path to Malloy — install directly from the VS Code Marketplace:
+### Install the VSCode Extension
 
-- **[I already have VS Code →](https://docs.malloydata.dev/documentation/setup/extension.html#using-the-malloy-extension-on-your-desktop)**
-- **[I use BigQuery / Google Cloud →](https://docs.malloydata.dev/documentation/setup/extension.html#using-the-malloy-extension-on-google-cloud-shell-editor)**
-- **[I want to try it on a `.csv` / `.parquet` in a GitHub repo →](https://docs.malloydata.dev/documentation/setup/extension.html#using-the-malloy-extension-on-github-dev)**
+The fastest path to Malloy — install the Malloy extension directly from the VSCode Marketplace:
 
-![Malloy VS Code Extension — write queries, explore results inline](https://user-images.githubusercontent.com/1093458/182458787-ca228186-c954-4a07-b298-f92dbf91e48d.gif)
+- **[Install the Malloy extension in VSCode](https://docs.malloydata.dev/documentation/setup/extension.html#installation)**
+- **[Try it in the browser first (no install)](https://github.dev/malloydata/try-malloy/airports.malloy)** — opens a live Malloy notebook in github.dev, GitHub's in-browser VSCode. Requires a GitHub sign-in.
+- **[Connect to your database](https://docs.malloydata.dev/documentation/setup/extension.html#database-specific-setup)** — BigQuery, Snowflake, DuckDB, Postgres, MySQL, Trino/Presto, MotherDuck
 
-### 2. Try in your browser (no install)
+![Malloy VSCode Extension — write queries, explore results inline](https://user-images.githubusercontent.com/1093458/182458787-ca228186-c954-4a07-b298-f92dbf91e48d.gif)
 
-**[Click here to open a live Malloy notebook in github.dev →](https://github.dev/malloydata/try-malloy/airports.malloy)**
+### Run from the command line
 
-### 3. Use the npm packages
+For scripting, pipelines, or CI — install the standalone Malloy CLI:
+
+```bash
+npm install -g malloy-cli
+malloy-cli run my_query.malloy
+```
+
+It can `run` queries, `compile` to SQL, and `build` persistent tables from sources marked `#@ persist`. Connections are configured in `~/.config/malloy/malloy-config.json` (DuckDB, BigQuery, Postgres, Snowflake, Trino, Presto). See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/index) and [malloy-cli repo](https://github.com/malloydata/malloy-cli).
+
+### Use the npm packages
+
+Install the compiler and a database connector:
 
 ```bash
 npm install @malloydata/malloy @malloydata/db-duckdb
 ```
+
+Run a query from Node.js:
+
+```javascript
+const malloy = require("@malloydata/malloy");
+const duckdb = require("@malloydata/db-duckdb");
+
+const connection = new duckdb.DuckDBConnection("duckdb");
+const runtime = new malloy.SingleConnectionRuntime({ connection });
+
+const query = runtime.loadQuery(`
+  run: duckdb.sql('SELECT 1 AS one UNION ALL SELECT 2 AS one') -> {
+    aggregate: total is sum(one)
+  }
+`);
+
+query.run().then(result => console.log(result.data.value));
+// [ { total: 3 } ]
+```
+
+See the [language docs](https://docs.malloydata.dev/documentation/) for the full SDK reference and more examples.
 
 ---
 
@@ -166,7 +198,7 @@ Change `avg_flight_time` once in the source and every query that uses it updates
 - **Nested data** — query arrays and structs naturally without unnesting boilerplate
 - **Symmetric aggregates** — fan-out safe `count()`, `sum()`, and `avg()` across any join path
 - **Multi-dialect SQL output** — one model targets BigQuery, Snowflake, DuckDB, and more
-- **VS Code integration** — schema explorer, inline results, and syntax highlighting
+- **VSCode integration** — schema explorer, inline results, and syntax highlighting
 
 ---
 
@@ -194,8 +226,8 @@ This monorepo ships the core compiler, database connectors, and rendering utilit
 |---|---|
 | [Language Reference](https://docs.malloydata.dev/documentation/) | Full language guide |
 | [Quickstart](https://docs.malloydata.dev/documentation/user_guides/basic.html) | 10-minute tour |
-| [eCommerce Example](https://docs.malloydata.dev/documentation/examples/ecommerce.html) | End-to-end walkthrough on a real dataset |
-| [Iowa Modeling Walkthrough](https://docs.malloydata.dev/documentation/examples/iowa/iowa.html) | Semantic modeling from scratch |
+| [Malloy by Example](https://docs.malloydata.dev/documentation/user_guides/malloy_by_example) | Advanced modeling patterns and idioms |
+| [Malloy CLI](https://docs.malloydata.dev/documentation/malloy_cli/index) | Command-line reference for `run`, `compile`, `build` |
 | [YouTube Channel](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg) | Video demos and walkthroughs |
 
 ---
@@ -215,7 +247,7 @@ Have a feature request? Open a [GitHub issue](https://github.com/malloydata/mall
 - **[GitHub Issues](https://github.com/malloydata/malloy/issues)** — bug reports and feature requests
 - **[YouTube](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg)** — demos and tutorials
 
-> Note: The Malloy VS Code Extension collects a small amount of anonymous usage data. You can opt out in the extension settings. [Learn more](https://policies.google.com/technologies/cookies).
+> Note: The Malloy VSCode Extension collects a small amount of anonymous usage data. You can opt out in the extension settings. [Learn more](https://policies.google.com/technologies/cookies).
 
 ---
 

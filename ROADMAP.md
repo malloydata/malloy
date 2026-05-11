@@ -42,7 +42,7 @@ Full proposal details in [malloydata/whatsnext](https://github.com/malloydata/wh
 | [Relationships](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0001-relationships/wn-0001.md) | Top-level two-way join declarations between sources |
 | [Source & query parameters](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0002-parameters/wn-0002.md) | Parameterized `time_filter`, `string_filter`, `numeric_filter` on sources and views |
 | [Arrays & records](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0015-arrays-and-records/WN-0015.md) | First-class array and record type support |
-| [Joins in queries](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0018-joins-in-queries/wn-0018.md) | Inline join declarations inside a `run:` block |
+| [Joins in queries](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0018-joins-in-queries/WN-0018.md) | Inline join declarations inside a `run:` block |
 | [Drill](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0021-drill/wn-0021.md) | Structured drill-down from summary views to detail rows |
 | [Modules](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0010-module-support/wn-0010.md) | URL-based module imports for shared Malloy libraries |
 

@@ -95,7 +95,7 @@
   <!-- Tab -->
   <rect x="652" y="37" width="116" height="20" rx="4" fill="#ffffff" stroke="#d0d7e0" stroke-width="1"/>
   <text x="710" y="51" font-family="'Roboto Mono','Courier New',monospace" font-size="11"
-        fill="#5a6a7a" text-anchor="middle">flights.malloy</text>
+        fill="#5a6a7a" text-anchor="middle">airports.malloy</text>
 
   <!-- Annotation -->
   <text x="1090" y="51" font-family="'Roboto',Arial,sans-serif" font-size="11"
