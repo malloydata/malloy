@@ -26,16 +26,16 @@
 
 Malloy is an open source language for describing **data relationships and transformations**.
 
-It is both a **semantic modeling layer** and a **query language** that compiles down to SQL and runs on your existing data warehouse. Think of it as "SQL with a type system for your data" — define your measures, joins, and business logic once, then compose them freely without copy-pasting SQL snippets.
+It is both a **semantic modeling layer** and a **query language** that compiles to SQL — Malloy doesn't replace SQL, it adds a layer of meaning on top that runs on your existing data warehouse. Define your measures, joins, and business logic once, then compose them freely without copy-pasting SQL snippets across queries and dashboards.
 
-**Supported backends:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks · MSSQL (experimental)
+**Supported backends:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks
 
 ---
 
 ## Who Malloy Is For
 
 - **Analytics engineers and data teams** who want reusable measures, dimensions, joins, and views without scattering business logic across SQL files and dashboards.
-- **SQL users** who need a more composable way to express analysis while still compiling to SQL that runs in their existing warehouse.
+- **SQL teams** who need the same metric to mean the same thing across every dashboard, notebook, and report — without relying on everyone remembering the same rules.
 - **Teams working with nested data** who want first-class support for arrays, records, and nested query results instead of repeated unnesting boilerplate.
 - **Developers building data applications or BI experiences** who need a semantic model, query language, and rendering-friendly result shapes in one open source stack.
 
@@ -43,7 +43,7 @@ It is both a **semantic modeling layer** and a **query language** that compiles 
 
 ## Why Malloy?
 
-SQL gives you maximum freedom but no guardrails — joins get duplicated, aggregations silently fan out, and measures drift across dashboards. Existing semantic layers add safety but lock you into their query model. Malloy gives you both: **the safety of a semantic data model with the full flexibility of a relational query language.**
+SQL gives you maximum flexibility — exactly what you want when one analyst is asking one-off questions. But at team scale, that same flexibility quietly turns into duplicated joins, fan-out bugs, and measures that drift across dashboards. Existing semantic layers add safety but lock you into their query model. Malloy gives you both: **the safety of a semantic data model with the full flexibility of a relational query language.**
 
 <p>
   <em>“This feels like magic.”</em> — Lloyd Tabb
@@ -73,32 +73,19 @@ SQL gives you maximum freedom but no guardrails — joins get duplicated, aggreg
 
 ## Quick Start
 
-Three independent paths — pick whichever fits your setup:
+To install Malloy - there are three independent paths — pick whichever best fits your setup:
 
 ### Install the VSCode Extension
 
-The fastest path to Malloy — install the Malloy extension directly from the VSCode Marketplace:
+A quick and easy way to try Malloy is to use VSCode by [installing the Malloy extension into directly from the VSCode Marketplace](https://docs.malloydata.dev/documentation/setup/extension.html#installation). You can do this locally or [Try it in the browser (no install)](https://github.dev/malloydata/try-malloy/airports.malloy) — opens a live Malloy notebook in github.dev, GitHub's in-browser VSCode. Requires a GitHub sign-in.
 
-- **[Install the Malloy extension in VSCode](https://docs.malloydata.dev/documentation/setup/extension.html#installation)**
-- **[Try it in the browser first (no install)](https://github.dev/malloydata/try-malloy/airports.malloy)** — opens a live Malloy notebook in github.dev, GitHub's in-browser VSCode. Requires a GitHub sign-in.
-- **[Connect to your database](https://docs.malloydata.dev/documentation/setup/extension.html#database-specific-setup)** — BigQuery, Snowflake, DuckDB, Postgres, MySQL, Trino/Presto, MotherDuck
+Follow the instructions for [connecting Malloy to your database](https://docs.malloydata.dev/documentation/setup/extension.html#database-specific-setup) — supports BigQuery, Snowflake, DuckDB, Postgres, MySQL, Trino/Presto, or MotherDuck
 
 ![Malloy VSCode Extension — write queries, explore results inline](https://user-images.githubusercontent.com/1093458/182458787-ca228186-c954-4a07-b298-f92dbf91e48d.gif)
 
-### Run from the command line
-
-For scripting, pipelines, or CI — install the standalone Malloy CLI:
-
-```bash
-npm install -g malloy-cli
-malloy-cli run my_query.malloy
-```
-
-It can `run` queries, `compile` to SQL, and `build` persistent tables from sources marked `#@ persist`. Connections are configured in `~/.config/malloy/malloy-config.json` (DuckDB, BigQuery, Postgres, Snowflake, Trino, Presto). See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/index) and [malloy-cli repo](https://github.com/malloydata/malloy-cli).
-
 ### Use the npm packages
 
-Install the compiler and a database connector:
+To use Malloy in Node.js - install the compiler and a database connector, for example:
 
 ```bash
 npm install @malloydata/malloy @malloydata/db-duckdb
@@ -123,61 +110,148 @@ query.run().then(result => console.log(result.data.value));
 // [ { total: 3 } ]
 ```
 
+### Run Malloy from the command line
+
+For scripting, pipelines, or CI — you can install the standalone Malloy CLI:
+
+```bash
+npm install -g malloy-cli
+malloy-cli run my_query.malloy
+```
+
+It can `run` queries, `compile` to SQL, and `build` persistent tables from sources marked `#@ persist`.<br>
+Connections are configured in `~/.config/malloy/malloy-config.json` (DuckDB, BigQuery, Postgres, Snowflake, Trino, Presto).<br>
+See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/index) and [malloy-cli repo](https://github.com/malloydata/malloy-cli).
+
 See the [language docs](https://docs.malloydata.dev/documentation/) for the full SDK reference and more examples.
 
 ---
 
-## Language at a Glance
+## The Malloy Language at a Glance
 
-Malloy compiles to SQL. Here is what a query looks like side by side:
+SQL is the right tool for a vast range of analytics — direct exploration, one-off queries, anything where the question and the data sit in front of a single analyst. **Malloy doesn't replace SQL — it compiles to it.** What Malloy adds is a *semantic layer inside the query language itself*: joins, measures, and business rules live in one place and compose, so the same definitions feed every dashboard, every query, every report.
+
+Where it earns its keep is whenever more than one person — or more than one query — needs to agree on what *"active user"*, *"revenue"*, or *"on-time flight"* actually means. If you're a solo analyst writing ad-hoc SQL against one table, Malloy buys you less. If you're a team trying to keep dozens of dashboards and pipelines aligned on the same definitions, that's exactly the gap it fills.
+
+The four stages below build the picture incrementally — bare query → reusable measures → encoded business rules → multi-table joins. The snippets run against two small parquet files; grab them once, then paste any example into the Malloy VSCode extension or `malloy-cli` (no warehouse account required):
+
+```bash
+curl -O https://raw.githubusercontent.com/malloydata/malloy-samples/main/data/airports.parquet
+curl -O https://raw.githubusercontent.com/malloydata/malloy-samples/main/data/flights.parquet
+```
+
+### 1. A first query — Malloy compiles to SQL
+
+A bare Malloy query reads like an outline of what you want, in the order you'd describe it out loud:
 
 **Malloy**
 ```malloy
-run: bigquery.table('malloydata-org.faa.flights') -> {
-  where: origin = 'SFO'
-  group_by: carrier
+run: duckdb.table('airports.parquet') -> {
+  group_by: state
   aggregate:
-    flight_count is count()
-    average_flight_time is flight_time.avg()
+    airport_count is count()
+    avg_elevation is elevation.avg()
 }
 ```
 
 **Equivalent SQL**
 ```sql
 SELECT
-  carrier,
-  COUNT(*)           AS flight_count,
-  AVG(flight_time)   AS average_flight_time
-FROM `malloydata-org.faa.flights`
-WHERE origin = 'SFO'
-GROUP BY carrier
-ORDER BY flight_count DESC  -- Malloy orders by first aggregate automatically
+  state,
+  COUNT(*)         AS airport_count,
+  AVG(elevation)   AS avg_elevation
+FROM 'airports.parquet'
+GROUP BY state
+ORDER BY airport_count DESC  -- Malloy orders by first aggregate automatically
 ```
 
-Malloy's real power is **defining a model once and reusing it everywhere**. Measures, joins, and dimensions live in the source — not scattered across queries:
+### 2. Define a source — write the model once, reuse everywhere
+
+Pull the measures out of the query and into a **source**. Now `airport_count` and `avg_elevation` are defined once, and any number of queries can compose them without copy-paste:
 
 ```malloy
 -- Define once
-source: flights is bigquery.table('malloydata-org.faa.flights') extend {
+source: airports is duckdb.table('airports.parquet') extend {
   measure:
-    flight_count is count()
-    avg_flight_time is flight_time.avg()
+    airport_count is count()
+    avg_elevation is elevation.avg()
 }
 
--- Query by carrier — measures reused, no copy-paste
-run: flights -> {
-  group_by: carrier
-  aggregate: flight_count, avg_flight_time
+-- Group by state
+run: airports -> {
+  group_by: state
+  aggregate: airport_count, avg_elevation
 }
 
--- Query by origin — same measures, zero duplication
-run: flights -> {
-  group_by: origin
-  aggregate: flight_count, avg_flight_time
+-- Group by facility type — same measures, zero duplication
+run: airports -> {
+  group_by: fac_type
+  aggregate: airport_count, avg_elevation
 }
 ```
 
-Change `avg_flight_time` once in the source and every query that uses it updates automatically. The [language guide](https://docs.malloydata.dev/documentation/user_guides/basic.html) walks through this in depth.
+Change `avg_elevation` once and every query updates automatically.
+
+### 3. Pin contested definitions — write the rules down once
+
+The real payoff of a source isn't avoiding a few `count()` calls — it's pinning down measures whose definitions are *not* obvious, where different teams in an organization would otherwise compute them differently.
+
+Take "on-time arrival rate" on the flights data. The US DOT regulatory definition is precise: a flight is on-time if `arr_delay < 15` minutes, and cancelled or diverted flights are excluded from both numerator and denominator. A naive `count() { where: arr_delay < 15 } / count()` quietly counts cancellations as on-time arrivals (they have an `arr_delay` of 0 in this dataset) — a real data-quality trap.
+
+Encode the rule once, in the source, with a comment that explains *why*:
+
+```malloy
+source: flights is duckdb.table('flights.parquet') extend {
+  -- "On-time" follows the US DOT definition: arrived within 14 minutes of
+  -- schedule. Cancelled and diverted flights are excluded entirely — they
+  -- had no arrival outcome to measure. Change the rule here and every
+  -- dashboard in the company moves.
+  measure:
+    completed_flights is count() { where: cancelled = 'N' and diverted = 'N' }
+    on_time_flights is count() {
+      where: cancelled = 'N' and diverted = 'N' and arr_delay < 15
+    }
+    on_time_rate is on_time_flights / completed_flights
+}
+
+run: flights -> {
+  group_by: carrier
+  aggregate: on_time_rate, completed_flights
+  order_by: on_time_rate desc
+}
+```
+
+Now every dashboard, every report, every ad-hoc query agrees on what "on-time" means — not because everyone remembered the same rule, but because the rule lives in one place.
+
+### 4. Compose across tables — joins live in the source
+
+Sources can join other tables. Measures and dimensions then compose across the join, and Malloy's symmetric aggregates keep `count()`, `sum()`, and `avg()` correct even when a one-to-many join would otherwise fan rows out:
+
+```malloy
+-- Define once: flights joined to their origin airport
+source: flights is duckdb.table('flights.parquet') extend {
+  join_one: origin_airport is
+    duckdb.table('airports.parquet') on origin = origin_airport.code
+
+  measure:
+    flight_count is count()
+    avg_origin_elevation is origin_airport.elevation.avg()
+}
+
+-- Group by carrier — joined measure reused
+run: flights -> {
+  group_by: carrier
+  aggregate: flight_count, avg_origin_elevation
+}
+
+-- Group by the joined table's column — same measures, no extra joins to write
+run: flights -> {
+  group_by: origin_airport.state
+  aggregate: flight_count, avg_origin_elevation
+}
+```
+
+The [language guide](https://docs.malloydata.dev/documentation/user_guides/basic.html) walks through this in depth, including filters, nested queries, and the pipe operator.
 
 ---
 
