@@ -26,22 +26,11 @@
 
 Malloy is an open source language for describing **data relationships and transformations**.
 
-It is both a **semantic modeling layer** and a **query language** that compiles to SQL — Malloy doesn't replace SQL, it adds a layer of meaning on top that runs on your existing data warehouse. Define your measures, joins, and business logic once, then compose them freely without copy-pasting SQL snippets across queries and dashboards.
+It is both a **semantic modeling layer** and a **query language** that compiles to SQL - Malloy doesn't replace SQL, it adds a layer of meaning on top that runs on your existing data warehouse. Define your measures, joins, and business logic once, then compose them freely without copy-pasting SQL snippets across queries and dashboards.
 
 **Supported backends:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks
 
----
-
-## Who Malloy Is For
-
-- **Analytics engineers and data teams** who want reusable measures, dimensions, joins, and views without scattering business logic across SQL files and dashboards.
-- **SQL teams** who need the same metric to mean the same thing across every dashboard, notebook, and report — without relying on everyone remembering the same rules.
-- **Teams working with nested data** who want first-class support for arrays, records, and nested query results instead of repeated unnesting boilerplate.
-- **Developers building data applications or BI experiences** who need a semantic model, query language, and rendering-friendly result shapes in one open source stack.
-
----
-
-## Why Malloy?
+Malloy is built for analytics engineers, SQL teams, and developers building data apps who need measures, joins, and views to mean the same thing across every dashboard, notebook, and pipeline — especially when that data is nested.
 
 SQL gives you maximum flexibility — exactly what you want when one analyst is asking one-off questions. But at team scale, that same flexibility quietly turns into duplicated joins, fan-out bugs, and measures that drift across dashboards. Existing semantic layers add safety but lock you into their query model. Malloy gives you both: **the safety of a semantic data model with the full flexibility of a relational query language.**
 
@@ -57,17 +46,6 @@ SQL gives you maximum flexibility — exactly what you want when one analyst is 
 | Measures drift across dashboards | Single source of truth — change a measure once, every query updates |
 | Nested data requires boilerplate | First-class support for nested and repeated fields, no unnesting required |
 | Multi-step transforms are hard to read | Pipe operator `->` chains transformations linearly, like a Unix pipeline |
-
----
-
-## How Does Malloy Compare?
-
-| Tool | Key difference from Malloy |
-|---|---|
-| **Raw SQL** | No semantic layer - measures are copy-pasted into every query; fan-out bugs are silent |
-| **LookML** | Proprietary and locked to Looker; Malloy is open source and targets any SQL warehouse |
-| **dbt metrics / MetricFlow** | Definition-only; you still write SQL to consume metrics — Malloy is a full query language |
-| **Cube** | JavaScript/YAML configuration; Malloy is a typed, composable query language |
 
 ---
 
@@ -124,6 +102,17 @@ Connections are configured in `~/.config/malloy/malloy-config.json` (DuckDB, Big
 See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/index) and [malloy-cli repo](https://github.com/malloydata/malloy-cli).
 
 See the [language docs](https://docs.malloydata.dev/documentation/) for the full SDK reference and more examples.
+
+---
+
+## How Does Malloy Compare?
+
+| Tool | Key difference from Malloy |
+|---|---|
+| **Raw SQL** | No semantic layer - measures are copy-pasted into every query; fan-out bugs are silent |
+| **LookML** | Proprietary and locked to Looker; Malloy is open source and targets any SQL warehouse |
+| **dbt metrics / MetricFlow** | Definition-only; you still write SQL to consume metrics — Malloy is a full query language |
+| **Cube** | JavaScript/YAML configuration; Malloy is a typed, composable query language |
 
 ---
 
