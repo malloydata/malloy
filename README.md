@@ -129,20 +129,9 @@ See the [language docs](https://docs.malloydata.dev/documentation/) for the full
 
 ## The Malloy Language at a Glance
 
-SQL is the right tool for a vast range of analytics — direct exploration, one-off queries, anything where the question and the data sit in front of a single analyst. **Malloy doesn't replace SQL — it compiles to it.** What Malloy adds is a *semantic layer inside the query language itself*: joins, measures, and business rules live in one place and compose, so the same definitions feed every dashboard, every query, every report.
+SQL is the right tool for ad-hoc, single-analyst exploration against one table. Where Malloy earns its keep is when a team needs the same definition of *"active user"*, *"revenue"*, or *"on-time flight"* across dozens of queries, dashboards, and pipelines. **Malloy doesn't replace SQL — it compiles to it**, adding a semantic layer *inside* the query language so joins, measures, and business rules live in one place and feed every query downstream.
 
-Where it earns its keep is whenever more than one person — or more than one query — needs to agree on what *"active user"*, *"revenue"*, or *"on-time flight"* actually means. If you're a solo analyst writing ad-hoc SQL against one table, Malloy buys you less. If you're a team trying to keep dozens of dashboards and pipelines aligned on the same definitions, that's exactly the gap it fills.
-
-The four stages below build the picture incrementally — bare query → reusable measures → encoded business rules → multi-table joins. The snippets run against two small parquet files; grab them once, then paste any example into the Malloy VSCode extension or `malloy-cli` (no warehouse account required):
-
-```bash
-curl -O https://raw.githubusercontent.com/malloydata/malloy-samples/main/data/airports.parquet
-curl -O https://raw.githubusercontent.com/malloydata/malloy-samples/main/data/flights.parquet
-```
-
-### 1. A first query — Malloy compiles to SQL
-
-A bare Malloy query reads like an outline of what you want, in the order you'd describe it out loud:
+A bare Malloy query reads like an outline of what you want:
 
 **Malloy**
 ```malloy
@@ -156,102 +145,25 @@ run: duckdb.table('airports.parquet') -> {
 
 **Equivalent SQL**
 ```sql
-SELECT
-  state,
-  COUNT(*)         AS airport_count,
-  AVG(elevation)   AS avg_elevation
+SELECT state, COUNT(*) AS airport_count, AVG(elevation) AS avg_elevation
 FROM 'airports.parquet'
 GROUP BY state
 ORDER BY airport_count DESC  -- Malloy orders by first aggregate automatically
 ```
 
-### 2. Define a source — write the model once, reuse everywhere
-
-Pull the measures out of the query and into a **source**. Now `airport_count` and `avg_elevation` are defined once, and any number of queries can compose them without copy-paste:
-
-```malloy
--- Define once
-source: airports is duckdb.table('airports.parquet') extend {
-  measure:
-    airport_count is count()
-    avg_elevation is elevation.avg()
-}
-
--- Group by state
-run: airports -> {
-  group_by: state
-  aggregate: airport_count, avg_elevation
-}
-
--- Group by facility type — same measures, zero duplication
-run: airports -> {
-  group_by: fac_type
-  aggregate: airport_count, avg_elevation
-}
-```
-
-Change `avg_elevation` once and every query updates automatically.
-
-### 3. Pin contested definitions — write the rules down once
-
-The real payoff of a source isn't avoiding a few `count()` calls — it's pinning down measures whose definitions are *not* obvious, where different teams in an organization would otherwise compute them differently.
-
-Take "on-time arrival rate" on the flights data. The US DOT regulatory definition is precise: a flight is on-time if `arr_delay < 15` minutes, and cancelled or diverted flights are excluded from both numerator and denominator. A naive `count() { where: arr_delay < 15 } / count()` quietly counts cancellations as on-time arrivals (they have an `arr_delay` of 0 in this dataset) — a real data-quality trap.
-
-Encode the rule once, in the source, with a comment that explains *why*:
+The real payoff is pinning down measures whose definitions aren't obvious. Take "on-time arrival" — the US DOT defines it as `arr_delay < 15` *with cancelled and diverted flights excluded*. A naive `count() { where: arr_delay < 15 } / count()` silently treats cancellations as on-time. Encode the rule once, and every dashboard, report, and ad-hoc query agrees:
 
 ```malloy
 source: flights is duckdb.table('flights.parquet') extend {
-  -- "On-time" follows the US DOT definition: arrived within 14 minutes of
-  -- schedule. Cancelled and diverted flights are excluded entirely — they
-  -- had no arrival outcome to measure. Change the rule here and every
-  -- dashboard in the company moves.
   measure:
-    completed_flights is count() { where: cancelled = 'N' and diverted = 'N' }
-    on_time_flights is count() {
-      where: cancelled = 'N' and diverted = 'N' and arr_delay < 15
-    }
-    on_time_rate is on_time_flights / completed_flights
-}
-
-run: flights -> {
-  group_by: carrier
-  aggregate: on_time_rate, completed_flights
-  order_by: on_time_rate desc
+    on_time_rate is
+      count() { where: cancelled = 'N' and diverted = 'N' and arr_delay < 15 }
+      /
+      count() { where: cancelled = 'N' and diverted = 'N' }
 }
 ```
 
-Now every dashboard, every report, every ad-hoc query agrees on what "on-time" means — not because everyone remembered the same rule, but because the rule lives in one place.
-
-### 4. Compose across tables — joins live in the source
-
-Sources can join other tables. Measures and dimensions then compose across the join, and Malloy's symmetric aggregates keep `count()`, `sum()`, and `avg()` correct even when a one-to-many join would otherwise fan rows out:
-
-```malloy
--- Define once: flights joined to their origin airport
-source: flights is duckdb.table('flights.parquet') extend {
-  join_one: origin_airport is
-    duckdb.table('airports.parquet') on origin = origin_airport.code
-
-  measure:
-    flight_count is count()
-    avg_origin_elevation is origin_airport.elevation.avg()
-}
-
--- Group by carrier — joined measure reused
-run: flights -> {
-  group_by: carrier
-  aggregate: flight_count, avg_origin_elevation
-}
-
--- Group by the joined table's column — same measures, no extra joins to write
-run: flights -> {
-  group_by: origin_airport.state
-  aggregate: flight_count, avg_origin_elevation
-}
-```
-
-The [language guide](https://docs.malloydata.dev/documentation/user_guides/basic.html) walks through this in depth, including filters, nested queries, and the pipe operator.
+For the full language tour — sources, joins, nested results, symmetric aggregates, and the pipe operator — see the [10-minute quickstart](https://docs.malloydata.dev/documentation/user_guides/basic.html) and [Malloy by Example](https://docs.malloydata.dev/documentation/user_guides/malloy_by_example).
 
 ---
 
