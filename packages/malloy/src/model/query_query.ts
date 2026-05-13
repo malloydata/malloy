@@ -945,7 +945,7 @@ export class QueryQuery extends QueryField {
       }
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlQuoteIdentifier(
           '__distinct_key'
         )}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
@@ -1118,7 +1118,7 @@ export class QueryQuery extends QueryField {
     if (isBaseTable(qs.structDef)) {
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlQuoteIdentifier(
           '__distinct_key'
         )}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
@@ -1214,7 +1214,7 @@ export class QueryQuery extends QueryField {
             o.push(`${fi.fieldUsage.resultIndex} ${f.dir || 'ASC'}`);
           } else if (this.parent.dialect.orderByClause === 'output_name') {
             o.push(
-              `${this.parent.dialect.sqlMaybeQuoteIdentifier(f.field)} ${
+              `${this.parent.dialect.sqlQuoteIdentifier(f.field)} ${
                 f.dir || 'ASC'
               }`
             );
@@ -1231,7 +1231,7 @@ export class QueryQuery extends QueryField {
         } else if (this.parent.dialect.orderByClause === 'output_name') {
           const orderingField = resultStruct.getFieldByNumber(f.field);
           o.push(
-            `${this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${this.parent.dialect.sqlQuoteIdentifier(
               orderingField.name
             )} ${f.dir || 'ASC'}`
           );
@@ -1261,7 +1261,7 @@ export class QueryQuery extends QueryField {
 
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
       if (fi.fieldUsage.type === 'result') {
         fields.push(` ${fi.generateExpression()} as ${sqlName}`);
       }
@@ -1325,7 +1325,7 @@ export class QueryQuery extends QueryField {
         .join(',\n');
       const outputFields = outputPipelinedSQL.map(f => f.sqlFieldName);
       const allFields = Array.from(this.rootResult.allFields.keys()).map(f =>
-        this.parent.dialect.sqlMaybeQuoteIdentifier(f)
+        this.parent.dialect.sqlQuoteIdentifier(f)
       );
       const fields = allFields.filter(f => outputFields.indexOf(f) === -1);
       retSQL = `SELECT ${
@@ -1352,7 +1352,7 @@ export class QueryQuery extends QueryField {
     const orderedFields = [...scalarFields, ...otherFields];
 
     for (const [name, fi] of orderedFields) {
-      const outputName = this.parent.dialect.sqlMaybeQuoteIdentifier(
+      const outputName = this.parent.dialect.sqlQuoteIdentifier(
         `${name}__${resultSet.groupSet}`
       );
       if (fi instanceof FieldInstanceField) {
@@ -1375,10 +1375,9 @@ export class QueryQuery extends QueryField {
               });
               output.sql.push(outputFieldName);
               if (fi.f.fieldDef.type === 'number') {
-                const outputNameString =
-                  this.parent.dialect.sqlMaybeQuoteIdentifier(
-                    `${name}__${resultSet.groupSet}_string`
-                  );
+                const outputNameString = this.parent.dialect.sqlQuoteIdentifier(
+                  `${name}__${resultSet.groupSet}_string`
+                );
                 const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.sql.push(outputFieldNameString);
                 output.dimensionIndexes.push(output.fieldIndex++);
@@ -1519,9 +1518,7 @@ export class QueryQuery extends QueryField {
         while (r) {
           for (const name of r.fieldNames(fi => isScalarField(fi.f))) {
             dimensions.push(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(
-                `${name}__${r.groupSet}`
-              )
+              this.parent.dialect.sqlQuoteIdentifier(`${name}__${r.groupSet}`)
             );
           }
           r = r.parent;
@@ -1560,7 +1557,7 @@ export class QueryQuery extends QueryField {
             }
             obSQL.push(
               ' ' +
-                this.parent.dialect.sqlMaybeQuoteIdentifier(
+                this.parent.dialect.sqlQuoteIdentifier(
                   `${orderingField.name}__${result.groupSet}`
                 ) +
                 ` ${ordering.dir || 'ASC'}`
@@ -1725,7 +1722,7 @@ export class QueryQuery extends QueryField {
   ) {
     const groupsToMap: number[] = [];
     for (const [name, fi] of resultSet.allFields) {
-      const sqlFieldName = this.parent.dialect.sqlMaybeQuoteIdentifier(
+      const sqlFieldName = this.parent.dialect.sqlQuoteIdentifier(
         `${name}__${resultSet.groupSet}`
       );
       if (fi instanceof FieldInstanceField) {
@@ -1860,12 +1857,12 @@ export class QueryQuery extends QueryField {
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
     const dimensionIndexes: number[] = [];
     for (const [name, fi] of this.rootResult.allFields) {
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
           if (isScalarField(fi.f)) {
             fieldsSQL.push(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(
+              this.parent.dialect.sqlQuoteIdentifier(
                 `${name}__${this.rootResult.groupSet}`
               ) + ` as ${sqlName}`
             );
@@ -1873,7 +1870,7 @@ export class QueryQuery extends QueryField {
           } else if (isBasicCalculation(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlAnyValueLastTurtle(
-                this.parent.dialect.sqlMaybeQuoteIdentifier(
+                this.parent.dialect.sqlQuoteIdentifier(
                   `${name}__${this.rootResult.groupSet}`
                 ),
                 this.rootResult.groupSet,
@@ -1897,7 +1894,7 @@ export class QueryQuery extends QueryField {
         } else if (fi.firstSegment.type === 'project') {
           fieldsSQL.push(
             this.parent.dialect.sqlAnyValueLastTurtle(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(
+              this.parent.dialect.sqlQuoteIdentifier(
                 `${name}__${this.rootResult.groupSet}`
               ),
               this.rootResult.groupSet,
@@ -1945,7 +1942,7 @@ export class QueryQuery extends QueryField {
     const dialectFieldList: DialectFieldList = [];
 
     for (const [name, field] of resultStruct.allFields) {
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
       //
       if (
         resultStruct.firstSegment.type === 'reduce' &&
@@ -1966,7 +1963,7 @@ export class QueryQuery extends QueryField {
           };
           dialectFieldList.push({
             typeDef: multiLineNest,
-            sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            sqlExpression: this.parent.dialect.sqlQuoteIdentifier(
               `${name}__${resultStruct.groupSet}`
             ),
             rawName: name,
@@ -1981,7 +1978,7 @@ export class QueryQuery extends QueryField {
           };
           dialectFieldList.push({
             typeDef: oneLineNest,
-            sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            sqlExpression: this.parent.dialect.sqlQuoteIdentifier(
               `${name}__${resultStruct.groupSet}`
             ),
             rawName: name,
@@ -1995,7 +1992,7 @@ export class QueryQuery extends QueryField {
       ) {
         pushDialectField(dialectFieldList, {
           fieldDef: field.f.fieldDef,
-          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+          sqlExpression: this.parent.dialect.sqlQuoteIdentifier(
             `${name}__${resultStruct.groupSet}`
           ),
           rawName: name,
@@ -2038,12 +2035,12 @@ export class QueryQuery extends QueryField {
       } else {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
-      const structField = this.parent.dialect.sqlMaybeQuoteIdentifier(
+      const structField = this.parent.dialect.sqlQuoteIdentifier(
         orderingField.name
       );
       if (resultStruct.firstSegment.type === 'reduce') {
         compiledOrderBy.push({
-          field: this.parent.dialect.sqlMaybeQuoteIdentifier(
+          field: this.parent.dialect.sqlQuoteIdentifier(
             `${orderingField.name}__${resultStruct.groupSet}`
           ),
           structField,
@@ -2311,12 +2308,12 @@ class QueryQueryIndexStage extends QueryQuery {
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = 'COUNT(*)';
     const dialect = this.parent.dialect;
-    const fieldNameColumn = dialect.sqlMaybeQuoteIdentifier('fieldName');
-    const fieldPathColumn = dialect.sqlMaybeQuoteIdentifier('fieldPath');
-    const fieldValueColumn = dialect.sqlMaybeQuoteIdentifier('fieldValue');
-    const fieldTypeColumn = dialect.sqlMaybeQuoteIdentifier('fieldType');
-    const fieldRangeColumn = dialect.sqlMaybeQuoteIdentifier('fieldRange');
-    const weightColumn = dialect.sqlMaybeQuoteIdentifier('weight');
+    const fieldNameColumn = dialect.sqlQuoteIdentifier('fieldName');
+    const fieldPathColumn = dialect.sqlQuoteIdentifier('fieldPath');
+    const fieldValueColumn = dialect.sqlQuoteIdentifier('fieldValue');
+    const fieldTypeColumn = dialect.sqlQuoteIdentifier('fieldType');
+    const fieldRangeColumn = dialect.sqlQuoteIdentifier('fieldRange');
+    const weightColumn = dialect.sqlQuoteIdentifier('weight');
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
       measureSQL = this.rootResult.getField(measureName).generateExpression();

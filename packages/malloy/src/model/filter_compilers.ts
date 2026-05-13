@@ -161,7 +161,7 @@ export const FilterCompilers = {
     // For some databases checking NULL combined with a boolean check
     // is faster than a COALESCE, for now, just detect if the expression
     // is just a column reference, and if so, don't use COALECSE.
-    const quoteChar = d.sqlMaybeQuoteIdentifier('select')[0];
+    const quoteChar = d.sqlQuoteIdentifier('select')[0];
     const isColumn = x.match(`^[()${quoteChar}\\w.]+$`);
 
     if (isColumn) {

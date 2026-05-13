@@ -35,6 +35,30 @@ When modifying grammar files, regenerate the parser:
 npm run build-parser  # In the malloy package directory
 ```
 
+### String literal forms
+
+Malloy has several quoted-literal forms with different escape rules. Knowing which is which matters when generating Malloy source programmatically (e.g. in tests with adversarial values) — they are NOT interchangeable. The authoritative source is `MalloyLexer.g4`.
+
+Two lexer rules drive the escape behavior:
+- `STR_CHAR` covers escape-processed bodies. `\'`, `\\`, `\n`, `\t`, `\uXXXX` are real escape sequences and produce a single character in the resulting string.
+- `RAW_CHAR` (and `RAW3_CHAR` for triple-delimited forms) covers raw bodies. Backslash is a literal character; `\'` is the only practical "escape" and it just lets the lexer keep scanning — both the `\` and the `'` end up in the string.
+
+| Form | Lexer token | Example | Body | Notes |
+|---|---|---|---|---|
+| Single-quoted string | `SQ_STRING` | `'hello'`, `'o\'brien'` | `STR_CHAR` | Standard string value — backslash escapes |
+| Double-quoted string | `DQ_STRING` | `"hello"` | `STR_CHAR` | Same; choice of delimiter is cosmetic |
+| Backtick-quoted identifier | `BQ_STRING` | `` `weird name` `` | `STR_CHAR` | An identifier (column/field name), not a string value |
+| Raw single-quoted string | `RAW_SQ` | `s'a\d'` | `RAW_CHAR` | Raw string value. `s` prefix |
+| Raw double-quoted string | `RAW_DQ` | `s"a\d"` | `RAW_CHAR` | Same, double-delimited |
+| Regex literal | `HACKY_REGEX` | `r'a\d'`, `R'a\d'`, `/a\d/` | `RAW_CHAR` | Regular expression; always raw |
+| Filter expression | `SQ_FILTER` / `DQ_FILTER` / `BQ_FILTER` | `f'...'`, `f"..."`, `` f`...` `` | `RAW_CHAR` | Filter syntax; always raw |
+| Multi-line filter | `SQ3_FILTER` / `DQ3_FILTER` / `BQ3_FILTER` | `f'''...'''`, `f"""..."""`, `` f```...``` `` | `RAW3_CHAR` | Triple-delimited filter; always raw |
+| Embedded SQL block | `SQL_BEGIN`/`SQL_END` | `"""SELECT * FROM ${%{...}}"""` | `SQL_CHAR` | Body is raw SQL with `%{ malloy }` interpolation; opens a lexer mode. Used in `db.sql("""...""")` and turducken patterns |
+
+A naming gotcha across languages: in BigQuery and Python, `r'...'` means *raw string*. In Malloy, `r'...'` means *regex literal*. Malloy's raw-string prefix is `s`.
+
+Practical implication when authoring Malloy source from JavaScript: for any of the raw forms above (regex, `s'...'`, filter, triple-quoted filter, embedded SQL), do not double backslashes in the JavaScript-side rendering — Malloy will not undouble them. The standard mistake is `"r'" + s.replace(/\\/g, '\\\\') + "'"`, which turns the JS string `a\d` into the 4-character Malloy string `a\\d`, and the regex engine sees a literal backslash where you expected a digit class.
+
 ### 2. AST (Abstract Syntax Tree) (ast/)
 
 The AST is a tree of `MalloyElement` objects that represents the semantic structure of Malloy code.

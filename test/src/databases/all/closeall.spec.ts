@@ -8,7 +8,7 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 describe.each(runtimes.runtimeList)(
   'connection close test %s',
   (conName, runtime) => {
-    const n = runtime.dialect.sqlMaybeQuoteIdentifier('n');
+    const n = runtime.dialect.sqlQuoteIdentifier('n');
     const testModel = wrapTestModel(runtime, '');
     test.each(Array.from({length: 50}, (_, i) => i + 1))(
       'run SELECT %i',

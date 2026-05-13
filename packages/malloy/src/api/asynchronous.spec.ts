@@ -134,7 +134,7 @@ describe('api', () => {
           connection_name: 'connection',
           sql: `SELECT \n\
    base."carrier" as "carrier"
-FROM flights as base
+FROM "flights" as base
 GROUP BY 1
 ORDER BY 1 asc NULLS LAST
 `,
@@ -229,7 +229,7 @@ ORDER BY 1 asc NULLS LAST
           connection_name: 'connection',
           sql: `SELECT \n\
    base."carrier" as "carrier"
-FROM flights as base
+FROM "flights" as base
 GROUP BY 1
 ORDER BY 1 asc NULLS LAST
 `,

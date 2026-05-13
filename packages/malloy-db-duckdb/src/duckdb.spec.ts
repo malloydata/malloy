@@ -115,20 +115,20 @@ describe('DuckDBConnection', () => {
       );
     });
 
-    it('leaves bare table identifiers unquoted', async () => {
+    it('quotes bare table identifiers', async () => {
       await connection.fetchSchemaForTables({'plain': 'plain_table'}, {});
       expect(runRawSQL).toHaveBeenCalledWith(
-        'DESCRIBE SELECT * FROM plain_table'
+        'DESCRIBE SELECT * FROM "plain_table"'
       );
     });
 
-    it('leaves schema-qualified identifiers unquoted', async () => {
+    it('quotes each segment of schema-qualified identifiers', async () => {
       await connection.fetchSchemaForTables(
         {'qualified': 'main.qualified_table'},
         {}
       );
       expect(runRawSQL).toHaveBeenCalledWith(
-        'DESCRIBE SELECT * FROM main.qualified_table'
+        'DESCRIBE SELECT * FROM "main"."qualified_table"'
       );
     });
   });

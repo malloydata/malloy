@@ -37,7 +37,7 @@ describe.each(runtimes.runtimeList)(
   (conName, runtime) => {
     const testModel = wrapTestModel(runtime, '');
     const supportsNestedArrays = runtime.dialect.nestedArrays;
-    const quote = runtime.dialect.sqlMaybeQuoteIdentifier;
+    const quote = (s: string) => runtime.dialect.sqlQuoteIdentifier(s);
 
     const empty = `${conName}.sql("SELECT 0 as z")`;
     function arraySelectVal(...val: number[]): string {

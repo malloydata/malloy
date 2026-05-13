@@ -127,7 +127,7 @@ export class PostgresDialect extends PostgresBase {
   quoteTablePath(tablePath: string): string {
     return tablePath
       .split('.')
-      .map(part => `"${part}"`)
+      .map(part => this.quoteIdentifierPart(part, true))
       .join('.');
   }
 
@@ -224,7 +224,8 @@ export class PostgresDialect extends PostgresBase {
       return `(${parentAlias}->>'__row_id')`;
     }
     if (parentType !== 'table') {
-      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},'${childName}')`;
+      const nameLit = this.sqlLiteralString(childName);
+      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},${nameLit})`;
       switch (childType) {
         case 'string':
           break;
@@ -236,12 +237,12 @@ export class PostgresDialect extends PostgresBase {
         case 'record':
         case 'array[record]':
         case 'sql native':
-          ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
+          ret = `JSONB_EXTRACT_PATH(${parentAlias},${nameLit})`;
           break;
       }
       return ret;
     } else {
-      const child = this.sqlMaybeQuoteIdentifier(childName);
+      const child = this.sqlQuoteIdentifier(childName);
       return `${parentAlias}.${child}`;
     }
   }
@@ -399,14 +400,6 @@ export class PostgresDialect extends PostgresBase {
     return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -471,7 +464,7 @@ export class PostgresDialect extends PostgresBase {
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const props: string[] = [];
     for (const [kName, kVal] of Object.entries(lit.kids)) {
-      props.push(`'${kName}',${kVal.sql}`);
+      props.push(`${this.sqlLiteralString(kName)},${kVal.sql}`);
     }
     return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
   }

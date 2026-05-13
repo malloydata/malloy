@@ -69,7 +69,7 @@ export interface CompiledOrderBy {
  */
 export interface LateralJoinExpression {
   sql: string;
-  name: string; // already quoted by sqlMaybeQuoteIdentifier
+  name: string; // already quoted by sqlQuoteIdentifier
 }
 
 /*
@@ -92,6 +92,19 @@ export const MAX_INT128 = BigInt('170141183460469231731687303715884105727'); // 
 // Decimal(38,0) limits (for Snowflake NUMBER(38,0))
 export const MIN_DECIMAL38 = BigInt('-99999999999999999999999999999999999999'); // -(10^38 - 1)
 export const MAX_DECIMAL38 = BigInt('99999999999999999999999999999999999999'); // 10^38 - 1
+
+/**
+ * Allowed values for `Dialect.stringLiteralStyle` and
+ * `Dialect.identifierEscapeStyle`. Subclasses set their style with
+ * e.g. `stringLiteralStyle = EscapeStyle.Backslash`; the `as const`
+ * is centralized here so dialect files stay free of it.
+ */
+export const EscapeStyle = {
+  Doubled: 'doubled',
+  Backslash: 'backslash',
+  Unset: 'unset',
+} as const;
+export type EscapeStyleValue = (typeof EscapeStyle)[keyof typeof EscapeStyle];
 
 /**
  * Data which dialect methods need in order to correctly generate SQL.
@@ -466,7 +479,94 @@ export abstract class Dialect {
   sqlDateToString(sqlDateExp: string): string {
     return this.castToString(`DATE(${sqlDateExp})`);
   }
-  abstract sqlMaybeQuoteIdentifier(identifier: string): string;
+  /**
+   * The character the dialect uses to quote identifiers. Most dialects
+   * use ANSI double-quote `"`; MySQL, BigQuery and Databricks use the
+   * backtick `` ` ``. The dialect must escape this character by doubling
+   * inside a quoted identifier.
+   *
+   * Defaults to the empty string sentinel — concrete dialects must set
+   * a real value (or override `sqlQuoteIdentifier`), otherwise the
+   * base method throws to surface the omission immediately.
+   */
+  identifierQuoteChar = '';
+
+  /**
+   * How the dialect escapes the closing quote inside a string literal.
+   * Set via `EscapeStyle` from this module:
+   *
+   * - `EscapeStyle.Doubled`: `''` escapes `'`. Backslash is a literal
+   *   character. (ANSI standard; Postgres, DuckDB, Trino, Presto.)
+   * - `EscapeStyle.Backslash`: `\'` escapes `'`, `\\` escapes `\`.
+   *   (BigQuery, Snowflake, MySQL default mode, Databricks.)
+   * - `EscapeStyle.Unset` (default): base methods throw if reached. A
+   *   new dialect must set this (or override the literal methods).
+   *
+   * `sqlLiteralString` and `sqlLiteralRegexp` share this style — the
+   * regex engine receives whatever the SQL parser decodes, and the two
+   * must agree or regex patterns containing backslashes silently break.
+   */
+  stringLiteralStyle: EscapeStyleValue = EscapeStyle.Unset;
+
+  /**
+   * How the dialect escapes the quote character inside a quoted
+   * identifier. Mirrors `stringLiteralStyle`:
+   *
+   * - `EscapeStyle.Doubled`: doubling the quote char escapes it (ANSI
+   *   standard; most dialects).
+   * - `EscapeStyle.Backslash`: backslash-style escape, with `\\` for
+   *   backslash and `\<quote>` for the quote char. (BigQuery — quoted
+   *   identifiers use string-literal escape sequences.)
+   * - `EscapeStyle.Unset` (default): base method throws if reached.
+   */
+  identifierEscapeStyle: EscapeStyleValue = EscapeStyle.Unset;
+
+  /**
+   * Wrap an identifier in the dialect's quote character, escaping any
+   * embedded quote characters per the dialect's `identifierEscapeStyle`.
+   * This is the only safe way to render a user-controlled identifier
+   * in SQL.
+   */
+  sqlQuoteIdentifier(identifier: string): string {
+    const q = this.identifierQuoteChar;
+    if (!q) {
+      throw new Error(
+        `${this.name}: identifierQuoteChar is not set. ` +
+          'Set it on the dialect (e.g. \'"\' or "`"), ' +
+          'or override sqlQuoteIdentifier.'
+      );
+    }
+    if (this.identifierEscapeStyle === EscapeStyle.Doubled) {
+      return q + identifier.split(q).join(q + q) + q;
+    }
+    if (this.identifierEscapeStyle === EscapeStyle.Backslash) {
+      const escaped = identifier
+        .replace(/\\/g, '\\\\')
+        .split(q)
+        .join('\\' + q);
+      return q + escaped + q;
+    }
+    throw new Error(
+      `${this.name}: identifierEscapeStyle is not set. ` +
+        'Set it to EscapeStyle.Doubled or EscapeStyle.Backslash on the dialect, ' +
+        'or override sqlQuoteIdentifier.'
+    );
+  }
+
+  /**
+   * Quote a single segment of a table path. When `alwaysQuote` is false,
+   * a segment that already looks like a bare SQL identifier is returned
+   * unquoted, which produces tidier SQL for the common case. When true,
+   * the segment is always wrapped and escaped.
+   *
+   * Dialects compose this in their `quoteTablePath` implementations.
+   */
+  protected quoteIdentifierPart(part: string, alwaysQuote: boolean): string {
+    if (!alwaysQuote && /^[A-Za-z_][A-Za-z0-9_]*$/.test(part)) {
+      return part;
+    }
+    return this.sqlQuoteIdentifier(part);
+  }
 
   abstract castToString(expression: string): string;
 
@@ -803,8 +903,35 @@ export abstract class Dialect {
     literal: string,
     timezone: string
   ): string;
-  abstract sqlLiteralString(literal: string): string;
-  abstract sqlLiteralRegexp(literal: string): string;
+  /**
+   * Render a Malloy string as a SQL string literal. The escape style is
+   * driven by `stringLiteralStyle`; dialects normally do not override
+   * this method.
+   */
+  sqlLiteralString(literal: string): string {
+    if (this.stringLiteralStyle === 'doubled') {
+      return "'" + literal.split("'").join("''") + "'";
+    }
+    if (this.stringLiteralStyle === 'backslash') {
+      const escaped = literal.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return "'" + escaped + "'";
+    }
+    throw new Error(
+      `${this.name}: stringLiteralStyle is not set. ` +
+        'Set it to EscapeStyle.Doubled or EscapeStyle.Backslash on the dialect, ' +
+        'or override sqlLiteralString.'
+    );
+  }
+
+  /**
+   * Render a Malloy regex literal as a SQL string literal. Defaults to
+   * `sqlLiteralString` — the regex engine receives whatever bytes the
+   * SQL parser decodes, and `sqlLiteralString` already produces a
+   * correctly decoding literal for both escape styles.
+   */
+  sqlLiteralRegexp(literal: string): string {
+    return this.sqlLiteralString(literal);
+  }
   abstract sqlLiteralArray(lit: ArrayLiteralNode): string;
   abstract sqlLiteralRecord(lit: RecordLiteralNode): string;
 

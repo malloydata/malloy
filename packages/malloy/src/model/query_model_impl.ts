@@ -163,12 +163,12 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       const fieldNames: string[] = [];
       for (const f of ret.outputStruct.fields) {
         if (isAtomic(f)) {
-          const quoted = q.parent.dialect.sqlMaybeQuoteIdentifier(f.name);
+          const quoted = q.parent.dialect.sqlQuoteIdentifier(f.name);
           fieldNames.push(quoted);
         }
       }
       // const fieldNames = getAtomicFields(ret.outputStruct).map(fieldDef =>
-      //   q.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
+      //   q.parent.dialect.sqlQuoteIdentifier(fieldDef.name)
       // );
       ret.lastStageName = stageWriter.addStage(
         q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
@@ -302,11 +302,11 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         },
       ],
     };
-    const fieldNameColumn = d.sqlMaybeQuoteIdentifier('fieldName');
-    const fieldPathColumn = d.sqlMaybeQuoteIdentifier('fieldPath');
-    const fieldValueColumn = d.sqlMaybeQuoteIdentifier('fieldValue');
-    const fieldTypeColumn = d.sqlMaybeQuoteIdentifier('fieldType');
-    const weightColumn = d.sqlMaybeQuoteIdentifier('weight');
+    const fieldNameColumn = d.sqlQuoteIdentifier('fieldName');
+    const fieldPathColumn = d.sqlQuoteIdentifier('fieldPath');
+    const fieldValueColumn = d.sqlQuoteIdentifier('fieldValue');
+    const fieldTypeColumn = d.sqlQuoteIdentifier('fieldType');
+    const weightColumn = d.sqlQuoteIdentifier('weight');
 
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);

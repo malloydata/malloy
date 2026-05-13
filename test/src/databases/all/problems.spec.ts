@@ -43,7 +43,7 @@ async function getError<T>(fn: () => Promise<T>) {
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const testModel = wrapTestModel(runtime, '');
   it(`properly quotes nested field names in ${databaseName}`, async () => {
-    const one = runtime.dialect.sqlMaybeQuoteIdentifier('one');
+    const one = runtime.dialect.sqlQuoteIdentifier('one');
     await expect(`
       run: ${databaseName}.sql(""" SELECT 1 as ${one} """) -> {
         nest: foo is {

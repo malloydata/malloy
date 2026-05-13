@@ -262,6 +262,8 @@ For new files, this is the current correct copyright text (here in C/Java/Javasc
  */
 ```
 
+**Do not copy the header from a neighboring file.** Most existing files were created when the project used a longer Google MIT header; the short SPDX form above is what every *new* file must use. The neighboring-file pattern is the most common way to end up with the wrong header by accident. Always use the exact block above for new files, regardless of what the rest of the directory looks like.
+
 ## Commit and PR Guidelines
 
 Do not include AI attribution (e.g., "Generated with Claude Code", "Co-Authored-By: Claude") in commits or pull requests.

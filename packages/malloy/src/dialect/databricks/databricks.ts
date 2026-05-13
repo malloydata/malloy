@@ -33,7 +33,7 @@ import type {
   OrderByRequest,
   QueryInfo,
 } from '../dialect';
-import {Dialect, qtz} from '../dialect';
+import {Dialect, EscapeStyle, qtz} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {DATABRICKS_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -72,6 +72,9 @@ const databricksToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 
 export class DatabricksDialect extends Dialect {
   name = 'databricks';
+  stringLiteralStyle = EscapeStyle.Backslash;
+  identifierEscapeStyle = EscapeStyle.Doubled;
+  identifierQuoteChar = '`';
   defaultNumberType = 'DOUBLE';
   defaultDecimalType = 'DECIMAL';
   udfPrefix = '__udf';
@@ -123,7 +126,7 @@ export class DatabricksDialect extends Dialect {
         for (const f of malloyType.fields) {
           if (isAtomic(f)) {
             fields.push(
-              `${this.sqlMaybeQuoteIdentifier(f.name)}: ${this.malloyTypeToSQLType(f)}`
+              `${this.sqlQuoteIdentifier(f.name)}: ${this.malloyTypeToSQLType(f)}`
             );
           }
         }
@@ -135,7 +138,7 @@ export class DatabricksDialect extends Dialect {
           for (const f of malloyType.fields) {
             if (isAtomic(f)) {
               fields.push(
-                `${this.sqlMaybeQuoteIdentifier(f.name)}: ${this.malloyTypeToSQLType(f)}`
+                `${this.sqlQuoteIdentifier(f.name)}: ${this.malloyTypeToSQLType(f)}`
               );
             }
           }
@@ -163,9 +166,12 @@ export class DatabricksDialect extends Dialect {
   }
 
   quoteTablePath(tablePath: string): string {
+    // Always quote each segment so reserved words can be used as table
+    // names. Databricks is case-insensitive for identifiers, so quoting
+    // has no backward-compat cost.
     return tablePath
       .split('.')
-      .map(part => (/^[a-zA-Z_]\w*$/.test(part) ? part : `\`${part}\``))
+      .map(part => this.quoteIdentifierPart(part, true))
       .join('.');
   }
 
@@ -203,7 +209,9 @@ export class DatabricksDialect extends Dialect {
   private buildNamedStructExpression(fieldList: DialectFieldList): string {
     return (
       'named_struct(' +
-      fieldList.map(f => `'${f.rawName}', ${f.sqlExpression}`).join(', ') +
+      fieldList
+        .map(f => `${this.sqlLiteralString(f.rawName)}, ${f.sqlExpression}`)
+        .join(', ') +
       ')'
     );
   }
@@ -265,7 +273,9 @@ export class DatabricksDialect extends Dialect {
     const namedStruct = this.buildNamedStructExpression(fieldList);
     const nullStruct =
       'named_struct(' +
-      fieldList.map(f => `'${f.rawName}', NULL`).join(', ') +
+      fieldList
+        .map(f => `${this.sqlLiteralString(f.rawName)}, NULL`)
+        .join(', ') +
       ')';
     return `COALESCE(FIRST(CASE WHEN group_set=${groupSet} THEN ${namedStruct} END) IGNORE NULLS, ${nullStruct})`;
   }
@@ -352,7 +362,7 @@ export class DatabricksDialect extends Dialect {
     if (childName === '__row_id') {
       return `__row_id_from_${parentAlias}`;
     }
-    return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
+    return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
@@ -371,13 +381,9 @@ export class DatabricksDialect extends Dialect {
 
   sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList) {
     const fields = fieldList
-      .map(f => `${alias}.${this.sqlMaybeQuoteIdentifier(f.rawName)}`)
+      .map(f => `${alias}.${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     return `STRUCT(${fields})`;
-  }
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '`' + identifier.replace(/`/g, '``') + '`';
   }
 
   sqlCreateTableAsSelect(tableName: string, sql: string): string {
@@ -540,15 +546,6 @@ export class DatabricksDialect extends Dialect {
       }
     }
     return tableSQL;
-  }
-
-  sqlLiteralString(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
   }
 
   getDialectFunctionOverrides(): {
