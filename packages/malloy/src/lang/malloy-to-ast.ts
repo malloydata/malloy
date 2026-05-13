@@ -23,7 +23,7 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import type {ParseTree} from 'antlr4ts/tree';
+import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import type * as parse from './lib/Malloy/MalloyParser';
@@ -69,7 +69,7 @@ import {
 } from '../model/malloy_types';
 import type {Tag} from '@malloydata/malloy-tag';
 import {parseAnnotation} from '@malloydata/malloy-tag';
-import {isNotUndefined, rangeFromContext} from './utils';
+import {isNotUndefined, rangeFromContext, rangeFromToken} from './utils';
 import {isFilterable} from '@malloydata/malloy-filter';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {Timer} from '../timing';
@@ -275,13 +275,23 @@ export class MalloyToAST
     return new ast.Unimplemented();
   }
 
+  /**
+   * Attach a source location to an AST element and return it. The range
+   * is taken from the supplied parse-tree node — either a
+   * `ParserRuleContext` (entire rule's token span) or a `TerminalNode`
+   * (just that one token).
+   */
   protected astAt<MT extends ast.MalloyElement>(
     el: MT,
-    cx: ParserRuleContext
+    cx: ParserRuleContext | TerminalNode
   ): MT {
+    const range =
+      cx instanceof ParserRuleContext
+        ? this.rangeFromContext(cx)
+        : rangeFromToken(this.parseInfo.sourceInfo, cx.symbol);
     el.location = {
       url: this.parseInfo.sourceURL,
-      range: this.rangeFromContext(cx),
+      range,
     };
     return el;
   }
@@ -448,7 +458,23 @@ export class MalloyToAST
         );
       }
     }
-    const inline = !!pcx.INLINE_KW();
+    // The modifier slot accepts any identifier and rejects anything but
+    // `inline` at AST-build — this keeps `inline` from being a reserved
+    // word elsewhere in the language (fields, sources, view names, etc.
+    // can still be called `inline`). The cost: a slightly later error
+    // surface if someone misspells the modifier.
+    // Case-insensitive match: Malloy keywords are case-insensitive in
+    // the lexer, so accept `inline`, `INLINE`, `Inline`, etc.
+    const modCx = pcx.givenModifier();
+    let inline = false;
+    if (modCx) {
+      const modText = getId(modCx);
+      if (modText.toLowerCase() === 'inline') {
+        inline = true;
+      } else {
+        this.contextError(modCx, 'invalid-given-modifier', {modifier: modText});
+      }
+    }
     const decl = new ast.GivenDeclaration(name, typeDef, defVal, inline);
     decl.extendNote({notes: this.getNotes(pcx.tags())});
     return this.astAt(decl, pcx);
@@ -2537,12 +2563,10 @@ export class MalloyToAST
     const lhs = this.getFieldExpr(pcx.fieldExpr());
     const isNot = !!pcx.NOT();
     const givenName = pcx.GIVEN_REF().text.slice(1);
-    // The GivenReference is internal to ExprInGiven (the grammar
-    // doesn't produce a standalone exprGivenRef context here), so its
-    // location piggybacks on the whole `expr in $X` range — errors
-    // will point at the construct, not just the `$X` token. Good
-    // enough for type-mismatch messages.
-    const givenRef = this.astAt(new ast.GivenReference(givenName), pcx);
+    const givenRef = this.astAt(
+      new ast.GivenReference(givenName),
+      pcx.GIVEN_REF()
+    );
     return this.astAt(new ast.ExprInGiven(lhs, isNot, givenRef), pcx);
   }
 

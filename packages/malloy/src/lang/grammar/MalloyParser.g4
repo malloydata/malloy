@@ -92,8 +92,10 @@ givenDefList
   ;
 
 givenDef
-  : tags INLINE_KW? givenNameDef DOUBLECOLON givenType (isDefine fieldExpr)?
+  : tags givenModifier? givenNameDef DOUBLECOLON givenType (isDefine fieldExpr)?
   ;
+
+givenModifier: id;
 
 givenNameDef: id;
 

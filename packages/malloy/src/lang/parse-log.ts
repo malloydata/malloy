@@ -335,6 +335,7 @@ type MessageParameterTypes = {
   'in-given-type-mismatch': {lhsType: string; elementType: string};
   'inline-no-default': {name: string};
   'inline-bad-operator': {name: string; operators: string};
+  'invalid-given-modifier': {modifier: string};
   'illegal-filter-type': string;
   'invalid-source-from-given': string;
   'aggregate-analytic-in-select': string;
@@ -506,6 +507,8 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `inline given \`${e.name}\` must have a value — there is nothing to inline without one`,
   'inline-bad-operator': e =>
     `inline given \`${e.name}\` uses operator(s) not allowed in inline expressions: ${e.operators}`,
+  'invalid-given-modifier': e =>
+    `Unknown modifier \`${e.modifier}\` on \`given:\` declaration; the only modifier allowed here is \`inline\``,
 };
 
 export type MessageCode = keyof MessageParameterTypes;

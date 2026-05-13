@@ -295,7 +295,7 @@ describe('$NAME references in expressions', () => {
 describe('given: parse-time errors', () => {
   test('missing type is a parse error', () => {
     expect('given: TENANT').toLog(
-      errorMessage(/extraneous|missing|mismatched/i)
+      errorMessage(/extraneous|missing|mismatched|no viable/i)
     );
   });
 
@@ -1806,6 +1806,23 @@ describe('inline givens', () => {
   test('regular (non-inline) given has inline=false on the AST', () => {
     const givens = onlyGivens('given: REG :: number is 42');
     expect(givens[0].inline).toBe(false);
+  });
+
+  test('the inline modifier is case-insensitive', () => {
+    const givens = onlyGivens(`
+      given:
+        inline LOWER :: boolean is true
+        INLINE UPPER :: boolean is true
+        Inline MIXED :: boolean is true
+    `);
+    expect(givens.map(g => g.inline)).toEqual([true, true, true]);
+  });
+
+  test('any modifier other than `inline` is a translate-time error', () => {
+    expect(`
+      ##! experimental.givens
+      given: nonsense FOO :: boolean is true
+    `).toLogAtLeast(errorMessage(/Unknown modifier `nonsense`/));
   });
 
   test('inline flag survives into the IR Given record', () => {

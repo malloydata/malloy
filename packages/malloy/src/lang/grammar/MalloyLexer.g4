@@ -120,7 +120,6 @@ HAS: H A S ;
 HOUR: H O U R S?;
 IMPORT: I M P O R T;
 INCLUDE: I N C L U D E;
-INLINE_KW: I N L I N E ;
 INNER: I N N E R;
 IS: I S ;
 IN: I N ;
