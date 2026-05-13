@@ -93,6 +93,9 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
         .map(o => `${subExpr(o)}`)
         .join(',')}}}`;
     }
+    case 'inGiven': {
+      return `{${subExpr(e.e)} ${e.not ? 'not in' : 'in'} $${e.givenRef.refName}}`;
+    }
     case 'genericSQLExpr': {
       let sql = '';
       let i = 0;

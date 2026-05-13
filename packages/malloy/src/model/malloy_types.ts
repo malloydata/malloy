@@ -125,6 +125,7 @@ export type Expr =
   | NullNode
   | CaseExpr
   | InCompareExpr
+  | InGivenExpr
   | CompositeFieldExpr
   | ErrorNode;
 
@@ -483,6 +484,20 @@ export interface InCompareExpr extends ExprWithKids {
   kids: {e: Expr; oneOf: Expr[]};
 }
 
+/**
+ * Test against a runtime-bound array given: `expr in $ARRAY_GIVEN`.
+ *
+ * Uses ExprE (one child `e`, the LHS). The given reference is embedded
+ * as a top-level field rather than a kid so the auto-visitor in
+ * `compileExpr` doesn't descend into it; resolution and per-element
+ * SQL emission happen in the `case 'inGiven':` handler.
+ */
+export interface InGivenExpr extends ExprE {
+  node: 'inGiven';
+  not: boolean;
+  givenRef: GivenRefNode;
+}
+
 export type ExpressionType =
   | 'scalar'
   | 'aggregate'
@@ -575,6 +590,11 @@ export interface Given extends HasLocation, HasAnnotation {
    *  its own default. Empty/undefined when the default is a closed
    *  literal. */
   givenUsage?: GivenUsage;
+  /** Marked with the `inline` modifier — the default is eager-evaluated
+   *  to a literal at bind time and substituted as that literal in SQL.
+   *  Translator validates the default is eager-evaluable; bind-time
+   *  evaluator (`model/inline_expr.ts`) performs the reduction. */
+  inline?: boolean;
 }
 
 export interface GivenEntry {

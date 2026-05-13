@@ -330,6 +330,11 @@ type MessageParameterTypes = {
   'given-reference-not-implemented': string;
   'given-not-found': string;
   'given-no-tags-after-is': string;
+  'in-given-rhs-not-array': {givenName: string; actualType: string};
+  'in-given-rhs-not-basic-array': {givenName: string; elementType: string};
+  'in-given-type-mismatch': {lhsType: string; elementType: string};
+  'inline-no-default': {name: string};
+  'inline-bad-operator': {name: string; operators: string};
   'illegal-filter-type': string;
   'invalid-source-from-given': string;
   'aggregate-analytic-in-select': string;
@@ -491,6 +496,16 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `Case when expression must be boolean, not ${e.whenType}`,
   'case-when-type-does-not-match': e =>
     `Case when type ${e.whenType} does not match value type ${e.valueType}`,
+  'in-given-rhs-not-array': e =>
+    `\`in $${e.givenName}\` requires \`${e.givenName}\` to be an array , but it is \`${e.actualType}\``,
+  'in-given-rhs-not-basic-array': e =>
+    `\`in $${e.givenName}\` requires \`${e.givenName}\` to be an array of a basic type (string, number, etc.), but its element type is \`${e.elementType}\``,
+  'in-given-type-mismatch': e =>
+    `\`in\` left-hand side type \`${e.lhsType}\` does not match the array element type \`${e.elementType}\``,
+  'inline-no-default': e =>
+    `inline given \`${e.name}\` must have a value — there is nothing to inline without one`,
+  'inline-bad-operator': e =>
+    `inline given \`${e.name}\` uses operator(s) not allowed in inline expressions: ${e.operators}`,
 };
 
 export type MessageCode = keyof MessageParameterTypes;

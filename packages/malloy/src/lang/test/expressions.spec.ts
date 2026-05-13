@@ -686,7 +686,7 @@ describe('expressions', () => {
       source: root is a extend {
         rename: column is ai
         rename: nested is astruct
-        rename: inline is aninline
+        rename: inlinerec is aninline
         dimension: field is column * 2
         dimension: field_and_one_field is column + one.column
         dimension: many_field is many.column * 2
@@ -880,18 +880,18 @@ describe('expressions', () => {
         )
       );
     });
-    test('sum(inline.column)', () => {
-      expect(modelX`sum(inline.column)`).toLog(
+    test('sum(inlinerec.column)', () => {
+      expect(modelX`sum(inlinerec.column)`).toLog(
         warningMessage(
-          'Join path is required for this calculation; use `inline.column.sum()` or `source.sum(inline.column)` to get a result weighted with respect to `source`'
+          'Join path is required for this calculation; use `inlinerec.column.sum()` or `source.sum(inlinerec.column)` to get a result weighted with respect to `source`'
         )
       );
     });
-    test('inline.column.sum()', () => {
-      expect(modelX`inline.column.sum()`).toTranslate();
+    test('inlinerec.column.sum()', () => {
+      expect(modelX`inlinerec.column.sum()`).toTranslate();
     });
-    test('source.sum(inline.column)', () => {
-      expect(modelX`source.sum(inline.column)`).toTranslate();
+    test('source.sum(inlinerec.column)', () => {
+      expect(modelX`source.sum(inlinerec.column)`).toTranslate();
     });
     test('sum(many.field)', () => {
       expect(modelX`sum(many.field)`).toLog(

@@ -448,7 +448,8 @@ export class MalloyToAST
         );
       }
     }
-    const decl = new ast.GivenDeclaration(name, typeDef, defVal);
+    const inline = !!pcx.INLINE_KW();
+    const decl = new ast.GivenDeclaration(name, typeDef, defVal, inline);
     decl.extendNote({notes: this.getNotes(pcx.tags())});
     return this.astAt(decl, pcx);
   }
@@ -2529,6 +2530,20 @@ export class MalloyToAST
       new ast.ExprIsNull(this.getFieldExpr(expr), pcx.NOT() ? '!=' : '='),
       pcx
     );
+  }
+
+  visitExprInGiven(pcx: parse.ExprInGivenContext): ast.ExprInGiven {
+    this.inExperiment('givens', pcx);
+    const lhs = this.getFieldExpr(pcx.fieldExpr());
+    const isNot = !!pcx.NOT();
+    const givenName = pcx.GIVEN_REF().text.slice(1);
+    // The GivenReference is internal to ExprInGiven (the grammar
+    // doesn't produce a standalone exprGivenRef context here), so its
+    // location piggybacks on the whole `expr in $X` range — errors
+    // will point at the construct, not just the `$X` token. Good
+    // enough for type-mismatch messages.
+    const givenRef = this.astAt(new ast.GivenReference(givenName), pcx);
+    return this.astAt(new ast.ExprInGiven(lhs, isNot, givenRef), pcx);
   }
 
   visitExprWarnIn(pcx: parse.ExprWarnInContext): ast.ExprLegacyIn {

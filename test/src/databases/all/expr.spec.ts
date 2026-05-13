@@ -184,7 +184,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             limit: 2
           }
           limit: 3
-          nest: inline is {
+          nest: inlined is {
             aggregate: inline_sum is airport_count.sum()
           }
         }
@@ -193,7 +193,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       'o.by_state.state': 'TX',
       'o.by_state.airport_count': 1845,
       'o.airport_count': 11146,
-      'o.inline.inline_sum': 11146,
+      'o.inlined.inline_sum': 11146,
       'airport_count': 19701,
     });
   });
