@@ -13,10 +13,7 @@
 
 [Try in Browser](https://github.dev/malloydata/try-malloy/airports.malloy) · [Quickstart](https://docs.malloydata.dev/documentation/user_guides/basic.html) · [Docs](https://docs.malloydata.dev/documentation/) · [Slack](https://malloydata.github.io/slack) · [YouTube](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg)
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/images/hero-dark.svg">
-  <img src=".github/images/hero-light.svg" alt="Malloy — semantic modeling and query language for SQL" width="100%"/>
-</picture>
+<img src=".github/images/wordmark-dark.svg" alt="Malloy" width="650"/>
 
 </div>
 
@@ -34,11 +31,6 @@ Malloy is built for analytics engineers, SQL teams, and developers building data
 
 SQL gives you maximum flexibility — exactly what you want when one analyst is asking one-off questions. But at team scale, that same flexibility quietly turns into duplicated joins, fan-out bugs, and measures that drift across dashboards. Existing semantic layers add safety but lock you into their query model. Malloy gives you both: **the safety of a semantic data model with the full flexibility of a relational query language.**
 
-<p>
-  <em>“This feels like magic.”</em> — Lloyd Tabb
-</p>
-
-
 | Pain point | How Malloy solves it |
 |---|---|
 | Joins duplicated everywhere | Define joins once in a source, reuse across every query |
@@ -47,11 +39,26 @@ SQL gives you maximum flexibility — exactly what you want when one analyst is 
 | Nested data requires boilerplate | First-class support for nested and repeated fields, no unnesting required |
 | Multi-step transforms are hard to read | Pipe operator `->` chains transformations linearly, like a Unix pipeline |
 
+<br>
+<p>
+  <em>“This feels like magic.”</em> -- Lloyd Tabb
+</p>
+
+
+---
+
+## How Malloy works
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/images/how-it-works-dark.svg">
+  <img src=".github/images/how-it-works-light.svg" alt="How Malloy works: define a semantic .malloy model, compile to SQL, run natively on your warehouse — consumed from VS Code, npm, CLI, Publisher, or Python." width="100%"/>
+</picture>
+
 ---
 
 ## Quick Start
 
-To install Malloy - there are three independent paths — pick whichever best fits your setup:
+To install Malloy - there are four independent paths — pick whichever best fits your setup:
 
 ### Install the VSCode Extension
 
@@ -102,6 +109,16 @@ Connections are configured in `~/.config/malloy/malloy-config.json` (DuckDB, Big
 See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/index) and [malloy-cli repo](https://github.com/malloydata/malloy-cli).
 
 See the [language docs](https://docs.malloydata.dev/documentation/) for the full SDK reference and more examples.
+
+### Serve models with Publisher
+
+[Publisher](https://github.com/malloydata/publisher) is the open-source semantic model server for Malloy — it serves your `.malloy` models through REST and MCP APIs, so apps, BI tools, and AI agents can query them consistently:
+
+```bash
+npx @malloy-publisher/server --port 4000 --server_root path/to/your/models
+```
+
+Open `http://localhost:4000` to browse models, run queries, and grab MCP endpoints. See the [Publisher repo](https://github.com/malloydata/publisher) for setup, sample models, and deployment options.
 
 ---
 

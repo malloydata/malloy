@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 440" role="img" aria-labelledby="how-it-works-title">
+  <title id="how-it-works-title">How Malloy works: define a semantic .malloy model, compile to SQL, run natively on your warehouse.</title>
+
+  <defs>
+    <linearGradient id="pageBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#0F1623"/>
+      <stop offset="100%" stop-color="#131C2F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="440" fill="url(#pageBg)"/>
+
+  <!-- ============ DEFINE card ============ -->
+  <g>
+    <title>Step 1 — Define a semantic model in .malloy</title>
+    <rect x="48" y="44" width="380" height="352" rx="10" ry="10"
+          fill="#172035" stroke="#2D4A6E" stroke-width="1"/>
+
+    <circle cx="76" cy="72" r="11" fill="#1A8FC8"/>
+    <text x="76" y="76" text-anchor="middle"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="12" font-weight="600" fill="#0F1623">1</text>
+
+    <text x="100" y="76"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="13" font-weight="600" letter-spacing="2" fill="#E2E8F0">DEFINE</text>
+
+    <text x="100" y="94"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="12" font-weight="400" fill="#8BA8C4">Semantic model in .malloy</text>
+
+    <line x1="72" y1="112" x2="404" y2="112" stroke="#2D4A6E" stroke-width="1"/>
+
+    <rect x="72" y="126" width="118" height="20" rx="4" ry="4"
+          fill="#1E2D45" stroke="#2D4A6E" stroke-width="1"/>
+    <text x="131" y="140" text-anchor="middle"
+          font-family="'Roboto Mono','Courier New',monospace"
+          font-size="11" fill="#8BA8C4">flights.malloy</text>
+
+    <g font-family="'Roboto Mono','Courier New',monospace" font-size="14" fill="#E2E8F0">
+      <text x="72" y="172" xml:space="preserve"><tspan fill="#4285F4" font-weight="500">source</tspan>: flights <tspan fill="#4285F4" font-weight="500">is</tspan> duckdb.table(</text>
+      <text x="72" y="194" xml:space="preserve">  <tspan fill="#7DD3B0">'flights.parquet'</tspan>) <tspan fill="#4285F4" font-weight="500">extend</tspan> {</text>
+      <text x="72" y="216" xml:space="preserve">  <tspan fill="#4285F4" font-weight="500">measure</tspan>: on_time_rate <tspan fill="#4285F4" font-weight="500">is</tspan></text>
+      <text x="72" y="238" xml:space="preserve">    <tspan fill="#4285F4" font-weight="500">count</tspan>() { <tspan fill="#4285F4" font-weight="500">where</tspan>: arr_delay &lt; 15 }</text>
+      <text x="72" y="260" xml:space="preserve">    / <tspan fill="#4285F4" font-weight="500">count</tspan>()</text>
+      <text x="72" y="282" xml:space="preserve">}</text>
+
+      <text x="72" y="320" xml:space="preserve"><tspan fill="#4285F4" font-weight="500">run</tspan>: flights -&gt; {</text>
+      <text x="72" y="342" xml:space="preserve">  <tspan fill="#4285F4" font-weight="500">group_by</tspan>: carrier</text>
+      <text x="72" y="364" xml:space="preserve">  <tspan fill="#4285F4" font-weight="500">aggregate</tspan>: on_time_rate</text>
+      <text x="72" y="386" xml:space="preserve">}</text>
+    </g>
+  </g>
+
+  <!-- ===== Arrow 1 (simple muted) ===== -->
+  <g>
+    <text x="456" y="200" text-anchor="middle"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="11" font-weight="500" letter-spacing="2.5" fill="#6B7A8E">PARSE</text>
+    <line x1="436" y1="220" x2="470" y2="220" stroke="#6B7A8E" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="470,214 482,220 470,226" fill="#6B7A8E"/>
+  </g>
+
+  <!-- ============ COMPILE card ============ -->
+  <g>
+    <title>Step 2 — Malloy compiler: type-checked, dialect-aware</title>
+    <rect x="484" y="44" width="280" height="352" rx="10" ry="10"
+          fill="#172035" stroke="#2D4A6E" stroke-width="1"/>
+
+    <circle cx="512" cy="72" r="11" fill="#2DD0E8"/>
+    <text x="512" y="76" text-anchor="middle"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="12" font-weight="600" fill="#0F1623">2</text>
+
+    <text x="536" y="76"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="13" font-weight="600" letter-spacing="2" fill="#E2E8F0">COMPILE</text>
+
+    <text x="536" y="94"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="12" font-weight="400" fill="#8BA8C4">Malloy → SQL</text>
+
+    <line x1="508" y1="112" x2="740" y2="112" stroke="#2D4A6E" stroke-width="1"/>
+
+    <!-- M mark: 4 interlaced rope strokes, faithful to the brand logo. -->
+    <g transform="translate(534, 154) scale(0.45)" stroke-width="66" stroke-linecap="round" fill="none">
+      <path d="M 48 243 L 115 45"  stroke="#1A8FC8"/>
+      <path d="M 155 37 L 240 244" stroke="#2DD0E8"/>
+      <path d="M 153 244 L 235 37" stroke="#F58A3B"/>
+      <path d="M 291 61 L 347 243" stroke="#FFCB1F"/>
+    </g>
+
+    <text x="624" y="314" text-anchor="middle"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="20" font-weight="500" fill="#E2E8F0">Malloy compiler</text>
+
+    <g font-family="'Google Sans','Helvetica Neue','Arial',sans-serif" font-size="11" font-weight="500">
+      <rect x="512" y="338" width="92" height="22" rx="11" ry="11" fill="#1E2D45" stroke="#2D4A6E" stroke-width="1"/>
+      <text x="558" y="353" text-anchor="middle" fill="#A8C4F0">Type-checked</text>
+
+      <rect x="612" y="338" width="92" height="22" rx="11" ry="11" fill="#1E2D45" stroke="#2D4A6E" stroke-width="1"/>
+      <text x="658" y="353" text-anchor="middle" fill="#A8C4F0">Dialect-aware</text>
+
+      <rect x="562" y="366" width="124" height="22" rx="11" ry="11" fill="#1E2D45" stroke="#2D4A6E" stroke-width="1"/>
+      <text x="624" y="381" text-anchor="middle" fill="#A8C4F0">Symmetric aggregates</text>
+    </g>
+  </g>
+
+  <!-- ===== Arrow 2 (simple muted) ===== -->
+  <g>
+    <text x="792" y="200" text-anchor="middle"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="11" font-weight="500" letter-spacing="2.5" fill="#6B7A8E">SQL</text>
+    <line x1="772" y1="220" x2="806" y2="220" stroke="#6B7A8E" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="806,214 818,220 806,226" fill="#6B7A8E"/>
+  </g>
+
+  <!-- ============ RUN card ============ -->
+  <g>
+    <title>Step 3 — Run native SQL on your data warehouse</title>
+    <rect x="820" y="44" width="332" height="352" rx="10" ry="10"
+          fill="#172035" stroke="#2D4A6E" stroke-width="1"/>
+
+    <circle cx="848" cy="72" r="11" fill="#F58A3B"/>
+    <text x="848" y="76" text-anchor="middle"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="12" font-weight="600" fill="#0F1623">3</text>
+
+    <text x="872" y="76"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="13" font-weight="600" letter-spacing="2" fill="#E2E8F0">RUN</text>
+
+    <text x="872" y="94"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="12" font-weight="400" fill="#8BA8C4">Native SQL on your warehouse</text>
+
+    <line x1="844" y1="112" x2="1128" y2="112" stroke="#2D4A6E" stroke-width="1"/>
+
+    <g font-family="'Google Sans','Helvetica Neue','Arial',sans-serif" font-size="15" font-weight="500" fill="#E2E8F0">
+      <circle cx="858" cy="142" r="5" fill="#1A8FC8"/>
+      <text x="876" y="147">BigQuery</text>
+
+      <circle cx="858" cy="176" r="5" fill="#2DD0E8"/>
+      <text x="876" y="181">Snowflake</text>
+
+      <circle cx="858" cy="210" r="5" fill="#F58A3B"/>
+      <text x="876" y="215">DuckDB <tspan font-weight="400" fill="#8BA8C4">/ MotherDuck</tspan></text>
+
+      <circle cx="858" cy="244" r="5" fill="#FFCB1F"/>
+      <text x="876" y="249">PostgreSQL</text>
+
+      <circle cx="858" cy="278" r="5" fill="#1A8FC8"/>
+      <text x="876" y="283">MySQL</text>
+
+      <circle cx="858" cy="312" r="5" fill="#2DD0E8"/>
+      <text x="876" y="317">Trino <tspan font-weight="400" fill="#8BA8C4">/ Presto</tspan></text>
+
+      <circle cx="858" cy="346" r="5" fill="#F58A3B"/>
+      <text x="876" y="351">Databricks</text>
+    </g>
+
+    <text x="986" y="380" text-anchor="middle"
+          font-family="'Google Sans','Helvetica Neue','Arial',sans-serif"
+          font-size="11" font-style="italic" fill="#8BA8C4">No data leaves your warehouse</text>
+  </g>
+</svg>
