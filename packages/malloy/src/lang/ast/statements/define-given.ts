@@ -5,11 +5,18 @@
 
 import type {
   Annotation,
+  Expr,
   Given,
   GivenEntry,
   GivenTypeDef,
 } from '../../../model/malloy_types';
-import {givenUsageFrom, TD} from '../../../model/malloy_types';
+import {
+  exprHasE,
+  exprHasKids,
+  givenUsageFrom,
+  TD,
+} from '../../../model/malloy_types';
+import {INLINE_LEAVES, INLINE_OPS} from '../../../model/inline_expr';
 import {mkGivenID} from '../../../model/source_def_utils';
 import {typeDefToString} from '../../../model/utils';
 import type {ConstantExpression} from '../expressions/constant-expression';
@@ -35,6 +42,34 @@ function filterTypeMismatch(
   );
 }
 
+/**
+ * Walk an Expr tree and collect every node string that isn't in the
+ * allowed inline operator/leaf sets.
+ *
+ * The translator caller is gated on a clean translation of the default
+ * (`constVal.type !== 'error'`): we don't pile bad-operator errors on
+ * top of a default that didn't translate cleanly for more fundamental
+ * reasons (an unknown `$REF`, a type mismatch, etc.). Every bad node
+ * is collected so the author sees the full list in one diagnostic.
+ */
+function collectInlineBadOps(e: Expr, bad: Set<string>): void {
+  if (!INLINE_OPS.has(e.node) && !INLINE_LEAVES.has(e.node)) {
+    bad.add(e.node);
+  }
+  if (exprHasE(e)) {
+    collectInlineBadOps(e.e, bad);
+  } else if (exprHasKids(e)) {
+    for (const kid of Object.values(e.kids)) {
+      if (kid === null) continue;
+      if (Array.isArray(kid)) {
+        for (const k of kid) collectInlineBadOps(k, bad);
+      } else {
+        collectInlineBadOps(kid, bad);
+      }
+    }
+  }
+}
+
 export class GivenDeclaration
   extends MalloyElement
   implements DocStatement, Noteable
@@ -48,7 +83,8 @@ export class GivenDeclaration
   constructor(
     readonly name: string,
     readonly typeDef: GivenTypeDef,
-    defaultExpr?: ConstantExpression
+    defaultExpr?: ConstantExpression,
+    readonly inline: boolean = false
   ) {
     super();
     if (defaultExpr) {
@@ -70,6 +106,13 @@ export class GivenDeclaration
         `Cannot redefine '${this.name}'`
       );
       return;
+    }
+
+    // An inline given with no default has nothing to evaluate at bind
+    // time. Log and keep going — the given still registers in the
+    // namespace so downstream errors don't cascade pointlessly.
+    if (this.inline && !this.default) {
+      this.logError('inline-no-default', {name: this.name});
     }
 
     // Default expression. ConstantExpression evaluates through a
@@ -149,6 +192,18 @@ export class GivenDeclaration
           }
           givenUsage = closure;
         }
+
+        // Ensure inline expression is resolveable at compile time.
+        if (this.inline) {
+          const bad = new Set<string>();
+          collectInlineBadOps(defaultExpr, bad);
+          if (bad.size > 0) {
+            this.default.logError('inline-bad-operator', {
+              name: this.name,
+              operators: [...bad].sort().join(', '),
+            });
+          }
+        }
       }
     }
 
@@ -163,6 +218,7 @@ export class GivenDeclaration
       givenUsage,
       location: this.location,
       annotation: this.note,
+      ...(this.inline ? {inline: true} : {}),
     };
     doc.documentGivens.set(id, givenIR);
 

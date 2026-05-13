@@ -8,6 +8,7 @@ import {
   DefineGivens,
   Document,
   ExprAddSub,
+  ExprInGiven,
   ExprNumber,
   GivenDeclaration,
   GivenReference,
@@ -294,7 +295,7 @@ describe('$NAME references in expressions', () => {
 describe('given: parse-time errors', () => {
   test('missing type is a parse error', () => {
     expect('given: TENANT').toLog(
-      errorMessage(/extraneous|missing|mismatched/i)
+      errorMessage(/extraneous|missing|mismatched|no viable/i)
     );
   });
 
@@ -1712,5 +1713,185 @@ describe('given: Model.givens introspection', () => {
     expect([...perQuery.keys()]).toEqual(['USED']);
     // Same id on both sides for the shared given.
     expect(all.get('USED')?.id).toBe(perQuery.get('USED')?.id);
+  });
+});
+
+describe('expr in $ARRAY_GIVEN', () => {
+  test('parses as ExprInGiven', () => {
+    const e = givenExpr`astr in $STATES`.translator.ast();
+    expect(e).toBeInstanceOf(ExprInGiven);
+    if (e instanceof ExprInGiven) {
+      expect(e.notIn).toBe(false);
+      expect(e.givenRef).toBeInstanceOf(GivenReference);
+      expect(e.givenRef.name).toEqual('STATES');
+    }
+  });
+
+  test('not-in form sets notIn=true', () => {
+    const e = givenExpr`astr not in $STATES`.translator.ast();
+    expect(e).toBeInstanceOf(ExprInGiven);
+    if (e instanceof ExprInGiven) {
+      expect(e.notIn).toBe(true);
+    }
+  });
+
+  test('produces an inGiven IR node referencing the given', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      given: STATES :: string[] is ['CA']
+      run: a -> { where: astr in $STATES; select: * }
+    `);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    const filter = md.queryList[0].pipeline[0].filterList![0];
+    expect(filter).toBeExpr('{filterCondition {astr in $STATES}}');
+  });
+
+  test('not-in form produces a negated inGiven IR node', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      given: STATES :: string[] is ['CA']
+      run: a -> { where: astr not in $STATES; select: * }
+    `);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    const filter = md.queryList[0].pipeline[0].filterList![0];
+    expect(filter).toBeExpr('{filterCondition {astr not in $STATES}}');
+  });
+
+  test('LHS basic type must match array element type', () => {
+    // ai is a number; $STATES is string[] → mismatch.
+    expect(`
+      ##! experimental.givens
+      given: STATES :: string[] is ['CA']
+      run: a -> { where: ai in $STATES; select: * }
+    `).toLog(errorMessage(/does not match the array element type/));
+  });
+
+  test('RHS must be array-typed', () => {
+    expect(`
+      ##! experimental.givens
+      given: TENANT :: string
+      run: a -> { where: astr in $TENANT; select: * }
+    `).toLog(errorMessage(/requires `TENANT` to be an array/));
+  });
+
+  test('experimental.givens flag required', () => {
+    // Multiple sites in the source touch the experimental flag; we just
+    // assert at least one flag-required error is raised — no claim
+    // about other downstream errors.
+    expect(`
+      run: a -> { where: astr in $STATES; select: * }
+    `).toLogAtLeast(errorMessage(/Experimental flag `givens` is not set/));
+  });
+
+  test('unknown given name surfaces the standard given-not-found error', () => {
+    expect(`
+      ##! experimental.givens
+      run: a -> { where: astr in $NOPE; select: * }
+    `).toLog(
+      errorMessage(/references a given named `NOPE`, which is not declared/)
+    );
+  });
+});
+
+describe('inline givens', () => {
+  test('declaration parses and sets inline=true on the AST', () => {
+    const givens = onlyGivens('given: inline OK :: boolean is true');
+    expect(givens).toHaveLength(1);
+    expect(givens[0].name).toEqual('OK');
+    expect(givens[0].inline).toBe(true);
+  });
+
+  test('regular (non-inline) given has inline=false on the AST', () => {
+    const givens = onlyGivens('given: REG :: number is 42');
+    expect(givens[0].inline).toBe(false);
+  });
+
+  test('the inline modifier is case-insensitive', () => {
+    const givens = onlyGivens(`
+      given:
+        inline LOWER :: boolean is true
+        INLINE UPPER :: boolean is true
+        Inline MIXED :: boolean is true
+    `);
+    expect(givens.map(g => g.inline)).toEqual([true, true, true]);
+  });
+
+  test('any modifier other than `inline` is a translate-time error', () => {
+    expect(`
+      ##! experimental.givens
+      given: nonsense FOO :: boolean is true
+    `).toLogAtLeast(errorMessage(/Unknown modifier `nonsense`/));
+  });
+
+  test('inline flag survives into the IR Given record', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      given:
+        ROLE :: string is "viewer"
+        inline IS_ADMIN :: boolean is $ROLE = "admin"
+    `);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    expect(md.givens![givenId(md, 'ROLE')].inline).toBeUndefined();
+    expect(md.givens![givenId(md, 'IS_ADMIN')].inline).toBe(true);
+  });
+
+  test('inline given without a default is a translate-time error', () => {
+    expect(`
+      ##! experimental.givens
+      given: inline FOO :: number
+    `).toLog(errorMessage(/inline given `FOO` must have a value/));
+  });
+
+  test('inline default with a disallowed operator is a translate-time error', () => {
+    // Arithmetic is not in the initial inline operator set.
+    expect(`
+      ##! experimental.givens
+      given:
+        N :: number is 10
+        inline DOUBLED :: number is $N + 1
+    `).toLog(
+      errorMessage(/inline given `DOUBLED` uses operator\(s\) not allowed/)
+    );
+  });
+
+  test('inline default with only allowed operators translates cleanly', () => {
+    expect(`
+      ##! experimental.givens
+      given:
+        CAPS :: string[]
+        ROLE :: string
+        inline CAN_READ :: boolean is 'read' in $CAPS
+        inline CAN_MUTATE :: boolean is 'write' in $CAPS or $ROLE = 'admin'
+    `).toTranslate();
+  });
+
+  test('inline given filtered out of Model.givens introspection', () => {
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      given:
+        TENANT :: string is "acme"
+        inline DERIVED :: boolean is $TENANT = "acme"
+    `);
+    expect(t).toTranslate();
+    const model = new Model(t.translate().modelDef!, [], []);
+    const names = [...model.givens.keys()].sort();
+    expect(names).toEqual(['TENANT']);
+  });
+
+  test('inline given still appears in modelDef.contents (not API-filtered there)', () => {
+    // ModelDef.contents is the source of truth for the namespace; filtering
+    // happens only at the foundation-API layer.
+    const t = new TestTranslator(`
+      ##! experimental.givens
+      given:
+        ROLE :: string is "viewer"
+        inline IS_ADMIN :: boolean is $ROLE = "admin"
+    `);
+    expect(t).toTranslate();
+    const md = t.translate().modelDef!;
+    expect(md.contents['IS_ADMIN']?.type).toBe('given');
   });
 });

@@ -8,6 +8,8 @@ import {TestSelect} from '../test-select';
 import {MalloyConfig, Runtime} from '@malloydata/malloy';
 import type {URLReader} from '@malloydata/malloy';
 import type {GivenValue} from '@malloydata/malloy';
+import {mkTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 const runtime = runtimeFor('duckdb');
 
@@ -806,5 +808,228 @@ describe('givens — finalizeGivens (Stage 4e)', () => {
       .loadQueryByName('q')
       .run();
     expect(result.data.path(0, 'state').value).toBe('CA');
+  });
+});
+
+describe('givens — `expr in $arrayGiven` (Pattern B)', () => {
+  test('basic in $ARR filters rows to those whose value is in the array', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: ALLOWED_STATES :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state in $ALLOWED_STATES
+        group_by: state
+        order_by: state
+      }
+    `);
+    const result = await model.loadQueryByName('q').run({
+      givens: {ALLOWED_STATES: ['CA', 'NY', 'TX']},
+    });
+    const states = result.data.toObject().map(r => r['state']);
+    expect(states.sort()).toEqual(['CA', 'NY', 'TX']);
+  });
+
+  test('not-in form negates membership', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: EXCLUDED :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state not in $EXCLUDED
+        where: state ? 'CA' | 'NY' | 'TX' | 'AZ'
+        group_by: state
+        order_by: state
+      }
+    `);
+    // The first where narrows to the four states; the second tests whether
+    // not-in actually excludes the named ones from the survivors.
+    const r1 = (
+      await model.loadQueryByName('q').run({givens: {EXCLUDED: []}})
+    ).data
+      .toObject()
+      .map(r => r['state']);
+    const r2 = (
+      await model
+        .loadQueryByName('q')
+        .run({givens: {EXCLUDED: ['CA', 'NY', 'TX']}})
+    ).data
+      .toObject()
+      .map(r => r['state']);
+    expect(r1.sort()).toEqual(['AZ', 'CA', 'NY', 'TX']);
+    expect(r2).toEqual(['AZ']);
+  });
+
+  test('empty array evaluates to FALSE for IN, TRUE for NOT IN', async () => {
+    // IN form: no rows match.
+    const inModel = runtime.loadModel(`
+      ##! experimental.givens
+      given: ALLOWED :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state in $ALLOWED
+        group_by: state
+      }
+    `);
+    const inR = await inModel.loadQueryByName('q').run({givens: {ALLOWED: []}});
+    expect(inR.data.toObject().length).toBe(0);
+
+    // NOT IN form: all rows match.
+    const notInModel = runtime.loadModel(`
+      ##! experimental.givens
+      given: EXCLUDED :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state not in $EXCLUDED
+        group_by: state
+      }
+    `);
+    const notInR = await notInModel
+      .loadQueryByName('q')
+      .run({givens: {EXCLUDED: []}});
+    expect(notInR.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('null bound is treated as empty', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: ALLOWED :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state in $ALLOWED
+        group_by: state
+      }
+    `);
+    const result = await model
+      .loadQueryByName('q')
+      .run({givens: {ALLOWED: null}});
+    expect(result.data.toObject().length).toBe(0);
+  });
+
+  test('declaration default is used when caller supplies nothing', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: ALLOWED :: string[] is ['CA', 'NY']
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state in $ALLOWED
+        group_by: state
+        order_by: state
+      }
+    `);
+    const result = await model.loadQueryByName('q').run();
+    const states = result.data.toObject().map(r => r['state']);
+    expect(states.sort()).toEqual(['CA', 'NY']);
+  });
+
+  test('number array — exact membership against a fixed fixture', async () => {
+    // Demonstrates the proper test pattern for an inGiven against a
+    // known dataset: inline data via mkTestModel, declaration-default
+    // for the given so toMatchRows can run a self-contained query
+    // string, exact row assertion via toMatchRows.
+    const tm = mkTestModel(runtime, {
+      widgets: [
+        {id: 1, size: 10},
+        {id: 2, size: 20},
+        {id: 3, size: 30},
+      ],
+    });
+    await expect(`
+      ##! experimental.givens
+      given: SIZES :: number[] is [10, 30]
+      run: widgets -> {
+        where: size in $SIZES
+        select: id
+        order_by: id
+      }
+    `).toMatchRows(tm, [{id: 1}, {id: 3}]);
+  });
+});
+
+describe('givens — `inline` (Pattern A)', () => {
+  test('inline boolean gate becomes a literal in SQL', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        ROLE :: string
+        inline IS_ADMIN :: boolean is $ROLE = 'admin'
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $IS_ADMIN
+        group_by: state
+      }
+    `);
+    // ROLE != admin → gate is false → no rows.
+    const denied = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'viewer'}});
+    expect(denied.data.toObject().length).toBe(0);
+    // ROLE == admin → gate is true → rows come through (limited by
+    // Malloy's default 10).
+    const allowed = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'admin'}});
+    expect(allowed.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('inline gate composed from $arrayGiven membership', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        CAPABILITIES :: string[]
+        inline CAN_READ :: boolean is 'read_orders' in $CAPABILITIES
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $CAN_READ
+        group_by: state
+      }
+    `);
+    const withCap = await model
+      .loadQueryByName('q')
+      .run({givens: {CAPABILITIES: ['read_orders', 'view']}});
+    expect(withCap.data.toObject().length).toBeGreaterThan(0);
+
+    const withoutCap = await model
+      .loadQueryByName('q')
+      .run({givens: {CAPABILITIES: ['view']}});
+    expect(withoutCap.data.toObject().length).toBe(0);
+  });
+
+  test('inline default with a constant has no $-deps but still works', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: inline GATE :: boolean is true
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $GATE
+        group_by: state
+      }
+    `);
+    const result = await model.loadQueryByName('q').run();
+    expect(result.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('multiple inline gates combine with `and`/`or` correctly', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        ROLE :: string
+        CAPS :: string[]
+        inline IS_ADMIN :: boolean is $ROLE = 'admin'
+        inline HAS_READ :: boolean is 'read' in $CAPS
+        inline CAN_QUERY :: boolean is $IS_ADMIN or $HAS_READ
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $CAN_QUERY
+        group_by: state
+      }
+    `);
+    // Admin with no caps → CAN_QUERY = true
+    const adminPath = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'admin', CAPS: []}});
+    expect(adminPath.data.toObject().length).toBeGreaterThan(0);
+
+    // Non-admin with caps → CAN_QUERY = true via has-read.
+    const capsPath = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'viewer', CAPS: ['read']}});
+    expect(capsPath.data.toObject().length).toBeGreaterThan(0);
+
+    // Non-admin without caps → CAN_QUERY = false → no rows.
+    const denied = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'viewer', CAPS: []}});
+    expect(denied.data.toObject().length).toBe(0);
   });
 });

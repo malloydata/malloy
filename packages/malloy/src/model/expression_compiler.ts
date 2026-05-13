@@ -235,6 +235,31 @@ function compileExpr<T extends Expr>(
         const oneOf = expr.kids.oneOf.map(o => o.sql).join(',');
         return `${expr.kids.e.sql} ${expr.not ? 'NOT IN' : 'IN'} (${oneOf})`;
       }
+      case 'inGiven': {
+        const bound = resolveGivenBoundExpr(
+          context,
+          expr.givenRef.id,
+          expr.givenRef.refName
+        );
+        // null binding collapses to empty-set semantics — not the SQL
+        // `IN (NULL)` shape, which has confusing NULL-membership rules.
+        if (bound.node === 'null') {
+          return expr.not ? 'TRUE' : 'FALSE';
+        }
+        if (bound.node !== 'arrayLiteral') {
+          throw new Error(
+            `Internal compiler error: 'inGiven' bound to '${bound.node}', expected 'arrayLiteral'. The translator should have rejected a non-array given here.`
+          );
+        }
+        if (bound.kids.values.length === 0) {
+          return expr.not ? 'TRUE' : 'FALSE';
+        }
+        const elemSqls = bound.kids.values.map(v =>
+          exprToSQL(resultSet, context, v, state)
+        );
+        const verb = expr.not ? 'NOT IN' : 'IN';
+        return `${expr.e.sql} ${verb} (${elemSqls.join(',')})`;
+      }
       case 'like':
       case '!like': {
         const likeIt = expr.node === 'like' ? 'LIKE' : 'NOT LIKE';
@@ -817,24 +842,37 @@ export function generateParameterFragment(
   throw new Error(`Can't generate SQL, no value for ${expr.path}`);
 }
 
+/**
+ * Resolve a given to the Expr that should stand in for it at SQL emit:
+ * supplied value if the caller bound one, otherwise the declaration's
+ * default. Throws when neither is available — that case is a query the
+ * compiler can't satisfy.
+ *
+ * Shared by `generateGivenFragment` ($NAME directly in an expression)
+ * and the `'inGiven'` SQL-emit case ($ARR in `expr in $ARR`).
+ */
+function resolveGivenBoundExpr(
+  context: QueryStruct,
+  id: string,
+  refName: string
+): Expr {
+  const supplied = context.prepareResultOptions?.resolvedGivens?.get(id);
+  if (supplied !== undefined) return supplied;
+  const decl = context.getModel().givens[id];
+  if (decl?.default !== undefined) return decl.default;
+  throw new Error(unsatisfiedGivenMessage(refName));
+}
+
 export function generateGivenFragment(
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: GivenRefNode,
   state: GenerateState
 ): string {
-  const id = expr.id;
-  const supplied = context.prepareResultOptions?.resolvedGivens?.get(id);
-  if (supplied !== undefined) {
-    return exprToSQL(resultSet, context, supplied, state);
-  }
-  // The default may itself be a `$OTHER`-bearing expression — recursive
+  // The bound expr may itself be a `$OTHER`-bearing expression; recursive
   // compile handles default chains.
-  const decl = context.getModel().givens[id];
-  if (decl?.default !== undefined) {
-    return exprToSQL(resultSet, context, decl.default, state);
-  }
-  throw new Error(unsatisfiedGivenMessage(expr.refName));
+  const bound = resolveGivenBoundExpr(context, expr.id, expr.refName);
+  return exprToSQL(resultSet, context, bound, state);
 }
 
 function unsatisfiedGivenMessage(refName: string): string {

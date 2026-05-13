@@ -295,9 +295,11 @@ export abstract class MalloyElement {
       const kiddle = this.children[kidLabel];
       if (kiddle instanceof MalloyElement) {
         yield kiddle;
+        yield* kiddle.walk();
       } else {
         for (const k of kiddle) {
           yield k;
+          yield* k.walk();
         }
       }
     }

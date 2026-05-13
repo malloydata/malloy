@@ -92,8 +92,10 @@ givenDefList
   ;
 
 givenDef
-  : tags givenNameDef DOUBLECOLON givenType (isDefine fieldExpr)?
+  : tags givenModifier? givenNameDef DOUBLECOLON givenType (isDefine fieldExpr)?
   ;
+
+givenModifier: id;
 
 givenNameDef: id;
 
@@ -730,6 +732,7 @@ fieldExpr
   | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
   | fieldExpr IS NOT? NULL                                 # exprNullCheck
   | fieldExpr NOT? IN OPAREN fieldExprList CPAREN          # exprWarnIn
+  | fieldExpr NOT? IN GIVEN_REF                            # exprInGiven
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr AND fieldExpr                                # exprLogicalAnd

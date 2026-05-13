@@ -14,6 +14,7 @@ import type {
   NumberFieldDef,
   StringFieldDef,
   FilterCondition,
+  Expr,
   Given as InternalGiven,
   GivenID,
   GivenTypeDef,
@@ -61,7 +62,10 @@ import {
   minimalBuildGraph,
 } from '../../model/persist_utils';
 import {resolveSourceID, mkBuildID} from '../../model/source_def_utils';
-import {resolveSuppliedGivens} from '../../model/given_binding';
+import {
+  evaluateInlineGivens,
+  resolveSuppliedGivens,
+} from '../../model/given_binding';
 import {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
 import {annotationToTag, annotationToTaglines} from '../../annotation';
@@ -1074,10 +1078,6 @@ export class Model implements Taggable {
    * The givens this model surfaces, keyed by caller-facing surface name.
    * Used by whole-model parameter-editor UIs to render input widgets for
    * every given the model can accept.
-   *
-   * Internal-only givens (declared but never surfaced into the namespace,
-   * resolved purely via defaults) are NOT in this map — the caller has no
-   * way to set them, so listing them would mislead a UI.
    */
   public get givens(): ReadonlyMap<string, Given> {
     const out = new Map<string, Given>();
@@ -1087,8 +1087,9 @@ export class Model implements Taggable {
       if (entry.type !== 'given') continue;
       if (this.runtimeContext?.finalizedGivens?.has(surfaceName)) continue;
       const decl = givens[entry.id];
-      if (!decl) continue;
-      out.set(surfaceName, new Given(surfaceName, entry.id, decl));
+      if (decl && !decl.inline) {
+        out.set(surfaceName, new Given(surfaceName, entry.id, decl));
+      }
     }
     return out;
   }
@@ -1595,11 +1596,18 @@ export class PreparedQuery implements Taggable {
    */
   public getPreparedResult(options?: CompileQueryOptions): PreparedResult {
     const queryModel = this._model.queryModel;
+    // Build the resolved-givens map in two phases:
+    //   1. caller-supplied values (resolveSuppliedGivens)
+    //   2. inline-given defaults eager-evaluated against the map
+    // Result is undefined when no values land — preserves the previous
+    // "no givens path" downstream.
+    const resolved = options?.givens
+      ? resolveSuppliedGivens(options.givens, this._modelDef)
+      : new Map<GivenID, Expr>();
+    evaluateInlineGivens(resolved, this._modelDef);
     const prepareResultOptions: PrepareResultOptions = {
       ...options,
-      resolvedGivens: options?.givens
-        ? resolveSuppliedGivens(options.givens, this._modelDef)
-        : undefined,
+      resolvedGivens: resolved.size > 0 ? resolved : undefined,
     };
     const translatedQuery = queryModel.compileQuery(
       this._query,

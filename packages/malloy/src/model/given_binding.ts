@@ -5,6 +5,7 @@
 
 import {DateTime} from 'luxon';
 import {closestMatch} from '../util/closest_match';
+import {inlineExpr} from './inline_expr';
 import {isRepeatedRecord, mkSafeRecord, TD} from './malloy_types';
 import type {
   AtomicTypeDef,
@@ -56,6 +57,37 @@ export function resolveSuppliedGivens(
     out.set(entry.id, valueToExpr(name, decl.type, value));
   }
   return out;
+}
+
+/**
+ * Evaluate every `inline` given's default to a literal Expr and add it
+ * to the bound map. Mutates and returns `bound` for convenience.
+ *
+ * Givens already in `bound` (caller supplied a value) are left alone —
+ * the caller's value wins over the inline default. Inline givens with
+ * no default are skipped here; the translator already logged the
+ * `inline-no-default` error at declaration time.
+ *
+ * Iteration follows `modelDef.contents` insertion order, which (by
+ * Malloy's no-forward-refs rule) is also topological order: if inline
+ * A's default references inline B, B's declaration came first and is
+ * already in the map by the time A runs.
+ */
+export function evaluateInlineGivens(
+  bound: Map<GivenID, Expr>,
+  modelDef: ModelDef | undefined
+): Map<GivenID, Expr> {
+  if (!modelDef) return bound;
+  const givens = modelDef.givens ?? {};
+  for (const [, entry] of Object.entries(modelDef.contents)) {
+    if (entry.type !== 'given') continue;
+    if (bound.has(entry.id)) continue;
+    const decl = givens[entry.id];
+    if (!decl?.inline) continue;
+    if (decl.default === undefined) continue;
+    bound.set(entry.id, inlineExpr(decl.default, bound));
+  }
+  return bound;
 }
 
 function valueToExpr(
