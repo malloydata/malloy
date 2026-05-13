@@ -59,17 +59,37 @@ function toMalloyString(s: string): string {
   return "'" + s.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
 }
 
-// Malloy r'...' is a raw string: backslash is literal, no escape
-// processing inside the body. As a consequence the body cannot
-// contain a single quote — `\'` in r'...' is parsed as two raw chars
-// (backslash + quote), not as an escape that vanishes the quote, so
-// there is no syntax that produces a regex literal containing a `'`.
-// Assert the precondition rather than fake an escape that wouldn't
-// round-trip.
+// Render a JS string as a Malloy regex literal (r'...').
+//
+// The lexer rules (MalloyLexer.g4) are:
+//   HACKY_REGEX: ('/' | [rR]) SQ RAW_CHAR*? SQ;
+//   RAW_CHAR:    ('\\' ~[\n]) | ~[\\\n];
+//
+// r'...' is a raw string: there is no escape character. The `\X`
+// alternative of RAW_CHAR exists only so the lexer can scan past
+// a quote without terminating — both the backslash and X end up
+// in the resulting string. Consequences:
+//
+//   * A single quote in the desired body has no lossless encoding.
+//     `\'` puts a `'` in the body but leaves an extra `\` next to
+//     it, which changes the regex pattern.
+//   * A newline has no encoding (matches neither RAW_CHAR branch).
+//   * A body ending in an odd run of backslashes has no encoding:
+//     the trailing `\` consumes the closing `'` as part of `\'`,
+//     leaving the literal unterminated.
+//
+// We refuse those inputs rather than silently emit a different
+// regex than the caller asked for. (Aside: CodeQL flags
+// `s.replace(/'/g, "\\'")` here under js/incomplete-sanitization
+// because it escapes one character without escaping the escape
+// character. That rule assumes a non-raw quoted-string context;
+// it doesn't fit r'...', where the right answer is "refuse what
+// can't be encoded," not "escape more.")
 function toMalloyRegex(s: string): string {
-  if (s.includes("'")) {
+  const trailingBackslashes = s.match(/\\*$/)![0].length;
+  if (s.includes("'") || s.includes('\n') || trailingBackslashes % 2 === 1) {
     throw new Error(
-      `toMalloyRegex cannot encode a regex containing a single quote: ${JSON.stringify(s)}`
+      `toMalloyRegex cannot encode this string as r'...': ${JSON.stringify(s)}`
     );
   }
   return "r'" + s + "'";
