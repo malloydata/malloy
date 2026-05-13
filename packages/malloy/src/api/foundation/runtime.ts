@@ -696,9 +696,7 @@ export class SingleConnectionRuntime<
 
   // quote a column name
   quote(column: string): string {
-    return getDialect(this.connection.dialectName).sqlMaybeQuoteIdentifier(
-      column
-    );
+    return getDialect(this.connection.dialectName).sqlQuoteIdentifier(column);
   }
 
   get dialect(): Dialect {

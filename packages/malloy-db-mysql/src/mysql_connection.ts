@@ -25,15 +25,6 @@ import {BaseConnection} from '@malloydata/malloy/connection';
 import {randomUUID} from 'crypto';
 import * as MYSQL from 'mysql2/promise';
 
-/**
- * A bare or schema-qualified SQL identifier — `name` or `db.name`. Anything
- * else (dashes, dots-as-extensions, slashes, special characters) needs to be
- * wrapped in backticks for `DESCRIBE` to parse it as one identifier rather
- * than e.g. parsing `my-table` as subtraction.
- */
-const SQL_IDENTIFIER_CHAIN =
-  /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
-
 export interface MySQLConfiguration {
   host?: string;
   port?: number;
@@ -194,10 +185,7 @@ export class MySQLConnection
       fields: [],
     };
 
-    const quotedTablePath = SQL_IDENTIFIER_CHAIN.test(tablePath)
-      ? tablePath
-      : `\`${tablePath}\``;
-    const infoQuery = `DESCRIBE ${quotedTablePath}`;
+    const infoQuery = `DESCRIBE ${this.dialect.quoteTablePath(tablePath)}`;
     const result = await this.runRawSQL(infoQuery);
     await this.schemaFromResult(result, structDef);
     return structDef;

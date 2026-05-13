@@ -336,8 +336,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
       source: sql_mfrs is ${databaseName}.sql("""
         SELECT
-          ${runtime.dialect.sqlMaybeQuoteIdentifier('manufacturer')}
-          as ${runtime.dialect.sqlMaybeQuoteIdentifier('sql_mfr')}
+          ${runtime.dialect.sqlQuoteIdentifier('manufacturer')}
+          as ${runtime.dialect.sqlQuoteIdentifier('sql_mfr')}
           FROM %{ base_models -> mfr_list } as SpOrKlE
       """)
 

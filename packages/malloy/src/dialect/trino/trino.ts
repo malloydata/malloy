@@ -140,14 +140,16 @@ export class TrinoDialect extends PostgresBase {
   supportsHyperLogLog = true;
 
   quoteTablePath(tablePath: string): string {
-    // Quote with double quotes if contains dangerous characters
-    if (tablePath.match(/[;-]/)) {
-      return tablePath
-        .split('.')
-        .map(part => `"${part}"`)
-        .join('.');
-    }
-    return tablePath;
+    // OPEN QUESTION: should this always-quote each segment so reserved
+    // words can be used as table names? Trino normalizes bare identifiers
+    // to lowercase (like Postgres), so switching to always-quote could
+    // break users whose Malloy uses mixed/upper case for tables that
+    // were created bare. Left as perPartMaybeQuoted pending a design
+    // call alongside Snowflake.
+    return tablePath
+      .split('.')
+      .map(part => this.quoteIdentifierPart(part, false))
+      .join('.');
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -275,7 +277,7 @@ export class TrinoDialect extends PostgresBase {
     if (childName === '__row_id') {
       return `__row_id_from_${parentAlias}`;
     }
-    return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
+    return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
   }
 
   sqlUnnestPipelineHead(
@@ -594,14 +596,6 @@ ${indent(sql)}
     return tableSQL;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -631,7 +625,7 @@ ${indent(sql)}
         for (const f of malloyType.fields) {
           if (isAtomic(f)) {
             typeSpec.push(
-              `${this.sqlMaybeQuoteIdentifier(
+              `${this.sqlQuoteIdentifier(
                 f.name
               )} ${this.malloyTypeToSQLType(f)}`
             );
@@ -647,7 +641,7 @@ ${indent(sql)}
           for (const f of malloyType.fields) {
             if (isAtomic(f)) {
               typeSpec.push(
-                `${this.sqlMaybeQuoteIdentifier(
+                `${this.sqlQuoteIdentifier(
                   f.name
                 )} ${this.malloyTypeToSQLType(f)}`
               );
@@ -766,7 +760,7 @@ ${indent(sql)}
           safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal'
         );
         const elType = this.malloyTypeToSQLType(f);
-        rowTypes.push(`${this.sqlMaybeQuoteIdentifier(name)} ${elType}`);
+        rowTypes.push(`${this.sqlQuoteIdentifier(name)} ${elType}`);
       }
     }
     return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;

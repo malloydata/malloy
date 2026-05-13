@@ -17,7 +17,7 @@ import type {
 } from '../model/malloy_types';
 import {TD} from '../model/malloy_types';
 import type {QueryInfo} from './dialect';
-import {Dialect, qtz} from './dialect';
+import {Dialect, EscapeStyle, qtz} from './dialect';
 
 export const timeExtractMap: Record<string, string> = {
   'day_of_week': 'dow',
@@ -32,6 +32,13 @@ export abstract class PostgresBase extends Dialect {
   hasTimestamptz = true;
   // Postgres-family dialects use JSON serialization which loses bigint precision
   supportsBigIntPrecision = false;
+
+  // All current Postgres-family dialects (Postgres, DuckDB, Trino, Presto)
+  // use ANSI doubled-quote literal escaping and ANSI double-quote identifiers.
+  // Subclasses may override.
+  stringLiteralStyle = EscapeStyle.Doubled;
+  identifierEscapeStyle = EscapeStyle.Doubled;
+  identifierQuoteChar = '"';
 
   sqlNowExpr(): string {
     return 'LOCALTIMESTAMP';
@@ -126,10 +133,6 @@ export abstract class PostgresBase extends Dialect {
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const array = lit.kids.values.map(val => val.sql);
     return 'ARRAY[' + array.join(',') + ']';
-  }
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier.replace(/"/g, '""') + '"';
   }
 
   sqlConvertToCivilTime(

@@ -469,7 +469,7 @@ describe('api', () => {
   });
   test('compile model with turducken sql dependency', () => {
     const sql =
-      '\n                SELECT carrier FROM (SELECT \n   base."carrier" as "carrier"\nFROM flights as base\nGROUP BY 1\nORDER BY 1 asc NULLS LAST\n)\n              ';
+      '\n                SELECT carrier FROM (SELECT \n   base."carrier" as "carrier"\nFROM "flights" as base\nGROUP BY 1\nORDER BY 1 asc NULLS LAST\n)\n              ';
     const result = compileModel({
       model_url: 'file://test.malloy',
       compiler_needs: {
@@ -611,7 +611,7 @@ describe('api', () => {
           ],
           sql: `SELECT \n\
    base."carrier" as "carrier"
-FROM flights as base
+FROM "flights" as base
 GROUP BY 1
 ORDER BY 1 asc NULLS LAST
 `,
@@ -729,7 +729,7 @@ ORDER BY 1 asc NULLS LAST
           ],
           sql: `SELECT \n\
    base."carrier" as "carrier"
-FROM flights as base
+FROM "flights" as base
 GROUP BY 1
 ORDER BY 1 asc NULLS LAST
 LIMIT 100
@@ -810,7 +810,7 @@ LIMIT 100
           ],
           sql: `SELECT \n\
    base."carrier" as "carrier"
-FROM flights as base
+FROM "flights" as base
 GROUP BY 1
 ORDER BY 1 asc NULLS LAST
 LIMIT 101
@@ -1193,8 +1193,8 @@ LIMIT 101
       expect(result.result).toBeDefined();
       expect(result.result?.sql).toBeDefined();
       expect(result.result?.connection_name).toBe('duckdb');
-      expect(result.result?.sql).toContain('LEFT JOIN malloytest.airports');
-      expect(result.result?.sql).toContain('LEFT JOIN malloytest.carriers');
+      expect(result.result?.sql).toContain('LEFT JOIN "malloytest"."airports"');
+      expect(result.result?.sql).toContain('LEFT JOIN "malloytest"."carriers"');
       expect(result.result?.sql).toContain(
         'COALESCE((COALESCE((base."id2"),airports_0."city")),carriers_0."name")'
       );
@@ -1277,7 +1277,7 @@ LIMIT 101
       expect(result.result).toBeDefined();
       expect(result.result?.sql).toBeDefined();
       expect(result.result?.connection_name).toBe('duckdb');
-      expect(result.result?.sql).toContain('LEFT JOIN malloytest.airports');
+      expect(result.result?.sql).toContain('LEFT JOIN "malloytest"."airports"');
       expect(result.result?.sql).toContain('airports_0."city"');
     });
     test('coalesce with parameter and constant', () => {

@@ -114,8 +114,20 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   quoteTablePath(tableName: string): string {
-    // Quote if contains special chars that could be SQL injection or need quoting
-    return tableName.match(/[/*:;-]/) ? `'${tableName}'` : tableName;
+    // DuckDB accepts either a SQL identifier path (schema.table) or a
+    // file path as a string literal (FROM 'foo.parquet'). Detect which
+    // shape the input is.
+    if (/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/.test(tableName)) {
+      // Identifier path. Always quote each segment so that reserved
+      // words (`select`, `from`, ...) can be used as table names.
+      // DuckDB is case-insensitive for both bare and quoted identifiers,
+      // so there is no backward-compat cost to quoting.
+      return tableName
+        .split('.')
+        .map(part => this.quoteIdentifierPart(part, true))
+        .join('.');
+    }
+    return this.sqlLiteralString(tableName);
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -238,7 +250,7 @@ export class DuckDBDialect extends PostgresBase {
     } else if (parentType === 'array[scalar]') {
       return parentAlias;
     } else {
-      return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
+      return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
     }
   }
 
@@ -281,7 +293,7 @@ export class DuckDBDialect extends PostgresBase {
       }
     }
     return `SELECT LIST(STRUCT_PACK(${dialectFieldList
-      .map(d => this.sqlMaybeQuoteIdentifier(d.sqlOutputName))
+      .map(d => this.sqlQuoteIdentifier(d.sqlOutputName))
       .join(',')})${o}) FROM ${lastStageName}\n`;
   }
 
@@ -354,14 +366,6 @@ export class DuckDBDialect extends PostgresBase {
     return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -390,7 +394,7 @@ export class DuckDBDialect extends PostgresBase {
       for (const f of malloyType.fields) {
         if (isAtomic(f)) {
           typeSpec.push(
-            `${this.sqlMaybeQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
+            `${this.sqlQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
           );
         }
       }
@@ -401,7 +405,7 @@ export class DuckDBDialect extends PostgresBase {
         for (const f of malloyType.fields) {
           if (isAtomic(f)) {
             typeSpec.push(
-              `${this.sqlMaybeQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
+              `${this.sqlQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
             );
           }
         }
@@ -503,7 +507,7 @@ export class DuckDBDialect extends PostgresBase {
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const pairs = Object.entries(lit.kids).map(
       ([propName, propVal]) =>
-        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
+        `${this.sqlQuoteIdentifier(propName)}:${propVal.sql}`
     );
     return '{' + pairs.join(',') + '}';
   }

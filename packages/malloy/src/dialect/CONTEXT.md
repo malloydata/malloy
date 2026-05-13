@@ -250,6 +250,22 @@ When creating a new dialect, prefer `def()` and the `T` convention for simple fu
 
 See [adding-a-new-database.md](../doc/adding-a-new-database.md) for a complete step-by-step guide covering both the Dialect and Connection sides, test data setup, and CI configuration.
 
+### Escape-function contract
+
+Every dialect must declare three fields that drive identifier and string-literal escaping:
+
+- `identifierQuoteChar` — the character used to quote identifiers, typically `"` or `` ` ``.
+- `identifierEscapeStyle` — `EscapeStyle.Doubled` (ANSI: doubling the quote char escapes it; every current dialect except BigQuery) or `EscapeStyle.Backslash` (BigQuery: quoted identifiers use string-literal escape sequences).
+- `stringLiteralStyle` — `EscapeStyle.Doubled` for ANSI `''` escaping (Postgres-family) or `EscapeStyle.Backslash` for `\'` escaping (BigQuery, Snowflake, MySQL, Databricks).
+
+`EscapeStyle` is exported from `dialect.ts`; importing it gives the literal-type narrowing for free, so dialect files do not need `as const`.
+
+The base class provides safe implementations of `sqlQuoteIdentifier`, `sqlLiteralString`, and `sqlLiteralRegexp` driven by these flags. Dialects normally do not override them. If a subclass forgets to set a flag, the base method throws at first use with a message naming the dialect and the missing flag — `escape.spec.ts` exercises this fail-fast path on every registered dialect, so a forgotten flag fails CI rather than producing wrong SQL silently.
+
+`quoteTablePath` is still per-dialect because table-path styles vary (per-part vs whole-path quoting, file-path string literals for DuckDB). Use the protected `quoteIdentifierPart(part, alwaysQuote)` helper rather than rolling your own string concatenation — it routes through `sqlQuoteIdentifier` and is correct by construction.
+
+The contract is verified by `packages/malloy/src/dialect/escape.spec.ts`, which iterates `getDialects()` and asserts that an adversarial input corpus round-trips through each escape function. A new dialect is covered automatically the moment it is registered in `dialect_map.ts`; you do not need to edit the spec file.
+
 ## Key Source Files
 
 | File | Purpose |
