@@ -29,6 +29,7 @@ import {
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
 import type {ModelEntryReference} from '../types/malloy-element';
+import {getDialect} from '../../../dialect';
 
 type TableInfo = {tablePath: string; connectionName?: string | undefined};
 export abstract class TableSource extends Source {
@@ -39,7 +40,27 @@ export abstract class TableSource extends Source {
     if (info === undefined) {
       return ErrorFactory.structDef;
     }
-    const {tablePath, connectionName} = info;
+    const {tablePath: rawTablePath, connectionName} = info;
+
+    // Validate the table path against the connection's dialect grammar.
+    // ImportsAndTablesStep also validated this and silently skipped
+    // invalid entries; we re-validate here so we can log a precise
+    // translator error at the AST element's location.
+    let tablePath = rawTablePath;
+    if (connectionName !== undefined) {
+      const dialectName =
+        this.translator()?.root.connectionDialectZone.get(connectionName);
+      if (dialectName !== undefined) {
+        const dialect = getDialect(dialectName);
+        const validation = dialect.sqlValidateTableName(rawTablePath);
+        if (!validation.ok) {
+          this.logError('invalid-table-path', validation.error);
+          return ErrorFactory.structDef;
+        }
+        tablePath = validation.canonical;
+      }
+    }
+
     const key = constructTableKey(connectionName, tablePath);
     const tableDefEntry = this.translator()?.root.schemaZone.getEntry(key);
     let msg = `Schema read failure for table '${tablePath}' for connection '${connectionName}'`;

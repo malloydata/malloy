@@ -1486,7 +1486,6 @@ export class PersistSource implements Taggable {
       return getCompiledSQL(
         sd,
         options ?? {},
-        path => this.dialect.quoteTablePath(path),
         (query, opts) => queryModel.compileQuery(query, opts).sql
       );
     } else {

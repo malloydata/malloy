@@ -143,6 +143,59 @@ export function inDays(units: string): boolean {
   return allUnits.indexOf(units) >= dayIndex;
 }
 
+/**
+ * Recognize a dotted identifier path where each segment is either a
+ * bare SQL identifier (`[A-Za-z_][A-Za-z0-9_]*`) or a `q`-delimited
+ * quoted identifier with doubled-quote escape (`qq` inside the body
+ * represents one literal `q`). Segments are joined by `.`.
+ *
+ * Returns true if the entire input is a valid path; false otherwise.
+ * No information about the parsed structure is returned — this is the
+ * validator for dialects whose canonical form is the user's input
+ * verbatim. Dialects with richer grammars (BigQuery, DuckDB) override
+ * `sqlValidateTableName` directly.
+ */
+export function parseDottedIdentPathDoubled(
+  input: string,
+  quoteChar: string
+): boolean {
+  if (input.length === 0) return false;
+  let i = 0;
+  while (i < input.length) {
+    // Parse one segment.
+    if (input[i] === quoteChar) {
+      i++;
+      let closed = false;
+      while (i < input.length) {
+        if (input[i] === quoteChar) {
+          if (input[i + 1] === quoteChar) {
+            i += 2; // doubled-quote escape
+          } else {
+            i++; // closing quote
+            closed = true;
+            break;
+          }
+        } else {
+          i++;
+        }
+      }
+      if (!closed) return false;
+    } else if (/[A-Za-z_]/.test(input[i])) {
+      while (i < input.length && /[A-Za-z0-9_]/.test(input[i])) {
+        i++;
+      }
+    } else {
+      return false;
+    }
+    // After a segment, either end-of-input or a dot-then-another-segment.
+    if (i === input.length) return true;
+    if (input[i] !== '.') return false;
+    i++;
+    if (i === input.length) return false; // trailing dot
+  }
+  return true;
+}
+
 // Return the active query timezone, if it different than the
 // "native" timezone for timestamps.
 export function qtz(qi: QueryInfo): string | undefined {
@@ -391,8 +444,82 @@ export abstract class Dialect {
     [name: string]: DialectFunctionOverloadDef[];
   };
 
-  // return a quoted string for use as a table path.
-  abstract quoteTablePath(tablePath: string): string;
+  /**
+   * Validate a user-supplied table-path string against this dialect's
+   * table-path grammar. On success, returns the canonical SQL form that
+   * should be embedded in `FROM` clauses (and stored in
+   * `StructDef.tablePath`). On failure, returns an error message.
+   *
+   * # When implementing this for a new dialect
+   *
+   * **Don't override unless you have to.** The base implementation in
+   * `Dialect` accepts a dotted identifier path where each segment is a
+   * bare SQL identifier or a `q`-delimited quoted segment with `qq`
+   * doubled-quote escape (where `q` is the dialect's
+   * `identifierQuoteChar`). That's the right answer for every
+   * dialect whose grammar matches the ANSI shape: Postgres, MySQL,
+   * Snowflake, Trino, Databricks. Just set `identifierQuoteChar`,
+   * `identifierEscapeStyle = Doubled`, and let the base do its thing.
+   *
+   * Override only when your dialect's table-path grammar is
+   * genuinely different:
+   *   - **BigQuery**: whole-path inside one set of backticks, with
+   *     backslash-style escape and rejection of embedded backticks.
+   *   - **DuckDB**: accepts arbitrary string-literal table names and
+   *     file-path conveniences (globs, URLs). Uses a real peggy parser.
+   *     **Do not look at DuckDB's implementation as a reference for
+   *     a normal SQL dialect** — its grammar is intentionally richer
+   *     than what ANSI SQL allows.
+   *
+   * # Contract
+   *
+   * Two callers:
+   *  1. `ImportsAndTablesStep` calls this after connection dialects
+   *     are resolved. Invalid paths are silently skipped (no
+   *     schemaZone register, no needs-request); valid paths are
+   *     registered under their canonical key. No error logging here
+   *     — the source range ImportsAndTablesStep has is the whole
+   *     `connection.table(...)` expression, not the path string
+   *     itself.
+   *  2. The AST step's `TableMethodSource.getSourceDef` calls this
+   *     before looking up the schema. Invalid → log error at the
+   *     path-string's source range (precise squiggle), return
+   *     `ErrorFactory.structDef`. Valid → look up canonical key in
+   *     `schemaZone`.
+   *
+   * The function MUST be deterministic — both callers compute the
+   * same canonical form for the same input, so their schemaZone keys
+   * agree without any shared state.
+   *
+   * The canonical form should be exactly the SQL fragment that gets
+   * pasted into `FROM` (and `DESCRIBE` for schema fetch). For most
+   * dialects this is identical to the user's input; the only reason
+   * to differ is when the input is syntactic sugar for SQL that
+   * looks different (e.g. DuckDB's file-path convenience wraps the
+   * input in single quotes).
+   */
+  sqlValidateTableName(
+    input: string
+  ): {ok: true; canonical: string} | {ok: false; error: string} {
+    if (this.identifierEscapeStyle !== EscapeStyle.Doubled) {
+      throw new Error(
+        `${this.name}: sqlValidateTableName base implementation only ` +
+          `supports doubled-quote identifier escape. Override for other styles.`
+      );
+    }
+    if (parseDottedIdentPathDoubled(input, this.identifierQuoteChar)) {
+      return {ok: true, canonical: input};
+    }
+    return {
+      ok: false,
+      error:
+        `Invalid ${this.name} table path: ${JSON.stringify(input)} — expected ` +
+        `a dotted identifier path (each segment a bare identifier or ` +
+        `${this.identifierQuoteChar}quoted${this.identifierQuoteChar}, ` +
+        `with ${this.identifierQuoteChar}${this.identifierQuoteChar} to escape ` +
+        `the quote character).`,
+    };
+  }
 
   // returns an table that is a 0 based array of numbers
   abstract sqlGroupSetTable(groupSetCount: number): string;
@@ -551,21 +678,6 @@ export abstract class Dialect {
         'Set it to EscapeStyle.Doubled or EscapeStyle.Backslash on the dialect, ' +
         'or override sqlQuoteIdentifier.'
     );
-  }
-
-  /**
-   * Quote a single segment of a table path. When `alwaysQuote` is false,
-   * a segment that already looks like a bare SQL identifier is returned
-   * unquoted, which produces tidier SQL for the common case. When true,
-   * the segment is always wrapped and escaped.
-   *
-   * Dialects compose this in their `quoteTablePath` implementations.
-   */
-  protected quoteIdentifierPart(part: string, alwaysQuote: boolean): string {
-    if (!alwaysQuote && /^[A-Za-z_][A-Za-z0-9_]*$/.test(part)) {
-      return part;
-    }
-    return this.sqlQuoteIdentifier(part);
   }
 
   abstract castToString(expression: string): string;

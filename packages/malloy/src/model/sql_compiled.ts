@@ -31,13 +31,11 @@ export type CompileQueryCallback = (
  *
  * @param src The SQLSourceDef to compile
  * @param opts PrepareResultOptions with buildManifest and connectionDigests
- * @param quoteTablePath Dialect function to safely quote a table path
  * @param compileQuery Callback to compile a Query to SQL
  */
 export function getCompiledSQL(
   src: SQLSourceDef,
   opts: PrepareResultOptions,
-  quoteTablePath: (path: string) => string,
   compileQuery: CompileQueryCallback
 ): string {
   // If no segments, just return the pre-computed selectStr
@@ -48,7 +46,7 @@ export function getCompiledSQL(
   // Expand each segment
   const parts: string[] = [];
   for (const segment of src.selectSegments) {
-    parts.push(expandSegment(segment, opts, quoteTablePath, compileQuery));
+    parts.push(expandSegment(segment, opts, compileQuery));
   }
   return parts.join('');
 }
@@ -59,7 +57,6 @@ export function getCompiledSQL(
 function expandSegment(
   segment: SQLPhraseSegment,
   opts: PrepareResultOptions,
-  quoteTablePath: (path: string) => string,
   compileQuery: CompileQueryCallback
 ): string {
   // Plain SQL string
@@ -69,11 +66,11 @@ function expandSegment(
 
   // PersistableSourceDef (sql_select or query_source)
   if (isSegmentSource(segment)) {
-    return expandPersistableSource(segment, opts, quoteTablePath, compileQuery);
+    return expandPersistableSource(segment, opts, compileQuery);
   }
 
   // Query segment
-  return expandQuery(segment, opts, quoteTablePath, compileQuery);
+  return expandQuery(segment, opts, compileQuery);
 }
 
 /**
@@ -83,7 +80,6 @@ function expandSegment(
 function expandPersistableSource(
   source: PersistableSourceDef,
   opts: PrepareResultOptions,
-  quoteTablePath: (path: string) => string,
   compileQuery: CompileQueryCallback
 ): string {
   const {buildManifest, connectionDigests} = opts;
@@ -93,13 +89,14 @@ function expandPersistableSource(
     const connDigest = safeRecordGet(connectionDigests, source.connection);
     if (connDigest) {
       // Get the SQL for this source to compute BuildID (no opts = full SQL)
-      const sql = getSourceSQL(source, quoteTablePath, compileQuery);
+      const sql = getSourceSQL(source, compileQuery);
       const buildId = mkBuildID(connDigest, sql);
       const entry = buildManifest.entries[buildId];
 
       if (entry) {
-        // Found in manifest - substitute with subquery from persisted table
-        return `(SELECT * FROM ${quoteTablePath(entry.tableName)})`;
+        // Found in manifest - substitute with subquery from persisted table.
+        // entry.tableName is canonical SQL, supplied by the manifest builder.
+        return `(SELECT * FROM ${entry.tableName})`;
       }
 
       // Not in manifest
@@ -115,7 +112,7 @@ function expandPersistableSource(
   }
 
   // No manifest or not found - expand inline as subquery
-  const sql = getSourceSQL(source, quoteTablePath, compileQuery, opts);
+  const sql = getSourceSQL(source, compileQuery, opts);
   return `(${sql})`;
 }
 
@@ -125,7 +122,6 @@ function expandPersistableSource(
 function expandQuery(
   query: Query,
   opts: PrepareResultOptions,
-  _quoteTablePath: (path: string) => string,
   compileQuery: CompileQueryCallback
 ): string {
   // Set isPartialQuery so CTEs aren't used (they can't be nested in subqueries)
@@ -137,20 +133,18 @@ function expandQuery(
  * Get the SQL for a PersistableSourceDef.
  *
  * @param source The persistable source to compile
- * @param quoteTablePath Dialect function to quote table paths
  * @param compileQuery Callback to compile a Query to SQL
  * @param opts Optional - if provided with manifest, nested sources may be substituted.
  *             Omit for "full SQL" (e.g., when computing BuildID).
  */
 export function getSourceSQL(
   source: PersistableSourceDef,
-  quoteTablePath: (path: string) => string,
   compileQuery: CompileQueryCallback,
   opts?: PrepareResultOptions
 ): string {
   if (source.type === 'sql_select') {
     // Recursive call for nested sql_select
-    return getCompiledSQL(source, opts ?? {}, quoteTablePath, compileQuery);
+    return getCompiledSQL(source, opts ?? {}, compileQuery);
   }
 
   // query_source - compile the inner query

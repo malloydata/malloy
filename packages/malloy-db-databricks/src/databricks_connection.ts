@@ -283,8 +283,8 @@ export class DatabricksConnection
     };
 
     try {
-      const quotedPath = this.dialect.quoteTablePath(tablePath);
-      const result = await this.runRawSQL(`DESCRIBE TABLE ${quotedPath}`);
+      // tablePath is already canonical SQL — translator pre-validated.
+      const result = await this.runRawSQL(`DESCRIBE TABLE ${tablePath}`);
       this.fillStructDefFromDescribe(result, structDef);
       return structDef;
     } catch (e) {

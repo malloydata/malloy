@@ -482,3 +482,132 @@ describe('base Dialect fail-fast on missing config', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// sqlValidateTableName — table-path grammar per dialect
+// ---------------------------------------------------------------------------
+//
+// Inputs that every dialect must accept (canonical form should equal the
+// input verbatim for these).
+const VALID_TABLE_PATHS = [
+  {name: 'bare', value: 'foo'},
+  {name: 'dotted', value: 'schema.foo'},
+  {name: 'three_part', value: 'project.schema.foo'},
+];
+
+// Inputs that every standard SQL dialect must reject. DuckDB is special
+// (file-path convenience + explicit-single-quoted form), so it's tested
+// separately.
+const INVALID_TABLE_PATHS = [
+  {name: 'empty', value: ''},
+  {name: 'leading_dot', value: '.foo'},
+  {name: 'trailing_dot', value: 'foo.'},
+  {name: 'starts_with_digit', value: '1foo'},
+  {name: 'has_space', value: 'foo bar'},
+  {name: 'has_semicolon', value: 'foo;DROP TABLE x;--'},
+  {name: 'mixed_ident_string', value: "schema.'name'"},
+  {name: 'unterminated_quote', value: '"foo'},
+];
+
+for (const dialect of getDialects()) {
+  describe(`${dialect.name} sqlValidateTableName`, () => {
+    describe('accepts valid table paths', () => {
+      for (const {name, value} of VALID_TABLE_PATHS) {
+        it(name, () => {
+          const result = dialect.sqlValidateTableName(value);
+          expect(result.ok).toBe(true);
+          if (result.ok) {
+            // Canonical form is input verbatim for plain identifier paths.
+            expect(result.canonical).toBe(value);
+          }
+        });
+      }
+    });
+
+    // DuckDB's file-path convenience accepts many shapes the standard
+    // dialects reject; skip the rejection corpus there.
+    if (dialect.name !== 'duckdb') {
+      describe('rejects invalid table paths', () => {
+        for (const {name, value} of INVALID_TABLE_PATHS) {
+          it(name, () => {
+            const result = dialect.sqlValidateTableName(value);
+            expect(result.ok).toBe(false);
+          });
+        }
+      });
+    }
+  });
+}
+
+// DuckDB has a richer grammar — file-path convenience and explicit
+// single-quoted forms — so its acceptance set is broader and its
+// canonical form transforms file-path inputs by wrapping them in
+// single quotes.
+describe('DuckDB sqlValidateTableName — convenience extensions', () => {
+  const duckdb = getDialects().find(d => d.name === 'duckdb')!;
+
+  const acceptedAsFilePath: {name: string; input: string; canonical: string}[] =
+    [
+      {
+        name: 'parquet_with_dash',
+        input: 'arrests-latest.parquet',
+        canonical: "'arrests-latest.parquet'",
+      },
+      {
+        name: 'relative_path',
+        input: '../data/foo.csv',
+        canonical: "'../data/foo.csv'",
+      },
+      {
+        name: 's3_url',
+        input: 's3://bucket/x.parquet',
+        canonical: "'s3://bucket/x.parquet'",
+      },
+      {
+        name: 'glob_star',
+        input: 'data/*.parquet',
+        canonical: "'data/*.parquet'",
+      },
+      {
+        name: 'glob_question',
+        input: 'data/???.parquet',
+        canonical: "'data/???.parquet'",
+      },
+    ];
+
+  for (const {name, input, canonical} of acceptedAsFilePath) {
+    it(`file-path: ${name}`, () => {
+      const result = duckdb.sqlValidateTableName(input);
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.canonical).toBe(canonical);
+    });
+  }
+
+  const explicitSingleQuoted = [
+    {name: 'plain', value: "'foo.csv'"},
+    {name: 'with_dots', value: "'thing.with.dots'"},
+    {name: 'doubled_inner_quote', value: "'o''brien'"},
+  ];
+  for (const {name, value} of explicitSingleQuoted) {
+    it(`explicit single-quoted: ${name}`, () => {
+      const result = duckdb.sqlValidateTableName(value);
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.canonical).toBe(value);
+    });
+  }
+
+  const rejected = [
+    {name: 'has_space', value: 'foo bar.csv'},
+    {name: 'has_semicolon', value: 'foo;DROP TABLE x;--'},
+    {name: 'has_paren', value: 'read_csv(foo.csv)'},
+    {name: 'unterminated_quote', value: "'foo"},
+    {name: 'trailing_after_close', value: "'foo' AND 1=1"},
+    {name: 'has_backtick', value: 'foo`bar'},
+  ];
+  for (const {name, value} of rejected) {
+    it(`rejects: ${name}`, () => {
+      const result = duckdb.sqlValidateTableName(value);
+      expect(result.ok).toBe(false);
+    });
+  }
+});

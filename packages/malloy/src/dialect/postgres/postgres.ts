@@ -124,13 +124,6 @@ export class PostgresDialect extends PostgresBase {
   likeEscape = false;
   maxIdentifierLength = 63;
 
-  quoteTablePath(tablePath: string): string {
-    return tablePath
-      .split('.')
-      .map(part => this.quoteIdentifierPart(part, true))
-      .join('.');
-  }
-
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN GENERATE_SERIES(0,${groupSetCount},1) as group_set`;
   }

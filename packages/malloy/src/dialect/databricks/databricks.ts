@@ -165,16 +165,6 @@ export class DatabricksDialect extends Dialect {
     );
   }
 
-  quoteTablePath(tablePath: string): string {
-    // Always quote each segment so reserved words can be used as table
-    // names. Databricks is case-insensitive for identifiers, so quoting
-    // has no backward-compat cost.
-    return tablePath
-      .split('.')
-      .map(part => this.quoteIdentifierPart(part, true))
-      .join('.');
-  }
-
   sqlGroupSetTable(groupSetCount: number): string {
     return `LATERAL VIEW EXPLODE(SEQUENCE(0, ${groupSetCount})) group_set AS group_set`;
   }

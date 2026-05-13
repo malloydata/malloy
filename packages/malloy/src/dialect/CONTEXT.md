@@ -262,9 +262,36 @@ Every dialect must declare three fields that drive identifier and string-literal
 
 The base class provides safe implementations of `sqlQuoteIdentifier`, `sqlLiteralString`, and `sqlLiteralRegexp` driven by these flags. Dialects normally do not override them. If a subclass forgets to set a flag, the base method throws at first use with a message naming the dialect and the missing flag — `escape.spec.ts` exercises this fail-fast path on every registered dialect, so a forgotten flag fails CI rather than producing wrong SQL silently.
 
-`quoteTablePath` is still per-dialect because table-path styles vary (per-part vs whole-path quoting, file-path string literals for DuckDB). Use the protected `quoteIdentifierPart(part, alwaysQuote)` helper rather than rolling your own string concatenation — it routes through `sqlQuoteIdentifier` and is correct by construction.
-
 The contract is verified by `packages/malloy/src/dialect/escape.spec.ts`, which iterates `getDialects()` and asserts that an adversarial input corpus round-trips through each escape function. A new dialect is covered automatically the moment it is registered in `dialect_map.ts`; you do not need to edit the spec file.
+
+### Table-path validation contract
+
+User-supplied table-path strings (from `connection.table('…')` and the virtual table map) are validated against each dialect's table-path grammar at translation time, not at SQL emission time. The mechanism is one method:
+
+```ts
+sqlValidateTableName(input: string):
+  | {ok: true; canonical: string}
+  | {ok: false; error: string};
+```
+
+On success, `canonical` is the SQL fragment that gets pasted directly into `FROM` clauses and stored in `StructDef.tablePath`. There is no separate "quote this table path" step — the validator's canonical form is the SQL form.
+
+The base class provides a default implementation that accepts a dotted identifier path where each segment is a bare SQL identifier or a `q`-delimited quoted segment with `qq` doubled-quote escape (where `q` is the dialect's `identifierQuoteChar`). This matches Postgres, MySQL, Snowflake, Trino, and Databricks. For the default, the canonical form is the input verbatim — *we do not auto-quote table names anymore*. Reserved-word tables in the user's database must be quoted explicitly by the user (e.g. `db.table('"select"')` on Postgres).
+
+**Two dialects override this method:**
+
+- **BigQuery (`standardsql`)** — accepts either a dotted bare-identifier path (dashes allowed in segments) or a whole-path inside backticks (with the backslash escape sequences BigQuery defines for quoted identifiers). Anything else is rejected. Canonical = input.
+
+- **DuckDB** — has a richer grammar with a hand-rolled parser in `duckdb/table-path-parser.ts`. Accepts identifier paths, double-quoted identifier paths, explicit single-quoted string-literal forms, AND a "file-path convenience" branch for backwards-compatible inputs like `arrests-latest.parquet` or `data/*.parquet`. The convenience branch wraps the input in single quotes at canonical time, since DuckDB's parser requires the quotes in actual SQL. **If you are writing a validator for a new ANSI SQL dialect, do not use DuckDB as a reference** — its grammar is intentionally permissive in a way that no standard SQL dialect should match.
+
+When the validator rejects an input:
+- `ImportsAndTablesStep` silently skips the reference (no schemaZone register, no schema-fetch needs-request).
+- The AST step (`TableMethodSource.getSourceDef`) re-validates and logs the error at the AST element's source location — the user sees a squiggle on the `connection.table(...)` expression.
+
+Tests:
+- `packages/malloy/src/dialect/escape.spec.ts` — per-dialect unit tests over an adversarial corpus.
+- `packages/malloy/src/lang/test/table-path-validation.spec.ts` — end-to-end translator-error tests with source-range assertions.
+- `test/src/databases/duckdb-all/duckdb.spec.ts` — DuckDB-specific shapes (file paths, globs).
 
 ## Key Source Files
 

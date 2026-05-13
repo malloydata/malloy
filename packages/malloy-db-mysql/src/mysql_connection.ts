@@ -185,7 +185,8 @@ export class MySQLConnection
       fields: [],
     };
 
-    const infoQuery = `DESCRIBE ${this.dialect.quoteTablePath(tablePath)}`;
+    // tablePath is already canonical SQL — translator pre-validated.
+    const infoQuery = `DESCRIBE ${tablePath}`;
     const result = await this.runRawSQL(infoQuery);
     await this.schemaFromResult(result, structDef);
     return structDef;

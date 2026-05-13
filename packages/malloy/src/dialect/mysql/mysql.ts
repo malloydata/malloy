@@ -193,13 +193,6 @@ export class MySQLDialect extends Dialect {
     );
   }
 
-  quoteTablePath(tablePath: string): string {
-    return tablePath
-      .split('.')
-      .map(part => this.quoteIdentifierPart(part, true))
-      .join('.');
-  }
-
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (select number - 1 as group_set from JSON_TABLE(cast(concat("[1", repeat(",1", ${groupSetCount}), "]") as JSON),"$[*]" COLUMNS(number FOR ORDINALITY)) group_set) as group_set`;
   }

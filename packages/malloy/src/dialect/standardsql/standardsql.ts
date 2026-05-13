@@ -165,14 +165,67 @@ export class StandardSQLDialect extends Dialect {
     }
   }
 
-  quoteTablePath(tablePath: string): string {
-    this.bqRejectBacktick(tablePath, 'table path');
-    return '`' + tablePath.replace(/\\/g, '\\\\') + '`';
-  }
-
   sqlQuoteIdentifier(identifier: string): string {
     this.bqRejectBacktick(identifier, 'identifier');
     return super.sqlQuoteIdentifier(identifier);
+  }
+
+  // BigQuery table paths come in two shapes:
+  //   1. Dotted bare-identifier path: `project.dataset.table`. Per
+  //      BigQuery's lexical rules, dashes are allowed in segments
+  //      (specifically, the first segment in FROM/TABLE position can
+  //      contain dashes; dataset names cannot, but we accept dashes
+  //      anywhere and let BigQuery surface the position-specific
+  //      error at bind time).
+  //   2. Whole-path inside backticks: `` `project.dataset.table` ``,
+  //      with the backslash escape sequences BigQuery defines for
+  //      quoted identifiers. An unescaped backtick in the body would
+  //      close the literal, so we reject.
+  // Anything else (string-literal form, function calls, dashes in a
+  // position BigQuery cannot parse, embedded whitespace, etc.) → reject.
+  // Canonical form is the input verbatim.
+  override sqlValidateTableName(
+    input: string
+  ): {ok: true; canonical: string} | {ok: false; error: string} {
+    if (input.length === 0) {
+      return {ok: false, error: 'BigQuery table path is empty'};
+    }
+    if (input[0] === '`') {
+      // Whole-path backtick form. Body must not contain an unescaped
+      // backtick; `\X` is a two-char escape sequence we skip past.
+      if (input.length < 2 || input[input.length - 1] !== '`') {
+        return {
+          ok: false,
+          error: `BigQuery table path: unmatched backtick in ${JSON.stringify(input)}`,
+        };
+      }
+      const body = input.slice(1, -1);
+      let i = 0;
+      while (i < body.length) {
+        if (body[i] === '\\' && i + 1 < body.length) {
+          i += 2;
+        } else if (body[i] === '`') {
+          return {
+            ok: false,
+            error: `BigQuery table path: unescaped backtick inside backticks: ${JSON.stringify(input)}`,
+          };
+        } else {
+          i++;
+        }
+      }
+      return {ok: true, canonical: input};
+    }
+    // Bare dotted path.
+    if (/^[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*)*$/.test(input)) {
+      return {ok: true, canonical: input};
+    }
+    return {
+      ok: false,
+      error:
+        `Invalid BigQuery table path: ${JSON.stringify(input)} — expected a ` +
+        'dotted identifier path (e.g. `project.dataset.table`, dashes ' +
+        'allowed in segments) or a whole-path backtick-quoted form.',
+    };
   }
 
   needsCivilTimeComputation(

@@ -55,6 +55,7 @@ import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 import type {TinyToken} from '../tiny_parser';
 import {TinyParseError, TinyParser} from '../tiny_parser';
+import {validateDuckDBTablePath} from './table-path-parser';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
@@ -113,21 +114,10 @@ export class DuckDBDialect extends PostgresBase {
     return `__udf${Math.floor(Math.random() * 100000)}`;
   }
 
-  quoteTablePath(tableName: string): string {
-    // DuckDB accepts either a SQL identifier path (schema.table) or a
-    // file path as a string literal (FROM 'foo.parquet'). Detect which
-    // shape the input is.
-    if (/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/.test(tableName)) {
-      // Identifier path. Always quote each segment so that reserved
-      // words (`select`, `from`, ...) can be used as table names.
-      // DuckDB is case-insensitive for both bare and quoted identifiers,
-      // so there is no backward-compat cost to quoting.
-      return tableName
-        .split('.')
-        .map(part => this.quoteIdentifierPart(part, true))
-        .join('.');
-    }
-    return this.sqlLiteralString(tableName);
+  override sqlValidateTableName(
+    input: string
+  ): {ok: true; canonical: string} | {ok: false; error: string} {
+    return validateDuckDBTablePath(input);
   }
 
   sqlGroupSetTable(groupSetCount: number): string {

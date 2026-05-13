@@ -202,7 +202,10 @@ export abstract class DuckDBCommon
       fields: [],
     };
 
-    const infoQuery = `DESCRIBE SELECT * FROM ${this.dialect.quoteTablePath(tablePath)}`;
+    // tablePath is already canonical SQL — the translator validated it
+    // via dialect.sqlValidateTableName before issuing the schema-fetch
+    // needs-request. No further wrapping needed.
+    const infoQuery = `DESCRIBE SELECT * FROM ${tablePath}`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
   }

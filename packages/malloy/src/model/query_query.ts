@@ -765,7 +765,8 @@ export class QueryQuery extends QueryField {
   getStructSourceSQL(qs: QueryStruct, stageWriter: StageWriter): string {
     switch (qs.structDef.type) {
       case 'table':
-        return this.parent.dialect.quoteTablePath(qs.structDef.tablePath);
+        // tablePath is canonical SQL — translator pre-validated.
+        return qs.structDef.tablePath;
       case 'virtual': {
         const virtualMap = qs.prepareResultOptions?.virtualMap;
         const tablePath = virtualMap
@@ -776,7 +777,9 @@ export class QueryQuery extends QueryField {
             `No virtual map entry for '${qs.structDef.name}' on connection '${qs.structDef.connection}'`
           );
         }
-        return this.parent.dialect.quoteTablePath(tablePath);
+        // virtualMap entries are application-supplied — assumed already
+        // canonical SQL.
+        return tablePath;
       }
       case 'composite':
         // TODO: throw an error here; not simple because we call into this
@@ -788,7 +791,6 @@ export class QueryQuery extends QueryField {
         return `(${getCompiledSQL(
           qs.structDef,
           qs.prepareResultOptions ?? {},
-          path => this.parent.dialect.quoteTablePath(path),
           (query, opts) => {
             // Compile query to isolated SQL (not into parent's stageWriter)
             const ret = this.compileQueryToStages(
@@ -824,8 +826,9 @@ export class QueryQuery extends QueryField {
             const entry = buildManifest.entries[buildId];
 
             if (entry) {
-              // Found in manifest - use persisted table
-              return this.parent.dialect.quoteTablePath(entry.tableName);
+              // Found in manifest - use persisted table.
+              // entry.tableName comes from the manifest, assumed canonical.
+              return entry.tableName;
             }
 
             if (buildManifest.strict) {
@@ -2548,7 +2551,6 @@ class QueryQueryRaw extends QueryQuery {
       getCompiledSQL(
         this.parent.structDef,
         this.parent.prepareResultOptions ?? {},
-        path => this.parent.dialect.quoteTablePath(path),
         (query, opts) => {
           // Compile query to isolated SQL (not into parent's stageWriter)
           const ret = this.compileQueryToStages(

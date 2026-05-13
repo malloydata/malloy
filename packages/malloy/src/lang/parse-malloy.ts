@@ -44,6 +44,7 @@ import type {
 import {BaseMessageLogger, makeLogMessage} from './parse-log';
 import type {FindReferencesData} from './parse-tree-walkers/find-external-references';
 import {findReferences} from './parse-tree-walkers/find-external-references';
+import {getDialect} from '../dialect';
 import type {ZoneData} from './zone';
 import {Zone} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
@@ -208,6 +209,11 @@ class ParseStep implements TranslationStep {
 
 class ImportsAndTablesStep implements TranslationStep {
   private parseReferences: FindReferencesData | undefined = undefined;
+  // True once we have validated each table reference against its
+  // connection's dialect and registered the canonical-keyed entries in
+  // schemaZone. Only happens after connection dialects are resolved,
+  // since we need the dialect to know how to validate.
+  private tablesRegistered = false;
   constructor(readonly parseStep: ParseStep) {}
 
   step(that: MalloyTranslation): DataRequestResponse | ParseResponse {
@@ -223,12 +229,9 @@ class ImportsAndTablesStep implements TranslationStep {
         parseReq.parse.root
       );
 
-      for (const ref in this.parseReferences.tables) {
-        that.root.schemaZone.reference(ref, {
-          url: that.sourceURL,
-          range: this.parseReferences.tables[ref].firstReference,
-        });
-      }
+      // Register connection dialects and imports immediately. Table
+      // references are deferred until dialects are resolved, because
+      // validating a table path requires knowing its dialect's grammar.
 
       for (const connName in this.parseReferences.connectionDialects) {
         that.root.connectionDialectZone.reference(connName, {
@@ -276,17 +279,71 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     let allMissing: DataRequestResponse = {};
+
+    // Validate and register table references AFTER dialects are known.
+    // Invalid paths are silently skipped here — no schemaZone register,
+    // no needs-request. The AST step re-validates and logs the error
+    // with the precise source location of the table-path string.
+    if (
+      !this.tablesRegistered &&
+      that.root.connectionDialectZone.getUndefined() === undefined
+    ) {
+      const refs = this.parseReferences.tables;
+      const canonical: typeof refs = {};
+      for (const rawKey in refs) {
+        const info = refs[rawKey];
+        const dialectName = info.connectionName
+          ? that.root.connectionDialectZone.get(info.connectionName)
+          : undefined;
+        if (dialectName === undefined) {
+          // No dialect resolved (anonymous connection or lookup failed).
+          // Preserve the existing entry; downstream will report the
+          // missing-connection error.
+          canonical[rawKey] = info;
+          that.root.schemaZone.reference(rawKey, {
+            url: that.sourceURL,
+            range: info.firstReference,
+          });
+          continue;
+        }
+        const dialect = getDialect(dialectName);
+        const result = dialect.sqlValidateTableName(info.tablePath);
+        if (!result.ok) {
+          // Invalid — skip. AST step will surface the error.
+          continue;
+        }
+        const canonicalKey =
+          info.connectionName === undefined
+            ? result.canonical
+            : `${info.connectionName}:${result.canonical}`;
+        canonical[canonicalKey] = {
+          connectionName: info.connectionName,
+          tablePath: result.canonical,
+          firstReference: info.firstReference,
+        };
+        that.root.schemaZone.reference(canonicalKey, {
+          url: that.sourceURL,
+          range: info.firstReference,
+        });
+      }
+      this.parseReferences.tables = canonical;
+      this.tablesRegistered = true;
+    }
+
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
       const tables = {};
       for (const key of missingTables) {
         const info = this.parseReferences.tables[key];
+        if (info === undefined) continue;
         tables[key] = {
           connectionName: info.connectionName,
           tablePath: info.tablePath,
         };
       }
-      allMissing = {tables};
+      if (Object.keys(tables).length > 0) {
+        allMissing = {tables};
+      }
     }
 
     const missingDialects = that.root.connectionDialectZone.getUndefined();
