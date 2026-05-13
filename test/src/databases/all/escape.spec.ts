@@ -59,12 +59,20 @@ function toMalloyString(s: string): string {
   return "'" + s.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
 }
 
-// Malloy r'...' is a raw string — backslash is literal, no escape
-// processing on the contents. The only character that needs handling
-// is a single quote (rendered as \' in the source so the lexer keeps
-// scanning to the actual closing quote).
+// Malloy r'...' is a raw string: backslash is literal, no escape
+// processing inside the body. As a consequence the body cannot
+// contain a single quote — `\'` in r'...' is parsed as two raw chars
+// (backslash + quote), not as an escape that vanishes the quote, so
+// there is no syntax that produces a regex literal containing a `'`.
+// Assert the precondition rather than fake an escape that wouldn't
+// round-trip.
 function toMalloyRegex(s: string): string {
-  return "r'" + s.replace(/'/g, "\\'") + "'";
+  if (s.includes("'")) {
+    throw new Error(
+      `toMalloyRegex cannot encode a regex containing a single quote: ${JSON.stringify(s)}`
+    );
+  }
+  return "r'" + s + "'";
 }
 
 function toMalloyIdent(s: string): string {
