@@ -371,6 +371,16 @@ export class BigQueryConnection
   }
 
   private normalizeTablePath(tablePath: string): string {
+    // Canonical tablePath may be the whole path inside backticks
+    // (BigQuery's wildcard auto-wrap, or user-quoted form). Strip the
+    // outer backticks before our naive segment splitting below.
+    if (
+      tablePath.length >= 2 &&
+      tablePath[0] === '`' &&
+      tablePath[tablePath.length - 1] === '`'
+    ) {
+      tablePath = tablePath.slice(1, -1);
+    }
     if (tablePath.split('.').length === 2) {
       return `${this.projectId}.${tablePath}`;
     } else {
@@ -595,7 +605,10 @@ export class BigQueryConnection
     tableName: string,
     tablePath: string
   ): Promise<TableSourceDef | string> {
-    tablePath = this.normalizeTablePath(tablePath);
+    // Keep the canonical tablePath (which may be backtick-wrapped for
+    // wildcard tables) for downstream SQL emission. The metadata lookup
+    // wants the unwrapped form, which `getTableFieldSchema` handles via
+    // `normalizeTablePath`.
     try {
       const tableFieldSchema = await this.getTableFieldSchema(tablePath);
       const tableDef: TableSourceDef = {

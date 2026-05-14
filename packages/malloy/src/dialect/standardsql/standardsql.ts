@@ -63,12 +63,20 @@ import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 import {parseDottedTablePath} from '../table-path';
 
-// BigQuery's bare-dotted form: each segment is `[A-Za-z_][A-Za-z0-9_-]*`.
-// Dashes are allowed in segments (the live engine accepts `proj-foo`).
+// BigQuery's bare-dotted form. Each segment matches
+// `[A-Za-z_][A-Za-z0-9_*-]*`:
+//   - Dashes are allowed in segments (live engine accepts `proj-foo`
+//     without backticks even though docs sometimes suggest otherwise).
+//   - `*` is allowed as BigQuery's wildcard-table suffix (e.g.
+//     `dataset.events_*` matches all tables starting with `events_`).
+//     BigQuery's parser does NOT accept a bare `*` — wildcard tables
+//     must be backtick-quoted (`` `dataset.events_*` ``). The validator
+//     accepts the bare form for back-compat and wraps it in backticks
+//     at canonical time (see `sqlValidateTableName`).
 // Note that no segment-level quoting exists in this form — BigQuery's
 // quote shape is whole-path, handled separately in `sqlValidateTableName`.
 const BIGQUERY_BARE_TOKENS: Record<string, RegExp> = {
-  bare: /^[A-Za-z_][A-Za-z0-9_-]*/,
+  bare: /^[A-Za-z_][A-Za-z0-9_*-]*/,
   dot: /^\./,
 };
 
@@ -225,8 +233,21 @@ export class StandardSQLDialect extends Dialect {
       }
       return {ok: true, canonical: input};
     }
-    // Bare dotted path with dashes allowed.
-    return parseDottedTablePath(input, BIGQUERY_BARE_TOKENS, 'BigQuery');
+    // Bare dotted path with dashes (and `*` for wildcard tables) allowed.
+    const bareResult = parseDottedTablePath(
+      input,
+      BIGQUERY_BARE_TOKENS,
+      'BigQuery'
+    );
+    if (!bareResult.ok) return bareResult;
+    // Wildcard tables aren't legal in BigQuery's bare-FROM grammar; they
+    // must be backtick-quoted. We accept the bare form for back-compat
+    // and wrap it at canonical time, the same shape as DuckDB's
+    // file-path convenience.
+    if (input.includes('*')) {
+      return {ok: true, canonical: `\`${input}\``};
+    }
+    return bareResult;
   }
 
   needsCivilTimeComputation(
