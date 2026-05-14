@@ -275,54 +275,30 @@ class ImportsAndTablesStep implements TranslationStep {
 
     let allMissing: DataRequestResponse = {};
 
-    // Validate and register table references against each table's
-    // dialect grammar. We process each entry independently: tables whose
-    // dialect is already known get canonicalized; tables whose dialect
-    // is still pending are preserved as-is and revisited on the next
-    // step. This lets translation proceed when *some* dialects are
-    // unresolved (e.g. one connection is not a real connection — the
-    // AST step will report that error downstream) without hanging on
-    // their absence.
-    //
-    // Invalid paths are silently skipped here — no schemaZone register,
-    // no needs-request. The AST step re-validates and logs the error
-    // with the precise source location of the table-path string.
+    // Validate each table reference against its dialect's grammar (if
+    // the dialect is resolved) and register the canonical entry. Bad
+    // paths are silently dropped — the AST step re-validates and logs
+    // an error at the precise source range. Entries whose dialect
+    // isn't resolved yet are preserved unchanged and re-processed on a
+    // later step.
     {
       const refs = this.parseReferences.tables;
       const canonical: typeof refs = {};
       for (const rawKey in refs) {
         const info = refs[rawKey];
-        const dialectName = info.connectionName
-          ? that.root.connectionDialectZone.get(info.connectionName)
-          : undefined;
-        if (dialectName === undefined) {
-          // Dialect not (yet) known: preserve the existing entry and
-          // register the raw key in the schema zone so the connection's
-          // missing-table error path still fires. If the dialect resolves
-          // later we'll re-canonicalize on the next step.
-          canonical[rawKey] = info;
-          that.root.schemaZone.reference(rawKey, {
-            url: that.sourceURL,
-            range: info.firstReference,
-          });
-          continue;
+        let {tablePath} = info;
+        const dialectName = that.root.connectionDialectZone.get(
+          info.connectionName
+        );
+        if (dialectName !== undefined) {
+          const result =
+            getDialect(dialectName).sqlValidateTableName(tablePath);
+          if (!result.ok) continue;
+          tablePath = result.canonical;
         }
-        const dialect = getDialect(dialectName);
-        const result = dialect.sqlValidateTableName(info.tablePath);
-        if (!result.ok) {
-          // Invalid — skip. AST step will surface the error.
-          continue;
-        }
-        const canonicalKey =
-          info.connectionName === undefined
-            ? result.canonical
-            : `${info.connectionName}:${result.canonical}`;
-        canonical[canonicalKey] = {
-          connectionName: info.connectionName,
-          tablePath: result.canonical,
-          firstReference: info.firstReference,
-        };
-        that.root.schemaZone.reference(canonicalKey, {
+        const key = `${info.connectionName}:${tablePath}`;
+        canonical[key] = {...info, tablePath};
+        that.root.schemaZone.reference(key, {
           url: that.sourceURL,
           range: info.firstReference,
         });

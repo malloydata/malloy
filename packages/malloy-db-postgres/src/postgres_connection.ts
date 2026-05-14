@@ -93,11 +93,10 @@ const SCHEMA_PAGE_SIZE = 1000;
 
 /**
  * Decode a canonical Postgres dotted-table path into its underlying
- * identifier strings (as they appear in `information_schema`).
- *
- * Uses the shared dialect-level parser (same grammar the validator
- * accepted), then applies Postgres's bare-identifier folding rule:
- * bare segments are lowercased; `"…"` quoted segments keep their case.
+ * identifier strings as they appear in `information_schema`. The schema
+ * lookup is a string-literal comparison, not an identifier reference,
+ * so Postgres's bare-name lowercase folding doesn't happen for us — we
+ * apply it here: bare segments → lowercase, `"…"` segments → as-is.
  */
 function decodeDottedSegments(input: string): string[] | undefined {
   const result = decodeDottedTablePath(input, {

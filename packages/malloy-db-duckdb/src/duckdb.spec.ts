@@ -103,12 +103,7 @@ describe('DuckDBConnection', () => {
       expect(runRawSQL).toHaveBeenCalledTimes(2);
     });
 
-    // The DuckDB connection now receives canonical-SQL table paths from
-    // the translator (via dialect.sqlValidateTableName) and embeds them
-    // verbatim in the DESCRIBE query. These tests verify the embedding
-    // for each canonical-form shape.
-
-    it('embeds explicit-single-quoted file paths verbatim', async () => {
+    it('fetches schema for a single-quoted file-path table', async () => {
       await connection.fetchSchemaForTables(
         {'dashed': "'arrests-latest.parquet'"},
         {}
@@ -118,14 +113,14 @@ describe('DuckDBConnection', () => {
       );
     });
 
-    it('embeds bare identifier paths verbatim', async () => {
+    it('fetches schema for a bare identifier', async () => {
       await connection.fetchSchemaForTables({'plain': 'plain_table'}, {});
       expect(runRawSQL).toHaveBeenCalledWith(
         'DESCRIBE SELECT * FROM plain_table'
       );
     });
 
-    it('embeds schema-qualified identifier paths verbatim', async () => {
+    it('fetches schema for a schema-qualified identifier path', async () => {
       await connection.fetchSchemaForTables(
         {'qualified': 'main.qualified_table'},
         {}

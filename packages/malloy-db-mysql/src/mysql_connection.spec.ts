@@ -57,14 +57,8 @@ describeMySQL('db:MySQL', () => {
   });
 
   it('fetches schema for tables whose names contain dashes', async () => {
-    // Dash isn't a legal char in a bare MySQL identifier; the translator
-    // would reject `mysql.table('arrests-latest')` at compile time. To
-    // reference a dashed name the user must quote it explicitly:
-    // `mysql.table('\`arrests-latest\`')`. The translator's validator
-    // canonicalizes to that quoted form, and the connection's
-    // `fetchTableSchema` pastes it verbatim into the schema query.
-    // This test exercises the connection layer directly, so we pass the
-    // backtick-quoted (canonical) form ourselves.
+    // fetchSchemaForTables expects canonical SQL (post-translator), so
+    // we pass the backtick-quoted form directly.
     await connection.runRawSQL('DROP TABLE IF EXISTS `arrests-latest`');
     await connection.runRawSQL(
       'CREATE TABLE `arrests-latest` (id INT, name VARCHAR(50))'

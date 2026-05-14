@@ -401,58 +401,25 @@ export abstract class Dialect {
    *
    * The default is strict ANSI: `[A-Za-z_][A-Za-z0-9_]*`. Override to
    * widen the char set (Postgres allows `$`, MySQL allows digit-start
-   * with caveats, BigQuery allows dashes, …). The verified per-dialect
-   * regexes are derived from probing the live engines — see
-   * `scripts/probe_table_paths.ts`.
+   * with caveats, BigQuery allows dashes, …). The per-dialect regexes
+   * were verified by probing live engines.
    */
   tablePathBareIdentRegex: RegExp = /^[A-Za-z_][A-Za-z0-9_]*/;
 
   /**
-   * Validate a user-supplied table-path string against this dialect's
-   * table-path grammar. On success, returns the canonical SQL form that
-   * should be embedded in `FROM` clauses (and stored in
-   * `StructDef.tablePath`). On failure, returns an error message.
+   * Validate a user-supplied table-path string for this dialect. On
+   * success, the canonical form is the SQL fragment that gets pasted
+   * into `FROM` clauses and stored in `StructDef.tablePath`. Canonical
+   * equals input verbatim except where a Malloy convenience needs
+   * translating into dialect SQL (today: DuckDB's file-path branch
+   * wraps the input in single quotes).
    *
-   * # When implementing this for a new dialect
-   *
-   * The default implementation parses a dotted sequence of identifier
-   * segments using this dialect's `identifierQuoteChar`,
-   * `identifierEscapeStyle`, and `tablePathBareIdentRegex`. Every
-   * well-behaved SQL dialect we ship — Postgres, MySQL, Snowflake,
-   * Trino, Databricks, BigQuery — uses the default and just declares
-   * its own bare-segment regex.
-   *
-   * Override `sqlValidateTableName` directly only when your dialect's
-   * grammar isn't a dotted sequence of identifier segments (DuckDB
-   * accepts file paths and explicit single-quoted literals in addition
-   * to identifier paths, so it overrides).
-   *
-   * # Contract
-   *
-   * Two callers:
-   *  1. `ImportsAndTablesStep` calls this after connection dialects
-   *     are resolved. Invalid paths are silently skipped (no
-   *     schemaZone register, no needs-request); valid paths are
-   *     registered under their canonical key. No error logging here
-   *     — the source range ImportsAndTablesStep has is the whole
-   *     `connection.table(...)` expression, not the path string
-   *     itself.
-   *  2. The AST step's `TableMethodSource.getSourceDef` calls this
-   *     before looking up the schema. Invalid → log error at the
-   *     path-string's source range (precise squiggle), return
-   *     `ErrorFactory.structDef`. Valid → look up canonical key in
-   *     `schemaZone`.
-   *
-   * The function MUST be deterministic — both callers compute the
-   * same canonical form for the same input, so their schemaZone keys
-   * agree without any shared state.
-   *
-   * The canonical form should be exactly the SQL fragment that gets
-   * pasted into `FROM` (and `DESCRIBE` for schema fetch). For most
-   * dialects this is identical to the user's input; the only reason
-   * to differ is when the input is syntactic sugar for SQL that
-   * looks different (e.g. DuckDB's file-path convenience wraps the
-   * input in single quotes).
+   * The default implementation handles every dialect whose table-path
+   * grammar is a dotted sequence of `bare | quoted` segments — every
+   * dialect we ship except DuckDB. New dialects of that shape need
+   * only override `tablePathBareIdentRegex`; override
+   * `sqlValidateTableName` itself only if your grammar is structurally
+   * different.
    */
   sqlValidateTableName(input: string): ValidateTablePathResult {
     if (

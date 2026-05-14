@@ -298,7 +298,7 @@ override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
 // No sqlValidateTableName override needed.
 ```
 
-The per-dialect regexes were derived empirically by probing the live engines — see `scripts/probe_table_paths.ts`.
+The per-dialect regexes were derived empirically by probing the live engines.
 
 **One dialect overrides the method outright: DuckDB.** Its grammar isn't a pure dotted-segment shape — it accepts file-path-shaped inputs (`arrests-latest.parquet`, `s3://…`, globs) and explicit single-quoted literals (`'foo.csv'`) in addition to identifier paths. See `duckdb/table-path-parser.ts`. **Do not look at DuckDB as a reference for a normal SQL dialect** — its grammar is intentionally richer than what ANSI SQL allows.
 
@@ -310,7 +310,6 @@ Tests:
 - `packages/malloy/src/dialect/escape.spec.ts` — per-dialect unit tests with corpora reflecting the live engines' actual behavior.
 - `packages/malloy/src/lang/test/table-path-validation.spec.ts` — end-to-end translator-error tests with source-range assertions.
 - `test/src/databases/duckdb-all/duckdb.spec.ts` — DuckDB-specific shapes (file paths, globs).
-- `scripts/probe_table_paths.ts` — adversarial corpus driver against live engines; rerun whenever a new dialect or `tablePathBareIdentRegex` change lands.
 
 ## Key Source Files
 

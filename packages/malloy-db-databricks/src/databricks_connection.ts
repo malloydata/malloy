@@ -283,7 +283,6 @@ export class DatabricksConnection
     };
 
     try {
-      // tablePath is already canonical SQL — translator pre-validated.
       const result = await this.runRawSQL(`DESCRIBE TABLE ${tablePath}`);
       this.fillStructDefFromDescribe(result, structDef);
       return structDef;

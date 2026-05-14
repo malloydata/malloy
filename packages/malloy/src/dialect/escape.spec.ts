@@ -387,8 +387,8 @@ describe('base Dialect fail-fast on missing config', () => {
 //
 // The validator's contract is per-dialect: each engine has its own bare-
 // identifier rules (Postgres allows `$`, MySQL allows digit-start, Trino
-// is strict ANSI, etc.). These corpora were derived from probing the live
-// engines (see scripts/probe_table_paths.ts) and labeled accordingly.
+// is strict ANSI, etc.). These corpora reflect the live engines'
+// observed behavior.
 //
 // Inputs that every dialect — including the special-grammar ones — must
 // agree on. DuckDB's wider acceptance set is tested separately.

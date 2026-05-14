@@ -3,34 +3,15 @@
  * SPDX-License-Identifier: MIT
  */
 
-// Shared dotted-table-path parser.
-//
-// Every "well-behaved" SQL dialect — every dialect we ship except DuckDB —
-// uses the same table-path grammar:
+// Parser for dotted table paths of the shape
 //
 //   TablePath = Segment ( '.' Segment )* EOF
 //   Segment   = BareIdent | QuotedIdent
 //
-// The variation between dialects is purely lexical:
-//   - which characters can appear in a BareIdent
-//   - which character delimits a QuotedIdent (`"` vs `` ` ``)
-//   - whether quoted bodies use doubled-quote escape (`""`) or backslash
-//     escape (`\X`)
-//
-// All three are exposed as `Dialect` properties (`identifierQuoteChar`,
-// `identifierEscapeStyle`, `tablePathBareIdentRegex`). The base
-// `Dialect.sqlValidateTableName` wires those into a call to
-// `decodeDottedTablePath` below, so a well-behaved dialect just declares
-// its bare-segment regex and inherits the rest. Dialects whose grammars
-// genuinely differ (today, DuckDB) override `sqlValidateTableName`
-// directly.
-//
-// The parser returns the *decoded* segment values (delimiters stripped,
-// escape sequences unescaped) — the same information a connection needs
-// when it has to take a canonical tablePath apart to talk to a metadata
-// API. The `sqlValidateTableName` wrapper throws the segments away and
-// returns `{ok, canonical: input}`. Connections that need segments call
-// `decodeDottedTablePath` directly.
+// parameterized by the bare-segment regex, the quote character, and
+// the quote escape style (`""` doubled or `\X` backslash). Used by
+// `Dialect.sqlValidateTableName` and by connection code that needs to
+// take a canonical tablePath apart to talk to a metadata API.
 
 export type ValidateTablePathResult =
   | {ok: true; canonical: string}
@@ -70,20 +51,10 @@ export interface DottedTablePathOptions {
 
 /**
  * Parse `input` as a dotted table path and require end-of-input. On
- * success, returns the decoded segment values — quote delimiters
- * stripped, escape sequences unescaped.
- *
- * Two kinds of caller:
- *   - `Dialect.sqlValidateTableName` uses this to decide whether to
- *     accept the input. It discards `segments` and returns
- *     `{ok: true, canonical: input}` (the canonical SQL form is the
- *     input verbatim — we don't auto-quote or fold).
- *   - Connections that need to take a canonical tablePath apart for
- *     metadata-API calls (BigQuery, Postgres, …) use the decoded
- *     `segments` directly.
- *
- * Doing both jobs in one function guarantees the validator and the
- * connection can never disagree about what a tablePath means.
+ * success, returns the decoded segment values — delimiters stripped,
+ * escape sequences unescaped — so callers that need the segments
+ * (connection metadata lookups) and callers that only need
+ * accept/reject (`validateDottedTablePath`) share one parser.
  */
 export function decodeDottedTablePath(
   input: string,

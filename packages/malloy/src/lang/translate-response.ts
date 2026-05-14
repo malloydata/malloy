@@ -50,7 +50,7 @@ export interface NeedSchemaData {
   tables: Record<
     string,
     {
-      connectionName: string | undefined;
+      connectionName: string;
       tablePath: string;
     }
   >;

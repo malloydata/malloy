@@ -371,21 +371,9 @@ export class BigQueryConnection
     };
   }
 
-  // Decode a canonical BigQuery tablePath into its underlying segment
-  // values (with delimiters stripped and `\X` escapes unescaped). Uses
-  // the same parser as the dialect's validator, so segment boundaries
-  // here match exactly what `sqlValidateTableName` accepted.
-  //
-  // Special case: BigQuery's "whole-path inside one set of backticks"
-  // form (`` `proj.dataset.table` ``) parses as a SINGLE quoted segment,
-  // because that's what BigQuery's grammar considers it. But the
-  // metadata API still wants project/dataset/table separately, so when
-  // we see exactly one quoted segment we split its decoded body on `.`
-  // to recover the parts.
-  //
-  // Falls back to a single-element array for malformed input (the
-  // dialect should have rejected anything we can't decode, but be
-  // defensive).
+  // The whole-backtick form `` `proj.dataset.table` `` parses as one
+  // quoted segment, but the metadata API still wants the parts
+  // separately — split its decoded body on `.` to recover them.
   private decodeTablePathSegments(tablePath: string): string[] {
     const result = decodeDottedTablePath(tablePath, {
       quoteChar: '`',
