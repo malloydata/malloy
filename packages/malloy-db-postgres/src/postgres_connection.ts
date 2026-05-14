@@ -49,6 +49,7 @@ import {
   mkArrayDef,
   sqlKey,
   makeDigest,
+  decodeDottedTablePath,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -94,53 +95,19 @@ const SCHEMA_PAGE_SIZE = 1000;
  * Decode a canonical Postgres dotted-table path into its underlying
  * identifier strings (as they appear in `information_schema`).
  *
- * Bare segments are lowercased (Postgres's bare-identifier folding rule).
- * `"…"` quoted segments are stripped of their delimiters and have `""`
- * unescaped to `"` — case-preserving, as Postgres treats them.
- *
- * Returns `undefined` if the input doesn't parse as a valid dotted path
- * (the translator's validator should have caught that already, but be
- * defensive). The validator's grammar and this decoder must stay in sync.
+ * Uses the shared dialect-level parser (same grammar the validator
+ * accepted), then applies Postgres's bare-identifier folding rule:
+ * bare segments are lowercased; `"…"` quoted segments keep their case.
  */
 function decodeDottedSegments(input: string): string[] | undefined {
-  const segments: string[] = [];
-  let i = 0;
-  while (i < input.length) {
-    if (input[i] === '"') {
-      let j = i + 1;
-      let decoded = '';
-      let closed = false;
-      while (j < input.length) {
-        if (input[j] === '"') {
-          if (input[j + 1] === '"') {
-            decoded += '"';
-            j += 2;
-          } else {
-            j++;
-            closed = true;
-            break;
-          }
-        } else {
-          decoded += input[j];
-          j++;
-        }
-      }
-      if (!closed) return undefined;
-      segments.push(decoded);
-      i = j;
-    } else {
-      let j = i;
-      while (j < input.length && input[j] !== '.') j++;
-      if (j === i) return undefined; // empty segment
-      segments.push(input.slice(i, j).toLowerCase());
-      i = j;
-    }
-    if (i === input.length) return segments;
-    if (input[i] !== '.') return undefined;
-    i++;
-    if (i === input.length) return undefined; // trailing dot
-  }
-  return segments;
+  const result = decodeDottedTablePath(input, {
+    quoteChar: '"',
+    escapeStyle: 'doubled',
+    bareIdentRegex: /^[A-Za-z_][A-Za-z0-9_$]*/,
+    dialectName: 'Postgres',
+  });
+  if (!result.ok) return undefined;
+  return result.segments.map(s => (s.quoted ? s.value : s.value.toLowerCase()));
 }
 
 export interface PostgresConnectionOptions

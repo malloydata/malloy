@@ -42,7 +42,7 @@ import type {
 import {isRawCast, isBasicAtomic, TD, isDateUnit} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 import type {ValidateTablePathResult} from './table-path';
-import {parseDottedTablePath} from './table-path';
+import {validateDottedTablePath} from './table-path';
 
 interface DialectField {
   typeDef: AtomicTypeDef;
@@ -464,7 +464,7 @@ export abstract class Dialect {
           'to be set to Doubled or Backslash (or override sqlValidateTableName).'
       );
     }
-    return parseDottedTablePath(input, {
+    return validateDottedTablePath(input, {
       quoteChar: this.identifierQuoteChar,
       escapeStyle: this.identifierEscapeStyle,
       bareIdentRegex: this.tablePathBareIdentRegex,

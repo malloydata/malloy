@@ -57,6 +57,7 @@ import {
   toAsyncGenerator,
   sqlKey,
   makeDigest,
+  decodeDottedTablePath,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -370,27 +371,40 @@ export class BigQueryConnection
     };
   }
 
-  private normalizeTablePath(tablePath: string): string {
-    // Canonical tablePath may be the whole path inside backticks
-    // (BigQuery's wildcard auto-wrap, or user-quoted form). Strip the
-    // outer backticks before our naive segment splitting below.
-    if (
-      tablePath.length >= 2 &&
-      tablePath[0] === '`' &&
-      tablePath[tablePath.length - 1] === '`'
-    ) {
-      tablePath = tablePath.slice(1, -1);
+  // Decode a canonical BigQuery tablePath into its underlying segment
+  // values (with delimiters stripped and `\X` escapes unescaped). Uses
+  // the same parser as the dialect's validator, so segment boundaries
+  // here match exactly what `sqlValidateTableName` accepted.
+  //
+  // Special case: BigQuery's "whole-path inside one set of backticks"
+  // form (`` `proj.dataset.table` ``) parses as a SINGLE quoted segment,
+  // because that's what BigQuery's grammar considers it. But the
+  // metadata API still wants project/dataset/table separately, so when
+  // we see exactly one quoted segment we split its decoded body on `.`
+  // to recover the parts.
+  //
+  // Falls back to a single-element array for malformed input (the
+  // dialect should have rejected anything we can't decode, but be
+  // defensive).
+  private decodeTablePathSegments(tablePath: string): string[] {
+    const result = decodeDottedTablePath(tablePath, {
+      quoteChar: '`',
+      escapeStyle: 'backslash',
+      bareIdentRegex: this.dialect.tablePathBareIdentRegex,
+      dialectName: 'BigQuery',
+    });
+    if (!result.ok) return [tablePath];
+    if (result.segments.length === 1 && result.segments[0].quoted) {
+      return result.segments[0].value.split('.');
     }
-    if (tablePath.split('.').length === 2) {
-      return `${this.projectId}.${tablePath}`;
-    } else {
-      return tablePath;
-    }
+    return result.segments.map(s => s.value);
   }
 
   public async getTableFieldSchema(tablePath: string): Promise<SchemaInfo> {
-    const segments = this.normalizeTablePath(tablePath).split('.');
-
+    let segments = this.decodeTablePathSegments(tablePath);
+    if (segments.length === 2) {
+      segments = [this.projectId, ...segments];
+    }
     if (segments.length !== 3) {
       throw new Error(
         `Improper table path: ${tablePath}. A table path requires 2 or 3 segments`
@@ -782,9 +796,9 @@ export class BigQueryConnection
   }
 
   async fetchTableMetadata(tablePath: string): Promise<TableMetadata> {
-    const tablePathInfo = tablePath.split('.');
+    const [proj, dataset, table] = this.decodeTablePathSegments(tablePath);
     return {
-      url: `https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1s${tablePathInfo[0]}!2s${tablePathInfo[1]}!3s${tablePathInfo[2]}`,
+      url: `https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1s${proj}!2s${dataset}!3s${table}`,
     };
   }
 

@@ -61,3 +61,11 @@ export {getMalloyStandardFunctions} from './functions';
 export type {MalloyStandardFunctionImplementations} from './functions';
 export type {TinyToken} from './tiny_parser';
 export {TinyParser} from './tiny_parser';
+export type {
+  DecodeDottedTablePathResult,
+  DottedTablePathOptions,
+  TablePathEscapeStyle,
+  TablePathSegment,
+  ValidateTablePathResult,
+} from './table-path';
+export {decodeDottedTablePath, validateDottedTablePath} from './table-path';

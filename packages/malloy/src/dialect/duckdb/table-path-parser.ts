@@ -15,7 +15,7 @@
 //
 //   2. Identifier path: bare or `"..."` quoted segments, dotted. Same
 //      grammar as the other dialects' default — checked by calling the
-//      base `parseDottedTablePath` helper with the standard ANSI
+//      base `validateDottedTablePath` helper with the standard ANSI
 //      identifier rules DuckDB inherits via `PostgresBase`.
 //
 //   3. File-path convenience: a non-empty run of
@@ -30,7 +30,7 @@
 // only if the identifier-path parse fails.
 
 import type {ValidateTablePathResult} from '../table-path';
-import {parseDottedTablePath} from '../table-path';
+import {validateDottedTablePath} from '../table-path';
 
 const DUCKDB_FILE_PATH_RE = /^[A-Za-z0-9._\-/:?*]+$/;
 const DUCKDB_SINGLE_QUOTED_RE = /^'(?:[^']|'')*'$/;
@@ -54,7 +54,7 @@ export function validateDuckDBTablePath(
     };
   }
   // Branch 2: identifier path (same grammar as ANSI dialects).
-  const id = parseDottedTablePath(input, {
+  const id = validateDottedTablePath(input, {
     quoteChar: '"',
     escapeStyle: 'doubled',
     bareIdentRegex: /^[A-Za-z_][A-Za-z0-9_]*/,
