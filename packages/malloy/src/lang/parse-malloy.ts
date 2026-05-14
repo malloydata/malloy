@@ -209,11 +209,6 @@ class ParseStep implements TranslationStep {
 
 class ImportsAndTablesStep implements TranslationStep {
   private parseReferences: FindReferencesData | undefined = undefined;
-  // True once we have validated each table reference against its
-  // connection's dialect and registered the canonical-keyed entries in
-  // schemaZone. Only happens after connection dialects are resolved,
-  // since we need the dialect to know how to validate.
-  private tablesRegistered = false;
   constructor(readonly parseStep: ParseStep) {}
 
   step(that: MalloyTranslation): DataRequestResponse | ParseResponse {
@@ -280,14 +275,19 @@ class ImportsAndTablesStep implements TranslationStep {
 
     let allMissing: DataRequestResponse = {};
 
-    // Validate and register table references AFTER dialects are known.
+    // Validate and register table references against each table's
+    // dialect grammar. We process each entry independently: tables whose
+    // dialect is already known get canonicalized; tables whose dialect
+    // is still pending are preserved as-is and revisited on the next
+    // step. This lets translation proceed when *some* dialects are
+    // unresolved (e.g. one connection is not a real connection — the
+    // AST step will report that error downstream) without hanging on
+    // their absence.
+    //
     // Invalid paths are silently skipped here — no schemaZone register,
     // no needs-request. The AST step re-validates and logs the error
     // with the precise source location of the table-path string.
-    if (
-      !this.tablesRegistered &&
-      that.root.connectionDialectZone.getUndefined() === undefined
-    ) {
+    {
       const refs = this.parseReferences.tables;
       const canonical: typeof refs = {};
       for (const rawKey in refs) {
@@ -296,9 +296,10 @@ class ImportsAndTablesStep implements TranslationStep {
           ? that.root.connectionDialectZone.get(info.connectionName)
           : undefined;
         if (dialectName === undefined) {
-          // No dialect resolved (anonymous connection or lookup failed).
-          // Preserve the existing entry; downstream will report the
-          // missing-connection error.
+          // Dialect not (yet) known: preserve the existing entry and
+          // register the raw key in the schema zone so the connection's
+          // missing-table error path still fires. If the dialect resolves
+          // later we'll re-canonicalize on the next step.
           canonical[rawKey] = info;
           that.root.schemaZone.reference(rawKey, {
             url: that.sourceURL,
@@ -327,7 +328,6 @@ class ImportsAndTablesStep implements TranslationStep {
         });
       }
       this.parseReferences.tables = canonical;
-      this.tablesRegistered = true;
     }
 
     const missingTables = that.root.schemaZone.getUndefined();

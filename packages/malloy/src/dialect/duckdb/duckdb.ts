@@ -55,6 +55,7 @@ import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 import type {TinyToken} from '../tiny_parser';
 import {TinyParseError, TinyParser} from '../tiny_parser';
+import type {ValidateTablePathResult} from '../table-path';
 import {validateDuckDBTablePath} from './table-path-parser';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
@@ -114,9 +115,11 @@ export class DuckDBDialect extends PostgresBase {
     return `__udf${Math.floor(Math.random() * 100000)}`;
   }
 
-  override sqlValidateTableName(
-    input: string
-  ): {ok: true; canonical: string} | {ok: false; error: string} {
+  // DuckDB's table-path grammar is too rich for the shared ANSI parser
+  // (it has file-path and explicit-single-quoted-literal branches in
+  // addition to dotted identifier paths). See
+  // `duckdb/table-path-parser.ts` for the grammar.
+  override sqlValidateTableName(input: string): ValidateTablePathResult {
     return validateDuckDBTablePath(input);
   }
 

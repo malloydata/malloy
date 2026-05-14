@@ -61,6 +61,16 @@ import {
 } from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+import {parseDottedTablePath} from '../table-path';
+
+// BigQuery's bare-dotted form: each segment is `[A-Za-z_][A-Za-z0-9_-]*`.
+// Dashes are allowed in segments (the live engine accepts `proj-foo`).
+// Note that no segment-level quoting exists in this form — BigQuery's
+// quote shape is whole-path, handled separately in `sqlValidateTableName`.
+const BIGQUERY_BARE_TOKENS: Record<string, RegExp> = {
+  bare: /^[A-Za-z_][A-Za-z0-9_-]*/,
+  dot: /^\./,
+};
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -215,17 +225,8 @@ export class StandardSQLDialect extends Dialect {
       }
       return {ok: true, canonical: input};
     }
-    // Bare dotted path.
-    if (/^[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*)*$/.test(input)) {
-      return {ok: true, canonical: input};
-    }
-    return {
-      ok: false,
-      error:
-        `Invalid BigQuery table path: ${JSON.stringify(input)} — expected a ` +
-        'dotted identifier path (e.g. `project.dataset.table`, dashes ' +
-        'allowed in segments) or a whole-path backtick-quoted form.',
-    };
+    // Bare dotted path with dashes allowed.
+    return parseDottedTablePath(input, BIGQUERY_BARE_TOKENS, 'BigQuery');
   }
 
   needsCivilTimeComputation(

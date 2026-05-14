@@ -269,29 +269,47 @@ The contract is verified by `packages/malloy/src/dialect/escape.spec.ts`, which 
 User-supplied table-path strings (from `connection.table('…')` and the virtual table map) are validated against each dialect's table-path grammar at translation time, not at SQL emission time. The mechanism is one method:
 
 ```ts
-sqlValidateTableName(input: string):
+abstract sqlValidateTableName(input: string):
   | {ok: true; canonical: string}
   | {ok: false; error: string};
 ```
 
-On success, `canonical` is the SQL fragment that gets pasted directly into `FROM` clauses and stored in `StructDef.tablePath`. There is no separate "quote this table path" step — the validator's canonical form is the SQL form.
+On success, `canonical` is the SQL fragment that gets pasted directly into `FROM` clauses and stored in `StructDef.tablePath`. There is no separate "quote this table path" step — the validator's canonical form is the SQL form. The base class declares this abstract: every dialect must own its own implementation, because empirically the "ANSI shape" dialects disagree on bare-identifier rules (Postgres allows `$`, MySQL allows digit-start, Trino is strict ANSI, etc.).
 
-The base class provides a default implementation that accepts a dotted identifier path where each segment is a bare SQL identifier or a `q`-delimited quoted segment with `qq` doubled-quote escape (where `q` is the dialect's `identifierQuoteChar`). This matches Postgres, MySQL, Snowflake, Trino, and Databricks. For the default, the canonical form is the input verbatim — *we do not auto-quote table names anymore*. Reserved-word tables in the user's database must be quoted explicitly by the user (e.g. `db.table('"select"')` on Postgres).
+**Scope.** `sqlValidateTableName` accepts *names of tables* and the file-path shapes that DuckDB's replacement scans treat as tables. It deliberately rejects table-valued function calls (`read_parquet(...)`, `range(10)`), `LATERAL`, aliases, subqueries, and other things that are valid in a `FROM` clause but compose tables rather than name them. Users who want those use a SQL block (`connection.sql("""SELECT * FROM …""")`). The framework here can be extended later if a real need emerges; today the cost/benefit doesn't justify it.
 
-**Two dialects override this method:**
+**Shared parser for dotted-identifier dialects.** Every "ANSI-shape" dialect (Postgres, MySQL, Snowflake, Trino, Databricks, plus BigQuery's bare-dotted form) uses `parseDottedTablePath` from `dialect/table-path.ts`. The shared parser enforces the dotted-segment grammar via `TinyParser`; each dialect supplies a token map (regex per token name) that encodes its own lexical rules:
 
-- **BigQuery (`standardsql`)** — accepts either a dotted bare-identifier path (dashes allowed in segments) or a whole-path inside backticks (with the backslash escape sequences BigQuery defines for quoted identifiers). Anything else is rejected. Canonical = input.
+```ts
+// e.g. postgres/postgres.ts
+const POSTGRES_TABLE_PATH_TOKENS: Record<string, RegExp> = {
+  bare: /^[A-Za-z_][A-Za-z0-9_$]*/,
+  delim: /^"(?:[^"]|"")*"/,
+  dot: /^\./,
+};
 
-- **DuckDB** — has a richer grammar with a hand-rolled parser in `duckdb/table-path-parser.ts`. Accepts identifier paths, double-quoted identifier paths, explicit single-quoted string-literal forms, AND a "file-path convenience" branch for backwards-compatible inputs like `arrests-latest.parquet` or `data/*.parquet`. The convenience branch wraps the input in single quotes at canonical time, since DuckDB's parser requires the quotes in actual SQL. **If you are writing a validator for a new ANSI SQL dialect, do not use DuckDB as a reference** — its grammar is intentionally permissive in a way that no standard SQL dialect should match.
+override sqlValidateTableName(input: string): ValidateTablePathResult {
+  return parseDottedTablePath(input, POSTGRES_TABLE_PATH_TOKENS, 'Postgres');
+}
+```
+
+Token-map conventions: `bare` and `delim` produce identifier-segment tokens; `dot` is the literal `.`; do **not** include a `space:` rule (TinyParser's whitespace-skipping is keyed on that name, and we want whitespace in a table path to be a hard rejection). The per-dialect regexes were derived from probing the live engines — see `scripts/probe_table_paths.ts`.
+
+**Two dialects have richer top-level structure** and don't fit pure dotted-segment grammar:
+
+- **BigQuery (`standardsql`)** — accepts either a whole-path inside backticks (with `\\X` escape sequences) or a dotted bare-identifier path. The whole-backtick form is handled inline in the override; the bare form delegates to `parseDottedTablePath` with a token map whose `bare` regex allows dashes in segments.
+
+- **DuckDB** — has its own parser at `duckdb/table-path-parser.ts` (a `TinyParser` subclass). Three branches: explicit `'…'` single-quoted literal, identifier path (delegating to the shared parser's grammar), and file-path convenience (`[A-Za-z0-9._\-/:?*]+` wrapped in single quotes at canonical time). **Do not look at DuckDB as a reference for a normal SQL dialect** — its grammar is intentionally richer than what ANSI SQL allows.
 
 When the validator rejects an input:
 - `ImportsAndTablesStep` silently skips the reference (no schemaZone register, no schema-fetch needs-request).
 - The AST step (`TableMethodSource.getSourceDef`) re-validates and logs the error at the AST element's source location — the user sees a squiggle on the `connection.table(...)` expression.
 
 Tests:
-- `packages/malloy/src/dialect/escape.spec.ts` — per-dialect unit tests over an adversarial corpus.
+- `packages/malloy/src/dialect/escape.spec.ts` — per-dialect unit tests with corpora reflecting the live engines' actual behavior.
 - `packages/malloy/src/lang/test/table-path-validation.spec.ts` — end-to-end translator-error tests with source-range assertions.
 - `test/src/databases/duckdb-all/duckdb.spec.ts` — DuckDB-specific shapes (file paths, globs).
+- `scripts/probe_table_paths.ts` — adversarial corpus driver against live engines; rerun whenever a new dialect or token-map change lands.
 
 ## Key Source Files
 

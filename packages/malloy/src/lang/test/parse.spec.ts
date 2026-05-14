@@ -53,7 +53,10 @@ describe('model statements', () => {
       // is basically ignored in the end, as we still eventually get the error
       // that a1 is not a connection (it's a source).
       m.translator.update({
-        errors: {tables: {'a1:aTable': 'invalid connection'}},
+        errors: {
+          tables: {'a1:aTable': 'invalid connection'},
+          connectionDialects: {a1: 'invalid connection'},
+        },
       });
       expect(m).toLog(errorMessage('a1 is not a connection'));
     });

@@ -38,17 +38,6 @@ const ADVERSARIAL_STRINGS: {name: string; value: string}[] = [
   {name: 'tab', value: 'col\tval'},
 ];
 
-// Additional inputs for table paths, which may legitimately contain dots
-// and other path-like characters.
-const ADVERSARIAL_TABLE_PATHS: {name: string; value: string}[] = [
-  ...ADVERSARIAL_STRINGS,
-  {name: 'dotted_schema', value: 'schema.table'},
-  {name: 'three_part_path', value: 'project.dataset.table'},
-  {name: 'dashed_filename', value: 'arrests-latest.parquet'},
-  {name: 'slash_path', value: 'path/to/file.parquet'},
-  {name: 'space_in_name', value: 'my table'},
-];
-
 // ---------------------------------------------------------------------------
 // SQL parsers — minimal but accurate enough to detect smuggling.
 //
@@ -141,40 +130,6 @@ function parseQuotedIdent(
     i++;
   }
   return null;
-}
-
-// Parse a bare SQL identifier starting at offset.
-function parseBareIdent(sql: string, start = 0): ParseResult {
-  const m = sql.slice(start).match(/^[A-Za-z_][A-Za-z0-9_$]*/);
-  if (!m) return null;
-  return {value: m[0], end: start + m[0].length};
-}
-
-// Parse a dotted path of [bare | quoted] segments. Accepts a single
-// identifier quote character. Returns the joined parts and total length
-// consumed, or null if malformed.
-function parseDottedPath(
-  sql: string,
-  identQuote: string,
-  identMode: 'doubled' | 'backslash'
-): {value: string; end: number} | null {
-  let i = 0;
-  const parts: string[] = [];
-  while (i < sql.length) {
-    let seg: ParseResult;
-    if (sql[i] === identQuote) {
-      seg = parseQuotedIdent(sql, identQuote, identMode, i);
-    } else {
-      seg = parseBareIdent(sql, i);
-    }
-    if (!seg) return null;
-    parts.push(seg.value);
-    i = seg.end;
-    if (i >= sql.length) break;
-    if (sql[i] !== '.') return null;
-    i++;
-  }
-  return {value: parts.join('.'), end: i};
 }
 
 // ---------------------------------------------------------------------------
@@ -288,63 +243,6 @@ for (const dialect of getDialects()) {
           expect(parsed).not.toBeNull();
           expect(parsed!.end).toBe(out.length);
           expect(parsed!.value).toBe(value);
-        });
-      }
-    });
-
-    describe('quoteTablePath round-trip', () => {
-      for (const {name, value} of ADVERSARIAL_TABLE_PATHS) {
-        it(name, () => {
-          // A dialect may refuse to encode an input (e.g. BigQuery cannot
-          // represent a backtick inside a backtick-quoted identifier).
-          // Throwing is a safe outcome — better a compile-time error than
-          // SQL that the dialect cannot represent unambiguously.
-          let out: string;
-          try {
-            out = dialect.quoteTablePath(value);
-          } catch (e) {
-            return;
-          }
-          // A dialect may produce either:
-          //   (a) one quoted identifier containing the whole path including dots
-          //       (e.g. BigQuery: `proj.dataset.table`)
-          //   (b) a dot-separated sequence of bare/quoted identifier parts
-          //       (e.g. Postgres: "proj"."dataset"."table")
-          //   (c) a single string literal — only used by DuckDB for paths
-          //       which are actually file references rather than identifiers.
-          // Round-trip succeeds if any of these interpretations decodes
-          // exactly to the input.
-          const candidates: (() => string | null)[] = [
-            // (a) Whole path as one quoted identifier.
-            () => {
-              const r = parseQuotedIdent(out, identQuote, identStyle);
-              if (r && r.end === out.length) return r.value;
-              return null;
-            },
-            // (b) Dotted sequence of identifier segments.
-            () => {
-              const r = parseDottedPath(out, identQuote, identStyle);
-              if (r && r.end === out.length) return r.value;
-              return null;
-            },
-            // (c) Single-quoted string literal (DuckDB file paths).
-            () => {
-              const r = parseStringLiteral(out, stringStyle);
-              if (r && r.end === out.length) return r.value;
-              return null;
-            },
-          ];
-
-          let decoded: string | null = null;
-          for (const tryParse of candidates) {
-            const v = tryParse();
-            if (v === value) {
-              decoded = v;
-              break;
-            }
-          }
-
-          expect(decoded).toBe(value);
         });
       }
     });
@@ -487,48 +385,161 @@ describe('base Dialect fail-fast on missing config', () => {
 // sqlValidateTableName — table-path grammar per dialect
 // ---------------------------------------------------------------------------
 //
-// Inputs that every dialect must accept (canonical form should equal the
-// input verbatim for these).
-const VALID_TABLE_PATHS = [
+// The validator's contract is per-dialect: each engine has its own bare-
+// identifier rules (Postgres allows `$`, MySQL allows digit-start, Trino
+// is strict ANSI, etc.). These corpora were derived from probing the live
+// engines (see scripts/probe_table_paths.ts) and labeled accordingly.
+//
+// Inputs that every dialect — including the special-grammar ones — must
+// agree on. DuckDB's wider acceptance set is tested separately.
+const UNIVERSAL_ACCEPT = [
   {name: 'bare', value: 'foo'},
-  {name: 'dotted', value: 'schema.foo'},
-  {name: 'three_part', value: 'project.schema.foo'},
+  {name: 'dotted_two_part', value: 'schema.foo'},
+  {name: 'dotted_three_part', value: 'project.schema.foo'},
 ];
 
-// Inputs that every standard SQL dialect must reject. DuckDB is special
-// (file-path convenience + explicit-single-quoted form), so it's tested
-// separately.
-const INVALID_TABLE_PATHS = [
+const UNIVERSAL_REJECT = [
   {name: 'empty', value: ''},
   {name: 'leading_dot', value: '.foo'},
   {name: 'trailing_dot', value: 'foo.'},
-  {name: 'starts_with_digit', value: '1foo'},
   {name: 'has_space', value: 'foo bar'},
   {name: 'has_semicolon', value: 'foo;DROP TABLE x;--'},
   {name: 'mixed_ident_string', value: "schema.'name'"},
-  {name: 'unterminated_quote', value: '"foo'},
 ];
+
+// Per-dialect cases — divergences from the universal corpus that this
+// dialect's engine actually treats differently. The label reflects the
+// live engine's behavior (verified empirically).
+interface PerDialectCase {
+  name: string;
+  value: string;
+}
+interface PerDialectCorpus {
+  accept: PerDialectCase[];
+  reject: PerDialectCase[];
+}
+
+const PER_DIALECT: Record<string, PerDialectCorpus> = {
+  postgres: {
+    accept: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+      {name: 'dotted_quoted', value: '"schema"."foo"'},
+    ],
+    reject: [
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+    ],
+  },
+  mysql: {
+    accept: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'digit_start_non_numeric', value: '1foo'},
+      {name: 'backtick_quoted', value: '`foo`'},
+      {name: 'backtick_doubled', value: '`foo``bar`'},
+    ],
+    reject: [
+      {name: 'pure_numeric', value: '123'},
+      {name: 'unterminated_backtick', value: '`foo'},
+    ],
+  },
+  snowflake: {
+    accept: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+    ],
+    reject: [
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+    ],
+  },
+  trino: {
+    accept: [
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+    ],
+    reject: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+    ],
+  },
+  presto: {
+    accept: [
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+    ],
+    reject: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+    ],
+  },
+  databricks: {
+    accept: [
+      {name: 'digit_start_non_numeric', value: '1foo'},
+      {name: 'backtick_quoted', value: '`foo`'},
+      {name: 'backtick_doubled', value: '`foo``bar`'},
+    ],
+    reject: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'pure_numeric', value: '123'},
+      {name: 'unterminated_backtick', value: '`foo'},
+    ],
+  },
+  standardsql: {
+    accept: [
+      {name: 'dashed_segment', value: 'my-project.dataset.table'},
+      {name: 'whole_backtick', value: '`my-project.dataset.table`'},
+    ],
+    reject: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unmatched_backtick', value: '`foo'},
+    ],
+  },
+};
 
 for (const dialect of getDialects()) {
   describe(`${dialect.name} sqlValidateTableName`, () => {
-    describe('accepts valid table paths', () => {
-      for (const {name, value} of VALID_TABLE_PATHS) {
+    describe('universal accept', () => {
+      for (const {name, value} of UNIVERSAL_ACCEPT) {
         it(name, () => {
           const result = dialect.sqlValidateTableName(value);
           expect(result.ok).toBe(true);
-          if (result.ok) {
-            // Canonical form is input verbatim for plain identifier paths.
-            expect(result.canonical).toBe(value);
-          }
+          if (result.ok) expect(result.canonical).toBe(value);
         });
       }
     });
 
     // DuckDB's file-path convenience accepts many shapes the standard
-    // dialects reject; skip the rejection corpus there.
+    // dialects reject; skip the universal-reject corpus there.
     if (dialect.name !== 'duckdb') {
-      describe('rejects invalid table paths', () => {
-        for (const {name, value} of INVALID_TABLE_PATHS) {
+      describe('universal reject', () => {
+        for (const {name, value} of UNIVERSAL_REJECT) {
+          it(name, () => {
+            const result = dialect.sqlValidateTableName(value);
+            expect(result.ok).toBe(false);
+          });
+        }
+      });
+    }
+
+    const perDialect = PER_DIALECT[dialect.name];
+    if (perDialect) {
+      describe('dialect-specific accept', () => {
+        for (const {name, value} of perDialect.accept) {
+          it(name, () => {
+            const result = dialect.sqlValidateTableName(value);
+            expect(result.ok).toBe(true);
+            if (result.ok) expect(result.canonical).toBe(value);
+          });
+        }
+      });
+      describe('dialect-specific reject', () => {
+        for (const {name, value} of perDialect.reject) {
           it(name, () => {
             const result = dialect.sqlValidateTableName(value);
             expect(result.ok).toBe(false);

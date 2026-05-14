@@ -98,6 +98,14 @@ class FindExternalReferences implements MalloyParserListener {
     const tablePath = getPlainString(pcx.tablePath());
     const reference = this.trans.rangeFromContext(pcx);
     this.registerTableReference(connId, tablePath, reference);
+    // Validating the table path against the dialect's grammar (in
+    // `ImportsAndTablesStep`) requires the connection's dialect to be
+    // resolved, so register a need for it. Without this, the validator
+    // is bypassed and dialect-specific canonical forms (e.g. DuckDB's
+    // wrapping of file-path-shaped inputs in single quotes) are lost.
+    if (connId && !this.needConnectionDialects[connId]) {
+      this.needConnectionDialects[connId] = {firstReference: reference};
+    }
   }
 
   enterVirtualSource(pcx: parser.VirtualSourceContext) {

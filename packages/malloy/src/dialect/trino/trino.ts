@@ -57,6 +57,19 @@ import {
   TRINO_DIALECT_FUNCTIONS,
 } from './dialect_functions';
 import {TRINO_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+import type {ValidateTablePathResult} from '../table-path';
+import {parseDottedTablePath} from '../table-path';
+
+// Trino bare identifier: strict ANSI — `[A-Za-z_][A-Za-z0-9_]*`. Verified
+// against the live engine: `$` in a bare identifier is rejected with
+// "mismatched input '$'", and a leading digit is rejected with
+// "identifiers must not start with a digit". Quoted identifiers use
+// `"…"` with `""` to escape an embedded quote. Presto inherits.
+const TRINO_TABLE_PATH_TOKENS: Record<string, RegExp> = {
+  bare: /^[A-Za-z_][A-Za-z0-9_]*/,
+  delim: /^"(?:[^"]|"")*"/,
+  dot: /^\./,
+};
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -138,6 +151,10 @@ export class TrinoDialect extends PostgresBase {
   supportsTempTables = false;
   supportsCountApprox = true;
   supportsHyperLogLog = true;
+
+  override sqlValidateTableName(input: string): ValidateTablePathResult {
+    return parseDottedTablePath(input, TRINO_TABLE_PATH_TOKENS, this.name);
+  }
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(SEQUENCE(0,${groupSetCount})))`;

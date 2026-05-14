@@ -143,59 +143,6 @@ export function inDays(units: string): boolean {
   return allUnits.indexOf(units) >= dayIndex;
 }
 
-/**
- * Recognize a dotted identifier path where each segment is either a
- * bare SQL identifier (`[A-Za-z_][A-Za-z0-9_]*`) or a `q`-delimited
- * quoted identifier with doubled-quote escape (`qq` inside the body
- * represents one literal `q`). Segments are joined by `.`.
- *
- * Returns true if the entire input is a valid path; false otherwise.
- * No information about the parsed structure is returned — this is the
- * validator for dialects whose canonical form is the user's input
- * verbatim. Dialects with richer grammars (BigQuery, DuckDB) override
- * `sqlValidateTableName` directly.
- */
-export function parseDottedIdentPathDoubled(
-  input: string,
-  quoteChar: string
-): boolean {
-  if (input.length === 0) return false;
-  let i = 0;
-  while (i < input.length) {
-    // Parse one segment.
-    if (input[i] === quoteChar) {
-      i++;
-      let closed = false;
-      while (i < input.length) {
-        if (input[i] === quoteChar) {
-          if (input[i + 1] === quoteChar) {
-            i += 2; // doubled-quote escape
-          } else {
-            i++; // closing quote
-            closed = true;
-            break;
-          }
-        } else {
-          i++;
-        }
-      }
-      if (!closed) return false;
-    } else if (/[A-Za-z_]/.test(input[i])) {
-      while (i < input.length && /[A-Za-z0-9_]/.test(input[i])) {
-        i++;
-      }
-    } else {
-      return false;
-    }
-    // After a segment, either end-of-input or a dot-then-another-segment.
-    if (i === input.length) return true;
-    if (input[i] !== '.') return false;
-    i++;
-    if (i === input.length) return false; // trailing dot
-  }
-  return true;
-}
-
 // Return the active query timezone, if it different than the
 // "native" timezone for timestamps.
 export function qtz(qi: QueryInfo): string | undefined {
@@ -452,24 +399,21 @@ export abstract class Dialect {
    *
    * # When implementing this for a new dialect
    *
-   * **Don't override unless you have to.** The base implementation in
-   * `Dialect` accepts a dotted identifier path where each segment is a
-   * bare SQL identifier or a `q`-delimited quoted segment with `qq`
-   * doubled-quote escape (where `q` is the dialect's
-   * `identifierQuoteChar`). That's the right answer for every
-   * dialect whose grammar matches the ANSI shape: Postgres, MySQL,
-   * Snowflake, Trino, Databricks. Just set `identifierQuoteChar`,
-   * `identifierEscapeStyle = Doubled`, and let the base do its thing.
+   * Every dialect must own this. There is no shared default — empirically,
+   * "ANSI-shape" dialects disagree on which characters can appear in a
+   * bare identifier (Postgres allows `$`, MySQL allows digit-start, etc.).
+   * The right answer is dialect-specific even for things that look
+   * universal.
    *
-   * Override only when your dialect's table-path grammar is
-   * genuinely different:
-   *   - **BigQuery**: whole-path inside one set of backticks, with
-   *     backslash-style escape and rejection of embedded backticks.
-   *   - **DuckDB**: accepts arbitrary string-literal table names and
-   *     file-path conveniences (globs, URLs). Uses a real peggy parser.
-   *     **Do not look at DuckDB's implementation as a reference for
-   *     a normal SQL dialect** — its grammar is intentionally richer
-   *     than what ANSI SQL allows.
+   * For dialects whose grammar is genuinely a dotted sequence of
+   * identifier segments (every ANSI-shape dialect we ship), use
+   * `parseDottedTablePath` from `dialect/table-path.ts` and supply a
+   * `TinyParser` token map (`{bare, delim, dot}` regexes) that encodes
+   * your engine's segment rules. That's a 3–5 line override.
+   *
+   * For dialects with grammars that aren't dotted-segment-shaped
+   * (BigQuery's whole-path backtick form, DuckDB's file-path convenience
+   * and explicit-string-literal forms), implement the override directly.
    *
    * # Contract
    *
@@ -498,28 +442,9 @@ export abstract class Dialect {
    * looks different (e.g. DuckDB's file-path convenience wraps the
    * input in single quotes).
    */
-  sqlValidateTableName(
+  abstract sqlValidateTableName(
     input: string
-  ): {ok: true; canonical: string} | {ok: false; error: string} {
-    if (this.identifierEscapeStyle !== EscapeStyle.Doubled) {
-      throw new Error(
-        `${this.name}: sqlValidateTableName base implementation only ` +
-          `supports doubled-quote identifier escape. Override for other styles.`
-      );
-    }
-    if (parseDottedIdentPathDoubled(input, this.identifierQuoteChar)) {
-      return {ok: true, canonical: input};
-    }
-    return {
-      ok: false,
-      error:
-        `Invalid ${this.name} table path: ${JSON.stringify(input)} — expected ` +
-        `a dotted identifier path (each segment a bare identifier or ` +
-        `${this.identifierQuoteChar}quoted${this.identifierQuoteChar}, ` +
-        `with ${this.identifierQuoteChar}${this.identifierQuoteChar} to escape ` +
-        `the quote character).`,
-    };
-  }
+  ): {ok: true; canonical: string} | {ok: false; error: string};
 
   // returns an table that is a 0 based array of numbers
   abstract sqlGroupSetTable(groupSetCount: number): string;

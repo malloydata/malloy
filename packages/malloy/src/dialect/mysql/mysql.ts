@@ -60,6 +60,20 @@ import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {MYSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+import type {ValidateTablePathResult} from '../table-path';
+import {parseDottedTablePath} from '../table-path';
+
+// MySQL bare identifier: `[A-Za-z0-9_$]+`, can start with a digit, but
+// must not consist entirely of digits (otherwise it lexes as a number
+// literal). Verified against the live engine: both `foo$bar` and `1foo`
+// resolve to table names; `123` would not. The bare regex requires at
+// least one non-digit character to enforce that distinction. Quoted
+// identifiers use backticks with `` `` `` to escape an embedded backtick.
+const MYSQL_TABLE_PATH_TOKENS: Record<string, RegExp> = {
+  bare: /^[A-Za-z0-9_$]*[A-Za-z_$][A-Za-z0-9_$]*/,
+  delim: /^`(?:[^`]|``)*`/,
+  dot: /^\./,
+};
 
 const msExtractionMap: Record<string, string> = {
   day_of_week: 'DAYOFWEEK',
@@ -156,6 +170,10 @@ export class MySQLDialect extends Dialect {
   booleanType: BooleanTypeSupport = 'simulated';
   orderByClause: OrderByClauseType = 'ordinal';
   maxIdentifierLength = 64;
+
+  override sqlValidateTableName(input: string): ValidateTablePathResult {
+    return parseDottedTablePath(input, MYSQL_TABLE_PATH_TOKENS, 'MySQL');
+  }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {

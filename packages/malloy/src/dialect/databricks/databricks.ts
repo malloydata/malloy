@@ -38,6 +38,20 @@ import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {DATABRICKS_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DATABRICKS_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+import type {ValidateTablePathResult} from '../table-path';
+import {parseDottedTablePath} from '../table-path';
+
+// Databricks bare identifier: `[A-Za-z0-9_]+`, can start with a digit
+// (but must not be entirely digits, otherwise it lexes as a number).
+// Verified against the live engine: `1foo` resolves to a table name,
+// but `$` is rejected with PARSE_SYNTAX_ERROR. The bare regex requires
+// at least one non-digit. Quoted identifiers use backticks with `` `` ``
+// to escape an embedded backtick.
+const DATABRICKS_TABLE_PATH_TOKENS: Record<string, RegExp> = {
+  bare: /^[A-Za-z0-9_]*[A-Za-z_][A-Za-z0-9_]*/,
+  delim: /^`(?:[^`]|``)*`/,
+  dot: /^\./,
+};
 
 const extractionMap: Record<string, string> = {
   day_of_week: 'DAYOFWEEK',
@@ -106,6 +120,14 @@ export class DatabricksDialect extends Dialect {
   hasTimestamptz = false;
   supportsBigIntPrecision = false;
   maxIdentifierLength = 255;
+
+  override sqlValidateTableName(input: string): ValidateTablePathResult {
+    return parseDottedTablePath(
+      input,
+      DATABRICKS_TABLE_PATH_TOKENS,
+      'Databricks'
+    );
+  }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {

@@ -3,161 +3,125 @@
  * SPDX-License-Identifier: MIT
  */
 
-// Validator for DuckDB table-path strings supplied to `connection.table()`.
+// DuckDB's table-path validator.
 //
-// DuckDB's FROM-clause table grammar is permissive: it accepts identifier
-// paths, double-quoted identifiers, single-quoted string-literal names,
-// and (via replacement scans) file paths and globs. We restrict
-// `connection.table()` to a defined subset and reject everything else at
-// translation time. The grammar:
+// DuckDB accepts a richer set of table references than any ANSI-shape
+// dialect, so it has its own parser rather than reusing the shared one.
+// Three disjoint branches, tried in order:
 //
-//   TablePath
-//     = ExplicitSingleQuoted             # 'foo.csv', 'foo''bar', s3://x
-//     / IdentifierPath                   # foo, foo.bar, "name", "a"."b"
-//     / FilePathConvenience              # arrests-latest.parquet, data/*.parquet
+//   1. Explicit single-quoted literal: `'foo.csv'`, `'thing.with.dots'`,
+//      `'o''brien'`. The closing quote must be the last character; `''`
+//      inside the body escapes a single quote. Canonical form is the
+//      input verbatim — this is already valid SQL.
 //
-//   ExplicitSingleQuoted = "'" ( [^'] / "''" )* "'"
-//   IdentifierPath       = Segment ( "." Segment )*
-//   Segment              = BareIdent / QuotedIdent
-//   BareIdent            = [A-Za-z_] [A-Za-z0-9_]*
-//   QuotedIdent          = '"' ( [^"] / '""' )* '"'
-//   FilePathConvenience  = [A-Za-z0-9._\-/:?*]+
+//   2. Identifier path: bare or `"..."` quoted segments, dotted.
+//      Same grammar as the ANSI dialects use. Canonical form is the
+//      input verbatim.
 //
-// The FilePathConvenience char set is deliberately narrow:
-//   - alphanumerics, dot, dash, underscore: identifier-like
-//   - slash, colon: paths and URL schemes
-//   - question-mark, star: DuckDB glob wildcards
-// Anything outside that set — spaces, parens, semicolons, `'`, `"` — falls
-// through to a translation-time error. Users who need exotic characters
-// in a path use the ExplicitSingleQuoted form (typing literal `'`s into
-// their Malloy string).
+//   3. File-path convenience: a non-empty run of
+//      `[A-Za-z0-9._\-/:?*]` characters. The char set is deliberately
+//      narrow — single quotes, whitespace, parentheses, and semicolons
+//      are excluded so the convenience form can't carry a SQL payload.
+//      Canonical form wraps the input in single quotes so it becomes a
+//      DuckDB string-literal table name.
 //
-// In all three branches the canonical SQL form is the input verbatim.
+// The branches are not LL(1)-distinguishable by first character (a
+// letter can start either branch 2 or branch 3), so we try branch 2
+// first and fall through to branch 3 if it can't consume the input.
+//
+// The parser uses TinyParser for tokenization. The single token map
+// names every shape DuckDB cares about; `parse()` dispatches based on
+// which token sequence we see.
 
-export type ValidationResult =
-  | {ok: true; canonical: string}
-  | {ok: false; error: string};
+import {TinyParser, TinyParseError} from '../tiny_parser';
+import type {ValidateTablePathResult} from '../table-path';
 
-const RE_BARE_IDENT_START = /[A-Za-z_]/;
-const RE_BARE_IDENT_CONT = /[A-Za-z0-9_]/;
-const RE_CONVENIENCE_CHAR = /[A-Za-z0-9._\-/:?*]/;
-
-export function validateDuckDBTablePath(input: string): ValidationResult {
-  if (input.length === 0) {
-    return {ok: false, error: 'DuckDB table path is empty'};
+class DuckDBTablePathParser extends TinyParser {
+  constructor(input: string) {
+    // Tokens are tried in declaration order, first match wins. The
+    // ordering that matters is `bare` before `filePath`: both match an
+    // input like `foo`, and we want it lexed as a bare identifier
+    // (entering branch 2) rather than as a single file-path token.
+    super(input, {
+      singleQuoted: /^'(?:[^']|'')*'/,
+      bare: /^[A-Za-z_][A-Za-z0-9_]*/,
+      delim: /^"(?:[^"]|"")*"/,
+      dot: /^\./,
+      filePath: /^[A-Za-z0-9._\-/:?*]+/,
+    });
   }
 
-  if (input[0] === "'") {
-    return parseExplicitSingleQuoted(input);
-  }
+  parse(): ValidateTablePathResult {
+    if (this.input.length === 0) {
+      return {ok: false, error: 'DuckDB table path is empty'};
+    }
+    try {
+      const first = this.peek();
 
-  // Try IdentifierPath. If the whole input is consumed, the input is
-  // already SQL-ready and is its own canonical form.
-  if (consumesAll(input, parseIdentifierPath)) {
-    return {ok: true, canonical: input};
-  }
+      // Branch 1: whole input is a single-quoted literal.
+      if (first.type === 'singleQuoted') {
+        this.read();
+        if (!this.eof()) {
+          throw this.parseError(
+            'trailing characters after closing single quote'
+          );
+        }
+        return {ok: true, canonical: this.input};
+      }
 
-  // Try FilePathConvenience. The convenience char set excludes `'` (and
-  // any SQL-suspicious char), so wrapping in single quotes produces a
-  // safe DuckDB string-literal table name — no escape needed.
-  if (consumesAll(input, parseConvenience)) {
+      // Branch 2: identifier path. We commit only if it consumes the
+      // entire input; otherwise we fall through to the convenience
+      // branch below (the parser state stops at the offending char).
+      if (first.type === 'bare' || first.type === 'delim') {
+        this.read();
+        while (this.match('dot')) {
+          const seg = this.peek();
+          if (seg.type !== 'bare' && seg.type !== 'delim') {
+            // Identifier path failed mid-stream; try convenience.
+            return tryFilePathConvenience(this.input);
+          }
+          this.read();
+        }
+        if (this.eof()) {
+          return {ok: true, canonical: this.input};
+        }
+        // Identifier path stopped before end-of-input; try convenience.
+        return tryFilePathConvenience(this.input);
+      }
+
+      // Branch 3: file-path convenience.
+      return tryFilePathConvenience(this.input);
+    } catch (e) {
+      if (e instanceof TinyParseError) {
+        return {ok: false, error: e.message};
+      }
+      throw e;
+    }
+  }
+}
+
+function tryFilePathConvenience(input: string): ValidateTablePathResult {
+  const p = new TinyParser(input, {
+    filePath: /^[A-Za-z0-9._\-/:?*]+/,
+  });
+  const tok = p.peek();
+  if (tok.type === 'filePath' && tok.text === input) {
     return {ok: true, canonical: `'${input}'`};
   }
-
   return {
     ok: false,
     error:
-      `Invalid DuckDB table path: ${JSON.stringify(input)} — expected one of ` +
-      'an identifier path (e.g. main.flights), a quoted identifier ("name"), ' +
-      "a single-quoted string ('foo.csv'), or a file-path-shaped string of " +
-      'letters, digits, and `._-/:?*`. Wrap exotic paths in single quotes.',
+      `Invalid DuckDB table path: ${JSON.stringify(input)} — expected an ` +
+      'identifier path, a quoted identifier path, a single-quoted ' +
+      "literal ('foo.csv'), or a file-path-shaped string of letters, " +
+      'digits, and `._-/:?*`. For table-valued function calls (e.g. ' +
+      "read_parquet('foo.parquet')) or other table expressions, use a " +
+      'SQL block instead: connection.sql("""SELECT * FROM …""").',
   };
 }
 
-function consumesAll(
-  input: string,
-  parse: (s: string, i: number) => number | null
-): boolean {
-  const end = parse(input, 0);
-  return end === input.length;
-}
-
-// Returns the index just past the explicit single-quoted literal, or null.
-function parseExplicitSingleQuoted(input: string): ValidationResult {
-  // input[0] === "'"
-  let i = 1;
-  while (i < input.length) {
-    if (input[i] === "'") {
-      if (input[i + 1] === "'") {
-        i += 2; // doubled-quote escape
-      } else {
-        // Closing quote. Must be the last character.
-        if (i === input.length - 1) {
-          return {ok: true, canonical: input};
-        }
-        return {
-          ok: false,
-          error:
-            `Invalid DuckDB table path: ${JSON.stringify(input)} — ` +
-            'trailing characters after closing single quote.',
-        };
-      }
-    } else {
-      i++;
-    }
-  }
-  return {
-    ok: false,
-    error:
-      `Invalid DuckDB table path: ${JSON.stringify(input)} — unterminated ` +
-      "single-quoted string (use '' to embed a single quote inside).",
-  };
-}
-
-// Returns the index after the last consumed character of an IdentifierPath
-// starting at `i`, or null if the input does not start with a valid path.
-function parseIdentifierPath(input: string, i: number): number | null {
-  let pos = parseSegment(input, i);
-  if (pos === null) return null;
-  while (pos < input.length && input[pos] === '.') {
-    const next = parseSegment(input, pos + 1);
-    if (next === null) return null;
-    pos = next;
-  }
-  return pos;
-}
-
-function parseSegment(input: string, i: number): number | null {
-  if (i >= input.length) return null;
-  if (input[i] === '"') {
-    // Quoted identifier with "" doubled-quote escape.
-    let j = i + 1;
-    while (j < input.length) {
-      if (input[j] === '"') {
-        if (input[j + 1] === '"') {
-          j += 2;
-        } else {
-          return j + 1;
-        }
-      } else {
-        j++;
-      }
-    }
-    return null; // unterminated
-  }
-  if (!RE_BARE_IDENT_START.test(input[i])) return null;
-  let j = i + 1;
-  while (j < input.length && RE_BARE_IDENT_CONT.test(input[j])) {
-    j++;
-  }
-  return j;
-}
-
-function parseConvenience(input: string, i: number): number | null {
-  if (i >= input.length || !RE_CONVENIENCE_CHAR.test(input[i])) return null;
-  let j = i + 1;
-  while (j < input.length && RE_CONVENIENCE_CHAR.test(input[j])) {
-    j++;
-  }
-  return j;
+export function validateDuckDBTablePath(
+  input: string
+): ValidateTablePathResult {
+  return new DuckDBTablePathParser(input).parse();
 }

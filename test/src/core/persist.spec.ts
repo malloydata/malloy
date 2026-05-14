@@ -273,7 +273,7 @@ describe('source persistence', () => {
           connectionDigests: {[tstDB]: connectionDigest},
         });
 
-        expect(sql).toContain('"my_schema"."persisted_carrier_stats"');
+        expect(sql).toContain('my_schema.persisted_carrier_stats');
         expect(sql).not.toContain('COUNT(');
       });
 
@@ -365,7 +365,7 @@ describe('source persistence', () => {
           connectionDigests: {[tstDB]: connectionDigest},
         });
 
-        expect(sql).toContain('"cached"."carrier_stats_table"');
+        expect(sql).toContain('cached.carrier_stats_table');
         expect(sql).not.toContain('COUNT(');
       });
     });
@@ -1144,7 +1144,7 @@ describe('source persistence', () => {
         connectionDigests: {[tstDB]: connectionDigest},
       });
 
-      expect(sql).toContain('"cache"."carrier_stats_built"');
+      expect(sql).toContain('cache.carrier_stats_built');
       expect(sql).not.toContain('COUNT(');
     });
   });
@@ -1222,7 +1222,7 @@ describe('source persistence', () => {
         connectionDigests: {[tstDB]: connectionDigest},
       });
 
-      expect(wrapperSQL).toContain('"build_cache"."carrier_stats_v1"');
+      expect(wrapperSQL).toContain('build_cache.carrier_stats_v1');
       expect(wrapperSQL).toContain('flight_count > 100');
 
       const wrapperBuildId = wrapper.makeBuildId(connectionDigest, wrapperSQL);
@@ -1460,7 +1460,7 @@ describe('source persistence', () => {
       );
 
       const sql = await getModel2SQL(manifest);
-      expect(sql).toContain('"cached"."carrier_stats_table"');
+      expect(sql).toContain('cached.carrier_stats_table');
       expect(sql).not.toContain('COUNT(');
     });
 
@@ -1499,7 +1499,7 @@ describe('source persistence', () => {
       );
 
       const sql = await getModel2SQL(manifest);
-      expect(sql).toContain('"cached"."carrier_stats_table"');
+      expect(sql).toContain('cached.carrier_stats_table');
       expect(sql).not.toContain('COUNT(');
     });
 
@@ -1519,7 +1519,7 @@ describe('source persistence', () => {
       );
 
       const sql = await getModel2SQL(manifest);
-      expect(sql).toContain('"cached"."carrier_stats_table"');
+      expect(sql).toContain('cached.carrier_stats_table');
       expect(sql).not.toContain('COUNT(');
     });
 
@@ -1784,7 +1784,7 @@ describe('source persistence', () => {
       const sqlWithManifest = await rt
         .loadQuery(BY_CARRIER_QUERY_MODEL)
         .getSQL();
-      expect(sqlWithManifest).toMatch(/FROM\s+"by_carrier"\s/);
+      expect(sqlWithManifest).toMatch(/FROM\s+by_carrier\s/);
 
       // Override with empty manifest — SQL should NOT reference the table
       const sqlWithoutManifest = await rt
@@ -1792,7 +1792,7 @@ describe('source persistence', () => {
           buildManifest: EMPTY_BUILD_MANIFEST,
         })
         .getSQL();
-      expect(sqlWithoutManifest).not.toMatch(/FROM\s+"by_carrier"\s/);
+      expect(sqlWithoutManifest).not.toMatch(/FROM\s+by_carrier\s/);
     });
 
     it('query results match with and without manifest', async () => {
@@ -1988,14 +1988,14 @@ describe('source persistence', () => {
       const sqlBefore = await runtime
         .loadQuery(BY_CARRIER_QUERY_MODEL)
         .getSQL();
-      expect(sqlBefore).not.toMatch(/FROM\s+"by_carrier"\s/);
+      expect(sqlBefore).not.toMatch(/FROM\s+by_carrier\s/);
 
       // Set manifest via setter
       runtime.buildManifest = manifest;
 
       // Now SQL SHOULD reference the table
       const sqlAfter = await runtime.loadQuery(BY_CARRIER_QUERY_MODEL).getSQL();
-      expect(sqlAfter).toMatch(/FROM\s+"by_carrier"\s/);
+      expect(sqlAfter).toMatch(/FROM\s+by_carrier\s/);
     });
   });
 
@@ -2057,7 +2057,7 @@ describe('source persistence', () => {
       const resultSQL = await runtimeWithManifest(manifest)
         .loadQuery(strictModelCode)
         .getSQL();
-      expect(resultSQL).toContain('"cached"."by_carrier"');
+      expect(resultSQL).toContain('cached.by_carrier');
     });
 
     it('non-strict manifest falls through when persist source is missing', async () => {
@@ -2111,7 +2111,7 @@ describe('source persistence', () => {
       const sql = await runtimeWithManifest(manifest)
         .loadQuery(modelCode)
         .getSQL();
-      expect(sql).toContain('"cached"."by_carrier"');
+      expect(sql).toContain('cached.by_carrier');
     });
 
     it('strict manifest ignores named non-persistent source used as join', async () => {
@@ -2157,7 +2157,7 @@ describe('source persistence', () => {
       const sql = await runtimeWithManifest(manifest)
         .loadQuery(modelCode)
         .getSQL();
-      expect(sql).toContain('"cached"."by_carrier"');
+      expect(sql).toContain('cached.by_carrier');
     });
   });
 });

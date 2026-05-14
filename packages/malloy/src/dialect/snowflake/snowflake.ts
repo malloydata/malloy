@@ -63,6 +63,18 @@ import {
 } from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+import type {ValidateTablePathResult} from '../table-path';
+import {parseDottedTablePath} from '../table-path';
+
+// Snowflake bare identifier: starts with letter or underscore, continues
+// with letter, digit, underscore, or `$`. Verified against the live
+// engine: `foo$bar` resolves to a table name. Quoted identifiers use
+// `"…"` with `""` to escape an embedded quote.
+const SNOWFLAKE_TABLE_PATH_TOKENS: Record<string, RegExp> = {
+  bare: /^[A-Za-z_][A-Za-z0-9_$]*/,
+  delim: /^"(?:[^"]|"")*"/,
+  dot: /^\./,
+};
 
 const extractionMap: Record<string, string> = {
   'day_of_week': 'dayofweek',
@@ -136,6 +148,14 @@ export class SnowflakeDialect extends Dialect {
   supportsQualify = false;
   supportsPipelinesInViews = false;
   supportsComplexFilteredSources = false;
+
+  override sqlValidateTableName(input: string): ValidateTablePathResult {
+    return parseDottedTablePath(
+      input,
+      SNOWFLAKE_TABLE_PATH_TOKENS,
+      'Snowflake'
+    );
+  }
 
   // Snowflake uses NUMBER(38,0) for all integers - can exceed JS Number precision
   override integerTypeMappings: IntegerTypeMapping[] = [
