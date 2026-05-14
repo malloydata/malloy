@@ -41,6 +41,8 @@ import type {
 } from '../model/malloy_types';
 import {isRawCast, isBasicAtomic, TD, isDateUnit} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
+import type {ValidateTablePathResult} from './table-path';
+import {validateDottedTablePath} from './table-path';
 
 interface DialectField {
   typeDef: AtomicTypeDef;
@@ -391,8 +393,51 @@ export abstract class Dialect {
     [name: string]: DialectFunctionOverloadDef[];
   };
 
-  // return a quoted string for use as a table path.
-  abstract quoteTablePath(tablePath: string): string;
+  /**
+   * Regex matching one bare (unquoted) table-path segment for this
+   * dialect, anchored at the start of the input. Drives the default
+   * `sqlValidateTableName` along with `identifierQuoteChar` and
+   * `identifierEscapeStyle`.
+   *
+   * The default is strict ANSI: `[A-Za-z_][A-Za-z0-9_]*`. Override to
+   * widen the char set (Postgres allows `$`, MySQL allows digit-start
+   * with caveats, BigQuery allows dashes, …). The per-dialect regexes
+   * were verified by probing live engines.
+   */
+  tablePathBareIdentRegex: RegExp = /^[A-Za-z_][A-Za-z0-9_]*/;
+
+  /**
+   * Validate a user-supplied table-path string for this dialect. On
+   * success, the canonical form is the SQL fragment that gets pasted
+   * into `FROM` clauses and stored in `StructDef.tablePath`. Canonical
+   * equals input verbatim except where a Malloy convenience needs
+   * translating into dialect SQL (today: DuckDB's file-path branch
+   * wraps the input in single quotes).
+   *
+   * The default implementation handles every dialect whose table-path
+   * grammar is a dotted sequence of `bare | quoted` segments — every
+   * dialect we ship except DuckDB. New dialects of that shape need
+   * only override `tablePathBareIdentRegex`; override
+   * `sqlValidateTableName` itself only if your grammar is structurally
+   * different.
+   */
+  sqlValidateTableName(input: string): ValidateTablePathResult {
+    if (
+      this.identifierEscapeStyle !== EscapeStyle.Doubled &&
+      this.identifierEscapeStyle !== EscapeStyle.Backslash
+    ) {
+      throw new Error(
+        `${this.name}: sqlValidateTableName requires identifierEscapeStyle ` +
+          'to be set to Doubled or Backslash (or override sqlValidateTableName).'
+      );
+    }
+    return validateDottedTablePath(input, {
+      quoteChar: this.identifierQuoteChar,
+      escapeStyle: this.identifierEscapeStyle,
+      bareIdentRegex: this.tablePathBareIdentRegex,
+      dialectName: this.name,
+    });
+  }
 
   // returns an table that is a 0 based array of numbers
   abstract sqlGroupSetTable(groupSetCount: number): string;
@@ -551,21 +596,6 @@ export abstract class Dialect {
         'Set it to EscapeStyle.Doubled or EscapeStyle.Backslash on the dialect, ' +
         'or override sqlQuoteIdentifier.'
     );
-  }
-
-  /**
-   * Quote a single segment of a table path. When `alwaysQuote` is false,
-   * a segment that already looks like a bare SQL identifier is returned
-   * unquoted, which produces tidier SQL for the common case. When true,
-   * the segment is always wrapped and escaped.
-   *
-   * Dialects compose this in their `quoteTablePath` implementations.
-   */
-  protected quoteIdentifierPart(part: string, alwaysQuote: boolean): string {
-    if (!alwaysQuote && /^[A-Za-z_][A-Za-z0-9_]*$/.test(part)) {
-      return part;
-    }
-    return this.sqlQuoteIdentifier(part);
   }
 
   abstract castToString(expression: string): string;

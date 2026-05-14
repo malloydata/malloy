@@ -92,18 +92,18 @@ describe('Postgres tests', () => {
     }
   }
 
-  it('will quote to properly access mixed case table name', async () => {
+  it('user quoting works for mixed case table name', async () => {
     if (await oneExists(runtime, 'public."UpperTablePublic"')) {
       await expect(`
-        run: postgres.table('public.UpperTablePublic') -> { select: one }
+        run: postgres.table('public."UpperTablePublic"') -> { select: one }
       `).toMatchResult(testModel, {one: 1});
     }
   });
 
-  it('quote to properly access mixes case schema name', async () => {
+  it('user quoting works for mixed case schema name', async () => {
     if (await oneExists(runtime, '"UpperSchema"."UpperSchemaUpperTable"')) {
       await expect(`
-        run: postgres.table('UpperSchema.UpperSchemaUpperTable') -> { select: one }
+        run: postgres.table('"UpperSchema"."UpperSchemaUpperTable"') -> { select: one }
       `).toMatchResult(testModel, {one: 1});
     }
   });

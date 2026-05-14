@@ -38,17 +38,6 @@ const ADVERSARIAL_STRINGS: {name: string; value: string}[] = [
   {name: 'tab', value: 'col\tval'},
 ];
 
-// Additional inputs for table paths, which may legitimately contain dots
-// and other path-like characters.
-const ADVERSARIAL_TABLE_PATHS: {name: string; value: string}[] = [
-  ...ADVERSARIAL_STRINGS,
-  {name: 'dotted_schema', value: 'schema.table'},
-  {name: 'three_part_path', value: 'project.dataset.table'},
-  {name: 'dashed_filename', value: 'arrests-latest.parquet'},
-  {name: 'slash_path', value: 'path/to/file.parquet'},
-  {name: 'space_in_name', value: 'my table'},
-];
-
 // ---------------------------------------------------------------------------
 // SQL parsers — minimal but accurate enough to detect smuggling.
 //
@@ -141,40 +130,6 @@ function parseQuotedIdent(
     i++;
   }
   return null;
-}
-
-// Parse a bare SQL identifier starting at offset.
-function parseBareIdent(sql: string, start = 0): ParseResult {
-  const m = sql.slice(start).match(/^[A-Za-z_][A-Za-z0-9_$]*/);
-  if (!m) return null;
-  return {value: m[0], end: start + m[0].length};
-}
-
-// Parse a dotted path of [bare | quoted] segments. Accepts a single
-// identifier quote character. Returns the joined parts and total length
-// consumed, or null if malformed.
-function parseDottedPath(
-  sql: string,
-  identQuote: string,
-  identMode: 'doubled' | 'backslash'
-): {value: string; end: number} | null {
-  let i = 0;
-  const parts: string[] = [];
-  while (i < sql.length) {
-    let seg: ParseResult;
-    if (sql[i] === identQuote) {
-      seg = parseQuotedIdent(sql, identQuote, identMode, i);
-    } else {
-      seg = parseBareIdent(sql, i);
-    }
-    if (!seg) return null;
-    parts.push(seg.value);
-    i = seg.end;
-    if (i >= sql.length) break;
-    if (sql[i] !== '.') return null;
-    i++;
-  }
-  return {value: parts.join('.'), end: i};
 }
 
 // ---------------------------------------------------------------------------
@@ -288,63 +243,6 @@ for (const dialect of getDialects()) {
           expect(parsed).not.toBeNull();
           expect(parsed!.end).toBe(out.length);
           expect(parsed!.value).toBe(value);
-        });
-      }
-    });
-
-    describe('quoteTablePath round-trip', () => {
-      for (const {name, value} of ADVERSARIAL_TABLE_PATHS) {
-        it(name, () => {
-          // A dialect may refuse to encode an input (e.g. BigQuery cannot
-          // represent a backtick inside a backtick-quoted identifier).
-          // Throwing is a safe outcome — better a compile-time error than
-          // SQL that the dialect cannot represent unambiguously.
-          let out: string;
-          try {
-            out = dialect.quoteTablePath(value);
-          } catch (e) {
-            return;
-          }
-          // A dialect may produce either:
-          //   (a) one quoted identifier containing the whole path including dots
-          //       (e.g. BigQuery: `proj.dataset.table`)
-          //   (b) a dot-separated sequence of bare/quoted identifier parts
-          //       (e.g. Postgres: "proj"."dataset"."table")
-          //   (c) a single string literal — only used by DuckDB for paths
-          //       which are actually file references rather than identifiers.
-          // Round-trip succeeds if any of these interpretations decodes
-          // exactly to the input.
-          const candidates: (() => string | null)[] = [
-            // (a) Whole path as one quoted identifier.
-            () => {
-              const r = parseQuotedIdent(out, identQuote, identStyle);
-              if (r && r.end === out.length) return r.value;
-              return null;
-            },
-            // (b) Dotted sequence of identifier segments.
-            () => {
-              const r = parseDottedPath(out, identQuote, identStyle);
-              if (r && r.end === out.length) return r.value;
-              return null;
-            },
-            // (c) Single-quoted string literal (DuckDB file paths).
-            () => {
-              const r = parseStringLiteral(out, stringStyle);
-              if (r && r.end === out.length) return r.value;
-              return null;
-            },
-          ];
-
-          let decoded: string | null = null;
-          for (const tryParse of candidates) {
-            const v = tryParse();
-            if (v === value) {
-              decoded = v;
-              break;
-            }
-          }
-
-          expect(decoded).toBe(value);
         });
       }
     });
@@ -481,4 +379,314 @@ describe('base Dialect fail-fast on missing config', () => {
       /stub-no-escape-style.*identifierEscapeStyle is not set/
     );
   });
+});
+
+// ---------------------------------------------------------------------------
+// sqlValidateTableName — table-path grammar per dialect
+// ---------------------------------------------------------------------------
+//
+// The validator's contract is per-dialect: each engine has its own bare-
+// identifier rules (Postgres allows `$`, MySQL allows digit-start, Trino
+// is strict ANSI, etc.). These corpora reflect the live engines'
+// observed behavior.
+//
+// Inputs that every dialect — including the special-grammar ones — must
+// agree on. DuckDB's wider acceptance set is tested separately.
+const UNIVERSAL_ACCEPT = [
+  {name: 'bare', value: 'foo'},
+  {name: 'dotted_two_part', value: 'schema.foo'},
+  {name: 'dotted_three_part', value: 'project.schema.foo'},
+];
+
+const UNIVERSAL_REJECT = [
+  {name: 'empty', value: ''},
+  {name: 'leading_dot', value: '.foo'},
+  {name: 'trailing_dot', value: 'foo.'},
+  {name: 'has_space', value: 'foo bar'},
+  {name: 'has_semicolon', value: 'foo;DROP TABLE x;--'},
+  {name: 'mixed_ident_string', value: "schema.'name'"},
+];
+
+// Per-dialect cases — divergences from the universal corpus that this
+// dialect's engine actually treats differently. The label reflects the
+// live engine's behavior (verified empirically).
+interface PerDialectCase {
+  name: string;
+  value: string;
+}
+interface PerDialectCorpus {
+  accept: PerDialectCase[];
+  reject: PerDialectCase[];
+}
+
+const PER_DIALECT: Record<string, PerDialectCorpus> = {
+  postgres: {
+    accept: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+      {name: 'dotted_quoted', value: '"schema"."foo"'},
+    ],
+    reject: [
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+    ],
+  },
+  mysql: {
+    accept: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'digit_start_non_numeric', value: '1foo'},
+      {name: 'backtick_quoted', value: '`foo`'},
+      {name: 'backtick_doubled', value: '`foo``bar`'},
+    ],
+    reject: [
+      {name: 'pure_numeric', value: '123'},
+      {name: 'unterminated_backtick', value: '`foo'},
+    ],
+  },
+  snowflake: {
+    accept: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+    ],
+    reject: [
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+    ],
+  },
+  trino: {
+    accept: [
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+    ],
+    reject: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+    ],
+  },
+  presto: {
+    accept: [
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+    ],
+    reject: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+    ],
+  },
+  databricks: {
+    accept: [
+      {name: 'digit_start_non_numeric', value: '1foo'},
+      {name: 'backtick_quoted', value: '`foo`'},
+      {name: 'backtick_doubled', value: '`foo``bar`'},
+    ],
+    reject: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'pure_numeric', value: '123'},
+      {name: 'unterminated_backtick', value: '`foo'},
+    ],
+  },
+  // BigQuery's wildcard behavior is tested separately below.
+  standardsql: {
+    accept: [
+      {name: 'dashed_segment', value: 'my-project.dataset.table'},
+      {name: 'whole_backtick', value: '`my-project.dataset.table`'},
+      {name: 'per_segment_backtick', value: '`proj`.dataset.`table`'},
+    ],
+    reject: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unmatched_backtick', value: '`foo'},
+    ],
+  },
+};
+
+for (const dialect of getDialects()) {
+  describe(`${dialect.name} sqlValidateTableName`, () => {
+    describe('universal accept', () => {
+      for (const {name, value} of UNIVERSAL_ACCEPT) {
+        it(name, () => {
+          const result = dialect.sqlValidateTableName(value);
+          expect(result.ok).toBe(true);
+          if (result.ok) expect(result.canonical).toBe(value);
+        });
+      }
+    });
+
+    // DuckDB's file-path convenience accepts many shapes the standard
+    // dialects reject; skip the universal-reject corpus there.
+    if (dialect.name !== 'duckdb') {
+      describe('universal reject', () => {
+        for (const {name, value} of UNIVERSAL_REJECT) {
+          it(name, () => {
+            const result = dialect.sqlValidateTableName(value);
+            expect(result.ok).toBe(false);
+          });
+        }
+      });
+    }
+
+    const perDialect = PER_DIALECT[dialect.name];
+    if (perDialect) {
+      describe('dialect-specific accept', () => {
+        for (const {name, value} of perDialect.accept) {
+          it(name, () => {
+            const result = dialect.sqlValidateTableName(value);
+            expect(result.ok).toBe(true);
+            if (result.ok) expect(result.canonical).toBe(value);
+          });
+        }
+      });
+      describe('dialect-specific reject', () => {
+        for (const {name, value} of perDialect.reject) {
+          it(name, () => {
+            const result = dialect.sqlValidateTableName(value);
+            expect(result.ok).toBe(false);
+          });
+        }
+      });
+    }
+  });
+}
+
+describe('sqlValidateTableName forbids `;` and `--` in decoded segments', () => {
+  const postgres = getDialects().find(d => d.name === 'postgres')!;
+  const duckdb = getDialects().find(d => d.name === 'duckdb')!;
+
+  it('postgres rejects `;` inside quoted identifier', () => {
+    const r = postgres.sqlValidateTableName('"x;evil"');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/forbidden character/);
+  });
+
+  it('postgres rejects `--` inside quoted identifier', () => {
+    const r = postgres.sqlValidateTableName('"x--evil"');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/forbidden character/);
+  });
+
+  it('duckdb rejects `;` inside quoted identifier (shared parser)', () => {
+    const r = duckdb.sqlValidateTableName('"x;evil"');
+    expect(r.ok).toBe(false);
+  });
+
+  it('duckdb rejects `;` inside explicit single-quoted form', () => {
+    const r = duckdb.sqlValidateTableName("'x;evil'");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/forbidden character/);
+  });
+
+  it('duckdb still accepts file-path convenience without `;` or `--`', () => {
+    const r = duckdb.sqlValidateTableName('data/foo.parquet');
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.canonical).toBe("'data/foo.parquet'");
+  });
+});
+
+// BigQuery's bare-FROM grammar doesn't accept wildcards — they must be
+// backtick-quoted (`` `dataset.events_*` ``). The validator rejects the
+// bare form; users supply the backticks themselves, same as they would
+// in hand-written BigQuery SQL.
+describe('BigQuery sqlValidateTableName — wildcards require backticks', () => {
+  const bq = getDialects().find(d => d.name === 'standardsql')!;
+
+  const acceptedAsBackticked: string[] = [
+    '`dataset.events_*`',
+    '`my-project.dataset.events_*`',
+    'my.dataset.`events_*`', // per-segment backticking
+  ];
+  for (const input of acceptedAsBackticked) {
+    it(`accepts: ${input}`, () => {
+      const result = bq.sqlValidateTableName(input);
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.canonical).toBe(input);
+    });
+  }
+
+  const rejectedAsBare: string[] = [
+    'dataset.events_*',
+    'my-project.dataset.events_*',
+  ];
+  for (const input of rejectedAsBare) {
+    it(`rejects bare: ${input}`, () => {
+      const result = bq.sqlValidateTableName(input);
+      expect(result.ok).toBe(false);
+    });
+  }
+});
+
+// DuckDB has a richer grammar — file-path convenience and explicit
+// single-quoted forms — so its acceptance set is broader and its
+// canonical form transforms file-path inputs by wrapping them in
+// single quotes.
+describe('DuckDB sqlValidateTableName — convenience extensions', () => {
+  const duckdb = getDialects().find(d => d.name === 'duckdb')!;
+
+  const acceptedAsFilePath: {name: string; input: string; canonical: string}[] =
+    [
+      {
+        name: 'parquet_with_dash',
+        input: 'arrests-latest.parquet',
+        canonical: "'arrests-latest.parquet'",
+      },
+      {
+        name: 'relative_path',
+        input: '../data/foo.csv',
+        canonical: "'../data/foo.csv'",
+      },
+      {
+        name: 's3_url',
+        input: 's3://bucket/x.parquet',
+        canonical: "'s3://bucket/x.parquet'",
+      },
+      {
+        name: 'glob_star',
+        input: 'data/*.parquet',
+        canonical: "'data/*.parquet'",
+      },
+      {
+        name: 'glob_question',
+        input: 'data/???.parquet',
+        canonical: "'data/???.parquet'",
+      },
+    ];
+
+  for (const {name, input, canonical} of acceptedAsFilePath) {
+    it(`file-path: ${name}`, () => {
+      const result = duckdb.sqlValidateTableName(input);
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.canonical).toBe(canonical);
+    });
+  }
+
+  const explicitSingleQuoted = [
+    {name: 'plain', value: "'foo.csv'"},
+    {name: 'with_dots', value: "'thing.with.dots'"},
+    {name: 'doubled_inner_quote', value: "'o''brien'"},
+  ];
+  for (const {name, value} of explicitSingleQuoted) {
+    it(`explicit single-quoted: ${name}`, () => {
+      const result = duckdb.sqlValidateTableName(value);
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.canonical).toBe(value);
+    });
+  }
+
+  const rejected = [
+    {name: 'has_space', value: 'foo bar.csv'},
+    {name: 'has_semicolon', value: 'foo;DROP TABLE x;--'},
+    {name: 'has_paren', value: 'read_csv(foo.csv)'},
+    {name: 'unterminated_quote', value: "'foo"},
+    {name: 'trailing_after_close', value: "'foo' AND 1=1"},
+    {name: 'has_backtick', value: 'foo`bar'},
+  ];
+  for (const {name, value} of rejected) {
+    it(`rejects: ${name}`, () => {
+      const result = duckdb.sqlValidateTableName(value);
+      expect(result.ok).toBe(false);
+    });
+  }
 });

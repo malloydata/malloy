@@ -43,6 +43,8 @@ export {
   literal,
   spread,
   Dialect,
+  decodeDottedTablePath,
+  validateDottedTablePath,
 } from './dialect';
 export type {
   DialectFieldList,
@@ -52,6 +54,11 @@ export type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
+  DecodeDottedTablePathResult,
+  DottedTablePathOptions,
+  TablePathEscapeStyle,
+  TablePathSegment,
+  ValidateTablePathResult,
 } from './dialect';
 // TODO tighten up exports
 export type {

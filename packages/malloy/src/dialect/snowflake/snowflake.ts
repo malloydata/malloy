@@ -137,23 +137,14 @@ export class SnowflakeDialect extends Dialect {
   supportsPipelinesInViews = false;
   supportsComplexFilteredSources = false;
 
+  // Snowflake bare-identifier continuation allows `$` (verified against
+  // the live engine).
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
+
   // Snowflake uses NUMBER(38,0) for all integers - can exceed JS Number precision
   override integerTypeMappings: IntegerTypeMapping[] = [
     {min: MIN_DECIMAL38, max: MAX_DECIMAL38, numberType: 'bigint'},
   ];
-
-  quoteTablePath(tablePath: string): string {
-    // OPEN QUESTION: should this always-quote each segment so reserved
-    // words can be used as table names? Snowflake folds bare identifiers
-    // to UPPERCASE, while quoted identifiers preserve case. Switching to
-    // always-quote would break every existing user whose tables were
-    // created bare (so live as uppercase) and addressed from Malloy in
-    // mixed/lower case. Left as perPartMaybeQuoted pending a design call.
-    return tablePath
-      .split('.')
-      .map(part => this.quoteIdentifierPart(part, false))
-      .join('.');
-  }
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT index as group_set FROM TABLE(FLATTEN(ARRAY_GENERATE_RANGE(0, ${

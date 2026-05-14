@@ -157,6 +157,12 @@ export class MySQLDialect extends Dialect {
   orderByClause: OrderByClauseType = 'ordinal';
   maxIdentifierLength = 64;
 
+  // MySQL bare identifiers allow `$` and may start with a digit, but
+  // cannot be entirely digits (or they lex as number literals). The
+  // regex requires at least one non-digit char somewhere in the run.
+  // Verified against the live engine.
+  override tablePathBareIdentRegex = /^[A-Za-z0-9_$]*[A-Za-z_$][A-Za-z0-9_$]*/;
+
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
       case 'number':
@@ -191,13 +197,6 @@ export class MySQLDialect extends Dialect {
         rawType: baseSqlType,
       }
     );
-  }
-
-  quoteTablePath(tablePath: string): string {
-    return tablePath
-      .split('.')
-      .map(part => this.quoteIdentifierPart(part, true))
-      .join('.');
   }
 
   sqlGroupSetTable(groupSetCount: number): string {

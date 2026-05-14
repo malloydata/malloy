@@ -44,6 +44,7 @@ import type {
 import {BaseMessageLogger, makeLogMessage} from './parse-log';
 import type {FindReferencesData} from './parse-tree-walkers/find-external-references';
 import {findReferences} from './parse-tree-walkers/find-external-references';
+import {getDialect} from '../dialect';
 import type {ZoneData} from './zone';
 import {Zone} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
@@ -223,12 +224,9 @@ class ImportsAndTablesStep implements TranslationStep {
         parseReq.parse.root
       );
 
-      for (const ref in this.parseReferences.tables) {
-        that.root.schemaZone.reference(ref, {
-          url: that.sourceURL,
-          range: this.parseReferences.tables[ref].firstReference,
-        });
-      }
+      // Register connection dialects and imports immediately. Table
+      // references are deferred until dialects are resolved, because
+      // validating a table path requires knowing its dialect's grammar.
 
       for (const connName in this.parseReferences.connectionDialects) {
         that.root.connectionDialectZone.reference(connName, {
@@ -276,17 +274,52 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     let allMissing: DataRequestResponse = {};
+
+    // Validate each table reference against its dialect's grammar (if
+    // the dialect is resolved) and register the canonical entry. Bad
+    // paths are silently dropped — the AST step re-validates and logs
+    // an error at the precise source range. Entries whose dialect
+    // isn't resolved yet are preserved unchanged and re-processed on a
+    // later step.
+    {
+      const refs = this.parseReferences.tables;
+      const canonical: typeof refs = {};
+      for (const rawKey in refs) {
+        const info = refs[rawKey];
+        let {tablePath} = info;
+        const dialectName = that.root.connectionDialectZone.get(
+          info.connectionName
+        );
+        if (dialectName !== undefined) {
+          const result =
+            getDialect(dialectName).sqlValidateTableName(tablePath);
+          if (!result.ok) continue;
+          tablePath = result.canonical;
+        }
+        const key = `${info.connectionName}:${tablePath}`;
+        canonical[key] = {...info, tablePath};
+        that.root.schemaZone.reference(key, {
+          url: that.sourceURL,
+          range: info.firstReference,
+        });
+      }
+      this.parseReferences.tables = canonical;
+    }
+
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
       const tables = {};
       for (const key of missingTables) {
         const info = this.parseReferences.tables[key];
+        if (info === undefined) continue;
         tables[key] = {
           connectionName: info.connectionName,
           tablePath: info.tablePath,
         };
       }
-      allMissing = {tables};
+      if (Object.keys(tables).length > 0) {
+        allMissing = {tables};
+      }
     }
 
     const missingDialects = that.root.connectionDialectZone.getUndefined();

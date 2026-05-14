@@ -139,18 +139,9 @@ export class TrinoDialect extends PostgresBase {
   supportsCountApprox = true;
   supportsHyperLogLog = true;
 
-  quoteTablePath(tablePath: string): string {
-    // OPEN QUESTION: should this always-quote each segment so reserved
-    // words can be used as table names? Trino normalizes bare identifiers
-    // to lowercase (like Postgres), so switching to always-quote could
-    // break users whose Malloy uses mixed/upper case for tables that
-    // were created bare. Left as perPartMaybeQuoted pending a design
-    // call alongside Snowflake.
-    return tablePath
-      .split('.')
-      .map(part => this.quoteIdentifierPart(part, false))
-      .join('.');
-  }
+  // Trino bare identifier is strict ANSI (`[A-Za-z_][A-Za-z0-9_]*`),
+  // which matches the Dialect default — no override needed. Verified
+  // against the live engine.
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(SEQUENCE(0,${groupSetCount})))`;

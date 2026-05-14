@@ -107,6 +107,11 @@ export class DatabricksDialect extends Dialect {
   supportsBigIntPrecision = false;
   maxIdentifierLength = 255;
 
+  // Databricks bare identifiers may start with a digit, but cannot be
+  // entirely digits (or they lex as number literals). Verified against
+  // the live engine: `1foo` resolves; `$` is rejected.
+  override tablePathBareIdentRegex = /^[A-Za-z0-9_]*[A-Za-z_][A-Za-z0-9_]*/;
+
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
       case 'number':
@@ -163,16 +168,6 @@ export class DatabricksDialect extends Dialect {
         rawType: baseSqlType,
       }
     );
-  }
-
-  quoteTablePath(tablePath: string): string {
-    // Always quote each segment so reserved words can be used as table
-    // names. Databricks is case-insensitive for identifiers, so quoting
-    // has no backward-compat cost.
-    return tablePath
-      .split('.')
-      .map(part => this.quoteIdentifierPart(part, true))
-      .join('.');
   }
 
   sqlGroupSetTable(groupSetCount: number): string {

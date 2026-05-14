@@ -202,7 +202,7 @@ export abstract class DuckDBCommon
       fields: [],
     };
 
-    const infoQuery = `DESCRIBE SELECT * FROM ${this.dialect.quoteTablePath(tablePath)}`;
+    const infoQuery = `DESCRIBE SELECT * FROM ${tablePath}`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
   }

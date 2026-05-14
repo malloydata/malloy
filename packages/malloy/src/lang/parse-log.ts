@@ -313,6 +313,7 @@ type MessageParameterTypes = {
   'parameter-name-conflict': string;
   'parameter-shadowing-field': string;
   'invalid-import-url': string;
+  'invalid-table-path': string;
   'no-translator-for-import': string;
   'name-conflict-on-selective-import': string;
   'selective-import-not-found': string;

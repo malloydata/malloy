@@ -165,15 +165,28 @@ export class StandardSQLDialect extends Dialect {
     }
   }
 
-  quoteTablePath(tablePath: string): string {
-    this.bqRejectBacktick(tablePath, 'table path');
-    return '`' + tablePath.replace(/\\/g, '\\\\') + '`';
-  }
-
   sqlQuoteIdentifier(identifier: string): string {
     this.bqRejectBacktick(identifier, 'identifier');
     return super.sqlQuoteIdentifier(identifier);
   }
+
+  // BigQuery bare-identifier continuation allows dashes (verified
+  // against the live engine: `proj-foo.dataset.table` resolves to a
+  // table reference, both bare and inside per-segment backticks). The
+  // base `sqlValidateTableName` handles every shape we accept —
+  // bare-dotted, whole-backticked, and per-segment-backticked — because
+  // its grammar is `Segment ('.' Segment)*` and a segment is either
+  // bare or quoted with this dialect's `identifierQuoteChar` /
+  // `identifierEscapeStyle` (`` ` `` / Backslash). The whole-path form
+  // (`` `proj.dataset.table` ``) is accepted naturally as a single
+  // quoted segment.
+  //
+  // `*` is intentionally NOT in this regex. BigQuery's parser only
+  // accepts `*` inside backticks (wildcard tables must be quoted, e.g.
+  // `` `dataset.events_*` ``). Bare wildcards would fail at the engine,
+  // so we reject them up front and require the user to type the
+  // backticks they'd need anyway.
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_-]*/;
 
   needsCivilTimeComputation(
     typeDef: AtomicTypeDef,

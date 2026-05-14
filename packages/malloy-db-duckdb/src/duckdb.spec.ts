@@ -103,11 +103,9 @@ describe('DuckDBConnection', () => {
       expect(runRawSQL).toHaveBeenCalledTimes(2);
     });
 
-    it('quotes file-path table names containing dashes', async () => {
-      // Bug repro: `duckdb.table('arrests-latest.parquet')` failed because
-      // the dash made DuckDB parse `arrests-latest.parquet` as subtraction.
+    it('fetches schema for a single-quoted file-path table', async () => {
       await connection.fetchSchemaForTables(
-        {'dashed': 'arrests-latest.parquet'},
+        {'dashed': "'arrests-latest.parquet'"},
         {}
       );
       expect(runRawSQL).toHaveBeenCalledWith(
@@ -115,20 +113,20 @@ describe('DuckDBConnection', () => {
       );
     });
 
-    it('quotes bare table identifiers', async () => {
+    it('fetches schema for a bare identifier', async () => {
       await connection.fetchSchemaForTables({'plain': 'plain_table'}, {});
       expect(runRawSQL).toHaveBeenCalledWith(
-        'DESCRIBE SELECT * FROM "plain_table"'
+        'DESCRIBE SELECT * FROM plain_table'
       );
     });
 
-    it('quotes each segment of schema-qualified identifiers', async () => {
+    it('fetches schema for a schema-qualified identifier path', async () => {
       await connection.fetchSchemaForTables(
         {'qualified': 'main.qualified_table'},
         {}
       );
       expect(runRawSQL).toHaveBeenCalledWith(
-        'DESCRIBE SELECT * FROM "main"."qualified_table"'
+        'DESCRIBE SELECT * FROM main.qualified_table'
       );
     });
   });

@@ -49,6 +49,7 @@ import {
   mkArrayDef,
   sqlKey,
   makeDigest,
+  decodeDottedTablePath,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -89,6 +90,24 @@ type PostgresConnectionConfigurationReader =
 
 const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
+
+/**
+ * Decode a canonical Postgres dotted-table path into its underlying
+ * identifier strings as they appear in `information_schema`. The schema
+ * lookup is a string-literal comparison, not an identifier reference,
+ * so Postgres's bare-name lowercase folding doesn't happen for us — we
+ * apply it here: bare segments → lowercase, `"…"` segments → as-is.
+ */
+function decodeDottedSegments(input: string): string[] | undefined {
+  const result = decodeDottedTablePath(input, {
+    quoteChar: '"',
+    escapeStyle: 'doubled',
+    bareIdentRegex: /^[A-Za-z_][A-Za-z0-9_$]*/,
+    dialectName: 'Postgres',
+  });
+  if (!result.ok) return undefined;
+  return result.segments.map(s => (s.quoted ? s.value : s.value.toLowerCase()));
+}
 
 export interface PostgresConnectionOptions
   extends ConnectionConfig, PostgresConnectionConfiguration {}
@@ -213,13 +232,14 @@ export class PostgresConnection
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJSON: boolean
+    deJSON: boolean,
+    values?: unknown[]
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
     await client.connect();
     await this.connectionSetup(client);
 
-    let result = await client.query(sqlCommand);
+    let result = await client.query(sqlCommand, values);
     if (Array.isArray(result)) {
       result = result.pop();
     }
@@ -349,13 +369,15 @@ export class PostgresConnection
 
   private async schemaFromQuery(
     infoQuery: string,
-    structDef: StructDef
+    structDef: StructDef,
+    values?: unknown[]
   ): Promise<void> {
     const {rows, totalRows} = await this.runPostgresQuery(
       infoQuery,
       SCHEMA_PAGE_SIZE,
       0,
-      false
+      false,
+      values
     );
     if (!totalRows) {
       throw new Error('Unable to read schema.');
@@ -387,21 +409,26 @@ export class PostgresConnection
       connection: this.name,
       fields: [],
     };
-    const [schema, table] = tablePath.split('.');
-    if (table === undefined) {
+    // tablePath is canonical SQL — bare segments (case-folded to lower by
+    // Postgres) or `"…"` quoted segments (case-preserving, `""` escape).
+    // The information_schema lookup needs the raw identifier strings, not
+    // the SQL surface form, so decode each segment.
+    const segments = decodeDottedSegments(tablePath);
+    if (segments === undefined || segments.length < 2) {
       return 'Default schema not yet supported in Postgres';
     }
+    const [schema, table] = segments.slice(-2);
     const infoQuery = `
       SELECT column_name, c.data_type, e.data_type as element_type
       FROM information_schema.columns c LEFT JOIN information_schema.element_types e
         ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
           = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
-        WHERE table_name = '${table}'
-          AND table_schema = '${schema}'
+        WHERE table_name = $1
+          AND table_schema = $2
     `;
 
     try {
-      await this.schemaFromQuery(infoQuery, structDef);
+      await this.schemaFromQuery(infoQuery, structDef, [table, schema]);
     } catch (error) {
       return `Error fetching schema for ${tablePath}: ${error.message}`;
     }
@@ -554,10 +581,11 @@ export class PooledPostgresConnection
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJSON: boolean
+    deJSON: boolean,
+    values?: unknown[]
   ): Promise<MalloyQueryData> {
     const pool = await this.getPool();
-    let result = await pool.query(sqlCommand);
+    let result = await pool.query(sqlCommand, values);
 
     if (Array.isArray(result)) {
       result = result.pop();

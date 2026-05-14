@@ -57,15 +57,15 @@ describeMySQL('db:MySQL', () => {
   });
 
   it('fetches schema for tables whose names contain dashes', async () => {
-    // Bug repro: `mysql.table('arrests-latest')` failed because the dash
-    // made MySQL parse `DESCRIBE arrests-latest` as subtraction.
+    // fetchSchemaForTables expects canonical SQL (post-translator), so
+    // we pass the backtick-quoted form directly.
     await connection.runRawSQL('DROP TABLE IF EXISTS `arrests-latest`');
     await connection.runRawSQL(
       'CREATE TABLE `arrests-latest` (id INT, name VARCHAR(50))'
     );
     try {
       const res = await connection.fetchSchemaForTables(
-        {dashed: 'arrests-latest'},
+        {dashed: '`arrests-latest`'},
         {}
       );
       expect(res.errors).toEqual({});
