@@ -489,13 +489,12 @@ const PER_DIALECT: Record<string, PerDialectCorpus> = {
       {name: 'unterminated_backtick', value: '`foo'},
     ],
   },
-  // BigQuery's bare-wildcard auto-wrap is tested separately below
-  // (its canonical form differs from the input).
+  // BigQuery's wildcard behavior is tested separately below.
   standardsql: {
     accept: [
       {name: 'dashed_segment', value: 'my-project.dataset.table'},
       {name: 'whole_backtick', value: '`my-project.dataset.table`'},
-      {name: 'whole_backtick_wildcard', value: '`my.dataset.events_*`'},
+      {name: 'per_segment_backtick', value: '`proj`.dataset.`table`'},
     ],
     reject: [
       {name: 'dollar_in_bare', value: 'foo$bar'},
@@ -553,30 +552,34 @@ for (const dialect of getDialects()) {
   });
 }
 
-// BigQuery's bare-wildcard form (`dataset.events_*`) is accepted for
-// back-compat with prior auto-quote behavior, but BigQuery's own parser
-// requires wildcards to be backtick-quoted. The validator wraps the
-// bare form in backticks at canonical time.
-describe('BigQuery sqlValidateTableName — wildcard auto-wrap', () => {
+// BigQuery's bare-FROM grammar doesn't accept wildcards — they must be
+// backtick-quoted (`` `dataset.events_*` ``). The validator rejects the
+// bare form; users supply the backticks themselves, same as they would
+// in hand-written BigQuery SQL.
+describe('BigQuery sqlValidateTableName — wildcards require backticks', () => {
   const bq = getDialects().find(d => d.name === 'standardsql')!;
 
-  const wildcards: {name: string; input: string; canonical: string}[] = [
-    {
-      name: 'two_part_wildcard',
-      input: 'dataset.events_*',
-      canonical: '`dataset.events_*`',
-    },
-    {
-      name: 'three_part_wildcard',
-      input: 'my-project.dataset.events_*',
-      canonical: '`my-project.dataset.events_*`',
-    },
+  const acceptedAsBackticked: string[] = [
+    '`dataset.events_*`',
+    '`my-project.dataset.events_*`',
+    'my.dataset.`events_*`', // per-segment backticking
   ];
-  for (const {name, input, canonical} of wildcards) {
-    it(`auto-wraps: ${name}`, () => {
+  for (const input of acceptedAsBackticked) {
+    it(`accepts: ${input}`, () => {
       const result = bq.sqlValidateTableName(input);
       expect(result.ok).toBe(true);
-      if (result.ok) expect(result.canonical).toBe(canonical);
+      if (result.ok) expect(result.canonical).toBe(input);
+    });
+  }
+
+  const rejectedAsBare: string[] = [
+    'dataset.events_*',
+    'my-project.dataset.events_*',
+  ];
+  for (const input of rejectedAsBare) {
+    it(`rejects bare: ${input}`, () => {
+      const result = bq.sqlValidateTableName(input);
+      expect(result.ok).toBe(false);
     });
   }
 });

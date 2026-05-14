@@ -61,24 +61,6 @@ import {
 } from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
-import {parseDottedTablePath} from '../table-path';
-
-// BigQuery's bare-dotted form. Each segment matches
-// `[A-Za-z_][A-Za-z0-9_*-]*`:
-//   - Dashes are allowed in segments (live engine accepts `proj-foo`
-//     without backticks even though docs sometimes suggest otherwise).
-//   - `*` is allowed as BigQuery's wildcard-table suffix (e.g.
-//     `dataset.events_*` matches all tables starting with `events_`).
-//     BigQuery's parser does NOT accept a bare `*` — wildcard tables
-//     must be backtick-quoted (`` `dataset.events_*` ``). The validator
-//     accepts the bare form for back-compat and wraps it in backticks
-//     at canonical time (see `sqlValidateTableName`).
-// Note that no segment-level quoting exists in this form — BigQuery's
-// quote shape is whole-path, handled separately in `sqlValidateTableName`.
-const BIGQUERY_BARE_TOKENS: Record<string, RegExp> = {
-  bare: /^[A-Za-z_][A-Za-z0-9_*-]*/,
-  dot: /^\./,
-};
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -188,67 +170,23 @@ export class StandardSQLDialect extends Dialect {
     return super.sqlQuoteIdentifier(identifier);
   }
 
-  // BigQuery table paths come in two shapes:
-  //   1. Dotted bare-identifier path: `project.dataset.table`. Per
-  //      BigQuery's lexical rules, dashes are allowed in segments
-  //      (specifically, the first segment in FROM/TABLE position can
-  //      contain dashes; dataset names cannot, but we accept dashes
-  //      anywhere and let BigQuery surface the position-specific
-  //      error at bind time).
-  //   2. Whole-path inside backticks: `` `project.dataset.table` ``,
-  //      with the backslash escape sequences BigQuery defines for
-  //      quoted identifiers. An unescaped backtick in the body would
-  //      close the literal, so we reject.
-  // Anything else (string-literal form, function calls, dashes in a
-  // position BigQuery cannot parse, embedded whitespace, etc.) → reject.
-  // Canonical form is the input verbatim.
-  override sqlValidateTableName(
-    input: string
-  ): {ok: true; canonical: string} | {ok: false; error: string} {
-    if (input.length === 0) {
-      return {ok: false, error: 'BigQuery table path is empty'};
-    }
-    if (input[0] === '`') {
-      // Whole-path backtick form. Body must not contain an unescaped
-      // backtick; `\X` is a two-char escape sequence we skip past.
-      if (input.length < 2 || input[input.length - 1] !== '`') {
-        return {
-          ok: false,
-          error: `BigQuery table path: unmatched backtick in ${JSON.stringify(input)}`,
-        };
-      }
-      const body = input.slice(1, -1);
-      let i = 0;
-      while (i < body.length) {
-        if (body[i] === '\\' && i + 1 < body.length) {
-          i += 2;
-        } else if (body[i] === '`') {
-          return {
-            ok: false,
-            error: `BigQuery table path: unescaped backtick inside backticks: ${JSON.stringify(input)}`,
-          };
-        } else {
-          i++;
-        }
-      }
-      return {ok: true, canonical: input};
-    }
-    // Bare dotted path with dashes (and `*` for wildcard tables) allowed.
-    const bareResult = parseDottedTablePath(
-      input,
-      BIGQUERY_BARE_TOKENS,
-      'BigQuery'
-    );
-    if (!bareResult.ok) return bareResult;
-    // Wildcard tables aren't legal in BigQuery's bare-FROM grammar; they
-    // must be backtick-quoted. We accept the bare form for back-compat
-    // and wrap it at canonical time, the same shape as DuckDB's
-    // file-path convenience.
-    if (input.includes('*')) {
-      return {ok: true, canonical: `\`${input}\``};
-    }
-    return bareResult;
-  }
+  // BigQuery bare-identifier continuation allows dashes (verified
+  // against the live engine: `proj-foo.dataset.table` resolves to a
+  // table reference, both bare and inside per-segment backticks). The
+  // base `sqlValidateTableName` handles every shape we accept —
+  // bare-dotted, whole-backticked, and per-segment-backticked — because
+  // its grammar is `Segment ('.' Segment)*` and a segment is either
+  // bare or quoted with this dialect's `identifierQuoteChar` /
+  // `identifierEscapeStyle` (`` ` `` / Backslash). The whole-path form
+  // (`` `proj.dataset.table` ``) is accepted naturally as a single
+  // quoted segment.
+  //
+  // `*` is intentionally NOT in this regex. BigQuery's parser only
+  // accepts `*` inside backticks (wildcard tables must be quoted, e.g.
+  // `` `dataset.events_*` ``). Bare wildcards would fail at the engine,
+  // so we reject them up front and require the user to type the
+  // backticks they'd need anyway.
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_-]*/;
 
   needsCivilTimeComputation(
     typeDef: AtomicTypeDef,

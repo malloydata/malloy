@@ -269,37 +269,38 @@ The contract is verified by `packages/malloy/src/dialect/escape.spec.ts`, which 
 User-supplied table-path strings (from `connection.table('…')` and the virtual table map) are validated against each dialect's table-path grammar at translation time, not at SQL emission time. The mechanism is one method:
 
 ```ts
-abstract sqlValidateTableName(input: string):
+sqlValidateTableName(input: string):
   | {ok: true; canonical: string}
   | {ok: false; error: string};
 ```
 
-On success, `canonical` is the SQL fragment that gets pasted directly into `FROM` clauses and stored in `StructDef.tablePath`. There is no separate "quote this table path" step — the validator's canonical form is the SQL form. The base class declares this abstract: every dialect must own its own implementation, because empirically the "ANSI shape" dialects disagree on bare-identifier rules (Postgres allows `$`, MySQL allows digit-start, Trino is strict ANSI, etc.).
+On success, `canonical` is the SQL fragment that gets pasted directly into `FROM` clauses and stored in `StructDef.tablePath`. There is no separate "quote this table path" step — the validator's canonical form is the SQL form. We never rewrite, auto-quote, or fold the user's input.
 
-**Scope.** `sqlValidateTableName` accepts *names of tables* and the file-path shapes that DuckDB's replacement scans treat as tables. It deliberately rejects table-valued function calls (`read_parquet(...)`, `range(10)`), `LATERAL`, aliases, subqueries, and other things that are valid in a `FROM` clause but compose tables rather than name them. Users who want those use a SQL block (`connection.sql("""SELECT * FROM …""")`). The framework here can be extended later if a real need emerges; today the cost/benefit doesn't justify it.
+**Scope.** `sqlValidateTableName` accepts *names of tables* and the file-path shapes that DuckDB's replacement scans treat as tables. It deliberately rejects table-valued function calls (`read_parquet(...)`, `range(10)`), `LATERAL`, aliases, subqueries, and other things that are valid in a `FROM` clause but compose tables rather than name them. Users who want those use a SQL block (`connection.sql("""SELECT * FROM …""")`).
 
-**Shared parser for dotted-identifier dialects.** Every "ANSI-shape" dialect (Postgres, MySQL, Snowflake, Trino, Databricks, plus BigQuery's bare-dotted form) uses `parseDottedTablePath` from `dialect/table-path.ts`. The shared parser enforces the dotted-segment grammar via `TinyParser`; each dialect supplies a token map (regex per token name) that encodes its own lexical rules:
+**Default implementation handles every well-behaved dialect.** Six of the seven dialects we ship (Postgres, MySQL, Snowflake, Trino, Databricks, BigQuery) all use the same dotted-segment grammar:
+
+```
+TablePath = Segment ( '.' Segment )* EOF
+Segment   = BareIdent | QuotedIdent
+```
+
+What varies between them is purely lexical:
+- the **quote character** for `QuotedIdent` (`"` for the ANSI-style dialects, `` ` `` for MySQL, Databricks, BigQuery),
+- the **escape style** inside the quoted body (doubled-quote `""` for most, backslash `\X` for BigQuery),
+- the **bare-segment character set** (Postgres allows `$`, MySQL allows digit-start, BigQuery allows dashes, Trino is strict ANSI, …).
+
+All three are exposed as `Dialect` properties already: `identifierQuoteChar`, `identifierEscapeStyle`, and `tablePathBareIdentRegex`. The base `sqlValidateTableName` reads them and calls `parseDottedTablePath` from `dialect/table-path.ts`. A new well-behaved dialect just declares its bare-segment regex (and uses the existing escape/quote properties) and inherits the rest:
 
 ```ts
 // e.g. postgres/postgres.ts
-const POSTGRES_TABLE_PATH_TOKENS: Record<string, RegExp> = {
-  bare: /^[A-Za-z_][A-Za-z0-9_$]*/,
-  delim: /^"(?:[^"]|"")*"/,
-  dot: /^\./,
-};
-
-override sqlValidateTableName(input: string): ValidateTablePathResult {
-  return parseDottedTablePath(input, POSTGRES_TABLE_PATH_TOKENS, 'Postgres');
-}
+override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
+// No sqlValidateTableName override needed.
 ```
 
-Token-map conventions: `bare` and `delim` produce identifier-segment tokens; `dot` is the literal `.`; do **not** include a `space:` rule (TinyParser's whitespace-skipping is keyed on that name, and we want whitespace in a table path to be a hard rejection). The per-dialect regexes were derived from probing the live engines — see `scripts/probe_table_paths.ts`.
+The per-dialect regexes were derived empirically by probing the live engines — see `scripts/probe_table_paths.ts`.
 
-**Two dialects have richer top-level structure** and don't fit pure dotted-segment grammar:
-
-- **BigQuery (`standardsql`)** — accepts either a whole-path inside backticks (with `\\X` escape sequences) or a dotted bare-identifier path. The whole-backtick form is handled inline in the override; the bare form delegates to `parseDottedTablePath` with a token map whose `bare` regex allows dashes in segments.
-
-- **DuckDB** — has its own parser at `duckdb/table-path-parser.ts` (a `TinyParser` subclass). Three branches: explicit `'…'` single-quoted literal, identifier path (delegating to the shared parser's grammar), and file-path convenience (`[A-Za-z0-9._\-/:?*]+` wrapped in single quotes at canonical time). **Do not look at DuckDB as a reference for a normal SQL dialect** — its grammar is intentionally richer than what ANSI SQL allows.
+**One dialect overrides the method outright: DuckDB.** Its grammar isn't a pure dotted-segment shape — it accepts file-path-shaped inputs (`arrests-latest.parquet`, `s3://…`, globs) and explicit single-quoted literals (`'foo.csv'`) in addition to identifier paths. See `duckdb/table-path-parser.ts`. **Do not look at DuckDB as a reference for a normal SQL dialect** — its grammar is intentionally richer than what ANSI SQL allows.
 
 When the validator rejects an input:
 - `ImportsAndTablesStep` silently skips the reference (no schemaZone register, no schema-fetch needs-request).
@@ -309,7 +310,7 @@ Tests:
 - `packages/malloy/src/dialect/escape.spec.ts` — per-dialect unit tests with corpora reflecting the live engines' actual behavior.
 - `packages/malloy/src/lang/test/table-path-validation.spec.ts` — end-to-end translator-error tests with source-range assertions.
 - `test/src/databases/duckdb-all/duckdb.spec.ts` — DuckDB-specific shapes (file paths, globs).
-- `scripts/probe_table_paths.ts` — adversarial corpus driver against live engines; rerun whenever a new dialect or token-map change lands.
+- `scripts/probe_table_paths.ts` — adversarial corpus driver against live engines; rerun whenever a new dialect or `tablePathBareIdentRegex` change lands.
 
 ## Key Source Files
 

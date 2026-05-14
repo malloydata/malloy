@@ -52,18 +52,6 @@ import {
 import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
 import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
-import type {ValidateTablePathResult} from '../table-path';
-import {parseDottedTablePath} from '../table-path';
-
-// Postgres bare identifier: starts with letter or underscore, continues
-// with letter, digit, underscore, or `$`. Verified against the live
-// engine: `foo$bar` is accepted as a table name. Quoted identifiers use
-// `"…"` with `""` to escape an embedded quote.
-const POSTGRES_TABLE_PATH_TOKENS: Record<string, RegExp> = {
-  bare: /^[A-Za-z_][A-Za-z0-9_$]*/,
-  delim: /^"(?:[^"]|"")*"/,
-  dot: /^\./,
-};
 
 const pgMakeIntervalMap: Record<string, string> = {
   'year': 'years',
@@ -136,9 +124,9 @@ export class PostgresDialect extends PostgresBase {
   likeEscape = false;
   maxIdentifierLength = 63;
 
-  override sqlValidateTableName(input: string): ValidateTablePathResult {
-    return parseDottedTablePath(input, POSTGRES_TABLE_PATH_TOKENS, 'Postgres');
-  }
+  // Postgres bare-identifier continuation allows `$` (verified against
+  // the live engine: `postgres.table('foo$bar')` resolves successfully).
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN GENERATE_SERIES(0,${groupSetCount},1) as group_set`;

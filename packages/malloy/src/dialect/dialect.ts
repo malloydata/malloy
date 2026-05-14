@@ -41,6 +41,8 @@ import type {
 } from '../model/malloy_types';
 import {isRawCast, isBasicAtomic, TD, isDateUnit} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
+import type {ValidateTablePathResult} from './table-path';
+import {parseDottedTablePath} from './table-path';
 
 interface DialectField {
   typeDef: AtomicTypeDef;
@@ -392,6 +394,20 @@ export abstract class Dialect {
   };
 
   /**
+   * Regex matching one bare (unquoted) table-path segment for this
+   * dialect, anchored at the start of the input. Drives the default
+   * `sqlValidateTableName` along with `identifierQuoteChar` and
+   * `identifierEscapeStyle`.
+   *
+   * The default is strict ANSI: `[A-Za-z_][A-Za-z0-9_]*`. Override to
+   * widen the char set (Postgres allows `$`, MySQL allows digit-start
+   * with caveats, BigQuery allows dashes, …). The verified per-dialect
+   * regexes are derived from probing the live engines — see
+   * `scripts/probe_table_paths.ts`.
+   */
+  tablePathBareIdentRegex: RegExp = /^[A-Za-z_][A-Za-z0-9_]*/;
+
+  /**
    * Validate a user-supplied table-path string against this dialect's
    * table-path grammar. On success, returns the canonical SQL form that
    * should be embedded in `FROM` clauses (and stored in
@@ -399,21 +415,17 @@ export abstract class Dialect {
    *
    * # When implementing this for a new dialect
    *
-   * Every dialect must own this. There is no shared default — empirically,
-   * "ANSI-shape" dialects disagree on which characters can appear in a
-   * bare identifier (Postgres allows `$`, MySQL allows digit-start, etc.).
-   * The right answer is dialect-specific even for things that look
-   * universal.
+   * The default implementation parses a dotted sequence of identifier
+   * segments using this dialect's `identifierQuoteChar`,
+   * `identifierEscapeStyle`, and `tablePathBareIdentRegex`. Every
+   * well-behaved SQL dialect we ship — Postgres, MySQL, Snowflake,
+   * Trino, Databricks, BigQuery — uses the default and just declares
+   * its own bare-segment regex.
    *
-   * For dialects whose grammar is genuinely a dotted sequence of
-   * identifier segments (every ANSI-shape dialect we ship), use
-   * `parseDottedTablePath` from `dialect/table-path.ts` and supply a
-   * `TinyParser` token map (`{bare, delim, dot}` regexes) that encodes
-   * your engine's segment rules. That's a 3–5 line override.
-   *
-   * For dialects with grammars that aren't dotted-segment-shaped
-   * (BigQuery's whole-path backtick form, DuckDB's file-path convenience
-   * and explicit-string-literal forms), implement the override directly.
+   * Override `sqlValidateTableName` directly only when your dialect's
+   * grammar isn't a dotted sequence of identifier segments (DuckDB
+   * accepts file paths and explicit single-quoted literals in addition
+   * to identifier paths, so it overrides).
    *
    * # Contract
    *
@@ -442,9 +454,23 @@ export abstract class Dialect {
    * looks different (e.g. DuckDB's file-path convenience wraps the
    * input in single quotes).
    */
-  abstract sqlValidateTableName(
-    input: string
-  ): {ok: true; canonical: string} | {ok: false; error: string};
+  sqlValidateTableName(input: string): ValidateTablePathResult {
+    if (
+      this.identifierEscapeStyle !== EscapeStyle.Doubled &&
+      this.identifierEscapeStyle !== EscapeStyle.Backslash
+    ) {
+      throw new Error(
+        `${this.name}: sqlValidateTableName requires identifierEscapeStyle ` +
+          'to be set to Doubled or Backslash (or override sqlValidateTableName).'
+      );
+    }
+    return parseDottedTablePath(input, {
+      quoteChar: this.identifierQuoteChar,
+      escapeStyle: this.identifierEscapeStyle,
+      bareIdentRegex: this.tablePathBareIdentRegex,
+      dialectName: this.name,
+    });
+  }
 
   // returns an table that is a 0 based array of numbers
   abstract sqlGroupSetTable(groupSetCount: number): string;

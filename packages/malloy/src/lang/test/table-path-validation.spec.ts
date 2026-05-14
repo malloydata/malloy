@@ -27,7 +27,7 @@ describe('connection.table() path validation', () => {
 
   test('rejects a BigQuery path with embedded whitespace', () => {
     expect("source: bad is _bq_.table('my table.foo')").toLog(
-      errorMessage(/Invalid BigQuery table path/)
+      errorMessage(/Invalid standardsql table path/)
     );
   });
 
