@@ -232,13 +232,14 @@ export class PostgresConnection
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJSON: boolean
+    deJSON: boolean,
+    values?: unknown[]
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
     await client.connect();
     await this.connectionSetup(client);
 
-    let result = await client.query(sqlCommand);
+    let result = await client.query(sqlCommand, values);
     if (Array.isArray(result)) {
       result = result.pop();
     }
@@ -368,13 +369,15 @@ export class PostgresConnection
 
   private async schemaFromQuery(
     infoQuery: string,
-    structDef: StructDef
+    structDef: StructDef,
+    values?: unknown[]
   ): Promise<void> {
     const {rows, totalRows} = await this.runPostgresQuery(
       infoQuery,
       SCHEMA_PAGE_SIZE,
       0,
-      false
+      false,
+      values
     );
     if (!totalRows) {
       throw new Error('Unable to read schema.');
@@ -420,12 +423,12 @@ export class PostgresConnection
       FROM information_schema.columns c LEFT JOIN information_schema.element_types e
         ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
           = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
-        WHERE table_name = '${table}'
-          AND table_schema = '${schema}'
+        WHERE table_name = $1
+          AND table_schema = $2
     `;
 
     try {
-      await this.schemaFromQuery(infoQuery, structDef);
+      await this.schemaFromQuery(infoQuery, structDef, [table, schema]);
     } catch (error) {
       return `Error fetching schema for ${tablePath}: ${error.message}`;
     }
@@ -578,10 +581,11 @@ export class PooledPostgresConnection
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJSON: boolean
+    deJSON: boolean,
+    values?: unknown[]
   ): Promise<MalloyQueryData> {
     const pool = await this.getPool();
-    let result = await pool.query(sqlCommand);
+    let result = await pool.query(sqlCommand, values);
 
     if (Array.isArray(result)) {
       result = result.pop();

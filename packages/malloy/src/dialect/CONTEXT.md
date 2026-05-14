@@ -290,7 +290,7 @@ What varies between them is purely lexical:
 - the **escape style** inside the quoted body (doubled-quote `""` for most, backslash `\X` for BigQuery),
 - the **bare-segment character set** (Postgres allows `$`, MySQL allows digit-start, BigQuery allows dashes, Trino is strict ANSI, …).
 
-All three are exposed as `Dialect` properties already: `identifierQuoteChar`, `identifierEscapeStyle`, and `tablePathBareIdentRegex`. The base `sqlValidateTableName` reads them and calls `parseDottedTablePath` from `dialect/table-path.ts`. A new well-behaved dialect just declares its bare-segment regex (and uses the existing escape/quote properties) and inherits the rest:
+All three are exposed as `Dialect` properties already: `identifierQuoteChar`, `identifierEscapeStyle`, and `tablePathBareIdentRegex`. The base `sqlValidateTableName` reads them and calls `validateDottedTablePath` from `dialect/table-path.ts`. A new well-behaved dialect just declares its bare-segment regex (and uses the existing escape/quote properties) and inherits the rest:
 
 ```ts
 // e.g. postgres/postgres.ts
@@ -301,6 +301,8 @@ override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
 The per-dialect regexes were derived empirically by probing the live engines.
 
 **One dialect overrides the method outright: DuckDB.** Its grammar isn't a pure dotted-segment shape — it accepts file-path-shaped inputs (`arrests-latest.parquet`, `s3://…`, globs) and explicit single-quoted literals (`'foo.csv'`) in addition to identifier paths. See `duckdb/table-path-parser.ts`. **Do not look at DuckDB as a reference for a normal SQL dialect** — its grammar is intentionally richer than what ANSI SQL allows.
+
+**Defense in depth: `;` and `--` are forbidden in any decoded segment.** Even when a segment is legally quoted, the parser rejects it if the decoded value contains `;` or `--`. Real table names don't contain those, and the rule shuts down a class of injection scenarios in callers that splice the canonical form into other string contexts.
 
 When the validator rejects an input:
 - `ImportsAndTablesStep` silently skips the reference (no schemaZone register, no schema-fetch needs-request).

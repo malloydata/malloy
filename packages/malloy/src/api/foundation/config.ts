@@ -21,6 +21,10 @@ import {
   isThenable,
 } from './config_overlays';
 import type {ConfigOverlays} from './config_overlays';
+import {
+  requireCanonicalTablePathAnyDialect,
+  validateCanonicalTablePathAnyDialect,
+} from '../../connection/validate_table_path';
 
 /**
  * In-memory manifest store. Reads, updates, and serializes manifest data.
@@ -76,10 +80,12 @@ export class Manifest {
     this._manifest.strict = value;
   }
 
-  /**
-   * Add or replace a manifest entry. Also marks it as touched.
-   */
+  /** Add or replace a manifest entry. Also marks it as touched. */
   update(buildId: BuildID, entry: BuildManifestEntry): void {
+    requireCanonicalTablePathAnyDialect(
+      entry.tableName,
+      `Manifest entry '${buildId}'`
+    );
     this._manifest.entries[buildId] = entry;
     this._touched.add(buildId);
   }
@@ -121,9 +127,12 @@ export class Manifest {
     // Old format: {buildId: {tableName}, ...} (flat record, no "entries" key)
     const rawEntries = isRecord(parsed['entries']) ? parsed['entries'] : parsed;
     for (const [key, val] of Object.entries(rawEntries)) {
-      if (key !== 'strict' && isBuildManifestEntry(val)) {
-        this._manifest.entries[key] = val;
-      }
+      if (key === 'strict' || !isBuildManifestEntry(val)) continue;
+      requireCanonicalTablePathAnyDialect(
+        val.tableName,
+        `Manifest entry '${key}'`
+      );
+      this._manifest.entries[key] = val;
     }
   }
 }
@@ -332,7 +341,7 @@ export class MalloyConfig {
     this._connections = this._managedLookup;
 
     this._overlays = mergedOverlays;
-    this.virtualMap = toVirtualMap(prepared.virtualMap);
+    this.virtualMap = toVirtualMap(prepared.virtualMap, log);
     this.configURL = configURL;
     this.rootDirectory = rootDirectory;
     this.manifestPath = prepared.manifestPath;
@@ -638,18 +647,27 @@ function validateURLString(
 
 /**
  * Convert the raw virtualMap POJO shape (a dict of dicts of strings) into
- * the runtime Map-of-Maps representation that Runtime consumes.
+ * the runtime Map-of-Maps representation. Invalid entries are dropped and
+ * logged — they'd be pasted into FROM clauses downstream otherwise.
  */
-function toVirtualMap(raw: unknown): VirtualMap | undefined {
+function toVirtualMap(raw: unknown, log: LogMessage[]): VirtualMap | undefined {
   if (!isRecord(raw)) return undefined;
   const outer = new Map<string, Map<string, string>>();
   for (const [connName, inner] of Object.entries(raw)) {
     if (!isRecord(inner)) continue;
     const innerMap = new Map<string, string>();
     for (const [virtualName, tablePath] of Object.entries(inner)) {
-      if (typeof tablePath === 'string') {
-        innerMap.set(virtualName, tablePath);
+      if (typeof tablePath !== 'string') continue;
+      const invalid = validateCanonicalTablePathAnyDialect(tablePath);
+      if (invalid !== undefined) {
+        log.push({
+          message: `virtualMap entry '${connName}.${virtualName}': ${invalid}`,
+          severity: 'error',
+          code: 'config-validation',
+        });
+        continue;
       }
+      innerMap.set(virtualName, tablePath);
     }
     if (innerMap.size > 0) outer.set(connName, innerMap);
   }
@@ -660,6 +678,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isBuildManifestEntry(value: unknown): value is BuildManifestEntry {
+export function isBuildManifestEntry(
+  value: unknown
+): value is BuildManifestEntry {
   return isRecord(value) && typeof value['tableName'] === 'string';
 }

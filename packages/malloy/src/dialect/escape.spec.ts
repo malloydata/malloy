@@ -552,6 +552,40 @@ for (const dialect of getDialects()) {
   });
 }
 
+describe('sqlValidateTableName forbids `;` and `--` in decoded segments', () => {
+  const postgres = getDialects().find(d => d.name === 'postgres')!;
+  const duckdb = getDialects().find(d => d.name === 'duckdb')!;
+
+  it('postgres rejects `;` inside quoted identifier', () => {
+    const r = postgres.sqlValidateTableName('"x;evil"');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/forbidden character/);
+  });
+
+  it('postgres rejects `--` inside quoted identifier', () => {
+    const r = postgres.sqlValidateTableName('"x--evil"');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/forbidden character/);
+  });
+
+  it('duckdb rejects `;` inside quoted identifier (shared parser)', () => {
+    const r = duckdb.sqlValidateTableName('"x;evil"');
+    expect(r.ok).toBe(false);
+  });
+
+  it('duckdb rejects `;` inside explicit single-quoted form', () => {
+    const r = duckdb.sqlValidateTableName("'x;evil'");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/forbidden character/);
+  });
+
+  it('duckdb still accepts file-path convenience without `;` or `--`', () => {
+    const r = duckdb.sqlValidateTableName('data/foo.parquet');
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.canonical).toBe("'data/foo.parquet'");
+  });
+});
+
 // BigQuery's bare-FROM grammar doesn't accept wildcards — they must be
 // backtick-quoted (`` `dataset.events_*` ``). The validator rejects the
 // bare form; users supply the backticks themselves, same as they would

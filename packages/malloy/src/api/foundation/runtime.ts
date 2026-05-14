@@ -18,6 +18,8 @@ import type {
 } from '../../model';
 import {isSourceDef, mkSafeRecord} from '../../model';
 import {getDialect} from '../../dialect';
+import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
+import {isBuildManifestEntry} from './config';
 import type {Dialect} from '../../dialect';
 import type {RunSQLOptions} from '../../run_sql_options';
 import {rowDataToNumber} from '../../api/row_data_utils';
@@ -325,6 +327,17 @@ export class Runtime {
           const parsed: unknown = JSON.parse(text);
           if (!isBuildManifestShape(parsed)) {
             throw new Error('manifest is not an object with an "entries" map');
+          }
+          for (const [buildId, entry] of Object.entries(parsed.entries)) {
+            if (!isBuildManifestEntry(entry)) {
+              throw new Error(
+                `Manifest entry '${buildId}' is missing a string tableName`
+              );
+            }
+            requireCanonicalTablePathAnyDialect(
+              entry.tableName,
+              `Manifest entry '${buildId}'`
+            );
           }
           return parsed;
         } catch (e) {
@@ -1129,6 +1142,15 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         mergedOptions.buildManifest ??
         (await this.runtime._resolveBuildManifest());
 
+      if (buildManifest) {
+        for (const [buildId, entry] of Object.entries(buildManifest.entries)) {
+          requireCanonicalTablePathAnyDialect(
+            entry.tableName,
+            `Manifest entry '${buildId}'`
+          );
+        }
+      }
+
       // If we have a manifest with entries, compute connectionDigests for lookups.
       // TODO: This is inefficient - we call getBuildPlan just to find connection names.
       // Consider adding a listConnections() method to LookupConnection, or caching this.
@@ -1169,6 +1191,16 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
 
       // Use virtualMap from options if provided, otherwise fall back to Runtime's.
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
+      if (virtualMap) {
+        for (const [connName, inner] of virtualMap) {
+          for (const [virtualName, tablePath] of inner) {
+            requireCanonicalTablePathAnyDialect(
+              tablePath,
+              `virtualMap entry '${connName}.${virtualName}'`
+            );
+          }
+        }
+      }
 
       // Per-query supply for a finalized given is rejected at API entry
       // — the finalized-givens set is the runtime's "this can't be

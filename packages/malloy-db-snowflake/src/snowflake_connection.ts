@@ -443,16 +443,20 @@ export class SnowflakeConnection
   ): Promise<TableSizeProbe | undefined> {
     const parsed = parseSnowflakeTableName(tablePath);
     if (parsed === undefined || parsed.schema === undefined) return undefined;
-    const quoteLit = (s: string) => s.replace(/'/g, "''");
     const dbQualifier = parsed.database ? `${parsed.database.sql}.` : '';
+    // Use parameter binds for the literal segments. Snowflake honors
+    // backslash escapes inside string literals, so hand-rolled ANSI
+    // quoting wouldn't be safe for decoded identifier text that may
+    // contain a backslash.
     const rows = await this.executor.tryBatch(
       `select row_count as rc, bytes as by
        from ${dbQualifier}information_schema.tables
-       where table_schema = '${quoteLit(parsed.schema.literal)}'
-         and table_name = '${quoteLit(parsed.table.literal)}'
+       where table_schema = ?
+         and table_name = ?
        limit 1`,
       {},
-      this.schemaSampleTimeoutMs
+      this.schemaSampleTimeoutMs,
+      [parsed.schema.literal, parsed.table.literal]
     );
     if (!rows || rows.length === 0) return undefined;
     const row = rows[0];

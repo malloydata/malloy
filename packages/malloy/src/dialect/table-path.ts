@@ -67,6 +67,8 @@ export function decodeDottedTablePath(
   const segments: TablePathSegment[] = [];
   let i = 0;
   while (true) {
+    let segValue: string;
+    let segQuoted: boolean;
     if (input[i] === quoteChar) {
       const result = consumeQuotedSegment(input, i, quoteChar, escapeStyle);
       if (result === null) {
@@ -77,7 +79,8 @@ export function decodeDottedTablePath(
             'unterminated quoted segment',
         };
       }
-      segments.push({value: result.decoded, quoted: true});
+      segValue = result.decoded;
+      segQuoted = true;
       i = result.end;
     } else {
       const m = input.slice(i).match(bareIdentRegex);
@@ -89,9 +92,22 @@ export function decodeDottedTablePath(
             `invalid segment at position ${i}`,
         };
       }
-      segments.push({value: m[0], quoted: false});
+      segValue = m[0];
+      segQuoted = false;
       i += m[0].length;
     }
+    // Defense-in-depth: `;` and `--` are forbidden in any decoded segment,
+    // even a legally-quoted one. Real table names don't contain them.
+    if (segValue.includes(';') || segValue.includes('--')) {
+      return {
+        ok: false,
+        error:
+          `Invalid ${dialectName} table path: segment ${JSON.stringify(segValue)} ` +
+          'contains forbidden character; even when quoted, table-path ' +
+          'segments may not contain `;` or `--`.',
+      };
+    }
+    segments.push({value: segValue, quoted: segQuoted});
     if (i === input.length) return {ok: true, segments};
     if (input[i] !== '.') {
       return {

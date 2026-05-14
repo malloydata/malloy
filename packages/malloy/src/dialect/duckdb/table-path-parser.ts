@@ -44,6 +44,15 @@ export function validateDuckDBTablePath(
   // Branch 1: explicit single-quoted literal.
   if (input[0] === "'") {
     if (DUCKDB_SINGLE_QUOTED_RE.test(input)) {
+      const body = input.slice(1, -1).replace(/''/g, "'");
+      if (body.includes(';') || body.includes('--')) {
+        return {
+          ok: false,
+          error:
+            `Invalid DuckDB table path: ${JSON.stringify(input)} — ` +
+            'forbidden character `;` or `--` in single-quoted body.',
+        };
+      }
       return {ok: true, canonical: input};
     }
     return {
