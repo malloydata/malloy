@@ -13,7 +13,7 @@
 
 [Try in Browser](https://github.dev/malloydata/try-malloy/airports.malloy) · [Quickstart](https://docs.malloydata.dev/documentation/user_guides/basic.html) · [Docs](https://docs.malloydata.dev/documentation/) · [Slack](https://malloydata.github.io/slack) · [YouTube](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg)
 
-<img src=".github/images/wordmark-dark.svg" alt="Malloy" width="650"/>
+<img src=".github/images/malloy-logo.png" alt="Malloy" width="160"/>
 
 </div>
 
@@ -21,15 +21,13 @@
 
 ## What is Malloy?
 
-Malloy is an open source language for describing data relationships and transformations.
+Malloy is an open source language for describing data relationships and transformations. It is both a semantic modeling layer and a query language that compiles to SQL. Malloy doesn't replace SQL; it adds a layer of **meaning** that runs on your existing data warehouse. Define your measures, joins, and business logic once, then reuse them without copy-pasting SQL snippets across queries and dashboards.
 
-It is both a semantic modeling layer and a query language that compiles to SQL. Malloy doesn't replace SQL; it adds a layer of meaning on top that runs on your existing data warehouse. Define your measures, joins, and business logic once, then compose them without copy-pasting SQL snippets across queries and dashboards.
-
-**Supported backends:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks
+**Supported SQL engines:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks
 
 Malloy is built for analytics engineers, SQL teams, and developers building data apps who need measures, joins, and views to mean the same thing across every dashboard, notebook, and pipeline, especially when the data is nested.
 
-SQL gives you maximum flexibility, which is what you want when one analyst is asking one-off questions. At team scale that same flexibility can produce duplicated joins, fan-out bugs, and measures that drift across dashboards. Other semantic layers fix that but lock you into their own query model. Malloy keeps the flexibility of a relational query language and adds a semantic model on top.
+SQL gives you maximum flexibility, which is what you want when one analyst is asking one-off questions. On a team, that same flexibility produces duplicated joins, fan-out bugs, and measures that drift across dashboards or applications.
 
 Concretely:
 
@@ -66,7 +64,7 @@ There are four ways to install Malloy:
 
 The easiest way to try Malloy is the [VSCode Extension](https://docs.malloydata.dev/documentation/setup/extension.html#installation). You can do this locally, or [try it in the browser (no install)](https://github.dev/malloydata/try-malloy/airports.malloy), which opens a live Malloy notebook in github.dev (GitHub's in-browser VSCode; requires a GitHub sign-in).
 
-Follow the instructions for [connecting Malloy to your database](https://docs.malloydata.dev/documentation/setup/extension.html#database-specific-setup). Supports BigQuery, Snowflake, DuckDB, Postgres, MySQL, Trino/Presto, Databricks, or MotherDuck.
+Follow the instructions for [connecting Malloy to your database](https://docs.malloydata.dev/documentation/setup/extension.html#database-specific-setup). Supports BigQuery, Snowflake, DuckDB, MotherDuck, PostgreSQL, MySQL, Trino, Presto, or Databricks.
 
 ![Malloy VSCode Extension — write queries, explore results inline](https://user-images.githubusercontent.com/1093458/182458787-ca228186-c954-4a07-b298-f92dbf91e48d.gif)
 
@@ -109,8 +107,9 @@ malloy-cli run my_query.malloy
 ```
 
 It can `run` queries, `compile` to SQL, and `build` persistent tables from sources marked `#@ persist`.<br>
-Connections are configured in `~/.config/malloy/malloy-config.json` (DuckDB, BigQuery, Postgres, Snowflake, Trino, Presto).<br>
-See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/index) and [malloy-cli repo](https://github.com/malloydata/malloy-cli).
+Connections are configured in `~/.config/malloy/malloy-config.json` (BigQuery, Snowflake, DuckDB, PostgreSQL, MySQL, Trino, Presto, Databricks; MotherDuck via DuckDB).<br>
+
+See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/index) and [malloy-cli repo](https://github.com/malloydata/malloy-cli) for more details about using the CLI
 
 ### Serve models with Publisher
 
@@ -137,7 +136,7 @@ Open `http://localhost:4000` to browse models, run queries, and grab MCP endpoin
 
 ## The Malloy Language at a Glance
 
-SQL is the right tool for ad-hoc, single-analyst exploration against one table. Malloy pays off when a team needs the same definition of "active user", "revenue", or "on-time flight" across dozens of queries, dashboards, and pipelines. Because it compiles to SQL, joins, measures, and business rules live in one place and feed every query downstream.
+SQL is the right tool for ad-hoc, single-analyst exploration against one table. Malloy is for the case where several analysts share a warehouse and the definition of "active user" (for example) has to be the same in every dashboard. Because it compiles to SQL, joins, measures, and business rules live in one place and feed every query downstream.
 
 A bare Malloy query reads like an outline of what you want:
 
@@ -159,7 +158,7 @@ GROUP BY state
 ORDER BY airport_count DESC  -- Malloy orders by first aggregate automatically
 ```
 
-Malloy is most useful for pinning down measures whose definitions aren't obvious. Take "on-time arrival" — the US DOT defines it as `arr_delay < 15` *with cancelled and diverted flights excluded*. A naive `count() { where: arr_delay < 15 } / count()` silently treats cancellations as on-time. Encode the rule once, and every dashboard, report, and ad-hoc query agrees:
+Malloy is most useful for pinning down measures whose definitions aren't obvious. Take "on-time arrival" - the US DOT defines it as `arr_delay < 15` *with cancelled and diverted flights excluded*. A naive `count() { where: arr_delay < 15 } / count()` silently treats cancellations as on-time. Encode the rule once, and every dashboard, report, and ad-hoc query agrees:
 
 ```malloy
 source: flights is duckdb.table('flights.parquet') extend {
@@ -171,28 +170,7 @@ source: flights is duckdb.table('flights.parquet') extend {
 }
 ```
 
-For the full language tour (sources, joins, nested results, symmetric aggregates, and the pipe operator), see the [10-minute quickstart](https://docs.malloydata.dev/documentation/user_guides/basic.html) and [Malloy by Example](https://docs.malloydata.dev/documentation/user_guides/malloy_by_example).
-
----
-
-## Examples
-
-| Example | What it shows |
-|---|---|
-| [Build a semantic model](https://docs.malloydata.dev/documentation/user_guides/quickstart_modeling) | Define sources, joins, dimensions, and measures once, then reuse them across queries |
-| [Percent of total](https://docs.malloydata.dev/documentation/patterns/percent_of_total) | Express common analytics patterns with reusable calculations instead of window-function-heavy SQL |
-| [Nested subtotals](https://docs.malloydata.dev/documentation/patterns/nested_subtotals) | Drill from high-level totals into nested detail without hand-writing rollups or self-joins |
-
----
-
-## Key Features
-
-- **Semantic model**: capture joins, measures, and dimensions once and reuse them across queries
-- **Composable pipelines**: chain transformations with `->` across multi-step queries
-- **Nested data**: query arrays and structs without unnesting boilerplate
-- **Symmetric aggregates**: fan-out safe `count()`, `sum()`, and `avg()` across any join path
-- **Multi-dialect SQL output**: one model targets BigQuery, Snowflake, DuckDB, and more
-- **VSCode integration**: schema explorer, inline results, and syntax highlighting
+These are two simple examples. The [10-minute quickstart](https://docs.malloydata.dev/documentation/user_guides/basic.html) and [Malloy by Example](https://docs.malloydata.dev/documentation/user_guides/malloy_by_example) cover additional topics like joins, nested results, symmetric aggregates, and the pipe operator.
 
 ---
 
