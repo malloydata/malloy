@@ -1,80 +1,31 @@
-name: Bug Report
-description: Report a bug or unexpected behavior in Malloy
-labels: ["bug", "needs-triage"]
+name: Bug report
+description: Something not working in Malloy? Tell us about it.
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Before opening a bug report, please [search existing issues](https://github.com/malloydata/malloy/issues) to avoid duplicates.
-        For usage questions or help with your own project, use [Slack](https://malloydata.github.io/slack) or [GitHub Discussions](https://github.com/malloydata/malloy/discussions) instead.
-
-  - type: checkboxes
-    id: preflight
-    attributes:
-      label: Before submitting
-      options:
-        - label: I searched existing issues and did not find a duplicate
-          required: true
-        - label: I am using the latest published version of the affected package
-          required: true
+        Have a usage question rather than a bug? The [Slack](https://malloydata.github.io/slack) is usually faster than an issue.
 
   - type: textarea
-    id: current-behavior
+    id: what-happened
     attributes:
-      label: Current behavior
-      description: A clear description of what is happening.
-      placeholder: "When I run X, Y happens..."
-    validations:
-      required: true
-
-  - type: textarea
-    id: expected-behavior
-    attributes:
-      label: Expected behavior
-      description: What did you expect to happen instead?
-      placeholder: "I expected Z to happen..."
-    validations:
-      required: true
-
-  - type: textarea
-    id: steps
-    attributes:
-      label: Steps to reproduce
-      description: A minimal, step-by-step sequence to trigger the bug.
-      placeholder: |
-        1. Create a source with...
-        2. Run the query...
-        3. See error...
+      label: What happened?
+      description: What were you trying to do, and what went wrong?
     validations:
       required: true
 
   - type: textarea
     id: malloy-source
     attributes:
-      label: Minimal Malloy source
-      description: The smallest `.malloy` snippet that triggers the bug. This is the single most helpful thing you can include.
-      render: text
-    validations:
-      required: true
-
-  - type: textarea
-    id: sql-output
-    attributes:
-      label: Generated SQL (if applicable)
-      description: The SQL Malloy generated, if you can capture it.
-      render: sql
-
-  - type: textarea
-    id: error
-    attributes:
-      label: Error message or unexpected output
+      label: Malloy source (if applicable)
+      description: A short `.malloy` snippet that reproduces the issue. This is the single most helpful thing you can include.
       render: text
 
   - type: dropdown
     id: backend
     attributes:
       label: Database backend
-      multiple: true
       options:
         - DuckDB
         - BigQuery
@@ -85,38 +36,10 @@ body:
         - Databricks
         - DuckDB WASM (browser)
         - Not applicable / compiler only
-    validations:
-      required: true
-
-  - type: dropdown
-    id: environment
-    attributes:
-      label: Where are you running Malloy?
-      options:
-        - VS Code Extension
-        - npm package (Node.js)
-        - DuckDB WASM (browser)
-        - Malloy Publisher
         - Other
-    validations:
-      required: true
 
-  - type: textarea
-    id: env-info
+  - type: input
+    id: version
     attributes:
-      label: Environment
-      description: "Run `npm list @malloydata/malloy` or check your `package.json` for exact versions."
-      value: |
-        - OS:
-        - Node.js:
-        - @malloydata/malloy:
-        - @malloydata/db-[backend]:
-      render: markdown
-    validations:
-      required: false
-
-  - type: textarea
-    id: context
-    attributes:
-      label: Additional context
-      description: Anything else that might help — screenshots, links, related issues.
+      label: Malloy version (if known)
+      placeholder: "@malloydata/malloy 0.x.y"

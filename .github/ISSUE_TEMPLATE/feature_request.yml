@@ -1,81 +1,16 @@
-name: Feature Request
-description: Suggest a straightforward improvement or addition to Malloy
-labels: ["enhancement", "needs-triage"]
+name: Feature request
+description: Suggest an improvement to Malloy.
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        **Is this a big architectural idea for the Malloy language?** Open a [Discussion](https://github.com/malloydata/malloy/discussions/new?category=ideas) or a [WN proposal](https://github.com/malloydata/whatsnext) instead — it will get more visibility and the right reviewers.
-
-        This template is for concrete, scoped feature requests: a missing function, a new renderer option, a connector capability, a CLI flag, etc.
-
-  - type: checkboxes
-    id: preflight
-    attributes:
-      label: Before submitting
-      options:
-        - label: I searched existing issues and the roadmap and did not find a duplicate
-          required: true
-        - label: This is a concrete, scoped request — not a broad language design proposal
-          required: true
+        For larger language-design ideas, [open a Discussion](https://github.com/malloydata/malloy/discussions/new?category=ideas) or a [What's Next proposal](https://github.com/malloydata/whatsnext) — they get more visibility than an issue.
 
   - type: textarea
-    id: problem
+    id: idea
     attributes:
-      label: What problem are you trying to solve?
-      description: Describe the use case or limitation. What can't you do today?
+      label: What's the idea?
+      description: What can't you do today, or what would you like to be able to do?
     validations:
       required: true
-
-  - type: textarea
-    id: proposal
-    attributes:
-      label: Proposed solution
-      description: How would you like this to work? Include example Malloy syntax or pseudocode if helpful.
-      render: text
-    validations:
-      required: true
-
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives you considered
-      description: Any workarounds or other designs you thought about.
-
-  - type: textarea
-    id: impact
-    attributes:
-      label: Who else would benefit?
-      description: Helps maintainers prioritize. E.g. "anyone using DuckDB with large files", "all VS Code extension users".
-
-  - type: dropdown
-    id: area
-    attributes:
-      label: Area
-      multiple: true
-      options:
-        - Language / Compiler
-        - DuckDB connector
-        - BigQuery connector
-        - Snowflake connector
-        - PostgreSQL connector
-        - MySQL connector
-        - Trino / Presto connector
-        - Databricks connector
-        - Rendering / Visualization
-        - VS Code Extension
-        - Publisher
-        - CLI
-        - Python client
-        - npm API / SDK
-        - Documentation
-        - Other
-
-  - type: dropdown
-    id: willing-to-implement
-    attributes:
-      label: Are you willing to open a PR for this?
-      options:
-        - "Yes"
-        - "No"
-        - "Maybe — I'd need guidance"

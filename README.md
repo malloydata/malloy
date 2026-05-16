@@ -2,7 +2,7 @@
 
 # Malloy
 
-**A modern semantic modeling and query language built on top of SQL**
+**A semantic modeling and query language built on top of SQL**
 
 [![CI](https://github.com/malloydata/malloy/actions/workflows/run-tests.yaml/badge.svg)](https://github.com/malloydata/malloy/actions/workflows/run-tests.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -21,23 +21,25 @@
 
 ## What is Malloy?
 
-Malloy is an open source language for describing **data relationships and transformations**.
+Malloy is an open source language for describing data relationships and transformations.
 
-It is both a **semantic modeling layer** and a **query language** that compiles to SQL - Malloy doesn't replace SQL, it adds a layer of meaning on top that runs on your existing data warehouse. Define your measures, joins, and business logic once, then compose them freely without copy-pasting SQL snippets across queries and dashboards.
+It is both a semantic modeling layer and a query language that compiles to SQL. Malloy doesn't replace SQL; it adds a layer of meaning on top that runs on your existing data warehouse. Define your measures, joins, and business logic once, then compose them without copy-pasting SQL snippets across queries and dashboards.
 
 **Supported backends:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks
 
-Malloy is built for analytics engineers, SQL teams, and developers building data apps who need measures, joins, and views to mean the same thing across every dashboard, notebook, and pipeline — especially when that data is nested.
+Malloy is built for analytics engineers, SQL teams, and developers building data apps who need measures, joins, and views to mean the same thing across every dashboard, notebook, and pipeline, especially when the data is nested.
 
-SQL gives you maximum flexibility — exactly what you want when one analyst is asking one-off questions. But at team scale, that same flexibility quietly turns into duplicated joins, fan-out bugs, and measures that drift across dashboards. Existing semantic layers add safety but lock you into their query model. Malloy gives you both: **the safety of a semantic data model with the full flexibility of a relational query language.**
+SQL gives you maximum flexibility, which is what you want when one analyst is asking one-off questions. At team scale that same flexibility can produce duplicated joins, fan-out bugs, and measures that drift across dashboards. Other semantic layers fix that but lock you into their own query model. Malloy keeps the flexibility of a relational query language and adds a semantic model on top.
+
+Concretely:
 
 | Pain point | How Malloy solves it |
 |---|---|
 | Joins duplicated everywhere | Define joins once in a source, reuse across every query |
-| Aggregation fans out silently | Symmetric aggregates make `count()`, `sum()`, and `avg()` fan-out safe by default |
-| Measures drift across dashboards | Single source of truth — change a measure once, every query updates |
-| Nested data requires boilerplate | First-class support for nested and repeated fields, no unnesting required |
-| Multi-step transforms are hard to read | Pipe operator `->` chains transformations linearly, like a Unix pipeline |
+| Aggregation fans out silently | Symmetric aggregates make `count()`, `sum()`, and `avg()` fan-out safe |
+| Measures drift across dashboards | Define each measure once; change it in one place and every query reflects it |
+| Nested data requires boilerplate | Native nested and repeated fields, no unnesting required |
+| Multi-step transforms are hard to read | Pipe operator `->` chains transformations, like a Unix pipeline |
 
 <br>
 <p>
@@ -47,30 +49,32 @@ SQL gives you maximum flexibility — exactly what you want when one analyst is 
 
 ---
 
-## How Malloy works
+## How Malloy Works
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/images/how-it-works-dark.svg">
-  <img src=".github/images/how-it-works-light.svg" alt="How Malloy works: define a semantic .malloy model, compile to SQL, run natively on your warehouse — consumed from VS Code, npm, CLI, Publisher, or Python." width="100%"/>
+  <img src=".github/images/how-it-works-light.svg" alt="How Malloy works: define a semantic .malloy model, compile to SQL, run natively on your warehouse. Consumed from VS Code, npm, CLI, Publisher, or Python." width="100%"/>
 </picture>
 
 ---
 
 ## Quick Start
 
-To install Malloy - there are four independent paths — pick whichever best fits your setup:
+There are four ways to install Malloy:
 
 ### Install the VSCode Extension
 
-A quick and easy way to try Malloy is to use VSCode by [installing the Malloy extension into directly from the VSCode Marketplace](https://docs.malloydata.dev/documentation/setup/extension.html#installation). You can do this locally or [Try it in the browser (no install)](https://github.dev/malloydata/try-malloy/airports.malloy) — opens a live Malloy notebook in github.dev, GitHub's in-browser VSCode. Requires a GitHub sign-in.
+The easiest way to try Malloy is the [VSCode Extension](https://docs.malloydata.dev/documentation/setup/extension.html#installation). You can do this locally, or [try it in the browser (no install)](https://github.dev/malloydata/try-malloy/airports.malloy), which opens a live Malloy notebook in github.dev (GitHub's in-browser VSCode; requires a GitHub sign-in).
 
-Follow the instructions for [connecting Malloy to your database](https://docs.malloydata.dev/documentation/setup/extension.html#database-specific-setup) — supports BigQuery, Snowflake, DuckDB, Postgres, MySQL, Trino/Presto, or MotherDuck
+Follow the instructions for [connecting Malloy to your database](https://docs.malloydata.dev/documentation/setup/extension.html#database-specific-setup). Supports BigQuery, Snowflake, DuckDB, Postgres, MySQL, Trino/Presto, Databricks, or MotherDuck.
 
 ![Malloy VSCode Extension — write queries, explore results inline](https://user-images.githubusercontent.com/1093458/182458787-ca228186-c954-4a07-b298-f92dbf91e48d.gif)
 
+> Note: The Malloy VSCode Extension collects a small amount of anonymous usage data. You can opt out in the extension settings. [Learn more](https://policies.google.com/technologies/cookies).
+
 ### Use the npm packages
 
-To use Malloy in Node.js - install the compiler and a database connector, for example:
+To use Malloy in Node.js, install the compiler and a database connector. For example:
 
 ```bash
 npm install @malloydata/malloy @malloydata/db-duckdb
@@ -97,7 +101,7 @@ query.run().then(result => console.log(result.data.value));
 
 ### Run Malloy from the command line
 
-For scripting, pipelines, or CI — you can install the standalone Malloy CLI:
+For scripting, pipelines, or CI, install the standalone Malloy CLI:
 
 ```bash
 npm install -g malloy-cli
@@ -108,11 +112,9 @@ It can `run` queries, `compile` to SQL, and `build` persistent tables from sourc
 Connections are configured in `~/.config/malloy/malloy-config.json` (DuckDB, BigQuery, Postgres, Snowflake, Trino, Presto).<br>
 See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/index) and [malloy-cli repo](https://github.com/malloydata/malloy-cli).
 
-See the [language docs](https://docs.malloydata.dev/documentation/) for the full SDK reference and more examples.
-
 ### Serve models with Publisher
 
-[Publisher](https://github.com/malloydata/publisher) is the open-source semantic model server for Malloy — it serves your `.malloy` models through REST and MCP APIs, so apps, BI tools, and AI agents can query them consistently:
+[Publisher](https://github.com/malloydata/publisher) is the open-source semantic model server for Malloy. It serves your `.malloy` models through REST and MCP APIs so apps, BI tools, and AI agents can query them through one interface:
 
 ```bash
 npx @malloy-publisher/server --port 4000 --server_root path/to/your/models
@@ -126,16 +128,16 @@ Open `http://localhost:4000` to browse models, run queries, and grab MCP endpoin
 
 | Tool | Key difference from Malloy |
 |---|---|
-| **Raw SQL** | No semantic layer - measures are copy-pasted into every query; fan-out bugs are silent |
+| **Raw SQL** | No semantic layer; measures are copy-pasted into every query and fan-out bugs are silent |
 | **LookML** | Proprietary and locked to Looker; Malloy is open source and targets any SQL warehouse |
-| **dbt metrics / MetricFlow** | Definition-only; you still write SQL to consume metrics — Malloy is a full query language |
+| **dbt metrics / MetricFlow** | Definition-only; you still write SQL to consume metrics. Malloy is a full query language |
 | **Cube** | JavaScript/YAML configuration; Malloy is a typed, composable query language |
 
 ---
 
 ## The Malloy Language at a Glance
 
-SQL is the right tool for ad-hoc, single-analyst exploration against one table. Where Malloy earns its keep is when a team needs the same definition of *"active user"*, *"revenue"*, or *"on-time flight"* across dozens of queries, dashboards, and pipelines. **Malloy doesn't replace SQL — it compiles to it**, adding a semantic layer *inside* the query language so joins, measures, and business rules live in one place and feed every query downstream.
+SQL is the right tool for ad-hoc, single-analyst exploration against one table. Malloy pays off when a team needs the same definition of "active user", "revenue", or "on-time flight" across dozens of queries, dashboards, and pipelines. Because it compiles to SQL, joins, measures, and business rules live in one place and feed every query downstream.
 
 A bare Malloy query reads like an outline of what you want:
 
@@ -157,7 +159,7 @@ GROUP BY state
 ORDER BY airport_count DESC  -- Malloy orders by first aggregate automatically
 ```
 
-The real payoff is pinning down measures whose definitions aren't obvious. Take "on-time arrival" — the US DOT defines it as `arr_delay < 15` *with cancelled and diverted flights excluded*. A naive `count() { where: arr_delay < 15 } / count()` silently treats cancellations as on-time. Encode the rule once, and every dashboard, report, and ad-hoc query agrees:
+Malloy is most useful for pinning down measures whose definitions aren't obvious. Take "on-time arrival" — the US DOT defines it as `arr_delay < 15` *with cancelled and diverted flights excluded*. A naive `count() { where: arr_delay < 15 } / count()` silently treats cancellations as on-time. Encode the rule once, and every dashboard, report, and ad-hoc query agrees:
 
 ```malloy
 source: flights is duckdb.table('flights.parquet') extend {
@@ -169,7 +171,7 @@ source: flights is duckdb.table('flights.parquet') extend {
 }
 ```
 
-For the full language tour — sources, joins, nested results, symmetric aggregates, and the pipe operator — see the [10-minute quickstart](https://docs.malloydata.dev/documentation/user_guides/basic.html) and [Malloy by Example](https://docs.malloydata.dev/documentation/user_guides/malloy_by_example).
+For the full language tour (sources, joins, nested results, symmetric aggregates, and the pipe operator), see the [10-minute quickstart](https://docs.malloydata.dev/documentation/user_guides/basic.html) and [Malloy by Example](https://docs.malloydata.dev/documentation/user_guides/malloy_by_example).
 
 ---
 
@@ -185,12 +187,12 @@ For the full language tour — sources, joins, nested results, symmetric aggrega
 
 ## Key Features
 
-- **Semantic model** — capture joins, measures, and dimensions once; query them everywhere
-- **Composable pipelines** — chain transformations with `->` for readable multi-step analysis
-- **Nested data** — query arrays and structs naturally without unnesting boilerplate
-- **Symmetric aggregates** — fan-out safe `count()`, `sum()`, and `avg()` across any join path
-- **Multi-dialect SQL output** — one model targets BigQuery, Snowflake, DuckDB, and more
-- **VSCode integration** — schema explorer, inline results, and syntax highlighting
+- **Semantic model**: capture joins, measures, and dimensions once and reuse them across queries
+- **Composable pipelines**: chain transformations with `->` across multi-step queries
+- **Nested data**: query arrays and structs without unnesting boilerplate
+- **Symmetric aggregates**: fan-out safe `count()`, `sum()`, and `avg()` across any join path
+- **Multi-dialect SQL output**: one model targets BigQuery, Snowflake, DuckDB, and more
+- **VSCode integration**: schema explorer, inline results, and syntax highlighting
 
 ---
 
@@ -224,28 +226,18 @@ This monorepo ships the core compiler, database connectors, and rendering utilit
 
 ---
 
-## Roadmap
-
-See [`ROADMAP.md`](ROADMAP.md) for the public roadmap and upcoming priorities.
-
-Have a feature request? Open a [GitHub issue](https://github.com/malloydata/malloy/issues/new/choose) or start a conversation in [Slack](https://malloydata.github.io/slack).
-
----
-
 ## Community
 
-- **[Slack](https://malloydata.github.io/slack)** — ask questions, share models, meet other users
-- **[GitHub Discussions](https://github.com/malloydata/malloy/discussions)** — longer-form conversations and RFCs
-- **[GitHub Issues](https://github.com/malloydata/malloy/issues)** — bug reports and feature requests
-- **[YouTube](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg)** — demos and tutorials
-
-> Note: The Malloy VSCode Extension collects a small amount of anonymous usage data. You can opt out in the extension settings. [Learn more](https://policies.google.com/technologies/cookies).
+- **[Slack](https://malloydata.github.io/slack)**: ask questions, share models, meet other users
+- **[GitHub Discussions](https://github.com/malloydata/malloy/discussions)**: longer-form conversations and RFCs
+- **[GitHub Issues](https://github.com/malloydata/malloy/issues)**: bug reports and feature requests
+- **[YouTube](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg)**: demos and tutorials
 
 ---
 
 ## Contributing
 
-We welcome contributions of all kinds — bug fixes, new database connectors, documentation, and examples.
+We welcome bug fixes, new database connectors, documentation, and examples.
 
 1. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for licensing and DCO requirements
 2. Read [`developing.md`](developing.md) to set up your local environment
