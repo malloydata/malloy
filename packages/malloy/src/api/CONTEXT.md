@@ -66,8 +66,9 @@ These are the actual compiler internals that do the work. Not a public API.
 
 ### MalloyTranslator (`src/lang/`)
 - Parses Malloy source text into IR types (`ModelDef`, `Query`, `SourceDef`, etc.)
-- Handles imports, schema fetching requests, iterative compilation
-- Returns `translator.translate()` results with either final `ModelDef` or `needs` for more info
+- Runs as a sequence of named steps (`ParseStep` → `ImportsAndTablesStep` → `ASTStep` → `TranslateStep`, plus IDE-facing steps); synchronous, so async fetches happen through a `translate()` ↔ `update(ParseUpdate)` pause-and-resume protocol
+- `translate()` returns either the final `ModelDef`, a `DataRequestResponse` listing `urls` / `tables` / `compileSQL` / `connectionDialects` it needs, or errors
+- See [`../lang/CONTEXT.md`](../lang/CONTEXT.md) for the step machinery, the needs protocol, and the AST integration entry points (`DocStatement.execute`, `ExpressionDef.getExpression`)
 
 ### QueryModel (`src/model/query_model_impl.ts`)
 - Takes a compiled `ModelDef` and compiles queries to SQL
