@@ -42,10 +42,9 @@ describe('import:', () => {
     });
   });
   test('simple source with importBaseURL', () => {
-    const docParse = new TestTranslator(
-      'import "child"',
-      'http://example.com/'
-    );
+    const docParse = new TestTranslator('import "child"', {
+      importBaseURL: 'http://example.com/',
+    });
     const xr = docParse.unresolved();
     expect(docParse).toParse();
     expect(xr).toMatchObject({urls: ['http://example.com/child']});

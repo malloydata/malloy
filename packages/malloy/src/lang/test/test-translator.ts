@@ -365,6 +365,14 @@ export class TestChildTranslator extends MalloyChildTranslator {
 }
 
 const testURI = 'internal://test/langtests/root.malloy';
+
+export interface TestTranslatorOptions {
+  rootRule?: string;
+  importBaseURL?: string | null;
+  eventStream?: EventStream | null;
+  internalModel?: ModelDef;
+}
+
 export class TestTranslator extends MalloyTranslator {
   allDialectsEnabled = true;
   testRoot?: TestRoot;
@@ -453,16 +461,18 @@ export class TestTranslator extends MalloyTranslator {
 
   constructor(
     readonly testSrc: string,
-    importBaseURL: string | null = null,
-    eventStream: EventStream | null = null,
-    rootRule = 'malloyDocument',
-    internalModel?: ModelDef
+    options: TestTranslatorOptions = {}
   ) {
-    super(testURI, importBaseURL, null, eventStream);
-    this.grammarRule = rootRule;
+    super(
+      testURI,
+      options.importBaseURL ?? null,
+      null,
+      options.eventStream ?? null
+    );
+    this.grammarRule = options.rootRule ?? 'malloyDocument';
     this.importZone.define(testURI, testSrc);
-    if (internalModel !== undefined) {
-      this.internalModel = internalModel;
+    if (options.internalModel !== undefined) {
+      this.internalModel = options.internalModel;
     }
     for (const actualSchema of mockSchema) {
       this.schemaZone.define(
@@ -596,7 +606,7 @@ export class BetaExpression extends TestTranslator {
     model?: ModelDef,
     readonly sourceName: string = 'ab'
   ) {
-    super(src, null, null, 'debugExpr', model);
+    super(src, {rootRule: 'debugExpr', internalModel: model});
   }
 
   private testFS() {
@@ -726,10 +736,7 @@ export function makeModelFunc(options: {
       translator: new TestTranslator(
         (options.prefix ?? '') +
           (options.wrap ? options.wrap(ms.code) : ms.code),
-        null,
-        null,
-        undefined,
-        options?.model
+        {internalModel: options?.model}
       ),
     };
   };

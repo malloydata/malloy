@@ -1281,10 +1281,7 @@ describe('given: query satisfiability check', () => {
         ##! experimental.givens
         run: childSrc -> { select: * }
       `,
-        null,
-        null,
-        'malloyDocument',
-        cell1Model
+        {internalModel: cell1Model}
       );
       cell2.translate();
       expect(cell2).toLog(
