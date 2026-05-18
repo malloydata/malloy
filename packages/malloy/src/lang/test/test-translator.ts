@@ -371,6 +371,7 @@ export interface TestTranslatorOptions {
   importBaseURL?: string | null;
   eventStream?: EventStream | null;
   internalModel?: ModelDef;
+  restrictedMode?: boolean;
 }
 
 export class TestTranslator extends MalloyTranslator {
@@ -467,7 +468,8 @@ export class TestTranslator extends MalloyTranslator {
       testURI,
       options.importBaseURL ?? null,
       null,
-      options.eventStream ?? null
+      options.eventStream ?? null,
+      options.restrictedMode ?? false
     );
     this.grammarRule = options.rootRule ?? 'malloyDocument';
     this.importZone.define(testURI, testSrc);

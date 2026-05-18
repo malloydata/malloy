@@ -1060,7 +1060,8 @@ export class MalloyTranslator extends MalloyTranslation {
     rootURL: string,
     importURL: string | null = null,
     preload: ParseUpdate | null = null,
-    private readonly eventStream: EventStream | null = null
+    private readonly eventStream: EventStream | null = null,
+    readonly restrictedMode: boolean = false
   ) {
     super(rootURL, importURL);
     this.root = this;

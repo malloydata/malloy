@@ -116,6 +116,16 @@ export class MalloyError extends Error {
 // Malloy Static Class
 // =============================================================================
 
+type CompileRequest = Compilable &
+  CompileOptions &
+  CompileQueryOptions &
+  ParseOptions & {
+    urlReader: URLReader;
+    connections: LookupConnection<InfoConnection>;
+    model?: Model;
+    cacheManager?: CacheManager;
+  };
+
 export class Malloy {
   public static get version(): string {
     return MALLOY_VERSION;
@@ -175,7 +185,8 @@ export class Malloy {
       {
         urls: {[url.toString()]: source},
       },
-      eventStream
+      eventStream,
+      options?.restrictedMode ?? false
     );
     if (options?.testEnvironment) {
       translator.allDialectsEnabled = true;
@@ -264,27 +275,19 @@ export class Malloy {
    * @param model A compiled model to build upon (optional).
    * @return A (promise of a) compiled `Model`.
    */
-  public static async compile({
-    url,
-    source,
-    parse,
-    urlReader,
-    connections,
-    model,
-    refreshSchemaCache,
-    noThrowOnError,
-    eventStream,
-    importBaseURL,
-    cacheManager,
-  }: {
-    urlReader: URLReader;
-    connections: LookupConnection<InfoConnection>;
-    model?: Model;
-    cacheManager?: CacheManager;
-  } & Compilable &
-    CompileOptions &
-    CompileQueryOptions &
-    ParseOptions): Promise<Model> {
+  public static async compile(req: CompileRequest): Promise<Model> {
+    let {url, source, importBaseURL} = req;
+    const {
+      parse,
+      urlReader,
+      connections,
+      model,
+      refreshSchemaCache,
+      noThrowOnError,
+      eventStream,
+      cacheManager,
+      restrictedMode,
+    } = req;
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
       refreshTimestamp =
@@ -342,7 +345,8 @@ export class Malloy {
         {
           urls: {[_url]: source},
         },
-        eventStream
+        eventStream,
+        restrictedMode ?? false
       );
     }
     for (;;) {
