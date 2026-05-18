@@ -89,6 +89,13 @@ The AST is a tree of `MalloyElement` objects that represents the semantic struct
 - `visitX(pcx: XContext)` — visits a parse-tree node and returns the AST node for it (a `MalloyElement` subclass). Use this even if the method is only ever called from one parent visitor; the name signals "this is the parse-tree-to-AST mapping for rule `X`."
 - `getX(pcx: XContext)` — transforms a parse-tree fragment into something that is *not* an AST node (a typeDef, a primitive, a list of notes, etc.), or is a shared helper used from multiple callers. Distinct from `visitX` so a reader can tell at a glance whether the return is an AST node or a piece of supporting data.
 
+**AST integration entry points:**
+
+Two methods anchor how AST nodes plug into the translator's drivers. They're distinct from the `visitX`/`getX` parse-tree-builder conventions above and from the `structShapeFieldDef()`/`getX(parameterSpace)` IR-shaped accessor conventions.
+
+- **`DocStatement.execute(doc: Document): void`** — the interface declared at `malloy-element.ts:377`. `Document.compile()` (in the same file, ~`:588`) walks its `DocStatementList` via `executeList(doc)`, which iterates `this.elements` and for each non-list element calls `el.needs(doc)` first and `el.execute(doc)` only if `needs` returned undefined. Implementers: `ImportStatement`, `DefineSource`, `DefineGivens`, `ModelAnnotation`, `ExperimentalExperiment`, and others under `ast/statements/`.
+- **`ExpressionDef.getExpression(fs: FieldSpace): ExprValue`** — the abstract method at `expression-def.ts:82`. `ExpressionDef` is the base class for all expression-shaped AST nodes; operators recursively call `getExpression` on their operand `ExpressionDef`s to obtain the IR value + type for that subtree. Representative call sites: `expressions/case.ts`, `expressions/expr-cast.ts`, `expressions/pick-when.ts`, `expressions/apply.ts`. This is the integration point for expression evaluation, separate from the AST-element-wide naming conventions.
+
 ### 3. Translator (`parse-malloy.ts`)
 
 The translator defines the interface for transforming AST into IR.
@@ -97,11 +104,42 @@ The translator defines the interface for transforming AST into IR.
 - Used by translator to construct and comprehend `StructDef` objects
 - Manages namespace and field resolution during translation
 
-**Translation process:**
-1. AST is traversed
-2. Semantic analysis is performed (type checking, name resolution)
-3. IR structures are built incrementally
-4. Final IR represents complete semantic model
+#### Steps
+
+A translation is a series of named **steps**. Each step implements `TranslationStep { step(that: MalloyTranslation): StepResponses }`. Steps declare dependencies via constructor arguments — a step holds references to the steps it depends on and asks them for their answers up-chain. A step's response is one of three things: errors (go no further), a `DataRequestResponse` saying it needs more data, or its successful result.
+
+The steps and their dependency wiring are constructed in `MalloyTranslation`'s constructor (the comment there calls it "the makefile for the translation"):
+
+| Step | Depends on | Purpose |
+|---|---|---|
+| `ParseStep` | — | Fetch the source URL (may emit a `urls` need), run the ANTLR parser, hold the parse tree |
+| `ImportsAndTablesStep` | `ParseStep` | Walk the parse tree for `import` / table references, request the URLs and schemas that downstream steps will need |
+| `ASTStep` | `ImportsAndTablesStep` | Build the `MalloyElement` AST from the parse tree |
+| `TranslateStep` | `ASTStep` | Drive `Document.compile()` to produce the final `ModelDef` |
+| `MetadataStep` | `ParseStep` | Symbols/metadata for IDE features |
+| `CompletionsStep` | `ParseStep` | Completion candidates at a position |
+| `HelpContextStep` | `ParseStep` | Help-context lookup at a position |
+| `ModelAnnotationStep` | `ParseStep` | Extract model-level annotations (`##!` etc.) without full translation |
+| `TablePathInfoStep` | `ParseStep` | Table references found in the source |
+
+`MalloyTranslator.translate()` is the entry point for full translation: it caches a `finalAnswer` and otherwise delegates to `translateStep.step(this, extendingModel)`. `metadata()`, `modelAnnotation()`, `tablePathInfo()`, `completions()`, `helpContext()` are the entry points for the IDE-facing steps.
+
+#### Needs/update protocol
+
+The translator is **synchronous**. Async work — fetching the text of an imported URL, getting a table schema from a connection, compiling SQL to discover its schema, looking up a connection's dialect — is surfaced through a pause-and-resume protocol:
+
+1. The caller calls `translate()` (or one of the IDE-facing step methods).
+2. If the step needs data, the response carries one or more of the fields in `DataRequestResponse` (`translate-response.ts`):
+   - `urls: string[]` — files the translator wants the contents of
+   - `tables: Record<string, {connectionName, tablePath}>` — table schemas it wants
+   - `compileSQL: SQLSourceRequest` — a SQL block whose output schema it wants (from a `db.sql("""...""")` or turducken)
+   - `connectionDialects: Record<string, {connectionName}>` — dialect lookups for named connections
+3. The caller fetches what was requested and calls `MalloyTranslator.update(dd: ParseUpdate)` to feed results into the translator's `Zone`s (`importZone`, `schemaZone`, `sqlQueryZone`, `connectionDialectZone`).
+4. The caller calls `translate()` again; steps see populated zones and continue.
+
+A response with `final: true` ends the loop. The header comment on `MalloyTranslator` describes the call pattern; `Core.statedCompileModel` / `Core.updateCompileModelState` in `api/core.ts` are the standard driver. The async API (`api/asynchronous.ts`) wraps the loop with auto-fetching; the stateless and sessioned APIs leave it to the caller.
+
+Per-statement `needs()` during `Document.compile()` is a narrower variant of the same protocol. `DocStatementList.executeList(doc)` (see "AST integration entry points" above) calls `el.needs(doc)` before `el.execute(doc)`; a non-undefined return value pauses the statement loop. The per-statement `ModelDataRequest` type is just `NeedCompileSQL | undefined` (a single SQL compile request) — URL fetches and table schemas have already been resolved by `ImportsAndTablesStep` before the AST is built, so statement-level pauses are only for SQL-source schema discovery encountered mid-compile.
 
 ## Intermediate Representation (IR)
 
