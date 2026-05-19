@@ -88,7 +88,7 @@ export async function getSchemaCompletions(
         });
         const explore = exploreMap[exploreName];
         if (explore) {
-          const fields = getEligibleFields(fieldChain, explore, exploreMap);
+          const fields = getEligibleFields(fieldChain, explore);
           return filterCompletions(fields, keyword, fieldChain);
         }
       }
@@ -137,11 +137,7 @@ function getQueryContext(lines: string[], cursor: Position) {
   return {keyword, fieldChain};
 }
 
-function getEligibleFields(
-  fieldChain: string,
-  explore: Explore,
-  exploreMap: Record<string, Explore | undefined>
-): Field[] {
+function getEligibleFields(fieldChain: string, explore: Explore): Field[] {
   const fieldTree = fieldChain.split('.');
   fieldTree.pop();
   let currentExplore: Explore | undefined = explore;
@@ -154,7 +150,7 @@ function getEligibleFields(
       for (const field of currentExplore.allFields) {
         if (fieldName === field.name && field.isExploreField()) {
           validField = true;
-          currentExplore = exploreMap[field.name];
+          currentExplore = field;
           break;
         }
       }

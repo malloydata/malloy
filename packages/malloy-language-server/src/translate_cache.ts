@@ -57,7 +57,7 @@ export interface FetchModelResult {
 export class TranslateCache {
   private readonly truncatedCache = new Map<
     string,
-    {model: Model; exploreCount: number}
+    {model: Model; exploreCount: number; version: number}
   >();
 
   private readonly cache = new Map<string, CachedModel>();
@@ -263,7 +263,11 @@ export class TranslateCache {
     const {uri, languageId} = document;
     if (languageId === 'malloy') {
       const entry = this.truncatedCache.get(uri);
-      if (entry && entry.exploreCount === exploreCount) {
+      if (
+        entry &&
+        entry.exploreCount === exploreCount &&
+        entry.version === document.version
+      ) {
         this.logger.info(`translateWithTruncatedCache ${prettyUri} hit`);
         return entry.model;
       }
@@ -288,6 +292,7 @@ export class TranslateCache {
         this.truncatedCache.set(uri, {
           model,
           exploreCount,
+          version: document.version,
         });
       }
       this.logger.info(`translateWithTruncatedCache ${prettyUri} miss`);

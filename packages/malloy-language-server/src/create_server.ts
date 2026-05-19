@@ -60,7 +60,6 @@ export const createServer = (
   }
 
   const documents = new TextDocuments(TextDocument);
-  let haveConnectionsBeenSet = false;
   connection.onInitialize((params: InitializeParams) => {
     connection.console.info('onInitialize');
 
@@ -118,56 +117,54 @@ export const createServer = (
   async function diagnoseDocument(document: TextDocument) {
     const prettyUri = prettyLogUri(document.uri);
 
-    if (haveConnectionsBeenSet) {
-      connection.console.info(`diagnoseDocument ${prettyUri} start`);
-      const versionsAtRequestTime = new Map(
-        documents.all().map(document => [document.uri, document.version])
-      );
-      const diagnostics = await getMalloyDiagnostics(translateCache, document);
+    connection.console.info(`diagnoseDocument ${prettyUri} start`);
+    const versionsAtRequestTime = new Map(
+      documents.all().map(document => [document.uri, document.version])
+    );
+    const diagnostics = await getMalloyDiagnostics(translateCache, document);
 
-      for (const uri in diagnostics) {
-        const versionAtRequest = versionsAtRequestTime.get(uri);
-        if (
-          versionAtRequest === undefined ||
-          versionAtRequest === document.version
-        ) {
-          await connection.sendDiagnostics({
-            uri,
-            diagnostics: diagnostics[uri],
-            version: documents.get(uri)?.version,
-          });
-        }
+    for (const uri in diagnostics) {
+      const versionAtRequest = versionsAtRequestTime.get(uri);
+      const currentVersion = documents.get(uri)?.version;
+      if (
+        versionAtRequest === undefined ||
+        currentVersion === versionAtRequest
+      ) {
+        await connection.sendDiagnostics({
+          uri,
+          diagnostics: diagnostics[uri],
+          version: currentVersion,
+        });
       }
-
-      try {
-        const notebookDiagnostics = await aggregateNotebookDiagnostics(
-          diagnostics,
-          translateCache
-        );
-        for (const notebookUri in notebookDiagnostics) {
-          await connection.sendDiagnostics({
-            uri: notebookUri,
-            diagnostics: notebookDiagnostics[notebookUri],
-          });
-        }
-      } catch (error) {
-        connection.console.error(
-          `Failed to aggregate notebook diagnostics: ${error}`
-        );
-      }
-
-      for (const dependency of translateCache.dependentsOf(document.uri) ??
-        []) {
-        const document = documents.get(dependency);
-        if (document) {
-          connection.console.info(
-            `diagnoseDocument recompiling ${prettyLogUri(document.uri)}`
-          );
-          debouncedDiagnoseDocument(document);
-        }
-      }
-      connection.console.info(`diagnoseDocument ${prettyUri} end`);
     }
+
+    try {
+      const notebookDiagnostics = await aggregateNotebookDiagnostics(
+        diagnostics,
+        translateCache
+      );
+      for (const notebookUri in notebookDiagnostics) {
+        await connection.sendDiagnostics({
+          uri: notebookUri,
+          diagnostics: notebookDiagnostics[notebookUri],
+        });
+      }
+    } catch (error) {
+      connection.console.error(
+        `Failed to aggregate notebook diagnostics: ${error}`
+      );
+    }
+
+    for (const dependency of translateCache.dependentsOf(document.uri) ?? []) {
+      const document = documents.get(dependency);
+      if (document) {
+        connection.console.info(
+          `diagnoseDocument recompiling ${prettyLogUri(document.uri)}`
+        );
+        debouncedDiagnoseDocument(document);
+      }
+    }
+    connection.console.info(`diagnoseDocument ${prettyUri} end`);
   }
 
   const debouncedDiagnoseDocuments: Record<
@@ -289,7 +286,6 @@ export const createServer = (
     connectionManager.setGlobalConfigDirectory(
       settings.globalConfigDirectory ?? ''
     );
-    haveConnectionsBeenSet = true;
     translateCache.deleteAllModels();
     documents.all().forEach(debouncedDiagnoseDocument);
   });
