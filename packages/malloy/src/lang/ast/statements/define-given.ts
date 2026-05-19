@@ -256,4 +256,12 @@ export class DefineGivens extends DocStatementList {
     super(givens);
     this.givens = givens;
   }
+
+  executeList(doc: Document) {
+    if (this.isRestricted()) {
+      this.logError('restricted-construct-forbidden', {construct: 'given:'});
+      return undefined;
+    }
+    return super.executeList(doc);
+  }
 }

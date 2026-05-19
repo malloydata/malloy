@@ -372,6 +372,14 @@ export interface TestTranslatorOptions {
   eventStream?: EventStream | null;
   internalModel?: ModelDef;
   restrictedMode?: boolean;
+  /**
+   * Each entry is a compiler-flag tag fragment — the content that
+   * would follow `##! ` in a Malloy source annotation. Rendered to
+   * `##! <flag>\n` and pushed onto compilerFlagSrc before any
+   * TranslateStep seeding, so the flags are active during AST-build
+   * inExperiment() checks.
+   */
+  compilerFlags?: string[];
 }
 
 export class TestTranslator extends MalloyTranslator {
@@ -484,6 +492,9 @@ export class TestTranslator extends MalloyTranslator {
     }
     this.connectionDialectZone.define('_db_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
+    for (const flag of options.compilerFlags ?? []) {
+      this.compilerFlagSrc.push(`##! ${flag}\n`);
+    }
   }
 
   translate(): TranslateResponse {
@@ -747,7 +758,7 @@ export function makeModelFunc(
 }
 
 export function makeExprFunc(
-  model: ModelDef,
+  model?: ModelDef,
   sourceName: string = 'ab',
   options: Omit<TestTranslatorOptions, 'rootRule' | 'internalModel'> = {}
 ) {

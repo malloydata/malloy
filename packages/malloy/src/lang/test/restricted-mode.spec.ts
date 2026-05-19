@@ -51,4 +51,14 @@ describe('restricted mode', () => {
       error('restricted-construct-forbidden', {construct: 'import'})
     );
   });
+
+  test('`given:` is rejected in restricted mode', () => {
+    const restrictedGivens = makeModelFunc({
+      restrictedMode: true,
+      compilerFlags: ['experimental.givens'],
+    });
+    expect(restrictedGivens`given: x :: number is 1`).toLog(
+      error('restricted-construct-forbidden', {construct: 'given:'})
+    );
+  });
 });

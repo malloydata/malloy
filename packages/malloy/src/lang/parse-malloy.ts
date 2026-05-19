@@ -625,12 +625,14 @@ class TranslateStep implements TranslationStep {
       };
     }
 
-    // begin with the compiler flags of the model we are extending
+    // Layer the extending model's compiler flags on top of whatever was
+    // there already. In production the array starts empty so push vs.
+    // overwrite produce the same result; the push lets constructor-time
+    // seeding (e.g. TestTranslator's compilerFlags option) survive.
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
-      that.compilerFlagSrc = annotationToTaglines(
-        extendingModel.annotation,
-        /^##! /
+      that.compilerFlagSrc.push(
+        ...annotationToTaglines(extendingModel.annotation, /^##! /)
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
