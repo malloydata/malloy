@@ -276,7 +276,7 @@ export class Malloy {
    * @return A (promise of a) compiled `Model`.
    */
   public static async compile(req: CompileRequest): Promise<Model> {
-    let {url, source, importBaseURL} = req;
+    let {url, source, importBaseURL, cacheManager} = req;
     const {
       parse,
       urlReader,
@@ -285,9 +285,17 @@ export class Malloy {
       refreshSchemaCache,
       noThrowOnError,
       eventStream,
-      cacheManager,
       restrictedMode,
     } = req;
+    if (restrictedMode) {
+      // Restricted-mode compiles do not participate in the model-def
+      // cache. The cache key is the URL, but restricted vs. unrestricted
+      // produces different validation outcomes, so allowing a restricted
+      // compile to serve from (or write to) the same cache as
+      // unrestricted compiles would let restricted mode be bypassed by a
+      // prior unrestricted compile of the same URL.
+      cacheManager = undefined;
+    }
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
       refreshTimestamp =
@@ -326,6 +334,17 @@ export class Malloy {
     // It's not cached, so we may need to get the actual source
     const _url = url.toString();
     if (parse !== undefined) {
+      // A pre-parsed translator's restrictedMode was fixed at parse
+      // time and cannot be changed here. Loudly reject mismatched
+      // requests rather than silently inheriting the parse-time value.
+      if (
+        restrictedMode !== undefined &&
+        parse._translator.restrictedMode !== restrictedMode
+      ) {
+        throw new Error(
+          `Malloy.compile: restrictedMode (${restrictedMode}) does not match the pre-parsed translator's restrictedMode (${parse._translator.restrictedMode}). Set restrictedMode at parse time.`
+        );
+      }
       translator = parse._translator;
       const invalidationKey =
         parse._invalidationKey ?? (await getInvalidationKey(urlReader, url));

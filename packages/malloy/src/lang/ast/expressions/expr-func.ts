@@ -78,6 +78,18 @@ import * as TDU from '../typedesc-utils';
 import {mergeRefSummaries} from '../../composite-source-utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
 
+// Built-in functions that take a string literal of user-supplied SQL
+// and emit it directly. Gated by experimental.sql_functions in plain
+// Malloy; rejected unconditionally in restricted queries because they
+// are a raw-SQL escape hatch by definition.
+const SQL_FUNCTION_NAMES = [
+  'sql_number',
+  'sql_string',
+  'sql_date',
+  'sql_timestamp',
+  'sql_boolean',
+];
+
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
   constructor(
@@ -388,15 +400,13 @@ export class ExprFunc extends ExpressionDef {
       frag.partitionBy = partitionByFields;
     }
     const sqlFunctionFieldUsage: FieldUsage = [];
-    if (
-      [
-        'sql_number',
-        'sql_string',
-        'sql_date',
-        'sql_timestamp',
-        'sql_boolean',
-      ].includes(func.name)
-    ) {
+    if (SQL_FUNCTION_NAMES.includes(func.name)) {
+      if (this.isRestricted()) {
+        return this.loggedErrorExpr(
+          'restricted-construct-forbidden',
+          `\`${this.name}(...)\` cannot be used in a restricted query — the \`sql_*\` function family emits user-supplied SQL directly, which is not permitted.`
+        );
+      }
       if (!this.inExperiment('sql_functions', true)) {
         return this.loggedErrorExpr(
           'sql-functions-experiment-not-enabled',

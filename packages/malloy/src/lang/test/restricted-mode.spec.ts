@@ -86,13 +86,23 @@ describe('restricted mode', () => {
     );
   });
 
+  test('`sql_*` raw-SQL functions are rejected in restricted mode', () => {
+    const restrictedSqlFuncs = makeModelFunc({
+      restrictedMode: true,
+      compilerFlags: ['experimental.sql_functions'],
+    });
+    expect(
+      restrictedSqlFuncs`run: a -> { select: x is sql_number("1") }`
+    ).toLog(error('restricted-construct-forbidden'));
+  });
+
   test('every forbidden construct in one compile gets its own error', () => {
     // toLog is position-sensitive; the rejections fire in source order
     // because Document.executeList walks statements in order, so each
     // construct's diagnostic lands in its own slot.
     const restrictedAll = makeModelFunc({
       restrictedMode: true,
-      compilerFlags: ['experimental.givens'],
+      compilerFlags: ['experimental.givens', 'experimental.sql_functions'],
     });
     expect(restrictedAll`
       ##! experimental.givens
@@ -101,13 +111,15 @@ describe('restricted mode', () => {
       source: t is _db_.table('foo')
       source: s is _db_.sql("""SELECT 1""")
       run: a -> { select: y is myfn!number(1) }
+      run: a -> { select: z is sql_number("1") }
     `).toLog(
       errorMessage(/##! experimental\.givens/),
       errorMessage(/import "other"/),
       errorMessage(/given:/),
       errorMessage(/_db_\.table/),
       errorMessage(/_db_\.sql/),
-      errorMessage(/myfn!number/)
+      errorMessage(/myfn!number/),
+      errorMessage(/sql_number/)
     );
   });
 });
