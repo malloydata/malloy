@@ -217,6 +217,13 @@ class ImportsAndTablesStep implements TranslationStep {
       return parseReq;
     }
 
+    // Every reference this step would register — connection dialects,
+    // imports, table schemas — is for a construct that's forbidden in
+    // restricted code.
+    if (that.root.restrictedMode) {
+      return {timingInfo: parseReq.timingInfo};
+    }
+
     if (!this.parseReferences) {
       this.parseReferences = findReferences(
         that,
@@ -1082,6 +1089,19 @@ export class MalloyTranslator extends MalloyTranslation {
     for (const url in dd.translations) {
       this.pretranslatedModels.set(url, dd.translations[url]);
     }
+  }
+
+  private lockZonesIfRestricted(): void {
+    if (!this.restrictedMode) return;
+    this.schemaZone.lock();
+    this.importZone.lock();
+    this.sqlQueryZone.lock();
+    this.connectionDialectZone.lock();
+  }
+
+  translate(extendingModel?: ModelDef): TranslateResponse {
+    this.lockZonesIfRestricted();
+    return super.translate(extendingModel);
   }
 
   logError<T extends MessageCode>(

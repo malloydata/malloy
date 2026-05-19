@@ -105,6 +105,10 @@ export class ImportStatement
   }
 
   execute(doc: Document): void {
+    if (this.isRestricted()) {
+      this.logError('restricted-construct-forbidden', {construct: 'import'});
+      return;
+    }
     const trans = this.translator();
     if (!trans) {
       this.logError(

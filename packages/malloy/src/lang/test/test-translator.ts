@@ -606,9 +606,10 @@ export class BetaExpression extends TestTranslator {
   constructor(
     src: string,
     model?: ModelDef,
-    readonly sourceName: string = 'ab'
+    readonly sourceName: string = 'ab',
+    options: Omit<TestTranslatorOptions, 'rootRule' | 'internalModel'> = {}
   ) {
-    super(src, {rootRule: 'debugExpr', internalModel: model});
+    super(src, {...options, rootRule: 'debugExpr', internalModel: model});
   }
 
   private testFS() {
@@ -723,28 +724,33 @@ export function model(
   };
 }
 
-export function makeModelFunc(options: {
-  model?: ModelDef;
-  prefix?: string;
-  wrap?: (code: string) => string;
-}) {
+export function makeModelFunc(
+  options: TestTranslatorOptions & {
+    prefix?: string;
+    wrap?: (code: string) => string;
+  }
+) {
   return function model(
     unmarked: TemplateStringsArray,
     ...marked: string[]
   ): HasTranslator<TestTranslator> {
     const ms = markSource(unmarked, ...marked);
+    const {prefix, wrap, ...ttOptions} = options;
     return {
       ...ms,
       translator: new TestTranslator(
-        (options.prefix ?? '') +
-          (options.wrap ? options.wrap(ms.code) : ms.code),
-        {internalModel: options?.model}
+        (prefix ?? '') + (wrap ? wrap(ms.code) : ms.code),
+        ttOptions
       ),
     };
   };
 }
 
-export function makeExprFunc(model: ModelDef, sourceName: string) {
+export function makeExprFunc(
+  model: ModelDef,
+  sourceName: string = 'ab',
+  options: Omit<TestTranslatorOptions, 'rootRule' | 'internalModel'> = {}
+) {
   return function expr(
     unmarked: TemplateStringsArray,
     ...marked: string[]
@@ -752,7 +758,7 @@ export function makeExprFunc(model: ModelDef, sourceName: string) {
     const ms = markSource(unmarked, ...marked);
     return {
       ...ms,
-      translator: new BetaExpression(ms.code, model, sourceName),
+      translator: new BetaExpression(ms.code, model, sourceName, options),
     };
   };
 }
