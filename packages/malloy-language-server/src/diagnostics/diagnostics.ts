@@ -12,6 +12,7 @@ import type {TranslateCache} from '../translate_cache';
 import {parseMalloySQLSQLWithCache} from '../parse_cache';
 import {errorMessage} from '../common/errors';
 import {prettyLogUri} from '../common/log';
+import {getRenderTagDiagnostics} from './render-tag-validation';
 const errorDictURI =
   'https://docs.malloydata.dev/documentation/error_dictionary';
 
@@ -41,6 +42,9 @@ export async function getMalloyDiagnostics(
     );
     if (model?.problems) {
       problems.push(...model.problems);
+    }
+    if (model) {
+      problems.push(...getRenderTagDiagnostics(document, model));
     }
   } catch (error) {
     if (error instanceof MalloyError) {
