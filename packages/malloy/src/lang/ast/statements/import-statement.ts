@@ -106,7 +106,10 @@ export class ImportStatement
 
   execute(doc: Document): void {
     if (this.isRestricted()) {
-      this.logError('restricted-construct-forbidden', {construct: 'import'});
+      this.logError(
+        'restricted-construct-forbidden',
+        `\`import "${this.url}"\` cannot be used in a restricted query — file imports are not permitted.`
+      );
       return;
     }
     const trans = this.translator();

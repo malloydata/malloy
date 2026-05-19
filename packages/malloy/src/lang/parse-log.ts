@@ -450,7 +450,7 @@ type MessageParameterTypes = {
   'missing-required-group-by': string;
   'invalid-partition-composite': string;
   'integer-literal-out-of-range': string;
-  'restricted-construct-forbidden': {construct: string};
+  'restricted-construct-forbidden': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
@@ -512,7 +512,7 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'invalid-given-modifier': e =>
     `Unknown modifier \`${e.modifier}\` on \`given:\` declaration; the only modifier allowed here is \`inline\``,
   'restricted-construct-forbidden': e => ({
-    message: `\`${e.construct}\` is not allowed in restricted queries`,
+    message: e,
     tag: 'restricted-mode',
   }),
 };

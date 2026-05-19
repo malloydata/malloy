@@ -2136,10 +2136,11 @@ export class MalloyToAST
       // by TranslateStep from extendingModel.annotation) are the only
       // policy for a restricted compile.
       for (const note of tags.getCompilerFlagNotes()) {
+        const line = note.text.replace(/\n$/, '');
         this.msgLog.log(
           makeLogMessage(
             'restricted-construct-forbidden',
-            {construct: '##!'},
+            `\`${line}\` cannot be used in a restricted query — compiler-flag annotations are not permitted.`,
             {at: note.at}
           )
         );

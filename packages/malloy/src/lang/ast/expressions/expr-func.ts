@@ -60,6 +60,7 @@ import {
   TD,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
+import {typeDefToString} from '../../../model/utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
 import type {FieldReference} from '../query-items/field-references';
@@ -103,6 +104,15 @@ export class ExprFunc extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
+    if (this.isRaw && this.isRestricted()) {
+      const typeStr = this.explicitType
+        ? typeDefToString(this.explicitType)
+        : '';
+      return this.loggedErrorExpr(
+        'restricted-construct-forbidden',
+        `\`${this.name}!${typeStr}(...)\` cannot be used in a restricted query — direct SQL function calls (\`!type(...)\`) are not permitted.`
+      );
+    }
     return this.getPropsExpression(fs);
   }
 

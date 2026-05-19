@@ -48,7 +48,7 @@ describe('restricted mode', () => {
 
   test('`import` is rejected in restricted mode', () => {
     expect(restricted`import "child"`).toLog(
-      error('restricted-construct-forbidden', {construct: 'import'})
+      error('restricted-construct-forbidden')
     );
   });
 
@@ -58,13 +58,31 @@ describe('restricted mode', () => {
       compilerFlags: ['experimental.givens'],
     });
     expect(restrictedGivens`given: x :: number is 1`).toLog(
-      error('restricted-construct-forbidden', {construct: 'given:'})
+      error('restricted-construct-forbidden')
     );
   });
 
   test('`##!` is rejected in restricted mode', () => {
     expect(restricted`##! experimental.givens`).toLog(
-      error('restricted-construct-forbidden', {construct: '##!'})
+      error('restricted-construct-forbidden')
+    );
+  });
+
+  test('`connection.table(...)` is rejected in restricted mode', () => {
+    expect(restricted`source: x is _db_.table('foo')`).toLog(
+      error('restricted-construct-forbidden')
+    );
+  });
+
+  test('`connection.sql(...)` is rejected in restricted mode', () => {
+    expect(restricted`source: x is _db_.sql("""SELECT 1""")`).toLog(
+      error('restricted-construct-forbidden')
+    );
+  });
+
+  test('`name!type(args)` raw-SQL function is rejected in restricted mode', () => {
+    expect(restricted`run: a -> { select: x is myfn!number(1) }`).toLog(
+      error('restricted-construct-forbidden')
     );
   });
 });

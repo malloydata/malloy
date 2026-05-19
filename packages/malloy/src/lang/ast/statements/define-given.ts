@@ -259,7 +259,10 @@ export class DefineGivens extends DocStatementList {
 
   executeList(doc: Document) {
     if (this.isRestricted()) {
-      this.logError('restricted-construct-forbidden', {construct: 'given:'});
+      this.logError(
+        'restricted-construct-forbidden',
+        '`given:` cannot declare new givens in a restricted query — only `$NAME` references to existing givens are allowed.'
+      );
       return undefined;
     }
     return super.executeList(doc);

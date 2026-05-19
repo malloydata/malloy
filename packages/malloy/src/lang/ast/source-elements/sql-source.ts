@@ -122,6 +122,13 @@ export class SQLSource extends Source {
   }
 
   getSourceDef(): SourceDef {
+    if (this.isRestricted()) {
+      this.logError(
+        'restricted-construct-forbidden',
+        `\`${this.connectionName.refString}.sql(...)\` cannot be used in a restricted query — raw SQL is not permitted.`
+      );
+      return ErrorFactory.structDef;
+    }
     if (!this.validateConnectionName()) {
       return ErrorFactory.structDef;
     }
