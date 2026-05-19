@@ -399,7 +399,8 @@ class ASTStep implements TranslationStep {
     const secondPass = new MalloyToAST(
       parse,
       that.root.logger,
-      that.compilerFlagSrc
+      that.compilerFlagSrc,
+      that.root.restrictedMode
     );
     const {ast: newAST, compilerFlagSrc, timingInfo} = secondPass.run();
     stepTimer.contribute([timingInfo]);

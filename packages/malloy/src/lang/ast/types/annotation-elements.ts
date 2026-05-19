@@ -46,10 +46,12 @@ export class ObjectAnnotation
 export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'modelAnnotation';
 
+  getCompilerFlagNotes(): Note[] {
+    return this.notes.filter(note => note.text.match(COMPILER_FLAG_PREFIX));
+  }
+
   getCompilerFlagLines(): string[] {
-    return this.notes
-      .filter(note => note.text.match(COMPILER_FLAG_PREFIX))
-      .map(note => note.text);
+    return this.getCompilerFlagNotes().map(note => note.text);
   }
 
   execute(doc: Document): void {

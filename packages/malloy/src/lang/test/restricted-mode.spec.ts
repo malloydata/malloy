@@ -61,4 +61,10 @@ describe('restricted mode', () => {
       error('restricted-construct-forbidden', {construct: 'given:'})
     );
   });
+
+  test('`##!` is rejected in restricted mode', () => {
+    expect(restricted`##! experimental.givens`).toLog(
+      error('restricted-construct-forbidden', {construct: '##!'})
+    );
+  });
 });

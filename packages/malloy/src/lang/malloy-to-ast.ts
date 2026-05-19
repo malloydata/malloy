@@ -120,7 +120,8 @@ export class MalloyToAST
   constructor(
     readonly parseInfo: MalloyParseInfo,
     readonly msgLog: MessageLogger,
-    compilerFlagSrc: string[]
+    compilerFlagSrc: string[],
+    readonly restrictedMode: boolean = false
   ) {
     super();
     this.timer = new Timer('generate_ast');
@@ -2129,6 +2130,23 @@ export class MalloyToAST
 
   updateCompilerFlags(tags: ast.ModelAnnotation) {
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+    if (this.restrictedMode) {
+      // `##!` lines in restricted text never become active flags and
+      // never enter compilerFlagSrc — the trusted model's flags (seeded
+      // by TranslateStep from extendingModel.annotation) are the only
+      // policy for a restricted compile.
+      for (const note of tags.getCompilerFlagNotes()) {
+        this.msgLog.log(
+          makeLogMessage(
+            'restricted-construct-forbidden',
+            {construct: '##!'},
+            {at: note.at}
+          )
+        );
+      }
+      this.timer.contribute([parseCompilerFlagsTimer.stop()]);
+      return;
+    }
     const newLines = tags.getCompilerFlagLines();
     if (newLines.length > 0) {
       const oldLength = this.compilerFlagSrc.length;
