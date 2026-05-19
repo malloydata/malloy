@@ -2131,20 +2131,11 @@ export class MalloyToAST
   updateCompilerFlags(tags: ast.ModelAnnotation) {
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
     if (this.restrictedMode) {
-      // `##!` lines in restricted text never become active flags and
-      // never enter compilerFlagSrc — the trusted model's flags (seeded
-      // by TranslateStep from extendingModel.annotation) are the only
-      // policy for a restricted compile.
-      for (const note of tags.getCompilerFlagNotes()) {
-        const line = note.text.replace(/\n$/, '');
-        this.msgLog.log(
-          makeLogMessage(
-            'restricted-construct-forbidden',
-            `\`${line}\` cannot be used in a restricted query — compiler-flag annotations are not permitted.`,
-            {at: note.at}
-          )
-        );
-      }
+      // `##!` lines in restricted text never become active flags. The
+      // user-facing rejection is logged at execute time (see
+      // ModelAnnotation.execute) so it doesn't short-circuit ASTStep,
+      // which lets every other restricted-mode violation in the same
+      // compile log its own diagnostic.
       this.timer.contribute([parseCompilerFlagsTimer.stop()]);
       return;
     }

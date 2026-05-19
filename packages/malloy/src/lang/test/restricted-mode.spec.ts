@@ -4,7 +4,7 @@
  */
 
 import './parse-expects';
-import {error, makeModelFunc, model} from './test-translator';
+import {error, errorMessage, makeModelFunc, model} from './test-translator';
 
 const restricted = makeModelFunc({restrictedMode: true});
 
@@ -83,6 +83,31 @@ describe('restricted mode', () => {
   test('`name!type(args)` raw-SQL function is rejected in restricted mode', () => {
     expect(restricted`run: a -> { select: x is myfn!number(1) }`).toLog(
       error('restricted-construct-forbidden')
+    );
+  });
+
+  test('every forbidden construct in one compile gets its own error', () => {
+    // toLog is position-sensitive; the rejections fire in source order
+    // because Document.executeList walks statements in order, so each
+    // construct's diagnostic lands in its own slot.
+    const restrictedAll = makeModelFunc({
+      restrictedMode: true,
+      compilerFlags: ['experimental.givens'],
+    });
+    expect(restrictedAll`
+      ##! experimental.givens
+      import "other"
+      given: X :: number is 1
+      source: t is _db_.table('foo')
+      source: s is _db_.sql("""SELECT 1""")
+      run: a -> { select: y is myfn!number(1) }
+    `).toLog(
+      errorMessage(/##! experimental\.givens/),
+      errorMessage(/import "other"/),
+      errorMessage(/given:/),
+      errorMessage(/_db_\.table/),
+      errorMessage(/_db_\.sql/),
+      errorMessage(/myfn!number/)
     );
   });
 });
