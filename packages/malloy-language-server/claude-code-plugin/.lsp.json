@@ -1,0 +1,10 @@
+{
+  "malloy": {
+    "command": "malloy-language-server",
+    "extensionToLanguage": {
+      ".malloy": "malloy",
+      ".malloysql": "malloy-sql",
+      ".malloynb": "malloy-notebook"
+    }
+  }
+}
