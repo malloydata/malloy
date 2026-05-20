@@ -448,7 +448,11 @@ export class ExprFunc extends ExpressionDef {
               );
             }
             if (result.found.refType === 'parameter') {
-              expr.push({node: 'parameter', path: part.path});
+              expr.push({
+                node: 'parameter',
+                path: part.path,
+                at: this.args[0].location,
+              });
             } else {
               sqlFunctionFieldUsage.push({
                 path: part.path,

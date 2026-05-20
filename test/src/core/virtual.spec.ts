@@ -83,7 +83,7 @@ describe('virtual source resolution', () => {
     `;
 
     await expect(tstRuntime.loadQuery(code).run()).rejects.toThrow(
-      "No virtual map entry for 'no_such_table'"
+      /No virtual-map entry for virtual source 'no_such_table'/
     );
   });
 

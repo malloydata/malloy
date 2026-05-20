@@ -4,6 +4,7 @@
  */
 
 import type {
+  DocumentLocation,
   Expr,
   Parameter,
   TurtleDef,
@@ -24,10 +25,21 @@ import type {JoinInstance} from './join_instance';
  * Used to distinguish expected errors from unexpected ones.
  */
 class ConstantExpressionError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly at?: DocumentLocation
+  ) {
     super(message);
     this.name = 'ConstantExpressionError';
   }
+}
+
+function locSuffix(at: DocumentLocation | undefined): string {
+  if (!at) return '';
+  // Display 1-based line/column; range positions are 0-based.
+  const line = at.range.start.line + 1;
+  const col = at.range.start.character + 1;
+  return ` at ${at.url}:${line}:${col}`;
 }
 
 /**
@@ -141,15 +153,17 @@ class ConstantQueryStruct extends QueryStruct {
   /**
    * These methods should not be called for constant expressions
    */
-  override getFieldByName(path: string[]): never {
+  override getFieldByName(path: string[], at?: DocumentLocation): never {
     throw new ConstantExpressionError(
-      `Illegal reference to '${path.join('.')}' in constant expressions`
+      `Illegal reference to '${path.join('.')}' in constant expressions${locSuffix(at)}`,
+      at
     );
   }
 
-  override getStructByName(path: string[]): never {
+  override getStructByName(path: string[], at?: DocumentLocation): never {
     throw new ConstantExpressionError(
-      `Illegal reference to '${path.join('.')}' in constant expressions`
+      `Illegal reference to '${path.join('.')}' in constant expressions${locSuffix(at)}`,
+      at
     );
   }
 

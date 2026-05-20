@@ -154,7 +154,7 @@ npm run watch                  # Watch for TypeScript changes across the repo
 
 Builds, tests, and lints in this repo are slow. The wrong instinct is to re-run a command with different flags or verbosity to dig into a failure. The right instinct is to **capture the full output once and grep the saved log**.
 
-Pattern for any long-running command (build, dev, jest, lint, ci-*, test-duckdb) — plain redirection, no `&&` / `||` / `;` chaining:
+Pattern for any long-running command (build, dev, jest, lint, ci-*, precheck) — plain redirection, no `&&` / `||` / `;` chaining:
 
 ```
 CMD > /tmp/CMD.log 2>&1
@@ -273,12 +273,16 @@ npm run ci-postgres     # PostgreSQL
 
 Use these when you want a local pass that matches what CI will do.
 
-#### Comprehensive local sanity check
+#### `npm run precheck` — "did I break anything?"
 
 ```
-npm run test-duckdb     # all tests, duckdb dialect only — broadest dev-machine option
-npm run test-publisher  # all tests, publisher dialect only
+npm run precheck        # the broad regression check (alias for test-duckdb)
+npm run test-publisher  # same shape, publisher as the dialect
 ```
+
+The broadest check a dev machine can run before declaring a change done. `precheck` runs every test in every package, choosing duckdb wherever a dialect must be picked. If `precheck` passes, anything still failing in CI is dialect-specific.
+
+Different shape from `ci-<dialect>` above: `ci-duckdb` runs the duckdb CI job's specific selection; `precheck` runs **everything**. They're not interchangeable.
 
 Slow. Wrap in the capture-output pattern.
 

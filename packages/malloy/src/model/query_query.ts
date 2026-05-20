@@ -82,6 +82,7 @@ import {
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getCompiledSQL} from './sql_compiled';
 import {mkBuildID} from './source_def_utils';
+import {MalloyCompileError} from './malloy_compile_error';
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -317,10 +318,11 @@ export class QueryQuery extends QueryField {
       for (const pathSegment of ungrouping.path) {
         const nextStruct = destResult.allFields.get(pathSegment);
         if (!(nextStruct instanceof FieldInstanceResult)) {
-          throw new Error(
-            `Ungroup path ${ungrouping.path.join(
-              '.'
-            )} segment '${pathSegment}' is not a nested query`
+          throw new MalloyCompileError(
+            `Ungrouping path '${ungrouping.path.join('.')}' references ` +
+              `'${pathSegment}', which is not a nested view at this level.`,
+            'compiler-ungrouped-invalid-path',
+            this.fieldDef.location
           );
         }
         destResult = nextStruct;
@@ -378,8 +380,12 @@ export class QueryQuery extends QueryField {
 
       if (field instanceof QueryQuery) {
         if (this.firstSegment.type === 'project') {
-          throw new Error(
-            `Nested views cannot be used in select - '${field.fieldDef.name}'`
+          throw new MalloyCompileError(
+            `Cannot include nested view '${field.fieldDef.name}' in a ` +
+              "'select:' stage. Nested views require `group_by:` or " +
+              '`aggregate:` to be included in output.',
+            'compiler-nested-view-in-select',
+            field.fieldDef.location
           );
         }
         const fir = new FieldInstanceResult(
@@ -411,8 +417,11 @@ export class QueryQuery extends QueryField {
 
         if (isBasicAggregate(field)) {
           if (this.firstSegment.type === 'project') {
-            throw new Error(
-              `Aggregate Fields cannot be used in select - '${field.fieldDef.name}'`
+            throw new MalloyCompileError(
+              `Cannot include aggregate field '${field.fieldDef.name}' in ` +
+                "a 'select:' stage. Use `aggregate:` instead to compute aggregates.",
+              'compiler-aggregate-in-select',
+              field.fieldDef.location
             );
           }
         }
@@ -773,8 +782,12 @@ export class QueryQuery extends QueryField {
           ?.get(qs.structDef.connection)
           ?.get(qs.structDef.name);
         if (!tablePath) {
-          throw new Error(
-            `No virtual map entry for '${qs.structDef.name}' on connection '${qs.structDef.connection}'`
+          throw new MalloyCompileError(
+            `No virtual-map entry for virtual source '${qs.structDef.name}' ` +
+              `on connection '${qs.structDef.connection}'. ` +
+              'Add a virtual-map entry via the `virtualMap` runtime option.',
+            'runtime-virtual-map-missing',
+            qs.structDef.location
           );
         }
         // virtualMap entries are application-supplied — assumed already
@@ -832,11 +845,16 @@ export class QueryQuery extends QueryField {
             }
 
             if (buildManifest.strict) {
-              const base = `Persist source '${qs.structDef.sourceID}' not found in manifest (buildId: ${buildId})`;
-              throw new Error(
+              const base =
+                `Persist source '${qs.structDef.sourceID}' not found ` +
+                `in manifest (buildId: ${buildId}); strict manifest mode ` +
+                'forbids fallback to live compilation.';
+              throw new MalloyCompileError(
                 buildManifest.loadError
                   ? `${base}\n  ${buildManifest.loadError}`
-                  : base
+                  : base,
+                'runtime-manifest-strict-miss',
+                qs.structDef.location
               );
             }
           }
@@ -890,8 +908,11 @@ export class QueryQuery extends QueryField {
     if (typeof structRef === 'string') {
       const struct = this.structRefToQueryStruct(structRef);
       if (!struct) {
-        throw new Error(
-          `Unexpected reference to an undefined source '${structRef}'`
+        throw new MalloyCompileError(
+          `Query references source '${structRef}', ` +
+            'which is not defined in this model.',
+          'compiler-undefined-source',
+          undefined
         );
       }
       sourceStruct = struct;
@@ -1226,7 +1247,11 @@ export class QueryQuery extends QueryField {
             o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
           }
         } else {
-          throw new Error(`Unknown field in ORDER BY ${f.field}`);
+          throw new MalloyCompileError(
+            `ORDER BY references unknown field '${f.field}'.`,
+            'compiler-orderby-field-not-found',
+            queryDef.referencedAt
+          );
         }
       } else {
         if (this.parent.dialect.orderByClause === 'ordinal') {
@@ -1686,7 +1711,13 @@ export class QueryQuery extends QueryField {
       this.firstSegment.type === 'project' &&
       !this.parent.modelCompilerFlags().has('unsafe_complex_select_query')
     ) {
-      throw new Error('PROJECT cannot be used on queries with turtles');
+      throw new MalloyCompileError(
+        "Cannot use 'select:' in a stage that contains nested views. " +
+          'Use `group_by:` or restructure the pipeline. ' +
+          'Set `##! unsafe_complex_select_query` to bypass at your own risk.',
+        'compiler-project-with-turtles',
+        this.fieldDef.location
+      );
     }
 
     const groupBy = 'GROUP BY ' + f.dimensionIndexes.join(',') + '\n';
@@ -2268,7 +2299,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
   expandField(f: IndexFieldDef) {
     const as = f.path.join('.');
-    const field = this.parent.getQueryFieldByName(f.path);
+    const field = this.parent.getQueryFieldByName(f.path, f.at);
     return {as, field};
   }
 
