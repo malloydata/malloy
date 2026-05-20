@@ -318,7 +318,6 @@ For deeper context on specific subsystems, see:
 - [packages/malloy/src/api/CONTEXT.md](packages/malloy/src/api/CONTEXT.md) - API layers (Foundation, Stateless, Sessioned, Async)
 - [packages/malloy/src/api/foundation/CONTEXT.md](packages/malloy/src/api/foundation/CONTEXT.md) - Config pipeline internals (three states, section compilers, overlay resolution, failure modes)
 - [packages/malloy/src/doc/configuration.md](packages/malloy/src/doc/configuration.md) - User-facing configuration guide (`malloy-config.json`, overlays, discovery, embedding)
-- [packages/malloy/src/doc/restricted-mode.md](packages/malloy/src/doc/restricted-mode.md) - User-facing restricted-mode guide (`loadRestrictedQuery` API, forbidden constructs, error shape)
 - [packages/malloy/src/connection/CONTEXT.md](packages/malloy/src/connection/CONTEXT.md) - Connection registry, config format, backend properties
 - [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md) - Tag language for annotation parsing
 - [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md) - Data visualization and rendering

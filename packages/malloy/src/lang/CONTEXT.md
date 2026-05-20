@@ -190,7 +190,7 @@ Independent of the per-site rejections, the four needs-bearing zones (`importZon
 
 The `restrictedMode` flag flows: `ParseOptions.restrictedMode` → `MalloyTranslator` constructor → `that.root.restrictedMode` (read by AST nodes via `MalloyElement.isRestricted()`) and `MalloyToAST`'s `restrictedMode` constructor param (passed in by `ASTStep`).
 
-User-facing doc: [`../doc/restricted-mode.md`](../doc/restricted-mode.md). API-level details: [`../api/CONTEXT.md`](../api/CONTEXT.md).
+API-level details: [`../api/CONTEXT.md`](../api/CONTEXT.md) and the JSDoc on `ModelMaterializer.loadRestrictedQuery`.
 
 ## File Organization
 
