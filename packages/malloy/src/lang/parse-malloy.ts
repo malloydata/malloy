@@ -217,6 +217,13 @@ class ImportsAndTablesStep implements TranslationStep {
       return parseReq;
     }
 
+    // Every reference this step would register — connection dialects,
+    // imports, table schemas — is for a construct that's forbidden in
+    // restricted code.
+    if (that.root.restrictedMode) {
+      return {timingInfo: parseReq.timingInfo};
+    }
+
     if (!this.parseReferences) {
       this.parseReferences = findReferences(
         that,
@@ -392,7 +399,8 @@ class ASTStep implements TranslationStep {
     const secondPass = new MalloyToAST(
       parse,
       that.root.logger,
-      that.compilerFlagSrc
+      that.compilerFlagSrc,
+      that.root.restrictedMode
     );
     const {ast: newAST, compilerFlagSrc, timingInfo} = secondPass.run();
     stepTimer.contribute([timingInfo]);
@@ -618,12 +626,14 @@ class TranslateStep implements TranslationStep {
       };
     }
 
-    // begin with the compiler flags of the model we are extending
+    // Layer the extending model's compiler flags on top of whatever was
+    // there already. In production the array starts empty so push vs.
+    // overwrite produce the same result; the push lets constructor-time
+    // seeding (e.g. TestTranslator's compilerFlags option) survive.
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
-      that.compilerFlagSrc = annotationToTaglines(
-        extendingModel.annotation,
-        /^##! /
+      that.compilerFlagSrc.push(
+        ...annotationToTaglines(extendingModel.annotation, /^##! /)
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
@@ -1060,7 +1070,8 @@ export class MalloyTranslator extends MalloyTranslation {
     rootURL: string,
     importURL: string | null = null,
     preload: ParseUpdate | null = null,
-    private readonly eventStream: EventStream | null = null
+    private readonly eventStream: EventStream | null = null,
+    readonly restrictedMode: boolean = false
   ) {
     super(rootURL, importURL);
     this.root = this;
@@ -1081,6 +1092,19 @@ export class MalloyTranslator extends MalloyTranslation {
     for (const url in dd.translations) {
       this.pretranslatedModels.set(url, dd.translations[url]);
     }
+  }
+
+  private lockZonesIfRestricted(): void {
+    if (!this.restrictedMode) return;
+    this.schemaZone.lock();
+    this.importZone.lock();
+    this.sqlQueryZone.lock();
+    this.connectionDialectZone.lock();
+  }
+
+  translate(extendingModel?: ModelDef): TranslateResponse {
+    this.lockZonesIfRestricted();
+    return super.translate(extendingModel);
   }
 
   logError<T extends MessageCode>(

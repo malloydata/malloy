@@ -150,10 +150,40 @@ npm run clean                  # Clean build artifacts from all packages
 npm run watch                  # Watch for TypeScript changes across the repo
 ```
 
-NOTE FOR TOOLS RUNNING BUILD: build output is long, save it to a file:
+### Capturing output from long commands
+
+Builds, tests, and lints in this repo are slow. The wrong instinct is to re-run a command with different flags or verbosity to dig into a failure. The right instinct is to **capture the full output once and grep the saved log**.
+
+Pattern for any long-running command (build, dev, jest, lint, ci-*, precheck) — plain redirection, no `&&` / `||` / `;` chaining:
+
 ```
-npm run build > /tmp/build.log 2>&1 && echo Build OK || (tail -50 /tmp/build.log; exit 1)
+CMD > /tmp/CMD.log 2>&1
 ```
+
+Chaining (`&& echo OK || (tail …; exit 1)`) trips Claude Code's auto-approval and forces an interactive permission prompt even for commands that would otherwise sail through. Keep the call site to a single command with redirection only; the Bash tool already reports CMD's exit status. On failure, make a separate call to inspect the log:
+
+```
+tail -50 /tmp/CMD.log
+grep -nE 'error|FAIL' /tmp/CMD.log
+```
+
+If one pass through the log doesn't answer the question, grep it differently — **do not re-invoke CMD**. The log is the artifact you work with; re-running is the cost to avoid.
+
+Examples for the common commands:
+```
+npm run build > /tmp/build.log 2>&1
+npm run dev   > /tmp/dev.log   2>&1
+npx jest <path> -t <pattern> > /tmp/jest.log 2>&1
+```
+
+### Trust the exit code
+
+The Bash tool reports CMD's exit status directly. That is the signal.
+
+- **Exit 0 → done. Do not read the log.** No `tail`, no `grep`, no peek-just-in-case. The log exists only as a debugger for the failure case; on success it is noise, and reading it conditions you to invent problems in clean output.
+- **Exit non-zero → read the log.** Start with `tail -50 /tmp/CMD.log`. If that doesn't surface the cause, `grep -nE 'error|FAIL' /tmp/CMD.log` or `Read` the file directly. Still do not re-run CMD.
+
+The log is not a report or a summary of what the command did. It is a debugger you open only when something broke. Treat exit-0 as a guarantee that whatever the log contains is irrelevant for the work in front of you.
 
 ### Dev vs Build
 
@@ -196,48 +226,65 @@ Then add to `package.json`: `"codegen": "node ../../scripts/femto-build.js targe
 
 ### Testing
 
-**IMPORTANT**: Malloy has a large test suite which cannot run on a development machine. A CI run is needed to fully verify a change.
+**IMPORTANT**: Malloy has a large test suite which cannot run end-to-end on a development machine. A CI run is needed to fully verify a change.
 
-NOTES ON TOOLS RUNNING TESTS:
+#### The one canonical invocation
 
-**DO NOT RUN** `npm run test` without restrictions - it requires active database connections for every database and will take a very long time and won't ever succeed.
-
-**NEVER run** `npm run test -- filename` - this will take a very long time and won't ever succeed.
-
-#### Running Individual Tests
-
-The typical path when working on a fix is to run just the one test file containing the test, and a test pattern to identify the test. For example, to run the translator's source test:
-
-```bash
-npx jest packages/malloy/src/lang/test/source.spec.ts -t "TEST NAME PATTERN"
+```
+npx jest <FILE_OR_DIRECTORY> -t <TEST_PATTERN>
 ```
 
-#### Database-Specific Tests
+Run from the repo root. This is the only form that works reliably — the jest config is wired up for it. Combine with the capture-output pattern above:
 
-Some tests loop over all testable databases (for example, all tests in test/src/databases/all). For these it is important to restrict the databases under test to one available. Most developers use duckdb:
-
-```bash
-MALLOY_DATABASE=duckdb npx jest test/src/database/all/TEST.spec.ts -t "TEST NAME PATTERN"
+```
+npx jest <path> -t <pattern> > /tmp/jest.log 2>&1
 ```
 
-#### Comprehensive Local Testing
+**Do not use** the variants below. They are common AI defaults and they all fail here:
 
-The most comprehensive test you might run as a developer before letting CI build your code:
+- `npm run test` — requires every database connection; never finishes.
+- `npm run test -- <file>` — same problem; arg passthrough does not narrow the run the way you'd expect.
+- `jest …` directly without `npx` — wrong binary resolution.
+- `--testPathPattern`, `--testNamePattern`, or other jest-flag variants — `<path> -t <pattern>` is the supported surface.
 
-```bash
-npm run test-duckdb  # Runs all tests, but only checks the duckdb dialect
+On exit 0, move on — don't read `/tmp/jest.log`. On non-zero exit, `tail` or `grep` the log; if one pass doesn't surface the failing test, grep differently rather than re-running with new jest flags.
+
+#### Database-iterating tests (`test/src/databases/`)
+
+Tests under `test/src/databases/` loop over a connection set whose default is **all** Malloy backends. On a dev machine that fails. Always scope them with `MALLOY_DATABASE` (one connection) or `MALLOY_DATABASES` (a fixed set):
+
+```
+MALLOY_DATABASE=duckdb npx jest test/src/databases/all/<file>.spec.ts -t <pattern>
+MALLOY_DATABASES=duckdb,postgres npx jest test/src/databases/all/<file>.spec.ts -t <pattern>
 ```
 
-Every developer will be able to run this and is a good sanity check.
+If a test path lives under `test/src/databases/`, assume it needs this and add it.
 
-#### Other Test Commands
-```bash
-npm run test-publisher        # Test with publisher database (all tests, publisher dialect only)
-npm run ci-core              # CI: Core tests (malloy-core, malloy-render)
-npm run ci-duckdb            # CI: DuckDB-specific tests
-npm run ci-bigquery          # CI: BigQuery-specific tests
-npm run ci-postgres          # CI: PostgreSQL-specific tests
+#### Mirroring CI locally
+
+`npm run ci-<connection>` runs the **exact same tests CI runs** for that connection type — same scope, same dialect, same selection:
+
 ```
+npm run ci-core         # malloy-core + malloy-render
+npm run ci-duckdb       # DuckDB connection
+npm run ci-bigquery     # BigQuery
+npm run ci-postgres     # PostgreSQL
+```
+
+Use these when you want a local pass that matches what CI will do.
+
+#### `npm run precheck` — "did I break anything?"
+
+```
+npm run precheck        # the broad regression check (alias for test-duckdb)
+npm run test-publisher  # same shape, publisher as the dialect
+```
+
+The broadest check a dev machine can run before declaring a change done. `precheck` runs every test in every package, choosing duckdb wherever a dialect must be picked. If `precheck` passes, anything still failing in CI is dialect-specific.
+
+Different shape from `ci-<dialect>` above: `ci-duckdb` runs the duckdb CI job's specific selection; `precheck` runs **everything**. They're not interchangeable.
+
+Slow. Wrap in the capture-output pattern.
 
 For more details on test organization and infrastructure, see [test/CONTEXT.md](test/CONTEXT.md).
 

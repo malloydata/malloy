@@ -35,6 +35,8 @@ export interface Loggable {
 export interface ParseOptions {
   importBaseURL?: URL;
   testEnvironment?: boolean;
+  /** Reject language constructs that reach outside the trusted model. */
+  restrictedMode?: boolean;
 }
 
 /** Options for how to run the Malloy semantic checker/translator */

@@ -14,27 +14,22 @@ import {
   GivenReference,
 } from '../ast';
 import {
-  BetaExpression,
   TestTranslator,
   errorMessage,
-  markSource,
+  makeExprFunc,
+  makeModelFunc,
 } from './test-translator';
 import './parse-expects';
 import type {ModelDef, Query} from '../..';
 import {Model, type Given} from '../../api/foundation/core';
 
-// BetaExpression compiles a single expression; the source has no room
-// for `##!` annotations. Seed the translator's compilerFlagSrc directly
-// so the AST-build-time `inExperiment('givens', ...)` check passes.
-function givenExpr(unmarked: TemplateStringsArray, ...marked: string[]) {
-  const ms = markSource(unmarked, ...marked);
-  const translator = new BetaExpression(ms.code);
-  translator.compilerFlagSrc = ['##! experimental.givens\n'];
-  return {...ms, translator};
-}
+const givensModel = makeModelFunc({compilerFlags: ['experimental.givens']});
+const givenExpr = makeExprFunc(undefined, undefined, {
+  compilerFlags: ['experimental.givens'],
+});
 
 function parseDocument(src: string): Document {
-  const t = new TestTranslator(src);
+  const t = new TestTranslator(src, {compilerFlags: ['experimental.givens']});
   const node = t.ast();
   if (!(node instanceof Document)) {
     throw new Error(
@@ -53,11 +48,7 @@ function findDefineGivens(doc: Document): DefineGivens[] {
 }
 
 function onlyGivens(src: string): GivenDeclaration[] {
-  // Most AST-shape tests don't bother spelling the flag every time;
-  // the flag check fires at AST-build time, so we prepend it here.
-  const blocks = findDefineGivens(
-    parseDocument(`##! experimental.givens\n${src}`)
-  );
+  const blocks = findDefineGivens(parseDocument(src));
   return blocks.flatMap(b => b.givens);
 }
 
@@ -306,8 +297,7 @@ describe('given: parse-time errors', () => {
   });
 
   test('annotation after `is` is rejected with a targeted error', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given:
         X :: number is
           # not_allowed
@@ -346,12 +336,11 @@ describe('given: experimental flag', () => {
 
 describe('given: IR generation', () => {
   test('declarations populate ModelDef.givens and contents', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given:
         TENANT :: string
         MAX_ROWS :: number is 1000
-    `);
+    `.translator;
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     expect(md.givens).toBeDefined();
@@ -362,10 +351,9 @@ describe('given: IR generation', () => {
   });
 
   test('GivenEntry id matches a Given declaration', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given: TENANT :: string
-    `);
+    `.translator;
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     const entry = md.contents['TENANT'];
@@ -377,10 +365,9 @@ describe('given: IR generation', () => {
   });
 
   test('default value lands on Given.default as IR expression', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given: MAX_VAL :: number is 100
-    `);
+    `.translator;
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     const id = givenId(md, 'MAX_VAL');
@@ -390,10 +377,9 @@ describe('given: IR generation', () => {
   });
 
   test('absent default is `undefined` (explicit, not missing key)', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given: TENANT :: string
-    `);
+    `.translator;
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     const id = givenId(md, 'TENANT');
@@ -402,11 +388,10 @@ describe('given: IR generation', () => {
   });
 
   test('$NAME inside a where clause produces a GivenRefNode in IR', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given: TENANT :: string
       run: a -> { where: astr = $TENANT; select: * }
-    `);
+    `.translator;
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     const id = givenId(md, 'TENANT');
@@ -423,8 +408,7 @@ describe('given: IR generation', () => {
   });
 
   test('unknown $NAME errors at compile time', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       run: a -> { where: astr = $UNKNOWN; select: * }
     `).toLog(
       errorMessage(
@@ -436,15 +420,13 @@ describe('given: IR generation', () => {
   test('non-given namespace entry rejected with the same name', () => {
     // `a` is a pre-declared source in the test fixture; `$a` resolves to
     // the source entry, not a given, so it errors.
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       run: a -> { where: astr = $a; select: * }
     `).toLog(errorMessage(/`\$a` expects a given named `a`, but `a` is a/));
   });
 
   test('default may reference another given', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given:
         BASE :: number is 10
         SCALED :: number is $BASE
@@ -452,8 +434,7 @@ describe('given: IR generation', () => {
   });
 
   test('default may not reference a field (constant-only enforcement)', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       source: x is a extend {
         dimension: y is 5
       }
@@ -462,8 +443,7 @@ describe('given: IR generation', () => {
   });
 
   test('default value type-checked against declared type', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: BAD :: number is "not a number"
     `).toLog(
       errorMessage(
@@ -473,15 +453,13 @@ describe('given: IR generation', () => {
   });
 
   test('date literal accepted for declared timestamp (morphic)', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: X :: timestamp is @2001-02-02
     `).toTranslate();
   });
 
   test('timestamp literal not accepted for declared date (no reverse morph)', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: BAD :: date is @2001-02-02 12:00:00
     `).toLog(
       errorMessage(
@@ -491,8 +469,7 @@ describe('given: IR generation', () => {
   });
 
   test('compound declared type echoes back in type-mismatch error', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: BAD :: string[] is 1
     `).toLog(
       errorMessage(
@@ -502,8 +479,7 @@ describe('given: IR generation', () => {
   });
 
   test('array element-type mismatch is caught (deep equality via TD.eq)', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: BAD :: string[] is [1, 2, 3]
     `).toLog(
       errorMessage(
@@ -513,8 +489,7 @@ describe('given: IR generation', () => {
   });
 
   test('filter<T> declared with non-filter default is caught', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: BAD :: filter<string> is "not-a-filter"
     `).toLog(
       errorMessage(
@@ -524,8 +499,7 @@ describe('given: IR generation', () => {
   });
 
   test('filter<T> default with valid filter literal translates', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: TENANT_FILTER :: filter<string> is f'acme | beta'
     `).toTranslate();
   });
@@ -533,15 +507,13 @@ describe('given: IR generation', () => {
   test('filter<T> default with bad filter syntax errors at declaration', () => {
     // We know T at the declaration site, so the filter literal is
     // validated against T here, not just at use sites.
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: BAD :: filter<number> is f'not a number'
     `).toLog(errorMessage(/Filter syntax error/));
   });
 
   test('redeclaring a given name errors', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given:
         TENANT :: string
         TENANT :: number
@@ -549,8 +521,7 @@ describe('given: IR generation', () => {
   });
 
   test('given name colliding with a source errors', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       source: TENANT is a
       given: TENANT :: string
     `).toLog(errorMessage(/Cannot redefine 'TENANT'/));
@@ -558,10 +529,12 @@ describe('given: IR generation', () => {
 });
 
 describe('given: imports', () => {
-  // Helper: child file `child` is the imported module, parent `code` is
-  // the importer. Returns the parent translator after compile.
+  // Helper: `child` is the imported module's source, `parent` is the
+  // importer's source. Returns the parent translator after compile.
   function importTest(parent: string, child: string): TestTranslator {
-    const t = new TestTranslator(parent);
+    const t = new TestTranslator(parent, {
+      compilerFlags: ['experimental.givens'],
+    });
     t.unresolved();
     t.update({urls: {'internal://test/langtests/child': child}});
     t.compile();
@@ -571,7 +544,6 @@ describe('given: imports', () => {
   test('selective import surfaces a given by name', () => {
     const t = importTest(
       `
-        ##! experimental.givens
         import { MAX_ROWS } from "child"
       `,
       `
@@ -587,7 +559,6 @@ describe('given: imports', () => {
   test('selective import with rename: id stays the source-side id', () => {
     const t = importTest(
       `
-        ##! experimental.givens
         import { CAP is MAX_ROWS } from "child"
       `,
       `
@@ -619,7 +590,6 @@ describe('given: imports', () => {
     // surfacing under the name child declared.
     const t = importTest(
       `
-        ##! experimental.givens
         import "child"
         run: a -> { where: astr = $TENANT; select: * }
       `,
@@ -636,7 +606,6 @@ describe('given: imports', () => {
   test('non-selective import copies givens into the local map and the namespace', () => {
     const t = importTest(
       `
-        ##! experimental.givens
         import "child"
       `,
       `
@@ -666,7 +635,6 @@ describe('given: imports', () => {
     expect(
       importTest(
         `
-          ##! experimental.givens
           given: TENANT :: string is "local"
           import "child"
         `,
@@ -685,7 +653,6 @@ describe('given: imports', () => {
     expect(
       importTest(
         `
-        ##! experimental.givens
         import { childSrc } from "child"
         run: childSrc -> { select: * }
       `,
@@ -704,7 +671,6 @@ describe('given: imports', () => {
     expect(
       importTest(
         `
-        ##! experimental.givens
         import { NOT_A_GIVEN } from "child"
       `,
         `
@@ -721,7 +687,6 @@ describe('given: imports', () => {
     // reference (`given: CAP :: number is $MAX_ROWS`).
     const t = importTest(
       `
-        ##! experimental.givens
         import { MAX_ROWS } from "child"
         import { CAP is MAX_ROWS } from "child"
       `,
@@ -739,11 +704,10 @@ describe('given: imports', () => {
     // verifies the documentGivens copy is chainable: B's modelDef.givens
     // already contains C's givens (because B copied them at B's import
     // time), so A reading B's givens map transitively pulls C's in.
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       import { bSrc } from "b"
       run: bSrc -> { select: * }
-    `);
+    `.translator;
     t.unresolved();
     t.update({
       urls: {
@@ -776,7 +740,6 @@ describe('given: imports', () => {
     expect(
       importTest(
         `
-        ##! experimental.givens
         given: MAX_ROWS :: number is 50
         import { MAX_ROWS } from "child"
       `,
@@ -807,7 +770,9 @@ describe('given: per-Query givenUsage summary', () => {
     return new Set((q?.givenUsage ?? []).map(g => g.id));
   }
   function translateOK(src: string): ModelDef {
-    const t = new TestTranslator(src);
+    const t = new TestTranslator(src, {
+      compilerFlags: ['experimental.givens'],
+    });
     expect(t).toTranslate();
     return t.translate().modelDef!;
   }
@@ -909,7 +874,7 @@ describe('given: per-Query givenUsage summary', () => {
     // — partial coverage" in ~/ctx/mp/implementation.md.
     test('non-discriminating query picks the first branch', () => {
       const md = translateOK(`
-        ##! experimental {composite_sources, givens}
+        ##! experimental.composite_sources
         given:
           X :: number is 1
           Y :: number is 2
@@ -925,7 +890,7 @@ describe('given: per-Query givenUsage summary', () => {
 
     test('query references a branch-2-only field → only branch-2 givens', () => {
       const md = translateOK(`
-        ##! experimental {composite_sources, givens}
+        ##! experimental.composite_sources
         given:
           X :: number is 1
           Y :: number is 2
@@ -1034,7 +999,9 @@ describe('given: query satisfiability check', () => {
   // makes it past translate with an unbindable given.
 
   function importTest(parent: string, child: string): TestTranslator {
-    const t = new TestTranslator(parent);
+    const t = new TestTranslator(parent, {
+      compilerFlags: ['experimental.givens'],
+    });
     t.unresolved();
     t.update({urls: {'internal://test/langtests/child': child}});
     t.compile();
@@ -1046,16 +1013,14 @@ describe('given: query satisfiability check', () => {
       // X is in namespace (the local `given:` declaration surfaces it).
       // No default is required: the caller can bind it via .run({givens}).
       // This is "unsatisfied at translate, satisfiable at runtime" — fine.
-      expect(`
-        ##! experimental.givens
+      expect(givensModel`
         given: X :: number
         run: a -> { where: ai = $X; group_by: ai }
       `).toTranslate();
     });
 
     test('local run: with defaulted given — always satisfied', () => {
-      expect(`
-        ##! experimental.givens
+      expect(givensModel`
         given: X :: number is 10
         run: a -> { where: ai = $X; group_by: ai }
       `).toTranslate();
@@ -1065,7 +1030,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { TENANT, childSrc } from "child"
           run: childSrc -> { select: * }
         `,
@@ -1082,7 +1046,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
           run: childSrc -> { select: * }
         `,
@@ -1102,7 +1065,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
         `,
           `
@@ -1118,7 +1080,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
           run: childSrc -> { select: * }
         `,
@@ -1139,7 +1100,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
           run: childSrc -> { group_by: ai }
         `,
@@ -1162,7 +1122,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
           run: childSrc -> { select: * }
         `,
@@ -1184,7 +1143,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
           query: q is childSrc -> { select: * }
         `,
@@ -1207,7 +1165,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childQuery } from "child"
         `,
           `
@@ -1231,7 +1188,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
           given: TENANT :: string is "local-default"
           run: childSrc -> { select: * }
@@ -1256,10 +1212,9 @@ describe('given: query satisfiability check', () => {
       // it) but DOES fire in cell 2 once a run statement uses the
       // imported source. TestTranslator's optional `internalModel`
       // constructor arg is the test-side equivalent of extendModel.
-      const cell1 = new TestTranslator(`
-        ##! experimental.givens
+      const cell1 = givensModel`
         import { childSrc } from "child"
-      `);
+      `.translator;
       cell1.unresolved();
       cell1.update({
         urls: {
@@ -1278,10 +1233,12 @@ describe('given: query satisfiability check', () => {
       // the unsatisfiable given.
       const cell2 = new TestTranslator(
         `
-        ##! experimental.givens
         run: childSrc -> { select: * }
       `,
-        {internalModel: cell1Model}
+        {
+          internalModel: cell1Model,
+          compilerFlags: ['experimental.givens'],
+        }
       );
       cell2.translate();
       expect(cell2).toLog(
@@ -1300,7 +1257,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
           run: childSrc -> { select: * }
         `,
@@ -1325,7 +1281,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { B, childSrc } from "child"
           run: childSrc -> { select: * }
         `,
@@ -1348,7 +1303,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
           run: childSrc -> { select: * }
         `,
@@ -1374,7 +1328,6 @@ describe('given: query satisfiability check', () => {
       expect(
         importTest(
           `
-          ##! experimental.givens
           import { childSrc } from "child"
           run: childSrc -> v
         `,
@@ -1399,7 +1352,9 @@ describe('given: PreparedQuery.givens introspection', () => {
   // Compile a Malloy source through TestTranslator and return a Model
   // wrapper plus the raw modelDef. Throws if the source has problems.
   function modelFromSource(src: string): {model: Model; md: ModelDef} {
-    const t = new TestTranslator(src);
+    const t = new TestTranslator(src, {
+      compilerFlags: ['experimental.givens'],
+    });
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     return {model: new Model(md, [], []), md};
@@ -1407,7 +1362,6 @@ describe('given: PreparedQuery.givens introspection', () => {
 
   test('returns the givens this query references, keyed by surface name', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given:
         A :: number is 1
         B :: number is 2
@@ -1421,7 +1375,6 @@ describe('given: PreparedQuery.givens introspection', () => {
 
   test('empty Map for a query that uses no givens', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given: A :: number is 1
       query: q is a -> { group_by: ai }
     `);
@@ -1431,7 +1384,6 @@ describe('given: PreparedQuery.givens introspection', () => {
 
   test('Given wrapper exposes name, id, type, default, location', () => {
     const {model, md} = modelFromSource(`
-      ##! experimental.givens
       given: TENANT :: string is "acme"
       query: q is a -> { where: astr = $TENANT; group_by: astr }
     `);
@@ -1451,7 +1403,6 @@ describe('given: PreparedQuery.givens introspection', () => {
 
   test('undefaulted given has default === undefined (not missing)', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given: REQUIRED :: number
       query: q is a -> { where: ai = $REQUIRED; group_by: ai }
     `);
@@ -1462,11 +1413,10 @@ describe('given: PreparedQuery.givens introspection', () => {
   });
 
   test('renamed-on-import: surface name is the importer rename', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       import { CAP is MAX_ROWS } from "child"
       query: q is a -> { where: ai = $CAP; group_by: ai }
-    `);
+    `.translator;
     t.unresolved();
     t.update({
       urls: {
@@ -1487,12 +1437,11 @@ describe('given: PreparedQuery.givens introspection', () => {
   });
 
   test('two surface aliases to the same id are rejected as a collision', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       import { MAX_ROWS } from "child"
       import { CAP is MAX_ROWS } from "child"
       query: q is a -> { where: ai = $MAX_ROWS and ai > $CAP; group_by: ai }
-    `);
+    `.translator;
     t.unresolved();
     t.update({
       urls: {
@@ -1507,7 +1456,6 @@ describe('given: PreparedQuery.givens introspection', () => {
 
   test('annotations on the given declaration surface via tagParse / getTaglines', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given:
         # label="Tenant"
         TENANT :: string is "acme"
@@ -1525,7 +1473,6 @@ describe('given: PreparedQuery.givens introspection', () => {
 
   test('run: statement (no name) — getPreparedQueryByIndex works the same way', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given: X :: number is 1
       run: a -> { where: ai = $X; group_by: ai }
     `);
@@ -1536,7 +1483,6 @@ describe('given: PreparedQuery.givens introspection', () => {
 
   test('Given is the right shape (compile-time type sanity)', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given: X :: number is 1
       query: q is a -> { where: ai = $X; group_by: ai }
     `);
@@ -1550,7 +1496,9 @@ describe('given: PreparedQuery.givens introspection', () => {
 
 describe('given: Model.givens introspection', () => {
   function modelFromSource(src: string): {model: Model; md: ModelDef} {
-    const t = new TestTranslator(src);
+    const t = new TestTranslator(src, {
+      compilerFlags: ['experimental.givens'],
+    });
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     return {model: new Model(md, [], []), md};
@@ -1558,7 +1506,6 @@ describe('given: Model.givens introspection', () => {
 
   test('returns every surfaced given keyed by surface name', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given:
         A :: number is 1
         B :: string is "hi"
@@ -1570,7 +1517,6 @@ describe('given: Model.givens introspection', () => {
 
   test('empty Map when no givens declared', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       run: a -> { group_by: ai }
     `);
     expect(model.givens.size).toBe(0);
@@ -1578,7 +1524,6 @@ describe('given: Model.givens introspection', () => {
 
   test('Given wrapper exposes type, default, location, name, id', () => {
     const {model, md} = modelFromSource(`
-      ##! experimental.givens
       given: TENANT :: string is "acme"
     `);
     const t = model.givens.get('TENANT');
@@ -1592,17 +1537,15 @@ describe('given: Model.givens introspection', () => {
 
   test('undefaulted given has default === undefined', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given: REQUIRED :: number
     `);
     expect(model.givens.get('REQUIRED')?.default).toBeUndefined();
   });
 
   test('imported given uses its imported surface name', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       import { CAP is MAX_ROWS } from "child"
-    `);
+    `.translator;
     t.unresolved();
     t.update({
       urls: {
@@ -1620,11 +1563,10 @@ describe('given: Model.givens introspection', () => {
   });
 
   test('two surface aliases to the same id are rejected as a collision', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       import { MAX_ROWS } from "child"
       import { CAP is MAX_ROWS } from "child"
-    `);
+    `.translator;
     t.unresolved();
     t.update({
       urls: {
@@ -1639,7 +1581,6 @@ describe('given: Model.givens introspection', () => {
 
   test('annotations on given declarations surface via tagParse / getTaglines', () => {
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given:
         # label="Tenant"
         TENANT :: string is "acme"
@@ -1654,10 +1595,9 @@ describe('given: Model.givens introspection', () => {
   test('non-selectively-imported given appears in Model.givens under its original name', () => {
     // `import "child"` auto-surfaces child's givens into the importer's
     // namespace under their original names; Model.givens picks them up.
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       import "child"
-    `);
+    `.translator;
     t.unresolved();
     t.update({
       urls: {
@@ -1679,7 +1619,6 @@ describe('given: Model.givens introspection', () => {
     // it threw 'Internal Error: Unknown structure type' on any model
     // that declared a given, even if no query referenced one.
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given:
         TENANT :: string is "acme"
         MAX_ROWS :: number is 1000
@@ -1698,7 +1637,6 @@ describe('given: Model.givens introspection', () => {
     // same underlying records, with PreparedQuery.givens being a strict
     // subset filtered by the query's `givenUsage`.
     const {model} = modelFromSource(`
-      ##! experimental.givens
       given:
         USED :: number is 1
         UNUSED :: number is 2
@@ -1733,11 +1671,10 @@ describe('expr in $ARRAY_GIVEN', () => {
   });
 
   test('produces an inGiven IR node referencing the given', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given: STATES :: string[] is ['CA']
       run: a -> { where: astr in $STATES; select: * }
-    `);
+    `.translator;
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     const filter = md.queryList[0].pipeline[0].filterList![0];
@@ -1745,11 +1682,10 @@ describe('expr in $ARRAY_GIVEN', () => {
   });
 
   test('not-in form produces a negated inGiven IR node', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given: STATES :: string[] is ['CA']
       run: a -> { where: astr not in $STATES; select: * }
-    `);
+    `.translator;
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     const filter = md.queryList[0].pipeline[0].filterList![0];
@@ -1758,16 +1694,14 @@ describe('expr in $ARRAY_GIVEN', () => {
 
   test('LHS basic type must match array element type', () => {
     // ai is a number; $STATES is string[] → mismatch.
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: STATES :: string[] is ['CA']
       run: a -> { where: ai in $STATES; select: * }
     `).toLog(errorMessage(/does not match the array element type/));
   });
 
   test('RHS must be array-typed', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: TENANT :: string
       run: a -> { where: astr in $TENANT; select: * }
     `).toLog(errorMessage(/requires `TENANT` to be an array/));
@@ -1783,8 +1717,7 @@ describe('expr in $ARRAY_GIVEN', () => {
   });
 
   test('unknown given name surfaces the standard given-not-found error', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       run: a -> { where: astr in $NOPE; select: * }
     `).toLog(
       errorMessage(/references a given named `NOPE`, which is not declared/)
@@ -1816,19 +1749,17 @@ describe('inline givens', () => {
   });
 
   test('any modifier other than `inline` is a translate-time error', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: nonsense FOO :: boolean is true
     `).toLogAtLeast(errorMessage(/Unknown modifier `nonsense`/));
   });
 
   test('inline flag survives into the IR Given record', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given:
         ROLE :: string is "viewer"
         inline IS_ADMIN :: boolean is $ROLE = "admin"
-    `);
+    `.translator;
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     expect(md.givens![givenId(md, 'ROLE')].inline).toBeUndefined();
@@ -1836,16 +1767,14 @@ describe('inline givens', () => {
   });
 
   test('inline given without a default is a translate-time error', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given: inline FOO :: number
     `).toLog(errorMessage(/inline given `FOO` must have a value/));
   });
 
   test('inline default with a disallowed operator is a translate-time error', () => {
     // Arithmetic is not in the initial inline operator set.
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given:
         N :: number is 10
         inline DOUBLED :: number is $N + 1
@@ -1855,8 +1784,7 @@ describe('inline givens', () => {
   });
 
   test('inline default with only allowed operators translates cleanly', () => {
-    expect(`
-      ##! experimental.givens
+    expect(givensModel`
       given:
         CAPS :: string[]
         ROLE :: string
@@ -1866,12 +1794,11 @@ describe('inline givens', () => {
   });
 
   test('inline given filtered out of Model.givens introspection', () => {
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given:
         TENANT :: string is "acme"
         inline DERIVED :: boolean is $TENANT = "acme"
-    `);
+    `.translator;
     expect(t).toTranslate();
     const model = new Model(t.translate().modelDef!, [], []);
     const names = [...model.givens.keys()].sort();
@@ -1881,12 +1808,11 @@ describe('inline givens', () => {
   test('inline given still appears in modelDef.contents (not API-filtered there)', () => {
     // ModelDef.contents is the source of truth for the namespace; filtering
     // happens only at the foundation-API layer.
-    const t = new TestTranslator(`
-      ##! experimental.givens
+    const t = givensModel`
       given:
         ROLE :: string is "viewer"
         inline IS_ADMIN :: boolean is $ROLE = "admin"
-    `);
+    `.translator;
     expect(t).toTranslate();
     const md = t.translate().modelDef!;
     expect(md.contents['IS_ADMIN']?.type).toBe('given');

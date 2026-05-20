@@ -12,6 +12,7 @@ import type {
 } from './malloy_types';
 import {isSegmentSQL, isSegmentSource, safeRecordGet} from './malloy_types';
 import {mkBuildID} from './source_def_utils';
+import {MalloyCompileError} from './malloy_compile_error';
 
 /**
  * Callback type for compiling a Query to SQL.
@@ -101,11 +102,16 @@ function expandPersistableSource(
 
       // Not in manifest
       if (buildManifest.strict) {
-        const base = `Persist source '${source.sourceID}' not found in manifest (buildId: ${buildId})`;
-        throw new Error(
+        const base =
+          `Persist source '${source.sourceID}' not found in manifest ` +
+          `(buildId: ${buildId}); strict manifest mode forbids fallback ` +
+          'to live compilation.';
+        throw new MalloyCompileError(
           buildManifest.loadError
             ? `${base}\n  ${buildManifest.loadError}`
-            : base
+            : base,
+          'runtime-manifest-strict-miss',
+          source.location
         );
       }
     }

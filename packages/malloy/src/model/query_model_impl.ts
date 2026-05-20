@@ -26,6 +26,7 @@ import type {ModelRootInterface} from './query_node';
 import {QueryStruct, isScalarField} from './query_node';
 import type {QueryModel, QueryResults} from './query_model_contract';
 import {rowDataToNumber} from '../api/row_data_utils';
+import {MalloyCompileError} from './malloy_compile_error';
 
 export function makeQueryModel(modelDef: ModelDef | undefined): QueryModel {
   return new QueryModelImpl(modelDef);
@@ -84,7 +85,11 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     if (s) {
       return s;
     }
-    throw new Error(`Struct ${name} not found in model.`);
+    throw new MalloyCompileError(
+      `Source '${name}' is not defined in this model.`,
+      'compiler-undefined-source',
+      undefined
+    );
   }
 
   getStructFromRef(

@@ -46,13 +46,25 @@ export class ObjectAnnotation
 export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'modelAnnotation';
 
+  getCompilerFlagNotes(): Note[] {
+    return this.notes.filter(note => note.text.match(COMPILER_FLAG_PREFIX));
+  }
+
   getCompilerFlagLines(): string[] {
-    return this.notes
-      .filter(note => note.text.match(COMPILER_FLAG_PREFIX))
-      .map(note => note.text);
+    return this.getCompilerFlagNotes().map(note => note.text);
   }
 
   execute(doc: Document): void {
+    if (this.isRestricted()) {
+      for (const note of this.getCompilerFlagNotes()) {
+        const line = note.text.replace(/\n$/, '');
+        this.logError(
+          'restricted-construct-forbidden',
+          `\`${line}\` cannot be used in a restricted query — compiler-flag annotations are not permitted.`,
+          {at: note.at}
+        );
+      }
+    }
     if (doc.annotation.notes === undefined) {
       doc.annotation.notes = [];
     }

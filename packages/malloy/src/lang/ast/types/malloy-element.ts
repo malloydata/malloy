@@ -190,6 +190,10 @@ export abstract class MalloyElement {
     return undefined;
   }
 
+  isRestricted(): boolean {
+    return this.translator()?.root.restrictedMode ?? false;
+  }
+
   setTranslator(x: MalloyTranslation): void {
     this.xlate = x;
   }

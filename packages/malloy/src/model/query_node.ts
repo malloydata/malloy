@@ -8,6 +8,7 @@ import type {
   FieldDef,
   BooleanFieldDef,
   DateFieldDef,
+  DocumentLocation,
   StringFieldDef,
   JSONFieldDef,
   NumberFieldDef,
@@ -29,6 +30,7 @@ import type {
   SourceDef,
   Query,
 } from './malloy_types';
+import {MalloyCompileError} from './malloy_compile_error';
 import {
   isSourceDef,
   getIdentifier,
@@ -370,7 +372,12 @@ export class QueryStruct {
                   ? this.parent.resolveParentParameterReferences(resolved1)
                   : resolved1;
                 if (resolved2.value === null) {
-                  throw new Error('Invalid parameter value');
+                  throw new MalloyCompileError(
+                    `Parameter '${frag.path[0]}' resolves to a null value chain; ` +
+                      'this parameter was not supplied.',
+                    'compiler-parameter-no-value',
+                    undefined
+                  );
                 } else {
                   return resolved2.value;
                 }
@@ -413,9 +420,13 @@ export class QueryStruct {
             'INTERNAL ERROR: QueryQuery must initialize QueryStruct nested factory method'
           );
         }
-        this.addFieldToNameMap(as, QueryStruct.turtleFieldMaker(field, this));
+        this.addFieldToNameMap(
+          as,
+          QueryStruct.turtleFieldMaker(field, this),
+          field.location
+        );
       } else if (isAtomic(field) || isJoinedSource(field)) {
-        this.addFieldToNameMap(as, this.makeQueryField(field));
+        this.addFieldToNameMap(as, this.makeQueryField(field), field.location);
       } else {
         // According to the type system this should be impossible, but we have seen this happen
         // in the wild, so we are leaving error handling here to help debug if it happens again.
@@ -556,9 +567,13 @@ export class QueryStruct {
     return this;
   }
 
-  addFieldToNameMap(as: string, n: QueryField) {
+  addFieldToNameMap(as: string, n: QueryField, at?: DocumentLocation) {
     if (this.nameMap.has(as)) {
-      throw new Error(`Redefinition of ${as}`);
+      throw new MalloyCompileError(
+        `Field name '${as}' is defined more than once in this scope.`,
+        'compiler-name-redefined',
+        at
+      );
     }
     this.nameMap.set(as, n);
   }
@@ -569,7 +584,13 @@ export class QueryStruct {
     if ((pk = this.primaryKey())) {
       return pk;
     } else {
-      throw new Error(`Missing primary key for ${fieldDef}`);
+      throw new MalloyCompileError(
+        `Source '${getIdentifier(this.structDef)}' has no primary key; ` +
+          `cannot compute a unique key for field '${getIdentifier(fieldDef)}'. ` +
+          'Add `primary_key: <field>` to the source definition.',
+        'compiler-missing-primary-key',
+        fieldDef.location
+      );
     }
   }
 
@@ -697,7 +718,7 @@ export class QueryStruct {
   }
 
   /** convert a path into a field reference */
-  getFieldByName(path: string[]): QueryField {
+  getFieldByName(path: string[], at?: DocumentLocation): QueryField {
     let found: QueryField | undefined = undefined;
     let lookIn = this as QueryStruct | undefined;
     let notFound = path[0];
@@ -711,24 +732,33 @@ export class QueryStruct {
         found instanceof QueryFieldStruct ? found.queryStruct : undefined;
     }
     if (found === undefined) {
-      const pathErr = path.length > 1 ? ` in ${path.join('.')}` : '';
-      throw new Error(`${notFound} not found${pathErr}`);
+      const pathErr = path.length > 1 ? ` in path '${path.join('.')}'` : '';
+      throw new MalloyCompileError(
+        `Field '${notFound}' not found${pathErr}.`,
+        'compiler-field-not-found',
+        at
+      );
     }
     return found;
   }
 
   // structs referenced in queries are converted to fields.
-  getQueryFieldByName(name: string[]): QueryField {
-    const field = this.getFieldByName(name);
+  getQueryFieldByName(name: string[], at?: DocumentLocation): QueryField {
+    const field = this.getFieldByName(name, at);
     if (field instanceof QueryFieldStruct) {
-      throw new Error(`Cannot reference ${name.join('.')} as a scalar'`);
+      throw new MalloyCompileError(
+        `'${name.join('.')}' refers to a source or join, not a scalar field. ` +
+          'Use `source.field` to reference fields inside it.',
+        'compiler-cannot-reference-as-scalar',
+        at
+      );
     }
     return field;
   }
 
   getQueryFieldReference(f: RefToField): QueryField {
     const {path, annotation, drillExpression} = f;
-    const field = this.getFieldByName(path);
+    const field = this.getFieldByName(path, f.at);
     if (annotation || drillExpression) {
       if (field.parent === undefined) {
         throw new Error(
@@ -773,15 +803,19 @@ export class QueryStruct {
   }
 
   /** returns a query object for the given name */
-  getStructByName(name: string[]): QueryStruct {
+  getStructByName(name: string[], at?: DocumentLocation): QueryStruct {
     if (name.length === 0) {
       return this;
     }
-    const struct = this.getFieldByName(name);
+    const struct = this.getFieldByName(name, at);
     if (struct instanceof QueryFieldStruct) {
       return struct.queryStruct;
     }
-    throw new Error(`Error: Path to structure not found '${name.join('.')}'`);
+    throw new MalloyCompileError(
+      `'${name.join('.')}' is not a source or join.`,
+      'compiler-struct-not-found',
+      at
+    );
   }
 
   getDistinctKey(): QueryBasicField {

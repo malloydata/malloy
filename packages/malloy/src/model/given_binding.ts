@@ -16,6 +16,7 @@ import type {
   ModelDef,
   SafeRecord,
 } from './malloy_types';
+import {MalloyCompileError} from './malloy_compile_error';
 
 export function resolveSuppliedGivens(
   supplied: Record<string, GivenValue> | undefined,
@@ -28,10 +29,12 @@ export function resolveSuppliedGivens(
   // prototype pollution from e.g. an Object.create(...)-derived input.
   for (const [name, value] of Object.entries(supplied)) {
     if (value === undefined) {
-      throw new Error(
+      throw new MalloyCompileError(
         `givens.${name}: explicit undefined is not a valid value. ` +
           'Omit the key to defer to declaration default or a lower supply ' +
-          'layer; use null for an explicit null value.'
+          'layer; use null for an explicit null value.',
+        'runtime-given-undefined',
+        undefined
       );
     }
     const entry = modelDef.contents[name];
@@ -42,8 +45,11 @@ export function resolveSuppliedGivens(
       }
       const suggestion = closestMatch(name, surfaceNames);
       const hint = suggestion ? ` (did you mean '${suggestion}'?)` : '';
-      throw new Error(
-        `givens: unknown given '${name}'${hint}. Model surfaces [${surfaceNames.join(', ')}]`
+      throw new MalloyCompileError(
+        `givens: unknown given '${name}'${hint}. ` +
+          `Model surfaces [${surfaceNames.join(', ')}]`,
+        'runtime-given-unknown',
+        undefined
       );
     }
     const decl = givens[entry.id];
@@ -98,12 +104,13 @@ function valueToExpr(
   if (value === null) {
     return {node: 'null'};
   }
+  function bad(msg: string, code = 'runtime-given-bad-value'): never {
+    throw new MalloyCompileError(`givens.${path}: ${msg}`, code, undefined);
+  }
   switch (type.type) {
     case 'string': {
       if (typeof value !== 'string') {
-        throw new TypeError(
-          `givens.${path}: expected string, got ${describeJs(value)}`
-        );
+        bad(`expected string, got ${describeJs(value)}`);
       }
       return {node: 'stringLiteral', literal: value};
     }
@@ -111,45 +118,33 @@ function valueToExpr(
       let lit: string;
       if (typeof value === 'number') {
         if (!Number.isFinite(value)) {
-          throw new TypeError(
-            `givens.${path}: number must be finite, got ${value}`
-          );
+          bad(`number must be finite, got ${value}`);
         }
         lit = String(value);
       } else if (typeof value === 'bigint') {
         lit = value.toString();
       } else if (typeof value === 'string') {
         if (!/^-?(\d+(\.\d+)?|\.\d+)([eE][+-]?\d+)?$/.test(value)) {
-          throw new TypeError(
-            `givens.${path}: number-as-string must be numeric, got '${value}'`
-          );
+          bad(`number-as-string must be numeric, got '${value}'`);
         }
         lit = value;
       } else {
-        throw new TypeError(
-          `givens.${path}: expected number | bigint | string, got ${describeJs(value)}`
-        );
+        bad(`expected number | bigint | string, got ${describeJs(value)}`);
       }
       return {node: 'numberLiteral', literal: lit};
     }
     case 'boolean': {
       if (typeof value !== 'boolean') {
-        throw new TypeError(
-          `givens.${path}: expected boolean, got ${describeJs(value)}`
-        );
+        bad(`expected boolean, got ${describeJs(value)}`);
       }
       return {node: value ? 'true' : 'false'};
     }
     case 'date': {
       if (typeof value !== 'string') {
-        throw new TypeError(
-          `givens.${path}: expected ISO date string 'YYYY-MM-DD', got ${describeJs(value)}`
-        );
+        bad(`expected ISO date string 'YYYY-MM-DD', got ${describeJs(value)}`);
       }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        throw new TypeError(
-          `givens.${path}: date must match 'YYYY-MM-DD', got '${value}'`
-        );
+        bad(`date must match 'YYYY-MM-DD', got '${value}'`);
       }
       return {node: 'dateLiteral', literal: value, typeDef: {type: 'date'}};
     }
@@ -159,21 +154,21 @@ function valueToExpr(
       // strings (those want 'timestamptz'). Parse the rest with Luxon and
       // emit canonical "YYYY-MM-DD HH:MM:SS.sss" for the dialect.
       if (typeof value !== 'string') {
-        throw new TypeError(
-          `givens.${path}: expected ISO timestamp string (no offset), got ${describeJs(value)}`
+        bad(
+          `expected ISO timestamp string (no offset), got ${describeJs(value)}`
         );
       }
       if (/Z$|[+-]\d{2}:?\d{2}$/.test(value)) {
-        throw new TypeError(
-          `givens.${path}: 'timestamp' is naive — use 'timestamptz' for offset/zoned values, got '${value}'`
+        bad(
+          `'timestamp' is naive — use 'timestamptz' for offset/zoned values, got '${value}'`
         );
       }
       // ISO uses T-separator; SQL form uses space. Accept both.
       let dt = DateTime.fromISO(value, {zone: 'utc'});
       if (!dt.isValid) dt = DateTime.fromSQL(value, {zone: 'utc'});
       if (!dt.isValid) {
-        throw new TypeError(
-          `givens.${path}: invalid timestamp value '${value}': ${dt.invalidReason ?? 'unknown'}`
+        bad(
+          `invalid timestamp value '${value}': ${dt.invalidReason ?? 'unknown'}`
         );
       }
       return {
@@ -190,13 +185,13 @@ function valueToExpr(
         dt = DateTime.fromISO(value, {setZone: true});
         if (dt.isValid) dt = dt.toUTC();
       } else {
-        throw new TypeError(
-          `givens.${path}: expected JS Date or ISO timestamptz string, got ${describeJs(value)}`
+        bad(
+          `expected JS Date or ISO timestamptz string, got ${describeJs(value)}`
         );
       }
       if (!dt.isValid) {
-        throw new TypeError(
-          `givens.${path}: invalid timestamptz value '${value}': ${dt.invalidReason ?? 'unknown'}`
+        bad(
+          `invalid timestamptz value '${value}': ${dt.invalidReason ?? 'unknown'}`
         );
       }
       return {
@@ -208,17 +203,15 @@ function valueToExpr(
     }
     case 'filter expression': {
       if (typeof value !== 'string') {
-        throw new TypeError(
-          `givens.${path}: filter<T> givens require a JS string of Malloy filter source, got ${describeJs(value)}`
+        bad(
+          `filter<T> givens require a JS string of Malloy filter source, got ${describeJs(value)}`
         );
       }
       return {node: 'filterLiteral', filterSrc: value};
     }
     case 'array': {
       if (!Array.isArray(value)) {
-        throw new TypeError(
-          `givens.${path}: expected array, got ${describeJs(value)}`
-        );
+        bad(`expected array, got ${describeJs(value)}`);
       }
       // RepeatedRecord (array of records) carries `record_element` as its
       // element type and the record's schema in `fields`. Each element is
@@ -238,24 +231,26 @@ function valueToExpr(
         Array.isArray(value) ||
         value instanceof Date
       ) {
-        throw new TypeError(
-          `givens.${path}: expected object, got ${describeJs(value)}`
-        );
+        bad(`expected object, got ${describeJs(value)}`);
       }
       const obj = value;
       const declared = new Set(type.fields.map(f => f.name));
       for (const k of Object.keys(obj)) {
         if (!declared.has(k)) {
-          throw new TypeError(
-            `givens.${path}.${k}: unexpected key (not in record type [${[...declared].join(', ')}])`
+          throw new MalloyCompileError(
+            `givens.${path}.${k}: unexpected key (not in record type [${[...declared].join(', ')}])`,
+            'runtime-given-record-extra-key',
+            undefined
           );
         }
       }
       const kids: SafeRecord<Expr> = mkSafeRecord();
       for (const field of type.fields) {
         if (!(field.name in obj)) {
-          throw new TypeError(
-            `givens.${path}.${field.name}: missing required key`
+          throw new MalloyCompileError(
+            `givens.${path}.${field.name}: missing required key`,
+            'runtime-given-record-missing-key',
+            undefined
           );
         }
         kids[field.name] = valueToExpr(
@@ -269,7 +264,11 @@ function valueToExpr(
     case 'json':
     case 'sql native':
     case 'error':
-      throw new Error(`givens.${path}: type '${type.type}' is not bindable`);
+      throw new MalloyCompileError(
+        `givens.${path}: type '${type.type}' is not bindable as a given value.`,
+        'runtime-given-type-not-bindable',
+        undefined
+      );
     default: {
       // Exhaustiveness: future GivenTypeDef additions will trip this.
       const _x: never = type;
