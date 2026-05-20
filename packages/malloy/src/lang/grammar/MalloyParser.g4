@@ -430,6 +430,7 @@ joinFrom
 joinDef
   : tags joinFrom matrixOperation? WITH fieldExpr        # joinWith
   | tags joinFrom (matrixOperation? ON joinExpression)?  # joinOn
+  | tags joinFrom matrixOperation? USING OPAREN fieldNameList CPAREN # joinUsing
   ;
 
 joinExpression: fieldExpr;

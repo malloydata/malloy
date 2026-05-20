@@ -956,7 +956,12 @@ export class QueryQuery extends QueryField {
       if (qs.parent === undefined) {
         throw new Error('Expected joined struct to have a parent.');
       }
-      if (qsDef.onExpression) {
+
+      let isUsing = false;
+      if (qsDef.usingFields && qsDef.usingFields.length > 0) {
+        isUsing = true;
+        onCondition = `USING (${qsDef.usingFields.join(', ')})`;
+      } else if (qsDef.onExpression) {
         // Create a temporary field instance to generate the SQL
         const boolField = new QueryFieldBoolean(
           {
@@ -972,9 +977,9 @@ export class QueryQuery extends QueryField {
           this.rootResult,
           undefined
         );
-        onCondition = tempInstance.generateExpression();
+        onCondition = `ON ${tempInstance.generateExpression()}`;
       } else {
-        onCondition = '1=1';
+        onCondition = 'ON 1=1';
       }
       let filters = '';
       let conditions: string[] | undefined = undefined;
@@ -1010,9 +1015,15 @@ export class QueryQuery extends QueryField {
         // }
 
         if (conditions !== undefined && conditions.length >= 1) {
-          filters = ` AND (${conditions.join(' AND ')})`;
+          if (isUsing) {
+            // Cannot use AND with a USING clause. We must push the extra join conditions
+            // down into a subquery on the joined table.
+            structSQL = `(SELECT * FROM ${structSQL} WHERE ${conditions.join(' AND ')})`;
+          } else {
+            filters = ` AND (${conditions.join(' AND ')})`;
+          }
         }
-        s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
+        s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
@@ -1028,7 +1039,7 @@ export class QueryQuery extends QueryField {
         }\n${joins}\nWHERE ${conditions?.join(' AND ')}\n`;
         s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
           ji.alias
-        }\n  ON ${onCondition}\n`;
+        }\n  ${onCondition}\n`;
         return s;
       }
     } else if (qsDef.type === 'array') {
@@ -1051,11 +1062,10 @@ export class QueryQuery extends QueryField {
         // a join at the top level, and the name will exist.
         // ... not sure this is the right way to do this
         // ... the test for this is called "source repeated record containing an array"
-        arrayExpression = sqlFullChildReference(
-          qs.parent,
-          qsDef.name,
-          depth === 0 ? {result: this.rootResult, field: this} : undefined
-        );
+        arrayExpression = sqlFullChildReference(qs.parent, qsDef.name, {
+          result: this.rootResult,
+          field: depth === 0 ? this : undefined,
+        });
       }
       // we need to generate primary key.  If parent has a primary key combine
       // console.log(ji.alias, fieldExpression, this.inNestedPipeline());

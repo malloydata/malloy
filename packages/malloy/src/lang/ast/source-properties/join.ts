@@ -28,6 +28,8 @@ import type {
   MatrixOperation,
   SourceDef,
   AccessModifierLabel,
+  Expr,
+  FieldUsage,
 } from '../../../model/malloy_types';
 import {isSourceDef, isJoinable} from '../../../model/malloy_types';
 import type {DynamicSpace} from '../field-space/dynamic-space';
@@ -228,6 +230,92 @@ export class ExpressionJoin extends Join {
       name: this.name.refString,
       join: this.joinType,
       matrixOperation,
+      location: this.location,
+    };
+    delete joinStruct.as;
+    if (this.note) {
+      joinStruct.annotation = this.note;
+    }
+    this.document()?.rememberToAddModelAnnotations(joinStruct);
+    return joinStruct;
+  }
+}
+
+export class UsingJoin extends Join {
+  elementType = 'joinUsing';
+  joinType: JoinType = 'one';
+  matrixOperation: MatrixOperation = 'left';
+
+  constructor(
+    readonly name: ModelEntryReference,
+    readonly sourceExpr: SourceQueryElement,
+    readonly usingFields: string[]
+  ) {
+    super({name, sourceExpr});
+  }
+
+  fixupJoinOn(_outer: FieldSpace, inStruct: JoinFieldDef): void {
+    // Generate an onExpression equivalence internally so Malloy's semantic
+    // engine understands the lineage of the fields.
+    // e.g. for `USING (id)`, we do `base_table.id = joined_table.id`.
+    // We construct a boolean expression: `this.name.id = id`
+    // Since there can be multiple fields, it becomes `(this.name.id = id) AND ...`
+    if (this.usingFields.length === 0) {
+      return;
+    }
+
+    const conditions: Expr[] = [];
+    const fieldUsage: FieldUsage = [];
+    for (const field of this.usingFields) {
+      const left: Expr = {
+        node: 'field',
+        path: [this.name.refString, field],
+        at: this.location,
+      };
+      const right: Expr = {
+        node: 'field',
+        path: [field],
+        at: this.location,
+      };
+      conditions.push({node: '=', kids: {left, right}});
+      fieldUsage.push({path: [this.name.refString, field]}, {path: [field]});
+    }
+
+    let onExpr: Expr = conditions[0];
+    for (let i = 1; i < conditions.length; i++) {
+      onExpr = {node: 'and', kids: {left: onExpr, right: conditions[i]}};
+    }
+
+    inStruct.onExpression = onExpr;
+    inStruct.refSummary = mergeRefSummaries(inStruct.refSummary, {
+      fieldUsage,
+    });
+  }
+
+  getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {
+    const source = this.sourceExpr.getSource();
+    if (!source) {
+      this.sourceExpr.sqLog(
+        'invalid-join-source',
+        'Cannot create a source to join from'
+      );
+      return ErrorFactory.joinDef;
+    }
+    const sourceDef = source.getSourceDef(parameterSpace);
+    let matrixOperation: MatrixOperation = 'left';
+    if (this.inExperiment('join_types', true)) {
+      matrixOperation = this.matrixOperation;
+    }
+
+    if (!isJoinable(sourceDef)) {
+      throw this.internalError(`Can't join struct type ${sourceDef.type}`);
+    }
+    const joinStruct: JoinFieldDef = {
+      ...sourceDef,
+      name: this.name.refString,
+      join: this.joinType,
+      matrixOperation,
+      usingFields: this.usingFields,
       location: this.location,
     };
     delete joinStruct.as;

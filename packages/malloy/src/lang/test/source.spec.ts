@@ -165,6 +165,11 @@ describe('source:', () => {
           'source: y is a extend { join_many: x is b on astr = x.astr }'
         ).toTranslate();
       });
+      test('one using', () => {
+        expect(
+          'source: x is a extend { join_one: b using (astr) }'
+        ).toTranslate();
+      });
       test('cross', () => {
         expect('source: nab is a extend { join_cross: b }').toTranslate();
       });

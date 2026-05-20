@@ -1122,6 +1122,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
+  usingFields?: string[];
   refSummary?: RefSummary;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }

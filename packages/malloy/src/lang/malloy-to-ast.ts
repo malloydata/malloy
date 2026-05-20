@@ -921,6 +921,26 @@ export class MalloyToAST
     return this.astAt(join, pcx);
   }
 
+  visitJoinUsing(pcx: parse.JoinUsingContext): ast.Join {
+    const {joinAs, joinFrom, notes} = this.getJoinFrom(pcx.joinFrom());
+    const usingFields = pcx.fieldNameList().fieldName().map(getId);
+    const join = new ast.UsingJoin(joinAs, joinFrom, usingFields);
+
+    const mop = pcx.matrixOperation()?.text.toLocaleLowerCase() || 'left';
+    if (isMatrixOperation(mop)) {
+      join.matrixOperation = mop;
+    } else {
+      this.contextError(
+        pcx,
+        'unknown-matrix-operation',
+        'Internal Error: Unknown matrixOperation'
+      );
+    }
+
+    join.extendNote({notes: this.getNotes(pcx.tags()).concat(notes)});
+    return this.astAt(join, pcx);
+  }
+
   getFieldDef(
     pcx: parse.FieldDefContext,
     makeFieldDef: ast.FieldDeclarationConstructor
