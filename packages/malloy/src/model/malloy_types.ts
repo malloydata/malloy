@@ -256,12 +256,14 @@ export interface SourceReferenceNode extends ExprLeaf {
 export interface ParameterNode extends ExprLeaf {
   node: 'parameter';
   path: string[];
+  at?: DocumentLocation;
 }
 
 export interface GivenRefNode extends ExprLeaf {
   node: 'given';
   id: GivenID;
   refName: string;
+  at?: DocumentLocation;
 }
 
 export interface NowNode extends ExprLeaf {

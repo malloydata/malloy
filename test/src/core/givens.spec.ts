@@ -761,7 +761,7 @@ describe('givens — finalizeGivens (Stage 4e)', () => {
         )
         .loadQueryByName('q')
         .run()
-    ).rejects.toThrow(/finalized given.*no resolved value.*STATE/);
+    ).rejects.toThrow(/finalized given 'STATE' has no resolved value/i);
   });
 
   test('unsatisfied finalize entry does NOT block a query that does not reference it', async () => {

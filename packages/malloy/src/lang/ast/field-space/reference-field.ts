@@ -70,7 +70,7 @@ export class ReferenceField extends SpaceField {
         if (TD.isAtomic(foundType)) {
           this.queryFieldDef = {
             ...mkFieldDef(TDU.atomicDef(foundType), path[0]),
-            e: {node: 'parameter', path},
+            e: {node: 'parameter', path, at: this.fieldRef.location},
           };
         } else {
           // not sure what to do here, if we get here
