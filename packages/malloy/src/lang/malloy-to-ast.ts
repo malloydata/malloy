@@ -120,7 +120,8 @@ export class MalloyToAST
   constructor(
     readonly parseInfo: MalloyParseInfo,
     readonly msgLog: MessageLogger,
-    compilerFlagSrc: string[]
+    compilerFlagSrc: string[],
+    readonly restrictedMode: boolean = false
   ) {
     super();
     this.timer = new Timer('generate_ast');
@@ -2129,6 +2130,15 @@ export class MalloyToAST
 
   updateCompilerFlags(tags: ast.ModelAnnotation) {
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+    if (this.restrictedMode) {
+      // `##!` lines in restricted text never become active flags. The
+      // user-facing rejection is logged at execute time (see
+      // ModelAnnotation.execute) so it doesn't short-circuit ASTStep,
+      // which lets every other restricted-mode violation in the same
+      // compile log its own diagnostic.
+      this.timer.contribute([parseCompilerFlagsTimer.stop()]);
+      return;
+    }
     const newLines = tags.getCompilerFlagLines();
     if (newLines.length > 0) {
       const oldLength = this.compilerFlagSrc.length;

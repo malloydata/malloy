@@ -843,6 +843,66 @@ export class ModelMaterializer extends FluentState<Model> {
   }
 
   /**
+   * Load a Malloy query whose text comes from an untrusted source — an
+   * MCP client, an LLM-authored query, a UI field, an HTTP request body
+   * — and should compile against this already-loaded trusted model.
+   * Use this in preference to `loadQuery` when the caller of your
+   * service is not the author of the model and may write Malloy that
+   * reaches past the model's curated surface.
+   *
+   * Restricted-mode compilation rejects these constructs:
+   *
+   * - `import` statements
+   * - `given:` declarations (restricted queries may still reference
+   *   givens the model declared, via `$NAME`)
+   * - `##!` compiler-flag annotations
+   * - `connection.table(...)` and `connection.sql(...)` source forms
+   * - `name!type(args)` raw-SQL function calls
+   * - The `sql_*` family of built-in functions (`sql_number`,
+   *   `sql_string`, `sql_date`, `sql_timestamp`, `sql_boolean`)
+   *
+   * The model's existing surface — sources, queries, dimensions,
+   * measures, functions, givens declared by the model author — is
+   * fully available regardless of whether the model's own definitions
+   * use any of the forbidden constructs.
+   *
+   * Each rejection surfaces as a problem on the thrown `MalloyError`
+   * with `code: 'restricted-construct-forbidden'` and
+   * `errorTag: 'restricted-mode'`. The message quotes the offending
+   * source text and states the rule. Multiple violations are reported
+   * in one compile — the translation does not stop at the first.
+   *
+   * The input is required to be a string. Restricted text arrives from
+   * an untrusted caller as bytes the host already has in hand; there
+   * is no host-side trust mechanism for fetching it via a URL.
+   *
+   * @param text The Malloy text to compile as a restricted query.
+   * @return A `QueryMaterializer` capable of materializing or running
+   *   the query. Calling `.run()`, `.getSQL()`, `.getPreparedResult()`,
+   *   etc. throws `MalloyError` if the restricted compile produced any
+   *   problems; the `.problems` array on the error carries the
+   *   structured rejection list.
+   */
+  public loadRestrictedQuery(text: string): QueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      const urlReader = this.runtime.urlReader;
+      const connections = this.runtime.connections;
+      const testEnvironment = this.runtime.isTestRuntime ? true : undefined;
+      const model = await this.getModel();
+      const queryModel = await Malloy.compile({
+        source: text,
+        restrictedMode: true,
+        urlReader,
+        connections,
+        model,
+        testEnvironment,
+        ...this.compileQueryOptions,
+      });
+      return queryModel.preparedQuery;
+    });
+  }
+
+  /**
    * Extend a Malloy model by URL or contents.
    *
    * @param source The model URL or contents to load and (eventually) compile.

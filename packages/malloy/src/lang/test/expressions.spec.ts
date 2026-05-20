@@ -723,7 +723,7 @@ describe('expressions', () => {
     m.translator.translate();
     expect(m).toTranslate();
     const modelX = makeModelFunc({
-      model: m.translator.modelDef,
+      internalModel: m.translator.modelDef,
       wrap: x => `run: root -> { aggregate: x is ${x} }`,
     });
     test('one.column.min()', () => {

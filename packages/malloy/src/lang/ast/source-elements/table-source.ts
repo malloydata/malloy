@@ -102,6 +102,13 @@ export class TableMethodSource extends TableSource {
   }
 
   getTableInfo(): TableInfo | undefined {
+    if (this.isRestricted()) {
+      this.logError(
+        'restricted-construct-forbidden',
+        `\`${this.connectionName.refString}.table(...)\` cannot be used in a restricted query — direct table access is not permitted.`
+      );
+      return undefined;
+    }
     const connection = this.modelEntry(this.connectionName);
     const name = this.connectionName.refString;
     if (connection === undefined) {

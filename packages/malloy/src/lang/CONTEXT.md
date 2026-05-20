@@ -164,6 +164,34 @@ Given resolution itself is split in two — distinct from the translator/compile
 
 For the compiler-side phase and the runtime supply pipeline, see [`../api/foundation/CONTEXT.md`](../api/foundation/CONTEXT.md).
 
+## Restricted mode
+
+`MalloyTranslator.restrictedMode` (boolean, default false) marks a compile as a *restricted query* — Malloy text submitted by an untrusted author against an already-loaded trusted model. The flag is set only by `ModelMaterializer.loadRestrictedQuery`; direct callers of `Malloy.compile` *could* pass `restrictedMode: true` on the request, but that is not a documented surface.
+
+Seven constructs are rejected when the flag is set. Each rejection lives at the construct's existing integration point, logs `restricted-construct-forbidden` with `errorTag: 'restricted-mode'`, and quotes the offending source text in the message:
+
+| Construct | AST node | Where the check fires |
+|---|---|---|
+| `import` | `ImportStatement` (`ast/statements/import-statement.ts`) | `execute(doc)` |
+| `given:` declaration | `DefineGivens` (`ast/statements/define-given.ts`) | `executeList(doc)` |
+| `##!` annotation | `ModelAnnotation` (`ast/types/annotation-elements.ts`) | `execute(doc)`, per-note |
+| `connection.table(...)` | `TableMethodSource` (`ast/source-elements/table-source.ts`) | `getTableInfo()` |
+| `connection.sql(...)` | `SQLSource` (`ast/source-elements/sql-source.ts`) | `getSourceDef()` |
+| `name!type(args)` raw-SQL function | `ExprFunc` with `isRaw === true` (`ast/expressions/expr-func.ts`) | `getExpression(fs)` |
+| `sql_number / sql_string / sql_date / sql_timestamp / sql_boolean` | `ExprFunc` whose resolved `func.name` is in `SQL_FUNCTION_NAMES` | `getPropsExpression(fs)`, in the existing sql_* branch |
+
+The two `ExprFunc` rejections cover the two raw-SQL escape hatches in the language: the `!type(args)` syntactic form and the named `sql_*` function family. Both end up emitting user-supplied SQL into the query if allowed. The two checks fire at slightly different points — `isRaw` is decidable from the AST node alone, while the `sql_*` check needs the resolved `FunctionDef` and so lives alongside the existing `experimental.sql_functions` gate inside `getPropsExpression`.
+
+The rejections fire at integration time (`execute` / `getSourceDef` / `getExpression`) — not during AST build — so a single compile collects all violations rather than stopping at the first. `ASTStep`'s `hasErrors()` short-circuit doesn't trip because none of these sites have logged yet.
+
+The `##!` case has a structural twist: `MalloyToAST.updateCompilerFlags` is where compiler-flag lines would normally be pushed onto `compilerFlagSrc` during the visitor walk. In restricted mode, that push is suppressed so the flag never takes effect; the *user-visible diagnostic* is logged later from `ModelAnnotation.execute()`. The trusted-model seeding path in TranslateStep (which feeds `compilerFlagSrc` from `extendingModel.annotation`) is untouched — flags declared by the producer carry through.
+
+Independent of the per-site rejections, the four needs-bearing zones (`importZone`, `schemaZone`, `sqlQueryZone`, `connectionDialectZone`) are locked at the top of `MalloyTranslator.translate()` via `lockZonesIfRestricted()`. After the lock, `Zone.reference()` / `.define()` / `.updateFrom()` are silent no-ops. `ImportsAndTablesStep` also early-returns when restricted, so no child translators are created for `import` statements that are about to be rejected. The zone lock is the structural backstop: even if a future construct slipped through the AST-level rejection, the translator could not reach the host's `URLReader` or connections.
+
+The `restrictedMode` flag flows: `ParseOptions.restrictedMode` → `MalloyTranslator` constructor → `that.root.restrictedMode` (read by AST nodes via `MalloyElement.isRestricted()`) and `MalloyToAST`'s `restrictedMode` constructor param (passed in by `ASTStep`).
+
+API-level details: [`../api/CONTEXT.md`](../api/CONTEXT.md) and the JSDoc on `ModelMaterializer.loadRestrictedQuery`.
+
 ## File Organization
 
 ```
