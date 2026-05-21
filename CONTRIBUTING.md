@@ -50,14 +50,10 @@ use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
 
-All pull requests must pass tests. Some of those tests run against real
-databases using credentials that only the Malloy team's CI holds, so **CI does
-not run automatically on pull requests from forks.** A Malloy team member with
-write access reviews the change and triggers the test run; until they do, the
-checks on your PR will stay pending or fail at the permission gate. This is
-expected — it's how we let external contributions run the full database test
-suite without exposing those credentials. If your PR is ready and CI hasn't
-been triggered, reach out via the `#developing` channel on the
+All pull requests must pass tests. Because some tests use database credentials
+that only the Malloy team's CI holds, **CI doesn't run automatically on fork
+PRs** — a Malloy team member reviews and triggers it. If your PR is ready and CI
+hasn't run, reach out via the `#developing` channel on the
 [Malloy Slack](https://malloydata.github.io/slack).
 
 ## Code of Conduct
