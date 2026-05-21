@@ -2,6 +2,10 @@
   "name": "@malloydata/syntax-highlight",
   "version": "0.0.396",
   "description": "A package to simplify the process of developing, testing, and syncnig Malloy syntax highlighting grammars",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
   "files": [
     "grammars/**/*.tmGrammar.json",
     "grammars/**/*-language.json",
