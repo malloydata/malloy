@@ -326,7 +326,7 @@ For deeper context on specific subsystems, see:
 - [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md) - Tag language for annotation parsing
 - [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md) - Data visualization and rendering
 - [test/CONTEXT.md](test/CONTEXT.md) - Test organization and infrastructure
-- [.github/workflows/CONTEXT.md](.github/workflows/CONTEXT.md) - CI and release: what CI runs on a PR, the `pull_request_target`/`check-permission` security rule, and how packages are published to npm (OIDC trusted publishing, release gate, recovery)
+- [.github/workflows/CONTEXT.md](.github/workflows/CONTEXT.md) - CI and release: what CI runs, the external-PR security model, and npm publishing (OIDC trusted publishing)
 
 ## Maintaining the CONTEXT Tree
 
