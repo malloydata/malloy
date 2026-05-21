@@ -326,6 +326,7 @@ For deeper context on specific subsystems, see:
 - [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md) - Tag language for annotation parsing
 - [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md) - Data visualization and rendering
 - [test/CONTEXT.md](test/CONTEXT.md) - Test organization and infrastructure
+- [.github/workflows/CONTEXT.md](.github/workflows/CONTEXT.md) - CI and release: what CI runs, the external-PR security model, and npm publishing (OIDC trusted publishing)
 
 ## Maintaining the CONTEXT Tree
 
