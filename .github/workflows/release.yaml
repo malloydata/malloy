@@ -16,6 +16,7 @@ jobs:
         run: |
           npm --no-audit --no-fund ci --loglevel error
           npm run build
+          npm run build-duckdb-db
       - name: Precheck (dialect-agnostic tests + duckdb)
         run: npm run precheck
 
