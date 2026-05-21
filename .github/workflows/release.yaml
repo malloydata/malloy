@@ -4,33 +4,7 @@ permissions: {}
 on: [workflow_dispatch]
 
 jobs:
-  db-bigquery:
-    uses: './.github/workflows/db-bigquery.yaml'
-    secrets:
-      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-  db-duckdb:
-    uses: './.github/workflows/db-duckdb.yaml'
-  db-postgres:
-    uses: './.github/workflows/db-postgres.yaml'
-  db-snowflake:
-    uses: './.github/workflows/db-snowflake.yaml'
-    secrets:
-      SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
-  db-publisher:
-    uses: './.github/workflows/db-publisher.yaml'
-  main:
-    uses: './.github/workflows/main.yaml'
-    secrets:
-      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-
   npm-release:
-    needs:
-      - db-bigquery
-      - db-duckdb
-      - db-publisher
-      - db-postgres
-      - db-snowflake
-      - main
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -53,6 +27,8 @@ jobs:
           # Build
           npm --no-audit --no-fund ci --loglevel error
           npm run build
+          # Sanity-check before publishing: dialect-agnostic tests + duckdb
+          npm run precheck
           # Publish
           PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
           echo Publishing $PACKAGES
