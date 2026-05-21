@@ -12,11 +12,35 @@ This directory is the repo's CI and release machinery. The two things you most l
 
 `db-motherduck.yaml` exists but is **commented out** of `run-tests.yaml` — motherduck is not currently run in CI. `db-databricks.yaml` is active.
 
-### The security rule — `pull_request_target` + `check-permission`
+### Safely accepting external PRs (the scary part)
 
-This is the landmine. `run-tests.yaml` triggers on **`pull_request_target`**, not `pull_request`. That means CI runs in the context of the *base* repo and **has access to secrets even for pull requests from forks**. Unguarded, a fork PR could exfiltrate `BIGQUERY_KEY`, `SNOWFLAKE_CONNECTION`, the databricks tokens, etc.
+Read this before touching `run-tests.yaml`. How this repo runs CI on outside contributions is a deliberate design (PR #2087, Jan 2025) that does, on purpose, the exact combination GitHub documents as a privilege-escalation vulnerability. A single job is what keeps it safe, and the safety depends on a human step that's easy to perform carelessly.
 
-The guard is the **`check-permission`** job (`malloydata/check-ci-permissions`), which fails if the PR author lacks write access. **Any job that consumes a secret must declare `needs: check-permission`.** There is an explicit comment to this effect in `run-tests.yaml` — honor it. This is not optional; it's the thing standing between the repo and leaked credentials.
+**Why it's built this way.** Database tests need real credentials (BigQuery, Snowflake, Databricks, …). A normal `pull_request` workflow from a fork gets **no** secrets, so DB tests could never run on external contributions. To allow them, #2087 switched to **`pull_request_target`**, which runs in the *base* repo's context and therefore *has* the secrets — even for fork PRs, with no automatic "approve to run" prompt.
+
+**Why that's dangerous.** The workflow also checks out the PR's head code (`ref: ${{ github.event.pull_request.head.sha || github.sha }}`) and runs `npm ci` + build + test on it. That is **arbitrary code from the PR author executing on a runner that holds production credentials.** `pull_request_target` + checkout-the-PR-head + secrets is *the* canonical Actions footgun: unguarded, a stranger's PR could print or exfiltrate every secret.
+
+**What makes it safe — and the flow.** The **`check-permission`** job (`malloydata/check-ci-permissions`) fails the run unless **`github.triggering_actor`** has write access. It checks the *triggering actor*, **not** the PR author. So:
+
+- A stranger opens a PR → they are the triggering actor → `check-permission` fails → no credentialed job runs.
+- A **maintainer reviews the diff and re-runs CI** → the maintainer becomes the triggering actor → the gate passes → DB tests run with secrets.
+
+A write-access person vouching for the code is the thing that unlocks secret access. That's the intended human-in-the-loop.
+
+**Pitfalls:**
+
+- **Adding a secret to a job without `needs: check-permission`** exposes that secret to arbitrary external-PR code. The secret-bearing jobs that MUST gate today: `main`, `db-trino`, `db-presto`, `db-bigquery`, `db-snowflake`, `db-databricks`. Secret-free jobs (`db-duckdb`, `db-postgres`, `db-mysql`, `db-publisher`, `db-duckdb-wasm`) deliberately don't gate — they run untrusted code but hold no credentials, so the blast radius is just ephemeral compute. There's a comment to this effect in `run-tests.yaml`; honor it.
+- **Re-running an external PR's CI is an authorization act.** Because the gate trusts the triggering actor, clicking "re-run" on a fork PR makes *you* the authorizer and runs that PR's code with full secrets. Review the diff — especially any change to a workflow or a build script — before you re-run. Never re-run a PR you haven't read.
+- **Don't "simplify" the trigger back to `pull_request`.** That silently strips secret access, and DB tests stop exercising anything real on external PRs.
+
+The contributor-facing half — DCO sign-off, licensing, the committers list, the review requirement — lives in [CONTRIBUTING.md](../../CONTRIBUTING.md). DCO is enforced as a required status check, which is why bot/release commits use `git commit -s`.
+
+### CI integrity guards
+
+`main.yaml` runs two guard scripts before the core tests:
+
+- **`scripts/ci-test-sanity-check.sh`** — diffs every `*.spec.ts(x)` in the tree against `npx jest --listTests`. If you add a test file but don't wire it into a `jest.config.ts` project, CI fails here. The point is that **no test can be silently absent from CI.**
+- **`scripts/ci-env-sanity-check.sh`** — fails if `.node-version` is missing or empty.
 
 ### Conventions across the test workflows
 
