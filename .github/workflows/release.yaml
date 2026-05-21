@@ -4,7 +4,23 @@ permissions: {}
 on: [workflow_dispatch]
 
 jobs:
+  precheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Use Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20.x
+      - name: Install and build
+        run: |
+          npm --no-audit --no-fund ci --loglevel error
+          npm run build
+      - name: Precheck (dialect-agnostic tests + duckdb)
+        run: npm run precheck
+
   npm-release:
+    needs: precheck
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,8 +43,6 @@ jobs:
           # Build
           npm --no-audit --no-fund ci --loglevel error
           npm run build
-          # Sanity-check before publishing: dialect-agnostic tests + duckdb
-          npm run precheck
           # Publish
           PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
           echo Publishing $PACKAGES
