@@ -175,7 +175,7 @@ function convertParameterDefaultValue(
 function getAnnotationsFromField(
   field: FieldDef | Query | SourceDef
 ): Malloy.Annotation[] {
-  const taglines = new Annotations(field.annotation).all().map(a => a.rawText);
+  const taglines = new Annotations(field.annotation).texts();
   return taglines.map(tagline => ({
     value: tagline,
   }));
@@ -186,9 +186,7 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
   for (const field of fields) {
     const isPublic = field.accessModifier === undefined;
     if (!isPublic) continue;
-    const taglines = new Annotations(field.annotation)
-      .all()
-      .map(a => a.rawText);
+    const taglines = new Annotations(field.annotation).texts();
     const rawAnnotations: Malloy.Annotation[] = taglines.map(tagline => ({
       value: tagline,
     }));
@@ -492,9 +490,7 @@ function convertRecordType(
         }
       }
       if (f.annotation) {
-        const taglines = new Annotations(f.annotation)
-          .all()
-          .map(a => a.rawText);
+        const taglines = new Annotations(f.annotation).texts();
         annotations.push(
           ...taglines.map(tagline => ({
             value: tagline,

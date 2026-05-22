@@ -1838,8 +1838,8 @@ export class PreparedResult implements Taggable {
     const struct = structs[structs.length - 1];
     const schema = {fields: convertFieldInfos(struct, struct.fields)};
     const annotations = new Annotations(this.inner.annotation)
-      .all()
-      .map(l => ({value: l.rawText}));
+      .texts()
+      .map(t => ({value: t}));
     const metadataAnnot = struct.resultMetadata
       ? getResultStructMetadataAnnotation(struct, struct.resultMetadata)
       : undefined;
@@ -1878,8 +1878,8 @@ export class PreparedResult implements Taggable {
     });
 
     const modelAnnotations = new Annotations(this.modelDef.annotation)
-      .all()
-      .map(l => ({value: l.rawText}));
+      .texts()
+      .map(t => ({value: t}));
 
     return {
       schema,

@@ -641,8 +641,8 @@ export function statedCompileQuery(
       });
       timer.contribute([sqlTimer.stop()]);
       const modelAnnotations = new Annotations(result.modelDef.annotation)
-        .all()
-        .map(l => ({value: l.rawText}));
+        .texts()
+        .map(t => ({value: t}));
       let source: StructDef;
       if (query.compositeResolvedSourceDef) {
         source = query.compositeResolvedSourceDef;
@@ -659,8 +659,8 @@ export function statedCompileQuery(
       }
 
       const sourceAnnotations = new Annotations(source.annotation)
-        .all()
-        .map(l => ({value: l.rawText}));
+        .texts()
+        .map(t => ({value: t}));
       const sourceMetadataTag = Tag.withPrefix('#(malloy) ');
       sourceMetadataTag.set(['source', 'name'], translatedQuery.sourceExplore);
       const sourceArguments =

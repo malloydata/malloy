@@ -154,20 +154,25 @@ export class Annotations {
   constructor(private readonly annote: Annotation | undefined) {}
 
   /**
-   * Every annotation, **unparsed** — each carries its `route` (`''` is the MOTLY
-   * tag route), its `rawText`, and `contentIndex` (where the content begins).
-   * The content itself is not interpreted; parse it yourself, or use
-   * {@link parseAsTag} for the built-in MOTLY reading.
+   * Raw annotation text strings (prefix + content) — all routes if `route` is
+   * omitted, just that route's otherwise. The route-based successor to the
+   * deprecated `getTaglines`. For source-mapped offsets (bring-your-own
+   * parsers), see {@link forRoute}.
    */
-  all(): RoutedAnnotation[] {
-    return collectAnnotations(this.annote);
+  texts(route?: string): string[] {
+    const items =
+      route === undefined
+        ? collectAnnotations(this.annote)
+        : collectAnnotations(this.annote, route);
+    return items.map(a => a.rawText);
   }
 
   /**
-   * Your route's annotations, **unparsed** — the bring-your-own-parser door.
-   * A non-MOTLY app (e.g. JSON on its own route) reads these and parses the
-   * content (`rawText.slice(contentIndex)`) itself. `''` is the MOTLY route;
-   * malformed-prefix annotations are excluded.
+   * Your route's annotations as objects (`rawText` + `contentIndex` + `at`) —
+   * the bring-your-own-parser door. A non-MOTLY app (e.g. JSON on its own
+   * route) reads these to slice the content (`rawText.slice(contentIndex)`)
+   * itself and map its parser's errors back to source via `at`. Malformed-prefix
+   * annotations are excluded.
    */
   forRoute(route: string): AnnotationText[] {
     return collectAnnotations(this.annote, route);

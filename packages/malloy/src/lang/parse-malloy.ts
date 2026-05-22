@@ -633,9 +633,7 @@ class TranslateStep implements TranslationStep {
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
       that.compilerFlagSrc.push(
-        ...new Annotations(extendingModel.annotation)
-          .forRoute('!')
-          .map(a => a.rawText)
+        ...new Annotations(extendingModel.annotation).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
