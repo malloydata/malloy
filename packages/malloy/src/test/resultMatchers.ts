@@ -155,7 +155,8 @@ async function runQueryInternal(
   let queryTestTag: Tag | undefined = undefined;
   try {
     query = tm.model.loadQuery(src);
-    const queryTags = (await query.getPreparedQuery()).tagParse().tag;
+    const queryTags = (await query.getPreparedQuery()).annotations.parseAsTag()
+      .tag;
     queryTestTag = queryTags.tag('test');
   } catch (e) {
     // Add line numbers, helpful if failure is a compiler error

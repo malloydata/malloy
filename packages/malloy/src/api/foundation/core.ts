@@ -284,9 +284,9 @@ export class Explore extends Entity implements Taggable {
 
   private parsedModelTag?: Tag;
   public get modelTag(): Tag {
-    this.parsedModelTag ||= annotationToTag(
+    this.parsedModelTag ||= new Annotations(
       this._structDef.modelAnnotation
-    ).tag;
+    ).parseAsTag().tag;
     return this.parsedModelTag;
   }
 
@@ -1754,7 +1754,7 @@ export class PreparedResult implements Taggable {
   }
 
   get modelTag(): Tag {
-    return annotationToTag(this.modelDef.annotation).tag;
+    return new Annotations(this.modelDef.annotation).parseAsTag().tag;
   }
 
   /**
@@ -1837,9 +1837,9 @@ export class PreparedResult implements Taggable {
     const structs = this.inner.structs;
     const struct = structs[structs.length - 1];
     const schema = {fields: convertFieldInfos(struct, struct.fields)};
-    const annotations = annotationToTaglines(this.inner.annotation).map(l => ({
-      value: l,
-    }));
+    const annotations = new Annotations(this.inner.annotation)
+      .all()
+      .map(l => ({value: l.rawText}));
     const metadataAnnot = struct.resultMetadata
       ? getResultStructMetadataAnnotation(struct, struct.resultMetadata)
       : undefined;
@@ -1877,11 +1877,9 @@ export class PreparedResult implements Taggable {
         .toString(),
     });
 
-    const modelAnnotations = annotationToTaglines(this.modelDef.annotation).map(
-      l => ({
-        value: l,
-      })
-    );
+    const modelAnnotations = new Annotations(this.modelDef.annotation)
+      .all()
+      .map(l => ({value: l.rawText}));
 
     return {
       schema,

@@ -28,7 +28,7 @@ import {
 import {modelDefToModelInfo, writeLiteralToTag} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
 import type {SQLSourceRequest} from '../lang/translate-response';
-import {annotationToTaglines} from '../annotation';
+import {Annotations} from '../annotation';
 import {Tag} from '@malloydata/malloy-tag';
 import {DEFAULT_LOG_RANGE, mapLogs, nodeToLiteralValue} from './util';
 import {Timer} from '../timing';
@@ -640,11 +640,9 @@ export function statedCompileQuery(
         defaultRowLimit: state.defaultRowLimit,
       });
       timer.contribute([sqlTimer.stop()]);
-      const modelAnnotations = annotationToTaglines(
-        result.modelDef.annotation
-      ).map(l => ({
-        value: l,
-      }));
+      const modelAnnotations = new Annotations(result.modelDef.annotation)
+        .all()
+        .map(l => ({value: l.rawText}));
       let source: StructDef;
       if (query.compositeResolvedSourceDef) {
         source = query.compositeResolvedSourceDef;
@@ -660,11 +658,9 @@ export function statedCompileQuery(
         }
       }
 
-      const sourceAnnotations = annotationToTaglines(source.annotation).map(
-        l => ({
-          value: l,
-        })
-      );
+      const sourceAnnotations = new Annotations(source.annotation)
+        .all()
+        .map(l => ({value: l.rawText}));
       const sourceMetadataTag = Tag.withPrefix('#(malloy) ');
       sourceMetadataTag.set(['source', 'name'], translatedQuery.sourceExplore);
       const sourceArguments =
