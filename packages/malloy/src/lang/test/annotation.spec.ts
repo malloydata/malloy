@@ -32,7 +32,7 @@ import {
 import './parse-expects';
 import {diff} from 'jest-diff';
 import type {Annotation, Note} from '../../model/malloy_types';
-import {collectAnnotations} from '../../annotation';
+import {collectAnnotations, annotationToTag} from '../../annotation';
 
 interface TstAnnotation {
   inherits?: TstAnnotation;
@@ -1295,7 +1295,7 @@ describe('collectAnnotations (route-based)', () => {
     ]);
   });
 
-  test('a route filters to that route and omits route from the results', () => {
+  test('a route filters to that route; each result carries that route', () => {
     const annote: Annotation = {
       notes: [note('#(docs) one'), note('# tag'), note('#(docs) two')],
     };
@@ -1304,8 +1304,7 @@ describe('collectAnnotations (route-based)', () => {
       'one',
       'two',
     ]);
-    // The AnnotationText overload has no `route` field.
-    expect(docs.every(a => !('route' in a))).toBe(true);
+    expect(docs.every(a => a.route === 'docs')).toBe(true);
   });
 
   test('a malformed prefix is excluded from its route query, present in all', () => {
@@ -1332,5 +1331,17 @@ describe('collectAnnotations (route-based)', () => {
   test('undefined annotation yields nothing', () => {
     expect(collectAnnotations(undefined)).toEqual([]);
     expect(collectAnnotations(undefined, 'docs')).toEqual([]);
+  });
+
+  test('annotationToTag parses the requested route as MOTLY', () => {
+    const annote: Annotation = {
+      notes: [note('# size=large'), note('#(viz) chart=bar')],
+    };
+    // default route '' is the MOTLY tag namespace
+    expect(annotationToTag(annote).tag.text('size')).toBe('large');
+    expect(annotationToTag(annote).tag.text('chart')).toBeUndefined();
+    // a named route parses only that route's content
+    expect(annotationToTag(annote, 'viz').tag.text('chart')).toBe('bar');
+    expect(annotationToTag(annote, 'viz').tag.text('size')).toBeUndefined();
   });
 });

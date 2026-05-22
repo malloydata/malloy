@@ -8,18 +8,15 @@ export interface TagParseSpec {
   prefix?: RegExp;
 }
 
-/** One annotation addressed to a requested route, in inheritance order. */
-export interface AnnotationText {
+/** One annotation and the route its prefix resolves to (`''` is MOTLY). */
+export interface RoutedAnnotation {
   /** The annotation exactly as written — prefix + content. */
   rawText: string;
   /** Offset where the content begins; `rawText.slice(contentIndex)` is the content. */
   contentIndex: number;
   /** Where `rawText` begins in the source document. */
   at: DocumentLocation;
-}
-
-/** An {@link AnnotationText} that also carries its own route (`''` is MOTLY). */
-export interface RoutedAnnotation extends AnnotationText {
+  /** The route this annotation's prefix resolves to. */
   route: string;
 }
 
@@ -31,42 +28,31 @@ function* notesInOrder(annote: Annotation): Generator<Note> {
 }
 
 /**
- * Collect annotations by route, using the shared prefix parser.
- * - no route: every annotation, each carrying its own `route` — the only way to
- *   reach an annotation whose prefix is malformed.
- * - a route: only annotations on that route, `route` omitted from each result
- *   (the caller passed it). Malformed-prefix annotations are never returned here.
+ * Collect annotations, using the shared prefix parser. With no `route`, returns
+ * every annotation (the only way to reach one whose prefix is malformed). With a
+ * `route`, returns only annotations on that route, excluding malformed prefixes.
+ * Each result carries its own `route` either way.
  */
-export function collectAnnotations(
-  annote: Annotation | undefined
-): RoutedAnnotation[];
-export function collectAnnotations(
-  annote: Annotation | undefined,
-  route: string
-): AnnotationText[];
 export function collectAnnotations(
   annote: Annotation | undefined,
   route?: string
-): RoutedAnnotation[] | AnnotationText[] {
-  const notes = notesInOrder(annote ?? {});
-  if (route === undefined) {
-    return Array.from(notes, note => {
-      const {route: noteRoute, contentIndex} = parsePrefix(note.text);
-      return {rawText: note.text, contentIndex, at: note.at, route: noteRoute};
-    });
-  }
-  const matching: AnnotationText[] = [];
-  for (const note of notes) {
+): RoutedAnnotation[] {
+  const result: RoutedAnnotation[] = [];
+  for (const note of notesInOrder(annote ?? {})) {
     const parsed = parsePrefix(note.text);
-    if (parsed.route === route && parsed.malformation !== 'malformed-route') {
-      matching.push({
+    const matches =
+      route === undefined ||
+      (parsed.route === route && parsed.malformation !== 'malformed-route');
+    if (matches) {
+      result.push({
         rawText: note.text,
         contentIndex: parsed.contentIndex,
         at: note.at,
+        route: parsed.route,
       });
     }
   }
-  return matching;
+  return result;
 }
 
 /**
@@ -92,29 +78,25 @@ export interface MalloyTagParse {
   log: LogMessage[];
 }
 
-export function annotationToTag(
-  annote: Annotation | undefined,
-  spec: TagParseSpec = {}
+/** Parse a run of annotation lines as MOTLY into one Tag, collecting errors. */
+function parseTaglines(
+  lines: ReadonlyArray<{text: string; at: DocumentLocation}>
 ): MalloyTagParse {
-  const prefix = spec.prefix || /^##? /;
-  annote ||= {};
-  const notes = collectNotes(annote, prefix);
   const allErrs: LogMessage[] = [];
   const session = new TagParser();
-  for (const note of notes) {
+  for (const line of lines) {
     const origin: SourceOrigin = {
-      url: note.at.url,
-      startLine: note.at.range.start.line,
-      startColumn: note.at.range.start.character,
+      url: line.at.url,
+      startLine: line.at.range.start.line,
+      startColumn: line.at.range.start.character,
     };
-    const noteParse = session.parseAnnotation(note.text, origin);
+    const noteParse = session.parseAnnotation(line.text, origin);
     allErrs.push(
-      ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
+      ...noteParse.log.map((e: TagError) => mapMalloyError(e, line))
     );
   }
   const tag = session.finish();
-  const refErrors = tag.validateReferences();
-  for (const refError of refErrors) {
+  for (const refError of tag.validateReferences()) {
     allErrs.push({
       code: 'tag-reference-error',
       severity: 'warn',
@@ -122,6 +104,31 @@ export function annotationToTag(
     });
   }
   return {tag, log: allErrs};
+}
+
+/** Parse the annotations on `route` (default `''`, the MOTLY tag route) as MOTLY. */
+export function annotationToTag(
+  annote: Annotation | undefined,
+  route?: string
+): MalloyTagParse;
+/**
+ * @deprecated Pass a route string. The RegExp `prefix` form cannot report
+ * content offsets and matches against the whole annotation text.
+ */
+export function annotationToTag(
+  annote: Annotation | undefined,
+  spec: TagParseSpec
+): MalloyTagParse;
+export function annotationToTag(
+  annote: Annotation | undefined,
+  arg?: string | TagParseSpec
+): MalloyTagParse {
+  if (typeof arg === 'object') {
+    const prefix = arg.prefix || /^##? /;
+    return parseTaglines(collectNotes(annote ?? {}, prefix));
+  }
+  const matched = collectAnnotations(annote, arg ?? '');
+  return parseTaglines(matched.map(a => ({text: a.rawText, at: a.at})));
 }
 
 function mapMalloyError(e: TagError, note: Note): LogMessage {
