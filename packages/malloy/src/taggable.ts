@@ -16,6 +16,16 @@ export interface Taggable {
    * block annotations (`#|`…`|#`).
    */
   readonly annotations: Annotations;
+  /**
+   * @deprecated The RegExp form cannot see block annotations (`#|`…`|#`) and
+   * cannot report content offsets for error mapping. Use
+   * `annotations.parseAsTag(route)` instead.
+   */
   tagParse: (spec?: TagParseSpec) => MalloyTagParse;
+  /**
+   * @deprecated The RegExp form cannot see block annotations. Use
+   * `annotations.texts(route)` (raw strings) or `annotations.forRoute(route)`
+   * (objects with offsets) instead.
+   */
   getTaglines: (prefix?: RegExp) => string[];
 }

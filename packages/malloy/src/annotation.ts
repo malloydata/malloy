@@ -4,6 +4,12 @@ import type {Annotation, Note, DocumentLocation} from './model';
 import type {LogMessage} from './lang';
 import {parsePrefix} from './prefix';
 
+/**
+ * @deprecated Argument shape for the deprecated RegExp form of
+ * {@link annotationToTag}. The RegExp form cannot see block annotations
+ * (`#|`…`|#`). Pass a route string to `annotationToTag` instead, or use the
+ * {@link Annotations} view on a tagged entity.
+ */
 export interface TagParseSpec {
   prefix?: RegExp;
 }
@@ -79,6 +85,11 @@ function collectNotes(annote: Annotation, prefix?: RegExp): Note[] {
   return prefix ? notes.filter(note => note.text.match(prefix)) : notes;
 }
 
+/**
+ * @deprecated The RegExp form cannot see block annotations (`#|`…`|#`). Use
+ * `new Annotations(annote).texts(route)` instead, or the {@link Annotations}
+ * view on a tagged entity (`entity.annotations.texts(route)`).
+ */
 export function annotationToTaglines(
   annote: Annotation | undefined,
   prefix?: RegExp
@@ -125,8 +136,10 @@ export function annotationToTag(
   route?: string
 ): MalloyTagParse;
 /**
- * @deprecated Pass a route string. The RegExp `prefix` form cannot report
- * content offsets and matches against the whole annotation text.
+ * @deprecated The RegExp `prefix` form cannot see block annotations
+ * (`#|`…`|#`) and cannot report content offsets for error mapping. Pass a route
+ * string (the other overload), or use {@link Annotations.parseAsTag} on a
+ * tagged entity.
  */
 export function annotationToTag(
   annote: Annotation | undefined,
