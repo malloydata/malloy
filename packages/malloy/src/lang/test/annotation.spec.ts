@@ -953,6 +953,29 @@ describe('block annotations', () => {
       blockNotes: ['#|\nline one\nline two'],
     });
   });
+  test('CRLF block annotation normalizes to LF note text', () => {
+    // Windows line endings: the lexer keeps the \r in token text; the note
+    // must come out byte-identical to the LF version above (internal \r and the
+    // trailing \r\n both gone), so an annotation does not depend on EOL style.
+    const m = new TestTranslator(
+      '#|\r\nline one\r\nline two\r\n|#\r\nsource: na is a\r\n'
+    );
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['#|\nline one\nline two'],
+    });
+  });
+  test('CRLF single-line annotation normalizes to LF (trailing newline kept)', () => {
+    const m = new TestTranslator('## modelNote\r\nsource: na is a\r\n');
+    expect(m).toTranslate();
+    const md = m.translate()?.modelDef;
+    expect(md).toBeDefined();
+    expect(md!.annotation).matchesAnnotation({
+      notes: ['## modelNote\n'],
+    });
+  });
   test('indented closer must match opener column', () => {
     const m = new TestTranslator(`
       #|

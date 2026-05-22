@@ -232,7 +232,20 @@ function stripBlockIndent(
 }
 
 function stripTrailingNewline(s: string): string {
-  return s.endsWith('\n') ? s.slice(0, -1) : s;
+  // A trailing line ending may be CRLF or LF — strip either.
+  return s.replace(/\r?\n$/, '');
+}
+
+/**
+ * Annotation note text is normalized to LF line endings, so a block's stored
+ * text and content are identical regardless of the source's CRLF/LF style.
+ * The lexer keeps the source `\r` in token text (it sits at line ends, after a
+ * line's content); this is where it is dropped. Offsets are unaffected for the
+ * opener line, and block body-line column mapping is already approximate (see
+ * the TODO in annotation.ts mapMalloyError).
+ */
+function normalizeEol(s: string): string {
+  return s.replace(/\r\n/g, '\n');
 }
 
 export function getAnnotationText(
@@ -241,11 +254,29 @@ export function getAnnotationText(
 ): string {
   if (cx instanceof AnnotationContext) {
     const annot = cx.ANNOTATION();
-    if (annot) return annot.text;
+    if (annot) return normalizeEol(annot.text);
     const block = cx.blockAnnotation()!;
     const beginToken = block.BLOCK_ANNOTATION_BEGIN();
     const textLines = block.BLOCK_ANNOTATION_TEXT().map(t => t.text);
-    return stripTrailingNewline(
+    return normalizeEol(
+      stripTrailingNewline(
+        beginToken.text +
+          stripBlockIndent(
+            textLines,
+            beginToken.symbol.charPositionInLine,
+            cx,
+            warn
+          )
+      )
+    );
+  }
+  const doc = cx.DOC_ANNOTATION();
+  if (doc) return normalizeEol(doc.text);
+  const block = cx.docBlockAnnotation()!;
+  const beginToken = block.DOC_BLOCK_ANNOTATION_BEGIN();
+  const textLines = block.BLOCK_ANNOTATION_TEXT().map(t => t.text);
+  return normalizeEol(
+    stripTrailingNewline(
       beginToken.text +
         stripBlockIndent(
           textLines,
@@ -253,20 +284,6 @@ export function getAnnotationText(
           cx,
           warn
         )
-    );
-  }
-  const doc = cx.DOC_ANNOTATION();
-  if (doc) return doc.text;
-  const block = cx.docBlockAnnotation()!;
-  const beginToken = block.DOC_BLOCK_ANNOTATION_BEGIN();
-  const textLines = block.BLOCK_ANNOTATION_TEXT().map(t => t.text);
-  return stripTrailingNewline(
-    beginToken.text +
-      stripBlockIndent(
-        textLines,
-        beginToken.symbol.charPositionInLine,
-        cx,
-        warn
-      )
+    )
   );
 }
