@@ -31,7 +31,8 @@ import {
 } from './test-translator';
 import './parse-expects';
 import {diff} from 'jest-diff';
-import type {Annotation} from '../../model/malloy_types';
+import type {Annotation, Note} from '../../model/malloy_types';
+import {collectAnnotations} from '../../annotation';
 
 interface TstAnnotation {
   inherits?: TstAnnotation;
@@ -1273,5 +1274,63 @@ describe('user type annotation', () => {
         notes: ['# from s2\n'],
       },
     });
+  });
+});
+
+describe('collectAnnotations (route-based)', () => {
+  const at: Note['at'] = {
+    url: 'test://x',
+    range: {start: {line: 0, character: 0}, end: {line: 0, character: 0}},
+  };
+  const note = (text: string): Note => ({text, at});
+
+  test('no route returns every annotation, each carrying its route', () => {
+    const annote: Annotation = {
+      notes: [note('# tag1'), note('#(docs) hello'), note('#! flag')],
+    };
+    expect(collectAnnotations(annote).map(a => a.route)).toEqual([
+      '',
+      'docs',
+      '!',
+    ]);
+  });
+
+  test('a route filters to that route and omits route from the results', () => {
+    const annote: Annotation = {
+      notes: [note('#(docs) one'), note('# tag'), note('#(docs) two')],
+    };
+    const docs = collectAnnotations(annote, 'docs');
+    expect(docs.map(a => a.rawText.slice(a.contentIndex))).toEqual([
+      'one',
+      'two',
+    ]);
+    // The AnnotationText overload has no `route` field.
+    expect(docs.every(a => !('route' in a))).toBe(true);
+  });
+
+  test('a malformed prefix is excluded from its route query, present in all', () => {
+    // `#docs` (no brackets) is malformed; its best-effort route is still 'docs'.
+    const annote: Annotation = {notes: [note('#docs'), note('#(docs) ok')]};
+    const docs = collectAnnotations(annote, 'docs');
+    expect(docs.map(a => a.rawText)).toEqual(['#(docs) ok']);
+    expect(collectAnnotations(annote).map(a => a.rawText)).toContain('#docs');
+  });
+
+  test('inherited annotations come first', () => {
+    const parent: Annotation = {notes: [note('#(docs) parent')]};
+    const child: Annotation = {
+      inherits: parent,
+      notes: [note('#(docs) child')],
+    };
+    expect(
+      collectAnnotations(child, 'docs').map(a =>
+        a.rawText.slice(a.contentIndex)
+      )
+    ).toEqual(['parent', 'child']);
+  });
+
+  test('undefined annotation yields nothing', () => {
+    expect(collectAnnotations(undefined)).toEqual([]);
+    expect(collectAnnotations(undefined, 'docs')).toEqual([]);
   });
 });

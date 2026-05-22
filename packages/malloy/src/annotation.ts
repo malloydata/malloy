@@ -1,32 +1,83 @@
 import type {Tag, TagError, SourceOrigin} from '@malloydata/malloy-tag';
 import {TagParser} from '@malloydata/malloy-tag';
-import type {Annotation, Note} from './model';
+import type {Annotation, Note, DocumentLocation} from './model';
 import type {LogMessage} from './lang';
+import {parsePrefix} from './prefix';
 
 export interface TagParseSpec {
   prefix?: RegExp;
 }
 
+/** One annotation addressed to a requested route, in inheritance order. */
+export interface AnnotationText {
+  /** The annotation exactly as written — prefix + content. */
+  rawText: string;
+  /** Offset where the content begins; `rawText.slice(contentIndex)` is the content. */
+  contentIndex: number;
+  /** Where `rawText` begins in the source document. */
+  at: DocumentLocation;
+}
+
+/** An {@link AnnotationText} that also carries its own route (`''` is MOTLY). */
+export interface RoutedAnnotation extends AnnotationText {
+  route: string;
+}
+
+/** Every Note of an annotation, inherited first, in document order. */
+function* notesInOrder(annote: Annotation): Generator<Note> {
+  if (annote.inherits) yield* notesInOrder(annote.inherits);
+  if (annote.blockNotes) yield* annote.blockNotes;
+  if (annote.notes) yield* annote.notes;
+}
+
+/**
+ * Collect annotations by route, using the shared prefix parser.
+ * - no route: every annotation, each carrying its own `route` — the only way to
+ *   reach an annotation whose prefix is malformed.
+ * - a route: only annotations on that route, `route` omitted from each result
+ *   (the caller passed it). Malformed-prefix annotations are never returned here.
+ */
+export function collectAnnotations(
+  annote: Annotation | undefined
+): RoutedAnnotation[];
+export function collectAnnotations(
+  annote: Annotation | undefined,
+  route: string
+): AnnotationText[];
+export function collectAnnotations(
+  annote: Annotation | undefined,
+  route?: string
+): RoutedAnnotation[] | AnnotationText[] {
+  const notes = notesInOrder(annote ?? {});
+  if (route === undefined) {
+    return Array.from(notes, note => {
+      const {route: noteRoute, contentIndex} = parsePrefix(note.text);
+      return {rawText: note.text, contentIndex, at: note.at, route: noteRoute};
+    });
+  }
+  const matching: AnnotationText[] = [];
+  for (const note of notes) {
+    const parsed = parsePrefix(note.text);
+    if (parsed.route === route && parsed.malformation !== 'malformed-route') {
+      matching.push({
+        rawText: note.text,
+        contentIndex: parsed.contentIndex,
+        at: note.at,
+      });
+    }
+  }
+  return matching;
+}
+
 /**
  * Collect all matching Notes from an Annotation, walking the inherits
  * chain. Returns notes in inheritance order (inherited first).
+ *
+ * @deprecated RegExp prefix matching; use {@link collectAnnotations} with a route.
  */
 function collectNotes(annote: Annotation, prefix?: RegExp): Note[] {
-  const inherited = annote.inherits
-    ? collectNotes(annote.inherits, prefix)
-    : [];
-  const allNotes: Note[] = [];
-  if (annote.blockNotes) {
-    allNotes.push(...annote.blockNotes);
-  }
-  if (annote.notes) {
-    allNotes.push(...annote.notes);
-  }
-  if (prefix) {
-    const matching = allNotes.filter(note => note.text.match(prefix));
-    return inherited.concat(matching);
-  }
-  return inherited.concat(allNotes);
+  const notes = [...notesInOrder(annote)];
+  return prefix ? notes.filter(note => note.text.match(prefix)) : notes;
 }
 
 export function annotationToTaglines(
