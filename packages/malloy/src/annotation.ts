@@ -8,15 +8,18 @@ export interface TagParseSpec {
   prefix?: RegExp;
 }
 
-/** One annotation and the route its prefix resolves to (`''` is MOTLY). */
-export interface RoutedAnnotation {
+/** One annotation, unparsed — its raw text and where its content begins. */
+export interface AnnotationText {
   /** The annotation exactly as written — prefix + content. */
   rawText: string;
   /** Offset where the content begins; `rawText.slice(contentIndex)` is the content. */
   contentIndex: number;
   /** Where `rawText` begins in the source document. */
   at: DocumentLocation;
-  /** The route this annotation's prefix resolves to. */
+}
+
+/** An {@link AnnotationText} that also carries its route (`''` is MOTLY). */
+export interface RoutedAnnotation extends AnnotationText {
   route: string;
 }
 
@@ -28,31 +31,41 @@ function* notesInOrder(annote: Annotation): Generator<Note> {
 }
 
 /**
- * Collect annotations, using the shared prefix parser. With no `route`, returns
- * every annotation (the only way to reach one whose prefix is malformed). With a
- * `route`, returns only annotations on that route, excluding malformed prefixes.
- * Each result carries its own `route` either way.
+ * Collect annotations, using the shared prefix parser.
+ * - no `route`: every annotation, each carrying its own `route` (the only way
+ *   to reach one whose prefix is malformed).
+ * - a `route`: only annotations on that route, `route` omitted from each result
+ *   (you passed it); malformed prefixes excluded.
  */
+export function collectAnnotations(
+  annote: Annotation | undefined
+): RoutedAnnotation[];
+export function collectAnnotations(
+  annote: Annotation | undefined,
+  route: string
+): AnnotationText[];
 export function collectAnnotations(
   annote: Annotation | undefined,
   route?: string
-): RoutedAnnotation[] {
-  const result: RoutedAnnotation[] = [];
+): RoutedAnnotation[] | AnnotationText[] {
+  if (route === undefined) {
+    return Array.from(notesInOrder(annote ?? {}), note => {
+      const {route: noteRoute, contentIndex} = parsePrefix(note.text);
+      return {rawText: note.text, contentIndex, at: note.at, route: noteRoute};
+    });
+  }
+  const matching: AnnotationText[] = [];
   for (const note of notesInOrder(annote ?? {})) {
     const parsed = parsePrefix(note.text);
-    const matches =
-      route === undefined ||
-      (parsed.route === route && parsed.malformation !== 'malformed-route');
-    if (matches) {
-      result.push({
+    if (parsed.route === route && parsed.malformation !== 'malformed-route') {
+      matching.push({
         rawText: note.text,
         contentIndex: parsed.contentIndex,
         at: note.at,
-        route: parsed.route,
       });
     }
   }
-  return result;
+  return matching;
 }
 
 /**
@@ -117,7 +130,7 @@ export function annotationToTag(
  */
 export function annotationToTag(
   annote: Annotation | undefined,
-  spec: TagParseSpec
+  spec?: TagParseSpec
 ): MalloyTagParse;
 export function annotationToTag(
   annote: Annotation | undefined,
@@ -129,6 +142,41 @@ export function annotationToTag(
   }
   const matched = collectAnnotations(annote, arg ?? '');
   return parseTaglines(matched.map(a => ({text: a.rawText, at: a.at})));
+}
+
+/**
+ * The route-aware annotation API for a tagged entity. All annotation reading
+ * lives here, written once; each tagged class only has to say *where* its
+ * annotation is (by handing it to the constructor). Unlike the deprecated
+ * RegExp readers (`tagParse`/`getTaglines`), this sees block annotations.
+ */
+export class Annotations {
+  constructor(private readonly annote: Annotation | undefined) {}
+
+  /**
+   * Every annotation, **unparsed** — each carries its `route` (`''` is the MOTLY
+   * tag route), its `rawText`, and `contentIndex` (where the content begins).
+   * The content itself is not interpreted; parse it yourself, or use
+   * {@link parseAsTag} for the built-in MOTLY reading.
+   */
+  all(): RoutedAnnotation[] {
+    return collectAnnotations(this.annote);
+  }
+
+  /**
+   * Your route's annotations, **unparsed** — the bring-your-own-parser door.
+   * A non-MOTLY app (e.g. JSON on its own route) reads these and parses the
+   * content (`rawText.slice(contentIndex)`) itself. `''` is the MOTLY route;
+   * malformed-prefix annotations are excluded.
+   */
+  forRoute(route: string): AnnotationText[] {
+    return collectAnnotations(this.annote, route);
+  }
+
+  /** Parse a route's annotations as a MOTLY tag. Default `''` is the tag route. */
+  parseAsTag(route = ''): MalloyTagParse {
+    return annotationToTag(this.annote, route);
+  }
 }
 
 function mapMalloyError(e: TagError, note: Note): LogMessage {

@@ -68,7 +68,11 @@ import {
 } from '../../model/given_binding';
 import {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
-import {annotationToTag, annotationToTaglines} from '../../annotation';
+import {
+  annotationToTag,
+  annotationToTaglines,
+  Annotations,
+} from '../../annotation';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {
   convertFieldInfos,
@@ -272,6 +276,10 @@ export class Explore extends Entity implements Taggable {
 
   getTaglines(prefix?: RegExp): string[] {
     return annotationToTaglines(this._structDef.annotation, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this._structDef.annotation);
   }
 
   private parsedModelTag?: Tag;
@@ -641,6 +649,10 @@ export class AtomicField extends Entity implements Taggable {
     return annotationToTaglines(this.fieldTypeDef.annotation, prefix);
   }
 
+  get annotations(): Annotations {
+    return new Annotations(this.fieldTypeDef.annotation);
+  }
+
   public isIntrinsic(): boolean {
     return fieldIsIntrinsic(this.fieldTypeDef);
   }
@@ -912,6 +924,10 @@ export class QueryField extends Query implements Taggable {
     return annotationToTaglines(this.turtleDef.annotation, prefix);
   }
 
+  get annotations(): Annotations {
+    return new Annotations(this.turtleDef.annotation);
+  }
+
   public isQueryField(): this is QueryField {
     return true;
   }
@@ -977,6 +993,10 @@ export class ExploreField extends Explore {
 
   override tagParse(spec?: TagParseSpec) {
     return annotationToTag(this._structDef.annotation, spec);
+  }
+
+  override get annotations(): Annotations {
+    return new Annotations(this._structDef.annotation);
   }
 
   public isQueryField(): this is QueryField {
@@ -1100,6 +1120,10 @@ export class Model implements Taggable {
 
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this.modelDef.annotation, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this.modelDef.annotation);
   }
 
   /**
@@ -1434,6 +1458,10 @@ export class PersistSource implements Taggable {
     return this.explore.getTaglines(prefix);
   }
 
+  get annotations(): Annotations {
+    return this.explore.annotations;
+  }
+
   /**
    * The connection name for this source.
    */
@@ -1552,6 +1580,10 @@ export class Given implements Taggable {
   getTaglines(prefix?: RegExp): string[] {
     return annotationToTaglines(this._internal.annotation, prefix);
   }
+
+  get annotations(): Annotations {
+    return new Annotations(this._internal.annotation);
+  }
 }
 
 export class PreparedQuery implements Taggable {
@@ -1576,6 +1608,10 @@ export class PreparedQuery implements Taggable {
 
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this._query.annotation, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this._query.annotation);
   }
 
   /**
@@ -1703,6 +1739,10 @@ export class PreparedResult implements Taggable {
 
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this.inner.annotation, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this.inner.annotation);
   }
 
   get annotation(): Annotation | undefined {

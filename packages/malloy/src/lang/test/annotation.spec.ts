@@ -1295,7 +1295,7 @@ describe('collectAnnotations (route-based)', () => {
     ]);
   });
 
-  test('a route filters to that route; each result carries that route', () => {
+  test('a route filters to that route and omits route from results', () => {
     const annote: Annotation = {
       notes: [note('#(docs) one'), note('# tag'), note('#(docs) two')],
     };
@@ -1304,7 +1304,8 @@ describe('collectAnnotations (route-based)', () => {
       'one',
       'two',
     ]);
-    expect(docs.every(a => a.route === 'docs')).toBe(true);
+    // The route-filtered form returns AnnotationText — no `route` field.
+    expect(docs.every(a => !('route' in a))).toBe(true);
   });
 
   test('a malformed prefix is excluded from its route query, present in all', () => {
