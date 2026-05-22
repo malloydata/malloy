@@ -54,7 +54,7 @@ import {
 } from '../model/malloy_types';
 import {isNotUndefined} from './utils';
 import {pathToKey} from '../model/utils';
-import {annotationToTag} from '../annotation';
+import {Annotations} from '../annotation';
 
 type CompositeCouldNotFindFieldError = {
   code: 'could_not_find_field';
@@ -735,7 +735,7 @@ export function getPartitionCompositeDesc(
   logTo: MalloyElement
 ): PartitionCompositeDesc | undefined {
   if (annotation === undefined) return undefined;
-  const compilerFlags = annotationToTag(annotation, {prefix: /^#!\s*/}).tag;
+  const compilerFlags = new Annotations(annotation).parseAsTag('!').tag;
   const partitionCompositeTag = compilerFlags.tag(
     'experimental',
     'partition_composite'

@@ -1280,7 +1280,7 @@ export class Model implements Taggable {
    */
   public getBuildPlan(): BuildPlan {
     // Require experimental.persistence compiler flag
-    const modelTag = this.tagParse({prefix: /^##! /}).tag;
+    const modelTag = this.annotations.parseAsTag('!').tag;
     if (!modelTag.has('experimental', 'persistence')) {
       throw new Error(
         'Model must have ##! experimental.persistence to use getBuildPlan()'
