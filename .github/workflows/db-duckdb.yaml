@@ -3,21 +3,30 @@ permissions: {}
 
 on: workflow_call
 
+# This dialect is the fork-PR fallback: it does its own checkout + build
+# rather than consuming the pull_and_build artifact, because
+# pull_and_build gates on check-permission and would not run for
+# unauthorized fork PRs. Keeping db-duckdb self-sufficient means outside
+# contributors get one dialect's worth of CI feedback before a
+# maintainer authorizes their PR. See run-tests.yaml.
+
 jobs:
   test-duckdb:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
         with:
-          name: workspace
-      - name: Extract workspace
-        run: tar --use-compress-program='zstd -d -T0' -xf workspace.tzst && rm workspace.tzst
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Use Node.js 20.x
         uses: actions/setup-node@v5
         with:
           node-version: 20.x
-      - name: Test
-        run: npm run ci-duckdb
+      - name: npm install, build, and test
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run build-duckdb-db
+          npm run ci-duckdb
         env:
           CI: true
