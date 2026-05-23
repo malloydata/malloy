@@ -63,14 +63,26 @@ interface Annotation {
   blockNotes?: Note[];       // block-level notes shared across items in a block
   notes?: Note[];            // notes attached directly to this entity
 }
-interface Note { text: string; at: DocumentLocation; }
+interface Note {
+  text: string;
+  at: DocumentLocation;
+  indentStripped?: number;   // characters dedented per body line (block notes)
+}
 ```
 
-`text` is the raw source, marker and prefix included. Routes are derived at
-retrieval by `parsePrefix` (`../prefix.ts`); the Note stores no route. **Read
-through the `Annotations` view (`../annotation.ts`)** — it flattens
-`inherits` and filters by route. Walking the three buckets yourself is a
-smell.
+`text` is the annotation **as stored**: the marker and prefix are kept
+verbatim, line endings are LF-normalized, and for block annotations the body
+is dedented (`indentStripped` records how many leading characters were
+removed per non-blank body line). Routes are derived at retrieval by
+`parsePrefix` (`../prefix.ts`); the Note stores no route. **Read through the
+`Annotations` view (`../annotation.ts`)** — it flattens `inherits` and
+filters by route. Walking the three buckets yourself is a smell.
+
+`indentStripped` is what lets payload-parser error columns map back to
+source: for a body line, `source_col = indentStripped + parser_col`. The
+`Annotations` view's `mapMalloyError` and the BYO-door `forRoute(route)`
+both surface this — consumers parsing non-MOTLY content can compute their
+own source columns the same way.
 
 `inherits` is populated when an entity *derives* from another (most
 prominently `source: child is parent extend { ... }` in

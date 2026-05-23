@@ -1486,6 +1486,25 @@ describe('route warnings', () => {
   });
 });
 
+describe('tab-separated annotations round-trip to MOTLY', () => {
+  // parsePrefix accepts space, tab, CR, and LF as the prefix/content boundary;
+  // malloy-tag's stripPrefix must agree, or a tab-separated annotation gets
+  // selected for a route but its payload is silently dropped before MOTLY
+  // sees it.
+  const at: Note['at'] = {
+    url: 'test://x',
+    range: {start: {line: 0, character: 0}, end: {line: 0, character: 0}},
+  };
+  test('tab after marker — empty route, MOTLY parses payload', () => {
+    const annote: Annotation = {notes: [{text: '#\tfoo=true\n', at}]};
+    expect(annotationToTag(annote).tag.has('foo')).toBe(true);
+  });
+  test('tab after sigil route — `!` route, MOTLY parses payload', () => {
+    const annote: Annotation = {notes: [{text: '##!\tflag=on\n', at}]};
+    expect(annotationToTag(annote, '!').tag.text('flag')).toBe('on');
+  });
+});
+
 describe('mapMalloyError body-line column', () => {
   // Construct a block annotation by hand and assert tag-parse error columns
   // map back to source correctly. The opener is at line 5 column 4; the body

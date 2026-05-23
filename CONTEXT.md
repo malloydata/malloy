@@ -52,13 +52,14 @@ The Malloy language uses dotted path notation to access nested data. Nested data
 Objects in Malloy (sources, queries, joins, measures, dimensions, `group_by`, `aggregate`, etc.) can have metadata attached via **annotations**.
 
 **Annotation syntax:**
-- `#` marks the beginning of an annotation
-- An annotation continues to end-of-line
-- Annotations apply to objects declared below them
-- In block declarations, block-level annotations apply to all items, and each item can have its own
-- `##` marks **model-level annotations** that apply to the entire model
+- `#` (object) or `##` (model) marks the beginning of an annotation
+- Single-line annotations run to end-of-line: `# tag`, `## model_tag`
+- Block annotations span multiple lines between `#|`/`|#` (object) or `##|`/`|##` (model); the body is dedented to its common leading-whitespace prefix
+- Annotations apply to the construct declared below them; block-level annotations on a multi-item construct (e.g. `dimension: { ... }`) apply to every item
 
-**Annotations are just text** - the design intentionally leaves room for multiple DSLs. Each application extracts its annotations via pattern matching and defines its own syntax. For details on the Malloy Tag Language used for parsing annotations, see [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md).
+**Prefix and route.** Everything from the marker (`#`/`##`/`#|`/`##|`) up to the first whitespace is the annotation's **prefix**; it resolves to a **route** — a namespace key like `''` (the renderer's default), `!` (compiler flags), `@` (persistence), `docs`, `myApp`. Routes claimed by an app (`#(myApp) ...`) are how applications stake a namespace and decline MOTLY in favor of their own payload language. The grammar is formalized in [packages/malloy/src/prefix.ts](packages/malloy/src/prefix.ts); MOTLY itself is in [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md).
+
+Read annotations on any tagged entity through its `annotations` view (`entity.annotations.parseAsTag(route)` for MOTLY; `entity.annotations.forRoute(route)` for raw text + source offsets when bringing your own parser).
 
 ## Data Model and Type System
 
