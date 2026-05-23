@@ -4,7 +4,7 @@ CI and release machinery. Read the YAML for mechanics; this covers what's *not* 
 
 ## CI
 
-`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It fans out to reusable workflows — `main.yaml` (dialect-agnostic `ci-core`, plus `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. Each `db-<dialect>.yaml` runs `npm run ci-<dialect>`, the same script you run locally. `db-motherduck.yaml` is commented out of CI.
+`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job `needs: pull_and_build`, downloads the artifact, and runs only its dialect-specific setup + `npm run ci-<dialect>` — no per-job rebuild. Fan-out goes to reusable workflows — `main.yaml` (dialect-agnostic `ci-core`, plus `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. `db-motherduck.yaml` is commented out of CI.
 
 `scripts/ci-test-sanity-check.sh` (run by `main.yaml`) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
 
@@ -14,6 +14,18 @@ CI and release machinery. Read the YAML for mechanics; this covers what's *not* 
 
 - **Every secret-bearing job MUST `needs: check-permission`** (today: `main`, `db-trino`, `db-presto`, `db-bigquery`, `db-snowflake`, `db-databricks`). Secret-free jobs deliberately don't. Adding a secret to an ungated job leaks it to external-PR code.
 - The gate trusts the *triggering actor*, not the PR author — so **re-running a fork PR's CI authorizes its code to run with full secrets.** Review the diff (especially workflow/build-script changes) before re-running.
+
+### The security stance on pull_and_build, stated honestly
+
+`pull_and_build` runs `npm ci` on PR-head code and uploads the result as an artifact that every downstream dialect job (including secret-bearing ones) consumes. CodeQL flags this — `actions/cache-poisoning/poisonable-step` and `actions/untrusted-checkout/critical` — and is technically correct: the artifact contains attacker-influenceable output. **The repo's policy is to dismiss those alerts**, on the same reasoning as the prior dismissals already on file for similar shapes in this repo.
+
+The dismissal stands because the threat model is no different from the per-job-rebuild design that existed before `pull_and_build`. Whether `npm ci` runs once centrally or eleven times in each dialect job, the same PR-head code ends up executed alongside secrets when (and only when) `check-permission` lets the secret-bearing jobs run. The runtime gate is the actual mitigation; CodeQL cannot see runtime gates and so over-reports.
+
+`pull_and_build` itself runs with no repo secrets declared and `permissions: {}` denying the GITHUB_TOKEN any write access. That prevents the dumbest exfiltration ("print env in postinstall") but it does not meaningfully shrink the attack surface — a malicious postinstall can modify `node_modules`/`dist`, the modified output gets tarred up, downloaded by every secret-bearing job, and executed during `npm test` with the dialect's credentials available (some are env vars, others are written to disk by auth actions like `google-github-actions/auth`). The protection is the runtime gate. Don't read more into the centralization than that.
+
+**When dismissing an alert on this:** reference this section and the prior dismissals. Edits that change the structural shape of `pull_and_build` (new upload, different checkout target, added trigger) will re-fire the alert — that is the *desired* behavior; it forces a re-read of this stance before the shared-artifact pattern changes shape.
+
+The artifact pattern saves compute (one build instead of ~11 parallel rebuilds, ~30 runner-minutes per PR run) rather than wall-clock time — the parallel rebuilds shared the critical path, so wall-clock is similar. It's a stewardship-of-free-resources choice, not a CI-speed choice.
 
 Contributor-facing side (DCO sign-off, licensing, review) is in [CONTRIBUTING.md](../../CONTRIBUTING.md). Adding a dialect: [adding-a-new-database.md](../../packages/malloy/src/doc/adding-a-new-database.md).
 
