@@ -4,7 +4,9 @@ CI and release machinery. Read the YAML for mechanics; this covers what's *not* 
 
 ## CI
 
-`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It fans out to reusable workflows — `main.yaml` (dialect-agnostic `ci-core`, plus `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. Each `db-<dialect>.yaml` runs `npm run ci-<dialect>`, the same script you run locally. `db-motherduck.yaml` is commented out of CI.
+`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job then `needs: pull_and_build`, downloads the artifact, and runs only its dialect-specific setup + `npm run ci-<dialect>` — no per-job rebuild. Fan-out goes to reusable workflows — `main.yaml` (dialect-agnostic `ci-core`, plus `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. `db-motherduck.yaml` is commented out of CI.
+
+`pull_and_build` deliberately does **not** `needs: check-permission`. It has no secrets and produces only build output from PR head code — which is exactly what each downstream job would have built itself. Secret-bearing jobs still `needs: check-permission`, so the threat model is unchanged. The artifact pattern saves compute (one build instead of ~12 parallel rebuilds) rather than wall-clock time — the parallel rebuilds shared the critical path, so wall-clock is similar.
 
 `scripts/ci-test-sanity-check.sh` (run by `main.yaml`) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
 
