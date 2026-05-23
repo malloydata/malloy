@@ -1,6 +1,14 @@
 name: Malloy Tests
 permissions: {}
 
+# Runs the SECRET-BEARING half of CI: every job here needs repo secrets
+# (cloud DB credentials, etc.), runs on pull_request_target, and is
+# gated by check-permission. Each dialect job does its own checkout +
+# build because we cannot safely share an artifact built from PR-head
+# code in a workflow that exposes secrets (CodeQL: cache poisoning).
+# The non-secret half is in pr-tests.yaml, which uses pull_request and
+# can share a pull_and_build artifact safely.
+
 on:
   workflow_dispatch:
   pull_request_target:
@@ -22,114 +30,55 @@ jobs:
           error_message: |
             User does not have write access to this repository. Refer to CONTRIBUTING.md instructions on how to contribute to Malloy.
 
-  # Builds the workspace once and uploads it as an artifact for every
-  # downstream test job to consume. Gated by check-permission: an
-  # unauthorized fork PR must not be able to upload an artifact that
-  # secret-bearing downstream jobs would consume (CodeQL flags this as
-  # cache poisoning, even though the secret-bearing jobs are themselves
-  # gated). db-duckdb stays on its own checkout+build path so fork PRs
-  # still get one dialect's worth of CI feedback before a maintainer
-  # re-runs.
-  pull_and_build:
-    needs: check-permission
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Use Node.js 20.x
-        uses: actions/setup-node@v5
-        with:
-          node-version: 20.x
-      - name: Install and build
-        run: |
-          npm ci --loglevel error
-          npm run build
-          npm run build-duckdb-db
-      - name: Tar workspace
-        run: tar --exclude='./.git' --use-compress-program='zstd -3 -T0' -cf /tmp/workspace.tzst .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: workspace
-          path: /tmp/workspace.tzst
-          retention-days: 1
-          compression-level: 0
-
   # *** IMPORTANT ***
-  # When modifying these, make sure that needs: check-permission
-  # is part of any job that requires secrets.
+  # Every job below needs: check-permission. Adding a job without that
+  # gate leaks secrets to fork-PR code.
   main:
-    needs: [check-permission, pull_and_build]
+    needs: check-permission
     uses: './.github/workflows/main.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
   db-trino:
-    needs: [check-permission, pull_and_build]
+    needs: check-permission
     uses: './.github/workflows/db-trino.yaml'
     secrets:
       BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-presto:
-    needs: [check-permission, pull_and_build]
+    needs: check-permission
     uses: './.github/workflows/db-presto.yaml'
     secrets:
       BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
-  # db-duckdb is the only dialect that does its own checkout + build
-  # (no needs: check-permission, no needs: pull_and_build). It is the
-  # one piece of CI an unauthorized fork PR runs against — gives outside
-  # contributors at least one signal before a maintainer authorizes.
-  db-duckdb:
-    uses: './.github/workflows/db-duckdb.yaml'
   db-bigquery:
-    needs: [check-permission, pull_and_build]
+    needs: check-permission
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
   # db-motherduck:
-  #   needs: [check-permission, pull_and_build]
+  #   needs: check-permission
   #   uses: './.github/workflows/db-motherduck.yaml'
   #   secrets:
   #     MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
-  db-postgres:
-    needs: pull_and_build
-    uses: './.github/workflows/db-postgres.yaml'
-  db-publisher:
-    needs: pull_and_build
-    uses: './.github/workflows/db-publisher.yaml'
   db-snowflake:
-    needs: [check-permission, pull_and_build]
+    needs: check-permission
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
-  db-mysql:
-    needs: pull_and_build
-    uses: './.github/workflows/db-mysql.yaml'
   db-databricks:
-    needs: [check-permission, pull_and_build]
+    needs: check-permission
     uses: './.github/workflows/db-databricks.yaml'
     secrets:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
-  db-duckdb-wasm:
-    needs: pull_and_build
-    uses: './.github/workflows/db-duckdb-wasm.yaml'
 
-  # I think I have the sorted roughly longest to shortest
-  # so the longer running jobs get workers sooner, not sure
-  # that is the right plan
   malloy-tests:
     needs:
       - main
       - db-snowflake
       - db-bigquery
-      - db-duckdb
       - db-presto
-      - db-duckdb-wasm
       - db-trino
-      - db-publisher
-      - db-postgres
       # - db-motherduck
-      - db-mysql
       - db-databricks
     runs-on: ubuntu-latest
     steps:

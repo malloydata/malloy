@@ -1,0 +1,68 @@
+name: Malloy PR Tests
+permissions: {}
+
+# Runs on `pull_request` (not pull_request_target) so it executes with a
+# limited token and no access to repo secrets, even for fork PRs. This
+# is what lets us safely build PR-head code once in pull_and_build and
+# share the artifact with downstream test jobs — there is nothing to
+# poison. Secret-bearing jobs live in run-tests.yaml instead.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  pull_and_build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20.x
+      - name: Install and build
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run build-duckdb-db
+      - name: Tar workspace
+        run: tar --exclude='./.git' --use-compress-program='zstd -3 -T0' -cf /tmp/workspace.tzst .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workspace
+          path: /tmp/workspace.tzst
+          retention-days: 1
+          compression-level: 0
+
+  db-duckdb:
+    needs: pull_and_build
+    uses: './.github/workflows/db-duckdb.yaml'
+  db-postgres:
+    needs: pull_and_build
+    uses: './.github/workflows/db-postgres.yaml'
+  db-publisher:
+    needs: pull_and_build
+    uses: './.github/workflows/db-publisher.yaml'
+  db-mysql:
+    needs: pull_and_build
+    uses: './.github/workflows/db-mysql.yaml'
+  db-duckdb-wasm:
+    needs: pull_and_build
+    uses: './.github/workflows/db-duckdb-wasm.yaml'
+
+  malloy-pr-tests:
+    needs:
+      - db-duckdb
+      - db-postgres
+      - db-publisher
+      - db-mysql
+      - db-duckdb-wasm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Success
+        run: echo Success

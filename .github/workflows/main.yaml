@@ -30,11 +30,9 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
         with:
-          name: workspace
-      - name: Extract workspace
-        run: tar --use-compress-program='zstd -d -T0' -xf workspace.tzst && rm workspace.tzst
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Use Node.js 20.x
         uses: actions/setup-node@v5
         with:
@@ -43,11 +41,14 @@ jobs:
         uses: 'google-github-actions/auth@v3'
         with:
           credentials_json: '${{ secrets.BIGQUERY_KEY }}'
-      - name: Lint and test
+      - name: npm install, build, and test
         run: |
+          npm ci --loglevel error
           sh scripts/ci-test-sanity-check.sh
           sh scripts/ci-env-sanity-check.sh
           npm run lint
+          npm run build
+          npm run build-duckdb-db
           echo CREATE EXTENSION tsm_system_rows\; | psql
           gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
           npm run ci-core
