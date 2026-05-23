@@ -21,7 +21,9 @@ Contributor-facing side (DCO sign-off, licensing, review) is in [CONTRIBUTING.md
 
 Publishing uses **GitHub Actions OIDC trusted publishing**, not a stored `NPM_TOKEN` — there is no npm secret in this repo and one should not be added back. Each `@malloydata/*` package has a trusted publisher registered on npmjs.com bound to `malloydata/malloy` + `release.yaml`, set from a maintainer's machine (`npm trust github <pkg> --file release.yaml --repo malloydata/malloy --allow-publish --yes`, needs npm ≥ 11.10).
 
-`release.yaml` is `workflow_dispatch`-only: a `precheck` job (`npm run precheck`) gates the `npm-release` job, which publishes every workspace package, cuts the GitHub Release, then bumps the version. The gate is intentionally just precheck, not the full dialect matrix — those are required checks to *merge*, so they aren't re-verified at release.
+`release.yaml` is `workflow_dispatch`-only and runs three sequential jobs: `pull_and_build` checks out the repo, runs `npm ci` + `npm run build` + `npm run build-duckdb-db`, then uploads the entire built workspace (excluding `.git`) as a zstd-compressed tar artifact. `precheck` and `npm-release` both download that artifact instead of rebuilding — `precheck` runs `npm run precheck`, then `npm-release` publishes every workspace package, cuts the GitHub Release, and bumps the version. The gate is intentionally just precheck, not the full dialect matrix — those are required checks to *merge*, so they aren't re-verified at release.
+
+The artifact pattern (build once, fan out) lives entirely inside `release.yaml` rather than a separate top-level workflow because OIDC trusted publishing binds to the top-level caller filename — moving build to a different workflow file would break npm publish.
 
 **Rules that bite (not guessable):**
 
