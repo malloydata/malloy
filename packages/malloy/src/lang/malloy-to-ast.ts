@@ -48,7 +48,7 @@ import {
   getShortString,
   idToStr,
   getPlainString,
-  getAnnotationText,
+  noteFromAnnotation,
 } from './parse-utils';
 import type {
   AccessModifierLabel,
@@ -383,13 +383,9 @@ export class MalloyToAST
   }
 
   protected getAnnotation(cx: parse.AnnotationContext): Note {
-    const text = getAnnotationText(cx, (wcx, msg) => {
-      this.contextError(wcx, 'block-annotation-warning', msg, {
-        severity: 'warn',
-      });
-    });
-    this.warnIfMalformedPrefix(text, cx);
-    return {text: text, at: this.getLocation(cx)};
+    const note = noteFromAnnotation(cx, this.parseInfo);
+    this.warnIfMalformedPrefix(note.text, cx);
+    return note;
   }
 
   /**
@@ -2188,10 +2184,10 @@ export class MalloyToAST
         );
       }
     }
-    const allNotes = pcx.docAnnotation().map(a => {
-      const text = getAnnotationText(a);
-      this.warnIfMalformedPrefix(text, a);
-      return {text, at: this.getLocation(pcx)};
+    const allNotes: Note[] = pcx.docAnnotation().map(a => {
+      const note = noteFromAnnotation(a, this.parseInfo);
+      this.warnIfMalformedPrefix(note.text, a);
+      return note;
     });
     const tags = new ast.ModelAnnotation(allNotes);
     this.updateCompilerFlags(tags);

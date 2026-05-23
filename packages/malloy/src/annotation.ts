@@ -22,6 +22,13 @@ export interface AnnotationText {
   contentIndex: number;
   /** Where `rawText` begins in the source document. */
   at: DocumentLocation;
+  /**
+   * For block annotations: characters of leading whitespace removed from
+   * each body line by the translator's dedent pass. A BYO parser that wants
+   * source-mapped error columns adds this to the parser's reported column for
+   * body lines (`source_col = indentStripped + parser_col`).
+   */
+  indentStripped?: number;
 }
 
 /** An {@link AnnotationText} that also carries its route (`''` is MOTLY). */
@@ -57,7 +64,13 @@ export function collectAnnotations(
   if (route === undefined) {
     return Array.from(notesInOrder(annote ?? {}), note => {
       const {route: noteRoute, contentIndex} = parsePrefix(note.text);
-      return {rawText: note.text, contentIndex, at: note.at, route: noteRoute};
+      return {
+        rawText: note.text,
+        contentIndex,
+        at: note.at,
+        route: noteRoute,
+        indentStripped: note.indentStripped,
+      };
     });
   }
   const matching: AnnotationText[] = [];
@@ -68,6 +81,7 @@ export function collectAnnotations(
         rawText: note.text,
         contentIndex: parsed.contentIndex,
         at: note.at,
+        indentStripped: note.indentStripped,
       });
     }
   }
@@ -102,10 +116,8 @@ export interface MalloyTagParse {
   log: LogMessage[];
 }
 
-/** Parse a run of annotation lines as MOTLY into one Tag, collecting errors. */
-function parseTaglines(
-  lines: ReadonlyArray<{text: string; at: DocumentLocation}>
-): MalloyTagParse {
+/** Parse a run of Notes as MOTLY into one Tag, collecting errors. */
+function parseTaglines(lines: ReadonlyArray<Note>): MalloyTagParse {
   const allErrs: LogMessage[] = [];
   const session = new TagParser();
   for (const line of lines) {
@@ -154,7 +166,13 @@ export function annotationToTag(
     return parseTaglines(collectNotes(annote ?? {}, prefix));
   }
   const matched = collectAnnotations(annote, arg ?? '');
-  return parseTaglines(matched.map(a => ({text: a.rawText, at: a.at})));
+  return parseTaglines(
+    matched.map(a => ({
+      text: a.rawText,
+      at: a.at,
+      indentStripped: a.indentStripped,
+    }))
+  );
 }
 
 /**
@@ -207,26 +225,18 @@ export class Annotations {
 }
 
 function mapMalloyError(e: TagError, note: Note): LogMessage {
-  // Calculate prefix length (same logic as stripPrefix in malloy-tag)
-  let prefixLen = 0;
-  if (note.text[0] === '#') {
-    const skipTo = note.text.search(/[ \n]/);
-    if (skipTo > 0) {
-      prefixLen = skipTo;
-    }
-  }
-
-  // Map error position to source location
-  // e.line is 0-based line within the (stripped) input
-  // e.offset is 0-based column within that line
-  // TODO: For block annotations, lines > 0 have indentation stripped by
-  // stripBlockIndent, so e.offset doesn't account for the removed columns.
-  // This makes error squigglies misaligned on block annotation body lines.
+  // MOTLY reports `e.line` / `e.offset` into the *stripped* note text it
+  // parsed. To map back to source:
+  //   line 0 (opener line):    col = opener_col + prefix_len + e.offset
+  //   line N>0 (body lines):   col = indentStripped + e.offset
+  // `indentStripped` is the per-line dedent recorded on the Note by the
+  // translator (uniform per block, so the same formula serves every body
+  // line). Prefix length is everything before the separator, via parsePrefix.
   const line = note.at.range.start.line + e.line;
   const character =
     e.line === 0
-      ? note.at.range.start.character + prefixLen + e.offset
-      : e.offset;
+      ? note.at.range.start.character + prefixLength(note.text) + e.offset
+      : (note.indentStripped ?? 0) + e.offset;
 
   const loc = {line, character};
   return {
@@ -235,10 +245,14 @@ function mapMalloyError(e: TagError, note: Note): LogMessage {
     message: e.message,
     at: {
       url: note.at.url,
-      range: {
-        start: loc,
-        end: loc,
-      },
+      range: {start: loc, end: loc},
     },
   };
+}
+
+/** Length of the annotation prefix per malloy-tag's `stripPrefix`: index of
+ *  the first whitespace, or 0 if none. */
+function prefixLength(text: string): number {
+  const {contentIndex} = parsePrefix(text);
+  return contentIndex === text.length ? 0 : contentIndex - 1;
 }

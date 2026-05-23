@@ -380,7 +380,6 @@ type MessageParameterTypes = {
   'failed-to-parse-function-name': string;
   'orphaned-object-annotation': string;
   'unclosed-block-annotation': string;
-  'block-annotation-warning': string;
   'malformed-route': {prefix: string};
   'reserved-route': {prefix: string};
   'misplaced-model-annotation': string;

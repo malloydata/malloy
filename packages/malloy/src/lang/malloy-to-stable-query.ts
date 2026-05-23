@@ -117,9 +117,9 @@ export class MalloyToQuery
   protected getAnnotations(
     cx: HasAnnotations
   ): Malloy.Annotation[] | undefined {
-    const annotations = cx.annotation().map(a => {
-      return {value: getAnnotationText(a)};
-    });
+    const annotations = cx.annotation().map(a => ({
+      value: getAnnotationText(a),
+    }));
     return annotations.length > 0 ? annotations : undefined;
   }
 

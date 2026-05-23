@@ -901,7 +901,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  content line'],
+      blockNotes: ['#|\ncontent line'],
     });
   });
   test('simple model block annotation', () => {
@@ -914,7 +914,7 @@ describe('block annotations', () => {
     const md = m.translate()?.modelDef;
     expect(md).toBeDefined();
     expect(md!.annotation).matchesAnnotation({
-      notes: ['##|\n  model content'],
+      notes: ['##|\nmodel content'],
     });
   });
   test('empty block annotation', () => {
@@ -941,7 +941,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|(markdown)\n  content'],
+      blockNotes: ['#|(markdown)\ncontent'],
     });
   });
   test('block annotation at column 0', () => {
@@ -990,8 +990,10 @@ describe('block annotations', () => {
     expect(m).toTranslate();
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
+    // Body lines share 8 leading spaces; the deeper `|#` line keeps its
+    // extra 2 spaces of relative indent.
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  content\n    |# not a closer\n  more content'],
+      blockNotes: ['#|\ncontent\n  |# not a closer\nmore content'],
     });
   });
   test('|# in middle of line is not a closer', () => {
@@ -1005,7 +1007,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  some |# text'],
+      blockNotes: ['#|\nsome |# text'],
     });
   });
   test('mixed single-line and block annotations', () => {
@@ -1020,7 +1022,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['# single\n', '#|\n  block content'],
+      blockNotes: ['# single\n', '#|\nblock content'],
     });
   });
   test('unclosed block annotation', () => {
@@ -1062,7 +1064,10 @@ describe('block annotations', () => {
       blockNotes: ['#|\nnoted'],
     });
   });
-  test('indentation stripping based on opener column', () => {
+  // The body lines share 12 leading spaces; all 12 are stripped — including
+  // any "extra" indent beyond the opener. The dedent rule cares about what
+  // body lines share, not the opener's column.
+  test('dedent strips the common leading prefix of body lines', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         #|
@@ -1077,10 +1082,10 @@ describe('block annotations', () => {
     expect(na).toBeDefined();
     const x = getFieldDef(na!, 'x');
     expect(x.annotation).matchesAnnotation({
-      blockNotes: ['#|\n    line one\n    line two'],
+      blockNotes: ['#|\nline one\nline two'],
     });
   });
-  test('indentation stripping preserves relative indent', () => {
+  test('dedent preserves relative indent past the common prefix', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         #|
@@ -1096,10 +1101,10 @@ describe('block annotations', () => {
     expect(na).toBeDefined();
     const x = getFieldDef(na!, 'x');
     expect(x.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  outer\n    inner\n  outer'],
+      blockNotes: ['#|\nouter\n  inner\nouter'],
     });
   });
-  test('indentation stripping ignores blank lines', () => {
+  test('blank lines do not constrain the common prefix', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         #|
@@ -1115,34 +1120,53 @@ describe('block annotations', () => {
     expect(na).toBeDefined();
     const x = getFieldDef(na!, 'x');
     expect(x.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  line one\n\n  line two'],
+      blockNotes: ['#|\nline one\n\nline two'],
     });
   });
-  test('warns when content is left of opener', () => {
-    expect(`
+  // The point of switching to Python-style dedent: pasting flush-left code
+  // inside a block annotation no longer warns and no longer mangles the body.
+  // The shortest non-blank line wins the common prefix (here, 0).
+  test('flush-left content among indented body produces zero strip', () => {
+    const m = new TestTranslator(`
       source: na is a extend {
         #|
-    TOO FAR LEFT
+          line one
+flush left line
+          line three
         |#
         dimension: x is 1
       }
-    `).toLog(
-      warningMessage('Block annotation content is left of the opening #|')
-    );
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    const x = getFieldDef(na!, 'x');
+    expect(x.annotation).matchesAnnotation({
+      blockNotes: [
+        '#|\n          line one\nflush left line\n          line three',
+      ],
+    });
   });
-  test('warns when indentation contains tabs', () => {
-    expect(`
+  test('tabs and spaces mix limits the common prefix', () => {
+    const m = new TestTranslator(`
       source: na is a extend {
         #|
-\t\tcontent
+\tcontent
+        more content
         |#
         dimension: x is 1
       }
-    `).toLog(
-      warningMessage('Block annotation indentation contains tabs, use spaces')
-    );
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    const x = getFieldDef(na!, 'x');
+    // Tab vs spaces share no leading-WS prefix → no stripping, no warning.
+    expect(x.annotation).matchesAnnotation({
+      blockNotes: ['#|\n\tcontent\n        more content'],
+    });
   });
-  test('no stripping when opener at column 0', () => {
+  test('opener at column 0 still dedents body by common prefix', () => {
     const m = new TestTranslator(
       '#|\n    indented content\n|#\nsource: na is a\n'
     );
@@ -1150,7 +1174,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|\n    indented content'],
+      blockNotes: ['#|\nindented content'],
     });
   });
 });
@@ -1459,5 +1483,34 @@ describe('route warnings', () => {
       blockNotes: ['# good_child\n'],
       inherits: {blockNotes: ['#malformed_parent\n']},
     });
+  });
+});
+
+describe('mapMalloyError body-line column', () => {
+  // Construct a block annotation by hand and assert tag-parse error columns
+  // map back to source correctly. The opener is at line 5 column 4; the body
+  // line was at column 10 in source; dedent stripped 6 chars. So any
+  // body-line error must land at column 6 + parser_offset.
+  test('body-line errors land at indentStripped + parser_offset', () => {
+    const note: Note = {
+      text: '#|\n=oops',
+      at: {
+        url: 'test://x',
+        range: {
+          start: {line: 5, character: 4},
+          end: {line: 5, character: 6},
+        },
+      },
+      indentStripped: 6,
+    };
+    const annote: Annotation = {notes: [note]};
+    const errs = annotationToTag(annote).log.filter(
+      l => l.code === 'tag-parse-error'
+    );
+    expect(errs.length).toBeGreaterThan(0);
+    const e = errs[0];
+    expect(e.at?.range.start.line).toBe(6);
+    // `=` is at IR-line offset 0; source col = indentStripped (6) + 0.
+    expect(e.at?.range.start.character).toBe(6);
   });
 });
