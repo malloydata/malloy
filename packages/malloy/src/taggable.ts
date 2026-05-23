@@ -12,8 +12,9 @@ import type {TagParseSpec, MalloyTagParse, Annotations} from './annotation';
  */
 export interface Taggable {
   /**
-   * Route-aware annotation access. Unlike `tagParse`/`getTaglines`, this sees
-   * block annotations (`#|`…`|#`).
+   * Route-aware annotation access — read annotations by *route*. See
+   * `Annotations` for what a route is and which ones are claimed. Unlike
+   * `tagParse`/`getTaglines`, this sees block annotations (`#|`…`|#`).
    */
   readonly annotations: Annotations;
   /**

@@ -77,6 +77,7 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
 import {
   convertFieldInfos,
   getResultStructMetadataAnnotation,
+  toStableAnnotations,
   writeLiteralToTag,
 } from '../../to_stable';
 import {nodeToLiteralValue} from '../util';
@@ -1837,9 +1838,7 @@ export class PreparedResult implements Taggable {
     const structs = this.inner.structs;
     const struct = structs[structs.length - 1];
     const schema = {fields: convertFieldInfos(struct, struct.fields)};
-    const annotations = new Annotations(this.inner.annotation)
-      .texts()
-      .map(t => ({value: t}));
+    const annotations = toStableAnnotations(this.inner.annotation);
     const metadataAnnot = struct.resultMetadata
       ? getResultStructMetadataAnnotation(struct, struct.resultMetadata)
       : undefined;
@@ -1877,9 +1876,7 @@ export class PreparedResult implements Taggable {
         .toString(),
     });
 
-    const modelAnnotations = new Annotations(this.modelDef.annotation)
-      .texts()
-      .map(t => ({value: t}));
+    const modelAnnotations = toStableAnnotations(this.modelDef.annotation);
 
     return {
       schema,

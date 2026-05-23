@@ -1339,10 +1339,8 @@ describe('collectAnnotations (route-based)', () => {
     const annote: Annotation = {
       notes: [note('# size=large'), note('#(viz) chart=bar')],
     };
-    // default route '' is the MOTLY tag namespace
     expect(annotationToTag(annote).tag.text('size')).toBe('large');
     expect(annotationToTag(annote).tag.text('chart')).toBeUndefined();
-    // a named route parses only that route's content
     expect(annotationToTag(annote, 'viz').tag.text('chart')).toBe('bar');
     expect(annotationToTag(annote, 'viz').tag.text('size')).toBeUndefined();
   });

@@ -158,10 +158,19 @@ export function annotationToTag(
 }
 
 /**
- * The route-aware annotation API for a tagged entity. All annotation reading
- * lives here, written once; each tagged class only has to say *where* its
- * annotation is (by handing it to the constructor). Unlike the deprecated
- * RegExp readers (`tagParse`/`getTaglines`), this sees block annotations.
+ * The route-aware annotation API for a tagged entity.
+ *
+ * An annotation has a *prefix* (everything from `#`/`##` up to the first
+ * whitespace) that resolves to a *route* — a namespace key. Built-in routes:
+ * `''` (MOTLY tags, the human default), `!` (compiler flags), `@` (persistence
+ * directives), `"` (doc-string markdown). Apps stake their own routes with
+ * brackets: `#(myApp) ...` is route `myApp`. The grammar (forms, bracket
+ * pairs, malformation warnings) lives in `./prefix.ts`.
+ *
+ * All annotation reading lives here, written once; each tagged class only has
+ * to say *where* its annotation is (by handing it to the constructor). Unlike
+ * the deprecated RegExp readers (`tagParse`/`getTaglines`), this sees block
+ * annotations.
  */
 export class Annotations {
   constructor(private readonly annote: Annotation | undefined) {}
