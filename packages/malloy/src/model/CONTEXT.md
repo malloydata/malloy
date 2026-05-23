@@ -53,6 +53,38 @@ The compiler consumes **Intermediate Representation (IR)** produced by the trans
   - Field references and path expressions
 - Forms a complete expression tree that can be compiled to SQL
 
+### Annotations in the IR
+
+Annotations attach to any IR entity with an `annotation?: Annotation` field:
+
+```ts
+interface Annotation {
+  inherits?: Annotation;     // parent's annotation when this entity is derived
+  blockNotes?: Note[];       // block-level notes shared across items in a block
+  notes?: Note[];            // notes attached directly to this entity
+}
+interface Note { text: string; at: DocumentLocation; }
+```
+
+`text` is the raw source, marker and prefix included. Routes are derived at
+retrieval by `parsePrefix` (`../prefix.ts`); the Note stores no route. **Read
+through the `Annotations` view (`../annotation.ts`)** — it flattens
+`inherits` and filters by route. Walking the three buckets yourself is a
+smell.
+
+`inherits` is populated when an entity *derives* from another (most
+prominently `source: child is parent extend { ... }` in
+`lang/ast/statements/define-source.ts`, but also model-extends-model in
+`malloy-element.ts:initModelDef`, queries in `define-query.ts`, and several
+field-space sites). Grep for `inherits:` in `lang/ast/` for the full list.
+
+**One Note, many paths.** `MalloyToAST.getAnnotation` builds each source-level
+annotation exactly once; the same `Note` object then appears on every entity
+that earns it — directly via `notes`/`blockNotes`, transitively via
+`inherits`. Construction-time diagnostics (e.g. the prefix `malformed-route`
+/ `reserved-route` warnings) fire once per source annotation, not once per
+reachable copy.
+
 ## Compilation Pipeline
 
 ```

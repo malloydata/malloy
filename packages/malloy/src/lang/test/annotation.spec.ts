@@ -27,6 +27,7 @@ import {
   getFieldDef,
   getQueryFieldDef,
   model,
+  warning,
   warningMessage,
 } from './test-translator';
 import './parse-expects';
@@ -1344,5 +1345,121 @@ describe('collectAnnotations (route-based)', () => {
     // a named route parses only that route's content
     expect(annotationToTag(annote, 'viz').tag.text('chart')).toBe('bar');
     expect(annotationToTag(annote, 'viz').tag.text('size')).toBeUndefined();
+  });
+});
+
+describe('route warnings', () => {
+  test('bare-word object prefix warns malformed-route once', () => {
+    expect(`
+      source: na is a extend {
+        #malformed
+        dimension: x is 1
+      }
+    `).toLog(warning('malformed-route', {prefix: '#malformed'}));
+  });
+
+  test('bare-word model prefix warns malformed-route', () => {
+    expect('##malformed\nsource: na is a\n').toLog(
+      warning('malformed-route', {prefix: '##malformed'})
+    );
+  });
+
+  test('unclosed bracket warns malformed-route', () => {
+    expect(`
+      source: na is a extend {
+        #(docs
+        dimension: x is 1
+      }
+    `).toLog(warning('malformed-route', {prefix: '#(docs'}));
+  });
+
+  test('unclaimed sigil warns reserved-route', () => {
+    expect(`
+      source: na is a extend {
+        #% nope
+        dimension: x is 1
+      }
+    `).toLog(warning('reserved-route', {prefix: '#%'}));
+  });
+
+  test('well-formed prefixes do not warn', () => {
+    expect(`
+      ##! flag
+      source: na is a extend {
+        # tag
+        #(docs) hello
+        #! flag2
+        #@ persist
+        #" desc
+        dimension: x is 1
+      }
+    `).toTranslate();
+  });
+
+  // The dedup case: a block-level note attaches to every item inside the
+  // block, but is constructed once at the parse site — so we must warn once,
+  // not N times. Three malformed prefixes in source → exactly three warnings.
+  test('block-level note dedups to one warning per source annotation', () => {
+    expect(`
+      source: na is a extend {
+        #malformed
+        dimension:
+          #mf2
+          x is 1
+          #mf3
+          y is 2
+      }
+    `).toLog(
+      // The block-level note (`#malformed`) is emitted after the inner items
+      // because the AST builder visits inner item annotations first, then
+      // assembles the block-level annotation list.
+      warning('malformed-route', {prefix: '#mf2'}),
+      warning('malformed-route', {prefix: '#mf3'}),
+      warning('malformed-route', {prefix: '#malformed'})
+    );
+  });
+
+  test('block annotation with malformed route warns once', () => {
+    expect(`
+      source: na is a extend {
+        #|malformed
+        body
+        |#
+        dimension: x is 1
+      }
+    `).toLog(warning('malformed-route', {prefix: '#|malformed'}));
+  });
+
+  // `inherits` is populated when a child source has its own notes AND extends
+  // a parent source: `define-source.ts` does
+  // `entry.annotation = {...this.note, inherits: structDef.annotation}`.
+  // The inherited Notes never re-flow through getAnnotation, so the warning
+  // fires only at the parse site even though the malformed Note ends up
+  // reachable from child.annotation.inherits.
+  test('extend populates `inherits`; malformed parent note warns once', () => {
+    const m = new TestTranslator(`
+      #malformed_parent
+      source: parent is a extend { dimension: x is 1 }
+
+      # good_child
+      source: child is parent extend { dimension: y is 2 }
+    `);
+    m.translate();
+    // Exactly one problem total — the parent-site warning — even though the
+    // malformed Note is also reachable through child.annotation.inherits.
+    expect(m.problemResponse().problems).toEqual([
+      expect.objectContaining({
+        code: 'malformed-route',
+        severity: 'warn',
+        data: {prefix: '#malformed_parent'},
+      }),
+    ]);
+    // And inherits is in fact populated — the malformed note is reachable
+    // through child.annotation.inherits, proving the chain is live.
+    const child = m.getSourceDef('child');
+    expect(child!.annotation).matchesAnnotation({
+      blockNotes: ['# good_child\n'],
+      inherits: {blockNotes: ['#malformed_parent\n']},
+    });
   });
 });
