@@ -4,45 +4,28 @@ CI and release machinery. Read the YAML for mechanics; this covers what's *not* 
 
 ## CI
 
-CI is split across **two workflows** by the security boundary: whether the job needs repo secrets. Both fan out to the same per-dialect reusable workflows (`main.yaml`, `db-<dialect>.yaml`), but the entry points differ.
-
-| Workflow | Trigger | Build pattern | Jobs | Secrets |
-|---|---|---|---|---|
-| `pr-tests.yaml` | `pull_request` | Shared `pull_and_build` artifact | duckdb, postgres, publisher, mysql, duckdb-wasm | none |
-| `run-tests.yaml` | `pull_request_target` | Each job rebuilds | main (core), bigquery, snowflake, trino, presto, databricks | yes |
-
-Each workflow has its own rollup job (`malloy-pr-tests`, `malloy-tests`). Branch protection should require both. `db-motherduck.yaml` is commented out of both.
-
-### The split, and why it exists
-
-The deep reason is **`pull_request` vs `pull_request_target`**, and the cache-poisoning footgun that comes with mixing secrets and PR-head code in one workflow.
-
-- **`pull_request`** uses the workflow file from the **PR head**, checks out PR head, and for fork PRs runs with a **read-only token and no repo secrets**. Even malicious fork code can do nothing dangerous — there's nothing to steal and no write access. Safe to build PR-head code, share artifacts between jobs, etc.
-- **`pull_request_target`** uses the workflow file from the **target branch (main)** and grants the workflow **full secrets**. By default it checks out main (also safe). The danger appears when you explicitly check out PR head AND run any of its code (`npm ci`, build, tests) — those scripts execute with secrets in env. This is the classic privilege-escalation footgun that's hit Microsoft, Tinder, others.
-
-This repo needs secrets (BigQuery, Snowflake, etc.) for the cloud-DB tests, so it can't avoid `pull_request_target` entirely. The mitigation is the **`check-permission`** job (`malloydata/check-ci-permissions`), which fails unless `github.triggering_actor` has write access. Every secret-bearing job `needs: check-permission`, so fork-PR code never executes alongside secrets without a maintainer's explicit re-run.
-
-CodeQL (`actions/cache-poisoning/poisonable-step`, `actions/untrusted-checkout/critical`) flags `pull_request_target` + checkout-of-head + execute-code + share-output as a static pattern — it can't see runtime gates. The repo has a history of dismissing these alerts because the runtime gate is real. The split removes the *structural* anti-pattern for the build-and-share story by moving it to `pull_request`, where no secrets exist and CodeQL's rule simply doesn't apply.
-
-### Rules that bite
-
-- **Every secret-bearing job MUST `needs: check-permission`** (today: `main`, `db-trino`, `db-presto`, `db-bigquery`, `db-snowflake`, `db-databricks`). Adding a secret to a job in `run-tests.yaml` without that gate leaks it to fork-PR code.
-- **Never add a secret to anything in `pr-tests.yaml`.** That workflow's safety property is "no secrets exist." If you need secrets, the job belongs in `run-tests.yaml`.
-- **Never share artifacts between the two workflows.** Workflow runs are independent and artifacts are run-scoped anyway, so this isn't easy to do by accident — but if you reach for `actions/cache` to bridge them, you reintroduce the cache-poisoning hole.
-- **Branch protection must require both rollups** (`malloy-pr-tests` AND `malloy-tests`), otherwise a fork PR can merge having only run half of CI.
-- **The `check-permission` gate trusts the *triggering actor*, not the PR author** — re-running a fork PR's CI authorizes its code to run with full secrets. Review workflow/build-script diffs before re-running.
-
-### Why pr-tests.yaml uses an artifact and run-tests.yaml doesn't
-
-The shared `pull_and_build` artifact saves redundant builds in the secret-free half (5 dialects + 1 build → 5 builds avoided per run). It doesn't help wall-clock — those builds were parallel anyway, sharing the critical path. The point is compute stewardship.
-
-The secret-bearing jobs deliberately stay self-sufficient. They could in principle share a separate `pull_and_build` artifact within `run-tests.yaml`, but that's the exact pattern CodeQL flags and the threat we're avoiding. Each rebuilds; redundant work is the price of the structural guarantee.
-
-### Why we can iterate on pr-tests.yaml via PRs but not run-tests.yaml
-
-`pull_request` uses the workflow file from the PR head, so changes to `pr-tests.yaml` take effect immediately in that PR's CI. `pull_request_target` uses the workflow from main, so changes to `run-tests.yaml` only take effect after merge — `workflow_dispatch` on the branch is the way to test those changes pre-merge.
+`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job `needs: pull_and_build`, downloads the artifact, and runs only its dialect-specific setup + `npm run ci-<dialect>` — no per-job rebuild. Fan-out goes to reusable workflows — `main.yaml` (dialect-agnostic `ci-core`, plus `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. `db-motherduck.yaml` is commented out of CI.
 
 `scripts/ci-test-sanity-check.sh` (run by `main.yaml`) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
+
+### Safely accepting external PRs — do not break this
+
+`run-tests.yaml` triggers on **`pull_request_target`**, so it runs with the repo's secrets *and* checks out the PR's head code — arbitrary code from any author running on a runner that holds production credentials. This is a known privilege-escalation footgun; the **`check-permission`** job (`malloydata/check-ci-permissions`) contains it, failing the run unless **`github.triggering_actor`** has write access (design: PR #2087).
+
+- **Every secret-bearing job MUST `needs: check-permission`** (today: `main`, `db-trino`, `db-presto`, `db-bigquery`, `db-snowflake`, `db-databricks`). Secret-free jobs deliberately don't. Adding a secret to an ungated job leaks it to external-PR code.
+- The gate trusts the *triggering actor*, not the PR author — so **re-running a fork PR's CI authorizes its code to run with full secrets.** Review the diff (especially workflow/build-script changes) before re-running.
+
+### The security stance on pull_and_build, stated honestly
+
+`pull_and_build` runs `npm ci` on PR-head code and uploads the result as an artifact that every downstream dialect job (including secret-bearing ones) consumes. CodeQL flags this — `actions/cache-poisoning/poisonable-step` and `actions/untrusted-checkout/critical` — and is technically correct: the artifact contains attacker-influenceable output. **The repo's policy is to dismiss those alerts**, on the same reasoning as the prior dismissals already on file for similar shapes in this repo.
+
+The dismissal stands because the threat model is no different from the per-job-rebuild design that existed before `pull_and_build`. Whether `npm ci` runs once centrally or eleven times in each dialect job, the same PR-head code ends up executed with secrets in env when (and only when) `check-permission` lets the secret-bearing jobs run. The runtime gate is the actual mitigation; CodeQL cannot see runtime gates and so over-reports.
+
+One marginal improvement of the centralized design: `pull_and_build` does its `npm ci` with **no secrets in its env** (the job declares none, and `permissions: {}` at the workflow level denies the GITHUB_TOKEN any write access). A malicious postinstall in PR code can no longer exfiltrate during install — only the downstream `npm run ci-<dialect>` step has secret access. The previous per-job pattern had install *and* test running with secrets in env, so this is slightly safer at the margin, not less safe.
+
+**When dismissing an alert on this:** reference this section and the prior dismissals. Edits that change the structural shape of `pull_and_build` (new upload, different checkout target, added trigger) will re-fire the alert — that is the *desired* behavior; it forces a re-read of this stance before the shared-artifact pattern changes shape.
+
+The artifact pattern saves compute (one build instead of ~11 parallel rebuilds, ~30 runner-minutes per PR run) rather than wall-clock time — the parallel rebuilds shared the critical path, so wall-clock is similar. It's a stewardship-of-free-resources choice, not a CI-speed choice.
 
 Contributor-facing side (DCO sign-off, licensing, review) is in [CONTRIBUTING.md](../../CONTRIBUTING.md). Adding a dialect: [adding-a-new-database.md](../../packages/malloy/src/doc/adding-a-new-database.md).
 
