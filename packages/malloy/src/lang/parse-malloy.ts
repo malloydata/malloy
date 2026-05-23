@@ -81,7 +81,7 @@ import type {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import type {EventStream} from '../runtime_types';
-import {annotationToTaglines} from '../annotation';
+import {Annotations} from '../annotation';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParserRuleContext} from 'antlr4ts';
 import {Timer} from '../timing';
@@ -633,7 +633,7 @@ class TranslateStep implements TranslationStep {
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
       that.compilerFlagSrc.push(
-        ...annotationToTaglines(extendingModel.annotation, /^##! /)
+        ...new Annotations(extendingModel.annotation).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);

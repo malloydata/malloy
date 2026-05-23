@@ -68,11 +68,16 @@ import {
 } from '../../model/given_binding';
 import {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
-import {annotationToTag, annotationToTaglines} from '../../annotation';
+import {
+  annotationToTag,
+  annotationToTaglines,
+  Annotations,
+} from '../../annotation';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {
   convertFieldInfos,
   getResultStructMetadataAnnotation,
+  toStableAnnotations,
   writeLiteralToTag,
 } from '../../to_stable';
 import {nodeToLiteralValue} from '../util';
@@ -274,11 +279,15 @@ export class Explore extends Entity implements Taggable {
     return annotationToTaglines(this._structDef.annotation, prefix);
   }
 
+  get annotations(): Annotations {
+    return new Annotations(this._structDef.annotation);
+  }
+
   private parsedModelTag?: Tag;
   public get modelTag(): Tag {
-    this.parsedModelTag ||= annotationToTag(
+    this.parsedModelTag ||= new Annotations(
       this._structDef.modelAnnotation
-    ).tag;
+    ).parseAsTag().tag;
     return this.parsedModelTag;
   }
 
@@ -641,6 +650,10 @@ export class AtomicField extends Entity implements Taggable {
     return annotationToTaglines(this.fieldTypeDef.annotation, prefix);
   }
 
+  get annotations(): Annotations {
+    return new Annotations(this.fieldTypeDef.annotation);
+  }
+
   public isIntrinsic(): boolean {
     return fieldIsIntrinsic(this.fieldTypeDef);
   }
@@ -912,6 +925,10 @@ export class QueryField extends Query implements Taggable {
     return annotationToTaglines(this.turtleDef.annotation, prefix);
   }
 
+  get annotations(): Annotations {
+    return new Annotations(this.turtleDef.annotation);
+  }
+
   public isQueryField(): this is QueryField {
     return true;
   }
@@ -977,6 +994,10 @@ export class ExploreField extends Explore {
 
   override tagParse(spec?: TagParseSpec) {
     return annotationToTag(this._structDef.annotation, spec);
+  }
+
+  override get annotations(): Annotations {
+    return new Annotations(this._structDef.annotation);
   }
 
   public isQueryField(): this is QueryField {
@@ -1100,6 +1121,10 @@ export class Model implements Taggable {
 
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this.modelDef.annotation, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this.modelDef.annotation);
   }
 
   /**
@@ -1256,7 +1281,7 @@ export class Model implements Taggable {
    */
   public getBuildPlan(): BuildPlan {
     // Require experimental.persistence compiler flag
-    const modelTag = this.tagParse({prefix: /^##! /}).tag;
+    const modelTag = this.annotations.parseAsTag('!').tag;
     if (!modelTag.has('experimental', 'persistence')) {
       throw new Error(
         'Model must have ##! experimental.persistence to use getBuildPlan()'
@@ -1434,6 +1459,10 @@ export class PersistSource implements Taggable {
     return this.explore.getTaglines(prefix);
   }
 
+  get annotations(): Annotations {
+    return this.explore.annotations;
+  }
+
   /**
    * The connection name for this source.
    */
@@ -1552,6 +1581,10 @@ export class Given implements Taggable {
   getTaglines(prefix?: RegExp): string[] {
     return annotationToTaglines(this._internal.annotation, prefix);
   }
+
+  get annotations(): Annotations {
+    return new Annotations(this._internal.annotation);
+  }
 }
 
 export class PreparedQuery implements Taggable {
@@ -1576,6 +1609,10 @@ export class PreparedQuery implements Taggable {
 
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this._query.annotation, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this._query.annotation);
   }
 
   /**
@@ -1705,6 +1742,10 @@ export class PreparedResult implements Taggable {
     return annotationToTaglines(this.inner.annotation, prefix);
   }
 
+  get annotations(): Annotations {
+    return new Annotations(this.inner.annotation);
+  }
+
   get annotation(): Annotation | undefined {
     return this.inner.annotation;
   }
@@ -1714,7 +1755,7 @@ export class PreparedResult implements Taggable {
   }
 
   get modelTag(): Tag {
-    return annotationToTag(this.modelDef.annotation).tag;
+    return new Annotations(this.modelDef.annotation).parseAsTag().tag;
   }
 
   /**
@@ -1797,9 +1838,7 @@ export class PreparedResult implements Taggable {
     const structs = this.inner.structs;
     const struct = structs[structs.length - 1];
     const schema = {fields: convertFieldInfos(struct, struct.fields)};
-    const annotations = annotationToTaglines(this.inner.annotation).map(l => ({
-      value: l,
-    }));
+    const annotations = toStableAnnotations(this.inner.annotation);
     const metadataAnnot = struct.resultMetadata
       ? getResultStructMetadataAnnotation(struct, struct.resultMetadata)
       : undefined;
@@ -1837,11 +1876,7 @@ export class PreparedResult implements Taggable {
         .toString(),
     });
 
-    const modelAnnotations = annotationToTaglines(this.modelDef.annotation).map(
-      l => ({
-        value: l,
-      })
-    );
+    const modelAnnotations = toStableAnnotations(this.modelDef.annotation);
 
     return {
       schema,

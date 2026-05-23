@@ -67,24 +67,6 @@ export function tagFromAnnotations(
   return session.finish();
 }
 
-export function renderTagFromAnnotations(
-  annotations: Malloy.Annotation[] | undefined
-) {
-  // Support both '# ' and '#r ' namespaces for render tags
-  const defaultTagLines =
-    annotations?.map(a => a.value)?.filter(l => l.startsWith('# ')) ?? [];
-  const renderTagLines =
-    annotations?.map(a => a.value)?.filter(l => l.startsWith('#r ')) ?? [];
-
-  // Merge both namespaces with #r taking precedence (later in array)
-  const allLines = [...defaultTagLines, ...renderTagLines];
-  const session = new TagParser();
-  for (const line of allLines) {
-    session.parseAnnotation(line);
-  }
-  return session.finish();
-}
-
 export function getTextWidthCanvas(
   text: string,
   font: string,

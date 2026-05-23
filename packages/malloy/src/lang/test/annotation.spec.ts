@@ -27,11 +27,13 @@ import {
   getFieldDef,
   getQueryFieldDef,
   model,
+  warning,
   warningMessage,
 } from './test-translator';
 import './parse-expects';
 import {diff} from 'jest-diff';
-import type {Annotation} from '../../model/malloy_types';
+import type {Annotation, Note} from '../../model/malloy_types';
+import {collectAnnotations, annotationToTag} from '../../annotation';
 
 interface TstAnnotation {
   inherits?: TstAnnotation;
@@ -899,7 +901,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  content line'],
+      blockNotes: ['#|\ncontent line'],
     });
   });
   test('simple model block annotation', () => {
@@ -912,7 +914,7 @@ describe('block annotations', () => {
     const md = m.translate()?.modelDef;
     expect(md).toBeDefined();
     expect(md!.annotation).matchesAnnotation({
-      notes: ['##|\n  model content'],
+      notes: ['##|\nmodel content'],
     });
   });
   test('empty block annotation', () => {
@@ -939,7 +941,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|(markdown)\n  content'],
+      blockNotes: ['#|(markdown)\ncontent'],
     });
   });
   test('block annotation at column 0', () => {
@@ -951,6 +953,29 @@ describe('block annotations', () => {
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
       blockNotes: ['#|\nline one\nline two'],
+    });
+  });
+  test('CRLF block annotation normalizes to LF note text', () => {
+    // Windows line endings: the lexer keeps the \r in token text; the note
+    // must come out byte-identical to the LF version above (internal \r and the
+    // trailing \r\n both gone), so an annotation does not depend on EOL style.
+    const m = new TestTranslator(
+      '#|\r\nline one\r\nline two\r\n|#\r\nsource: na is a\r\n'
+    );
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['#|\nline one\nline two'],
+    });
+  });
+  test('CRLF single-line annotation normalizes to LF (trailing newline kept)', () => {
+    const m = new TestTranslator('## modelNote\r\nsource: na is a\r\n');
+    expect(m).toTranslate();
+    const md = m.translate()?.modelDef;
+    expect(md).toBeDefined();
+    expect(md!.annotation).matchesAnnotation({
+      notes: ['## modelNote\n'],
     });
   });
   test('indented closer must match opener column', () => {
@@ -965,8 +990,10 @@ describe('block annotations', () => {
     expect(m).toTranslate();
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
+    // Body lines share 8 leading spaces; the deeper `|#` line keeps its
+    // extra 2 spaces of relative indent.
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  content\n    |# not a closer\n  more content'],
+      blockNotes: ['#|\ncontent\n  |# not a closer\nmore content'],
     });
   });
   test('|# in middle of line is not a closer', () => {
@@ -980,7 +1007,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  some |# text'],
+      blockNotes: ['#|\nsome |# text'],
     });
   });
   test('mixed single-line and block annotations', () => {
@@ -995,7 +1022,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['# single\n', '#|\n  block content'],
+      blockNotes: ['# single\n', '#|\nblock content'],
     });
   });
   test('unclosed block annotation', () => {
@@ -1037,7 +1064,10 @@ describe('block annotations', () => {
       blockNotes: ['#|\nnoted'],
     });
   });
-  test('indentation stripping based on opener column', () => {
+  // The body lines share 12 leading spaces; all 12 are stripped — including
+  // any "extra" indent beyond the opener. The dedent rule cares about what
+  // body lines share, not the opener's column.
+  test('dedent strips the common leading prefix of body lines', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         #|
@@ -1052,10 +1082,10 @@ describe('block annotations', () => {
     expect(na).toBeDefined();
     const x = getFieldDef(na!, 'x');
     expect(x.annotation).matchesAnnotation({
-      blockNotes: ['#|\n    line one\n    line two'],
+      blockNotes: ['#|\nline one\nline two'],
     });
   });
-  test('indentation stripping preserves relative indent', () => {
+  test('dedent preserves relative indent past the common prefix', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         #|
@@ -1071,10 +1101,10 @@ describe('block annotations', () => {
     expect(na).toBeDefined();
     const x = getFieldDef(na!, 'x');
     expect(x.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  outer\n    inner\n  outer'],
+      blockNotes: ['#|\nouter\n  inner\nouter'],
     });
   });
-  test('indentation stripping ignores blank lines', () => {
+  test('blank lines do not constrain the common prefix', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         #|
@@ -1090,34 +1120,53 @@ describe('block annotations', () => {
     expect(na).toBeDefined();
     const x = getFieldDef(na!, 'x');
     expect(x.annotation).matchesAnnotation({
-      blockNotes: ['#|\n  line one\n\n  line two'],
+      blockNotes: ['#|\nline one\n\nline two'],
     });
   });
-  test('warns when content is left of opener', () => {
-    expect(`
+  // The point of switching to Python-style dedent: pasting flush-left code
+  // inside a block annotation no longer warns and no longer mangles the body.
+  // The shortest non-blank line wins the common prefix (here, 0).
+  test('flush-left content among indented body produces zero strip', () => {
+    const m = new TestTranslator(`
       source: na is a extend {
         #|
-    TOO FAR LEFT
+          line one
+flush left line
+          line three
         |#
         dimension: x is 1
       }
-    `).toLog(
-      warningMessage('Block annotation content is left of the opening #|')
-    );
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    const x = getFieldDef(na!, 'x');
+    expect(x.annotation).matchesAnnotation({
+      blockNotes: [
+        '#|\n          line one\nflush left line\n          line three',
+      ],
+    });
   });
-  test('warns when indentation contains tabs', () => {
-    expect(`
+  test('tabs and spaces mix limits the common prefix', () => {
+    const m = new TestTranslator(`
       source: na is a extend {
         #|
-\t\tcontent
+\tcontent
+        more content
         |#
         dimension: x is 1
       }
-    `).toLog(
-      warningMessage('Block annotation indentation contains tabs, use spaces')
-    );
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    const x = getFieldDef(na!, 'x');
+    // Tab vs spaces share no leading-WS prefix → no stripping, no warning.
+    expect(x.annotation).matchesAnnotation({
+      blockNotes: ['#|\n\tcontent\n        more content'],
+    });
   });
-  test('no stripping when opener at column 0', () => {
+  test('opener at column 0 still dedents body by common prefix', () => {
     const m = new TestTranslator(
       '#|\n    indented content\n|#\nsource: na is a\n'
     );
@@ -1125,7 +1174,7 @@ describe('block annotations', () => {
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     expect(na!.annotation).matchesAnnotation({
-      blockNotes: ['#|\n    indented content'],
+      blockNotes: ['#|\nindented content'],
     });
   });
 });
@@ -1250,5 +1299,237 @@ describe('user type annotation', () => {
         notes: ['# from s2\n'],
       },
     });
+  });
+});
+
+describe('collectAnnotations (route-based)', () => {
+  const at: Note['at'] = {
+    url: 'test://x',
+    range: {start: {line: 0, character: 0}, end: {line: 0, character: 0}},
+  };
+  const note = (text: string): Note => ({text, at});
+
+  test('no route returns every annotation, each carrying its route', () => {
+    const annote: Annotation = {
+      notes: [note('# tag1'), note('#(docs) hello'), note('#! flag')],
+    };
+    expect(collectAnnotations(annote).map(a => a.route)).toEqual([
+      '',
+      'docs',
+      '!',
+    ]);
+  });
+
+  test('a route filters to that route and omits route from results', () => {
+    const annote: Annotation = {
+      notes: [note('#(docs) one'), note('# tag'), note('#(docs) two')],
+    };
+    const docs = collectAnnotations(annote, 'docs');
+    expect(docs.map(a => a.rawText.slice(a.contentIndex))).toEqual([
+      'one',
+      'two',
+    ]);
+    // The route-filtered form returns AnnotationText — no `route` field.
+    expect(docs.every(a => !('route' in a))).toBe(true);
+  });
+
+  test('a malformed prefix is excluded from its route query, present in all', () => {
+    // `#docs` (no brackets) is malformed; its best-effort route is still 'docs'.
+    const annote: Annotation = {notes: [note('#docs'), note('#(docs) ok')]};
+    const docs = collectAnnotations(annote, 'docs');
+    expect(docs.map(a => a.rawText)).toEqual(['#(docs) ok']);
+    expect(collectAnnotations(annote).map(a => a.rawText)).toContain('#docs');
+  });
+
+  test('inherited annotations come first', () => {
+    const parent: Annotation = {notes: [note('#(docs) parent')]};
+    const child: Annotation = {
+      inherits: parent,
+      notes: [note('#(docs) child')],
+    };
+    expect(
+      collectAnnotations(child, 'docs').map(a =>
+        a.rawText.slice(a.contentIndex)
+      )
+    ).toEqual(['parent', 'child']);
+  });
+
+  test('undefined annotation yields nothing', () => {
+    expect(collectAnnotations(undefined)).toEqual([]);
+    expect(collectAnnotations(undefined, 'docs')).toEqual([]);
+  });
+
+  test('annotationToTag parses the requested route as MOTLY', () => {
+    const annote: Annotation = {
+      notes: [note('# size=large'), note('#(viz) chart=bar')],
+    };
+    expect(annotationToTag(annote).tag.text('size')).toBe('large');
+    expect(annotationToTag(annote).tag.text('chart')).toBeUndefined();
+    expect(annotationToTag(annote, 'viz').tag.text('chart')).toBe('bar');
+    expect(annotationToTag(annote, 'viz').tag.text('size')).toBeUndefined();
+  });
+});
+
+describe('route warnings', () => {
+  test('bare-word object prefix warns malformed-route once', () => {
+    expect(`
+      source: na is a extend {
+        #malformed
+        dimension: x is 1
+      }
+    `).toLog(warning('malformed-route', {prefix: '#malformed'}));
+  });
+
+  test('bare-word model prefix warns malformed-route', () => {
+    expect('##malformed\nsource: na is a\n').toLog(
+      warning('malformed-route', {prefix: '##malformed'})
+    );
+  });
+
+  test('unclosed bracket warns malformed-route', () => {
+    expect(`
+      source: na is a extend {
+        #(docs
+        dimension: x is 1
+      }
+    `).toLog(warning('malformed-route', {prefix: '#(docs'}));
+  });
+
+  test('unclaimed sigil warns reserved-route', () => {
+    expect(`
+      source: na is a extend {
+        #% nope
+        dimension: x is 1
+      }
+    `).toLog(warning('reserved-route', {prefix: '#%'}));
+  });
+
+  test('well-formed prefixes do not warn', () => {
+    expect(`
+      ##! flag
+      source: na is a extend {
+        # tag
+        #(docs) hello
+        #! flag2
+        #@ persist
+        #" desc
+        dimension: x is 1
+      }
+    `).toTranslate();
+  });
+
+  // The dedup case: a block-level note attaches to every item inside the
+  // block, but is constructed once at the parse site — so we must warn once,
+  // not N times. Three malformed prefixes in source → exactly three warnings.
+  test('block-level note dedups to one warning per source annotation', () => {
+    expect(`
+      source: na is a extend {
+        #malformed
+        dimension:
+          #mf2
+          x is 1
+          #mf3
+          y is 2
+      }
+    `).toLog(
+      // The block-level note (`#malformed`) is emitted after the inner items
+      // because the AST builder visits inner item annotations first, then
+      // assembles the block-level annotation list.
+      warning('malformed-route', {prefix: '#mf2'}),
+      warning('malformed-route', {prefix: '#mf3'}),
+      warning('malformed-route', {prefix: '#malformed'})
+    );
+  });
+
+  test('block annotation with malformed route warns once', () => {
+    expect(`
+      source: na is a extend {
+        #|malformed
+        body
+        |#
+        dimension: x is 1
+      }
+    `).toLog(warning('malformed-route', {prefix: '#|malformed'}));
+  });
+
+  // `inherits` is populated when a child source has its own notes AND extends
+  // a parent source: `define-source.ts` does
+  // `entry.annotation = {...this.note, inherits: structDef.annotation}`.
+  // The inherited Notes never re-flow through getAnnotation, so the warning
+  // fires only at the parse site even though the malformed Note ends up
+  // reachable from child.annotation.inherits.
+  test('extend populates `inherits`; malformed parent note warns once', () => {
+    const m = new TestTranslator(`
+      #malformed_parent
+      source: parent is a extend { dimension: x is 1 }
+
+      # good_child
+      source: child is parent extend { dimension: y is 2 }
+    `);
+    m.translate();
+    // Exactly one problem total — the parent-site warning — even though the
+    // malformed Note is also reachable through child.annotation.inherits.
+    expect(m.problemResponse().problems).toEqual([
+      expect.objectContaining({
+        code: 'malformed-route',
+        severity: 'warn',
+        data: {prefix: '#malformed_parent'},
+      }),
+    ]);
+    // And inherits is in fact populated — the malformed note is reachable
+    // through child.annotation.inherits, proving the chain is live.
+    const child = m.getSourceDef('child');
+    expect(child!.annotation).matchesAnnotation({
+      blockNotes: ['# good_child\n'],
+      inherits: {blockNotes: ['#malformed_parent\n']},
+    });
+  });
+});
+
+describe('tab-separated annotations round-trip to MOTLY', () => {
+  // parsePrefix accepts space, tab, CR, and LF as the prefix/content boundary;
+  // malloy-tag's stripPrefix must agree, or a tab-separated annotation gets
+  // selected for a route but its payload is silently dropped before MOTLY
+  // sees it.
+  const at: Note['at'] = {
+    url: 'test://x',
+    range: {start: {line: 0, character: 0}, end: {line: 0, character: 0}},
+  };
+  test('tab after marker — empty route, MOTLY parses payload', () => {
+    const annote: Annotation = {notes: [{text: '#\tfoo=true\n', at}]};
+    expect(annotationToTag(annote).tag.has('foo')).toBe(true);
+  });
+  test('tab after sigil route — `!` route, MOTLY parses payload', () => {
+    const annote: Annotation = {notes: [{text: '##!\tflag=on\n', at}]};
+    expect(annotationToTag(annote, '!').tag.text('flag')).toBe('on');
+  });
+});
+
+describe('mapMalloyError body-line column', () => {
+  // Construct a block annotation by hand and assert tag-parse error columns
+  // map back to source correctly. The opener is at line 5 column 4; the body
+  // line was at column 10 in source; dedent stripped 6 chars. So any
+  // body-line error must land at column 6 + parser_offset.
+  test('body-line errors land at indentStripped + parser_offset', () => {
+    const note: Note = {
+      text: '#|\n=oops',
+      at: {
+        url: 'test://x',
+        range: {
+          start: {line: 5, character: 4},
+          end: {line: 5, character: 6},
+        },
+      },
+      indentStripped: 6,
+    };
+    const annote: Annotation = {notes: [note]};
+    const errs = annotationToTag(annote).log.filter(
+      l => l.code === 'tag-parse-error'
+    );
+    expect(errs.length).toBeGreaterThan(0);
+    const e = errs[0];
+    expect(e.at?.range.start.line).toBe(6);
+    // `=` is at IR-line offset 0; source col = indentStripped (6) + 0.
+    expect(e.at?.range.start.character).toBe(6);
   });
 });

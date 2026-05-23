@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {TagParseSpec, MalloyTagParse} from './annotation';
+import type {TagParseSpec, MalloyTagParse, Annotations} from './annotation';
 
 /**
  * Interface for objects that have Malloy tag annotations.
@@ -11,6 +11,22 @@ import type {TagParseSpec, MalloyTagParse} from './annotation';
  * runtime implement this interface to expose their tag metadata.
  */
 export interface Taggable {
+  /**
+   * Route-aware annotation access — read annotations by *route*. See
+   * `Annotations` for what a route is and which ones are claimed. Unlike
+   * `tagParse`/`getTaglines`, this sees block annotations (`#|`…`|#`).
+   */
+  readonly annotations: Annotations;
+  /**
+   * @deprecated The RegExp form cannot see block annotations (`#|`…`|#`) and
+   * cannot report content offsets for error mapping. Use
+   * `annotations.parseAsTag(route)` instead.
+   */
   tagParse: (spec?: TagParseSpec) => MalloyTagParse;
+  /**
+   * @deprecated The RegExp form cannot see block annotations. Use
+   * `annotations.texts(route)` (raw strings) or `annotations.forRoute(route)`
+   * (objects with offsets) instead.
+   */
   getTaglines: (prefix?: RegExp) => string[];
 }

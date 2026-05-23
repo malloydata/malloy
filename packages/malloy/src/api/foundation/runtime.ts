@@ -1343,7 +1343,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         buildManifest = undefined;
       }
       if (buildManifest) {
-        const modelTag = preparedQuery.model.tagParse({prefix: /^##! /}).tag;
+        const modelTag = preparedQuery.model.annotations.parseAsTag('!').tag;
         if (!modelTag.has('experimental', 'persistence')) {
           if (explicitManifest) {
             // Explicitly passed non-empty manifest requires persistence support

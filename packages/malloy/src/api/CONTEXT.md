@@ -129,6 +129,23 @@ For the configuration pipeline internals (three states, section compilers, overl
 | `PersistSource` | Wraps a persistable source definition. Provides SQL compilation for persistent sources. |
 | `Result` | Query result with data + schema + metadata. |
 
+### Reading annotations
+
+Every class above implements `Taggable` and exposes annotations through an
+`annotations` view (`packages/malloy/src/annotation.ts`):
+
+```ts
+model.annotations.parseAsTag()           // empty route — renderer tags
+field.annotations.parseAsTag('docs')     // route `docs`, parsed as MOTLY
+field.annotations.texts('!')             // raw strings on the `!` route
+field.annotations.forRoute('vite')       // text + source offsets, BYO parser
+```
+
+`.annotations` sees both single-line and block annotations and routes by
+the prefix grammar in [`src/prefix.ts`](../prefix.ts). The legacy
+`tagParse({prefix: RegExp})` and `getTaglines(RegExp)` methods are
+`@deprecated` and cannot see block annotations — migrate to the view.
+
 ### Flow: Load Model → Get SQL for Named Query
 
 ```

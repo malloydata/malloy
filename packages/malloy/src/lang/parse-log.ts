@@ -380,7 +380,8 @@ type MessageParameterTypes = {
   'failed-to-parse-function-name': string;
   'orphaned-object-annotation': string;
   'unclosed-block-annotation': string;
-  'block-annotation-warning': string;
+  'malformed-route': {prefix: string};
+  'reserved-route': {prefix: string};
   'misplaced-model-annotation': string;
   'unexpected-non-source-query-expression-node': string;
   'sql-not-like': string;
@@ -514,6 +515,14 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'restricted-construct-forbidden': e => ({
     message: e,
     tag: 'restricted-mode',
+  }),
+  'malformed-route': e => ({
+    message: `Annotation prefix \`${e.prefix}\` is not a well-formed route — write \`# ...\` for a tag (note the space) or \`#(name)\` for an app route`,
+    severity: 'warn',
+  }),
+  'reserved-route': e => ({
+    message: `Annotation prefix \`${e.prefix}\` uses an unclaimed sigil; punct-only prefixes are reserved for Malloy's own use`,
+    severity: 'warn',
   }),
 };
 

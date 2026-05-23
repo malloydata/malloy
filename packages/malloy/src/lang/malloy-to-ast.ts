@@ -37,6 +37,7 @@ import type {
 import {makeLogMessage} from './parse-log';
 import type {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
+import {parsePrefix} from '../prefix';
 import type {FieldDeclarationConstructor} from './ast';
 import {TableSource} from './ast';
 import type {HasString, HasID} from './parse-utils';
@@ -47,7 +48,7 @@ import {
   getShortString,
   idToStr,
   getPlainString,
-  getAnnotationText,
+  noteFromAnnotation,
 } from './parse-utils';
 import type {
   AccessModifierLabel,
@@ -382,12 +383,26 @@ export class MalloyToAST
   }
 
   protected getAnnotation(cx: parse.AnnotationContext): Note {
-    const text = getAnnotationText(cx, (wcx, msg) => {
-      this.contextError(wcx, 'block-annotation-warning', msg, {
-        severity: 'warn',
-      });
-    });
-    return {text: text, at: this.getLocation(cx)};
+    const note = noteFromAnnotation(cx, this.parseInfo);
+    this.warnIfMalformedPrefix(note.text, cx);
+    return note;
+  }
+
+  /**
+   * Warn if the annotation prefix is not a well-formed route. The note is still
+   * stored either way — the malformation only drives the diagnostic, never the
+   * IR. Warnings fire at note construction; inherited annotations carry no
+   * malformation marker through the IR and are not re-warned by importers.
+   */
+  private warnIfMalformedPrefix(text: string, cx: ParserRuleContext): void {
+    const parsed = parsePrefix(text);
+    if (parsed.malformation === undefined) return;
+    // The slice up to contentIndex is "prefix + separator"; trim trailing
+    // whitespace to land on the prefix the user wrote. (A no-content single-
+    // line note like `#malformed\n` exposes this: contentIndex === text.length
+    // but the slice still ends at the `\n`.)
+    const prefix = text.slice(0, parsed.contentIndex).replace(/\s+$/, '');
+    this.contextError(cx, parsed.malformation, {prefix});
   }
 
   protected getNotes(cx: HasAnnotations): Note[] {
@@ -2169,10 +2184,11 @@ export class MalloyToAST
         );
       }
     }
-    const allNotes = pcx.docAnnotation().map(a => ({
-      text: getAnnotationText(a),
-      at: this.getLocation(pcx),
-    }));
+    const allNotes: Note[] = pcx.docAnnotation().map(a => {
+      const note = noteFromAnnotation(a, this.parseInfo);
+      this.warnIfMalformedPrefix(note.text, a);
+      return note;
+    });
     const tags = new ast.ModelAnnotation(allNotes);
     this.updateCompilerFlags(tags);
     return tags;

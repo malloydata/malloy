@@ -42,7 +42,7 @@ import {
   expressionIsCalculation,
 } from './malloy_types';
 import type {EventStream} from '../runtime_types';
-import {annotationToTag} from '../annotation';
+import {Annotations} from '../annotation';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
@@ -328,7 +328,7 @@ export class QueryStruct {
   modelCompilerFlags(): Tag {
     if (this._modelTag === undefined) {
       const annotation = this.structDef.modelAnnotation;
-      const {tag} = annotationToTag(annotation, {prefix: /^##!\s*/});
+      const {tag} = new Annotations(annotation).parseAsTag('!');
       this._modelTag = tag;
     }
     return this._modelTag;

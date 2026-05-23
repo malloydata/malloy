@@ -2072,6 +2072,13 @@ export interface Annotation {
 export interface Note {
   text: string;
   at: DocumentLocation;
+  /**
+   * For block annotations: characters of leading whitespace removed from each
+   * body line by the dedent pass. Used to map payload-parser error columns
+   * back to source (`source_col = indentStripped + parser_col` for body lines).
+   * Omitted for single-line notes and blocks with no common indent.
+   */
+  indentStripped?: number;
 }
 /** Annotations with a uuid to make it easier to stream */
 export interface ModelAnnotation extends Annotation {
