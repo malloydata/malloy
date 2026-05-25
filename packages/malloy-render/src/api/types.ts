@@ -17,14 +17,28 @@ import type {RenderPluginFactory} from './plugin-types';
 export type {RenderFieldMetadata} from '@/render-field-metadata';
 
 /**
- * Explicit theme overrides that win over Malloy `# theme.*` annotations
- * AND over the renderer's CSS variable defaults. Every key is optional;
- * any key that is omitted falls through the existing resolution chain
- * (local annotation → model annotation → `var(--malloy-theme--*)`
- * default). Values are inserted directly into the inline style block
- * that drives the renderer's `--malloy-render--*` variables, so they
- * must be valid CSS values (e.g. `"#ff0000"`, `"1px solid #ccc"`,
- * `"14px"`).
+ * Explicit theme overrides applied by the embedder.
+ *
+ * Resolution order (highest wins): explicit theme key here, then
+ * `# theme.<key>` on the result, then `## theme.<key>` on the model,
+ * then the CSS fallback `var(--malloy-theme--<kebab>)`. Every key is
+ * optional; omitted keys fall through the chain. An empty string is
+ * treated the same as `undefined` so a cleared input drops back to
+ * the next layer.
+ *
+ * Most keys are written into the renderer's `--malloy-render--*` CSS
+ * variables and must be valid CSS values (e.g. `"#ff0000"`,
+ * `"1px solid #ccc"`, `"14px"`). The exception is `mapColor` — see
+ * the field doc.
+ *
+ * Note: this theme is only read by the modern `MalloyRenderer` /
+ * `MalloyViz` API. The legacy `HTMLView` / `JSONView` exports do not
+ * consult it.
+ *
+ * Note: because the embedder layer is the highest precedence, a model
+ * publisher cannot override an embedder-supplied value with a
+ * `# theme.*` annotation. If you need the model to win for a specific
+ * key, omit that key from the embedder theme.
  */
 export interface MalloyExplicitTheme {
   tableRowHeight?: string;
@@ -41,11 +55,22 @@ export interface MalloyExplicitTheme {
   fontFamily?: string;
   background?: string;
   /**
-   * Saturated end of the gradient used by sequential color scales
-   * (choropleth maps, heatmaps, area charts). The renderer pairs this
-   * with a near-neutral low-end (`#f5f5f5`) so the operator only has
-   * to pick the brand-saturated colour. When unset, the renderer
-   * falls back to its built-in blue gradient.
+   * Saturated end of the gradient used by sequential color scales on
+   * `# shape_map` and `# segment_map` choropleth visualizations.
+   *
+   * Unlike the other keys on this interface, `mapColor` is consumed
+   * programmatically by `getColorScale` and baked into the Vega scale
+   * range at render time. It is NOT emitted as a `--malloy-render--*`
+   * CSS variable, so `var()` references won't resolve. Pass a literal
+   * colour string (e.g. `"#ff0000"`).
+   *
+   * The renderer derives the low end of the gradient automatically
+   * (light neutral for dark/medium high-ends, dark neutral for light
+   * high-ends) so the operator only has to pick the brand-saturated
+   * colour. When unset, the renderer uses its built-in blue gradient.
+   *
+   * Rect-mark heatmaps and the legacy `HTMLView` chart paths keep
+   * their existing palettes and ignore this key.
    */
   mapColor?: string;
 }
