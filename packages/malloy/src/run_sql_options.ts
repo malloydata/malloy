@@ -22,13 +22,13 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   NamedObject,
   SourceComponentInfo,
 } from './model/malloy_types';
 
 type SourceRefWithMetadata = NamedObject & {
-  annotation?: Annotation;
+  annotations?: AnnotationsDef;
   sourceComponentInfos?: SourceComponentInfo[];
 };
 
@@ -36,9 +36,9 @@ export interface RunSQLOptions {
   rowLimit?: number;
   abortSignal?: AbortSignal;
   /* This is an experimental feature */
-  modelAnnotation?: Annotation;
+  modelAnnotations?: AnnotationsDef;
   /* This is an experimental feature */
-  queryAnnotation?: Annotation;
+  queryAnnotation?: AnnotationsDef;
   clientMetadata?: {
     sourceRefWithMetadata?: SourceRefWithMetadata;
   };

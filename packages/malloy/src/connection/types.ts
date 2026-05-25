@@ -1,6 +1,6 @@
 import type {RunSQLOptions} from '../run_sql_options';
 import type {
-  Annotation,
+  AnnotationsDef,
   MalloyQueryData,
   QueryRecord,
   QueryRunStats,
@@ -16,7 +16,7 @@ export interface FetchSchemaOptions {
   // Fetch a fresh copy of the schema instead of using cache
   refreshTimestamp?: number;
   /* This is an experimental feature */
-  modelAnnotation?: Annotation;
+  modelAnnotations?: AnnotationsDef;
 }
 
 /**

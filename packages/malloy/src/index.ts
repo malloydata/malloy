@@ -110,7 +110,7 @@ export type {
   DocumentRange,
   DocumentPosition,
   Sampling,
-  Annotation,
+  AnnotationsDef,
   BasicAtomicTypeDef,
   BasicAtomicDef,
   AtomicTypeDef,

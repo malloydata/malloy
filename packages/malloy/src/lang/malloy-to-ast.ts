@@ -102,7 +102,7 @@ const DEFAULT_COMPILER_FLAGS = [];
 const LEGAL_FILTER_TYPES =
   'string, number, boolean, date, timestamp, timestamptz';
 
-type HasAnnotations = ParserRuleContext & {
+type AnnotatedCtx = ParserRuleContext & {
   annotation: () => parse.AnnotationContext[];
 };
 
@@ -405,7 +405,7 @@ export class MalloyToAST
     this.contextError(cx, parsed.malformation, {prefix});
   }
 
-  protected getNotes(cx: HasAnnotations): Note[] {
+  protected getNotes(cx: AnnotatedCtx): Note[] {
     return cx.annotation().map(a => this.getAnnotation(a));
   }
 

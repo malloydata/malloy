@@ -571,7 +571,7 @@ export type Argument = Parameter;
  */
 export type GivenTypeDef = AtomicTypeDef | FilterExpressionParamTypeDef;
 
-export interface Given extends HasLocation, HasAnnotation {
+export interface Given extends HasLocation, HasAnnotations {
   /** The name as written at the declaration site. Used by diagnostics
    *  that need a readable surface name out of an opaque GivenID. */
   name: string;
@@ -641,7 +641,7 @@ export interface DocumentLocation {
  * the references, and in that case, this should include something like an
  * index or pointer to the full definition elsewhere in the model.
  */
-export interface LightweightDefinition extends HasLocation, HasAnnotation {
+export interface LightweightDefinition extends HasLocation, HasAnnotations {
   type: string;
 }
 
@@ -698,8 +698,8 @@ export interface HasLocation {
   location?: DocumentLocation;
 }
 
-export interface HasAnnotation {
-  annotation?: Annotation;
+export interface HasAnnotations {
+  annotations?: AnnotationsDef;
 }
 
 /** All names have their source names and how they will appear in the symbol table that owns them */
@@ -887,7 +887,7 @@ export function canOrderBy(s: string) {
  */
 
 export interface FieldBase
-  extends NamedObject, Expression, ResultMetadata, HasAnnotation {
+  extends NamedObject, Expression, ResultMetadata, HasAnnotations {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
@@ -1248,12 +1248,12 @@ export interface TurtleSegment extends Filtered {
 export interface Pipeline {
   pipeline: PipeSegment[];
 }
-export interface Query extends Pipeline, Filtered, HasLocation, HasAnnotation {
+export interface Query extends Pipeline, Filtered, HasLocation, HasAnnotations {
   type?: 'query';
   name?: string;
   structRef: StructRef;
   sourceArguments?: SafeRecord<Argument>;
-  modelAnnotation?: Annotation;
+  modelAnnotations?: AnnotationsDef;
   compositeResolvedSourceDef?: SourceDef;
   // Dedup'd union of every segment's `expandedGivenUsage` (and nested turtle
   // stages'). Populated when the Query is finalized; consumers that need the
@@ -1517,7 +1517,7 @@ export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
 export type AccessModifierLabel = NonDefaultAccessModifierLabel | 'public';
 
-export interface TurtleDef extends NamedObject, Pipeline, HasAnnotation {
+export interface TurtleDef extends NamedObject, Pipeline, HasAnnotations {
   type: 'turtle';
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   refSummary?: RefSummary;
@@ -1526,9 +1526,9 @@ export interface TurtleDef extends NamedObject, Pipeline, HasAnnotation {
 
 export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
-interface StructDefBase extends HasLocation, NamedObject, HasAnnotation {
+interface StructDefBase extends HasLocation, NamedObject, HasAnnotations {
   type: string;
-  modelAnnotation?: ModelAnnotation;
+  modelAnnotations?: ModelAnnotationsDef;
   fields: FieldDef[];
   /** Marker for error placeholder structs created by ErrorFactory */
   errorFactory?: boolean;
@@ -1989,7 +1989,7 @@ export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
 // Queries have fields like this ..
 
-export interface RefToField extends HasAnnotation {
+export interface RefToField extends HasAnnotations {
   type: 'fieldref';
   path: string[];
   at?: DocumentLocation;
@@ -2013,12 +2013,12 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export interface UserTypeFieldDef extends HasAnnotation {
+export interface UserTypeFieldDef extends HasAnnotations {
   name: string;
   typeDef: AtomicTypeDef;
 }
 
-export interface UserTypeDef extends NamedObject, HasAnnotation {
+export interface UserTypeDef extends NamedObject, HasAnnotations {
   type: 'userType';
   fields: UserTypeFieldDef[];
 }
@@ -2052,7 +2052,7 @@ export interface ModelDef {
    */
   sourceRegistry: Record<SourceID, SourceRegistryValue>;
   givens?: Record<GivenID, Given>;
-  annotation?: ModelAnnotation;
+  annotations?: ModelAnnotationsDef;
   queryList: Query[];
   dependencies: DependencyTree;
   references?: DocumentReference[];
@@ -2063,9 +2063,11 @@ export interface ModelDef {
 export type NamedSourceDefs = SafeRecord<SourceDef>;
 export type NamedModelObjects = SafeRecord<NamedModelObject>;
 
-/** Malloy source annotations attached to objects */
-export interface Annotation {
-  inherits?: Annotation;
+/** Bundle of source annotations attached to one object: the `notes` and
+ *  `blockNotes` written on it, plus the bundle from the spiritual parent
+ *  via `inherits`. The IR shape paired with the `Annotations` view class. */
+export interface AnnotationsDef {
+  inherits?: AnnotationsDef;
   blockNotes?: Note[];
   notes?: Note[];
 }
@@ -2080,8 +2082,8 @@ export interface Note {
    */
   indentStripped?: number;
 }
-/** Annotations with a uuid to make it easier to stream */
-export interface ModelAnnotation extends Annotation {
+/** Annotations bundle with a uuid to make it easier to stream. */
+export interface ModelAnnotationsDef extends AnnotationsDef {
   id: string;
 }
 
@@ -2131,7 +2133,7 @@ export interface DrillSource {
   sourceArguments?: SafeRecord<Argument>;
 }
 
-export interface CompiledQuery extends DrillSource, HasAnnotation {
+export interface CompiledQuery extends DrillSource, HasAnnotations {
   structs: SourceDef[];
   sql: string;
   lastStageName: string;
