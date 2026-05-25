@@ -20,7 +20,7 @@ import {
   safeRecordGet,
 } from './malloy_types';
 import {resolveSourceID} from './source_def_utils';
-import {Annotations} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 import type {LogMessage} from '../lang';
 import type {BuildNode} from '../api/foundation/types';
 

@@ -81,7 +81,7 @@ import type {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import type {EventStream} from '../runtime_types';
-import {Annotations} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParserRuleContext} from 'antlr4ts';
 import {Timer} from '../timing';

@@ -54,7 +54,7 @@ import {
 } from '../model/malloy_types';
 import {isNotUndefined} from './utils';
 import {pathToKey} from '../model/utils';
-import {Annotations} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 
 type CompositeCouldNotFindFieldError = {
   code: 'could_not_find_field';

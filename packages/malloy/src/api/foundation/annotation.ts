@@ -1,8 +1,13 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
 import type {Tag, TagError, SourceOrigin} from '@malloydata/malloy-tag';
 import {TagParser} from '@malloydata/malloy-tag';
-import type {AnnotationsDef, Note, DocumentLocation} from './model';
-import type {LogMessage} from './lang';
-import {parsePrefix} from './prefix';
+import type {AnnotationsDef, Note, DocumentLocation} from '../../model';
+import type {LogMessage} from '../../lang';
+import {parsePrefix} from '../../lang/annotation-prefix';
 
 /**
  * @deprecated Argument shape for the deprecated RegExp form of
@@ -191,12 +196,12 @@ export function annotationToTag(
  * `''` (MOTLY tags, the human default), `!` (compiler flags), `@` (persistence
  * directives), `"` (doc-string markdown). Apps stake their own routes with
  * brackets: `#(myApp) ...` is route `myApp`. The grammar (forms, bracket
- * pairs, malformation warnings) lives in `./prefix.ts`.
+ * pairs, malformation warnings) lives in `lang/prefix.ts`.
  *
  * All annotation reading lives here, written once; each tagged class only has
  * to say *where* its annotation is (by handing it to the constructor). Unlike
- * the deprecated RegExp readers (`tagParse`/`getTaglines`), this sees block
- * annotations.
+ * the deprecated RegExp readers (`tagParse`/`getTaglines`), this sees multi-
+ * line annotations.
  */
 export class Annotations {
   constructor(private readonly annote: AnnotationsDef | undefined) {}

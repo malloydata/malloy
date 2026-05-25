@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {parsePrefix} from './prefix';
+import {parsePrefix} from '../annotation-prefix';
 
 describe('parsePrefix', () => {
   describe('Form 1: empty routing -> MOTLY', () => {

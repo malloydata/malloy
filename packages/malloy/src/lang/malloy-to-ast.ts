@@ -37,7 +37,7 @@ import type {
 import {makeLogMessage} from './parse-log';
 import type {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
-import {parsePrefix} from '../prefix';
+import {parsePrefix} from './annotation-prefix';
 import type {FieldDeclarationConstructor} from './ast';
 import {TableSource} from './ast';
 import type {HasString, HasID} from './parse-utils';

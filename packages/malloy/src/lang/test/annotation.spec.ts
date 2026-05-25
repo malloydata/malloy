@@ -33,7 +33,10 @@ import {
 import './parse-expects';
 import {diff} from 'jest-diff';
 import type {AnnotationsDef, Note} from '../../model/malloy_types';
-import {collectAnnotations, annotationToTag} from '../../annotation';
+import {
+  collectAnnotations,
+  annotationToTag,
+} from '../../api/foundation/annotation';
 
 interface TstAnnotation {
   inherits?: TstAnnotation;

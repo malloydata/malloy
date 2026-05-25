@@ -35,7 +35,7 @@ import {
   getResultStructDefForQuery,
   getResultStructDefForView,
 } from './model';
-import {Annotations} from './annotation';
+import {Annotations} from './api/foundation/annotation';
 import {Tag} from '@malloydata/malloy-tag';
 
 export function sourceDefToSourceInfo(sourceDef: SourceDef): Malloy.SourceInfo {

@@ -42,7 +42,7 @@ import {
   expressionIsCalculation,
 } from './malloy_types';
 import type {EventStream} from '../runtime_types';
-import {Annotations} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';

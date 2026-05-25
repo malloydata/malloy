@@ -67,12 +67,8 @@ import {
   resolveSuppliedGivens,
 } from '../../model/given_binding';
 import {Tag} from '@malloydata/malloy-tag';
-import type {MalloyTagParse, TagParseSpec} from '../../annotation';
-import {
-  annotationToTag,
-  annotationToTaglines,
-  Annotations,
-} from '../../annotation';
+import type {MalloyTagParse, TagParseSpec} from './annotation';
+import {annotationToTag, annotationToTaglines, Annotations} from './annotation';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {
   convertFieldInfos,
@@ -83,7 +79,7 @@ import {
 import {nodeToLiteralValue} from '../util';
 import {locationContainsPosition} from '../../lang/utils';
 import {ReferenceList} from '../../lang/reference-list';
-import type {Taggable} from '../../taggable';
+import type {Taggable} from './taggable';
 
 type ComponentSourceDef = TableSourceDef | SQLSourceDef | QuerySourceDef;
 function isSourceComponent(source: StructDef): source is ComponentSourceDef {
