@@ -178,6 +178,7 @@ export function MalloyRenderInner(props: {
             height: parentSize().height - CHART_SIZE_BUFFER,
           },
           useVegaInterpreter: props.useVegaInterpreter,
+          explicitTheme: props.theme,
         });
 
         // Collect style overrides from plugin
