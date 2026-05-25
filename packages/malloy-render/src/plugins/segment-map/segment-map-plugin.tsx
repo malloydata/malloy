@@ -132,6 +132,10 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
             );
           }
 
+          // Snapshot the explicit theme into a local so an async theme
+          // swap in flight can't mutate what this render observes.
+          const themeForRender = explicitTheme;
+
           const data = props.dataColumn;
           const fields = data.field.fields;
           const lat1Field = fields[0];
@@ -148,7 +152,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
                   field: colorField.name,
                   type: colorType,
                   axis: {title: colorField.name},
-                  scale: getColorScale(colorType, false, false, explicitTheme),
+                  scale: getColorScale(colorType, false, false, themeForRender),
                 }
               : undefined;
 
@@ -181,11 +185,13 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
                 },
               },
             ],
-            // Background sourced from config.background (vegaConfigOverride
-            // supplies it from the embedder's theme) rather than the
-            // previous hardcoded 'transparent'. Same change as
-            // shape-map-plugin so maps paint the chart canvas colour
-            // operators picked in their theme.
+            // Default to transparent so the map blends with whatever
+            // host paints behind it. When `theme.background` is set,
+            // use it directly so the Vega canvas matches the rest of
+            // the chrome (the CSS-var-based theming used by tables
+            // doesn't reach the SVG itself). `vegaConfigOverride`
+            // still wins via the merge below.
+            background: themeForRender?.background ?? 'transparent',
             config: SEGMENT_MAP_VEGA_CONFIG,
           };
 

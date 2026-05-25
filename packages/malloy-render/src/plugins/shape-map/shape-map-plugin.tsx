@@ -153,6 +153,10 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
             );
           }
 
+          // Snapshot the explicit theme into a local so an async theme
+          // swap in flight can't mutate what this render observes.
+          const themeForRender = explicitTheme;
+
           const data = props.dataColumn;
           const regionField = data.field.fields[0];
           const colorField = data.field.fields[1];
@@ -171,7 +175,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
                     colorType,
                     false,
                     false,
-                    explicitTheme
+                    themeForRender
                   ),
                 }
               : undefined;
@@ -213,13 +217,13 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
                 },
               },
             ],
-            // Background sourced from config.background (which embedders
-            // supply via vegaConfigOverride) rather than hardcoded
-            // transparent. Vega defaults to white when unset, matching
-            // the prior transparent-against-white behaviour on
-            // unstyled hosts. A consumer that genuinely wants a
-            // transparent map can still set `config.background:
-            // 'transparent'` in their vegaConfigOverride.
+            // Default to transparent so the map blends with whatever
+            // host paints behind it (matches the renderer's long-standing
+            // behaviour). When the embedder supplies an explicit
+            // `theme.background`, use that as the Vega canvas colour so
+            // the map matches the rest of the chrome. A consumer can
+            // still override either via `vegaConfigOverride`.
+            background: themeForRender?.background ?? 'transparent',
             config: SHAPE_MAP_VEGA_CONFIG,
           };
 
