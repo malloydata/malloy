@@ -16,6 +16,32 @@ import type {RenderPluginFactory} from './plugin-types';
 
 export type {RenderFieldMetadata} from '@/render-field-metadata';
 
+/**
+ * Explicit theme overrides that win over Malloy `# theme.*` annotations
+ * AND over the renderer's CSS variable defaults. Every key is optional;
+ * any key that is omitted falls through the existing resolution chain
+ * (local annotation → model annotation → `var(--malloy-theme--*)`
+ * default). Values are inserted directly into the inline style block
+ * that drives the renderer's `--malloy-render--*` variables, so they
+ * must be valid CSS values (e.g. `"#ff0000"`, `"1px solid #ccc"`,
+ * `"14px"`).
+ */
+export interface MalloyExplicitTheme {
+  tableRowHeight?: string;
+  tableBodyColor?: string;
+  tableFontSize?: string;
+  tableHeaderColor?: string;
+  tableHeaderWeight?: string;
+  tableBodyWeight?: string;
+  tableBorder?: string;
+  tableBackground?: string;
+  tableGutterSize?: string;
+  tablePinnedBackground?: string;
+  tablePinnedBorder?: string;
+  fontFamily?: string;
+  background?: string;
+}
+
 export interface MalloyRendererOptions {
   onClick?: (payload: MalloyClickEventPayload) => void;
   onDrill?: (drillData: DrillData) => void;
@@ -28,4 +54,10 @@ export interface MalloyRendererOptions {
   plugins?: RenderPluginFactory[];
   pluginOptions?: Record<string, unknown>;
   useVegaInterpreter?: boolean;
+  /**
+   * Optional explicit theme overrides. Keys here take precedence over
+   * any `# theme.*` annotations on the result and over the renderer's
+   * own CSS variable defaults. See {@link MalloyExplicitTheme}.
+   */
+  theme?: MalloyExplicitTheme;
 }

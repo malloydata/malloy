@@ -180,6 +180,7 @@ export class MalloyViz {
       scrollEl: this.options.scrollEl,
       renderFieldMetadata: this.metadata,
       useVegaInterpreter: this.options.useVegaInterpreter,
+      theme: this.options.theme,
       onReady: () => this.handleReady(),
     };
 

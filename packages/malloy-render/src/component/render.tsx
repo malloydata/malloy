@@ -29,6 +29,7 @@ import type {
   TableConfig,
   VegaConfigHandler,
 } from './types';
+import type {MalloyExplicitTheme} from '@/api/types';
 export type {DrillData} from './types';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getDataTree} from '../data_tree';
@@ -49,6 +50,7 @@ export type MalloyRenderProps = {
   dashboardConfig?: Partial<DashboardConfig>;
   renderFieldMetadata: RenderFieldMetadata;
   useVegaInterpreter?: boolean;
+  theme?: MalloyExplicitTheme;
   onReady?: () => void;
 };
 
@@ -117,6 +119,7 @@ export function MalloyRender(props: MalloyRenderProps) {
             vegaConfigOverride={props.vegaConfigOverride}
             renderFieldMetadata={props.renderFieldMetadata}
             useVegaInterpreter={props.useVegaInterpreter}
+            theme={props.theme}
             onReady={props.onReady}
           />
         </ConfigContext.Provider>
@@ -134,6 +137,7 @@ export function MalloyRenderInner(props: {
   vegaConfigOverride?: VegaConfigHandler;
   renderFieldMetadata: RenderFieldMetadata;
   useVegaInterpreter?: boolean;
+  theme?: MalloyExplicitTheme;
 }) {
   const [parentSize, setParentSize] = createSignal({
     width: 0,
@@ -214,7 +218,11 @@ export function MalloyRenderInner(props: {
   };
 
   const style = () => {
-    const baseStyles = generateThemeStyle(tags().modelTheme, tags().localTheme);
+    const baseStyles = generateThemeStyle(
+      tags().modelTheme,
+      tags().localTheme,
+      props.theme
+    );
     const overrideStyles = Object.entries(metadata().styleOverrides)
       .map(([key, value]) => `${key}: ${value};`)
       .join('\n');
@@ -280,72 +288,111 @@ export function MalloyRenderInner(props: {
   );
 }
 
-// Get the first valid theme value or fallback to CSS variable
-function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
-  let value: string | undefined;
+// Resolve a single theme key. The first defined source wins:
+//   1. explicitTheme[prop] — caller-supplied via MalloyRendererOptions.theme
+//   2. localTheme tag      — `# theme.<prop>` on the result
+//   3. modelTheme tag      — `# theme.<prop>` on the model
+//   4. CSS fallback        — `var(--malloy-theme--<kebab>)`
+function getThemeValue(
+  prop: keyof MalloyExplicitTheme,
+  explicitTheme: MalloyExplicitTheme | undefined,
+  ...themes: Array<Tag | undefined>
+): string {
+  const explicit = explicitTheme?.[prop];
+  if (typeof explicit !== 'undefined') return explicit;
   for (const theme of themes) {
-    value = theme?.text(prop);
-    if (typeof value !== 'undefined') break;
+    const value = theme?.text(prop);
+    if (typeof value !== 'undefined') return value;
   }
   // If no theme overrides, convert prop name from camelCase to kebab and pull from --malloy-theme-- variable
-  return (
-    value ??
-    `var(--malloy-theme--${prop
-      .replace(/([a-z])([A-Z])/g, '$1-$2')
-      .toLowerCase()})`
-  );
+  return `var(--malloy-theme--${prop
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .toLowerCase()})`;
 }
 
-function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
+function generateThemeStyle(
+  modelTheme?: Tag,
+  localTheme?: Tag,
+  explicitTheme?: MalloyExplicitTheme
+) {
   const tableRowHeight = getThemeValue(
     'tableRowHeight',
+    explicitTheme,
     localTheme,
     modelTheme
   );
   const tableBodyColor = getThemeValue(
     'tableBodyColor',
+    explicitTheme,
     localTheme,
     modelTheme
   );
-  const tableFontSize = getThemeValue('tableFontSize', localTheme, modelTheme);
+  const tableFontSize = getThemeValue(
+    'tableFontSize',
+    explicitTheme,
+    localTheme,
+    modelTheme
+  );
   const tableHeaderColor = getThemeValue(
     'tableHeaderColor',
+    explicitTheme,
     localTheme,
     modelTheme
   );
   const tableHeaderWeight = getThemeValue(
     'tableHeaderWeight',
+    explicitTheme,
     localTheme,
     modelTheme
   );
   const tableBodyWeight = getThemeValue(
     'tableBodyWeight',
+    explicitTheme,
     localTheme,
     modelTheme
   );
-  const tableBorder = getThemeValue('tableBorder', localTheme, modelTheme);
+  const tableBorder = getThemeValue(
+    'tableBorder',
+    explicitTheme,
+    localTheme,
+    modelTheme
+  );
   const tableBackground = getThemeValue(
     'tableBackground',
+    explicitTheme,
     localTheme,
     modelTheme
   );
   const tableGutterSize = getThemeValue(
     'tableGutterSize',
+    explicitTheme,
     localTheme,
     modelTheme
   );
   const tablePinnedBackground = getThemeValue(
     'tablePinnedBackground',
+    explicitTheme,
     localTheme,
     modelTheme
   );
   const tablePinnedBorder = getThemeValue(
     'tablePinnedBorder',
+    explicitTheme,
     localTheme,
     modelTheme
   );
-  const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
-  const background = getThemeValue('background', localTheme, modelTheme);
+  const fontFamily = getThemeValue(
+    'fontFamily',
+    explicitTheme,
+    localTheme,
+    modelTheme
+  );
+  const background = getThemeValue(
+    'background',
+    explicitTheme,
+    localTheme,
+    modelTheme
+  );
 
   const css = `
     --malloy-render--table-row-height: ${tableRowHeight};
