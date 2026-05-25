@@ -15,8 +15,6 @@
   "exports": {
     ".": {
       "types": "./dist/module/index.d.ts",
-      "import": "./dist/module/index.mjs",
-      "require": "./dist/module/index.umd.js",
       "default": "./dist/module/index.umd.js"
     }
   },
