@@ -189,9 +189,12 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
             // host paints behind it. When `theme.background` is set,
             // use it directly so the Vega canvas matches the rest of
             // the chrome (the CSS-var-based theming used by tables
-            // doesn't reach the SVG itself). `vegaConfigOverride`
-            // still wins via the merge below.
-            background: themeForRender?.background ?? 'transparent',
+            // doesn't reach the SVG itself). Empty string is treated
+            // as unset (matches getThemeValue) so a cleared form field
+            // falls back to transparent rather than handing Vega
+            // `background: ''`. `vegaConfigOverride` still wins via
+            // the merge below.
+            background: themeForRender?.background || 'transparent',
             config: SEGMENT_MAP_VEGA_CONFIG,
           };
 

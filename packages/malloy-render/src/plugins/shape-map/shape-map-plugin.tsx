@@ -221,9 +221,12 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
             // host paints behind it (matches the renderer's long-standing
             // behaviour). When the embedder supplies an explicit
             // `theme.background`, use that as the Vega canvas colour so
-            // the map matches the rest of the chrome. A consumer can
-            // still override either via `vegaConfigOverride`.
-            background: themeForRender?.background ?? 'transparent',
+            // the map matches the rest of the chrome. Empty string is
+            // treated as unset (matches getThemeValue) so a cleared form
+            // field falls back to transparent rather than handing Vega
+            // `background: ''`. A consumer can still override either
+            // outcome via `vegaConfigOverride`.
+            background: themeForRender?.background || 'transparent',
             config: SHAPE_MAP_VEGA_CONFIG,
           };
 
