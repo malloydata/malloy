@@ -282,4 +282,7 @@ export {Annotations, RoutedNote} from './annotation';
 export {annotationToTag, annotationToTaglines} from './annotation';
 export type {BuildGraph, BuildNode, BuildPlan} from './api/foundation';
 export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';
+export {Reference} from './api/foundation';
+export type {ReferenceKind} from './api/foundation';
+export type {ImportLocation} from './model';
 export {makeDigest} from './model';

@@ -1049,6 +1049,83 @@ export interface RuntimeContext {
   readonly finalizedGivens?: ReadonlySet<string>;
 }
 
+export type ReferenceKind =
+  | 'field'
+  | 'join'
+  | 'explore'
+  | 'query'
+  | 'sqlBlock'
+  | 'given';
+
+const REFERENCE_KIND_BY_IR_TYPE: Record<
+  DocumentReference['type'],
+  ReferenceKind
+> = {
+  fieldReference: 'field',
+  joinReference: 'join',
+  exploreReference: 'explore',
+  queryReference: 'query',
+  sqlBlockReference: 'sqlBlock',
+  givenReference: 'given',
+};
+
+/**
+ * A reference to a definition found at a position in a Malloy document —
+ * the Foundation view returned by {@link Model.referenceAt}. Carries the
+ * use-site location (where the reference appears), the definition's
+ * location (where to go for "go to definition"), the kind of entity
+ * referenced, and an `annotations` view over the definition's annotations.
+ *
+ * Construct via {@link Model.referenceAt}; direct construction is internal.
+ */
+export class Reference {
+  /** @internal */
+  constructor(private readonly _ref: DocumentReference) {}
+
+  /** The name as written at the use site (e.g. `"orders"`). */
+  get text(): string {
+    return this._ref.text;
+  }
+
+  /** What kind of entity this reference points at. */
+  get kind(): ReferenceKind {
+    return REFERENCE_KIND_BY_IR_TYPE[this._ref.type];
+  }
+
+  /** Where this reference appears in source. */
+  get location(): DocumentLocation {
+    return this._ref.location;
+  }
+
+  /** Where the definition is. Omitted for synthetic references that have
+   *  no source-level definition site. */
+  get definitionLocation(): DocumentLocation | undefined {
+    return this._ref.definition.location;
+  }
+
+  /** The referent's type as a string (e.g. `"string"` for a string field,
+   *  `"source"` for a source). Free-form text from the IR; used by IDE
+   *  display to render type hints. */
+  get definitionType(): string {
+    return this._ref.definition.type;
+  }
+
+  /** For given references only: the textual form of the given's default
+   *  expression, if one was declared. Undefined for non-given references
+   *  and for givens without a default. */
+  get defaultText(): string | undefined {
+    if (this._ref.type === 'givenReference') {
+      return this._ref.definition.defaultText;
+    }
+    return undefined;
+  }
+
+  /** The definition's annotations, as a view. */
+  get annotations(): Annotations {
+    return new Annotations(this._ref.definition.annotations);
+  }
+}
+
 export class Model implements Taggable {
   private readonly references: ReferenceList;
   private _queryModel?: QueryModel;
@@ -1128,11 +1205,21 @@ export class Model implements Taggable {
   }
 
   /**
-   * Retrieve a document reference for the token at the given position within
-   * the document that produced this model.
+   * Retrieve a reference for the token at the given position within the
+   * document that produced this model.
    *
    * @param position A position within the document.
-   * @return A `DocumentReference` at that position if one exists.
+   * @return A {@link Reference} at that position if one exists.
+   */
+  public referenceAt(position: ModelDocumentPosition): Reference | undefined {
+    const ref = this.references.find(position);
+    return ref ? new Reference(ref) : undefined;
+  }
+
+  /**
+   * @deprecated Use {@link referenceAt} — returns a Foundation
+   * {@link Reference} view instead of the raw IR. This method returns
+   * the IR shape directly and will be removed in a future release.
    */
   public getReference(
     position: ModelDocumentPosition
