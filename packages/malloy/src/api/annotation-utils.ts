@@ -30,10 +30,10 @@ export function routeOf(a: Malloy.Annotation): string | undefined {
 }
 
 /**
- * The payload of a stable {@link Malloy.Annotation} — the text after the
- * prefix and separator (`'name=foo'` for `'#(filter) name=foo'`,
- * `'tag'` for `'# tag\n'`). Returns the empty string for an annotation
- * that has no content.
+ * The payload of a stable {@link Malloy.Annotation} — the substring after
+ * the prefix and separator (`'name=foo'` for `'#(filter) name=foo'`,
+ * `'tag\n'` for `'# tag\n'` — the lexer keeps the trailing newline).
+ * Returns the empty string for an annotation that has no content.
  */
 export function payloadOf(a: Malloy.Annotation): string {
   return a.value.slice(parsePrefix(a.value).contentIndex);
@@ -41,7 +41,15 @@ export function payloadOf(a: Malloy.Annotation): string {
 
 /**
  * Filter `annotations` to just those on `route`, in input order.
- * Annotations with malformed prefixes are excluded.
+ *
+ * Annotations with `malformed-route` prefixes are excluded (no clean route
+ * to resolve to). `reserved-route` annotations *are* included — their
+ * prefix parses to a real route and the user got a compile-time warning,
+ * but the data is what it is.
+ *
+ * Route filtering is level-blind: `# tag` and `## tag` both resolve to
+ * route `''`. Producers separate object-level from model-level annotations
+ * into different arrays; consumers pass the array carrying the right level.
  */
 export function annotationsForRoute(
   annotations: Malloy.Annotation[] | undefined,
@@ -57,7 +65,9 @@ export function annotationsForRoute(
 /**
  * Parse a stable `Malloy.Annotation[]`'s `route` annotations as MOTLY into
  * one Tag. The stable counterpart to `Annotations.parseAsTag` — consumes
- * the flat wire shape, no source offsets.
+ * the flat wire shape, no source offsets. Selection follows
+ * {@link annotationsForRoute} semantics (level-blind, malformed-route
+ * excluded, reserved-route included).
  */
 export function tagFromAnnotations(
   annotations: Malloy.Annotation[] | undefined,

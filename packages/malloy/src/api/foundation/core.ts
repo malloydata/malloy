@@ -1829,10 +1829,21 @@ export class PreparedResult implements Taggable {
     return new Annotations(this.inner.annotations);
   }
 
+  /**
+   * @deprecated Hands out raw IR (`AnnotationsDef`). Use `.annotations`
+   * (returns the {@link Annotations} view) for read access. Internal
+   * code that needs the IR shape should read `._rawQuery.annotations`
+   * directly. Slated for removal once external consumers migrate.
+   */
   get annotation(): AnnotationsDef | undefined {
     return this.inner.annotations;
   }
 
+  /**
+   * @deprecated Hands out raw IR (`AnnotationsDef`). Internal code that
+   * needs the model-level IR shape should read `._modelDef.annotations`
+   * directly. Slated for removal once external consumers migrate.
+   */
   get modelAnnotation(): AnnotationsDef | undefined {
     return this.modelDef.annotations;
   }

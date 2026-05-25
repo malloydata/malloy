@@ -35,10 +35,10 @@ type SourceRefWithMetadata = NamedObject & {
 export interface RunSQLOptions {
   rowLimit?: number;
   abortSignal?: AbortSignal;
-  /* This is an experimental feature */
+  /** Model annotations forwarded to the adapter (e.g. `##!` dialect flags). */
   modelAnnotations?: AnnotationsDef;
-  /* This is an experimental feature */
-  queryAnnotation?: AnnotationsDef;
+  /** Query annotations forwarded to the adapter. */
+  queryAnnotations?: AnnotationsDef;
   clientMetadata?: {
     sourceRefWithMetadata?: SourceRefWithMetadata;
   };

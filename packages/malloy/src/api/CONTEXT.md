@@ -132,7 +132,7 @@ For the configuration pipeline internals (three states, section compilers, overl
 ### Reading annotations
 
 Every class above implements `Taggable` and exposes annotations through an
-`annotations` view (`packages/malloy/src/annotation.ts`):
+`annotations` view (`packages/malloy/src/api/foundation/annotation.ts`):
 
 ```ts
 model.annotations.parseAsTag()           // empty route — renderer tags
@@ -141,10 +141,17 @@ field.annotations.texts('!')             // raw strings on the `!` route
 field.annotations.forRoute('vite')       // text + source offsets, BYO parser
 ```
 
-`.annotations` sees both single-line and block annotations and routes by
-the prefix grammar in [`src/prefix.ts`](../prefix.ts). The legacy
+`.annotations` sees both single-line and multi-line annotations and routes
+by the prefix grammar in
+[`src/lang/annotation-prefix.ts`](../lang/annotation-prefix.ts). The legacy
 `tagParse({prefix: RegExp})` and `getTaglines(RegExp)` methods are
-`@deprecated` and cannot see block annotations — migrate to the view.
+`@deprecated` and cannot see multi-line annotations — migrate to the view.
+
+For callers that hold a flat `Malloy.Annotation[]` (the stable wire shape
+from `@malloydata/malloy-interfaces`) rather than a Foundation entity, the
+same route grammar is exposed through free helpers in
+[`api/annotation-utils.ts`](./annotation-utils.ts):
+`routeOf` / `payloadOf` / `annotationsForRoute` / `tagFromAnnotations`.
 
 ### Flow: Load Model → Get SQL for Named Query
 
@@ -262,7 +269,7 @@ API-level documentation lives in the JSDoc on the two `validate` methods.
 
 **Location:** `packages/malloy/src/api/core.ts`
 
-The implementation layer that the "stable" APIs build on. Synchronous, stateless-ish (uses explicit state objects).
+The implementation layer that the Stateless / Sessioned / Asynchronous APIs build on. Synchronous, stateless-ish (uses explicit state objects).
 
 ### Key Functions
 
@@ -301,6 +308,19 @@ Core.statedCompileQuery(state)  [when model is ready]
 - Directly instantiates `IR.QueryModel` for SQL generation
 
 ---
+
+## Layer 4 — request-response APIs (experimental)
+
+Three sibling APIs share a request-response shape designed to be wire-friendly:
+consumers transact in `Malloy.*` types from `@malloydata/malloy-interfaces`,
+not in Foundation class instances. They all sit on the Core layer above.
+
+These are **experimental.** Their surface, error semantics, and feature
+coverage are still settling — see "The Fundamental Problem" section below
+for the load-bearing limitation. **Foundation is the production surface
+today;** the trio is appropriate for use cases that can't hold class
+instances (network services, multi-language hosts, REST/serverless) and are
+willing to live with the rough edges.
 
 ## Layer 4a: Stateless API
 
@@ -387,7 +407,7 @@ export async function compileModel(request, fetchers): Promise<Malloy.CompileMod
 ### Characteristics
 - Async functions
 - Requires `fetchers` object with `connections` and `urls` readers
-- Most "complete" of the stable APIs - handles iteration internally
+- Most "complete" of the request-response APIs — handles iteration internally
 - Designed for: Node.js environments with database access
 
 ---
@@ -407,9 +427,9 @@ export async function compileModel(request, fetchers): Promise<Malloy.CompileMod
 
 ---
 
-## The Fundamental Problem with Stable APIs
+## The Fundamental Problem with the request-response APIs
 
-The stable APIs (stateless, sessioned, async) were designed for a web client that would:
+The Stateless / Sessioned / Asynchronous trio was designed for a web client that would:
 1. Fetch a model
 2. Let user modify a query (as API.Query object)
 3. Convert API.Query → Malloy text → recompile → get SQL
@@ -436,5 +456,5 @@ The Foundation API doesn't have this problem because `PreparedQuery` holds the a
 
 1. **For production use today:** Use the Foundation API (`api/foundation/`)
 2. **For network services:** Async API is most practical (handles the loop)
-3. **For stable API improvements:** Need direct API.Query → IR.QueryQuery path
-4. **For new features:** Experiment in Foundation API first, then figure out stable exposure
+3. **For request-response API improvements:** Need direct API.Query → IR.QueryQuery path
+4. **For new features:** Experiment in Foundation API first, then figure out wire-shape exposure

@@ -220,7 +220,13 @@ export class Annotations {
    * Your route's notes as {@link RoutedNote}s — for callers that parse the
    * payload with their own parser (instead of MOTLY). Read `.content` to
    * feed your parser, and `.at` + `.indentStripped` to map your parser's
-   * errors back to source. Malformed-prefix annotations are excluded.
+   * errors back to source.
+   *
+   * `malformed-route` annotations are excluded (no clean route to resolve
+   * to). `reserved-route` annotations are included — they parse to a real
+   * route and the user got a compile-time warning. Route filtering is
+   * level-blind (`#` and `##` both go to route `''`); the entity hands
+   * you the annotations that apply at its level.
    */
   forRoute(route: string): RoutedNote[] {
     return collectAnnotations(this.annote, route);

@@ -517,11 +517,11 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     tag: 'restricted-mode',
   }),
   'malformed-route': e => ({
-    message: `AnnotationsDef prefix \`${e.prefix}\` is not a well-formed route — write \`# ...\` for a tag (note the space) or \`#(name)\` for an app route`,
+    message: `Annotation prefix \`${e.prefix}\` is not a well-formed route — write \`# ...\` for a tag (note the space) or \`#(name)\` for an app route`,
     severity: 'warn',
   }),
   'reserved-route': e => ({
-    message: `AnnotationsDef prefix \`${e.prefix}\` uses an unclaimed sigil; punct-only prefixes are reserved for Malloy's own use`,
+    message: `Annotation prefix \`${e.prefix}\` uses an unclaimed sigil; punct-only prefixes are reserved for Malloy's own use`,
     severity: 'warn',
   }),
 };

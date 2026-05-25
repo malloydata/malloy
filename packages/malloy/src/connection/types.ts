@@ -15,7 +15,7 @@ import type {SQLSourceRequest} from '../lang/translate-response';
 export interface FetchSchemaOptions {
   // Fetch a fresh copy of the schema instead of using cache
   refreshTimestamp?: number;
-  /* This is an experimental feature */
+  /** Model annotations forwarded to the adapter (e.g. `##!` dialect flags). */
   modelAnnotations?: AnnotationsDef;
 }
 
