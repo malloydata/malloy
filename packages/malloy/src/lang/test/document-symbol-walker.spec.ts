@@ -239,7 +239,7 @@ test('join ons are included', () => {
   );
 });
 
-test('source lenses go before block annotations when one source', () => {
+test('source lenses go before multi-line annotations when one source', () => {
   testLens(
     markSource`${`# tag
     # tag2
@@ -262,7 +262,7 @@ test('source lenses go before individual annotations when more than one source',
   );
 });
 
-test('query lenses go before block annotations when one source', () => {
+test('query lenses go before multi-line annotations when one source', () => {
   testLens(
     markSource`${`# tag
     # tag2
@@ -285,7 +285,7 @@ test('query lenses go before individual annotations when more than one source', 
   );
 });
 
-test('run lenses go before block annotations', () => {
+test('run lenses go before multi-line annotations', () => {
   testLens(
     markSource`${`# tag
     # tag2

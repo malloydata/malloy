@@ -2180,7 +2180,7 @@ export class MalloyToAST
         this.contextError(
           pcx,
           'unclosed-block-annotation',
-          'Block annotation is not closed, add correctly indented "|##"'
+          'Multi-line annotation is not closed, add correctly indented "|##"'
         );
       }
     }
@@ -2205,7 +2205,7 @@ export class MalloyToAST
       this.contextError(
         pcx,
         'unclosed-block-annotation',
-        'Block annotation is not closed, add correctly indented "|#"'
+        'Multi-line annotation is not closed, add correctly indented "|#"'
       );
     } else {
       this.contextError(
@@ -2228,7 +2228,7 @@ export class MalloyToAST
       this.contextError(
         pcx,
         'unclosed-block-annotation',
-        'Block annotation is not closed, add correctly indented "|##"'
+        'Multi-line annotation is not closed, add correctly indented "|##"'
       );
     } else {
       this.contextError(

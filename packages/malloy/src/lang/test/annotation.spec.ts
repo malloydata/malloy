@@ -320,7 +320,7 @@ describe('document annotation', () => {
   });
 });
 describe('source definition annotations', () => {
-  test('turtle block annotation', () => {
+  test('turtle multi-line annotation', () => {
     const m = new TestTranslator(turtleDef);
     expect(m).toTranslate();
     const na = m.getSourceDef('na');
@@ -347,7 +347,7 @@ describe('source definition annotations', () => {
       expect(note_a.annotations).matchesAnnotation({inherits: defaultTags});
     }
   });
-  test('dimension block annotation', () => {
+  test('dimension multi-line annotation', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         # blockNote
@@ -368,7 +368,7 @@ describe('source definition annotations', () => {
       expect(note_a?.annotations).matchesAnnotation(defaultTags);
     }
   });
-  test('measure block annotation', () => {
+  test('measure multi-line annotation', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         # blockNote
@@ -389,7 +389,7 @@ describe('source definition annotations', () => {
       expect(note_a?.annotations).matchesAnnotation(defaultTags);
     }
   });
-  test('join_one-with block annotation', () => {
+  test('join_one-with multi-line annotation', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         # blockNote
@@ -410,7 +410,7 @@ describe('source definition annotations', () => {
       expect(note_a?.annotations).matchesAnnotation(defaultTags);
     }
   });
-  test('join_many-on block annotation', () => {
+  test('join_many-on multi-line annotation', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         # blockNote
@@ -889,8 +889,8 @@ describe('query operation annotations', () => {
     });
   });
 });
-describe('block annotations', () => {
-  test('simple object block annotation', () => {
+describe('multi-line annotations', () => {
+  test('simple object multi-line annotation', () => {
     const m = new TestTranslator(`
       #|
         content line
@@ -904,7 +904,7 @@ describe('block annotations', () => {
       blockNotes: ['#|\ncontent line'],
     });
   });
-  test('simple model block annotation', () => {
+  test('simple model multi-line annotation', () => {
     const m = new TestTranslator(`
       ##|
         model content
@@ -917,7 +917,7 @@ describe('block annotations', () => {
       notes: ['##|\nmodel content'],
     });
   });
-  test('empty block annotation', () => {
+  test('empty multi-line annotation', () => {
     const m = new TestTranslator(`
       #|
       |#
@@ -930,7 +930,7 @@ describe('block annotations', () => {
       blockNotes: ['#|'],
     });
   });
-  test('block annotation with routing', () => {
+  test('multi-line annotation with routing', () => {
     const m = new TestTranslator(`
       #|(markdown)
         content
@@ -944,7 +944,7 @@ describe('block annotations', () => {
       blockNotes: ['#|(markdown)\ncontent'],
     });
   });
-  test('block annotation at column 0', () => {
+  test('multi-line annotation at column 0', () => {
     const m = new TestTranslator(
       '#|\nline one\nline two\n|#\nsource: na is a\n'
     );
@@ -955,7 +955,7 @@ describe('block annotations', () => {
       blockNotes: ['#|\nline one\nline two'],
     });
   });
-  test('CRLF block annotation normalizes to LF note text', () => {
+  test('CRLF multi-line annotation normalizes to LF note text', () => {
     // Windows line endings: the lexer keeps the \r in token text; the note
     // must come out byte-identical to the LF version above (internal \r and the
     // trailing \r\n both gone), so an annotation does not depend on EOL style.
@@ -1010,7 +1010,7 @@ describe('block annotations', () => {
       blockNotes: ['#|\nsome |# text'],
     });
   });
-  test('mixed single-line and block annotations', () => {
+  test('mixed single-line and multi-line annotations', () => {
     const m = new TestTranslator(`
       # single
       #|
@@ -1025,29 +1025,29 @@ describe('block annotations', () => {
       blockNotes: ['# single\n', '#|\nblock content'],
     });
   });
-  test('unclosed block annotation', () => {
+  test('unclosed multi-line annotation', () => {
     expect(`
       #|
         no closer
       source: na is a
     `).toLog(
       errorMessage(
-        'Block annotation is not closed, add correctly indented "|#"'
+        'Multi-line annotation is not closed, add correctly indented "|#"'
       )
     );
   });
-  test('unclosed doc block annotation', () => {
+  test('unclosed doc multi-line annotation', () => {
     expect(`
       ##|
         no closer
       source: na is a
     `).toLog(
       errorMessage(
-        'Block annotation is not closed, add correctly indented "|##"'
+        'Multi-line annotation is not closed, add correctly indented "|##"'
       )
     );
   });
-  test('block annotation on dimension', () => {
+  test('multi-line annotation on dimension', () => {
     const m = new TestTranslator(`
       source: na is a extend {
         #|
@@ -1124,7 +1124,7 @@ describe('block annotations', () => {
     });
   });
   // The point of switching to Python-style dedent: pasting flush-left code
-  // inside a block annotation no longer warns and no longer mangles the body.
+  // inside a multi-line annotation no longer warns and no longer mangles the body.
   // The shortest non-blank line wins the common prefix (here, 0).
   test('flush-left content among indented body produces zero strip', () => {
     const m = new TestTranslator(`
@@ -1325,20 +1325,17 @@ describe('collectAnnotations (route-based)', () => {
       notes: [note('#(docs) one'), note('# tag'), note('#(docs) two')],
     };
     const docs = collectAnnotations(annote, 'docs');
-    expect(docs.map(a => a.rawText.slice(a.contentIndex))).toEqual([
-      'one',
-      'two',
-    ]);
-    // The route-filtered form returns AnnotationText — no `route` field.
-    expect(docs.every(a => !('route' in a))).toBe(true);
+    expect(docs.map(a => a.content)).toEqual(['one', 'two']);
+    // The filtered form still echoes the route — same RoutedNote shape.
+    expect(docs.every(a => a.route === 'docs')).toBe(true);
   });
 
   test('a malformed prefix is excluded from its route query, present in all', () => {
     // `#docs` (no brackets) is malformed; its best-effort route is still 'docs'.
     const annote: AnnotationsDef = {notes: [note('#docs'), note('#(docs) ok')]};
     const docs = collectAnnotations(annote, 'docs');
-    expect(docs.map(a => a.rawText)).toEqual(['#(docs) ok']);
-    expect(collectAnnotations(annote).map(a => a.rawText)).toContain('#docs');
+    expect(docs.map(a => a.text)).toEqual(['#(docs) ok']);
+    expect(collectAnnotations(annote).map(a => a.text)).toContain('#docs');
   });
 
   test('inherited annotations come first', () => {
@@ -1347,11 +1344,10 @@ describe('collectAnnotations (route-based)', () => {
       inherits: parent,
       notes: [note('#(docs) child')],
     };
-    expect(
-      collectAnnotations(child, 'docs').map(a =>
-        a.rawText.slice(a.contentIndex)
-      )
-    ).toEqual(['parent', 'child']);
+    expect(collectAnnotations(child, 'docs').map(a => a.content)).toEqual([
+      'parent',
+      'child',
+    ]);
   });
 
   test('undefined annotation yields nothing', () => {
@@ -1441,7 +1437,7 @@ describe('route warnings', () => {
     );
   });
 
-  test('block annotation with malformed route warns once', () => {
+  test('multi-line annotation with malformed route warns once', () => {
     expect(`
       source: na is a extend {
         #|malformed
@@ -1506,7 +1502,7 @@ describe('tab-separated annotations round-trip to MOTLY', () => {
 });
 
 describe('mapMalloyError body-line column', () => {
-  // Construct a block annotation by hand and assert tag-parse error columns
+  // Construct a multi-line annotation by hand and assert tag-parse error columns
   // map back to source correctly. The opener is at line 5 column 4; the body
   // line was at column 10 in source; dedent stripped 6 chars. So any
   // body-line error must land at column 6 + parser_offset.

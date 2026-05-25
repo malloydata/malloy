@@ -2075,10 +2075,12 @@ export interface Note {
   text: string;
   at: DocumentLocation;
   /**
-   * For block annotations: characters of leading whitespace removed from each
-   * body line by the dedent pass. Used to map payload-parser error columns
-   * back to source (`source_col = indentStripped + parser_col` for body lines).
-   * Omitted for single-line notes and blocks with no common indent.
+   * For multi-line annotations (`#|`…`|#`): characters of leading whitespace
+   * removed from each body line by the dedent pass. Used to map
+   * payload-parser error columns back to source
+   * (`source_col = indentStripped + parser_col` for body lines). Omitted for
+   * single-line annotations and for multi-line annotations with no common
+   * indent.
    */
   indentStripped?: number;
 }

@@ -110,7 +110,6 @@ export type {
   DocumentRange,
   DocumentPosition,
   Sampling,
-  AnnotationsDef,
   BasicAtomicTypeDef,
   BasicAtomicDef,
   AtomicTypeDef,
@@ -277,6 +276,9 @@ export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
 export * as API from './api';
 export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';
+export {Annotations, RoutedNote} from './annotation';
+/** @deprecated — use the `.annotations` view on a Foundation entity
+ *  (`entity.annotations.parseAsTag(route)` / `.texts(route)`). */
 export {annotationToTag, annotationToTaglines} from './annotation';
 export type {BuildGraph, BuildNode, BuildPlan} from './api/foundation';
 export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';

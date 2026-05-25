@@ -6,34 +6,62 @@ import {parsePrefix} from './prefix';
 
 /**
  * @deprecated Argument shape for the deprecated RegExp form of
- * {@link annotationToTag}. The RegExp form cannot see block annotations
- * (`#|`…`|#`). Pass a route string to `annotationToTag` instead, or use the
- * {@link Annotations} view on a tagged entity.
+ * {@link annotationToTag}. The RegExp form cannot see multi-line
+ * annotations (`#|`…`|#`). Pass a route string to `annotationToTag`
+ * instead, or use the {@link Annotations} view on a tagged entity.
  */
 export interface TagParseSpec {
   prefix?: RegExp;
 }
 
-/** One annotation, unparsed — its raw text and where its content begins. */
-export interface AnnotationText {
-  /** The annotation exactly as written — prefix + content. */
-  rawText: string;
-  /** Offset where the content begins; `rawText.slice(contentIndex)` is the content. */
-  contentIndex: number;
-  /** Where `rawText` begins in the source document. */
-  at: DocumentLocation;
-  /**
-   * For block annotations: characters of leading whitespace removed from
-   * each body line by the translator's dedent pass. A BYO parser that wants
-   * source-mapped error columns adds this to the parser's reported column for
-   * body lines (`source_col = indentStripped + parser_col`).
-   */
-  indentStripped?: number;
-}
+/**
+ * One annotation, returned by {@link Annotations.forRoute} — wraps an IR
+ * note with its parsed route and prefix/content split. Carries the offsets
+ * a caller needs to parse the payload (`.content`) with their own parser
+ * and map parser errors back to source positions.
+ *
+ * Foundation-owned: not derived from the IR `Note` type, so IR can evolve
+ * fields without breaking this public shape. Direct construction is
+ * internal; reach instances via `Annotations.forRoute`.
+ */
+export class RoutedNote {
+  /** @internal */
+  constructor(
+    private readonly _note: Note,
+    public readonly route: string,
+    public readonly contentIndex: number
+  ) {}
 
-/** An {@link AnnotationText} that also carries its route (`''` is MOTLY). */
-export interface RoutedAnnotation extends AnnotationText {
-  route: string;
+  /** The annotation exactly as written — prefix + content. */
+  get text(): string {
+    return this._note.text;
+  }
+
+  /** Where this note starts in source. */
+  get at(): DocumentLocation {
+    return this._note.at;
+  }
+
+  /**
+   * Multi-line annotations only (`#|`…`|#`). Number of leading-whitespace
+   * characters stripped from each body line during the dedent pass (Python
+   * `textwrap.dedent` semantics — longest common prefix across non-blank
+   * body lines). Omitted for single-line annotations and for multi-line
+   * annotations with no common indent.
+   *
+   * To map your parser's column numbers back to source:
+   * `source_col = indentStripped + parser_col` for body lines; first-line
+   * columns map straight through, offset by {@link contentIndex}.
+   */
+  get indentStripped(): number | undefined {
+    return this._note.indentStripped;
+  }
+
+  /** The payload — `text.slice(contentIndex)`. The string to feed to
+   *  your own parser. */
+  get content(): string {
+    return this._note.text.slice(this.contentIndex);
+  }
 }
 
 /** Every Note of an annotation, inherited first, in document order. */
@@ -45,44 +73,24 @@ function* notesInOrder(annote: AnnotationsDef): Generator<Note> {
 
 /**
  * Collect annotations, using the shared prefix parser.
- * - no `route`: every annotation, each carrying its own `route` (the only way
- *   to reach one whose prefix is malformed).
- * - a `route`: only annotations on that route, `route` omitted from each result
- *   (you passed it); malformed prefixes excluded.
+ * - no `route`: every annotation, each carrying its own `route` (the only
+ *   way to reach one whose prefix is malformed).
+ * - a `route`: only annotations on that route; malformed prefixes excluded.
  */
-export function collectAnnotations(
-  annote: AnnotationsDef | undefined
-): RoutedAnnotation[];
-export function collectAnnotations(
-  annote: AnnotationsDef | undefined,
-  route: string
-): AnnotationText[];
 export function collectAnnotations(
   annote: AnnotationsDef | undefined,
   route?: string
-): RoutedAnnotation[] | AnnotationText[] {
-  if (route === undefined) {
-    return Array.from(notesInOrder(annote ?? {}), note => {
-      const {route: noteRoute, contentIndex} = parsePrefix(note.text);
-      return {
-        rawText: note.text,
-        contentIndex,
-        at: note.at,
-        route: noteRoute,
-        indentStripped: note.indentStripped,
-      };
-    });
-  }
-  const matching: AnnotationText[] = [];
+): RoutedNote[] {
+  const matching: RoutedNote[] = [];
   for (const note of notesInOrder(annote ?? {})) {
     const parsed = parsePrefix(note.text);
-    if (parsed.route === route && parsed.malformation !== 'malformed-route') {
-      matching.push({
-        rawText: note.text,
-        contentIndex: parsed.contentIndex,
-        at: note.at,
-        indentStripped: note.indentStripped,
-      });
+    if (route === undefined) {
+      matching.push(new RoutedNote(note, parsed.route, parsed.contentIndex));
+    } else if (
+      parsed.route === route &&
+      parsed.malformation !== 'malformed-route'
+    ) {
+      matching.push(new RoutedNote(note, parsed.route, parsed.contentIndex));
     }
   }
   return matching;
@@ -100,9 +108,9 @@ function collectNotes(annote: AnnotationsDef, prefix?: RegExp): Note[] {
 }
 
 /**
- * @deprecated The RegExp form cannot see block annotations (`#|`…`|#`). Use
- * `new Annotations(annote).texts(route)` instead, or the {@link Annotations}
- * view on a tagged entity (`entity.annotations.texts(route)`).
+ * @deprecated The RegExp form cannot see multi-line annotations
+ * (`#|`…`|#`). Use `new Annotations(annote).texts(route)` instead, or the
+ * {@link Annotations} view on a tagged entity (`entity.annotations.texts(route)`).
  */
 export function annotationToTaglines(
   annote: AnnotationsDef | undefined,
@@ -148,10 +156,10 @@ export function annotationToTag(
   route?: string
 ): MalloyTagParse;
 /**
- * @deprecated The RegExp `prefix` form cannot see block annotations
- * (`#|`…`|#`) and cannot report content offsets for error mapping. Pass a route
- * string (the other overload), or use {@link Annotations.parseAsTag} on a
- * tagged entity.
+ * @deprecated The RegExp `prefix` form cannot see multi-line annotations
+ * (`#|`…`|#`) and cannot report content offsets for error mapping. Pass a
+ * route string (the other overload), or use {@link Annotations.parseAsTag}
+ * on a tagged entity.
  */
 export function annotationToTag(
   annote: AnnotationsDef | undefined,
@@ -168,7 +176,7 @@ export function annotationToTag(
   const matched = collectAnnotations(annote, arg ?? '');
   return parseTaglines(
     matched.map(a => ({
-      text: a.rawText,
+      text: a.text,
       at: a.at,
       indentStripped: a.indentStripped,
     }))
@@ -196,25 +204,20 @@ export class Annotations {
   /**
    * Raw annotation text strings (prefix + content) — all routes if `route` is
    * omitted, just that route's otherwise. The route-based successor to the
-   * deprecated `getTaglines`. For source-mapped offsets (bring-your-own
-   * parsers), see {@link forRoute}.
+   * deprecated `getTaglines`. For source-mapped offsets (when parsing the
+   * payload with your own parser), see {@link forRoute}.
    */
   texts(route?: string): string[] {
-    const items =
-      route === undefined
-        ? collectAnnotations(this.annote)
-        : collectAnnotations(this.annote, route);
-    return items.map(a => a.rawText);
+    return collectAnnotations(this.annote, route).map(a => a.text);
   }
 
   /**
-   * Your route's annotations as objects (`rawText` + `contentIndex` + `at`) —
-   * the bring-your-own-parser door. A non-MOTLY app (e.g. JSON on its own
-   * route) reads these to slice the content (`rawText.slice(contentIndex)`)
-   * itself and map its parser's errors back to source via `at`. Malformed-prefix
-   * annotations are excluded.
+   * Your route's notes as {@link RoutedNote}s — for callers that parse the
+   * payload with their own parser (instead of MOTLY). Read `.content` to
+   * feed your parser, and `.at` + `.indentStripped` to map your parser's
+   * errors back to source. Malformed-prefix annotations are excluded.
    */
-  forRoute(route: string): AnnotationText[] {
+  forRoute(route: string): RoutedNote[] {
     return collectAnnotations(this.annote, route);
   }
 
