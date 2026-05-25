@@ -6,7 +6,7 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   AtomicFieldDef,
   FieldDef,
   JoinFieldDef,
@@ -27,7 +27,7 @@ import type {MalloyElement} from '../types/malloy-element';
  */
 export class CompositeSource extends Source {
   elementType = 'compositeSource';
-  currentAnnotation?: Annotation;
+  currentAnnotation?: AnnotationsDef;
 
   constructor(readonly sources: Source[]) {
     super({sources});

@@ -25,7 +25,7 @@ import type {FieldDef, StructDef} from '../../../model/malloy_types';
 import {
   isJoined,
   type AccessModifierLabel,
-  type Annotation,
+  type AnnotationsDef,
   type DocumentLocation,
   type SourceDef,
 } from '../../../model/malloy_types';
@@ -164,7 +164,7 @@ export class RefinedSpace extends DynamicSpace {
     }
   }
 
-  addNotes(notes: Map<string, Annotation>): void {
+  addNotes(notes: Map<string, AnnotationsDef>): void {
     for (const [symbol, note] of notes) {
       this.newNotes.set(symbol, note);
     }
@@ -211,13 +211,13 @@ function editJoinsFromIncludeState(
           as: rename ? rename.name.nameString : field.as,
           accessModifier:
             accessModifier === 'public' ? undefined : accessModifier,
-          annotation: notes
+          annotations: notes
             ? {
-                inherits: field.annotation,
+                inherits: field.annotations,
                 blockNotes: notes.blockNotes,
                 notes: notes.notes,
               }
-            : field.annotation,
+            : field.annotations,
         }
       : {...field};
     if (isJoined(editedField)) {

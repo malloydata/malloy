@@ -198,7 +198,7 @@ export class ImportStatement
                       location: importOne.location,
                       definition: {
                         type: typeDefToString(givenIR.type),
-                        annotation: givenIR.annotation,
+                        annotations: givenIR.annotations,
                         location: givenIR.location,
                         defaultText: givenIR.defaultText,
                       },

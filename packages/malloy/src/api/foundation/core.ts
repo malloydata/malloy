@@ -26,7 +26,7 @@ import type {
   TurtleDef,
   NativeUnsupportedFieldDef,
   ImportLocation,
-  Annotation,
+  AnnotationsDef,
   NamedModelObject,
   SQLSourceDef,
   AtomicFieldDef,
@@ -272,21 +272,21 @@ export class Explore extends Entity implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec): MalloyTagParse {
-    return annotationToTag(this._structDef.annotation, spec);
+    return annotationToTag(this._structDef.annotations, spec);
   }
 
   getTaglines(prefix?: RegExp): string[] {
-    return annotationToTaglines(this._structDef.annotation, prefix);
+    return annotationToTaglines(this._structDef.annotations, prefix);
   }
 
   get annotations(): Annotations {
-    return new Annotations(this._structDef.annotation);
+    return new Annotations(this._structDef.annotations);
   }
 
   private parsedModelTag?: Tag;
   public get modelTag(): Tag {
     this.parsedModelTag ||= new Annotations(
-      this._structDef.modelAnnotation
+      this._structDef.modelAnnotations
     ).parseAsTag().tag;
     return this.parsedModelTag;
   }
@@ -643,15 +643,15 @@ export class AtomicField extends Entity implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    return annotationToTag(this.fieldTypeDef.annotation, spec);
+    return annotationToTag(this.fieldTypeDef.annotations, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this.fieldTypeDef.annotation, prefix);
+    return annotationToTaglines(this.fieldTypeDef.annotations, prefix);
   }
 
   get annotations(): Annotations {
-    return new Annotations(this.fieldTypeDef.annotation);
+    return new Annotations(this.fieldTypeDef.annotations);
   }
 
   public isIntrinsic(): boolean {
@@ -918,15 +918,15 @@ export class QueryField extends Query implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    return annotationToTag(this.turtleDef.annotation, spec);
+    return annotationToTag(this.turtleDef.annotations, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this.turtleDef.annotation, prefix);
+    return annotationToTaglines(this.turtleDef.annotations, prefix);
   }
 
   get annotations(): Annotations {
-    return new Annotations(this.turtleDef.annotation);
+    return new Annotations(this.turtleDef.annotations);
   }
 
   public isQueryField(): this is QueryField {
@@ -993,11 +993,11 @@ export class ExploreField extends Explore {
   }
 
   override tagParse(spec?: TagParseSpec) {
-    return annotationToTag(this._structDef.annotation, spec);
+    return annotationToTag(this._structDef.annotations, spec);
   }
 
   override get annotations(): Annotations {
-    return new Annotations(this._structDef.annotation);
+    return new Annotations(this._structDef.annotations);
   }
 
   public isQueryField(): this is QueryField {
@@ -1116,15 +1116,15 @@ export class Model implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec): MalloyTagParse {
-    return annotationToTag(this.modelDef.annotation, spec);
+    return annotationToTag(this.modelDef.annotations, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this.modelDef.annotation, prefix);
+    return annotationToTaglines(this.modelDef.annotations, prefix);
   }
 
   get annotations(): Annotations {
-    return new Annotations(this.modelDef.annotation);
+    return new Annotations(this.modelDef.annotations);
   }
 
   /**
@@ -1441,8 +1441,8 @@ export class PersistSource implements Taggable {
   /**
    * The annotation on this source.
    */
-  get annotation(): Annotation | undefined {
-    return this.persistableDef.annotation;
+  get annotation(): AnnotationsDef | undefined {
+    return this.persistableDef.annotations;
   }
 
   /**
@@ -1575,15 +1575,15 @@ export class Given implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec): MalloyTagParse {
-    return annotationToTag(this._internal.annotation, spec);
+    return annotationToTag(this._internal.annotations, spec);
   }
 
   getTaglines(prefix?: RegExp): string[] {
-    return annotationToTaglines(this._internal.annotation, prefix);
+    return annotationToTaglines(this._internal.annotations, prefix);
   }
 
   get annotations(): Annotations {
-    return new Annotations(this._internal.annotation);
+    return new Annotations(this._internal.annotations);
   }
 }
 
@@ -1604,15 +1604,15 @@ export class PreparedQuery implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    return annotationToTag(this._query.annotation, spec);
+    return annotationToTag(this._query.annotations, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this._query.annotation, prefix);
+    return annotationToTaglines(this._query.annotations, prefix);
   }
 
   get annotations(): Annotations {
-    return new Annotations(this._query.annotation);
+    return new Annotations(this._query.annotations);
   }
 
   /**
@@ -1735,27 +1735,27 @@ export class PreparedResult implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec): MalloyTagParse {
-    return annotationToTag(this.inner.annotation, spec);
+    return annotationToTag(this.inner.annotations, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this.inner.annotation, prefix);
+    return annotationToTaglines(this.inner.annotations, prefix);
   }
 
   get annotations(): Annotations {
-    return new Annotations(this.inner.annotation);
+    return new Annotations(this.inner.annotations);
   }
 
-  get annotation(): Annotation | undefined {
-    return this.inner.annotation;
+  get annotation(): AnnotationsDef | undefined {
+    return this.inner.annotations;
   }
 
-  get modelAnnotation(): Annotation | undefined {
-    return this.modelDef.annotation;
+  get modelAnnotation(): AnnotationsDef | undefined {
+    return this.modelDef.annotations;
   }
 
   get modelTag(): Tag {
-    return new Annotations(this.modelDef.annotation).parseAsTag().tag;
+    return new Annotations(this.modelDef.annotations).parseAsTag().tag;
   }
 
   /**
@@ -1791,7 +1791,7 @@ export class PreparedResult implements Taggable {
     const explore = this.inner.structs[this.inner.structs.length - 1];
     const namedExplore = {
       ...explore,
-      annotation: this.inner.annotation,
+      annotations: this.inner.annotations,
       name: this.inner.queryName || explore.name,
     };
     try {
@@ -1838,7 +1838,7 @@ export class PreparedResult implements Taggable {
     const structs = this.inner.structs;
     const struct = structs[structs.length - 1];
     const schema = {fields: convertFieldInfos(struct, struct.fields)};
-    const annotations = toStableAnnotations(this.inner.annotation);
+    const annotations = toStableAnnotations(this.inner.annotations);
     const metadataAnnot = struct.resultMetadata
       ? getResultStructMetadataAnnotation(struct, struct.resultMetadata)
       : undefined;
@@ -1876,7 +1876,7 @@ export class PreparedResult implements Taggable {
         .toString(),
     });
 
-    const modelAnnotations = toStableAnnotations(this.modelDef.annotation);
+    const modelAnnotations = toStableAnnotations(this.modelDef.annotations);
 
     return {
       schema,

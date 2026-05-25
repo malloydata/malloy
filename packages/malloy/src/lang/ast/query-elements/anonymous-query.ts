@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Annotation} from '../../../model';
+import type {AnnotationsDef} from '../../../model';
 
 import type {DocStatement, Document} from '../types/malloy-element';
 import {MalloyElement} from '../types/malloy-element';
@@ -42,7 +42,7 @@ export class AnonymousQuery
 
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: Annotation;
+  note?: AnnotationsDef;
 
   execute(doc: Document): void {
     const queryObj = this.queryExpr.getQuery();
@@ -55,11 +55,11 @@ export class AnonymousQuery
     }
     const modelQuery = {...queryObj.query()};
     const annotation = this.note || {};
-    if (modelQuery.annotation) {
-      annotation.inherits = modelQuery.annotation;
+    if (modelQuery.annotations) {
+      annotation.inherits = modelQuery.annotations;
     }
     if (annotation.notes || annotation.blockNotes || annotation.inherits) {
-      modelQuery.annotation = annotation;
+      modelQuery.annotations = annotation;
     }
     doc.queryList.push(modelQuery);
   }

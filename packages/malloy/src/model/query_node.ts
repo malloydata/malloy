@@ -327,7 +327,7 @@ export class QueryStruct {
   private _modelTag: Tag | undefined = undefined;
   modelCompilerFlags(): Tag {
     if (this._modelTag === undefined) {
-      const annotation = this.structDef.modelAnnotation;
+      const annotation = this.structDef.modelAnnotations;
       const {tag} = new Annotations(annotation).parseAsTag('!');
       this._modelTag = tag;
     }
@@ -757,9 +757,9 @@ export class QueryStruct {
   }
 
   getQueryFieldReference(f: RefToField): QueryField {
-    const {path, annotation, drillExpression} = f;
+    const {path, annotations, drillExpression} = f;
     const field = this.getFieldByName(path, f.at);
-    if (annotation || drillExpression) {
+    if (annotations || drillExpression) {
       if (field.parent === undefined) {
         throw new Error(
           'Inconcievable, field reference to orphaned query field'
@@ -768,7 +768,7 @@ export class QueryStruct {
       // Made a field object from the source, but the annotations were computed by the compiler
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryFieldStruct) {
-        const newDef = {...field.fieldDef, annotation, drillExpression};
+        const newDef = {...field.fieldDef, annotations, drillExpression};
         return new QueryFieldStruct(
           newDef,
           undefined,
@@ -777,7 +777,7 @@ export class QueryStruct {
           field.referenceId
         );
       } else {
-        const newDef = {...field.fieldDef, annotation, drillExpression};
+        const newDef = {...field.fieldDef, annotations, drillExpression};
         return field.parent.makeQueryField(newDef, field.referenceId);
       }
     }
@@ -832,7 +832,7 @@ export class QueryStruct {
     turtleDef: TurtleDef | TurtleDefPlusFilters
   ): TurtleDef {
     const pipeline = [...turtleDef.pipeline];
-    const annotation = turtleDef.annotation;
+    const annotations = turtleDef.annotations;
 
     const addedFilters = (turtleDef as TurtleDefPlusFilters).filterList || [];
     pipeline[0] = {
@@ -847,7 +847,7 @@ export class QueryStruct {
       type: 'turtle',
       name: turtleDef.name,
       pipeline,
-      annotation,
+      annotations,
       location: turtleDef.location,
     };
     return flatTurtleDef;

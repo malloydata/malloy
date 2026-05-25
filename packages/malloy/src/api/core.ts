@@ -120,7 +120,7 @@ function convertDimension(field: Malloy.DimensionInfo): AtomicFieldDef {
   const typeDef = typeDefFromField(field.type);
   return {
     ...mkFieldDef(typeDef, field.name),
-    annotation:
+    annotations:
       field.annotations && field.annotations.length
         ? {
             notes: field.annotations?.map(a => ({
@@ -643,7 +643,7 @@ export function statedCompileQuery(
         defaultRowLimit: state.defaultRowLimit,
       });
       timer.contribute([sqlTimer.stop()]);
-      const modelAnnotations = toStableAnnotations(result.modelDef.annotation);
+      const modelAnnotations = toStableAnnotations(result.modelDef.annotations);
       let source: StructDef;
       if (query.compositeResolvedSourceDef) {
         source = query.compositeResolvedSourceDef;
@@ -659,7 +659,7 @@ export function statedCompileQuery(
         }
       }
 
-      const sourceAnnotations = toStableAnnotations(source.annotation);
+      const sourceAnnotations = toStableAnnotations(source.annotations);
       const sourceMetadataTag = Tag.withPrefix('#(malloy) ');
       sourceMetadataTag.set(['source', 'name'], translatedQuery.sourceExplore);
       const sourceArguments =

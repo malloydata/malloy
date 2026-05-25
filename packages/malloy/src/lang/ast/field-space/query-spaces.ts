@@ -365,8 +365,8 @@ export abstract class QuerySpace extends QueryOperationSpace {
       throw new Error('Invalid type for fieldref');
     }
     ret.location = ret.location ?? this.astEl.location;
-    if (queryFieldDef.annotation) {
-      ret.annotation = queryFieldDef.annotation;
+    if (queryFieldDef.annotations) {
+      ret.annotations = queryFieldDef.annotations;
     }
     return ret;
   }

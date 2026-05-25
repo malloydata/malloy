@@ -43,8 +43,8 @@ export function checkPersistAnnotation(source: SourceDef): {
   persist: boolean;
   log: LogMessage[];
 } {
-  if (!source.annotation) return {persist: false, log: []};
-  const {tag, log} = new Annotations(source.annotation).parseAsTag('@');
+  if (!source.annotations) return {persist: false, log: []};
+  const {tag, log} = new Annotations(source.annotations).parseAsTag('@');
   return {persist: tag.has('persist'), log};
 }
 

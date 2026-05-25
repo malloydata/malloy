@@ -251,7 +251,7 @@ function stripTrailingNewline(s: string): string {
 }
 
 /**
- * Annotation note text is normalized to LF line endings, so a block's stored
+ * AnnotationsDef note text is normalized to LF line endings, so a block's stored
  * text and content are identical regardless of the source's CRLF/LF style.
  * The lexer keeps the source `\r` in token text (it sits at line ends, after a
  * line's content); this is where it is dropped.

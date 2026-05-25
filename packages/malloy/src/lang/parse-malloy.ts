@@ -563,15 +563,15 @@ class ModelAnnotationStep implements TranslationStep {
       if (!tryParse.parse || tryParse.final) {
         return tryParse;
       } else {
-        const modelAnnotation = walkForModelAnnotation(
+        const modelAnnotations = walkForModelAnnotation(
           that,
           tryParse.parse.tokenStream,
           tryParse.parse
         );
         this.response = {
-          modelAnnotation: {
-            ...modelAnnotation,
-            inherits: extendingModel?.annotation,
+          modelAnnotations: {
+            ...modelAnnotations,
+            inherits: extendingModel?.annotations,
           },
         };
       }
@@ -633,7 +633,7 @@ class TranslateStep implements TranslationStep {
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
       that.compilerFlagSrc.push(
-        ...new Annotations(extendingModel.annotation).texts('!')
+        ...new Annotations(extendingModel.annotations).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);

@@ -256,7 +256,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       sourceArguments,
       queryName: query.name,
       connectionName: ret.connectionName,
-      annotation: query.annotation,
+      annotations: query.annotations,
       queryTimezone: ret.structs[0].queryTimezone,
       defaultRowLimitAdded: addedDefaultRowLimit,
     };

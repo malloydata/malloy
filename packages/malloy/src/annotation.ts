@@ -1,6 +1,6 @@
 import type {Tag, TagError, SourceOrigin} from '@malloydata/malloy-tag';
 import {TagParser} from '@malloydata/malloy-tag';
-import type {Annotation, Note, DocumentLocation} from './model';
+import type {AnnotationsDef, Note, DocumentLocation} from './model';
 import type {LogMessage} from './lang';
 import {parsePrefix} from './prefix';
 
@@ -37,7 +37,7 @@ export interface RoutedAnnotation extends AnnotationText {
 }
 
 /** Every Note of an annotation, inherited first, in document order. */
-function* notesInOrder(annote: Annotation): Generator<Note> {
+function* notesInOrder(annote: AnnotationsDef): Generator<Note> {
   if (annote.inherits) yield* notesInOrder(annote.inherits);
   if (annote.blockNotes) yield* annote.blockNotes;
   if (annote.notes) yield* annote.notes;
@@ -51,14 +51,14 @@ function* notesInOrder(annote: Annotation): Generator<Note> {
  *   (you passed it); malformed prefixes excluded.
  */
 export function collectAnnotations(
-  annote: Annotation | undefined
+  annote: AnnotationsDef | undefined
 ): RoutedAnnotation[];
 export function collectAnnotations(
-  annote: Annotation | undefined,
+  annote: AnnotationsDef | undefined,
   route: string
 ): AnnotationText[];
 export function collectAnnotations(
-  annote: Annotation | undefined,
+  annote: AnnotationsDef | undefined,
   route?: string
 ): RoutedAnnotation[] | AnnotationText[] {
   if (route === undefined) {
@@ -89,12 +89,12 @@ export function collectAnnotations(
 }
 
 /**
- * Collect all matching Notes from an Annotation, walking the inherits
+ * Collect all matching Notes from an AnnotationsDef, walking the inherits
  * chain. Returns notes in inheritance order (inherited first).
  *
  * @deprecated RegExp prefix matching; use {@link collectAnnotations} with a route.
  */
-function collectNotes(annote: Annotation, prefix?: RegExp): Note[] {
+function collectNotes(annote: AnnotationsDef, prefix?: RegExp): Note[] {
   const notes = [...notesInOrder(annote)];
   return prefix ? notes.filter(note => note.text.match(prefix)) : notes;
 }
@@ -105,7 +105,7 @@ function collectNotes(annote: Annotation, prefix?: RegExp): Note[] {
  * view on a tagged entity (`entity.annotations.texts(route)`).
  */
 export function annotationToTaglines(
-  annote: Annotation | undefined,
+  annote: AnnotationsDef | undefined,
   prefix?: RegExp
 ): string[] {
   return collectNotes(annote || {}, prefix).map(n => n.text);
@@ -144,7 +144,7 @@ function parseTaglines(lines: ReadonlyArray<Note>): MalloyTagParse {
 
 /** Parse the annotations on `route` (default `''`, the MOTLY tag route) as MOTLY. */
 export function annotationToTag(
-  annote: Annotation | undefined,
+  annote: AnnotationsDef | undefined,
   route?: string
 ): MalloyTagParse;
 /**
@@ -154,11 +154,11 @@ export function annotationToTag(
  * tagged entity.
  */
 export function annotationToTag(
-  annote: Annotation | undefined,
+  annote: AnnotationsDef | undefined,
   spec?: TagParseSpec
 ): MalloyTagParse;
 export function annotationToTag(
-  annote: Annotation | undefined,
+  annote: AnnotationsDef | undefined,
   arg?: string | TagParseSpec
 ): MalloyTagParse {
   if (typeof arg === 'object') {
@@ -191,7 +191,7 @@ export function annotationToTag(
  * annotations.
  */
 export class Annotations {
-  constructor(private readonly annote: Annotation | undefined) {}
+  constructor(private readonly annote: AnnotationsDef | undefined) {}
 
   /**
    * Raw annotation text strings (prefix + content) — all routes if `route` is

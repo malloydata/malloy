@@ -173,7 +173,7 @@ export function emitVisibleToken(f: Formatter, t: Token, idx: number): void {
   const text = t.text ?? '';
 
   // ---- Verbatim regions: SQL strings and block annotations ----
-  // We don't own a SQL formatter. Annotation indentation is significant.
+  // We don't own a SQL formatter. AnnotationsDef indentation is significant.
   if (t.type === L.SQL_BEGIN) {
     const endIdx = findMatching(f.tokens, idx, L.SQL_BEGIN, L.SQL_END);
     const stop = f.tokens[endIdx].stopIndex;

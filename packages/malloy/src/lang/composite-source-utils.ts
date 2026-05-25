@@ -31,7 +31,7 @@ import type {
   AggregateUngrouping,
   RequiredGroupBy,
   DocumentLocation,
-  Annotation,
+  AnnotationsDef,
   PartitionCompositeDesc,
   FilterCondition,
   StructDef,
@@ -205,17 +205,17 @@ function _resolveCompositeSources(
         }
         base = {
           ...resolveInner.success,
-          annotation: composeAnnotations(
-            base.annotation,
-            resolveInner.success.annotation
+          annotations: composeAnnotations(
+            base.annotations,
+            resolveInner.success.annotations
           ),
         };
       } else {
         base = {
           ...inputSource,
-          annotation: composeAnnotations(
-            base.annotation,
-            inputSource.annotation
+          annotations: composeAnnotations(
+            base.annotations,
+            inputSource.annotations
           ),
         };
       }
@@ -730,12 +730,12 @@ function getPartitionCompositeFilter(
 }
 
 export function getPartitionCompositeDesc(
-  annotation: Annotation | undefined,
+  annotations: AnnotationsDef | undefined,
   structDef: StructDef,
   logTo: MalloyElement
 ): PartitionCompositeDesc | undefined {
-  if (annotation === undefined) return undefined;
-  const compilerFlags = new Annotations(annotation).parseAsTag('!').tag;
+  if (annotations === undefined) return undefined;
+  const compilerFlags = new Annotations(annotations).parseAsTag('!').tag;
   const partitionCompositeTag = compilerFlags.tag(
     'experimental',
     'partition_composite'
@@ -794,9 +794,9 @@ export function getPartitionCompositeDesc(
 }
 
 function composeAnnotations(
-  base: Annotation | undefined,
-  slice: Annotation | undefined
-): Annotation | undefined {
+  base: AnnotationsDef | undefined,
+  slice: AnnotationsDef | undefined
+): AnnotationsDef | undefined {
   if (base === undefined) return slice;
   if (slice === undefined) return base;
   const notes = [...(base.notes ?? []), ...(slice.notes ?? [])];

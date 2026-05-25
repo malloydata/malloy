@@ -22,7 +22,7 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   FieldUsageEntry,
   QueryFieldDef,
   TypeDesc,
@@ -93,12 +93,12 @@ export class ReferenceField extends SpaceField {
         const origFd = refTo.constructorFieldDef();
         if (origFd) {
           const notes = this.fieldRef.note;
-          if (origFd.annotation || notes) {
-            const annotation: Annotation = notes || {};
-            if (origFd.annotation) {
-              annotation.inherits = origFd.annotation;
+          if (origFd.annotations || notes) {
+            const annotations: AnnotationsDef = notes || {};
+            if (origFd.annotations) {
+              annotations.inherits = origFd.annotations;
             }
-            this.queryFieldDef.annotation = annotation;
+            this.queryFieldDef.annotations = annotations;
           }
         }
       }

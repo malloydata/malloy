@@ -22,7 +22,7 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   FieldDef,
   RefToField,
   TypeDesc,
@@ -58,7 +58,7 @@ export abstract class FieldReference
   implements Noteable, MakeEntry
 {
   readonly isNoteableObj = true;
-  note?: Annotation;
+  note?: AnnotationsDef;
   extendNote = extendNoteMethod;
 
   constructor(names: FieldName[]) {
@@ -267,7 +267,7 @@ export class ViewOrScalarFieldReference extends FieldReference {
 
 export class WildcardFieldReference extends MalloyElement implements Noteable {
   elementType = 'wildcardFieldReference';
-  note?: Annotation;
+  note?: AnnotationsDef;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   except = new Set<string>();

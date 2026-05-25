@@ -1161,7 +1161,7 @@ function runSQLOptionsWithAnnotations(
 ): RunSQLOptions {
   return {
     queryAnnotation: preparedResult.annotation,
-    modelAnnotation: preparedResult.modelAnnotation,
+    modelAnnotations: preparedResult.modelAnnotation,
     ...givenOptions,
   };
 }
