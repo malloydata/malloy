@@ -225,7 +225,16 @@ export function MalloyRenderInner(props: {
       tags().localTheme,
       props.theme
     );
+    // Plugin style overrides come from per-plugin `getStyleOverrides()`
+    // and are concatenated AFTER baseStyles, so they normally win on
+    // CSS-cascade last-wins. Suppress any plugin override whose key was
+    // explicitly set on `props.theme`; otherwise an embedder-supplied
+    // `theme.background` silently loses to plugin-derived defaults
+    // (e.g. bar-chart writing `--malloy-render--background` from its
+    // vegaConfig.background).
+    const suppressed = themeOverridesAsCssVarNames(props.theme);
     const overrideStyles = Object.entries(metadata().styleOverrides)
+      .filter(([key]) => !suppressed.has(key))
       .map(([key, value]) => `${key}: ${value};`)
       .join('\n');
     return baseStyles + overrideStyles;
@@ -290,21 +299,51 @@ export function MalloyRenderInner(props: {
   );
 }
 
+// Convert a MalloyExplicitTheme prop name to the matching renderer CSS
+// variable name, e.g. `tableRowHeight` -> `--malloy-render--table-row-height`.
+function themePropToCssVar(prop: keyof MalloyExplicitTheme): string {
+  return `--malloy-render--${prop
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .toLowerCase()}`;
+}
+
+// Set of `--malloy-render--*` CSS var names that the embedder has
+// explicitly set via `props.theme`. Used to suppress same-named plugin
+// style overrides so the explicit theme wins on the CSS cascade.
+// `mapColor` is excluded because it is consumed by Vega scales, not
+// rendered as a CSS var.
+function themeOverridesAsCssVarNames(
+  theme: MalloyExplicitTheme | undefined
+): Set<string> {
+  const names = new Set<string>();
+  if (!theme) return names;
+  for (const [key, value] of Object.entries(theme)) {
+    if (key === 'mapColor') continue;
+    if (typeof value !== 'string' || value === '') continue;
+    names.add(themePropToCssVar(key as keyof MalloyExplicitTheme));
+  }
+  return names;
+}
+
 // Resolve a single theme key. The first defined source wins:
 //   1. explicitTheme[prop] — caller-supplied via MalloyRendererOptions.theme
 //   2. localTheme tag      — `# theme.<prop>` on the result
 //   3. modelTheme tag      — `# theme.<prop>` on the model
 //   4. CSS fallback        — `var(--malloy-theme--<kebab>)`
+//
+// An empty string from any source is treated as "unset" so a cleared
+// form field falls through to the next source rather than emitting a
+// malformed CSS declaration (`--malloy-render--*: ;`).
 function getThemeValue(
   prop: keyof MalloyExplicitTheme,
   explicitTheme: MalloyExplicitTheme | undefined,
   ...themes: Array<Tag | undefined>
 ): string {
   const explicit = explicitTheme?.[prop];
-  if (typeof explicit !== 'undefined') return explicit;
+  if (typeof explicit === 'string' && explicit !== '') return explicit;
   for (const theme of themes) {
     const value = theme?.text(prop);
-    if (typeof value !== 'undefined') return value;
+    if (typeof value === 'string' && value !== '') return value;
   }
   // If no theme overrides, convert prop name from camelCase to kebab and pull from --malloy-theme-- variable
   return `var(--malloy-theme--${prop
