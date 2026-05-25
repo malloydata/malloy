@@ -394,7 +394,7 @@ export class TemporalFilterCompiler {
   }
 
   time(timeSQL: string): string {
-    if (this.timetype === 'timestamp') {
+    if (this.timetype !== 'date') {
       return timeSQL;
     }
     return this.d.sqlCast(
