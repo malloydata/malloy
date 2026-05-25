@@ -24,6 +24,7 @@ import type {
   RenderMetadata,
 } from '@/component/render-result-metadata';
 import type {RenderLogCollector} from '@/component/render-log-collector';
+import type {MalloyExplicitTheme} from '@/api/types';
 
 function getDataType(
   field: Field,
@@ -127,6 +128,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
     create: (field: Field): DOMRenderPluginInstance => {
       let vegaConfigOverride: Record<string, unknown> = {};
       let logCollector: RenderLogCollector | undefined;
+      let explicitTheme: MalloyExplicitTheme | undefined;
 
       return {
         name: 'shape_map',
@@ -141,6 +143,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
           vegaConfigOverride =
             options.getVegaConfigOverride?.('shape_map') ?? {};
           logCollector = options.renderFieldMetadata.logCollector;
+          explicitTheme = options.explicitTheme;
         },
 
         renderToDOM: (container: HTMLElement, props: RenderProps): void => {
@@ -164,7 +167,12 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
                   field: colorField.name,
                   type: colorType,
                   axis: {title: colorField.name},
-                  scale: getColorScale(colorType, false),
+                  scale: getColorScale(
+                    colorType,
+                    false,
+                    false,
+                    explicitTheme
+                  ),
                 }
               : undefined;
 

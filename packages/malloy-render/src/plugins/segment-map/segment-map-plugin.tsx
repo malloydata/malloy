@@ -23,6 +23,7 @@ import type {
   RenderMetadata,
 } from '@/component/render-result-metadata';
 import type {RenderLogCollector} from '@/component/render-log-collector';
+import type {MalloyExplicitTheme} from '@/api/types';
 
 function getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
   if (field.isString()) return 'nominal';
@@ -106,6 +107,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
     create: (field: Field): DOMRenderPluginInstance => {
       let vegaConfigOverride: Record<string, unknown> = {};
       let logCollector: RenderLogCollector | undefined;
+      let explicitTheme: MalloyExplicitTheme | undefined;
 
       return {
         name: 'segment_map',
@@ -120,6 +122,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
           vegaConfigOverride =
             options.getVegaConfigOverride?.('segment_map') ?? {};
           logCollector = options.renderFieldMetadata.logCollector;
+          explicitTheme = options.explicitTheme;
         },
 
         renderToDOM: (container: HTMLElement, props: RenderProps): void => {
@@ -145,7 +148,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
                   field: colorField.name,
                   type: colorType,
                   axis: {title: colorField.name},
-                  scale: getColorScale(colorType, false),
+                  scale: getColorScale(colorType, false, false, explicitTheme),
                 }
               : undefined;
 

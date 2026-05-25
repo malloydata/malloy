@@ -24,28 +24,45 @@
 import startCase from 'lodash/startCase';
 import type {RenderDef} from './data_styles';
 import type {RendererOptions} from './renderer_types';
+import type {MalloyExplicitTheme} from '../api/types';
 import {DateTime} from 'luxon';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {Field} from '../data_tree';
 
+/**
+ * Low end of the gradient generated for `mapColor` when the operator
+ * sets only the saturated high end. A near-white neutral grey reads
+ * well on both light and dark page chrome.
+ */
+const MAP_GRADIENT_LOW = '#f5f5f5';
+
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,
   isRectMark: boolean,
-  hasOverlappingText = false
+  hasOverlappingText = false,
+  explicitTheme?: MalloyExplicitTheme
 ): {range: string[]} | undefined {
   if (type === undefined) {
     return undefined;
   }
+  // Sequential scales (ordinal / quantitative non-rect) use the
+  // operator's `mapColor` as the saturated end of a 2-stop gradient
+  // when supplied. The rect-mark heatmap branch keeps its existing
+  // 2-colour orange/blue scheme — that's specifically tuned for the
+  // dual-tone heatmap-with-text rendering and isn't a map gradient.
+  const sequentialGradient = explicitTheme?.mapColor
+    ? [MAP_GRADIENT_LOW, explicitTheme.mapColor]
+    : null;
   switch (type) {
     case 'ordinal':
-      return {range: ['#C2D5EE', '#1A73E8']};
+      return {range: sequentialGradient ?? ['#C2D5EE', '#1A73E8']};
     case 'temporal':
     case 'quantitative':
       return isRectMark
         ? hasOverlappingText
           ? {range: ['#6BA4EE', '#EEA361']}
           : {range: ['#1A73E8', '#E8710A']}
-        : {range: ['#C2D5EE', '#1A73E8']};
+        : {range: sequentialGradient ?? ['#C2D5EE', '#1A73E8']};
     case 'nominal':
       return hasOverlappingText
         ? {

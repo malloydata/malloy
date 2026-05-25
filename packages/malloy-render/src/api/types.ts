@@ -40,6 +40,14 @@ export interface MalloyExplicitTheme {
   tablePinnedBorder?: string;
   fontFamily?: string;
   background?: string;
+  /**
+   * Saturated end of the gradient used by sequential color scales
+   * (choropleth maps, heatmaps, area charts). The renderer pairs this
+   * with a near-neutral low-end (`#f5f5f5`) so the operator only has
+   * to pick the brand-saturated colour. When unset, the renderer
+   * falls back to its built-in blue gradient.
+   */
+  mapColor?: string;
 }
 
 export interface MalloyRendererOptions {
