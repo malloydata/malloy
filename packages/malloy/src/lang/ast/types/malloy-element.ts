@@ -542,6 +542,10 @@ export class Document extends MalloyElement implements NameSpace {
   documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
   documentGivens = new Map<GivenID, Given>();
+  // When an `export { … }` statement appears, the document switches from
+  // "everything declared here is exported" to "only names in this set are
+  // exported." Undefined means no export statement has been seen.
+  explicitExports: Set<string> | undefined;
   queryList: Query[] = [];
   statements: DocStatementList;
   didInitModel = false;
@@ -562,6 +566,7 @@ export class Document extends MalloyElement implements NameSpace {
     this.documentModel = new Map<string, ModelEntry>();
     this.documentSrcRegistry = {};
     this.documentGivens = new Map<GivenID, Given>();
+    this.explicitExports = undefined;
     this.queryList = [];
     if (extendingModelDef) {
       if (extendingModelDef.annotation) {
@@ -716,6 +721,9 @@ export class Document extends MalloyElement implements NameSpace {
     if (this.hasAnnotation()) {
       def.annotation = this.currentModelAnnotation();
     }
+    const explicit = this.explicitExports;
+    const isExported = (name: string, modelEntry: ModelEntry): boolean =>
+      explicit ? explicit.has(name) : modelEntry.exported === true;
     for (const [name, modelEntry] of this.documentModel) {
       const entryDef = modelEntry.entry;
       if (
@@ -723,7 +731,7 @@ export class Document extends MalloyElement implements NameSpace {
         entryDef.type === 'query' ||
         entryDef.type === 'userType'
       ) {
-        if (modelEntry.exported) {
+        if (isExported(name, modelEntry)) {
           def.exports.push(name);
         }
         if (entryDef.type === 'userType') {
@@ -736,7 +744,7 @@ export class Document extends MalloyElement implements NameSpace {
           def.contents[name] = newEntry;
         }
       } else if (entryDef.type === 'given') {
-        if (modelEntry.exported) {
+        if (isExported(name, modelEntry)) {
           def.exports.push(name);
         }
         def.contents[name] = {...entryDef};

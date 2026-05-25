@@ -2105,6 +2105,14 @@ export class MalloyToAST
     return this.parseTime(pcx, ast.LiteralYear.parse);
   }
 
+  visitExportStatement(pcx: parse.ExportStatementContext): ast.ExportStatement {
+    const items = pcx.exportItem().map(itemCx => {
+      const idCx = itemCx.id();
+      return this.astAt(new ast.ExportItem(idToStr(idCx)), idCx);
+    });
+    return this.astAt(new ast.ExportStatement(items), pcx);
+  }
+
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
     const url = this.getPlainStringFrom(pcx.importURL());
     const importStmt = this.astAt(

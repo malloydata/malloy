@@ -319,6 +319,9 @@ type MessageParameterTypes = {
   'selective-import-not-found': string;
   'name-conflict-on-indiscriminate-import': string;
   'failed-import': string;
+  'export-name-not-defined': string;
+  'export-name-not-exportable': string;
+  'duplicate-export-name': string;
   'unsatisfied-given-in-query': string;
   'given-alias-collision': string;
   'failed-to-compute-output-schema': string;
