@@ -181,7 +181,11 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
                 },
               },
             ],
-            background: 'transparent',
+            // Background sourced from config.background (vegaConfigOverride
+            // supplies it from the embedder's theme) rather than the
+            // previous hardcoded 'transparent'. Same change as
+            // shape-map-plugin so maps paint the chart canvas colour
+            // operators picked in their theme.
             config: SEGMENT_MAP_VEGA_CONFIG,
           };
 

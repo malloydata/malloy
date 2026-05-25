@@ -213,7 +213,13 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
                 },
               },
             ],
-            background: 'transparent',
+            // Background sourced from config.background (which embedders
+            // supply via vegaConfigOverride) rather than hardcoded
+            // transparent. Vega defaults to white when unset, matching
+            // the prior transparent-against-white behaviour on
+            // unstyled hosts. A consumer that genuinely wants a
+            // transparent map can still set `config.background:
+            // 'transparent'` in their vegaConfigOverride.
             config: SHAPE_MAP_VEGA_CONFIG,
           };
 
