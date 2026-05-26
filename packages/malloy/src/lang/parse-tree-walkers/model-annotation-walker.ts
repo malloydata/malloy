@@ -26,7 +26,7 @@ import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
 import type {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import type * as parser from '../lib/Malloy/MalloyParser';
 import type {MalloyTranslation} from '../parse-malloy';
-import type {Annotation, Note} from '../../model/malloy_types';
+import type {AnnotationsDef, Note} from '../../model/malloy_types';
 import type {MalloyParseInfo} from '../malloy-parse-info';
 import {noteFromAnnotation} from '../parse-utils';
 
@@ -44,7 +44,7 @@ class ModelAnnotationWalker implements MalloyParserListener {
     }
   }
 
-  get annotation(): Annotation {
+  get annotations(): AnnotationsDef {
     return {notes: this.notes};
   }
 }
@@ -53,9 +53,9 @@ export function walkForModelAnnotation(
   forParse: MalloyTranslation,
   tokens: CommonTokenStream,
   parseInfo: MalloyParseInfo
-): Annotation {
+): AnnotationsDef {
   const finder = new ModelAnnotationWalker(forParse, tokens, parseInfo);
   const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseInfo.root);
-  return finder.annotation;
+  return finder.annotations;
 }

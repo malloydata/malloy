@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Annotation} from '../../../model';
+import type {AnnotationsDef} from '../../../model';
 import type {MalloyElement} from './malloy-element';
 import {ListOf} from './malloy-element';
 import type {Noteable} from '../types/noteable';
@@ -32,9 +32,9 @@ export abstract class DefinitionList<DT extends MalloyElement>
   implements Noteable
 {
   readonly isNoteableObj = true;
-  note?: Annotation;
+  note?: AnnotationsDef;
 
-  extendNote(ext: Partial<Annotation>) {
+  extendNote(ext: Partial<AnnotationsDef>) {
     extendNoteHelper(this, ext);
     this.distributeAnnotation();
   }

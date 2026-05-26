@@ -56,7 +56,7 @@ export class GivenReference extends ExpressionDef {
       location: this.location,
       definition: {
         type: typeDefToString(given.type),
-        annotation: given.annotation,
+        annotations: given.annotations,
         location: given.location,
         defaultText: given.defaultText,
       },

@@ -4,7 +4,7 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   Expr,
   Given,
   GivenEntry,
@@ -77,7 +77,7 @@ export class GivenDeclaration
   elementType = 'given';
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: Annotation;
+  note?: AnnotationsDef;
   readonly default?: ConstantExpression;
 
   constructor(
@@ -217,7 +217,7 @@ export class GivenDeclaration
       defaultText,
       givenUsage,
       location: this.location,
-      annotation: this.note,
+      annotations: this.note,
       ...(this.inline ? {inline: true} : {}),
     };
     doc.documentGivens.set(id, givenIR);
@@ -241,7 +241,7 @@ export class GivenDeclaration
       },
       definition: {
         type: typeDefToString(this.typeDef),
-        annotation: this.note,
+        annotations: this.note,
         location: this.location,
         defaultText,
       },

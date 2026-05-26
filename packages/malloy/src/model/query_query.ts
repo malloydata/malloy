@@ -651,9 +651,9 @@ export class QueryQuery extends QueryField {
             join: 'many',
             name,
             fields: structDef.fields,
-            ...(structDef.annotation && {annotation: structDef.annotation}),
-            ...(structDef.modelAnnotation && {
-              modelAnnotation: structDef.modelAnnotation,
+            ...(structDef.annotations && {annotations: structDef.annotations}),
+            ...(structDef.modelAnnotations && {
+              modelAnnotations: structDef.modelAnnotations,
             }),
             resultMetadata,
             ...(queryTimezone && {queryTimezone}),
@@ -665,9 +665,9 @@ export class QueryQuery extends QueryField {
             join: 'one',
             name,
             fields: structDef.fields,
-            ...(structDef.annotation && {annotation: structDef.annotation}),
-            ...(structDef.modelAnnotation && {
-              modelAnnotation: structDef.modelAnnotation,
+            ...(structDef.annotations && {annotations: structDef.annotations}),
+            ...(structDef.modelAnnotations && {
+              modelAnnotations: structDef.modelAnnotations,
             }),
             resultMetadata,
             ...(queryTimezone && {queryTimezone}),
@@ -698,12 +698,12 @@ export class QueryQuery extends QueryField {
           }
 
           const location = fOut.location;
-          const annotation = fOut.annotation;
+          const annotations = fOut.annotations;
 
           const common = {
             resultMetadata,
             location,
-            annotation,
+            annotations,
           };
 
           // build out the result fields...
@@ -764,8 +764,8 @@ export class QueryQuery extends QueryField {
       resultMetadata: this.getResultMetadata(this.rootResult),
       queryTimezone: resultStruct.getQueryInfo().queryTimezone,
     };
-    if (this.parent.structDef.modelAnnotation) {
-      outputStruct.modelAnnotation = this.parent.structDef.modelAnnotation;
+    if (this.parent.structDef.modelAnnotations) {
+      outputStruct.modelAnnotations = this.parent.structDef.modelAnnotations;
     }
 
     return outputStruct;
@@ -2196,7 +2196,7 @@ export class QueryQuery extends QueryField {
       // console.log(stageWriter.generateSQLStages());
       structDef = pipeOut.outputStruct;
     }
-    structDef.annotation = fi.turtleDef.annotation;
+    structDef.annotations = fi.turtleDef.annotations;
     return {
       structDef,
       pipeOut,
@@ -2562,8 +2562,8 @@ class QueryQueryIndex extends QueryQuery {
       ],
       connection: this.parent.connectionName,
     };
-    if (this.parent.structDef.modelAnnotation) {
-      ret.modelAnnotation = this.parent.structDef.modelAnnotation;
+    if (this.parent.structDef.modelAnnotations) {
+      ret.modelAnnotations = this.parent.structDef.modelAnnotations;
     }
     return ret;
   }

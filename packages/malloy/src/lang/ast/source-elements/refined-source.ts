@@ -23,7 +23,7 @@
 
 import type {
   AccessModifierLabel,
-  Annotation,
+  AnnotationsDef,
   SourceDef,
 } from '../../../model/malloy_types';
 import {
@@ -57,7 +57,7 @@ import {
  */
 export class RefinedSource extends Source {
   elementType = 'refinedSource';
-  currentAnnotation?: Annotation;
+  currentAnnotation?: AnnotationsDef;
 
   constructor(
     readonly source: Source,

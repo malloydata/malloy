@@ -37,7 +37,7 @@ import type {
 import {makeLogMessage} from './parse-log';
 import type {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
-import {parsePrefix} from '../prefix';
+import {parsePrefix} from './annotation-prefix';
 import type {FieldDeclarationConstructor} from './ast';
 import {TableSource} from './ast';
 import type {HasString, HasID} from './parse-utils';
@@ -102,7 +102,7 @@ const DEFAULT_COMPILER_FLAGS = [];
 const LEGAL_FILTER_TYPES =
   'string, number, boolean, date, timestamp, timestamptz';
 
-type HasAnnotations = ParserRuleContext & {
+type AnnotatedCtx = ParserRuleContext & {
   annotation: () => parse.AnnotationContext[];
 };
 
@@ -405,7 +405,7 @@ export class MalloyToAST
     this.contextError(cx, parsed.malformation, {prefix});
   }
 
-  protected getNotes(cx: HasAnnotations): Note[] {
+  protected getNotes(cx: AnnotatedCtx): Note[] {
     return cx.annotation().map(a => this.getAnnotation(a));
   }
 
@@ -2188,7 +2188,7 @@ export class MalloyToAST
         this.contextError(
           pcx,
           'unclosed-block-annotation',
-          'Block annotation is not closed, add correctly indented "|##"'
+          'Multi-line annotation is not closed, add correctly indented "|##"'
         );
       }
     }
@@ -2213,7 +2213,7 @@ export class MalloyToAST
       this.contextError(
         pcx,
         'unclosed-block-annotation',
-        'Block annotation is not closed, add correctly indented "|#"'
+        'Multi-line annotation is not closed, add correctly indented "|#"'
       );
     } else {
       this.contextError(
@@ -2236,7 +2236,7 @@ export class MalloyToAST
       this.contextError(
         pcx,
         'unclosed-block-annotation',
-        'Block annotation is not closed, add correctly indented "|##"'
+        'Multi-line annotation is not closed, add correctly indented "|##"'
       );
     } else {
       this.contextError(

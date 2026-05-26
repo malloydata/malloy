@@ -48,7 +48,7 @@ export abstract class DynamicSpace
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
   protected newAccessModifiers = new Map<string, model.AccessModifierLabel>();
-  protected newNotes = new Map<string, model.Annotation>();
+  protected newNotes = new Map<string, model.AnnotationsDef>();
 
   constructor(extending: SourceDef) {
     super({...extending}, extending.dialect, extending.connection);
@@ -178,9 +178,9 @@ export abstract class DynamicSpace
         const field = this.sourceDef.fields[index];
         this.sourceDef.fields[index] = {
           ...field,
-          annotation: {
+          annotations: {
             ...note,
-            inherits: field.annotation,
+            inherits: field.annotations,
           },
         };
       }

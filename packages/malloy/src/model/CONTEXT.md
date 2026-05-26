@@ -55,34 +55,36 @@ The compiler consumes **Intermediate Representation (IR)** produced by the trans
 
 ### Annotations in the IR
 
-Annotations attach to any IR entity with an `annotation?: Annotation` field:
+Annotations attach to any IR entity with an `annotations?: AnnotationsDef` field:
 
 ```ts
-interface Annotation {
-  inherits?: Annotation;     // parent's annotation when this entity is derived
-  blockNotes?: Note[];       // block-level notes shared across items in a block
+interface AnnotationsDef {
+  inherits?: AnnotationsDef; // parent's annotations when this entity is derived
+  blockNotes?: Note[];       // notes inherited from a containing block of definitions
   notes?: Note[];            // notes attached directly to this entity
 }
 interface Note {
   text: string;
   at: DocumentLocation;
-  indentStripped?: number;   // characters dedented per body line (block notes)
+  indentStripped?: number;   // characters dedented per body line (multi-line annotations)
 }
 ```
 
 `text` is the annotation **as stored**: the marker and prefix are kept
-verbatim, line endings are LF-normalized, and for block annotations the body
-is dedented (`indentStripped` records how many leading characters were
-removed per non-blank body line). Routes are derived at retrieval by
-`parsePrefix` (`../prefix.ts`); the Note stores no route. **Read through the
-`Annotations` view (`../annotation.ts`)** — it flattens `inherits` and
-filters by route. Walking the three buckets yourself is a smell.
+verbatim, line endings are LF-normalized, and for multi-line annotations
+the body is dedented (`indentStripped` records how many leading characters
+were removed per non-blank body line). Routes are derived at retrieval by
+`parsePrefix` (`../lang/annotation-prefix.ts`); the Note stores no route.
+**Read through the `Annotations` view (`../api/foundation/annotation.ts`)** —
+it flattens `inherits` and filters by route. Walking the three buckets
+yourself is a smell.
 
 `indentStripped` is what lets payload-parser error columns map back to
 source: for a body line, `source_col = indentStripped + parser_col`. The
-`Annotations` view's `mapMalloyError` and the BYO-door `forRoute(route)`
-both surface this — consumers parsing non-MOTLY content can compute their
-own source columns the same way.
+`Annotations` view's `mapMalloyError` and the `forRoute(route)` door (which
+returns `RoutedNote` instances carrying offsets) both surface this —
+consumers parsing non-MOTLY content can compute their own source columns
+the same way.
 
 `inherits` is populated when an entity *derives* from another (most
 prominently `source: child is parent extend { ... }` in

@@ -2478,7 +2478,7 @@ describe('query:', () => {
         f => f.as === 'aext'
       );
       expect(aext).toBeDefined();
-      expect(aext?.annotation?.blockNotes).toMatchObject([
+      expect(aext?.annotations?.blockNotes).toMatchObject([
         {text: '# only_on_s2\n'},
       ]);
     });
@@ -2514,7 +2514,7 @@ describe('query:', () => {
         f => f.as === 'aext'
       );
       expect(aext).toBeDefined();
-      expect(aext?.annotation?.blockNotes).toMatchObject([
+      expect(aext?.annotations?.blockNotes).toMatchObject([
         {text: '# only_on_s2\n'},
       ]);
     });

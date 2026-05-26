@@ -22,7 +22,7 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
@@ -68,7 +68,7 @@ export abstract class AtomicFieldDeclaration
 {
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: Annotation;
+  note?: AnnotationsDef;
 
   constructor(
     readonly expr: ExpressionDef,
@@ -174,7 +174,7 @@ export abstract class AtomicFieldDeclaration
         ret.code = this.exprSrc;
       }
       if (this.note) {
-        ret.annotation = this.note;
+        ret.annotations = this.note;
       }
       return ret;
     }

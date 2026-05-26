@@ -77,8 +77,8 @@ export function mkQuerySourceDef(
     location: base.location,
 
     // StructDefBase
-    annotation: base.annotation,
-    modelAnnotation: base.modelAnnotation,
+    annotations: base.annotations,
+    modelAnnotations: base.modelAnnotations,
     fields: base.fields,
 
     // Filtered
@@ -129,8 +129,8 @@ export function mkSQLSourceDef(
     location: base.location,
 
     // StructDefBase
-    annotation: base.annotation,
-    modelAnnotation: base.modelAnnotation,
+    annotations: base.annotations,
+    modelAnnotations: base.modelAnnotations,
     fields: base.fields,
 
     // Filtered
