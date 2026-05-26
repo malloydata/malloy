@@ -267,10 +267,12 @@ export class Explore extends Entity implements Taggable {
     return false;
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec): MalloyTagParse {
     return annotationToTag(this._structDef.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp): string[] {
     return annotationToTaglines(this._structDef.annotations, prefix);
   }
@@ -638,10 +640,12 @@ export class AtomicField extends Entity implements Taggable {
     }
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec) {
     return annotationToTag(this.fieldTypeDef.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this.fieldTypeDef.annotations, prefix);
   }
@@ -913,10 +917,12 @@ export class QueryField extends Query implements Taggable {
     this.parent = parent;
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec) {
     return annotationToTag(this.turtleDef.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this.turtleDef.annotations, prefix);
   }
@@ -1188,10 +1194,12 @@ export class Model implements Taggable {
     return out;
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec): MalloyTagParse {
     return annotationToTag(this.modelDef.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this.modelDef.annotations, prefix);
   }
@@ -1522,22 +1530,20 @@ export class PersistSource implements Taggable {
   }
 
   /**
-   * The annotation on this source.
+   * @deprecated Hands out raw IR (`AnnotationsDef`). Use `.annotations`
+   * (returns the {@link Annotations} view). Slated for removal once
+   * external consumers migrate.
    */
   get annotation(): AnnotationsDef | undefined {
     return this.persistableDef.annotations;
   }
 
-  /**
-   * Parse the source's tags.
-   */
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec): MalloyTagParse {
     return this.explore.tagParse(spec);
   }
 
-  /**
-   * Get annotation taglines matching an optional prefix.
-   */
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp): string[] {
     return this.explore.getTaglines(prefix);
   }
@@ -1657,10 +1663,12 @@ export class Given implements Taggable {
     return this._internal.location;
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec): MalloyTagParse {
     return annotationToTag(this._internal.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp): string[] {
     return annotationToTaglines(this._internal.annotations, prefix);
   }
@@ -1686,10 +1694,12 @@ export class PreparedQuery implements Taggable {
     return this._model._modelDef;
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec) {
     return annotationToTag(this._query.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this._query.annotations, prefix);
   }
@@ -1817,10 +1827,12 @@ export class PreparedResult implements Taggable {
     return new PreparedResult(query, modelDef);
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec): MalloyTagParse {
     return annotationToTag(this.inner.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp) {
     return annotationToTaglines(this.inner.annotations, prefix);
   }
