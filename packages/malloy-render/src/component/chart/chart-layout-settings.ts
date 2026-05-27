@@ -221,16 +221,13 @@ export function getXAxisSettings({
 
   const maxStringSize = getTextWidthDOM(maxString, xLabelFontStyles);
   const ellipsesSize = getTextWidthDOM('...', xLabelFontStyles);
+  const horizontalLabelHeight = getTextHeightDOM(
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZgy',
+    xLabelFontStyles
+  );
 
-  const X_AXIS_THRESHOLD = 0.35;
-  const plotHeight = chartHeight - 2 * xTitleOffset - xTitleSize - ellipsesSize;
-
-  let labelHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * plotHeight);
-  labelLimit = labelHeight;
-  if (labelHeight < maxStringSize) {
-    labelHeight += ellipsesSize;
-  }
-  xAxisHeight = labelHeight + xTitleOffset * 2 + xTitleSize + xLabelPadding;
+  const titleBlock = xTitleOffset * 2 + xTitleSize + xLabelPadding;
+  const labelHeightBudget = Math.max(0, chartHeight - titleBlock);
 
   // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
   const uniqueValuesCt = xField.valueSet.size;
@@ -240,27 +237,57 @@ export function getXAxisSettings({
     : parentField.maxUniqueFieldValueCounts.get(xField.name)!;
   // TODO: shouldn't yTitleSize and yAxisWidth be subtracted from this chartWidth?
   const xSpacePerLabel = chartWidth / recordsToFit;
-  if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
+
+  // labelSeparation in the Vega axis spec; keep in sync with generate-*-vega-spec.ts.
+  const LABEL_SEPARATION = 4;
+  // cos(45°) = sin(45°) = √2/2. The vertical bounding box of a -45° rotated
+  // label is (width + lineHeight) * cos(45°), since both the width and the
+  // line-height project onto the vertical axis after rotation.
+  const SQRT2_OVER_2 = Math.SQRT1_2;
+  const diagonalBand = (maxStringSize + horizontalLabelHeight) * SQRT2_OVER_2;
+
+  let reservedLabelBand: number;
+
+  if (xSpacePerLabel >= maxStringSize + LABEL_SEPARATION) {
+    // Tier 1: horizontal. Labels fit without overlap, no truncation needed.
     labelAngle = 0;
-    // Remove label limit; our vega specs should use labelOverlap setting to hide overlapping labels
     labelLimit = 0;
     labelAlign = undefined;
-
-    const horizontalLabelHeight = getTextHeightDOM(
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZgy',
-      xLabelFontStyles
-    );
-    xAxisHeight = horizontalLabelHeight + xTitleOffset * 2 + xTitleSize;
+    reservedLabelBand = horizontalLabelHeight;
+  } else if (
+    xSpacePerLabel >= maxStringSize * SQRT2_OVER_2 + LABEL_SEPARATION &&
+    diagonalBand <= labelHeightBudget
+  ) {
+    // Tier 2: diagonal (-45°). Both the horizontal and vertical projections fit.
+    labelAngle = -45;
+    labelAlign = 'right';
+    labelLimit = 0;
+    reservedLabelBand = diagonalBand;
+  } else {
+    // Tier 3: vertical (-90°). Truncate only when the label genuinely doesn't fit.
+    labelAngle = -90;
+    labelAlign = 'right';
+    if (maxStringSize <= labelHeightBudget) {
+      labelLimit = 0;
+      reservedLabelBand = maxStringSize;
+    } else {
+      // Vega appends '...' past labelLimit, so the rendered band is
+      // labelLimit + ellipsesSize. Math.max(1, ...) avoids labelLimit=0
+      // which Vega treats as "no limit".
+      labelLimit = Math.max(1, labelHeightBudget);
+      reservedLabelBand = labelLimit + ellipsesSize;
+    }
   }
 
-  const titleArea = xAxisHeight - (xLabelPadding + labelLimit);
+  xAxisHeight = reservedLabelBand + titleBlock;
+  const titleArea = xAxisHeight - (xLabelPadding + reservedLabelBand);
 
   return {
     labelAngle,
     labelLimit,
     labelPadding: xLabelPadding,
-    minExtent: labelLimit,
-    maxExtent: labelLimit,
+    minExtent: reservedLabelBand,
+    maxExtent: reservedLabelBand,
     labelBaseline: 'top',
     labelAlign,
     height: xAxisHeight,
