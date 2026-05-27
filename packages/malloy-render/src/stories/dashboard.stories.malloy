@@ -710,9 +710,9 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       sum_retail is retail_price.sum()
   }
 
-  // Invalid span on one child: that child falls back to its default
-  // span (4 for nests with one inner field). Grid mode is still active
-  // because the other child has a valid span.
+  // Invalid span on one child: that child falls back to its computed
+  // default span. Grid mode is still active because the sibling has a
+  // valid span.
   #(story)
   # dashboard
   view: dashboard_fallback_bad_span is {
