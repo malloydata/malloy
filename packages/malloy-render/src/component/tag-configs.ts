@@ -327,8 +327,16 @@ function resolveDashboardTags(field: Field): DashboardNestConfig {
     maxTableHeight = maxTableHeightTag.numeric()!;
   }
 
-  const columns = dashboardTag?.numeric('columns');
-  const gap = dashboardTag?.numeric('gap');
+  // Drop out-of-range values so layout falls back to defaults; the
+  // validator emits a clear error so the user knows what's wrong.
+  const rawColumns = dashboardTag?.numeric('columns');
+  const columns =
+    rawColumns !== undefined && Number.isInteger(rawColumns) && rawColumns >= 1
+      ? rawColumns
+      : undefined;
+
+  const rawGap = dashboardTag?.numeric('gap');
+  const gap = rawGap !== undefined && rawGap >= 0 ? rawGap : undefined;
 
   return {maxTableHeight, columns, gap};
 }
@@ -391,7 +399,14 @@ export function resolveBuiltInTags(field: Field): void {
         for (const child of field.fields) {
           const childTag = child.tag;
           const spanVal = childTag.numeric('span');
-          if (spanVal !== undefined) {
+          // Drop out-of-range spans so the field gets its default span;
+          // the validator already logged the error.
+          if (
+            spanVal !== undefined &&
+            Number.isInteger(spanVal) &&
+            spanVal >= 1 &&
+            spanVal <= 12
+          ) {
             child.setResolvedSpan(spanVal);
           }
           const subtitle = childTag.text('subtitle');
