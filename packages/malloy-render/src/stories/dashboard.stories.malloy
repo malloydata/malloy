@@ -676,4 +676,62 @@ source: products is duckdb.table("static/data/products.parquet") extend {
         limit: 5
       }
   }
+
+  // ============================================
+  // DEFENSIVE FALLBACKS: invalid layout values
+  // Validator logs an error AND the renderer falls back to default
+  // layout instead of feeding broken values into CSS. Each story below
+  // should render successfully (in flex / default span), not as a
+  // broken grid.
+  // ============================================
+
+  // Invalid columns: should render as flex (no grid mode triggered).
+  #(story)
+  # dashboard { columns = -3 }
+  view: dashboard_fallback_bad_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+  }
+
+  // Invalid gap: should render as flex with the default gap; CSS must
+  // not contain `gap: -5px`.
+  #(story)
+  # dashboard { gap = -5 }
+  view: dashboard_fallback_bad_gap is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+  }
+
+  // Invalid span on one child: that child falls back to its default
+  // span (4 for nests with one inner field). Grid mode is still active
+  // because the other child has a valid span.
+  #(story)
+  # dashboard
+  view: dashboard_fallback_bad_span is {
+    group_by:
+      category
+    nest:
+      # span = 15
+      # bar_chart
+      bad_span is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
+      }
+      # span = 6
+      # bar_chart
+      good_span is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
+      }
+  }
 }
