@@ -192,13 +192,16 @@ export function Dashboard(props: {
     // items take exactly their share of 12 (span 3 of 12 = 25% width) —
     // otherwise two span=3 items in a half-full row would each stretch to
     // 50% and lose the sizing intent.
-    const frTemplate = totalSpan >= 12
-      ? spans.map(s => `${s}fr`).join(' ')
-      : spans.map(s => `minmax(0, ${((s / 12) * 100).toFixed(1)}%)`).join(' ');
+    const frTemplate =
+      totalSpan >= 12
+        ? spans.map(s => `${s}fr`).join(' ')
+        : spans
+            .map(s => `minmax(0, ${((s / 12) * 100).toFixed(1)}%)`)
+            .join(' ');
 
     const minWidths = group.map(itemMinWidth);
-    const minRowWidth = minWidths.reduce((a, b) => a + b, 0)
-      + (group.length - 1) * gapPx;
+    const minRowWidth =
+      minWidths.reduce((a, b) => a + b, 0) + (group.length - 1) * gapPx;
 
     return {frTemplate, collapseClass: bucketFor(minRowWidth)};
   };
