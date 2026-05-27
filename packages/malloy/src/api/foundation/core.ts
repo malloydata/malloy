@@ -19,6 +19,7 @@ import type {
   GivenID,
   GivenTypeDef,
   Query as InternalQuery,
+  Pipeline,
   ModelDef,
   DocumentPosition as ModelDocumentPosition,
   NamedQueryDef,
@@ -233,6 +234,17 @@ export type PreparedResultJSON = {
   query: CompiledQuery;
   modelDef: ModelDef;
 };
+
+/**
+ * Identifier-only enumeration of a model's top-level queries.
+ * Internal: returned by `Model.queries()`, not exported. Callers pair
+ * the names with `getPreparedQueryByName` and the indices `0..unnamed-1`
+ * with `getPreparedQueryByIndex` to load any one of them.
+ */
+interface ModelQueries {
+  named: string[];
+  unnamed: number;
+}
 
 // =============================================================================
 // Explore
@@ -887,7 +899,7 @@ export class StringField extends AtomicField {
 // Query and QueryField
 // =============================================================================
 
-export class Query extends Entity {
+export class Query extends Entity implements Taggable {
   protected turtleDef: TurtleDef;
   private sourceQuery?: Query;
 
@@ -907,15 +919,6 @@ export class Query extends Entity {
   public get location(): DocumentLocation | undefined {
     return this.turtleDef.location;
   }
-}
-
-export class QueryField extends Query implements Taggable {
-  protected parent: Explore;
-
-  constructor(turtleDef: TurtleDef, parent: Explore, source?: Query) {
-    super(turtleDef, parent, source);
-    this.parent = parent;
-  }
 
   /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec) {
@@ -929,6 +932,15 @@ export class QueryField extends Query implements Taggable {
 
   get annotations(): Annotations {
     return new Annotations(this.turtleDef.annotations);
+  }
+}
+
+export class QueryField extends Query {
+  protected parent: Explore;
+
+  constructor(turtleDef: TurtleDef, parent: Explore, source?: Query) {
+    super(turtleDef, parent, source);
+    this.parent = parent;
   }
 
   public isQueryField(): this is QueryField {
@@ -1331,9 +1343,27 @@ export class Model implements Taggable {
   }
 
   /**
-   * Get an array of `NamedQueryDef`s contained in the model.
+   * Enumerate the model's top-level queries by identifier.
    *
-   * @return An array of `NamedQueryDef`s contained in the model.
+   * Returns the names of named queries (`query: foo is ...`) and the count
+   * of unnamed `run:` statements. Pair with {@link getPreparedQueryByName}
+   * and {@link getPreparedQueryByIndex} to load any of them — those are the
+   * only path to the query itself; this getter exposes only identifiers,
+   * not IR.
+   */
+  public queries(): ModelQueries {
+    const named: string[] = [];
+    for (const object of Object.values(this.modelDef.contents)) {
+      if (object.type === 'query') {
+        named.push(object.name);
+      }
+    }
+    return {named, unnamed: this.modelDef.queryList.length};
+  }
+
+  /**
+   * @deprecated Leaks IR. Use {@link queries} for enumeration and
+   *   {@link getPreparedQueryByName} to load a named query.
    */
   public get namedQueries(): NamedQueryDef[] {
     const isNamedQueryDef = (
@@ -1678,34 +1708,50 @@ export class Given implements Taggable {
   }
 }
 
-export class PreparedQuery implements Taggable {
-  public _query: InternalQuery | NamedQueryDef;
+/**
+ * Internal abstract base for Foundation wrappers around an IR `Pipeline`
+ * (an IR object that has a pipeline, annotations, and a source location).
+ * Owns the four `Taggable` accessors and a `location` getter, all reading
+ * from the wrapped IR. Not exported.
+ */
+abstract class PipelineBase implements Taggable {
+  constructor(protected pipelineDef: Pipeline) {}
 
+  get annotations(): Annotations {
+    return new Annotations(this.pipelineDef.annotations);
+  }
+
+  get location(): DocumentLocation | undefined {
+    return this.pipelineDef.location;
+  }
+
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this.pipelineDef.annotations, spec);
+  }
+
+  /** @deprecated Use `.annotations.texts(route)`. */
+  getTaglines(prefix?: RegExp): string[] {
+    return annotationToTaglines(this.pipelineDef.annotations, prefix);
+  }
+}
+
+export class PreparedQuery extends PipelineBase {
   constructor(
     query: InternalQuery,
     private _model: Model,
     public problems: LogMessage[],
     public name?: string
   ) {
-    this._query = query;
+    super(query);
+  }
+
+  public get _query(): InternalQuery | NamedQueryDef {
+    return this.pipelineDef as InternalQuery | NamedQueryDef;
   }
 
   public get _modelDef(): ModelDef {
     return this._model._modelDef;
-  }
-
-  /** @deprecated Use `.annotations.parseAsTag(route)`. */
-  tagParse(spec?: TagParseSpec) {
-    return annotationToTag(this._query.annotations, spec);
-  }
-
-  /** @deprecated Use `.annotations.texts(route)`. */
-  getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this._query.annotations, prefix);
-  }
-
-  get annotations(): Annotations {
-    return new Annotations(this._query.annotations);
   }
 
   /**

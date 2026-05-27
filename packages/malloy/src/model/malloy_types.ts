@@ -1245,10 +1245,10 @@ export interface Filtered {
 export interface TurtleSegment extends Filtered {
   name: string;
 }
-export interface Pipeline {
+export interface Pipeline extends HasAnnotations, HasLocation {
   pipeline: PipeSegment[];
 }
-export interface Query extends Pipeline, Filtered, HasLocation, HasAnnotations {
+export interface Query extends Pipeline, Filtered {
   type?: 'query';
   name?: string;
   structRef: StructRef;
@@ -1517,7 +1517,7 @@ export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
 export type AccessModifierLabel = NonDefaultAccessModifierLabel | 'public';
 
-export interface TurtleDef extends NamedObject, Pipeline, HasAnnotations {
+export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   refSummary?: RefSummary;
