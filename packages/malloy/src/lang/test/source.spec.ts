@@ -31,7 +31,8 @@ import {
   getFieldDef,
 } from './test-translator';
 import './parse-expects';
-import {isSourceDef} from '../../model';
+import {isSourceDef, QueryModel} from '../../model';
+import type {VirtualMap} from '../../model';
 
 describe('source:', () => {
   test('table', () => {
@@ -1357,6 +1358,33 @@ describe('virtual sources', () => {
       errors: {connectionDialects: {a: 'a is not a connection'}},
     });
     expect(m).toLog(error('invalid-connection-for-table-source'));
+  });
+
+  test('query source referencing virtual source compiles with virtualMap', () => {
+    const m = vsModel(`
+      type: facts_fields is { category :: string, amount :: number }
+      source: facts_raw is _db_.virtual('facts_raw')::facts_fields
+
+      source: facts_agg is facts_raw -> {
+        group_by: category
+        aggregate: total is sum(amount)
+      } extend {
+        dimension: total_display is concat(category, ': ', total::string)
+      }
+
+      run: facts_raw -> { group_by: category; aggregate: total is sum(amount) }
+    `);
+    expect(m).toTranslate();
+
+    const modelDef = m.translate().modelDef!;
+    const virtualMap: VirtualMap = new Map([
+      ['_db_', new Map([['facts_raw', 'facts_table']])],
+    ]);
+    const queryModel = new QueryModel(modelDef);
+    const query = modelDef.queryList[0];
+    expect(() =>
+      queryModel.compileQuery(query, {virtualMap})
+    ).not.toThrow();
   });
 });
 

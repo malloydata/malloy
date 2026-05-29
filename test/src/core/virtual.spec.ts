@@ -239,6 +239,33 @@ describe('virtual source resolution', () => {
     const result = await runtime.loadQuery(code).run();
     expect(result.data.value.length).toBe(5);
   });
+
+  it('query source from virtual source with extend compiles', async () => {
+    const code = `${VIRTUAL_ANNOTATION}
+      type: flight_fields is {
+        carrier :: string,
+        dep_delay :: number,
+        distance :: number
+      }
+      source: flights is ${tstDB}.virtual('vflights')::flight_fields
+
+      source: flights_agg is flights -> {
+        group_by: carrier
+        aggregate: total_distance is sum(distance)
+      } extend {
+        dimension: carrier_display is concat(carrier, ' airlines')
+      }
+
+      run: flights -> { group_by: carrier; aggregate: cnt is count(); limit: 5 }
+    `;
+
+    const virtualMap = mkVirtualMap({
+      [tstDB]: {vflights: 'malloytest.flights'},
+    });
+
+    const result = await tstRuntime.loadQuery(code).run({virtualMap});
+    expect(result.data.value.length).toBe(5);
+  });
 });
 
 describe('ManagedConnectionLookup', () => {

@@ -37,6 +37,8 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
+  private _modelLoaded = false;
+  private _pendingModelDef: ModelDef | undefined = undefined;
 
   get givens(): Record<string, Given> {
     return this.modelDef?.givens ?? {};
@@ -44,8 +46,18 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
 
   constructor(modelDef: ModelDef | undefined) {
     if (modelDef) {
-      this.loadModelFromDef(modelDef);
+      this._pendingModelDef = modelDef;
+      this.modelDef = modelDef;
     }
+  }
+
+  private ensureModelLoaded(
+    prepareResultOptions: PrepareResultOptions | undefined
+  ): void {
+    if (this._modelLoaded || !this._pendingModelDef) return;
+    this._modelLoaded = true;
+    this._loadModelFromDef(this._pendingModelDef, prepareResultOptions ?? {});
+    this._pendingModelDef = undefined;
   }
 
   // Another circularity breaking method ... call into QueryQuery
@@ -54,16 +66,31 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     query: Query,
     options: PrepareResultOptions | undefined
   ): SourceDef | undefined {
+    this.ensureModelLoaded(options);
     const result = this.loadQuery(query, undefined, options, false, false);
     return result.structs.pop();
   }
 
   loadModelFromDef(modelDef: ModelDef): void {
+    this._pendingModelDef = modelDef;
     this.modelDef = modelDef;
-    for (const s of Object.values(this.modelDef.contents)) {
+    this._modelLoaded = false;
+    this.structs.clear();
+  }
+
+  private _loadModelFromDef(
+    modelDef: ModelDef,
+    prepareResultOptions: PrepareResultOptions
+  ): void {
+    for (const s of Object.values(modelDef.contents)) {
       let qs;
       if (isSourceDef(s)) {
-        qs = new QueryStruct(s, undefined, {model: this}, {});
+        qs = new QueryStruct(
+          s,
+          undefined,
+          {model: this},
+          prepareResultOptions
+        );
         this.structs.set(getIdentifier(s), qs);
         qs.resolveQueryFields((query, options) =>
           this.getFinalOutputStruct(query, options)
@@ -80,7 +107,11 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     }
   }
 
-  getStructByName(name: string): QueryStruct {
+  getStructByName(
+    name: string,
+    prepareResultOptions?: PrepareResultOptions
+  ): QueryStruct {
+    this.ensureModelLoaded(prepareResultOptions);
     const s = this.structs.get(name);
     if (s) {
       return s;
@@ -98,17 +129,15 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     prepareResultOptions?: PrepareResultOptions
   ): QueryStruct {
     prepareResultOptions ??= {};
+    this.ensureModelLoaded(prepareResultOptions);
     if (typeof structRef === 'string') {
-      const ret = this.getStructByName(structRef);
-      if (sourceArguments !== undefined) {
-        return new QueryStruct(
-          ret.structDef,
-          sourceArguments,
-          ret.parent ? {struct: ret.parent} : {model: this},
-          prepareResultOptions
-        );
-      }
-      return ret;
+      const ret = this.getStructByName(structRef, prepareResultOptions);
+      return new QueryStruct(
+        ret.structDef,
+        sourceArguments ?? ret.sourceArguments,
+        ret.parent ? {struct: ret.parent} : {model: this},
+        prepareResultOptions
+      );
     }
     return new QueryStruct(
       structRef,
@@ -218,6 +247,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     prepareResultOptions?: PrepareResultOptions,
     finalize = true
   ): CompiledQuery {
+    this.ensureModelLoaded(prepareResultOptions);
     const addDefaultRowLimit = this.addDefaultRowLimit(
       query,
       prepareResultOptions?.defaultRowLimit
