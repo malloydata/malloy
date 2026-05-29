@@ -294,18 +294,21 @@ export abstract class MalloyElement {
     return asString;
   }
 
-  *walk(): Generator<MalloyElement> {
+  *allChildren(): Generator<MalloyElement> {
     for (const kidLabel of Object.keys(this.children)) {
       const kiddle = this.children[kidLabel];
       if (kiddle instanceof MalloyElement) {
         yield kiddle;
-        yield* kiddle.walk();
       } else {
-        for (const k of kiddle) {
-          yield k;
-          yield* k.walk();
-        }
+        yield* kiddle;
       }
+    }
+  }
+
+  *walk(): Generator<MalloyElement> {
+    for (const child of this.allChildren()) {
+      yield child;
+      yield* child.walk();
     }
   }
 
@@ -328,7 +331,7 @@ export abstract class MalloyElement {
   }
 
   needs(doc: Document): ModelDataRequest | undefined {
-    for (const child of this.walk()) {
+    for (const child of this.allChildren()) {
       const childNeeds = child.needs(doc);
       if (childNeeds) return childNeeds;
     }
