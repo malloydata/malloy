@@ -97,6 +97,45 @@ export function pickSampleStrategy(
   return 'tablesample-only';
 }
 
+/**
+ * BLOCK sampling percentages tried, in order, when sampling a known-large
+ * base table for VARIANT schema inference. See sampleVariantBlocks.
+ */
+export const VARIANT_SAMPLE_BLOCK_PERCENTS = [1, 10, 50] as const;
+
+/**
+ * Draw a VARIANT schema sample from a known-large base table, escalating the
+ * `TABLESAMPLE BLOCK` percentage until a draw returns rows.
+ *
+ * BLOCK sampling decides independently *per micro-partition* at p%, so a small
+ * p on a table with relatively few partitions can select ZERO partitions and
+ * return no rows. An empty draw is indistinguishable downstream from "this
+ * column is genuinely an opaque variant", so a single unlucky `BLOCK (1)` draw
+ * would silently degrade every VARIANT/ARRAY/OBJECT column to `sql native` —
+ * and non-deterministically, since BLOCK is unseeded, so the same table can
+ * resolve differently on consecutive schema fetches. Escalating p recovers
+ * evidence: each draw is still bounded by the caller's `LIMIT`, and because a
+ * single selected partition already over-fills that limit, the extra
+ * percentages cost at most about one partition's worth of scanning.
+ *
+ * `runSample(blockPercent)` runs the sample at the given percentage and
+ * resolves to the rows (or `undefined`/`[]` on error or empty draw). Returns
+ * the first non-empty result, or `undefined` if every percentage came back
+ * empty.
+ */
+export async function sampleVariantBlocks(
+  runSample: (blockPercent: number) => Promise<QueryRecord[] | undefined>,
+  blockPercents: readonly number[] = VARIANT_SAMPLE_BLOCK_PERCENTS
+): Promise<QueryRecord[] | undefined> {
+  for (const blockPercent of blockPercents) {
+    const rows = await runSample(blockPercent);
+    if (rows !== undefined && rows.length > 0) {
+      return rows;
+    }
+  }
+  return undefined;
+}
+
 export interface SnowflakeConnectionOptions {
   // snowflake sdk connection options
   connOptions?: ConnectionOptions;
@@ -363,28 +402,33 @@ export class SnowflakeConnection
       }
 
       if (fieldPathRows === undefined) {
-        const tablesampleQuery = makeSampleQuery(
-          `${projectVariants} from ${tablePath} TABLESAMPLE BLOCK (1) limit ${n}`
-        );
+        const blockSampleQuery = (blockPercent: number) =>
+          makeSampleQuery(
+            `${projectVariants} from ${tablePath} TABLESAMPLE BLOCK (${blockPercent}) limit ${n}`
+          );
         if (strategy === 'tablesample-only') {
           // Known-large base table: TABLESAMPLE is safe (reads a few
           // micro-partitions), plain LIMIT without a WHERE can be
-          // catastrophic on large partitioned tables. If TABLESAMPLE
-          // fails here we accept variant rather than risk an unbounded
-          // scan.
-          fieldPathRows =
-            (await this.executor.tryBatch(
-              tablesampleQuery,
+          // catastrophic on large partitioned tables. BLOCK decides
+          // per-partition, so a low percentage can return zero rows on a
+          // table with relatively few partitions; escalate the percentage
+          // until a draw yields evidence rather than silently degrading
+          // every variant column to sql native. Each draw is still bounded
+          // by `limit n`, so this never risks an unbounded scan.
+          fieldPathRows = await sampleVariantBlocks(blockPercent =>
+            this.executor.tryBatch(
+              blockSampleQuery(blockPercent),
               {},
               this.schemaSampleTimeoutMs
-            )) ?? undefined;
+            )
+          );
         } else {
           // Unknown size (view, temp view, non-parseable name) or
           // full-scan fallback: best-effort TABLESAMPLE→LIMIT chain.
           // The LIMIT fallback is the acknowledged "can't help" case
           // for views over large partitioned tables.
           fieldPathRows = await this.runSchemaSample(
-            tablesampleQuery,
+            blockSampleQuery(1),
             makeSampleQuery(`${projectVariants} from ${tablePath} limit ${n}`)
           );
         }

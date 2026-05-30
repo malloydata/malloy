@@ -3,7 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {pickSampleStrategy} from './snowflake_connection';
+import type {QueryRecord} from '@malloydata/malloy';
+import {
+  pickSampleStrategy,
+  sampleVariantBlocks,
+  VARIANT_SAMPLE_BLOCK_PERCENTS,
+} from './snowflake_connection';
 import {parseSnowflakeTableName} from './snowflake_table_name';
 
 describe('pickSampleStrategy', () => {
@@ -40,6 +45,63 @@ describe('pickSampleStrategy', () => {
     expect(pickSampleStrategy({bytes: 1, rowCount: 1}, 0)).toBe(
       'tablesample-only'
     );
+  });
+});
+
+describe('sampleVariantBlocks', () => {
+  const rows = (n: number): QueryRecord[] =>
+    Array.from({length: n}, (_, i) => ({N: i}));
+
+  test('returns the first non-empty draw and does not escalate', async () => {
+    const tried: number[] = [];
+    const result = await sampleVariantBlocks(blockPercent => {
+      tried.push(blockPercent);
+      return Promise.resolve(rows(3));
+    });
+    expect(result).toHaveLength(3);
+    expect(tried).toEqual([1]);
+  });
+
+  test('escalates past an empty draw until one returns rows', async () => {
+    const tried: number[] = [];
+    const result = await sampleVariantBlocks(blockPercent => {
+      tried.push(blockPercent);
+      return Promise.resolve(blockPercent >= 10 ? rows(2) : []);
+    });
+    expect(result).toHaveLength(2);
+    expect(tried).toEqual([1, 10]);
+  });
+
+  test('treats an errored (undefined) draw like empty and continues', async () => {
+    const tried: number[] = [];
+    const result = await sampleVariantBlocks(blockPercent => {
+      tried.push(blockPercent);
+      return Promise.resolve(blockPercent >= 50 ? rows(1) : undefined);
+    });
+    expect(result).toHaveLength(1);
+    expect(tried).toEqual([...VARIANT_SAMPLE_BLOCK_PERCENTS]);
+  });
+
+  test('returns undefined when every percentage comes back empty', async () => {
+    const tried: number[] = [];
+    const result = await sampleVariantBlocks(blockPercent => {
+      tried.push(blockPercent);
+      return Promise.resolve([]);
+    });
+    expect(result).toBeUndefined();
+    expect(tried).toEqual([...VARIANT_SAMPLE_BLOCK_PERCENTS]);
+  });
+
+  test('honors a custom percentage ladder, in order', async () => {
+    const tried: number[] = [];
+    await sampleVariantBlocks(
+      blockPercent => {
+        tried.push(blockPercent);
+        return Promise.resolve([]);
+      },
+      [5, 25]
+    );
+    expect(tried).toEqual([5, 25]);
   });
 });
 
