@@ -174,7 +174,7 @@ export abstract class AtomicFieldDeclaration
         ret.code = this.exprSrc;
       }
       if (this.note) {
-        ret.annotations = this.note;
+        ret.annotations = {...this.note, fromModel: this.modelID};
       }
       return ret;
     }

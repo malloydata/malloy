@@ -30,6 +30,7 @@ import type {
   GivenID,
   ModelDef,
   ModelAnnotationsDef,
+  ModelID,
   NamedModelObject,
   Query,
   SourceID,
@@ -57,7 +58,6 @@ import type {ModelEntry} from './model-entry';
 import type {NameSpace} from './name-space';
 import type {Noteable} from './noteable';
 import {isNoteable, extendNoteMethod} from './noteable';
-import {v5 as uuidv5} from 'uuid';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -205,6 +205,15 @@ export abstract class MalloyElement {
   private get sourceURL() {
     const trans = this.translator();
     return trans?.sourceURL || '(missing)';
+  }
+
+  /**
+   * The {@link ModelID} of the document this element is being compiled in.
+   * Stamped onto object annotations (`fromModel`) at creation so cross-file
+   * model-annotation resolution knows which model each node came from.
+   */
+  get modelID(): ModelID {
+    return mkModelID(this.translator()?.sourceURL);
   }
 
   private readonly logged = new Set<string>();
@@ -487,24 +496,6 @@ export class DocStatementList
   }
 }
 
-const docAnnotationNameSpace = '5a79a191-06bc-43cf-9b12-58741cd82970';
-
-function annotationNotes(an: AnnotationsDef): string[] {
-  const ret = an.inherits ? annotationNotes(an.inherits) : [];
-  if (an.blockNotes) {
-    ret.push(...an.blockNotes.map(n => n.text));
-  }
-  if (an.notes) {
-    ret.push(...an.notes.map(n => n.text));
-  }
-  return ret;
-}
-
-function annotationID(a: AnnotationsDef): string {
-  const allStrs = annotationNotes(a).join('');
-  return uuidv5(allStrs, docAnnotationNameSpace);
-}
-
 /**
  * The Document class is a little weird because we might need to bounce back
  * to the requestor, which might be on the other side of a wire, to get
@@ -553,7 +544,7 @@ export class Document extends MalloyElement implements NameSpace {
   statements: DocStatementList;
   didInitModel = false;
   modelWasModified = false;
-  annotations: AnnotationsDef = {};
+  annotations: ModelAnnotationsDef = {};
   experiments = new Tag({});
 
   constructor(statements: (DocStatement | DocStatementList)[]) {
@@ -713,14 +704,12 @@ export class Document extends MalloyElement implements NameSpace {
 
   currentModelAnnotation(): ModelAnnotationsDef | undefined {
     if (this.hasAnnotation()) {
-      const ret = {...this.annotations, id: ''};
-      ret.id = annotationID(ret);
-      return ret;
+      return {...this.annotations};
     }
   }
 
   modelDef(): ModelDef {
-    const def = mkModelDef('', mkModelID(this.translator()?.sourceURL));
+    const def = mkModelDef('', this.modelID);
     if (this.hasAnnotation()) {
       def.annotations = this.currentModelAnnotation();
     }

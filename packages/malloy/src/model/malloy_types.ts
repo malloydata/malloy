@@ -699,7 +699,7 @@ export interface HasLocation {
 }
 
 export interface HasAnnotations {
-  annotations?: AnnotationsDef;
+  annotations?: ObjectAnnotationsDef;
 }
 
 /** All names have their source names and how they will appear in the symbol table that owns them */
@@ -2076,11 +2076,24 @@ export type NamedModelObjects = SafeRecord<NamedModelObject>;
 
 /** Bundle of source annotations attached to one object: the `notes` and
  *  `blockNotes` written on it, plus the bundle from the spiritual parent
- *  via `inherits`. The IR shape paired with the `Annotations` view class. */
+ *  via `inherits`. The IR shape paired with the `Annotations` view class.
+ *
+ *  This is the origin-blind base. Every note-operating helper takes this.
+ *  Object annotations specialize it with provenance ({@link ObjectAnnotationsDef});
+ *  model annotations specialize it as the per-file map value
+ *  ({@link ModelAnnotationsDef}). */
 export interface AnnotationsDef {
   inherits?: AnnotationsDef;
   blockNotes?: Note[];
   notes?: Note[];
+}
+/** Annotations attached to a named object (`#` annotations on a field, view,
+ *  source, query, …). Carries the id of the model that *created* this node, so
+ *  cross-file model-annotation resolution can walk the `inherits` chain and
+ *  fold each node's model annotations. `fromModel` is required and stamped at
+ *  creation = the compiling document's id; it is never rewritten on import. */
+export interface ObjectAnnotationsDef extends AnnotationsDef {
+  fromModel: ModelID;
 }
 export interface Note {
   text: string;
@@ -2095,9 +2108,11 @@ export interface Note {
    */
   indentStripped?: number;
 }
-/** Annotations bundle with a uuid to make it easier to stream. */
+/** Model-level (`##`) annotations for one file. Never carries `fromModel` —
+ *  these are keyed externally by {@link ModelID} in
+ *  `ModelDef.modelAnnotationsByID` (the resolver supplies the origin). */
 export interface ModelAnnotationsDef extends AnnotationsDef {
-  id: string;
+  inherits?: ModelAnnotationsDef;
 }
 
 export type QueryScalar =

@@ -71,8 +71,8 @@ export class DefineQuery
     };
     if (this.note) {
       entry.annotations = entry.annotations
-        ? {...this.note, inherits: entry.annotations}
-        : this.note;
+        ? {...this.note, inherits: entry.annotations, fromModel: this.modelID}
+        : {...this.note, fromModel: this.modelID};
     }
     doc.setEntry(this.name, {entry, exported: true});
   }

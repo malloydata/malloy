@@ -60,6 +60,7 @@ export {
   composeSQLExpr,
   makeDigest,
   mkModelDef,
+  mkModelID,
   pathToKey,
   typeDefToString,
 } from './utils';

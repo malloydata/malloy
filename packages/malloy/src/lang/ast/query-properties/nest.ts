@@ -66,7 +66,11 @@ export class NestFieldDeclaration
         type: 'turtle',
         name: this.name,
         pipeline: pipelineWithDrillPaths,
-        annotations: {...this.note, inherits: annotations},
+        annotations: {
+          ...this.note,
+          inherits: annotations,
+          fromModel: this.modelID,
+        },
         location: this.location,
         refSummary,
       };

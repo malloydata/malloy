@@ -217,7 +217,9 @@ export class GivenDeclaration
       defaultText,
       givenUsage,
       location: this.location,
-      annotations: this.note,
+      annotations: this.note
+        ? {...this.note, fromModel: this.modelID}
+        : undefined,
       ...(this.inline ? {inline: true} : {}),
     };
     doc.documentGivens.set(id, givenIR);
@@ -241,7 +243,9 @@ export class GivenDeclaration
       },
       definition: {
         type: typeDefToString(this.typeDef),
-        annotations: this.note,
+        annotations: this.note
+          ? {...this.note, fromModel: this.modelID}
+          : undefined,
         location: this.location,
         defaultText,
       },

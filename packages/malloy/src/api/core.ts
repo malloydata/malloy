@@ -21,6 +21,7 @@ import type {
 import {
   isSourceDef,
   mkFieldDef,
+  mkModelID,
   QueryModel,
   refIsStructDef,
   safeRecordGet,
@@ -116,6 +117,11 @@ function typeDefFromField(type: Malloy.AtomicType): AtomicTypeDef {
   }
 }
 
+// Fields converted from a stable-wire schema (table/SQL output) have no Malloy
+// source model, so their annotations get one synthetic model id. It is never
+// matched cross-file, so a single shared id is correct and avoids per-field churn.
+const SCHEMA_FIELD_MODEL = mkModelID();
+
 function convertDimension(field: Malloy.DimensionInfo): AtomicFieldDef {
   const typeDef = typeDefFromField(field.type);
   return {
@@ -123,6 +129,7 @@ function convertDimension(field: Malloy.DimensionInfo): AtomicFieldDef {
     annotations:
       field.annotations && field.annotations.length
         ? {
+            fromModel: SCHEMA_FIELD_MODEL,
             notes: field.annotations?.map(a => ({
               text: a.value,
               // TODO correctly map the location of the annotation to the location of the table call...

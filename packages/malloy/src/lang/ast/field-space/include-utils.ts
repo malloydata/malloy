@@ -7,7 +7,7 @@
 
 import type {
   AccessModifierLabel,
-  AnnotationsDef,
+  ObjectAnnotationsDef,
   DocumentLocation,
   FieldDef,
   SourceDef,
@@ -25,7 +25,7 @@ import type {MalloyElement} from '../types/malloy-element';
 
 export interface JoinIncludeProcessingState {
   star: AccessModifierLabel | 'inherit' | 'except' | undefined;
-  starNote: AnnotationsDef | undefined;
+  starNote: ObjectAnnotationsDef | undefined;
   fieldsIncluded: Set<string>;
   joinNames: Set<string>;
   fieldsExcepted: Set<string>;
@@ -38,7 +38,7 @@ export interface JoinIncludeProcessingState {
     location: DocumentLocation;
   }[];
   fieldsToInclude: Set<string> | undefined;
-  notes: Map<string, AnnotationsDef>;
+  notes: Map<string, ObjectAnnotationsDef>;
 }
 
 export interface IncludeProcessingState {
@@ -197,6 +197,7 @@ export function processIncludeList(
             joinState.starNote = {
               notes: f.note?.notes ?? [],
               blockNotes: item.note?.blockNotes ?? [],
+              fromModel: item.modelID,
             };
           }
         } else {
@@ -251,6 +252,7 @@ export function processIncludeList(
               joinState.notes.set(name, {
                 notes: f.note?.notes ?? [],
                 blockNotes: item.note?.blockNotes ?? [],
+                fromModel: item.modelID,
               });
             }
           }

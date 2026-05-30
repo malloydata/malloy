@@ -4,7 +4,7 @@
  */
 
 import type {
-  AnnotationsDef,
+  ObjectAnnotationsDef,
   AtomicFieldDef,
   FieldDef,
   NonDefaultAccessModifierLabel,
@@ -162,9 +162,9 @@ export class TypedSource extends Source {
  * Chain: field → shape → (whatever field previously inherited from)
  */
 function mergeAnnotation(
-  fieldAnnotation: AnnotationsDef | undefined,
-  shapeAnnotation: AnnotationsDef
-): AnnotationsDef {
+  fieldAnnotation: ObjectAnnotationsDef | undefined,
+  shapeAnnotation: ObjectAnnotationsDef
+): ObjectAnnotationsDef {
   if (!fieldAnnotation) {
     return shapeAnnotation;
   }
