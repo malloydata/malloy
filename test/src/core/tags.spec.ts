@@ -269,6 +269,23 @@ describe('tags in results', () => {
     const modelTags = result.modelTag;
     expect(modelTags.text('from')).toEqual('cell2');
   });
+  test('inline compiles get distinct, method-labeled model ids', async () => {
+    const src = 'source: one is duckdb.sql("select 1")';
+    const m1 = await runtime.loadModel(src).getModel();
+    const m2 = await runtime.loadModel(src).getModel();
+    const extended = await runtime
+      .loadModel(src)
+      .extendModel('## x=1')
+      .getModel();
+
+    // A URL-less compile is labeled by the operation that made it.
+    expect(m1._modelDef.modelID).toMatch(/^internal:\/\/loadModel\//);
+    expect(extended._modelDef.modelID).toMatch(/^internal:\/\/extendModel\//);
+
+    // Two inline compiles of identical text are still distinct models — they
+    // must not collide on identity (the bug a shared constant URL caused).
+    expect(m1._modelDef.modelID).not.toEqual(m2._modelDef.modelID);
+  });
   test('nested fields of same field do not share tags', async () => {
     const loaded = runtime.loadQuery(`
       source: one is duckdb.sql("SELECT 1 as one")

@@ -895,6 +895,7 @@ export class ModelMaterializer extends FluentState<Model> {
       const queryModel = await Malloy.compile({
         source: text,
         restrictedMode: true,
+        method: 'query',
         urlReader,
         connections,
         model,
@@ -936,6 +937,7 @@ export class ModelMaterializer extends FluentState<Model> {
           urlReader,
           connections,
           model,
+          method: 'extendModel',
           refreshSchemaCache: options?.refreshSchemaCache,
           noThrowOnError: options?.noThrowOnError,
           importBaseURL: options?.importBaseURL,

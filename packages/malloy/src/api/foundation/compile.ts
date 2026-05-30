@@ -34,12 +34,27 @@ import {MALLOY_VERSION} from '../../version';
 import type {CacheManager} from './cache';
 import {readURL, getInvalidationKey, isInternalURL} from './readers';
 import {Parse} from './document';
-import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
+import {v4 as uuidv4} from 'uuid';
+import type {
+  ParseOptions,
+  CompileOptions,
+  CompileQueryOptions,
+  CompileMethod,
+} from './types';
 import type {PreparedResult} from './core';
 import {Model, Explore} from './core';
 import {Result, DataRecord} from './result';
 
-const MALLOY_INTERNAL_URL = 'internal://internal.malloy';
+/**
+ * Mint the synthetic URL for an inline (URL-less) compile. Each call is
+ * unique, so two inline models — or an inline base and its inline extension —
+ * never collide on identity. Stays under the `internal://` scheme so it
+ * remains uncacheable (see `isInternalURL`). The `method` segment is a
+ * diagnostic label only.
+ */
+function mkInternalURL(method: CompileMethod = 'loadModel'): string {
+  return `internal://${method}/${uuidv4()}`;
+}
 
 // =============================================================================
 // Types
@@ -173,7 +188,7 @@ export class Malloy {
     invalidationKey?: InvalidationKey
   ): Parse {
     if (url === undefined) {
-      url = new URL(MALLOY_INTERNAL_URL);
+      url = new URL(mkInternalURL(options?.method));
     }
     let importBaseURL = url;
     if (options?.importBaseURL) {
@@ -286,6 +301,7 @@ export class Malloy {
       noThrowOnError,
       eventStream,
       restrictedMode,
+      method,
     } = req;
     if (restrictedMode) {
       // Restricted-mode compiles do not participate in the model-def
@@ -310,7 +326,7 @@ export class Malloy {
       if (parse !== undefined) {
         url = new URL(parse._translator.sourceURL);
       } else {
-        url = new URL(MALLOY_INTERNAL_URL);
+        url = new URL(mkInternalURL(method));
       }
     }
     const invalidationKeys: {[url: string]: InvalidationKey} = {};

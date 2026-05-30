@@ -37,7 +37,23 @@ export interface ParseOptions {
   testEnvironment?: boolean;
   /** Reject language constructs that reach outside the trusted model. */
   restrictedMode?: boolean;
+  /**
+   * Diagnostic label for the synthetic URL minted when compiling inline
+   * source that has no URL of its own: `internal://<method>/<uuid>`. Each
+   * such compile still gets a unique id regardless; this just makes the
+   * originating operation legible in error locations and annotation
+   * provenance. Read solely to build that URL — never branched on.
+   */
+  method?: CompileMethod;
 }
+
+/**
+ * The operation behind a URL-less (inline-source) compile, used only to
+ * label its synthetic `internal://` URL. `query` covers both the stable
+ * query-compile path and `loadRestrictedQuery`; `loadQuery` is a `loadModel`
+ * under the hood and carries that label.
+ */
+export type CompileMethod = 'loadModel' | 'extendModel' | 'query';
 
 /** Options for how to run the Malloy semantic checker/translator */
 export interface CompileOptions {

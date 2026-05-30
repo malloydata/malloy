@@ -6,6 +6,7 @@
  */
 
 import * as Malloy from '@malloydata/malloy-interfaces';
+import {v4 as uuidv4} from 'uuid';
 import type {LogMessage} from '../lang';
 import {MalloyTranslator} from '../lang';
 import type {ParseUpdate} from '../lang/parse-malloy';
@@ -594,7 +595,7 @@ export function newCompileQueryState(
   const needs = {
     ...(request.compiler_needs ?? {}),
   };
-  const queryURL = 'internal://query.malloy';
+  const queryURL = `internal://query/${uuidv4()}`;
   needs.files = [
     {
       url: queryURL,
