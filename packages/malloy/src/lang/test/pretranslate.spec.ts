@@ -7,6 +7,7 @@
 
 import './parse-expects';
 import {TestTranslator} from './test-translator';
+import {mkModelDef} from '../../model/utils';
 
 describe('pretranslated models', () => {
   test('import of pretranslated', () => {
@@ -17,9 +18,8 @@ describe('pretranslated models', () => {
     docParse.update({
       translations: {
         'internal://test/langtests/child': {
-          name: 'child',
+          ...mkModelDef('child', 'internal://test/langtests/child'),
           exports: ['foo'],
-          queryList: [],
           contents: {
             foo: {
               type: 'table',
@@ -30,7 +30,6 @@ describe('pretranslated models', () => {
               fields: [],
             },
           },
-          sourceRegistry: {},
           dependencies: {
             'internal://test/langtests/grandchild': {
               'internal://test/langtests/grandgrandchild1': {},

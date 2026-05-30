@@ -32,7 +32,7 @@ import type {
   DependencyTree,
   DocumentRange,
 } from '../model/malloy_types';
-import {mkModelDef} from '../model/utils';
+import {mkModelDef, mkModelID} from '../model/utils';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
 import type {
@@ -730,7 +730,7 @@ export abstract class MalloyTranslation {
     public grammarRule = 'malloyDocument'
   ) {
     this.childTranslators = new Map<string, MalloyTranslation>();
-    this.modelDef = mkModelDef(sourceURL);
+    this.modelDef = mkModelDef(sourceURL, mkModelID(sourceURL));
     /**
      * This is sort of the makefile for the translation, all the steps
      * and the dependencies of the steps are declared here. Then when

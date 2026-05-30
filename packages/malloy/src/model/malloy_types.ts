@@ -1606,6 +1606,14 @@ export type GivenID = string;
 export type BuildID = string;
 
 /**
+ * Identifies the model a definition came from. Either a real model URL or a
+ * synthetic `"internal <uuid>"` for URL-less models. The space makes the
+ * synthetic form an illegal URL, so it can never collide with a real model
+ * URL. Created with `mkModelID`.
+ */
+export type ModelID = string;
+
+/**
  * Reference to a source in modelDef.contents by name.
  * Used in sourceRegistry to avoid duplicating SourceDefs that are in the namespace.
  */
@@ -2044,6 +2052,7 @@ export interface DependencyTree {
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
+  modelID: ModelID;
   exports: string[];
   contents: SafeRecord<NamedModelObject>;
   /**

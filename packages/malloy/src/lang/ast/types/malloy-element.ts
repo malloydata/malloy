@@ -37,7 +37,7 @@ import type {
   StructDef,
 } from '../../../model/malloy_types';
 import {isSourceDef, isPersistableSourceDef} from '../../../model/malloy_types';
-import {mkModelDef} from '../../../model/utils';
+import {mkModelDef, mkModelID} from '../../../model/utils';
 import {Tag} from '@malloydata/malloy-tag';
 import type {
   LogMessageOptions,
@@ -720,7 +720,7 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   modelDef(): ModelDef {
-    const def = mkModelDef('');
+    const def = mkModelDef('', mkModelID(this.translator()?.sourceURL));
     if (this.hasAnnotation()) {
       def.annotations = this.currentModelAnnotation();
     }
