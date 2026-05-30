@@ -37,6 +37,10 @@ const config: Config = {
     {
       ...defaultConfig,
       displayName: 'malloy-core',
+      setupFilesAfterEnv: [
+        '<rootDir>/test/jest.setup.dom.ts',
+        ...(defaultConfig.setupFilesAfterEnv ?? []),
+      ],
       roots: [
         '<rootDir>/packages/malloy/',
         '<rootDir>/packages/malloy-filter/',

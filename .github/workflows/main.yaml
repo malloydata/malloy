@@ -38,7 +38,7 @@ jobs:
       - name: Use Node.js 20.x
         uses: actions/setup-node@v5
         with:
-          node-version: 20.x
+          node-version: 24.x
       - name: GCloud auth
         uses: 'google-github-actions/auth@v3'
         with:

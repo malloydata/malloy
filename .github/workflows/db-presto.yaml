@@ -20,7 +20,7 @@ jobs:
       - name: Use Node.js 20.x
         uses: actions/setup-node@v5
         with:
-          node-version: 20.x
+          node-version: 24.x
       - name: Test
         run: |
           ./test/presto/presto_start.sh --slim
