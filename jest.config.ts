@@ -37,10 +37,6 @@ const config: Config = {
     {
       ...defaultConfig,
       displayName: 'malloy-core',
-      setupFilesAfterEnv: [
-        '<rootDir>/test/jest.setup.dom.ts',
-        ...(defaultConfig.setupFilesAfterEnv ?? []),
-      ],
       roots: [
         '<rootDir>/packages/malloy/',
         '<rootDir>/packages/malloy-filter/',
@@ -51,8 +47,20 @@ const config: Config = {
         '<rootDir>/packages/malloy/',
         '<rootDir>/packages/malloy-query-builder/',
         '<rootDir>/test/src/core/',
-        '<rootDir>/test/src/render/',
       ],
+    },
+    {
+      // The render tests need a DOM (jest.setup.dom.ts). They are kept in
+      // their own project so the fake `document` global is not in scope for
+      // the duckdb-wasm tests in malloy-core — web-worker's browser detection
+      // keys off `typeof document` and breaks under Node when it is present.
+      ...defaultConfig,
+      displayName: 'malloy-render-test',
+      setupFilesAfterEnv: [
+        '<rootDir>/test/jest.setup.dom.ts',
+        ...(defaultConfig.setupFilesAfterEnv ?? []),
+      ],
+      roots: ['<rootDir>/test/src/render/'],
     },
     {
       ...defaultConfig,
