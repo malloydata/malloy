@@ -68,7 +68,7 @@
           }
         },
         {
-          "match": "(?i)\\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|UNGROUPED)(\\s*\\()",
+          "match": "(?i)\\b(ALL|AVG|CAST|COMPOSE|COUNT|EXCLUDE|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|UNGROUPED)(\\s*\\()",
           "captures": {
             "1": { "name": "entity.name.function" }
           }
@@ -343,6 +343,10 @@
           "name": "entity.name.type.date"
         },
         {
+          "match": "(?i)\\btimestamptz\\b",
+          "name": "entity.name.type.timestamptz"
+        },
+        {
           "match": "(?i)\\btimestamp\\b",
           "name": "entity.name.type.timestamp"
         },
@@ -493,6 +497,14 @@
         {
           "match": "(?i)\\bdeclare\\b",
           "name": "keyword.control.declare"
+        },
+        {
+          "match": "(?i)\\btype\\b",
+          "name": "keyword.control.type"
+        },
+        {
+          "match": "(?i)\\bgiven\\b",
+          "name": "keyword.control.given"
         }
       ]
     },
@@ -569,6 +581,58 @@
         {
           "match": "(?i)\\binclude\\b",
           "name": "keyword.control.include"
+        },
+        {
+          "match": "(?i)\\bas\\b",
+          "name": "keyword.control.as"
+        },
+        {
+          "match": "(?i)\\bfrom\\b",
+          "name": "keyword.control.from"
+        },
+        {
+          "match": "(?i)\\bexport\\b",
+          "name": "keyword.control.export"
+        },
+        {
+          "match": "(?i)\\bcase\\b",
+          "name": "keyword.control.case"
+        },
+        {
+          "match": "(?i)\\bthen\\b",
+          "name": "keyword.control.then"
+        },
+        {
+          "match": "(?i)\\bend\\b",
+          "name": "keyword.control.end"
+        },
+        {
+          "match": "(?i)\\bfilter\\b",
+          "name": "keyword.control.filter"
+        },
+        {
+          "match": "(?i)\\bin\\b",
+          "name": "keyword.other.in"
+        },
+        {
+          "match": "(?i)\\blike\\b",
+          "name": "keyword.other.like"
+        },
+        {
+          "match": "(?i)\\binner\\b",
+          "name": "keyword.other.inner"
+        },
+        {
+          "match": "(?i)\\bleft\\b",
+          "name": "keyword.other.left"
+        },
+        {
+          "match": "(?i)\\bright\\b",
+          "name": "keyword.other.right"
+        },
+        {
+          "match": "(?i)\\bfull\\b",
+          "name": "keyword.other.full"
         }
       ]
     }
