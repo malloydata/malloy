@@ -355,8 +355,8 @@ function equality(
       while (actualFilter.node === '()') {
         actualFilter = actualFilter.e;
       }
-      if (actualFilter.node !== 'parameter') {
-        // Parameters are checked when parameter value is parsed
+      if (actualFilter.node !== 'parameter' && actualFilter.node !== 'given') {
+        // Parameter and given values are checked when supplied
         checkFilterExpression(right, lhs.type, actualFilter);
       }
       const filterMatch: FilterMatchExpr = {

@@ -1,6 +1,6 @@
-/* eslint-disable no-console, n/no-process-exit */
+/* eslint-disable no-console */
 import {DatabricksConnection} from '@malloydata/db-databricks/src/databricks_connection';
-// eslint-disable-next-line n/no-extraneous-import
+
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 

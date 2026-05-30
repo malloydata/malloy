@@ -53,6 +53,52 @@ The compiler consumes **Intermediate Representation (IR)** produced by the trans
   - Field references and path expressions
 - Forms a complete expression tree that can be compiled to SQL
 
+### Annotations in the IR
+
+Annotations attach to any IR entity with an `annotations?: AnnotationsDef` field:
+
+```ts
+interface AnnotationsDef {
+  inherits?: AnnotationsDef; // parent's annotations when this entity is derived
+  blockNotes?: Note[];       // notes inherited from a containing block of definitions
+  notes?: Note[];            // notes attached directly to this entity
+}
+interface Note {
+  text: string;
+  at: DocumentLocation;
+  indentStripped?: number;   // characters dedented per body line (multi-line annotations)
+}
+```
+
+`text` is the annotation **as stored**: the marker and prefix are kept
+verbatim, line endings are LF-normalized, and for multi-line annotations
+the body is dedented (`indentStripped` records how many leading characters
+were removed per non-blank body line). Routes are derived at retrieval by
+`parsePrefix` (`../lang/annotation-prefix.ts`); the Note stores no route.
+**Read through the `Annotations` view (`../api/foundation/annotation.ts`)** —
+it flattens `inherits` and filters by route. Walking the three buckets
+yourself is a smell.
+
+`indentStripped` is what lets payload-parser error columns map back to
+source: for a body line, `source_col = indentStripped + parser_col`. The
+`Annotations` view's `mapMalloyError` and the `forRoute(route)` door (which
+returns `RoutedNote` instances carrying offsets) both surface this —
+consumers parsing non-MOTLY content can compute their own source columns
+the same way.
+
+`inherits` is populated when an entity *derives* from another (most
+prominently `source: child is parent extend { ... }` in
+`lang/ast/statements/define-source.ts`, but also model-extends-model in
+`malloy-element.ts:initModelDef`, queries in `define-query.ts`, and several
+field-space sites). Grep for `inherits:` in `lang/ast/` for the full list.
+
+**One Note, many paths.** `MalloyToAST.getAnnotation` builds each source-level
+annotation exactly once; the same `Note` object then appears on every entity
+that earns it — directly via `notes`/`blockNotes`, transitively via
+`inherits`. Construction-time diagnostics (e.g. the prefix `malformed-route`
+/ `reserved-route` warnings) fire once per source annotation, not once per
+reachable copy.
+
 ## Compilation Pipeline
 
 ```

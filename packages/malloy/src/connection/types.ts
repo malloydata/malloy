@@ -1,6 +1,6 @@
 import type {RunSQLOptions} from '../run_sql_options';
 import type {
-  Annotation,
+  AnnotationsDef,
   MalloyQueryData,
   QueryRecord,
   QueryRunStats,
@@ -15,8 +15,8 @@ import type {SQLSourceRequest} from '../lang/translate-response';
 export interface FetchSchemaOptions {
   // Fetch a fresh copy of the schema instead of using cache
   refreshTimestamp?: number;
-  /* This is an experimental feature */
-  modelAnnotation?: Annotation;
+  /** Model annotations forwarded to the adapter (e.g. `##!` dialect flags). */
+  modelAnnotations?: AnnotationsDef;
 }
 
 /**
@@ -111,6 +111,21 @@ export interface Connection extends InfoConnection {
   canStream(): this is StreamingConnection;
 
   close(): Promise<void>;
+
+  /**
+   * Release expensive backend resources (file locks, sockets, sub-processes,
+   * pooled connections) but remain logically valid. The next operation
+   * transparently reattaches whatever was released; schema cache and other
+   * in-process state survive.
+   *
+   * The default is a no-op for backends that hold no release-able resources
+   * between operations. Backends that hold OS-level resources (DuckDB file
+   * locks, persistent socket pools) should override.
+   *
+   * Hosts that share a connection across concurrent operations should not
+   * call `idle()` while an operation is in flight.
+   */
+  idle(): Promise<void>;
 
   estimateQueryCost(sqlCommand: string): Promise<QueryRunStats>;
 

@@ -40,11 +40,13 @@ Top-level keys:
 | Key | Purpose |
 |---|---|
 | `connections` | Named connection entries. Each has an `is` field naming a registered backend, plus backend-specific properties. |
-| `manifestPath` | Directory where the build manifest lives, relative to the config file. Defaults to `MANIFESTS`. |
+| `manifestPath` | Directory where the build manifest lives, relative to the config file. Defaults to `MANIFESTS`. May be a string literal or a sync-resolving overlay reference (e.g. `{"env": "MALLOY_MANIFEST_PATH"}`). |
+| `givensPath` | File where per-runtime [given](givens.md) values live, relative to the config file. JSON object of `name → value` pairs. May be a string literal or a sync-resolving overlay reference. |
+| `finalizeGivens` | Array of [given](givens.md) names that are locked at the runtime layer — per-query supply for these names is rejected, and they are filtered out of `Model.givens` / `PreparedQuery.givens` introspection so UIs don't render editors for them. Security primitive for multi-tenant deployments where the tenant identifier must not be caller-overridable. |
 | `virtualMap` | URL rewrite rules for sources that reference virtual locations. Literal — no overlay expansion. |
 | `includeDefaultConnections` | If `true`, fabricate one entry per registered backend type not already listed. See below. |
 
-Any non-`json`-typed property value may be a reference instead of a literal (see [Overlay References](#overlay-references)).
+Any non-`json`-typed property value — both inside `connections` and at the top level (`manifestPath`, `givensPath`) — may be a reference instead of a literal. See [Overlay References](#overlay-references). Top-level references carry one extra constraint: the overlay must resolve synchronously, because these values are read at construction time.
 
 ## Overlay References
 
@@ -61,23 +63,26 @@ Some values don't belong in a file — secrets, host-specific paths, session tok
 Built-in overlay sources:
 
 - **`env`** — environment variables. `{env: "NAME"}` resolves to `process.env.NAME` on Node, or whatever the host wires up on WASM/browser builds.
-- **`config`** — host context. Discovery populates this with `rootDirectory` (the project root) and `configURL` (the location of the matched file). Defaults to a no-op that returns `undefined` for everything.
+- **`config`** — host context. Built internally by `MalloyConfig` from the typed `configURL` and `rootDirectory` fields the host supplies (or that `discoverConfig` computed). The `config` slot is reserved by `MalloyConfig`; hosts pass the values directly via the constructor's options object instead of writing an overlay function.
 
 Hosts can register additional overlays — VS Code adds a `secret` overlay backed by VS Code's SecretStorage; Publisher adds a `session` overlay backed by the request. A `malloy-config.json` that uses only `{env: ...}` references is portable between hosts. One that uses `{secret: ...}` is not — only VS Code has a `secret` overlay.
 
 Overlays may be synchronous or asynchronous — an overlay's return type is `unknown | Promise<unknown>`. Use sync for purely in-memory sources (env vars, context dicts); use async for anything that touches IO (secret stores, session fetches, enterprise-injected values). Reference resolution is deferred to connection-lookup time (already async), so async overlays don't force the host to change anything else.
 
-**One exception.** The `config` overlay must resolve the `configURL` key synchronously. `manifestURL` is computed once in the `MalloyConfig` constructor from `configURL` + `manifestPath`, and that single peek is the one place overlay IO can't be awaited. If a host's `config` overlay returns a Promise for `configURL`, `MalloyConfig` pushes a warning to `config.log` and leaves `manifestURL` undefined (persistence silently stops working otherwise). Other keys in the `config` overlay — `rootDirectory`, host-specific context — can still be async; only `configURL` is sync-only.
+**Sync-only at the top level.** Top-level string settings written as references (`manifestPath: {env: "..."}`, `givensPath: {env: "..."}`) must resolve synchronously. They feed into `manifestURL` and `givensURL`, which are computed once in the `MalloyConfig` constructor — and constructors can't `await`. If an overlay returns a Promise for one of these, `MalloyConfig` pushes a loud warning to `config.log` and drops the value; without the warning, persistence (or per-runtime givens) would silently stop working.
 
 ### Failure Modes
 
-References fail in three distinguishable ways, each handled differently:
+References fail in four distinguishable ways, each handled differently:
 
-1. **Unknown overlay source** (`{zzz: "foo"}` when no `zzz` overlay is registered) — logged as a warning to `config.log` when the affected connection is looked up (not at construction time); the property is dropped. Almost always a typo or host/config mismatch.
+1. **Unknown overlay source** (`{zzz: "foo"}` when no `zzz` overlay is registered) — logged as a warning to `config.log`; the property is dropped. Almost always a typo or host/config mismatch.
 2. **Known overlay returns `undefined`** (`{env: "MISSING_VAR"}` — env var unset) — silently dropped. Legitimate "value not present" state. If the dropped property was required, the connection factory complains when the connection is built (lazy, at lookup time), not at config-build time.
 3. **Unresolved reference inside a default** — silently dropped. Defaults are hints, not requirements.
+4. **Async overlay used in a sync-only slot** (e.g. `manifestPath: {secret: "X"}` when `secret` returns a Promise) — logged as a loud warning to `config.log` and dropped. Top-level string settings are read at construction time and can't `await`; this is misuse, not a missing value. The same rule applies to `configURL` on the host-supplied `config` overlay.
 
 A consequence: a typo'd env var and an unset env var are indistinguishable. This matches established behavior.
+
+Mode 1 fires at construction time for top-level references and at first lookup for connection-property references — a consequence of when each is resolved. Mode 4 only fires at construction time, since it's specific to the sync-only slots. Modes 2 and 3 are silent in both cases.
 
 ### The `json` Property Type
 
@@ -103,7 +108,7 @@ A soloist can get working connections with nothing but:
 
 …which yields `duckdb`, `bigquery`, `postgres`, etc. — each with registry defaults applied. A host with no config file at all typically does the same thing by constructing `new MalloyConfig({includeDefaultConnections: true})` as a fallback.
 
-The fabricator skips a type `T` if some existing entry either has `is: "T"` or is *named* `T`. The second rule lets a user write `{duckdb: {is: 'postgres', ...}}` — naming an entry `duckdb` but pointing it at a different backend — without the fabricator silently adding a second entry of the same name.
+The fabricator skips a type `T` only if some existing entry is *named* `T`. The `is` of user entries doesn't enter into it: writing `{dankdb: {is: 'duckdb'}}` leaves the slot named `duckdb` free, so a phantom `duckdb` is still added and both are reachable. Writing `{duckdb: {is: 'postgres', ...}}` does occupy the `duckdb` slot — naming wins, regardless of the backend it points at.
 
 ## Discovery
 
@@ -123,7 +128,10 @@ A **file-not-found** at a given level is normal — the walker moves on. A file 
 
 ### `rootDirectory` vs. `configURL`
 
-The ceiling is the **project root** — exposed as `config.rootDirectory`. The config file's directory is **incidental** — exposed as `config.configURL` separately, for tools that care.
+`MalloyConfig` carries two distinct filesystem anchors as readonly fields, both URL-shaped strings:
+
+- **`config.configURL`** — where the config file lives. The base for resolving `manifestPath` and `givensPath`. Set by `discoverConfig` to the URL of the matched file. POJO callers pass it directly in the constructor's options.
+- **`config.rootDirectory`** — the project root. Available to connection-property defaults via the `{config: 'rootDirectory'}` overlay-reference shape. Set by `discoverConfig` to the ceiling of the discovery range. Opaque to foundation — consumers (e.g. DuckDB) decide what to do with it.
 
 DuckDB's `workingDirectory` binds to `rootDirectory`, not to the config file's directory. This means relative data paths in Malloy files stay stable regardless of where a developer chose to put their `malloy-config.json`.
 
@@ -148,19 +156,59 @@ const rawSQL = await runtime
   .getSQL();
 ```
 
+## Givens
+
+When a model declares [givens](givens.md) (named values supplied at run time), the per-runtime layer of values can live in a JSON file pointed at by `givensPath`:
+
+```jsonc
+// malloy-config.json
+{
+  "givensPath": "./local-givens.json"
+}
+```
+
+The values file is a flat JSON object of `name → value` pairs:
+
+```jsonc
+// local-givens.json
+{
+  "TENANT": "acme",
+  "USER_ROLE": "admin",
+  "CUTOFF_DATE": "2024-01-01"
+}
+```
+
+Per-environment routing is the canonical use of the env-overlay form on `givensPath`:
+
+```jsonc
+{
+  "givensPath": {"env": "MALLOY_GIVENS_FILE"}
+}
+```
+
+A developer sets `MALLOY_GIVENS_FILE` to a local fixture; CI sets it to a test fixture; production sets it to a deployment-managed file. Same project config everywhere; the env-var binding chooses the actual file.
+
+**Resolution.** `MalloyConfig` computes `givensURL` from `givensPath` joined against `configURL`. The Runtime lazily reads the file on the first compile that needs givens, parses JSON, and uses the values as defaults for every query that runs through it. Per-query supply via `.run({givens: ...})` overrides the per-runtime layer per-key.
+
+**Failure policy.** Stricter than the manifest: a missing `givensPath` file or malformed JSON throws on the first compile, with the resolved URL in the error message. The per-runtime givens layer is a configured contract, not an opportunistic read; a misconfigured path should fail loudly at the first compile, not silently degrade.
+
+**Type validation.** Each value is validated against the type declared in the model's `given:` block. Mismatches throw at the API boundary with a path that points at the offending location (e.g. `givens.SESSION.user_id: expected string, got number`). For the per-type accepted JS shapes (strings, numbers, dates, compound types), see [the givens language doc](givens.md).
+
+If `givensPath` is set but no `configURL` is available, `MalloyConfig` warns at construction time — the path can't be resolved against any anchor, so the per-runtime layer won't be loaded. Pass `configURL` in the constructor's options to fix.
+
 ## Embedding
 
 ### Local host (VS Code, CLI, AI tooling)
 
 ```typescript
 import '@malloydata/malloy-connections'; // registers all backends
-import {Runtime, MalloyConfig, discoverConfig, contextOverlay} from '@malloydata/malloy';
+import {Runtime, MalloyConfig, discoverConfig} from '@malloydata/malloy';
 
 const config =
   (await discoverConfig(startURL, projectRootURL, urlReader)) ??
   new MalloyConfig(
     {includeDefaultConnections: true},
-    {config: contextOverlay({rootDirectory: projectRootURL.toString()})}
+    {rootDirectory: projectRootURL.toString()}
   );
 
 const runtime = new Runtime({config, urlReader});
@@ -174,13 +222,14 @@ The source of truth is a database, not a file. Assemble a POJO from state, and i
 
 ```typescript
 const config = new MalloyConfig(publisher.buildConfig(packageId), {
-  config: publisherOverlay(packageId),
-  session: sessionOverlay(request),
+  configURL: publisher.configURL(packageId),
+  rootDirectory: publisher.packageRoot(packageId),
+  overlays: {session: sessionOverlay(request)},
 });
 const runtime = new Runtime({config, urlReader});
 ```
 
-The `env` overlay is inherited from the defaults; `config` is replaced with a Publisher-specific one that knows package roots; `session` is added.
+The `env` overlay is inherited from the defaults; the `config` overlay is built internally from `configURL` + `rootDirectory`; `session` is an additional host-defined overlay.
 
 ### Decorating the connection lookup
 
@@ -216,3 +265,15 @@ These construction modes all continue to work:
 - The soloist path — no config file, just registered defaults
 
 Existing `malloy-config.json` files work as-is. The `{env: "NAME"}` syntax has been in use since before overlays existed; the new design recognizes it as a general-purpose overlay reference shape.
+
+**Constructor options shape.** The `MalloyConfig` constructor's second argument used to be a `ConfigOverlays` dict — a map of overlay-name → function. It now accepts a typed options object:
+
+```typescript
+new MalloyConfig(pojo, {
+  configURL?: string,
+  rootDirectory?: string,
+  overlays?: ConfigOverlays,  // env, host-defined; `config` slot reserved
+});
+```
+
+The legacy `ConfigOverlays`-dict shape is detected at runtime and adapted automatically (with `@deprecated` markers on the affected overload). Callers can migrate when convenient — the old form keeps compiling and running.

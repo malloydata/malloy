@@ -7,8 +7,8 @@
 
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
-import type {FieldUsage, PipeSegment, Query} from '../../model';
-import {bareFieldUsage, isIndexSegment, isQuerySegment} from '../../model';
+import type {FieldUsage, Query} from '../../model';
+import {isIndexSegment, isQuerySegment} from '../../model';
 
 describe('composite sources', () => {
   describe('composite field usage', () => {
@@ -66,20 +66,13 @@ describe('composite sources', () => {
   });
 
   describe('expanded field usage', () => {
-    function segmentExpandedFieldUsage(segment: PipeSegment) {
-      return isQuerySegment(segment) || isIndexSegment(segment)
-        ? segment.expandedFieldUsage?.filter(u => bareFieldUsage(u))
-        : undefined;
-    }
     test('direct field reference', () => {
       const m = model`
         run: a -> { group_by: ai }
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai']]);
     });
 
     test('where reference', () => {
@@ -88,10 +81,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai']},
-        {path: ['af']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai'], ['af']]);
     });
 
     test('reference in calculate', () => {
@@ -102,10 +92,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai']},
-        {path: ['c']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai'], ['c']]);
     });
 
     test('exclude field is not counted', () => {
@@ -119,9 +106,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai']]);
     });
 
     test('view is not included', () => {
@@ -134,9 +119,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai']]);
     });
 
     test('join in view is included', () => {
@@ -150,9 +133,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['b', 'ai']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['b', 'ai']]);
     });
 
     test('expression involving multiple fields', () => {
@@ -161,10 +142,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai']},
-        {path: ['af']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai'], ['af']]);
     });
 
     test('dimension reference', () => {
@@ -175,10 +153,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai_2']},
-        {path: ['ai']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai_2'], ['ai']]);
     });
 
     test('join on reference', () => {
@@ -207,10 +182,10 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai_3']},
-        {path: ['ai_2']},
-        {path: ['ai']},
+      expect(query.pipeline[0]).hasExpandedFieldUsage([
+        ['ai_3'],
+        ['ai_2'],
+        ['ai'],
       ]);
     });
 
@@ -222,10 +197,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai']},
-        {path: ['astr']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai'], ['astr']]);
     });
 
     test('join where is included', () => {
@@ -260,10 +232,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai']},
-        {path: ['ai_2']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai'], ['ai_2']]);
     });
 
     test('second-stage extend dimension works', () => {
@@ -277,10 +246,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
-        {path: ['ai_2']},
-        {path: ['ai']},
-      ]);
+      expect(query.pipeline[1]).hasExpandedFieldUsage([['ai_2'], ['ai']]);
     });
 
     test('param is not included', () => {
@@ -293,9 +259,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['param_value']},
-      ]);
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['param_value']]);
     });
 
     test('query arrow usage', () => {
@@ -305,9 +269,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
-        {path: ['ai']},
-      ]);
+      expect(query.pipeline[1]).hasExpandedFieldUsage([['ai']]);
     });
 
     test('query arrow usage with composite ', () => {
@@ -327,9 +289,7 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
-        {path: ['ai']},
-      ]);
+      expect(query.pipeline[1]).hasExpandedFieldUsage([['ai']]);
     });
 
     test('query refine usage', () => {
@@ -339,10 +299,58 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
-        {path: ['ai']},
-        {path: ['af']},
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai'], ['af']]);
+    });
+
+    // Companion to the alwaysJoins walker fix landed in commit 30011cd18:
+    // segment-level direct `join_one:` joins activate unconditionally
+    // (regardless of any field reference) and their on-clause field paths
+    // must appear in `expandedFieldUsage`. The given-side test lives in
+    // givens.spec.ts; these are the field-side parallel.
+    test('segment-level direct `join_one:` — on-clause field paths appear in expandedFieldUsage', () => {
+      const m = model`
+        run: a -> {
+          join_one: b on b.ai = af
+          group_by: ai
+        }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      // Always-on join: even though no segment field references b, the
+      // on-clause's b.ai and af must appear because the join is active.
+      expect(query.pipeline[0]).hasExpandedFieldUsage([
+        ['ai'],
+        ['b', 'ai'],
+        ['af'],
       ]);
+    });
+
+    test('segment-level `extend: { join_one: ... }` — conditional, used: on-clause appears', () => {
+      const m = model`
+        run: a -> {
+          extend: { join_one: b on b.ai = af }
+          group_by: b.ai
+        }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      // Conditional join activates because b.ai is referenced; on-clause
+      // af must appear via the activation.
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['b', 'ai'], ['af']]);
+    });
+
+    test('segment-level `extend: { join_one: ... }` — conditional, NOT used: on-clause does NOT appear', () => {
+      const m = model`
+        run: a -> {
+          extend: { join_one: b on b.ai = af }
+          group_by: ai
+        }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      // Conditional join is declared but never reached via any reference,
+      // so it isn't activated and its on-clause fields stay out.
+      expect(query.pipeline[0]).hasExpandedFieldUsage([['ai']]);
     });
   });
 
@@ -906,7 +914,7 @@ function pathToKey(path: string[]): string {
  */
 function checkForFieldUsage(
   query: Query | undefined,
-  ...refs: FieldUsage[]
+  ...refs: FieldUsage
 ): [boolean, string] {
   if (!query) {
     return [false, 'Query not found'];
@@ -1111,7 +1119,7 @@ describe('field usage with compiler extensions', () => {
   });
   test('inline count and calculate preserve uniqueKeyRequirement', () => {
     // When count() and rank() are both inline in the same query, their
-    // fieldUsage entries both have path []. The expandFieldUsage init loop
+    // fieldUsage entries both have path []. The expandRefUsage init loop
     // must not overwrite one with the other.
     const mTest = model`
       run: ab -> {

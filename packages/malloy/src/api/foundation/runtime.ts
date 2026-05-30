@@ -13,10 +13,14 @@ import type {
   QueryRunStats,
   PrepareResultOptions,
   BuildManifest,
+  GivenValue,
   VirtualMap,
 } from '../../model';
-import {isSourceDef, mkSafeRecord} from '../../model';
+import {isSourceDef, mkSafeRecord, MalloyCompileError} from '../../model';
+import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
+import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
+import {isBuildManifestEntry} from './config';
 import type {Dialect} from '../../dialect';
 import type {RunSQLOptions} from '../../run_sql_options';
 import {rowDataToNumber} from '../../api/row_data_utils';
@@ -27,7 +31,7 @@ import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
 import type {PreparedResult, Explore} from './core';
 import {Model, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
-import {Malloy} from './compile';
+import {Malloy, MalloyError} from './compile';
 
 // =============================================================================
 // Type Aliases
@@ -117,6 +121,11 @@ export class Runtime {
   private _resolvedBuildManifestPromise:
     | Promise<BuildManifest | undefined>
     | undefined;
+  private _resolvedGivensPromise:
+    | Promise<Record<string, GivenValue> | undefined>
+    | undefined;
+  private _constructorGivensMap: ReadonlyMap<string, GivenValue>;
+  private _finalizedGivensSet: ReadonlySet<string>;
   private _virtualMap: VirtualMap | undefined;
 
   constructor({
@@ -127,11 +136,19 @@ export class Runtime {
     buildManifest,
     eventStream,
     cacheManager,
+    givens,
   }: {
     urlReader?: URLReader;
     buildManifest?: BuildManifest;
     eventStream?: EventStream;
     cacheManager?: CacheManager;
+    /**
+     * Per-runtime givens supplied directly by the host (multi-tenant
+     * server passing JWT-derived values; tests; scripts). Overlaid on top
+     * of `config.givensURL` per-key, then per-query supply via
+     * `.run({givens: ...})` overlays on top of both.
+     */
+    givens?: Record<string, GivenValue>;
   } & Connectionable) {
     if (config !== undefined) {
       this._config = config;
@@ -154,6 +171,21 @@ export class Runtime {
     this._buildManifest = buildManifest;
     this._eventStream = eventStream;
     this._cacheManager = cacheManager;
+    if (givens) {
+      for (const [name, value] of Object.entries(givens)) {
+        if (value === undefined) {
+          throw new Error(
+            `Runtime givens.${name}: explicit undefined is not a valid value. ` +
+              'Omit the key to defer to declaration default or the file layer; ' +
+              'use null for an explicit null value.'
+          );
+        }
+      }
+    }
+    this._constructorGivensMap = givens
+      ? new Map(Object.entries(givens))
+      : new Map();
+    this._finalizedGivensSet = new Set(this._config?.finalizeGivens ?? []);
   }
 
   /**
@@ -182,6 +214,50 @@ export class Runtime {
    */
   public get eventStream(): EventStream | undefined {
     return this._eventStream;
+  }
+
+  /**
+   * Constructor-supplied givens, exposed for the materializer's per-query
+   * merge. Underscore-prefixed because it's the constructor layer only —
+   * use `getGivens()` for the full file+constructor view a caller usually
+   * wants.
+   *
+   * @internal Accessed from QueryMaterializer.
+   */
+  public get _constructorGivens(): ReadonlyMap<string, GivenValue> {
+    return this._constructorGivensMap;
+  }
+
+  /**
+   * The runtime's effective givens — file (from `config.givensPath`,
+   * lazily loaded) merged with the constructor `givens:` option, with
+   * the constructor winning per-key. Per-query supply via
+   * `.run({ givens: ... })` is *not* included; that's a per-call
+   * argument, not runtime state.
+   *
+   * Async because the file may not yet be loaded; subsequent calls share
+   * the cached promise.
+   */
+  public async getGivens(): Promise<ReadonlyMap<string, GivenValue>> {
+    const file = await this._resolveGivens();
+    const merged = new Map<string, GivenValue>();
+    if (file) {
+      for (const [k, v] of Object.entries(file)) merged.set(k, v);
+    }
+    for (const [k, v] of this._constructorGivensMap) merged.set(k, v);
+    return merged;
+  }
+
+  /**
+   * Surface names of givens locked at the runtime layer (the resolved set
+   * the `config.finalizeGivens` directive produced). Per-query supply for
+   * these names throws; `Model.givens` and `PreparedQuery.givens` filter
+   * them out so introspection-driven UIs don't render editors for them.
+   *
+   * @internal Accessed from QueryMaterializer and Model construction.
+   */
+  public get _finalizedGivens(): ReadonlySet<string> {
+    return this._finalizedGivensSet;
   }
 
   /**
@@ -233,13 +309,13 @@ export class Runtime {
     if (this._buildManifest) {
       return Promise.resolve(this._buildManifest);
     }
-    const url = this._config?.manifestURL;
-    if (!url) return Promise.resolve(undefined);
+    const urlStr = this._config?.manifestURL;
+    if (!urlStr) return Promise.resolve(undefined);
     if (!this._resolvedBuildManifestPromise) {
       this._resolvedBuildManifestPromise = (async () => {
         let text: string;
         try {
-          const result = await this._urlReader.readURL(url);
+          const result = await this._urlReader.readURL(new URL(urlStr));
           text = typeof result === 'string' ? result : result.contents;
         } catch {
           // Read failure (no file, permission, etc.) — treat as "no
@@ -249,7 +325,22 @@ export class Runtime {
           return undefined;
         }
         try {
-          return JSON.parse(text) as BuildManifest;
+          const parsed: unknown = JSON.parse(text);
+          if (!isBuildManifestShape(parsed)) {
+            throw new Error('manifest is not an object with an "entries" map');
+          }
+          for (const [buildId, entry] of Object.entries(parsed.entries)) {
+            if (!isBuildManifestEntry(entry)) {
+              throw new Error(
+                `Manifest entry '${buildId}' is missing a string tableName`
+              );
+            }
+            requireCanonicalTablePathAnyDialect(
+              entry.tableName,
+              `Manifest entry '${buildId}'`
+            );
+          }
+          return parsed;
         } catch (e) {
           // File was present but couldn't be parsed. Return an empty
           // manifest carrying the load error so a strict-mode compile can
@@ -257,12 +348,69 @@ export class Runtime {
           const msg = e instanceof Error ? e.message : String(e);
           return {
             entries: {},
-            loadError: `Manifest file at ${url.toString()} could not be parsed: ${msg}`,
+            loadError: `Manifest file at ${urlStr} could not be parsed: ${msg}`,
           };
         }
       })();
     }
     return this._resolvedBuildManifestPromise;
+  }
+
+  /**
+   * Resolve the per-runtime givens map from `config.givensURL` (the file
+   * `givensPath` points at). Lazy and cached as a Promise — first compile
+   * triggers the read, subsequent compiles share the result.
+   *
+   * Stricter error policy than `_resolveBuildManifest`: a missing file or
+   * malformed JSON throws. Per design, the per-runtime givens layer is a
+   * configured contract, not an opportunistic read; a misconfigured path
+   * should fail loudly at the first compile, not silently degrade.
+   *
+   * Returns `undefined` only when no `givensURL` is configured.
+   *
+   * @internal Accessed from QueryMaterializer.
+   */
+  public _resolveGivens(): Promise<Record<string, GivenValue> | undefined> {
+    const urlStr = this._config?.givensURL;
+    if (!urlStr) return Promise.resolve(undefined);
+    if (!this._resolvedGivensPromise) {
+      this._resolvedGivensPromise = (async () => {
+        let text: string;
+        try {
+          const result = await this._urlReader.readURL(new URL(urlStr));
+          text = typeof result === 'string' ? result : result.contents;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          throw new Error(
+            `givens: failed to read givens file at ${urlStr}: ${msg}`
+          );
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          throw new Error(`givens: failed to parse JSON at ${urlStr}: ${msg}`);
+        }
+        if (!isGivensObject(parsed)) {
+          const got = Array.isArray(parsed)
+            ? 'array'
+            : parsed === null
+              ? 'null'
+              : typeof parsed;
+          throw new Error(
+            `givens: file at ${urlStr} must be a JSON object of name → value pairs, got ${got}`
+          );
+        }
+        return parsed;
+      })();
+    }
+    return this._resolvedGivensPromise;
+  }
+
+  /** @internal */
+  public _invalidateGivensCache(): void {
+    this._resolvedGivensPromise = undefined;
   }
 
   /**
@@ -283,19 +431,35 @@ export class Runtime {
   }
 
   /**
-   * Notify every connection this runtime's config has handed out that it
-   * is time to release its resources (pools, sockets, file handles,
-   * in-process databases). A no-op for runtimes constructed without a
-   * MalloyConfig — in that case the caller owns the connections they
-   * passed in and is responsible for closing them.
+   * Tell this runtime's connections what to do with their backend
+   * resources now that the host is done with this Runtime. Two policies:
    *
-   * The expected contract is one MalloyConfig per Runtime. Long-running
-   * hosts (Publisher, a VS Code extension tearing down a project) should
-   * call this when a runtime goes out of scope; one-shot CLIs can skip it
-   * and let process exit clean up.
+   * - `'close'` (default) — destructive shutdown. Connections release
+   *   resources and become unusable. Use at real shutdown: process exit,
+   *   extension deactivate, config-file change.
+   *
+   * - `'idle'` — reversible release. Connections release expensive
+   *   resources (DuckDB file locks, socket pools) but stay logically
+   *   valid. The same Connection objects are reused on next lookup;
+   *   schema cache and other in-process state survive. Use between
+   *   operations in long-lived hosts (a VSCode extension, an MCP server,
+   *   any host that builds Runtimes per request) so that other writers
+   *   can claim resources during idle gaps.
+   *
+   * A no-op for runtimes constructed without a MalloyConfig — in that
+   * case the caller owns the connections they passed in.
+   */
+  public async shutdown(
+    connections: 'close' | 'idle' = 'close'
+  ): Promise<void> {
+    await this._config?.shutdown(connections);
+  }
+
+  /**
+   * @deprecated Use `shutdown('close')` instead.
    */
   public async releaseConnections(): Promise<void> {
-    await this._config?.releaseConnections();
+    await this.shutdown('close');
   }
 
   /**
@@ -321,7 +485,7 @@ export class Runtime {
     return new ModelMaterializer(
       this,
       async () => {
-        return Malloy.compile({
+        const m = await Malloy.compile({
           ...compilable,
           urlReader: this.urlReader,
           connections: this.connections,
@@ -332,8 +496,31 @@ export class Runtime {
           testEnvironment: options?.testEnvironment,
           cacheManager: this.cacheManager,
         });
+        return this._withRuntimeContext(m);
       },
       options
+    );
+  }
+
+  /**
+   * Re-wrap a `Model` produced by `Malloy.compile` with this runtime's
+   * `RuntimeContext` so context-sensitive Model methods (currently
+   * `Model.givens` filtering finalized names; future runtime-aware
+   * concerns) work correctly. No-op when there's nothing in the context.
+   *
+   * @internal Accessed from `ModelMaterializer.extendModel` and Runtime
+   * loadModel paths.
+   */
+  public _withRuntimeContext(m: Model): Model {
+    if (this._finalizedGivensSet.size === 0) return m;
+    return new Model(
+      m._modelDef,
+      m.problems,
+      m.fromSources,
+      m.getExistingQueryModel(),
+      {
+        finalizedGivens: this._finalizedGivensSet,
+      }
     );
   }
 
@@ -348,7 +535,15 @@ export class Runtime {
     return new ModelMaterializer(
       this,
       async () => {
-        return new Model(modelDef, [], []);
+        return new Model(
+          modelDef,
+          [],
+          [],
+          undefined,
+          this._finalizedGivensSet.size > 0
+            ? {finalizedGivens: this._finalizedGivensSet}
+            : undefined
+        );
       },
       options
     );
@@ -515,9 +710,7 @@ export class SingleConnectionRuntime<
 
   // quote a column name
   quote(column: string): string {
-    return getDialect(this.connection.dialectName).sqlMaybeQuoteIdentifier(
-      column
-    );
+    return getDialect(this.connection.dialectName).sqlQuoteIdentifier(column);
   }
 
   get dialect(): Dialect {
@@ -651,6 +844,68 @@ export class ModelMaterializer extends FluentState<Model> {
   }
 
   /**
+   * Load a Malloy query whose text comes from an untrusted source — an
+   * MCP client, an LLM-authored query, a UI field, an HTTP request body
+   * — and should compile against this already-loaded trusted model.
+   * Use this in preference to `loadQuery` when the caller of your
+   * service is not the author of the model and may write Malloy that
+   * reaches past the model's curated surface.
+   *
+   * Restricted-mode compilation rejects these constructs:
+   *
+   * - `import` statements
+   * - `given:` declarations (restricted queries may still reference
+   *   givens the model declared, via `$NAME`)
+   * - `##!` compiler-flag annotations
+   * - `connection.table(...)` and `connection.sql(...)` source forms
+   * - `name!type(args)` raw-SQL function calls
+   * - The `sql_*` family of built-in functions (`sql_number`,
+   *   `sql_string`, `sql_date`, `sql_timestamp`, `sql_boolean`)
+   *
+   * The model's existing surface — sources, queries, dimensions,
+   * measures, functions, givens declared by the model author — is
+   * fully available regardless of whether the model's own definitions
+   * use any of the forbidden constructs.
+   *
+   * Errors reach the caller in the same way as any other Malloy
+   * compile: `.validate()` returns a `LogMessage[]`, and `.run()` /
+   * `.getPreparedResult()` / `.getSQL()` throw `MalloyError` whose
+   * `.problems` is the same array. The list holds every compile
+   * problem — ordinary translator and SQL-compile errors as well as
+   * restricted-mode rejections. The restricted-mode subset is
+   * identifiable by `code: 'restricted-construct-forbidden'` and
+   * `errorTag: 'restricted-mode'`; restricted-mode rejection messages
+   * quote the offending source text and state the rule. Multiple
+   * violations are reported in one compile.
+   *
+   * The input is required to be a string. Restricted text arrives from
+   * an untrusted caller as bytes the host already has in hand; there
+   * is no host-side trust mechanism for fetching it via a URL.
+   *
+   * @param text The Malloy text to compile as a restricted query.
+   * @return A `QueryMaterializer` capable of materializing or running
+   *   the query.
+   */
+  public loadRestrictedQuery(text: string): QueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      const urlReader = this.runtime.urlReader;
+      const connections = this.runtime.connections;
+      const testEnvironment = this.runtime.isTestRuntime ? true : undefined;
+      const model = await this.getModel();
+      const queryModel = await Malloy.compile({
+        source: text,
+        restrictedMode: true,
+        urlReader,
+        connections,
+        model,
+        testEnvironment,
+        ...this.compileQueryOptions,
+      });
+      return queryModel.preparedQuery;
+    });
+  }
+
+  /**
    * Extend a Malloy model by URL or contents.
    *
    * @param source The model URL or contents to load and (eventually) compile.
@@ -687,7 +942,7 @@ export class ModelMaterializer extends FluentState<Model> {
           testEnvironment: options?.testEnvironment,
           ...this.compileQueryOptions,
         });
-        return queryModel;
+        return this.runtime._withRuntimeContext(queryModel);
       },
       options
     );
@@ -751,11 +1006,16 @@ export class ModelMaterializer extends FluentState<Model> {
     const result = await this.loadQuery(searchMapMalloy, options).run({
       rowLimit: 1000,
     });
-    const rawResult = result._queryResult.result as unknown as {
+    // The query above is fully constrained — its shape is dictated by the
+    // group_by/aggregate/nest we just compiled. Use the public `data`
+    // accessor (a typed `QueryData`) and assert the row shape rather than
+    // reaching into `_queryResult` and laundering through `unknown`.
+    type SearchValueMapRow = {
       fieldName: string;
       cardinality: unknown;
       values: {fieldValue: string; weight: unknown}[];
-    }[];
+    };
+    const rawResult = result.data.toObject() as SearchValueMapRow[];
     return rawResult.map(row => ({
       ...row,
       cardinality: rowDataToNumber(row.cardinality),
@@ -859,6 +1119,36 @@ export class ModelMaterializer extends FluentState<Model> {
   public getModel(): Promise<Model> {
     return this.materialize();
   }
+
+  /**
+   * Compile this model and return any problems as structured
+   * `LogMessage`s; empty array means clean. Non-throwing.
+   *
+   * Only translator-time problems surface here; SQL-compile problems
+   * are per-query and live on `QueryMaterializer.validate()`.
+   *
+   * A subsequent `getModel()` reuses the cached materialize.
+   */
+  public async validate(): Promise<LogMessage[]> {
+    try {
+      await this.materialize();
+      return [];
+    } catch (e) {
+      if (e instanceof MalloyError) return e.problems;
+      if (e instanceof Error) {
+        return [
+          {
+            message:
+              'Internal compiler error (likely a Malloy bug — please file ' +
+              `an issue): ${e.message}`,
+            severity: 'error',
+            code: 'compiler-bug',
+          },
+        ];
+      }
+      throw e;
+    }
+  }
 }
 
 // =============================================================================
@@ -870,8 +1160,8 @@ function runSQLOptionsWithAnnotations(
   givenOptions?: RunSQLOptions
 ): RunSQLOptions {
   return {
-    queryAnnotation: preparedResult.annotation,
-    modelAnnotation: preparedResult.modelAnnotation,
+    queryAnnotations: preparedResult._rawQuery.annotations,
+    modelAnnotations: preparedResult._modelDef.annotations,
     ...givenOptions,
   };
 }
@@ -881,8 +1171,20 @@ function runSQLOptionsWithAnnotations(
  * materializing the query (via `getPreparedQuery()`) or extending the task to load
  * prepared results or run the query (via e.g. `loadPreparedResult()` or `run()`).
  */
+type CompileAttempt = {
+  preparedResult?: PreparedResult;
+  problems: LogMessage[];
+};
+
 export class QueryMaterializer extends FluentState<PreparedQuery> {
   private readonly compileQueryOptions: CompileQueryOptions | undefined;
+  /**
+   * Memoizes the no-options compile so `validate()` + a follow-up
+   * `getPreparedResult()` / `run()` shares one compilation. Calls with
+   * explicit options bypass — options aren't hashed.
+   */
+  private _compileAttempt: Promise<CompileAttempt> | undefined;
+
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<PreparedQuery>,
@@ -890,6 +1192,80 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   ) {
     super(runtime, materialize);
     this.compileQueryOptions = options;
+  }
+
+  /**
+   * `MalloyError` (translator) is unwrapped into its `problems` array.
+   * `MalloyCompileError` (SQL compiler) becomes one structured problem.
+   * Any other `Error` is treated as an invariant violation and surfaces
+   * as one `code: 'compiler-bug'` problem.
+   */
+  private async _compileAndCollect(
+    options?: CompileQueryOptions
+  ): Promise<CompileAttempt> {
+    try {
+      const preparedResult =
+        await this.loadPreparedResult(options).getPreparedResult();
+      return {preparedResult, problems: []};
+    } catch (e) {
+      if (e instanceof MalloyError) {
+        return {problems: e.problems};
+      }
+      if (e instanceof MalloyCompileError) {
+        return {
+          problems: [
+            {
+              message: e.message,
+              severity: 'error',
+              code: e.code,
+              at: e.at,
+            },
+          ],
+        };
+      }
+      if (e instanceof Error) {
+        return {
+          problems: [
+            {
+              message:
+                'Internal compiler error (likely a Malloy bug — please file ' +
+                `an issue): ${e.message}`,
+              severity: 'error',
+              code: 'compiler-bug',
+            },
+          ],
+        };
+      }
+      throw e;
+    }
+  }
+
+  private compileAttempt(
+    options?: CompileQueryOptions
+  ): Promise<CompileAttempt> {
+    if (options === undefined && this._compileAttempt) {
+      return this._compileAttempt;
+    }
+    const p = this._compileAndCollect(options);
+    if (options === undefined) {
+      this._compileAttempt = p;
+    }
+    return p;
+  }
+
+  /**
+   * Compile this query and return any problems as structured
+   * `LogMessage`s; empty array means clean. Non-throwing.
+   *
+   * Surfaces translator-time errors (may be several) and compile-time
+   * errors (at most one — the compiler is fail-fast). LogMessages carry
+   * `code` and, where the IR has it, `at: DocumentLocation`.
+   *
+   * A subsequent no-options `getPreparedResult()` / `getSQL()` / `run()`
+   * reuses the cached compile.
+   */
+  public async validate(options?: CompileQueryOptions): Promise<LogMessage[]> {
+    return (await this.compileAttempt(options)).problems;
   }
 
   /**
@@ -945,6 +1321,15 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         mergedOptions.buildManifest ??
         (await this.runtime._resolveBuildManifest());
 
+      if (buildManifest) {
+        for (const [buildId, entry] of Object.entries(buildManifest.entries)) {
+          requireCanonicalTablePathAnyDialect(
+            entry.tableName,
+            `Manifest entry '${buildId}'`
+          );
+        }
+      }
+
       // If we have a manifest with entries, compute connectionDigests for lookups.
       // TODO: This is inefficient - we call getBuildPlan just to find connection names.
       // Consider adding a listConnections() method to LookupConnection, or caching this.
@@ -958,12 +1343,16 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         buildManifest = undefined;
       }
       if (buildManifest) {
-        const modelTag = preparedQuery.model.tagParse({prefix: /^##! /}).tag;
+        const modelTag = preparedQuery.model.annotations.parseAsTag('!').tag;
         if (!modelTag.has('experimental', 'persistence')) {
           if (explicitManifest) {
             // Explicitly passed non-empty manifest requires persistence support
-            throw new Error(
-              'Model must have ##! experimental.persistence to use buildManifest'
+            throw new MalloyCompileError(
+              'A non-empty `buildManifest` was supplied, but the model is ' +
+                'missing `##! experimental.persistence`. Add the flag to the ' +
+                'model or pass `EMPTY_BUILD_MANIFEST` to suppress substitution.',
+              'runtime-manifest-needs-persistence-flag',
+              undefined
             );
           }
           // Runtime-level manifest (e.g. from config): silently ignore
@@ -985,8 +1374,87 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
 
       // Use virtualMap from options if provided, otherwise fall back to Runtime's.
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
+      if (virtualMap) {
+        for (const [connName, inner] of virtualMap) {
+          for (const [virtualName, tablePath] of inner) {
+            requireCanonicalTablePathAnyDialect(
+              tablePath,
+              `virtualMap entry '${connName}.${virtualName}'`
+            );
+          }
+        }
+      }
 
-      // Build PrepareResultOptions from CompileQueryOptions + connectionDigests
+      // Per-query supply for a finalized given is rejected at API entry
+      // — the finalized-givens set is the runtime's "this can't be
+      // overridden by the caller" guarantee. Fail before any IO so misuse
+      // is loud.
+      const finalizedSet = this.runtime._finalizedGivens;
+      if (finalizedSet.size > 0 && mergedOptions.givens) {
+        for (const name of Object.keys(mergedOptions.givens)) {
+          if (finalizedSet.has(name)) {
+            throw new MalloyCompileError(
+              `Cannot supply given '${name}' per-query: it is finalized at ` +
+                'the runtime layer via `config.finalizeGivens`.',
+              'runtime-given-finalized',
+              undefined
+            );
+          }
+        }
+      }
+
+      // Three layers of givens, merged per-key in precedence order:
+      //   1. config.givensURL file (lazy + cached)
+      //   2. Runtime constructor `givens:` option
+      //   3. Per-query supply via `.run({givens: ...})`
+      // Higher-numbered layers win on collision. Each layer is optional;
+      // the merge collapses to undefined when all three are absent.
+      const fileGivens = await this.runtime._resolveGivens();
+      const constructorGivens = mapToRecord(this.runtime._constructorGivens);
+      const haveAny = fileGivens || constructorGivens || mergedOptions.givens;
+      const mergedGivens = haveAny
+        ? {...fileGivens, ...constructorGivens, ...mergedOptions.givens}
+        : undefined;
+
+      // Query-scoped validation: of the givens THIS query references,
+      // any that are finalized must have a value somewhere (file or
+      // constructor). One config covers a project; individual files
+      // declare overlapping but distinct given sets; an unrelated query
+      // shouldn't fail because some other file's given is in the
+      // finalize list without a value. The per-query rejection above is
+      // the actual security primitive; this check is the sanity net for
+      // "you locked it but forgot to supply it."
+      const queryGivenUsage = preparedQuery._query.givenUsage ?? [];
+      if (finalizedSet.size > 0 && queryGivenUsage.length > 0) {
+        const referencedIds = new Set(queryGivenUsage.map(g => g.id));
+        const missingProblems: LogMessage[] = [];
+        for (const [surfaceName, entry] of Object.entries(
+          preparedQuery._modelDef.contents
+        )) {
+          if (entry.type !== 'given') continue;
+          if (!referencedIds.has(entry.id)) continue;
+          if (!finalizedSet.has(surfaceName)) continue;
+          if (mergedGivens && surfaceName in mergedGivens) continue;
+          const firstUse = queryGivenUsage.find(u => u.id === entry.id);
+          missingProblems.push({
+            message:
+              `Finalized given '${surfaceName}' has no resolved value. ` +
+              'It must be supplied in `givensPath` or in the Runtime ' +
+              "constructor's `givens`.",
+            severity: 'error',
+            code: 'runtime-given-finalized-missing',
+            at: firstUse?.at,
+          });
+        }
+        if (missingProblems.length > 0) {
+          throw new MalloyError(
+            missingProblems.map(p => p.message).join('\n'),
+            missingProblems
+          );
+        }
+      }
+
+      // Build PrepareResultOptions from CompileQueryOptions + connectionDigests.
       const prepareResultOptions: PrepareResultOptions = {
         defaultRowLimit: mergedOptions.defaultRowLimit,
         buildManifest,
@@ -997,6 +1465,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       return preparedQuery.getPreparedResult({
         ...mergedOptions,
         ...prepareResultOptions,
+        givens: mergedGivens,
       });
     });
   }
@@ -1004,12 +1473,21 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Materialize the prepared result of this loaded query.
    *
+   * Throws `MalloyError` on failure, with `.problems` populated for both
+   * translator and compiler errors. For non-throwing access to the same
+   * problem list, use `validate()`.
+   *
    * @return A promise of the prepared result of this loaded query.
    */
-  public getPreparedResult(
+  public async getPreparedResult(
     options?: CompileQueryOptions
   ): Promise<PreparedResult> {
-    return this.loadPreparedResult(options).getPreparedResult();
+    const attempt = await this.compileAttempt(options);
+    if (attempt.preparedResult) return attempt.preparedResult;
+    throw new MalloyError(
+      attempt.problems.map(p => p.message).join('\n') || 'Compilation failed.',
+      attempt.problems
+    );
   }
 
   /**
@@ -1166,4 +1644,40 @@ export class ExploreMaterializer extends FluentState<Explore> {
   public getExplore(): Promise<Explore> {
     return this.materialize();
   }
+}
+
+/**
+ * Structural check for the `BuildManifest` shape: a non-null object with an
+ * object `entries` field. Doesn't validate every entry — `BuildManifestEntry`
+ * is just `{tableName: string}`, so a stricter walk could come later if we
+ * find malformed entries causing trouble. The current goal is to fail
+ * cleanly on a manifest file that parsed to a string/array/null instead of
+ * leaving a downstream `entries[buildId]` lookup to crash on `undefined`.
+ */
+function isBuildManifestShape(value: unknown): value is BuildManifest {
+  if (typeof value !== 'object' || value === null) return false;
+  const entries = (value as {entries?: unknown}).entries;
+  return typeof entries === 'object' && entries !== null;
+}
+
+/**
+ * Shallow shape-check for the givens-values file: must be a non-array
+ * non-null object. Per-value type checking happens later when each
+ * declared given is bound via `resolveSuppliedGivens` — at this layer we
+ * only ensure the top-level shape is a name → value map.
+ */
+function isGivensObject(value: unknown): value is Record<string, GivenValue> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Convert a non-empty `ReadonlyMap` into a plain object for spread-merging
+ * with other given layers. Returns `undefined` for an empty map so the
+ * merge can short-circuit when all layers are absent.
+ */
+function mapToRecord(
+  m: ReadonlyMap<string, GivenValue>
+): Record<string, GivenValue> | undefined {
+  if (m.size === 0) return undefined;
+  return Object.fromEntries(m);
 }

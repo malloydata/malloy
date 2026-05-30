@@ -20,7 +20,7 @@
 
 import {readFile} from 'fs/promises';
 import * as path from 'path';
-// eslint-disable-next-line n/no-extraneous-import
+
 import {DBSQLClient, DBSQLLogger, LogLevel} from '@databricks/sql';
 
 const PARQUET_DIR = path.resolve(__dirname, '../data/malloytest-parquet');

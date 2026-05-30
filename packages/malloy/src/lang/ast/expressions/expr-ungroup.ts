@@ -25,6 +25,7 @@ import type {UngroupNode} from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
   expressionIsUngroupedAggregate,
+  fieldUsageFrom,
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from '../field-space/query-spaces';
@@ -101,18 +102,18 @@ export class ExprUngroup extends ExpressionDef {
         }
         ungroup.fields = dstFields;
       }
-      const fieldUsage = exprVal.fieldUsage;
+      const fieldUsage = fieldUsageFrom(exprVal.refSummary);
       return {
         ...TDU.atomicDef(exprVal),
         expressionType: 'ungrouped_aggregate',
         value: ungroup,
         evalSpace: 'output',
-        fieldUsage,
+        refSummary: exprVal.refSummary,
         ungroupings: [
           {
             requiresGroupBy: exprVal.requiresGroupBy ?? [],
-            fieldUsage: fieldUsage ?? [],
-            ungroupedFields: isExclude ? ungroupFields ?? [] : '*',
+            fieldUsage,
+            ungroupedFields: isExclude ? (ungroupFields ?? []) : '*',
             path: [],
             exclude: isExclude,
             refFields: ungroup.fields,

@@ -15,6 +15,7 @@ import type {
 } from '../model/malloy_types';
 import {sqlKey} from '../model/sql_block';
 import type {RunSQLOptions} from '../run_sql_options';
+import {validateCanonicalTablePath} from './validate_table_path';
 import type {
   Connection,
   FetchSchemaOptions,
@@ -114,6 +115,11 @@ export abstract class BaseConnection implements Connection {
     const errors: {[name: string]: string} = {};
 
     for (const [tableName, tablePath] of Object.entries(missing)) {
+      const invalid = validateCanonicalTablePath(this.dialectName, tablePath);
+      if (invalid !== undefined) {
+        errors[tableName] = invalid;
+        continue;
+      }
       const inCache = await this.checkSchemaCache<TableSourceDef>(
         tablePath,
         'table',
@@ -166,6 +172,8 @@ export abstract class BaseConnection implements Connection {
   }
 
   async close(): Promise<void> {}
+
+  async idle(): Promise<void> {}
 
   async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
     return {};

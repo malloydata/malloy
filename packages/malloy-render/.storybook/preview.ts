@@ -1,5 +1,5 @@
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
-import {Preview} from '@storybook/html';
+import type {Preview} from '@storybook/html';
 import registeredData from './registered_data.json';
 import theme from './theme';
 
@@ -10,7 +10,7 @@ async function createConnection() {
     rowLimit: 1000,
   });
   await connection.connecting;
-  for (let tableName of registeredData) {
+  for (const tableName of registeredData) {
     const tableUrl = `data/${tableName}`;
     const fullTableName = `static/${tableUrl}`;
     await connection.registerRemoteTable(

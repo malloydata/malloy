@@ -365,6 +365,23 @@ export class TestChildTranslator extends MalloyChildTranslator {
 }
 
 const testURI = 'internal://test/langtests/root.malloy';
+
+export interface TestTranslatorOptions {
+  rootRule?: string;
+  importBaseURL?: string | null;
+  eventStream?: EventStream | null;
+  internalModel?: ModelDef;
+  restrictedMode?: boolean;
+  /**
+   * Each entry is a compiler-flag tag fragment — the content that
+   * would follow `##! ` in a Malloy source annotation. Rendered to
+   * `##! <flag>\n` and pushed onto compilerFlagSrc before any
+   * TranslateStep seeding, so the flags are active during AST-build
+   * inExperiment() checks.
+   */
+  compilerFlags?: string[];
+}
+
 export class TestTranslator extends MalloyTranslator {
   allDialectsEnabled = true;
   testRoot?: TestRoot;
@@ -453,16 +470,19 @@ export class TestTranslator extends MalloyTranslator {
 
   constructor(
     readonly testSrc: string,
-    importBaseURL: string | null = null,
-    eventStream: EventStream | null = null,
-    rootRule = 'malloyDocument',
-    internalModel?: ModelDef
+    options: TestTranslatorOptions = {}
   ) {
-    super(testURI, importBaseURL, null, eventStream);
-    this.grammarRule = rootRule;
+    super(
+      testURI,
+      options.importBaseURL ?? null,
+      null,
+      options.eventStream ?? null,
+      options.restrictedMode ?? false
+    );
+    this.grammarRule = options.rootRule ?? 'malloyDocument';
     this.importZone.define(testURI, testSrc);
-    if (internalModel !== undefined) {
-      this.internalModel = internalModel;
+    if (options.internalModel !== undefined) {
+      this.internalModel = options.internalModel;
     }
     for (const actualSchema of mockSchema) {
       this.schemaZone.define(
@@ -472,6 +492,9 @@ export class TestTranslator extends MalloyTranslator {
     }
     this.connectionDialectZone.define('_db_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
+    for (const flag of options.compilerFlags ?? []) {
+      this.compilerFlagSrc.push(`##! ${flag}\n`);
+    }
   }
 
   translate(): TranslateResponse {
@@ -594,9 +617,10 @@ export class BetaExpression extends TestTranslator {
   constructor(
     src: string,
     model?: ModelDef,
-    readonly sourceName: string = 'ab'
+    readonly sourceName: string = 'ab',
+    options: Omit<TestTranslatorOptions, 'rootRule' | 'internalModel'> = {}
   ) {
-    super(src, null, null, 'debugExpr', model);
+    super(src, {...options, rootRule: 'debugExpr', internalModel: model});
   }
 
   private testFS() {
@@ -711,31 +735,33 @@ export function model(
   };
 }
 
-export function makeModelFunc(options: {
-  model?: ModelDef;
-  prefix?: string;
-  wrap?: (code: string) => string;
-}) {
+export function makeModelFunc(
+  options: TestTranslatorOptions & {
+    prefix?: string;
+    wrap?: (code: string) => string;
+  }
+) {
   return function model(
     unmarked: TemplateStringsArray,
     ...marked: string[]
   ): HasTranslator<TestTranslator> {
     const ms = markSource(unmarked, ...marked);
+    const {prefix, wrap, ...ttOptions} = options;
     return {
       ...ms,
       translator: new TestTranslator(
-        (options.prefix ?? '') +
-          (options.wrap ? options.wrap(ms.code) : ms.code),
-        null,
-        null,
-        undefined,
-        options?.model
+        (prefix ?? '') + (wrap ? wrap(ms.code) : ms.code),
+        ttOptions
       ),
     };
   };
 }
 
-export function makeExprFunc(model: ModelDef, sourceName: string) {
+export function makeExprFunc(
+  model?: ModelDef,
+  sourceName: string = 'ab',
+  options: Omit<TestTranslatorOptions, 'rootRule' | 'internalModel'> = {}
+) {
   return function expr(
     unmarked: TemplateStringsArray,
     ...marked: string[]
@@ -743,7 +769,7 @@ export function makeExprFunc(model: ModelDef, sourceName: string) {
     const ms = markSource(unmarked, ...marked);
     return {
       ...ms,
-      translator: new BetaExpression(ms.code, model, sourceName),
+      translator: new BetaExpression(ms.code, model, sourceName, options),
     };
   };
 }

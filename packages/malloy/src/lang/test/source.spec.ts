@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -524,7 +523,7 @@ describe('source:', () => {
             expect(isSourceDef(d)).toBe(true);
             if (isSourceDef(dC)) {
               const dCAi = dC.fields.find(f => (f.as ?? f.name) === 'ai');
-              expect(dCAi?.annotation).toMatchObject({
+              expect(dCAi?.annotations).toMatchObject({
                 notes: [{text: '# new_note\n'}],
               });
             }

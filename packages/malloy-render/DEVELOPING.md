@@ -21,16 +21,21 @@ $ npm run --prefix packages/malloy-render storybook-windows
 
 Then navigate to the URL provided. In this storybook, you can navigate between different stories that render Malloy queries from the Malloy source code.
 
-### Tips
+### Iteration rules
 
-This storybook does not hot reload, so you need to reload the page when:
+Storybook does not use hot module replacement (HMR), but the Vite dev server stays running while you work. Most changes are picked up by a browser page reload; only boot-time artifacts require restarting Storybook.
 
-- you make changes to malloy-render source code
-- you add a new story
+| You change… | What you do |
+|---|---|
+| `.ts` / `.tsx` / `.css` in `src/` | Reload the browser page — Vite serves source directly, so changes are picked up on refresh |
+| A `.stories.malloy` file | Restart Storybook — the story indexer runs once at boot |
+| `.storybook/` config or `registered_data.json` | Restart Storybook |
+| A file in `src/stories/static/data/` | Reload the browser page |
+| Anything in `packages/malloy/src/` (Malloy core) | Restart Storybook |
 
-If you make changes to the malloy core package, you need to relaunch the storybook.
+You do **not** need to run `npm run build` as part of normal iteration. `npm run build` produces the published library bundles (`dist/module/index.umd.js`, `index.mjs`), which Storybook does not consume — Storybook reads source directly via Vite.
 
-It is fairly common for Malloy compilation to randomly fail when opening the storybook. A simple reload of the page fixes the problem.
+It is fairly common for Malloy compilation to randomly fail when first opening Storybook. A simple page reload fixes it.
 
 ## Adding new stories for viewing the renderer
 

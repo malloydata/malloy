@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {AccessModifierLabel, Annotation} from '../../../model';
+import type {AccessModifierLabel, AnnotationsDef} from '../../../model';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {RenameSpaceField} from '../field-space/rename-space-field';
 import {DefinitionList} from '../types/definition-list';
@@ -33,7 +33,7 @@ import {SpaceField} from '../types/space-field';
 
 export class RenameField extends MalloyElement implements Noteable, MakeEntry {
   elementType = 'renameField';
-  note?: Annotation;
+  note?: AnnotationsDef;
   extendNote = extendNoteMethod;
   readonly isNoteableObj = true;
 

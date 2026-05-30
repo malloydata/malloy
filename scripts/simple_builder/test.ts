@@ -24,7 +24,7 @@ import {gc} from './gc';
 import type {BuilderLog, GCLog, Log} from './log_types';
 import type {Connection, BuildManifest} from '@malloydata/malloy';
 import {Runtime, Manifest, EMPTY_BUILD_MANIFEST} from '@malloydata/malloy';
-// eslint-disable-next-line n/no-extraneous-import
+
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 
 const ROOT = path.resolve(__dirname, '../../.tmp/simple_builder_test');

@@ -4,7 +4,7 @@
  */
 
 import type {EventStream} from '../../runtime_types';
-import type {BuildManifest, VirtualMap} from '../../model';
+import type {BuildManifest, GivenValue, VirtualMap} from '../../model';
 
 /**
  * An empty BuildManifest with no entries and strict mode off.
@@ -19,7 +19,7 @@ export const EMPTY_BUILD_MANIFEST: BuildManifest = Object.freeze({
   strict: false,
 });
 
-export type {Taggable} from '../../taggable';
+export type {Taggable} from './taggable';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,6 +35,8 @@ export interface Loggable {
 export interface ParseOptions {
   importBaseURL?: URL;
   testEnvironment?: boolean;
+  /** Reject language constructs that reach outside the trusted model. */
+  restrictedMode?: boolean;
 }
 
 /** Options for how to run the Malloy semantic checker/translator */
@@ -53,6 +55,7 @@ export interface CompileQueryOptions {
   connectionDigests?: Record<string, string>;
   /** Map from connectionName → virtualName → tablePath for virtual source resolution */
   virtualMap?: VirtualMap;
+  givens?: Record<string, GivenValue>;
 }
 
 // =============================================================================

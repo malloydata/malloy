@@ -1,4 +1,4 @@
-import {tagFromAnnotations} from '@/util';
+import {tagFromAnnotations} from '@malloydata/malloy';
 import {type Field, RootField, getFieldType, FieldType} from '@/data_tree';
 import type {
   RenderPluginFactory,
@@ -12,6 +12,7 @@ import type {
 import {RenderLogCollector} from '@/component/render-log-collector';
 import {resolveBuiltInTags} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
+import {convertLegacyToVizTag} from '@/component/tag-utils';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -25,7 +26,6 @@ export type OnPluginCreateError = (
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
   private rootField: RootField;
-  private warnedLegacyDeclaredPathPlugins = new Set<string>();
   readonly logCollector: RenderLogCollector;
 
   constructor(
@@ -52,7 +52,7 @@ export class RenderFieldMetadata {
         annotations: result.annotations,
       },
       {
-        modelTag: tagFromAnnotations(result.model_annotations, '## '),
+        modelTag: tagFromAnnotations(result.model_annotations, ''),
         queryTimezone: result.query_timezone,
       }
     );
@@ -130,7 +130,7 @@ export class RenderFieldMetadata {
 
       // Mark renderer-owned tag paths as read so semantic ownership,
       // not literal render-time access, drives unread-tag warnings.
-      this.markOwnedTagPaths(field, plugins, matchingFactories);
+      this.markOwnedTagPaths(field, matchingFactories);
     }
     // Recurse for nested fields
     if (field.isNest()) {
@@ -314,24 +314,60 @@ export class RenderFieldMetadata {
     }
 
     // --- Chart field references ---
+    // Normalize legacy # bar_chart { ... } / # line_chart { ... } into the
+    // viz namespace so this check catches both old and new tag forms —
+    // matching what the chart settings builders do.
     if (field.isNest()) {
-      const vizTag = tag.tag('viz');
+      const normalizedTag = convertLegacyToVizTag(tag);
+      const vizTag = normalizedTag.tag('viz');
       if (vizTag) {
-        const childNames = new Set(field.fields.map(f => f.name));
+        const childByName = new Map(field.fields.map(f => [f.name, f]));
         for (const channelName of ['x', 'y', 'series'] as const) {
           const refArray = vizTag.textArray(channelName);
           const refs = refArray ?? [];
           const singleRef = vizTag.text(channelName);
           if (singleRef && !refArray) refs.push(singleRef);
           for (const ref of refs) {
-            if (!childNames.has(ref)) {
+            const child = childByName.get(ref);
+            if (!child) {
               log.error(
-                `Chart field reference '${ref}' for '${channelName}' on '${field.name}' does not match any field. Available fields: ${[...childNames].join(', ')}`,
+                `Chart field reference '${ref}' for '${channelName}' on '${field.name}' does not match any field. Available fields: ${[...childByName.keys()].join(', ')}`,
+                vizTag.tag(channelName)
+              );
+              continue;
+            }
+            if (
+              channelName === 'y' &&
+              child.isBasic() &&
+              !child.isNumber() &&
+              !child.wasCalculation()
+            ) {
+              log.error(
+                `Chart y-channel field '${ref}' on '${field.name}' must be numeric or a measure; got ${getFieldType(child)}.`,
                 vizTag.tag(channelName)
               );
             }
           }
         }
+      }
+    }
+
+    // --- Embedded # y tag on child field must be numeric or a measure ---
+    if (
+      field.isBasic() &&
+      tag.has('y') &&
+      !field.isNumber() &&
+      !field.wasCalculation()
+    ) {
+      const parent = field.parent;
+      const parentIsChart = parent
+        ?.getPlugins()
+        .some(plugin => plugin.name === 'bar' || plugin.name === 'line');
+      if (parentIsChart) {
+        log.error(
+          `Field '${field.name}' is tagged '# y' but is not numeric or a measure; the chart will pick y from the available measures instead.`,
+          tag.tag('y')
+        );
       }
     }
 
@@ -363,8 +399,10 @@ export class RenderFieldMetadata {
     }
 
     // --- Chart mode ---
+    // Normalize legacy # bar_chart / # line_chart so mode validation
+    // catches both old and new tag forms.
     if (field.isNest()) {
-      const vizTag = tag.tag('viz');
+      const vizTag = convertLegacyToVizTag(tag).tag('viz');
       if (vizTag) {
         const modeVal = vizTag.text('mode');
         if (modeVal !== undefined) {
@@ -491,26 +529,9 @@ export class RenderFieldMetadata {
    */
   private markOwnedTagPaths(
     field: Field,
-    plugins: RenderPluginInstance[],
     matchingFactories: RenderPluginFactory[]
   ): void {
     const tag = field.tag;
-
-    for (const plugin of plugins) {
-      const declaredPaths = plugin.getDeclaredTagPaths?.() ?? [];
-      if (
-        declaredPaths.length > 0 &&
-        !this.warnedLegacyDeclaredPathPlugins.has(plugin.name)
-      ) {
-        this.warnedLegacyDeclaredPathPlugins.add(plugin.name);
-        this.logCollector.warn(
-          `Plugin '${plugin.name}' uses deprecated getDeclaredTagPaths(); migrate to getValidationSpec().`
-        );
-      }
-      for (const path of declaredPaths) {
-        tag.find(path);
-      }
-    }
 
     const specs: RendererValidationSpec[] = matchingFactories
       .map(factory => factory.getValidationSpec?.())

@@ -24,6 +24,7 @@ import type {
   Connection,
   ConnectionAttributes,
   PostSqlsourceRequest,
+  PostQuerydataRequest,
   RawAxiosRequestConfig,
 } from './client';
 import {Configuration, ConnectionsApi, ConnectionsTestApi} from './client';
@@ -215,14 +216,14 @@ export class PublisherConnection
     try {
       // TODO: Add support for abortSignal.
       options.abortSignal = undefined;
-      const request: PostSqlsourceRequest = {
+      const request: PostQuerydataRequest = {
         sqlStatement: sql,
+        options: JSON.stringify(options),
       };
       const response = await this.connectionsApi.postQuerydata(
         this.environmentName,
         this.name,
         request,
-        JSON.stringify(options),
         {
           headers: PublisherConnection.getAuthHeaders(this.accessToken),
         }
@@ -242,14 +243,14 @@ export class PublisherConnection
       // TODO: Add support for abortSignal.
       options.abortSignal = undefined;
       // TODO: Add real streaming support to publisher API.
-      const request: PostSqlsourceRequest = {
+      const request: PostQuerydataRequest = {
         sqlStatement: sqlCommand,
+        options: JSON.stringify(options),
       };
       const response = await this.connectionsApi.postQuerydata(
         this.environmentName,
         this.name,
         request,
-        JSON.stringify(options),
         {
           headers: PublisherConnection.getAuthHeaders(this.accessToken),
         }

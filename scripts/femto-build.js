@@ -28,7 +28,7 @@
  * If inputs (and deps) haven't changed, commands are skipped entirely.
  */
 
-/* eslint-disable n/no-process-exit, n/no-extraneous-require, no-empty */
+/* eslint-disable no-empty */
 const {createHash} = require('crypto');
 const {readFileSync, writeFileSync, existsSync, unlinkSync} = require('fs');
 const {execSync} = require('child_process');

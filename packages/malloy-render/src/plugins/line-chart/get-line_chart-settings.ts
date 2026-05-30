@@ -7,7 +7,7 @@
 
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Channel, YChannel, SeriesChannel} from '@/component/types';
-import type {NestField} from '@/data_tree';
+import type {Field, NestField} from '@/data_tree';
 import {walkFields, deepMerge} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {
@@ -193,21 +193,41 @@ export function getLineChartSettings(
     limit: seriesLimit,
   };
 
-  function getField(ref: string) {
-    return explore.pathTo(explore.fieldAt([ref]));
+  // Returns undefined for unknown field refs instead of throwing so bad
+  // references are silently skipped here and reported by
+  // RenderFieldMetadata.validateFieldTags() with a source location.
+  function getField(ref: string): string | undefined {
+    try {
+      return explore.pathTo(explore.fieldAt([ref]));
+    } catch {
+      return undefined;
+    }
   }
 
   // Parse top level tags
   if (vizTag.text('x')) {
-    xChannel.fields.push(getField(vizTag.text('x')!));
+    const xPath = getField(vizTag.text('x')!);
+    if (xPath !== undefined) xChannel.fields.push(xPath);
   }
+  // Non-numeric y fields are skipped here and logged as validation errors
+  // in RenderFieldMetadata.validateFieldTags() so the user gets a
+  // source-located error instead of the red-box tile.
+  const isValidYField = (path: string) => {
+    const f = explore.fieldAt(path);
+    return f.isNumber() || f.wasCalculation();
+  };
   if (vizTag.text('y')) {
-    yChannel.fields.push(getField(vizTag.text('y')!));
+    const path = getField(vizTag.text('y')!);
+    if (path !== undefined && isValidYField(path)) yChannel.fields.push(path);
   } else if (vizTag.textArray('y')) {
-    yChannel.fields.push(...vizTag.textArray('y')!.map(getField));
+    vizTag.textArray('y')!.forEach(ref => {
+      const path = getField(ref);
+      if (path !== undefined && isValidYField(path)) yChannel.fields.push(path);
+    });
   }
   if (vizTag.text('series')) {
-    seriesChannel.fields.push(getField(vizTag.text('series')!));
+    const seriesPath = getField(vizTag.text('series')!);
+    if (seriesPath !== undefined) seriesChannel.fields.push(seriesPath);
   }
 
   // Parse embedded tags
@@ -224,7 +244,10 @@ export function getLineChartSettings(
         embeddedX.push(pathTo);
       }
       if (tag.has('y')) {
-        embeddedY.push(pathTo);
+        // Non-numeric y fields skipped here; logged in validateFieldTags.
+        if (field.isNumber() || field.wasCalculation()) {
+          embeddedY.push(pathTo);
+        }
       }
       if (tag.has('series')) {
         embeddedSeries.push(pathTo);
@@ -251,18 +274,25 @@ export function getLineChartSettings(
     f => f.isBasic() && f.wasDimension()
   );
 
-  const measures = explore.fields.filter(f => f.wasCalculation());
-
-  // If still no x or y, attempt to pick the best choice
+  // If still no x, attempt to pick the best choice — skipping any field
+  // the user has already claimed for another channel either by # y / # series
+  // tag or by viz.y / viz.series reference.
   if (xChannel.fields.length === 0) {
-    // Pick date/time field first if it exists
-    const dateTimeField = explore.fields.find(
-      f => f.wasDimension() && f.isTime()
+    const isClaimed = (f: Field): boolean => {
+      const path = explore.pathTo(f);
+      if (yChannel.fields.includes(path)) return true;
+      if (seriesChannel.fields.includes(path)) return true;
+      if (f.tag.has('y') || f.tag.has('series')) return true;
+      return false;
+    };
+    let fieldToUse = explore.fields.find(
+      f => f.wasDimension() && f.isTime() && !isClaimed(f)
     );
-    if (dateTimeField) xChannel.fields.push(explore.pathTo(dateTimeField));
-    // Pick first dimension field for x
-    else if (dimensions.length > 0) {
-      xChannel.fields.push(explore.pathTo(dimensions[0]));
+    if (!fieldToUse) {
+      fieldToUse = dimensions.find(f => !isClaimed(f));
+    }
+    if (fieldToUse) {
+      xChannel.fields.push(explore.pathTo(fieldToUse));
     }
   }
   if (yChannel.fields.length === 0) {
@@ -273,29 +303,37 @@ export function getLineChartSettings(
     if (numberField) yChannel.fields.push(explore.pathTo(numberField));
   }
   // If no series defined and multiple dimensions, use leftover dimension
+  // (one not already assigned to x or y channels)
   if (seriesChannel.fields.length === 0 && dimensions.length > 1) {
     const dimension = dimensions.find(d => {
       const path = explore.pathTo(d);
-      return !xChannel.fields.includes(path);
+      return !xChannel.fields.includes(path) && !yChannel.fields.includes(path);
     });
     if (dimension) {
       seriesChannel.fields.push(explore.pathTo(dimension));
     }
   }
 
-  if (dimensions.length > 2) {
+  // Dimensions explicitly assigned to the y channel don't count against the
+  // x+series dimension budget.
+  const yDimensionsCount = yChannel.fields.filter(path => {
+    const field = explore.fieldAt(path);
+    return field.wasDimension();
+  }).length;
+
+  if (dimensions.length - yDimensionsCount > 2) {
     throw new Error(
       'Malloy Line Chart: Too many dimensions. A line chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
     );
   }
-  if (dimensions.length === 0) {
+  if (dimensions.length - yDimensionsCount === 0) {
     throw new Error(
       'Malloy Line Chart: No dimensions found. A line chart must have at least 1 dimension for the x axis.'
     );
   }
-  if (measures.length === 0) {
+  if (yChannel.fields.length === 0) {
     throw new Error(
-      'Malloy Line Chart: No measures found. A line chart must have at least 1 measure for the y axis.'
+      'Malloy Line Chart: No measures found and no y channel specified. A line chart must have at least 1 measure or explicitly tagged numeric dimension for the y axis.'
     );
   }
 

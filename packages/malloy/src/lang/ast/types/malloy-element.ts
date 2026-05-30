@@ -23,11 +23,13 @@
 
 import {getDialect} from '../../../dialect';
 import type {
-  Annotation,
+  AnnotationsDef,
   DocumentLocation,
   DocumentReference,
+  Given,
+  GivenID,
   ModelDef,
-  ModelAnnotation,
+  ModelAnnotationsDef,
   NamedModelObject,
   Query,
   SourceID,
@@ -148,7 +150,7 @@ export abstract class MalloyElement {
           text: key,
           definition: {
             type: result.entry.type,
-            annotation: result.entry.annotation,
+            annotations: result.entry.annotations,
             location: result.entry.location,
           },
           location: reference.location,
@@ -159,7 +161,7 @@ export abstract class MalloyElement {
           text: key,
           definition: {
             type: result.entry.type,
-            annotation: result.entry.annotation,
+            annotations: result.entry.annotations,
             location: result.entry.location,
           },
           location: reference.location,
@@ -186,6 +188,10 @@ export abstract class MalloyElement {
       return this.parent.translator();
     }
     return undefined;
+  }
+
+  isRestricted(): boolean {
+    return this.translator()?.root.restrictedMode ?? false;
   }
 
   setTranslator(x: MalloyTranslation): void {
@@ -288,20 +294,25 @@ export abstract class MalloyElement {
     return asString;
   }
 
-  *walk(): Generator<MalloyElement> {
+  *allChildren(): Generator<MalloyElement> {
     for (const kidLabel of Object.keys(this.children)) {
       const kiddle = this.children[kidLabel];
       if (kiddle instanceof MalloyElement) {
         yield kiddle;
       } else {
-        for (const k of kiddle) {
-          yield k;
-        }
+        yield* kiddle;
       }
     }
   }
 
-  private varInfo(): string {
+  *walk(): Generator<MalloyElement> {
+    for (const child of this.allChildren()) {
+      yield child;
+      yield* child.walk();
+    }
+  }
+
+  protected varInfo(): string {
     let extra = '';
     for (const [key, value] of Object.entries(this)) {
       if (key !== 'elementType') {
@@ -320,7 +331,7 @@ export abstract class MalloyElement {
   }
 
   needs(doc: Document): ModelDataRequest | undefined {
-    for (const child of this.walk()) {
+    for (const child of this.allChildren()) {
       const childNeeds = child.needs(doc);
       if (childNeeds) return childNeeds;
     }
@@ -442,7 +453,7 @@ export class DocStatementList
   execCursor = 0;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: Annotation;
+  note?: AnnotationsDef;
   noteCursor = 0;
   executeList(doc: Document): ModelDataRequest {
     while (this.execCursor < this.elements.length) {
@@ -478,7 +489,7 @@ export class DocStatementList
 
 const docAnnotationNameSpace = '5a79a191-06bc-43cf-9b12-58741cd82970';
 
-function annotationNotes(an: Annotation): string[] {
+function annotationNotes(an: AnnotationsDef): string[] {
   const ret = an.inherits ? annotationNotes(an.inherits) : [];
   if (an.blockNotes) {
     ret.push(...an.blockNotes.map(n => n.text));
@@ -489,7 +500,7 @@ function annotationNotes(an: Annotation): string[] {
   return ret;
 }
 
-function annotationID(a: Annotation): string {
+function annotationID(a: AnnotationsDef): string {
   const allStrs = annotationNotes(a).join('');
   return uuidv5(allStrs, docAnnotationNameSpace);
 }
@@ -508,16 +519,41 @@ function annotationID(a: Annotation): string {
  * that can be tomorrow
  */
 
+function unsatisfiedGivenMessage(
+  label: string,
+  decl: Given | undefined,
+  id: GivenID
+): string {
+  // We always have the GivenID; we may or may not have the declaration
+  // (we should — every given referenced should have been copied into
+  // documentGivens at import time — but defend against it being absent).
+  const surface = decl?.name ?? id;
+  const where = decl?.location?.url
+    ? ` (declared in ${decl.location.url})`
+    : '';
+  return (
+    `${label} references given \`${surface}\`${where}, ` +
+    'which is not surfaced in this model and has no default. ' +
+    `Either import it (e.g. \`import { ${surface} } from "..."\`) ` +
+    'or supply a default at the declaration site.'
+  );
+}
+
 export class Document extends MalloyElement implements NameSpace {
   elementType = 'document';
   globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
+  documentGivens = new Map<GivenID, Given>();
+  // When an `export { … }` statement appears, the document switches from
+  // "everything declared here is exported" to "only names in this set are
+  // exported." Undefined means no export statement has been seen.
+  explicitExports: Set<string> | undefined;
   queryList: Query[] = [];
   statements: DocStatementList;
   didInitModel = false;
   modelWasModified = false;
-  annotation: Annotation = {};
+  annotations: AnnotationsDef = {};
   experiments = new Tag({});
 
   constructor(statements: (DocStatement | DocStatementList)[]) {
@@ -532,10 +568,12 @@ export class Document extends MalloyElement implements NameSpace {
     }
     this.documentModel = new Map<string, ModelEntry>();
     this.documentSrcRegistry = {};
+    this.documentGivens = new Map<GivenID, Given>();
+    this.explicitExports = undefined;
     this.queryList = [];
     if (extendingModelDef) {
-      if (extendingModelDef.annotation) {
-        this.annotation.inherits = extendingModelDef.annotation;
+      if (extendingModelDef.annotations) {
+        this.annotations.inherits = extendingModelDef.annotations;
       }
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
         const entry = {...orig};
@@ -543,10 +581,16 @@ export class Document extends MalloyElement implements NameSpace {
           isSourceDef(entry) ||
           entry.type === 'query' ||
           entry.type === 'function' ||
-          entry.type === 'userType'
+          entry.type === 'userType' ||
+          entry.type === 'given'
         ) {
           const exported = extendingModelDef.exports.includes(nm);
           this.setEntry(nm, {entry, exported});
+        }
+      }
+      if (extendingModelDef.givens) {
+        for (const [id, given] of Object.entries(extendingModelDef.givens)) {
+          this.documentGivens.set(id, given);
         }
       }
     }
@@ -557,15 +601,17 @@ export class Document extends MalloyElement implements NameSpace {
     const needs = this.statements.executeList(this);
     const modelDef = this.modelDef();
     if (needs === undefined) {
+      this.checkGivenAliasCollisions();
+      this.checkQueryGivenSatisfiability();
       for (const q of this.queryList) {
-        if (q.modelAnnotation === undefined && modelDef.annotation) {
-          q.modelAnnotation = modelDef.annotation;
+        if (q.modelAnnotations === undefined && modelDef.annotations) {
+          q.modelAnnotations = modelDef.annotations;
         }
       }
     }
-    if (modelDef.annotation) {
+    if (modelDef.annotations) {
       for (const sd of this.modelAnnotationTodoList) {
-        sd.modelAnnotation ||= modelDef.annotation;
+        sd.modelAnnotations ||= modelDef.annotations;
       }
     }
     const ret: DocumentCompileResult = {
@@ -584,16 +630,90 @@ export class Document extends MalloyElement implements NameSpace {
     this.modelAnnotationTodoList.push(sd);
   }
 
+  private checkGivenAliasCollisions(): void {
+    const byId = new Map<GivenID, string[]>();
+    for (const [name, m] of this.documentModel) {
+      if (m.entry.type !== 'given') continue;
+      const list = byId.get(m.entry.id);
+      if (list) {
+        list.push(name);
+      } else {
+        byId.set(m.entry.id, [name]);
+      }
+    }
+    for (const [id, names] of byId) {
+      if (names.length < 2) continue;
+      const decl = this.documentGivens.get(id);
+      const sourceName = decl?.name ?? names[0];
+      const where = decl?.location?.url
+        ? ` (declared in ${decl.location.url})`
+        : '';
+      const sorted = [...names].sort();
+      this.logError(
+        'given-alias-collision',
+        `Given \`${sourceName}\`${where} is surfaced under multiple names ` +
+          `[${sorted.join(', ')}] in this model. ` +
+          'Surfacing the same given under two names is ambiguous at supply ' +
+          'time. To expose it under a second name, declare a local given ' +
+          `with a default-chain reference: \`given: NEW_NAME :: T is $${sourceName}\`.`
+      );
+    }
+  }
+
+  private checkQueryGivenSatisfiability(): void {
+    // Always runs at end-of-compile, not gated on imports — a notebook cell
+    // that calls `extendModel` with a prior modelDef inherits that model's
+    // queries and givens, and a query inherited from cell N can become
+    // unsatisfiable in cell N+1 if the satisfying given is removed (or
+    // never re-supplied). Cheap when there's nothing to check.
+    const namespaceGivens = new Set<GivenID>();
+    for (const m of this.documentModel.values()) {
+      if (m.entry.type === 'given') namespaceGivens.add(m.entry.id);
+    }
+    const checkOne = (q: Query, label: string): void => {
+      const usage = q.givenUsage;
+      if (!usage || usage.length === 0) return;
+      // Build the full set of ids the query transitively needs: each id
+      // in Q.givenUsage, plus each id's precomputed default-chain closure
+      // (Given.givenUsage). Since the closure is already transitive, no
+      // recursion at check time.
+      const allIds = new Set<GivenID>();
+      for (const g of usage) {
+        allIds.add(g.id);
+        const decl = this.documentGivens.get(g.id);
+        for (const t of decl?.givenUsage ?? []) allIds.add(t.id);
+      }
+      for (const id of allIds) {
+        if (namespaceGivens.has(id)) continue;
+        const decl = this.documentGivens.get(id);
+        if (decl?.default !== undefined) continue;
+        this.logError(
+          'unsatisfied-given-in-query',
+          unsatisfiedGivenMessage(label, decl, id),
+          {at: q.location}
+        );
+      }
+    };
+    // Named queries in the namespace (locally defined OR imported).
+    for (const [name, m] of this.documentModel) {
+      if (m.entry.type === 'query') checkOne(m.entry, `Query '${name}'`);
+    }
+    // `run:` statements.
+    for (const q of this.queryList) {
+      checkOne(q, 'run: statement');
+    }
+  }
+
   hasAnnotation(): boolean {
     return (
-      (this.annotation.notes && this.annotation.notes.length > 0) ||
-      this.annotation.inherits !== undefined
+      (this.annotations.notes && this.annotations.notes.length > 0) ||
+      this.annotations.inherits !== undefined
     );
   }
 
-  currentModelAnnotation(): ModelAnnotation | undefined {
+  currentModelAnnotation(): ModelAnnotationsDef | undefined {
     if (this.hasAnnotation()) {
-      const ret = {...this.annotation, id: ''};
+      const ret = {...this.annotations, id: ''};
       ret.id = annotationID(ret);
       return ret;
     }
@@ -602,8 +722,11 @@ export class Document extends MalloyElement implements NameSpace {
   modelDef(): ModelDef {
     const def = mkModelDef('');
     if (this.hasAnnotation()) {
-      def.annotation = this.currentModelAnnotation();
+      def.annotations = this.currentModelAnnotation();
     }
+    const explicit = this.explicitExports;
+    const isExported = (name: string, modelEntry: ModelEntry): boolean =>
+      explicit ? explicit.has(name) : modelEntry.exported === true;
     for (const [name, modelEntry] of this.documentModel) {
       const entryDef = modelEntry.entry;
       if (
@@ -611,22 +734,33 @@ export class Document extends MalloyElement implements NameSpace {
         entryDef.type === 'query' ||
         entryDef.type === 'userType'
       ) {
-        if (modelEntry.exported) {
+        if (isExported(name, modelEntry)) {
           def.exports.push(name);
         }
         if (entryDef.type === 'userType') {
           def.contents[name] = {...entryDef};
         } else {
           const newEntry = {...entryDef};
-          if (newEntry.modelAnnotation === undefined && def.annotation) {
-            newEntry.modelAnnotation = def.annotation;
+          if (newEntry.modelAnnotations === undefined && def.annotations) {
+            newEntry.modelAnnotations = def.annotations;
           }
           def.contents[name] = newEntry;
         }
+      } else if (entryDef.type === 'given') {
+        if (isExported(name, modelEntry)) {
+          def.exports.push(name);
+        }
+        def.contents[name] = {...entryDef};
       }
     }
     // Copy the accumulated sourceRegistry
     def.sourceRegistry = {...this.documentSrcRegistry};
+    if (this.documentGivens.size > 0) {
+      def.givens = {};
+      for (const [id, given] of this.documentGivens) {
+        def.givens[id] = given;
+      }
+    }
     return def;
   }
 

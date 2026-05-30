@@ -54,6 +54,7 @@ import type {
 } from '../dialect';
 import {
   Dialect,
+  EscapeStyle,
   MIN_INT64,
   MAX_INT64,
   type LateralJoinExpression,
@@ -115,6 +116,9 @@ const bqToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 
 export class StandardSQLDialect extends Dialect {
   name = 'standardsql';
+  stringLiteralStyle = EscapeStyle.Backslash;
+  identifierEscapeStyle = EscapeStyle.Backslash;
+  identifierQuoteChar = '`';
   experimental = false;
   defaultNumberType = 'FLOAT64';
   defaultDecimalType = 'NUMERIC';
@@ -147,9 +151,42 @@ export class StandardSQLDialect extends Dialect {
     {min: MIN_INT64, max: MAX_INT64, numberType: 'bigint'},
   ];
 
-  quoteTablePath(tablePath: string): string {
-    return `\`${tablePath}\``;
+  // BigQuery's parser accepts `\`` as a backtick escape inside quoted
+  // identifiers, but BigQuery's schema layer rejects field/table names
+  // containing a literal backtick. Refuse here so the error names the
+  // dialect; the rest of the escape (backslash-doubling) is handled by
+  // the base via identifierEscapeStyle.
+  // Reference: https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical
+  private bqRejectBacktick(name: string, kind: string): void {
+    if (name.includes('`')) {
+      throw new Error(
+        `BigQuery ${kind} cannot contain a backtick: ${JSON.stringify(name)}`
+      );
+    }
   }
+
+  sqlQuoteIdentifier(identifier: string): string {
+    this.bqRejectBacktick(identifier, 'identifier');
+    return super.sqlQuoteIdentifier(identifier);
+  }
+
+  // BigQuery bare-identifier continuation allows dashes (verified
+  // against the live engine: `proj-foo.dataset.table` resolves to a
+  // table reference, both bare and inside per-segment backticks). The
+  // base `sqlValidateTableName` handles every shape we accept —
+  // bare-dotted, whole-backticked, and per-segment-backticked — because
+  // its grammar is `Segment ('.' Segment)*` and a segment is either
+  // bare or quoted with this dialect's `identifierQuoteChar` /
+  // `identifierEscapeStyle` (`` ` `` / Backslash). The whole-path form
+  // (`` `proj.dataset.table` ``) is accepted naturally as a single
+  // quoted segment.
+  //
+  // `*` is intentionally NOT in this regex. BigQuery's parser only
+  // accepts `*` inside backticks (wildcard tables must be quoted, e.g.
+  // `` `dataset.events_*` ``). Bare wildcards would fail at the engine,
+  // so we reject them up front and require the user to type the
+  // backticks they'd need anyway.
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_-]*/;
 
   needsCivilTimeComputation(
     typeDef: AtomicTypeDef,
@@ -280,7 +317,7 @@ export class StandardSQLDialect extends Dialect {
     childName: string,
     _childType: string
   ): string {
-    const child = this.sqlMaybeQuoteIdentifier(childName);
+    const child = this.sqlQuoteIdentifier(childName);
     return `${parentAlias}.${child}`;
   }
 
@@ -319,10 +356,6 @@ ${indent(sql)}
 
   sqlSelectAliasAsStruct(alias: string): string {
     return `(SELECT AS STRUCT ${alias}.*)`;
-  }
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '`' + identifier + '`';
   }
 
   sqlNowExpr(): string {
@@ -506,16 +539,6 @@ ${indent(sql)}
     return tableSQL;
   }
 
-  sqlLiteralString(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -591,7 +614,7 @@ ${indent(sql)}
     const ents: string[] = [];
     for (const [name, val] of Object.entries(lit.kids)) {
       const expr = val.sql || 'internal-error-literal-record';
-      ents.push(`${expr} AS ${this.sqlMaybeQuoteIdentifier(name)}`);
+      ents.push(`${expr} AS ${this.sqlQuoteIdentifier(name)}`);
     }
     return `STRUCT(${ents.join(',')})`;
   }

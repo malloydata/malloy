@@ -44,6 +44,7 @@ import type {
 import {BaseMessageLogger, makeLogMessage} from './parse-log';
 import type {FindReferencesData} from './parse-tree-walkers/find-external-references';
 import {findReferences} from './parse-tree-walkers/find-external-references';
+import {getDialect} from '../dialect';
 import type {ZoneData} from './zone';
 import {Zone} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
@@ -80,7 +81,7 @@ import type {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import type {EventStream} from '../runtime_types';
-import {annotationToTaglines} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParserRuleContext} from 'antlr4ts';
 import {Timer} from '../timing';
@@ -110,10 +111,7 @@ interface TranslationStep {
 }
 
 interface ParseData
-  extends ResponseBase,
-    ProblemResponse,
-    NeedURLData,
-    FinalResponse {
+  extends ResponseBase, ProblemResponse, NeedURLData, FinalResponse {
   parse: MalloyParseInfo;
 }
 
@@ -219,6 +217,13 @@ class ImportsAndTablesStep implements TranslationStep {
       return parseReq;
     }
 
+    // Every reference this step would register — connection dialects,
+    // imports, table schemas — is for a construct that's forbidden in
+    // restricted code.
+    if (that.root.restrictedMode) {
+      return {timingInfo: parseReq.timingInfo};
+    }
+
     if (!this.parseReferences) {
       this.parseReferences = findReferences(
         that,
@@ -226,12 +231,9 @@ class ImportsAndTablesStep implements TranslationStep {
         parseReq.parse.root
       );
 
-      for (const ref in this.parseReferences.tables) {
-        that.root.schemaZone.reference(ref, {
-          url: that.sourceURL,
-          range: this.parseReferences.tables[ref].firstReference,
-        });
-      }
+      // Register connection dialects and imports immediately. Table
+      // references are deferred until dialects are resolved, because
+      // validating a table path requires knowing its dialect's grammar.
 
       for (const connName in this.parseReferences.connectionDialects) {
         that.root.connectionDialectZone.reference(connName, {
@@ -279,17 +281,52 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     let allMissing: DataRequestResponse = {};
+
+    // Validate each table reference against its dialect's grammar (if
+    // the dialect is resolved) and register the canonical entry. Bad
+    // paths are silently dropped — the AST step re-validates and logs
+    // an error at the precise source range. Entries whose dialect
+    // isn't resolved yet are preserved unchanged and re-processed on a
+    // later step.
+    {
+      const refs = this.parseReferences.tables;
+      const canonical: typeof refs = {};
+      for (const rawKey in refs) {
+        const info = refs[rawKey];
+        let {tablePath} = info;
+        const dialectName = that.root.connectionDialectZone.get(
+          info.connectionName
+        );
+        if (dialectName !== undefined) {
+          const result =
+            getDialect(dialectName).sqlValidateTableName(tablePath);
+          if (!result.ok) continue;
+          tablePath = result.canonical;
+        }
+        const key = `${info.connectionName}:${tablePath}`;
+        canonical[key] = {...info, tablePath};
+        that.root.schemaZone.reference(key, {
+          url: that.sourceURL,
+          range: info.firstReference,
+        });
+      }
+      this.parseReferences.tables = canonical;
+    }
+
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
       const tables = {};
       for (const key of missingTables) {
         const info = this.parseReferences.tables[key];
+        if (info === undefined) continue;
         tables[key] = {
           connectionName: info.connectionName,
           tablePath: info.tablePath,
         };
       }
-      allMissing = {tables};
+      if (Object.keys(tables).length > 0) {
+        allMissing = {tables};
+      }
     }
 
     const missingDialects = that.root.connectionDialectZone.getUndefined();
@@ -362,7 +399,8 @@ class ASTStep implements TranslationStep {
     const secondPass = new MalloyToAST(
       parse,
       that.root.logger,
-      that.compilerFlagSrc
+      that.compilerFlagSrc,
+      that.root.restrictedMode
     );
     const {ast: newAST, compilerFlagSrc, timingInfo} = secondPass.run();
     stepTimer.contribute([timingInfo]);
@@ -525,15 +563,15 @@ class ModelAnnotationStep implements TranslationStep {
       if (!tryParse.parse || tryParse.final) {
         return tryParse;
       } else {
-        const modelAnnotation = walkForModelAnnotation(
+        const modelAnnotations = walkForModelAnnotation(
           that,
           tryParse.parse.tokenStream,
           tryParse.parse
         );
         this.response = {
-          modelAnnotation: {
-            ...modelAnnotation,
-            inherits: extendingModel?.annotation,
+          modelAnnotations: {
+            ...modelAnnotations,
+            inherits: extendingModel?.annotations,
           },
         };
       }
@@ -588,12 +626,14 @@ class TranslateStep implements TranslationStep {
       };
     }
 
-    // begin with the compiler flags of the model we are extending
+    // Layer the extending model's compiler flags on top of whatever was
+    // there already. In production the array starts empty so push vs.
+    // overwrite produce the same result; the push lets constructor-time
+    // seeding (e.g. TestTranslator's compilerFlags option) survive.
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
-      that.compilerFlagSrc = annotationToTaglines(
-        extendingModel.annotation,
-        /^##! /
+      that.compilerFlagSrc.push(
+        ...new Annotations(extendingModel.annotations).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
@@ -1030,7 +1070,8 @@ export class MalloyTranslator extends MalloyTranslation {
     rootURL: string,
     importURL: string | null = null,
     preload: ParseUpdate | null = null,
-    private readonly eventStream: EventStream | null = null
+    private readonly eventStream: EventStream | null = null,
+    readonly restrictedMode: boolean = false
   ) {
     super(rootURL, importURL);
     this.root = this;
@@ -1051,6 +1092,19 @@ export class MalloyTranslator extends MalloyTranslation {
     for (const url in dd.translations) {
       this.pretranslatedModels.set(url, dd.translations[url]);
     }
+  }
+
+  private lockZonesIfRestricted(): void {
+    if (!this.restrictedMode) return;
+    this.schemaZone.lock();
+    this.importZone.lock();
+    this.sqlQueryZone.lock();
+    this.connectionDialectZone.lock();
+  }
+
+  translate(extendingModel?: ModelDef): TranslateResponse {
+    this.lockZonesIfRestricted();
+    return super.translate(extendingModel);
   }
 
   logError<T extends MessageCode>(
@@ -1089,11 +1143,7 @@ export interface ConnectionDialects {
   connectionDialects: ZoneData<string>;
 }
 export interface UpdateData
-  extends URLData,
-    SchemaData,
-    SQLSources,
-    ModelData,
-    ConnectionDialects {
+  extends URLData, SchemaData, SQLSources, ModelData, ConnectionDialects {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;

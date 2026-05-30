@@ -8,6 +8,7 @@ import type {
   ModelDef,
   StructRef,
   Argument,
+  Given,
   PrepareResultOptions,
   Query,
   SourceDef,
@@ -25,6 +26,7 @@ import type {ModelRootInterface} from './query_node';
 import {QueryStruct, isScalarField} from './query_node';
 import type {QueryModel, QueryResults} from './query_model_contract';
 import {rowDataToNumber} from '../api/row_data_utils';
+import {MalloyCompileError} from './malloy_compile_error';
 
 export function makeQueryModel(modelDef: ModelDef | undefined): QueryModel {
   return new QueryModelImpl(modelDef);
@@ -35,6 +37,10 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
+
+  get givens(): Record<string, Given> {
+    return this.modelDef?.givens ?? {};
+  }
 
   constructor(modelDef: ModelDef | undefined) {
     if (modelDef) {
@@ -66,6 +72,8 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         /* TODO */
       } else if (s.type === 'userType') {
         // User type definitions are metadata only, not queryable
+      } else if (s.type === 'given') {
+        // Givens are metadata in the namespace, not queryable structures.
       } else {
         throw new Error('Internal Error: Unknown structure type');
       }
@@ -77,7 +85,11 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     if (s) {
       return s;
     }
-    throw new Error(`Struct ${name} not found in model.`);
+    throw new MalloyCompileError(
+      `Source '${name}' is not defined in this model.`,
+      'compiler-undefined-source',
+      undefined
+    );
   }
 
   getStructFromRef(
@@ -156,12 +168,12 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       const fieldNames: string[] = [];
       for (const f of ret.outputStruct.fields) {
         if (isAtomic(f)) {
-          const quoted = q.parent.dialect.sqlMaybeQuoteIdentifier(f.name);
+          const quoted = q.parent.dialect.sqlQuoteIdentifier(f.name);
           fieldNames.push(quoted);
         }
       }
       // const fieldNames = getAtomicFields(ret.outputStruct).map(fieldDef =>
-      //   q.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
+      //   q.parent.dialect.sqlQuoteIdentifier(fieldDef.name)
       // );
       ret.lastStageName = stageWriter.addStage(
         q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
@@ -244,7 +256,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       sourceArguments,
       queryName: query.name,
       connectionName: ret.connectionName,
-      annotation: query.annotation,
+      annotations: query.annotations,
       queryTimezone: ret.structs[0].queryTimezone,
       defaultRowLimitAdded: addedDefaultRowLimit,
     };
@@ -295,11 +307,11 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         },
       ],
     };
-    const fieldNameColumn = d.sqlMaybeQuoteIdentifier('fieldName');
-    const fieldPathColumn = d.sqlMaybeQuoteIdentifier('fieldPath');
-    const fieldValueColumn = d.sqlMaybeQuoteIdentifier('fieldValue');
-    const fieldTypeColumn = d.sqlMaybeQuoteIdentifier('fieldType');
-    const weightColumn = d.sqlMaybeQuoteIdentifier('weight');
+    const fieldNameColumn = d.sqlQuoteIdentifier('fieldName');
+    const fieldPathColumn = d.sqlQuoteIdentifier('fieldPath');
+    const fieldValueColumn = d.sqlQuoteIdentifier('fieldValue');
+    const fieldTypeColumn = d.sqlQuoteIdentifier('fieldType');
+    const weightColumn = d.sqlQuoteIdentifier('weight');
 
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);

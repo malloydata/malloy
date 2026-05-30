@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Annotation, NamedQueryDef} from '../../../model/malloy_types';
+import type {AnnotationsDef, NamedQueryDef} from '../../../model/malloy_types';
 
 import type {DocStatement, Document} from '../types/malloy-element';
 import {MalloyElement, DocStatementList} from '../types/malloy-element';
@@ -44,7 +44,7 @@ export class DefineQuery
 
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: Annotation;
+  note?: AnnotationsDef;
 
   execute(doc: Document): void {
     const existing = doc.getEntry(this.name);
@@ -70,8 +70,8 @@ export class DefineQuery
       location: this.location,
     };
     if (this.note) {
-      entry.annotation = entry.annotation
-        ? {...this.note, inherits: entry.annotation}
+      entry.annotations = entry.annotations
+        ? {...this.note, inherits: entry.annotations}
         : this.note;
     }
     doc.setEntry(this.name, {entry, exported: true});

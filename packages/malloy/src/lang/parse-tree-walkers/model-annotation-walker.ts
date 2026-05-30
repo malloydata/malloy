@@ -21,18 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {CommonTokenStream, ParserRuleContext} from 'antlr4ts';
+import type {CommonTokenStream} from 'antlr4ts';
 import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
 import type {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import type * as parser from '../lib/Malloy/MalloyParser';
 import type {MalloyTranslation} from '../parse-malloy';
-import type {
-  Annotation,
-  DocumentLocation,
-  Note,
-} from '../../model/malloy_types';
+import type {AnnotationsDef, Note} from '../../model/malloy_types';
 import type {MalloyParseInfo} from '../malloy-parse-info';
-import {getAnnotationText} from '../parse-utils';
+import {noteFromAnnotation} from '../parse-utils';
 
 class ModelAnnotationWalker implements MalloyParserListener {
   private readonly notes: Note[] = [];
@@ -42,22 +38,13 @@ class ModelAnnotationWalker implements MalloyParserListener {
     private readonly parseInfo: MalloyParseInfo
   ) {}
 
-  protected getLocation(cx: ParserRuleContext): DocumentLocation {
-    return {
-      url: this.parseInfo.sourceURL,
-      range: this.translator.rangeFromContext(cx),
-    };
-  }
-
   enterDocAnnotations(pcx: parser.DocAnnotationsContext): void {
-    const allNotes: Note[] = pcx.docAnnotation().map(a => ({
-      text: getAnnotationText(a),
-      at: this.getLocation(pcx),
-    }));
-    this.notes.push(...allNotes);
+    for (const a of pcx.docAnnotation()) {
+      this.notes.push(noteFromAnnotation(a, this.parseInfo));
+    }
   }
 
-  get annotation(): Annotation {
+  get annotations(): AnnotationsDef {
     return {notes: this.notes};
   }
 }
@@ -66,9 +53,9 @@ export function walkForModelAnnotation(
   forParse: MalloyTranslation,
   tokens: CommonTokenStream,
   parseInfo: MalloyParseInfo
-): Annotation {
+): AnnotationsDef {
   const finder = new ModelAnnotationWalker(forParse, tokens, parseInfo);
   const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseInfo.root);
-  return finder.annotation;
+  return finder.annotations;
 }

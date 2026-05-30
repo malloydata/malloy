@@ -102,10 +102,8 @@ export function databasesFromEnvironmentOr(
  * A replacement for [describe()] that mimics [describe.skip()]
  */
 const describeSkip: jest.Describe = Object.assign(
-  (
-    name: number | string | Function | jest.FunctionLike,
-    fn: jest.EmptyFunction
-  ) => describe.skip(name, fn),
+  (name: number | string | jest.FunctionLike, fn: jest.EmptyFunction) =>
+    describe.skip(name, fn),
   {
     skip: describe.skip,
     // eslint-disable-next-line no-restricted-properties

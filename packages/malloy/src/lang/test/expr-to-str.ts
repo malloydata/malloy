@@ -33,6 +33,8 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
     }
     case 'parameter':
       return `{parameter ${e.path}}`;
+    case 'given':
+      return `{$${e.refName}}`;
     case '()':
       return `(${subExpr(e.e)})`;
     case 'numberLiteral':
@@ -90,6 +92,9 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
       return `{${subExpr(e.kids.e)} ${e.not ? 'not in' : 'in'} {${e.kids.oneOf
         .map(o => `${subExpr(o)}`)
         .join(',')}}}`;
+    }
+    case 'inGiven': {
+      return `{${subExpr(e.e)} ${e.not ? 'not in' : 'in'} $${e.givenRef.refName}}`;
     }
     case 'genericSQLExpr': {
       let sql = '';

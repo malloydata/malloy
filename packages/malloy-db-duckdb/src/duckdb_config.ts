@@ -48,6 +48,15 @@ export interface NormalizedDuckDBConfig {
   motherDuckToken?: string;
   additionalExtensions: string[];
   setupSQL?: string;
+  // User-requested: release the OS file lock between operations so other
+  // tools (malloy-cli, duckdb CLI, another malloy host) can use the same
+  // database file. Implemented by binding the primary database to
+  // `:memory:` and bracketing access with ATTACH/DETACH around the real
+  // file. `effectiveShareable` is `true` only when `shareable` is set AND
+  // the database path is a local file we can attach (not `:memory:`,
+  // MotherDuck, or another remote scheme).
+  shareable: boolean;
+  effectiveShareable: boolean;
 }
 
 export class DuckDBConfigValidationError extends Error {
@@ -84,6 +93,7 @@ export function normalizeDuckDBConfig(
     readOptionalString(config, 'motherDuckToken')
   );
   const readOnly = readOptionalBoolean(config, 'readOnly') ?? false;
+  const shareable = readOptionalBoolean(config, 'shareable') ?? false;
   const additionalExtensions = normalizeExtensions(
     config['additionalExtensions'],
     'additionalExtensions'
@@ -327,6 +337,11 @@ export function normalizeDuckDBConfig(
     motherDuckToken: rawMotherDuckToken,
     additionalExtensions,
     setupSQL: rawSetupSQL,
+    shareable,
+    effectiveShareable:
+      shareable &&
+      databasePath !== ':memory:' &&
+      !isLikelyRemoteDatabasePath(databasePath),
   };
 }
 
@@ -367,7 +382,8 @@ export function buildDuckDBShareKey(config: NormalizedDuckDBConfig): string {
     config.workingDirectory ?? '',
     ...[...config.additionalExtensions].sort(),
     config.extensionDirectory ?? '',
-    config.motherDuckToken ?? ''
+    config.motherDuckToken ?? '',
+    String(config.effectiveShareable)
   );
 }
 

@@ -38,23 +38,18 @@ interface BaseRenderPluginInstance<TMetadata = unknown> {
     options: GetResultMetadataOptions
   ): void;
   getStyleOverrides?(): Record<string, string>;
-
-  /**
-   * Legacy compatibility for plugins that still declare self-owned paths
-   * from the instance. New code should use factory.getValidationSpec().
-   * @deprecated Use RenderPluginFactory.getValidationSpec() instead.
-   */
-  getDeclaredTagPaths?(): string[][];
 }
 
-export interface SolidJSRenderPluginInstance<TMetadata = unknown>
-  extends BaseRenderPluginInstance<TMetadata> {
+export interface SolidJSRenderPluginInstance<
+  TMetadata = unknown,
+> extends BaseRenderPluginInstance<TMetadata> {
   readonly renderMode: 'solidjs';
   renderComponent(props: RenderProps): JSXElement;
 }
 
-export interface DOMRenderPluginInstance<TMetadata = unknown>
-  extends BaseRenderPluginInstance<TMetadata> {
+export interface DOMRenderPluginInstance<
+  TMetadata = unknown,
+> extends BaseRenderPluginInstance<TMetadata> {
   readonly renderMode: 'dom';
   renderToDOM(container: HTMLElement, props: RenderProps): void;
   cleanup?(container: HTMLElement): void;

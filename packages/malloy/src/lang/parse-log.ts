@@ -303,6 +303,7 @@ type MessageParameterTypes = {
   'query-definition-from-non-query': string;
   'source-definition-name-conflict': string;
   'user-type-definition-name-conflict': string;
+  'given-definition-name-conflict': string;
   'virtual-source-not-yet-implemented': string;
   'virtual-source-missing-user-type-refs': string;
   'virtual-source-unknown-dialect': string;
@@ -312,11 +313,17 @@ type MessageParameterTypes = {
   'parameter-name-conflict': string;
   'parameter-shadowing-field': string;
   'invalid-import-url': string;
+  'invalid-table-path': string;
   'no-translator-for-import': string;
   'name-conflict-on-selective-import': string;
   'selective-import-not-found': string;
   'name-conflict-on-indiscriminate-import': string;
   'failed-import': string;
+  'export-name-not-defined': string;
+  'export-name-not-exportable': string;
+  'duplicate-export-name': string;
+  'unsatisfied-given-in-query': string;
+  'given-alias-collision': string;
   'failed-to-compute-output-schema': string;
   'invalid-timeframe-for-time-offset': string;
   'time-comparison-type-mismatch': string;
@@ -324,6 +331,17 @@ type MessageParameterTypes = {
   'time-offset-type-mismatch': string;
   'unexpected-binary-operator': string;
   'illegal-reference-in-parameter-default': string;
+  'given-reference-not-implemented': string;
+  'given-not-found': string;
+  'given-no-tags-after-is': string;
+  'in-given-rhs-not-array': {givenName: string; actualType: string};
+  'in-given-rhs-not-basic-array': {givenName: string; elementType: string};
+  'in-given-type-mismatch': {lhsType: string; elementType: string};
+  'inline-no-default': {name: string};
+  'inline-bad-operator': {name: string; operators: string};
+  'invalid-given-modifier': {modifier: string};
+  'illegal-filter-type': string;
+  'invalid-source-from-given': string;
   'aggregate-analytic-in-select': string;
   'refinement-of-raw-query': string;
   'illegal-multistage-refinement-operation': string;
@@ -365,7 +383,8 @@ type MessageParameterTypes = {
   'failed-to-parse-function-name': string;
   'orphaned-object-annotation': string;
   'unclosed-block-annotation': string;
-  'block-annotation-warning': string;
+  'malformed-route': {prefix: string};
+  'reserved-route': {prefix: string};
   'misplaced-model-annotation': string;
   'unexpected-non-source-query-expression-node': string;
   'sql-not-like': string;
@@ -435,6 +454,7 @@ type MessageParameterTypes = {
   'missing-required-group-by': string;
   'invalid-partition-composite': string;
   'integer-literal-out-of-range': string;
+  'restricted-construct-forbidden': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
@@ -483,6 +503,30 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `Case when expression must be boolean, not ${e.whenType}`,
   'case-when-type-does-not-match': e =>
     `Case when type ${e.whenType} does not match value type ${e.valueType}`,
+  'in-given-rhs-not-array': e =>
+    `\`in $${e.givenName}\` requires \`${e.givenName}\` to be an array , but it is \`${e.actualType}\``,
+  'in-given-rhs-not-basic-array': e =>
+    `\`in $${e.givenName}\` requires \`${e.givenName}\` to be an array of a basic type (string, number, etc.), but its element type is \`${e.elementType}\``,
+  'in-given-type-mismatch': e =>
+    `\`in\` left-hand side type \`${e.lhsType}\` does not match the array element type \`${e.elementType}\``,
+  'inline-no-default': e =>
+    `inline given \`${e.name}\` must have a value — there is nothing to inline without one`,
+  'inline-bad-operator': e =>
+    `inline given \`${e.name}\` uses operator(s) not allowed in inline expressions: ${e.operators}`,
+  'invalid-given-modifier': e =>
+    `Unknown modifier \`${e.modifier}\` on \`given:\` declaration; the only modifier allowed here is \`inline\``,
+  'restricted-construct-forbidden': e => ({
+    message: e,
+    tag: 'restricted-mode',
+  }),
+  'malformed-route': e => ({
+    message: `Annotation prefix \`${e.prefix}\` is not a well-formed route — write \`# ...\` for a tag (note the space) or \`#(name)\` for an app route`,
+    severity: 'warn',
+  }),
+  'reserved-route': e => ({
+    message: `Annotation prefix \`${e.prefix}\` uses an unclaimed sigil; punct-only prefixes are reserved for Malloy's own use`,
+    severity: 'warn',
+  }),
 };
 
 export type MessageCode = keyof MessageParameterTypes;
@@ -555,7 +599,7 @@ export function makeLogMessage<T extends MessageCode>(
   }
   const template = typeof info === 'string' ? {message: info} : info;
   const data =
-    template.data ?? typeof parameters === 'string' ? null : parameters;
+    (template.data ?? typeof parameters === 'string') ? null : parameters;
   return {
     code,
     data,

@@ -42,10 +42,9 @@ describe('import:', () => {
     });
   });
   test('simple source with importBaseURL', () => {
-    const docParse = new TestTranslator(
-      'import "child"',
-      'http://example.com/'
-    );
+    const docParse = new TestTranslator('import "child"', {
+      importBaseURL: 'http://example.com/',
+    });
     const xr = docParse.unresolved();
     expect(docParse).toParse();
     expect(xr).toMatchObject({urls: ['http://example.com/child']});
@@ -315,6 +314,42 @@ source: botProjQSrc is botProjQ
       },
     });
     expect(doc.translator).toLog(errorMessage("Cannot redefine 'cc'"));
+  });
+
+  test('non-selective import collision with local source errors', () => {
+    const doc = model`
+      source: bb is a
+      import "child"`;
+    const xr = doc.translator.unresolved();
+    expect(doc).toParse();
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
+    doc.translator.update({
+      urls: {
+        'internal://test/langtests/child': 'source: bb is a',
+      },
+    });
+    expect(doc.translator).toLog(errorMessage("Cannot redefine 'bb'"));
+  });
+
+  test('non-selective imports of two children with the same source name error', () => {
+    const doc = model`
+      import "childA"
+      import "childB"`;
+    const xr = doc.translator.unresolved();
+    expect(doc).toParse();
+    expect(xr).toMatchObject({
+      urls: [
+        'internal://test/langtests/childA',
+        'internal://test/langtests/childB',
+      ],
+    });
+    doc.translator.update({
+      urls: {
+        'internal://test/langtests/childA': 'source: bb is a',
+        'internal://test/langtests/childB': 'source: bb is a',
+      },
+    });
+    expect(doc.translator).toLog(errorMessage("Cannot redefine 'bb'"));
   });
 
   describe('sourceRegistry across imports', () => {

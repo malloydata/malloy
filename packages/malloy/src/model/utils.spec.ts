@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// eslint-disable-next-line no-restricted-imports
 import {generateHash} from './utils';
 
 describe('model/utils', () => {

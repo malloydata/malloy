@@ -39,7 +39,7 @@ export class ViewFieldDeclaration
   elementType = 'view-field-declaration';
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: model.Annotation;
+  note?: model.AnnotationsDef;
 
   constructor(
     readonly name: string,
@@ -58,13 +58,13 @@ export class ViewFieldDeclaration
   }
 
   getFieldDef(fs: FieldSpace): model.TurtleDef {
-    const {pipeline, annotation} = this.view.pipelineComp(fs);
+    const {pipeline, annotations} = this.view.pipelineComp(fs);
     const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
     const def: model.TurtleDef = {
       type: 'turtle',
       name: this.name,
       pipeline: checkedPipeline,
-      annotation: {...this.note, inherits: annotation},
+      annotations: {...this.note, inherits: annotations},
       location: this.location,
     };
     return def;

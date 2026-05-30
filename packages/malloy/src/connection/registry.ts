@@ -42,6 +42,12 @@ export interface ConnectionPropertyDefinition {
   optional?: true;
   default?: string | number | boolean | {[source: string]: string | string[]};
   description?: string;
+  /**
+   * Advisory hint to editors that this property is not part of typical
+   * configuration and may be hidden, folded under an "advanced" toggle, or
+   * ignored. Does not affect registry or factory behavior — purely UI guidance.
+   */
+  advanced?: boolean;
   /** For type 'file': extension filters for picker dialogs. */
   fileFilters?: Record<string, string[]>;
   /**
@@ -205,11 +211,14 @@ export function writeConnectionsConfig(config: ConnectionsConfig): string {
 
 /**
  * A LookupConnection with lifecycle management: close() shuts down all
- * cached connections, and an optional onConnectionCreated callback fires
- * once per connection after factory creation (before caching).
+ * cached connections, idle() releases their backend resources but keeps
+ * the cache so the same connection objects are reused on next lookup, and
+ * an optional onConnectionCreated callback fires once per connection after
+ * factory creation (before caching).
  */
 export interface ManagedConnectionLookup extends LookupConnection<Connection> {
   close(): Promise<void>;
+  idle(): Promise<void>;
 }
 
 /**
@@ -283,6 +292,14 @@ export function createConnectionsFromConfig(
       cache.clear();
       for (const conn of connections) {
         await conn.close();
+      }
+    },
+
+    async idle(): Promise<void> {
+      // Cache is preserved — the same Connection objects are reused so that
+      // schema cache and other in-process state survive the idle.
+      for (const conn of cache.values()) {
+        await conn.idle();
       }
     },
   };

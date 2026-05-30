@@ -7,13 +7,19 @@ import type {LogMessage} from '../../lang';
 import type {
   BuildID,
   CompiledQuery,
+  ConstantExpr,
   DocumentLocation,
   BooleanFieldDef,
   JSONFieldDef,
   NumberFieldDef,
   StringFieldDef,
   FilterCondition,
+  Expr,
+  Given as InternalGiven,
+  GivenID,
+  GivenTypeDef,
   Query as InternalQuery,
+  Pipeline,
   ModelDef,
   DocumentPosition as ModelDocumentPosition,
   NamedQueryDef,
@@ -21,7 +27,7 @@ import type {
   TurtleDef,
   NativeUnsupportedFieldDef,
   ImportLocation,
-  Annotation,
+  AnnotationsDef,
   NamedModelObject,
   SQLSourceDef,
   AtomicFieldDef,
@@ -34,6 +40,7 @@ import type {
   SourceComponentInfo,
   DocumentReference,
   PersistableSourceDef,
+  PrepareResultOptions,
 } from '../../model';
 import {
   fieldIsIntrinsic,
@@ -56,19 +63,24 @@ import {
   minimalBuildGraph,
 } from '../../model/persist_utils';
 import {resolveSourceID, mkBuildID} from '../../model/source_def_utils';
+import {
+  evaluateInlineGivens,
+  resolveSuppliedGivens,
+} from '../../model/given_binding';
 import {Tag} from '@malloydata/malloy-tag';
-import type {MalloyTagParse, TagParseSpec} from '../../annotation';
-import {annotationToTag, annotationToTaglines} from '../../annotation';
+import type {MalloyTagParse, TagParseSpec} from './annotation';
+import {annotationToTag, annotationToTaglines, Annotations} from './annotation';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {
   convertFieldInfos,
   getResultStructMetadataAnnotation,
+  toStableAnnotations,
   writeLiteralToTag,
 } from '../../to_stable';
 import {nodeToLiteralValue} from '../util';
 import {locationContainsPosition} from '../../lang/utils';
 import {ReferenceList} from '../../lang/reference-list';
-import type {Taggable} from '../../taggable';
+import type {Taggable} from './taggable';
 
 type ComponentSourceDef = TableSourceDef | SQLSourceDef | QuerySourceDef;
 function isSourceComponent(source: StructDef): source is ComponentSourceDef {
@@ -223,6 +235,17 @@ export type PreparedResultJSON = {
   modelDef: ModelDef;
 };
 
+/**
+ * Identifier-only enumeration of a model's top-level queries.
+ * Internal: returned by `Model.queries()`, not exported. Callers pair
+ * the names with `getPreparedQueryByName` and the indices `0..unnamed-1`
+ * with `getPreparedQueryByIndex` to load any one of them.
+ */
+interface ModelQueries {
+  named: string[];
+  unnamed: number;
+}
+
 // =============================================================================
 // Explore
 // =============================================================================
@@ -256,19 +279,25 @@ export class Explore extends Entity implements Taggable {
     return false;
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec): MalloyTagParse {
-    return annotationToTag(this._structDef.annotation, spec);
+    return annotationToTag(this._structDef.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp): string[] {
-    return annotationToTaglines(this._structDef.annotation, prefix);
+    return annotationToTaglines(this._structDef.annotations, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this._structDef.annotations);
   }
 
   private parsedModelTag?: Tag;
   public get modelTag(): Tag {
-    this.parsedModelTag ||= annotationToTag(
-      this._structDef.modelAnnotation
-    ).tag;
+    this.parsedModelTag ||= new Annotations(
+      this._structDef.modelAnnotations
+    ).parseAsTag().tag;
     return this.parsedModelTag;
   }
 
@@ -623,12 +652,18 @@ export class AtomicField extends Entity implements Taggable {
     }
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec) {
-    return annotationToTag(this.fieldTypeDef.annotation, spec);
+    return annotationToTag(this.fieldTypeDef.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this.fieldTypeDef.annotation, prefix);
+    return annotationToTaglines(this.fieldTypeDef.annotations, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this.fieldTypeDef.annotations);
   }
 
   public isIntrinsic(): boolean {
@@ -864,7 +899,7 @@ export class StringField extends AtomicField {
 // Query and QueryField
 // =============================================================================
 
-export class Query extends Entity {
+export class Query extends Entity implements Taggable {
   protected turtleDef: TurtleDef;
   private sourceQuery?: Query;
 
@@ -884,22 +919,28 @@ export class Query extends Entity {
   public get location(): DocumentLocation | undefined {
     return this.turtleDef.location;
   }
+
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
+  tagParse(spec?: TagParseSpec) {
+    return annotationToTag(this.turtleDef.annotations, spec);
+  }
+
+  /** @deprecated Use `.annotations.texts(route)`. */
+  getTaglines(prefix?: RegExp) {
+    return annotationToTaglines(this.turtleDef.annotations, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this.turtleDef.annotations);
+  }
 }
 
-export class QueryField extends Query implements Taggable {
+export class QueryField extends Query {
   protected parent: Explore;
 
   constructor(turtleDef: TurtleDef, parent: Explore, source?: Query) {
     super(turtleDef, parent, source);
     this.parent = parent;
-  }
-
-  tagParse(spec?: TagParseSpec) {
-    return annotationToTag(this.turtleDef.annotation, spec);
-  }
-
-  getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this.turtleDef.annotation, prefix);
   }
 
   public isQueryField(): this is QueryField {
@@ -966,7 +1007,11 @@ export class ExploreField extends Explore {
   }
 
   override tagParse(spec?: TagParseSpec) {
-    return annotationToTag(this._structDef.annotation, spec);
+    return annotationToTag(this._structDef.annotations, spec);
+  }
+
+  override get annotations(): Annotations {
+    return new Annotations(this._structDef.annotations);
   }
 
   public isQueryField(): this is QueryField {
@@ -1002,6 +1047,99 @@ export class ExploreField extends Explore {
 // Model
 // =============================================================================
 
+/**
+ * Runtime-aware concerns layered onto a `Model` after it leaves the
+ * compiler. `Malloy.compile()` returns a `Model` with no context; a
+ * `Runtime.loadModel()` decoration attaches the runtime's context so
+ * context-sensitive views (currently `Model.givens` filtering finalized
+ * names; in future, tenant overrides / session bindings / etc.) work
+ * correctly. New runtime-aware concerns add a field here rather than a
+ * parallel constructor parameter.
+ */
+export interface RuntimeContext {
+  /** Surface names of givens locked at the runtime layer (from
+   *  `config.finalizeGivens`). Filtered out of `Model.givens` so
+   *  introspection-driven UIs don't render editors for them. */
+  readonly finalizedGivens?: ReadonlySet<string>;
+}
+
+export type ReferenceKind =
+  | 'field'
+  | 'join'
+  | 'explore'
+  | 'query'
+  | 'sqlBlock'
+  | 'given';
+
+const REFERENCE_KIND_BY_IR_TYPE: Record<
+  DocumentReference['type'],
+  ReferenceKind
+> = {
+  fieldReference: 'field',
+  joinReference: 'join',
+  exploreReference: 'explore',
+  queryReference: 'query',
+  sqlBlockReference: 'sqlBlock',
+  givenReference: 'given',
+};
+
+/**
+ * A reference to a definition found at a position in a Malloy document —
+ * the Foundation view returned by {@link Model.referenceAt}. Carries the
+ * use-site location (where the reference appears), the definition's
+ * location (where to go for "go to definition"), the kind of entity
+ * referenced, and an `annotations` view over the definition's annotations.
+ *
+ * Construct via {@link Model.referenceAt}; direct construction is internal.
+ */
+export class Reference {
+  /** @internal */
+  constructor(private readonly _ref: DocumentReference) {}
+
+  /** The name as written at the use site (e.g. `"orders"`). */
+  get text(): string {
+    return this._ref.text;
+  }
+
+  /** What kind of entity this reference points at. */
+  get kind(): ReferenceKind {
+    return REFERENCE_KIND_BY_IR_TYPE[this._ref.type];
+  }
+
+  /** Where this reference appears in source. */
+  get location(): DocumentLocation {
+    return this._ref.location;
+  }
+
+  /** Where the definition is. Omitted for synthetic references that have
+   *  no source-level definition site. */
+  get definitionLocation(): DocumentLocation | undefined {
+    return this._ref.definition.location;
+  }
+
+  /** The referent's type as a string (e.g. `"string"` for a string field,
+   *  `"source"` for a source). Free-form text from the IR; used by IDE
+   *  display to render type hints. */
+  get definitionType(): string {
+    return this._ref.definition.type;
+  }
+
+  /** For given references only: the textual form of the given's default
+   *  expression, if one was declared. Undefined for non-given references
+   *  and for givens without a default. */
+  get defaultText(): string | undefined {
+    if (this._ref.type === 'givenReference') {
+      return this._ref.definition.defaultText;
+    }
+    return undefined;
+  }
+
+  /** The definition's annotations, as a view. */
+  get annotations(): Annotations {
+    return new Annotations(this._ref.definition.annotations);
+  }
+}
+
 export class Model implements Taggable {
   private readonly references: ReferenceList;
   private _queryModel?: QueryModel;
@@ -1011,7 +1149,13 @@ export class Model implements Taggable {
     private modelDef: ModelDef,
     readonly problems: LogMessage[],
     readonly fromSources: string[],
-    existingQueryModel?: QueryModel
+    existingQueryModel?: QueryModel,
+    /**
+     * Runtime-aware context layered onto this Model. `Malloy.compile()`
+     * leaves it undefined; `Runtime.loadModel()` paths attach the
+     * runtime's context so methods like `Model.givens` filter correctly.
+     */
+    private readonly runtimeContext?: RuntimeContext
   ) {
     this.references = new ReferenceList(
       fromSources[0] ?? '',
@@ -1042,20 +1186,56 @@ export class Model implements Taggable {
     return this._queryModel;
   }
 
-  tagParse(spec?: TagParseSpec): MalloyTagParse {
-    return annotationToTag(this.modelDef.annotation, spec);
+  /**
+   * The givens this model surfaces, keyed by caller-facing surface name.
+   * Used by whole-model parameter-editor UIs to render input widgets for
+   * every given the model can accept.
+   */
+  public get givens(): ReadonlyMap<string, Given> {
+    const out = new Map<string, Given>();
+    const givens = this.modelDef.givens;
+    if (!givens) return out;
+    for (const [surfaceName, entry] of this.contentsMap) {
+      if (entry.type !== 'given') continue;
+      if (this.runtimeContext?.finalizedGivens?.has(surfaceName)) continue;
+      const decl = givens[entry.id];
+      if (decl && !decl.inline) {
+        out.set(surfaceName, new Given(surfaceName, entry.id, decl));
+      }
+    }
+    return out;
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this.modelDef.annotations, spec);
+  }
+
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this.modelDef.annotation, prefix);
+    return annotationToTaglines(this.modelDef.annotations, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this.modelDef.annotations);
   }
 
   /**
-   * Retrieve a document reference for the token at the given position within
-   * the document that produced this model.
+   * Retrieve a reference for the token at the given position within the
+   * document that produced this model.
    *
    * @param position A position within the document.
-   * @return A `DocumentReference` at that position if one exists.
+   * @return A {@link Reference} at that position if one exists.
+   */
+  public referenceAt(position: ModelDocumentPosition): Reference | undefined {
+    const ref = this.references.find(position);
+    return ref ? new Reference(ref) : undefined;
+  }
+
+  /**
+   * @deprecated Use {@link referenceAt} — returns a Foundation
+   * {@link Reference} view instead of the raw IR. This method returns
+   * the IR shape directly and will be removed in a future release.
    */
   public getReference(
     position: ModelDocumentPosition
@@ -1163,9 +1343,27 @@ export class Model implements Taggable {
   }
 
   /**
-   * Get an array of `NamedQueryDef`s contained in the model.
+   * Enumerate the model's top-level queries by identifier.
    *
-   * @return An array of `NamedQueryDef`s contained in the model.
+   * Returns the names of named queries (`query: foo is ...`) and the count
+   * of unnamed `run:` statements. Pair with {@link getPreparedQueryByName}
+   * and {@link getPreparedQueryByIndex} to load any of them — those are the
+   * only path to the query itself; this getter exposes only identifiers,
+   * not IR.
+   */
+  public queries(): ModelQueries {
+    const named: string[] = [];
+    for (const object of Object.values(this.modelDef.contents)) {
+      if (object.type === 'query') {
+        named.push(object.name);
+      }
+    }
+    return {named, unnamed: this.modelDef.queryList.length};
+  }
+
+  /**
+   * @deprecated Leaks IR. Use {@link queries} for enumeration and
+   *   {@link getPreparedQueryByName} to load a named query.
    */
   public get namedQueries(): NamedQueryDef[] {
     const isNamedQueryDef = (
@@ -1204,7 +1402,7 @@ export class Model implements Taggable {
    */
   public getBuildPlan(): BuildPlan {
     // Require experimental.persistence compiler flag
-    const modelTag = this.tagParse({prefix: /^##! /}).tag;
+    const modelTag = this.annotations.parseAsTag('!').tag;
     if (!modelTag.has('experimental', 'persistence')) {
       throw new Error(
         'Model must have ##! experimental.persistence to use getBuildPlan()'
@@ -1362,24 +1560,26 @@ export class PersistSource implements Taggable {
   }
 
   /**
-   * The annotation on this source.
+   * @deprecated Hands out raw IR (`AnnotationsDef`). Use `.annotations`
+   * (returns the {@link Annotations} view). Slated for removal once
+   * external consumers migrate.
    */
-  get annotation(): Annotation | undefined {
-    return this.persistableDef.annotation;
+  get annotation(): AnnotationsDef | undefined {
+    return this.persistableDef.annotations;
   }
 
-  /**
-   * Parse the source's tags.
-   */
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec): MalloyTagParse {
     return this.explore.tagParse(spec);
   }
 
-  /**
-   * Get annotation taglines matching an optional prefix.
-   */
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp): string[] {
     return this.explore.getTaglines(prefix);
+  }
+
+  get annotations(): Annotations {
+    return this.explore.annotations;
   }
 
   /**
@@ -1434,7 +1634,6 @@ export class PersistSource implements Taggable {
       return getCompiledSQL(
         sd,
         options ?? {},
-        path => this.dialect.quoteTablePath(path),
         (query, opts) => queryModel.compileQuery(query, opts).sql
       );
     } else {
@@ -1462,28 +1661,97 @@ export class PersistSource implements Taggable {
 // PreparedQuery
 // =============================================================================
 
-export class PreparedQuery implements Taggable {
-  public _query: InternalQuery | NamedQueryDef;
+/**
+ * Foundation API wrapper for a given declaration. Parallel to Explore /
+ * PreparedQuery — exposes a stable, callerable surface over the internal
+ * `Given` IR record. Returned from `PreparedQuery.givens`.
+ */
+export class Given implements Taggable {
+  /**
+   * @param name        Caller-facing surface name in the model (post-rename
+   *                    on import). The key by which the caller passes a
+   *                    value to `.run({givens: {[name]: ...}})`.
+   * @param id          Global GivenID. Stable across imports and renames.
+   * @param _internal   The internal Given declaration record.
+   */
+  constructor(
+    readonly name: string,
+    readonly id: GivenID,
+    private readonly _internal: InternalGiven
+  ) {}
 
+  get type(): GivenTypeDef {
+    return this._internal.type;
+  }
+
+  /** `undefined` when no default — the caller must supply at run time. */
+  get default(): ConstantExpr | undefined {
+    return this._internal.default;
+  }
+
+  get location(): DocumentLocation | undefined {
+    return this._internal.location;
+  }
+
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this._internal.annotations, spec);
+  }
+
+  /** @deprecated Use `.annotations.texts(route)`. */
+  getTaglines(prefix?: RegExp): string[] {
+    return annotationToTaglines(this._internal.annotations, prefix);
+  }
+
+  get annotations(): Annotations {
+    return new Annotations(this._internal.annotations);
+  }
+}
+
+/**
+ * Internal abstract base for Foundation wrappers around an IR `Pipeline`
+ * (an IR object that has a pipeline, annotations, and a source location).
+ * Owns the four `Taggable` accessors and a `location` getter, all reading
+ * from the wrapped IR. Not exported.
+ */
+abstract class PipelineBase implements Taggable {
+  constructor(protected pipelineDef: Pipeline) {}
+
+  get annotations(): Annotations {
+    return new Annotations(this.pipelineDef.annotations);
+  }
+
+  get location(): DocumentLocation | undefined {
+    return this.pipelineDef.location;
+  }
+
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this.pipelineDef.annotations, spec);
+  }
+
+  /** @deprecated Use `.annotations.texts(route)`. */
+  getTaglines(prefix?: RegExp): string[] {
+    return annotationToTaglines(this.pipelineDef.annotations, prefix);
+  }
+}
+
+export class PreparedQuery extends PipelineBase {
   constructor(
     query: InternalQuery,
     private _model: Model,
     public problems: LogMessage[],
     public name?: string
   ) {
-    this._query = query;
+    super(query);
+  }
+
+  public get _query(): InternalQuery | NamedQueryDef {
+    return this.pipelineDef as InternalQuery | NamedQueryDef;
   }
 
   public get _modelDef(): ModelDef {
     return this._model._modelDef;
-  }
-
-  tagParse(spec?: TagParseSpec) {
-    return annotationToTag(this._query.annotation, spec);
-  }
-
-  getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this._query.annotation, prefix);
   }
 
   /**
@@ -1503,7 +1771,23 @@ export class PreparedQuery implements Taggable {
    */
   public getPreparedResult(options?: CompileQueryOptions): PreparedResult {
     const queryModel = this._model.queryModel;
-    const translatedQuery = queryModel.compileQuery(this._query, options);
+    // Build the resolved-givens map in two phases:
+    //   1. caller-supplied values (resolveSuppliedGivens)
+    //   2. inline-given defaults eager-evaluated against the map
+    // Result is undefined when no values land — preserves the previous
+    // "no givens path" downstream.
+    const resolved = options?.givens
+      ? resolveSuppliedGivens(options.givens, this._modelDef)
+      : new Map<GivenID, Expr>();
+    evaluateInlineGivens(resolved, this._modelDef);
+    const prepareResultOptions: PrepareResultOptions = {
+      ...options,
+      resolvedGivens: resolved.size > 0 ? resolved : undefined,
+    };
+    const translatedQuery = queryModel.compileQuery(
+      this._query,
+      prepareResultOptions
+    );
     return new PreparedResult(
       {
         ...translatedQuery,
@@ -1539,6 +1823,30 @@ export class PreparedQuery implements Taggable {
   public get model(): Model {
     return this._model;
   }
+
+  /**
+   * The givens this specific query references, keyed by caller-facing
+   * surface name. Used by "run this query" UIs to prompt only for the
+   * givens this query actually touches, not every given declared in the
+   * model.
+   *
+   * Computed as `model.givens` filtered by `query.givenUsage` — i.e. the
+   * intersection of "what the model surfaces" with "what this query
+   * needs." Internal-only givens (referenced but never surfaced) stay
+   * invisible because they're not in `model.givens` to begin with.
+   */
+  public get givens(): ReadonlyMap<string, Given> {
+    const out = new Map<string, Given>();
+    const usage = this._query.givenUsage;
+    if (!usage || usage.length === 0) return out;
+    const referenced = new Set(usage.map(g => g.id));
+    for (const [name, given] of this._model.givens) {
+      if (referenced.has(given.id)) {
+        out.set(name, given);
+      }
+    }
+    return out;
+  }
 }
 
 // =============================================================================
@@ -1565,24 +1873,41 @@ export class PreparedResult implements Taggable {
     return new PreparedResult(query, modelDef);
   }
 
+  /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec): MalloyTagParse {
-    return annotationToTag(this.inner.annotation, spec);
+    return annotationToTag(this.inner.annotations, spec);
   }
 
+  /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this.inner.annotation, prefix);
+    return annotationToTaglines(this.inner.annotations, prefix);
   }
 
-  get annotation(): Annotation | undefined {
-    return this.inner.annotation;
+  get annotations(): Annotations {
+    return new Annotations(this.inner.annotations);
   }
 
-  get modelAnnotation(): Annotation | undefined {
-    return this.modelDef.annotation;
+  /**
+   * @deprecated Hands out raw IR (`AnnotationsDef`). Use `.annotations`
+   * (returns the {@link Annotations} view) for read access. Internal
+   * code that needs the IR shape should read `._rawQuery.annotations`
+   * directly. Slated for removal once external consumers migrate.
+   */
+  get annotation(): AnnotationsDef | undefined {
+    return this.inner.annotations;
+  }
+
+  /**
+   * @deprecated Hands out raw IR (`AnnotationsDef`). Internal code that
+   * needs the model-level IR shape should read `._modelDef.annotations`
+   * directly. Slated for removal once external consumers migrate.
+   */
+  get modelAnnotation(): AnnotationsDef | undefined {
+    return this.modelDef.annotations;
   }
 
   get modelTag(): Tag {
-    return annotationToTag(this.modelDef.annotation).tag;
+    return new Annotations(this.modelDef.annotations).parseAsTag().tag;
   }
 
   /**
@@ -1618,7 +1943,7 @@ export class PreparedResult implements Taggable {
     const explore = this.inner.structs[this.inner.structs.length - 1];
     const namedExplore = {
       ...explore,
-      annotation: this.inner.annotation,
+      annotations: this.inner.annotations,
       name: this.inner.queryName || explore.name,
     };
     try {
@@ -1665,9 +1990,7 @@ export class PreparedResult implements Taggable {
     const structs = this.inner.structs;
     const struct = structs[structs.length - 1];
     const schema = {fields: convertFieldInfos(struct, struct.fields)};
-    const annotations = annotationToTaglines(this.inner.annotation).map(l => ({
-      value: l,
-    }));
+    const annotations = toStableAnnotations(this.inner.annotations);
     const metadataAnnot = struct.resultMetadata
       ? getResultStructMetadataAnnotation(struct, struct.resultMetadata)
       : undefined;
@@ -1705,11 +2028,7 @@ export class PreparedResult implements Taggable {
         .toString(),
     });
 
-    const modelAnnotations = annotationToTaglines(this.modelDef.annotation).map(
-      l => ({
-        value: l,
-      })
-    );
+    const modelAnnotations = toStableAnnotations(this.modelDef.annotations);
 
     return {
       schema,

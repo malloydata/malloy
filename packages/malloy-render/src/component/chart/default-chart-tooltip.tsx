@@ -22,8 +22,8 @@ export function DefaultChartTooltip(props: {data: ChartTooltipEntry}) {
   // For performance, only render on next frame. Tooltips can rapidly mount as user quickly mouses through a chart.
   let tId: number | undefined;
   createEffect(() => {
-    // Run effect on every new set of data
-    props.data;
+    // Read props.data so SolidJS tracks it as a reactive dep and re-runs this effect when data changes.
+    void props.data;
     setRender(false);
     if (tId) cancelAnimationFrame(tId);
     tId = requestAnimationFrame(() => {

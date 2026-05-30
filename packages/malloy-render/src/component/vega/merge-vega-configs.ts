@@ -1,6 +1,6 @@
 const isObject = (obj: unknown) => obj && typeof obj === 'object';
 
-export function mergeVegaConfigs(target: Object, source: Object) {
+export function mergeVegaConfigs(target: object, source: object) {
   if (!isObject(target) || !isObject(source)) {
     return source;
   }

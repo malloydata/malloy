@@ -91,7 +91,7 @@ export class FilterElement extends MalloyElement {
         code: this.exprSrc,
         e: {node: 'false'},
         expressionType: 'scalar',
-        fieldUsage: exprVal.fieldUsage,
+        refSummary: exprVal.refSummary,
         isSourceFilter: false,
       };
     }
@@ -101,7 +101,7 @@ export class FilterElement extends MalloyElement {
       code: this.exprSrc,
       e: exprVal.value,
       expressionType: exprVal.expressionType,
-      fieldUsage: exprVal.fieldUsage,
+      refSummary: exprVal.refSummary,
       stableFilter,
       isSourceFilter: false,
     };

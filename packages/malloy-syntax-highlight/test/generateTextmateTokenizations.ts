@@ -60,12 +60,15 @@ function initializeRegistry(
   languageMap: Record<string, TextmateLanguageDefinition>,
   theme: IRawTheme
 ) {
-  const wasmBin = readFileSync(
+  const {buffer: wasmBin} = readFileSync(
     pathJoin(
       __dirname,
       '../../../node_modules/vscode-oniguruma/release/onig.wasm'
     )
-  ).buffer;
+  );
+  if (!(wasmBin instanceof ArrayBuffer)) {
+    throw new Error('expected ArrayBuffer for onig.wasm');
+  }
   const vscodeOnigurumaLib = loadWASM(wasmBin).then(() => {
     return {
       createOnigScanner(patterns: string[]) {

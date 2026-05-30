@@ -22,13 +22,13 @@
  */
 
 import type {
-  FieldUsage,
   FilterCondition,
   PartialSegment,
   PipeSegment,
   QueryFieldDef,
   QuerySegment,
   ReduceSegment,
+  RefSummary,
 } from '../../../model/malloy_types';
 import {
   canOrderBy,
@@ -53,7 +53,7 @@ import {ReduceFieldSpace} from '../field-space/query-spaces';
 import {DefinitionList} from '../types/definition-list';
 import type {QueryInputSpace} from '../field-space/query-input-space';
 import type {MalloyElement} from '../types/malloy-element';
-import {mergeFieldUsage} from '../../composite-source-utils';
+import {mergeRefSummaries} from '../../composite-source-utils';
 
 function queryFieldName(qf: QueryFieldDef): string {
   if (qf.type === 'fieldref') {
@@ -102,8 +102,8 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
 
-  get fieldUsage(): FieldUsage[] {
-    return this.resultFS.fieldUsage;
+  get refSummary(): RefSummary | undefined {
+    return this.resultFS.refSummary;
   }
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
@@ -137,9 +137,9 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       to.alwaysJoins = [...this.alwaysJoins];
     }
 
-    const fromFieldUsage =
-      from && isQuerySegment(from) ? from.fieldUsage ?? [] : [];
-    to.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
+    const fromRefSummary =
+      from && isQuerySegment(from) ? from.refSummary : undefined;
+    to.refSummary = mergeRefSummaries(fromRefSummary, this.refSummary);
   }
 }
 

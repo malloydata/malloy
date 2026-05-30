@@ -31,7 +31,9 @@ malloyStatement
   : defineSourceStatement
   | defineUserTypeStatement
   | defineQuery
+  | defineGivenStatement
   | importStatement
+  | exportStatement
   | runStatement
   | docAnnotations
   | ignoredObjectAnnotations
@@ -80,6 +82,27 @@ userTypeFieldType
 
 defineQuery
   : topLevelQueryDefs                 # use_top_level_query_defs
+  ;
+
+defineGivenStatement
+  : tags GIVEN givenDefList
+  ;
+
+givenDefList
+  : givenDef (COMMA? givenDef)* COMMA?
+  ;
+
+givenDef
+  : tags givenModifier? givenNameDef DOUBLECOLON givenType (isDefine fieldExpr)?
+  ;
+
+givenModifier: id;
+
+givenNameDef: id;
+
+givenType
+  : malloyType
+  | FILTER LT malloyBasicType GT
   ;
 
 topLevelAnonQueryDef
@@ -140,6 +163,14 @@ importItem
 
 importURL
   : string
+  ;
+
+exportStatement
+  : EXPORT OCURLY exportItem (COMMA exportItem)* COMMA? CCURLY
+  ;
+
+exportItem
+  : id
   ;
 
 docAnnotations
@@ -690,6 +721,7 @@ malloyOrSQLType
 
 fieldExpr
   : fieldPath                                              # exprFieldPath
+  | GIVEN_REF                                              # exprGivenRef
   | literal                                                # exprLiteral
   | OBRACK fieldExpr (COMMA fieldExpr)* COMMA? CBRACK      # exprArrayLiteral
   | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
@@ -709,6 +741,7 @@ fieldExpr
   | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
   | fieldExpr IS NOT? NULL                                 # exprNullCheck
   | fieldExpr NOT? IN OPAREN fieldExprList CPAREN          # exprWarnIn
+  | fieldExpr NOT? IN GIVEN_REF                            # exprInGiven
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr AND fieldExpr                                # exprLogicalAnd

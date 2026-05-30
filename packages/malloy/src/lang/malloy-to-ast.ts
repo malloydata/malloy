@@ -23,7 +23,7 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import type {ParseTree} from 'antlr4ts/tree';
+import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import type * as parse from './lib/Malloy/MalloyParser';
@@ -37,6 +37,7 @@ import type {
 import {makeLogMessage} from './parse-log';
 import type {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
+import {parsePrefix} from './annotation-prefix';
 import type {FieldDeclarationConstructor} from './ast';
 import {TableSource} from './ast';
 import type {HasString, HasID} from './parse-utils';
@@ -47,7 +48,7 @@ import {
   getShortString,
   idToStr,
   getPlainString,
-  getAnnotationText,
+  noteFromAnnotation,
 } from './parse-utils';
 import type {
   AccessModifierLabel,
@@ -55,6 +56,8 @@ import type {
   BasicAtomicTypeDef,
   DocumentLocation,
   DocumentRange,
+  FilterExprType,
+  GivenTypeDef,
   Note,
   ParameterTypeDef,
 } from '../model/malloy_types';
@@ -67,7 +70,7 @@ import {
 } from '../model/malloy_types';
 import type {Tag} from '@malloydata/malloy-tag';
 import {parseAnnotation} from '@malloydata/malloy-tag';
-import {isNotUndefined, rangeFromContext} from './utils';
+import {isNotUndefined, rangeFromContext, rangeFromToken} from './utils';
 import {isFilterable} from '@malloydata/malloy-filter';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {Timer} from '../timing';
@@ -96,7 +99,10 @@ function isIndirectUserType(t: UserTypeFieldTypeResult): t is IndirectUserType {
 
 const DEFAULT_COMPILER_FLAGS = [];
 
-type HasAnnotations = ParserRuleContext & {
+const LEGAL_FILTER_TYPES =
+  'string, number, boolean, date, timestamp, timestamptz';
+
+type AnnotatedCtx = ParserRuleContext & {
   annotation: () => parse.AnnotationContext[];
 };
 
@@ -115,7 +121,8 @@ export class MalloyToAST
   constructor(
     readonly parseInfo: MalloyParseInfo,
     readonly msgLog: MessageLogger,
-    compilerFlagSrc: string[]
+    compilerFlagSrc: string[],
+    readonly restrictedMode: boolean = false
   ) {
     super();
     this.timer = new Timer('generate_ast');
@@ -270,13 +277,23 @@ export class MalloyToAST
     return new ast.Unimplemented();
   }
 
+  /**
+   * Attach a source location to an AST element and return it. The range
+   * is taken from the supplied parse-tree node — either a
+   * `ParserRuleContext` (entire rule's token span) or a `TerminalNode`
+   * (just that one token).
+   */
   protected astAt<MT extends ast.MalloyElement>(
     el: MT,
-    cx: ParserRuleContext
+    cx: ParserRuleContext | TerminalNode
   ): MT {
+    const range =
+      cx instanceof ParserRuleContext
+        ? this.rangeFromContext(cx)
+        : rangeFromToken(this.parseInfo.sourceInfo, cx.symbol);
     el.location = {
       url: this.parseInfo.sourceURL,
-      range: this.rangeFromContext(cx),
+      range,
     };
     return el;
   }
@@ -366,15 +383,29 @@ export class MalloyToAST
   }
 
   protected getAnnotation(cx: parse.AnnotationContext): Note {
-    const text = getAnnotationText(cx, (wcx, msg) => {
-      this.contextError(wcx, 'block-annotation-warning', msg, {
-        severity: 'warn',
-      });
-    });
-    return {text: text, at: this.getLocation(cx)};
+    const note = noteFromAnnotation(cx, this.parseInfo);
+    this.warnIfMalformedPrefix(note.text, cx);
+    return note;
   }
 
-  protected getNotes(cx: HasAnnotations): Note[] {
+  /**
+   * Warn if the annotation prefix is not a well-formed route. The note is still
+   * stored either way — the malformation only drives the diagnostic, never the
+   * IR. Warnings fire at note construction; inherited annotations carry no
+   * malformation marker through the IR and are not re-warned by importers.
+   */
+  private warnIfMalformedPrefix(text: string, cx: ParserRuleContext): void {
+    const parsed = parsePrefix(text);
+    if (parsed.malformation === undefined) return;
+    // The slice up to contentIndex is "prefix + separator"; trim trailing
+    // whitespace to land on the prefix the user wrote. (A no-content single-
+    // line note like `#malformed\n` exposes this: contentIndex === text.length
+    // but the slice still ends at the `\n`.)
+    const prefix = text.slice(0, parsed.contentIndex).replace(/\s+$/, '');
+    this.contextError(cx, parsed.malformation, {prefix});
+  }
+
+  protected getNotes(cx: AnnotatedCtx): Note[] {
     return cx.annotation().map(a => this.getAnnotation(a));
   }
 
@@ -401,6 +432,117 @@ export class MalloyToAST
     const defList = new ast.DefineSourceList(defs);
     defList.extendNote({blockNotes});
     return defList;
+  }
+
+  visitDefineGivenStatement(
+    pcx: parse.DefineGivenStatementContext
+  ): ast.DefineGivens {
+    this.inExperiment('givens', pcx);
+    const defsCx = pcx.givenDefList().givenDef();
+    const givens = defsCx.map(dcx => this.visitGivenDef(dcx));
+    const blockNotes = this.getNotes(pcx.tags());
+    const block = new ast.DefineGivens(givens);
+    for (const g of givens) {
+      g.extendNote({blockNotes});
+    }
+    return this.astAt(block, pcx);
+  }
+
+  visitGivenDef(pcx: parse.GivenDefContext): ast.GivenDeclaration {
+    const name = getId(pcx.givenNameDef());
+    const typeDef = this.getGivenType(pcx.givenType());
+    const defaultCx = pcx.fieldExpr();
+    let defVal: ast.ConstantExpression | undefined;
+    if (defaultCx) {
+      defVal = this.astAt(
+        new ast.ConstantExpression(this.getFieldExpr(defaultCx)),
+        defaultCx
+      );
+    }
+    const isCx = pcx.isDefine();
+    if (isCx) {
+      // We accept the `tags IS tags` shape syntactically so we can give a
+      // targeted error here instead of a confusing parse-level one. Tags
+      // belong above the declaration; nothing should sit between `is` and
+      // the default expression.
+      const afterIs = isCx._afterIs;
+      if (afterIs && afterIs.annotation().length > 0) {
+        this.contextError(
+          afterIs,
+          'given-no-tags-after-is',
+          'Annotations are not allowed between `is` and the default value of a given; place them above the declaration'
+        );
+      }
+    }
+    // The modifier slot accepts any identifier and rejects anything but
+    // `inline` at AST-build — this keeps `inline` from being a reserved
+    // word elsewhere in the language (fields, sources, view names, etc.
+    // can still be called `inline`). The cost: a slightly later error
+    // surface if someone misspells the modifier.
+    // Case-insensitive match: Malloy keywords are case-insensitive in
+    // the lexer, so accept `inline`, `INLINE`, `Inline`, etc.
+    const modCx = pcx.givenModifier();
+    let inline = false;
+    if (modCx) {
+      const modText = getId(modCx);
+      if (modText.toLowerCase() === 'inline') {
+        inline = true;
+      } else {
+        this.contextError(modCx, 'invalid-given-modifier', {modifier: modText});
+      }
+    }
+    const decl = new ast.GivenDeclaration(name, typeDef, defVal, inline);
+    decl.extendNote({notes: this.getNotes(pcx.tags())});
+    return this.astAt(decl, pcx);
+  }
+
+  /**
+   * Parse the TYPE inside `filter<TYPE>`. Returns the filter type on
+   * success; logs `illegal-filter-type` and returns undefined when TYPE
+   * is not a filterable type. `getBasicMalloyType` already logs for
+   * invalid basic types, so on its `'error'` path we stay silent and
+   * return undefined.
+   */
+  protected getFilterType(
+    basicCx: parse.MalloyBasicTypeContext
+  ): FilterExprType | undefined {
+    const inner = this.getBasicMalloyType(basicCx);
+    if (inner.type === 'error') return undefined;
+    if (isFilterable(inner.type)) {
+      return inner.type;
+    }
+    this.contextError(
+      basicCx,
+      'illegal-filter-type',
+      `\`filter<${basicCx.text}>\` is not allowed; filtering is only supported for ${LEGAL_FILTER_TYPES}`
+    );
+    return undefined;
+  }
+
+  getGivenType(pcx: parse.GivenTypeContext): GivenTypeDef {
+    if (pcx.FILTER()) {
+      const basicCx = pcx.malloyBasicType();
+      if (basicCx) {
+        const filterType = this.getFilterType(basicCx);
+        if (filterType) return {type: 'filter expression', filterType};
+      }
+      return {type: 'error'};
+    }
+    const mtcx = pcx.malloyType();
+    if (mtcx) {
+      return this.getMalloyType(mtcx);
+    }
+    // Unreachable from valid grammar input: `givenType` is exactly
+    // `malloyType | FILTER LT malloyBasicType GT`, so one of the branches
+    // above must have matched. Surfacing a real error here (rather than
+    // throwing) keeps the translator running and gives any AI or human
+    // reading the log a hint that the parser and AST builder have drifted.
+    this.contextError(
+      pcx,
+      'unexpected-malloy-type',
+      `\`${pcx.text}\` was not recognized as a legal type. This is likely a compiler bug — the grammar admits cases the translator doesn't handle.`
+    );
+    return {type: 'error'};
   }
 
   visitDefineUserTypeStatement(
@@ -541,26 +683,22 @@ export class MalloyToAST
     let pType: ParameterTypeDef | undefined;
     const typeCx = pcx.legalParamType();
     if (typeCx) {
-      const typeDef = this.getBasicMalloyType(typeCx.malloyBasicType());
-      const t = typeDef.type;
       if (typeCx.FILTER()) {
-        if (isFilterable(t)) {
-          pType = {type: 'filter expression', filterType: t};
-        } else {
+        const filterType = this.getFilterType(typeCx.malloyBasicType());
+        if (filterType) {
+          pType = {type: 'filter expression', filterType};
+        }
+      } else {
+        const t = this.getBasicMalloyType(typeCx.malloyBasicType()).type;
+        if (!isParameterType(t)) {
           this.contextError(
             typeCx,
             'parameter-illegal-default-type',
-            `Unknown filter type ${t}`
+            `Unknown parameter type ${t}`
           );
+        } else {
+          pType = {type: t};
         }
-      } else if (!isParameterType(t)) {
-        this.contextError(
-          typeCx,
-          'parameter-illegal-default-type',
-          `Unknown parameter type ${t}`
-        );
-      } else {
-        pType = {type: t};
       }
     }
 
@@ -1503,6 +1641,13 @@ export class MalloyToAST
     return this.astAt(idRef, pcx);
   }
 
+  visitExprGivenRef(pcx: parse.ExprGivenRefContext): ast.GivenReference {
+    this.inExperiment('givens', pcx);
+    // GIVEN_REF token text is `$NAME`; strip the leading `$`.
+    const name = pcx.GIVEN_REF().text.slice(1);
+    return this.astAt(new ast.GivenReference(name), pcx);
+  }
+
   visitExprNULL(_pcx: parse.ExprNULLContext): ast.ExprNULL {
     return new ast.ExprNULL();
   }
@@ -1960,6 +2105,14 @@ export class MalloyToAST
     return this.parseTime(pcx, ast.LiteralYear.parse);
   }
 
+  visitExportStatement(pcx: parse.ExportStatementContext): ast.ExportStatement {
+    const items = pcx.exportItem().map(itemCx => {
+      const idCx = itemCx.id();
+      return this.astAt(new ast.ExportItem(idToStr(idCx)), idCx);
+    });
+    return this.astAt(new ast.ExportStatement(items), pcx);
+  }
+
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
     const url = this.getPlainStringFrom(pcx.importURL());
     const importStmt = this.astAt(
@@ -2000,6 +2153,15 @@ export class MalloyToAST
 
   updateCompilerFlags(tags: ast.ModelAnnotation) {
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+    if (this.restrictedMode) {
+      // `##!` lines in restricted text never become active flags. The
+      // user-facing rejection is logged at execute time (see
+      // ModelAnnotation.execute) so it doesn't short-circuit ASTStep,
+      // which lets every other restricted-mode violation in the same
+      // compile log its own diagnostic.
+      this.timer.contribute([parseCompilerFlagsTimer.stop()]);
+      return;
+    }
     const newLines = tags.getCompilerFlagLines();
     if (newLines.length > 0) {
       const oldLength = this.compilerFlagSrc.length;
@@ -2026,14 +2188,15 @@ export class MalloyToAST
         this.contextError(
           pcx,
           'unclosed-block-annotation',
-          'Block annotation is not closed, add correctly indented "|##"'
+          'Multi-line annotation is not closed, add correctly indented "|##"'
         );
       }
     }
-    const allNotes = pcx.docAnnotation().map(a => ({
-      text: getAnnotationText(a),
-      at: this.getLocation(pcx),
-    }));
+    const allNotes: Note[] = pcx.docAnnotation().map(a => {
+      const note = noteFromAnnotation(a, this.parseInfo);
+      this.warnIfMalformedPrefix(note.text, a);
+      return note;
+    });
     const tags = new ast.ModelAnnotation(allNotes);
     this.updateCompilerFlags(tags);
     return tags;
@@ -2050,7 +2213,7 @@ export class MalloyToAST
       this.contextError(
         pcx,
         'unclosed-block-annotation',
-        'Block annotation is not closed, add correctly indented "|#"'
+        'Multi-line annotation is not closed, add correctly indented "|#"'
       );
     } else {
       this.contextError(
@@ -2073,7 +2236,7 @@ export class MalloyToAST
       this.contextError(
         pcx,
         'unclosed-block-annotation',
-        'Block annotation is not closed, add correctly indented "|##"'
+        'Multi-line annotation is not closed, add correctly indented "|##"'
       );
     } else {
       this.contextError(
@@ -2427,6 +2590,18 @@ export class MalloyToAST
       new ast.ExprIsNull(this.getFieldExpr(expr), pcx.NOT() ? '!=' : '='),
       pcx
     );
+  }
+
+  visitExprInGiven(pcx: parse.ExprInGivenContext): ast.ExprInGiven {
+    this.inExperiment('givens', pcx);
+    const lhs = this.getFieldExpr(pcx.fieldExpr());
+    const isNot = !!pcx.NOT();
+    const givenName = pcx.GIVEN_REF().text.slice(1);
+    const givenRef = this.astAt(
+      new ast.GivenReference(givenName),
+      pcx.GIVEN_REF()
+    );
+    return this.astAt(new ast.ExprInGiven(lhs, isNot, givenRef), pcx);
   }
 
   visitExprWarnIn(pcx: parse.ExprWarnInContext): ast.ExprLegacyIn {

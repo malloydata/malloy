@@ -41,14 +41,14 @@ export abstract class SpaceField extends SpaceEntry {
       ...def,
       expressionType,
       evalSpace: 'input',
-      fieldUsage:
-        // Use the composite field usage in the def if it exists, otherwise, if the
-        // field has an e whic is a composite field, then the composite field usage
-        // should be just the name of the field.
-        def.fieldUsage ??
+      // Use the composite field usage in the def if it exists, otherwise, if
+      // the field has an e which is a composite field, then the composite
+      // field usage should be just the name of the field.
+      refSummary:
+        def.refSummary ??
         (def.e?.node === 'compositeField'
-          ? [{path: [def.name], at: def.location}]
-          : []),
+          ? {fieldUsage: [{path: [def.name], at: def.location}]}
+          : undefined),
     };
     return ref;
   }
@@ -60,7 +60,7 @@ export abstract class SpaceField extends SpaceEntry {
     };
     return {
       ...turtleTypeDef,
-      fieldUsage: def.fieldUsage ?? [],
+      refSummary: def.refSummary,
       // TODO these are sorta weird for a turtle...
       expressionType: 'scalar',
       evalSpace: 'constant',

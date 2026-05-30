@@ -26,6 +26,7 @@ import type {
   RowStatement,
   Connection,
   ConnectionOptions,
+  Binds,
 } from 'snowflake-sdk';
 import snowflake from 'snowflake-sdk';
 import type {Pool, Options as PoolOptions} from 'generic-pool';
@@ -166,7 +167,8 @@ export class SnowflakeExecutor {
     sqlText: string,
     conn: Connection,
     options?: RunSQLOptions,
-    timeoutMs?: number
+    timeoutMs?: number,
+    binds?: Binds
   ): Promise<QueryData> {
     const abortSignal = options?.abortSignal;
     // Fail fast if already aborted before we even start executing
@@ -185,6 +187,7 @@ export class SnowflakeExecutor {
       try {
         _statement = conn.execute({
           sqlText,
+          binds,
           complete: (
             err: SnowflakeError | undefined,
             _stmt: RowStatement,
@@ -283,11 +286,12 @@ export class SnowflakeExecutor {
   public async batch(
     sqlText: string,
     options?: RunSQLOptions,
-    timeoutMs?: number
+    timeoutMs?: number,
+    binds?: Binds
   ): Promise<QueryData> {
     return await this.pool_.use(async (conn: Connection) => {
       await this.ensureSessionInitialized(conn, options, timeoutMs);
-      return await this._execute(sqlText, conn, options, timeoutMs);
+      return await this._execute(sqlText, conn, options, timeoutMs, binds);
     });
   }
 
@@ -302,12 +306,13 @@ export class SnowflakeExecutor {
   public async tryBatch(
     sqlText: string,
     options?: RunSQLOptions,
-    timeoutMs?: number
+    timeoutMs?: number,
+    binds?: Binds
   ): Promise<QueryData | undefined> {
     return await this.pool_.use(async (conn: Connection) => {
       await this.ensureSessionInitialized(conn, options, timeoutMs);
       try {
-        return await this._execute(sqlText, conn, options, timeoutMs);
+        return await this._execute(sqlText, conn, options, timeoutMs, binds);
       } catch {
         return undefined;
       }

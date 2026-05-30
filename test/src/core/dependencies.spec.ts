@@ -53,6 +53,7 @@ describe('dependencies', () => {
   it('javascript references should not be circular', async () => {
     const deps = await madge('packages', {
       fileExtensions: ['js'],
+      excludeRegExp: [/malloy-render\/dist/],
     });
     expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
   });

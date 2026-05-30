@@ -261,7 +261,7 @@ function generateSQL(dialect: Dialect, rows: TestDataRow[]): string {
 
       if (idx === 0) {
         // First row: include column aliases and explicit casts if needed
-        const quotedName = dialect.sqlMaybeQuoteIdentifier(colName);
+        const quotedName = dialect.sqlQuoteIdentifier(colName);
         if (typedValue.needsCast) {
           const sqlType = dialect.malloyTypeToSQLType(typedValue.malloyType);
           fields.push(`CAST(${sql} AS ${sqlType}) AS ${quotedName}`);
@@ -293,7 +293,7 @@ function generateSQL(dialect: Dialect, rows: TestDataRow[]): string {
 
   // Multiple rows: wrap for sorting
   const quotedColumns = columnList
-    .map(col => dialect.sqlMaybeQuoteIdentifier(col))
+    .map(col => dialect.sqlQuoteIdentifier(col))
     .join(', ');
   const innerQuery = selects.join('\nUNION ALL ');
 

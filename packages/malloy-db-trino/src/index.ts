@@ -93,6 +93,7 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
     displayName: 'Setup SQL',
     type: 'text',
     optional: true,
+    advanced: true,
     description: 'SQL statements to run when the connection is established',
   },
   {
@@ -100,6 +101,7 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
     displayName: 'Source',
     type: 'string',
     optional: true,
+    advanced: true,
     description: 'Source name for the Trino client',
   },
   {
@@ -107,6 +109,7 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
     displayName: 'SSL',
     type: 'json',
     optional: true,
+    advanced: true,
     description: 'TLS/SSL configuration (e.g. {"rejectUnauthorized": false})',
   },
   {
@@ -114,6 +117,7 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
     displayName: 'Session',
     type: 'json',
     optional: true,
+    advanced: true,
     description: 'Session properties as key-value pairs',
   },
   {
@@ -121,6 +125,7 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
     displayName: 'Extra Credential',
     type: 'json',
     optional: true,
+    advanced: true,
     description: 'Extra credentials as key-value pairs',
   },
   {
@@ -128,6 +133,7 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
     displayName: 'Extra Headers',
     type: 'json',
     optional: true,
+    advanced: true,
     description: 'Additional HTTP headers as key-value pairs',
   },
 ];
@@ -144,6 +150,7 @@ const prestoProperties: ConnectionPropertyDefinition[] = [
     displayName: 'Setup SQL',
     type: 'text',
     optional: true,
+    advanced: true,
     description: 'SQL statements to run when the connection is established',
   },
 ];

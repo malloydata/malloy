@@ -29,7 +29,7 @@ import type {
   Parameter,
   TypeDesc,
 } from '../../model';
-import {expressionIsScalar, isRepeatedRecord, TD} from '../../model';
+import {expressionIsScalar, TD} from '../../model';
 
 function mkTypeDesc(
   // The problem is that record and array, as currently defined, require a dialect
@@ -43,7 +43,6 @@ function mkTypeDesc(
     type: dataType,
     expressionType,
     evalSpace,
-    fieldUsage: [],
   };
 }
 
@@ -137,53 +136,12 @@ export function inspect(...types: (TypeDesc | undefined)[]): string {
 
 /**
  * Used when using a TypeDesc or TypeDesc-like interface to
- * create a field, don't copy the non type fields.
+ * create a field, don't copy the non type fields. Thin wrapper over
+ * `TD.atomicDef`; exists in `lang/` so callers can pass a `TypeDesc`
+ * (translator-side) without leaking that type into the model layer.
  */
 export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
-  if (TD.isAtomic(td)) {
-    switch (td.type) {
-      case 'array': {
-        return isRepeatedRecord(td)
-          ? {
-              type: 'array',
-              elementTypeDef: td.elementTypeDef,
-              fields: td.fields,
-            }
-          : {
-              type: 'array',
-              elementTypeDef: td.elementTypeDef,
-            };
-      }
-      case 'record': {
-        return {type: 'record', fields: td.fields};
-      }
-      case 'number': {
-        return td.numberType
-          ? {type: 'number', numberType: td.numberType}
-          : {type: 'number'};
-      }
-      case 'sql native': {
-        return td.rawType
-          ? {type: 'sql native', rawType: td.rawType}
-          : {type: 'sql native'};
-      }
-      case 'timestamp': {
-        return {
-          type: 'timestamp',
-          ...(td.timeframe === undefined ? {} : {timeframe: td.timeframe}),
-        };
-      }
-      case 'timestamptz': {
-        return {
-          type: 'timestamptz',
-          ...(td.timeframe === undefined ? {} : {timeframe: td.timeframe}),
-        };
-      }
-      default:
-        return {type: td.type};
-    }
-  }
-  return {type: 'error'};
+  return TD.atomicDef(td);
 }
 
 export function parameterTypeDesc(
@@ -199,6 +157,5 @@ export function parameterTypeDesc(
     ...theType,
     expressionType: 'scalar',
     evalSpace,
-    fieldUsage: [],
   };
 }

@@ -1,6 +1,7 @@
 import {join, dirname} from 'path';
-import {mergeConfig, InlineConfig} from 'vite';
-import {StorybookConfig} from '@storybook/html-vite';
+import type {InlineConfig} from 'vite';
+import {mergeConfig} from 'vite';
+import type {StorybookConfig} from '@storybook/html-vite';
 import {
   malloyStoriesIndexer,
   viteMalloyStoriesPlugin,
@@ -20,17 +21,17 @@ const config: StorybookConfig = {
     '../src/**/*.stories.malloy',
     '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
   ],
-  experimental_indexers: async existingIndexers => [
+  'experimental_indexers': async existingIndexers => [
     ...(existingIndexers ?? []),
     malloyStoriesIndexer,
   ],
-  staticDirs: ['../src/stories/static'],
+  'staticDirs': ['../src/stories/static'],
   'addons': [
     getAbsolutePath('@storybook/addon-links'),
     getAbsolutePath('@storybook/addon-essentials'),
     getAbsolutePath('@storybook/addon-interactions'),
   ],
-  core: {
+  'core': {
     builder: '@storybook/builder-vite',
     disableTelemetry: true,
   },

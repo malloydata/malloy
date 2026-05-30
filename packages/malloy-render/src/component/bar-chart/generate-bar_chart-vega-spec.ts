@@ -88,7 +88,7 @@ function getLimitedData({
     : [];
 
   const refinedMaxSizePerBar =
-    maxSizePerBar ?? (seriesField && isGrouping) ? 8 : 8;
+    (maxSizePerBar ?? (seriesField && isGrouping)) ? 8 : 8;
 
   // Limit x axis values shown
   const subGroupBars = seriesField && isGrouping ? seriesLimit : 1;
@@ -197,7 +197,18 @@ export function generateBarChartVegaSpec(
   //   - determine x axis available space
   //   - get max string (this is where data limits code comes in to play? is it just a callback fn for getMaxString() to be passed in?)
   //   - calculate xAxisSettings correctly
-  const chartSettings = getChartLayoutSettings(explore, chartTag, {
+  const chartSettings = getChartLayoutSettings(explore, {
+    size: {
+      width:
+        chartTag.numeric('size', 'width') ??
+        explore.tag.numeric('size', 'width') ??
+        undefined,
+      height:
+        chartTag.numeric('size', 'height') ??
+        explore.tag.numeric('size', 'height') ??
+        undefined,
+      preset: chartTag.text('size') ?? explore.tag.text('size') ?? undefined,
+    },
     metadata,
     xField,
     yField,
@@ -694,7 +705,7 @@ export function generateBarChartVegaSpec(
         range: 'height',
         domain: settings.isStack
           ? {data: 'values', field: 'y1'}
-          : chartSettings.yScale.domain ?? {data: 'values', field: 'y'},
+          : (chartSettings.yScale.domain ?? {data: 'values', field: 'y'}),
       },
       {
         name: 'color',
@@ -925,7 +936,7 @@ export function generateBarChartVegaSpec(
       const row = data.rows[i];
       const xValue = getXValue(row);
       const seriesVal = seriesField
-        ? row.column(seriesField.name).value ?? NULL_SYMBOL
+        ? (row.column(seriesField.name).value ?? NULL_SYMBOL)
         : yField.name;
 
       if (skipRecord(row)) continue;
@@ -956,7 +967,8 @@ export function generateBarChartVegaSpec(
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar',
-    chartTag,
+    title: chartTag.text('title'),
+    subtitle: chartTag.text('subtitle'),
     mapMalloyDataToChartData,
     getTooltipData: (item: Item, view: View) => {
       if (tooltipEntryMemo.has(item)) {

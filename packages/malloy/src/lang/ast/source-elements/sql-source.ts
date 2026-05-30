@@ -122,6 +122,13 @@ export class SQLSource extends Source {
   }
 
   getSourceDef(): SourceDef {
+    if (this.isRestricted()) {
+      this.logError(
+        'restricted-construct-forbidden',
+        `\`${this.connectionName.refString}.sql(...)\` cannot be used in a restricted query — raw SQL is not permitted.`
+      );
+      return ErrorFactory.structDef;
+    }
     if (!this.validateConnectionName()) {
       return ErrorFactory.structDef;
     }
@@ -152,13 +159,13 @@ export class SQLSource extends Source {
       return ErrorFactory.structDef;
     } else if (lookup.status === 'present') {
       const location = this.select.location;
-      // Create a base struct with updated fields (adding location and fieldUsage)
+      // Create a base struct with updated fields (adding location and refSummary)
       const baseStruct: SourceDef = {
         ...lookup.value,
         fields: lookup.value.fields.map(f => ({
           ...f,
           location,
-          fieldUsage: [{path: [f.as ?? f.name], at: location}],
+          refSummary: {fieldUsage: [{path: [f.as ?? f.name], at: location}]},
         })),
         location: this.location,
       };
@@ -173,7 +180,7 @@ export class SQLSource extends Source {
       const fromDoc = this.document();
       const modelAnnotation = fromDoc?.currentModelAnnotation();
       if (modelAnnotation) {
-        locStruct.modelAnnotation = modelAnnotation;
+        locStruct.modelAnnotations = modelAnnotation;
       }
       return locStruct;
     } else {

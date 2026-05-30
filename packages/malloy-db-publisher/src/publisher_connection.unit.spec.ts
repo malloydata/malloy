@@ -602,8 +602,10 @@ describe('db:Publisher', () => {
         expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          {sqlStatement: 'SELECT * FROM test_table'},
-          JSON.stringify({}),
+          {
+            sqlStatement: 'SELECT * FROM test_table',
+            options: JSON.stringify({}),
+          },
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -673,8 +675,10 @@ describe('db:Publisher', () => {
         expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          {sqlStatement: 'SELECT * FROM test_table'},
-          JSON.stringify(options),
+          {
+            sqlStatement: 'SELECT * FROM test_table',
+            options: JSON.stringify(options),
+          },
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -775,8 +779,7 @@ describe('db:Publisher', () => {
         expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          {sqlStatement: 'SELECT * FROM test_table'},
-          '{}',
+          {sqlStatement: 'SELECT * FROM test_table', options: '{}'},
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -851,8 +854,10 @@ describe('db:Publisher', () => {
         expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          {sqlStatement: 'SELECT * FROM test_table'},
-          JSON.stringify(options),
+          {
+            sqlStatement: 'SELECT * FROM test_table',
+            options: JSON.stringify(options),
+          },
           {
             headers: {
               Authorization: 'Bearer test-token',

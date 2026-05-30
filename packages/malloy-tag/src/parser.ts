@@ -25,11 +25,13 @@ export interface SourceOrigin {
 /**
  * Strip the Malloy annotation prefix (e.g., "# " or "#(docs) ") from source.
  * Annotation text starts with # followed by routing characters and a
- * space or newline delimiter. Everything up to and including that delimiter
- * is stripped, leaving just the MOTLY content.
+ * whitespace delimiter (space, tab, CR, or LF — the same separator class
+ * `parsePrefix` uses in core). Everything up to (but not including) the
+ * delimiter is stripped; the delimiter itself is part of the returned
+ * MOTLY content (MOTLY skips leading whitespace).
  */
 function stripPrefix(source: string): string {
-  const skipTo = source.search(/[ \n]/);
+  const skipTo = source.search(/[ \t\r\n]/);
   if (skipTo > 0) {
     return source.slice(skipTo);
   }

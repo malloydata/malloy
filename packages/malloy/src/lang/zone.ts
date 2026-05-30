@@ -59,8 +59,13 @@ export type ZoneEntry<T> = EntryPresent<T> | ReferenceEntry | EntryErrored;
 export class Zone<TValue> {
   zone: Map<string, ZoneEntry<TValue>>;
   location: Record<string, DocumentLocation> = {};
+  private locked = false;
   constructor() {
     this.zone = new Map<string, ZoneEntry<TValue>>();
+  }
+
+  lock(): void {
+    this.locked = true;
   }
 
   get(str: string): TValue | undefined {
@@ -87,6 +92,7 @@ export class Zone<TValue> {
    * @param val
    */
   define(str: string, val: TValue): void {
+    if (this.locked) return;
     this.zone.set(str, {status: 'present', value: val});
   }
 
@@ -96,6 +102,7 @@ export class Zone<TValue> {
    * @param loc The location of the reference
    */
   reference(str: string, loc: DocumentLocation): void {
+    if (this.locked) return;
     const zst = this.zone.get(str);
     if (zst?.status === undefined) {
       this.zone.set(str, {status: 'reference', firstReference: loc});
@@ -125,6 +132,7 @@ export class Zone<TValue> {
     updateData: ZoneData<TValue> | undefined,
     errorData: Record<string, string> | undefined
   ): void {
+    if (this.locked) return;
     if (updateData) {
       for (const [updateKey, updateVal] of Object.entries(updateData)) {
         if (updateVal !== undefined) {

@@ -27,7 +27,7 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
  * so fix that one first if the tests are failing.
  */
 
-function literalNum(num: Number): Expr {
+function literalNum(num: number): Expr {
   const literal = num.toString();
   return {node: 'numberLiteral', literal, sql: literal};
 }
@@ -37,10 +37,10 @@ describe.each(runtimes.runtimeList)(
   (conName, runtime) => {
     const testModel = wrapTestModel(runtime, '');
     const supportsNestedArrays = runtime.dialect.nestedArrays;
-    const quote = runtime.dialect.sqlMaybeQuoteIdentifier;
+    const quote = (s: string) => runtime.dialect.sqlQuoteIdentifier(s);
 
     const empty = `${conName}.sql("SELECT 0 as z")`;
-    function arraySelectVal(...val: Number[]): string {
+    function arraySelectVal(...val: number[]): string {
       const literal: ArrayLiteralNode = {
         node: 'arrayLiteral',
         typeDef: {
