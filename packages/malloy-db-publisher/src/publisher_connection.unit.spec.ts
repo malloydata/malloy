@@ -1270,7 +1270,9 @@ async function setupAndTestInvalidJsonResponse(
   mockConnectionsApi.getConnection.mockResolvedValueOnce(
     mockConnectionResponse
   );
-  (mockConnectionsApi[apiMethod] as jest.Mock).mockResolvedValueOnce(mockInvalidResponse);
+  (mockConnectionsApi[apiMethod] as jest.Mock).mockResolvedValueOnce(
+    mockInvalidResponse
+  );
 
   const connection = await PublisherConnection.create('test-connection', {
     connectionUri:
