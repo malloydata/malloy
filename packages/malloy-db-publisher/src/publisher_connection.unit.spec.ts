@@ -606,6 +606,7 @@ describe('db:Publisher', () => {
             sqlStatement: 'SELECT * FROM test_table',
             options: JSON.stringify({}),
           },
+          undefined,
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -679,6 +680,7 @@ describe('db:Publisher', () => {
             sqlStatement: 'SELECT * FROM test_table',
             options: JSON.stringify(options),
           },
+          undefined,
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -780,6 +782,7 @@ describe('db:Publisher', () => {
           'test-project',
           'test-connection',
           {sqlStatement: 'SELECT * FROM test_table', options: '{}'},
+          undefined,
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -858,6 +861,7 @@ describe('db:Publisher', () => {
             sqlStatement: 'SELECT * FROM test_table',
             options: JSON.stringify(options),
           },
+          undefined,
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -1216,7 +1220,9 @@ async function setupAndTestApiError(
   mockConnectionsApi.getConnection.mockResolvedValueOnce(
     mockConnectionResponse
   );
-  mockConnectionsApi[apiMethod].mockRejectedValueOnce(new Error(errorMessage));
+  (mockConnectionsApi[apiMethod] as jest.Mock).mockRejectedValueOnce(
+    new Error(errorMessage)
+  );
 
   const connection = await PublisherConnection.create('test-connection', {
     connectionUri:
@@ -1264,7 +1270,7 @@ async function setupAndTestInvalidJsonResponse(
   mockConnectionsApi.getConnection.mockResolvedValueOnce(
     mockConnectionResponse
   );
-  mockConnectionsApi[apiMethod].mockResolvedValueOnce(mockInvalidResponse);
+  (mockConnectionsApi[apiMethod] as jest.Mock).mockResolvedValueOnce(mockInvalidResponse);
 
   const connection = await PublisherConnection.create('test-connection', {
     connectionUri:

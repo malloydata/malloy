@@ -224,6 +224,7 @@ export class PublisherConnection
         this.environmentName,
         this.name,
         request,
+        undefined,
         {
           headers: PublisherConnection.getAuthHeaders(this.accessToken),
         }
@@ -251,6 +252,7 @@ export class PublisherConnection
         this.environmentName,
         this.name,
         request,
+        undefined,
         {
           headers: PublisherConnection.getAuthHeaders(this.accessToken),
         }
