@@ -27,8 +27,6 @@ import type {
   StructDef,
   TurtleDef,
   TurtleDefPlusFilters,
-  SourceDef,
-  Query,
 } from './malloy_types';
 import {MalloyCompileError} from './malloy_compile_error';
 import {
@@ -591,51 +589,6 @@ export class QueryStruct {
         'compiler-missing-primary-key',
         fieldDef.location
       );
-    }
-  }
-
-  /**
-   * called after all structure has been loaded.  Examine this structure to see
-   * if if it is based on a query and if it is, add the output fields (unless
-   * they exist) to the structure.
-   *
-   * finalOutputStruct exists so that query_node doesn't need to
-   * to import query_query
-   */
-  resolveQueryFields(
-    finalOutputStruct: (
-      query: Query,
-      options: PrepareResultOptions | undefined
-    ) => SourceDef | undefined
-  ) {
-    if (this.structDef.type === 'query_source' && finalOutputStruct) {
-      const resultStruct = finalOutputStruct(
-        this.structDef.query,
-        this.prepareResultOptions
-      );
-
-      // should never happen.
-      if (!resultStruct) {
-        throw new Error("Internal Error, query didn't produce a struct");
-      }
-
-      const structDef = {...this.structDef};
-      for (const f of resultStruct.fields) {
-        const as = getIdentifier(f);
-        if (!this.nameMap.has(as)) {
-          structDef.fields.push(f);
-          this.nameMap.set(as, this.makeQueryField(f));
-        }
-      }
-      this.structDef = structDef;
-      if (!this.structDef.primaryKey && resultStruct.primaryKey) {
-        this.structDef.primaryKey = resultStruct.primaryKey;
-      }
-    }
-    for (const [, v] of this.nameMap) {
-      if (v instanceof QueryFieldStruct) {
-        v.queryStruct.resolveQueryFields(finalOutputStruct);
-      }
     }
   }
 
