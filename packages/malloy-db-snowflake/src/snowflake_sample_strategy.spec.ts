@@ -72,14 +72,26 @@ describe('sampleVariantBlocks', () => {
     expect(tried).toEqual([1, 10]);
   });
 
-  test('treats an errored (undefined) draw like empty and continues', async () => {
+  test('stops on an errored (undefined) draw without escalating', async () => {
+    // A timeout/error carries no "table is small" evidence, and higher
+    // percentages only scan more — so we must not escalate into more timeouts.
     const tried: number[] = [];
     const result = await sampleVariantBlocks(blockPercent => {
       tried.push(blockPercent);
-      return Promise.resolve(blockPercent >= 50 ? rows(1) : undefined);
+      return Promise.resolve(undefined);
     });
-    expect(result).toHaveLength(1);
-    expect(tried).toEqual([...VARIANT_SAMPLE_BLOCK_PERCENTS]);
+    expect(result).toBeUndefined();
+    expect(tried).toEqual([1]);
+  });
+
+  test('escalates past an empty draw but stops at a later error', async () => {
+    const tried: number[] = [];
+    const result = await sampleVariantBlocks(blockPercent => {
+      tried.push(blockPercent);
+      return Promise.resolve(blockPercent === 1 ? [] : undefined);
+    });
+    expect(result).toBeUndefined();
+    expect(tried).toEqual([1, 10]);
   });
 
   test('returns undefined when every percentage comes back empty', async () => {

@@ -74,9 +74,11 @@ export interface TableSizeProbe {
  *
  *   tablesample-only: probe confirmed a base table above the small
  *     threshold. TABLESAMPLE BLOCK is safe (reads a few micro
- *     partitions). Plain LIMIT without a WHERE is unsafe on large
- *     partitioned tables, so we skip the LIMIT fallback — we'd rather
- *     degrade to variant than issue a runaway query.
+ *     partitions); plain LIMIT without a WHERE is unsafe on large
+ *     partitioned tables, so we skip the LIMIT fallback and instead
+ *     escalate the BLOCK percentage until a draw returns rows (see
+ *     sampleVariantBlocks). A column degrades to variant only on a
+ *     genuinely empty table or a hard failure, never an unlucky draw.
  *
  *   tablesample-then-limit: probe gave no size info (views, temp
  *     views, exotic names). We can't distinguish a small view from a
@@ -98,30 +100,30 @@ export function pickSampleStrategy(
 }
 
 /**
- * BLOCK sampling percentages tried, in order, when sampling a known-large
- * base table for VARIANT schema inference. See sampleVariantBlocks.
+ * `TABLESAMPLE BLOCK` percentages tried, in order, when sampling a known-large
+ * base table for VARIANT schema inference. Terminates at 100 so the only empty
+ * draw is a genuinely empty table. See sampleVariantBlocks.
  */
-export const VARIANT_SAMPLE_BLOCK_PERCENTS = [1, 10, 50] as const;
+export const VARIANT_SAMPLE_BLOCK_PERCENTS = [1, 10, 100] as const;
 
 /**
  * Draw a VARIANT schema sample from a known-large base table, escalating the
  * `TABLESAMPLE BLOCK` percentage until a draw returns rows.
  *
- * BLOCK sampling decides independently *per micro-partition* at p%, so a small
- * p on a table with relatively few partitions can select ZERO partitions and
- * return no rows. An empty draw is indistinguishable downstream from "this
- * column is genuinely an opaque variant", so a single unlucky `BLOCK (1)` draw
- * would silently degrade every VARIANT/ARRAY/OBJECT column to `sql native` —
- * and non-deterministically, since BLOCK is unseeded, so the same table can
- * resolve differently on consecutive schema fetches. Escalating p recovers
- * evidence: each draw is still bounded by the caller's `LIMIT`, and because a
- * single selected partition already over-fills that limit, the extra
- * percentages cost at most about one partition's worth of scanning.
+ * BLOCK decides independently per micro-partition, so a low percentage on a
+ * table with few partitions can draw zero rows. An empty draw is
+ * indistinguishable downstream from a genuinely-opaque variant — and, since
+ * BLOCK is unseeded, non-deterministic — so accepting it would silently degrade
+ * every variant column to `sql native`. Escalate instead: an empty draw is
+ * itself evidence the table is small enough to sample harder. (Probabilities
+ * and sizing are in the PR description.)
  *
- * `runSample(blockPercent)` runs the sample at the given percentage and
- * resolves to the rows (or `undefined`/`[]` on error or empty draw). Returns
- * the first non-empty result, or `undefined` if every percentage came back
- * empty.
+ * Contract: a column degrades to variant only from a genuinely empty table
+ * (empty even at `BLOCK (100)`) or a hard failure — never an unlucky draw.
+ *
+ * `runSample` resolves to the rows, to `[]` on an empty draw (escalate), or to
+ * `undefined` on error/timeout (stop — no "table is small" evidence). Returns
+ * the first non-empty draw, else `undefined`.
  */
 export async function sampleVariantBlocks(
   runSample: (blockPercent: number) => Promise<QueryRecord[] | undefined>,
@@ -129,9 +131,11 @@ export async function sampleVariantBlocks(
 ): Promise<QueryRecord[] | undefined> {
   for (const blockPercent of blockPercents) {
     const rows = await runSample(blockPercent);
-    if (rows !== undefined && rows.length > 0) {
-      return rows;
-    }
+    // Error/timeout carries no "table is small" evidence, and a higher
+    // percentage only scans more — stop rather than escalate into more timeouts.
+    if (rows === undefined) return undefined;
+    if (rows.length > 0) return rows;
+    // Empty draw: proven small enough to sample harder — escalate.
   }
   return undefined;
 }
@@ -407,14 +411,11 @@ export class SnowflakeConnection
             `${projectVariants} from ${tablePath} TABLESAMPLE BLOCK (${blockPercent}) limit ${n}`
           );
         if (strategy === 'tablesample-only') {
-          // Known-large base table: TABLESAMPLE is safe (reads a few
-          // micro-partitions), plain LIMIT without a WHERE can be
-          // catastrophic on large partitioned tables. BLOCK decides
-          // per-partition, so a low percentage can return zero rows on a
-          // table with relatively few partitions; escalate the percentage
-          // until a draw yields evidence rather than silently degrading
-          // every variant column to sql native. Each draw is still bounded
-          // by `limit n`, so this never risks an unbounded scan.
+          // Known-large base table: BLOCK decides per-partition, so a low
+          // percentage can draw zero rows; escalate until one returns rows
+          // rather than degrade the column to sql native (see
+          // sampleVariantBlocks). Plain LIMIT without a WHERE is unsafe here,
+          // so there is no LIMIT fallback.
           fieldPathRows = await sampleVariantBlocks(blockPercent =>
             this.executor.tryBatch(
               blockSampleQuery(blockPercent),
