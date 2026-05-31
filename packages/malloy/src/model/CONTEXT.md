@@ -66,14 +66,25 @@ The name a thing goes by in a given context is therefore **`activeName(x)` = `x.
 
 ### Annotations in the IR
 
-Annotations attach to any IR entity with an `annotations?: AnnotationsDef` field:
+Object (`#`) annotations attach to any IR entity via an
+`annotations?: ObjectAnnotationsDef` field:
 
 ```ts
+// Origin-blind base — every note-walking helper takes this.
 interface AnnotationsDef {
   inherits?: AnnotationsDef; // parent's annotations when this entity is derived
   blockNotes?: Note[];       // notes inherited from a containing block of definitions
   notes?: Note[];            // notes attached directly to this entity
 }
+// Object annotations carry the id of the model that created the node, so
+// model (`##`) annotations can be resolved across files (see below). Stamped
+// at creation; never rewritten on import.
+interface ObjectAnnotationsDef extends AnnotationsDef {
+  fromModel: ModelID;
+}
+// Model (`##`) annotations: one file's model-level bundle, keyed externally
+// by ModelID in `ModelDef.modelAnnotationsByID` (no `fromModel` of its own).
+interface ModelAnnotationsDef extends AnnotationsDef {}
 interface Note {
   text: string;
   at: DocumentLocation;
@@ -109,6 +120,26 @@ that earns it — directly via `notes`/`blockNotes`, transitively via
 `inherits`. Construction-time diagnostics (e.g. the prefix `malformed-route`
 / `reserved-route` warnings) fire once per source annotation, not once per
 reachable copy.
+
+### Model-level annotations resolve across files
+
+`ModelDef.modelAnnotationsByID` maps each involved model's `ModelID` (this
+model plus everything it imported or extended) to that file's
+`ModelAnnotationsDef`. Because object annotations carry `fromModel`,
+`resolveModelAnnotations(model, objectAnnotation)`
+(`model/annotation_utils.ts`) walks the object's `inherits` chain, collects the
+model each node came from, and folds those models' bundles —
+imports-first / local-last, last-wins, a model deduped to its most-ancestral
+slot. The running model's own `##` always applies and, being most local, wins.
+The renderer consumes the **run-head's** resolved bundle as
+`result.model_annotations`; embedded objects' divergent stacks are never read.
+
+> **Legacy, slated for removal:** a per-object `modelAnnotations?` field still
+> exists on `Query`/struct defs and is read by SQL generation (`query_node.ts`)
+> and some Foundation entity accessors, fed by `sql-source.ts` /
+> `source_def_utils.ts` and propagated through `query_query.ts`. It predates the
+> map and should be retired in favor of `resolveModelAnnotations` once those
+> readers are moved over.
 
 ## Compilation Pipeline
 
