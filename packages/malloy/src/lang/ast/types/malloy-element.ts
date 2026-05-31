@@ -536,6 +536,10 @@ export class Document extends MalloyElement implements NameSpace {
   documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
   documentGivens = new Map<GivenID, Given>();
+  /** Model annotations of every imported/extended model, keyed by ModelID,
+   *  accumulated as imports/extends are processed; folded into the result
+   *  `modelAnnotationsByID` in {@link modelDef}. */
+  documentModelAnnotationsByID: Record<ModelID, ModelAnnotationsDef> = {};
   // When an `export { … }` statement appears, the document switches from
   // "everything declared here is exported" to "only names in this set are
   // exported." Undefined means no export statement has been seen.
@@ -563,9 +567,18 @@ export class Document extends MalloyElement implements NameSpace {
     this.explicitExports = undefined;
     this.queryList = [];
     if (extendingModelDef) {
-      if (extendingModelDef.annotations) {
-        this.annotations.inherits = extendingModelDef.annotations;
+      // The extension's own `##` bundle inherits the base model's, so the
+      // extend lineage is preserved; the whole base map comes along so any
+      // model the base imported is still resolvable.
+      const baseBundle =
+        extendingModelDef.modelAnnotationsByID[extendingModelDef.modelID];
+      if (baseBundle) {
+        this.annotations.inherits = baseBundle;
       }
+      Object.assign(
+        this.documentModelAnnotationsByID,
+        extendingModelDef.modelAnnotationsByID
+      );
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
         const entry = {...orig};
         if (
@@ -594,16 +607,6 @@ export class Document extends MalloyElement implements NameSpace {
     if (needs === undefined) {
       this.checkGivenAliasCollisions();
       this.checkQueryGivenSatisfiability();
-      for (const q of this.queryList) {
-        if (q.modelAnnotations === undefined && modelDef.annotations) {
-          q.modelAnnotations = modelDef.annotations;
-        }
-      }
-    }
-    if (modelDef.annotations) {
-      for (const sd of this.modelAnnotationTodoList) {
-        sd.modelAnnotations ||= modelDef.annotations;
-      }
     }
     const ret: DocumentCompileResult = {
       modelDef: {
@@ -710,8 +713,10 @@ export class Document extends MalloyElement implements NameSpace {
 
   modelDef(): ModelDef {
     const def = mkModelDef('', this.modelID);
-    if (this.hasAnnotation()) {
-      def.annotations = this.currentModelAnnotation();
+    def.modelAnnotationsByID = {...this.documentModelAnnotationsByID};
+    const localAnnotation = this.currentModelAnnotation();
+    if (localAnnotation) {
+      def.modelAnnotationsByID[def.modelID] = localAnnotation;
     }
     const explicit = this.explicitExports;
     const isExported = (name: string, modelEntry: ModelEntry): boolean =>
@@ -729,11 +734,7 @@ export class Document extends MalloyElement implements NameSpace {
         if (entryDef.type === 'userType') {
           def.contents[name] = {...entryDef};
         } else {
-          const newEntry = {...entryDef};
-          if (newEntry.modelAnnotations === undefined && def.annotations) {
-            newEntry.modelAnnotations = def.annotations;
-          }
-          def.contents[name] = newEntry;
+          def.contents[name] = {...entryDef};
         }
       } else if (entryDef.type === 'given') {
         if (isExported(name, modelEntry)) {

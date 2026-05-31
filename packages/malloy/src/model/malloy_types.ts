@@ -2063,7 +2063,14 @@ export interface ModelDef {
    */
   sourceRegistry: Record<SourceID, SourceRegistryValue>;
   givens?: Record<GivenID, Given>;
-  annotations?: ModelAnnotationsDef;
+  /**
+   * Model (`##`) annotations of every model involved in this compile, keyed by
+   * {@link ModelID} — this model plus everything it imported or extended.
+   * Replaces the old single `annotations` bundle. Object annotations carry a
+   * `fromModel` id; {@link resolveModelAnnotations} walks an object's `inherits`
+   * chain and folds the entries that apply.
+   */
+  modelAnnotationsByID: Record<ModelID, ModelAnnotationsDef>;
   queryList: Query[];
   dependencies: DependencyTree;
   references?: DocumentReference[];

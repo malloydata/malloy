@@ -260,7 +260,7 @@ describe('document annotation', () => {
     expect(m).toTranslate();
     const model = m.translate()?.modelDef;
     expect(model).toBeDefined();
-    const notes = model?.annotations;
+    const notes = model && model.modelAnnotationsByID[model.modelID];
     expect(notes).matchesAnnotation({notes: ['## model1\n', '## model2\n']});
   });
   test('annotations and renamed fields', () => {
@@ -316,7 +316,9 @@ describe('document annotation', () => {
     const second = model`## from=2\n`;
     second.translator.internalModel = firstModel!;
     const secondModel = second.translator.translate()?.modelDef;
-    expect(secondModel?.annotations).matchesAnnotation({
+    expect(
+      secondModel && secondModel.modelAnnotationsByID[secondModel.modelID]
+    ).matchesAnnotation({
       inherits: {notes: ['## from=1\n']},
       notes: ['## from=2\n'],
     });
@@ -916,7 +918,7 @@ describe('multi-line annotations', () => {
     expect(m).toTranslate();
     const md = m.translate()?.modelDef;
     expect(md).toBeDefined();
-    expect(md!.annotations).matchesAnnotation({
+    expect(md!.modelAnnotationsByID[md!.modelID]).matchesAnnotation({
       notes: ['##|\nmodel content'],
     });
   });
@@ -977,7 +979,7 @@ describe('multi-line annotations', () => {
     expect(m).toTranslate();
     const md = m.translate()?.modelDef;
     expect(md).toBeDefined();
-    expect(md!.annotations).matchesAnnotation({
+    expect(md!.modelAnnotationsByID[md!.modelID]).matchesAnnotation({
       notes: ['## modelNote\n'],
     });
   });

@@ -571,7 +571,9 @@ class ModelAnnotationStep implements TranslationStep {
         this.response = {
           modelAnnotations: {
             ...modelAnnotations,
-            inherits: extendingModel?.annotations,
+            inherits: extendingModel
+              ? extendingModel.modelAnnotationsByID[extendingModel.modelID]
+              : undefined,
           },
         };
       }
@@ -633,7 +635,9 @@ class TranslateStep implements TranslationStep {
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
       that.compilerFlagSrc.push(
-        ...new Annotations(extendingModel.annotations).texts('!')
+        ...new Annotations(
+          extendingModel.modelAnnotationsByID[extendingModel.modelID]
+        ).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);

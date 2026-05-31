@@ -25,6 +25,7 @@ import {
   mkModelID,
   QueryModel,
   refIsStructDef,
+  resolveModelAnnotations,
   safeRecordGet,
 } from '../model';
 import {
@@ -651,7 +652,9 @@ export function statedCompileQuery(
         defaultRowLimit: state.defaultRowLimit,
       });
       timer.contribute([sqlTimer.stop()]);
-      const modelAnnotations = toStableAnnotations(result.modelDef.annotations);
+      const modelAnnotations = toStableAnnotations(
+        resolveModelAnnotations(result.modelDef, query.annotations)
+      );
       let source: StructDef;
       if (query.compositeResolvedSourceDef) {
         source = query.compositeResolvedSourceDef;

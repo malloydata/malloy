@@ -28,6 +28,7 @@ import type {
   NativeUnsupportedFieldDef,
   ImportLocation,
   AnnotationsDef,
+  ModelAnnotationsDef,
   NamedModelObject,
   SQLSourceDef,
   AtomicFieldDef,
@@ -53,6 +54,7 @@ import {
   isRecordOrRepeatedRecord,
   isPersistableSourceDef,
   getCompiledSQL,
+  resolveModelAnnotations,
   safeRecordGet,
 } from '../../model';
 import {mkModelDef} from '../../model/utils';
@@ -1207,18 +1209,23 @@ export class Model implements Taggable {
     return out;
   }
 
+  /** This model's own `##` annotations (the bundle keyed by its own ModelID). */
+  private get _ownModelAnnotations(): ModelAnnotationsDef | undefined {
+    return this.modelDef.modelAnnotationsByID[this.modelDef.modelID];
+  }
+
   /** @deprecated Use `.annotations.parseAsTag(route)`. */
   tagParse(spec?: TagParseSpec): MalloyTagParse {
-    return annotationToTag(this.modelDef.annotations, spec);
+    return annotationToTag(this._ownModelAnnotations, spec);
   }
 
   /** @deprecated Use `.annotations.texts(route)`. */
   getTaglines(prefix?: RegExp) {
-    return annotationToTaglines(this.modelDef.annotations, prefix);
+    return annotationToTaglines(this._ownModelAnnotations, prefix);
   }
 
   get annotations(): Annotations {
-    return new Annotations(this.modelDef.annotations);
+    return new Annotations(this._ownModelAnnotations);
   }
 
   /**
@@ -1904,11 +1911,13 @@ export class PreparedResult implements Taggable {
    * directly. Slated for removal once external consumers migrate.
    */
   get modelAnnotation(): AnnotationsDef | undefined {
-    return this.modelDef.annotations;
+    return resolveModelAnnotations(this.modelDef, this.inner.annotations);
   }
 
   get modelTag(): Tag {
-    return new Annotations(this.modelDef.annotations).parseAsTag().tag;
+    return new Annotations(
+      resolveModelAnnotations(this.modelDef, this.inner.annotations)
+    ).parseAsTag().tag;
   }
 
   /**
@@ -2029,7 +2038,9 @@ export class PreparedResult implements Taggable {
         .toString(),
     });
 
-    const modelAnnotations = toStableAnnotations(this.modelDef.annotations);
+    const modelAnnotations = toStableAnnotations(
+      resolveModelAnnotations(this.modelDef, this.inner.annotations)
+    );
 
     return {
       schema,

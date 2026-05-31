@@ -16,7 +16,12 @@ import type {
   GivenValue,
   VirtualMap,
 } from '../../model';
-import {isSourceDef, mkSafeRecord, MalloyCompileError} from '../../model';
+import {
+  isSourceDef,
+  mkSafeRecord,
+  MalloyCompileError,
+  resolveModelAnnotations,
+} from '../../model';
 import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
 import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
@@ -1163,7 +1168,10 @@ function runSQLOptionsWithAnnotations(
 ): RunSQLOptions {
   return {
     queryAnnotations: preparedResult._rawQuery.annotations,
-    modelAnnotations: preparedResult._modelDef.annotations,
+    modelAnnotations: resolveModelAnnotations(
+      preparedResult._modelDef,
+      preparedResult._rawQuery.annotations
+    ),
     ...givenOptions,
   };
 }
