@@ -11,7 +11,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 20.x
+          node-version: 24.x
       - name: Install and build
         run: |
           npm --no-audit --no-fund ci --loglevel error
@@ -38,7 +38,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 20.x
+          node-version: 24.x
       - name: Precheck (dialect-agnostic tests + duckdb)
         run: npm run precheck
 
@@ -60,7 +60,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 20.x
+          node-version: 24.x
       - name: Upgrade npm for trusted publishing (OIDC)
         run: npm install -g npm@latest
       - name: Publish and bump version
