@@ -46,17 +46,19 @@ export function resolveModelAnnotations(
   model: ModelDef,
   annote?: ObjectAnnotationsDef
 ): ModelAnnotationsDef {
-  const localFirst: ModelID[] = [];
+  // Most-local first: the running model (whose `##` wins), then the object's
+  // annotation chain walked outward (local → ancestral).
+  const localToAncestral: ModelID[] = [model.modelID];
   for (let n: AnnotationsDef | undefined = annote; n; n = n.inherits) {
-    if (isObjectAnnotation(n)) localFirst.push(n.fromModel);
+    if (isObjectAnnotation(n)) localToAncestral.push(n.fromModel);
   }
-  localFirst.push(model.modelID);
-  // Walk ancestral→local, keeping each model's first occurrence; that order is
-  // the fold order (most ancestral applied first, most local last).
+  // Fold imports-first / local-last: walk ancestral → local, keeping each
+  // model's most-ancestral slot (first occurrence in that order). Reading the
+  // folded notes in this order makes the most-local model's `##` win.
   const foldOrder: ModelID[] = [];
   const seen = new Set<ModelID>();
-  for (let i = localFirst.length - 1; i >= 0; i--) {
-    const id = localFirst[i];
+  for (let i = localToAncestral.length - 1; i >= 0; i--) {
+    const id = localToAncestral[i];
     if (!seen.has(id)) {
       seen.add(id);
       foldOrder.push(id);
