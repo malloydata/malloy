@@ -1842,4 +1842,13 @@ describe('number subtype propagation', () => {
       expect(getNumberType(result)).toBeUndefined();
     });
   });
+
+  // Guards against MalloyElement.needs() re-walking the whole subtree per node,
+  // which made a long binary `or` chain blow up super-linearly and hang.
+  test('long or-chain compiles in reasonable time', () => {
+    const where = Array.from({length: 100}, (_, i) => `astr = 't${i}'`).join(
+      ' or '
+    );
+    expect(model`run: a -> { where: ${where}; group_by: astr }`).toTranslate();
+  });
 });

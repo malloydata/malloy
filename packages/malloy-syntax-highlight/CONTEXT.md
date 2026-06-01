@@ -67,6 +67,8 @@ Tag content within annotations is parsed by `#tag-values` patterns that highligh
 
 Tests verify that grammars produce correct tokenization (scope names + colors) against VSCode themes.
 
+`malloyTestInput.ts` is split into `commonTestInput` and `monarchDivergentTestInput`. The TextMate (Jest) suite runs the full default export (both); the Monarch (Karma) suite runs `commonTestInput` only. The divergent blocks (tags / block annotations / multi-level embedding) are cases the Monarch generator structurally cannot reproduce — keeping them out of the Karma comparison is deliberate, so **a green Karma run means green, not "ignore the usual failures."** Don't add a Monarch-divergent pattern to `commonTestInput`; if the generator ever gains support, move the block over.
+
 ```bash
 # Regenerate expected tokenizations after changing the TextMate grammar or test inputs
 npm run gen-malloy-tokens
