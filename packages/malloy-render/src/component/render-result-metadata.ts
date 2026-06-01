@@ -43,9 +43,10 @@ export type GetResultMetadataOptions = {
   useVegaInterpreter?: boolean;
   /**
    * Operator-level theme passed by the embedding app (e.g. Publisher).
-   * Plugins that build their own colour scales (maps, sparklines)
-   * forward this to {@link getColorScale} so the gradient picks up
-   * the operator's `mapColor` instead of the hardcoded blue ramp.
+   * The `# shape_map` and `# segment_map` plugins build their own
+   * colour scales and forward this to {@link getColorScale} so the
+   * gradient picks up the operator's `mapColor` instead of the
+   * hardcoded blue ramp.
    */
   explicitTheme?: MalloyExplicitTheme;
 };

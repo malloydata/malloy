@@ -26,10 +26,14 @@ export type {RenderFieldMetadata} from '@/render-field-metadata';
  * treated the same as `undefined` so a cleared input drops back to
  * the next layer.
  *
- * Most keys are written into the renderer's `--malloy-render--*` CSS
- * variables and must be valid CSS values (e.g. `"#ff0000"`,
- * `"1px solid #ccc"`, `"14px"`). The exception is `mapColor` — see
- * the field doc.
+ * This full resolution chain applies to the CSS-variable chrome keys
+ * (the table and font keys, plus `background`), which are emitted as
+ * `--malloy-render--*` variables and must be valid CSS values (e.g.
+ * `"#ff0000"`, `"1px solid #ccc"`, `"14px"`). The `mapColor` key and
+ * the map canvas `background` are consumed inside the Vega spec rather
+ * than via CSS and are read only from this embedder prop; `# theme`
+ * and `## theme` annotations and the CSS fallback do not reach the map
+ * canvas. See the `mapColor` field doc.
  *
  * Note: this theme is only read by the modern `MalloyRenderer` /
  * `MalloyViz` API. The legacy `HTMLView` / `JSONView` exports do not

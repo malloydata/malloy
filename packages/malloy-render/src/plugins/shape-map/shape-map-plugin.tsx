@@ -153,8 +153,8 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
             );
           }
 
-          // Snapshot the explicit theme into a local so an async theme
-          // swap in flight can't mutate what this render observes.
+          // Capture the theme that beforeRender populated, for use in this
+          // synchronous render pass.
           const themeForRender = explicitTheme;
 
           const data = props.dataColumn;
@@ -171,12 +171,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
                   field: colorField.name,
                   type: colorType,
                   axis: {title: colorField.name},
-                  scale: getColorScale(
-                    colorType,
-                    false,
-                    false,
-                    themeForRender
-                  ),
+                  scale: getColorScale(colorType, false, false, themeForRender),
                 }
               : undefined;
 

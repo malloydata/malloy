@@ -326,10 +326,10 @@ function themeOverridesAsCssVarNames(
 }
 
 // Resolve a single theme key. The first defined source wins:
-//   1. explicitTheme[prop] — caller-supplied via MalloyRendererOptions.theme
-//   2. localTheme tag      — `# theme.<prop>` on the result
-//   3. modelTheme tag      — `# theme.<prop>` on the model
-//   4. CSS fallback        — `var(--malloy-theme--<kebab>)`
+//   1. explicitTheme[prop]: caller-supplied via MalloyRendererOptions.theme
+//   2. localTheme tag: `# theme.<prop>` on the result
+//   3. modelTheme tag: `## theme.<prop>` on the model
+//   4. CSS fallback: `var(--malloy-theme--<kebab>)`
 //
 // An empty string from any source is treated as "unset" so a cleared
 // form field falls through to the next source rather than emitting a

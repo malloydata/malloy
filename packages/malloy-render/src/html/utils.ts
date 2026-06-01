@@ -80,10 +80,11 @@ export function getColorScale(
   }
   // Sequential scales (ordinal / quantitative / temporal, non-rect)
   // use the operator's `mapColor` as the saturated end of a 2-stop
-  // gradient when supplied. Rect-mark heatmaps keep their tuned
-  // orange/blue scheme on EVERY branch (ordinal, temporal,
-  // quantitative) — that scheme is specifically tuned for the
-  // dual-tone heatmap-with-text rendering and isn't a map gradient.
+  // gradient when supplied. Rect marks keep their existing palettes and
+  // ignore mapColor: the ordinal rect branch stays on the default blue
+  // gradient, while temporal/quantitative rect heatmaps keep their tuned
+  // orange/blue scheme (tuned for the dual-tone heatmap-with-text
+  // rendering, not a map gradient).
   const sequentialGradient = explicitTheme?.mapColor
     ? [pickGradientLow(explicitTheme.mapColor), explicitTheme.mapColor]
     : null;
