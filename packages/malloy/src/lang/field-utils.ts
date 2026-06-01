@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {activeName} from '../model/malloy_types';
 import type {FieldDef, QueryFieldDef} from '../model/malloy_types';
 
 type NamedFieldThing = FieldDef | QueryFieldDef;
@@ -29,7 +30,7 @@ export function nameFromDef(f1: NamedFieldThing): string {
   if (f1.type === 'fieldref') {
     return f1.path[f1.path.length - 1];
   }
-  return f1.as ?? f1.name;
+  return activeName(f1);
 }
 
 export function mergeFields<T extends NamedFieldThing>(

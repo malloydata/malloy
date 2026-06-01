@@ -45,6 +45,7 @@ import type {
   AggregateUngrouping,
 } from '../../../model/malloy_types';
 import {
+  activeName,
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
@@ -747,10 +748,10 @@ function isDataTypeMatch(
     const genericsSet: GenericAssignment[] = [];
     const paramFieldsByName = new Map<string, FunctionParameterFieldDef>();
     for (const field of paramT.fields) {
-      paramFieldsByName.set(field.as ?? field.name, field);
+      paramFieldsByName.set(activeName(field), field);
     }
     for (const field of arg.fields) {
-      const match = paramFieldsByName.get(field.as ?? field.name);
+      const match = paramFieldsByName.get(activeName(field));
       if (match === undefined) {
         return {dataTypeMatch: false, genericsSet: []};
       }

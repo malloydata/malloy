@@ -31,6 +31,7 @@ import type {
   AccessModifierLabel,
 } from '../../../model/malloy_types';
 import {
+  activeName,
   isJoined,
   isTurtle,
   isSourceDef,
@@ -97,7 +98,7 @@ export class StaticSpace implements FieldSpace {
     if (this.memoMap === undefined) {
       this.memoMap = new Map<string, SpaceEntry>();
       for (const f of this.fromStruct.fields) {
-        const name = f.as || f.name;
+        const name = activeName(f);
         this.memoMap.set(name, this.defToSpaceField(f));
       }
       if (isSourceDef(this.fromStruct)) {

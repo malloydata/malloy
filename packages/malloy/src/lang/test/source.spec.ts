@@ -31,7 +31,7 @@ import {
   getFieldDef,
 } from './test-translator';
 import './parse-expects';
-import {isSourceDef, QueryModel} from '../../model';
+import {activeName, isSourceDef, QueryModel} from '../../model';
 import type {VirtualMap} from '../../model';
 
 describe('source:', () => {
@@ -64,7 +64,7 @@ describe('source:', () => {
     expect(x).toTranslate();
     const a = x.getSourceDef('a');
     if (a) {
-      const aFields = a.fields.map(f => f.as || f.name);
+      const aFields = a.fields.map(f => activeName(f));
       expect(aFields).toContain('astr');
       expect(aFields).not.toContain('one');
     }
@@ -517,13 +517,13 @@ describe('source:', () => {
           const d = t.modelDef.contents['d'];
           expect(isSourceDef(d)).toBe(true);
           if (isSourceDef(d)) {
-            const dC = d.fields.find(f => (f.as ?? f.name) === 'c');
+            const dC = d.fields.find(f => activeName(f) === 'c');
             expect(dC).toBeDefined();
             if (dC === undefined) throw new Error('Expected dC to be defined');
             expect(isSourceDef(dC)).toBe(true);
             expect(isSourceDef(d)).toBe(true);
             if (isSourceDef(dC)) {
-              const dCAi = dC.fields.find(f => (f.as ?? f.name) === 'ai');
+              const dCAi = dC.fields.find(f => activeName(f) === 'ai');
               expect(dCAi?.annotations).toMatchObject({
                 notes: [{text: '# new_note\n'}],
               });

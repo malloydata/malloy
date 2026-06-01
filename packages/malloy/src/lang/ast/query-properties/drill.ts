@@ -184,7 +184,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
             return undefined;
           } else {
             if (isAtomic(f) && expressionIsScalar(f.expressionType))
-              return f.as ?? f.name;
+              return activeName(f);
           }
         })
         .filter(isNotUndefined);
@@ -465,7 +465,7 @@ export function attachDrillPaths(
           return updateNestedDrillPaths(f, nestName);
         }
         const fieldName =
-          f.type === 'fieldref' ? f.path[f.path.length - 1] : (f.as ?? f.name);
+          f.type === 'fieldref' ? f.path[f.path.length - 1] : activeName(f);
 
         return {
           ...f,

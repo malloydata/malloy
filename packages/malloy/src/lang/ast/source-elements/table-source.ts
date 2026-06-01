@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {activeName} from '../../../model/malloy_types';
 import type {SourceDef} from '../../../model/malloy_types';
 import {constructTableKey} from '../../parse-tree-walkers/find-external-references';
 import {Source} from './source';
@@ -74,7 +75,7 @@ export abstract class TableSource extends Source {
             ...field,
             location: this.location,
             refSummary: {
-              fieldUsage: [{path: [field.as ?? field.name], at: this.location}],
+              fieldUsage: [{path: [activeName(field)], at: this.location}],
             },
           })),
           location: this.location,

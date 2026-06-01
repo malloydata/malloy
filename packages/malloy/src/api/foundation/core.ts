@@ -43,6 +43,7 @@ import type {
   PrepareResultOptions,
 } from '../../model';
 import {
+  activeName,
   fieldIsIntrinsic,
   QueryModel,
   expressionIsCalculation,
@@ -258,7 +259,7 @@ export class Explore extends Entity implements Taggable {
   private _allFieldsWithOrder: SortableField[] | undefined;
 
   constructor(structDef: StructDef, parentExplore?: Explore, source?: Explore) {
-    super(structDef.as || structDef.name, parentExplore, source);
+    super(activeName(structDef), parentExplore, source);
     this._structDef = structDef;
     this._parentExplore = parentExplore;
     this.sourceExplore = source;
@@ -305,7 +306,7 @@ export class Explore extends Entity implements Taggable {
    * @return The name of the entity.
    */
   public get name(): string {
-    return this.structDef.as || this.structDef.name;
+    return activeName(this.structDef);
   }
 
   public getQueryByName(name: string): PreparedQuery {
@@ -315,7 +316,7 @@ export class Explore extends Entity implements Taggable {
         `Cannot get query by name from a struct of type ${this.structDef.type}`
       );
     }
-    const view = structRef.fields.find(f => (f.as ?? f.name) === name);
+    const view = structRef.fields.find(f => activeName(f) === name);
     if (view === undefined) {
       throw new Error(`No such view named \`${name}\``);
     }
@@ -355,7 +356,7 @@ export class Explore extends Entity implements Taggable {
       const sourceFields = this.source?.fieldMap || new Map();
       this._fieldMap = new Map(
         this.structDef.fields.map(fieldDef => {
-          const name = fieldDef.as || fieldDef.name;
+          const name = activeName(fieldDef);
           const sourceField = sourceFields.get(fieldDef.name);
           if (isJoined(fieldDef)) {
             return [name, new ExploreField(fieldDef, this, sourceField)];
@@ -617,7 +618,7 @@ export class AtomicField extends Entity implements Taggable {
     parent: Explore,
     source?: AtomicField
   ) {
-    super(fieldTypeDef.as || fieldTypeDef.name, parent, source);
+    super(activeName(fieldTypeDef), parent, source);
     this.fieldTypeDef = fieldTypeDef;
     this.parent = parent;
   }
@@ -904,7 +905,7 @@ export class Query extends Entity implements Taggable {
   private sourceQuery?: Query;
 
   constructor(turtleDef: TurtleDef, parent?: Explore, source?: Query) {
-    super(turtleDef.as || turtleDef.name, parent, source);
+    super(activeName(turtleDef), parent, source);
     this.turtleDef = turtleDef;
   }
 
