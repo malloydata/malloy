@@ -296,6 +296,13 @@ export class Explore extends Entity implements Taggable {
     return new Annotations(this._structDef.annotations);
   }
 
+  /** The model (`##`) annotations resolved for this object. */
+  get modelAnnotations(): Annotations {
+    return new Annotations(
+      resolveModelAnnotations(this.modelDef, this._structDef.annotations)
+    );
+  }
+
   private parsedModelTag?: Tag;
   public get modelTag(): Tag {
     this.parsedModelTag ||= new Annotations(
@@ -1228,6 +1235,11 @@ export class Model implements Taggable {
     return new Annotations(this._ownModelAnnotations);
   }
 
+  /** A model's resolved model annotations are its own `##` bundle. */
+  get modelAnnotations(): Annotations {
+    return new Annotations(resolveModelAnnotations(this.modelDef));
+  }
+
   /**
    * Retrieve a reference for the token at the given position within the
    * document that produced this model.
@@ -1893,6 +1905,13 @@ export class PreparedResult implements Taggable {
 
   get annotations(): Annotations {
     return new Annotations(this.inner.annotations);
+  }
+
+  /** The model (`##`) annotations resolved for this query's run-head. */
+  get modelAnnotations(): Annotations {
+    return new Annotations(
+      resolveModelAnnotations(this.modelDef, this.inner.annotations)
+    );
   }
 
   /**

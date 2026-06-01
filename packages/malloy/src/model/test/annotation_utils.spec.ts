@@ -101,6 +101,9 @@ describe('resolveModelAnnotations fold order', () => {
     const model = modelWith('cell2', {
       cell2: {inherits: base, notes: [note('## from=cell2\n')]},
     });
-    expect(resolvedTexts(model)).toEqual(['## from=cell1\n', '## from=cell2\n']);
+    expect(resolvedTexts(model)).toEqual([
+      '## from=cell1\n',
+      '## from=cell2\n',
+    ]);
   });
 });
