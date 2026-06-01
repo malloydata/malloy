@@ -108,10 +108,11 @@ describe('getXAxisSettings', () => {
     expect(s.maxExtent).toBeCloseTo(expectedBand, 5);
   });
 
-  test('long label + dense axis picks vertical and truncates to labelHeightBudget', () => {
+  test('long label + dense axis picks vertical and truncates to the binding cap', () => {
     // chartHeight=80, titleBlock = 2*16 + 12 + 6 = 50, budget = 30.
-    // maxString 'very long category label' = 160 px > 30 px, so labelLimit = 30.
-    // reservedLabelBand reserves space for Vega's appended ellipsis = 30 + 10.
+    // plotProtectionCap = 0.35 * 80 = 28, which is tighter than the 30px budget,
+    // so the cap is the binding constraint: labelLimit = min(28, 30) = 28.
+    // reservedLabelBand reserves space for Vega's appended ellipsis = 28 + 10.
     const s = callSettings({
       maxString: 'very long category label',
       width: 200,
@@ -119,9 +120,26 @@ describe('getXAxisSettings', () => {
       height: 80,
     });
     expect(s.labelAngle).toBe(-90);
-    expect(s.labelLimit).toBe(30);
-    expect(s.minExtent).toBe(40);
-    expect(s.maxExtent).toBe(40);
+    expect(s.labelLimit).toBe(28);
+    expect(s.minExtent).toBe(38);
+    expect(s.maxExtent).toBe(38);
+  });
+
+  test('long but fitting label on a medium-tall chart still caps the band (PR #2777 review regression)', () => {
+    // mtoy-googly-moogly's review case: a ~160px label on an md chart (252px tall).
+    // Without the cap, labelLimit=0 reserved the full 160px band, dropping the
+    // plot to ~14px. plotProtectionCap = 0.35 * 252 = 88.2 < 160, so the cap
+    // truncates: labelLimit = min(88.2, 202) = 88.2, band = 88.2 + 10 ellipsis.
+    const s = callSettings({
+      maxString: 'very long category label',
+      width: 400,
+      uniqueValues: 10,
+      height: 252,
+    });
+    expect(s.labelAngle).toBe(-90);
+    expect(s.labelLimit).toBeCloseTo(88.2, 5);
+    expect(s.minExtent).toBeCloseTo(98.2, 5);
+    expect(s.maxExtent).toBeCloseTo(98.2, 5);
   });
 
   test('degenerate chart (height <= titleBlock) does not explode xAxisHeight', () => {

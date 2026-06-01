@@ -245,6 +245,13 @@ export function getXAxisSettings({
   // line-height project onto the vertical axis after rotation.
   const SQRT2_OVER_2 = Math.SQRT1_2;
   const diagonalBand = (maxStringSize + horizontalLabelHeight) * SQRT2_OVER_2;
+  // Cap the vertical (-90°) label band at this fraction of the chart height so a
+  // long categorical label can't starve the plot. The pre-3-tier code used the
+  // same 0.35 fraction but against a plotHeight estimate that subtracted the
+  // title block and ellipsis; that expression collapsed to a few pixels on short
+  // charts and over-truncated labels (the #2777 complaint). Capping against
+  // chartHeight keeps the plot protection without that degenerate collapse.
+  const MAX_VERTICAL_LABEL_HEIGHT_FRACTION = 0.35;
 
   let reservedLabelBand: number;
 
@@ -264,17 +271,23 @@ export function getXAxisSettings({
     labelLimit = 0;
     reservedLabelBand = diagonalBand;
   } else {
-    // Tier 3: vertical (-90°). Truncate only when the label genuinely doesn't fit.
+    // Tier 3: vertical (-90°). Truncate when the label doesn't fit the available
+    // label band, OR when leaving it un-truncated would crush the plot. Short
+    // labels still skip truncation, preserving the #2777 fix.
     labelAngle = -90;
     labelAlign = 'right';
-    if (maxStringSize <= labelHeightBudget) {
+    const plotProtectionCap = MAX_VERTICAL_LABEL_HEIGHT_FRACTION * chartHeight;
+    if (
+      maxStringSize <= labelHeightBudget &&
+      maxStringSize <= plotProtectionCap
+    ) {
       labelLimit = 0;
       reservedLabelBand = maxStringSize;
     } else {
       // Vega appends '...' past labelLimit, so the rendered band is
       // labelLimit + ellipsesSize. Math.max(1, ...) avoids labelLimit=0
       // which Vega treats as "no limit".
-      labelLimit = Math.max(1, labelHeightBudget);
+      labelLimit = Math.max(1, Math.min(plotProtectionCap, labelHeightBudget));
       reservedLabelBand = labelLimit + ellipsesSize;
     }
   }
