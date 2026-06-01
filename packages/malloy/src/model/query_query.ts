@@ -778,12 +778,16 @@ export class QueryQuery extends QueryField {
         return qs.structDef.tablePath;
       case 'virtual': {
         const virtualMap = qs.prepareResultOptions?.virtualMap;
+        // Resolve via `virtualName` (the `virtual('...')` argument), which
+        // survives `extend`; `name` may have been renamed to the Malloy
+        // source name when the source was derived.
+        const virtualName = qs.structDef.virtualName ?? qs.structDef.name;
         const tablePath = virtualMap
           ?.get(qs.structDef.connection)
-          ?.get(qs.structDef.name);
+          ?.get(virtualName);
         if (!tablePath) {
           throw new MalloyCompileError(
-            `No virtual-map entry for virtual source '${qs.structDef.name}' ` +
+            `No virtual-map entry for virtual source '${virtualName}' ` +
               `on connection '${qs.structDef.connection}'. ` +
               'Add a virtual-map entry via the `virtualMap` runtime option.',
             'runtime-virtual-map-missing',

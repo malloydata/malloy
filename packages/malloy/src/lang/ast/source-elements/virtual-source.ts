@@ -48,6 +48,7 @@ export class VirtualTableSource extends Source {
     const sourceDef: VirtualSourceDef = {
       type: 'virtual',
       name: this.virtualName,
+      virtualName: this.virtualName,
       dialect,
       connection: name,
       fields: [],

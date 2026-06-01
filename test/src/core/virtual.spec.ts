@@ -152,6 +152,43 @@ describe('virtual source resolution', () => {
     expect(row['model_count']).toBeDefined();
   });
 
+  it('join to derived virtual source (extend)', async () => {
+    // When a virtual source is extended and then joined, getStructSourceSQL
+    // must look up the virtual argument ("vcarriers"), not the derived Malloy
+    // source name ("carriers"). `extend` renames the structDef's `name`, so
+    // resolving by `name` would fail with "No virtual-map entry for 'carriers'".
+    const code = `${VIRTUAL_ANNOTATION}
+      type: flight_fields is { carrier :: string }
+      type: carrier_fields is { code :: string, nickname :: string }
+
+      source: flights_raw is ${tstDB}.virtual('vflights')::flight_fields
+      source: carriers_raw is ${tstDB}.virtual('vcarriers')::carrier_fields
+
+      source: carriers is carriers_raw extend {
+        primary_key: code
+      }
+      source: flights is flights_raw extend {
+        join_one: carriers with carrier
+      }
+
+      run: flights -> {
+        group_by: carriers.nickname
+        aggregate: flight_count is count()
+      }
+    `;
+
+    const virtualMap = mkVirtualMap({
+      [tstDB]: {
+        vflights: 'malloytest.flights',
+        vcarriers: 'malloytest.carriers',
+      },
+    });
+
+    // This should not throw "No virtual-map entry for 'carriers'"
+    const result = await tstRuntime.loadQuery(code).run({virtualMap});
+    expect(result.data.value.length).toBeGreaterThan(0);
+  });
+
   it('virtualMap from MalloyConfig is available', () => {
     const configJSON = JSON.stringify({
       connections: {

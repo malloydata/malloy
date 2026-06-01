@@ -1566,6 +1566,12 @@ export interface CompositeSourceDef extends SourceDefBase {
 // the name: of a virtual source def is the key to the virtualMap
 export interface VirtualSourceDef extends SourceDefBase {
   type: 'virtual';
+  /**
+   * The virtual source argument (e.g. 'vcustomers' in `virtual('vcustomers')`)
+   * used as the key for virtual-map resolution. Unlike `name`, this survives
+   * `extend` (where `name` is renamed to the new Malloy source name).
+   */
+  virtualName: string;
 }
 
 /*
