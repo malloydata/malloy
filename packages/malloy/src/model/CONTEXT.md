@@ -29,7 +29,7 @@ Every `StructDef`, `SourceDef`, and `FieldDef` is an `AliasedName` with two name
 - **`name`** — the intrinsic name, fixed when the def is created. It is **write-once**: nothing rebinds a def by reassigning `name`. For some def kinds `name` carries identity that must survive every rebinding — e.g. `VirtualSourceDef.name` *is* the `virtual('…')` argument, the key into the `virtualMap`.
 - **`as`** — the local binding name. Every rename, `X is …`, join, or `rename:` sets `as`, never `name`.
 
-The name a thing goes by in a given context is therefore **`getIdentifier(x)` = `x.as ?? x.name`**, and the `as ?? name` idiom is mandatory at every use site — you cannot tell from the use site whether this particular def is one whose `name` is load-bearing identity, so you always preserve `name` and always read through `as`.
+The name a thing goes by in a given context is therefore **`activeName(x)` = `x.as ?? x.name`** (the one helper for this, defined next to the `AliasedName` interface in `malloy_types.ts`). Always call `activeName` at use sites — never hand-roll `x.as ?? x.name`, which is easy to get wrong (`x.as ?? x.name === n` parses as `x.as ?? (x.name === n)`). You cannot tell from a use site whether this particular def is one whose `name` is load-bearing identity, so you always preserve `name` and always read through `activeName`.
 
 **Corollary for writers:** to rebind a def, set `as`. Never assign `name` and never `delete x.as` to "reset" a name — doing so destroys any identity payload `name` carried. (This was the cause of the joined-virtual-source bug: the join wrote the join name into `name` and deleted `as`, erasing the `virtualMap` key.)
 

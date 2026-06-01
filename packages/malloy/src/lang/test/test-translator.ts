@@ -41,6 +41,7 @@ import type {
   UserTypeDef,
 } from '../../model/malloy_types';
 import {
+  activeName,
   isQuerySegment,
   isSourceDef,
   isUserTypeDef,
@@ -668,7 +669,7 @@ export function getModelQuery(modelDef: ModelDef, name: string): Query {
 
 export function getFieldDef(source: StructDef, name: string): FieldDef {
   for (const f of source.fields) {
-    if (f.as ?? f.name === name) {
+    if (activeName(f) === name) {
       return f;
     }
   }
@@ -685,7 +686,7 @@ export function getQueryFieldDef(
         if (name === f.path[f.path.length - 1]) {
           return f;
         }
-      } else if (f.as ?? f.name === name) {
+      } else if (activeName(f) === name) {
         return f;
       }
     }

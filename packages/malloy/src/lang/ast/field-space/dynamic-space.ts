@@ -22,7 +22,7 @@
  */
 
 import * as model from '../../../model/malloy_types';
-import {mkSafeRecord} from '../../../model/malloy_types';
+import {activeName, mkSafeRecord} from '../../../model/malloy_types';
 import {nameFromDef} from '../../field-utils';
 import type {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
@@ -170,7 +170,7 @@ export abstract class DynamicSpace
       // e.g. if a field had a compiler flag on it...
       for (const [name, note] of this.newNotes) {
         const index = this.sourceDef.fields.findIndex(
-          f => f.as ?? f.name === name
+          f => activeName(f) === name
         );
         if (index === -1) {
           throw new Error(`Can't find field '${name}' to set access modifier`);
