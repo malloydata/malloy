@@ -135,4 +135,14 @@ describe('getColorScale', () => {
       expect(scale?.range).toEqual(['#f5f5f5', 'var(--my-brand-colour)']);
     });
   });
+
+  describe('with empty-string mapColor', () => {
+    test('treats an empty mapColor as unset and uses the default gradient', () => {
+      // An empty string is falsy, so it falls through the mapColor check
+      // rather than producing a one-stop or malformed gradient.
+      expect(
+        getColorScale('quantitative', false, false, {mapColor: ''})
+      ).toEqual({range: ['#C2D5EE', '#1A73E8']});
+    });
+  });
 });

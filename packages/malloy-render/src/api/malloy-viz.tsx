@@ -12,6 +12,7 @@ import type {
   RenderPluginInstance,
 } from '@/api/plugin-types';
 import {MalloyRender} from '@/component/render';
+import {mergeThemeOption} from '@/component/theme';
 import type {MalloyRenderProps} from '@/component/render';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {RenderFieldMetadata} from '@/render-field-metadata';
@@ -204,13 +205,11 @@ export class MalloyViz {
     // partial theme update (e.g. `{ theme: { mapColor: '#f00' } }`)
     // doesn't wipe the rest of the previously-set theme keys. Passing
     // `theme: undefined` explicitly still clears the theme.
-    let mergedTheme = this.options.theme;
-    if ('theme' in newOptions) {
-      mergedTheme =
-        newOptions.theme === undefined
-          ? undefined
-          : {...this.options.theme, ...newOptions.theme};
-    }
+    const mergedTheme = mergeThemeOption(
+      this.options.theme,
+      'theme' in newOptions,
+      newOptions.theme
+    );
     this.options = {...this.options, ...newOptions, theme: mergedTheme};
   }
 
