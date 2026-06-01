@@ -2015,14 +2015,6 @@ export type TypedDef =
   | RefToField
   | StructDef;
 
-/** Get the output name for a NamedObject */
-export function getIdentifier(n: AliasedName): string {
-  if (n.as !== undefined) {
-    return n.as;
-  }
-  return n.name;
-}
-
 export interface UserTypeFieldDef extends HasAnnotations {
   name: string;
   typeDef: AtomicTypeDef;

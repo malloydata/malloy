@@ -22,7 +22,7 @@
  */
 
 import type {JoinFieldDef, TypeDesc} from '../../../model/malloy_types';
-import {isSourceDef} from '../../../model/malloy_types';
+import {activeName, isSourceDef} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
 import type {FieldSpace} from '../types/field-space';
 import type {JoinPathElement} from '../types/lookup-result';
@@ -41,7 +41,7 @@ export abstract class StructSpaceFieldBase extends SpaceField {
 
   get joinPathElement(): JoinPathElement {
     return {
-      name: this.structDef.as || this.structDef.name,
+      name: activeName(this.structDef),
       joinType: this.structDef.join,
       joinElementType: this.structDef.type,
     };

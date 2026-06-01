@@ -286,7 +286,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         this.addValidatedCompositeFieldUserFromEntry(name, referenceField);
       } else {
         const entry = new RefineFromSpaceField(field);
-        const name = field.as ?? field.name;
+        const name = model.activeName(field);
         this.setEntry(name, entry);
         this.addValidatedCompositeFieldUserFromEntry(name, entry);
       }
@@ -323,7 +323,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       name = queryFieldDef.path[queryFieldDef.path.length - 1];
       location = queryFieldDef.at;
     } else {
-      name = queryFieldDef.as ?? queryFieldDef.name;
+      name = model.activeName(queryFieldDef);
       location = queryFieldDef.location;
     }
     let ret: model.FieldDef;
@@ -384,7 +384,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
     if (primaryKeyField.type === 'fieldref') {
       return primaryKeyField.path[primaryKeyField.path.length - 1];
     } else {
-      return primaryKeyField.as ?? primaryKeyField.name;
+      return model.activeName(primaryKeyField);
     }
   }
 

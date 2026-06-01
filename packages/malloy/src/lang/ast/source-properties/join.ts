@@ -29,7 +29,7 @@ import type {
   SourceDef,
   AccessModifierLabel,
 } from '../../../model/malloy_types';
-import {isSourceDef, isJoinable} from '../../../model/malloy_types';
+import {activeName, isSourceDef, isJoinable} from '../../../model/malloy_types';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
@@ -125,7 +125,7 @@ export class KeyJoin extends Join {
     const exprX = this.keyExpr.getExpression(outer);
     if (isSourceDef(inStruct) && inStruct.primaryKey) {
       const pkey = inStruct.fields.find(
-        f => (f.as || f.name) === inStruct.primaryKey
+        f => activeName(f) === inStruct.primaryKey
       );
       if (pkey) {
         if (pkey.type === exprX.type) {

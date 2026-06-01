@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {activeName} from '../../../model/malloy_types';
 import type {
   InvokedStructRef,
   SourceDef,
@@ -165,7 +166,7 @@ export class SQLSource extends Source {
         fields: lookup.value.fields.map(f => ({
           ...f,
           location,
-          refSummary: {fieldUsage: [{path: [f.as ?? f.name], at: location}]},
+          refSummary: {fieldUsage: [{path: [activeName(f)], at: location}]},
         })),
         location: this.location,
       };

@@ -14,7 +14,13 @@ import type {
   MatrixOperation,
   SourceDef,
 } from '../../../model/malloy_types';
-import {isAtomic, isJoined, isSourceDef, TD} from '../../../model/malloy_types';
+import {
+  activeName,
+  isAtomic,
+  isJoined,
+  isSourceDef,
+  TD,
+} from '../../../model/malloy_types';
 
 import type {HasParameter} from '../parameters/has-parameter';
 import {Source} from './source';
@@ -82,7 +88,7 @@ function composeSources(
       );
     }
     for (const field of sourceDef.fields) {
-      const fieldName = field.as ?? field.name;
+      const fieldName = activeName(field);
       if (field.accessModifier === 'private') {
         continue;
       }

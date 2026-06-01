@@ -23,6 +23,7 @@
 
 import type {FieldDef, StructDef} from '../../../model/malloy_types';
 import {
+  activeName,
   isJoined,
   type AccessModifierLabel,
   type AnnotationsDef,
@@ -186,7 +187,7 @@ function editJoinsFromIncludeState(
   if (isJoin) {
     if (joinedState.fieldsToInclude) {
       fields = from.fields.filter(f =>
-        joinedState.fieldsToInclude?.has(f.as ?? f.name)
+        joinedState.fieldsToInclude?.has(activeName(f))
       );
     } else {
       fields = from.fields;
@@ -197,13 +198,13 @@ function editJoinsFromIncludeState(
   // const fields = from.fields;
   const updatedFields: FieldDef[] = [];
   for (const field of fields) {
-    const name = field.as ?? field.name;
+    const name = activeName(field);
     // TODO ensure you can't make it more permissive here...
     const accessModifier =
       joinedState.modifiers.get(name) ?? field.accessModifier;
     const notes = joinedState.notes.get(name);
     const rename = joinedState.renames.find(
-      r => r.name.nameString === (field.as ?? field.name)
+      r => r.name.nameString === activeName(field)
     );
     const editedField: FieldDef = isJoin
       ? {
@@ -224,7 +225,7 @@ function editJoinsFromIncludeState(
       updatedFields.push({
         ...editedField,
         fields: editJoinsFromIncludeState(
-          [...path, field.as ?? field.name],
+          [...path, activeName(field)],
           editedField,
           includeState
         ),

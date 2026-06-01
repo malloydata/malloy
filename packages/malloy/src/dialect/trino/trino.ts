@@ -35,6 +35,7 @@ import type {
   RecordLiteralNode,
 } from '../../model/malloy_types';
 import {
+  activeName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -746,7 +747,7 @@ ${indent(sql)}
     const rowTypes: string[] = [];
     for (const f of lit.typeDef.fields) {
       if (isAtomic(f)) {
-        const name = f.as ?? f.name;
+        const name = activeName(f);
         rowVals.push(
           safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal'
         );

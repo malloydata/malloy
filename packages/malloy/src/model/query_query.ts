@@ -43,7 +43,7 @@ import {
   isAtomic,
   expressionIsCalculation,
   expressionIsScalar,
-  getIdentifier,
+  activeName,
   isJoinedSource,
   isBasicArray,
   isIndexSegment,
@@ -871,9 +871,7 @@ export class QueryQuery extends QueryField {
       }
       default:
         throw new Error(
-          `Cannot create SQL StageWriter from '${getIdentifier(
-            qs.structDef
-          )}' type '${qs.structDef.type}`
+          `Cannot create SQL StageWriter from '${activeName(qs.structDef)}' type '${qs.structDef.type}`
         );
     }
   }
@@ -959,7 +957,7 @@ export class QueryQuery extends QueryField {
     let s = '';
     const qs = ji.queryStruct;
     const qsDef = qs.structDef;
-    qs.eventStream?.emit('join-used', {name: getIdentifier(qsDef)});
+    qs.eventStream?.emit('join-used', {name: activeName(qsDef)});
     qs.maybeEmitParameterizedSourceUsage();
     if (isJoinedSource(qsDef)) {
       let structSQL = this.getStructSourceSQL(qs, stageWriter);

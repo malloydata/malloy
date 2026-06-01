@@ -38,7 +38,7 @@ import {
   exprHasE,
   exprHasKids,
   fieldIsIntrinsic,
-  getIdentifier,
+  activeName,
   mkSafeRecord,
 } from './malloy_types';
 import type {DialectFieldList} from '../dialect';
@@ -291,9 +291,9 @@ export function getDialectFieldList(structDef: StructDef): DialectFieldList {
   for (const f of structDef.fields.filter(fieldIsIntrinsic)) {
     dialectFieldList.push({
       typeDef: f,
-      sqlExpression: getIdentifier(f),
-      rawName: getIdentifier(f),
-      sqlOutputName: getIdentifier(f),
+      sqlExpression: activeName(f),
+      rawName: activeName(f),
+      sqlOutputName: activeName(f),
     });
   }
   return dialectFieldList;
