@@ -107,13 +107,12 @@ export class KeyJoin extends Join {
     }
     const joinStruct: JoinFieldDef = {
       ...sourceDef,
-      name: this.name.refString,
+      as: this.name.refString,
       join: 'one',
       matrixOperation: 'left',
       onExpression: {node: 'error', message: "('join fixup'='not done yet')"},
       location: this.location,
     };
-    delete joinStruct.as;
 
     if (this.note) {
       joinStruct.annotations = this.note;
@@ -225,12 +224,11 @@ export class ExpressionJoin extends Join {
     }
     const joinStruct: JoinFieldDef = {
       ...sourceDef,
-      name: this.name.refString,
+      as: this.name.refString,
       join: this.joinType,
       matrixOperation,
       location: this.location,
     };
-    delete joinStruct.as;
     if (this.note) {
       joinStruct.annotations = this.note;
     }

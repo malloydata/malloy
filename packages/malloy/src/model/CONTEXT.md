@@ -22,6 +22,17 @@ The compiler consumes **Intermediate Representation (IR)** produced by the trans
 - **`SourceDef`** - A data source (table or derived table) with its schema and extended fields
 - **`StructDef`** - Schema definition for any structured data (records, arrays, tables, query results)
 
+**The `name` / `as` invariant (`AliasedName`):**
+
+Every `StructDef`, `SourceDef`, and `FieldDef` is an `AliasedName` with two name slots:
+
+- **`name`** — the intrinsic name, fixed when the def is created. It is **write-once**: nothing rebinds a def by reassigning `name`. For some def kinds `name` carries identity that must survive every rebinding — e.g. `VirtualSourceDef.name` *is* the `virtual('…')` argument, the key into the `virtualMap`.
+- **`as`** — the local binding name. Every rename, `X is …`, join, or `rename:` sets `as`, never `name`.
+
+The name a thing goes by in a given context is therefore **`getIdentifier(x)` = `x.as ?? x.name`**, and the `as ?? name` idiom is mandatory at every use site — you cannot tell from the use site whether this particular def is one whose `name` is load-bearing identity, so you always preserve `name` and always read through `as`.
+
+**Corollary for writers:** to rebind a def, set `as`. Never assign `name` and never `delete x.as` to "reset" a name — doing so destroys any identity payload `name` carried. (This was the cause of the joined-virtual-source bug: the join wrote the join name into `name` and deleted `as`, erasing the `virtualMap` key.)
+
 **Type Definitions:**
 - **`BasicAtomicType`** - String union of simple type names (`string | number | boolean | date | timestamp | timestamptz | json | sql native | error`). Guard: `isBasicAtomicType()`.
 - **`BasicAtomicTypeDef`** - TypeDef union for basic types (each variant may carry metadata, e.g. `NumberTypeDef` has optional `numberType`)

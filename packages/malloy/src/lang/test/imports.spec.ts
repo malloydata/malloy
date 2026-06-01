@@ -96,7 +96,7 @@ source: botProjQSrc is botProjQ
     });
     expect(docParse).toTranslate();
     const newSrc = docParse.getSourceDef('newSrc');
-    const maybeField = newSrc?.fields.find(f => f.name === 'b');
+    const maybeField = newSrc?.fields.find(f => (f.as ?? f.name) === 'b');
     expect(maybeField).toBeDefined();
     if (maybeField && isJoined(maybeField)) {
       expect(maybeField.type).toBe('query_source');
