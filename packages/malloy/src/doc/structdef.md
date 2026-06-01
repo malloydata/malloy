@@ -5,8 +5,8 @@ The most basic `StructDef` is a namespace. `StructDef`s become a `FieldSpace`" i
 ```TypeScript
 interface StructDefBase extends HasLocation, NamedObject {
   type: string;
-  annotation?: Annotation;
-  modelAnnotation?: ModelAnnotation;
+  annotations?: AnnotationsDef;
+  modelAnnotations?: ModelAnnotationsDef;
   fields: FieldDef[];
   dialect: string;
 }

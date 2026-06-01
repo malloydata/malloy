@@ -81,7 +81,7 @@ import type {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import type {EventStream} from '../runtime_types';
-import {Annotations} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParserRuleContext} from 'antlr4ts';
 import {Timer} from '../timing';
@@ -563,15 +563,15 @@ class ModelAnnotationStep implements TranslationStep {
       if (!tryParse.parse || tryParse.final) {
         return tryParse;
       } else {
-        const modelAnnotation = walkForModelAnnotation(
+        const modelAnnotations = walkForModelAnnotation(
           that,
           tryParse.parse.tokenStream,
           tryParse.parse
         );
         this.response = {
-          modelAnnotation: {
-            ...modelAnnotation,
-            inherits: extendingModel?.annotation,
+          modelAnnotations: {
+            ...modelAnnotations,
+            inherits: extendingModel?.annotations,
           },
         };
       }
@@ -633,7 +633,7 @@ class TranslateStep implements TranslationStep {
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
       that.compilerFlagSrc.push(
-        ...new Annotations(extendingModel.annotation).texts('!')
+        ...new Annotations(extendingModel.annotations).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);

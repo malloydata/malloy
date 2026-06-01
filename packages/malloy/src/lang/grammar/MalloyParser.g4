@@ -33,6 +33,7 @@ malloyStatement
   | defineQuery
   | defineGivenStatement
   | importStatement
+  | exportStatement
   | runStatement
   | docAnnotations
   | ignoredObjectAnnotations
@@ -162,6 +163,14 @@ importItem
 
 importURL
   : string
+  ;
+
+exportStatement
+  : EXPORT OCURLY exportItem (COMMA exportItem)* COMMA? CCURLY
+  ;
+
+exportItem
+  : id
   ;
 
 docAnnotations

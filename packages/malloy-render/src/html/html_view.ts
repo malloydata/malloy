@@ -36,7 +36,7 @@ import {getDataTree} from '../data_tree';
 import {HTMLDashboardRenderer} from './dashboard';
 import {HTMLListRenderer} from './list';
 import {HTMLListDetailRenderer} from './list_detail';
-import {tagFromAnnotations} from '../util';
+import {tagFromAnnotations} from '@malloydata/malloy';
 import {MalloyRenderer} from '@/api/malloy-renderer';
 import type {MalloyViz} from '@/api/malloy-viz';
 
@@ -50,7 +50,7 @@ export class HTMLView {
     malloyResult: Malloy.Result,
     options: RendererOptions
   ): Promise<HTMLElement> {
-    const modelTag = tagFromAnnotations(malloyResult.model_annotations, '## ');
+    const modelTag = tagFromAnnotations(malloyResult.model_annotations, '');
     const useLegacyRenderer =
       modelTag.has('renderer_legacy') || options.useLegacy === true;
     if (!useLegacyRenderer) {

@@ -22,7 +22,7 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   JoinFieldDef,
   JoinType,
   MatrixOperation,
@@ -58,7 +58,7 @@ export abstract class Join
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   abstract sourceExpr: SourceQueryElement;
-  note?: Annotation;
+  note?: AnnotationsDef;
 
   makeEntry(fs: DynamicSpace) {
     fs.newEntry(
@@ -116,7 +116,7 @@ export class KeyJoin extends Join {
     delete joinStruct.as;
 
     if (this.note) {
-      joinStruct.annotation = this.note;
+      joinStruct.annotations = this.note;
     }
     this.document()?.rememberToAddModelAnnotations(joinStruct);
     return joinStruct;
@@ -232,7 +232,7 @@ export class ExpressionJoin extends Join {
     };
     delete joinStruct.as;
     if (this.note) {
-      joinStruct.annotation = this.note;
+      joinStruct.annotations = this.note;
     }
     this.document()?.rememberToAddModelAnnotations(joinStruct);
     return joinStruct;

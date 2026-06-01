@@ -14,6 +14,7 @@ module.exports = defineConfig([
       'packages/malloy-malloy-sql/src/grammar/**',
       'packages/malloy-tag/src/peggy/dist/**',
       'packages/malloy-syntax-highlight/**/*.monarch.ts',
+      'packages/malloy-syntax-highlight/**/tokenizations/*.ts',
       'packages/malloy-interfaces/docs/**',
       'packages/malloy-query-builder/docs/**',
       'packages/malloy-tag/src/lib/**',

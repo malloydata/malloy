@@ -6,8 +6,8 @@
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
+import {tagFromAnnotations} from '@malloydata/malloy';
 import {
-  tagFromAnnotations,
   formatBigNumber,
   formatScaledNumber,
   parseNumberShorthand,
@@ -15,38 +15,50 @@ import {
   normalizeScale,
 } from './util';
 
-describe('tagFromAnnotations original behavior', () => {
-  test('should preserve original behavior for non-default prefixes', () => {
+describe('tagFromAnnotations route selection', () => {
+  test('selects annotations by app-claimed route', () => {
     const annotations: Malloy.Annotation[] = [
       {value: '#(malloy) query_name=test'},
       {value: '## model_tag=value'},
       {value: '# regular_tag'},
-      {value: '#r render_tag'},
+      {value: '#r render_tag'}, // malformed prefix; excluded
     ];
 
-    // Test malloy prefix
-    const malloyTag = tagFromAnnotations(annotations, '#(malloy) ');
+    const malloyTag = tagFromAnnotations(annotations, 'malloy');
     expect(malloyTag.text('query_name')).toBe('test');
     expect(malloyTag.has('regular_tag')).toBe(false);
     expect(malloyTag.has('render_tag')).toBe(false);
-
-    // Test model prefix
-    const modelTag = tagFromAnnotations(annotations, '## ');
-    expect(modelTag.text('model_tag')).toBe('value');
-    expect(modelTag.has('regular_tag')).toBe(false);
-    expect(modelTag.has('render_tag')).toBe(false);
   });
 
-  test('should use default # prefix when no prefix specified', () => {
+  test('empty route selects MOTLY (the renderer-tag namespace)', () => {
+    // Route filtering does not distinguish `#` from `##`; the wire shape
+    // separates levels by which array a caller passes (annotations vs
+    // model_annotations). Here both `## model_tag=value` and `# regular_tag`
+    // are route `''`, so both parse into the resulting tag.
+    const annotations: Malloy.Annotation[] = [
+      {value: '#(malloy) query_name=test'},
+      {value: '## model_tag=value'},
+      {value: '# regular_tag'},
+      {value: '#r render_tag'}, // malformed prefix; excluded
+    ];
+
+    const tag = tagFromAnnotations(annotations, '');
+    expect(tag.text('model_tag')).toBe('value');
+    expect(tag.has('regular_tag')).toBe(true);
+    expect(tag.has('query_name')).toBe(false); // wrong route
+    expect(tag.has('render_tag')).toBe(false); // malformed
+  });
+
+  test('excludes malformed-prefix annotations', () => {
     const annotations: Malloy.Annotation[] = [
       {value: '# bar_chart'},
-      {value: '#r line_chart'}, // should be ignored
+      {value: '#r line_chart'}, // malformed, excluded
       {value: '# size=lg'},
     ];
 
-    const tag = tagFromAnnotations(annotations);
+    const tag = tagFromAnnotations(annotations, '');
     expect(tag.has('bar_chart')).toBe(true);
-    expect(tag.has('line_chart')).toBe(false); // #r ignored
+    expect(tag.has('line_chart')).toBe(false);
     expect(tag.text('size')).toBe('lg');
   });
 });

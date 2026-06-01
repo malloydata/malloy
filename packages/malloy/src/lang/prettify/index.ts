@@ -48,7 +48,7 @@
  *     of a comparison reads as one unit; breaking inside is more confusing
  *     than the line being long.
  *   - SQL strings (`"""…"""`, including `%{…}` malloy interpolations) and
- *     block annotations (`#" … "`) are emitted verbatim from source. We don't
+ *     multi-line annotations (`#" … "`) are emitted verbatim from source. We don't
  *     own a SQL formatter; annotation indentation is significant.
  *   - `;` is the compact-inline statement separator. Wrapped form drops it
  *     (newlines do the job); inline form keeps it.

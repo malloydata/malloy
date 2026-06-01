@@ -48,33 +48,21 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     }
   }
 
-  // Another circularity breaking method ... call into QueryQuery
-  // to find the output shape of a query
-  getFinalOutputStruct(
-    query: Query,
-    options: PrepareResultOptions | undefined
-  ): SourceDef | undefined {
-    const result = this.loadQuery(query, undefined, options, false, false);
-    return result.structs.pop();
-  }
-
   loadModelFromDef(modelDef: ModelDef): void {
     this.modelDef = modelDef;
     for (const s of Object.values(this.modelDef.contents)) {
-      let qs;
+      // Only sources become QueryStructs. query/userType/given are namespace
+      // metadata, not queryable, and are skipped.
       if (isSourceDef(s)) {
-        qs = new QueryStruct(s, undefined, {model: this}, {});
-        this.structs.set(getIdentifier(s), qs);
-        qs.resolveQueryFields((query, options) =>
-          this.getFinalOutputStruct(query, options)
+        this.structs.set(
+          getIdentifier(s),
+          new QueryStruct(s, undefined, {model: this}, {})
         );
-      } else if (s.type === 'query') {
-        /* TODO */
-      } else if (s.type === 'userType') {
-        // User type definitions are metadata only, not queryable
-      } else if (s.type === 'given') {
-        // Givens are metadata in the namespace, not queryable structures.
-      } else {
+      } else if (
+        s.type !== 'query' &&
+        s.type !== 'userType' &&
+        s.type !== 'given'
+      ) {
         throw new Error('Internal Error: Unknown structure type');
       }
     }
@@ -100,15 +88,12 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     prepareResultOptions ??= {};
     if (typeof structRef === 'string') {
       const ret = this.getStructByName(structRef);
-      if (sourceArguments !== undefined) {
-        return new QueryStruct(
-          ret.structDef,
-          sourceArguments,
-          ret.parent ? {struct: ret.parent} : {model: this},
-          prepareResultOptions
-        );
-      }
-      return ret;
+      return new QueryStruct(
+        ret.structDef,
+        sourceArguments ?? ret.sourceArguments,
+        ret.parent ? {struct: ret.parent} : {model: this},
+        prepareResultOptions
+      );
     }
     return new QueryStruct(
       structRef,
@@ -256,7 +241,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       sourceArguments,
       queryName: query.name,
       connectionName: ret.connectionName,
-      annotation: query.annotation,
+      annotations: query.annotations,
       queryTimezone: ret.structs[0].queryTimezone,
       defaultRowLimitAdded: addedDefaultRowLimit,
     };

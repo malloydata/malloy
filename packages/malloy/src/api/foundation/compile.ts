@@ -452,7 +452,7 @@ export class Malloy {
             }
           }
         }
-        const {modelAnnotation} = translator.modelAnnotation(model?._modelDef);
+        const {modelAnnotations} = translator.modelAnnotation(model?._modelDef);
         if (result.tables) {
           // collect tables by connection name since there may be multiple connections
           const tablesByConnection: Map<
@@ -484,7 +484,7 @@ export class Malloy {
                   tablePathByKey,
                   {
                     refreshTimestamp,
-                    modelAnnotation,
+                    modelAnnotations,
                   }
                 );
               translator.update({tables, errors: {tables: errors}});
@@ -529,7 +529,7 @@ export class Malloy {
             const conn = await connections.lookupConnection(connectionName);
             const resolved = await conn.fetchSchemaForSQLStruct(toCompile, {
               refreshTimestamp,
-              modelAnnotation,
+              modelAnnotations,
             });
             if (resolved.error) {
               translator.update({

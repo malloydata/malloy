@@ -72,6 +72,8 @@ export {
   PersistSource,
   PreparedQuery,
   PreparedResult,
+  Reference,
+  type ReferenceKind,
 } from './core';
 
 // Result and Data classes

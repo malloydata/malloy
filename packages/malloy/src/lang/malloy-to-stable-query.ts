@@ -36,7 +36,7 @@ import {
   LiteralYear,
 } from './ast';
 
-type HasAnnotations = ParserRuleContext & {
+type AnnotatedCtx = ParserRuleContext & {
   annotation: () => parse.AnnotationContext[];
 };
 
@@ -114,9 +114,7 @@ export class MalloyToQuery
    * @param cx Any parse context which has an annotation* rule
    * @returns Array of texts for the annotations
    */
-  protected getAnnotations(
-    cx: HasAnnotations
-  ): Malloy.Annotation[] | undefined {
+  protected getAnnotations(cx: AnnotatedCtx): Malloy.Annotation[] | undefined {
     const annotations = cx.annotation().map(a => ({
       value: getAnnotationText(a),
     }));

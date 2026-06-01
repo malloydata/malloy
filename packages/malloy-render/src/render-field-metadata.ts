@@ -1,4 +1,4 @@
-import {tagFromAnnotations} from '@/util';
+import {tagFromAnnotations} from '@malloydata/malloy';
 import {type Field, RootField, getFieldType, FieldType} from '@/data_tree';
 import type {
   RenderPluginFactory,
@@ -52,7 +52,7 @@ export class RenderFieldMetadata {
         annotations: result.annotations,
       },
       {
-        modelTag: tagFromAnnotations(result.model_annotations, '## '),
+        modelTag: tagFromAnnotations(result.model_annotations, ''),
         queryTimezone: result.query_timezone,
       }
     );

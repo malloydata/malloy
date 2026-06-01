@@ -23,13 +23,13 @@
 
 import {getDialect} from '../../../dialect';
 import type {
-  Annotation,
+  AnnotationsDef,
   DocumentLocation,
   DocumentReference,
   Given,
   GivenID,
   ModelDef,
-  ModelAnnotation,
+  ModelAnnotationsDef,
   NamedModelObject,
   Query,
   SourceID,
@@ -150,7 +150,7 @@ export abstract class MalloyElement {
           text: key,
           definition: {
             type: result.entry.type,
-            annotation: result.entry.annotation,
+            annotations: result.entry.annotations,
             location: result.entry.location,
           },
           location: reference.location,
@@ -161,7 +161,7 @@ export abstract class MalloyElement {
           text: key,
           definition: {
             type: result.entry.type,
-            annotation: result.entry.annotation,
+            annotations: result.entry.annotations,
             location: result.entry.location,
           },
           location: reference.location,
@@ -294,18 +294,21 @@ export abstract class MalloyElement {
     return asString;
   }
 
-  *walk(): Generator<MalloyElement> {
+  *allChildren(): Generator<MalloyElement> {
     for (const kidLabel of Object.keys(this.children)) {
       const kiddle = this.children[kidLabel];
       if (kiddle instanceof MalloyElement) {
         yield kiddle;
-        yield* kiddle.walk();
       } else {
-        for (const k of kiddle) {
-          yield k;
-          yield* k.walk();
-        }
+        yield* kiddle;
       }
+    }
+  }
+
+  *walk(): Generator<MalloyElement> {
+    for (const child of this.allChildren()) {
+      yield child;
+      yield* child.walk();
     }
   }
 
@@ -328,7 +331,7 @@ export abstract class MalloyElement {
   }
 
   needs(doc: Document): ModelDataRequest | undefined {
-    for (const child of this.walk()) {
+    for (const child of this.allChildren()) {
       const childNeeds = child.needs(doc);
       if (childNeeds) return childNeeds;
     }
@@ -450,7 +453,7 @@ export class DocStatementList
   execCursor = 0;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: Annotation;
+  note?: AnnotationsDef;
   noteCursor = 0;
   executeList(doc: Document): ModelDataRequest {
     while (this.execCursor < this.elements.length) {
@@ -486,7 +489,7 @@ export class DocStatementList
 
 const docAnnotationNameSpace = '5a79a191-06bc-43cf-9b12-58741cd82970';
 
-function annotationNotes(an: Annotation): string[] {
+function annotationNotes(an: AnnotationsDef): string[] {
   const ret = an.inherits ? annotationNotes(an.inherits) : [];
   if (an.blockNotes) {
     ret.push(...an.blockNotes.map(n => n.text));
@@ -497,7 +500,7 @@ function annotationNotes(an: Annotation): string[] {
   return ret;
 }
 
-function annotationID(a: Annotation): string {
+function annotationID(a: AnnotationsDef): string {
   const allStrs = annotationNotes(a).join('');
   return uuidv5(allStrs, docAnnotationNameSpace);
 }
@@ -542,11 +545,15 @@ export class Document extends MalloyElement implements NameSpace {
   documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
   documentGivens = new Map<GivenID, Given>();
+  // When an `export { … }` statement appears, the document switches from
+  // "everything declared here is exported" to "only names in this set are
+  // exported." Undefined means no export statement has been seen.
+  explicitExports: Set<string> | undefined;
   queryList: Query[] = [];
   statements: DocStatementList;
   didInitModel = false;
   modelWasModified = false;
-  annotation: Annotation = {};
+  annotations: AnnotationsDef = {};
   experiments = new Tag({});
 
   constructor(statements: (DocStatement | DocStatementList)[]) {
@@ -562,10 +569,11 @@ export class Document extends MalloyElement implements NameSpace {
     this.documentModel = new Map<string, ModelEntry>();
     this.documentSrcRegistry = {};
     this.documentGivens = new Map<GivenID, Given>();
+    this.explicitExports = undefined;
     this.queryList = [];
     if (extendingModelDef) {
-      if (extendingModelDef.annotation) {
-        this.annotation.inherits = extendingModelDef.annotation;
+      if (extendingModelDef.annotations) {
+        this.annotations.inherits = extendingModelDef.annotations;
       }
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
         const entry = {...orig};
@@ -596,14 +604,14 @@ export class Document extends MalloyElement implements NameSpace {
       this.checkGivenAliasCollisions();
       this.checkQueryGivenSatisfiability();
       for (const q of this.queryList) {
-        if (q.modelAnnotation === undefined && modelDef.annotation) {
-          q.modelAnnotation = modelDef.annotation;
+        if (q.modelAnnotations === undefined && modelDef.annotations) {
+          q.modelAnnotations = modelDef.annotations;
         }
       }
     }
-    if (modelDef.annotation) {
+    if (modelDef.annotations) {
       for (const sd of this.modelAnnotationTodoList) {
-        sd.modelAnnotation ||= modelDef.annotation;
+        sd.modelAnnotations ||= modelDef.annotations;
       }
     }
     const ret: DocumentCompileResult = {
@@ -698,14 +706,14 @@ export class Document extends MalloyElement implements NameSpace {
 
   hasAnnotation(): boolean {
     return (
-      (this.annotation.notes && this.annotation.notes.length > 0) ||
-      this.annotation.inherits !== undefined
+      (this.annotations.notes && this.annotations.notes.length > 0) ||
+      this.annotations.inherits !== undefined
     );
   }
 
-  currentModelAnnotation(): ModelAnnotation | undefined {
+  currentModelAnnotation(): ModelAnnotationsDef | undefined {
     if (this.hasAnnotation()) {
-      const ret = {...this.annotation, id: ''};
+      const ret = {...this.annotations, id: ''};
       ret.id = annotationID(ret);
       return ret;
     }
@@ -714,8 +722,11 @@ export class Document extends MalloyElement implements NameSpace {
   modelDef(): ModelDef {
     const def = mkModelDef('');
     if (this.hasAnnotation()) {
-      def.annotation = this.currentModelAnnotation();
+      def.annotations = this.currentModelAnnotation();
     }
+    const explicit = this.explicitExports;
+    const isExported = (name: string, modelEntry: ModelEntry): boolean =>
+      explicit ? explicit.has(name) : modelEntry.exported === true;
     for (const [name, modelEntry] of this.documentModel) {
       const entryDef = modelEntry.entry;
       if (
@@ -723,20 +734,20 @@ export class Document extends MalloyElement implements NameSpace {
         entryDef.type === 'query' ||
         entryDef.type === 'userType'
       ) {
-        if (modelEntry.exported) {
+        if (isExported(name, modelEntry)) {
           def.exports.push(name);
         }
         if (entryDef.type === 'userType') {
           def.contents[name] = {...entryDef};
         } else {
           const newEntry = {...entryDef};
-          if (newEntry.modelAnnotation === undefined && def.annotation) {
-            newEntry.modelAnnotation = def.annotation;
+          if (newEntry.modelAnnotations === undefined && def.annotations) {
+            newEntry.modelAnnotations = def.annotations;
           }
           def.contents[name] = newEntry;
         }
       } else if (entryDef.type === 'given') {
-        if (modelEntry.exported) {
+        if (isExported(name, modelEntry)) {
           def.exports.push(name);
         }
         def.contents[name] = {...entryDef};

@@ -143,7 +143,7 @@ export class ReferenceView extends View {
       return {
         pipeline,
         name: fieldDef.name,
-        annotation: fieldDef.annotation,
+        annotations: fieldDef.annotations,
         outputStruct: pipeline[pipeline.length - 1].outputStruct,
       };
     } else {

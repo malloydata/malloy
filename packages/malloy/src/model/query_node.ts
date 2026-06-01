@@ -27,8 +27,6 @@ import type {
   StructDef,
   TurtleDef,
   TurtleDefPlusFilters,
-  SourceDef,
-  Query,
 } from './malloy_types';
 import {MalloyCompileError} from './malloy_compile_error';
 import {
@@ -42,7 +40,7 @@ import {
   expressionIsCalculation,
 } from './malloy_types';
 import type {EventStream} from '../runtime_types';
-import {Annotations} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
@@ -327,7 +325,7 @@ export class QueryStruct {
   private _modelTag: Tag | undefined = undefined;
   modelCompilerFlags(): Tag {
     if (this._modelTag === undefined) {
-      const annotation = this.structDef.modelAnnotation;
+      const annotation = this.structDef.modelAnnotations;
       const {tag} = new Annotations(annotation).parseAsTag('!');
       this._modelTag = tag;
     }
@@ -594,51 +592,6 @@ export class QueryStruct {
     }
   }
 
-  /**
-   * called after all structure has been loaded.  Examine this structure to see
-   * if if it is based on a query and if it is, add the output fields (unless
-   * they exist) to the structure.
-   *
-   * finalOutputStruct exists so that query_node doesn't need to
-   * to import query_query
-   */
-  resolveQueryFields(
-    finalOutputStruct: (
-      query: Query,
-      options: PrepareResultOptions | undefined
-    ) => SourceDef | undefined
-  ) {
-    if (this.structDef.type === 'query_source' && finalOutputStruct) {
-      const resultStruct = finalOutputStruct(
-        this.structDef.query,
-        this.prepareResultOptions
-      );
-
-      // should never happen.
-      if (!resultStruct) {
-        throw new Error("Internal Error, query didn't produce a struct");
-      }
-
-      const structDef = {...this.structDef};
-      for (const f of resultStruct.fields) {
-        const as = getIdentifier(f);
-        if (!this.nameMap.has(as)) {
-          structDef.fields.push(f);
-          this.nameMap.set(as, this.makeQueryField(f));
-        }
-      }
-      this.structDef = structDef;
-      if (!this.structDef.primaryKey && resultStruct.primaryKey) {
-        this.structDef.primaryKey = resultStruct.primaryKey;
-      }
-    }
-    for (const [, v] of this.nameMap) {
-      if (v instanceof QueryFieldStruct) {
-        v.queryStruct.resolveQueryFields(finalOutputStruct);
-      }
-    }
-  }
-
   getModel(): ModelRootInterface {
     if (this.model) {
       return this.model;
@@ -757,9 +710,9 @@ export class QueryStruct {
   }
 
   getQueryFieldReference(f: RefToField): QueryField {
-    const {path, annotation, drillExpression} = f;
+    const {path, annotations, drillExpression} = f;
     const field = this.getFieldByName(path, f.at);
-    if (annotation || drillExpression) {
+    if (annotations || drillExpression) {
       if (field.parent === undefined) {
         throw new Error(
           'Inconcievable, field reference to orphaned query field'
@@ -768,7 +721,7 @@ export class QueryStruct {
       // Made a field object from the source, but the annotations were computed by the compiler
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryFieldStruct) {
-        const newDef = {...field.fieldDef, annotation, drillExpression};
+        const newDef = {...field.fieldDef, annotations, drillExpression};
         return new QueryFieldStruct(
           newDef,
           undefined,
@@ -777,7 +730,7 @@ export class QueryStruct {
           field.referenceId
         );
       } else {
-        const newDef = {...field.fieldDef, annotation, drillExpression};
+        const newDef = {...field.fieldDef, annotations, drillExpression};
         return field.parent.makeQueryField(newDef, field.referenceId);
       }
     }
@@ -832,7 +785,7 @@ export class QueryStruct {
     turtleDef: TurtleDef | TurtleDefPlusFilters
   ): TurtleDef {
     const pipeline = [...turtleDef.pipeline];
-    const annotation = turtleDef.annotation;
+    const annotations = turtleDef.annotations;
 
     const addedFilters = (turtleDef as TurtleDefPlusFilters).filterList || [];
     pipeline[0] = {
@@ -847,7 +800,7 @@ export class QueryStruct {
       type: 'turtle',
       name: turtleDef.name,
       pipeline,
-      annotation,
+      annotations,
       location: turtleDef.location,
     };
     return flatTurtleDef;

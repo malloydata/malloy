@@ -192,7 +192,7 @@ export class StaticSpace implements FieldSpace {
               : 'fieldReference',
           definition: {
             type: definition.type,
-            annotation: definition.annotation,
+            annotations: definition.annotations,
             location: definition.location,
           },
           location: head.location,

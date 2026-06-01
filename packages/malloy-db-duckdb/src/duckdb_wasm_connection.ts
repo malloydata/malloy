@@ -230,7 +230,8 @@ function unwrapTable(table: Table): QueryRecord[] {
   return table.toArray().map(row => unwrapRow(row, table.schema));
 }
 
-const isNode = () => typeof navigator === 'undefined';
+const isNode = () =>
+  typeof process !== 'undefined' && typeof process.versions?.node === 'string';
 
 type RemoteFileCallback = (
   tableName: string
@@ -332,8 +333,12 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
             })
           );
 
-      // Instantiate the asynchronous version of DuckDB-wasm
-      this.worker = new Worker(workerUrl);
+      // Instantiate the asynchronous version of DuckDB-wasm. Under Node the
+      // worker bundle is a CommonJS module, so load it as a module worker;
+      // web-worker's classic-script path runs it without a module scope.
+      this.worker = isNode()
+        ? new Worker(workerUrl, {type: 'module'})
+        : new Worker(workerUrl);
       const logger = new duckdb.VoidLogger();
       this._database = new duckdb.AsyncDuckDB(logger, this.worker);
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);

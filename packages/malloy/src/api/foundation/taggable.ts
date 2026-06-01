@@ -14,17 +14,17 @@ export interface Taggable {
   /**
    * Route-aware annotation access — read annotations by *route*. See
    * `Annotations` for what a route is and which ones are claimed. Unlike
-   * `tagParse`/`getTaglines`, this sees block annotations (`#|`…`|#`).
+   * `tagParse`/`getTaglines`, this sees multi-line annotations (`#|`…`|#`).
    */
   readonly annotations: Annotations;
   /**
-   * @deprecated The RegExp form cannot see block annotations (`#|`…`|#`) and
-   * cannot report content offsets for error mapping. Use
+   * @deprecated The RegExp form cannot see multi-line annotations
+   * (`#|`…`|#`) and cannot report content offsets for error mapping. Use
    * `annotations.parseAsTag(route)` instead.
    */
   tagParse: (spec?: TagParseSpec) => MalloyTagParse;
   /**
-   * @deprecated The RegExp form cannot see block annotations. Use
+   * @deprecated The RegExp form cannot see multi-line annotations. Use
    * `annotations.texts(route)` (raw strings) or `annotations.forRoute(route)`
    * (objects with offsets) instead.
    */

@@ -91,6 +91,7 @@ export * from './expressions/range';
 export * from './expressions/time-frame';
 export * from './expressions/unary';
 export * from './statements/import-statement';
+export * from './statements/export-statement';
 export * from './query-properties/extend';
 export * from './parameters/argument';
 export * from './parameters/has-parameter';

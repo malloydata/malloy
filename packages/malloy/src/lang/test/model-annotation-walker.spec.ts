@@ -26,9 +26,9 @@ import {TestTranslator, markSource} from './test-translator';
 test('model annotations can be retrieved', () => {
   const src = markSource`${'## foo'}`;
   const doc = new TestTranslator(src.code);
-  const {modelAnnotation} = doc.modelAnnotation();
-  expect(modelAnnotation?.notes?.length).toBe(1);
-  const notes = modelAnnotation?.notes ?? [];
+  const {modelAnnotations} = doc.modelAnnotation();
+  expect(modelAnnotations?.notes?.length).toBe(1);
+  const notes = modelAnnotations?.notes ?? [];
   expect(notes[0].text).toBe('## foo');
   expect(notes[0].at).toMatchObject(src.locations[0]);
 });
@@ -40,6 +40,6 @@ test('does not explode if bad parse', () => {
   `;
   const doc = new TestTranslator(src.code);
   const response = doc.modelAnnotation();
-  expect(response.modelAnnotation).toBe(undefined);
+  expect(response.modelAnnotations).toBe(undefined);
   expect(response.final).toBe(true);
 });

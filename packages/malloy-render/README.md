@@ -1,6 +1,6 @@
 # Malloy Renderer
 
-The Malloy Renderer is a web component for rendering Malloy query results. It is included by default in the Malloy VSCode extension, but can also be embedded by developers into their own applications that use Malloy query results. To learn more about how to use the renderer in a Malloy model, see [the Renderer docs](https://docs.malloydata.dev/documentation/visualizations/overview).
+The Malloy Renderer is a web component for rendering Malloy query results. It is included by default in the Malloy VSCode extension, but can also be embedded by developers into their own applications. To learn more about how to use the renderer in a Malloy model, see [the Renderer docs](https://docs.malloydata.dev/documentation/visualizations/overview).
 
 ## Using the Renderer in Web Apps
 
@@ -25,7 +25,7 @@ malloyRenderElement.result = myMalloyResult;
 
 /*
 Alternatively, you can pass Malloy QueryResult and ModelDef objects to the renderer,
-which will then construct the Result object. This is useful when you are receiving serialiazed Malloy results via an API.
+which will then construct the Result object. This is useful when you are receiving serialized Malloy results via an API.
 */
 malloyRenderElement.queryResult = myQueryResult;
 malloyRenderElement.modelDef = myModelDef;

@@ -19,7 +19,7 @@ export const EMPTY_BUILD_MANIFEST: BuildManifest = Object.freeze({
   strict: false,
 });
 
-export type {Taggable} from '../../taggable';
+export type {Taggable} from './taggable';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -79,7 +79,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     }
     const {
       pipeline: rhsPipeline,
-      annotation,
+      annotations,
       outputStruct,
       name,
     } = this.view.pipelineComp(fieldSpace);
@@ -87,7 +87,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     const query = {
       ...queryBase,
       name,
-      annotation,
+      annotations,
       pipeline: [...queryBase.pipeline, ...rhsPipeline],
     };
 

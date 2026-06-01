@@ -7,7 +7,7 @@
 
 import type {
   AccessModifierLabel,
-  Annotation,
+  AnnotationsDef,
   DocumentLocation,
   FieldDef,
   SourceDef,
@@ -25,7 +25,7 @@ import type {MalloyElement} from '../types/malloy-element';
 
 export interface JoinIncludeProcessingState {
   star: AccessModifierLabel | 'inherit' | 'except' | undefined;
-  starNote: Annotation | undefined;
+  starNote: AnnotationsDef | undefined;
   fieldsIncluded: Set<string>;
   joinNames: Set<string>;
   fieldsExcepted: Set<string>;
@@ -38,7 +38,7 @@ export interface JoinIncludeProcessingState {
     location: DocumentLocation;
   }[];
   fieldsToInclude: Set<string> | undefined;
-  notes: Map<string, Annotation>;
+  notes: Map<string, AnnotationsDef>;
 }
 
 export interface IncludeProcessingState {

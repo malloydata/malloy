@@ -180,7 +180,7 @@ export class SQLSource extends Source {
       const fromDoc = this.document();
       const modelAnnotation = fromDoc?.currentModelAnnotation();
       if (modelAnnotation) {
-        locStruct.modelAnnotation = modelAnnotation;
+        locStruct.modelAnnotations = modelAnnotation;
       }
       return locStruct;
     } else {
