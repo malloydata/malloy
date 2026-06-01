@@ -708,6 +708,16 @@ export interface AliasedName {
   as?: string;
 }
 
+/**
+ * The name an `AliasedName` goes by in its current context: its `as` binding
+ * if it has one, otherwise its intrinsic `name`. This is the only correct way
+ * to ask "what is this called here" — see the `name`/`as` invariant in
+ * model/CONTEXT.md.
+ */
+export function activeName(an: AliasedName): string {
+  return an.as ?? an.name;
+}
+
 /** all named objects have a type an a name (optionally aliased) */
 export interface NamedObject extends AliasedName, HasLocation {
   type: string;

@@ -152,6 +152,43 @@ describe('virtual source resolution', () => {
     expect(row['model_count']).toBeDefined();
   });
 
+  it('join to derived virtual source (extend)', async () => {
+    // A virtual source carries its `virtualMap` key in `name`. Joining a
+    // source rebinds it to the join name; that rebinding must go through `as`
+    // and leave `name` intact, otherwise the key ("vcarriers") is replaced by
+    // the join name ("carriers") and resolution fails with
+    // "No virtual-map entry for 'carriers'".
+    const code = `${VIRTUAL_ANNOTATION}
+      type: flight_fields is { carrier :: string }
+      type: carrier_fields is { code :: string, nickname :: string }
+
+      source: flights_raw is ${tstDB}.virtual('vflights')::flight_fields
+      source: carriers_raw is ${tstDB}.virtual('vcarriers')::carrier_fields
+
+      source: carriers is carriers_raw extend {
+        primary_key: code
+      }
+      source: flights is flights_raw extend {
+        join_one: carriers with carrier
+      }
+
+      run: flights -> {
+        group_by: carriers.nickname
+        aggregate: flight_count is count()
+      }
+    `;
+
+    const virtualMap = mkVirtualMap({
+      [tstDB]: {
+        vflights: 'malloytest.flights',
+        vcarriers: 'malloytest.carriers',
+      },
+    });
+
+    const result = await tstRuntime.loadQuery(code).run({virtualMap});
+    expect(result.data.value.length).toBeGreaterThan(0);
+  });
+
   it('virtualMap from MalloyConfig is available', () => {
     const configJSON = JSON.stringify({
       connections: {

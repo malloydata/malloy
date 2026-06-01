@@ -22,6 +22,7 @@ import type {
   TypeDesc,
 } from '../../../model/malloy_types';
 import {
+  activeName,
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
@@ -215,7 +216,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
         if (f.type === 'fieldref') {
           return f.path[f.path.length - 1] === name.refString;
         } else {
-          return f.as ?? f.name === name.refString;
+          return activeName(f) === name.refString;
         }
       });
       if (field === undefined) {

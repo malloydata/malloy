@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import {isJoined} from '../../model';
+import {activeName, isJoined} from '../../model';
 import './parse-expects';
 import {TestTranslator, errorMessage, model} from './test-translator';
 import escapeRegEx from 'lodash/escapeRegExp';
@@ -96,7 +96,7 @@ source: botProjQSrc is botProjQ
     });
     expect(docParse).toTranslate();
     const newSrc = docParse.getSourceDef('newSrc');
-    const maybeField = newSrc?.fields.find(f => f.name === 'b');
+    const maybeField = newSrc?.fields.find(f => activeName(f) === 'b');
     expect(maybeField).toBeDefined();
     if (maybeField && isJoined(maybeField)) {
       expect(maybeField.type).toBe('query_source');
