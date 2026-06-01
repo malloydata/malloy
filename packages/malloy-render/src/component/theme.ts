@@ -8,12 +8,16 @@
 import type {Tag} from '@malloydata/malloy-tag';
 import type {MalloyExplicitTheme} from '@/api/types';
 
+// Convert a camelCase theme prop name to its kebab-case CSS suffix,
+// e.g. `tableRowHeight` -> `table-row-height`.
+function propToKebab(prop: keyof MalloyExplicitTheme): string {
+  return prop.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
 // Convert a MalloyExplicitTheme prop name to the matching renderer CSS
 // variable name, e.g. `tableRowHeight` -> `--malloy-render--table-row-height`.
 export function themePropToCssVar(prop: keyof MalloyExplicitTheme): string {
-  return `--malloy-render--${prop
-    .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .toLowerCase()}`;
+  return `--malloy-render--${propToKebab(prop)}`;
 }
 
 // Set of `--malloy-render--*` CSS var names that the embedder has
@@ -54,11 +58,9 @@ export function getThemeValue(
     const value = theme?.text(prop);
     if (typeof value === 'string' && value !== '') return value;
   }
-  // If no theme overrides, convert prop name from camelCase to kebab and
-  // pull from the --malloy-theme-- variable.
-  return `var(--malloy-theme--${prop
-    .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .toLowerCase()})`;
+  // If no theme overrides, fall back to the --malloy-theme-- variable
+  // using the kebab-cased prop name.
+  return `var(--malloy-theme--${propToKebab(prop)})`;
 }
 
 export function generateThemeStyle(

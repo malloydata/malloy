@@ -231,7 +231,10 @@ export function MalloyRenderInner(props: {
     // explicitly set on `props.theme`; otherwise an embedder-supplied
     // `theme.background` silently loses to plugin-derived defaults
     // (e.g. bar-chart writing `--malloy-render--background` from its
-    // vegaConfig.background).
+    // vegaConfig.background). This intentionally also lets
+    // `theme.background` win over a per-chart `vegaConfigOverride`
+    // background at the container level; that chart's own canvas still
+    // paints its override.
     const suppressed = themeOverridesAsCssVarNames(props.theme);
     const overrideStyles = Object.entries(metadata().styleOverrides)
       .filter(([key]) => !suppressed.has(key))

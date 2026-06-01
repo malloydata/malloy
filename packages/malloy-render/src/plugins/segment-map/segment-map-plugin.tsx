@@ -17,7 +17,7 @@ import * as lite from 'vega-lite';
 import * as vega from 'vega';
 import usAtlas from 'us-atlas/states-10m.json';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
-import {getColorScale} from '@/html/utils';
+import {getColorScale, mapCanvasBackground} from '@/html/utils';
 import type {
   GetResultMetadataOptions,
   RenderMetadata,
@@ -185,16 +185,10 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
                 },
               },
             ],
-            // Default to transparent so the map blends with whatever
-            // host paints behind it. When `theme.background` is set,
-            // use it directly so the Vega canvas matches the rest of
-            // the chrome (the CSS-var-based theming used by tables
-            // doesn't reach the SVG itself). Empty string is treated
-            // as unset (matches getThemeValue) so a cleared form field
-            // falls back to transparent rather than handing Vega
-            // `background: ''`. `vegaConfigOverride` still wins via
-            // the merge below.
-            background: themeForRender?.background || 'transparent',
+            // Map canvas background from the embedder theme; an unset or
+            // empty value falls back to transparent so the map blends with
+            // the host chrome. `vegaConfigOverride` can still override it.
+            background: mapCanvasBackground(themeForRender),
             config: SEGMENT_MAP_VEGA_CONFIG,
           };
 

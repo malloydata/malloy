@@ -39,6 +39,9 @@ import type {Field} from '../data_tree';
 const MAP_GRADIENT_LOW_LIGHT = '#f5f5f5';
 const MAP_GRADIENT_LOW_DARK = '#3a3a3a';
 
+// Default blue 2-stop ramp for sequential (non-heatmap) colour scales.
+const DEFAULT_SEQUENTIAL_RANGE = ['#C2D5EE', '#1A73E8'];
+
 /**
  * sRGB relative luminance per WCAG 2 (0 = black, 1 = white). Returns
  * `null` for inputs that don't parse as a 3- or 6-digit hex; callers
@@ -91,15 +94,15 @@ export function getColorScale(
   switch (type) {
     case 'ordinal':
       return isRectMark
-        ? {range: ['#C2D5EE', '#1A73E8']}
-        : {range: sequentialGradient ?? ['#C2D5EE', '#1A73E8']};
+        ? {range: DEFAULT_SEQUENTIAL_RANGE}
+        : {range: sequentialGradient ?? DEFAULT_SEQUENTIAL_RANGE};
     case 'temporal':
     case 'quantitative':
       return isRectMark
         ? hasOverlappingText
           ? {range: ['#6BA4EE', '#EEA361']}
           : {range: ['#1A73E8', '#E8710A']}
-        : {range: sequentialGradient ?? ['#C2D5EE', '#1A73E8']};
+        : {range: sequentialGradient ?? DEFAULT_SEQUENTIAL_RANGE};
     case 'nominal':
       return hasOverlappingText
         ? {
@@ -127,6 +130,16 @@ export function getColorScale(
             ],
           };
   }
+}
+
+// Resolve the Vega canvas background for the map plugins from the
+// embedder theme. An unset or empty `theme.background` falls back to
+// `'transparent'` so the map blends with the host chrome; only a
+// non-empty value paints the canvas.
+export function mapCanvasBackground(
+  explicitTheme?: MalloyExplicitTheme
+): string {
+  return explicitTheme?.background || 'transparent';
 }
 
 function numberFixedDigits(value: number, digits: number) {

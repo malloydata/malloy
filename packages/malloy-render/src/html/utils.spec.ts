@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {getColorScale} from './utils';
+import {getColorScale, mapCanvasBackground} from './utils';
 
 describe('getColorScale', () => {
   test('returns undefined when type is undefined', () => {
@@ -144,5 +144,20 @@ describe('getColorScale', () => {
         getColorScale('quantitative', false, false, {mapColor: ''})
       ).toEqual({range: ['#C2D5EE', '#1A73E8']});
     });
+  });
+});
+
+describe('mapCanvasBackground', () => {
+  test('uses a non-empty theme.background verbatim', () => {
+    expect(mapCanvasBackground({background: '#222'})).toBe('#222');
+  });
+
+  test('falls back to transparent when the theme or background is unset', () => {
+    expect(mapCanvasBackground(undefined)).toBe('transparent');
+    expect(mapCanvasBackground({})).toBe('transparent');
+  });
+
+  test('treats an empty-string background as unset (transparent, not "")', () => {
+    expect(mapCanvasBackground({background: ''})).toBe('transparent');
   });
 });

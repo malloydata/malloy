@@ -18,7 +18,7 @@ import * as vega from 'vega';
 import usAtlas from 'us-atlas/states-10m.json';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
 import {STATE_CODES} from '@/html/state_codes';
-import {getColorScale} from '@/html/utils';
+import {getColorScale, mapCanvasBackground} from '@/html/utils';
 import type {
   GetResultMetadataOptions,
   RenderMetadata,
@@ -212,16 +212,10 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
                 },
               },
             ],
-            // Default to transparent so the map blends with whatever
-            // host paints behind it (matches the renderer's long-standing
-            // behaviour). When the embedder supplies an explicit
-            // `theme.background`, use that as the Vega canvas colour so
-            // the map matches the rest of the chrome. Empty string is
-            // treated as unset (matches getThemeValue) so a cleared form
-            // field falls back to transparent rather than handing Vega
-            // `background: ''`. A consumer can still override either
-            // outcome via `vegaConfigOverride`.
-            background: themeForRender?.background || 'transparent',
+            // Map canvas background from the embedder theme; an unset or
+            // empty value falls back to transparent so the map blends with
+            // the host chrome. `vegaConfigOverride` can still override it.
+            background: mapCanvasBackground(themeForRender),
             config: SHAPE_MAP_VEGA_CONFIG,
           };
 
