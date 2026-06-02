@@ -187,7 +187,9 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
             ],
             // Map canvas background from the embedder theme; an unset or
             // empty value falls back to transparent so the map blends with
-            // the host chrome. `vegaConfigOverride` can still override it.
+            // the host chrome. `vegaConfigOverride` cannot change this: it
+            // merges only into spec.config, which a top-level spec.background
+            // shadows in Vega-Lite.
             background: mapCanvasBackground(themeForRender),
             config: SEGMENT_MAP_VEGA_CONFIG,
           };
