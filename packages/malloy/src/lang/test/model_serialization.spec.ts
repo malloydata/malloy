@@ -21,8 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {StructDef, TableSourceDef} from '../../model/malloy_types';
-import {Explore} from '../../api/foundation';
+import type {
+  ModelAnnotationsDef,
+  ModelID,
+  Note,
+  ObjectAnnotationsDef,
+  StructDef,
+  TableSourceDef,
+} from '../../model/malloy_types';
+import {Explore, pseudoModelFor} from '../../api/foundation/core';
 
 export const CHILD_EXPLORE: TableSourceDef = {
   type: 'table',
@@ -102,24 +109,41 @@ export const SOURCE_EXPLORE: StructDef = {
 
 describe('serializeModel', () => {
   test('Stringify on an `explore` with no parent nor source explore', async () => {
-    const parent_explore = new Explore(PARENT_EXPLORE);
+    const parent_explore = new Explore(
+      pseudoModelFor(PARENT_EXPLORE),
+      PARENT_EXPLORE
+    );
     expect(JSON.stringify(parent_explore)).toStrictEqual(
-      '{"_structDef":{"type":"table","name":"some_ns.parent","as":"parent","dialect":"standardsql","tablePath":"some_ns.parent","connection":"bigquery","primaryKey":"id2","fields":[{"type":"string","name":"name"},{"type":"number","name":"some_parent_count","expressionType":"aggregate","e":{"node":"aggregate","function":"count","e":{"node":""}}}]}}'
+      '{"_structDef":{"type":"table","name":"some_ns.parent","as":"parent","dialect":"standardsql","tablePath":"some_ns.parent","connection":"bigquery","primaryKey":"id2","fields":[{"type":"string","name":"name"},{"type":"number","name":"some_parent_count","expressionType":"aggregate","e":{"node":"aggregate","function":"count","e":{"node":""}}}]},"modelID":"internal://generated-model","modelAnnotationsByID":{}}'
     );
   });
 
   test('No parent nor source explore', async () => {
-    const parent_explore = new Explore(PARENT_EXPLORE);
+    const parent_explore = new Explore(
+      pseudoModelFor(PARENT_EXPLORE),
+      PARENT_EXPLORE
+    );
     expect(Explore.fromJSON(parent_explore.toJSON())).toStrictEqual(
       parent_explore
     );
   });
 
   test('Having parent and source explores', async () => {
-    const grandparent_explore = new Explore(GRANDPARENT_EXPLORE);
-    const parent_explore = new Explore(PARENT_EXPLORE, grandparent_explore);
-    const source_explore = new Explore(SOURCE_EXPLORE);
+    const grandparent_explore = new Explore(
+      pseudoModelFor(GRANDPARENT_EXPLORE),
+      GRANDPARENT_EXPLORE
+    );
+    const parent_explore = new Explore(
+      pseudoModelFor(PARENT_EXPLORE),
+      PARENT_EXPLORE,
+      grandparent_explore
+    );
+    const source_explore = new Explore(
+      pseudoModelFor(SOURCE_EXPLORE),
+      SOURCE_EXPLORE
+    );
     const child_explore = new Explore(
+      pseudoModelFor(CHILD_EXPLORE),
       CHILD_EXPLORE,
       parent_explore,
       source_explore
@@ -127,5 +151,28 @@ describe('serializeModel', () => {
     expect(Explore.fromJSON(child_explore.toJSON())).toStrictEqual(
       child_explore
     );
+  });
+
+  test('model annotations survive serialization round-trip', async () => {
+    const at = {
+      url: 'test',
+      range: {start: {line: 0, character: 0}, end: {line: 0, character: 0}},
+    };
+    const note = (text: string): Note => ({text, at});
+    // A struct whose annotation chain came from model `M`, plus `M`'s
+    // annotation bundle in the resolution map — only resolves with the map.
+    const annotations: ObjectAnnotationsDef = {fromModel: 'M'};
+    const struct: TableSourceDef = {...CHILD_EXPLORE, annotations};
+    const byID: Record<ModelID, ModelAnnotationsDef> = {
+      M: {notes: [note('## theme=foo\n')]},
+    };
+    const explore = new Explore(pseudoModelFor(struct, 'M', byID), struct);
+
+    // The live Explore resolves the model annotation...
+    expect(explore.modelAnnotations.texts()).toEqual(['## theme=foo\n']);
+    // ...and the deserialized one resolves it identically (the map crossed the
+    // wire; without it `fromJSON` would resolve against an empty map).
+    const round = Explore.fromJSON(explore.toJSON());
+    expect(round.modelAnnotations.texts()).toEqual(['## theme=foo\n']);
   });
 });

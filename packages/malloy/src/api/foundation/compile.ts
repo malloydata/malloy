@@ -42,7 +42,7 @@ import type {
   CompileMethod,
 } from './types';
 import type {PreparedResult} from './core';
-import {Model, Explore} from './core';
+import {Model, Explore, pseudoModelFor} from './core';
 import {Result, DataRecord} from './result';
 
 /**
@@ -746,7 +746,7 @@ export class Malloy {
     let sql: string;
     let resultExplore: Explore;
     if (sqlStruct) {
-      resultExplore = new Explore(sqlStruct);
+      resultExplore = new Explore(pseudoModelFor(sqlStruct), sqlStruct);
       sql = sqlStruct.selectStr;
     } else if (preparedResult !== undefined) {
       resultExplore = preparedResult.resultExplore;
