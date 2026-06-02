@@ -35,7 +35,13 @@ const ADVERSARIAL_STRINGS: {name: string; value: string}[] = [
   {name: 'line_comment', value: '-- injected'},
   {name: 'all_delims', value: '\'`"\\'},
   {name: 'newline', value: 'line1\nline2'},
+  {name: 'carriage_return', value: 'line1\rline2'},
+  {name: 'crlf', value: 'line1\r\nline2'},
   {name: 'tab', value: 'col\tval'},
+  // A multi-line text value with several embedded CRLFs — the shape that,
+  // emitted unescaped inside a generated string literal, made BigQuery
+  // report "Unclosed string literal". This is the case the fix exists for.
+  {name: 'multiline_blob', value: 'Order summary\r\nitem: widget\r\nqty: 3'},
 ];
 
 // ---------------------------------------------------------------------------
@@ -67,6 +73,15 @@ function parseStringLiteral(
         continue;
       }
       return {value, end: i + 1};
+    }
+    if (mode === 'backslash' && (c === '\n' || c === '\r')) {
+      // A backslash-style literal (BigQuery et al.) cannot span a raw
+      // newline: the lexer ends the literal at the line break, leaving it
+      // unterminated ("Unclosed string literal"). Model that here so an
+      // unescaped newline is caught as a parse failure rather than silently
+      // consumed — the permissive `value += c` path below would otherwise
+      // hide exactly the bug this corpus exists to catch.
+      return null;
     }
     if (mode === 'backslash' && c === '\\') {
       if (i + 1 >= sql.length) return null;
@@ -125,6 +140,13 @@ function parseQuotedIdent(
         continue;
       }
       return {value, end: i + 1};
+    }
+    if (mode === 'backslash' && (c === '\n' || c === '\r')) {
+      // Same rule as parseStringLiteral: a backslash-style quoted token
+      // cannot span a raw newline. Modelled here too so the identifier
+      // round-trip catches an unescaped newline rather than silently
+      // consuming it via the `value += c` path below.
+      return null;
     }
     value += c;
     i++;
@@ -248,6 +270,38 @@ for (const dialect of getDialects()) {
     });
   });
 }
+
+// Exact-encoding contract for backslash-style dialects.
+//
+// The round-trip tests above prove the value survives a decode; they do
+// not pin the *encoding*. This block asserts the literal output byte-for-
+// byte, so a regression to a different-but-still-decodable form (e.g.
+// `\x0a` or a raw byte) is caught. The byte-exact form is what keeps
+// generated SQL single-line and ordered (`<` / `>`) comparisons correct.
+describe('backslash-style exact encoding', () => {
+  // standardsql (BigQuery) is the canonical backslash-style dialect.
+  const bq = getDialects().find(d => d.name === 'standardsql')!;
+
+  it('escapes LF, CR, and TAB as named escapes', () => {
+    expect(bq.sqlLiteralString('a\nb\rc\td')).toBe("'a\\nb\\rc\\td'");
+  });
+
+  it('escapes the backslash and the closing quote', () => {
+    expect(bq.sqlLiteralString("a\\b'c")).toBe("'a\\\\b\\'c'");
+  });
+
+  it('emits no raw newline anywhere in the output', () => {
+    expect(bq.sqlLiteralString('x\r\ny')).not.toMatch(/[\n\r]/);
+  });
+
+  it('escapes control characters in quoted identifiers too', () => {
+    // sqlQuoteIdentifier shares the backslash-escape contract; a raw
+    // newline would break a backtick-quoted BigQuery identifier exactly
+    // as it breaks a string literal.
+    expect(bq.sqlQuoteIdentifier('col\nname')).toBe('`col\\nname`');
+    expect(bq.sqlQuoteIdentifier('col\nname')).not.toMatch(/[\n\r]/);
+  });
+});
 
 // Record-literal and field-reference smuggling tests.
 //

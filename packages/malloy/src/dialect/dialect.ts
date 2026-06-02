@@ -567,6 +567,50 @@ export abstract class Dialect {
   identifierEscapeStyle: EscapeStyleValue = EscapeStyle.Unset;
 
   /**
+   * Escape the body of a backslash-style quoted token — a string literal
+   * (`'…'`) or a quoted identifier (`` `…` ``) — for the dialects whose
+   * `EscapeStyle` is `Backslash` (BigQuery, Snowflake, MySQL, Databricks).
+   * Escapes the backslash, the closing delimiter `delim`, and the control
+   * characters newline / carriage-return / tab.
+   *
+   * The driving case is the raw newline: BigQuery rejects it outright
+   * ("Unclosed string literal"). The other three dialects tolerate a raw
+   * newline but decode `\n`/`\r`/`\t` to the same bytes, so escaping
+   * uniformly keeps the value byte-exact — ordered (`<` / `>`) comparisons
+   * against the original stay correct — and the generated SQL single-line.
+   *
+   * Scope is deliberately these three control characters: the ones seen to
+   * break real queries. Other non-printables (`\0`, U+2028, U+2029) are
+   * passed through — there is no evidence they terminate these dialects'
+   * lexers, and escaping bytes we have not verified risks corrupting values.
+   */
+  protected escapeBackslashStyle(body: string, delim: string): string {
+    let out = '';
+    for (const ch of body) {
+      switch (ch) {
+        case '\\':
+          out += '\\\\';
+          break;
+        case '\n':
+          out += '\\n';
+          break;
+        case '\r':
+          out += '\\r';
+          break;
+        case '\t':
+          out += '\\t';
+          break;
+        case delim:
+          out += '\\' + delim;
+          break;
+        default:
+          out += ch;
+      }
+    }
+    return out;
+  }
+
+  /**
    * Wrap an identifier in the dialect's quote character, escaping any
    * embedded quote characters per the dialect's `identifierEscapeStyle`.
    * This is the only safe way to render a user-controlled identifier
@@ -585,11 +629,7 @@ export abstract class Dialect {
       return q + identifier.split(q).join(q + q) + q;
     }
     if (this.identifierEscapeStyle === EscapeStyle.Backslash) {
-      const escaped = identifier
-        .replace(/\\/g, '\\\\')
-        .split(q)
-        .join('\\' + q);
-      return q + escaped + q;
+      return q + this.escapeBackslashStyle(identifier, q) + q;
     }
     throw new Error(
       `${this.name}: identifierEscapeStyle is not set. ` +
@@ -943,8 +983,10 @@ export abstract class Dialect {
       return "'" + literal.split("'").join("''") + "'";
     }
     if (this.stringLiteralStyle === 'backslash') {
-      const escaped = literal.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      return "'" + escaped + "'";
+      // Backslash-style literals must escape control characters; a raw
+      // newline terminates the literal early in BigQuery ("Unclosed string
+      // literal"). See escapeBackslashStyle for the full contract.
+      return "'" + this.escapeBackslashStyle(literal, "'") + "'";
     }
     throw new Error(
       `${this.name}: stringLiteralStyle is not set. ` +

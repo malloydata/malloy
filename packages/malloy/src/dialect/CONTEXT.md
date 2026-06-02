@@ -262,7 +262,9 @@ Every dialect must declare three fields that drive identifier and string-literal
 
 The base class provides safe implementations of `sqlQuoteIdentifier`, `sqlLiteralString`, and `sqlLiteralRegexp` driven by these flags. Dialects normally do not override them. If a subclass forgets to set a flag, the base method throws at first use with a message naming the dialect and the missing flag — `escape.spec.ts` exercises this fail-fast path on every registered dialect, so a forgotten flag fails CI rather than producing wrong SQL silently.
 
-The contract is verified by `packages/malloy/src/dialect/escape.spec.ts`, which iterates `getDialects()` and asserts that an adversarial input corpus round-trips through each escape function. A new dialect is covered automatically the moment it is registered in `dialect_map.ts`; you do not need to edit the spec file.
+For `EscapeStyle.Backslash`, both the literal and identifier paths share `escapeBackslashStyle`, which escapes the backslash, the closing delimiter, and the control characters `\n` / `\r` / `\t`. A raw newline terminates a backslash-style token early in BigQuery ("Unclosed string literal"); the other backslash dialects tolerate it but decode the named escapes to the same bytes, so escaping uniformly keeps values byte-exact. The escape set is deliberately those three control characters — `\0` and the Unicode line/paragraph separators are passed through, since there is no evidence they break these lexers.
+
+The contract is verified at two levels: `packages/malloy/src/dialect/escape.spec.ts` iterates `getDialects()` and asserts an adversarial corpus round-trips through each escape function (a new dialect is covered automatically the moment it is registered in `dialect_map.ts`), and `test/src/databases/all/escape.spec.ts` proves the output parses against the real engines. Extend the corpora when you add a character class the escapers must handle; you do not need to touch the spec to cover a new *dialect*.
 
 ### Table-path validation contract
 

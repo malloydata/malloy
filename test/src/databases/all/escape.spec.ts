@@ -33,6 +33,15 @@ const STRING_CORPUS: {name: string; value: string}[] = [
   {name: 'backslash', value: 'a\\b'},
   {name: 'trailing_backslash', value: 'foo\\'},
   {name: 'injection', value: "';DROP TABLE x;--"},
+  // Control characters. A raw newline broke BigQuery ("Unclosed string
+  // literal"); these prove the escaped output round-trips on the real
+  // engine, which the unit-test parser alone cannot. `multiline_blob`
+  // covers a value with several embedded CRLFs. (A lone `\r` is left to
+  // the unit corpus: some engines normalize a bare CR, which would make
+  // the assertion engine-dependent rather than a clean escape check.)
+  {name: 'newline', value: 'line1\nline2'},
+  {name: 'crlf', value: 'line1\r\nline2'},
+  {name: 'multiline_blob', value: 'Order summary\r\nitem: widget\r\nqty: 3'},
 ];
 
 // Regex patterns that exercise backslash semantics in backslash-style
@@ -56,7 +65,28 @@ const IDENT_CORPUS: {name: string; value: string}[] = [
 ];
 
 function toMalloyString(s: string): string {
-  return "'" + s.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+  // Mirror the dialect's backslash escaping so control-character values
+  // produce valid Malloy source. Malloy's lexer decodes \n/\r/\t back to
+  // the original bytes (malloy-tag parseString), so the value reaching the
+  // dialect — and the database — is exact. Backslash is escaped in the
+  // same pass, so this stays complete (not js/incomplete-sanitization).
+  const body = s.replace(/[\\'\n\r\t]/g, ch => {
+    switch (ch) {
+      case '\\':
+        return '\\\\';
+      case "'":
+        return "\\'";
+      case '\n':
+        return '\\n';
+      case '\r':
+        return '\\r';
+      case '\t':
+        return '\\t';
+      default:
+        return ch;
+    }
+  });
+  return "'" + body + "'";
 }
 
 // Render a JS string as a Malloy regex literal (r'...').
