@@ -260,9 +260,13 @@ Every dialect must declare three fields that drive identifier and string-literal
 
 `EscapeStyle` is exported from `dialect.ts`; importing it gives the literal-type narrowing for free, so dialect files do not need `as const`.
 
-The base class provides safe implementations of `sqlQuoteIdentifier`, `sqlLiteralString`, and `sqlLiteralRegexp` driven by these flags. Dialects normally do not override them. If a subclass forgets to set a flag, the base method throws at first use with a message naming the dialect and the missing flag — `escape.spec.ts` exercises this fail-fast path on every registered dialect, so a forgotten flag fails CI rather than producing wrong SQL silently.
+The base class provides safe implementations of `sqlQuoteIdentifier`, `sqlLiteralString`, and `sqlLiteralRegexp` driven by these flags. If a subclass forgets to set a flag, the base method throws at first use with a message naming the dialect and the missing flag, so a forgotten flag fails CI rather than producing wrong SQL silently.
 
-The contract is verified by `packages/malloy/src/dialect/escape.spec.ts`, which iterates `getDialects()` and asserts that an adversarial input corpus round-trips through each escape function. A new dialect is covered automatically the moment it is registered in `dialect_map.ts`; you do not need to edit the spec file.
+For `EscapeStyle.Backslash` (BigQuery, Snowflake, MySQL, Databricks), both the literal and identifier paths share `escapeBackslashStyle`, which escapes the backslash, the closing delimiter, and the control characters `\n` / `\r` / `\t`. A raw newline terminates a backslash-style token early in BigQuery ("Unclosed string literal"); the other backslash dialects tolerate it but decode the named escapes to the same bytes, so escaping uniformly keeps values byte-exact. The escape set is deliberately those three control characters — `\0` and the Unicode line/paragraph separators are passed through, since there is no evidence they break these lexers.
+
+A raw newline is also the one value plain `EscapeStyle.Doubled` (`''`) quoting cannot carry safely: the literal is valid SQL, but the SQL indenter (`indent()` in `model/utils.ts`) injects whitespace after every newline, corrupting a multi-line literal. So `PostgresBase.sqlLiteralString` encodes a newline-bearing literal as a Postgres/DuckDB `E'…'` escape string, and `TrinoDialect` overrides that with a Trino/Presto `U&'…'` Unicode-escape literal. These are the only overrides of the base literal methods.
+
+The contract is verified at two levels. `packages/malloy/src/dialect/escape.spec.ts` (connection-free) asserts, for every registered dialect, the byte-exact encoding, fail-fast on a missing flag, field-name injection containment, and the table-path grammar. `test/src/databases/all/escape-e2e.spec.ts` round-trips an adversarial corpus through the real engines — the only honest decode check. A new dialect is covered automatically once registered in `dialect_map.ts`; extend the e2e corpus when you add a character class the escapers must handle.
 
 ### Table-path validation contract
 

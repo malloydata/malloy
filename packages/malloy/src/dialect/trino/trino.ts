@@ -140,9 +140,31 @@ export class TrinoDialect extends PostgresBase {
   supportsCountApprox = true;
   supportsHyperLogLog = true;
 
-  // Trino bare identifier is strict ANSI (`[A-Za-z_][A-Za-z0-9_]*`),
-  // which matches the Dialect default — no override needed. Verified
-  // against the live engine.
+  // Trino bare identifier is strict ANSI, matching the Dialect default.
+
+  // Trino/Presto have no E'...' escape string, so encode a newline-bearing
+  // literal as U&'...'. Inside it the quote doubles (''), the backslash
+  // escape-introducer doubles (\\), and a control char becomes \XXXX.
+  sqlLiteralString(literal: string): string {
+    if (!literal.includes('\n')) {
+      return super.sqlLiteralString(literal);
+    }
+    const body = literal.replace(/['\\\n\r\t]/g, ch => {
+      switch (ch) {
+        case "'":
+          return "''";
+        case '\\':
+          return '\\\\';
+        case '\n':
+          return '\\000A';
+        case '\r':
+          return '\\000D';
+        default: // '\t'
+          return '\\0009';
+      }
+    });
+    return `U&'${body}'`;
+  }
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(SEQUENCE(0,${groupSetCount})))`;
