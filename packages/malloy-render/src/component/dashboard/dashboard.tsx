@@ -13,7 +13,10 @@ import type {Field, RecordCell, RecordOrRepeatedRecordCell} from '@/data_tree';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './dashboard.css?raw';
 import {useConfig} from '../render';
-import type {DashboardNestConfig} from '@/component/tag-configs';
+import type {
+  DashboardChildConfig,
+  DashboardNestConfig,
+} from '@/component/tag-configs';
 
 // Per-item minimum widths. Used for:
 //   - bucket assignment (minRowWidth -> row-collapse-{sm,md,lg})
@@ -61,6 +64,12 @@ function DashboardItem(props: {
         disableVirtualization: !shouldVirtualizeTable(),
         shouldFillWidth: true,
       },
+      // Big values inside a dashboard render embedded: the dashboard item
+      // supplies the card chrome, so big-value flattens itself rather than
+      // the dashboard reaching into big-value's internal classes.
+      big_value: {
+        embedded: true,
+      },
     },
   });
 
@@ -85,14 +94,16 @@ function DashboardItem(props: {
     itemStyle['max-height'] = `${props.maxTableHeight}px`;
 
   const title = props.field.getLabel();
-  const subtitle = props.field.getSubtitle();
+  const childConfig =
+    props.field.getDashboardChildConfig<DashboardChildConfig>();
+  const subtitle = childConfig?.subtitle;
 
   return (
     <div
       class="dashboard-item"
       classList={{
         'dashboard-item-measure': !!props.isMeasure,
-        'dashboard-item-borderless': props.field.isBorderless(),
+        'dashboard-item-borderless': !!childConfig?.borderless,
       }}
       onClick={config.onClick ? handleClick : undefined}
     >
@@ -131,21 +142,23 @@ export function Dashboard(props: {
   const gap = dashConfig?.gap;
   const gapPx = gap ?? DEFAULT_GAP_PX;
 
+  const childConfigOf = (f: Field) =>
+    f.getDashboardChildConfig<DashboardChildConfig>();
+
   const dashboardStyle = () => {
     const style: Record<string, string> = {};
     if (gap !== undefined) style['--malloy-render--dashboard-gap'] = `${gap}px`;
     return style;
   };
 
-  const useGrid = (() => {
-    if (columns !== undefined || gap !== undefined) return true;
-    return field.fields.some(
-      f =>
-        !f.isHidden() &&
-        !(f.isBasic() && f.wasDimension()) &&
-        (f.getSpan() !== undefined || f.hasBreak())
-    );
-  })();
+  // Grid is driven purely by the view-level columns/gap settings. # span and
+  // # break used to also flip the dashboard into grid mode, but that made the
+  // mode impossible to negate from an extension (a refinement can't reach back
+  // to drop a child's span/break). Span is now a grid-scoped sizing hint (the
+  // validator warns when it is used without a grid) and break works in both
+  // modes via nonDimensionsGrouped, so the mode is controlled entirely by
+  // columns/gap and round-trips cleanly on a copied dashboard.
+  const useGrid = columns !== undefined || gap !== undefined;
 
   const getColumnsStyle = () => {
     if (columns === undefined) return {};
@@ -165,7 +178,7 @@ export function Dashboard(props: {
 
   // Compute the effective span for a field
   const computeSpan = (f: Field): number => {
-    const explicit = f.getSpan();
+    const explicit = childConfigOf(f)?.span;
     if (explicit !== undefined) return explicit;
     if (f.isBasic() && f.wasCalculation()) return 3;
     if (f.isNest()) {
@@ -247,7 +260,7 @@ export function Dashboard(props: {
   const nonDimensionsGrouped = () => {
     const group: Field[][] = [[]];
     for (const f of nonDimensions()) {
-      if (f.hasBreak()) {
+      if (childConfigOf(f)?.break) {
         group.push([]);
       }
       const lastGroup = group.at(-1)!;

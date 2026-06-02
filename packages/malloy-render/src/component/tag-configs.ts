@@ -315,6 +315,20 @@ export interface DashboardNestConfig {
   gap: number | undefined;
 }
 
+/**
+ * Per-child layout config for the direct children of a # dashboard nest.
+ * Resolved once at setup time and stashed on each child via
+ * setDashboardChildConfig, so the dashboard component never reads child
+ * tags at render time and these dashboard-only concepts stay off the
+ * universal field base.
+ */
+export interface DashboardChildConfig {
+  span?: number;
+  subtitle?: string;
+  break?: boolean;
+  borderless?: boolean;
+}
+
 function resolveDashboardTags(field: Field): DashboardNestConfig {
   const tag = field.tag;
   const dashboardTag = tag.tag('dashboard');
@@ -398,6 +412,10 @@ export function resolveBuiltInTags(field: Field): void {
       if (field.isNest()) {
         for (const child of field.fields) {
           const childTag = child.tag;
+          // Always read each child tag (even when absent) so it is marked
+          // read and the unread-tag detector never warns on it. This is why
+          // the dashboard no longer needs childOwnedPaths entries.
+          const childConfig: DashboardChildConfig = {};
           const spanVal = childTag.numeric('span');
           // Drop out-of-range spans so the field gets its default span;
           // the validator already logged the error.
@@ -407,18 +425,19 @@ export function resolveBuiltInTags(field: Field): void {
             spanVal >= 1 &&
             spanVal <= 12
           ) {
-            child.setResolvedSpan(spanVal);
+            childConfig.span = spanVal;
           }
           const subtitle = childTag.text('subtitle');
           if (subtitle !== undefined) {
-            child.setResolvedSubtitle(subtitle);
+            childConfig.subtitle = subtitle;
           }
           if (childTag.has('break')) {
-            child.setResolvedBreak(true);
+            childConfig.break = true;
           }
           if (childTag.has('borderless')) {
-            child.setResolvedBorderless(true);
+            childConfig.borderless = true;
           }
+          child.setDashboardChildConfig(childConfig);
         }
       }
       break;
