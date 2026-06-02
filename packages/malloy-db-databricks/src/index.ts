@@ -59,6 +59,7 @@ registerConnectionType('databricks', {
       displayName: 'OAuth Client ID',
       type: 'string',
       optional: true,
+      advanced: true,
       description: 'OAuth M2M client ID',
     },
     {
@@ -66,6 +67,7 @@ registerConnectionType('databricks', {
       displayName: 'OAuth Client Secret',
       type: 'secret',
       optional: true,
+      advanced: true,
       description: 'OAuth M2M client secret',
     },
     {
@@ -85,6 +87,7 @@ registerConnectionType('databricks', {
       displayName: 'Setup SQL',
       type: 'text',
       optional: true,
+      advanced: true,
       description: 'SQL statements to run when the connection is established',
     },
   ],

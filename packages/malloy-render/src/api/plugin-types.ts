@@ -40,14 +40,16 @@ interface BaseRenderPluginInstance<TMetadata = unknown> {
   getStyleOverrides?(): Record<string, string>;
 }
 
-export interface SolidJSRenderPluginInstance<TMetadata = unknown>
-  extends BaseRenderPluginInstance<TMetadata> {
+export interface SolidJSRenderPluginInstance<
+  TMetadata = unknown,
+> extends BaseRenderPluginInstance<TMetadata> {
   readonly renderMode: 'solidjs';
   renderComponent(props: RenderProps): JSXElement;
 }
 
-export interface DOMRenderPluginInstance<TMetadata = unknown>
-  extends BaseRenderPluginInstance<TMetadata> {
+export interface DOMRenderPluginInstance<
+  TMetadata = unknown,
+> extends BaseRenderPluginInstance<TMetadata> {
   readonly renderMode: 'dom';
   renderToDOM(container: HTMLElement, props: RenderProps): void;
   cleanup?(container: HTMLElement): void;

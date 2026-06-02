@@ -49,13 +49,13 @@ export class NestFieldDeclaration
   getFieldDef(fs: FieldSpace): model.TurtleDef {
     if (this.turtleDef) return this.turtleDef;
     if (fs.isQueryFieldSpace()) {
-      const {pipeline, annotation} = this.view.pipelineComp(
+      const {pipeline, annotations} = this.view.pipelineComp(
         fs,
         fs.outputSpace()
       );
-      const fieldUsage =
+      const refSummary =
         pipeline[0] && model.isQuerySegment(pipeline[0])
-          ? pipeline[0].fieldUsage
+          ? pipeline[0].refSummary
           : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
       const pipelineWithDrillPaths = attachDrillPaths(
@@ -66,9 +66,9 @@ export class NestFieldDeclaration
         type: 'turtle',
         name: this.name,
         pipeline: pipelineWithDrillPaths,
-        annotation: {...this.note, inherits: annotation},
+        annotations: {...this.note, inherits: annotations},
         location: this.location,
-        fieldUsage,
+        refSummary,
       };
       return this.turtleDef;
     }

@@ -22,7 +22,7 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
@@ -68,7 +68,7 @@ export abstract class AtomicFieldDeclaration
 {
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: Annotation;
+  note?: AnnotationsDef;
 
   constructor(
     readonly expr: ExpressionDef,
@@ -134,7 +134,7 @@ export abstract class AtomicFieldDeclaration
         value: exprValue.value,
         expressionType: exprValue.expressionType,
         evalSpace: exprValue.evalSpace,
-        fieldUsage: exprValue.fieldUsage,
+        refSummary: exprValue.refSummary,
         requiresGroupBy: exprValue.requiresGroupBy,
       };
       exprValue = nullAsNumber;
@@ -164,7 +164,7 @@ export abstract class AtomicFieldDeclaration
         ret.e = exprValue.value;
       }
       ret.drillExpression = this.expr.drillExpression();
-      ret.fieldUsage = exprValue.fieldUsage;
+      ret.refSummary = exprValue.refSummary;
       ret.ungroupings = exprValue.ungroupings;
       ret.requiresGroupBy = exprValue.requiresGroupBy;
       if (exprValue.expressionType) {
@@ -174,7 +174,7 @@ export abstract class AtomicFieldDeclaration
         ret.code = this.exprSrc;
       }
       if (this.note) {
-        ret.annotation = this.note;
+        ret.annotations = this.note;
       }
       return ret;
     }

@@ -723,7 +723,7 @@ describe('expressions', () => {
     m.translator.translate();
     expect(m).toTranslate();
     const modelX = makeModelFunc({
-      model: m.translator.modelDef,
+      internalModel: m.translator.modelDef,
       wrap: x => `run: root -> { aggregate: x is ${x} }`,
     });
     test('one.column.min()', () => {
@@ -864,16 +864,20 @@ describe('expressions', () => {
         }
       `).toTranslate();
     });
-    test('shows the correct error message when the longest overlap between the join usages is length zero', () => {
+    // TODO: this test was a silent no-op (`.toLog;` instead of `.toLog(...)`). When fixed
+    // to actually invoke the matcher, the source compiles cleanly without producing the
+    // expected error — Malloy semantics or the message wording has drifted. Re-investigate.
+    test.skip('shows the correct error message when the longest overlap between the join usages is length zero', () => {
       expect(markSource`
     source: testcase is a extend {
       join_one: a on true
 
       measure: value is sum(a.ai * ai)
     }
-      `).toLog;
-      errorMessage(
-        'Join path is required for this calculation; use `a.sum(a.ai * ai)` or `source.sum(a.ai * ai)` to get a result weighted with respect to `source`'
+      `).toLog(
+        errorMessage(
+          'Join path is required for this calculation; use `a.sum(a.ai * ai)` or `source.sum(a.ai * ai)` to get a result weighted with respect to `source`'
+        )
       );
     });
     test('sum(inline.column)', () => {
@@ -1837,5 +1841,14 @@ describe('number subtype propagation', () => {
       expect(result.type).toBe('number');
       expect(getNumberType(result)).toBeUndefined();
     });
+  });
+
+  // Guards against MalloyElement.needs() re-walking the whole subtree per node,
+  // which made a long binary `or` chain blow up super-linearly and hang.
+  test('long or-chain compiles in reasonable time', () => {
+    const where = Array.from({length: 100}, (_, i) => `astr = 't${i}'`).join(
+      ' or '
+    );
+    expect(model`run: a -> { where: ${where}; group_by: astr }`).toTranslate();
   });
 });

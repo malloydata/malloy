@@ -6,7 +6,7 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   AtomicFieldDef,
   FieldDef,
   JoinFieldDef,
@@ -14,7 +14,13 @@ import type {
   MatrixOperation,
   SourceDef,
 } from '../../../model/malloy_types';
-import {isAtomic, isJoined, isSourceDef, TD} from '../../../model/malloy_types';
+import {
+  activeName,
+  isAtomic,
+  isJoined,
+  isSourceDef,
+  TD,
+} from '../../../model/malloy_types';
 
 import type {HasParameter} from '../parameters/has-parameter';
 import {Source} from './source';
@@ -27,7 +33,7 @@ import type {MalloyElement} from '../types/malloy-element';
  */
 export class CompositeSource extends Source {
   elementType = 'compositeSource';
-  currentAnnotation?: Annotation;
+  currentAnnotation?: AnnotationsDef;
 
   constructor(readonly sources: Source[]) {
     super({sources});
@@ -82,7 +88,7 @@ function composeSources(
       );
     }
     for (const field of sourceDef.fields) {
-      const fieldName = field.as ?? field.name;
+      const fieldName = activeName(field);
       if (field.accessModifier === 'private') {
         continue;
       }
@@ -130,9 +136,11 @@ function composeSources(
             name: fieldName,
             as: undefined,
             e: {node: 'compositeField'},
-            fieldUsage: [
-              {path: [fieldName], at: compositeCodeSource.codeLocation},
-            ],
+            refSummary: {
+              fieldUsage: [
+                {path: [fieldName], at: compositeCodeSource.codeLocation},
+              ],
+            },
             code: undefined,
             location: compositeCodeSource.codeLocation,
             // A composite field's grouping may differ from slice to slice

@@ -36,6 +36,7 @@ import type {
   RecordLiteralNode,
 } from '../../model/malloy_types';
 import {
+  activeName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -54,7 +55,13 @@ import type {
   IntegerTypeMapping,
   QueryInfo,
 } from '../dialect';
-import {Dialect, qtz, MIN_DECIMAL38, MAX_DECIMAL38} from '../dialect';
+import {
+  Dialect,
+  EscapeStyle,
+  qtz,
+  MIN_DECIMAL38,
+  MAX_DECIMAL38,
+} from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -106,6 +113,9 @@ export class SnowflakeDialect extends Dialect {
   name = 'snowflake';
   experimental = false;
   hasTimestamptz = true;
+  stringLiteralStyle = EscapeStyle.Backslash;
+  identifierEscapeStyle = EscapeStyle.Doubled;
+  identifierQuoteChar = '"';
   defaultNumberType = 'NUMBER';
   defaultDecimalType = 'NUMBER';
   udfPrefix = '__udf';
@@ -128,21 +138,14 @@ export class SnowflakeDialect extends Dialect {
   supportsPipelinesInViews = false;
   supportsComplexFilteredSources = false;
 
+  // Snowflake bare-identifier continuation allows `$` (verified against
+  // the live engine).
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
+
   // Snowflake uses NUMBER(38,0) for all integers - can exceed JS Number precision
   override integerTypeMappings: IntegerTypeMapping[] = [
     {min: MIN_DECIMAL38, max: MAX_DECIMAL38, numberType: 'bigint'},
   ];
-
-  quoteTablePath(tablePath: string): string {
-    // Quote with double quotes if contains dangerous characters
-    if (tablePath.match(/[;-]/)) {
-      return tablePath
-        .split('.')
-        .map(part => `"${part}"`)
-        .join('.');
-    }
-    return tablePath;
-  }
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT index as group_set FROM TABLE(FLATTEN(ARRAY_GENERATE_RANGE(0, ${
@@ -162,7 +165,7 @@ export class SnowflakeDialect extends Dialect {
 
   mapFieldsForObjectConstruct(fieldList: DialectFieldList): string {
     return fieldList
-      .map(f => `'${f.rawName}', (${f.sqlExpression})`)
+      .map(f => `${this.sqlLiteralString(f.rawName)}, (${f.sqlExpression})`)
       .join(', ');
   }
 
@@ -211,7 +214,7 @@ export class SnowflakeDialect extends Dialect {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
-    const as = this.sqlMaybeQuoteIdentifier(alias);
+    const as = this.sqlQuoteIdentifier(alias);
     if (isArray) {
       return `LEFT JOIN lateral flatten(input => ${source}) as ${as}`;
     } else {
@@ -268,7 +271,7 @@ export class SnowflakeDialect extends Dialect {
     childName: string,
     childType: string
   ): string {
-    const sqlName = this.sqlMaybeQuoteIdentifier(childName);
+    const sqlName = this.sqlQuoteIdentifier(childName);
     if (childName === '__row_id') {
       return `"${parentAlias}".INDEX::varchar`;
     } else if (parentType.startsWith('array')) {
@@ -320,10 +323,6 @@ export class SnowflakeDialect extends Dialect {
 
   sqlSelectAliasAsStruct(alias: string): string {
     return `OBJECT_CONSTRUCT_KEEP_NULL(${alias}.*)`;
-  }
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier.replace(/"/g, '""') + '"';
   }
 
   sqlCreateTableAsSelect(tableName: string, sql: string): string {
@@ -560,16 +559,6 @@ ${indent(sql)}
     return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
-  sqlLiteralString(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -595,8 +584,8 @@ ${indent(sql)}
     } else if (malloyType.type === 'record' || isRepeatedRecord(malloyType)) {
       const sqlFields = malloyType.fields.reduce((ret, f) => {
         if (isAtomic(f)) {
-          const name = f.as ?? f.name;
-          const oneSchema = `${this.sqlMaybeQuoteIdentifier(
+          const name = activeName(f);
+          const oneSchema = `${this.sqlQuoteIdentifier(
             name
           )} ${this.malloyTypeToSQLType(f)}`;
           ret.push(oneSchema);
@@ -664,11 +653,10 @@ ${indent(sql)}
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const rowVals: string[] = [];
     for (const f of lit.typeDef.fields) {
-      const name = f.as ?? f.name;
-      const propName = `'${name}'`;
+      const name = activeName(f);
       const propVal =
         safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal';
-      rowVals.push(`${propName},${propVal}`);
+      rowVals.push(`${this.sqlLiteralString(name)},${propVal}`);
     }
     return `OBJECT_CONSTRUCT_KEEP_NULL(${rowVals.join(',')})`;
   }

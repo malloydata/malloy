@@ -22,7 +22,7 @@
  */
 
 import * as model from '../../../model/malloy_types';
-import {mkSafeRecord} from '../../../model/malloy_types';
+import {activeName, mkSafeRecord} from '../../../model/malloy_types';
 import {nameFromDef} from '../../field-utils';
 import type {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
@@ -48,7 +48,7 @@ export abstract class DynamicSpace
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
   protected newAccessModifiers = new Map<string, model.AccessModifierLabel>();
-  protected newNotes = new Map<string, model.Annotation>();
+  protected newNotes = new Map<string, model.AnnotationsDef>();
 
   constructor(extending: SourceDef) {
     super({...extending}, extending.dialect, extending.connection);
@@ -152,7 +152,7 @@ export abstract class DynamicSpace
       // Add access modifiers at the end so views don't obey them
       for (const [name, access] of this.newAccessModifiers) {
         const index = this.sourceDef.fields.findIndex(
-          f => (f.as ?? f.name) === name
+          f => activeName(f) === name
         );
         if (index === -1) {
           throw new Error(`Can't find field '${name}' to set access modifier`);
@@ -170,7 +170,7 @@ export abstract class DynamicSpace
       // e.g. if a field had a compiler flag on it...
       for (const [name, note] of this.newNotes) {
         const index = this.sourceDef.fields.findIndex(
-          f => f.as ?? f.name === name
+          f => activeName(f) === name
         );
         if (index === -1) {
           throw new Error(`Can't find field '${name}' to set access modifier`);
@@ -178,9 +178,9 @@ export abstract class DynamicSpace
         const field = this.sourceDef.fields[index];
         this.sourceDef.fields[index] = {
           ...field,
-          annotation: {
+          annotations: {
             ...note,
-            inherits: field.annotation,
+            inherits: field.annotations,
           },
         };
       }

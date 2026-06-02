@@ -413,7 +413,7 @@ export function BigValueComponent(props: BigValueComponentProps) {
 
       // Look up sparkline by nest name from pre-resolved sparkline ref
       const sparklineNest = config?.sparklineRef
-        ? sparkNestMap.get(config.sparklineRef) ?? null
+        ? (sparkNestMap.get(config.sparklineRef) ?? null)
         : null;
 
       result.push({

@@ -46,7 +46,6 @@ export function mkSqlEqWith(
   cName: string,
   initV?: InitValues
 ) {
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   return async function (
     expr: string,
     result: string | boolean | number

@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Annotation, StructDef} from '../../../model/malloy_types';
-import {isPersistableSourceDef} from '../../../model/malloy_types';
+import type {AnnotationsDef, StructDef} from '../../../model/malloy_types';
+import {activeName, isPersistableSourceDef} from '../../../model/malloy_types';
 import {mkSourceID} from '../../../model/source_def_utils';
 import {checkPersistAnnotation} from '../../../model/persist_utils';
 import {ErrorFactory} from '../error-factory';
@@ -55,7 +55,7 @@ export class DefineSource
   }
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: Annotation;
+  note?: AnnotationsDef;
 
   execute(doc: Document): void {
     if (doc.modelEntry(this.name)) {
@@ -81,8 +81,8 @@ export class DefineSource
       location: this.location,
     };
     if (this.note) {
-      entry.annotation = structDef.annotation
-        ? {...this.note, inherits: structDef.annotation}
+      entry.annotations = structDef.annotations
+        ? {...this.note, inherits: structDef.annotations}
         : this.note;
     }
     if (isPersistableSourceDef(entry)) {
@@ -121,9 +121,7 @@ export class DefineSource
   ) {
     for (const parameter of parameters) {
       if (
-        structDef.fields.find(
-          field => (field.as ?? field.name) === parameter.name
-        )
+        structDef.fields.find(field => activeName(field) === parameter.name)
       ) {
         parameter.logError(
           'parameter-shadowing-field',

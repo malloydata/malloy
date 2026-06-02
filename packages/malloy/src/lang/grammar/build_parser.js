@@ -26,8 +26,7 @@
 // has changed, to avoid re-running antlr when there are no changes.
 
 /* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-var-requires */
-/* eslint-disable n/no-process-exit */
+
 const {readFileSync, writeFileSync, existsSync, rmSync} = require('fs');
 const {v5: uuidv5} = require('uuid');
 const path = require('path');

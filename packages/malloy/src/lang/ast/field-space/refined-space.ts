@@ -23,9 +23,10 @@
 
 import type {FieldDef, StructDef} from '../../../model/malloy_types';
 import {
+  activeName,
   isJoined,
   type AccessModifierLabel,
-  type Annotation,
+  type AnnotationsDef,
   type DocumentLocation,
   type SourceDef,
 } from '../../../model/malloy_types';
@@ -164,7 +165,7 @@ export class RefinedSpace extends DynamicSpace {
     }
   }
 
-  addNotes(notes: Map<string, Annotation>): void {
+  addNotes(notes: Map<string, AnnotationsDef>): void {
     for (const [symbol, note] of notes) {
       this.newNotes.set(symbol, note);
     }
@@ -186,7 +187,7 @@ function editJoinsFromIncludeState(
   if (isJoin) {
     if (joinedState.fieldsToInclude) {
       fields = from.fields.filter(f =>
-        joinedState.fieldsToInclude?.has(f.as ?? f.name)
+        joinedState.fieldsToInclude?.has(activeName(f))
       );
     } else {
       fields = from.fields;
@@ -197,13 +198,13 @@ function editJoinsFromIncludeState(
   // const fields = from.fields;
   const updatedFields: FieldDef[] = [];
   for (const field of fields) {
-    const name = field.as ?? field.name;
+    const name = activeName(field);
     // TODO ensure you can't make it more permissive here...
     const accessModifier =
       joinedState.modifiers.get(name) ?? field.accessModifier;
     const notes = joinedState.notes.get(name);
     const rename = joinedState.renames.find(
-      r => r.name.nameString === (field.as ?? field.name)
+      r => r.name.nameString === activeName(field)
     );
     const editedField: FieldDef = isJoin
       ? {
@@ -211,20 +212,20 @@ function editJoinsFromIncludeState(
           as: rename ? rename.name.nameString : field.as,
           accessModifier:
             accessModifier === 'public' ? undefined : accessModifier,
-          annotation: notes
+          annotations: notes
             ? {
-                inherits: field.annotation,
+                inherits: field.annotations,
                 blockNotes: notes.blockNotes,
                 notes: notes.notes,
               }
-            : field.annotation,
+            : field.annotations,
         }
       : {...field};
     if (isJoined(editedField)) {
       updatedFields.push({
         ...editedField,
         fields: editJoinsFromIncludeState(
-          [...path, field.as ?? field.name],
+          [...path, activeName(field)],
           editedField,
           includeState
         ),

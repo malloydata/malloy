@@ -1,12 +1,10 @@
 import path from 'path';
-import {PluginOption} from 'vite';
+import type {PluginOption} from 'vite';
 import type {IndexInput, Indexer} from '@storybook/types';
 import fs from 'fs';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
-import {Model, SingleConnectionRuntime, URLReader} from '@malloydata/malloy';
-
-const STORY_MODEL_PREFIX = /##\(story\)\s/;
-const STORY_PREFIX = /#\(story\)\s/;
+import type {Model, URLReader} from '@malloydata/malloy';
+import {SingleConnectionRuntime} from '@malloydata/malloy';
 
 async function createConnection() {
   // TODO: figure out how to get duckdb.table to load based on taht path, rather than from workingDirectory. so that malloy story files can be anywhere
@@ -39,7 +37,7 @@ type ModelIndexInput = IndexInput & {
 };
 
 function fileNameToComponentName(fileName: string) {
-  const regex = /\/([^\/]+)\.stories\.malloy$/;
+  const regex = /\/([^/]+)\.stories\.malloy$/;
   const match = fileName.match(regex);
   const name = match && match[1];
   if (name) {
@@ -54,24 +52,25 @@ function fileNameToComponentName(fileName: string) {
 
 function getModelStories(materializedModel: Model, fileName: string) {
   const models = materializedModel.explores;
-  let modelStories: ModelIndexInput[] = [];
+  const modelStories: ModelIndexInput[] = [];
 
-  const isLegacy = materializedModel.tagParse().tag.has('renderer_legacy');
+  const isLegacy = materializedModel.annotations
+    .parseAsTag()
+    .tag.has('renderer_legacy');
   const componentName =
-    materializedModel
-      .tagParse({prefix: STORY_MODEL_PREFIX})
-      .tag.text('component') ?? fileNameToComponentName(fileName);
+    materializedModel.annotations.parseAsTag('story').tag.text('component') ??
+    fileNameToComponentName(fileName);
 
   models.forEach(model => {
     model.allFields
-      .filter(f => f.isQueryField() && f.getTaglines(STORY_PREFIX).length > 0)
+      .filter(f => f.isQueryField() && f.annotations.texts('story').length > 0)
       .forEach(query => {
         modelStories.push({
           type: 'story',
           importPath: fileName,
           title: `Malloy ${isLegacy ? 'Legacy' : 'Next'}/${componentName}`,
           exportName: query.name,
-          name: query.tagParse({prefix: STORY_PREFIX}).tag.text('story'),
+          name: query.annotations.parseAsTag('story').tag.text('story'),
           sourceName: model.name,
           queryName: query.name,
         });

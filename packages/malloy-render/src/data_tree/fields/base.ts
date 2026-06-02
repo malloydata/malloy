@@ -6,7 +6,8 @@ import {
 } from '../utils';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import type {Tag} from '@malloydata/malloy-tag';
-import {renderTagFromAnnotations, NULL_SYMBOL, notUndefined} from '../../util';
+import {tagFromAnnotations} from '@malloydata/malloy';
+import {NULL_SYMBOL, notUndefined} from '../../util';
 import type {
   Field,
   NestField,
@@ -150,10 +151,8 @@ export abstract class FieldBase {
      */
     skipTagParsing = false
   ) {
-    this.tag = renderTagFromAnnotations(this.field.annotations);
-    this.metadataTag = skipTagParsing
-      ? this.tag
-      : tagFor(this.field, '#(malloy) ');
+    this.tag = tagFromAnnotations(this.field.annotations, '');
+    this.metadataTag = skipTagParsing ? this.tag : tagFor(this.field, 'malloy');
     this.path = parent ? [...parent.path, field.name] : [];
   }
 

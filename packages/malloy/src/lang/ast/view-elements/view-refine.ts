@@ -53,7 +53,7 @@ export class ViewRefine extends View {
     const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
     return {
       pipeline: resultPipe,
-      annotation: query.annotation,
+      annotations: query.annotations,
       outputStruct:
         resultPipe.length > 0
           ? resultPipe[resultPipe.length - 1].outputStruct

@@ -20,8 +20,5 @@
   ],
   "files": [],
   "include": [],
-  "exclude": ["**/node_modules"],
-  "compilerOptions": {
-    "downlevelIteration": true
-  }
+  "exclude": ["**/node_modules"]
 }

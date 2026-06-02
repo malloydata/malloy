@@ -29,7 +29,7 @@ import {QuerySource} from '../source-elements/query-source';
 import {NamedSource} from '../source-elements/named-source';
 import {QueryReference} from '../query-elements/query-reference';
 import type {Argument} from '../parameters/argument';
-import {isSourceDef} from '../../../model';
+import {activeName, isSourceDef} from '../../../model';
 
 /**
  * A reference to either a source or a query.
@@ -58,9 +58,10 @@ export class SQReference extends SourceQueryElement {
         this.has({query});
         return query;
       } else {
+        const label = entry.type === 'given' ? entry.name : activeName(entry);
         this.sqLog(
           'cannot-use-as-query',
-          `Illegal reference to '${entry.as || entry.name}', query expected`
+          `Illegal reference to '${label}', query expected`
         );
       }
     } else {

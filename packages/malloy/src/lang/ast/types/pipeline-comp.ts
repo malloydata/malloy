@@ -22,7 +22,7 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   PipeSegment,
   SourceDef,
 } from '../../../model/malloy_types';
@@ -30,6 +30,6 @@ import type {
 export interface PipelineComp {
   outputStruct: SourceDef;
   pipeline: PipeSegment[];
-  annotation?: Annotation;
+  annotations?: AnnotationsDef;
   name?: string;
 }

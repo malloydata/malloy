@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type * as Malloy from '@malloydata/malloy-interfaces';
-import {TagParser} from '@malloydata/malloy-tag';
 // Copied from malloy core to avoid depending on it for simple type guards.
 type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
 function isDateUnit(str: string): str is DateUnit {
@@ -52,37 +50,6 @@ export function deepMerge<T extends Record<string, unknown>[]>(
 
 function isObject(item: unknown): item is Record<string, unknown> {
   return item !== null && typeof item === 'object' && !Array.isArray(item);
-}
-
-export function tagFromAnnotations(
-  annotations: Malloy.Annotation[] | undefined,
-  prefix = '# '
-) {
-  const tagLines =
-    annotations?.map(a => a.value)?.filter(l => l.startsWith(prefix)) ?? [];
-  const session = new TagParser();
-  for (const line of tagLines) {
-    session.parseAnnotation(line);
-  }
-  return session.finish();
-}
-
-export function renderTagFromAnnotations(
-  annotations: Malloy.Annotation[] | undefined
-) {
-  // Support both '# ' and '#r ' namespaces for render tags
-  const defaultTagLines =
-    annotations?.map(a => a.value)?.filter(l => l.startsWith('# ')) ?? [];
-  const renderTagLines =
-    annotations?.map(a => a.value)?.filter(l => l.startsWith('#r ')) ?? [];
-
-  // Merge both namespaces with #r taking precedence (later in array)
-  const allLines = [...defaultTagLines, ...renderTagLines];
-  const session = new TagParser();
-  for (const line of allLines) {
-    session.parseAnnotation(line);
-  }
-  return session.finish();
 }
 
 export function getTextWidthCanvas(

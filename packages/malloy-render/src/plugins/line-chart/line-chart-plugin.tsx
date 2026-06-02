@@ -54,8 +54,7 @@ interface SeriesStats {
   avg: number;
 }
 
-interface LineChartPluginInstance
-  extends CoreVizPluginInstance<LineChartPluginMetadata> {
+interface LineChartPluginInstance extends CoreVizPluginInstance<LineChartPluginMetadata> {
   field: NestField;
   chartDisplay: ChartDisplayConfig;
   seriesStats: Map<string, SeriesStats>;

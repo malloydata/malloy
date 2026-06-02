@@ -35,6 +35,7 @@ import type {
   RecordLiteralNode,
 } from '../../model/malloy_types';
 import {
+  activeName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -139,16 +140,9 @@ export class TrinoDialect extends PostgresBase {
   supportsCountApprox = true;
   supportsHyperLogLog = true;
 
-  quoteTablePath(tablePath: string): string {
-    // Quote with double quotes if contains dangerous characters
-    if (tablePath.match(/[;-]/)) {
-      return tablePath
-        .split('.')
-        .map(part => `"${part}"`)
-        .join('.');
-    }
-    return tablePath;
-  }
+  // Trino bare identifier is strict ANSI (`[A-Za-z_][A-Za-z0-9_]*`),
+  // which matches the Dialect default — no override needed. Verified
+  // against the live engine.
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(SEQUENCE(0,${groupSetCount})))`;
@@ -275,7 +269,7 @@ export class TrinoDialect extends PostgresBase {
     if (childName === '__row_id') {
       return `__row_id_from_${parentAlias}`;
     }
-    return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
+    return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
   }
 
   sqlUnnestPipelineHead(
@@ -594,14 +588,6 @@ ${indent(sql)}
     return tableSQL;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -631,7 +617,7 @@ ${indent(sql)}
         for (const f of malloyType.fields) {
           if (isAtomic(f)) {
             typeSpec.push(
-              `${this.sqlMaybeQuoteIdentifier(
+              `${this.sqlQuoteIdentifier(
                 f.name
               )} ${this.malloyTypeToSQLType(f)}`
             );
@@ -647,7 +633,7 @@ ${indent(sql)}
           for (const f of malloyType.fields) {
             if (isAtomic(f)) {
               typeSpec.push(
-                `${this.sqlMaybeQuoteIdentifier(
+                `${this.sqlQuoteIdentifier(
                   f.name
                 )} ${this.malloyTypeToSQLType(f)}`
               );
@@ -761,12 +747,12 @@ ${indent(sql)}
     const rowTypes: string[] = [];
     for (const f of lit.typeDef.fields) {
       if (isAtomic(f)) {
-        const name = f.as ?? f.name;
+        const name = activeName(f);
         rowVals.push(
           safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal'
         );
         const elType = this.malloyTypeToSQLType(f);
-        rowTypes.push(`${this.sqlMaybeQuoteIdentifier(name)} ${elType}`);
+        rowTypes.push(`${this.sqlQuoteIdentifier(name)} ${elType}`);
       }
     }
     return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;

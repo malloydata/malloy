@@ -29,7 +29,7 @@ export async function readURL(
     contents,
     invalidationKey: isInternalURL(url.toString())
       ? null
-      : invalidationKey ?? hashForInvalidationKey(contents),
+      : (invalidationKey ?? hashForInvalidationKey(contents)),
   };
 }
 

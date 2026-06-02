@@ -8,6 +8,7 @@ import type {
   ModelDef,
   StructRef,
   Argument,
+  Given,
   PrepareResultOptions,
   Query,
   SourceDef,
@@ -17,7 +18,7 @@ import type {
   TurtleDefPlusFilters,
   TurtleDef,
 } from './malloy_types';
-import {isSourceDef, getIdentifier, isAtomic} from './malloy_types';
+import {activeName, isSourceDef, isAtomic} from './malloy_types';
 import {StageWriter} from './stage_writer';
 import {StandardSQLDialect, type Dialect} from '../dialect';
 import type {Connection} from '../connection/types';
@@ -25,6 +26,7 @@ import type {ModelRootInterface} from './query_node';
 import {QueryStruct, isScalarField} from './query_node';
 import type {QueryModel, QueryResults} from './query_model_contract';
 import {rowDataToNumber} from '../api/row_data_utils';
+import {MalloyCompileError} from './malloy_compile_error';
 
 export function makeQueryModel(modelDef: ModelDef | undefined): QueryModel {
   return new QueryModelImpl(modelDef);
@@ -36,37 +38,31 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
 
+  get givens(): Record<string, Given> {
+    return this.modelDef?.givens ?? {};
+  }
+
   constructor(modelDef: ModelDef | undefined) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);
     }
   }
 
-  // Another circularity breaking method ... call into QueryQuery
-  // to find the output shape of a query
-  getFinalOutputStruct(
-    query: Query,
-    options: PrepareResultOptions | undefined
-  ): SourceDef | undefined {
-    const result = this.loadQuery(query, undefined, options, false, false);
-    return result.structs.pop();
-  }
-
   loadModelFromDef(modelDef: ModelDef): void {
     this.modelDef = modelDef;
     for (const s of Object.values(this.modelDef.contents)) {
-      let qs;
+      // Only sources become QueryStructs. query/userType/given are namespace
+      // metadata, not queryable, and are skipped.
       if (isSourceDef(s)) {
-        qs = new QueryStruct(s, undefined, {model: this}, {});
-        this.structs.set(getIdentifier(s), qs);
-        qs.resolveQueryFields((query, options) =>
-          this.getFinalOutputStruct(query, options)
+        this.structs.set(
+          activeName(s),
+          new QueryStruct(s, undefined, {model: this}, {})
         );
-      } else if (s.type === 'query') {
-        /* TODO */
-      } else if (s.type === 'userType') {
-        // User type definitions are metadata only, not queryable
-      } else {
+      } else if (
+        s.type !== 'query' &&
+        s.type !== 'userType' &&
+        s.type !== 'given'
+      ) {
         throw new Error('Internal Error: Unknown structure type');
       }
     }
@@ -77,7 +73,11 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     if (s) {
       return s;
     }
-    throw new Error(`Struct ${name} not found in model.`);
+    throw new MalloyCompileError(
+      `Source '${name}' is not defined in this model.`,
+      'compiler-undefined-source',
+      undefined
+    );
   }
 
   getStructFromRef(
@@ -88,15 +88,12 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     prepareResultOptions ??= {};
     if (typeof structRef === 'string') {
       const ret = this.getStructByName(structRef);
-      if (sourceArguments !== undefined) {
-        return new QueryStruct(
-          ret.structDef,
-          sourceArguments,
-          ret.parent ? {struct: ret.parent} : {model: this},
-          prepareResultOptions
-        );
-      }
-      return ret;
+      return new QueryStruct(
+        ret.structDef,
+        sourceArguments ?? ret.sourceArguments,
+        ret.parent ? {struct: ret.parent} : {model: this},
+        prepareResultOptions
+      );
     }
     return new QueryStruct(
       structRef,
@@ -151,17 +148,17 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     if (emitFinalStage && q.parent.dialect.hasFinalStage) {
       // const fieldNames: string[] = [];
       // for (const f of ret.outputStruct.fields) {
-      //   fieldNames.push(getIdentifier(f));
+      //   fieldNames.push(activeName(f));
       // }
       const fieldNames: string[] = [];
       for (const f of ret.outputStruct.fields) {
         if (isAtomic(f)) {
-          const quoted = q.parent.dialect.sqlMaybeQuoteIdentifier(f.name);
+          const quoted = q.parent.dialect.sqlQuoteIdentifier(f.name);
           fieldNames.push(quoted);
         }
       }
       // const fieldNames = getAtomicFields(ret.outputStruct).map(fieldDef =>
-      //   q.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
+      //   q.parent.dialect.sqlQuoteIdentifier(fieldDef.name)
       // );
       ret.lastStageName = stageWriter.addStage(
         q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
@@ -221,9 +218,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     );
     const structRef = query.compositeResolvedSourceDef ?? query.structRef;
     const sourceExplore =
-      typeof structRef === 'string'
-        ? structRef
-        : structRef.as || structRef.name;
+      typeof structRef === 'string' ? structRef : activeName(structRef);
     const sourceArguments =
       query.sourceArguments ??
       (typeof structRef === 'string' ? undefined : structRef.arguments);
@@ -244,7 +239,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       sourceArguments,
       queryName: query.name,
       connectionName: ret.connectionName,
-      annotation: query.annotation,
+      annotations: query.annotations,
       queryTimezone: ret.structs[0].queryTimezone,
       defaultRowLimitAdded: addedDefaultRowLimit,
     };
@@ -295,11 +290,11 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         },
       ],
     };
-    const fieldNameColumn = d.sqlMaybeQuoteIdentifier('fieldName');
-    const fieldPathColumn = d.sqlMaybeQuoteIdentifier('fieldPath');
-    const fieldValueColumn = d.sqlMaybeQuoteIdentifier('fieldValue');
-    const fieldTypeColumn = d.sqlMaybeQuoteIdentifier('fieldType');
-    const weightColumn = d.sqlMaybeQuoteIdentifier('weight');
+    const fieldNameColumn = d.sqlQuoteIdentifier('fieldName');
+    const fieldPathColumn = d.sqlQuoteIdentifier('fieldPath');
+    const fieldValueColumn = d.sqlQuoteIdentifier('fieldValue');
+    const fieldTypeColumn = d.sqlQuoteIdentifier('fieldType');
+    const weightColumn = d.sqlQuoteIdentifier('weight');
 
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);

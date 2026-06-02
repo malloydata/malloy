@@ -33,6 +33,7 @@ import {
 import './parse-expects';
 import type {Query, QueryFieldDef, QuerySegment} from '../../model';
 import {
+  activeName,
   expressionIsCalculation,
   isJoined,
   isQuerySegment,
@@ -1184,7 +1185,7 @@ describe('query:', () => {
       const notb = model.getSourceDef('notb');
       expect(notb).toBeDefined();
       if (notb) {
-        const d = notb.fields.find(f => f.as || f.name === 'd');
+        const d = notb.fields.find(f => activeName(f) === 'd');
         expect(d).toBeDefined();
         expect(d?.type).toBe('number');
         if (d?.type === 'number') {
@@ -2478,7 +2479,7 @@ describe('query:', () => {
         f => f.as === 'aext'
       );
       expect(aext).toBeDefined();
-      expect(aext?.annotation?.blockNotes).toMatchObject([
+      expect(aext?.annotations?.blockNotes).toMatchObject([
         {text: '# only_on_s2\n'},
       ]);
     });
@@ -2514,7 +2515,7 @@ describe('query:', () => {
         f => f.as === 'aext'
       );
       expect(aext).toBeDefined();
-      expect(aext?.annotation?.blockNotes).toMatchObject([
+      expect(aext?.annotations?.blockNotes).toMatchObject([
         {text: '# only_on_s2\n'},
       ]);
     });

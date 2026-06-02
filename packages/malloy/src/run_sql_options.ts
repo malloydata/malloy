@@ -21,27 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {
-  Annotation,
-  NamedObject,
-  SourceComponentInfo,
-} from './model/malloy_types';
-
-type SourceRefWithMetadata = NamedObject & {
-  annotation?: Annotation;
-  sourceComponentInfos?: SourceComponentInfo[];
-};
+import type {AnnotationsDef} from './model/malloy_types';
 
 export interface RunSQLOptions {
   rowLimit?: number;
   abortSignal?: AbortSignal;
-  /* This is an experimental feature */
-  modelAnnotation?: Annotation;
-  /* This is an experimental feature */
-  queryAnnotation?: Annotation;
-  clientMetadata?: {
-    sourceRefWithMetadata?: SourceRefWithMetadata;
-  };
+  /** Model annotations forwarded to the adapter (e.g. `##!` dialect flags). */
+  modelAnnotations?: AnnotationsDef;
+  /** Query annotations forwarded to the adapter. */
+  queryAnnotations?: AnnotationsDef;
 }
 
 export type QueryOptionsReader = RunSQLOptions | (() => RunSQLOptions);

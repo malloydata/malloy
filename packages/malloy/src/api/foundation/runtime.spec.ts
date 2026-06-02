@@ -3,20 +3,33 @@
  * SPDX-License-Identifier: MIT
  */
 
+import {BaseConnection} from '../../connection/base_connection';
 import {MalloyConfig} from './config';
-import {contextOverlay} from './config_overlays';
 import {Runtime} from './runtime';
 import {registerConnectionType} from '../../connection/registry';
-import type {ConnectionConfig, Connection} from '../../connection/types';
+import type {ConnectionConfig} from '../../connection/types';
 import type {URLReader} from '../../runtime_types';
 import type {BuildManifest} from '../../model/malloy_types';
 
-function mockConnection(name: string): Connection {
-  return {
-    name,
-    dialectName: 'mock',
-    getDigest: () => 'mock-digest',
-  } as unknown as Connection;
+class MockConnection extends BaseConnection {
+  constructor(public readonly name: string) {
+    super();
+  }
+  get dialectName() {
+    return 'mock';
+  }
+  getDigest() {
+    return 'mock-digest';
+  }
+  runSQL = jest.fn(async () => ({rows: [], totalRows: 0}));
+  fetchTableSchema = jest.fn();
+  fetchSelectSchema = jest.fn();
+  close = jest.fn(async () => undefined);
+  idle = jest.fn(async () => undefined);
+}
+
+function mockConnection(name: string): MockConnection {
+  return new MockConnection(name);
 }
 
 beforeEach(() => {
@@ -56,11 +69,7 @@ const sampleManifest: BuildManifest = {
 function configWithManifestURL(): MalloyConfig {
   return new MalloyConfig(
     {connections: {mydb: {is: 'mockdb'}}},
-    {
-      config: contextOverlay({
-        configURL: 'file:///home/user/project/malloy-config.json',
-      }),
-    }
+    {configURL: 'file:///home/user/project/malloy-config.json'}
   );
 }
 
@@ -174,5 +183,305 @@ describe('Runtime build manifest resolution', () => {
     runtime.buildManifest = explicit;
     const second = await runtime._resolveBuildManifest();
     expect(second).toBe(explicit);
+  });
+});
+
+describe('Runtime givens resolution', () => {
+  const configURL = 'file:///home/user/project/malloy-config.json';
+  const givensURL = 'file:///home/user/project/local-givens.json';
+
+  function configWithGivensURL(): MalloyConfig {
+    return new MalloyConfig(
+      {
+        connections: {mydb: {is: 'mockdb'}},
+        givensPath: './local-givens.json',
+      },
+      {configURL}
+    );
+  }
+
+  it('lazily reads from config.givensURL on first request', async () => {
+    const config = configWithGivensURL();
+    const {reader, calls} = countingReader({
+      [givensURL]: {TENANT: 'acme', MAX_ROWS: 100},
+    });
+    const runtime = new Runtime({config, urlReader: reader});
+
+    expect(calls).toEqual([]);
+
+    const result = await runtime._resolveGivens();
+    expect(result).toEqual({TENANT: 'acme', MAX_ROWS: 100});
+    expect(calls).toEqual([givensURL]);
+  });
+
+  it('caches the read across multiple calls', async () => {
+    const config = configWithGivensURL();
+    const {reader, calls} = countingReader({
+      [givensURL]: {TENANT: 'acme'},
+    });
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await runtime._resolveGivens();
+    await runtime._resolveGivens();
+    await runtime._resolveGivens();
+    expect(calls).toHaveLength(1);
+  });
+
+  it('_invalidateGivensCache forces a re-read on next call', async () => {
+    const config = configWithGivensURL();
+    const {reader, calls} = countingReader({
+      [givensURL]: {TENANT: 'acme'},
+    });
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await runtime._resolveGivens();
+    await runtime._resolveGivens();
+    expect(calls).toHaveLength(1);
+
+    runtime._invalidateGivensCache();
+    await runtime._resolveGivens();
+    expect(calls).toHaveLength(2);
+  });
+
+  it('throws with the URL in the message when the file is missing', async () => {
+    const config = configWithGivensURL();
+    const {reader} = countingReader({}); // every read throws
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await expect(runtime._resolveGivens()).rejects.toThrow(
+      /failed to read givens file at file:\/\/\/home\/user\/project\/local-givens\.json/
+    );
+  });
+
+  it('throws when the file is malformed JSON', async () => {
+    const config = configWithGivensURL();
+    const {reader} = countingReader({[givensURL]: 'not valid json'});
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await expect(runtime._resolveGivens()).rejects.toThrow(
+      /failed to parse JSON at file:\/\/\/home\/user\/project\/local-givens\.json/
+    );
+  });
+
+  it('throws when the JSON top-level is not an object', async () => {
+    const config = configWithGivensURL();
+    const {reader} = countingReader({[givensURL]: '[1,2,3]'});
+    const runtime = new Runtime({config, urlReader: reader});
+
+    await expect(runtime._resolveGivens()).rejects.toThrow(
+      /must be a JSON object.*got array/
+    );
+  });
+
+  it('returns undefined and does not read when config has no givensURL', async () => {
+    const config = new MalloyConfig({connections: {mydb: {is: 'mockdb'}}});
+    expect(config.givensURL).toBeUndefined();
+    const {reader, calls} = countingReader({});
+    const runtime = new Runtime({config, urlReader: reader});
+
+    const result = await runtime._resolveGivens();
+    expect(result).toBeUndefined();
+    expect(calls).toEqual([]);
+  });
+});
+
+describe('Runtime constructor givens + getGivens()', () => {
+  it('getGivens() reflects the constructor `givens:` option', async () => {
+    const runtime = new Runtime({
+      connection: mockConnection('mock'),
+      givens: {TENANT: 'acme', MAX_ROWS: 100},
+    });
+    const merged = await runtime.getGivens();
+    expect([...merged.entries()]).toEqual([
+      ['TENANT', 'acme'],
+      ['MAX_ROWS', 100],
+    ]);
+  });
+
+  it('getGivens() is empty when no layer is supplied', async () => {
+    const runtime = new Runtime({connection: mockConnection('mock')});
+    const merged = await runtime.getGivens();
+    expect(merged.size).toBe(0);
+  });
+
+  it('getGivens() merges file + constructor, constructor wins per-key', async () => {
+    const configURL = 'file:///home/user/project/malloy-config.json';
+    const givensURL = 'file:///home/user/project/local-givens.json';
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL}
+    );
+    const {reader} = countingReader({
+      [givensURL]: {TENANT: 'file-tenant', MAX_ROWS: 100},
+    });
+    const conn = mockConnection('mock');
+    const runtime = new Runtime({
+      config,
+      urlReader: reader,
+      connections: {lookupConnection: () => Promise.resolve(conn)},
+      givens: {TENANT: 'ctor-tenant', USER_ROLE: 'admin'},
+    });
+
+    const merged = await runtime.getGivens();
+    // Constructor TENANT wins over file TENANT; MAX_ROWS comes from
+    // file, USER_ROLE from constructor.
+    expect(merged.get('TENANT')).toBe('ctor-tenant');
+    expect(merged.get('MAX_ROWS')).toBe(100);
+    expect(merged.get('USER_ROLE')).toBe('admin');
+  });
+
+  it('getGivens() returns just the file layer when no constructor option', async () => {
+    const configURL = 'file:///home/user/project/malloy-config.json';
+    const givensURL = 'file:///home/user/project/local-givens.json';
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL}
+    );
+    const {reader} = countingReader({[givensURL]: {TENANT: 'acme'}});
+    const conn = mockConnection('mock');
+    const runtime = new Runtime({
+      config,
+      urlReader: reader,
+      connections: {lookupConnection: () => Promise.resolve(conn)},
+    });
+
+    const merged = await runtime.getGivens();
+    expect([...merged.entries()]).toEqual([['TENANT', 'acme']]);
+  });
+
+  it('rejects an explicit undefined value at construction time', () => {
+    expect(
+      () =>
+        new Runtime({
+          connection: mockConnection('mock'),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          givens: {TENANT: undefined as any},
+        })
+    ).toThrow(/explicit undefined is not a valid value/);
+  });
+});
+
+describe('Runtime.shutdown / MalloyConfig.shutdown', () => {
+  function buildRuntimeWithMockConnections(): {
+    runtime: Runtime;
+    config: MalloyConfig;
+  } {
+    const config = new MalloyConfig({
+      connections: {a: {is: 'mockdb'}, b: {is: 'mockdb'}},
+    });
+    const runtime = new Runtime({config});
+    return {runtime, config};
+  }
+
+  it("shutdown('close') walks the cache and calls close() on each looked-up connection", async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const a = await config.connections.lookupConnection('a');
+    const b = await config.connections.lookupConnection('b');
+
+    await runtime.shutdown('close');
+
+    expect(a.close).toHaveBeenCalledTimes(1);
+    expect(b.close).toHaveBeenCalledTimes(1);
+    expect(a.idle).not.toHaveBeenCalled();
+    expect(b.idle).not.toHaveBeenCalled();
+  });
+
+  it("shutdown('idle') walks the cache and calls idle() on each looked-up connection", async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const a = await config.connections.lookupConnection('a');
+    const b = await config.connections.lookupConnection('b');
+
+    await runtime.shutdown('idle');
+
+    expect(a.idle).toHaveBeenCalledTimes(1);
+    expect(b.idle).toHaveBeenCalledTimes(1);
+    expect(a.close).not.toHaveBeenCalled();
+    expect(b.close).not.toHaveBeenCalled();
+  });
+
+  it('shutdown() defaults to close', async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const a = await config.connections.lookupConnection('a');
+
+    await runtime.shutdown();
+
+    expect(a.close).toHaveBeenCalledTimes(1);
+    expect(a.idle).not.toHaveBeenCalled();
+  });
+
+  it('shutdown skips connections that were never looked up', async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    // Look up only 'a'. 'b' is never instantiated.
+    const a = await config.connections.lookupConnection('a');
+
+    await runtime.shutdown('close');
+
+    expect(a.close).toHaveBeenCalledTimes(1);
+    // No way to assert on b — it never got constructed. The fact that
+    // shutdown didn't throw despite b's absence is the test.
+  });
+
+  it('idle preserves the cache — same Connection instance returned on next lookup', async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const before = await config.connections.lookupConnection('a');
+
+    await runtime.shutdown('idle');
+
+    const after = await config.connections.lookupConnection('a');
+    expect(after).toBe(before);
+  });
+
+  it('close drops the cache — fresh Connection instance on next lookup', async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const before = await config.connections.lookupConnection('a');
+
+    await runtime.shutdown('close');
+
+    const after = await config.connections.lookupConnection('a');
+    expect(after).not.toBe(before);
+  });
+
+  it("releaseConnections() is a deprecated alias for shutdown('close')", async () => {
+    const {runtime, config} = buildRuntimeWithMockConnections();
+    const a = await config.connections.lookupConnection('a');
+
+    await runtime.releaseConnections();
+
+    expect(a.close).toHaveBeenCalledTimes(1);
+    expect(a.idle).not.toHaveBeenCalled();
+    // And the cache was dropped.
+    const after = await config.connections.lookupConnection('a');
+    expect(after).not.toBe(a);
+  });
+
+  it('shutdown is a no-op for runtimes built without a MalloyConfig', async () => {
+    const conn = mockConnection('legacy');
+    const runtime = new Runtime({connection: conn});
+    await runtime.shutdown('close');
+    await runtime.shutdown('idle');
+    expect(conn.close).not.toHaveBeenCalled();
+    expect(conn.idle).not.toHaveBeenCalled();
+  });
+});
+
+describe('BaseConnection default idle', () => {
+  it('is a no-op (does not throw) for backends that do not override it', async () => {
+    // Use the genuine inheritance path: a Connection that doesn't override
+    // idle. MockConnection above sets idle to a jest.fn so it doesn't
+    // exercise the default — this trivial subclass leaves it inherited.
+    class Inheriting extends BaseConnection {
+      get name() {
+        return 'trivial';
+      }
+      get dialectName() {
+        return 'trivial';
+      }
+      getDigest = () => 'trivial';
+      runSQL = jest.fn();
+      fetchTableSchema = jest.fn();
+      fetchSelectSchema = jest.fn();
+    }
+    const c = new Inheriting();
+    await expect(c.idle()).resolves.toBeUndefined();
   });
 });

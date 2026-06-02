@@ -7,6 +7,7 @@
 
 import {
   mergeFieldUsage,
+  mergeRefSummaries,
   pathBegins,
   pathEq,
 } from '../../composite-source-utils';
@@ -21,11 +22,14 @@ import type {
   TypeDesc,
 } from '../../../model/malloy_types';
 import {
+  activeName,
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
+  fieldUsageFrom,
   isAtomic,
   isQuerySegment,
+  mkRefSummary,
 } from '../../../model/malloy_types';
 import {isNotUndefined} from '../../utils';
 import {ExprCompare} from '../expressions/expr-compare';
@@ -85,7 +89,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
     }
     const drillDimensions = fs.outputSpace().drillDimensions;
     let collectedWheres: Expr | undefined = undefined;
-    let collectedWhereFieldUsage: FieldUsage[] | undefined = undefined;
+    let collectedWhereFieldUsage: FieldUsage | undefined = undefined;
     if (reference.list.length === 0) {
       filter.logError('invalid-drill-reference', 'Invalid drill reference`');
       return;
@@ -180,7 +184,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
             return undefined;
           } else {
             if (isAtomic(f) && expressionIsScalar(f.expressionType))
-              return f.as ?? f.name;
+              return activeName(f);
           }
         })
         .filter(isNotUndefined);
@@ -192,7 +196,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
           if (expressionIsAggregate(filter.expressionType)) continue;
           if (collectedWheres === undefined) {
             collectedWheres = filter.e;
-            collectedWhereFieldUsage = filter.fieldUsage;
+            collectedWhereFieldUsage = fieldUsageFrom(filter.refSummary);
           } else {
             collectedWheres = {
               node: 'and',
@@ -203,7 +207,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
             };
             collectedWhereFieldUsage = mergeFieldUsage(
               collectedWhereFieldUsage,
-              filter.fieldUsage
+              fieldUsageFrom(filter.refSummary)
             );
           }
         }
@@ -212,7 +216,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
         if (f.type === 'fieldref') {
           return f.path[f.path.length - 1] === name.refString;
         } else {
-          return f.as ?? f.name === name.refString;
+          return activeName(f) === name.refString;
         }
       });
       if (field === undefined) {
@@ -352,7 +356,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
       ...fieldDef,
       evalSpace: 'output',
       expressionType: fieldDef.expressionType ?? 'scalar',
-      fieldUsage: fieldDef.fieldUsage ?? [],
+      refSummary: fieldDef.refSummary,
     });
     filter.has({drillField});
     const fExpression = new ExprCompare(drillField, '=', value);
@@ -374,7 +378,10 @@ export class Drill extends Filter implements QueryPropertyInterface {
               kids: {left: collectedWheres, right: fExpr.value},
             },
       expressionType: fExpr.expressionType,
-      fieldUsage: mergeFieldUsage(fExpr.fieldUsage, collectedWhereFieldUsage),
+      refSummary: mergeRefSummaries(
+        fExpr.refSummary,
+        mkRefSummary({fieldUsage: collectedWhereFieldUsage})
+      ),
       stableFilter: {
         kind: 'literal_equality',
         expression: {
@@ -458,7 +465,7 @@ export function attachDrillPaths(
           return updateNestedDrillPaths(f, nestName);
         }
         const fieldName =
-          f.type === 'fieldref' ? f.path[f.path.length - 1] : f.as ?? f.name;
+          f.type === 'fieldref' ? f.path[f.path.length - 1] : activeName(f);
 
         return {
           ...f,

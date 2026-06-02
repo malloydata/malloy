@@ -28,6 +28,7 @@ import type {
 import {
   expressionIsAggregate,
   expressionIsScalar,
+  fieldUsageFrom,
 } from '../../../model/malloy_types';
 import type {ExpressionDef} from '../types/expression-def';
 
@@ -36,7 +37,7 @@ import {ListOf, MalloyElement} from '../types/malloy-element';
 import {ExprIdReference} from './expr-id-reference';
 import {mergeFieldUsage} from '../../composite-source-utils';
 
-type FieldUsageSummary = FieldUsage[] | undefined;
+type FieldUsageSummary = FieldUsage | undefined;
 
 export class FunctionOrderBy extends MalloyElement {
   elementType = 'orderBy';
@@ -68,7 +69,7 @@ export class FunctionOrderBy extends MalloyElement {
       };
     }
     const expr = this.field.getExpression(fs);
-    fieldUsage = expr.fieldUsage;
+    fieldUsage = fieldUsageFrom(expr.refSummary);
     if (expressionIsAggregate(expr.expressionType)) {
       // Aggregates are okay
     } else if (expressionIsScalar(expr.expressionType)) {
@@ -108,7 +109,7 @@ export class FunctionOrderBy extends MalloyElement {
     const dir = this.dir || 'asc';
     if (this.field) {
       const expr = this.field.getExpression(fs);
-      fieldUsage = expr.fieldUsage;
+      fieldUsage = fieldUsageFrom(expr.refSummary);
       if (!expressionIsScalar(expr.expressionType)) {
         this.field.logError(
           'aggregate-order-by-not-scalar',

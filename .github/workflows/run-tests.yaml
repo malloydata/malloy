@@ -22,55 +22,88 @@ jobs:
           error_message: |
             User does not have write access to this repository. Refer to CONTRIBUTING.md instructions on how to contribute to Malloy.
 
+  # Builds the workspace once and uploads it as an artifact for every
+  # downstream test job to consume. No secrets — produces only build
+  # output from the PR head, which is exactly what each downstream job
+  # would have built itself. Does not need check-permission.
+  pull_and_build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.x
+      - name: Install and build
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run build-duckdb-db
+      - name: Tar workspace
+        run: tar --exclude='./.git' --use-compress-program='zstd -3 -T0' -cf /tmp/workspace.tzst .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workspace
+          path: /tmp/workspace.tzst
+          retention-days: 1
+          compression-level: 0
+
   # *** IMPORTANT ***
   # When modifying these, make sure that needs: check-permission
   # is part of any job that requires secrets.
   main:
-    needs: check-permission
+    needs: [check-permission, pull_and_build]
     uses: './.github/workflows/main.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
   db-trino:
-    needs: check-permission
+    needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-trino.yaml'
     secrets:
       BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-presto:
-    needs: check-permission
+    needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-presto.yaml'
     secrets:
       BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-duckdb:
+    needs: pull_and_build
     uses: './.github/workflows/db-duckdb.yaml'
   db-bigquery:
-    needs: check-permission
+    needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
   # db-motherduck:
-  #   needs: check-permission
+  #   needs: [check-permission, pull_and_build]
   #   uses: './.github/workflows/db-motherduck.yaml'
   #   secrets:
   #     MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
   db-postgres:
+    needs: pull_and_build
     uses: './.github/workflows/db-postgres.yaml'
   db-publisher:
+    needs: pull_and_build
     uses: './.github/workflows/db-publisher.yaml'
   db-snowflake:
-    needs: check-permission
+    needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
   db-mysql:
+    needs: pull_and_build
     uses: './.github/workflows/db-mysql.yaml'
   db-databricks:
-    needs: check-permission
+    needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-databricks.yaml'
     secrets:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
   db-duckdb-wasm:
+    needs: pull_and_build
     uses: './.github/workflows/db-duckdb-wasm.yaml'
 
   # I think I have the sorted roughly longest to shortest

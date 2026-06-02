@@ -4,7 +4,6 @@
  */
 
 import {MalloyConfig} from './config';
-import {contextOverlay} from './config_overlays';
 import {discoverConfig} from './config_discover';
 import {
   createConnectionsFromConfig,
@@ -182,6 +181,40 @@ describe('MalloyConfig.log validation warnings', () => {
     expect(configLog({manifestPath: 'custom/path'})).toEqual([]);
   });
 
+  it('accepts valid givensPath', () => {
+    // configURL is required for path resolution; without it, computeGivensURL
+    // would warn that the per-runtime layer can't be loaded. We're testing
+    // section-compiler acceptance here — pass a configURL to suppress the
+    // unrelated resolution warning.
+    const config = new MalloyConfig(
+      {givensPath: './local-givens.json'},
+      {configURL: 'file:///home/user/project/malloy-config.json'}
+    );
+    expect(config.log).toEqual([]);
+  });
+
+  it('warns when givensPath is not a string', () => {
+    const log = configLog({givensPath: 42});
+    expect(log).toHaveLength(1);
+    expect(log[0].message).toContain('should be a string or an overlay');
+  });
+
+  it('accepts valid finalizeGivens', () => {
+    expect(configLog({finalizeGivens: ['TENANT', 'USER_ROLE']})).toEqual([]);
+  });
+
+  it('warns when finalizeGivens is not an array of strings', () => {
+    const log = configLog({finalizeGivens: 'TENANT'});
+    expect(log).toHaveLength(1);
+    expect(log[0].message).toContain('should be an array of given names');
+  });
+
+  it('warns when finalizeGivens contains non-string entries', () => {
+    const log = configLog({finalizeGivens: ['TENANT', 42]});
+    expect(log).toHaveLength(1);
+    expect(log[0].message).toContain('should be an array of given names');
+  });
+
   it('returns no warnings for empty config', () => {
     expect(configLog({})).toEqual([]);
   });
@@ -235,6 +268,18 @@ describe('MalloyConfig constructor forms', () => {
     expect(config.manifestPath).toBe('my/manifest');
   });
 
+  it('exposes givensPath as a readonly field', () => {
+    const config = new MalloyConfig({givensPath: './givens.json'});
+    expect(config.givensPath).toBe('./givens.json');
+  });
+
+  it('exposes finalizeGivens as a readonly field', () => {
+    const config = new MalloyConfig({
+      finalizeGivens: ['TENANT', 'REGION'],
+    });
+    expect(config.finalizeGivens).toEqual(['TENANT', 'REGION']);
+  });
+
   it('exposes virtualMap converted to Map-of-Maps', () => {
     const config = new MalloyConfig({
       virtualMap: {duckdb: {flights: 'malloytest.flights'}},
@@ -252,9 +297,7 @@ describe('MalloyConfig manifestURL resolution', () => {
   ): MalloyConfig {
     return new MalloyConfig(
       pojo,
-      configURL === undefined
-        ? undefined
-        : {config: contextOverlay({configURL})}
+      configURL === undefined ? undefined : {configURL}
     );
   }
 
@@ -326,21 +369,27 @@ describe('MalloyConfig manifestURL resolution', () => {
   it('is undefined when overlays are present but configURL is missing', () => {
     const config = new MalloyConfig(
       {},
-      {config: contextOverlay({rootDirectory: 'file:///home/user/project/'})}
+      {rootDirectory: 'file:///home/user/project/'}
     );
     expect(config.manifestURL).toBeUndefined();
   });
 
-  it('warns loudly when the config overlay returns a Promise for configURL', () => {
+  it('warns loudly when a legacy `config` overlay returns a Promise for configURL', () => {
     const config = new MalloyConfig(
       {},
       {config: async () => 'file:///home/user/project/malloy-config.json'}
     );
     expect(config.manifestURL).toBeUndefined();
-    const warnings = config.log.filter(l => l.code === 'config-overlay');
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0].message).toContain('Promise');
-    expect(warnings[0].message).toContain('configURL');
+    // The legacy-overlay adapter probes the overlay for each typed FS key
+    // (configURL, rootDirectory). An async overlay produces a warning per
+    // probe — both fire. Either is sufficient evidence of misuse.
+    const promiseWarnings = config.log.filter(
+      l => l.code === 'config-overlay' && l.message.includes('Promise')
+    );
+    expect(promiseWarnings.length).toBeGreaterThanOrEqual(1);
+    expect(promiseWarnings.some(w => w.message.includes('configURL'))).toBe(
+      true
+    );
   });
 
   it('keeps manifestPath as the raw string for app inspection', () => {
@@ -349,6 +398,94 @@ describe('MalloyConfig manifestURL resolution', () => {
       'file:///home/user/project/malloy-config.json'
     );
     expect(config.manifestPath).toBe('build/MANIFESTS');
+  });
+});
+
+describe('MalloyConfig top-level string references', () => {
+  const configURL = 'file:///home/user/project/malloy-config.json';
+
+  it('resolves an env reference for manifestPath', () => {
+    process.env['TEST_MANIFEST_PATH'] = 'custom/build';
+    try {
+      const config = new MalloyConfig(
+        {manifestPath: {env: 'TEST_MANIFEST_PATH'}},
+        {configURL}
+      );
+      expect(config.log).toEqual([]);
+      expect(config.manifestPath).toBe('custom/build');
+      expect(config.manifestURL?.toString()).toBe(
+        'file:///home/user/project/custom/build/malloy-manifest.json'
+      );
+    } finally {
+      delete process.env['TEST_MANIFEST_PATH'];
+    }
+  });
+
+  it('falls back to the default when the env reference is unset', () => {
+    delete process.env['DEFINITELY_NOT_SET_98765'];
+    const config = new MalloyConfig(
+      {manifestPath: {env: 'DEFINITELY_NOT_SET_98765'}},
+      {configURL}
+    );
+    expect(config.log).toEqual([]);
+    expect(config.manifestPath).toBeUndefined();
+    expect(config.manifestURL?.toString()).toBe(
+      'file:///home/user/project/MANIFESTS/malloy-manifest.json'
+    );
+  });
+
+  it('warns and drops on unknown overlay source', () => {
+    const config = new MalloyConfig(
+      {manifestPath: {nosuch: 'whatever'}},
+      {configURL}
+    );
+    const warnings = config.log.filter(l => l.code === 'config-overlay');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain('unknown overlay source "nosuch"');
+    expect(warnings[0].message).toContain('manifestPath');
+    expect(config.manifestPath).toBeUndefined();
+  });
+
+  it('warns and drops when the overlay returns a Promise', () => {
+    const config = new MalloyConfig(
+      {manifestPath: {async: 'manifestPath'}},
+      {
+        configURL,
+        overlays: {async: async () => 'something'},
+      }
+    );
+    const warnings = config.log.filter(l => l.code === 'config-overlay');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain('Promise');
+    expect(warnings[0].message).toContain('manifestPath');
+    expect(config.manifestPath).toBeUndefined();
+  });
+
+  it('resolves an env reference for givensPath', () => {
+    process.env['TEST_GIVENS_PATH'] = './dev-givens.json';
+    try {
+      const config = new MalloyConfig(
+        {givensPath: {env: 'TEST_GIVENS_PATH'}},
+        {configURL}
+      );
+      expect(config.log).toEqual([]);
+      expect(config.givensPath).toBe('./dev-givens.json');
+      expect(config.givensURL?.toString()).toBe(
+        'file:///home/user/project/dev-givens.json'
+      );
+    } finally {
+      delete process.env['TEST_GIVENS_PATH'];
+    }
+  });
+
+  it('leaves givensURL undefined when givensPath is not set', () => {
+    const config = new MalloyConfig({}, {configURL});
+    expect(config.givensURL).toBeUndefined();
+  });
+
+  it('leaves givensURL undefined when no configURL is supplied', () => {
+    const config = new MalloyConfig({givensPath: './givens.json'});
+    expect(config.givensURL).toBeUndefined();
   });
 });
 
@@ -411,9 +548,7 @@ describe('MalloyConfig overlay resolution', () => {
       }
     );
     expect(config.log).toEqual([]);
-    const conn = (await config.connections.lookupConnection(
-      'mydb'
-    )) as unknown as {name: string};
+    const conn = await config.connections.lookupConnection('mydb');
     expect(conn.name).toBe('mydb');
   });
 
@@ -424,7 +559,7 @@ describe('MalloyConfig overlay resolution', () => {
           mydb: {is: 'mockdb', databasePath: {config: 'rootDirectory'}},
         },
       },
-      {config: contextOverlay({rootDirectory: '/project'})}
+      {rootDirectory: '/project'}
     );
     expect(config.log).toEqual([]);
   });
@@ -437,9 +572,7 @@ describe('MalloyConfig overlay resolution', () => {
     });
     expect(config.log).toEqual([]);
     // ssl is json-typed — the object passes through literally, no env lookup.
-    const conn = (await config.connections.lookupConnection(
-      'mydb'
-    )) as unknown as {name: string};
+    const conn = await config.connections.lookupConnection('mydb');
     expect(conn.name).toBe('mydb');
   });
 });
@@ -622,17 +755,20 @@ describe('MalloyConfig property defaults and includeDefaultConnections', () => {
     expect(conn.dialectName).toBe('mockdb-dialect');
   });
 
-  it('does not fabricate when the type is already used', async () => {
+  it('still fabricates the type-named phantom when a user entry shares the type', async () => {
     const config = new MalloyConfig({
       connections: {mydb: {is: 'mockdb'}},
       includeDefaultConnections: true,
     });
-    // mockdb is used by 'mydb', so no auto-added connection named 'mockdb'.
-    await expect(
-      config.connections.lookupConnection('mockdb')
-    ).rejects.toThrow();
-    const conn = await config.connections.lookupConnection('mydb');
-    expect(conn.name).toBe('mydb');
+    // The user entry 'mydb' uses type mockdb, but the slot named 'mockdb'
+    // is unoccupied — the phantom default must still be fabricated so that
+    // hosts advertising 'mockdb' by name can resolve it at runtime.
+    const phantom = await config.connections.lookupConnection('mockdb');
+    expect(phantom.name).toBe('mockdb');
+    expect(phantom.dialectName).toBe('mockdb-dialect');
+    const userConn = await config.connections.lookupConnection('mydb');
+    expect(userConn.name).toBe('mydb');
+    expect(userConn.dialectName).toBe('mockdb-dialect');
   });
 
   it('does not clobber a user-named connection that collides with a type name', async () => {
@@ -649,7 +785,7 @@ describe('MalloyConfig property defaults and includeDefaultConnections', () => {
   it('applies reference-shaped property defaults to fabricated entries', async () => {
     const config = new MalloyConfig(
       {includeDefaultConnections: true},
-      {config: contextOverlay({rootDirectory: '/my/project'})}
+      {rootDirectory: '/my/project'}
     );
     // refdb's `root` default is {config: 'rootDirectory'}. Fabrication
     // creates the bare entry; applyPropertyDefaults then fills in `root`.
@@ -660,7 +796,7 @@ describe('MalloyConfig property defaults and includeDefaultConnections', () => {
   it('applies property defaults to user-listed entries too', async () => {
     const config = new MalloyConfig(
       {connections: {myref: {is: 'refdb'}}},
-      {config: contextOverlay({rootDirectory: '/my/project'})}
+      {rootDirectory: '/my/project'}
     );
     // This is the fix for the earlier bug: property defaults used to only
     // fire during fabrication, leaving explicit entries underconfigured.
@@ -672,7 +808,7 @@ describe('MalloyConfig property defaults and includeDefaultConnections', () => {
   it('user-specified values override property defaults', async () => {
     const config = new MalloyConfig(
       {connections: {myref: {is: 'refdb', root: '/explicit'}}},
-      {config: contextOverlay({rootDirectory: '/my/project'})}
+      {rootDirectory: '/my/project'}
     );
     await config.connections.lookupConnection('myref');
     expect(capturedRoot).toBe('/explicit');

@@ -2,8 +2,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "skipLibCheck": true,
-    "downlevelIteration": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noPropertyAccessFromIndexSignature": false,
     "lib": ["ES2021.String", "dom"],
     "target": "es6",

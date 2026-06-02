@@ -8,6 +8,7 @@ import type {
   FieldDef,
   BooleanFieldDef,
   DateFieldDef,
+  DocumentLocation,
   StringFieldDef,
   JSONFieldDef,
   NumberFieldDef,
@@ -15,6 +16,8 @@ import type {
   NativeUnsupportedFieldDef,
   JoinFieldDef,
   Argument,
+  Given,
+  GivenID,
   PrepareResultOptions,
   AtomicFieldDef,
   BasicAtomicDef,
@@ -24,12 +27,11 @@ import type {
   StructDef,
   TurtleDef,
   TurtleDefPlusFilters,
-  SourceDef,
-  Query,
 } from './malloy_types';
+import {MalloyCompileError} from './malloy_compile_error';
 import {
+  activeName,
   isSourceDef,
-  getIdentifier,
   isBaseTable,
   hasExpression,
   isAtomic,
@@ -38,7 +40,7 @@ import {
   expressionIsCalculation,
 } from './malloy_types';
 import type {EventStream} from '../runtime_types';
-import {annotationToTag} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
@@ -67,7 +69,7 @@ export class QueryField extends QueryNode {
   }
 
   getIdentifier() {
-    return getIdentifier(this.fieldDef);
+    return activeName(this.fieldDef);
   }
 
   getJoinableParent(): QueryStruct {
@@ -254,6 +256,7 @@ export interface ParentQueryStruct {
 // Interface for model - provides struct lookup capability
 export interface ModelRootInterface {
   structs: Map<string, QueryStruct>;
+  givens: Record<GivenID, Given>;
 }
 
 export interface ParentQueryModel {
@@ -322,8 +325,8 @@ export class QueryStruct {
   private _modelTag: Tag | undefined = undefined;
   modelCompilerFlags(): Tag {
     if (this._modelTag === undefined) {
-      const annotation = this.structDef.modelAnnotation;
-      const {tag} = annotationToTag(annotation, {prefix: /^##!\s*/});
+      const annotation = this.structDef.modelAnnotations;
+      const {tag} = new Annotations(annotation).parseAsTag('!');
       this._modelTag = tag;
     }
     return this._modelTag;
@@ -367,7 +370,12 @@ export class QueryStruct {
                   ? this.parent.resolveParentParameterReferences(resolved1)
                   : resolved1;
                 if (resolved2.value === null) {
-                  throw new Error('Invalid parameter value');
+                  throw new MalloyCompileError(
+                    `Parameter '${frag.path[0]}' resolves to a null value chain; ` +
+                      'this parameter was not supplied.',
+                    'compiler-parameter-no-value',
+                    undefined
+                  );
                 } else {
                   return resolved2.value;
                 }
@@ -402,7 +410,7 @@ export class QueryStruct {
 
   private addFieldsFromFieldList(fields: FieldDef[]) {
     for (const field of fields) {
-      const as = getIdentifier(field);
+      const as = activeName(field);
 
       if (field.type === 'turtle') {
         if (!QueryStruct.turtleFieldMaker) {
@@ -410,9 +418,13 @@ export class QueryStruct {
             'INTERNAL ERROR: QueryQuery must initialize QueryStruct nested factory method'
           );
         }
-        this.addFieldToNameMap(as, QueryStruct.turtleFieldMaker(field, this));
+        this.addFieldToNameMap(
+          as,
+          QueryStruct.turtleFieldMaker(field, this),
+          field.location
+        );
       } else if (isAtomic(field) || isJoinedSource(field)) {
-        this.addFieldToNameMap(as, this.makeQueryField(field));
+        this.addFieldToNameMap(as, this.makeQueryField(field), field.location);
       } else {
         // According to the type system this should be impossible, but we have seen this happen
         // in the wild, so we are leaving error handling here to help debug if it happens again.
@@ -445,7 +457,7 @@ export class QueryStruct {
     // make a unique alias name
     if (ret === undefined) {
       const aliases = Array.from(this.pathAliasMap.values());
-      const base = identifierNormalize(getIdentifier(this.structDef));
+      const base = identifierNormalize(activeName(this.structDef));
       let name = `${base}_0`;
       let n = 1;
       while (aliases.includes(name) && n < 1000) {
@@ -471,7 +483,7 @@ export class QueryStruct {
       const x =
         this.parent.getSQLIdentifier() +
         '.' +
-        getIdentifier(this.structDef) +
+        activeName(this.structDef) +
         `[${this.getIdentifier()}.__row_id]`;
       return x;
     } else {
@@ -520,7 +532,7 @@ export class QueryStruct {
 
     // if this is an inline object, include the parents alias.
     if (this.structDef.type === 'record' && this.parent) {
-      return this.parent.sqlSimpleChildReference(getIdentifier(this.structDef));
+      return this.parent.sqlSimpleChildReference(activeName(this.structDef));
     }
     // we are somewhere in the join tree.  Make sure the alias is unique.
     return this.getAliasIdentifier();
@@ -529,9 +541,7 @@ export class QueryStruct {
   // return the name of the field in Malloy
   getFullOutputName(): string {
     if (this.parent) {
-      return (
-        this.parent.getFullOutputName() + getIdentifier(this.structDef) + '.'
-      );
+      return this.parent.getFullOutputName() + activeName(this.structDef) + '.';
     } else {
       return '';
     }
@@ -553,9 +563,13 @@ export class QueryStruct {
     return this;
   }
 
-  addFieldToNameMap(as: string, n: QueryField) {
+  addFieldToNameMap(as: string, n: QueryField, at?: DocumentLocation) {
     if (this.nameMap.has(as)) {
-      throw new Error(`Redefinition of ${as}`);
+      throw new MalloyCompileError(
+        `Field name '${as}' is defined more than once in this scope.`,
+        'compiler-name-redefined',
+        at
+      );
     }
     this.nameMap.set(as, n);
   }
@@ -566,52 +580,13 @@ export class QueryStruct {
     if ((pk = this.primaryKey())) {
       return pk;
     } else {
-      throw new Error(`Missing primary key for ${fieldDef}`);
-    }
-  }
-
-  /**
-   * called after all structure has been loaded.  Examine this structure to see
-   * if if it is based on a query and if it is, add the output fields (unless
-   * they exist) to the structure.
-   *
-   * finalOutputStruct exists so that query_node doesn't need to
-   * to import query_query
-   */
-  resolveQueryFields(
-    finalOutputStruct: (
-      query: Query,
-      options: PrepareResultOptions | undefined
-    ) => SourceDef | undefined
-  ) {
-    if (this.structDef.type === 'query_source' && finalOutputStruct) {
-      const resultStruct = finalOutputStruct(
-        this.structDef.query,
-        this.prepareResultOptions
+      throw new MalloyCompileError(
+        `Source '${activeName(this.structDef)}' has no primary key; ` +
+          `cannot compute a unique key for field '${activeName(fieldDef)}'. ` +
+          'Add `primary_key: <field>` to the source definition.',
+        'compiler-missing-primary-key',
+        fieldDef.location
       );
-
-      // should never happen.
-      if (!resultStruct) {
-        throw new Error("Internal Error, query didn't produce a struct");
-      }
-
-      const structDef = {...this.structDef};
-      for (const f of resultStruct.fields) {
-        const as = getIdentifier(f);
-        if (!this.nameMap.has(as)) {
-          structDef.fields.push(f);
-          this.nameMap.set(as, this.makeQueryField(f));
-        }
-      }
-      this.structDef = structDef;
-      if (!this.structDef.primaryKey && resultStruct.primaryKey) {
-        this.structDef.primaryKey = resultStruct.primaryKey;
-      }
-    }
-    for (const [, v] of this.nameMap) {
-      if (v instanceof QueryFieldStruct) {
-        v.queryStruct.resolveQueryFields(finalOutputStruct);
-      }
     }
   }
 
@@ -694,7 +669,7 @@ export class QueryStruct {
   }
 
   /** convert a path into a field reference */
-  getFieldByName(path: string[]): QueryField {
+  getFieldByName(path: string[], at?: DocumentLocation): QueryField {
     let found: QueryField | undefined = undefined;
     let lookIn = this as QueryStruct | undefined;
     let notFound = path[0];
@@ -708,25 +683,34 @@ export class QueryStruct {
         found instanceof QueryFieldStruct ? found.queryStruct : undefined;
     }
     if (found === undefined) {
-      const pathErr = path.length > 1 ? ` in ${path.join('.')}` : '';
-      throw new Error(`${notFound} not found${pathErr}`);
+      const pathErr = path.length > 1 ? ` in path '${path.join('.')}'` : '';
+      throw new MalloyCompileError(
+        `Field '${notFound}' not found${pathErr}.`,
+        'compiler-field-not-found',
+        at
+      );
     }
     return found;
   }
 
   // structs referenced in queries are converted to fields.
-  getQueryFieldByName(name: string[]): QueryField {
-    const field = this.getFieldByName(name);
+  getQueryFieldByName(name: string[], at?: DocumentLocation): QueryField {
+    const field = this.getFieldByName(name, at);
     if (field instanceof QueryFieldStruct) {
-      throw new Error(`Cannot reference ${name.join('.')} as a scalar'`);
+      throw new MalloyCompileError(
+        `'${name.join('.')}' refers to a source or join, not a scalar field. ` +
+          'Use `source.field` to reference fields inside it.',
+        'compiler-cannot-reference-as-scalar',
+        at
+      );
     }
     return field;
   }
 
   getQueryFieldReference(f: RefToField): QueryField {
-    const {path, annotation, drillExpression} = f;
-    const field = this.getFieldByName(path);
-    if (annotation || drillExpression) {
+    const {path, annotations, drillExpression} = f;
+    const field = this.getFieldByName(path, f.at);
+    if (annotations || drillExpression) {
       if (field.parent === undefined) {
         throw new Error(
           'Inconcievable, field reference to orphaned query field'
@@ -735,7 +719,7 @@ export class QueryStruct {
       // Made a field object from the source, but the annotations were computed by the compiler
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryFieldStruct) {
-        const newDef = {...field.fieldDef, annotation, drillExpression};
+        const newDef = {...field.fieldDef, annotations, drillExpression};
         return new QueryFieldStruct(
           newDef,
           undefined,
@@ -744,7 +728,7 @@ export class QueryStruct {
           field.referenceId
         );
       } else {
-        const newDef = {...field.fieldDef, annotation, drillExpression};
+        const newDef = {...field.fieldDef, annotations, drillExpression};
         return field.parent.makeQueryField(newDef, field.referenceId);
       }
     }
@@ -770,15 +754,19 @@ export class QueryStruct {
   }
 
   /** returns a query object for the given name */
-  getStructByName(name: string[]): QueryStruct {
+  getStructByName(name: string[], at?: DocumentLocation): QueryStruct {
     if (name.length === 0) {
       return this;
     }
-    const struct = this.getFieldByName(name);
+    const struct = this.getFieldByName(name, at);
     if (struct instanceof QueryFieldStruct) {
       return struct.queryStruct;
     }
-    throw new Error(`Error: Path to structure not found '${name.join('.')}'`);
+    throw new MalloyCompileError(
+      `'${name.join('.')}' is not a source or join.`,
+      'compiler-struct-not-found',
+      at
+    );
   }
 
   getDistinctKey(): QueryBasicField {
@@ -795,7 +783,7 @@ export class QueryStruct {
     turtleDef: TurtleDef | TurtleDefPlusFilters
   ): TurtleDef {
     const pipeline = [...turtleDef.pipeline];
-    const annotation = turtleDef.annotation;
+    const annotations = turtleDef.annotations;
 
     const addedFilters = (turtleDef as TurtleDefPlusFilters).filterList || [];
     pipeline[0] = {
@@ -810,7 +798,7 @@ export class QueryStruct {
       type: 'turtle',
       name: turtleDef.name,
       pipeline,
-      annotation,
+      annotations,
       location: turtleDef.location,
     };
     return flatTurtleDef;

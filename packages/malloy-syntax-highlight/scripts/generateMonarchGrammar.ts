@@ -180,7 +180,9 @@ function numRegexGroups(regex: MonarchRegExpString) {
  * richest themes, so we map this scope name to "comment.line" which does recieve styles
  */
 function translateToken(token: TextMateScopeName) {
-  return token in TOKENS_MAP ? TOKENS_MAP[token] : token.replaceAll('-', '.');
+  return token in TOKENS_MAP
+    ? TOKENS_MAP[token as keyof typeof TOKENS_MAP]
+    : token.replaceAll('-', '.');
 }
 
 /**
@@ -367,11 +369,11 @@ function getIgnoreChars(
   const state = tokenizer[currentRef];
   for (const rule of state) {
     if (Array.isArray(rule)) {
-      const beginChar =
-        typeof rule[M_REGEXP_INDEX] === 'string' &&
-        rule[M_REGEXP_INDEX][1] === '\\'
-          ? rule[M_REGEXP_INDEX].slice(1, 3)
-          : rule[M_REGEXP_INDEX][1];
+      const re = rule[M_REGEXP_INDEX];
+      if (typeof re !== 'string') {
+        throw new Error('expected string regex in monarch rule');
+      }
+      const beginChar = re[1] === '\\' ? re.slice(1, 3) : re[1];
       if (!ignoreChars.has(beginChar)) {
         ignoreChars.add(beginChar);
       }

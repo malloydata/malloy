@@ -46,7 +46,7 @@ import type {
   MessageCode,
   MessageParameterType,
 } from '../../parse-log';
-import {emptyFieldUsage, mergeFieldUsage} from '../../composite-source-utils';
+import {mergeRefSummaries} from '../../composite-source-utils';
 import {ErrorFactory} from '../error-factory';
 import {ReferenceField} from './reference-field';
 import {RefineFromSpaceField} from './refine-from-space-field';
@@ -87,15 +87,28 @@ export abstract class QueryOperationSpace
       }
   )[] = [];
 
-  // Composite field usage is not computed until `queryFieldDefs` is called
-  // (or `getPipeSegment` for index segments); if anyone
-  // tries to access it before that, they'll get an error
-  _fieldUsage: model.FieldUsage[] | undefined = undefined;
-  get fieldUsage(): model.FieldUsage[] {
-    if (this._fieldUsage === undefined) {
-      throw new Error('Field usage accessed before computed');
+  // Reference summary is not computed until `queryFieldDefs` is called
+  // (or `getPipeSegment` for index segments). Reading it before that throws;
+  // assigning to it (via the setter) flips the computed flag.
+  // `undefined` is a valid post-computation value, so the flag is what
+  // distinguishes "not yet computed" from "computed and empty".
+  private _refSummary: model.RefSummary | undefined = undefined;
+  private _refSummaryComputed = false;
+  get refSummary(): model.RefSummary | undefined {
+    if (!this._refSummaryComputed) {
+      throw new Error('Ref summary accessed before computed');
     }
-    return this._fieldUsage;
+    return this._refSummary;
+  }
+  protected set refSummary(rs: model.RefSummary | undefined) {
+    this._refSummary = rs;
+    this._refSummaryComputed = true;
+  }
+  get fieldUsage(): model.FieldUsage {
+    return model.fieldUsageFrom(this.refSummary);
+  }
+  get givenUsage(): model.GivenUsage {
+    return model.givenUsageFrom(this.refSummary);
   }
 
   constructor(
@@ -229,7 +242,7 @@ export abstract class QueryOperationSpace
   }
 
   public addFieldUserFromFilter(filter: model.FilterCondition) {
-    if (filter.fieldUsage !== undefined) {
+    if (filter.refSummary !== undefined) {
       this.compositeFieldUsers.push({type: 'filter', filter});
     }
   }
@@ -273,7 +286,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         this.addValidatedCompositeFieldUserFromEntry(name, referenceField);
       } else {
         const entry = new RefineFromSpaceField(field);
-        const name = field.as ?? field.name;
+        const name = model.activeName(field);
         this.setEntry(name, entry);
         this.addValidatedCompositeFieldUserFromEntry(name, entry);
       }
@@ -310,7 +323,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       name = queryFieldDef.path[queryFieldDef.path.length - 1];
       location = queryFieldDef.at;
     } else {
-      name = queryFieldDef.as ?? queryFieldDef.name;
+      name = model.activeName(queryFieldDef);
       location = queryFieldDef.location;
     }
     let ret: model.FieldDef;
@@ -352,8 +365,8 @@ export abstract class QuerySpace extends QueryOperationSpace {
       throw new Error('Invalid type for fieldref');
     }
     ret.location = ret.location ?? this.astEl.location;
-    if (queryFieldDef.annotation) {
-      ret.annotation = queryFieldDef.annotation;
+    if (queryFieldDef.annotations) {
+      ret.annotations = queryFieldDef.annotations;
     }
     return ret;
   }
@@ -371,7 +384,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
     if (primaryKeyField.type === 'fieldref') {
       return primaryKeyField.path[primaryKeyField.path.length - 1];
     } else {
-      return primaryKeyField.as ?? primaryKeyField.name;
+      return model.activeName(primaryKeyField);
     }
   }
 
@@ -399,13 +412,11 @@ export abstract class QuerySpace extends QueryOperationSpace {
       return this.translatedQueryFields;
     }
     const fields: TranslatedQueryField[] = [];
-    let fieldUsage = emptyFieldUsage();
+    let refSummary: model.RefSummary | undefined = undefined;
     for (const user of this.compositeFieldUsers) {
-      let nextFieldUsage: model.FieldUsage[] | undefined = undefined;
+      let nextRefSummary: model.RefSummary | undefined = undefined;
       if (user.type === 'filter') {
-        if (user.filter.fieldUsage) {
-          nextFieldUsage = user.filter.fieldUsage;
-        }
+        nextRefSummary = user.filter.refSummary;
       } else {
         const {name, field} = user;
         const wildPath = this.expandedWild.get(name);
@@ -419,12 +430,12 @@ export abstract class QuerySpace extends QueryOperationSpace {
             },
             typeDesc,
           });
-          nextFieldUsage = typeDesc.fieldUsage;
+          nextRefSummary = typeDesc.refSummary;
         } else {
           const queryFieldDef = field.getQueryFieldDef(this.exprSpace);
           if (queryFieldDef) {
             const typeDesc = field.typeDesc();
-            nextFieldUsage = typeDesc.fieldUsage;
+            nextRefSummary = typeDesc.refSummary;
             // Filter out fields whose type is 'error', which means that a totally bad field
             // isn't sent to the compiler, where it will wig out.
             // TODO Figure out how to make errors generated by `canContain` go in the right place,
@@ -442,9 +453,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
           }
         }
       }
-      fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
+      refSummary = mergeRefSummaries(refSummary, nextRefSummary);
     }
-    this._fieldUsage = fieldUsage;
+    this.refSummary = refSummary;
 
     for (const drillDimension of this.drillDimensions) {
       if (!drillDimension.satisfied) {

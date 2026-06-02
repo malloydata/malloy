@@ -43,6 +43,8 @@ export {
   literal,
   spread,
   Dialect,
+  decodeDottedTablePath,
+  validateDottedTablePath,
 } from './dialect';
 export type {
   DialectFieldList,
@@ -52,6 +54,11 @@ export type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
+  DecodeDottedTablePathResult,
+  DottedTablePathOptions,
+  TablePathEscapeStyle,
+  TablePathSegment,
+  ValidateTablePathResult,
 } from './dialect';
 // TODO tighten up exports
 export type {
@@ -103,7 +110,6 @@ export type {
   DocumentRange,
   DocumentPosition,
   Sampling,
-  Annotation,
   BasicAtomicTypeDef,
   BasicAtomicDef,
   AtomicTypeDef,
@@ -128,6 +134,7 @@ export type {
   BuildID,
   BuildManifest,
   BuildManifestEntry,
+  GivenValue,
   VirtualMap,
 } from './model';
 export {
@@ -223,6 +230,8 @@ export type {
   TimestampField,
 } from './api/foundation';
 export type {Overlay, ConfigOverlays} from './api/foundation';
+export type {FilesystemContext, MalloyConfigOptions} from './api/foundation';
+export type {RuntimeContext} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
   EventStream,
@@ -267,7 +276,22 @@ export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
 export * as API from './api';
 export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';
-export {annotationToTag, annotationToTaglines} from './annotation';
+export {Annotations, RoutedNote} from './api/foundation/annotation';
+export {
+  routeOf,
+  payloadOf,
+  annotationsForRoute,
+  tagFromAnnotations,
+} from './api/annotation-utils';
+/** @deprecated — use the `.annotations` view on a Foundation entity
+ *  (`entity.annotations.parseAsTag(route)` / `.texts(route)`). */
+export {
+  annotationToTag,
+  annotationToTaglines,
+} from './api/foundation/annotation';
 export type {BuildGraph, BuildNode, BuildPlan} from './api/foundation';
 export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';
+export {Reference} from './api/foundation';
+export type {ReferenceKind} from './api/foundation';
+export type {ImportLocation} from './model';
 export {makeDigest} from './model';

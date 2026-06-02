@@ -27,6 +27,7 @@ import {
   expressionIsAnalytic,
   expressionIsCalculation,
 } from '../../../model/malloy_types';
+import {mergeRefSummaries} from '../../composite-source-utils';
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import {FunctionOrdering} from './function-ordering';
@@ -38,7 +39,6 @@ import {ExpressionDef} from '../types/expression-def';
 import type {FieldPropStatement} from '../types/field-prop-statement';
 import type {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
-import {mergeFieldUsage} from '../../composite-source-utils';
 import {GroupedBy} from './grouped_by';
 
 export class ExprProps extends ExpressionDef {
@@ -81,9 +81,9 @@ export class ExprProps extends ExpressionDef {
       if (this.typeCheck(this.expr, {...expr, expressionType: 'scalar'})) {
         return {
           ...expr,
-          fieldUsage: mergeFieldUsage(
-            expr.fieldUsage,
-            ...filterList.map(f => f.fieldUsage ?? [])
+          refSummary: mergeRefSummaries(
+            expr.refSummary,
+            ...filterList.map(f => f.refSummary)
           ),
           value: {
             node: 'filteredExpr',

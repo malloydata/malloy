@@ -160,6 +160,20 @@ describe('postgres schema reading', () => {
     await connection.close();
   });
 
+  it('parameterizes information_schema lookups for quoted identifiers containing single quotes', async () => {
+    const connection = new PooledPostgresConnection('postgres');
+    // Postgres quoted identifiers may legitimately contain `'`. Pre-fix, the
+    // table value was interpolated into the WHERE clause, producing malformed
+    // SQL like `table_name = 'O'Brien'` (Postgres syntax-errors before any
+    // rows come back). The parameterized path binds the value, so the lookup
+    // simply returns no rows and surfaces as "Unable to read schema."
+    const tablePath = 'public."O\'Brien"';
+    const result = await connection.fetchTableSchema(tablePath, tablePath);
+    expect(typeof result).toBe('string');
+    expect(result as string).toMatch(/Unable to read schema/);
+    await connection.close();
+  });
+
   it('maps integer types correctly', async () => {
     const connection = new PooledPostgresConnection('postgres');
     const schema = await connection.fetchSchemaForSQLStruct(

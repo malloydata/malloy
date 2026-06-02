@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/* eslint-disable no-console */
 import {API} from '@malloydata/malloy';
 import type {
   CompileQueryResponse,

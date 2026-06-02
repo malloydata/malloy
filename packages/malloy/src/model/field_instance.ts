@@ -12,7 +12,9 @@ import type {
   TurtleDef,
   UniqueKeyRequirement,
 } from './malloy_types';
+import {MalloyCompileError} from './malloy_compile_error';
 import {
+  activeName,
   isIndexSegment,
   isRawSegment,
   isJoined,
@@ -127,7 +129,7 @@ export class FieldInstanceField implements FieldInstance {
   private generateDistinctKeyExpression(): string {
     if (this.f.parent.primaryKey()) {
       const pk = this.f.parent.getPrimaryKeyField(this.f.fieldDef);
-      const pkName = pk.fieldDef.as || pk.fieldDef.name;
+      const pkName = activeName(pk.fieldDef);
       const pkField = this.parent.getField(pkName);
       return pkField.generateExpression();
     } else if (this.f.parent.structDef.type === 'array') {
@@ -251,8 +253,11 @@ export class FieldInstanceResult implements FieldInstance {
     const fi = this.allFields.get(as);
     if (fi) {
       if (fi.type === 'query') {
-        throw new Error(
-          `Redefinition of field ${field.fieldDef.name} as struct`
+        throw new MalloyCompileError(
+          `Field '${field.fieldDef.name}' is already defined as a nested view; ` +
+            'cannot also use it as a scalar field in this output.',
+          'compiler-field-redefined-as-struct',
+          field.fieldDef.location
         );
       }
       const fif = fi as FieldInstanceField;
@@ -261,8 +266,11 @@ export class FieldInstanceResult implements FieldInstance {
           // its already in the result, we can just ignore it.
           return;
         } else {
-          throw new Error(
-            `Ambiguous output field name '${field.fieldDef.name}'.`
+          throw new MalloyCompileError(
+            `Output field name '${field.fieldDef.name}' is ambiguous — ` +
+              'defined more than once at the query output level.',
+            'compiler-ambiguous-output-name',
+            field.fieldDef.location
           );
         }
       }
@@ -546,8 +554,11 @@ export class FieldInstanceResult implements FieldInstance {
     // verify that all names specified are available in the current scope.
     for (const fieldName of ungroupSet?.fields || []) {
       if (inScopeFieldNames.indexOf(fieldName) === -1) {
-        throw new Error(
-          `${ungroupSet?.type}(): unknown field name "${fieldName}" or name not in scope.`
+        throw new MalloyCompileError(
+          `'${ungroupSet?.type}()' references field '${fieldName}', ` +
+            'which is not defined or not in scope at this nesting level.',
+          'compiler-ungroup-field-unknown',
+          undefined
         );
       }
     }

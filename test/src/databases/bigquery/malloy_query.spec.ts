@@ -591,7 +591,6 @@ describe('airport_tests', () => {
     //     | project : [top_seaplane.state = by_state.state]
     //       by_state.*
     // `);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // expect((result.data.value[0] as any).pipe_turtle[0].total_airports).toBe(1845);
   });
 
@@ -613,7 +612,6 @@ describe('airport_tests', () => {
     //         by_state.*
     //       )
     // `);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // expect((result.data.value[0] as any).pipe_turtle[0].total_airports).toBe(1845);
   });
 

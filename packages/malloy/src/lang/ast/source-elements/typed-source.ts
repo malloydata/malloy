@@ -4,13 +4,14 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   AtomicFieldDef,
   FieldDef,
   NonDefaultAccessModifierLabel,
   SourceDef,
 } from '../../../model/malloy_types';
 import {
+  activeName,
   TD,
   fieldIsIntrinsic,
   isUserTypeDef,
@@ -75,9 +76,7 @@ export class TypedSource extends Source {
     }
 
     const isVirtual = sourceDef.type === 'virtual';
-    const sourceFields = new Map(
-      sourceDef.fields.map(f => [f.as ?? f.name, f])
-    );
+    const sourceFields = new Map(sourceDef.fields.map(f => [activeName(f), f]));
     const fieldsToAdd: FieldDef[] = [];
 
     // Validate/Enforce that this source matches the shape
@@ -107,18 +106,21 @@ export class TypedSource extends Source {
     // Intrinsic fields not in any shape: mark as hidden.
     // Matching fields inherit annotations from the shape.
     const resultFields = sourceDef.fields.map(f => {
-      const name = f.as ?? f.name;
+      const name = activeName(f);
       const shapeEntry = outputShape.get(name);
       if (!shapeEntry || !fieldIsIntrinsic(f)) {
         return fieldIsIntrinsic(f) && !shapeEntry
           ? {...f, accessModifier: USER_TYPE_HIDDEN_ACCESS}
           : f;
       }
-      const shapeAnnotation = shapeEntry.field.annotation;
+      const shapeAnnotation = shapeEntry.field.annotations;
       if (!shapeAnnotation) {
         return f;
       }
-      return {...f, annotation: mergeAnnotation(f.annotation, shapeAnnotation)};
+      return {
+        ...f,
+        annotations: mergeAnnotation(f.annotations, shapeAnnotation),
+      };
     });
 
     return {
@@ -145,8 +147,8 @@ export class TypedSource extends Source {
 
       for (const sf of entry.entry.fields) {
         const field = mkFieldDef(sf.typeDef, sf.name);
-        if (sf.annotation) {
-          field.annotation = sf.annotation;
+        if (sf.annotations) {
+          field.annotations = sf.annotations;
         }
         next.set(sf.name, {field, fromShape: ref});
       }
@@ -160,9 +162,9 @@ export class TypedSource extends Source {
  * Chain: field → shape → (whatever field previously inherited from)
  */
 function mergeAnnotation(
-  fieldAnnotation: Annotation | undefined,
-  shapeAnnotation: Annotation
-): Annotation {
+  fieldAnnotation: AnnotationsDef | undefined,
+  shapeAnnotation: AnnotationsDef
+): AnnotationsDef {
   if (!fieldAnnotation) {
     return shapeAnnotation;
   }

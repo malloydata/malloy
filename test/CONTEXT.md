@@ -7,12 +7,19 @@ This directory contains the test infrastructure for Malloy, including cross-data
 Tests are organized into several categories:
 
 ### Core Tests (`test/src/core/`)
-Tests for core Malloy functionality that don't require database execution:
-- AST generation
-- IR generation
-- Model semantics
-- Type checking
-- Error handling
+Tests for core Malloy functionality. The directory holds two flavors:
+
+- **Pure translator/IR tests** — AST generation, IR generation, type checking, error handling (no SQL execution).
+- **End-to-end query tests** — single-dialect tests (almost always DuckDB) that load a Malloy model, run a query, and assert on results. They exercise the full Foundation API path (`runtime.loadModel(...).loadQueryByName(...).run(...)`) including SQL generation and execution against the loaded test database.
+
+Both live here. The end-to-end ones use `runtimeFor('duckdb')` and read from the `malloytest.*` tables (e.g. `state_facts`, `aircraft`, `flights`) loaded into `test/data/duckdb/duckdb_test.db` by `npm run build-duckdb-db`. They follow the dialect-gating pattern with `MALLOY_DATABASE` so they auto-skip when DuckDB isn't selected:
+
+```ts
+let describe = globalThis.describe;
+if (!envDatabases.includes('duckdb')) describe = describe.skip;
+```
+
+This is the right home for any feature test that requires SQL execution but only needs to verify *language behavior* (not dialect-specific quirks). For features whose behavior must hold across every dialect, write a cross-database test in `test/src/databases/all/` instead.
 
 ### Database-Specific Tests (`test/src/databases/{database}/`)
 Tests that verify database-specific behavior:
@@ -155,6 +162,12 @@ Cloud SQL warehouses (BigQuery, Snowflake, Databricks) can't read local files vi
 - **Databricks**: Uploads parquets to a Unity Catalog Volume via REST API, then `CREATE TABLE AS SELECT FROM read_files()` to create tables
 
 An ideal future state would be publishing the parquets to a well-known cloud storage location that all warehouses could read from, but the hosting/cost question is still open.
+
+## Authoring Malloy source from JavaScript
+
+When a test programmatically constructs Malloy source (e.g. injecting adversarial values for escape testing), be aware that Malloy has several string-literal forms with different escape rules. The `r'...'` and `/.../` regex forms — and all triple-quoted strings — are *raw*: backslash is preserved verbatim, no escape processing. Doubling backslashes on the JavaScript side will produce a different string than intended.
+
+The full table is in [`../packages/malloy/src/lang/CONTEXT.md`](../packages/malloy/src/lang/CONTEXT.md) under "String literal forms". `test/src/databases/all/escape.spec.ts` is a worked example.
 
 ## Important Notes
 

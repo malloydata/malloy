@@ -7,6 +7,7 @@ import type {LogMessage} from '../../lang/parse-log';
 import {
   getConnectionProperties,
   getConnectionTypeDef,
+  isConnectionConfigEntry,
   validateConnectionConfigProperties,
 } from '../../connection/registry';
 import type {
@@ -117,6 +118,14 @@ export function buildManagedLookup(
         await conn.close();
       }
     },
+
+    async idle(): Promise<void> {
+      // Cache is preserved — same Connection objects are reused so that
+      // schema cache and other in-process state survive the idle.
+      for (const conn of cache.values()) {
+        await conn.idle();
+      }
+    },
   };
 }
 
@@ -130,12 +139,18 @@ async function resolveCompiledEntry(
   overlays: ConfigOverlays,
   log: LogMessage[]
 ): Promise<ConnectionConfigEntry> {
-  const resolved = (await resolveNode(entry, overlays, log)) as Record<
-    string,
-    unknown
-  >;
+  const resolved = await resolveNode(entry, overlays, log);
+  // resolveNode returns `unknown`. The compileConnections pipeline
+  // guarantees every connection entry is an object dict with `is` set to
+  // a literal string, so this should always pass — but a structured
+  // throw beats a downstream NPE if a compiler bug ever sneaks through.
+  if (!isConnectionConfigEntry(resolved)) {
+    throw new Error(
+      'Connection entry did not resolve to a valid {is: string, ...} dict'
+    );
+  }
   await applyPropertyDefaults(resolved, overlays);
-  return resolved as ConnectionConfigEntry;
+  return resolved;
 }
 
 /**

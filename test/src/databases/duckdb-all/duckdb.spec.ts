@@ -45,6 +45,38 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     `).toMatchResult(testModel, {carrier: 'AA'});
   });
 
+  // DuckDB's table-path grammar (validated by dialect.sqlValidateTableName)
+  // is a superset of the standard "dotted identifier path" because DuckDB
+  // accepts string-literal-form table names that resolve to files via
+  // replacement scans. These tests exercise the DuckDB-only shapes.
+  // (The validator itself is unit-tested in
+  // packages/malloy/src/dialect/escape.spec.ts; these are end-to-end
+  // checks that the full pipeline — validate → schema fetch → query —
+  // works for shapes the cross-dialect tests can't cover.)
+
+  it('table path with relative-path file-name convenience', async () => {
+    // Dashes/dots-as-extension force the FilePathConvenience branch,
+    // which wraps the input in single quotes at the SQL level.
+    await expect(`
+      run: duckdb.table('test/data/duckdb/words.parquet') -> {
+        top: 1
+        group_by: word
+        order_by: word
+      }
+    `).toMatchResult(testModel, {});
+  });
+
+  it('table path with ? glob wildcard', async () => {
+    // Single-char glob matches part.0.parquet, part.1.parquet,
+    // part.2.parquet.
+    await expect(`
+      run: duckdb.table('test/data/duckdb/flights/part.?.parquet') -> {
+        top: 1
+        group_by: carrier
+      }
+    `).toMatchResult(testModel, {carrier: 'AA'});
+  });
+
   it('accepts all schema numbers', async () => {
     const allNumeric = [
       'BIGINT',

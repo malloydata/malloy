@@ -1,16 +1,14 @@
 # Malloy Tag Language (MOTLY)
 
-Malloy annotations use a configuration language called MOTLY. The MOTLY language specification and parser live in a separate repository (TODO: add link to MOTLY git repository when available).
+MOTLY is the payload language for Malloy annotations whose route is MOTLY-shaped
+(the empty route `# tag`, the compiler-flag route `##! flag`, etc.). The
+language spec and parser live at
+[github.com/malloydata/motly](https://github.com/malloydata/motly). This
+package wraps the parser with type-safe accessors via a `Tag` class.
 
-MOTLY is a concise, readable syntax for adding structured metadata to Malloy objects through annotations. It's designed to work seamlessly with Malloy's annotation system and can also be used as a standalone configuration language.
-
-## Purpose
-
-While Malloy annotations can contain arbitrary text, the Tag Language provides a standardized way to express structured metadata that is:
-- Human-readable and writable
-- Easy to parse programmatically
-- Flexible enough for various use cases
-- Concise and unobtrusive in code
+Malloy annotations are *just text* — MOTLY is one possible payload format, used
+where it's claimed. Routes that aren't MOTLY-shaped (e.g. `#" markdown`) pass
+their payload through some other parser.
 
 ## Syntax Overview
 
@@ -98,54 +96,46 @@ Two ways to add properties to objects with different semantics:
 
 ## Annotation Prefixes
 
-Different prefixes are used to avoid collision between different uses of annotations:
+Annotations have a **prefix** (everything from `#`/`##` up to the first
+whitespace) that resolves to a **route** — a namespace key. The prefix grammar
+(forms, bracket pairs, malformation warnings) is defined in `packages/malloy`
+(`src/prefix.ts`); this package just parses MOTLY content once a consumer has
+split the prefix off.
 
-- **`# `** (hash-space) - Reserved for Malloy renderer
-- **`#!`** - Compiler directives
-- **`#(docs)`** - Malloy documentation
-- **`#(appName) `** - Encouraged pattern for application-specific tags
+Claimed routes:
 
-Example with application prefix:
-```malloy
-#(myApp) visible theme=dark priority=high
+- **`# tag`** — empty route. Reserved for the Malloy renderer; if you write
+  to it, you are talking to the renderer. Other apps should claim their own
+  route.
+- **`##! flag`** — model-level compiler flag (route `!`, internal sigil).
+- **`#@ persist`** — persistence directive (route `@`, internal sigil).
+- **`#" markdown`** — doc string (route `"`, payload is markdown, not MOTLY).
+- **`#(appName) ...`** — app route. Bracket forms `() <> [] {}` are
+  equivalent (`#(docs)` ≡ `#<docs>`). This is how a new app stakes a
+  namespace.
+
+## Reading tags from a compiled model
+
+Tag reading lives in `packages/malloy`. From a `Taggable` core entity, use
+the `annotations` view to filter by route and parse as MOTLY:
+
+```typescript
+field.annotations.parseAsTag()        // empty route (renderer tags)
+field.annotations.parseAsTag('docs')  // route `docs`
+field.annotations.forRoute('vite')    // raw text + offsets, BYO parser
 ```
 
-## Multi-line Annotations
+The old `tagParse({prefix: /^#@ /})` / `getTaglines(/.../)` RegExp surface is
+deprecated — it can't see block annotations and has no content offsets.
 
-The tag language works with single-line annotations. For multi-line text that is NOT in the tag language:
-
-```malloy
-#" This is a multi-line string annotation
-#" which is NOT in the tag language
-#" but could be displayed as help text
-source: name is VALUE
-```
-
-## Usage Pattern
-
-The expected workflow for using tag annotations:
-
-1. **Write annotations** in Malloy code using tag syntax
-2. **Query annotations** from compiled model using pattern matching (filter by prefix)
-3. **Parse tags** using the malloy-tag package
-4. **Extract values** and use in your application
-
-## Implementation
-
-The `malloy-tag` package provides:
-- **MOTLY parser** via the `motly-ts` package
-- **Tag class** with methods for type-safe value access
-- **Type definitions** for parsed tag structures
-
-### Key API Methods
+## Tag API
 
 ```typescript
 import {Tag} from '@malloydata/malloy-tag';
 
 const {tag, log} = Tag.parse('enabled=@true port=8080 name="My App"');
 
-// Convert to plain JavaScript object
-const obj = tag.toObject();  // { enabled: true, port: 8080, name: "My App" }
+tag.toObject();             // { enabled: true, port: 8080, name: "My App" }
 
 // Type-safe accessors
 tag.text('name');           // "My App"
@@ -158,16 +148,5 @@ tag.has('name');            // true
 
 // Nested access
 tag.text('server', 'host');
-tag.tag('server');          // Get nested Tag object
+tag.tag('server');          // returns a nested Tag
 ```
-
-## Documentation
-
-For complete MOTLY language syntax and examples, see the MOTLY repository (TODO: add link).
-
-## Important Notes
-
-- Not all annotations use the tag language - raw text is also valid
-- The tag language is optional - annotations can be simple strings
-- Each application defines its own conventions for tag usage
-- Tags are metadata only - they don't affect query execution

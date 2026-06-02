@@ -124,12 +124,9 @@ export class PostgresDialect extends PostgresBase {
   likeEscape = false;
   maxIdentifierLength = 63;
 
-  quoteTablePath(tablePath: string): string {
-    return tablePath
-      .split('.')
-      .map(part => `"${part}"`)
-      .join('.');
-  }
+  // Postgres bare-identifier continuation allows `$` (verified against
+  // the live engine: `postgres.table('foo$bar')` resolves successfully).
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN GENERATE_SERIES(0,${groupSetCount},1) as group_set`;
@@ -224,7 +221,8 @@ export class PostgresDialect extends PostgresBase {
       return `(${parentAlias}->>'__row_id')`;
     }
     if (parentType !== 'table') {
-      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},'${childName}')`;
+      const nameLit = this.sqlLiteralString(childName);
+      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},${nameLit})`;
       switch (childType) {
         case 'string':
           break;
@@ -236,12 +234,12 @@ export class PostgresDialect extends PostgresBase {
         case 'record':
         case 'array[record]':
         case 'sql native':
-          ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
+          ret = `JSONB_EXTRACT_PATH(${parentAlias},${nameLit})`;
           break;
       }
       return ret;
     } else {
-      const child = this.sqlMaybeQuoteIdentifier(childName);
+      const child = this.sqlQuoteIdentifier(childName);
       return `${parentAlias}.${child}`;
     }
   }
@@ -399,14 +397,6 @@ export class PostgresDialect extends PostgresBase {
     return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -471,7 +461,7 @@ export class PostgresDialect extends PostgresBase {
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const props: string[] = [];
     for (const [kName, kVal] of Object.entries(lit.kids)) {
-      props.push(`'${kName}',${kVal.sql}`);
+      props.push(`${this.sqlLiteralString(kName)},${kVal.sql}`);
     }
     return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
   }

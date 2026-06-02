@@ -21,8 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* eslint-disable no-console */
-
 import {describeIfDatabaseAvailable} from '../../util';
 import '@malloydata/malloy/test/matchers';
 import {wrapTestModel} from '@malloydata/malloy/test';

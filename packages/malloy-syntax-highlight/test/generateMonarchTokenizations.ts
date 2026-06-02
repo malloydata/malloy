@@ -49,7 +49,8 @@ export async function loadMonacoAssets() {
   });
 }
 
-function registerLanguages(monacoGlobal, testConfig: MonarchTestConfig) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function registerLanguages(monacoGlobal: any, testConfig: MonarchTestConfig) {
   for (const language of testConfig.embeddedLanguages) {
     monacoGlobal.languages.register({id: language.id});
     monacoGlobal.languages.setMonarchTokensProvider(
@@ -66,7 +67,8 @@ function registerLanguages(monacoGlobal, testConfig: MonarchTestConfig) {
   // monacoGlobal.languages.setLanguageConfiguration(testConfig.language.id, testConfig.language.configuration);
 }
 
-function setupEditor(monacoGlobal, theme: Monaco.IStandaloneThemeData) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setupEditor(monacoGlobal: any, theme: Monaco.IStandaloneThemeData) {
   monacoGlobal.editor.defineTheme('test-theme', theme);
   const element = document.createElement('div');
   element.id = 'editor';
@@ -78,7 +80,8 @@ function setupEditor(monacoGlobal, theme: Monaco.IStandaloneThemeData) {
 }
 
 export function generateMonarchTokenizations(
-  monacoGlobal,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  monacoGlobal: any,
   testConfig: MonarchTestConfig
 ): TestItem[][] {
   const tokenizations: TestItem[][] = [];

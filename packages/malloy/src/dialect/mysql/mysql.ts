@@ -55,7 +55,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
 } from '../dialect';
-import {Dialect, qtz} from '../dialect';
+import {Dialect, EscapeStyle, qtz} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -126,6 +126,9 @@ function malloyTypeToJSONTableType(malloyType: AtomicTypeDef): string {
 
 export class MySQLDialect extends Dialect {
   name = 'mysql';
+  stringLiteralStyle = EscapeStyle.Backslash;
+  identifierEscapeStyle = EscapeStyle.Doubled;
+  identifierQuoteChar = '`';
   defaultNumberType = 'DOUBLE PRECISION';
   defaultDecimalType = 'DECIMAL';
   udfPrefix = 'ms_temp.__udf';
@@ -153,6 +156,12 @@ export class MySQLDialect extends Dialect {
   booleanType: BooleanTypeSupport = 'simulated';
   orderByClause: OrderByClauseType = 'ordinal';
   maxIdentifierLength = 64;
+
+  // MySQL bare identifiers allow `$` and may start with a digit, but
+  // cannot be entirely digits (or they lex as number literals). The
+  // regex requires at least one non-digit char somewhere in the run.
+  // Verified against the live engine.
+  override tablePathBareIdentRegex = /^[A-Za-z0-9_$]*[A-Za-z_$][A-Za-z0-9_$]*/;
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
@@ -190,13 +199,6 @@ export class MySQLDialect extends Dialect {
     );
   }
 
-  quoteTablePath(tablePath: string): string {
-    return tablePath
-      .split('.')
-      .map(part => `\`${part}\``)
-      .join('.');
-  }
-
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (select number - 1 as group_set from JSON_TABLE(cast(concat("[1", repeat(",1", ${groupSetCount}), "]") as JSON),"$[*]" COLUMNS(number FOR ORDINALITY)) group_set) as group_set`;
   }
@@ -206,7 +208,11 @@ export class MySQLDialect extends Dialect {
   }
 
   private mapFields(fieldList: DialectFieldList): string {
-    return fieldList.map(f => `"${f.rawName}", ${f.sqlExpression}`).join(', ');
+    // JSON_OBJECT key is a string value. Routing rawName through
+    // sqlLiteralString also keeps the SQL valid under ANSI_QUOTES mode.
+    return fieldList
+      .map(f => `${this.sqlLiteralString(f.rawName)}, ${f.sqlExpression}`)
+      .join(', ');
   }
 
   sqlAggregateTurtle(
@@ -272,10 +278,13 @@ export class MySQLDialect extends Dialect {
       ) {
         fType = f.typeDef.rawType.toUpperCase();
       }
+      // JSON_TABLE PATH argument is a string literal containing a
+      // JSONPath. Render rawName through sqlLiteralString so a single
+      // quote in the user-controlled field name cannot close the SQL
+      // string literal.
+      const jsonPathLit = this.sqlLiteralString('$.' + f.rawName);
       fields.push(
-        `${this.sqlMaybeQuoteIdentifier(f.sqlOutputName)} ${fType}  PATH "$.${
-          f.rawName
-        }"`
+        `${this.sqlQuoteIdentifier(f.sqlOutputName)} ${fType}  PATH ${jsonPathLit}`
       );
     }
     return fields.join(',\n');
@@ -354,7 +363,11 @@ export class MySQLDialect extends Dialect {
     childType: string
   ): string {
     if (parentType === 'array[scalar]' || parentType === 'record') {
-      let ret = `JSON_UNQUOTE(JSON_EXTRACT(${parentAlias},'$.${childName}'))`;
+      // childName comes from user-controlled record field names; render
+      // the JSON path through sqlLiteralString so a single quote in the
+      // name cannot close the SQL string literal.
+      const jsonPathLit = this.sqlLiteralString('$.' + childName);
+      let ret = `JSON_UNQUOTE(JSON_EXTRACT(${parentAlias},${jsonPathLit}))`;
       if (parentType === 'array[scalar]') {
         ret = `JSON_UNQUOTE(${parentAlias}.\`value\`)`;
       }
@@ -368,7 +381,7 @@ export class MySQLDialect extends Dialect {
           return `CAST(${ret} as JSON)`;
       }
     }
-    const child = this.sqlMaybeQuoteIdentifier(childName);
+    const child = this.sqlQuoteIdentifier(childName);
     return `${parentAlias}.${child}`;
   }
 
@@ -389,10 +402,6 @@ export class MySQLDialect extends Dialect {
     // return `JSON_OBJECT(${physicalFieldNames
     //   .map(name => `'${name.replace(/`/g, '')}', \`${alias}\`.${name}`)
     //   .join(',')})`;
-  }
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '`' + identifier.replace(/`/g, '``') + '`';
   }
 
   // TODO: Check what this is.
@@ -584,15 +593,6 @@ export class MySQLDialect extends Dialect {
       }
     }
     return tableSQL;
-  }
-
-  sqlLiteralString(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
   }
 
   getDialectFunctionOverrides(): {

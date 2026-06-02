@@ -8,6 +8,20 @@ The connection subsystem provides database backend abstractions, a centralized r
 - `base_connection.ts` — Abstract base class with schema caching; all backends extend this
 - `registry.ts` — Module-level `Map<string, ConnectionTypeDef>` with register/lookup functions
 - `registry.spec.ts` — Registry tests
+- `validate_table_path.ts` — Helpers that re-validate a `tablePath` against the destination dialect (or any registered dialect) before it crosses an API boundary into SQL. See [Canonical tablePath invariant](#canonical-tablepath-invariant) below.
+
+## Canonical tablePath invariant
+
+Any `tablePath` reaching a connection — through `fetchSchemaForTables`, a `virtualMap` entry, or a `BuildManifestEntry.tableName` — is supposed to already be the canonical SQL form produced by `Dialect.sqlValidateTableName`. The translator validates user-supplied paths at translation time (see `dialect/CONTEXT.md` → *Table-path validation contract*) and stores the canonical form on `StructDef.tablePath`; the compiler splices it into `FROM` clauses verbatim with no further quoting.
+
+Application-supplied paths (`virtualMap`, manifest entries) bypass the translator, so the foundation re-validates at every ingress: `Manifest.update`/`loadText`, the runtime's manifest read and query path, `toVirtualMap`, and the legacy `fetchSchemaForTable` adapter. `BaseConnection.fetchSchemaForTables` is the last line of defense: it rejects any entry whose `tablePath` is not canonical for its dialect rather than letting it reach the backend.
+
+The validators live in `validate_table_path.ts`:
+
+- `validateCanonicalTablePath(dialectName, tablePath)` — destination dialect is known.
+- `validateCanonicalTablePathAnyDialect(tablePath)` / `requireCanonicalTablePathAnyDialect(...)` — destination dialect isn't synchronously known (manifest entries, `virtualMap`). Accept iff the value is canonical for *some* registered dialect — loose enough for legitimate cross-dialect manifests, still strict enough to reject malformed strings.
+
+A failure at one of these boundaries means a caller skipped the translator — that's a bug in the caller, not a user-visible error. Error messages name the boundary so the responsible call site is obvious.
 
 ## Architecture
 
@@ -114,30 +128,43 @@ Each `ConnectionPropertyDefinition` has a `type` field that determines UI render
 | `json` | JSON object (structured config like SSL options, headers) |
 | `text` | Multi-line text input |
 
+## Cross-Repo: User-Facing Docs
+
+The user-facing list of connection types and their parameters lives in a
+separate repository: [`malloydata/malloydata.github.io`](https://github.com/malloydata/malloydata.github.io)
+at `src/documentation/setup/config.malloynb`. When you add, remove, or rename
+a registered property — or change its semantics — open a companion PR there
+so the docs site stays in sync. Add to the PR checklist:
+
+- [ ] Updated `malloydata.github.io/src/documentation/setup/config.malloynb`
+      if any registered connection property changed.
+
 ## Per-Backend Properties
 
 **DuckDB** (`displayName: "DuckDB"`):
-`databasePath` (file), `workingDirectory` (string), `motherDuckToken` (secret), `additionalExtensions` (string — comma-separated, factory parses to array), `readOnly` (boolean), `setupSQL` (text)
+`databasePath` (file), `workingDirectory` (string), `motherDuckToken` (secret), `additionalExtensions` (string — comma-separated, factory parses to array), `readOnly` (boolean), `shareable` (boolean), `setupSQL` (text, advanced). The remaining properties — `securityPolicy`, `allowedDirectories`, `enableExternalAccess`, `lockConfiguration`, `autoloadKnownExtensions`, `autoinstallKnownExtensions`, `allowCommunityExtensions`, `allowUnsignedExtensions`, `tempFileEncryption`, `threads`, `memoryLimit`, `tempDirectory`, `extensionDirectory` — are all `advanced: true` (security policy, extension policy, and resource tuning).
+
+When `shareable: true` (and `databasePath` is a local file), the DuckDB connection binds its primary database to `:memory:` and brackets file access with `ATTACH 'path' AS malloy_db; USE malloy_db.main;` in `setupOnce()` and `DETACH malloy_db` in `idle()`. This releases the OS file lock between operations so other tools (`malloy-cli`, the `duckdb` CLI, another malloy host) can open the same file. The `:memory:` primary stays alive across `idle()`, so the `BaseConnection.schemaCache` and any `CREATE TEMPORARY TABLE` state survive a cycle. Shareable connections do not participate in `DuckDBConnection.activeDBs` sharing — each owns its own in-memory instance. `readOnly: true` is honored via `(READ_ONLY)` on the ATTACH so it scopes the real file, not the writable in-memory primary.
 
 **BigQuery** (`displayName: "BigQuery"`):
-`projectId` (string), `serviceAccountKeyPath` (file), `location` (string), `maximumBytesBilled` (string), `timeoutMs` (string), `billingProjectId` (string), `setupSQL` (text)
+`projectId` (string), `serviceAccountKeyPath` (file), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `setupSQL` (text, advanced)
 
 **PostgreSQL** (`displayName: "PostgreSQL"`):
-`host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string), `setupSQL` (text)
+`host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string, advanced), `setupSQL` (text, advanced)
 
 **Snowflake** (`displayName: "Snowflake"`):
-`account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number), `setupSQL` (text)
-Factory extracts `name`, `setupSQL`, `timeoutMs`; passes remaining properties as snowflake-sdk `ConnectionOptions`.
+`account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number, advanced), `schemaSampleTimeoutMs` (number, advanced), `schemaSampleRowLimit` (number, advanced), `schemaSampleFullScanMaxBytes` (number, advanced), `setupSQL` (text, advanced), `poolMin` (number, advanced), `poolMax` (number, advanced), `poolTestOnBorrow` (boolean, advanced)
+Factory extracts `name`, `setupSQL`, `timeoutMs`, and the three pool fields; passes remaining properties as snowflake-sdk `ConnectionOptions`. The pool fields are assembled into a `generic-pool` options object via `buildPoolOptions()` and shallow-merged with `SnowflakeExecutor.defaultPoolOptions_` (`{min: 1, max: 1, testOnBorrow: true, testOnReturn: true}`); omitting all three preserves the defaults.
 
 **Trino** (`displayName: "Trino"`):
-`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text), `source` (string), `ssl` (json), `session` (json), `extraCredential` (json), `extraHeaders` (json)
+`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced), `source` (string, advanced), `ssl` (json, advanced), `session` (json, advanced), `extraCredential` (json, advanced), `extraHeaders` (json, advanced)
 The json-typed properties pass through to `trino-client`'s `ConnectionOptions` via `extraConfig`.
 
 **Presto** (`displayName: "Presto"`):
-`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text)
+`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
 
 **MySQL** (`displayName: "MySQL"`):
-`host` (string), `port` (number), `database` (string), `user` (string), `password` (password), `setupSQL` (text)
+`host` (string), `port` (number), `database` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
 
 **Publisher** (`displayName: "Malloy Publisher"`):
 `connectionUri` (string, required), `accessToken` (secret)
@@ -154,6 +181,10 @@ interface ConnectionPropertyDefinition {
   displayName: string;
   type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text';
   optional?: true;
+  // Advisory hint to editors: this property is not part of typical
+  // configuration and may be hidden, folded under an "advanced" toggle, or
+  // ignored entirely. Has no effect on the registry or factory.
+  advanced?: boolean;
   // Literal default, or a single-key reference-shaped object that the
   // MalloyConfig resolver expands against the config overlays
   // (e.g. {config: 'rootDirectory'}).
@@ -210,7 +241,23 @@ abstract fetchTableSchema(tableName: string, tablePath: string): Promise<TableSo
 abstract fetchSelectSchema(sqlSource: SQLSourceRequest): Promise<SQLSourceDef | string>;
 ```
 
-BaseConnection provides default no-op implementations for: `close()`, `estimateQueryCost()`, `fetchMetadata()`, `fetchTableMetadata()`. The type guards `isPool()`, `canPersist()`, `canStream()` all default to `false`.
+BaseConnection provides default no-op implementations for: `close()`, `idle()`, `estimateQueryCost()`, `fetchMetadata()`, `fetchTableMetadata()`. The type guards `isPool()`, `canPersist()`, `canStream()` all default to `false`.
+
+### Connection Lifecycle: `close` vs `idle`
+
+`Connection` exposes two release methods with different post-conditions. Backends can override both, just `close()`, or neither.
+
+| Method | Post-condition | Use case |
+|---|---|---|
+| `close()` | Connection is destroyed. Subsequent operations may fail. | Real shutdown: process exit, extension deactivate, config-file change. |
+| `idle()` | Connection is logically valid; backend resources released. Schema cache and other in-process state survive. Next operation transparently reattaches. | Per-operation pause in long-lived hosts (VS Code, MCP servers) so other writers can claim resources during idle gaps. |
+
+The default `idle()` is a no-op for backends that hold no release-able resources between operations. Override when your backend holds something the host might want to release temporarily — most commonly an OS-level file lock (DuckDB) or a persistent socket pool.
+
+When implementing `idle()`:
+- Don't eagerly reattach inside `idle()` itself — that defeats the purpose. Mark internal state for "needs reattach" and let the next `runSQL()` / schema fetch trigger init lazily.
+- Make sure `setupSQL` and any other init-time work replays cleanly on reattach. The schema cache in `BaseConnection.schemaCache` survives across an idle/reattach cycle (cache keys are content-addressable: `tablePath`, `sqlKey(connection.name, selectStr)`), so don't redundantly invalidate it.
+- Hosts that share a connection across concurrent operations should not call `idle()` while an operation is in flight. The current implementations don't refcount in-flight operations.
 
 ### Schema Caching (BaseConnection)
 
@@ -297,7 +344,11 @@ After getting raw database types, map them to Malloy types via `dialect.sqlTypeT
 
 ### DuckDB Instance Sharing
 
-DuckDB has a unique pattern: a static `activeDBs` map groups connections by database path. Multiple `DuckDBConnection` instances pointing to the same path share one `DuckDBInstance` but each get their own connection handle. The instance is closed only when the last connection to it calls `close()`. This is not traditional pooling — `isPool()` returns `false`.
+DuckDB has a unique pattern: a static `activeDBs` map groups connections by database path. Multiple `DuckDBConnection` instances pointing to the same path share one `DuckDBInstance` but each get their own connection handle. The instance is closed only when the last connection to it calls `close()` (or `idle()`). This is not traditional pooling — `isPool()` returns `false`.
+
+`DuckDBConnection.idle()` participates in this scheme: removing the calling connection from the entry's `connections` list, and only closing the underlying `DuckDBInstance` (releasing the OS file lock) when the count hits zero. The connection then nulls out `this.connection` and clears `this.isSetup`; the next call into `setup()` detects the null and runs a fresh `init()`, which rejoins an existing `activeDBs` entry if another connection has since recreated one or creates a new instance.
+
+`idle()` is a no-op for `:memory:` databases — closing the instance would silently destroy in-memory state.
 
 ## Connection Digest (`getDigest()`)
 

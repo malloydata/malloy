@@ -5,7 +5,9 @@
 
 import type {LogMessage} from '../../lang/parse-log';
 import {getRegisteredConnectionTypes} from '../../connection/registry';
-import type {ConfigDict} from './config_compile';
+import type {ConfigDict, ConfigNode} from './config_compile';
+import {isThenable} from './config_overlays';
+import type {ConfigOverlays} from './config_overlays';
 
 /**
  * The synchronous slice of config preparation. What the `MalloyConfig`
@@ -25,6 +27,8 @@ import type {ConfigDict} from './config_compile';
 export interface PreparedConfig {
   compiledConnections: Record<string, ConfigDict>;
   manifestPath?: string;
+  givensPath?: string;
+  finalizeGivens?: ReadonlyArray<string>;
   virtualMap?: unknown;
 }
 
@@ -46,10 +50,13 @@ export interface PreparedConfig {
  */
 export function prepareConfig(
   compiled: ConfigDict,
-  _log: LogMessage[]
+  overlays: ConfigOverlays,
+  log: LogMessage[]
 ): PreparedConfig {
   let compiledConnections: Record<string, ConfigDict> = {};
   let manifestPath: string | undefined;
+  let givensPath: string | undefined;
+  let finalizeGivens: ReadonlyArray<string> | undefined;
   let virtualMap: unknown;
   let includeDefaultConnections = false;
 
@@ -61,8 +68,26 @@ export function prepareConfig(
         break;
       }
       case 'manifestPath': {
-        if (node.kind === 'value' && typeof node.value === 'string') {
-          manifestPath = node.value;
+        manifestPath = resolveSyncStringSetting(
+          node,
+          overlays,
+          log,
+          'manifestPath'
+        );
+        break;
+      }
+      case 'givensPath': {
+        givensPath = resolveSyncStringSetting(
+          node,
+          overlays,
+          log,
+          'givensPath'
+        );
+        break;
+      }
+      case 'finalizeGivens': {
+        if (node.kind === 'value' && isStringArray(node.value)) {
+          finalizeGivens = node.value;
         }
         break;
       }
@@ -86,7 +111,17 @@ export function prepareConfig(
     fabricateMissingConnections(compiledConnections);
   }
 
-  return {compiledConnections, manifestPath, virtualMap};
+  return {
+    compiledConnections,
+    manifestPath,
+    givensPath,
+    finalizeGivens,
+    virtualMap,
+  };
+}
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every(x => typeof x === 'string');
 }
 
 /**
@@ -106,33 +141,26 @@ function extractCompiledConnections(
 }
 
 /**
- * Add a bare `{is: typeName}` compiled entry for each registered connection
- * type not already represented in `compiledConnections`. Only runs when the
- * POJO sets `includeDefaultConnections: true`. Property values (including
- * reference-shaped defaults like DuckDB's `{config: 'rootDirectory'}`) are
- * *not* filled in here — that is the job of the async lookup resolver.
+ * For each registered connection type T, add a bare `{is: T}` compiled
+ * entry named T unless one already exists under that name. Only runs when
+ * the POJO sets `includeDefaultConnections: true`. Property values
+ * (including reference-shaped defaults like DuckDB's
+ * `{config: 'rootDirectory'}`) are filled in later by the async lookup
+ * resolver, not here.
  *
- * Skip rules:
- *   - Type already in use: some existing entry has `is: typeName`.
- *   - Name already taken: some existing entry is *named* `typeName`, even
- *     if its `is` points elsewhere. This protects a user who writes
- *     `{duckdb: {is: 'postgres', ...}}` — naming an entry after a type but
- *     pointing at a different backend — from being clobbered.
+ * The skip is purely name-based: the `is` of a user entry is irrelevant.
+ * `{duckdb: {is: 'postgres'}}` shadows the duckdb phantom (slot taken);
+ * `{dankdb: {is: 'duckdb'}}` does not (slot `duckdb` is still free, and
+ * both end up reachable). This name-only rule is the contract hosts rely
+ * on — e.g. the VS Code connections sidebar advertises defaults by name,
+ * and the runtime must resolve them under those same names.
  *
  * Mutates `compiledConnections` in place.
  */
 function fabricateMissingConnections(
   compiledConnections: Record<string, ConfigDict>
 ): void {
-  const presentTypes = new Set<string>();
-  for (const entry of Object.values(compiledConnections)) {
-    const isNode = entry.entries['is'];
-    if (isNode?.kind === 'value' && typeof isNode.value === 'string') {
-      presentTypes.add(isNode.value);
-    }
-  }
   for (const typeName of getRegisteredConnectionTypes()) {
-    if (presentTypes.has(typeName)) continue;
     if (compiledConnections[typeName]) continue;
     compiledConnections[typeName] = {
       kind: 'dict',
@@ -141,4 +169,50 @@ function fabricateMissingConnections(
       },
     };
   }
+}
+
+/**
+ * Resolve a top-level string setting that may be a literal or an overlay
+ * reference. Top-level scalars are read at construction time, so the overlay
+ * MUST resolve synchronously — same rule that applies to `configURL`. An
+ * overlay returning a Promise is a hard misuse: warn loudly and drop, so the
+ * application notices instead of silently losing the setting.
+ *
+ * Failure modes mirror connection-property resolution otherwise:
+ *   - unknown overlay source → warn + drop (case 1)
+ *   - overlay returns undefined → silent drop (case 2; falls back to default)
+ *   - non-string literal node → returns undefined (compile-time validation
+ *     already warned)
+ */
+function resolveSyncStringSetting(
+  node: ConfigNode,
+  overlays: ConfigOverlays,
+  log: LogMessage[],
+  settingName: string
+): string | undefined {
+  if (node.kind === 'value') {
+    return typeof node.value === 'string' ? node.value : undefined;
+  }
+  if (node.kind === 'reference') {
+    const overlay = overlays[node.source];
+    if (!overlay) {
+      log.push({
+        message: `unknown overlay source "${node.source}" for "${settingName}"`,
+        severity: 'warn',
+        code: 'config-overlay',
+      });
+      return undefined;
+    }
+    const v = overlay(node.path);
+    if (isThenable(v)) {
+      log.push({
+        message: `the \`${node.source}\` overlay returned a Promise for "${settingName}"; top-level string settings must resolve synchronously`,
+        severity: 'warn',
+        code: 'config-overlay',
+      });
+      return undefined;
+    }
+    return typeof v === 'string' ? v : undefined;
+  }
+  return undefined;
 }

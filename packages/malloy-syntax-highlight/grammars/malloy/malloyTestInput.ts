@@ -22,14 +22,27 @@
  */
 
 /*
- * Test input for Monarch and TextMate syntax highlighting tests
- * - The third nested array is commented out because the recent tag DSL
- *   update is reflected in the TextMate highlight grammar
- * - The final two nested array are commented out because the script to
- *   automatically generate Monarch grammars does not yet handle multiple
- *   levels of embedding
+ * Test input for Monarch and TextMate syntax highlighting tests.
+ *
+ * `commonTestInput` holds blocks that both grammars tokenize identically — the real
+ * parity surface, exercised by BOTH the TextMate (Jest) and Monarch (Karma) suites.
+ *
+ * `monarchDivergentTestInput` holds blocks the TextMate grammar handles correctly but
+ * the Monarch generator structurally cannot reproduce, so they are exercised by the
+ * TextMate (Jest) suite ONLY — the Monarch config excludes them so the Karma suite
+ * stays green. The Monarch generator:
+ *   - hard-codes commenting out the `@tags` include, so tag/annotation content is not
+ *     highlighted under Monarch
+ *   - cannot express the column-matching backreferences block annotations (#|…|#) need
+ *   - does not handle multiple levels of embedding (the commented-out blocks below)
+ * Do NOT delete this coverage or try to force Monarch to match — see CONTEXT.md. If the
+ * generator ever gains support, move the block up into `commonTestInput`.
+ *
+ * The default export concatenates both (common first) so the TextMate suite and the
+ * generated darkPlus.ts ground truth still cover everything; the Monarch config consumes
+ * only `commonTestInput` plus the matching leading slice of the ground truth.
  */
-export default [
+export const commonTestInput = [
   ['// / \' " """ // unable to break out of /* line comments'],
   [' -- a different -- line comment'],
   // [ '# bar_chart (tags are line comments for the time being)   ' ],
@@ -39,6 +52,16 @@ export default [
     '" */  -- escaped block',
   ],
   ['  sample: true'],
+  ['type: t is filter<timestamptz>  given: g is number'],
+  [
+    "export source: s is from(q) extend { where: name like r'A' and id in (1) }",
+  ],
+  [
+    'view: v is { group_by: g is case when x then cast(y as string) else z end }',
+  ],
+  [
+    'run: m -> { aggregate: a is all(sum(n)) exclude(count()) compose(b, c) } join_one: o is t on a = b inner left right full',
+  ],
   ['fl1ght_y34r is `Year of Flight 256/* */`  -- escapes identifier'],
   ['`Year', '  -- escapes quoted identifier at newline'],
   ['`Disposable Income` is (0.88 * b1) + 84 / 100.00 * b2 + (.79 * `b3`)  '],
@@ -61,6 +84,9 @@ export default [
   ['"/* -- \\e\\uFFFF \\\'\\'],
   ["state ~ 'CA' | r'M.' | \"CO\" | /'O.'  -- end"],
   ['run: duckdb.sql("""', '  SELECT 1', '""")'],
+];
+
+export const monarchDivergentTestInput = [
   ['#|', '  renderer=sparkline size=large', '|#', 'dimension: x is 1'],
   ['##|', '  model_tag=value', '|##'],
   [
@@ -73,6 +99,8 @@ export default [
     '|#',
     "source: flights is trino_test.table('malloytest.flights')",
   ],
+  // Multi-level embedding — Monarch supports only one level (kept commented; the
+  // TextMate suite can be extended to cover these when desired):
   // [
   //   'select: """',
   //   '-- SQL CONTEXT',
@@ -92,3 +120,5 @@ export default [
   //   '"""  // MALLOY CONTEXT'
   // ]
 ];
+
+export default [...commonTestInput, ...monarchDivergentTestInput];

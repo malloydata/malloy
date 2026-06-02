@@ -1,3 +1,8 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
 import {DuckDBDialect} from '../../dialect';
 import {constantExprToSQL} from '../constant_expression_compiler';
 import type {Expr, Parameter} from '../malloy_types';
@@ -136,7 +141,7 @@ describe('Constant Expression Compiler', () => {
 
       // Parameter errors from the original expression compiler are thrown, not returned
       expect(() => constantExprToSQL(expr, dialect, parameters)).toThrow(
-        'no value for missing'
+        /Parameter 'missing' has no value supplied/
       );
     });
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -21,8 +20,6 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import * as malloy from '@malloydata/malloy';
 import {EmptyURLReader} from '@malloydata/malloy';

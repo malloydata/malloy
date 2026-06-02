@@ -30,7 +30,10 @@ import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import type {View} from '../view-elements/view';
-import {checkRequiredGroupBys} from '../../composite-source-utils';
+import {
+  checkRequiredGroupBys,
+  computeQueryGivenUsage,
+} from '../../composite-source-utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -76,7 +79,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     }
     const {
       pipeline: rhsPipeline,
-      annotation,
+      annotations,
       outputStruct,
       name,
     } = this.view.pipelineComp(fieldSpace);
@@ -84,7 +87,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     const query = {
       ...queryBase,
       name,
-      annotation,
+      annotations,
       pipeline: [...queryBase.pipeline, ...rhsPipeline],
     };
 
@@ -114,10 +117,10 @@ export class QueryArrow extends QueryBase implements QueryElement {
     const pipelineWithExpandedFieldUsage = [
       // The base query (if it exists) will already have its `expandedFieldUsage` computed
       ...queryBase.pipeline,
-      ...this.expandFieldUsage(
+      ...this.expandRefUsage(
         this.source instanceof Source
           ? // If `source ->` then use the composite resolved struct,
-            compositeResolvedSourceDef ?? inputStruct
+            (compositeResolvedSourceDef ?? inputStruct)
           : // Otherwise just use the `inputStruct`
             inputStruct,
         rhsPipeline
@@ -129,6 +132,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
         ...query,
         compositeResolvedSourceDef,
         pipeline: pipelineWithExpandedFieldUsage,
+        givenUsage: computeQueryGivenUsage(pipelineWithExpandedFieldUsage),
       },
       outputStruct,
       inputStruct,

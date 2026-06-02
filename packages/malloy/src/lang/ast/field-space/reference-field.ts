@@ -22,8 +22,8 @@
  */
 
 import type {
-  Annotation,
-  FieldUsage,
+  AnnotationsDef,
+  FieldUsageEntry,
   QueryFieldDef,
   TypeDesc,
 } from '../../../model/malloy_types';
@@ -70,7 +70,7 @@ export class ReferenceField extends SpaceField {
         if (TD.isAtomic(foundType)) {
           this.queryFieldDef = {
             ...mkFieldDef(TDU.atomicDef(foundType), path[0]),
-            e: {node: 'parameter', path},
+            e: {node: 'parameter', path, at: this.fieldRef.location},
           };
         } else {
           // not sure what to do here, if we get here
@@ -93,12 +93,12 @@ export class ReferenceField extends SpaceField {
         const origFd = refTo.constructorFieldDef();
         if (origFd) {
           const notes = this.fieldRef.note;
-          if (origFd.annotation || notes) {
-            const annotation: Annotation = notes || {};
-            if (origFd.annotation) {
-              annotation.inherits = origFd.annotation;
+          if (origFd.annotations || notes) {
+            const annotations: AnnotationsDef = notes || {};
+            if (origFd.annotations) {
+              annotations.inherits = origFd.annotations;
             }
-            this.queryFieldDef.annotation = annotation;
+            this.queryFieldDef.annotations = annotations;
           }
         }
       }
@@ -112,13 +112,13 @@ export class ReferenceField extends SpaceField {
     if (refTo) {
       const joinPath = this.fieldRef.list.slice(0, -1).map(x => x.refString);
       const typeDesc = refTo.typeDesc();
-      const usage: FieldUsage = {
+      const usage: FieldUsageEntry = {
         path: this.fieldRef.path,
         at: this.fieldRef.location,
       };
       this.memoTypeDesc = {
         ...typeDesc,
-        fieldUsage: [usage],
+        refSummary: {fieldUsage: [usage]},
         requiresGroupBy: typeDesc.requiresGroupBy?.map(gb => ({
           ...gb,
           path: [...joinPath, ...gb.path],

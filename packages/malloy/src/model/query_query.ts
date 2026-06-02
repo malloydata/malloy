@@ -43,7 +43,7 @@ import {
   isAtomic,
   expressionIsCalculation,
   expressionIsScalar,
-  getIdentifier,
+  activeName,
   isJoinedSource,
   isBasicArray,
   isIndexSegment,
@@ -82,6 +82,7 @@ import {
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getCompiledSQL} from './sql_compiled';
 import {mkBuildID} from './source_def_utils';
+import {MalloyCompileError} from './malloy_compile_error';
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -317,10 +318,11 @@ export class QueryQuery extends QueryField {
       for (const pathSegment of ungrouping.path) {
         const nextStruct = destResult.allFields.get(pathSegment);
         if (!(nextStruct instanceof FieldInstanceResult)) {
-          throw new Error(
-            `Ungroup path ${ungrouping.path.join(
-              '.'
-            )} segment '${pathSegment}' is not a nested query`
+          throw new MalloyCompileError(
+            `Ungrouping path '${ungrouping.path.join('.')}' references ` +
+              `'${pathSegment}', which is not a nested view at this level.`,
+            'compiler-ungrouped-invalid-path',
+            this.fieldDef.location
           );
         }
         destResult = nextStruct;
@@ -378,8 +380,12 @@ export class QueryQuery extends QueryField {
 
       if (field instanceof QueryQuery) {
         if (this.firstSegment.type === 'project') {
-          throw new Error(
-            `Nested views cannot be used in select - '${field.fieldDef.name}'`
+          throw new MalloyCompileError(
+            `Cannot include nested view '${field.fieldDef.name}' in a ` +
+              "'select:' stage. Nested views require `group_by:` or " +
+              '`aggregate:` to be included in output.',
+            'compiler-nested-view-in-select',
+            field.fieldDef.location
           );
         }
         const fir = new FieldInstanceResult(
@@ -411,8 +417,11 @@ export class QueryQuery extends QueryField {
 
         if (isBasicAggregate(field)) {
           if (this.firstSegment.type === 'project') {
-            throw new Error(
-              `Aggregate Fields cannot be used in select - '${field.fieldDef.name}'`
+            throw new MalloyCompileError(
+              `Cannot include aggregate field '${field.fieldDef.name}' in ` +
+                "a 'select:' stage. Use `aggregate:` instead to compute aggregates.",
+              'compiler-aggregate-in-select',
+              field.fieldDef.location
             );
           }
         }
@@ -642,9 +651,9 @@ export class QueryQuery extends QueryField {
             join: 'many',
             name,
             fields: structDef.fields,
-            ...(structDef.annotation && {annotation: structDef.annotation}),
-            ...(structDef.modelAnnotation && {
-              modelAnnotation: structDef.modelAnnotation,
+            ...(structDef.annotations && {annotations: structDef.annotations}),
+            ...(structDef.modelAnnotations && {
+              modelAnnotations: structDef.modelAnnotations,
             }),
             resultMetadata,
             ...(queryTimezone && {queryTimezone}),
@@ -656,9 +665,9 @@ export class QueryQuery extends QueryField {
             join: 'one',
             name,
             fields: structDef.fields,
-            ...(structDef.annotation && {annotation: structDef.annotation}),
-            ...(structDef.modelAnnotation && {
-              modelAnnotation: structDef.modelAnnotation,
+            ...(structDef.annotations && {annotations: structDef.annotations}),
+            ...(structDef.modelAnnotations && {
+              modelAnnotations: structDef.modelAnnotations,
             }),
             resultMetadata,
             ...(queryTimezone && {queryTimezone}),
@@ -689,12 +698,12 @@ export class QueryQuery extends QueryField {
           }
 
           const location = fOut.location;
-          const annotation = fOut.annotation;
+          const annotations = fOut.annotations;
 
           const common = {
             resultMetadata,
             location,
-            annotation,
+            annotations,
           };
 
           // build out the result fields...
@@ -755,8 +764,8 @@ export class QueryQuery extends QueryField {
       resultMetadata: this.getResultMetadata(this.rootResult),
       queryTimezone: resultStruct.getQueryInfo().queryTimezone,
     };
-    if (this.parent.structDef.modelAnnotation) {
-      outputStruct.modelAnnotation = this.parent.structDef.modelAnnotation;
+    if (this.parent.structDef.modelAnnotations) {
+      outputStruct.modelAnnotations = this.parent.structDef.modelAnnotations;
     }
 
     return outputStruct;
@@ -765,18 +774,25 @@ export class QueryQuery extends QueryField {
   getStructSourceSQL(qs: QueryStruct, stageWriter: StageWriter): string {
     switch (qs.structDef.type) {
       case 'table':
-        return this.parent.dialect.quoteTablePath(qs.structDef.tablePath);
+        // tablePath is canonical SQL — translator pre-validated.
+        return qs.structDef.tablePath;
       case 'virtual': {
         const virtualMap = qs.prepareResultOptions?.virtualMap;
         const tablePath = virtualMap
           ?.get(qs.structDef.connection)
           ?.get(qs.structDef.name);
         if (!tablePath) {
-          throw new Error(
-            `No virtual map entry for '${qs.structDef.name}' on connection '${qs.structDef.connection}'`
+          throw new MalloyCompileError(
+            `No virtual-map entry for virtual source '${qs.structDef.name}' ` +
+              `on connection '${qs.structDef.connection}'. ` +
+              'Add a virtual-map entry via the `virtualMap` runtime option.',
+            'runtime-virtual-map-missing',
+            qs.structDef.location
           );
         }
-        return this.parent.dialect.quoteTablePath(tablePath);
+        // virtualMap entries are application-supplied — assumed already
+        // canonical SQL.
+        return tablePath;
       }
       case 'composite':
         // TODO: throw an error here; not simple because we call into this
@@ -788,7 +804,6 @@ export class QueryQuery extends QueryField {
         return `(${getCompiledSQL(
           qs.structDef,
           qs.prepareResultOptions ?? {},
-          path => this.parent.dialect.quoteTablePath(path),
           (query, opts) => {
             // Compile query to isolated SQL (not into parent's stageWriter)
             const ret = this.compileQueryToStages(
@@ -824,16 +839,22 @@ export class QueryQuery extends QueryField {
             const entry = buildManifest.entries[buildId];
 
             if (entry) {
-              // Found in manifest - use persisted table
-              return this.parent.dialect.quoteTablePath(entry.tableName);
+              // Found in manifest - use persisted table.
+              // entry.tableName comes from the manifest, assumed canonical.
+              return entry.tableName;
             }
 
             if (buildManifest.strict) {
-              const base = `Persist source '${qs.structDef.sourceID}' not found in manifest (buildId: ${buildId})`;
-              throw new Error(
+              const base =
+                `Persist source '${qs.structDef.sourceID}' not found ` +
+                `in manifest (buildId: ${buildId}); strict manifest mode ` +
+                'forbids fallback to live compilation.';
+              throw new MalloyCompileError(
                 buildManifest.loadError
                   ? `${base}\n  ${buildManifest.loadError}`
-                  : base
+                  : base,
+                'runtime-manifest-strict-miss',
+                qs.structDef.location
               );
             }
           }
@@ -850,9 +871,7 @@ export class QueryQuery extends QueryField {
       }
       default:
         throw new Error(
-          `Cannot create SQL StageWriter from '${getIdentifier(
-            qs.structDef
-          )}' type '${qs.structDef.type}`
+          `Cannot create SQL StageWriter from '${activeName(qs.structDef)}' type '${qs.structDef.type}`
         );
     }
   }
@@ -887,8 +906,11 @@ export class QueryQuery extends QueryField {
     if (typeof structRef === 'string') {
       const struct = this.structRefToQueryStruct(structRef);
       if (!struct) {
-        throw new Error(
-          `Unexpected reference to an undefined source '${structRef}'`
+        throw new MalloyCompileError(
+          `Query references source '${structRef}', ` +
+            'which is not defined in this model.',
+          'compiler-undefined-source',
+          undefined
         );
       }
       sourceStruct = struct;
@@ -935,7 +957,7 @@ export class QueryQuery extends QueryField {
     let s = '';
     const qs = ji.queryStruct;
     const qsDef = qs.structDef;
-    qs.eventStream?.emit('join-used', {name: getIdentifier(qsDef)});
+    qs.eventStream?.emit('join-used', {name: activeName(qsDef)});
     qs.maybeEmitParameterizedSourceUsage();
     if (isJoinedSource(qsDef)) {
       let structSQL = this.getStructSourceSQL(qs, stageWriter);
@@ -945,7 +967,7 @@ export class QueryQuery extends QueryField {
       }
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlQuoteIdentifier(
           '__distinct_key'
         )}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
@@ -1118,7 +1140,7 @@ export class QueryQuery extends QueryField {
     if (isBaseTable(qs.structDef)) {
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlQuoteIdentifier(
           '__distinct_key'
         )}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
@@ -1214,7 +1236,7 @@ export class QueryQuery extends QueryField {
             o.push(`${fi.fieldUsage.resultIndex} ${f.dir || 'ASC'}`);
           } else if (this.parent.dialect.orderByClause === 'output_name') {
             o.push(
-              `${this.parent.dialect.sqlMaybeQuoteIdentifier(f.field)} ${
+              `${this.parent.dialect.sqlQuoteIdentifier(f.field)} ${
                 f.dir || 'ASC'
               }`
             );
@@ -1223,7 +1245,11 @@ export class QueryQuery extends QueryField {
             o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
           }
         } else {
-          throw new Error(`Unknown field in ORDER BY ${f.field}`);
+          throw new MalloyCompileError(
+            `ORDER BY references unknown field '${f.field}'.`,
+            'compiler-orderby-field-not-found',
+            queryDef.referencedAt
+          );
         }
       } else {
         if (this.parent.dialect.orderByClause === 'ordinal') {
@@ -1231,7 +1257,7 @@ export class QueryQuery extends QueryField {
         } else if (this.parent.dialect.orderByClause === 'output_name') {
           const orderingField = resultStruct.getFieldByNumber(f.field);
           o.push(
-            `${this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${this.parent.dialect.sqlQuoteIdentifier(
               orderingField.name
             )} ${f.dir || 'ASC'}`
           );
@@ -1261,7 +1287,7 @@ export class QueryQuery extends QueryField {
 
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
       if (fi.fieldUsage.type === 'result') {
         fields.push(` ${fi.generateExpression()} as ${sqlName}`);
       }
@@ -1325,7 +1351,7 @@ export class QueryQuery extends QueryField {
         .join(',\n');
       const outputFields = outputPipelinedSQL.map(f => f.sqlFieldName);
       const allFields = Array.from(this.rootResult.allFields.keys()).map(f =>
-        this.parent.dialect.sqlMaybeQuoteIdentifier(f)
+        this.parent.dialect.sqlQuoteIdentifier(f)
       );
       const fields = allFields.filter(f => outputFields.indexOf(f) === -1);
       retSQL = `SELECT ${
@@ -1352,7 +1378,7 @@ export class QueryQuery extends QueryField {
     const orderedFields = [...scalarFields, ...otherFields];
 
     for (const [name, fi] of orderedFields) {
-      const outputName = this.parent.dialect.sqlMaybeQuoteIdentifier(
+      const outputName = this.parent.dialect.sqlQuoteIdentifier(
         `${name}__${resultSet.groupSet}`
       );
       if (fi instanceof FieldInstanceField) {
@@ -1375,10 +1401,9 @@ export class QueryQuery extends QueryField {
               });
               output.sql.push(outputFieldName);
               if (fi.f.fieldDef.type === 'number') {
-                const outputNameString =
-                  this.parent.dialect.sqlMaybeQuoteIdentifier(
-                    `${name}__${resultSet.groupSet}_string`
-                  );
+                const outputNameString = this.parent.dialect.sqlQuoteIdentifier(
+                  `${name}__${resultSet.groupSet}_string`
+                );
                 const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.sql.push(outputFieldNameString);
                 output.dimensionIndexes.push(output.fieldIndex++);
@@ -1519,9 +1544,7 @@ export class QueryQuery extends QueryField {
         while (r) {
           for (const name of r.fieldNames(fi => isScalarField(fi.f))) {
             dimensions.push(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(
-                `${name}__${r.groupSet}`
-              )
+              this.parent.dialect.sqlQuoteIdentifier(`${name}__${r.groupSet}`)
             );
           }
           r = r.parent;
@@ -1560,7 +1583,7 @@ export class QueryQuery extends QueryField {
             }
             obSQL.push(
               ' ' +
-                this.parent.dialect.sqlMaybeQuoteIdentifier(
+                this.parent.dialect.sqlQuoteIdentifier(
                   `${orderingField.name}__${result.groupSet}`
                 ) +
                 ` ${ordering.dir || 'ASC'}`
@@ -1686,7 +1709,13 @@ export class QueryQuery extends QueryField {
       this.firstSegment.type === 'project' &&
       !this.parent.modelCompilerFlags().has('unsafe_complex_select_query')
     ) {
-      throw new Error('PROJECT cannot be used on queries with turtles');
+      throw new MalloyCompileError(
+        "Cannot use 'select:' in a stage that contains nested views. " +
+          'Use `group_by:` or restructure the pipeline. ' +
+          'Set `##! unsafe_complex_select_query` to bypass at your own risk.',
+        'compiler-project-with-turtles',
+        this.fieldDef.location
+      );
     }
 
     const groupBy = 'GROUP BY ' + f.dimensionIndexes.join(',') + '\n';
@@ -1725,7 +1754,7 @@ export class QueryQuery extends QueryField {
   ) {
     const groupsToMap: number[] = [];
     for (const [name, fi] of resultSet.allFields) {
-      const sqlFieldName = this.parent.dialect.sqlMaybeQuoteIdentifier(
+      const sqlFieldName = this.parent.dialect.sqlQuoteIdentifier(
         `${name}__${resultSet.groupSet}`
       );
       if (fi instanceof FieldInstanceField) {
@@ -1860,12 +1889,12 @@ export class QueryQuery extends QueryField {
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
     const dimensionIndexes: number[] = [];
     for (const [name, fi] of this.rootResult.allFields) {
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
           if (isScalarField(fi.f)) {
             fieldsSQL.push(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(
+              this.parent.dialect.sqlQuoteIdentifier(
                 `${name}__${this.rootResult.groupSet}`
               ) + ` as ${sqlName}`
             );
@@ -1873,7 +1902,7 @@ export class QueryQuery extends QueryField {
           } else if (isBasicCalculation(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlAnyValueLastTurtle(
-                this.parent.dialect.sqlMaybeQuoteIdentifier(
+                this.parent.dialect.sqlQuoteIdentifier(
                   `${name}__${this.rootResult.groupSet}`
                 ),
                 this.rootResult.groupSet,
@@ -1897,7 +1926,7 @@ export class QueryQuery extends QueryField {
         } else if (fi.firstSegment.type === 'project') {
           fieldsSQL.push(
             this.parent.dialect.sqlAnyValueLastTurtle(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(
+              this.parent.dialect.sqlQuoteIdentifier(
                 `${name}__${this.rootResult.groupSet}`
               ),
               this.rootResult.groupSet,
@@ -1945,7 +1974,7 @@ export class QueryQuery extends QueryField {
     const dialectFieldList: DialectFieldList = [];
 
     for (const [name, field] of resultStruct.allFields) {
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
       //
       if (
         resultStruct.firstSegment.type === 'reduce' &&
@@ -1966,7 +1995,7 @@ export class QueryQuery extends QueryField {
           };
           dialectFieldList.push({
             typeDef: multiLineNest,
-            sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            sqlExpression: this.parent.dialect.sqlQuoteIdentifier(
               `${name}__${resultStruct.groupSet}`
             ),
             rawName: name,
@@ -1981,7 +2010,7 @@ export class QueryQuery extends QueryField {
           };
           dialectFieldList.push({
             typeDef: oneLineNest,
-            sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            sqlExpression: this.parent.dialect.sqlQuoteIdentifier(
               `${name}__${resultStruct.groupSet}`
             ),
             rawName: name,
@@ -1995,7 +2024,7 @@ export class QueryQuery extends QueryField {
       ) {
         pushDialectField(dialectFieldList, {
           fieldDef: field.f.fieldDef,
-          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+          sqlExpression: this.parent.dialect.sqlQuoteIdentifier(
             `${name}__${resultStruct.groupSet}`
           ),
           rawName: name,
@@ -2038,12 +2067,12 @@ export class QueryQuery extends QueryField {
       } else {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
-      const structField = this.parent.dialect.sqlMaybeQuoteIdentifier(
+      const structField = this.parent.dialect.sqlQuoteIdentifier(
         orderingField.name
       );
       if (resultStruct.firstSegment.type === 'reduce') {
         compiledOrderBy.push({
-          field: this.parent.dialect.sqlMaybeQuoteIdentifier(
+          field: this.parent.dialect.sqlQuoteIdentifier(
             `${orderingField.name}__${resultStruct.groupSet}`
           ),
           structField,
@@ -2165,7 +2194,7 @@ export class QueryQuery extends QueryField {
       // console.log(stageWriter.generateSQLStages());
       structDef = pipeOut.outputStruct;
     }
-    structDef.annotation = fi.turtleDef.annotation;
+    structDef.annotations = fi.turtleDef.annotations;
     return {
       structDef,
       pipeOut,
@@ -2268,7 +2297,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
   expandField(f: IndexFieldDef) {
     const as = f.path.join('.');
-    const field = this.parent.getQueryFieldByName(f.path);
+    const field = this.parent.getQueryFieldByName(f.path, f.at);
     return {as, field};
   }
 
@@ -2311,12 +2340,12 @@ class QueryQueryIndexStage extends QueryQuery {
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = 'COUNT(*)';
     const dialect = this.parent.dialect;
-    const fieldNameColumn = dialect.sqlMaybeQuoteIdentifier('fieldName');
-    const fieldPathColumn = dialect.sqlMaybeQuoteIdentifier('fieldPath');
-    const fieldValueColumn = dialect.sqlMaybeQuoteIdentifier('fieldValue');
-    const fieldTypeColumn = dialect.sqlMaybeQuoteIdentifier('fieldType');
-    const fieldRangeColumn = dialect.sqlMaybeQuoteIdentifier('fieldRange');
-    const weightColumn = dialect.sqlMaybeQuoteIdentifier('weight');
+    const fieldNameColumn = dialect.sqlQuoteIdentifier('fieldName');
+    const fieldPathColumn = dialect.sqlQuoteIdentifier('fieldPath');
+    const fieldValueColumn = dialect.sqlQuoteIdentifier('fieldValue');
+    const fieldTypeColumn = dialect.sqlQuoteIdentifier('fieldType');
+    const fieldRangeColumn = dialect.sqlQuoteIdentifier('fieldRange');
+    const weightColumn = dialect.sqlQuoteIdentifier('weight');
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
       measureSQL = this.rootResult.getField(measureName).generateExpression();
@@ -2531,8 +2560,8 @@ class QueryQueryIndex extends QueryQuery {
       ],
       connection: this.parent.connectionName,
     };
-    if (this.parent.structDef.modelAnnotation) {
-      ret.modelAnnotation = this.parent.structDef.modelAnnotation;
+    if (this.parent.structDef.modelAnnotations) {
+      ret.modelAnnotations = this.parent.structDef.modelAnnotations;
     }
     return ret;
   }
@@ -2551,7 +2580,6 @@ class QueryQueryRaw extends QueryQuery {
       getCompiledSQL(
         this.parent.structDef,
         this.parent.prepareResultOptions ?? {},
-        path => this.parent.dialect.quoteTablePath(path),
         (query, opts) => {
           // Compile query to isolated SQL (not into parent's stageWriter)
           const ret = this.compileQueryToStages(

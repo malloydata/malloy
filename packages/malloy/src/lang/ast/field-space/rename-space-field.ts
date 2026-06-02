@@ -22,10 +22,11 @@
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   DocumentLocation,
   FieldDef,
 } from '../../../model/malloy_types';
+import {activeName, mapFieldUsage} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
 
@@ -34,7 +35,7 @@ export class RenameSpaceField extends SpaceField {
     private readonly otherField: SpaceField,
     private readonly newName: string,
     private readonly location: DocumentLocation,
-    private note: Annotation | undefined
+    private note: AnnotationsDef | undefined
   ) {
     super();
   }
@@ -45,23 +46,23 @@ export class RenameSpaceField extends SpaceField {
       return undefined;
     }
     if (this.note) {
-      if (returnFieldDef.annotation) {
-        returnFieldDef.annotation = {
+      if (returnFieldDef.annotations) {
+        returnFieldDef.annotations = {
           ...this.note,
-          inherits: returnFieldDef.annotation,
+          inherits: returnFieldDef.annotations,
         };
       } else {
-        returnFieldDef.annotation = this.note;
+        returnFieldDef.annotations = this.note;
       }
     }
     return {
       ...returnFieldDef,
       as: this.newName,
       location: this.location,
-      fieldUsage: returnFieldDef.fieldUsage?.map(u => ({
+      refSummary: mapFieldUsage(returnFieldDef.refSummary, u => ({
         ...u,
         path:
-          u.path[0] === (returnFieldDef.as ?? returnFieldDef.name)
+          u.path[0] === activeName(returnFieldDef)
             ? [this.newName, ...u.path.slice(1)]
             : u.path,
       })),

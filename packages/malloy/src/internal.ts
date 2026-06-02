@@ -17,3 +17,5 @@ export {
 } from './model';
 export {TinyParseError, TinyParser} from './dialect/tiny_parser';
 export type {TinyToken} from './dialect/tiny_parser';
+export {prettify} from './lang/prettify';
+export type {PrettifyResult, PrettifyError} from './lang/prettify';

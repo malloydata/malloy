@@ -283,8 +283,7 @@ export class DatabricksConnection
     };
 
     try {
-      const quotedPath = this.dialect.quoteTablePath(tablePath);
-      const result = await this.runRawSQL(`DESCRIBE TABLE ${quotedPath}`);
+      const result = await this.runRawSQL(`DESCRIBE TABLE ${tablePath}`);
       this.fillStructDefFromDescribe(result, structDef);
       return structDef;
     } catch (e) {

@@ -30,7 +30,7 @@ import type {
   TimestampUnit,
 } from '../../../model';
 import {maxOfExpressionTypes, mergeEvalSpaces} from '../../../model';
-import {mergeFieldUsage} from '../../composite-source-utils';
+import {mergeRefSummaries} from '../../composite-source-utils';
 import type {ExprResult} from './expr-result';
 import type {TimeResult} from './time-result';
 
@@ -50,7 +50,7 @@ export function computedExprValue({
     value,
     expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
-    fieldUsage: mergeFieldUsage(...from.map(e => e.fieldUsage)),
+    refSummary: mergeRefSummaries(...from.map(e => e.refSummary)),
     ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
     requiresGroupBy: mergeGroupedBys(...from.map(e => e.requiresGroupBy)),
   };
@@ -73,7 +73,7 @@ export function computedTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
-    fieldUsage: mergeFieldUsage(...from.map(e => e.fieldUsage)),
+    refSummary: mergeRefSummaries(...from.map(e => e.refSummary)),
     ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
     requiresGroupBy: mergeGroupedBys(...from.map(e => e.requiresGroupBy)),
   };
@@ -122,7 +122,6 @@ export function literalTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
-    fieldUsage: [],
   };
   if (timeframe) {
     y.timeframe = timeframe;

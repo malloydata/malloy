@@ -185,10 +185,7 @@ export class MySQLConnection
       fields: [],
     };
 
-    const quotedTablePath = tablePath.match(/[:*/]/)
-      ? `\`${tablePath}\``
-      : tablePath;
-    const infoQuery = `DESCRIBE ${quotedTablePath}`;
+    const infoQuery = `DESCRIBE ${tablePath}`;
     const result = await this.runRawSQL(infoQuery);
     await this.schemaFromResult(result, structDef);
     return structDef;
@@ -282,9 +279,8 @@ export class MySQLConnection
       return jsonArray;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filteredArray = jsonArray
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       .filter(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (element: any) =>

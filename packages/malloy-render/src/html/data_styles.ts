@@ -179,7 +179,6 @@ export interface VegaRenderOptions extends DataRenderOptions {
 }
 
 export interface SingleValueRenderOptions extends DataRenderOptions {
-  // eslint-disable-next-line camelcase
   single_value?: Record<string, unknown>;
 }
 
@@ -208,11 +207,9 @@ export interface ChartRenderOptions extends DataRenderOptions {
 }
 
 export interface CartesianChartRenderOptions extends ChartRenderOptions {
-  // eslint-disable-next-line camelcase
   chart?: {
-    // eslint-disable-next-line camelcase
     x_axis?: string;
-    // eslint-disable-next-line camelcase
+
     y_axis?: string;
     color?: string;
     shape?: string;
@@ -233,12 +230,10 @@ export interface ColumnSparkLineRenderOptions extends BarChartRenderOptions {
 }
 
 export interface ScatterChartRenderOptions extends CartesianChartRenderOptions {
-  // eslint-disable-next-line camelcase
   scatter_chart?: Record<string, unknown>;
 }
 
 export interface LineChartRenderOptions extends CartesianChartRenderOptions {
-  // eslint-disable-next-line camelcase
   line_chart?: Record<string, unknown>;
 }
 

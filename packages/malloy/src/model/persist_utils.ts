@@ -20,7 +20,7 @@ import {
   safeRecordGet,
 } from './malloy_types';
 import {resolveSourceID} from './source_def_utils';
-import {annotationToTag} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 import type {LogMessage} from '../lang';
 import type {BuildNode} from '../api/foundation/types';
 
@@ -43,8 +43,8 @@ export function checkPersistAnnotation(source: SourceDef): {
   persist: boolean;
   log: LogMessage[];
 } {
-  if (!source.annotation) return {persist: false, log: []};
-  const {tag, log} = annotationToTag(source.annotation, {prefix: /^#@ /});
+  if (!source.annotations) return {persist: false, log: []};
+  const {tag, log} = new Annotations(source.annotations).parseAsTag('@');
   return {persist: tag.has('persist'), log};
 }
 

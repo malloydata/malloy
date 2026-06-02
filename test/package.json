@@ -15,21 +15,21 @@
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../jest.config.js",
-    "build": "tsc --build",
-    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
+    "build": "node ../node_modules/typescript/bin/tsc --build",
+    "clean": "node ../node_modules/typescript/bin/tsc --build --clean && rm -f tsconfig.tsbuildinfo",
     "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {
     "@jest/globals": "^29.4.3",
-    "@malloydata/db-bigquery": "0.0.381",
-    "@malloydata/db-duckdb": "0.0.381",
-    "@malloydata/db-postgres": "0.0.381",
-    "@malloydata/db-snowflake": "0.0.381",
-    "@malloydata/db-trino": "0.0.381",
-    "@malloydata/malloy": "0.0.381",
-    "@malloydata/malloy-tag": "0.0.381",
-    "@malloydata/render": "0.0.381",
-    "@malloydata/render-validator": "0.0.381",
+    "@malloydata/db-bigquery": "0.0.404",
+    "@malloydata/db-duckdb": "0.0.404",
+    "@malloydata/db-postgres": "0.0.404",
+    "@malloydata/db-snowflake": "0.0.404",
+    "@malloydata/db-trino": "0.0.404",
+    "@malloydata/malloy": "0.0.404",
+    "@malloydata/malloy-tag": "0.0.404",
+    "@malloydata/render": "0.0.404",
+    "@malloydata/render-validator": "0.0.404",
     "events": "^3.3.0",
     "jsdom": "^22.1.0",
     "luxon": "^3.5.0",
@@ -39,5 +39,8 @@
     "@types/jsdom": "^21.1.1",
     "@types/luxon": "^3.5.0"
   },
-  "version": "0.0.381"
+  "overrides": {
+    "typescript": "^6.0.3"
+  },
+  "version": "0.0.404"
 }

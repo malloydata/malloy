@@ -13,7 +13,6 @@
  * don't mistakenly believe they are running in a browser.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 
 class Node {

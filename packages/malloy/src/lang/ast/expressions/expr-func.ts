@@ -40,10 +40,12 @@ import type {
   RecordFunctionReturnTypeDef,
   RecordTypeDef,
   FieldUsage,
+  FieldUsageEntry,
   FunctionOrderBy as ModelFunctionOrderBy,
   AggregateUngrouping,
 } from '../../../model/malloy_types';
 import {
+  activeName,
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
@@ -55,9 +57,11 @@ import {
   isBasicArray,
   maxOfExpressionTypes,
   mergeEvalSpaces,
+  mkRefSummary,
   TD,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
+import {typeDefToString} from '../../../model/utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
 import type {FieldReference} from '../query-items/field-references';
@@ -72,8 +76,20 @@ import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
 import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
-import {mergeFieldUsage} from '../../composite-source-utils';
+import {mergeRefSummaries} from '../../composite-source-utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
+
+// Built-in functions that take a string literal of user-supplied SQL
+// and emit it directly. Gated by experimental.sql_functions in plain
+// Malloy; rejected unconditionally in restricted queries because they
+// are a raw-SQL escape hatch by definition.
+const SQL_FUNCTION_NAMES = [
+  'sql_number',
+  'sql_string',
+  'sql_date',
+  'sql_timestamp',
+  'sql_boolean',
+];
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -101,6 +117,15 @@ export class ExprFunc extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
+    if (this.isRaw && this.isRestricted()) {
+      const typeStr = this.explicitType
+        ? typeDefToString(this.explicitType)
+        : '';
+      return this.loggedErrorExpr(
+        'restricted-construct-forbidden',
+        `\`${this.name}!${typeStr}(...)\` cannot be used in a restricted query — direct SQL function calls (\`!type(...)\`) are not permitted.`
+      );
+    }
     return this.getPropsExpression(fs);
   }
 
@@ -190,7 +215,9 @@ export class ExprFunc extends ExpressionDef {
               at: this.source.location,
             },
             evalSpace: footType.evalSpace,
-            fieldUsage: [{path: this.source.path, at: this.source.location}],
+            refSummary: {
+              fieldUsage: [{path: this.source.path, at: this.source.location}],
+            },
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -305,7 +332,7 @@ export class ExprFunc extends ExpressionDef {
     let funcCall: Expr = frag;
     const isAnalytic = expressionIsAnalytic(overload.returnType.expressionType);
     const isAsymmetric = !overload.isSymmetric;
-    const orderByUsage: FieldUsage[] = [];
+    const orderByUsage: FieldUsage = [];
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins
     // TODO add in an error if you use an illegal join pattern
@@ -373,16 +400,14 @@ export class ExprFunc extends ExpressionDef {
       }
       frag.partitionBy = partitionByFields;
     }
-    const sqlFunctionFieldUsage: FieldUsage[] = [];
-    if (
-      [
-        'sql_number',
-        'sql_string',
-        'sql_date',
-        'sql_timestamp',
-        'sql_boolean',
-      ].includes(func.name)
-    ) {
+    const sqlFunctionFieldUsage: FieldUsage = [];
+    if (SQL_FUNCTION_NAMES.includes(func.name)) {
+      if (this.isRestricted()) {
+        return this.loggedErrorExpr(
+          'restricted-construct-forbidden',
+          `\`${this.name}(...)\` cannot be used in a restricted query — the \`sql_*\` function family emits user-supplied SQL directly, which is not permitted.`
+        );
+      }
       if (!this.inExperiment('sql_functions', true)) {
         return this.loggedErrorExpr(
           'sql-functions-experiment-not-enabled',
@@ -424,7 +449,11 @@ export class ExprFunc extends ExpressionDef {
               );
             }
             if (result.found.refType === 'parameter') {
-              expr.push({node: 'parameter', path: part.path});
+              expr.push({
+                node: 'parameter',
+                path: part.path,
+                at: this.args[0].location,
+              });
             } else {
               sqlFunctionFieldUsage.push({
                 path: part.path,
@@ -455,18 +484,21 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
           ? maxEvalSpace
           : 'output';
-    const aggregateFunctionUsage: FieldUsage[] = [];
+    const aggregateFunctionUsage: FieldUsage = [];
     if (isAsymmetric || isAnalytic) {
-      const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
+      const funcUsage: FieldUsageEntry = {
+        path: structPath || [],
+        at: this.location,
+      };
       if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
       if (isAnalytic) funcUsage.analyticFunctionUse = true;
       aggregateFunctionUsage.push(funcUsage);
     }
-    const fieldUsage = mergeFieldUsage(
-      ...argExprs.map(ae => ae.fieldUsage),
-      orderByUsage,
-      sqlFunctionFieldUsage,
-      aggregateFunctionUsage
+    const refSummary = mergeRefSummaries(
+      ...argExprs.map(ae => ae.refSummary),
+      mkRefSummary({fieldUsage: orderByUsage}),
+      mkRefSummary({fieldUsage: sqlFunctionFieldUsage}),
+      mkRefSummary({fieldUsage: aggregateFunctionUsage})
     );
     const ungroupings = argExprs.reduce(
       (ug: AggregateUngrouping[], a) => a.ungroupings ?? ug,
@@ -481,7 +513,7 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      fieldUsage,
+      refSummary,
       ungroupings,
     };
   }
@@ -716,10 +748,10 @@ function isDataTypeMatch(
     const genericsSet: GenericAssignment[] = [];
     const paramFieldsByName = new Map<string, FunctionParameterFieldDef>();
     for (const field of paramT.fields) {
-      paramFieldsByName.set(field.as ?? field.name, field);
+      paramFieldsByName.set(activeName(field), field);
     }
     for (const field of arg.fields) {
-      const match = paramFieldsByName.get(field.as ?? field.name);
+      const match = paramFieldsByName.get(activeName(field));
       if (match === undefined) {
         return {dataTypeMatch: false, genericsSet: []};
       }

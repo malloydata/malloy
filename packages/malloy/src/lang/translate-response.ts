@@ -22,7 +22,7 @@
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import type {Annotation, ModelDef} from '../model/malloy_types';
+import type {AnnotationsDef, ModelDef} from '../model/malloy_types';
 import type {MalloyElement} from './ast';
 import type {LogMessage} from './parse-log';
 import type {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
@@ -50,7 +50,7 @@ export interface NeedSchemaData {
   tables: Record<
     string,
     {
-      connectionName: string | undefined;
+      connectionName: string;
       tablePath: string;
     }
   >;
@@ -74,10 +74,7 @@ export interface NeedConnectionDialects {
 }
 
 interface NeededData
-  extends NeedURLData,
-    NeedSchemaData,
-    NeedCompileSQL,
-    NeedConnectionDialects {}
+  extends NeedURLData, NeedSchemaData, NeedCompileSQL, NeedConnectionDialects {}
 export type DataRequestResponse = Partial<NeededData> & ResponseBase;
 export function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
   return (
@@ -88,61 +85,40 @@ export function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
 }
 export type ModelDataRequest = NeedCompileSQL | undefined;
 interface ASTData
-  extends ResponseBase,
-    ProblemResponse,
-    NeededData,
-    FinalResponse {
+  extends ResponseBase, ProblemResponse, NeededData, FinalResponse {
   ast: MalloyElement;
 }
 export type ASTResponse = Partial<ASTData>;
 interface Metadata
-  extends ResponseBase,
-    NeededData,
-    ProblemResponse,
-    FinalResponse {
+  extends ResponseBase, NeededData, ProblemResponse, FinalResponse {
   symbols: DocumentSymbol[];
 }
 export type MetadataResponse = Partial<Metadata>;
 interface ModelAnnotationData
-  extends ResponseBase,
-    NeededData,
-    ProblemResponse,
-    FinalResponse {
-  modelAnnotation: Annotation;
+  extends ResponseBase, NeededData, ProblemResponse, FinalResponse {
+  modelAnnotations: AnnotationsDef;
 }
 export type ModelAnnotationResponse = Partial<ModelAnnotationData>;
 interface Completions
-  extends ResponseBase,
-    NeededData,
-    ProblemResponse,
-    FinalResponse {
+  extends ResponseBase, NeededData, ProblemResponse, FinalResponse {
   completions: DocumentCompletion[];
 }
 export type CompletionsResponse = Partial<Completions>;
 interface HelpContext
-  extends ResponseBase,
-    NeededData,
-    ProblemResponse,
-    FinalResponse {
+  extends ResponseBase, NeededData, ProblemResponse, FinalResponse {
   helpContext: DocumentHelpContext | undefined;
 }
 
 export type HelpContextResponse = Partial<HelpContext>;
 interface TranslatedResponseData
-  extends ResponseBase,
-    NeededData,
-    ProblemResponse,
-    FinalResponse {
+  extends ResponseBase, NeededData, ProblemResponse, FinalResponse {
   modelDef: ModelDef;
   fromSources: string[];
   modelWasModified: boolean;
 }
 
 interface TablePath
-  extends ResponseBase,
-    NeededData,
-    ProblemResponse,
-    FinalResponse {
+  extends ResponseBase, NeededData, ProblemResponse, FinalResponse {
   pathInfo: PathInfo[];
 }
 export type TablePathResponse = Partial<TablePath>;

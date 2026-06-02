@@ -4,7 +4,6 @@ permissions: {}
 on: workflow_call
 
 jobs:
-  # Label of the container job
   test-postgres:
     runs-on: ubuntu-latest
 
@@ -23,17 +22,17 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Use Node.js 20.x
+          name: workspace
+      - name: Extract workspace
+        run: tar --use-compress-program='zstd -d -T0' -xf workspace.tzst && rm workspace.tzst
+      - name: Use Node.js 24.x
         uses: actions/setup-node@v5
         with:
-          node-version: 20.x
-      - name: npm install, build, and test
+          node-version: 24.x
+      - name: Test
         run: |
-          npm ci --loglevel error
-          npm run build
           echo CREATE EXTENSION tsm_system_rows\; | psql
           gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
           npm run ci-postgres

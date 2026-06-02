@@ -21,9 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-/* eslint-disable no-console */
-
 import '@malloydata/malloy/test/matchers';
 import {wrapTestModel} from '@malloydata/malloy/test';
 import {RuntimeList} from '../../runtimes';

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -32,7 +31,8 @@ import {
   getFieldDef,
 } from './test-translator';
 import './parse-expects';
-import {isSourceDef} from '../../model';
+import {activeName, isSourceDef, QueryModel} from '../../model';
+import type {VirtualMap} from '../../model';
 
 describe('source:', () => {
   test('table', () => {
@@ -64,7 +64,7 @@ describe('source:', () => {
     expect(x).toTranslate();
     const a = x.getSourceDef('a');
     if (a) {
-      const aFields = a.fields.map(f => f.as || f.name);
+      const aFields = a.fields.map(f => activeName(f));
       expect(aFields).toContain('astr');
       expect(aFields).not.toContain('one');
     }
@@ -517,14 +517,14 @@ describe('source:', () => {
           const d = t.modelDef.contents['d'];
           expect(isSourceDef(d)).toBe(true);
           if (isSourceDef(d)) {
-            const dC = d.fields.find(f => (f.as ?? f.name) === 'c');
+            const dC = d.fields.find(f => activeName(f) === 'c');
             expect(dC).toBeDefined();
             if (dC === undefined) throw new Error('Expected dC to be defined');
             expect(isSourceDef(dC)).toBe(true);
             expect(isSourceDef(d)).toBe(true);
             if (isSourceDef(dC)) {
-              const dCAi = dC.fields.find(f => (f.as ?? f.name) === 'ai');
-              expect(dCAi?.annotation).toMatchObject({
+              const dCAi = dC.fields.find(f => activeName(f) === 'ai');
+              expect(dCAi?.annotations).toMatchObject({
                 notes: [{text: '# new_note\n'}],
               });
             }
@@ -1358,6 +1358,58 @@ describe('virtual sources', () => {
       errors: {connectionDialects: {a: 'a is not a connection'}},
     });
     expect(m).toLog(error('invalid-connection-for-table-source'));
+  });
+
+  // Regression for #2845: a query source built on a virtual source used to
+  // fail model load, because loading eagerly generated SQL for the query
+  // source before a virtualMap was available.
+  test('query source built on a virtual source loads and compiles', () => {
+    const m = vsModel(`
+      type: ff is { category :: string, amount :: number }
+      source: facts_raw is _db_.virtual('facts_raw')::ff
+      source: facts_agg is facts_raw -> {
+        group_by: category
+        aggregate: total is sum(amount)
+      }
+      run: facts_agg -> { group_by: category }
+    `);
+    expect(m).toTranslate();
+    const modelDef = m.translate().modelDef!;
+    const virtualMap: VirtualMap = new Map([
+      ['_db_', new Map([['facts_raw', 'facts_table']])],
+    ]);
+    const queryModel = new QueryModel(modelDef);
+    const compiled = queryModel.compileQuery(modelDef.queryList[0], {
+      virtualMap,
+    });
+    expect(compiled.sql).toContain('facts_table');
+  });
+
+  // A query source on a virtual source, reached through a join, exercises the
+  // nested-query-source path that the old load-time field resolution walked.
+  test('joined query source on a virtual source compiles', () => {
+    const m = vsModel(`
+      type: ff is { id :: number, category :: string, amount :: number }
+      source: facts_raw is _db_.virtual('facts_raw')::ff
+      source: cat_totals is facts_raw -> {
+        group_by: category
+        aggregate: total is sum(amount)
+      }
+      source: enriched is facts_raw extend {
+        join_one: cat_totals on category = cat_totals.category
+      }
+      run: enriched -> { select: category, cat_totals.total }
+    `);
+    expect(m).toTranslate();
+    const modelDef = m.translate().modelDef!;
+    const virtualMap: VirtualMap = new Map([
+      ['_db_', new Map([['facts_raw', 'facts_table']])],
+    ]);
+    const queryModel = new QueryModel(modelDef);
+    const compiled = queryModel.compileQuery(modelDef.queryList[0], {
+      virtualMap,
+    });
+    expect(compiled.sql).toContain('facts_table');
   });
 });
 
