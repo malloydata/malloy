@@ -43,7 +43,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // FLEX STORIES — no span/columns/gap/break tags
+  // FLEX STORIES: no span/columns/gap/break tags
   // ============================================
 
   // ============================================
@@ -189,7 +189,25 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // GRID STORIES — use span/columns/gap/break tags
+  // Break in flex mode: # break forces a new wrapping row even without a
+  // grid. Span is not used here (it would warn) because there is no grid.
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_break_flex is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+      # break
+      avg_retail2 is retail_price.avg()
+      avg_retail3 is retail_price.avg()
+  }
+
+  // ============================================
+  // GRID STORIES: use span/columns/gap/break tags
   // ============================================
 
   // ============================================
@@ -233,7 +251,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // 8 + 4 = 12 (wide chart + narrow KPI)
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_span_8_4_grid is {
     group_by:
       category
@@ -254,7 +272,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Per-item span: three items at 4+4+4
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_span_equal_thirds_grid is {
     group_by:
       category
@@ -273,7 +291,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Two half-width items, then a full-width table
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_span_mixed_grid is {
     group_by:
       category
@@ -296,7 +314,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Charts in dashboard: KPIs + line chart + bar chart
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_with_charts_grid is {
     group_by:
       category
@@ -353,7 +371,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Full dashboard: KPIs row, then charts row, then table
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_full_layout_grid is {
     group_by:
       category
@@ -388,7 +406,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Blank spans: 3+3 fills left half, right half empty
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_blank_spans_grid is {
     group_by:
       category
@@ -404,7 +422,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Big values with sparklines in dashboard
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_with_sparklines_grid is {
     group_by:
       category
@@ -467,7 +485,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Row break: KPIs then table on new row
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_with_break_grid is {
     group_by:
       category
@@ -559,7 +577,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // UX mockup: subtitles, big_value centering, table in card
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_ux_mockup_grid is {
     group_by:
       category
@@ -596,7 +614,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Tall chart via size.height inside a dashboard
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_tall_chart_grid is {
     group_by:
       category
@@ -625,7 +643,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Tests: does a 640px preset chart scale down in a ~25% card?
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_lg_chart_narrow_span_grid is {
     group_by:
       category
@@ -653,7 +671,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Tests: non-span items get computed default span
   // ============================================
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_mixed_span_defaults_grid is {
     group_by:
       category
@@ -710,11 +728,11 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       sum_retail is retail_price.sum()
   }
 
-  // Invalid span on one child: that child falls back to its computed
-  // default span. Grid mode is still active because the sibling has a
-  // valid span.
+  // Invalid span on one child falls back to its computed default span. The
+  // valid span on the sibling is honored because the dashboard has a grid
+  // (via gap); without a grid, span would be ignored with a warning.
   #(story)
-  # dashboard
+  # dashboard { gap = 16 }
   view: dashboard_fallback_bad_span is {
     group_by:
       category
