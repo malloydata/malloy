@@ -40,6 +40,15 @@ export abstract class PostgresBase extends Dialect {
   identifierEscapeStyle = EscapeStyle.Doubled;
   identifierQuoteChar = '"';
 
+  // A raw newline in a doubled literal is valid SQL but gets mangled by the
+  // SQL indenter (indent() in model/utils.ts), so encode it. Postgres/DuckDB
+  // use an E'...' escape string; Trino/Presto override with U&'...'.
+  sqlLiteralString(literal: string): string {
+    return literal.includes('\n')
+      ? `E'${this.escapeBackslashStyle(literal, "'")}'`
+      : super.sqlLiteralString(literal);
+  }
+
   sqlNowExpr(): string {
     return 'LOCALTIMESTAMP';
   }

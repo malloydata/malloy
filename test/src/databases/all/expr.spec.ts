@@ -867,6 +867,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     test('quote backslash', async () => {
       expect(await sqlEq(`'${back}${back}'`, back)).isSqlEq();
     });
+    test('strings containing newline', async () => {
+      await expect(
+        `run: ${databaseName}.sql("SELECT 1 as one") -> {
+          select: newline is 'a${back}nb'
+        }`
+      ).toMatchResult(testModel, {newline: 'a\nb'});
+    });
   });
 
   test('nullish ?? operator', async () => {

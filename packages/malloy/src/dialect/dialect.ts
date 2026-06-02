@@ -567,6 +567,38 @@ export abstract class Dialect {
   identifierEscapeStyle: EscapeStyleValue = EscapeStyle.Unset;
 
   /**
+   * Escape the body of a backslash-style quoted token (`EscapeStyle.Backslash`
+   * dialects) — the backslash, the closing `delim`, and newline/CR/tab. The
+   * newline matters: BigQuery rejects a raw one ("Unclosed string literal").
+   * `\0` / U+2028 / U+2029 are passed through (no evidence they break a lexer).
+   */
+  protected escapeBackslashStyle(body: string, delim: string): string {
+    let out = '';
+    for (const ch of body) {
+      switch (ch) {
+        case '\\':
+          out += '\\\\';
+          break;
+        case '\n':
+          out += '\\n';
+          break;
+        case '\r':
+          out += '\\r';
+          break;
+        case '\t':
+          out += '\\t';
+          break;
+        case delim:
+          out += '\\' + delim;
+          break;
+        default:
+          out += ch;
+      }
+    }
+    return out;
+  }
+
+  /**
    * Wrap an identifier in the dialect's quote character, escaping any
    * embedded quote characters per the dialect's `identifierEscapeStyle`.
    * This is the only safe way to render a user-controlled identifier
@@ -585,11 +617,7 @@ export abstract class Dialect {
       return q + identifier.split(q).join(q + q) + q;
     }
     if (this.identifierEscapeStyle === EscapeStyle.Backslash) {
-      const escaped = identifier
-        .replace(/\\/g, '\\\\')
-        .split(q)
-        .join('\\' + q);
-      return q + escaped + q;
+      return q + this.escapeBackslashStyle(identifier, q) + q;
     }
     throw new Error(
       `${this.name}: identifierEscapeStyle is not set. ` +
@@ -943,8 +971,7 @@ export abstract class Dialect {
       return "'" + literal.split("'").join("''") + "'";
     }
     if (this.stringLiteralStyle === 'backslash') {
-      const escaped = literal.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      return "'" + escaped + "'";
+      return "'" + this.escapeBackslashStyle(literal, "'") + "'";
     }
     throw new Error(
       `${this.name}: stringLiteralStyle is not set. ` +
@@ -954,10 +981,8 @@ export abstract class Dialect {
   }
 
   /**
-   * Render a Malloy regex literal as a SQL string literal. Defaults to
-   * `sqlLiteralString` — the regex engine receives whatever bytes the
-   * SQL parser decodes, and `sqlLiteralString` already produces a
-   * correctly decoding literal for both escape styles.
+   * Render a Malloy regex literal. Defaults to `sqlLiteralString`: the regex
+   * engine receives whatever the SQL parser decodes, which is already correct.
    */
   sqlLiteralRegexp(literal: string): string {
     return this.sqlLiteralString(literal);

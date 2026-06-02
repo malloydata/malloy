@@ -7,268 +7,38 @@ import {getDialects} from './dialect_map';
 import {Dialect} from './dialect';
 import type {RecordLiteralNode} from '../model/malloy_types';
 
-// ---------------------------------------------------------------------------
-// Adversarial input corpus
-// ---------------------------------------------------------------------------
+// Byte-exact encoding for backslash-style dialects. Catches a regression to a
+// different-but-decodable form; the real engine round-trip lives in the e2e
+// spec, test/src/databases/all/escape-e2e.spec.ts.
+describe('backslash-style exact encoding', () => {
+  const bq = getDialects().find(d => d.name === 'standardsql')!;
 
-// Strings to pass through string/regex/identifier escape functions. Each
-// entry is something that, if mishandled, allows SQL injection or breaks
-// query parsing.
-const ADVERSARIAL_STRINGS: {name: string; value: string}[] = [
-  {name: 'empty', value: ''},
-  {name: 'bare', value: 'foo'},
-  {name: 'bare_underscore', value: 'foo_bar'},
-  {name: 'single_quote', value: "o'brien"},
-  {name: 'double_quote', value: 'say "hi"'},
-  {name: 'backtick', value: 'foo`bar'},
-  {name: 'backslash', value: 'foo\\bar'},
-  {name: 'lone_single_quote', value: "'"},
-  {name: 'lone_double_quote', value: '"'},
-  {name: 'lone_backtick', value: '`'},
-  {name: 'lone_backslash', value: '\\'},
-  {name: 'doubled_single_quote', value: "''"},
-  {name: 'doubled_double_quote', value: '""'},
-  {name: 'doubled_backtick', value: '``'},
-  {name: 'injection_classic', value: "';DROP TABLE x;--"},
-  {name: 'injection_or_1_1', value: "' OR 1=1 --"},
-  {name: 'block_comment', value: '/* injected */'},
-  {name: 'line_comment', value: '-- injected'},
-  {name: 'all_delims', value: '\'`"\\'},
-  {name: 'newline', value: 'line1\nline2'},
-  {name: 'tab', value: 'col\tval'},
-];
-
-// ---------------------------------------------------------------------------
-// SQL parsers — minimal but accurate enough to detect smuggling.
-//
-// Each parser returns the decoded value and the position after it consumed.
-// If the parser cannot consume the full input as the expected SQL form,
-// the test reports the failure with the actual output for diagnosis.
-// ---------------------------------------------------------------------------
-
-type ParseResult = {value: string; end: number} | null;
-
-// Parse a SQL string literal of the form 'body', where body uses either
-// '' (doubled) or \' (backslash) to escape the closing quote. Backslash
-// also escapes itself when in backslash mode.
-function parseStringLiteral(
-  sql: string,
-  mode: 'doubled' | 'backslash'
-): ParseResult {
-  if (sql[0] !== "'") return null;
-  let i = 1;
-  let value = '';
-  while (i < sql.length) {
-    const c = sql[i];
-    if (c === "'") {
-      if (sql[i + 1] === "'") {
-        value += "'";
-        i += 2;
-        continue;
-      }
-      return {value, end: i + 1};
-    }
-    if (mode === 'backslash' && c === '\\') {
-      if (i + 1 >= sql.length) return null;
-      const next = sql[i + 1];
-      // Decode the escape sequence. We are deliberately permissive: any
-      // dialect-specific backslash sequence is accepted, but we only
-      // decode the ones we recognize. The crucial point is that \' does
-      // not close the literal.
-      if (next === "'") value += "'";
-      else if (next === '\\') value += '\\';
-      else if (next === 'n') value += '\n';
-      else if (next === 't') value += '\t';
-      else if (next === 'r') value += '\r';
-      else value += next;
-      i += 2;
-      continue;
-    }
-    value += c;
-    i++;
-  }
-  return null; // unterminated
-}
-
-// Parse a quoted identifier delimited by `q`.
-//
-// - `doubled` mode treats `qq` as the escape for q (ANSI SQL).
-// - `backslash` mode treats `\q`, `\\`, and other `\X` sequences as
-//   string-literal-style escapes (BigQuery quoted identifiers).
-function parseQuotedIdent(
-  sql: string,
-  q: string,
-  mode: 'doubled' | 'backslash',
-  start = 0
-): ParseResult {
-  if (sql[start] !== q) return null;
-  let i = start + 1;
-  let value = '';
-  while (i < sql.length) {
-    const c = sql[i];
-    if (mode === 'backslash' && c === '\\') {
-      if (i + 1 >= sql.length) return null;
-      const next = sql[i + 1];
-      if (next === q) value += q;
-      else if (next === '\\') value += '\\';
-      else if (next === 'n') value += '\n';
-      else if (next === 't') value += '\t';
-      else if (next === 'r') value += '\r';
-      else value += next;
-      i += 2;
-      continue;
-    }
-    if (c === q) {
-      if (mode === 'doubled' && sql[i + 1] === q) {
-        value += q;
-        i += 2;
-        continue;
-      }
-      return {value, end: i + 1};
-    }
-    value += c;
-    i++;
-  }
-  return null;
-}
-
-// ---------------------------------------------------------------------------
-// Per-dialect probes — detect escape style and identifier quote char.
-// We probe rather than hard-code so a new dialect is automatically handled.
-// ---------------------------------------------------------------------------
-
-function probeStringEscapeStyle(
-  fn: (s: string) => string,
-  context: string
-): 'doubled' | 'backslash' {
-  const out = fn("'");
-  if (out === "''''") return 'doubled';
-  if (out === "'\\''") return 'backslash';
-  throw new Error(
-    `${context}: cannot determine escape style. ` +
-      `Expected one of '''' (doubled) or '\\'' (backslash), got ${JSON.stringify(out)}. ` +
-      'If your dialect uses a different escape style, extend probeStringEscapeStyle.'
-  );
-}
-
-function probeIdentifierQuote(d: Dialect): string {
-  const out = d.sqlQuoteIdentifier('a');
-  if (out.length < 2) {
-    throw new Error(
-      `${d.name}: sqlQuoteIdentifier('a') returned ${JSON.stringify(out)}; ` +
-        'expected a quoted identifier of at least three characters.'
-    );
-  }
-  const first = out[0];
-  const last = out[out.length - 1];
-  if (first !== last) {
-    throw new Error(
-      `${d.name}: sqlQuoteIdentifier('a') returned ${JSON.stringify(out)}; ` +
-        'expected matching opening and closing quote characters.'
-    );
-  }
-  return first;
-}
-
-// Detect whether the dialect's identifier quoting uses ANSI doubled-
-// quote escapes (e.g. Postgres "a""b") or string-literal-style
-// backslash escapes (BigQuery `a\\b`). Probe by feeding a single
-// backslash: doubled-mode produces 3 chars (quote + \ + quote);
-// backslash-mode produces 4 chars (quote + \ + \ + quote).
-function probeIdentifierEscapeStyle(d: Dialect): 'doubled' | 'backslash' {
-  const out = d.sqlQuoteIdentifier('\\');
-  if (out.length === 3) return 'doubled';
-  if (out.length === 4) return 'backslash';
-  throw new Error(
-    `${d.name}: sqlQuoteIdentifier('\\\\') returned ${JSON.stringify(out)}; ` +
-      'expected either 3 chars (doubled) or 4 chars (backslash).'
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-for (const dialect of getDialects()) {
-  describe(`${dialect.name} dialect escape invariants`, () => {
-    const identQuote = probeIdentifierQuote(dialect);
-    const identStyle = probeIdentifierEscapeStyle(dialect);
-    const stringStyle = probeStringEscapeStyle(
-      s => dialect.sqlLiteralString(s),
-      `${dialect.name}.sqlLiteralString`
-    );
-    const regexpStyle = probeStringEscapeStyle(
-      s => dialect.sqlLiteralRegexp(s),
-      `${dialect.name}.sqlLiteralRegexp`
-    );
-
-    describe('sqlLiteralString round-trip', () => {
-      for (const {name, value} of ADVERSARIAL_STRINGS) {
-        it(name, () => {
-          const out = dialect.sqlLiteralString(value);
-          const parsed = parseStringLiteral(out, stringStyle);
-          expect(parsed).not.toBeNull();
-          expect(parsed!.end).toBe(out.length);
-          expect(parsed!.value).toBe(value);
-        });
-      }
-    });
-
-    describe('sqlLiteralRegexp round-trip', () => {
-      for (const {name, value} of ADVERSARIAL_STRINGS) {
-        it(name, () => {
-          const out = dialect.sqlLiteralRegexp(value);
-          const parsed = parseStringLiteral(out, regexpStyle);
-          expect(parsed).not.toBeNull();
-          expect(parsed!.end).toBe(out.length);
-          expect(parsed!.value).toBe(value);
-        });
-      }
-    });
-
-    describe('sqlQuoteIdentifier round-trip', () => {
-      for (const {name, value} of ADVERSARIAL_STRINGS) {
-        it(name, () => {
-          // A dialect may refuse inputs it has no way to encode safely
-          // (e.g. BigQuery cannot escape a backtick inside a backtick-
-          // quoted identifier). Throwing is a safe outcome — better a
-          // compile-time error than malformed or injecting SQL.
-          let out: string;
-          try {
-            out = dialect.sqlQuoteIdentifier(value);
-          } catch (e) {
-            return;
-          }
-          const parsed = parseQuotedIdent(out, identQuote, identStyle);
-          expect(parsed).not.toBeNull();
-          expect(parsed!.end).toBe(out.length);
-          expect(parsed!.value).toBe(value);
-        });
-      }
-    });
+  it('escapes LF, CR, and TAB as named escapes', () => {
+    expect(bq.sqlLiteralString('a\nb\rc\td')).toBe("'a\\nb\\rc\\td'");
   });
-}
 
-// Record-literal and field-reference smuggling tests.
-//
-// `sqlLiteralRecord` and `sqlFieldReference` render user-controlled
-// field names into per-dialect SQL fragments (JSON paths, record
-// constructors, JSONB extract calls). Historical bugs interpolated
-// names raw into `'${name}'`, letting a single quote inside the name
-// escape the SQL string literal.
-//
-// Test strategy: strip everything that's inside a quoted region
-// (single-quoted literals, double-quoted identifiers, backtick
-// identifiers), then assert the attack keyword does not appear in
-// what remains. If escaping is correct, the attack chars stay inside
-// the quoted region; if broken, they leak into bare SQL.
+  it('escapes the backslash and the closing quote', () => {
+    expect(bq.sqlLiteralString("a\\b'c")).toBe("'a\\\\b\\'c'");
+  });
+
+  it('emits no raw newline anywhere in the output', () => {
+    expect(bq.sqlLiteralString('x\r\ny')).not.toMatch(/[\n\r]/);
+  });
+
+  it('escapes control characters in quoted identifiers too', () => {
+    expect(bq.sqlQuoteIdentifier('col\nname')).toBe('`col\\nname`');
+    expect(bq.sqlQuoteIdentifier('col\nname')).not.toMatch(/[\n\r]/);
+  });
+});
+
+// Field-name smuggling: sqlLiteralRecord and sqlFieldReference render
+// user-controlled field names into SQL fragments; a quote in the name must
+// not escape the literal. Strategy: strip quoted regions, then assert the
+// attack payload doesn't appear in what's left (i.e. it stayed inside quotes).
 
 const FIELD_NAME_INJECTION = "';DROP TABLE x;--";
 
-// Walk the SQL string, skipping anything between matching quote
-// characters. Both doubled-escape (`''`) and backslash-escape (`\'`)
-// styles are handled — the dialect-agnostic stripping treats both as
-// "still inside a quoted region."
+// Skip anything between matching quote chars, handling both `''` and `\'`.
 function stripQuotedRegions(sql: string): string {
   let out = '';
   let i = 0;
@@ -339,17 +109,13 @@ for (const dialect of getDialects()) {
   });
 }
 
-// Meta-test: the base Dialect's literal/identifier methods must fail
-// loudly when a subclass forgets to set `stringLiteralStyle` or
-// `identifierQuoteChar`. Without this guarantee a new dialect could
-// silently emit SQL that looks structurally well-formed in the
-// round-trip tests above but is wrong against a real database.
+// The base methods must throw, naming the unset flag, when a dialect forgets
+// to configure itself — so a misconfigured dialect fails CI rather than
+// silently emitting wrong SQL.
 describe('base Dialect fail-fast on missing config', () => {
-  // Construct a Dialect-prototype instance without running the
-  // constructor (which would require implementing every abstract
-  // method). The base methods under test only read instance fields, so
-  // a prototype-only object reaches the same code path that a real
-  // subclass would.
+  // Prototype-only instance: the methods under test read only instance fields,
+  // so this reaches the same path a real subclass would, without the abstract
+  // methods.
   const stub = Object.create(Dialect.prototype) as Dialect;
   stub.name = 'stub-no-config';
 
@@ -381,17 +147,10 @@ describe('base Dialect fail-fast on missing config', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// sqlValidateTableName — table-path grammar per dialect
-// ---------------------------------------------------------------------------
-//
-// The validator's contract is per-dialect: each engine has its own bare-
-// identifier rules (Postgres allows `$`, MySQL allows digit-start, Trino
-// is strict ANSI, etc.). These corpora reflect the live engines'
-// observed behavior.
-//
-// Inputs that every dialect — including the special-grammar ones — must
-// agree on. DuckDB's wider acceptance set is tested separately.
+// sqlValidateTableName — per-dialect table-path grammar. Each engine has its
+// own bare-identifier rules (Postgres `$`, MySQL digit-start, Trino strict
+// ANSI, …); these corpora reflect the live engines. UNIVERSAL_* is what every
+// dialect must agree on; DuckDB's wider acceptance set is tested separately.
 const UNIVERSAL_ACCEPT = [
   {name: 'bare', value: 'foo'},
   {name: 'dotted_two_part', value: 'schema.foo'},
@@ -407,9 +166,8 @@ const UNIVERSAL_REJECT = [
   {name: 'mixed_ident_string', value: "schema.'name'"},
 ];
 
-// Per-dialect cases — divergences from the universal corpus that this
-// dialect's engine actually treats differently. The label reflects the
-// live engine's behavior (verified empirically).
+// Per-dialect divergences from the universal corpus, reflecting live-engine
+// behavior.
 interface PerDialectCase {
   name: string;
   value: string;
@@ -586,10 +344,8 @@ describe('sqlValidateTableName forbids `;` and `--` in decoded segments', () => 
   });
 });
 
-// BigQuery's bare-FROM grammar doesn't accept wildcards — they must be
-// backtick-quoted (`` `dataset.events_*` ``). The validator rejects the
-// bare form; users supply the backticks themselves, same as they would
-// in hand-written BigQuery SQL.
+// BigQuery wildcards must be backtick-quoted (`` `dataset.events_*` ``); the
+// validator rejects the bare form, same as hand-written BigQuery SQL.
 describe('BigQuery sqlValidateTableName — wildcards require backticks', () => {
   const bq = getDialects().find(d => d.name === 'standardsql')!;
 
@@ -618,10 +374,8 @@ describe('BigQuery sqlValidateTableName — wildcards require backticks', () => 
   }
 });
 
-// DuckDB has a richer grammar — file-path convenience and explicit
-// single-quoted forms — so its acceptance set is broader and its
-// canonical form transforms file-path inputs by wrapping them in
-// single quotes.
+// DuckDB's richer grammar: file-path convenience and explicit single-quoted
+// forms, with file paths canonicalized by wrapping in single quotes.
 describe('DuckDB sqlValidateTableName — convenience extensions', () => {
   const duckdb = getDialects().find(d => d.name === 'duckdb')!;
 
