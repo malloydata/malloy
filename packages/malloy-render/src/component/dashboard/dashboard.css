@@ -217,36 +217,10 @@
     grid-template-rows: 1fr;
   }
 
-  /* Flatten inner big_value card: the dashboard card is the container */
-  .dashboard-item .malloy-big-value {
-    padding: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  .dashboard-item .malloy-big-value-card {
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    width: 100%;
-    max-width: none;
-    min-width: auto;
-    height: 100%;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .dashboard-item .malloy-big-value-label-container {
-    justify-content: center;
-  }
-
-  .dashboard-item .malloy-big-value-value-row {
-    justify-content: center;
-  }
-
-  .dashboard-item .malloy-big-value-comparison {
-    justify-content: center;
-  }
+  /* Flattening the inner big_value (no border/shadow/padding, centered) lives
+     in big-value.css under .malloy-big-value--embedded, which the dashboard
+     opts into via customProps. The dashboard no longer overrides big-value's
+     internal classes. */
 
   /* Hide redundant dashboard item header; big_value has its own label */
   .dashboard-item:has(.malloy-big-value) > .dashboard-item-header {
