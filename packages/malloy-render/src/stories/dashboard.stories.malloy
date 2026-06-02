@@ -43,7 +43,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // FLEX STORIES: no span/columns/gap/break tags
+  // FLEX STORIES: no span/columns/gap signal (break is allowed here too; in
+  // flex it just forces a new wrapping row)
   // ============================================
 
   // ============================================
@@ -687,7 +688,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
         aggregate: avg_retail is retail_price.avg()
         limit: 10
       }
-      // This table has no # span — should get remaining 4 cols
+      // This table has no # span, so it should get the remaining 4 cols
       by_dept is {
         group_by: department
         aggregate: avg_retail is retail_price.avg()

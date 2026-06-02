@@ -412,8 +412,9 @@ export function resolveBuiltInTags(field: Field): void {
       if (field.isNest()) {
         for (const child of field.fields) {
           const childTag = child.tag;
-          // Always read each child tag (even when absent) so it is marked
-          // read and the unread-tag detector never warns on it. This is why
+          // Read each child tag unconditionally so any present span/subtitle/
+          // break/borderless is marked read; absent tags need no marking since
+          // the unread-tag detector only walks present properties. This is why
           // the dashboard no longer needs childOwnedPaths entries.
           const childConfig: DashboardChildConfig = {};
           const spanVal = childTag.numeric('span');
