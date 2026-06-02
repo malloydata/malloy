@@ -543,6 +543,33 @@ describe('render tag validation', () => {
       `);
       expectNoErrors(logs);
     });
+
+    it('warns no-grid (not columns mode) for # span with invalid columns', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { columns=0 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=6
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      // columns=0 is invalid, so the renderer falls back to flex. The span
+      // warning must describe the actual state (no grid), not columns mode.
+      const warnings = logs.filter(l => l.severity === 'warn');
+      expect(
+        warnings.some(
+          w => w.message.includes('span') && w.message.includes('no grid')
+        )
+      ).toBe(true);
+      expect(warnings.some(w => w.message.includes('columns mode'))).toBe(
+        false
+      );
+    });
   });
 
   describe('chart y-channel must be numeric', () => {
