@@ -468,6 +468,81 @@ describe('render tag validation', () => {
         )
       ).toBe(true);
     });
+
+    it('warns when # span is used on a dashboard with no grid', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=6
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const warnings = logs.filter(l => l.severity === 'warn');
+      expect(
+        warnings.some(
+          w => w.message.includes('span') && w.message.includes('no grid')
+        )
+      ).toBe(true);
+    });
+
+    it('does not warn for # span when the dashboard has a grid via gap', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { gap=16 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=6
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('span range error names the expected range, the bad value, and a fix', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=15
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const spanError = logs.find(
+        l => l.severity === 'error' && l.message.includes('span')
+      );
+      expect(spanError?.message).toContain('expected an integer 1–12');
+      expect(spanError?.message).toContain('got 15');
+      expect(spanError?.message).toContain('Fix: # span=6');
+    });
+
+    it('does not error when # dashboard.gap is zero', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard { gap=0 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate: a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+    });
   });
 
   describe('chart y-channel must be numeric', () => {
@@ -755,7 +830,7 @@ describe('render tag validation', () => {
     it('no warnings for # span, # subtitle, # borderless on dashboard child fields', async () => {
       const logs = await getValidationLogs(`
         source: s is duckdb.sql("SELECT 1 as a, 2 as b, 3 as c") extend {
-          # dashboard
+          # dashboard { gap=16 }
           view: q is {
             group_by: grp is 'all'
             aggregate:
