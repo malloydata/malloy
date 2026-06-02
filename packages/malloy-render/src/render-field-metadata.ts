@@ -505,6 +505,17 @@ export class RenderFieldMetadata {
         );
       }
 
+      // Grid mode is driven by columns/gap only. Mirror the clamping in
+      // resolveDashboardTags so this matches what the renderer actually does:
+      // an invalid columns or gap value falls back to flex, where # span has
+      // no effect. columnsActive distinguishes true columns mode (span
+      // ignored) from a gap-only grid (span honored).
+      const columnsActive =
+        columnsVal !== undefined &&
+        Number.isInteger(columnsVal) &&
+        columnsVal >= 1;
+      const hasGrid = columnsActive || (gapVal !== undefined && gapVal >= 0);
+
       // Validate dashboard-owned child tags
       for (const child of field.fields) {
         const childSpan = child.tag.numeric('span');
@@ -515,9 +526,14 @@ export class RenderFieldMetadata {
               child.tag.tag('span')
             );
           }
-          if (columnsVal !== undefined) {
+          if (columnsActive) {
             log.warn(
               `Invalid # span on '${child.name}': span is ignored when parent dashboard '${field.name}' uses columns mode. Fix: remove # span or remove dashboard.columns.`,
+              child.tag.tag('span')
+            );
+          } else if (!hasGrid) {
+            log.warn(
+              `Invalid # span on '${child.name}': span is ignored when parent dashboard '${field.name}' has no grid (no columns or gap). Fix: add # dashboard { gap=16 } (or columns=N) to enable a grid, or remove # span.`,
               child.tag.tag('span')
             );
           }

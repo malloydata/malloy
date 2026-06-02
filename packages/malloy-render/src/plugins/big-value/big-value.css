@@ -48,6 +48,40 @@
   max-width: 600px;
 }
 
+/* Embedded mode: the host (e.g. a dashboard item) provides the card chrome,
+   so the big value flattens itself and centers its content. The host opts in
+   via customProps. These rules live here so the host never has to override
+   big-value's internal classes. */
+.malloy-big-value--embedded {
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.malloy-big-value-card--embedded {
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  width: 100%;
+  max-width: none;
+  min-width: auto;
+  height: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.malloy-big-value-card--embedded .malloy-big-value-label-container {
+  justify-content: center;
+}
+
+.malloy-big-value-card--embedded .malloy-big-value-value-row {
+  justify-content: center;
+}
+
+.malloy-big-value-card--embedded .malloy-big-value-comparison {
+  justify-content: center;
+}
+
 /* Label container with tooltip */
 .malloy-big-value-label-container {
   display: flex;
