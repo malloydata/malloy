@@ -31,14 +31,36 @@ Two non-obvious consequences:
 
 ### Two Renderers
 - **New renderer** (`src/component/`) — Solid.js, the default.
-- **Legacy renderer** (`src/html/`) — HTML strings, activated with `## renderer_legacy`. Still publicly exported as `HTMLView`.
+- **Legacy renderer** (`src/html/`) — HTML strings, activated with `## renderer_legacy`. Still publicly exported as `HTMLView`. A few renderers (scatter, maps) still exist only here.
+
+### Internal Data Model (the data tree)
+
+`src/data_tree/` is the spine the rest of the renderer operates on. A `Malloy.Result` becomes two parallel trees rooted at a `RootField`:
+
+- **Fields** (`fields/`) — the *schema*. One class per type: `RootField` (wraps the result's dimension fields) → `RepeatedRecordField` → `ArrayField`, plus `RecordField` and the atomic fields (`NumberField`, `StringField`, `DateField`, …). `getFieldType()` / the `FieldType` enum are what plugin `matches()` switches on.
+- **Cells** (`cells/`) — the *data*, a parallel hierarchy (`RepeatedRecordCell`, `RecordCell`, `NumberCell`, …); each cell knows its `Field`. Renderers walk cells; a plugin receives `RenderProps.dataColumn: Cell`.
+
+Worth knowing before editing here:
+- `RepeatedRecordField` extends `ArrayField` and carries dedup machinery (`nestedRecordField`, lazy `elementField`, `skipTagParsing`) so child fields aren't re-created/re-parsed per row — see [docs/plans/field-creation-analysis.md](docs/plans/field-creation-analysis.md). Conceptually it's a *table*, not an array; the inheritance is historical.
+- `field.key` (`JSON.stringify(field.path)`) is the registry key; `field.path` is the access path from the root.
 
 ### Dispatch
 
-`RenderFieldMetadata` (`src/render-field-metadata.ts`) is the orchestrator: for each field it runs every plugin factory's `matches()` and attaches the first hit. At render time, `applyRenderer` (`src/component/renderer/apply-renderer.tsx`) uses the plugin if one matched, otherwise switches on the field's precomputed `renderAs()` value (`table`, `dashboard`, `link`, `image`, `list`, `cell`).
+`RenderFieldMetadata` (`src/render-field-metadata.ts`) is the orchestrator: for each field it runs every plugin factory's `matches()` and attaches the first hit. At render time, `applyRenderer` (`src/component/renderer/apply-renderer.tsx`) uses the plugin if one matched, otherwise switches on the field's precomputed `renderAs()` value (`table`, `dashboard`, `link`, `image`, `list`, `cell`, `chart`, or a plugin name; last-declared renderer tag wins, and legacy `bar_chart`/`line_chart` are normalized into the `viz` namespace by `convertLegacyToVizTag`).
+
+A parent renderer hands options to a child via `RenderProps.customProps`, keyed by renderer name — e.g. `customProps.table.shouldFillWidth`, `customProps.big_value.embedded`. This is how the dashboard configures the tiles it nests.
+
+**Two similarly-named classes, don't confuse them:** `RenderFieldMetadata` (above — field registry, plugin instantiation, tag validation, all at setup time) is *not* `RenderResultMetadata` (chart-oriented: column min/max, row counts, precompiled Vega runtimes; built by `getResultMetadata` in `render-result-metadata.ts`). The chart/Vega pipeline, the cross-chart interaction store (`ResultStore` / brushes), and the how-to for adding a chart live in [DEVELOPING.md](DEVELOPING.md) and are not duplicated here.
 
 ### Tag System
 Render annotations use the Malloy Tag API to check for rendering hints. For tag language syntax, see [packages/malloy-tag/CONTEXT.md](../malloy-tag/CONTEXT.md).
+
+**Two annotation routes.** Every field exposes two tags, both parsed from the same `Malloy.Annotation[]` strings but on different routes (`parsePrefix`):
+- `field.tag` (route `''`) — user-authored **render hints** (`# bar_chart`, `# currency`, `# label`). This is what the plugin system and validation act on.
+- `field.metadataTag` (route `malloy`) — **compiler-emitted query metadata**: `calculation` (→ `wasCalculation()`, i.e. measure-ness), `drill_*`, `source`/`parameters`, `ordered_by`, `query_timezone`, `reference_id`, plus serialized `Malloy.Expression`/`LiteralValue` objects.
+
+The `malloy` route is a metadata **side-channel**, not a renderer concept: rather than widen the typed stable interface, core's `to_stable.ts` (`writeMalloyObjectToTag`) serializes structured metadata into annotation strings under `#(malloy)`, and the renderer reverses it in `data_tree/utils.ts` (`extractMalloyObjectFromTag`). The encoding and ownership are core's; the renderer is only a consumer. Consequence: this metadata is **untyped at the interface boundary and versioned by convention** — that's why the renderer parses tags to reconstruct an `Expression`. Drilling (`data_tree/drilling.ts`, surfaced via the `onDrill(DrillData)` callback) is rebuilt entirely from these `drill_*` metadata tags; timezone resolution (`getEffectiveQueryTimezone`) walks `query_timezone` up the same channel.
+
 Low-level Tag API patterns (primarily for setup-time resolution/validation code):
 - `field.tag.has('pivot')` - Check if a tag exists
 - `field.tag.text('label')` - Get a text property
