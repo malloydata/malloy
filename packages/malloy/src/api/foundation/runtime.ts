@@ -16,12 +16,7 @@ import type {
   GivenValue,
   VirtualMap,
 } from '../../model';
-import {
-  isSourceDef,
-  mkSafeRecord,
-  MalloyCompileError,
-  getModelAnnotations,
-} from '../../model';
+import {isSourceDef, mkSafeRecord, MalloyCompileError} from '../../model';
 import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
 import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
@@ -1162,17 +1157,6 @@ export class ModelMaterializer extends FluentState<Model> {
 // QueryMaterializer
 // =============================================================================
 
-function runSQLOptionsWithAnnotations(
-  preparedResult: PreparedResult,
-  givenOptions?: RunSQLOptions
-): RunSQLOptions {
-  return {
-    queryAnnotations: preparedResult._rawQuery.annotations,
-    modelAnnotations: getModelAnnotations(preparedResult._modelDef),
-    ...givenOptions,
-  };
-}
-
 /**
  * An object representing the task of loading a `Query`, capable of
  * materializing the query (via `getPreparedQuery()`) or extending the task to load
@@ -1283,8 +1267,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   async run(options?: RunSQLOptions & CompileQueryOptions): Promise<Result> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult(options);
-    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
-    return Malloy.run({connections, preparedResult, options: finalOptions});
+    return Malloy.run({connections, preparedResult, options});
   }
 
   async *runStream(
@@ -1292,11 +1275,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   ): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult(options);
     const connections = this.runtime.connections;
-    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     const stream = Malloy.runStream({
       connections,
       preparedResult,
-      options: finalOptions,
+      options,
     });
     for await (const row of stream) {
       yield row;
@@ -1554,11 +1536,10 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   async run(options?: RunSQLOptions): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     return Malloy.run({
       connections,
       preparedResult,
-      options: finalOptions,
+      options,
     });
   }
 
@@ -1567,11 +1548,10 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   }): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     const stream = Malloy.runStream({
       connections,
       preparedResult,
-      options: finalOptions,
+      options,
     });
     for await (const row of stream) {
       yield row;
