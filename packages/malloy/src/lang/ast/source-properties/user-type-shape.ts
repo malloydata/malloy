@@ -41,7 +41,7 @@ export class UserTypeMemberDef extends UserTypeMember {
       typeDef: this.typeDef,
     };
     if (this.note) {
-      field.annotations = {...this.note, fromModel: this.modelID};
+      field.annotations = {...this.note};
     }
     return field;
   }
@@ -100,13 +100,11 @@ export class UserTypeMemberIndirect extends UserTypeMember {
         ? {
             ...this.note,
             inherits: modelEntry.entry.annotations,
-            fromModel: this.modelID,
           }
-        : {...this.note, fromModel: this.modelID};
+        : {...this.note};
     } else if (modelEntry.entry.annotations) {
       field.annotations = {
         inherits: modelEntry.entry.annotations,
-        fromModel: this.modelID,
       };
     }
     return field;

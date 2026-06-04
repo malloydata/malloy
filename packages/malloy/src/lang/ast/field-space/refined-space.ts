@@ -26,7 +26,7 @@ import {
   activeName,
   isJoined,
   type AccessModifierLabel,
-  type ObjectAnnotationsDef,
+  type AnnotationsDef,
   type DocumentLocation,
   type SourceDef,
 } from '../../../model/malloy_types';
@@ -165,7 +165,7 @@ export class RefinedSpace extends DynamicSpace {
     }
   }
 
-  addNotes(notes: Map<string, ObjectAnnotationsDef>): void {
+  addNotes(notes: Map<string, AnnotationsDef>): void {
     for (const [symbol, note] of notes) {
       this.newNotes.set(symbol, note);
     }
@@ -217,7 +217,6 @@ function editJoinsFromIncludeState(
                 inherits: field.annotations,
                 blockNotes: notes.blockNotes,
                 notes: notes.notes,
-                fromModel: notes.fromModel,
               }
             : field.annotations,
         }

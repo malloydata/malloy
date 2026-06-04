@@ -85,9 +85,8 @@ export class DefineSource
         ? {
             ...this.note,
             inherits: structDef.annotations,
-            fromModel: this.modelID,
           }
-        : {...this.note, fromModel: this.modelID};
+        : {...this.note};
     }
     if (isPersistableSourceDef(entry)) {
       entry.sourceID = mkSourceID(this.name, this.location?.url);

@@ -22,7 +22,7 @@
  */
 
 import type {
-  ObjectAnnotationsDef,
+  AnnotationsDef,
   DocumentLocation,
   FieldDef,
 } from '../../../model/malloy_types';
@@ -35,7 +35,7 @@ export class RenameSpaceField extends SpaceField {
     private readonly otherField: SpaceField,
     private readonly newName: string,
     private readonly location: DocumentLocation,
-    private note: ObjectAnnotationsDef | undefined
+    private note: AnnotationsDef | undefined
   ) {
     super();
   }

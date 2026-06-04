@@ -89,7 +89,7 @@ export class DefineUserType
       location: this.location,
     };
     if (this.note) {
-      entry.annotations = {...this.note, fromModel: this.modelID};
+      entry.annotations = {...this.note};
     }
     doc.setEntry(this.name, {entry, exported: this.exported});
   }

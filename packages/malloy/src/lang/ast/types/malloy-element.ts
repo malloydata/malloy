@@ -29,7 +29,7 @@ import type {
   Given,
   GivenID,
   ModelDef,
-  ModelAnnotationsDef,
+  ModelAnnotationEntry,
   ModelID,
   NamedModelObject,
   Query,
@@ -208,9 +208,9 @@ export abstract class MalloyElement {
   }
 
   /**
-   * The {@link ModelID} of the document this element is being compiled in.
-   * Stamped onto object annotations (`fromModel`) at creation so cross-file
-   * model-annotation resolution knows which model each node came from.
+   * The {@link ModelID} of the document this element is being compiled in — the
+   * key under which this model's `##` annotations and import/extend edges are
+   * recorded in `ModelDef.modelAnnotations`.
    */
   get modelID(): ModelID {
     return mkModelID(this.translator()?.sourceURL);
@@ -536,10 +536,16 @@ export class Document extends MalloyElement implements NameSpace {
   documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
   documentGivens = new Map<GivenID, Given>();
-  /** Model annotations of every imported/extended model, keyed by ModelID,
-   *  accumulated as imports/extends are processed; folded into the result
-   *  `modelAnnotationsByID` in {@link modelDef}. */
-  documentModelAnnotationsByID: Record<ModelID, ModelAnnotationsDef> = {};
+  /** {@link ModelAnnotationEntry} of every imported/extended model in the
+   *  closure, keyed by ModelID, accumulated as imports/extends are processed;
+   *  copied into the result `modelAnnotations` in {@link modelDef}, which then
+   *  adds this model's own self-entry. */
+  documentModelAnnotations: Record<ModelID, ModelAnnotationEntry> = {};
+  /** This model's **direct** import/extend predecessors, in fold order — the
+   *  extend-base prepended as `import₀` (added first by {@link initModelDef}),
+   *  then each `import`ed model's id appended. Becomes the self-entry's
+   *  `inheritsFrom` in {@link modelDef}. */
+  documentInheritsFrom: ModelID[] = [];
   // When an `export { … }` statement appears, the document switches from
   // "everything declared here is exported" to "only names in this set are
   // exported." Undefined means no export statement has been seen.
@@ -548,13 +554,30 @@ export class Document extends MalloyElement implements NameSpace {
   statements: DocStatementList;
   didInitModel = false;
   modelWasModified = false;
-  annotations: ModelAnnotationsDef = {};
+  annotations: AnnotationsDef = {};
   experiments = new Tag({});
 
   constructor(statements: (DocStatement | DocStatementList)[]) {
     super();
     this.statements = new DocStatementList(statements);
     this.has({statements: statements});
+  }
+
+  /**
+   * Merge another model's `##` annotation closure into this document and record
+   * it as a **direct** import/extend predecessor (its id appended to
+   * {@link documentInheritsFrom}). Shared by `import` and the extend-base init
+   * (`ImportStatement` and {@link initModelDef}) — they differ only in
+   * namespace/export copying, never in the annotation fold. First-writer wins
+   * on a closure-id collision (the diamond's shared model keeps one entry).
+   */
+  contributeModelAnnotations(other: ModelDef): void {
+    for (const [id, entry] of Object.entries(other.modelAnnotations)) {
+      if (!(id in this.documentModelAnnotations)) {
+        this.documentModelAnnotations[id] = entry;
+      }
+    }
+    this.documentInheritsFrom.push(other.modelID);
   }
 
   initModelDef(extendingModelDef: ModelDef | undefined): void {
@@ -567,18 +590,12 @@ export class Document extends MalloyElement implements NameSpace {
     this.explicitExports = undefined;
     this.queryList = [];
     if (extendingModelDef) {
-      // The extension's own `##` bundle inherits the base model's, so the
-      // extend lineage is preserved; the whole base map comes along so any
-      // model the base imported is still resolvable.
-      const baseBundle =
-        extendingModelDef.modelAnnotationsByID[extendingModelDef.modelID];
-      if (baseBundle) {
-        this.annotations.inherits = baseBundle;
-      }
-      Object.assign(
-        this.documentModelAnnotationsByID,
-        extendingModelDef.modelAnnotationsByID
-      );
+      // Extend-base is an implicit `import₀`: the base is this model's first
+      // direct predecessor (registered before any `import` runs), and its whole
+      // annotation closure comes along so anything the base imported stays
+      // resolvable. The base's own `##` rides the `inheritsFrom` edge, not a
+      // linear `inherits` chain.
+      this.contributeModelAnnotations(extendingModelDef);
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
         const entry = {...orig};
         if (
@@ -705,7 +722,7 @@ export class Document extends MalloyElement implements NameSpace {
     );
   }
 
-  currentModelAnnotation(): ModelAnnotationsDef | undefined {
+  currentModelAnnotation(): AnnotationsDef | undefined {
     if (this.hasAnnotation()) {
       return {...this.annotations};
     }
@@ -713,11 +730,13 @@ export class Document extends MalloyElement implements NameSpace {
 
   modelDef(): ModelDef {
     const def = mkModelDef('', this.modelID);
-    def.modelAnnotationsByID = {...this.documentModelAnnotationsByID};
-    const localAnnotation = this.currentModelAnnotation();
-    if (localAnnotation) {
-      def.modelAnnotationsByID[def.modelID] = localAnnotation;
-    }
+    def.modelAnnotations = {...this.documentModelAnnotations};
+    // Always record the self-entry — even with no own `##`, its `inheritsFrom`
+    // carries this model's import/extend edges, which the fold needs.
+    def.modelAnnotations[def.modelID] = {
+      ownNotes: this.currentModelAnnotation() ?? {},
+      inheritsFrom: [...this.documentInheritsFrom],
+    };
     const explicit = this.explicitExports;
     const isExported = (name: string, modelEntry: ModelEntry): boolean =>
       explicit ? explicit.has(name) : modelEntry.exported === true;

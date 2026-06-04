@@ -33,6 +33,7 @@ import type {
   DocumentRange,
 } from '../model/malloy_types';
 import {mkModelDef, mkModelID} from '../model/utils';
+import {getModelAnnotations} from '../model/annotation_utils';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
 import type {
@@ -571,8 +572,10 @@ class ModelAnnotationStep implements TranslationStep {
         this.response = {
           modelAnnotations: {
             ...modelAnnotations,
+            // The extending base's full `##` annotations sit under this model's
+            // own — so schema-fetch sees both, base annotations first.
             inherits: extendingModel
-              ? extendingModel.modelAnnotationsByID[extendingModel.modelID]
+              ? getModelAnnotations(extendingModel)
               : undefined,
           },
         };
@@ -634,9 +637,12 @@ class TranslateStep implements TranslationStep {
     // seeding (e.g. TestTranslator's compilerFlags option) survive.
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+      // Compiler flags from the extending base's `##` annotations. NOTE: `##!`
+      // flag semantics are still to be settled; this keeps the existing
+      // behavior (flags from the base model) green and is not the final design.
       that.compilerFlagSrc.push(
         ...new Annotations(
-          extendingModel.modelAnnotationsByID[extendingModel.modelID]
+          getModelAnnotations(extendingModel)
         ).texts('!')
       );
 

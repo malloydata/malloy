@@ -237,17 +237,11 @@ export class ImportStatement
             }
           }
 
-          // Carry the imported model's `##` annotations (its own plus anything
-          // it imported) into our map, keyed by ModelID, so object annotations
-          // stamped with those models resolve. The ids are global, so imported
-          // entries are copied untouched (first-writer wins on collision).
-          for (const [id, anno] of Object.entries(
-            importedModel.modelAnnotationsByID
-          )) {
-            if (!(id in doc.documentModelAnnotationsByID)) {
-              doc.documentModelAnnotationsByID[id] = anno;
-            }
-          }
+          // Carry the imported model's `##` annotation closure into ours and
+          // record it as a direct predecessor edge (any `import` from a file
+          // contributes that file's whole model-annotation set, in import
+          // order). Shared with the extend-base path via `contributeModelAnnotations`.
+          doc.contributeModelAnnotations(importedModel);
 
           // Register hidden dependencies from child's registry
           for (const sourceID of neededSourceIDs) {

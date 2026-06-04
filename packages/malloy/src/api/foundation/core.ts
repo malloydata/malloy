@@ -28,7 +28,7 @@ import type {
   NativeUnsupportedFieldDef,
   ImportLocation,
   AnnotationsDef,
-  ModelAnnotationsDef,
+  ModelAnnotationEntry,
   ModelID,
   NamedModelObject,
   SQLSourceDef,
@@ -55,7 +55,7 @@ import {
   isRecordOrRepeatedRecord,
   isPersistableSourceDef,
   getCompiledSQL,
-  resolveModelAnnotations,
+  getModelAnnotations,
   safeRecordGet,
 } from '../../model';
 import {mkModelDef} from '../../model/utils';
@@ -101,19 +101,19 @@ function isSourceComponent(source: StructDef): source is ComponentSourceDef {
  * Wraps just the one struct so SQL generation has something to compile
  * against.
  *
- * `modelID` + `modelAnnotationsByID` reconstitute the model-annotation
- * resolution tree: `fromJSON` passes the values captured by `toJSON` so a
- * deserialized Explore resolves its model annotations exactly as the live one
- * did. The raw-SQL-block and default paths pass nothing and get an empty map
- * (the honest answer for a genuinely detached struct). The default constant
- * `modelID` (rather than `mkModelDef`'s random one) keeps `fromJSON(x.toJSON())`
- * deep-equal to `x` for the no-annotations case.
+ * `modelID` + `modelAnnotations` reconstitute the model-annotation closure:
+ * `fromJSON` passes the values captured by `toJSON` so a deserialized Explore
+ * folds its model annotations exactly as the live one did. The raw-SQL-block
+ * and default paths pass nothing and get an empty map (the honest answer for a
+ * genuinely detached struct). The default constant `modelID` (rather than
+ * `mkModelDef`'s random one) keeps `fromJSON(x.toJSON())` deep-equal to `x` for
+ * the no-annotations case.
  */
 const GENERATED_MODEL_ID = 'internal://generated-model';
 export function pseudoModelFor(
   structDef: StructDef,
   modelID: ModelID = GENERATED_MODEL_ID,
-  modelAnnotationsByID: Record<ModelID, ModelAnnotationsDef> = {}
+  modelAnnotations: Record<ModelID, ModelAnnotationEntry> = {}
 ): ModelDef {
   if (!isSourceDef(structDef)) {
     throw new Error(
@@ -121,7 +121,7 @@ export function pseudoModelFor(
     );
   }
   const def = mkModelDef('generated_model', modelID);
-  def.modelAnnotationsByID = modelAnnotationsByID;
+  def.modelAnnotations = modelAnnotations;
   def.contents[structDef.name] = structDef;
   return def;
 }
@@ -259,10 +259,10 @@ export type Field = AtomicField | QueryField | ExploreField;
 
 export type SerializedExplore = {
   _structDef: StructDef;
-  /** Owner model id + annotation map, so a deserialized Explore resolves
-   *  model annotations as the live one did (provenance rides `_structDef`). */
+  /** Owner model id + annotation closure, so a deserialized Explore folds
+   *  model annotations as the live one did. */
   modelID: ModelID;
-  modelAnnotationsByID: Record<ModelID, ModelAnnotationsDef>;
+  modelAnnotations: Record<ModelID, ModelAnnotationEntry>;
   sourceExplore?: SerializedExplore;
   _parentExplore?: SerializedExplore;
 };
@@ -349,9 +349,7 @@ export class Explore extends Entity implements Taggable {
 
   /** The model annotations resolved for this object. */
   get modelAnnotations(): Annotations {
-    return new Annotations(
-      resolveModelAnnotations(this._ownerModelDef, this._structDef.annotations)
-    );
+    return new Annotations(getModelAnnotations(this._ownerModelDef));
   }
 
   private parsedModelTag?: Tag;
@@ -555,7 +553,7 @@ export class Explore extends Entity implements Taggable {
     return {
       _structDef: this._structDef,
       modelID: this._ownerModelDef.modelID,
-      modelAnnotationsByID: this._ownerModelDef.modelAnnotationsByID,
+      modelAnnotations: this._ownerModelDef.modelAnnotations,
       sourceExplore: this.sourceExplore?.toJSON(),
       _parentExplore: this._parentExplore?.toJSON(),
     };
@@ -574,7 +572,7 @@ export class Explore extends Entity implements Taggable {
       pseudoModelFor(
         main_explore._structDef,
         main_explore.modelID,
-        main_explore.modelAnnotationsByID
+        main_explore.modelAnnotations
       ),
       main_explore._structDef,
       parentExplore,
@@ -732,12 +730,7 @@ export class AtomicField extends Entity implements Taggable {
 
   /** The model annotations resolved for this field, via its parent. */
   get modelAnnotations(): Annotations {
-    return new Annotations(
-      resolveModelAnnotations(
-        this.parent._modelDef,
-        this.fieldTypeDef.annotations
-      )
-    );
+    return new Annotations(getModelAnnotations(this.parent._modelDef));
   }
 
   public isIntrinsic(): boolean {
@@ -1012,9 +1005,7 @@ export class Query extends Entity implements Taggable {
    *  explore. A bare `Query` with no parent has none. */
   get modelAnnotations(): Annotations {
     const modelDef = this._parent?._modelDef;
-    return new Annotations(
-      modelDef && resolveModelAnnotations(modelDef, this.turtleDef.annotations)
-    );
+    return new Annotations(modelDef && getModelAnnotations(modelDef));
   }
 }
 
@@ -1292,9 +1283,9 @@ export class Model implements Taggable {
     return out;
   }
 
-  /** This model's own annotation bundle (keyed by its own ModelID). */
-  private get _ownModelAnnotations(): ModelAnnotationsDef | undefined {
-    return this.modelDef.modelAnnotationsByID[this.modelDef.modelID];
+  /** This model's own `##` bundle (its self-entry's `ownNotes`). */
+  private get _ownModelAnnotations(): AnnotationsDef | undefined {
+    return this.modelDef.modelAnnotations[this.modelDef.modelID]?.ownNotes;
   }
 
   /** @deprecated Use `.annotations.parseAsTag(route)`. */
@@ -1311,9 +1302,9 @@ export class Model implements Taggable {
     return new Annotations(this._ownModelAnnotations);
   }
 
-  /** A model's resolved model annotations are its own bundle. */
+  /** A model's resolved model annotations are its own use scope. */
   get modelAnnotations(): Annotations {
-    return new Annotations(resolveModelAnnotations(this.modelDef));
+    return new Annotations(getModelAnnotations(this.modelDef));
   }
 
   /**
@@ -1813,9 +1804,7 @@ export class Given implements Taggable {
 
   /** The model annotations resolved for this given. */
   get modelAnnotations(): Annotations {
-    return new Annotations(
-      resolveModelAnnotations(this._modelDef, this._internal.annotations)
-    );
+    return new Annotations(getModelAnnotations(this._modelDef));
   }
 }
 
@@ -1871,9 +1860,7 @@ export class PreparedQuery extends PipelineBase {
 
   /** The model annotations resolved for this query's head. */
   get modelAnnotations(): Annotations {
-    return new Annotations(
-      resolveModelAnnotations(this._modelDef, this.pipelineDef.annotations)
-    );
+    return new Annotations(getModelAnnotations(this._modelDef));
   }
 
   /**
@@ -2011,9 +1998,7 @@ export class PreparedResult implements Taggable {
 
   /** The model annotations resolved for this query's run-head. */
   get modelAnnotations(): Annotations {
-    return new Annotations(
-      resolveModelAnnotations(this.modelDef, this.inner.annotations)
-    );
+    return new Annotations(getModelAnnotations(this.modelDef));
   }
 
   /**
@@ -2032,13 +2017,11 @@ export class PreparedResult implements Taggable {
    * directly. Slated for removal once external consumers migrate.
    */
   get modelAnnotation(): AnnotationsDef | undefined {
-    return resolveModelAnnotations(this.modelDef, this.inner.annotations);
+    return getModelAnnotations(this.modelDef);
   }
 
   get modelTag(): Tag {
-    return new Annotations(
-      resolveModelAnnotations(this.modelDef, this.inner.annotations)
-    ).parseAsTag().tag;
+    return new Annotations(getModelAnnotations(this.modelDef)).parseAsTag().tag;
   }
 
   /**
@@ -2159,9 +2142,7 @@ export class PreparedResult implements Taggable {
         .toString(),
     });
 
-    const modelAnnotations = toStableAnnotations(
-      resolveModelAnnotations(this.modelDef, this.inner.annotations)
-    );
+    const modelAnnotations = toStableAnnotations(getModelAnnotations(this.modelDef));
 
     return {
       schema,

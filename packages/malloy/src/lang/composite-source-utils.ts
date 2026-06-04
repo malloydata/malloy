@@ -32,7 +32,6 @@ import type {
   RequiredGroupBy,
   DocumentLocation,
   AnnotationsDef,
-  ObjectAnnotationsDef,
   PartitionCompositeDesc,
   FilterCondition,
   StructDef,
@@ -207,7 +206,7 @@ function _resolveCompositeSources(
         }
         base = {
           ...resolveInner.success,
-          annotations: composeObjectAnnotations(
+          annotations: composeAnnotations(
             base.annotations,
             resolveInner.success.annotations
           ),
@@ -215,7 +214,7 @@ function _resolveCompositeSources(
       } else {
         base = {
           ...inputSource,
-          annotations: composeObjectAnnotations(
+          annotations: composeAnnotations(
             base.annotations,
             inputSource.annotations
           ),
@@ -793,22 +792,6 @@ export function getPartitionCompositeDesc(
   }
   const compositeFields = structDef.fields.map(f => activeName(f));
   return {partitionField, partitions, compositeFields};
-}
-
-/**
- * Compose two object-annotation bundles for a resolved composite source. The
- * composed bundle keeps the provenance of whichever input is present (the
- * composite source's own bundle when both are); model-annotation resolution
- * only reads the run-head's `fromModel`, so the composite's identity wins.
- */
-function composeObjectAnnotations(
-  base: ObjectAnnotationsDef | undefined,
-  slice: ObjectAnnotationsDef | undefined
-): ObjectAnnotationsDef | undefined {
-  const fromModel = base?.fromModel ?? slice?.fromModel;
-  if (fromModel === undefined) return undefined;
-  const composed = composeAnnotations(base, slice);
-  return composed && {...composed, fromModel};
 }
 
 function composeAnnotations(

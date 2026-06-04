@@ -20,7 +20,7 @@ import {
   isSourceDef,
   mkSafeRecord,
   MalloyCompileError,
-  resolveModelAnnotations,
+  getModelAnnotations,
 } from '../../model';
 import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
@@ -1168,10 +1168,7 @@ function runSQLOptionsWithAnnotations(
 ): RunSQLOptions {
   return {
     queryAnnotations: preparedResult._rawQuery.annotations,
-    modelAnnotations: resolveModelAnnotations(
-      preparedResult._modelDef,
-      preparedResult._rawQuery.annotations
-    ),
+    modelAnnotations: getModelAnnotations(preparedResult._modelDef),
     ...givenOptions,
   };
 }

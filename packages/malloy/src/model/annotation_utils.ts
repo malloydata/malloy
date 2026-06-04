@@ -5,16 +5,10 @@
 
 import type {
   AnnotationsDef,
-  ModelAnnotationsDef,
   ModelDef,
   ModelID,
   Note,
-  ObjectAnnotationsDef,
 } from './malloy_types';
-
-function isObjectAnnotation(n: AnnotationsDef): n is ObjectAnnotationsDef {
-  return 'fromModel' in n;
-}
 
 /**
  * Every Note of an annotation bundle, inherited first, in document order
@@ -22,7 +16,7 @@ function isObjectAnnotation(n: AnnotationsDef): n is ObjectAnnotationsDef {
  *
  * Internal helper — not part of the public `model` barrel. The public way to
  * read notes is the `Annotations` view (`api/foundation/annotation.ts`), which
- * uses this; the model-annotation resolver below uses it too.
+ * uses this; the model-annotation fold below uses it too.
  */
 export function* notesInOrder(annote: AnnotationsDef): Generator<Note> {
   if (annote.inherits) yield* notesInOrder(annote.inherits);
@@ -31,43 +25,55 @@ export function* notesInOrder(annote: AnnotationsDef): Generator<Note> {
 }
 
 /**
- * Resolve the model (`##`) annotations that apply to one object, by walking the
- * object's annotation `inherits` chain, collecting the model each node came
- * from (`fromModel`), and folding those models' annotation bundles.
+ * The model (`##`) annotations for one model, compiled by walking the
+ * annotation-provenance tree: a model's own `##` together with everything it
+ * imports/extends, folded down the lineage into a single ordered bundle.
  *
- * Fold order is imports-first / local-last so last-wins falls out of note
- * order; a model is deduped to its first (most ancestral) appearance. The
- * running model's own `##` always applies and, being most local, wins. Each
- * model's bundle is flattened along its own `inherits` chain (the extend
- * lineage). `annote` may be undefined (e.g. a run-head with no object
- * annotations), in which case only the running model's own `##` applies.
+ * `modelID` defaults to `model.modelID` — the common case, "the annotations
+ * this model presents." `##` is model-level, so every object resolved in the
+ * model reports this same one bundle (resolution takes no object). Pass an
+ * explicit `modelID` to compile the bundle for any other model in the closure.
+ *
+ * Mechanism: a post-order DFS over each model's `inheritsFrom` edges
+ * (extend-base is `import₀`, sitting first) emits a model only after its
+ * predecessors and only once (its most-ancestral slot). The result is ordered
+ * imports-first / local-last — a consumer that takes "last wins" sees the
+ * target model's own `##` win — and is returned as an {@link AnnotationsDef}
+ * whose `inherits` chain *is* that order (target at the top, most-ancestral
+ * import deepest), so the `Annotations` view / {@link notesInOrder} consume it
+ * with no new code.
+ *
+ * Throws a compiler-bug-class error if the target (or any model it inherits
+ * from) has no entry in the closure: the one place that needs the entry is the
+ * one place that detects its absence.
  */
-export function resolveModelAnnotations(
+export function getModelAnnotations(
   model: ModelDef,
-  annote?: ObjectAnnotationsDef
-): ModelAnnotationsDef {
-  // Most-local first: the running model (whose `##` wins), then the object's
-  // annotation chain walked outward (local → ancestral).
-  const localToAncestral: ModelID[] = [model.modelID];
-  for (let n: AnnotationsDef | undefined = annote; n; n = n.inherits) {
-    if (isObjectAnnotation(n)) localToAncestral.push(n.fromModel);
-  }
-  // Fold imports-first / local-last: walk ancestral → local, keeping each
-  // model's most-ancestral slot (first occurrence in that order). Reading the
-  // folded notes in this order makes the most-local model's `##` win.
-  const foldOrder: ModelID[] = [];
+  modelID: ModelID = model.modelID
+): AnnotationsDef {
+  const order: ModelID[] = []; // ancestral-first, target last; deduped keep-first
   const seen = new Set<ModelID>();
-  for (let i = localToAncestral.length - 1; i >= 0; i--) {
-    const id = localToAncestral[i];
+  const visit = (id: ModelID): void => {
+    const entry = model.modelAnnotations[id];
+    if (entry === undefined) {
+      throw new Error(
+        `Internal error: model annotations requested for '${id}', ` +
+          `which has no entry in model '${model.modelID}' (likely a compiler bug)`
+      );
+    }
+    for (const pred of entry.inheritsFrom) visit(pred);
     if (!seen.has(id)) {
       seen.add(id);
-      foldOrder.push(id);
+      order.push(id);
     }
+  };
+  visit(modelID);
+  // Build the output `inherits` chain bottom-up: most-ancestral deepest, target
+  // at the top. `notesInOrder` then yields ancestral → local.
+  let chain: AnnotationsDef | undefined = undefined;
+  for (const id of order) {
+    const own = model.modelAnnotations[id].ownNotes;
+    chain = {notes: own.notes, blockNotes: own.blockNotes, inherits: chain};
   }
-  const notes: Note[] = [];
-  for (const id of foldOrder) {
-    const bundle = model.modelAnnotationsByID[id];
-    if (bundle) notes.push(...notesInOrder(bundle));
-  }
-  return {notes};
+  return chain ?? {};
 }

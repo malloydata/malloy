@@ -218,7 +218,7 @@ export class GivenDeclaration
       givenUsage,
       location: this.location,
       annotations: this.note
-        ? {...this.note, fromModel: this.modelID}
+        ? {...this.note}
         : undefined,
       ...(this.inline ? {inline: true} : {}),
     };
@@ -244,7 +244,7 @@ export class GivenDeclaration
       definition: {
         type: typeDefToString(this.typeDef),
         annotations: this.note
-          ? {...this.note, fromModel: this.modelID}
+          ? {...this.note}
           : undefined,
         location: this.location,
         defaultText,

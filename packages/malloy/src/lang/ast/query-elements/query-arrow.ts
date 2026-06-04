@@ -87,7 +87,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     const query = {
       ...queryBase,
       name,
-      annotations: annotations && {...annotations, fromModel: this.modelID},
+      annotations,
       pipeline: [...queryBase.pipeline, ...rhsPipeline],
     };
 

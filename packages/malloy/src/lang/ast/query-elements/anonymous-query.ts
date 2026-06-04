@@ -59,7 +59,7 @@ export class AnonymousQuery
       annotation.inherits = modelQuery.annotations;
     }
     if (annotation.notes || annotation.blockNotes || annotation.inherits) {
-      modelQuery.annotations = {...annotation, fromModel: this.modelID};
+      modelQuery.annotations = {...annotation};
     }
     doc.queryList.push(modelQuery);
   }

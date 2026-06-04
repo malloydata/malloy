@@ -379,7 +379,7 @@ export function mkModelDef(
     exports: [],
     contents: mkSafeRecord(),
     sourceRegistry: {},
-    modelAnnotationsByID: {},
+    modelAnnotations: {},
     queryList: [],
     dependencies: {},
   };

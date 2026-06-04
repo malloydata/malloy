@@ -48,7 +48,7 @@ export abstract class DynamicSpace
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
   protected newAccessModifiers = new Map<string, model.AccessModifierLabel>();
-  protected newNotes = new Map<string, model.ObjectAnnotationsDef>();
+  protected newNotes = new Map<string, model.AnnotationsDef>();
 
   constructor(extending: SourceDef) {
     super({...extending}, extending.dialect, extending.connection);

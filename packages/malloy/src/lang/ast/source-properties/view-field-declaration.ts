@@ -67,7 +67,6 @@ export class ViewFieldDeclaration
       annotations: {
         ...this.note,
         inherits: annotations,
-        fromModel: this.modelID,
       },
       location: this.location,
     };

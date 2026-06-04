@@ -67,24 +67,19 @@ The name a thing goes by in a given context is therefore **`activeName(x)` = `x.
 ### Annotations in the IR
 
 Object (`#`) annotations attach to any IR entity via an
-`annotations?: ObjectAnnotationsDef` field:
+`annotations?: AnnotationsDef` field:
 
 ```ts
-// Origin-blind base — every note-walking helper takes this.
+// One bundle type for both `#` object annotations and `##` model annotations.
+// Object annotations carry NO model provenance — `##` is model-level, resolved
+// by folding `ModelDef.modelAnnotations` keyed by ModelID (see below).
 interface AnnotationsDef {
   inherits?: AnnotationsDef; // parent's annotations when this entity is derived
   blockNotes?: Note[];       // notes inherited from a containing block of definitions
   notes?: Note[];            // notes attached directly to this entity
 }
-// Object annotations carry the id of the model that created the node, so
-// model (`##`) annotations can be resolved across files (see below). Stamped
-// at creation; never rewritten on import.
-interface ObjectAnnotationsDef extends AnnotationsDef {
-  fromModel: ModelID;
-}
-// Model (`##`) annotations: one file's model-level bundle, keyed externally
-// by ModelID in `ModelDef.modelAnnotationsByID` (no `fromModel` of its own).
-interface ModelAnnotationsDef extends AnnotationsDef {}
+// A model's own `##` is just an AnnotationsDef (`ModelAnnotationEntry.ownNotes`);
+// there is no separate model-annotation type.
 interface Note {
   text: string;
   at: DocumentLocation;
@@ -123,23 +118,41 @@ reachable copy.
 
 ### Model-level annotations resolve across files
 
-`ModelDef.modelAnnotationsByID` maps each involved model's `ModelID` (this
-model plus everything it imported or extended) to that file's
-`ModelAnnotationsDef`. Because object annotations carry `fromModel`,
-`resolveModelAnnotations(model, objectAnnotation)`
-(`model/annotation_utils.ts`) walks the object's `inherits` chain, collects the
-model each node came from, and folds those models' bundles —
-imports-first / local-last, last-wins, a model deduped to its most-ancestral
-slot. The running model's own `##` always applies and, being most local, wins.
-The renderer consumes the **run-head's** resolved bundle as
-`result.model_annotations`; embedded objects' divergent stacks are never read.
+`##` is **model-level**: a model has exactly one set of model annotations, and
+every object resolved in it reports that same set. `ModelDef.modelAnnotations`
+maps each involved model's `ModelID` (this model plus everything in its
+import/extend closure) to a `ModelAnnotationEntry`:
 
-> **Legacy, slated for removal:** a per-object `modelAnnotations?` field still
-> exists on `Query`/struct defs and is read by SQL generation (`query_node.ts`)
-> and some Foundation entity accessors, fed by `sql-source.ts` /
-> `source_def_utils.ts` and propagated through `query_query.ts`. It predates the
-> map and should be retired in favor of `resolveModelAnnotations` once those
-> readers are moved over.
+```ts
+interface ModelAnnotationEntry {
+  ownNotes: AnnotationsDef;      // that model's own `##`
+  inheritsFrom: ModelID[];       // DIRECT import/extend edges, extend-base as import₀
+}
+```
+
+`inheritsFrom` is the lineage **DAG** (direct edges only, not the resolved
+order); extend-base is an implicit `import₀` sitting first.
+`getModelAnnotations(model, modelID?)` (`model/annotation_utils.ts`) walks
+`inheritsFrom` from `modelID` (default `model.modelID`) post-order,
+dedup-keep-first, compiling that model's annotations ordered imports-first /
+local-last — returned as an `AnnotationsDef` whose `inherits` chain *is* that
+order, so the `Annotations` view / `notesInOrder` read it with no new code.
+`getModelAnnotations(model)` is the one set every object reports; the renderer
+consumes the **run-head's** as `result.model_annotations`. `##` is the same for
+every object, so resolution takes no object (last-wins / merge is MOTLY's job,
+not the annotation layer's).
+
+Both `import` and the extend-base init funnel through
+`Document.contributeModelAnnotations` (`malloy-element.ts`) — they differ only
+in namespace/export copying, never in the annotation fold.
+
+> **Legacy, slated for removal (separate follow-up):** a per-object
+> `modelAnnotations?` field still exists on `Query`/struct defs and is read by
+> SQL generation (`query_node.ts`) and some plumbing (`sql-source.ts` /
+> `source_def_utils.ts` / `query_query.ts`). It predates the model-level fold and
+> should be retired once those readers move to `getModelAnnotations`. `##!`
+> compiler flags also read it (`query_query.ts`); flag semantics are still to
+> be settled.
 
 ## Compilation Pipeline
 
