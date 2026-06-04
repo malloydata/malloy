@@ -72,3 +72,7 @@ packages/malloy-tag/src/.antlr
 packages/malloy-tag/src/lib
 
 @flowtyped
+
+# Copied into each package at publish time so the license text ships in the
+# tarball; never committed. See .github/workflows/release.yaml.
+packages/*/LICENSE
