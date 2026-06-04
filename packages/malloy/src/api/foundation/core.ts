@@ -1486,8 +1486,10 @@ export class Model implements Taggable {
    * @return BuildPlan with graphs and sources map
    */
   public getBuildPlan(): BuildPlan {
-    // Require experimental.persistence compiler flag
-    const modelTag = this.annotations.parseAsTag('!').tag;
+    // Require experimental.persistence compiler flag. Read the resolved model
+    // annotations (`.modelAnnotations`, the import/extend fold) rather than this
+    // model's own `##` so the flag carries across extend.
+    const modelTag = this.modelAnnotations.parseAsTag('!').tag;
     if (!modelTag.has('experimental', 'persistence')) {
       throw new Error(
         'Model must have ##! experimental.persistence to use getBuildPlan()'

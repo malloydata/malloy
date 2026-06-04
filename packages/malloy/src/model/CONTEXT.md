@@ -156,8 +156,11 @@ Deferring the inverse — an importable flag preamble (`import "all_experiments"
 is forward-safe: flags are additive, so a file written today keeps compiling if
 imports ever start carrying flags.
 
-`##!` flags are consumed **entirely during translation** (the `inExperiment`
-gates in `lang/`). There is deliberately no SQL-gen-time `##!` mechanism — the
+Most `##!` flags are consumed **at translation time** (the `inExperiment` gates
+in `lang/`). The Foundation API also reads `##! experimental.persistence` at
+**runtime** — off the resolved model annotations (`Model.modelAnnotations`, the
+fold, so it carries across extend) — to gate `getBuildPlan()` / manifest
+substitution. There is deliberately no **SQL-gen-time** `##!` mechanism: the
 former per-object `modelAnnotations` carrier and `modelCompilerFlags()` were
 removed once their only consumer (`unsafe_complex_select_query`, a temporary BQ
 escape hatch) proved unnecessary; the guard it bypassed is now a plain compiler
