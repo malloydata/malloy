@@ -78,6 +78,11 @@ jobs:
               echo "SKIPPED $PKG_NAME@$VERSION (already published)"
             else
               echo Publishing $PKG_NAME $VERSION
+              # MIT requires the license text to travel with the package. The
+              # per-file headers are short SPDX tags, so copy the full LICENSE
+              # into the package root (npm auto-bundles it). Kept out of git;
+              # see .gitignore for packages/*/LICENSE.
+              cp LICENSE "$package/LICENSE"
               npm publish -w $package --access=public
             fi
           done
