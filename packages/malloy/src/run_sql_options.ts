@@ -21,15 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {AnnotationsDef} from './model/malloy_types';
-
 export interface RunSQLOptions {
   rowLimit?: number;
   abortSignal?: AbortSignal;
-  /** Model annotations forwarded to the adapter (e.g. `##!` dialect flags). */
-  modelAnnotations?: AnnotationsDef;
-  /** Query annotations forwarded to the adapter. */
-  queryAnnotations?: AnnotationsDef;
 }
 
 export type QueryOptionsReader = RunSQLOptions | (() => RunSQLOptions);

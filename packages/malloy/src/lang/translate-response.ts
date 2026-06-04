@@ -22,7 +22,7 @@
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import type {AnnotationsDef, ModelDef} from '../model/malloy_types';
+import type {ModelDef} from '../model/malloy_types';
 import type {MalloyElement} from './ast';
 import type {LogMessage} from './parse-log';
 import type {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
@@ -94,11 +94,6 @@ interface Metadata
   symbols: DocumentSymbol[];
 }
 export type MetadataResponse = Partial<Metadata>;
-interface ModelAnnotationData
-  extends ResponseBase, NeededData, ProblemResponse, FinalResponse {
-  modelAnnotations: AnnotationsDef;
-}
-export type ModelAnnotationResponse = Partial<ModelAnnotationData>;
 interface Completions
   extends ResponseBase, NeededData, ProblemResponse, FinalResponse {
   completions: DocumentCompletion[];

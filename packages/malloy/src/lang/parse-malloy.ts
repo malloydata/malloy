@@ -67,7 +67,6 @@ import type {
   ModelDataRequest,
   NeedURLData,
   TranslateResponse,
-  ModelAnnotationResponse,
   TablePathResponse,
 } from './translate-response';
 import {isNeedResponse} from './translate-response';
@@ -79,7 +78,6 @@ import {
 import type {Tag} from '@malloydata/malloy-tag';
 import {parseAnnotation} from '@malloydata/malloy-tag';
 import type {MalloyParseInfo} from './malloy-parse-info';
-import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import type {EventStream} from '../runtime_types';
 import {Annotations} from '../api/foundation/annotation';
@@ -551,45 +549,6 @@ class HelpContextStep implements TranslationStep {
   }
 }
 
-class ModelAnnotationStep implements TranslationStep {
-  response?: ModelAnnotationResponse;
-  constructor(readonly parseStep: ParseStep) {}
-
-  step(
-    that: MalloyTranslation,
-    extendingModel?: ModelDef
-  ): ModelAnnotationResponse {
-    if (!this.response) {
-      const tryParse = this.parseStep.step(that);
-      if (!tryParse.parse || tryParse.final) {
-        return tryParse;
-      } else {
-        const modelAnnotations = walkForModelAnnotation(
-          that,
-          tryParse.parse.tokenStream,
-          tryParse.parse
-        );
-        this.response = {
-          // This runs DURING translation, before this model's own imports are
-          // resolved (schema/SQL-struct fetch is part of that resolution), so it
-          // is deliberately NOT the final import-folded `getModelAnnotations`
-          // result — that does not exist yet here. It is the model's own `##`
-          // plus the extend base's fold (all that is available pre-import).
-          // Consumed by connections for schema-fetch-time config; no adapter
-          // currently reads renderer-style model annotations through it.
-          modelAnnotations: {
-            ...modelAnnotations,
-            inherits: extendingModel
-              ? getModelAnnotations(extendingModel)
-              : undefined,
-          },
-        };
-      }
-    }
-    return this.response;
-  }
-}
-
 class TablePathInfoStep implements TranslationStep {
   response?: TablePathResponse;
   constructor(readonly parseStep: ParseStep) {}
@@ -726,7 +685,6 @@ export abstract class MalloyTranslation {
   }
 
   readonly parseStep: ParseStep;
-  readonly modelAnnotationStep: ModelAnnotationStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
   readonly astStep: ASTStep;
   readonly metadataStep: MetadataStep;
@@ -752,7 +710,6 @@ export abstract class MalloyTranslation {
      * things will happen automatically.
      */
     this.parseStep = new ParseStep();
-    this.modelAnnotationStep = new ModelAnnotationStep(this.parseStep);
     this.metadataStep = new MetadataStep(this.parseStep);
     this.completionsStep = new CompletionsStep(this.parseStep);
     this.helpContextStep = new HelpContextStep(this.parseStep);
@@ -981,10 +938,6 @@ export abstract class MalloyTranslation {
 
   metadata(): MetadataResponse {
     return this.metadataStep.step(this);
-  }
-
-  modelAnnotation(extendingModel?: ModelDef): ModelAnnotationResponse {
-    return this.modelAnnotationStep.step(this, extendingModel);
   }
 
   tablePathInfo(): TablePathResponse {
