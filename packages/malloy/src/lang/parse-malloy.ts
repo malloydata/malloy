@@ -570,10 +570,15 @@ class ModelAnnotationStep implements TranslationStep {
           tryParse.parse
         );
         this.response = {
+          // This runs DURING translation, before this model's own imports are
+          // resolved (schema/SQL-struct fetch is part of that resolution), so it
+          // is deliberately NOT the final import-folded `getModelAnnotations`
+          // result — that does not exist yet here. It is the model's own `##`
+          // plus the extend base's fold (all that is available pre-import).
+          // Consumed by connections for schema-fetch-time config; no adapter
+          // currently reads renderer-style model annotations through it.
           modelAnnotations: {
             ...modelAnnotations,
-            // The extending base's full `##` annotations sit under this model's
-            // own — so schema-fetch sees both, base annotations first.
             inherits: extendingModel
               ? getModelAnnotations(extendingModel)
               : undefined,
