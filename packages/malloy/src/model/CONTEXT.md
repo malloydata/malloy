@@ -146,13 +146,22 @@ Both `import` and the extend-base init funnel through
 `Document.contributeModelAnnotations` (`malloy-element.ts`) — they differ only
 in namespace/export copying, never in the annotation fold.
 
-> **Legacy, slated for removal (separate follow-up):** a per-object
-> `modelAnnotations?` field still exists on `Query`/struct defs and is read by
-> SQL generation (`query_node.ts`) and some plumbing (`sql-source.ts` /
-> `source_def_utils.ts` / `query_query.ts`). It predates the model-level fold and
-> should be retired once those readers move to `getModelAnnotations`. `##!`
-> compiler flags also read it (`query_query.ts`); flag semantics are still to
-> be settled.
+### Compiler-flag (`##!`) propagation
+
+Unlike themes, **`##!` compiler flags do not cross `import`.** A flag governs how
+*its own file* is parsed/compiled; it is not data the model carries downstream.
+(Notebook extend is a *continuation*, not an import, so it's outside this rule —
+flags flow along the extend chain as the same authoring session continues.)
+Deferring the inverse — an importable flag preamble (`import "all_experiments"`) —
+is forward-safe: flags are additive, so a file written today keeps compiling if
+imports ever start carrying flags.
+
+`##!` flags are consumed **entirely during translation** (the `inExperiment`
+gates in `lang/`). There is deliberately no SQL-gen-time `##!` mechanism — the
+former per-object `modelAnnotations` carrier and `modelCompilerFlags()` were
+removed once their only consumer (`unsafe_complex_select_query`, a temporary BQ
+escape hatch) proved unnecessary; the guard it bypassed is now a plain compiler
+error.
 
 ## Compilation Pipeline
 

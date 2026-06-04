@@ -35,7 +35,6 @@ import type {
   Query,
   SourceID,
   SourceRegistryValue,
-  StructDef,
 } from '../../../model/malloy_types';
 import {isSourceDef, isPersistableSourceDef} from '../../../model/malloy_types';
 import {mkModelDef, mkModelID} from '../../../model/utils';
@@ -636,11 +635,6 @@ export class Document extends MalloyElement implements NameSpace {
     return ret;
   }
 
-  private modelAnnotationTodoList: StructDef[] = [];
-  rememberToAddModelAnnotations(sd: StructDef) {
-    this.modelAnnotationTodoList.push(sd);
-  }
-
   private checkGivenAliasCollisions(): void {
     const byId = new Map<GivenID, string[]>();
     for (const [name, m] of this.documentModel) {
@@ -750,11 +744,7 @@ export class Document extends MalloyElement implements NameSpace {
         if (isExported(name, modelEntry)) {
           def.exports.push(name);
         }
-        if (entryDef.type === 'userType') {
-          def.contents[name] = {...entryDef};
-        } else {
-          def.contents[name] = {...entryDef};
-        }
+        def.contents[name] = {...entryDef};
       } else if (entryDef.type === 'given') {
         if (isExported(name, modelEntry)) {
           def.exports.push(name);

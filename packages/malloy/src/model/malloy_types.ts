@@ -1263,7 +1263,6 @@ export interface Query extends Pipeline, Filtered {
   name?: string;
   structRef: StructRef;
   sourceArguments?: SafeRecord<Argument>;
-  modelAnnotations?: AnnotationsDef;
   compositeResolvedSourceDef?: SourceDef;
   // Dedup'd union of every segment's `expandedGivenUsage` (and nested turtle
   // stages'). Populated when the Query is finalized; consumers that need the
@@ -1538,7 +1537,6 @@ export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
 interface StructDefBase extends HasLocation, NamedObject, HasAnnotations {
   type: string;
-  modelAnnotations?: AnnotationsDef;
   fields: FieldDef[];
   /** Marker for error placeholder structs created by ErrorFactory */
   errorFactory?: boolean;

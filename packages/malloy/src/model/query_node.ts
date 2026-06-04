@@ -40,8 +40,6 @@ import {
   expressionIsCalculation,
 } from './malloy_types';
 import type {EventStream} from '../runtime_types';
-import {Annotations} from '../api/foundation/annotation';
-import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
 import {exprMap} from './utils';
@@ -320,16 +318,6 @@ export class QueryStruct {
     maker: (field: TurtleDef, parent: QueryStruct) => QueryField
   ) {
     QueryStruct.turtleFieldMaker = maker;
-  }
-
-  private _modelTag: Tag | undefined = undefined;
-  modelCompilerFlags(): Tag {
-    if (this._modelTag === undefined) {
-      const annotation = this.structDef.modelAnnotations;
-      const {tag} = new Annotations(annotation).parseAsTag('!');
-      this._modelTag = tag;
-    }
-    return this._modelTag;
   }
 
   protected findFirstDialect(): string {

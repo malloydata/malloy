@@ -354,9 +354,7 @@ export class Explore extends Entity implements Taggable {
 
   private parsedModelTag?: Tag;
   /**
-   * @deprecated Use `.modelAnnotations.parseAsTag(route)`. This now resolves
-   * through the model-annotation resolver rather than the per-object
-   * `structDef.modelAnnotations` stamp.
+   * @deprecated Use `.modelAnnotations.parseAsTag(route)`.
    */
   public get modelTag(): Tag {
     this.parsedModelTag ||= this.modelAnnotations.parseAsTag().tag;
@@ -1302,7 +1300,7 @@ export class Model implements Taggable {
     return new Annotations(this._ownModelAnnotations);
   }
 
-  /** A model's resolved model annotations are its own use scope. */
+  /** The model annotations resolved across this model's import/extend lineage. */
   get modelAnnotations(): Annotations {
     return new Annotations(getModelAnnotations(this.modelDef));
   }
@@ -2012,8 +2010,8 @@ export class PreparedResult implements Taggable {
   }
 
   /**
-   * @deprecated Hands out raw IR (`AnnotationsDef`). Internal code that
-   * needs the model-level IR shape should read `._modelDef.annotations`
+   * @deprecated Hands out raw IR (`AnnotationsDef`). Internal code that needs
+   * the model-level IR shape should call `getModelAnnotations(this.modelDef)`
    * directly. Slated for removal once external consumers migrate.
    */
   get modelAnnotation(): AnnotationsDef | undefined {
@@ -2142,7 +2140,9 @@ export class PreparedResult implements Taggable {
         .toString(),
     });
 
-    const modelAnnotations = toStableAnnotations(getModelAnnotations(this.modelDef));
+    const modelAnnotations = toStableAnnotations(
+      getModelAnnotations(this.modelDef)
+    );
 
     return {
       schema,

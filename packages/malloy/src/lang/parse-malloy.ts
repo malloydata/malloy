@@ -641,9 +641,7 @@ class TranslateStep implements TranslationStep {
       // flag semantics are still to be settled; this keeps the existing
       // behavior (flags from the base model) green and is not the final design.
       that.compilerFlagSrc.push(
-        ...new Annotations(
-          getModelAnnotations(extendingModel)
-        ).texts('!')
+        ...new Annotations(getModelAnnotations(extendingModel)).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);

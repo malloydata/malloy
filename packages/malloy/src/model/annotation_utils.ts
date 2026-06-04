@@ -3,12 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {
-  AnnotationsDef,
-  ModelDef,
-  ModelID,
-  Note,
-} from './malloy_types';
+import type {AnnotationsDef, ModelDef, ModelID, Note} from './malloy_types';
 
 /**
  * Every Note of an annotation bundle, inherited first, in document order

@@ -205,7 +205,6 @@ export class RefinedSource extends Source {
     if (moreFilters) {
       return {...retStruct, filterList};
     }
-    this.document()?.rememberToAddModelAnnotations(retStruct);
     return retStruct;
   }
 }

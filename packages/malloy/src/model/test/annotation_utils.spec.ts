@@ -39,7 +39,9 @@ function modelWith(
 
 /** Fold a model's annotations and flatten the result to note texts, in order. */
 function foldTexts(model: ModelDef, modelID?: ModelID): string[] {
-  return [...notesInOrder(getModelAnnotations(model, modelID))].map(n => n.text);
+  return [...notesInOrder(getModelAnnotations(model, modelID))].map(
+    n => n.text
+  );
 }
 
 describe('getModelAnnotations fold', () => {

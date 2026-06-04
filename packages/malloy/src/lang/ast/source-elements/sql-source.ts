@@ -178,11 +178,6 @@ export class SQLSource extends Source {
         lookup.value.selectStr,
         selectSegments
       );
-      const fromDoc = this.document();
-      const modelAnnotation = fromDoc?.currentModelAnnotation();
-      if (modelAnnotation) {
-        locStruct.modelAnnotations = modelAnnotation;
-      }
       return locStruct;
     } else {
       this.logError(

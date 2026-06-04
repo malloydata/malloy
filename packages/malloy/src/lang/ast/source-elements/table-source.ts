@@ -80,7 +80,6 @@ export abstract class TableSource extends Source {
           })),
           location: this.location,
         };
-        this.document()?.rememberToAddModelAnnotations(ret);
         return ret;
       }
       if (tableDefEntry.status === 'error') {
