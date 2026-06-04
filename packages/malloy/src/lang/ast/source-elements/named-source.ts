@@ -313,7 +313,6 @@ export class NamedSource extends Source {
     }
 
     const ret = {...base, parameters: outParameters, arguments: outArguments};
-    this.document()?.rememberToAddModelAnnotations(ret);
     return ret;
   }
 }

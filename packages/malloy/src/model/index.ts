@@ -60,9 +60,11 @@ export {
   composeSQLExpr,
   makeDigest,
   mkModelDef,
+  mkModelID,
   pathToKey,
   typeDefToString,
 } from './utils';
+export {getModelAnnotations} from './annotation_utils';
 export {constantExprToSQL} from './constant_expression_compiler';
 export {getCompiledSQL} from './sql_compiled';
 export {MalloyCompileError} from './malloy_compile_error';

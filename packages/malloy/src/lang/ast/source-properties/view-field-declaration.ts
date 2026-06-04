@@ -64,7 +64,10 @@ export class ViewFieldDeclaration
       type: 'turtle',
       name: this.name,
       pipeline: checkedPipeline,
-      annotations: {...this.note, inherits: annotations},
+      annotations: {
+        ...this.note,
+        inherits: annotations,
+      },
       location: this.location,
     };
     return def;

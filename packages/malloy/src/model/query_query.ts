@@ -652,9 +652,6 @@ export class QueryQuery extends QueryField {
             name,
             fields: structDef.fields,
             ...(structDef.annotations && {annotations: structDef.annotations}),
-            ...(structDef.modelAnnotations && {
-              modelAnnotations: structDef.modelAnnotations,
-            }),
             resultMetadata,
             ...(queryTimezone && {queryTimezone}),
           };
@@ -666,9 +663,6 @@ export class QueryQuery extends QueryField {
             name,
             fields: structDef.fields,
             ...(structDef.annotations && {annotations: structDef.annotations}),
-            ...(structDef.modelAnnotations && {
-              modelAnnotations: structDef.modelAnnotations,
-            }),
             resultMetadata,
             ...(queryTimezone && {queryTimezone}),
           };
@@ -764,9 +758,6 @@ export class QueryQuery extends QueryField {
       resultMetadata: this.getResultMetadata(this.rootResult),
       queryTimezone: resultStruct.getQueryInfo().queryTimezone,
     };
-    if (this.parent.structDef.modelAnnotations) {
-      outputStruct.modelAnnotations = this.parent.structDef.modelAnnotations;
-    }
 
     return outputStruct;
   }
@@ -1705,14 +1696,10 @@ export class QueryQuery extends QueryField {
     };
     this.generateStage0Fields(this.rootResult, f, stageWriter);
 
-    if (
-      this.firstSegment.type === 'project' &&
-      !this.parent.modelCompilerFlags().has('unsafe_complex_select_query')
-    ) {
+    if (this.firstSegment.type === 'project') {
       throw new MalloyCompileError(
         "Cannot use 'select:' in a stage that contains nested views. " +
-          'Use `group_by:` or restructure the pipeline. ' +
-          'Set `##! unsafe_complex_select_query` to bypass at your own risk.',
+          'Use `group_by:` or restructure the pipeline.',
         'compiler-project-with-turtles',
         this.fieldDef.location
       );
@@ -2560,9 +2547,6 @@ class QueryQueryIndex extends QueryQuery {
       ],
       connection: this.parent.connectionName,
     };
-    if (this.parent.structDef.modelAnnotations) {
-      ret.modelAnnotations = this.parent.structDef.modelAnnotations;
-    }
     return ret;
   }
 }

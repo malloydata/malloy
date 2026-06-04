@@ -115,9 +115,8 @@ export class KeyJoin extends Join {
     };
 
     if (this.note) {
-      joinStruct.annotations = this.note;
+      joinStruct.annotations = {...this.note};
     }
-    this.document()?.rememberToAddModelAnnotations(joinStruct);
     return joinStruct;
   }
 
@@ -230,9 +229,8 @@ export class ExpressionJoin extends Join {
       location: this.location,
     };
     if (this.note) {
-      joinStruct.annotations = this.note;
+      joinStruct.annotations = {...this.note};
     }
-    this.document()?.rememberToAddModelAnnotations(joinStruct);
     return joinStruct;
   }
 }

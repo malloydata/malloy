@@ -16,7 +16,12 @@ import type {
   GivenValue,
   VirtualMap,
 } from '../../model';
-import {isSourceDef, mkSafeRecord, MalloyCompileError} from '../../model';
+import {
+  isSourceDef,
+  mkSafeRecord,
+  MalloyCompileError,
+  getModelAnnotations,
+} from '../../model';
 import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
 import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
@@ -895,6 +900,7 @@ export class ModelMaterializer extends FluentState<Model> {
       const queryModel = await Malloy.compile({
         source: text,
         restrictedMode: true,
+        method: 'query',
         urlReader,
         connections,
         model,
@@ -936,6 +942,7 @@ export class ModelMaterializer extends FluentState<Model> {
           urlReader,
           connections,
           model,
+          method: 'extendModel',
           refreshSchemaCache: options?.refreshSchemaCache,
           noThrowOnError: options?.noThrowOnError,
           importBaseURL: options?.importBaseURL,
@@ -1161,7 +1168,7 @@ function runSQLOptionsWithAnnotations(
 ): RunSQLOptions {
   return {
     queryAnnotations: preparedResult._rawQuery.annotations,
-    modelAnnotations: preparedResult._modelDef.annotations,
+    modelAnnotations: getModelAnnotations(preparedResult._modelDef),
     ...givenOptions,
   };
 }
@@ -1343,7 +1350,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         buildManifest = undefined;
       }
       if (buildManifest) {
-        const modelTag = preparedQuery.model.annotations.parseAsTag('!').tag;
+        // Resolved model annotations (the import/extend fold), so the
+        // `experimental.persistence` flag carries across extend.
+        const modelTag =
+          preparedQuery.model.modelAnnotations.parseAsTag('!').tag;
         if (!modelTag.has('experimental', 'persistence')) {
           if (explicitManifest) {
             // Explicitly passed non-empty manifest requires persistence support

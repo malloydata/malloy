@@ -83,7 +83,7 @@ export class RenameField extends MalloyElement implements Noteable, MakeEntry {
             oldValue.found,
             this.newName,
             this.location,
-            this.note
+            this.note ? {...this.note} : undefined
           )
         );
       } else {

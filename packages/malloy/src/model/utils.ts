@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {v5 as uuidv5} from 'uuid';
+import {v4 as uuidv4, v5 as uuidv5} from 'uuid';
 import {sha256} from '@noble/hashes/sha256';
 import {bytesToHex} from '@noble/hashes/utils';
 import type {
@@ -32,6 +32,7 @@ import type {
   GenericSQLExpr,
   GivenTypeDef,
   ModelDef,
+  ModelID,
   StructDef,
 } from './malloy_types';
 import {
@@ -355,15 +356,30 @@ export class GenerateState {
 }
 
 /**
+ * Make a {@link ModelID} for a model. Pass the model's URL for a real model;
+ * omit it for a URL-less model to get a synthetic `"internal <uuid>"` id. The
+ * space makes the synthetic form an illegal URL so it can never collide with a
+ * real model URL.
+ */
+export function mkModelID(url?: string): ModelID {
+  return url ?? `internal ${uuidv4()}`;
+}
+
+/**
  * Create an empty ModelDef with the given name.
  * Use this factory to ensure all required fields are present.
  */
-export function mkModelDef(name: string): ModelDef {
+export function mkModelDef(
+  name: string,
+  modelID: ModelID = mkModelID()
+): ModelDef {
   return {
     name,
+    modelID,
     exports: [],
     contents: mkSafeRecord(),
     sourceRegistry: {},
+    modelAnnotations: {},
     queryList: [],
     dependencies: {},
   };

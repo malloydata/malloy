@@ -94,7 +94,9 @@ export class ReferenceField extends SpaceField {
         if (origFd) {
           const notes = this.fieldRef.note;
           if (origFd.annotations || notes) {
-            const annotations: AnnotationsDef = notes || {};
+            const annotations: AnnotationsDef = {
+              ...(notes ?? {}),
+            };
             if (origFd.annotations) {
               annotations.inherits = origFd.annotations;
             }

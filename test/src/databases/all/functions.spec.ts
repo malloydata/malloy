@@ -1831,11 +1831,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     });
 
-    // TODO remove the need for the `##! unsafe_complex_select_query` compiler flag
     it('can be used in a select', async () => {
       await expect(`
         ##! experimental { function_order_by partition_by }
-        ##! unsafe_complex_select_query
         run: state_facts -> {
           select: state, births, popular_name
           calculate: prev_births_by_name is lag(births) {
@@ -1867,11 +1865,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       );
     });
-    // TODO remove the need for the `##! unsafe_complex_select_query` compiler flag
     it('can be used in a select in a composite source', async () => {
       await expect(`
         ##! experimental { function_order_by partition_by composite_sources }
-        ##! unsafe_complex_select_query
         source: state_facts_composite is compose(state_facts, state_facts)
         run: state_facts_composite -> {
           select: state, births, popular_name

@@ -66,6 +66,7 @@ import type {
 } from '../parse-log';
 import type {EventStream} from '../../runtime_types';
 import {sqlKey} from '../../model/sql_block';
+import {mkModelDef} from '../../model/utils';
 
 export function pretty(thing: unknown): string {
   return inspect(thing, {breakLength: 100, depth: Infinity});
@@ -415,11 +416,7 @@ export class TestTranslator extends MalloyTranslator {
    */
 
   internalModel: ModelDef = {
-    name: testURI,
-    exports: [],
-    queryList: [],
-    sourceRegistry: {},
-    dependencies: {},
+    ...mkModelDef(testURI, testURI),
     contents: {
       _db_: {type: 'connection', name: '_db_'},
       _bq_: {type: 'connection', name: '_bq_'},

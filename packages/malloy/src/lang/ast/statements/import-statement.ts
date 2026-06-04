@@ -237,6 +237,12 @@ export class ImportStatement
             }
           }
 
+          // Carry the imported model's `##` annotation closure into ours and
+          // record it as a direct predecessor edge (any `import` from a file
+          // contributes that file's whole model-annotation set, in import
+          // order). Shared with the extend-base path via `contributeModelAnnotations`.
+          doc.contributeModelAnnotations(importedModel);
+
           // Register hidden dependencies from child's registry
           for (const sourceID of neededSourceIDs) {
             if (!(sourceID in doc.documentSrcRegistry)) {

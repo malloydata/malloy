@@ -32,7 +32,8 @@ import type {
   DependencyTree,
   DocumentRange,
 } from '../model/malloy_types';
-import {mkModelDef} from '../model/utils';
+import {mkModelDef, mkModelID} from '../model/utils';
+import {getModelAnnotations} from '../model/annotation_utils';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
 import type {
@@ -569,9 +570,18 @@ class ModelAnnotationStep implements TranslationStep {
           tryParse.parse
         );
         this.response = {
+          // This runs DURING translation, before this model's own imports are
+          // resolved (schema/SQL-struct fetch is part of that resolution), so it
+          // is deliberately NOT the final import-folded `getModelAnnotations`
+          // result — that does not exist yet here. It is the model's own `##`
+          // plus the extend base's fold (all that is available pre-import).
+          // Consumed by connections for schema-fetch-time config; no adapter
+          // currently reads renderer-style model annotations through it.
           modelAnnotations: {
             ...modelAnnotations,
-            inherits: extendingModel?.annotations,
+            inherits: extendingModel
+              ? getModelAnnotations(extendingModel)
+              : undefined,
           },
         };
       }
@@ -632,8 +642,11 @@ class TranslateStep implements TranslationStep {
     // seeding (e.g. TestTranslator's compilerFlags option) survive.
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+      // Compiler flags from the extending base's `##` annotations. NOTE: `##!`
+      // flag semantics are still to be settled; this keeps the existing
+      // behavior (flags from the base model) green and is not the final design.
       that.compilerFlagSrc.push(
-        ...new Annotations(extendingModel.annotations).texts('!')
+        ...new Annotations(getModelAnnotations(extendingModel)).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
@@ -730,7 +743,7 @@ export abstract class MalloyTranslation {
     public grammarRule = 'malloyDocument'
   ) {
     this.childTranslators = new Map<string, MalloyTranslation>();
-    this.modelDef = mkModelDef(sourceURL);
+    this.modelDef = mkModelDef(sourceURL, mkModelID(sourceURL));
     /**
      * This is sort of the makefile for the translation, all the steps
      * and the dependencies of the steps are declared here. Then when

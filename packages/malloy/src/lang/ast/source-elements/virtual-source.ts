@@ -53,7 +53,6 @@ export class VirtualTableSource extends Source {
       fields: [],
       location: this.location,
     };
-    this.document()?.rememberToAddModelAnnotations(sourceDef);
     return sourceDef;
   }
 }

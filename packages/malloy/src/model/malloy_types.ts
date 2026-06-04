@@ -1263,7 +1263,6 @@ export interface Query extends Pipeline, Filtered {
   name?: string;
   structRef: StructRef;
   sourceArguments?: SafeRecord<Argument>;
-  modelAnnotations?: AnnotationsDef;
   compositeResolvedSourceDef?: SourceDef;
   // Dedup'd union of every segment's `expandedGivenUsage` (and nested turtle
   // stages'). Populated when the Query is finalized; consumers that need the
@@ -1538,7 +1537,6 @@ export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
 interface StructDefBase extends HasLocation, NamedObject, HasAnnotations {
   type: string;
-  modelAnnotations?: ModelAnnotationsDef;
   fields: FieldDef[];
   /** Marker for error placeholder structs created by ErrorFactory */
   errorFactory?: boolean;
@@ -1604,6 +1602,14 @@ export type GivenID = string;
 
 /** Hash of (connectionDigest, sql) - uniquely identifies a built artifact */
 export type BuildID = string;
+
+/**
+ * Identifies the model a definition came from. Either a real model URL or a
+ * synthetic `"internal <uuid>"` for URL-less models. The space makes the
+ * synthetic form an illegal URL, so it can never collide with a real model
+ * URL. Created with `mkModelID`.
+ */
+export type ModelID = string;
 
 /**
  * Reference to a source in modelDef.contents by name.
@@ -2044,6 +2050,7 @@ export interface DependencyTree {
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
+  modelID: ModelID;
   exports: string[];
   contents: SafeRecord<NamedModelObject>;
   /**
@@ -2054,7 +2061,17 @@ export interface ModelDef {
    */
   sourceRegistry: Record<SourceID, SourceRegistryValue>;
   givens?: Record<GivenID, Given>;
-  annotations?: ModelAnnotationsDef;
+  /**
+   * Model (`##`) annotations of every model involved in this compile, keyed by
+   * {@link ModelID} — this model plus everything it imported or extended (the
+   * whole closure, so any model's annotations are answerable from this
+   * `ModelDef` alone, even after it crosses the wire). Each entry carries that
+   * model's own `##` (`ownNotes`) and its direct import/extend predecessors
+   * (`inheritsFrom`, the DAG of edges, extend-base prepended as `import₀`).
+   * {@link getModelAnnotations} folds `inheritsFrom` from any model to produce
+   * that model's deduped, ordered annotation set.
+   */
+  modelAnnotations: Record<ModelID, ModelAnnotationEntry>;
   queryList: Query[];
   dependencies: DependencyTree;
   references?: DocumentReference[];
@@ -2067,7 +2084,16 @@ export type NamedModelObjects = SafeRecord<NamedModelObject>;
 
 /** Bundle of source annotations attached to one object: the `notes` and
  *  `blockNotes` written on it, plus the bundle from the spiritual parent
- *  via `inherits`. The IR shape paired with the `Annotations` view class. */
+ *  via `inherits`. The IR shape paired with the `Annotations` view class.
+ *
+ *  This is the one annotation bundle type for both `#` object annotations (on
+ *  fields, views, sources, queries, …) and `##` model annotations. Object
+ *  annotations carry no model provenance: `##` is model-level, resolved by
+ *  folding {@link ModelDef.modelAnnotations} keyed by {@link ModelID}, not by
+ *  per-object stamping. A model's own `##` is just an `AnnotationsDef` whose
+ *  `inherits` chain is unused as stored (`ModelAnnotationEntry.ownNotes`) and,
+ *  when returned by {@link getModelAnnotations}, *is* the folded order (local at the
+ *  top) so the `Annotations` view / `notesInOrder` read it with no new code. */
 export interface AnnotationsDef {
   inherits?: AnnotationsDef;
   blockNotes?: Note[];
@@ -2086,9 +2112,13 @@ export interface Note {
    */
   indentStripped?: number;
 }
-/** Annotations bundle with a uuid to make it easier to stream. */
-export interface ModelAnnotationsDef extends AnnotationsDef {
-  id: string;
+/** One model's entry in {@link ModelDef.modelAnnotations}: its own `##`
+ *  (`ownNotes`) plus its **direct** import/extend predecessors (`inheritsFrom`),
+ *  in fold order with the extend-base prepended as `import₀`. Direct edges only
+ *  — the lineage DAG, not the resolved order; {@link getModelAnnotations} resolves. */
+export interface ModelAnnotationEntry {
+  ownNotes: AnnotationsDef;
+  inheritsFrom: ModelID[];
 }
 
 export type QueryScalar =

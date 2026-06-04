@@ -132,7 +132,7 @@ describe('extendModel', () => {
               'end': {'character': 18, 'line': 0},
               'start': {'character': 15, 'line': 0},
             },
-            'url': 'internal://internal.malloy',
+            'url': expect.stringMatching(/^internal:\/\/loadModel\//),
           },
           'message': "Reference to undefined object 'bar'",
           'severity': 'error',
