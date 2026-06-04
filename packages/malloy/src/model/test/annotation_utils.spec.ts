@@ -108,14 +108,29 @@ describe('getModelAnnotations fold', () => {
     );
   });
 
-  test('a missing closure entry is a loud compiler-bug-class error', () => {
-    // An edge to a model with no entry — the one place that needs it detects it.
-    const dangling = modelWith('m', {m: entry([], ['ghost'])});
-    expect(() => getModelAnnotations(dangling)).toThrow(/no entry in model/);
-    // ...as is asking for a root that isn't in the closure at all.
+  test('a target with no entry contributes nothing (synthetic/detached model)', () => {
+    // An empty map (bare mkModelDef / pseudoModelFor) has no self-entry; the
+    // fold is empty, not an error.
+    const detached = modelWith('m', {});
+    expect(foldTexts(detached)).toEqual([]);
+    // ...likewise asking for a model that simply isn't in the closure.
     const present = modelWith('m', {m: entry(['## here\n'])});
-    expect(() => getModelAnnotations(present, 'absent')).toThrow(
-      /no entry in model/
-    );
+    expect(foldTexts(present, 'absent')).toEqual([]);
+  });
+
+  test('an inheritsFrom edge to a missing entry is a loud compiler-bug-class error', () => {
+    // A recorded edge whose target has no entry is corruption — caught at the
+    // one place that needs it.
+    const dangling = modelWith('m', {m: entry([], ['ghost'])});
+    expect(() => getModelAnnotations(dangling)).toThrow(/inheritsFrom edge/);
+  });
+
+  test('a cycle in inheritsFrom terminates (each model folded once)', () => {
+    // A back-edge (a→b→a) must not loop forever; each model still appears once.
+    const model = modelWith('a', {
+      a: entry(['## a\n'], ['b']),
+      b: entry(['## b\n'], ['a']),
+    });
+    expect(foldTexts(model)).toEqual(['## b\n', '## a\n']);
   });
 });

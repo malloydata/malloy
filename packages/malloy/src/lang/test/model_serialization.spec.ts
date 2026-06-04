@@ -22,10 +22,9 @@
  */
 
 import type {
-  ModelAnnotationsDef,
+  ModelAnnotationEntry,
   ModelID,
   Note,
-  ObjectAnnotationsDef,
   StructDef,
   TableSourceDef,
 } from '../../model/malloy_types';
@@ -114,7 +113,7 @@ describe('serializeModel', () => {
       PARENT_EXPLORE
     );
     expect(JSON.stringify(parent_explore)).toStrictEqual(
-      '{"_structDef":{"type":"table","name":"some_ns.parent","as":"parent","dialect":"standardsql","tablePath":"some_ns.parent","connection":"bigquery","primaryKey":"id2","fields":[{"type":"string","name":"name"},{"type":"number","name":"some_parent_count","expressionType":"aggregate","e":{"node":"aggregate","function":"count","e":{"node":""}}}]},"modelID":"internal://generated-model","modelAnnotationsByID":{}}'
+      '{"_structDef":{"type":"table","name":"some_ns.parent","as":"parent","dialect":"standardsql","tablePath":"some_ns.parent","connection":"bigquery","primaryKey":"id2","fields":[{"type":"string","name":"name"},{"type":"number","name":"some_parent_count","expressionType":"aggregate","e":{"node":"aggregate","function":"count","e":{"node":""}}}]},"modelID":"internal://generated-model","modelAnnotations":{}}'
     );
   });
 
@@ -159,19 +158,22 @@ describe('serializeModel', () => {
       range: {start: {line: 0, character: 0}, end: {line: 0, character: 0}},
     };
     const note = (text: string): Note => ({text, at});
-    // A struct whose annotation chain came from model `M`, plus `M`'s
-    // annotation bundle in the resolution map — only resolves with the map.
-    const annotations: ObjectAnnotationsDef = {fromModel: 'M'};
-    const struct: TableSourceDef = {...CHILD_EXPLORE, annotations};
-    const byID: Record<ModelID, ModelAnnotationsDef> = {
-      M: {notes: [note('## theme=foo\n')]},
+    // A struct owned by model `M`, whose `##` lives in the model-annotation
+    // closure. Resolution is model-level, so the struct needs no per-object
+    // provenance — the fold reads `M`'s entry, which must cross the wire.
+    const struct: TableSourceDef = {...CHILD_EXPLORE};
+    const modelAnnotations: Record<ModelID, ModelAnnotationEntry> = {
+      M: {ownNotes: {notes: [note('## theme=foo\n')]}, inheritsFrom: []},
     };
-    const explore = new Explore(pseudoModelFor(struct, 'M', byID), struct);
+    const explore = new Explore(
+      pseudoModelFor(struct, 'M', modelAnnotations),
+      struct
+    );
 
-    // The live Explore resolves the model annotation...
+    // The live Explore folds the model annotation...
     expect(explore.modelAnnotations.texts()).toEqual(['## theme=foo\n']);
-    // ...and the deserialized one resolves it identically (the map crossed the
-    // wire; without it `fromJSON` would resolve against an empty map).
+    // ...and the deserialized one folds it identically (the map crossed the
+    // wire; without it `fromJSON` would fold against an empty map).
     const round = Explore.fromJSON(explore.toJSON());
     expect(round.modelAnnotations.texts()).toEqual(['## theme=foo\n']);
   });

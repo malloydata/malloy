@@ -36,43 +36,51 @@ export function* notesInOrder(annote: AnnotationsDef): Generator<Note> {
  *
  * Mechanism: a post-order DFS over each model's `inheritsFrom` edges
  * (extend-base is `import₀`, sitting first) emits a model only after its
- * predecessors and only once (its most-ancestral slot). The result is ordered
- * imports-first / local-last — a consumer that takes "last wins" sees the
- * target model's own `##` win — and is returned as an {@link AnnotationsDef}
- * whose `inherits` chain *is* that order (target at the top, most-ancestral
- * import deepest), so the `Annotations` view / {@link notesInOrder} consume it
- * with no new code.
+ * predecessors and only once (its most-ancestral slot); back-edges are skipped,
+ * so the walk terminates on a cycle. The result is ordered imports-first /
+ * local-last — a consumer that takes "last wins" sees the target model's own
+ * `##` win — and is returned as an {@link AnnotationsDef} whose `inherits` chain
+ * *is* that order (target at the top, most-ancestral import deepest), so the
+ * `Annotations` view / {@link notesInOrder} consume it with no new code.
  *
- * Throws a compiler-bug-class error if the target (or any model it inherits
- * from) has no entry in the closure: the one place that needs the entry is the
- * one place that detects its absence.
+ * A target with no entry contributes nothing (empty) — the honest answer for a
+ * synthetic or detached `ModelDef` (built via `mkModelDef`, a `pseudoModelFor`
+ * struct, a model with no `##` anywhere) that never recorded a self-entry. But
+ * a recorded `inheritsFrom` *edge* to a model with no entry is corruption —
+ * population kept the edge but lost the target — and throws a compiler-bug-class
+ * error: the one place that needs the entry is the one place that detects it.
  */
 export function getModelAnnotations(
   model: ModelDef,
   modelID: ModelID = model.modelID
 ): AnnotationsDef {
   const order: ModelID[] = []; // ancestral-first, target last; deduped keep-first
-  const seen = new Set<ModelID>();
-  const visit = (id: ModelID): void => {
+  const entered = new Set<ModelID>(); // guards both re-folding and cycles
+  const visit = (id: ModelID, viaEdge: boolean): void => {
+    if (entered.has(id)) return; // already folded (diamond) or a back-edge cycle
     const entry = model.modelAnnotations[id];
     if (entry === undefined) {
-      throw new Error(
-        `Internal error: model annotations requested for '${id}', ` +
-          `which has no entry in model '${model.modelID}' (likely a compiler bug)`
-      );
+      if (viaEdge) {
+        throw new Error(
+          `Internal error: model '${model.modelID}' has an inheritsFrom edge ` +
+            `to '${id}', which has no entry in its closure (likely a compiler bug)`
+        );
+      }
+      return; // target model has no annotations of its own — contribute nothing
     }
-    for (const pred of entry.inheritsFrom) visit(pred);
-    if (!seen.has(id)) {
-      seen.add(id);
-      order.push(id);
-    }
+    entered.add(id);
+    for (const pred of entry.inheritsFrom) visit(pred, true);
+    order.push(id);
   };
-  visit(modelID);
+  visit(modelID, false);
   // Build the output `inherits` chain bottom-up: most-ancestral deepest, target
-  // at the top. `notesInOrder` then yields ancestral → local.
+  // at the top. `notesInOrder` then yields ancestral → local. Models that
+  // contribute no notes of their own add no link — the chain carries only the
+  // notes that exist, not an empty node per model in the lineage.
   let chain: AnnotationsDef | undefined = undefined;
   for (const id of order) {
     const own = model.modelAnnotations[id].ownNotes;
+    if (!own.notes?.length && !own.blockNotes?.length) continue;
     chain = {notes: own.notes, blockNotes: own.blockNotes, inherits: chain};
   }
   return chain ?? {};
