@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -74,9 +56,11 @@ export interface TableSizeProbe {
  *
  *   tablesample-only: probe confirmed a base table above the small
  *     threshold. TABLESAMPLE BLOCK is safe (reads a few micro
- *     partitions). Plain LIMIT without a WHERE is unsafe on large
- *     partitioned tables, so we skip the LIMIT fallback — we'd rather
- *     degrade to variant than issue a runaway query.
+ *     partitions); plain LIMIT without a WHERE is unsafe on large
+ *     partitioned tables, so we skip the LIMIT fallback and instead
+ *     escalate the BLOCK percentage until a draw returns rows (see
+ *     sampleVariantBlocks). A column degrades to variant only on a
+ *     genuinely empty table or a hard failure, never an unlucky draw.
  *
  *   tablesample-then-limit: probe gave no size info (views, temp
  *     views, exotic names). We can't distinguish a small view from a
@@ -95,6 +79,47 @@ export function pickSampleStrategy(
   if (probe === undefined) return 'tablesample-then-limit';
   if (probe.bytes <= fullScanMaxBytes) return 'full-scan-then-sample';
   return 'tablesample-only';
+}
+
+/**
+ * `TABLESAMPLE BLOCK` percentages tried, in order, when sampling a known-large
+ * base table for VARIANT schema inference. Terminates at 100 so the only empty
+ * draw is a genuinely empty table. See sampleVariantBlocks.
+ */
+export const VARIANT_SAMPLE_BLOCK_PERCENTS = [1, 10, 100] as const;
+
+/**
+ * Draw a VARIANT schema sample from a known-large base table, escalating the
+ * `TABLESAMPLE BLOCK` percentage until a draw returns rows.
+ *
+ * BLOCK decides independently per micro-partition, so a low percentage on a
+ * table with few partitions can draw zero rows. An empty draw is
+ * indistinguishable downstream from a genuinely-opaque variant — and, since
+ * BLOCK is unseeded, non-deterministic — so accepting it would silently degrade
+ * every variant column to `sql native`. Escalate instead: an empty draw is
+ * itself evidence the table is small enough to sample harder. (Probabilities
+ * and sizing are in the PR description.)
+ *
+ * Contract: a column degrades to variant only from a genuinely empty table
+ * (empty even at `BLOCK (100)`) or a hard failure — never an unlucky draw.
+ *
+ * `runSample` resolves to the rows, to `[]` on an empty draw (escalate), or to
+ * `undefined` on error/timeout (stop — no "table is small" evidence). Returns
+ * the first non-empty draw, else `undefined`.
+ */
+export async function sampleVariantBlocks(
+  runSample: (blockPercent: number) => Promise<QueryRecord[] | undefined>,
+  blockPercents: readonly number[] = VARIANT_SAMPLE_BLOCK_PERCENTS
+): Promise<QueryRecord[] | undefined> {
+  for (const blockPercent of blockPercents) {
+    const rows = await runSample(blockPercent);
+    // Error/timeout carries no "table is small" evidence, and a higher
+    // percentage only scans more — stop rather than escalate into more timeouts.
+    if (rows === undefined) return undefined;
+    if (rows.length > 0) return rows;
+    // Empty draw: proven small enough to sample harder — escalate.
+  }
+  return undefined;
 }
 
 export interface SnowflakeConnectionOptions {
@@ -363,28 +388,30 @@ export class SnowflakeConnection
       }
 
       if (fieldPathRows === undefined) {
-        const tablesampleQuery = makeSampleQuery(
-          `${projectVariants} from ${tablePath} TABLESAMPLE BLOCK (1) limit ${n}`
-        );
+        const blockSampleQuery = (blockPercent: number) =>
+          makeSampleQuery(
+            `${projectVariants} from ${tablePath} TABLESAMPLE BLOCK (${blockPercent}) limit ${n}`
+          );
         if (strategy === 'tablesample-only') {
-          // Known-large base table: TABLESAMPLE is safe (reads a few
-          // micro-partitions), plain LIMIT without a WHERE can be
-          // catastrophic on large partitioned tables. If TABLESAMPLE
-          // fails here we accept variant rather than risk an unbounded
-          // scan.
-          fieldPathRows =
-            (await this.executor.tryBatch(
-              tablesampleQuery,
+          // Known-large base table: BLOCK decides per-partition, so a low
+          // percentage can draw zero rows; escalate until one returns rows
+          // rather than degrade the column to sql native (see
+          // sampleVariantBlocks). Plain LIMIT without a WHERE is unsafe here,
+          // so there is no LIMIT fallback.
+          fieldPathRows = await sampleVariantBlocks(blockPercent =>
+            this.executor.tryBatch(
+              blockSampleQuery(blockPercent),
               {},
               this.schemaSampleTimeoutMs
-            )) ?? undefined;
+            )
+          );
         } else {
           // Unknown size (view, temp view, non-parseable name) or
           // full-scan fallback: best-effort TABLESAMPLE→LIMIT chain.
           // The LIMIT fallback is the acknowledged "can't help" case
           // for views over large partitioned tables.
           fieldPathRows = await this.runSchemaSample(
-            tablesampleQuery,
+            blockSampleQuery(1),
             makeSampleQuery(`${projectVariants} from ${tablePath} limit ${n}`)
           );
         }

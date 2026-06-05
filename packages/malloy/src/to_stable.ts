@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import * as Malloy from '@malloydata/malloy-interfaces';
@@ -23,6 +21,7 @@ import type {
   TimestampUnit,
 } from './model';
 import {
+  activeName,
   expressionIsAggregate,
   expressionIsScalar,
   isAtomic,
@@ -63,7 +62,7 @@ export function sourceDefToSourceInfo(sourceDef: SourceDef): Malloy.SourceInfo {
       : undefined;
 
   const sourceInfo: Malloy.SourceInfo = {
-    name: sourceDef.as ?? sourceDef.name,
+    name: activeName(sourceDef),
     schema: {
       fields: convertFieldInfos(sourceDef, sourceDef.fields),
     },
@@ -204,7 +203,7 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       ];
       const fieldInfo: Malloy.FieldInfo = {
         kind: 'view',
-        name: field.as ?? field.name,
+        name: activeName(field),
         annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
         schema: {fields: convertFieldInfos(outputStruct, outputStruct.fields)},
       };
@@ -233,7 +232,7 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       ];
       const fieldInfo: Malloy.FieldInfo = {
         kind: aggregate ? 'measure' : 'dimension',
-        name: field.as ?? field.name,
+        name: activeName(field),
         type: typeDefToType(field),
         annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
       };
@@ -241,7 +240,7 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
     } else if (isJoinedSource(field)) {
       const fieldInfo: Malloy.FieldInfo = {
         kind: 'join',
-        name: field.as ?? field.name,
+        name: activeName(field),
         annotations,
         schema: {
           fields: convertFieldInfos(field, field.fields),
@@ -383,8 +382,7 @@ export function getResultStructMetadataAnnotation(
       const orderBy = resultMetadata.orderBy[i];
       const orderByField =
         typeof orderBy.field === 'number'
-          ? (field.fields[orderBy.field - 1].as ??
-            field.fields[orderBy.field - 1].name)
+          ? activeName(field.fields[orderBy.field - 1])
           : orderBy.field;
       const direction = orderBy.dir ?? null;
       tag.set(['ordered_by', i, orderByField], direction);

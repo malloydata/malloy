@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -14,7 +12,13 @@ import type {
   MatrixOperation,
   SourceDef,
 } from '../../../model/malloy_types';
-import {isAtomic, isJoined, isSourceDef, TD} from '../../../model/malloy_types';
+import {
+  activeName,
+  isAtomic,
+  isJoined,
+  isSourceDef,
+  TD,
+} from '../../../model/malloy_types';
 
 import type {HasParameter} from '../parameters/has-parameter';
 import {Source} from './source';
@@ -82,7 +86,7 @@ function composeSources(
       );
     }
     for (const field of sourceDef.fields) {
-      const fieldName = field.as ?? field.name;
+      const fieldName = activeName(field);
       if (field.accessModifier === 'private') {
         continue;
       }

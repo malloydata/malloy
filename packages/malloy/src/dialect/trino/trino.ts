@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,p
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {indent} from '../../model/utils';
@@ -35,6 +17,7 @@ import type {
   RecordLiteralNode,
 } from '../../model/malloy_types';
 import {
+  activeName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -139,9 +122,31 @@ export class TrinoDialect extends PostgresBase {
   supportsCountApprox = true;
   supportsHyperLogLog = true;
 
-  // Trino bare identifier is strict ANSI (`[A-Za-z_][A-Za-z0-9_]*`),
-  // which matches the Dialect default — no override needed. Verified
-  // against the live engine.
+  // Trino bare identifier is strict ANSI, matching the Dialect default.
+
+  // Trino/Presto have no E'...' escape string, so encode a newline-bearing
+  // literal as U&'...'. Inside it the quote doubles (''), the backslash
+  // escape-introducer doubles (\\), and a control char becomes \XXXX.
+  sqlLiteralString(literal: string): string {
+    if (!literal.includes('\n')) {
+      return super.sqlLiteralString(literal);
+    }
+    const body = literal.replace(/['\\\n\r\t]/g, ch => {
+      switch (ch) {
+        case "'":
+          return "''";
+        case '\\':
+          return '\\\\';
+        case '\n':
+          return '\\000A';
+        case '\r':
+          return '\\000D';
+        default: // '\t'
+          return '\\0009';
+      }
+    });
+    return `U&'${body}'`;
+  }
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(SEQUENCE(0,${groupSetCount})))`;
@@ -746,7 +751,7 @@ ${indent(sql)}
     const rowTypes: string[] = [];
     for (const f of lit.typeDef.fields) {
       if (isAtomic(f)) {
-        const name = f.as ?? f.name;
+        const name = activeName(f);
         rowVals.push(
           safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal'
         );

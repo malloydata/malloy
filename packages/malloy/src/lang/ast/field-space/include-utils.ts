@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -12,7 +10,7 @@ import type {
   FieldDef,
   SourceDef,
 } from '../../../model/malloy_types';
-import {isJoined} from '../../../model/malloy_types';
+import {activeName, isJoined} from '../../../model/malloy_types';
 import type {IncludeItem} from '../source-query-elements/include-item';
 import {
   IncludeAccessItem,
@@ -55,7 +53,7 @@ function getJoinFields(
 ): FieldDef[] {
   let fields = from.fields;
   for (const joinName of joinPath) {
-    const join = fields.find(f => (f.as ?? f.name) === joinName);
+    const join = fields.find(f => activeName(f) === joinName);
     if (join === undefined) {
       logTo.logError('field-not-found', `\`${joinName}\` not found`);
       return [];
@@ -100,14 +98,14 @@ function getOrCreateIncludeStateForJoin(
   if (joinState !== undefined) return joinState.state;
   else {
     const fromFields = getJoinFields(from, joinPath, logTo);
-    const allFields = new Set(fromFields.map(f => f.as ?? f.name));
+    const allFields = new Set(fromFields.map(f => activeName(f)));
     const joinNames = new Set(
-      fromFields.filter(f => isJoined(f)).map(f => f.as ?? f.name)
+      fromFields.filter(f => isJoined(f)).map(f => activeName(f))
     );
     const alreadyPrivateFields = new Set(
       fromFields
         .filter(f => f.accessModifier === 'private')
-        .map(f => f.as ?? f.name)
+        .map(f => activeName(f))
     );
     const joinState: JoinIncludeProcessingState = {
       star: undefined,

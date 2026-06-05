@@ -14,6 +14,7 @@ import type {
 } from './malloy_types';
 import {MalloyCompileError} from './malloy_compile_error';
 import {
+  activeName,
   isIndexSegment,
   isRawSegment,
   isJoined,
@@ -128,7 +129,7 @@ export class FieldInstanceField implements FieldInstance {
   private generateDistinctKeyExpression(): string {
     if (this.f.parent.primaryKey()) {
       const pk = this.f.parent.getPrimaryKeyField(this.f.fieldDef);
-      const pkName = pk.fieldDef.as || pk.fieldDef.name;
+      const pkName = activeName(pk.fieldDef);
       const pkField = this.parent.getField(pkName);
       return pkField.generateExpression();
     } else if (this.f.parent.structDef.type === 'array') {

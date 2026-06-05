@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/syntax-highlight",
-  "version": "0.0.404",
+  "version": "0.0.406",
   "description": "A package to simplify the process of developing, testing, and syncnig Malloy syntax highlighting grammars",
   "repository": {
     "type": "git",
@@ -19,7 +19,7 @@
     "build": "npm run codegen && tsc",
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rm -rf dist && node ../../scripts/femto-build.js --clean",
     "gen-malloy-monarch": "ts-node scripts/generateMonarchGrammar grammars/malloy/malloy.tmGrammar.json grammars/malloy/malloy.monarch.ts && prettier grammars/malloy/malloy.monarch.ts --write",
-    "gen-malloy-tokens": "ts-node scripts/generateLanguageTokenizationFile grammars/malloy/tokenizations/darkPlus.ts",
+    "gen-malloy-tokens": "ts-node scripts/generateLanguageTokenizationFile grammars/malloy/tokenizations/darkPlus.ts && prettier grammars/malloy/tokenizations/darkPlus.ts --write",
     "test-monarch-grammars": "rimraf ./dist && tsc && karma start",
     "test-textmate-grammars": "jest",
     "gen-monaco-darkplus": "ts-node scripts/generateMonarchTheme themes/textmate/dark_plus.json themes/monaco/darkPlus.ts",

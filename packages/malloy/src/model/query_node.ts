@@ -27,13 +27,11 @@ import type {
   StructDef,
   TurtleDef,
   TurtleDefPlusFilters,
-  SourceDef,
-  Query,
 } from './malloy_types';
 import {MalloyCompileError} from './malloy_compile_error';
 import {
+  activeName,
   isSourceDef,
-  getIdentifier,
   isBaseTable,
   hasExpression,
   isAtomic,
@@ -42,8 +40,6 @@ import {
   expressionIsCalculation,
 } from './malloy_types';
 import type {EventStream} from '../runtime_types';
-import {Annotations} from '../api/foundation/annotation';
-import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
 import {exprMap} from './utils';
@@ -71,7 +67,7 @@ export class QueryField extends QueryNode {
   }
 
   getIdentifier() {
-    return getIdentifier(this.fieldDef);
+    return activeName(this.fieldDef);
   }
 
   getJoinableParent(): QueryStruct {
@@ -324,16 +320,6 @@ export class QueryStruct {
     QueryStruct.turtleFieldMaker = maker;
   }
 
-  private _modelTag: Tag | undefined = undefined;
-  modelCompilerFlags(): Tag {
-    if (this._modelTag === undefined) {
-      const annotation = this.structDef.modelAnnotations;
-      const {tag} = new Annotations(annotation).parseAsTag('!');
-      this._modelTag = tag;
-    }
-    return this._modelTag;
-  }
-
   protected findFirstDialect(): string {
     if (isSourceDef(this.structDef)) {
       return this.structDef.dialect;
@@ -412,7 +398,7 @@ export class QueryStruct {
 
   private addFieldsFromFieldList(fields: FieldDef[]) {
     for (const field of fields) {
-      const as = getIdentifier(field);
+      const as = activeName(field);
 
       if (field.type === 'turtle') {
         if (!QueryStruct.turtleFieldMaker) {
@@ -459,7 +445,7 @@ export class QueryStruct {
     // make a unique alias name
     if (ret === undefined) {
       const aliases = Array.from(this.pathAliasMap.values());
-      const base = identifierNormalize(getIdentifier(this.structDef));
+      const base = identifierNormalize(activeName(this.structDef));
       let name = `${base}_0`;
       let n = 1;
       while (aliases.includes(name) && n < 1000) {
@@ -485,7 +471,7 @@ export class QueryStruct {
       const x =
         this.parent.getSQLIdentifier() +
         '.' +
-        getIdentifier(this.structDef) +
+        activeName(this.structDef) +
         `[${this.getIdentifier()}.__row_id]`;
       return x;
     } else {
@@ -534,7 +520,7 @@ export class QueryStruct {
 
     // if this is an inline object, include the parents alias.
     if (this.structDef.type === 'record' && this.parent) {
-      return this.parent.sqlSimpleChildReference(getIdentifier(this.structDef));
+      return this.parent.sqlSimpleChildReference(activeName(this.structDef));
     }
     // we are somewhere in the join tree.  Make sure the alias is unique.
     return this.getAliasIdentifier();
@@ -543,9 +529,7 @@ export class QueryStruct {
   // return the name of the field in Malloy
   getFullOutputName(): string {
     if (this.parent) {
-      return (
-        this.parent.getFullOutputName() + getIdentifier(this.structDef) + '.'
-      );
+      return this.parent.getFullOutputName() + activeName(this.structDef) + '.';
     } else {
       return '';
     }
@@ -585,57 +569,12 @@ export class QueryStruct {
       return pk;
     } else {
       throw new MalloyCompileError(
-        `Source '${getIdentifier(this.structDef)}' has no primary key; ` +
-          `cannot compute a unique key for field '${getIdentifier(fieldDef)}'. ` +
+        `Source '${activeName(this.structDef)}' has no primary key; ` +
+          `cannot compute a unique key for field '${activeName(fieldDef)}'. ` +
           'Add `primary_key: <field>` to the source definition.',
         'compiler-missing-primary-key',
         fieldDef.location
       );
-    }
-  }
-
-  /**
-   * called after all structure has been loaded.  Examine this structure to see
-   * if if it is based on a query and if it is, add the output fields (unless
-   * they exist) to the structure.
-   *
-   * finalOutputStruct exists so that query_node doesn't need to
-   * to import query_query
-   */
-  resolveQueryFields(
-    finalOutputStruct: (
-      query: Query,
-      options: PrepareResultOptions | undefined
-    ) => SourceDef | undefined
-  ) {
-    if (this.structDef.type === 'query_source' && finalOutputStruct) {
-      const resultStruct = finalOutputStruct(
-        this.structDef.query,
-        this.prepareResultOptions
-      );
-
-      // should never happen.
-      if (!resultStruct) {
-        throw new Error("Internal Error, query didn't produce a struct");
-      }
-
-      const structDef = {...this.structDef};
-      for (const f of resultStruct.fields) {
-        const as = getIdentifier(f);
-        if (!this.nameMap.has(as)) {
-          structDef.fields.push(f);
-          this.nameMap.set(as, this.makeQueryField(f));
-        }
-      }
-      this.structDef = structDef;
-      if (!this.structDef.primaryKey && resultStruct.primaryKey) {
-        this.structDef.primaryKey = resultStruct.primaryKey;
-      }
-    }
-    for (const [, v] of this.nameMap) {
-      if (v instanceof QueryFieldStruct) {
-        v.queryStruct.resolveQueryFields(finalOutputStruct);
-      }
     }
   }
 

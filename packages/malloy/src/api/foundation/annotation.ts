@@ -6,6 +6,7 @@
 import type {Tag, TagError, SourceOrigin} from '@malloydata/malloy-tag';
 import {TagParser} from '@malloydata/malloy-tag';
 import type {AnnotationsDef, Note, DocumentLocation} from '../../model';
+import {notesInOrder} from '../../model/annotation_utils';
 import type {LogMessage} from '../../lang';
 import {parsePrefix} from '../../lang/annotation-prefix';
 
@@ -67,13 +68,6 @@ export class RoutedNote {
   get content(): string {
     return this._note.text.slice(this.contentIndex);
   }
-}
-
-/** Every Note of an annotation, inherited first, in document order. */
-function* notesInOrder(annote: AnnotationsDef): Generator<Note> {
-  if (annote.inherits) yield* notesInOrder(annote.inherits);
-  if (annote.blockNotes) yield* annote.blockNotes;
-  if (annote.notes) yield* annote.notes;
 }
 
 /**

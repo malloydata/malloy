@@ -18,12 +18,14 @@
 //      base `validateDottedTablePath` helper with the standard ANSI
 //      identifier rules DuckDB inherits via `PostgresBase`.
 //
-//   3. File-path convenience: a non-empty run of
-//      `[A-Za-z0-9._\-/:?*]` characters. The char set is deliberately
-//      narrow — single quotes, whitespace, parentheses, and semicolons
-//      are excluded so the convenience form can't carry a SQL payload.
-//      Canonical form wraps the input in single quotes so it becomes a
-//      DuckDB string-literal table name.
+//   3. File-path / URL convenience: a non-empty run of URL-shaped
+//      characters — the RFC 3986 set, minus the four that could carry a
+//      SQL payload (`'`, `(`, `)`, `;`) and whitespace, plus `%` for
+//      percent-encoding. This admits remote references DuckDB resolves
+//      directly (e.g. `hf://…`, `https://…?a=b&c=d`, `s3://…`) while
+//      keeping the injection guard: because `'` can never enter the set,
+//      the canonical form (the input wrapped in single quotes, making it
+//      a DuckDB string-literal table name) can't be broken out of.
 //
 // Branches 2 and 3 aren't LL(1)-distinguishable by first character (a
 // letter can start either), so we try (2) first and fall back to (3)
@@ -32,7 +34,7 @@
 import type {ValidateTablePathResult} from '../table-path';
 import {validateDottedTablePath} from '../table-path';
 
-const DUCKDB_FILE_PATH_RE = /^[A-Za-z0-9._\-/:?*]+$/;
+const DUCKDB_FILE_PATH_RE = /^[A-Za-z0-9._~:/?#@!$&*+,=%-]+$/;
 const DUCKDB_SINGLE_QUOTED_RE = /^'(?:[^']|'')*'$/;
 
 export function validateDuckDBTablePath(
@@ -70,7 +72,7 @@ export function validateDuckDBTablePath(
     dialectName: 'DuckDB',
   });
   if (id.ok) return id;
-  // Branch 3: file-path convenience.
+  // Branch 3: file-path / URL convenience.
   if (DUCKDB_FILE_PATH_RE.test(input)) {
     return {ok: true, canonical: `'${input}'`};
   }
@@ -79,8 +81,8 @@ export function validateDuckDBTablePath(
     error:
       `Invalid DuckDB table path: ${JSON.stringify(input)} — expected an ` +
       'identifier path, a quoted identifier path, a single-quoted ' +
-      "literal ('foo.csv'), or a file-path-shaped string of letters, " +
-      'digits, and `._-/:?*`. For table-valued function calls (e.g. ' +
+      "literal ('foo.csv'), or a simple file/URL path (some file/URL " +
+      'paths require quoting). For table-valued function calls (e.g. ' +
       "read_parquet('foo.parquet')) or other table expressions, use a " +
       'SQL block instead: connection.sql("""SELECT * FROM …""").',
   };

@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -32,7 +14,8 @@ import type {
   DependencyTree,
   DocumentRange,
 } from '../model/malloy_types';
-import {mkModelDef} from '../model/utils';
+import {mkModelDef, mkModelID} from '../model/utils';
+import {getModelAnnotations} from '../model/annotation_utils';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
 import type {
@@ -66,7 +49,6 @@ import type {
   ModelDataRequest,
   NeedURLData,
   TranslateResponse,
-  ModelAnnotationResponse,
   TablePathResponse,
 } from './translate-response';
 import {isNeedResponse} from './translate-response';
@@ -78,7 +60,6 @@ import {
 import type {Tag} from '@malloydata/malloy-tag';
 import {parseAnnotation} from '@malloydata/malloy-tag';
 import type {MalloyParseInfo} from './malloy-parse-info';
-import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import type {EventStream} from '../runtime_types';
 import {Annotations} from '../api/foundation/annotation';
@@ -550,36 +531,6 @@ class HelpContextStep implements TranslationStep {
   }
 }
 
-class ModelAnnotationStep implements TranslationStep {
-  response?: ModelAnnotationResponse;
-  constructor(readonly parseStep: ParseStep) {}
-
-  step(
-    that: MalloyTranslation,
-    extendingModel?: ModelDef
-  ): ModelAnnotationResponse {
-    if (!this.response) {
-      const tryParse = this.parseStep.step(that);
-      if (!tryParse.parse || tryParse.final) {
-        return tryParse;
-      } else {
-        const modelAnnotations = walkForModelAnnotation(
-          that,
-          tryParse.parse.tokenStream,
-          tryParse.parse
-        );
-        this.response = {
-          modelAnnotations: {
-            ...modelAnnotations,
-            inherits: extendingModel?.annotations,
-          },
-        };
-      }
-    }
-    return this.response;
-  }
-}
-
 class TablePathInfoStep implements TranslationStep {
   response?: TablePathResponse;
   constructor(readonly parseStep: ParseStep) {}
@@ -632,8 +583,11 @@ class TranslateStep implements TranslationStep {
     // seeding (e.g. TestTranslator's compilerFlags option) survive.
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+      // Compiler flags from the extending base's `##` annotations. NOTE: `##!`
+      // flag semantics are still to be settled; this keeps the existing
+      // behavior (flags from the base model) green and is not the final design.
       that.compilerFlagSrc.push(
-        ...new Annotations(extendingModel.annotations).texts('!')
+        ...new Annotations(getModelAnnotations(extendingModel)).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
@@ -713,7 +667,6 @@ export abstract class MalloyTranslation {
   }
 
   readonly parseStep: ParseStep;
-  readonly modelAnnotationStep: ModelAnnotationStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
   readonly astStep: ASTStep;
   readonly metadataStep: MetadataStep;
@@ -730,7 +683,7 @@ export abstract class MalloyTranslation {
     public grammarRule = 'malloyDocument'
   ) {
     this.childTranslators = new Map<string, MalloyTranslation>();
-    this.modelDef = mkModelDef(sourceURL);
+    this.modelDef = mkModelDef(sourceURL, mkModelID(sourceURL));
     /**
      * This is sort of the makefile for the translation, all the steps
      * and the dependencies of the steps are declared here. Then when
@@ -739,7 +692,6 @@ export abstract class MalloyTranslation {
      * things will happen automatically.
      */
     this.parseStep = new ParseStep();
-    this.modelAnnotationStep = new ModelAnnotationStep(this.parseStep);
     this.metadataStep = new MetadataStep(this.parseStep);
     this.completionsStep = new CompletionsStep(this.parseStep);
     this.helpContextStep = new HelpContextStep(this.parseStep);
@@ -968,10 +920,6 @@ export abstract class MalloyTranslation {
 
   metadata(): MetadataResponse {
     return this.metadataStep.step(this);
-  }
-
-  modelAnnotation(extendingModel?: ModelDef): ModelAnnotationResponse {
-    return this.modelAnnotationStep.step(this, extendingModel);
   }
 
   tablePathInfo(): TablePathResponse {

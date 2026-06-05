@@ -1,25 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -708,6 +689,16 @@ export interface AliasedName {
   as?: string;
 }
 
+/**
+ * The name an `AliasedName` goes by in its current context: its `as` binding
+ * if it has one, otherwise its intrinsic `name`. This is the only correct way
+ * to ask "what is this called here" — see the `name`/`as` invariant in
+ * model/CONTEXT.md.
+ */
+export function activeName(an: AliasedName): string {
+  return an.as ?? an.name;
+}
+
 /** all named objects have a type an a name (optionally aliased) */
 export interface NamedObject extends AliasedName, HasLocation {
   type: string;
@@ -1253,7 +1244,6 @@ export interface Query extends Pipeline, Filtered {
   name?: string;
   structRef: StructRef;
   sourceArguments?: SafeRecord<Argument>;
-  modelAnnotations?: AnnotationsDef;
   compositeResolvedSourceDef?: SourceDef;
   // Dedup'd union of every segment's `expandedGivenUsage` (and nested turtle
   // stages'). Populated when the Query is finalized; consumers that need the
@@ -1528,7 +1518,6 @@ export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
 interface StructDefBase extends HasLocation, NamedObject, HasAnnotations {
   type: string;
-  modelAnnotations?: ModelAnnotationsDef;
   fields: FieldDef[];
   /** Marker for error placeholder structs created by ErrorFactory */
   errorFactory?: boolean;
@@ -1594,6 +1583,14 @@ export type GivenID = string;
 
 /** Hash of (connectionDigest, sql) - uniquely identifies a built artifact */
 export type BuildID = string;
+
+/**
+ * Identifies the model a definition came from. Either a real model URL or a
+ * synthetic `"internal <uuid>"` for URL-less models. The space makes the
+ * synthetic form an illegal URL, so it can never collide with a real model
+ * URL. Created with `mkModelID`.
+ */
+export type ModelID = string;
 
 /**
  * Reference to a source in modelDef.contents by name.
@@ -2005,14 +2002,6 @@ export type TypedDef =
   | RefToField
   | StructDef;
 
-/** Get the output name for a NamedObject */
-export function getIdentifier(n: AliasedName): string {
-  if (n.as !== undefined) {
-    return n.as;
-  }
-  return n.name;
-}
-
 export interface UserTypeFieldDef extends HasAnnotations {
   name: string;
   typeDef: AtomicTypeDef;
@@ -2042,6 +2031,7 @@ export interface DependencyTree {
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
+  modelID: ModelID;
   exports: string[];
   contents: SafeRecord<NamedModelObject>;
   /**
@@ -2052,7 +2042,17 @@ export interface ModelDef {
    */
   sourceRegistry: Record<SourceID, SourceRegistryValue>;
   givens?: Record<GivenID, Given>;
-  annotations?: ModelAnnotationsDef;
+  /**
+   * Model (`##`) annotations of every model involved in this compile, keyed by
+   * {@link ModelID} — this model plus everything it imported or extended (the
+   * whole closure, so any model's annotations are answerable from this
+   * `ModelDef` alone, even after it crosses the wire). Each entry carries that
+   * model's own `##` (`ownNotes`) and its direct import/extend predecessors
+   * (`inheritsFrom`, the DAG of edges, extend-base prepended as `import₀`).
+   * {@link getModelAnnotations} folds `inheritsFrom` from any model to produce
+   * that model's deduped, ordered annotation set.
+   */
+  modelAnnotations: Record<ModelID, ModelAnnotationEntry>;
   queryList: Query[];
   dependencies: DependencyTree;
   references?: DocumentReference[];
@@ -2065,7 +2065,16 @@ export type NamedModelObjects = SafeRecord<NamedModelObject>;
 
 /** Bundle of source annotations attached to one object: the `notes` and
  *  `blockNotes` written on it, plus the bundle from the spiritual parent
- *  via `inherits`. The IR shape paired with the `Annotations` view class. */
+ *  via `inherits`. The IR shape paired with the `Annotations` view class.
+ *
+ *  This is the one annotation bundle type for both `#` object annotations (on
+ *  fields, views, sources, queries, …) and `##` model annotations. Object
+ *  annotations carry no model provenance: `##` is model-level, resolved by
+ *  folding {@link ModelDef.modelAnnotations} keyed by {@link ModelID}, not by
+ *  per-object stamping. A model's own `##` is just an `AnnotationsDef` whose
+ *  `inherits` chain is unused as stored (`ModelAnnotationEntry.ownNotes`) and,
+ *  when returned by {@link getModelAnnotations}, *is* the folded order (local at the
+ *  top) so the `Annotations` view / `notesInOrder` read it with no new code. */
 export interface AnnotationsDef {
   inherits?: AnnotationsDef;
   blockNotes?: Note[];
@@ -2084,9 +2093,13 @@ export interface Note {
    */
   indentStripped?: number;
 }
-/** Annotations bundle with a uuid to make it easier to stream. */
-export interface ModelAnnotationsDef extends AnnotationsDef {
-  id: string;
+/** One model's entry in {@link ModelDef.modelAnnotations}: its own `##`
+ *  (`ownNotes`) plus its **direct** import/extend predecessors (`inheritsFrom`),
+ *  in fold order with the extend-base prepended as `import₀`. Direct edges only
+ *  — the lineage DAG, not the resolved order; {@link getModelAnnotations} resolves. */
+export interface ModelAnnotationEntry {
+  ownNotes: AnnotationsDef;
+  inheritsFrom: ModelID[];
 }
 
 export type QueryScalar =

@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import * as duckdb from '@duckdb/duckdb-wasm';
@@ -230,7 +212,8 @@ function unwrapTable(table: Table): QueryRecord[] {
   return table.toArray().map(row => unwrapRow(row, table.schema));
 }
 
-const isNode = () => typeof navigator === 'undefined';
+const isNode = () =>
+  typeof process !== 'undefined' && typeof process.versions?.node === 'string';
 
 type RemoteFileCallback = (
   tableName: string
@@ -332,8 +315,12 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
             })
           );
 
-      // Instantiate the asynchronous version of DuckDB-wasm
-      this.worker = new Worker(workerUrl);
+      // Instantiate the asynchronous version of DuckDB-wasm. Under Node the
+      // worker bundle is a CommonJS module, so load it as a module worker;
+      // web-worker's classic-script path runs it without a module scope.
+      this.worker = isNode()
+        ? new Worker(workerUrl, {type: 'module'})
+        : new Worker(workerUrl);
       const logger = new duckdb.VoidLogger();
       this._database = new duckdb.AsyncDuckDB(logger, this.worker);
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);

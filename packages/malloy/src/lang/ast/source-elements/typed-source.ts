@@ -11,6 +11,7 @@ import type {
   SourceDef,
 } from '../../../model/malloy_types';
 import {
+  activeName,
   TD,
   fieldIsIntrinsic,
   isUserTypeDef,
@@ -75,9 +76,7 @@ export class TypedSource extends Source {
     }
 
     const isVirtual = sourceDef.type === 'virtual';
-    const sourceFields = new Map(
-      sourceDef.fields.map(f => [f.as ?? f.name, f])
-    );
+    const sourceFields = new Map(sourceDef.fields.map(f => [activeName(f), f]));
     const fieldsToAdd: FieldDef[] = [];
 
     // Validate/Enforce that this source matches the shape
@@ -107,7 +106,7 @@ export class TypedSource extends Source {
     // Intrinsic fields not in any shape: mark as hidden.
     // Matching fields inherit annotations from the shape.
     const resultFields = sourceDef.fields.map(f => {
-      const name = f.as ?? f.name;
+      const name = activeName(f);
       const shapeEntry = outputShape.get(name);
       if (!shapeEntry || !fieldIsIntrinsic(f)) {
         return fieldIsIntrinsic(f) && !shapeEntry
