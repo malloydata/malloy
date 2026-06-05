@@ -70,6 +70,46 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).toMatchResult(joinModel, {model_count: 1416});
   });
 
+  it('model source refine in query join using', async () => {
+    // Tests the new USING syntax and ensures coalesced columns work without table prefix errors
+    await expect(`
+      run: aircraft extend {
+        join_one: aircraft_models using (aircraft_model_code)
+      } -> {
+        aggregate:
+          aircraft_count
+          aircraft_models.model_count
+      }
+    `).toMatchResult(joinModel, {model_count: 1416});
+  });
+
+  it('model source refine join using', async () => {
+    await expect(`
+      source: my_aircraft is aircraft extend {
+        join_one: aircraft_models using (aircraft_model_code)
+      }
+      run: my_aircraft -> {
+        aggregate:
+          aircraft_count
+          aircraft_models.model_count
+      }
+    `).toMatchResult(joinModel, {model_count: 1416});
+  });
+
+  it('join with multiple using fields', async () => {
+    // Tests USING syntax with multiple columns
+    await expect(`
+      source: table1 is ${databaseName}.sql("SELECT 1 as id, 'a' as code, 10 as val1")
+      source: table2 is ${databaseName}.sql("SELECT 1 as id, 'a' as code, 20 as val2")
+      
+      run: table1 extend {
+        join_one: table2 using (id, code)
+      } -> {
+        select: id, code, val1, table2.val2
+      }
+    `).toMatchResult(testModel, {id: 1, code: 'a', val1: 10, val2: 20});
+  });
+
   it('model: join fact table query', async () => {
     await expect(`
       run: aircraft_models extend {

@@ -821,16 +821,10 @@ export function generateFieldFragment(
     }
 
     // The normal case - just generate the SQL reference
-    return sqlFullChildReference(
-      fieldRef.parent,
-      fieldRef.fieldDef.name,
-      fieldRef.parent.structDef.type === 'record'
-        ? {
-            result: resultSet,
-            field: fieldRef,
-          }
-        : undefined
-    );
+    return sqlFullChildReference(fieldRef.parent, fieldRef.fieldDef.name, {
+      result: resultSet,
+      field: fieldRef.parent.structDef.type === 'record' ? fieldRef : undefined,
+    });
   }
 }
 

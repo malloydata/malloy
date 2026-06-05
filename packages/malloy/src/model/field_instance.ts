@@ -114,16 +114,10 @@ export class FieldInstanceField implements FieldInstance {
       );
     }
 
-    return sqlFullChildReference(
-      this.f.parent,
-      this.f.fieldDef.name,
-      this.f.parent.structDef.type === 'record'
-        ? {
-            result: this.parent,
-            field: this.f,
-          }
-        : undefined
-    );
+    return sqlFullChildReference(this.f.parent, this.f.fieldDef.name, {
+      result: this.parent,
+      field: this.f.parent.structDef.type === 'record' ? this.f : undefined,
+    });
   }
 
   private generateDistinctKeyExpression(): string {
@@ -685,10 +679,14 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
 export function sqlFullChildReference(
   struct: QueryStruct,
   name: string,
-  expand: {result: FieldInstanceResult; field: QueryField} | undefined
+  expand: {result?: FieldInstanceResult; field?: QueryField} | undefined
 ): string {
   let parentRef = struct.getSQLIdentifier();
-  if (expand && isAtomic(struct.structDef) && hasExpression(struct.structDef)) {
+  if (
+    expand?.field &&
+    isAtomic(struct.structDef) &&
+    hasExpression(struct.structDef)
+  ) {
     if (!struct.parent) {
       throw new Error(`Cannot expand reference to ${name} without parent`);
     }
@@ -698,10 +696,36 @@ export function sqlFullChildReference(
       );
     }
     parentRef = FieldInstanceField.exprCompiler(
-      expand.result,
+      expand.result!,
       struct.parent,
       struct.structDef.e
     );
+  }
+
+  // When a SQL dialect processes a USING (col) join, it combines the join column from both tables
+  // into a single coalesced column. In many dialects (like BigQuery), referencing this coalesced
+  // column with a table alias (e.g. `base_table.col` or `joined_table.col`) will result in an error
+  // because the column is considered to belong to the join result itself, not the individual tables.
+  // Therefore, if this field is part of an active USING join and we are referencing it from one
+  // of the tables involved in that join, we must strip the table alias (parentRef) and emit the
+  // column name completely unqualified (e.g., just `col`).
+  if (expand?.result) {
+    const rootResult = expand.result.root();
+    for (const join of rootResult.joins.values()) {
+      const def = join.queryStruct.structDef;
+      if (isJoined(def) && def.usingFields?.includes(name)) {
+        // Check if the current struct generating the reference is either the joined table itself,
+        // or the left-hand-side table of the join (the parent). If `join.parent` is undefined,
+        // it implies the left-hand-side is the base table of the query.
+        if (
+          struct === join.queryStruct ||
+          (join.parent ? struct === join.parent.queryStruct : true)
+        ) {
+          parentRef = '';
+          break;
+        }
+      }
+    }
   }
   let refType: FieldReferenceType = 'table';
   if (struct.structDef.type === 'record') {
@@ -716,5 +740,8 @@ export function sqlFullChildReference(
   }
   const child = struct.getChildByName(name);
   const childType = child?.fieldDef.type || 'unknown';
+  if (parentRef === '') {
+    return struct.dialect.sqlQuoteIdentifier(name);
+  }
   return struct.dialect.sqlFieldReference(parentRef, refType, name, childType);
 }

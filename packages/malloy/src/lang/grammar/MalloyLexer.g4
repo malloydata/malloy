@@ -144,6 +144,7 @@ WHEN: W H E N ;
 WITH: W I T H ;
 YEAR: Y E A R S?;
 UNGROUPED: U N G R O U P E D;
+USING: U S I N G;
 VIRTUAL: V I R T U A L;
 
 fragment SQ: '\'';
