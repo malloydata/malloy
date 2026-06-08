@@ -263,47 +263,42 @@ class ImportsAndTablesStep implements TranslationStep {
 
     let allMissing: DataRequestResponse = {};
 
-    // Validate each table reference against its dialect's grammar (if
-    // the dialect is resolved) and register the canonical entry. Bad
-    // paths are silently dropped — the AST step re-validates and logs
-    // an error at the precise source range. Entries whose dialect
-    // isn't resolved yet are preserved unchanged and re-processed on a
-    // later step.
-    {
-      const refs = this.parseReferences.tables;
-      const canonical: typeof refs = {};
-      for (const rawKey in refs) {
-        const info = refs[rawKey];
-        let {tablePath} = info;
-        const dialectName = that.root.connectionDialectZone.get(
-          info.connectionName
-        );
-        if (dialectName !== undefined) {
-          const result =
-            getDialect(dialectName).sqlValidateTableName(tablePath);
-          if (!result.ok) continue;
-          tablePath = result.canonical;
-        }
-        const key = `${info.connectionName}:${tablePath}`;
-        canonical[key] = {...info, tablePath};
-        that.root.schemaZone.reference(key, {
-          url: that.sourceURL,
-          range: info.firstReference,
-        });
-      }
-      this.parseReferences.tables = canonical;
+    // A path can only be canonicalized once its dialect is known; references
+    // whose dialect isn't resolved yet are skipped and re-scanned next round.
+    // Invalid paths are dropped here and re-reported by the AST step.
+    // tableRequests feeds the missing-table loop below.
+    const tableRequests: Record<
+      string,
+      {connectionName: string; tablePath: string}
+    > = {};
+    for (const rawKey in this.parseReferences.tables) {
+      const info = this.parseReferences.tables[rawKey];
+      const dialectName = that.root.connectionDialectZone.get(
+        info.connectionName
+      );
+      if (dialectName === undefined) continue;
+      const result = getDialect(dialectName).sqlValidateTableName(
+        info.tablePath
+      );
+      if (!result.ok) continue;
+      const key = `${info.connectionName}:${result.canonical}`;
+      tableRequests[key] = {
+        connectionName: info.connectionName,
+        tablePath: result.canonical,
+      };
+      that.root.schemaZone.reference(key, {
+        url: that.sourceURL,
+        range: info.firstReference,
+      });
     }
 
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
       const tables = {};
       for (const key of missingTables) {
-        const info = this.parseReferences.tables[key];
-        if (info === undefined) continue;
-        tables[key] = {
-          connectionName: info.connectionName,
-          tablePath: info.tablePath,
-        };
+        const request = tableRequests[key];
+        if (request === undefined) continue;
+        tables[key] = request;
       }
       if (Object.keys(tables).length > 0) {
         allMissing = {tables};
