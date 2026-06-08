@@ -263,47 +263,51 @@ class ImportsAndTablesStep implements TranslationStep {
 
     let allMissing: DataRequestResponse = {};
 
-    // Validate each table reference against its dialect's grammar (if
-    // the dialect is resolved) and register the canonical entry. Bad
-    // paths are silently dropped — the AST step re-validates and logs
-    // an error at the precise source range. Entries whose dialect
-    // isn't resolved yet are preserved unchanged and re-processed on a
-    // later step.
-    {
-      const refs = this.parseReferences.tables;
-      const canonical: typeof refs = {};
-      for (const rawKey in refs) {
-        const info = refs[rawKey];
-        let {tablePath} = info;
-        const dialectName = that.root.connectionDialectZone.get(
-          info.connectionName
-        );
-        if (dialectName !== undefined) {
-          const result =
-            getDialect(dialectName).sqlValidateTableName(tablePath);
-          if (!result.ok) continue;
-          tablePath = result.canonical;
-        }
-        const key = `${info.connectionName}:${tablePath}`;
-        canonical[key] = {...info, tablePath};
-        that.root.schemaZone.reference(key, {
-          url: that.sourceURL,
-          range: info.firstReference,
-        });
-      }
-      this.parseReferences.tables = canonical;
+    // Register a schema request for every table reference whose dialect is
+    // known, keyed by the dialect's canonical form of the path. We re-scan
+    // the full (immutable) reference list every round:
+    //   - dialect not resolved yet  -> skip; we can't canonicalize the path,
+    //     and requesting the raw path is wrong (consumers reject non-canonical
+    //     paths). The connection's dialect is always requested (the
+    //     missingDialects block below), so a later round re-runs this loop
+    //     with the dialect known.
+    //   - canonicalization fails    -> skip; the AST step re-validates and
+    //     logs an error at the precise source range.
+    // `tableRequests` maps each canonical schema key back to its request info,
+    // for the missing-table loop just below. Re-registering an already-known
+    // key is idempotent, so re-scanning resolved entries each round is safe.
+    const tableRequests: Record<
+      string,
+      {connectionName: string; tablePath: string}
+    > = {};
+    for (const rawKey in this.parseReferences.tables) {
+      const info = this.parseReferences.tables[rawKey];
+      const dialectName = that.root.connectionDialectZone.get(
+        info.connectionName
+      );
+      if (dialectName === undefined) continue;
+      const result = getDialect(dialectName).sqlValidateTableName(
+        info.tablePath
+      );
+      if (!result.ok) continue;
+      const key = `${info.connectionName}:${result.canonical}`;
+      tableRequests[key] = {
+        connectionName: info.connectionName,
+        tablePath: result.canonical,
+      };
+      that.root.schemaZone.reference(key, {
+        url: that.sourceURL,
+        range: info.firstReference,
+      });
     }
 
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
       const tables = {};
       for (const key of missingTables) {
-        const info = this.parseReferences.tables[key];
-        if (info === undefined) continue;
-        tables[key] = {
-          connectionName: info.connectionName,
-          tablePath: info.tablePath,
-        };
+        const request = tableRequests[key];
+        if (request === undefined) continue;
+        tables[key] = request;
       }
       if (Object.keys(tables).length > 0) {
         allMissing = {tables};
