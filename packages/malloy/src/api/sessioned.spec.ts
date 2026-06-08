@@ -14,9 +14,8 @@ interface SessionFixtures {
   sqls?: Record<string, Malloy.Schema>; // `${connection}:${selectStr}` -> schema
 }
 
-// Answer one round of compiler needs from the fixtures. We don't care which
-// needs arrive in which round — whatever is asked for, we fill from the same
-// flat fixture set. Unknown items get no payload (the compiler will error).
+// Fill one round of compiler needs from the fixtures, in whatever order they
+// arrive. Unknown items get no payload.
 function fulfill(
   needs: Malloy.CompilerNeeds,
   fx: SessionFixtures
@@ -49,10 +48,8 @@ function fulfill(
   return out;
 }
 
-// Drive a stateful compile to completion, answering whatever the compiler asks
-// for from `fx` each round — regardless of how many rounds it takes or which
-// order dialects, tables, and files are requested in. `step` runs one compile
-// call given the needs to feed and the session to resume.
+// Drive a stateful compile to completion, answering needs from `fx` each
+// round. `step` runs one compile call given the needs to feed and the session.
 function runToCompletion<
   R extends {compiler_needs?: Malloy.CompilerNeeds; session_id?: string},
 >(
@@ -286,8 +283,7 @@ ORDER BY 1 asc NULLS LAST
           }
         );
         expect(result.session_id).toBe(session_id);
-        // The session is mid-flight; capture wherever it is without caring
-        // which needs the compiler asked for.
+        // Capture wherever the mid-flight session is.
         const midFlight = result.compiler_needs;
         expect(midFlight).toBeDefined();
         // Now asking for a different file should NOT purge the original session

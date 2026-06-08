@@ -74,16 +74,9 @@ describe('api', () => {
       expect(result).toMatchObject(expected);
     });
 
-    // Regression: the renderer storybook compiles
-    // `duckdb.table('static/data/products.parquet')`. The path is a valid
-    // DuckDB file-path table whose canonical SQL form is the input wrapped
-    // in single quotes (`'static/data/products.parquet'`). On the first
-    // translate round the connection's dialect isn't resolved yet, so the
-    // path can't be canonicalized — the translator must NOT request the
-    // schema for the raw path. The async loop fetches table schemas through
-    // `wrapLegacyInfoConnection.fetchSchemaForTable`, which throws on a
-    // non-canonical path; if the raw path goes out before the dialect is
-    // known, that throw escapes `fetchNeeds` and crashes the whole compile.
+    // A DuckDB file-path table (canonical form is single-quoted) compiles
+    // through the stateless API even though its dialect isn't known on the
+    // first round and the path can't be canonicalized until it is.
     test('file-path table is deferred until its dialect resolves', async () => {
       const legacy: LegacyInfoConnection = {
         get name() {
@@ -308,9 +301,7 @@ ORDER BY 1 asc NULLS LAST
         },
       };
       expect(result).toMatchObject(expected);
-      // Sanity-check the timing envelope without pinning the round structure
-      // (how many connection/schema round-trips the compile takes is an
-      // implementation detail and changes with dialect-resolution ordering).
+      // Check the timing envelope, not the round structure.
       expect(result.timing_info).toMatchObject({
         name: 'run_query',
         duration_ms: expect.any(Number),

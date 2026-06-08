@@ -263,19 +263,10 @@ class ImportsAndTablesStep implements TranslationStep {
 
     let allMissing: DataRequestResponse = {};
 
-    // Register a schema request for every table reference whose dialect is
-    // known, keyed by the dialect's canonical form of the path. We re-scan
-    // the full (immutable) reference list every round:
-    //   - dialect not resolved yet  -> skip; we can't canonicalize the path,
-    //     and requesting the raw path is wrong (consumers reject non-canonical
-    //     paths). The connection's dialect is always requested (the
-    //     missingDialects block below), so a later round re-runs this loop
-    //     with the dialect known.
-    //   - canonicalization fails    -> skip; the AST step re-validates and
-    //     logs an error at the precise source range.
-    // `tableRequests` maps each canonical schema key back to its request info,
-    // for the missing-table loop just below. Re-registering an already-known
-    // key is idempotent, so re-scanning resolved entries each round is safe.
+    // A path can only be canonicalized once its dialect is known; references
+    // whose dialect isn't resolved yet are skipped and re-scanned next round.
+    // Invalid paths are dropped here and re-reported by the AST step.
+    // tableRequests feeds the missing-table loop below.
     const tableRequests: Record<
       string,
       {connectionName: string; tablePath: string}
