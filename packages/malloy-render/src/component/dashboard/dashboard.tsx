@@ -200,11 +200,13 @@ export function Dashboard(props: {
     const spans = group.map(f => computeSpan(f));
     const totalSpan = spans.reduce((a, b) => a + b, 0);
 
-    // When the row fills 12 cols, use `fr` so items split the full row in
-    // proportion to their spans. When it doesn't, use `minmax(0, N%)` so
-    // items take exactly their share of 12 (span 3 of 12 = 25% width).
-    // Otherwise two span=3 items in a half-full row would each stretch to
-    // 50% and lose the sizing intent.
+    // Each break-group is a single non-wrapping row; span sets each item's
+    // proportion of that row, not a column in a wrapping 12-col grid. When the
+    // row's spans total 12, use `fr` so items split the full row in proportion
+    // to their spans. When they total less, use `minmax(0, N%)` so each item
+    // takes exactly its share of 12 (span 3 of 12 = 25% width); otherwise two
+    // span=3 items in a half-full row would each stretch to 50% and lose the
+    // sizing intent.
     const frTemplate =
       totalSpan >= 12
         ? spans.map(s => `${s}fr`).join(' ')
@@ -228,7 +230,6 @@ export function Dashboard(props: {
   const getRowClassList = (group: Field[]) => {
     const classes: Record<string, boolean> = {
       'dashboard-grid': useGrid,
-      'dashboard-columns': columns !== undefined,
     };
     if (useGrid && columns === undefined) {
       classes[getRowConfig(group).collapseClass] = true;
