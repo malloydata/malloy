@@ -203,6 +203,26 @@ export class GivenDeclaration
               operators: [...bad].sort().join(', '),
             });
           }
+          // An inline default may fold an unsupplied `$REF` to that
+          // given's declared default, so every reachable regular default
+          // must also be inline-reducible. The closure is flat; inline
+          // members self-validate at their own declaration, so only
+          // regular ones need checking here.
+          for (const g of givenUsage ?? []) {
+            const refDecl = doc.documentGivens.get(g.id);
+            if (!refDecl || refDecl.inline || refDecl.default === undefined) {
+              continue;
+            }
+            const refBad = new Set<string>();
+            collectInlineBadOps(refDecl.default, refBad);
+            if (refBad.size > 0) {
+              this.default.logError('inline-bad-operator-in-ref', {
+                name: this.name,
+                refName: refDecl.name,
+                operators: [...refBad].sort().join(', '),
+              });
+            }
+          }
         }
       }
     }
