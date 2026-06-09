@@ -570,6 +570,72 @@ describe('render tag validation', () => {
         false
       );
     });
+
+    it('errors when # span is set to a non-numeric value', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span="foo"
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const spanError = logs.find(
+        l => l.severity === 'error' && l.message.includes('span')
+      );
+      expect(spanError?.message).toContain('Invalid # span');
+      expect(spanError?.message).toContain('non-numeric');
+    });
+
+    it('does not also warn no-grid when # span fails the range check', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=15
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      // A single mistake should produce a single diagnostic: the range error
+      // fires and the "ignored / no grid" warning is suppressed.
+      const spanErrors = logs.filter(
+        l => l.severity === 'error' && l.message.includes('span')
+      );
+      expect(spanErrors.length).toBe(1);
+      const spanWarnings = logs.filter(
+        l => l.severity === 'warn' && l.message.includes('span')
+      );
+      expect(spanWarnings.length).toBe(0);
+    });
+
+    it('labels an ignored (not invalid) # span as "Ignored"', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=6
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const spanWarning = logs.find(
+        l => l.severity === 'warn' && l.message.includes('span')
+      );
+      expect(spanWarning?.message).toContain('Ignored # span');
+      expect(spanWarning?.message).not.toContain('Invalid # span');
+    });
   });
 
   describe('chart y-channel must be numeric', () => {
