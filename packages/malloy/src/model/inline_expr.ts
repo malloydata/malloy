@@ -50,16 +50,25 @@ export const INLINE_LEAVES: ReadonlySet<string> = new Set<string>([
 ]);
 
 /**
- * Bind-time evaluator for `inline` given defaults. Walks the Expr tree,
- * recursing on bound values for given-refs, and returns a literal Expr
- * (string/number/boolean/null/arrayLiteral).
+ * Bind-time evaluator for `inline` given defaults. Walks the Expr tree
+ * and returns a literal Expr (string/number/boolean/null/arrayLiteral).
+ *
+ * A pure folder: it does not know how given references get their values.
+ * `resolveGiven` is handed a given reference's id and surface name (both
+ * a `$NAME` ref and the array of an `expr in $NAME`) and returns the Expr
+ * that reference stands for — caller-supplied value, declaration default,
+ * or a thrown error if neither. That policy lives with the caller
+ * (`given_binding.ts`), not here — see `lookupGivenValue`.
  *
  * Throws on any node outside `INLINE_OPS ∪ INLINE_LEAVES`. The
  * translator's pre-flight check should have rejected such defaults
  * already, so a throw here flags a compiler bug rather than a caller
  * error.
  */
-export function inlineExpr(e: Expr, bound: Map<GivenID, Expr>): Expr {
+export function inlineExpr(
+  e: Expr,
+  resolveGiven: (id: GivenID, refName: string) => Expr
+): Expr {
   switch (e.node) {
     case 'stringLiteral':
     case 'numberLiteral':
@@ -68,25 +77,18 @@ export function inlineExpr(e: Expr, bound: Map<GivenID, Expr>): Expr {
     case 'null':
     case 'arrayLiteral':
       return e;
-    case 'given': {
-      const v = bound.get(e.id);
-      if (v === undefined) {
-        throw new Error(
-          `inlineExpr: given '${e.refName}' has no bound value and no default — translator should have caught this earlier`
-        );
-      }
-      return inlineExpr(v, bound);
-    }
+    case 'given':
+      return inlineExpr(resolveGiven(e.id, e.refName), resolveGiven);
     case '()':
-      return inlineExpr(e.e, bound);
+      return inlineExpr(e.e, resolveGiven);
     case 'not': {
-      const inner = inlineExpr(e.e, bound);
+      const inner = inlineExpr(e.e, resolveGiven);
       return toBoolLiteral(!exprAsBool(inner));
     }
     case 'and':
     case 'or': {
-      const left = exprAsBool(inlineExpr(e.kids.left, bound));
-      const right = exprAsBool(inlineExpr(e.kids.right, bound));
+      const left = exprAsBool(inlineExpr(e.kids.left, resolveGiven));
+      const right = exprAsBool(inlineExpr(e.kids.right, resolveGiven));
       return toBoolLiteral(e.node === 'and' ? left && right : left || right);
     }
     case '=':
@@ -95,28 +97,26 @@ export function inlineExpr(e: Expr, bound: Map<GivenID, Expr>): Expr {
     case '<':
     case '>=':
     case '<=': {
-      const left = inlineExpr(e.kids.left, bound);
-      const right = inlineExpr(e.kids.right, bound);
+      const left = inlineExpr(e.kids.left, resolveGiven);
+      const right = inlineExpr(e.kids.right, resolveGiven);
       return toBoolLiteral(compareLiterals(e.node, left, right));
     }
     case 'inGiven': {
-      const lhs = inlineExpr(e.e, bound);
-      const arrBound = bound.get(e.givenRef.id);
-      if (arrBound === undefined) {
-        throw new Error(
-          `inlineExpr: given '${e.givenRef.refName}' has no bound value and no default — translator should have caught this earlier`
-        );
-      }
-      if (arrBound.node === 'null') {
+      const lhs = inlineExpr(e.e, resolveGiven);
+      const arr = inlineExpr(
+        resolveGiven(e.givenRef.id, e.givenRef.refName),
+        resolveGiven
+      );
+      if (arr.node === 'null') {
         return toBoolLiteral(e.not);
       }
-      if (arrBound.node !== 'arrayLiteral') {
+      if (arr.node !== 'arrayLiteral') {
         throw new Error(
-          `inlineExpr: 'inGiven' bound to '${arrBound.node}', expected 'arrayLiteral'`
+          `inlineExpr: 'inGiven' resolved to '${arr.node}', expected 'arrayLiteral'`
         );
       }
-      const found = arrBound.kids.values.some(v =>
-        compareLiterals('=', lhs, inlineExpr(v, bound))
+      const found = arr.kids.values.some(v =>
+        compareLiterals('=', lhs, inlineExpr(v, resolveGiven))
       );
       return toBoolLiteral(e.not ? !found : found);
     }

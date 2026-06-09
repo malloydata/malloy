@@ -10,6 +10,7 @@ import {isRepeatedRecord, mkSafeRecord, TD} from './malloy_types';
 import type {
   AtomicTypeDef,
   Expr,
+  Given,
   GivenID,
   GivenTypeDef,
   GivenValue,
@@ -17,6 +18,22 @@ import type {
   SafeRecord,
 } from './malloy_types';
 import {MalloyCompileError} from './malloy_compile_error';
+
+/**
+ * The one definition of "what value does a given reference stand for":
+ * the caller-supplied value if one is bound, otherwise the declaration
+ * default. Returns undefined when neither exists — callers decide how to
+ * report that, since the right diagnostic differs by site (a bind-time
+ * inline fold vs. SQL emission). Shared by `evaluateInlineGivens` here
+ * and `resolveGivenBoundExpr` in the compiler.
+ */
+export function lookupGivenValue(
+  bound: Map<GivenID, Expr> | undefined,
+  givens: Record<GivenID, Given> | undefined,
+  id: GivenID
+): Expr | undefined {
+  return bound?.get(id) ?? givens?.[id]?.default;
+}
 
 export function resolveSuppliedGivens(
   supplied: Record<string, GivenValue> | undefined,
@@ -75,9 +92,12 @@ export function resolveSuppliedGivens(
  * `inline-no-default` error at declaration time.
  *
  * Iteration follows `modelDef.contents` insertion order, which (by
- * Malloy's no-forward-refs rule) is also topological order: if inline
- * A's default references inline B, B's declaration came first and is
- * already in the map by the time A runs.
+ * Malloy's no-forward-refs rule) is also topological order. An inline
+ * default that references another inline given relies on this: the
+ * referenced one was declared first, so it is already folded into
+ * `bound` by the time this one reads it. A reference to a regular given
+ * resolves straight to its supplied value or declaration default (see
+ * `resolveGiven`), which needs no ordering.
  */
 export function evaluateInlineGivens(
   bound: Map<GivenID, Expr>,
@@ -85,13 +105,26 @@ export function evaluateInlineGivens(
 ): Map<GivenID, Expr> {
   if (!modelDef) return bound;
   const givens = modelDef.givens ?? {};
+  // A `$REF` in an inline default resolves to its supplied value, else
+  // its declaration default; a reference with neither is a caller error.
+  // `bound` is read live, so a given folded earlier in the loop is
+  // visible to one folded later.
+  const resolveGiven = (id: GivenID, refName: string): Expr => {
+    const v = lookupGivenValue(bound, givens, id);
+    if (v !== undefined) return v;
+    throw new MalloyCompileError(
+      `Inline given depends on '${refName}', which has no supplied value and no default. Supply a value for '${refName}' or give it a declaration default.`,
+      'runtime-given-unsatisfied-inline',
+      undefined
+    );
+  };
   for (const [, entry] of Object.entries(modelDef.contents)) {
     if (entry.type !== 'given') continue;
     if (bound.has(entry.id)) continue;
     const decl = givens[entry.id];
     if (!decl?.inline) continue;
     if (decl.default === undefined) continue;
-    bound.set(entry.id, inlineExpr(decl.default, bound));
+    bound.set(entry.id, inlineExpr(decl.default, resolveGiven));
   }
   return bound;
 }
