@@ -272,7 +272,7 @@ export function generateBarChartVegaSpecV2(
     ? createMeasureAxis({
         type: 'y',
         title: settings.yChannel.fields
-          .map(f => explore.fieldAt(f).name)
+          .map(f => explore.fieldAt(f).getLabel())
           .join(', '),
         tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
         labelLimit: chartSettings.yAxis.width + 10,
@@ -715,7 +715,7 @@ export function generateBarChartVegaSpecV2(
       {
         orient: 'bottom',
         scale: 'xscale',
-        title: xField.name,
+        title: xField.getLabel(),
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
@@ -769,14 +769,14 @@ export function generateBarChartVegaSpecV2(
         (a, b) => Math.max(a, b?.toString().length ?? 1),
         0
       );
-      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      maxCharCt = Math.max(maxCharCt, seriesField!.getLabel().length);
     } else if (isDimensionalSeries) {
       // Legend size is by legend title or the longest legend value
       maxCharCt = seriesField!.maxString?.length ?? 0;
-      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      maxCharCt = Math.max(maxCharCt, seriesField!.getLabel().length);
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
-        (max, f) => Math.max(max, f.length),
+        (max, f) => Math.max(max, explore.fieldAt(f).getLabel().length),
         maxCharCt
       );
     }
@@ -797,10 +797,32 @@ export function generateBarChartVegaSpecV2(
     };
 
     (spec.padding as VegaPadding).right = legendSize;
+    // For a measure-series legend the color-domain values are the raw measure
+    // field names; map them to their # label via an ordinal scale so the legend
+    // entries match the axis and tooltip. Keeping the labels in scale data (not
+    // in a parsed expression) renders any label verbatim, including an explicit
+    // empty # label="".
+    if (isMeasureSeries && !isDimensionalSeries) {
+      // Dedupe by field name so the ordinal scale's domain and range stay in
+      // lockstep: d3 dedupes an ordinal scale's domain but keeps its range
+      // verbatim, so a measure repeated in yChannel.fields would otherwise
+      // shift the indices and map a later measure to the wrong label.
+      const labelByName = new Map<string, string>();
+      for (const fieldPath of settings.yChannel.fields) {
+        const f = explore.fieldAt(fieldPath);
+        labelByName.set(f.name, f.getLabel());
+      }
+      spec.scales!.push({
+        name: 'measureSeriesLabel',
+        type: 'ordinal',
+        domain: [...labelByName.keys()],
+        range: [...labelByName.values()],
+      });
+    }
     spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
-      title: seriesField ? seriesField.name : '',
+      title: seriesField ? seriesField.getLabel() : '',
       orient: 'right',
       ...legendSettings,
       values:
@@ -816,6 +838,9 @@ export function generateBarChartVegaSpecV2(
           name: 'legend_labels',
           interactive: true,
           update: {
+            ...(isMeasureSeries && !isDimensionalSeries
+              ? {text: {scale: 'measureSeriesLabel', field: 'value'}}
+              : {}),
             fillOpacity: [
               {
                 test: 'brushSeriesIn === datum.value',
@@ -1019,7 +1044,9 @@ export function generateBarChartVegaSpecV2(
         tooltipData = {
           title: [title],
           entries: records.map(rec => ({
-            label: rec.series,
+            label: isDimensionalSeries
+              ? rec.series
+              : explore.fieldAt([rec.series]).getLabel(),
             value: formatY(rec),
             highlight: false,
             color: colorScale(rec.series),
@@ -1045,7 +1072,9 @@ export function generateBarChartVegaSpecV2(
           title: [title],
           entries: records.map(rec => {
             return {
-              label: rec.series,
+              label: isDimensionalSeries
+                ? rec.series
+                : explore.fieldAt([rec.series]).getLabel(),
               value: formatY(rec),
               highlight: highlightedSeries === rec.series,
               color: colorScale(rec.series),

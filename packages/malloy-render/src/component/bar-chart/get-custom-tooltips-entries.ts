@@ -21,7 +21,7 @@ export function getCustomTooltipEntries({
   customTooltipFields.forEach(f => {
     records.forEach(rec => {
       customEntries.push({
-        label: f.name,
+        label: f.getLabel(),
         value: () =>
           applyRenderer({
             dataColumn: rec.__row.column(f.name),

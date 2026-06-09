@@ -199,6 +199,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
             // Create synthetic field
             pluginInstance.syntheticSeriesField = {
               name: seriesFields.map(f => f.name).join(' - '),
+              getLabel: () => seriesFields.map(f => f.getLabel()).join(' - '),
               valueSet: concatenatedValues,
               referenceId: '__synthetic_concatenated_series__',
               // Minimal Field interface implementation

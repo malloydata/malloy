@@ -196,6 +196,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
             // Create synthetic series field
             pluginInstance.syntheticSeriesField = {
               name: 'Year',
+              getLabel: () => 'Year',
               valueSet: yearValues,
               referenceId: '__synthetic_year__',
               // Add minimal Field interface properties that might be used
