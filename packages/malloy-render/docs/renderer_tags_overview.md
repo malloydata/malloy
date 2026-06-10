@@ -411,7 +411,15 @@ Arranges multiple nested views into a dashboard layout. Each nested view is rend
 
 - `.table.max_height`: Sets a maximum pixel height for tables rendered within dashboard tiles. Useful for controlling layout with large tables. Set to `'none'` to disable max height.
   - Syntax: `# dashboard { table.max_height=400 }` or `# dashboard { table.max_height=none }`
-- `# break` (applied to a nested view): Inserts a visual break in the dashboard layout, often forcing subsequent items onto a new row or section.
+- `.columns` (integer): Lays the tiles out in an equal-width grid of N columns that wraps onto new rows as needed. Per-tile `# span` is ignored in this mode.
+  - Syntax: `# dashboard { columns=3 }`
+- `.gap` (pixels): Sets the spacing between tiles. Setting `gap` also switches the dashboard out of the default flex-wrap layout into the per-row grid (where `# span` is honored). Use `columns` instead if you want an equal-width wrapping grid. Default is 16.
+  - Syntax: `# dashboard { gap=24 }`
+
+**Per-tile tags (applied to a nested view):**
+
+- `# span` (integer 1 to 12): Sets the tile's proportion of its row. Each `# break` group is laid out as one row, and the spans in that row divide it (for example, span=8 beside span=4 gives a wide chart next to a narrow KPI). This is a proportion within a single non-wrapping row, not a wrapping 12-column grid: a row does not wrap when its spans total more than 12, and `# span` only takes effect when the dashboard has a grid (`columns` or `gap`).
+- `# break`: Starts a new row. Tiles after a `# break` begin a fresh row. Works in both the default and grid layouts.
 
 **Example:**
 

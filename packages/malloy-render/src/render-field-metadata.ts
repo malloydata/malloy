@@ -519,21 +519,31 @@ export class RenderFieldMetadata {
       // Validate dashboard-owned child tags
       for (const child of field.fields) {
         const childSpan = child.tag.numeric('span');
-        if (childSpan !== undefined) {
-          if (!Number.isInteger(childSpan) || childSpan < 1 || childSpan > 12) {
+        if (child.tag.has('span') && childSpan === undefined) {
+          // Present but non-numeric (e.g. "foo", "half"). numeric() drops it
+          // to undefined, so flag it rather than let the span silently vanish.
+          log.error(
+            `Invalid # span on '${child.name}': expected an integer 1–12, got a non-numeric value. Fix: # span=6.`,
+            child.tag.tag('span')
+          );
+        } else if (childSpan !== undefined) {
+          const inRange =
+            Number.isInteger(childSpan) && childSpan >= 1 && childSpan <= 12;
+          if (!inRange) {
             log.error(
               `Invalid # span on '${child.name}': expected an integer 1–12, got ${childSpan}. Fix: # span=6.`,
               child.tag.tag('span')
             );
-          }
-          if (columnsActive) {
+          } else if (columnsActive) {
+            // Well-formed but not honored here: "Ignored", not "Invalid". The
+            // else-if keeps this from co-firing with the range error above.
             log.warn(
-              `Invalid # span on '${child.name}': span is ignored when parent dashboard '${field.name}' uses columns mode. Fix: remove # span or remove dashboard.columns.`,
+              `Ignored # span on '${child.name}': span is ignored when parent dashboard '${field.name}' uses columns mode. Fix: remove # span or remove dashboard.columns.`,
               child.tag.tag('span')
             );
           } else if (!hasGrid) {
             log.warn(
-              `Invalid # span on '${child.name}': span is ignored when parent dashboard '${field.name}' has no grid (no columns or gap). Fix: add # dashboard { gap=16 } (or columns=N) to enable a grid, or remove # span.`,
+              `Ignored # span on '${child.name}': span is ignored when parent dashboard '${field.name}' has no grid (no columns or gap). Fix: add # dashboard { gap=16 } (or columns=N) to enable a grid, or remove # span.`,
               child.tag.tag('span')
             );
           }

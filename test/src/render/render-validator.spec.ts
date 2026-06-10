@@ -570,6 +570,142 @@ describe('render tag validation', () => {
         false
       );
     });
+
+    it('errors when # span is set to a non-numeric value', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span="foo"
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const spanError = logs.find(
+        l => l.severity === 'error' && l.message.includes('span')
+      );
+      expect(spanError?.message).toContain('Invalid # span');
+      expect(spanError?.message).toContain('non-numeric');
+    });
+
+    it('does not also warn no-grid when # span fails the range check', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=15
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      // A single mistake should produce a single diagnostic: the range error
+      // fires and the "ignored / no grid" warning is suppressed.
+      const spanErrors = logs.filter(
+        l => l.severity === 'error' && l.message.includes('span')
+      );
+      expect(spanErrors.length).toBe(1);
+      const spanWarnings = logs.filter(
+        l => l.severity === 'warn' && l.message.includes('span')
+      );
+      expect(spanWarnings.length).toBe(0);
+    });
+
+    it('labels an ignored (not invalid) # span as "Ignored"', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=6
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const spanWarning = logs.find(
+        l => l.severity === 'warn' && l.message.includes('span')
+      );
+      expect(spanWarning?.message).toContain('Ignored # span');
+      expect(spanWarning?.message).not.toContain('Invalid # span');
+    });
+
+    it('labels the no-grid ignored # span as "Ignored"', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=6
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const spanWarning = logs.find(
+        l => l.severity === 'warn' && l.message.includes('span')
+      );
+      expect(spanWarning?.message).toContain('Ignored # span');
+      expect(spanWarning?.message).toContain('no grid');
+      expect(spanWarning?.message).not.toContain('Invalid # span');
+    });
+
+    it('does not also warn columns-mode when # span fails the range check', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span=15
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      // Even in columns mode, an out-of-range span yields a single range error
+      // and no "columns mode" warning, because the else-if suppresses it.
+      const spanErrors = logs.filter(
+        l => l.severity === 'error' && l.message.includes('span')
+      );
+      expect(spanErrors.length).toBe(1);
+      expect(spanErrors[0].message).toContain('got 15');
+      const spanWarnings = logs.filter(
+        l => l.severity === 'warn' && l.message.includes('span')
+      );
+      expect(spanWarnings.length).toBe(0);
+    });
+
+    it('coerces a unit-suffixed # span (e.g. "6px") to its numeric prefix', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { gap=16 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # span="6px"
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      // numeric() parseFloats "6px" to 6, so the span is treated as 6 and
+      // honored with no diagnostic. The coercion lives in malloy-tag's shared
+      // numeric(); this test pins the current behavior.
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
   });
 
   describe('chart y-channel must be numeric', () => {

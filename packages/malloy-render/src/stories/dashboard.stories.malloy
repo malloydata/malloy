@@ -164,7 +164,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
 
   // ============================================
   // Table with nested charts inside a dashboard
-  // Should auto-detect sub-nests and get span 12
+  // Should auto-detect sub-nests and get full-width (span 12)
   // ============================================
   #(story)
   # dashboard
@@ -248,8 +248,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Per-item span on a 12-column grid
-  // 8 + 4 = 12 (wide chart + narrow KPI)
+  // Per-item span sets each tile's proportion of its row
+  // span 8 beside span 4 = wide chart next to a narrow KPI
   // ============================================
   #(story)
   # dashboard { gap = 16 }
