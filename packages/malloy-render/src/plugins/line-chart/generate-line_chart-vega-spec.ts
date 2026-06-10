@@ -12,6 +12,10 @@ import type {
 } from '@/component/types';
 import {getChartLayoutSettings} from '@/component/chart/chart-layout-settings';
 import {createMeasureAxis} from '@/component/vega/measure-axis';
+import {
+  MEASURE_SERIES_LABEL_SCALE,
+  getMeasureSeriesLabelScale,
+} from '@/component/vega/measure-series-label-scale';
 import type {
   Axis,
   Config,
@@ -85,9 +89,22 @@ export interface LineChartSettings {
   interactive: boolean;
 }
 
+/**
+ * The slice of the line chart plugin instance the spec generator reads,
+ * narrowed so tests can construct a real, fully typed value.
+ */
+export type LineChartSpecInputs = Pick<
+  LineChartPluginInstance,
+  | 'getMetadata'
+  | 'field'
+  | 'chartDisplay'
+  | 'getTopNSeries'
+  | 'syntheticSeriesField'
+>;
+
 export function generateLineChartVegaSpecV2(
   metadata: RenderMetadata,
-  plugin: LineChartPluginInstance,
+  plugin: LineChartSpecInputs,
   vegaConfig?: Config
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
@@ -853,27 +870,10 @@ export function generateLineChartVegaSpecV2(
       offset: 4,
     };
     (spec.padding as VegaPadding).right = legendSize;
-    // For a measure-series legend the color-domain values are the raw measure
-    // field names; map them to their # label via an ordinal scale so the legend
-    // entries match the axis and tooltip. Keeping the labels in scale data (not
-    // in a parsed expression) renders any label verbatim, including an explicit
-    // empty # label="".
     if (isMeasureSeries && !isDimensionalSeries) {
-      // Dedupe by field name so the ordinal scale's domain and range stay in
-      // lockstep: d3 dedupes an ordinal scale's domain but keeps its range
-      // verbatim, so a measure repeated in yChannel.fields would otherwise
-      // shift the indices and map a later measure to the wrong label.
-      const labelByName = new Map<string, string>();
-      for (const fieldPath of settings.yChannel.fields) {
-        const f = explore.fieldAt(fieldPath);
-        labelByName.set(f.name, f.getLabel());
-      }
-      spec.scales!.push({
-        name: 'measureSeriesLabel',
-        type: 'ordinal',
-        domain: [...labelByName.keys()],
-        range: [...labelByName.values()],
-      });
+      spec.scales!.push(
+        getMeasureSeriesLabelScale(explore, settings.yChannel.fields)
+      );
     }
     spec.legends!.push({
       fill: 'color',
@@ -895,7 +895,7 @@ export function generateLineChartVegaSpecV2(
           interactive: true,
           update: {
             ...(isMeasureSeries && !isDimensionalSeries
-              ? {text: {scale: 'measureSeriesLabel', field: 'value'}}
+              ? {text: {scale: MEASURE_SERIES_LABEL_SCALE, field: 'value'}}
               : {}),
             fillOpacity: [
               {
