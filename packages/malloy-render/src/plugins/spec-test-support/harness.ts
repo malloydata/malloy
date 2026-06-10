@@ -22,8 +22,8 @@ export interface ChartQueryResult {
 }
 
 /**
- * Compile and run a query, returning the data-tree root (with `# label` tags
- * resolved) and the render metadata a spec generator takes as input.
+ * Runs a query, returning the data-tree root (`# label`s resolved) and the
+ * render metadata a spec generator consumes.
  */
 export async function runChartQuery(
   source: string,
@@ -50,10 +50,7 @@ const DATA =
 
 const SOURCE = `source: data is ${DATA}`;
 
-/**
- * The label-honoring cases shared by the bar and line chart specs,
- * parametrized by chart tag and each chart's spec builder.
- */
+/** The label-honoring cases shared by the bar and line chart specs. */
 export function describeChartLabelTests(
   chartTag: 'bar_chart' | 'line_chart',
   buildSpec: (source: string, query: string) => Promise<Spec>
@@ -123,8 +120,7 @@ export function describeChartLabelTests(
         }
         `
       );
-      // The labels ride a data-driven ordinal scale, so an explicit empty
-      // # label="" survives verbatim instead of falling back to the name.
+      // Labels ride a data-driven scale, so an empty # label="" survives.
       const scale = (spec.scales ?? []).find(
         s => s.name === MEASURE_SERIES_LABEL_SCALE
       );

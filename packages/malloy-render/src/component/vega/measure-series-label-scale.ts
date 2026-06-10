@@ -9,15 +9,12 @@ import type {NestField} from '@/data_tree';
 export const MEASURE_SERIES_LABEL_SCALE = 'measureSeriesLabel';
 
 /**
- * For a measure-series legend the color-domain values are the raw measure
- * field names; this ordinal scale maps them to their `# label` so the legend
- * entries match the axis and tooltip. Keeping the labels in scale data (not
- * in a parsed expression) renders any label verbatim. An explicit empty
- * `# label=""` intentionally renders a blank legend entry, the same way it
- * hides an axis title. Domain and range are deduped in lockstep via a Map
- * keyed by field name: d3 dedupes an ordinal scale's domain but keeps its
- * range verbatim, so a measure repeated in the y channel would otherwise
- * shift the indices and map a later measure to the wrong label.
+ * Maps the measure-series legend's domain (raw measure field names) to each
+ * field's `# label`. Labels live in scale data so they render verbatim: an
+ * explicit `# label=""` deliberately shows a blank legend entry, the same
+ * way it hides an axis title. Domain and range dedupe in lockstep because
+ * d3 dedupes an ordinal scale's domain but not its range; a repeated y
+ * measure would otherwise shift later labels onto the wrong measure.
  */
 export function getMeasureSeriesLabelScale(
   explore: NestField,
