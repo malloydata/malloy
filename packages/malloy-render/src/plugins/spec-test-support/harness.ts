@@ -3,27 +3,34 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {Spec} from 'vega';
+import type {Item, View} from 'vega';
 import {API} from '@malloydata/malloy';
 import {runtimeFor} from '../../../../../test/src/runtimes';
 import {RenderFieldMetadata} from '@/render-field-metadata';
 import {getDataTree, type RootField} from '@/data_tree';
+import type {RepeatedRecordCell} from '@/data_tree';
 import {
   getResultMetadata,
   type RenderMetadata,
 } from '@/component/render-result-metadata';
+import type {VegaChartProps} from '@/component/types';
 import {MEASURE_SERIES_LABEL_SCALE} from '@/component/vega/measure-series-label-scale';
 
 const duckdb = runtimeFor('duckdb');
 
+export async function closeChartTestRuntime() {
+  await duckdb.connection.close();
+}
+
 export interface ChartQueryResult {
   root: RootField;
+  rootCell: RepeatedRecordCell;
   metadata: RenderMetadata;
 }
 
 /**
- * Runs a query, returning the data-tree root (`# label`s resolved) and the
- * render metadata a spec generator consumes.
+ * Runs a query, returning the data-tree root (`# label`s resolved), its data
+ * cell, and the render metadata a spec generator consumes.
  */
 export async function runChartQuery(
   source: string,
@@ -32,13 +39,26 @@ export async function runChartQuery(
   const result = await duckdb.loadModel(source).loadQuery(query).run();
   const malloyResult = API.util.wrapResult(result);
   const rfm = new RenderFieldMetadata(malloyResult);
-  getDataTree(malloyResult, rfm);
+  const rootCell = getDataTree(malloyResult, rfm);
   const root = rfm.getRootField();
   const metadata = getResultMetadata(root, {
     renderFieldMetadata: rfm,
     parentSize: {width: 400, height: 300},
   });
-  return {root, metadata};
+  return {root, rootCell, metadata};
+}
+
+/**
+ * Builds the minimal scenegraph item shape getTooltipData reads. Real items
+ * only exist inside a running vega View, which the node test env cannot load
+ * (vega 6 is ESM-only), hence the cast at this third-party boundary.
+ */
+export function fakeTooltipItem(markName: string, datum: unknown): Item {
+  return {datum, mark: {name: markName}} as unknown as Item;
+}
+
+export function fakeTooltipView(): View {
+  return {scale: () => () => '#4285F4'} as unknown as View;
 }
 
 const DATA =
@@ -48,20 +68,37 @@ const DATA =
   "('1Q26: Auto Intenders', 25, '2Q26')) " +
   'AS t(audience_name, reach, period)")';
 
-const SOURCE = `source: data is ${DATA}`;
+export const SOURCE = `source: data is ${DATA}`;
+
+const DATA4 =
+  'duckdb.sql("SELECT * FROM (VALUES ' +
+  "('Total Universe (HH)', 75, '1Q26', 'East'), " +
+  "('1Q26: High Income Earners', 28, '1Q26', 'West'), " +
+  "('1Q26: Auto Intenders', 25, '2Q26', 'East')) " +
+  'AS t(audience_name, reach, period, region)")';
+
+export const SOURCE4 = `source: data4 is ${DATA4}`;
+
+const YOY_DATA =
+  'duckdb.sql("SELECT * FROM (VALUES ' +
+  "(DATE '2024-01-15', 10), (DATE '2024-04-15', 20), " +
+  "(DATE '2025-01-15', 12), (DATE '2025-04-15', 24)) " +
+  'AS t(event_date, sales)")';
+
+export const YOY_SOURCE = `source: yoy_data is ${YOY_DATA}`;
 
 /** The label-honoring cases shared by the bar and line chart specs. */
 export function describeChartLabelTests(
   chartTag: 'bar_chart' | 'line_chart',
-  buildSpec: (source: string, query: string) => Promise<Spec>
+  buildProps: (source: string, query: string) => Promise<VegaChartProps>
 ) {
   afterAll(async () => {
-    await duckdb.connection.close();
+    await closeChartTestRuntime();
   });
 
   describe(`${chartTag} honors # label tags on axis/legend titles`, () => {
     test('x and y axis titles use the # label tag, not the field name', async () => {
-      const spec = await buildSpec(
+      const {spec} = await buildProps(
         SOURCE,
         `
         # ${chartTag}
@@ -82,7 +119,7 @@ export function describeChartLabelTests(
     }, 60000);
 
     test('legend title uses the # label tag of the series dimension', async () => {
-      const spec = await buildSpec(
+      const {spec} = await buildProps(
         SOURCE,
         `
         # ${chartTag}
@@ -102,7 +139,7 @@ export function describeChartLabelTests(
     }, 60000);
 
     test('measure-series legend entries use the # label tags, not field names', async () => {
-      const spec = await buildSpec(
+      const {spec} = await buildProps(
         SOURCE,
         `
         # ${chartTag}
