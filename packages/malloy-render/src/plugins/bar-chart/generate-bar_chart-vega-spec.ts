@@ -45,6 +45,7 @@ import {Field} from '@/data_tree';
 import {NULL_SYMBOL} from '@/util';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {BarChartPluginInstance} from './bar-chart-plugin';
+import type {SyntheticSeriesField} from '@/plugins/synthetic-series-field';
 
 type BarDataRecord = {
   x: string | number;
@@ -78,7 +79,7 @@ function getLimitedData({
   xLimitSetting,
 }: {
   xField: Field;
-  seriesField?: Field | null;
+  seriesField?: Field | SyntheticSeriesField | null;
   maxSeries?: number;
   maxSizePerBar?: number;
   isGrouping: boolean;
@@ -156,7 +157,9 @@ export function generateBarChartVegaSpecV2(
   const xField = explore.fieldAt(xFieldPath);
   const xIsDateorTime = xField.isTime();
   const yField = explore.fieldAt(yFieldPath);
-  let seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+  let seriesField: Field | SyntheticSeriesField | null = seriesFieldPath
+    ? explore.fieldAt(seriesFieldPath)
+    : null;
 
   // Use synthetic field if available (for multiple series)
   if (plugin.syntheticSeriesField) {
@@ -1029,6 +1032,10 @@ export function generateBarChartVegaSpecV2(
           ? renderNumericField(field, value)
           : String(value);
       };
+      const entryLabel = (rec: BarDataRecord) =>
+        isDimensionalSeries
+          ? rec.series
+          : explore.fieldAt([rec.series]).getLabel();
 
       // Tooltip records for the highlight bars
       if (getMarkName(item) === 'x_highlight') {
@@ -1045,9 +1052,7 @@ export function generateBarChartVegaSpecV2(
         tooltipData = {
           title: [title],
           entries: records.map(rec => ({
-            label: isDimensionalSeries
-              ? rec.series
-              : explore.fieldAt([rec.series]).getLabel(),
+            label: entryLabel(rec),
             value: formatY(rec),
             highlight: false,
             color: colorScale(rec.series),
@@ -1073,9 +1078,7 @@ export function generateBarChartVegaSpecV2(
           title: [title],
           entries: records.map(rec => {
             return {
-              label: isDimensionalSeries
-                ? rec.series
-                : explore.fieldAt([rec.series]).getLabel(),
+              label: entryLabel(rec),
               value: formatY(rec),
               highlight: highlightedSeries === rec.series,
               color: colorScale(rec.series),

@@ -41,6 +41,7 @@ import {Field} from '@/data_tree';
 import {NULL_SYMBOL, type RenderTimeStringOptions} from '@/util';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
+import type {SyntheticSeriesField} from '@/plugins/synthetic-series-field';
 
 type LineDataRecord = {
   x: string | number;
@@ -135,7 +136,9 @@ export function generateLineChartVegaSpecV2(
   };
 
   const yField = explore.fieldAt(yFieldPath);
-  let seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+  let seriesField: Field | SyntheticSeriesField | null = seriesFieldPath
+    ? explore.fieldAt(seriesFieldPath)
+    : null;
 
   // Use synthetic series field for YoY mode
   if (settings.mode === 'yoy' && plugin.syntheticSeriesField) {
@@ -1126,6 +1129,10 @@ export function generateLineChartVegaSpecV2(
           ? renderNumericField(field, value)
           : String(value);
       };
+      const entryLabel = (rec: LineDataRecord) =>
+        isDimensionalSeries
+          ? rec.series
+          : explore.fieldAt([rec.series]).getLabel();
 
       // Tooltip records for the highlighted points
       if (['x_hit_target', 'ref_line_targets'].includes(markName)) {
@@ -1160,9 +1167,7 @@ export function generateLineChartVegaSpecV2(
         tooltipData = {
           title: [title],
           entries: sortedRecords.map(rec => ({
-            label: isDimensionalSeries
-              ? rec.series
-              : explore.fieldAt([rec.series]).getLabel(),
+            label: entryLabel(rec),
             value: formatY(rec),
             highlight: false,
             color: colorScale(rec.series),
@@ -1213,9 +1218,7 @@ export function generateLineChartVegaSpecV2(
           title: [title],
           entries: sortedRecords.map(rec => {
             return {
-              label: isDimensionalSeries
-                ? rec.series
-                : explore.fieldAt([rec.series]).getLabel(),
+              label: entryLabel(rec),
               value: formatY(rec),
               highlight: highlightedSeries === rec.series,
               color: colorScale(rec.series),
