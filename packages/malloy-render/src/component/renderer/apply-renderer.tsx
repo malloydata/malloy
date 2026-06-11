@@ -94,11 +94,20 @@ export function applyRenderer(props: RendererProps) {
         break;
       }
       default: {
-        try {
-          renderValue = String(dataColumn.value);
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.warn('Couldnt get value for ', field, dataColumn);
+        // renderAs resolved to a renderer name but no plugin or built-in
+        // renderer handled the field. Scalar values still have a usable string
+        // form, so render those. A structured value (record/array) has no scalar
+        // form -- String() on it produced "[object Object]" -- so throw a
+        // descriptive error instead; the renderer's ErrorBoundary surfaces it as
+        // an inline message rather than rendering garbage.
+        const value = dataColumn.value;
+        if (value === null || typeof value !== 'object') {
+          renderValue = String(value);
+        } else {
+          throw new Error(
+            `Malloy render: no renderer available for '${renderAs}' on field '${field.name}'. ` +
+              'The renderer configuration for this field may be incomplete or unsupported.'
+          );
         }
       }
     }
