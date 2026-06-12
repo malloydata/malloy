@@ -4,6 +4,7 @@
  */
 
 import path from 'path';
+import {fileURLToPath} from 'url';
 import {makeDigest} from '@malloydata/malloy';
 import type {
   ConnectionConfig,
@@ -568,13 +569,36 @@ function canonicalizeDatabasePath(databasePath: string): string {
   return canonicalizeConfigPath(databasePath, 'databasePath');
 }
 
+// A config path can arrive as a `file://` URL rather than a plain path —
+// notably `workingDirectory`, which defaults to `config.rootDirectory` (the
+// config stack carries it as a URL string). Left as a URL, `path.resolve`
+// treats `file:` as a relative segment and joins it to the process cwd,
+// silently breaking relative `read_parquet`/glob resolution. Decode file URLs
+// to a real path so every downstream consumer (FILE_SEARCH_PATH,
+// allowed_directories, …) sees one. Plain paths and non-file schemes pass
+// through untouched; a malformed file URL throws and surfaces as the caller's
+// field-specific validation error.
+function maybeFileURLToPath(input: string): string {
+  // Cheap guard so plain paths (the common case) skip URL parsing entirely.
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(input)) {
+    return input;
+  }
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    return input; // not a URL — treat as a plain path
+  }
+  return url.protocol === 'file:' ? fileURLToPath(url) : input;
+}
+
 function canonicalizeConfigPath(
   input: string,
   fieldName: string,
   options: pathSecurity.CanonicalPathOptions = {}
 ): string {
   try {
-    return pathSecurity.canonicalizePath(input, options);
+    return pathSecurity.canonicalizePath(maybeFileURLToPath(input), options);
   } catch (error) {
     throw new DuckDBConfigValidationError(
       `${fieldName} is invalid: ${errorMessage(error)}`
