@@ -6,6 +6,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import {pathToFileURL} from 'url';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {
   buildDuckDBShareKey,
@@ -72,6 +73,17 @@ describe('normalizeDuckDBConfig', () => {
     expect(() =>
       normalizeDuckDBConfig(baseConfig({workingDirectory: ''}))
     ).toThrow('workingDirectory is invalid: path must not be empty');
+  });
+
+  it('accepts a file:// URL workingDirectory and resolves it to a path', () => {
+    // `workingDirectory` defaults to `config.rootDirectory`, which the config
+    // stack carries as a URL string — make sure it lands as a real OS path and
+    // not a `file:`-prefixed segment joined to the process cwd.
+    const normalized = normalizeDuckDBConfig(
+      baseConfig({workingDirectory: pathToFileURL(workingDirectory).toString()})
+    );
+
+    expect(normalized.workingDirectory).toEqual(canonical(workingDirectory));
   });
 
   it('does not invent allowedDirectories outside sandboxed mode', () => {

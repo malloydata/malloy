@@ -149,6 +149,27 @@ FROM read_parquet("inventory_items2.parquet")
   });
 });
 
+describe('workingDirectory file:// URL handling', () => {
+  // `workingDirectory` defaults to `config.rootDirectory`, a URL string. It must
+  // reach DuckDB-Wasm's FILE_SEARCH_PATH as a plain virtual-FS path, not a
+  // `file:` URL — otherwise relative reads resolve against nothing.
+  const connection = new DuckDBWASMConnection({
+    name: 'duckdb',
+    workingDirectory: 'file:///work/data%20dir',
+  });
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  it('decodes the file:// URL into the FILE_SEARCH_PATH', async () => {
+    const result = await connection.runSQL(
+      "SELECT current_setting('file_search_path') AS search_path"
+    );
+    expect(result.rows[0]['search_path']).toBe('/work/data dir');
+  });
+});
+
 /**
  * Tests for reading numeric values through Malloy queries (WASM path)
  */
