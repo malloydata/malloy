@@ -39,6 +39,7 @@ import {
   lineChartSettingsSchema,
 } from './line-chart-settings';
 import {lineChartSettingsToTag} from './settings-to-tag';
+import type {SyntheticSeriesField} from '@/plugins/synthetic-series-field';
 
 interface LineChartPluginMetadata {
   type: 'line';
@@ -57,7 +58,7 @@ interface LineChartPluginInstance extends CoreVizPluginInstance<LineChartPluginM
   chartDisplay: ChartDisplayConfig;
   seriesStats: Map<string, SeriesStats>;
   getTopNSeries: (maxSeries: number) => (string | number | boolean)[];
-  syntheticSeriesField?: Field;
+  syntheticSeriesField?: SyntheticSeriesField;
 }
 
 export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance> =
@@ -193,19 +194,12 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
               yearValues.add(year);
             }
 
-            // Create synthetic series field
             pluginInstance.syntheticSeriesField = {
               name: 'Year',
+              getLabel: () => 'Year',
               valueSet: yearValues,
               referenceId: '__synthetic_year__',
-              // Add minimal Field interface properties that might be used
-              isTime: () => false,
-              isDate: () => false,
-              isBasic: () => true,
-              isNumber: () => false,
-              isString: () => true,
-              isBoolean: () => false,
-            } as unknown as Field;
+            };
 
             // Calculate series stats for YoY mode
             for (const row of cell.rows) {
