@@ -10,6 +10,7 @@ import type {
   RenderFieldRegistry,
 } from '@/registry/types';
 import {RenderLogCollector} from '@/component/render-log-collector';
+import type {Tag} from '@malloydata/malloy-tag';
 import {resolveBuiltInTags} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
@@ -185,7 +186,16 @@ export class RenderFieldMetadata {
   private validateFieldTags(field: Field): void {
     const tag = field.tag;
     const fieldType = getFieldType(field);
-    const log = this.logCollector;
+    // Errors are also recorded on the field so applyRenderer can surface them;
+    // warnings stay on the logs surface only.
+    const collector = this.logCollector;
+    const log = {
+      warn: (message: string, t?: Tag): void => collector.warn(message, t),
+      error: (message: string, t?: Tag): void => {
+        collector.error(message, t);
+        field.addValidationError(message);
+      },
+    };
 
     // --- Renderer tags on wrong field types ---
 

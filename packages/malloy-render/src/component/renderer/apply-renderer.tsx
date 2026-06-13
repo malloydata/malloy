@@ -14,6 +14,7 @@ import type {RendererProps} from '@/component/types';
 import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
 import {renderCellValue} from '@/component/cell-utils';
 import type {CellFormatConfig} from '@/component/tag-configs';
+import {ErrorMessage} from '@/component/error-message/error-message';
 
 export function applyRenderer(props: RendererProps) {
   const {dataColumn, customProps = {}} = props;
@@ -94,11 +95,18 @@ export function applyRenderer(props: RendererProps) {
         break;
       }
       default: {
-        try {
-          renderValue = String(dataColumn.value);
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.warn('Couldnt get value for ', field, dataColumn);
+        const validationErrors = field.getValidationErrors();
+        if (validationErrors.length > 0) {
+          // No renderer matched (e.g. a misconfigured # big_value); surface the
+          // validation error instead of stringifying to '[object Object]'.
+          renderValue = <ErrorMessage message={validationErrors.join(' ')} />;
+        } else {
+          try {
+            renderValue = String(dataColumn.value);
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn('Couldnt get value for ', field, dataColumn);
+          }
         }
       }
     }
