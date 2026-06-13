@@ -224,7 +224,10 @@ export function normalizeDuckDBConfig(
     );
   }
 
-  const databasePath = canonicalizeDatabasePath(rawDatabasePath);
+  const databasePath = canonicalizeDatabasePath(
+    rawDatabasePath,
+    workingDirectory
+  );
   const isMotherDuck = isMotherDuckPath(databasePath);
   if (restricted && !isAllowedClosedNetworkDatabasePath(databasePath)) {
     throw new DuckDBConfigValidationError(
@@ -562,11 +565,22 @@ function deriveRestrictedSecretDirectory({
   );
 }
 
-function canonicalizeDatabasePath(databasePath: string): string {
+// A relative `databasePath` resolves against `workingDirectory` (which itself
+// defaults to the project root via `{config: 'rootDirectory'}`), keeping a
+// config file portable — `databasePath: "analytics.duckdb"` names the database
+// alongside the project regardless of where the host process is launched.
+// `:memory:` and remote schemes are taken as-is; absolute paths ignore the
+// base; with no `workingDirectory` set, a relative path falls back to the cwd.
+function canonicalizeDatabasePath(
+  databasePath: string,
+  workingDirectory: string | undefined
+): string {
   if (databasePath === ':memory:' || isLikelyRemoteDatabasePath(databasePath)) {
     return databasePath;
   }
-  return canonicalizeConfigPath(databasePath, 'databasePath');
+  return canonicalizeConfigPath(databasePath, 'databasePath', {
+    baseDirectory: workingDirectory,
+  });
 }
 
 // A config path can arrive as a `file://` URL rather than a plain path —
