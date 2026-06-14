@@ -589,7 +589,7 @@ export default [
         {startIndex: 14, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 15,
-          type: ['source.malloy', 'variable.other.quoted'],
+          type: ['source.malloy', 'variable.other.quoted.malloy'],
           color: '#9CDCFE',
         },
         {startIndex: 40, type: ['source.malloy'], color: '#000000'},
@@ -649,7 +649,7 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: ['source.malloy', 'variable.other.quoted'],
+          type: ['source.malloy', 'variable.other.quoted.malloy'],
           color: '#9CDCFE',
         },
         {startIndex: 19, type: ['source.malloy'], color: '#000000'},
@@ -697,7 +697,7 @@ export default [
         {startIndex: 60, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 63,
-          type: ['source.malloy', 'variable.other.quoted'],
+          type: ['source.malloy', 'variable.other.quoted.malloy'],
           color: '#9CDCFE',
         },
         {startIndex: 67, type: ['source.malloy'], color: '#000000'},
@@ -773,7 +773,7 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: ['source.malloy', 'variable.other.quoted'],
+          type: ['source.malloy', 'variable.other.quoted.malloy'],
           color: '#9CDCFE',
         },
         {startIndex: 6, type: ['source.malloy'], color: '#000000'},

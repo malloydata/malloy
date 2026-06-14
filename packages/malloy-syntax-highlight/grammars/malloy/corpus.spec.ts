@@ -105,7 +105,7 @@ describe('syntax-highlight corpus — TextMate scopes', () => {
   for (const c of corpus.cases) {
     describe(c.name, () => {
       for (const e of c.expect) {
-        test(`${JSON.stringify(e.text)} → ${e.scope}`, () => {
+        it(`${JSON.stringify(e.text)} → ${e.scope}`, () => {
           const scopes = scopesAt(grammar, c.code, e.text);
           expect(scopes).toBeDefined();
           expect(scopes).toContain(e.scope);

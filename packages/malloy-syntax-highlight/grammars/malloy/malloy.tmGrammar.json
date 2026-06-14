@@ -173,7 +173,7 @@
       "patterns": [
         {
           "match": "`[^`]*`",
-          "name": "variable.other.quoted"
+          "name": "variable.other.quoted.malloy"
         }
       ]
     },

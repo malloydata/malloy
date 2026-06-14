@@ -91,6 +91,17 @@
       ]
     },
     {
+      "name": "bare backtick is a quoted identifier, not a string",
+      "code": "dimension: `weird name` is 1",
+      "expect": [
+        {
+          "text": "`weird name`",
+          "lexer": "BQ_STRING",
+          "scope": "variable.other.quoted.malloy"
+        }
+      ]
+    },
+    {
       "name": "regex literal r'...' and /'...'",
       "code": "where: state ~ r'C.' | /'N.'",
       "expect": [
