@@ -589,7 +589,7 @@ export default [
         {startIndex: 14, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 15,
-          type: ['source.malloy', 'variable.other.quoted'],
+          type: ['source.malloy', 'variable.other.quoted.malloy'],
           color: '#9CDCFE',
         },
         {startIndex: 40, type: ['source.malloy'], color: '#000000'},
@@ -649,7 +649,7 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: ['source.malloy', 'variable.other.quoted'],
+          type: ['source.malloy', 'variable.other.quoted.malloy'],
           color: '#9CDCFE',
         },
         {startIndex: 19, type: ['source.malloy'], color: '#000000'},
@@ -697,7 +697,7 @@ export default [
         {startIndex: 60, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 63,
-          type: ['source.malloy', 'variable.other.quoted'],
+          type: ['source.malloy', 'variable.other.quoted.malloy'],
           color: '#9CDCFE',
         },
         {startIndex: 67, type: ['source.malloy'], color: '#000000'},
@@ -773,7 +773,7 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: ['source.malloy', 'variable.other.quoted'],
+          type: ['source.malloy', 'variable.other.quoted.malloy'],
           color: '#9CDCFE',
         },
         {startIndex: 6, type: ['source.malloy'], color: '#000000'},
@@ -1437,7 +1437,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1446,7 +1446,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'keyword.operator.assignment.malloy',
+            'keyword.operator.assignment.motly',
           ],
           color: '#D4D4D4',
         },
@@ -1455,9 +1455,9 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'string.unquoted.motly',
           ],
-          color: '#569CD6',
+          color: '#CE9178',
         },
         {
           startIndex: 20,
@@ -1469,7 +1469,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1478,7 +1478,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'keyword.operator.assignment.malloy',
+            'keyword.operator.assignment.motly',
           ],
           color: '#D4D4D4',
         },
@@ -1487,9 +1487,9 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'string.unquoted.motly',
           ],
-          color: '#569CD6',
+          color: '#CE9178',
         },
       ],
     },
@@ -1564,7 +1564,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1573,7 +1573,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'keyword.operator.assignment.malloy',
+            'keyword.operator.assignment.motly',
           ],
           color: '#D4D4D4',
         },
@@ -1582,9 +1582,9 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'string.unquoted.motly',
           ],
-          color: '#569CD6',
+          color: '#CE9178',
         },
       ],
     },
@@ -1631,7 +1631,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1645,7 +1645,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1659,7 +1659,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1673,7 +1673,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1687,12 +1687,21 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
         {
           startIndex: 25,
+          type: [
+            'source.malloy',
+            'meta.annotation.block.malloy',
+            'punctuation.separator.motly',
+          ],
+          color: '#000000',
+        },
+        {
+          startIndex: 26,
           type: ['source.malloy', 'meta.annotation.block.malloy'],
           color: '#000000',
         },
@@ -1701,7 +1710,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1720,12 +1729,21 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
         {
           startIndex: 8,
+          type: [
+            'source.malloy',
+            'meta.annotation.block.malloy',
+            'keyword.operator.assignment.motly',
+          ],
+          color: '#D4D4D4',
+        },
+        {
+          startIndex: 9,
           type: ['source.malloy', 'meta.annotation.block.malloy'],
           color: '#000000',
         },
@@ -1734,7 +1752,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1748,7 +1766,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1762,7 +1780,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1781,7 +1799,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1795,7 +1813,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1809,7 +1827,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1823,7 +1841,7 @@ export default [
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'entity.name.tag.motly',
           ],
           color: '#569CD6',
         },
@@ -1838,27 +1856,13 @@ export default [
           color: '#000000',
         },
         {
-          startIndex: 5,
+          startIndex: 2,
           type: [
             'source.malloy',
             'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
+            'comment.line.number-sign.motly',
           ],
-          color: '#569CD6',
-        },
-        {
-          startIndex: 9,
-          type: ['source.malloy', 'meta.annotation.block.malloy'],
-          color: '#000000',
-        },
-        {
-          startIndex: 10,
-          type: [
-            'source.malloy',
-            'meta.annotation.block.malloy',
-            'entity.name.tag.malloy',
-          ],
-          color: '#569CD6',
+          color: '#6A9955',
         },
       ],
     },
@@ -1869,6 +1873,15 @@ export default [
           startIndex: 0,
           type: ['source.malloy', 'meta.annotation.block.malloy'],
           color: '#000000',
+        },
+        {
+          startIndex: 5,
+          type: [
+            'source.malloy',
+            'meta.annotation.block.malloy',
+            'comment.line.number-sign.motly',
+          ],
+          color: '#6A9955',
         },
       ],
     },

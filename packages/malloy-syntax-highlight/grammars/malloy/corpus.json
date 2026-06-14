@@ -91,6 +91,17 @@
       ]
     },
     {
+      "name": "bare backtick is a quoted identifier, not a string",
+      "code": "dimension: `weird name` is 1",
+      "expect": [
+        {
+          "text": "`weird name`",
+          "lexer": "BQ_STRING",
+          "scope": "variable.other.quoted.malloy"
+        }
+      ]
+    },
+    {
       "name": "regex literal r'...' and /'...'",
       "code": "where: state ~ r'C.' | /'N.'",
       "expect": [
@@ -225,28 +236,28 @@
         {
           "text": "bar_chart",
           "lexer": "ANNOTATION",
-          "scope": "entity.name.tag.malloy"
+          "scope": "entity.name.tag.motly"
         }
       ]
     },
     {
-      "name": "annotation: key=value (bare value shares the tag-name scope in v1)",
+      "name": "annotation: key=value (MOTLY distinguishes key from unquoted-string value)",
       "code": "# size=large",
       "expect": [
         {
           "text": "size",
           "lexer": "ANNOTATION",
-          "scope": "entity.name.tag.malloy"
+          "scope": "entity.name.tag.motly"
         },
         {
           "text": "=",
           "lexer": "ANNOTATION",
-          "scope": "keyword.operator.assignment.malloy"
+          "scope": "keyword.operator.assignment.motly"
         },
         {
           "text": "large",
           "lexer": "ANNOTATION",
-          "scope": "entity.name.tag.malloy"
+          "scope": "string.unquoted.motly"
         }
       ]
     },
@@ -257,12 +268,12 @@
         {
           "text": "-",
           "lexer": "ANNOTATION",
-          "scope": "keyword.operator.negation.malloy"
+          "scope": "keyword.operator.negation.motly"
         },
         {
           "text": "hidden",
           "lexer": "ANNOTATION",
-          "scope": "entity.name.tag.malloy"
+          "scope": "entity.name.tag.motly"
         }
       ]
     },
@@ -273,12 +284,12 @@
         {
           "text": "title",
           "lexer": "ANNOTATION",
-          "scope": "entity.name.tag.malloy"
+          "scope": "entity.name.tag.motly"
         },
         {
           "text": "\"Hi There\"",
           "lexer": "ANNOTATION",
-          "scope": "string.quoted.double.malloy"
+          "scope": "string.quoted.double.motly"
         }
       ]
     },
@@ -294,7 +305,7 @@
         {
           "text": "dialect",
           "lexer": "DOC_ANNOTATION",
-          "scope": "entity.name.tag.malloy"
+          "scope": "entity.name.tag.motly"
         }
       ]
     },
@@ -310,7 +321,7 @@
         {
           "text": "internal",
           "lexer": "DOC_ANNOTATION",
-          "scope": "entity.name.tag.malloy"
+          "scope": "entity.name.tag.motly"
         }
       ]
     },
@@ -327,7 +338,7 @@
         {
           "text": "size",
           "lexer": "BLOCK_ANNOTATION_TEXT",
-          "scope": "entity.name.tag.malloy"
+          "scope": "entity.name.tag.motly"
         },
         {
           "text": "|#",

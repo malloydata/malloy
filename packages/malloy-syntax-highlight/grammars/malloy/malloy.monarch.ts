@@ -287,7 +287,7 @@ export const monarch: Monaco.IMonarchLanguage = {
         'constant.numeric.date',
       ],
     ],
-    identifiers_quoted: [[/`[^`]*`/, 'variable.other.quoted']],
+    identifiers_quoted: [[/`[^`]*`/, 'variable.other.quoted.malloy']],
     types: [
       [
         /\b(boolean|date|json|number|string|timestamp|timestamptz)\b/,

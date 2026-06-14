@@ -39,6 +39,12 @@ interface Corpus {
 }
 
 const grammarPath = pathJoin(__dirname, 'malloy.tmGrammar.json');
+// MOTLY is embedded in annotation (tag) bodies; load the real grammar shipped
+// by @malloydata/motly-ts-parser so the embed resolves while tokenizing.
+const motlyGrammarPath = pathJoin(
+  __dirname,
+  '../../../../node_modules/@malloydata/motly-ts-parser/grammar/source.motly.tmGrammar.json'
+);
 const corpusPath = pathJoin(__dirname, 'corpus.json');
 const corpus: Corpus = JSON.parse(readFileSync(corpusPath, 'utf8'));
 
@@ -62,7 +68,13 @@ async function loadMalloyGrammar(): Promise<IGrammar> {
       if (scopeName === 'source.malloy') {
         return parseRawGrammar(readFileSync(grammarPath, 'utf8'), grammarPath);
       }
-      return null; // embedded grammars (source.sql) not bundled for this test
+      if (scopeName === 'source.motly') {
+        return parseRawGrammar(
+          readFileSync(motlyGrammarPath, 'utf8'),
+          motlyGrammarPath
+        );
+      }
+      return null; // other embedded grammars (source.sql) not bundled for this test
     },
   });
   const grammar = await registry.loadGrammar('source.malloy');
@@ -105,7 +117,7 @@ describe('syntax-highlight corpus — TextMate scopes', () => {
   for (const c of corpus.cases) {
     describe(c.name, () => {
       for (const e of c.expect) {
-        test(`${JSON.stringify(e.text)} → ${e.scope}`, () => {
+        it(`${JSON.stringify(e.text)} → ${e.scope}`, () => {
           const scopes = scopesAt(grammar, c.code, e.text);
           expect(scopes).toBeDefined();
           expect(scopes).toContain(e.scope);
