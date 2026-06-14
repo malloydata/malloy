@@ -17,6 +17,8 @@ export const monarch: Monaco.IMonarchLanguage = {
       {include: '@comments'},
       //{ include: '@tags' },
       {include: '@strings'},
+      {include: '@given'},
+      {include: '@percent'},
       {include: '@numbers'},
       {include: '@keywords'},
       {include: '@properties'},
@@ -30,27 +32,75 @@ export const monarch: Monaco.IMonarchLanguage = {
     ],
     sql_string: [
       [
-        /(\b[A-Za-z_][A-Za-z_0-9]*)(\s*\.\s*)(sql)(\s*\(\s*)(""")/,
+        /(\b[A-Za-z_][A-Za-z_0-9]*)(\s*\.\s*)((?:sql))(\s*\(\s*)(""")/,
         [
-          'variable.other',
+          'variable.other.malloy',
           '',
-          'keyword.control.sql',
+          'keyword.control.sql.malloy',
           '',
           {
-            next: '@sql_end',
+            next: '@sql_end_0',
             nextEmbedded: 'sql',
-            token: 'punctuation.sql.block.open',
+            token: 'punctuation.definition.string.begin.sql.malloy',
+          },
+        ],
+      ],
+      [
+        /(\b[A-Za-z_][A-Za-z_0-9]*)(\s*\.\s*)((?:sql))(\s*\(\s*)(")/,
+        [
+          'variable.other.malloy',
+          '',
+          'keyword.control.sql.malloy',
+          '',
+          {
+            next: '@sql_end_1',
+            nextEmbedded: 'sql',
+            token: 'punctuation.definition.string.begin.sql.malloy',
+          },
+        ],
+      ],
+      [
+        /(\b[A-Za-z_][A-Za-z_0-9]*)(\s*\.\s*)((?:sql))(\s*\(\s*)(')/,
+        [
+          'variable.other.malloy',
+          '',
+          'keyword.control.sql.malloy',
+          '',
+          {
+            next: '@sql_end_2',
+            nextEmbedded: 'sql',
+            token: 'punctuation.definition.string.begin.sql.malloy',
           },
         ],
       ],
     ],
-    sql_end: [
+    sql_end_0: [
       [
         /"""/,
         {
           next: '@pop',
           nextEmbedded: '@pop',
-          token: 'punctuation.sql.block.close',
+          token: 'punctuation.definition.string.end.sql.malloy',
+        },
+      ],
+    ],
+    sql_end_1: [
+      [
+        /"/,
+        {
+          next: '@pop',
+          nextEmbedded: '@pop',
+          token: 'punctuation.definition.string.end.sql.malloy',
+        },
+      ],
+    ],
+    sql_end_2: [
+      [
+        /'/,
+        {
+          next: '@pop',
+          nextEmbedded: '@pop',
+          token: 'punctuation.definition.string.end.sql.malloy',
         },
       ],
     ],
@@ -66,9 +116,8 @@ export const monarch: Monaco.IMonarchLanguage = {
     ],
     comment_line_double_slash_end: [
       [/\n/, {next: '@pop', token: 'comment.line.double.slash'}],
-      {include: '@tag_values'},
-      [/[^\n(]+/, 'comment.line.double.slash'],
-      [/[\n(]/, 'comment.line.double.slash'],
+      [/[^\n]+/, 'comment.line.double.slash'],
+      [/[\n]/, 'comment.line.double.slash'],
     ],
     comment_line_double_hyphen_end: [
       [/\n/, {next: '@pop', token: 'comment.line.double.hyphen'}],
@@ -77,176 +126,288 @@ export const monarch: Monaco.IMonarchLanguage = {
     ],
     tags: [
       [
-        /^([ \t]*)##\|/,
-        {
-          next: '@comment_line_double_slash_end',
-          token: 'support.type.property.name.json',
-        },
-      ],
-      [
-        /^([ \t]*)#\|/,
-        {
-          next: '@comment_line_double_slash_end',
-          token: 'support.type.property.name.json',
-        },
-      ],
-      [/##\n/, 'string.quoted'],
-      [/#"/, {next: '@comment_line_double_slash_end', token: 'comment.line'}],
-      [/#\n/, 'string.quoted'],
-      [
-        /#\s/,
-        {
-          next: '@comment_line_double_slash_end',
-          token: 'support.type.property.name.json',
-        },
-      ],
-      [
-        /##\s/,
-        {
-          next: '@comment_line_double_slash_end',
-          token: 'support.type.property.name.json',
-        },
-      ],
-      [/#/, {next: '@string_quoted_end', token: 'string.quoted'}],
-    ],
-    tag_values: [
-      [
-        /(-)?((?:[^\s=#]+)|(?:"[^#]+"))(?:\s*(=)\s*((?:[^\s=#]+)|(?:"[^#]+")))?/,
+        /^([ \t]*)(##\|(?:"|\([^\s)]*\)|<[^\s>]*>|\[[^\s\]]*\]|\{[^\s}]*\}))/,
         [
-          'keyword.control.negate',
-          'support.type.property.name.json',
-          'keyword.operator.comparison.ts',
-          'string.quoted',
+          '',
+          {
+            next: '@comment_block_documentation_malloy_end',
+            token: 'punctuation.definition.annotation.begin.malloy',
+          },
+        ],
+      ],
+      [
+        /^([ \t]*)(##\|)(?!(?:"|\([^\s)]*\)|<[^\s>]*>|\[[^\s\]]*\]|\{[^\s}]*\}))/,
+        [
+          '',
+          {
+            next: '@meta_annotation_block_malloy_end',
+            token: 'punctuation.definition.annotation.begin.malloy',
+          },
+        ],
+      ],
+      [
+        /^([ \t]*)(#\|(?:"|\([^\s)]*\)|<[^\s>]*>|\[[^\s\]]*\]|\{[^\s}]*\}))/,
+        [
+          '',
+          {
+            next: '@comment_block_documentation_malloy_end_2',
+            token: 'punctuation.definition.annotation.begin.malloy',
+          },
+        ],
+      ],
+      [
+        /^([ \t]*)(#\|)(?!(?:"|\([^\s)]*\)|<[^\s>]*>|\[[^\s\]]*\]|\{[^\s}]*\}))/,
+        [
+          '',
+          {
+            next: '@meta_annotation_block_malloy_end_2',
+            token: 'punctuation.definition.annotation.begin.malloy',
+          },
+        ],
+      ],
+      [
+        /(##?(?:"|\([^\s)]*\)|<[^\s>]*>|\[[^\s\]]*\]|\{[^\s}]*\}))/,
+        [
+          {
+            next: '@comment_line_documentation_malloy_end',
+            token: 'punctuation.definition.annotation.malloy',
+          },
+        ],
+      ],
+      [
+        /(##?)(?![|"(\[<{])/,
+        [
+          {
+            next: '@meta_annotation_line_malloy_end',
+            token: 'punctuation.definition.annotation.malloy',
+          },
         ],
       ],
     ],
-    string_quoted_end: [
-      [/\n/, {next: '@pop', token: 'string.quoted'}],
-      [/[^\n]+/, 'string.quoted'],
-      [/[\n]/, 'string.quoted'],
+    comment_block_documentation_malloy_end: [
+      [
+        /^\1(\|##)/,
+        [
+          {
+            next: '@pop',
+            token: 'punctuation.definition.annotation.end.malloy',
+          },
+        ],
+      ],
+      [/[^^]+/, 'comment.block.documentation.malloy'],
+      [/[^]/, 'comment.block.documentation.malloy'],
+    ],
+    meta_annotation_block_malloy_end: [
+      [
+        /^\1(\|##)/,
+        [
+          {
+            next: '@pop',
+            token: 'punctuation.definition.annotation.end.malloy',
+          },
+        ],
+      ],
+      {include: '@tag_content'},
+      [/[^^"=-[]+/, 'meta.annotation.block.malloy'],
+      [/[^"=-[]/, 'meta.annotation.block.malloy'],
+    ],
+    tag_content: [
+      [/"[^"#]*"/, 'string.quoted.double.malloy'],
+      [/=/, 'keyword.operator.assignment.malloy'],
+      [/-(?=[A-Za-z_])/, 'keyword.operator.negation.malloy'],
+      [/[0-9][A-Za-z_0-9.]*/, 'constant.numeric.malloy'],
+      [/[A-Za-z_][A-Za-z_0-9.]*/, 'entity.name.tag.malloy'],
+    ],
+    comment_block_documentation_malloy_end_2: [
+      [
+        /^\1(\|#)(?!#)/,
+        [
+          {
+            next: '@pop',
+            token: 'punctuation.definition.annotation.end.malloy',
+          },
+        ],
+      ],
+      [/[^^]+/, 'comment.block.documentation.malloy'],
+      [/[^]/, 'comment.block.documentation.malloy'],
+    ],
+    meta_annotation_block_malloy_end_2: [
+      [
+        /^\1(\|#)(?!#)/,
+        [
+          {
+            next: '@pop',
+            token: 'punctuation.definition.annotation.end.malloy',
+          },
+        ],
+      ],
+      {include: '@tag_content'},
+      [/[^^"=-[]+/, 'meta.annotation.block.malloy'],
+      [/[^"=-[]/, 'meta.annotation.block.malloy'],
+    ],
+    comment_line_documentation_malloy_end: [
+      [/$/, {next: '@pop', token: 'comment.line.documentation.malloy'}],
+      [/[^$]+/, 'comment.line.documentation.malloy'],
+      [/[$]/, 'comment.line.documentation.malloy'],
+    ],
+    meta_annotation_line_malloy_end: [
+      [/$/, {next: '@pop', token: 'meta.annotation.line.malloy'}],
+      {include: '@tag_content'},
+      [/[^$"=-[]+/, 'meta.annotation.line.malloy'],
+      [/[$"=-[]/, 'meta.annotation.line.malloy'],
     ],
     strings: [
-      [/'/, {next: '@string_quoted_single_end', token: 'string.quoted'}],
-      [/"/, {next: '@string_quoted_double_end', token: 'string.quoted'}],
-      [/"""/, {next: '@string_quoted_triple_end', token: 'string.quoted'}],
-      [/[r\/]'/, {next: '@string_regexp_end', token: 'string.regexp'}],
+      [
+        /\bf'''/,
+        {
+          next: '@string_quoted_filter_malloy_end',
+          token: 'string.quoted.filter.malloy',
+        },
+      ],
+      [
+        /\bf"""/,
+        {
+          next: '@string_quoted_filter_malloy_end_2',
+          token: 'string.quoted.filter.malloy',
+        },
+      ],
+      [
+        /\bf'/,
+        {
+          next: '@string_quoted_filter_malloy_end_3',
+          token: 'string.quoted.filter.malloy',
+        },
+      ],
+      [
+        /\bf"/,
+        {
+          next: '@string_quoted_filter_malloy_end_4',
+          token: 'string.quoted.filter.malloy',
+        },
+      ],
+      [
+        /\bf`/,
+        {
+          next: '@string_quoted_filter_malloy_end_5',
+          token: 'string.quoted.filter.malloy',
+        },
+      ],
+      [
+        /\bs'/,
+        {
+          next: '@string_quoted_raw_single_malloy_end',
+          token: 'string.quoted.raw.single.malloy',
+        },
+      ],
+      [
+        /\bs"/,
+        {
+          next: '@string_quoted_raw_double_malloy_end',
+          token: 'string.quoted.raw.double.malloy',
+        },
+      ],
+      [
+        /[r\/]'/,
+        {next: '@string_regexp_malloy_end', token: 'string.regexp.malloy'},
+      ],
+      [
+        /"""/,
+        {next: '@string_quoted_triple_malloy_end', token: 'string.quoted'},
+      ],
+      [/'/, {next: '@string_quoted_single_malloy_end', token: 'string.quoted'}],
+      [/"/, {next: '@string_quoted_double_malloy_end', token: 'string.quoted'}],
     ],
-    string_quoted_single_end: [
-      [/'/, {next: '@pop', token: 'string.quoted'}],
-      {include: '@escapes'},
-      [/[^'\\]+/, 'string.quoted.single'],
-      [/['\\]/, 'string.quoted.single'],
+    string_quoted_filter_malloy_end: [
+      [/'''/, {next: '@pop', token: 'string.quoted.filter.malloy'}],
+      [/[^']+/, 'string.quoted.filter.malloy'],
+      [/[']/, 'string.quoted.filter.malloy'],
     ],
-    escapes: [[/\\(u[A-Fa-f0-9]{4}|.)/, 'constant.character.escape']],
-    string_quoted_double_end: [
-      [/"/, {next: '@pop', token: 'string.quoted'}],
-      {include: '@escapes'},
-      [/[^"\\]+/, 'string.quoted.double'],
-      [/["\\]/, 'string.quoted.double'],
+    string_quoted_filter_malloy_end_2: [
+      [/"""/, {next: '@pop', token: 'string.quoted.filter.malloy'}],
+      [/[^"]+/, 'string.quoted.filter.malloy'],
+      [/["]/, 'string.quoted.filter.malloy'],
     ],
-    string_quoted_triple_end: [
-      [/"""/, {next: '@pop', token: 'string.quoted'}],
-      [/[^"]+/, 'string.quoted.triple'],
-      [/["]/, 'string.quoted.triple'],
+    string_quoted_filter_malloy_end_3: [
+      [/'/, {next: '@pop', token: 'string.quoted.filter.malloy'}],
+      [/[^']+/, 'string.quoted.filter.malloy'],
+      [/[']/, 'string.quoted.filter.malloy'],
     ],
-    string_regexp_end: [
-      [/'/, {next: '@pop', token: 'string.regexp'}],
+    string_quoted_filter_malloy_end_4: [
+      [/"/, {next: '@pop', token: 'string.quoted.filter.malloy'}],
+      [/[^"]+/, 'string.quoted.filter.malloy'],
+      [/["]/, 'string.quoted.filter.malloy'],
+    ],
+    string_quoted_filter_malloy_end_5: [
+      [/`/, {next: '@pop', token: 'string.quoted.filter.malloy'}],
+      [/[^`]+/, 'string.quoted.filter.malloy'],
+      [/[`]/, 'string.quoted.filter.malloy'],
+    ],
+    string_quoted_raw_single_malloy_end: [
+      [/'/, {next: '@pop', token: 'string.quoted.raw.single.malloy'}],
+      [/[^']+/, 'string.quoted.raw.single.malloy'],
+      [/[']/, 'string.quoted.raw.single.malloy'],
+    ],
+    string_quoted_raw_double_malloy_end: [
+      [/"/, {next: '@pop', token: 'string.quoted.raw.double.malloy'}],
+      [/[^"]+/, 'string.quoted.raw.double.malloy'],
+      [/["]/, 'string.quoted.raw.double.malloy'],
+    ],
+    string_regexp_malloy_end: [
+      [/'/, {next: '@pop', token: 'string.regexp.malloy'}],
       {include: '@regex_escapes'},
-      [/[^'\\]+/, 'string.regexp'],
-      [/['\\]/, 'string.regexp'],
+      [/[^'\\]+/, 'string.regexp.malloy'],
+      [/['\\]/, 'string.regexp.malloy'],
     ],
     regex_escapes: [[/\\./, 'constant.character.escape']],
+    string_quoted_triple_malloy_end: [
+      [/"""/, {next: '@pop', token: 'string.quoted'}],
+      [/[^"]+/, 'string.quoted.triple.malloy'],
+      [/["]/, 'string.quoted.triple.malloy'],
+    ],
+    string_quoted_single_malloy_end: [
+      [/'/, {next: '@pop', token: 'string.quoted'}],
+      {include: '@escapes'},
+      [/[^'\\]+/, 'string.quoted.single.malloy'],
+      [/['\\]/, 'string.quoted.single.malloy'],
+    ],
+    escapes: [[/\\(u[A-Fa-f0-9]{4}|.)/, 'constant.character.escape']],
+    string_quoted_double_malloy_end: [
+      [/"/, {next: '@pop', token: 'string.quoted'}],
+      {include: '@escapes'},
+      [/[^"\\]+/, 'string.quoted.double.malloy'],
+      [/["\\]/, 'string.quoted.double.malloy'],
+    ],
+    given: [[/\$[A-Za-z_][A-Za-z0-9_]*/, 'variable.parameter.malloy']],
+    percent: [[/[0-9]+%/, 'constant.numeric.percentage.malloy']],
     numbers: [
       [
         /(\b((0|[1-9][0-9]*)(E[+-]?[0-9]+|\.[0-9]*)?)|\.[0-9]+)/,
         'constant.numeric',
       ],
     ],
-    keywords: [
-      [/\bis\b/, 'keyword.control.is'],
-      [/\bon\b/, 'keyword.control.on'],
-      [/\bnot\b/, 'keyword.other.not'],
-      [/\bor\b/, 'keyword.other.or'],
-      [/\bdesc\b/, 'keyword.control.desc'],
-      [/\bby\b/, 'keyword.control.by'],
-      [/\band\b/, 'keyword.other.and'],
-      [/\basc\b/, 'keyword.control.asc'],
-      [/\bfor\b/, 'keyword.other.for'],
-      [/\belse\b/, 'keyword.other.else'],
-      [/\bto\b/, 'keyword.other.to'],
-      [/\bwhen\b/, 'keyword.other.when'],
-      [/\bpick\b/, 'keyword.other.pick'],
-      [/\bimport\b/, 'keyword.control.import'],
-      [/\binternal\b/, 'keyword.control.internal'],
-      [/\bpublic\b/, 'keyword.control.public'],
-      [/\bprivate\b/, 'keyword.control.private'],
-      [/\binclude\b/, 'keyword.control.include'],
-      [/\bas\b/, 'keyword.control.as'],
-      [/\bfrom\b/, 'keyword.control.from'],
-      [/\bexport\b/, 'keyword.control.export'],
-      [/\bcase\b/, 'keyword.control.case'],
-      [/\bthen\b/, 'keyword.control.then'],
-      [/\bend\b/, 'keyword.control.end'],
-      [/\bfilter\b/, 'keyword.control.filter'],
-      [/\bin\b/, 'keyword.other.in'],
-      [/\blike\b/, 'keyword.other.like'],
-      [/\binner\b/, 'keyword.other.inner'],
-      [/\bleft\b/, 'keyword.other.left'],
-      [/\bright\b/, 'keyword.other.right'],
-      [/\bfull\b/, 'keyword.other.full'],
-    ],
+    keywords: [[/\b(and|for|in|like|not|or|to)\b/, 'keyword.operator.malloy']],
     properties: [
-      [/\baccept\b/, 'keyword.control.accept'],
-      [/\bselect\b/, 'keyword.control.select'],
-      [/\bconnection\b/, 'keyword.control.connection'],
-      [/\brun\b/, 'keyword.control.run'],
-      [/\bextend\b/, 'keyword.control.extend'],
-      [/\brefine\b/, 'keyword.control.refine'],
-      [/\baggregate\b/, 'keyword.control.aggregate'],
-      [/\bsample\b/, 'keyword.control.sample'],
-      [/\bcalculate\b/, 'keyword.control.calculate'],
-      [/\btimezone\b/, 'keyword.control.timezone'],
-      [/\bdimension\b/, 'keyword.control.dimension'],
-      [/\bexcept\b/, 'keyword.control.except'],
-      [/\bsource\b/, 'keyword.control.source'],
-      [/\bgroup_by\b/, 'keyword.control.group_by'],
-      [/\bdrill\b/, 'keyword.control.drill'],
-      [/\bgrouped_by\b/, 'keyword.control.grouped_by'],
-      [/\bhaving\b/, 'keyword.control.having'],
-      [/\bindex\b/, 'keyword.control.index'],
-      [/\bjoin_one\b/, 'keyword.control.join_one'],
-      [/\bwith\b/, 'keyword.control.with'],
-      [/\bjoin_many\b/, 'keyword.control.join_many'],
-      [/\bjoin_cross\b/, 'keyword.control.join_cross'],
-      [/\blimit\b/, 'keyword.control.limit'],
-      [/\bmeasure\b/, 'keyword.control.measure'],
-      [/\bnest\b/, 'keyword.control.nest'],
-      [/\border_by\b/, 'keyword.control.order_by'],
-      [/\bpartition_by\b/, 'keyword.control.partition_by'],
-      [/\bprimary_key\b/, 'keyword.control.primary_key'],
-      [/\bproject\b/, 'keyword.control.project'],
-      [/\bquery\b/, 'keyword.control.query'],
-      [/\brename\b/, 'keyword.control.rename'],
-      [/\btop\b/, 'keyword.control.top'],
-      [/\bview\b/, 'keyword.control.view'],
-      [/\bwhere\b/, 'keyword.control.where'],
-      [/\bdeclare\b/, 'keyword.control.declare'],
-      [/\btype\b/, 'keyword.control.type'],
-      [/\bgiven\b/, 'keyword.control.given'],
+      [
+        /\b(accept|aggregate|calculate|calculation|connection|declare|dimension|drill|except|given|group_by|grouped_by|having|index|join_cross|join_many|join_one|limit|measure|nest|order_by|partition_by|primary_key|query|rename|run|sample|select|timezone|top|type|view|where)(?=:)/,
+        'keyword.control.malloy',
+      ],
+      [
+        /\b(as|asc|by|case|desc|distinct|else|end|export|extend|filter|from|full|has|import|include|inner|internal|is|left|on|pick|private|public|right|source|then|when|with)\b/,
+        'keyword.control.malloy',
+      ],
     ],
     functions: [
       [
-        /\b(count)(\s*\()(distinct)/,
-        ['entity.name.function', '', 'entity.name.function.modifier'],
+        /\b(all|avg|cast|compose|count|exclude|max|min|sum)(\s*\()/,
+        ['support.function.malloy', ''],
       ],
       [
-        /\b(ALL|AVG|CAST|COMPOSE|COUNT|EXCLUDE|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|UNGROUPED)(\s*\()/,
-        ['entity.name.function', ''],
+        /\b([a-zA-Z_][a-zA-Z_0-9]*)(!)(timestamp|number|string|boolean|date|json)?(\s*\()/,
+        ['entity.name.function.malloy', '', 'storage.type.malloy', ''],
       ],
-      [/\b([a-zA-Z_][a-zA-Z_0-9]*)(\s*\()/, ['entity.name.function', '']],
       [
-        /\b([a-zA-Z_][a-zA-Z_0-9]*)(!)(timestamp|number|string|boolean|date)?(\s*\()/,
-        ['entity.name.function', '', 'entity.name.type', ''],
+        /\b([a-zA-Z_][a-zA-Z_0-9]*)(\s*\()/,
+        ['entity.name.function.malloy', ''],
       ],
     ],
     datetimes: [
@@ -261,25 +422,24 @@ export const monarch: Monaco.IMonarchLanguage = {
     ],
     identifiers_quoted: [[/`[^`]*`/, 'variable.other.quoted']],
     types: [
-      [/\bstring\b/, 'entity.name.type.string'],
-      [/\bnumber\b/, 'entity.name.type.number'],
-      [/\bdate\b/, 'entity.name.type.date'],
-      [/\btimestamptz\b/, 'entity.name.type.timestamptz'],
-      [/\btimestamp\b/, 'entity.name.type.timestamp'],
-      [/\bboolean\b/, 'entity.name.type.boolean'],
+      [
+        /\b(boolean|date|json|number|string|timestamp|timestamptz)\b/,
+        'storage.type.malloy',
+      ],
     ],
     constants: [
-      [/\bnull\b/, 'constant.language.null'],
-      [/\btrue\b/, 'constant.language.true'],
-      [/\bfalse\b/, 'constant.language.false'],
+      [/\b(false|now|null|true)\b/, 'constant.language.malloy'],
+      [/\bthis\b/, 'variable.language.malloy'],
     ],
     timeframes: [
       [
         /\b((year|quarter|month|week|day|hour|minute|second)s?)\b/,
-        'keyword.other.timeframe',
+        'keyword.other.timeframe.malloy',
       ],
-      [/\b(day_of_year|day_of_month)\b/, 'keyword.other.timeframe'],
+      [/\b(day_of_year|day_of_month)\b/, 'keyword.other.timeframe.malloy'],
     ],
-    identifiers_unquoted: [[/\b[A-Za-z_][A-Za-z_0-9]*\b/, 'variable.other']],
+    identifiers_unquoted: [
+      [/\b[A-Za-z_][A-Za-z_0-9]*\b/, 'variable.other.malloy'],
+    ],
   },
 };
