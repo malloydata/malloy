@@ -65,10 +65,15 @@ export const commonTestInput = [
   ["/'regexp string /*-- \\escapes\\uFFFF \\'more\\"],
   ['"/* -- \\e\\uFFFF \\\'\\'],
   ["state ~ 'CA' | r'M.' | \"CO\" | /'O.'  -- end"],
-  ['run: duckdb.sql("""', '  SELECT 1', '""")'],
 ];
 
 export const monarchDivergentTestInput = [
+  // Embedded SQL diverges by engine: TextMate paints the region's
+  // meta.embedded.block.sql wrapper over the whole block (delimiters + body),
+  // while Monarch's nextEmbedded hands the body to the SQL language and can't
+  // carry the outer scope — so the region background can't match. Real SQL
+  // highlighting still works in both via the source.sql include.
+  ['run: duckdb.sql("""', '  SELECT 1', '""")'],
   ['#|', '  renderer=sparkline size=large', '|#', 'dimension: x is 1'],
   ['##|', '  model_tag=value', '|##'],
   [
