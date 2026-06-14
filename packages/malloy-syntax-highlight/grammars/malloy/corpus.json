@@ -1,0 +1,496 @@
+{
+  "description": "Authored grammar corpus — the shared contract between two tests. (1) The drift test in packages/malloy/src/lang/test/ tokenizes each `code` with the real MalloyLexer and asserts every `expect[].text` span maps to a token of the claimed `lexer` kind — catching 'the language moved'. (2) The hermetic grammar test in this package tokenizes each `code` with vscode-textmate and asserts every `expect[].text` span carries the claimed `scope`. `lexer` is verified ground truth (run scripts/oracle); `scope` is an authored design decision. Neither test is generated; this file is the spec.",
+  "scopeConventions": "Theme-portable TextMate scopes only — no borrowed .json/.ts suffixes. Themes key off scope prefixes (string, variable, constant, keyword, punctuation), so the trailing .malloy is specificity for our own theme rules, not a coloring dependency.",
+  "cases": [
+    {
+      "name": "plain single-quoted string",
+      "code": "dimension: a is 'plain'",
+      "expect": [
+        {
+          "text": "'plain'",
+          "lexer": "SQ_STRING",
+          "scope": "string.quoted.single.malloy"
+        }
+      ]
+    },
+    {
+      "name": "plain double-quoted string",
+      "code": "dimension: a is \"plain\"",
+      "expect": [
+        {
+          "text": "\"plain\"",
+          "lexer": "DQ_STRING",
+          "scope": "string.quoted.double.malloy"
+        }
+      ]
+    },
+    {
+      "name": "raw single-quoted string (s-prefix) — UNSUPPORTED today",
+      "code": "where: x = s'C:\\path'",
+      "expect": [
+        {
+          "text": "s'C:\\path'",
+          "lexer": "RAW_SQ",
+          "scope": "string.quoted.raw.single.malloy"
+        }
+      ]
+    },
+    {
+      "name": "raw double-quoted string (s-prefix) — UNSUPPORTED today",
+      "code": "where: x = s\"raw\"",
+      "expect": [
+        {
+          "text": "s\"raw\"",
+          "lexer": "RAW_DQ",
+          "scope": "string.quoted.raw.double.malloy"
+        }
+      ]
+    },
+    {
+      "name": "filter literal, single quote (f-prefix) — UNSUPPORTED today",
+      "code": "where: state ~ f'CA, NY'",
+      "expect": [
+        {
+          "text": "f'CA, NY'",
+          "lexer": "SQ_FILTER",
+          "scope": "string.quoted.filter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "filter literal, triple single quote (f-prefix) — UNSUPPORTED today",
+      "code": "where: ts ~ f'''after @2020'''",
+      "expect": [
+        {
+          "text": "f'''after @2020'''",
+          "lexer": "SQ3_FILTER",
+          "scope": "string.quoted.filter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "filter literal, double quote (f-prefix) — UNSUPPORTED today",
+      "code": "where: s ~ f\"foo\"",
+      "expect": [
+        {
+          "text": "f\"foo\"",
+          "lexer": "DQ_FILTER",
+          "scope": "string.quoted.filter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "filter literal, backtick (f-prefix) — UNSUPPORTED today",
+      "code": "where: s ~ f`bar`",
+      "expect": [
+        {
+          "text": "f`bar`",
+          "lexer": "BQ_FILTER",
+          "scope": "string.quoted.filter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "regex literal r'...' and /'...'",
+      "code": "where: state ~ r'C.' | /'N.'",
+      "expect": [
+        {
+          "text": "r'C.'",
+          "lexer": "HACKY_REGEX",
+          "scope": "string.regexp.malloy"
+        },
+        {
+          "text": "/'N.'",
+          "lexer": "HACKY_REGEX",
+          "scope": "string.regexp.malloy"
+        }
+      ]
+    },
+    {
+      "name": "given reference $name — UNSUPPORTED today",
+      "code": "where: y = $start_year",
+      "expect": [
+        {
+          "text": "$start_year",
+          "lexer": "GIVEN_REF",
+          "scope": "variable.parameter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "percent literal — UNSUPPORTED today",
+      "code": "sample: 50%",
+      "expect": [
+        {
+          "text": "50%",
+          "lexer": "PERCENT_LITERAL",
+          "scope": "constant.numeric.percentage.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: a \"\"\" string as an argument to connection.sql(...) IS SQL",
+      "note": "SQL-ness comes from the .sql() context, NOT the \"\"\" delimiter. The lexer cannot know this (it just sees SQL_BEGIN); the grammar must trigger SQL off the .sql( context.",
+      "code": "run: duckdb.sql(\"\"\"SELECT 1\"\"\")",
+      "expect": [
+        {
+          "text": "\"\"\"",
+          "lexer": "SQL_BEGIN",
+          "scope": "punctuation.definition.string.begin.sql.malloy"
+        },
+        {
+          "text": "SELECT",
+          "lexer": "SQL_END",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: a SHORT string in connection.sql(...) is ALSO SQL",
+      "note": "Lexer sees only SQ_STRING (a plain string) — false negative. Any string in .sql() is SQL; only the .sql() context tells you so.",
+      "code": "run: duckdb.sql('SELECT 1')",
+      "expect": [
+        {
+          "text": "'SELECT 1'",
+          "lexer": "SQ_STRING",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
+      "name": "bare \"\"\" is a MULTI-LINE STRING, not SQL",
+      "note": "Lexer fires SQL_BEGIN/SQL_END here too — false positive. Outside .sql(), \"\"\" is just a multi-line string literal. lexer != scope: the drift test checks the boundary, the scope is authored from parser semantics.",
+      "code": "dimension: doc is \"\"\"line one\nline two\"\"\"",
+      "expect": [
+        {
+          "text": "\"\"\"",
+          "lexer": "SQL_BEGIN",
+          "scope": "string.quoted.triple.malloy"
+        },
+        {
+          "text": "line one",
+          "lexer": "SQL_END",
+          "scope": "string.quoted.triple.malloy"
+        }
+      ]
+    },
+    {
+      "name": "interpolation %{...} INSIDE a .sql() block — valid; closes on plain } (today's }%? end pattern is wrong)",
+      "code": "run: duckdb.sql(\"\"\"SELECT %{ x } FROM t\"\"\")",
+      "expect": [
+        {
+          "text": "%{",
+          "lexer": "OPEN_CODE",
+          "scope": "punctuation.section.embedded.begin.malloy"
+        },
+        {"text": "x", "lexer": "IDENTIFIER", "scope": "variable.other.malloy"},
+        {
+          "text": "}",
+          "lexer": "CCURLY",
+          "scope": "punctuation.section.embedded.end.malloy"
+        }
+      ]
+    },
+    {
+      "name": "%{...} inside a BARE \"\"\" string is NOT an interpolation — plain string text",
+      "note": "Compiler raises illegal-query-interpolation-outside-sql-block. The lexer still emits OPEN_CODE/CCURLY (blind to context); the highlighter must keep the whole span as string and NOT treat %{ } as an embedded section. This is the case TextMate gets right by giving the bare-\"\"\" rule no interpolation pattern.",
+      "code": "dimension: bad is \"\"\"x %{ y } z\"\"\"",
+      "expect": [
+        {
+          "text": "%{",
+          "lexer": "OPEN_CODE",
+          "scope": "string.quoted.triple.malloy"
+        },
+        {
+          "text": " z",
+          "lexer": "SQL_END",
+          "scope": "string.quoted.triple.malloy"
+        }
+      ]
+    },
+    {
+      "name": "annotation: bare object tag",
+      "note": "The lexer makes the whole line one ANNOTATION token — tag CONTENT is not sub-lexed (the tag parser does that). So drift assertions on tag parts all map to ANNOTATION; the grammar is what sub-divides into marker / tag-name / value.",
+      "code": "# bar_chart",
+      "expect": [
+        {
+          "text": "#",
+          "lexer": "ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "bar_chart",
+          "lexer": "ANNOTATION",
+          "scope": "entity.name.tag.malloy"
+        }
+      ]
+    },
+    {
+      "name": "annotation: key=value (bare value shares the tag-name scope in v1)",
+      "code": "# size=large",
+      "expect": [
+        {
+          "text": "size",
+          "lexer": "ANNOTATION",
+          "scope": "entity.name.tag.malloy"
+        },
+        {
+          "text": "=",
+          "lexer": "ANNOTATION",
+          "scope": "keyword.operator.assignment.malloy"
+        },
+        {
+          "text": "large",
+          "lexer": "ANNOTATION",
+          "scope": "entity.name.tag.malloy"
+        }
+      ]
+    },
+    {
+      "name": "annotation: negated tag",
+      "code": "# -hidden",
+      "expect": [
+        {
+          "text": "-",
+          "lexer": "ANNOTATION",
+          "scope": "keyword.operator.negation.malloy"
+        },
+        {
+          "text": "hidden",
+          "lexer": "ANNOTATION",
+          "scope": "entity.name.tag.malloy"
+        }
+      ]
+    },
+    {
+      "name": "annotation: quoted value is a string",
+      "code": "# title=\"Hi There\"",
+      "expect": [
+        {
+          "text": "title",
+          "lexer": "ANNOTATION",
+          "scope": "entity.name.tag.malloy"
+        },
+        {
+          "text": "\"Hi There\"",
+          "lexer": "ANNOTATION",
+          "scope": "string.quoted.double.malloy"
+        }
+      ]
+    },
+    {
+      "name": "model annotation ##",
+      "code": "## dialect=duckdb",
+      "expect": [
+        {
+          "text": "##",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "dialect",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "entity.name.tag.malloy"
+        }
+      ]
+    },
+    {
+      "name": "##internal (no space) — parsePrefix routes to a malformed bare-word route; highlighter still colors content as a tag (it does not diagnose)",
+      "code": "##internal",
+      "expect": [
+        {
+          "text": "##",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "internal",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "entity.name.tag.malloy"
+        }
+      ]
+    },
+    {
+      "name": "block object annotation #| ... |# (column-matched close)",
+      "note": "Lexer emits BLOCK_ANNOTATION_BEGIN / _TEXT / _END; the column match is approximated in TextMate by a leading-whitespace backreference. v1 applies tag-content to block bodies, so prose used as a comment is colored as tags — flagged as a possible future muting decision.",
+      "code": "#|\n  size=large\n|#",
+      "expect": [
+        {
+          "text": "#|",
+          "lexer": "BLOCK_ANNOTATION_BEGIN",
+          "scope": "punctuation.definition.annotation.begin.malloy"
+        },
+        {
+          "text": "size",
+          "lexer": "BLOCK_ANNOTATION_TEXT",
+          "scope": "entity.name.tag.malloy"
+        },
+        {
+          "text": "|#",
+          "lexer": "BLOCK_ANNOTATION_END",
+          "scope": "punctuation.definition.annotation.end.malloy"
+        }
+      ]
+    },
+    {
+      "name": "block model annotation ##| ... |##",
+      "code": "##|\n  note=x\n|##",
+      "expect": [
+        {
+          "text": "##|",
+          "lexer": "DOC_BLOCK_ANNOTATION_BEGIN",
+          "scope": "punctuation.definition.annotation.begin.malloy"
+        },
+        {
+          "text": "|##",
+          "lexer": "BLOCK_ANNOTATION_END",
+          "scope": "punctuation.definition.annotation.end.malloy"
+        }
+      ]
+    },
+    {
+      "name": "documentation route #\" — NOT a tag, styled like documentation",
+      "note": "Per docs.malloydata.dev/documentation/language/tags, #\" is the Explorer-description route; content is markdown/prose, not tag property-language. Lexer still emits one ANNOTATION token (the route is a tag-parser concern); the grammar distinguishes #\" from # to style content as documentation, NOT entity.name.tag. Word 'tag' chosen in the text to prove it is NOT colored as a tag.",
+      "code": "#\" This is a tag-free documentation line",
+      "expect": [
+        {
+          "text": "#\"",
+          "lexer": "ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "documentation",
+          "lexer": "ANNOTATION",
+          "scope": "comment.line.documentation.malloy"
+        }
+      ]
+    },
+    {
+      "name": "model documentation route ##\"",
+      "code": "##\" model-level documentation",
+      "expect": [
+        {
+          "text": "##\"",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "documentation",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "comment.line.documentation.malloy"
+        }
+      ]
+    },
+    {
+      "name": "bracketed app route #(name) — content is app-defined, styled as documentation",
+      "note": "parsePrefix routes #(viz) to the opaque app route 'viz' (brackets stripped, no malformation). Content format is app-defined (JSON/markdown/...), so v1 styles it as documentation, not tags. Word 'config' proves it is not tag-colored.",
+      "code": "#(viz) renderer config goes here",
+      "expect": [
+        {
+          "text": "#(viz)",
+          "lexer": "ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "config",
+          "lexer": "ANNOTATION",
+          "scope": "comment.line.documentation.malloy"
+        }
+      ]
+    },
+    {
+      "name": "block with app route #|(name) … |# — routes apply to blocks too",
+      "note": "The block | is part of the sigil; the route follows it. A bracketed route makes the whole block documentation, not tags — even though the empty-route #| block above is tags. This is the case that proves block forms are routed.",
+      "code": "#|(forYourConsideration)\n  this is not a tag\n|#",
+      "expect": [
+        {
+          "text": "#|(forYourConsideration)",
+          "lexer": "BLOCK_ANNOTATION_BEGIN",
+          "scope": "punctuation.definition.annotation.begin.malloy"
+        },
+        {
+          "text": "not",
+          "lexer": "BLOCK_ANNOTATION_TEXT",
+          "scope": "comment.block.documentation.malloy"
+        },
+        {
+          "text": "|#",
+          "lexer": "BLOCK_ANNOTATION_END",
+          "scope": "punctuation.definition.annotation.end.malloy"
+        }
+      ]
+    },
+    {
+      "name": "keyword coverage: json type",
+      "note": "Newly added keywords (json/this/condition/has/virtual/calculation) were uncolored before. Scopes match each section's existing convention (no .malloy suffix — that blanket rename is deferred).",
+      "code": "dimension: j is x::json",
+      "expect": [
+        {"text": "json", "lexer": "JSON", "scope": "storage.type.malloy"}
+      ]
+    },
+    {
+      "name": "keyword coverage: this reference",
+      "code": "this",
+      "expect": [
+        {"text": "this", "lexer": "THIS", "scope": "variable.language.malloy"}
+      ]
+    },
+    {
+      "name": "keyword coverage: calculation:",
+      "code": "calculation: c is sum(x)",
+      "expect": [
+        {
+          "text": "calculation",
+          "lexer": "CALCULATION",
+          "scope": "keyword.control.malloy"
+        }
+      ]
+    },
+    {
+      "name": "keyword coverage: virtual",
+      "code": "virtual",
+      "expect": [
+        {
+          "text": "virtual",
+          "lexer": "VIRTUAL",
+          "scope": "keyword.control.malloy"
+        }
+      ]
+    },
+    {
+      "name": "keyword coverage: condition",
+      "code": "condition",
+      "expect": [
+        {
+          "text": "condition",
+          "lexer": "CONDITION",
+          "scope": "keyword.control.malloy"
+        }
+      ]
+    },
+    {
+      "name": "keyword coverage: has",
+      "code": "has",
+      "expect": [
+        {"text": "has", "lexer": "HAS", "scope": "keyword.control.malloy"}
+      ]
+    },
+    {
+      "name": "colon-keyword in field position is NOT a keyword (the (?=:) win)",
+      "note": "group_by: carries its colon → keyword. The bare `query` after it is a field reference — the lexer emits IDENTIFIER, not QUERY (which requires a colon) — so it must be a variable, not a keyword. This is exactly the 'bad thing' a per-word match caused; the (?=:) lookahead fixes it while leaving the colon uncolored.",
+      "code": "group_by: query",
+      "expect": [
+        {
+          "text": "group_by",
+          "lexer": "GROUP_BY",
+          "scope": "keyword.control.malloy"
+        },
+        {
+          "text": "query",
+          "lexer": "IDENTIFIER",
+          "scope": "variable.other.malloy"
+        }
+      ]
+    }
+  ]
+}
