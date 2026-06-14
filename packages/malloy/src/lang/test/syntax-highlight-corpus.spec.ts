@@ -24,6 +24,7 @@ import {readFileSync} from 'fs';
 import * as path from 'path';
 import {makeMalloyParser} from '../run-malloy-parser';
 import {parsePrefix} from '../annotation-prefix';
+import {MalloyLexer} from '../lib/Malloy/MalloyLexer';
 
 interface CorpusExpectation {
   text: string;
@@ -52,11 +53,12 @@ const corpus: Corpus = JSON.parse(readFileSync(corpusPath, 'utf8'));
 function lexerTokenNameAt(code: string, at: number): string | undefined {
   const {tokenStream} = makeMalloyParser(code);
   tokenStream.fill();
-  const vocab = tokenStream.tokenSource.vocabulary;
   for (const token of tokenStream.getTokens()) {
     if (token.type === -1) continue; // EOF
     if (token.startIndex <= at && at <= token.stopIndex) {
-      return vocab.getSymbolicName(token.type) ?? `#${token.type}`;
+      return (
+        MalloyLexer.VOCABULARY.getSymbolicName(token.type) ?? `#${token.type}`
+      );
     }
   }
   return undefined;
