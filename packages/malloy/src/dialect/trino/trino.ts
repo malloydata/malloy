@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,p
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {indent} from '../../model/utils';
@@ -35,6 +17,7 @@ import type {
   RecordLiteralNode,
 } from '../../model/malloy_types';
 import {
+  activeName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -139,15 +122,30 @@ export class TrinoDialect extends PostgresBase {
   supportsCountApprox = true;
   supportsHyperLogLog = true;
 
-  quoteTablePath(tablePath: string): string {
-    // Quote with double quotes if contains dangerous characters
-    if (tablePath.match(/[;-]/)) {
-      return tablePath
-        .split('.')
-        .map(part => `"${part}"`)
-        .join('.');
+  // Trino bare identifier is strict ANSI, matching the Dialect default.
+
+  // Trino/Presto have no E'...' escape string, so encode a newline-bearing
+  // literal as U&'...'. Inside it the quote doubles (''), the backslash
+  // escape-introducer doubles (\\), and a control char becomes \XXXX.
+  sqlLiteralString(literal: string): string {
+    if (!literal.includes('\n')) {
+      return super.sqlLiteralString(literal);
     }
-    return tablePath;
+    const body = literal.replace(/['\\\n\r\t]/g, ch => {
+      switch (ch) {
+        case "'":
+          return "''";
+        case '\\':
+          return '\\\\';
+        case '\n':
+          return '\\000A';
+        case '\r':
+          return '\\000D';
+        default: // '\t'
+          return '\\0009';
+      }
+    });
+    return `U&'${body}'`;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -275,7 +273,7 @@ export class TrinoDialect extends PostgresBase {
     if (childName === '__row_id') {
       return `__row_id_from_${parentAlias}`;
     }
-    return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
+    return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
   }
 
   sqlUnnestPipelineHead(
@@ -594,14 +592,6 @@ ${indent(sql)}
     return tableSQL;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -631,7 +621,7 @@ ${indent(sql)}
         for (const f of malloyType.fields) {
           if (isAtomic(f)) {
             typeSpec.push(
-              `${this.sqlMaybeQuoteIdentifier(
+              `${this.sqlQuoteIdentifier(
                 f.name
               )} ${this.malloyTypeToSQLType(f)}`
             );
@@ -647,7 +637,7 @@ ${indent(sql)}
           for (const f of malloyType.fields) {
             if (isAtomic(f)) {
               typeSpec.push(
-                `${this.sqlMaybeQuoteIdentifier(
+                `${this.sqlQuoteIdentifier(
                   f.name
                 )} ${this.malloyTypeToSQLType(f)}`
               );
@@ -761,12 +751,12 @@ ${indent(sql)}
     const rowTypes: string[] = [];
     for (const f of lit.typeDef.fields) {
       if (isAtomic(f)) {
-        const name = f.as ?? f.name;
+        const name = activeName(f);
         rowVals.push(
           safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal'
         );
         const elType = this.malloyTypeToSQLType(f);
-        rowTypes.push(`${this.sqlMaybeQuoteIdentifier(name)} ${elType}`);
+        rowTypes.push(`${this.sqlQuoteIdentifier(name)} ${elType}`);
       }
     }
     return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;

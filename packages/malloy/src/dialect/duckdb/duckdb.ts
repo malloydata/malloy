@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -55,6 +37,8 @@ import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 import type {TinyToken} from '../tiny_parser';
 import {TinyParseError, TinyParser} from '../tiny_parser';
+import type {ValidateTablePathResult} from '../table-path';
+import {validateDuckDBTablePath} from './table-path-parser';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
@@ -113,9 +97,12 @@ export class DuckDBDialect extends PostgresBase {
     return `__udf${Math.floor(Math.random() * 100000)}`;
   }
 
-  quoteTablePath(tableName: string): string {
-    // Quote if contains special chars that could be SQL injection or need quoting
-    return tableName.match(/[/*:;-]/) ? `'${tableName}'` : tableName;
+  // DuckDB's table-path grammar is too rich for the shared ANSI parser
+  // (it has file-path and explicit-single-quoted-literal branches in
+  // addition to dotted identifier paths). See
+  // `duckdb/table-path-parser.ts` for the grammar.
+  override sqlValidateTableName(input: string): ValidateTablePathResult {
+    return validateDuckDBTablePath(input);
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -238,7 +225,7 @@ export class DuckDBDialect extends PostgresBase {
     } else if (parentType === 'array[scalar]') {
       return parentAlias;
     } else {
-      return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
+      return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
     }
   }
 
@@ -281,7 +268,7 @@ export class DuckDBDialect extends PostgresBase {
       }
     }
     return `SELECT LIST(STRUCT_PACK(${dialectFieldList
-      .map(d => this.sqlMaybeQuoteIdentifier(d.sqlOutputName))
+      .map(d => this.sqlQuoteIdentifier(d.sqlOutputName))
       .join(',')})${o}) FROM ${lastStageName}\n`;
   }
 
@@ -354,14 +341,6 @@ export class DuckDBDialect extends PostgresBase {
     return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -390,7 +369,7 @@ export class DuckDBDialect extends PostgresBase {
       for (const f of malloyType.fields) {
         if (isAtomic(f)) {
           typeSpec.push(
-            `${this.sqlMaybeQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
+            `${this.sqlQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
           );
         }
       }
@@ -401,7 +380,7 @@ export class DuckDBDialect extends PostgresBase {
         for (const f of malloyType.fields) {
           if (isAtomic(f)) {
             typeSpec.push(
-              `${this.sqlMaybeQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
+              `${this.sqlQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
             );
           }
         }
@@ -503,7 +482,7 @@ export class DuckDBDialect extends PostgresBase {
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const pairs = Object.entries(lit.kids).map(
       ([propName, propVal]) =>
-        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
+        `${this.sqlQuoteIdentifier(propName)}:${propVal.sql}`
     );
     return '{' + pairs.join(',') + '}';
   }

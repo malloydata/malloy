@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {Expr} from '../../model/malloy_types';
@@ -92,6 +90,9 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
       return `{${subExpr(e.kids.e)} ${e.not ? 'not in' : 'in'} {${e.kids.oneOf
         .map(o => `${subExpr(o)}`)
         .join(',')}}}`;
+    }
+    case 'inGiven': {
+      return `{${subExpr(e.e)} ${e.not ? 'not in' : 'in'} $${e.givenRef.refName}}`;
     }
     case 'genericSQLExpr': {
       let sql = '';

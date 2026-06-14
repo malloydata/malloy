@@ -66,8 +66,9 @@ These are the actual compiler internals that do the work. Not a public API.
 
 ### MalloyTranslator (`src/lang/`)
 - Parses Malloy source text into IR types (`ModelDef`, `Query`, `SourceDef`, etc.)
-- Handles imports, schema fetching requests, iterative compilation
-- Returns `translator.translate()` results with either final `ModelDef` or `needs` for more info
+- Runs as a sequence of named steps (`ParseStep` → `ImportsAndTablesStep` → `ASTStep` → `TranslateStep`, plus IDE-facing steps); synchronous, so async fetches happen through a `translate()` ↔ `update(ParseUpdate)` pause-and-resume protocol
+- `translate()` returns either the final `ModelDef`, a `DataRequestResponse` listing `urls` / `tables` / `compileSQL` / `connectionDialects` it needs, or errors
+- See [`../lang/CONTEXT.md`](../lang/CONTEXT.md) for the step machinery, the needs protocol, and the AST integration entry points (`DocStatement.execute`, `ExpressionDef.getExpression`)
 
 ### QueryModel (`src/model/query_model_impl.ts`)
 - Takes a compiled `ModelDef` and compiles queries to SQL
@@ -127,6 +128,30 @@ For the configuration pipeline internals (three states, section compilers, overl
 | `PreparedResult` | Holds generated SQL + schema. Ready to execute. |
 | `PersistSource` | Wraps a persistable source definition. Provides SQL compilation for persistent sources. |
 | `Result` | Query result with data + schema + metadata. |
+
+### Reading annotations
+
+Every class above implements `Taggable` and exposes annotations through an
+`annotations` view (`packages/malloy/src/api/foundation/annotation.ts`):
+
+```ts
+model.annotations.parseAsTag()           // empty route — renderer tags
+field.annotations.parseAsTag('docs')     // route `docs`, parsed as MOTLY
+field.annotations.texts('!')             // raw strings on the `!` route
+field.annotations.forRoute('vite')       // text + source offsets, BYO parser
+```
+
+`.annotations` sees both single-line and multi-line annotations and routes
+by the prefix grammar in
+[`src/lang/annotation-prefix.ts`](../lang/annotation-prefix.ts). The legacy
+`tagParse({prefix: RegExp})` and `getTaglines(RegExp)` methods are
+`@deprecated` and cannot see multi-line annotations — migrate to the view.
+
+For callers that hold a flat `Malloy.Annotation[]` (the stable wire shape
+from `@malloydata/malloy-interfaces`) rather than a Foundation entity, the
+same route grammar is exposed through free helpers in
+[`api/annotation-utils.ts`](./annotation-utils.ts):
+`routeOf` / `payloadOf` / `annotationsForRoute` / `tagFromAnnotations`.
 
 ### Flow: Load Model → Get SQL for Named Query
 
@@ -216,13 +241,35 @@ Explicit `buildManifest` always wins over the auto-read.
 
 `MalloyConfig` is the standard entry point for both the CLI (`malloydata/malloy-cli`) and the VS Code extension.
 
+### Restricted-mode compilation
+
+`ModelMaterializer.loadRestrictedQuery(text: string): QueryMaterializer` compiles `text` against the materialized trusted model with the translator's `restrictedMode` flag set. Forbidden constructs in `text` (`import`, `given:`, `##!`, `connection.table`, `connection.sql`, `name!type`, and the `sql_*` raw-SQL function family) are rejected at translate time and surface as `MalloyError` problems tagged `errorTag: 'restricted-mode'`.
+
+The signature deliberately takes a string, not a URL: restricted text arrives from an untrusted caller as bytes the host already has in hand, so there is no host-side trust mechanism for fetching it. The method exists only on `ModelMaterializer` for the same reason — a restricted compile is meaningful only as part of the trusted-then-restricted pattern.
+
+Two-layer enforcement, both in `packages/malloy/src/lang/`:
+- **AST-level rejection** at each forbidden construct's integration method (`ImportStatement.execute`, `DefineGivens.executeList`, `ModelAnnotation.execute`, `TableMethodSource.getTableInfo`, `SQLSource.getSourceDef`, `ExprFunc.getExpression` — both for `isRaw` and for calls to the `sql_*` family). Each produces the user-visible diagnostic with the offending source text quoted.
+- **Zone lock** on the four needs-bearing zones (`importZone`, `schemaZone`, `sqlQueryZone`, `connectionDialectZone`) at the top of `MalloyTranslator.translate()`. After the lock, `reference()`/`define()`/`updateFrom()` are silent no-ops, so the translator is structurally unable to ask the host for outward resources regardless of whether each AST-level rejection fires.
+
+API-level documentation lives in the JSDoc on `ModelMaterializer.loadRestrictedQuery`.
+
+### Non-throwing validation
+
+`QueryMaterializer.validate(options?)` and `ModelMaterializer.validate()` return `Promise<LogMessage[]>` — empty array means clean compile, otherwise the array carries structured problems (`code`, `severity`, optional `at: DocumentLocation`). The query-level method surfaces both translator-time errors (possibly several) and SQL-compile errors (at most one — the compiler is fail-fast). The model-level method surfaces only translator-time errors; SQL-compile is per-query.
+
+`getPreparedResult()` / `getSQL()` / `run()` still throw `MalloyError` on failure; the thrown `.problems` is the same array. A `validate()` followed by a no-options consumer reuses one cached compile via `QueryMaterializer._compileAttempt`.
+
+SQL-compile errors that are user-actionable throw `MalloyCompileError` (`packages/malloy/src/model/malloy_compile_error.ts`) at the throw site, carrying `{message, code, at?}`. The materializer's `_compileAndCollect` helper translates it to a `LogMessage`. Invariant violations stay as bare `Error` and surface with `code: 'compiler-bug'`.
+
+API-level documentation lives in the JSDoc on the two `validate` methods.
+
 ---
 
 ## Layer 3: Core API
 
 **Location:** `packages/malloy/src/api/core.ts`
 
-The implementation layer that the "stable" APIs build on. Synchronous, stateless-ish (uses explicit state objects).
+The implementation layer that the Stateless / Sessioned / Asynchronous APIs build on. Synchronous, stateless-ish (uses explicit state objects).
 
 ### Key Functions
 
@@ -261,6 +308,19 @@ Core.statedCompileQuery(state)  [when model is ready]
 - Directly instantiates `IR.QueryModel` for SQL generation
 
 ---
+
+## Layer 4 — request-response APIs (experimental)
+
+Three sibling APIs share a request-response shape designed to be wire-friendly:
+consumers transact in `Malloy.*` types from `@malloydata/malloy-interfaces`,
+not in Foundation class instances. They all sit on the Core layer above.
+
+These are **experimental.** Their surface, error semantics, and feature
+coverage are still settling — see "The Fundamental Problem" section below
+for the load-bearing limitation. **Foundation is the production surface
+today;** the trio is appropriate for use cases that can't hold class
+instances (network services, multi-language hosts, REST/serverless) and are
+willing to live with the rough edges.
 
 ## Layer 4a: Stateless API
 
@@ -347,7 +407,7 @@ export async function compileModel(request, fetchers): Promise<Malloy.CompileMod
 ### Characteristics
 - Async functions
 - Requires `fetchers` object with `connections` and `urls` readers
-- Most "complete" of the stable APIs - handles iteration internally
+- Most "complete" of the request-response APIs — handles iteration internally
 - Designed for: Node.js environments with database access
 
 ---
@@ -367,9 +427,9 @@ export async function compileModel(request, fetchers): Promise<Malloy.CompileMod
 
 ---
 
-## The Fundamental Problem with Stable APIs
+## The Fundamental Problem with the request-response APIs
 
-The stable APIs (stateless, sessioned, async) were designed for a web client that would:
+The Stateless / Sessioned / Asynchronous trio was designed for a web client that would:
 1. Fetch a model
 2. Let user modify a query (as API.Query object)
 3. Convert API.Query → Malloy text → recompile → get SQL
@@ -396,5 +456,5 @@ The Foundation API doesn't have this problem because `PreparedQuery` holds the a
 
 1. **For production use today:** Use the Foundation API (`api/foundation/`)
 2. **For network services:** Async API is most practical (handles the loop)
-3. **For stable API improvements:** Need direct API.Query → IR.QueryQuery path
-4. **For new features:** Experiment in Foundation API first, then figure out stable exposure
+3. **For request-response API improvements:** Need direct API.Query → IR.QueryQuery path
+4. **For new features:** Experiment in Foundation API first, then figure out wire-shape exposure

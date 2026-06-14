@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -57,6 +39,7 @@ import {
   toAsyncGenerator,
   sqlKey,
   makeDigest,
+  decodeDottedTablePath,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -370,17 +353,28 @@ export class BigQueryConnection
     };
   }
 
-  private normalizeTablePath(tablePath: string): string {
-    if (tablePath.split('.').length === 2) {
-      return `${this.projectId}.${tablePath}`;
-    } else {
-      return tablePath;
+  // The whole-backtick form `` `proj.dataset.table` `` parses as one
+  // quoted segment, but the metadata API still wants the parts
+  // separately — split its decoded body on `.` to recover them.
+  private decodeTablePathSegments(tablePath: string): string[] {
+    const result = decodeDottedTablePath(tablePath, {
+      quoteChar: '`',
+      escapeStyle: 'backslash',
+      bareIdentRegex: this.dialect.tablePathBareIdentRegex,
+      dialectName: 'BigQuery',
+    });
+    if (!result.ok) return [tablePath];
+    if (result.segments.length === 1 && result.segments[0].quoted) {
+      return result.segments[0].value.split('.');
     }
+    return result.segments.map(s => s.value);
   }
 
   public async getTableFieldSchema(tablePath: string): Promise<SchemaInfo> {
-    const segments = this.normalizeTablePath(tablePath).split('.');
-
+    let segments = this.decodeTablePathSegments(tablePath);
+    if (segments.length === 2) {
+      segments = [this.projectId, ...segments];
+    }
     if (segments.length !== 3) {
       throw new Error(
         `Improper table path: ${tablePath}. A table path requires 2 or 3 segments`
@@ -595,7 +589,10 @@ export class BigQueryConnection
     tableName: string,
     tablePath: string
   ): Promise<TableSourceDef | string> {
-    tablePath = this.normalizeTablePath(tablePath);
+    // Keep the canonical tablePath (which may be backtick-wrapped for
+    // wildcard tables) for downstream SQL emission. The metadata lookup
+    // wants the unwrapped form, which `getTableFieldSchema` handles via
+    // `normalizeTablePath`.
     try {
       const tableFieldSchema = await this.getTableFieldSchema(tablePath);
       const tableDef: TableSourceDef = {
@@ -769,9 +766,9 @@ export class BigQueryConnection
   }
 
   async fetchTableMetadata(tablePath: string): Promise<TableMetadata> {
-    const tablePathInfo = tablePath.split('.');
+    const [proj, dataset, table] = this.decodeTablePathSegments(tablePath);
     return {
-      url: `https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1s${tablePathInfo[0]}!2s${tablePathInfo[1]}!3s${tablePathInfo[2]}`,
+      url: `https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1s${proj}!2s${dataset}!3s${table}`,
     };
   }
 

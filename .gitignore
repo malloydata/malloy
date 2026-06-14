@@ -72,3 +72,11 @@ packages/malloy-tag/src/.antlr
 packages/malloy-tag/src/lib
 
 @flowtyped
+
+# Copied into each published workspace at publish time so the license text
+# ships in the tarball; never committed. See .github/workflows/release.yaml.
+# Covers every workspace in package.json's workspaces.packages, including the
+# published test/ (@malloydata/malloy-tests) and profiler/ workspaces.
+packages/*/LICENSE
+test/LICENSE
+profiler/LICENSE

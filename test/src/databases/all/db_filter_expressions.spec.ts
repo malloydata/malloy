@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
@@ -1116,6 +1114,39 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           }
         `).toMatchResult(exactTimeModel, {n: 'exact'});
       });
+      test.when(tzTesting && db.dialect.hasTimestamptz)(
+        'date filter on timestamptz column respects query time zone',
+        async () => {
+          // Tokyo May 23 = 2026-05-22 15:00 UTC to 2026-05-23 15:00 UTC.
+          // Build a source whose `t` column is timestamptz, and confirm the
+          // f`2026-05-23` filter (in Tokyo) picks the right rows.
+          const tstzLit = (s: string): string => {
+            const node = Dialect.makeTimeLiteralNode(
+              db.dialect,
+              s,
+              'UTC',
+              undefined,
+              'timestamp'
+            );
+            return db.dialect.exprToSQL({}, node) || '';
+          };
+          const events = wrapTestModel(
+            db,
+            `query: events is ${dbName}.sql("""
+              SELECT ${tstzLit('2026-05-22 14:00:00')} AS ${q`t`}, 'before' AS ${q`n`}
+              UNION ALL SELECT ${tstzLit('2026-05-22 16:00:00')}, 'first'
+              UNION ALL SELECT ${tstzLit('2026-05-23 14:59:59')}, 'last'
+              UNION ALL SELECT ${tstzLit('2026-05-23 15:00:00')}, 'post-range'
+            """) -> {
+              timezone: 'Asia/Tokyo'
+              where: t ~ f'2026-05-23'
+              select: t, n
+              order_by: n
+            }`
+          );
+          await expect('run: events').toMatchRows(events, inRange);
+        }
+      );
       test.when(tzTesting)(
         'month offsets cross DST boundary in query time zone',
         async () => {

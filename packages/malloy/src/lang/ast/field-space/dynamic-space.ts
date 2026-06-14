@@ -1,28 +1,10 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import * as model from '../../../model/malloy_types';
-import {mkSafeRecord} from '../../../model/malloy_types';
+import {activeName, mkSafeRecord} from '../../../model/malloy_types';
 import {nameFromDef} from '../../field-utils';
 import type {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
@@ -48,7 +30,7 @@ export abstract class DynamicSpace
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
   protected newAccessModifiers = new Map<string, model.AccessModifierLabel>();
-  protected newNotes = new Map<string, model.Annotation>();
+  protected newNotes = new Map<string, model.AnnotationsDef>();
 
   constructor(extending: SourceDef) {
     super({...extending}, extending.dialect, extending.connection);
@@ -152,7 +134,7 @@ export abstract class DynamicSpace
       // Add access modifiers at the end so views don't obey them
       for (const [name, access] of this.newAccessModifiers) {
         const index = this.sourceDef.fields.findIndex(
-          f => (f.as ?? f.name) === name
+          f => activeName(f) === name
         );
         if (index === -1) {
           throw new Error(`Can't find field '${name}' to set access modifier`);
@@ -170,7 +152,7 @@ export abstract class DynamicSpace
       // e.g. if a field had a compiler flag on it...
       for (const [name, note] of this.newNotes) {
         const index = this.sourceDef.fields.findIndex(
-          f => f.as ?? f.name === name
+          f => activeName(f) === name
         );
         if (index === -1) {
           throw new Error(`Can't find field '${name}' to set access modifier`);
@@ -178,9 +160,9 @@ export abstract class DynamicSpace
         const field = this.sourceDef.fields[index];
         this.sourceDef.fields[index] = {
           ...field,
-          annotation: {
+          annotations: {
             ...note,
-            inherits: field.annotation,
+            inherits: field.annotations,
           },
         };
       }

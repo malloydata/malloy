@@ -163,6 +163,12 @@ Cloud SQL warehouses (BigQuery, Snowflake, Databricks) can't read local files vi
 
 An ideal future state would be publishing the parquets to a well-known cloud storage location that all warehouses could read from, but the hosting/cost question is still open.
 
+## Authoring Malloy source from JavaScript
+
+When a test programmatically constructs Malloy source (e.g. injecting adversarial values for escape testing), be aware that Malloy has several string-literal forms with different escape rules. The `r'...'` and `/.../` regex forms — and all triple-quoted strings — are *raw*: backslash is preserved verbatim, no escape processing. Doubling backslashes on the JavaScript side will produce a different string than intended.
+
+The full table is in [`../packages/malloy/src/lang/CONTEXT.md`](../packages/malloy/src/lang/CONTEXT.md) under "String literal forms". `test/src/databases/all/escape.spec.ts` is a worked example.
+
 ## Important Notes
 
 - Cross-database tests are critical for verifying Malloy's dialect abstraction

@@ -1,27 +1,9 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {v5 as uuidv5} from 'uuid';
+import {v4 as uuidv4, v5 as uuidv5} from 'uuid';
 import {sha256} from '@noble/hashes/sha256';
 import {bytesToHex} from '@noble/hashes/utils';
 import type {
@@ -32,13 +14,14 @@ import type {
   GenericSQLExpr,
   GivenTypeDef,
   ModelDef,
+  ModelID,
   StructDef,
 } from './malloy_types';
 import {
   exprHasE,
   exprHasKids,
   fieldIsIntrinsic,
-  getIdentifier,
+  activeName,
   mkSafeRecord,
 } from './malloy_types';
 import type {DialectFieldList} from '../dialect';
@@ -291,9 +274,9 @@ export function getDialectFieldList(structDef: StructDef): DialectFieldList {
   for (const f of structDef.fields.filter(fieldIsIntrinsic)) {
     dialectFieldList.push({
       typeDef: f,
-      sqlExpression: getIdentifier(f),
-      rawName: getIdentifier(f),
-      sqlOutputName: getIdentifier(f),
+      sqlExpression: activeName(f),
+      rawName: activeName(f),
+      sqlOutputName: activeName(f),
     });
   }
   return dialectFieldList;
@@ -355,15 +338,30 @@ export class GenerateState {
 }
 
 /**
+ * Make a {@link ModelID} for a model. Pass the model's URL for a real model;
+ * omit it for a URL-less model to get a synthetic `"internal <uuid>"` id. The
+ * space makes the synthetic form an illegal URL so it can never collide with a
+ * real model URL.
+ */
+export function mkModelID(url?: string): ModelID {
+  return url ?? `internal ${uuidv4()}`;
+}
+
+/**
  * Create an empty ModelDef with the given name.
  * Use this factory to ensure all required fields are present.
  */
-export function mkModelDef(name: string): ModelDef {
+export function mkModelDef(
+  name: string,
+  modelID: ModelID = mkModelID()
+): ModelDef {
   return {
     name,
+    modelID,
     exports: [],
     contents: mkSafeRecord(),
     sourceRegistry: {},
+    modelAnnotations: {},
     queryList: [],
     dependencies: {},
   };

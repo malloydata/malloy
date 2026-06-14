@@ -1,14 +1,13 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
   InfoConnection as LegacyInfoConnection,
   Connection as LegacyConnection,
 } from '../connection';
+import {validateCanonicalTablePath} from '../connection/validate_table_path';
 import type {Result} from './foundation';
 import type {Expr} from '../model';
 import {type QueryData, type QueryRecord, type QueryValue} from '../model';
@@ -44,6 +43,11 @@ export function wrapLegacyInfoConnection(
       };
     },
     async fetchSchemaForTable(tableName: string) {
+      const invalid = validateCanonicalTablePath(
+        connection.dialectName,
+        tableName
+      );
+      if (invalid !== undefined) throw new Error(invalid);
       const key = `${connection.name}:${tableName}`;
       const result = await connection.fetchSchemaForTables(
         {[key]: tableName},

@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -32,7 +14,8 @@ import type {
   DependencyTree,
   DocumentRange,
 } from '../model/malloy_types';
-import {mkModelDef} from '../model/utils';
+import {mkModelDef, mkModelID} from '../model/utils';
+import {getModelAnnotations} from '../model/annotation_utils';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
 import type {
@@ -44,6 +27,7 @@ import type {
 import {BaseMessageLogger, makeLogMessage} from './parse-log';
 import type {FindReferencesData} from './parse-tree-walkers/find-external-references';
 import {findReferences} from './parse-tree-walkers/find-external-references';
+import {getDialect} from '../dialect';
 import type {ZoneData} from './zone';
 import {Zone} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
@@ -65,7 +49,6 @@ import type {
   ModelDataRequest,
   NeedURLData,
   TranslateResponse,
-  ModelAnnotationResponse,
   TablePathResponse,
 } from './translate-response';
 import {isNeedResponse} from './translate-response';
@@ -77,10 +60,9 @@ import {
 import type {Tag} from '@malloydata/malloy-tag';
 import {parseAnnotation} from '@malloydata/malloy-tag';
 import type {MalloyParseInfo} from './malloy-parse-info';
-import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import type {EventStream} from '../runtime_types';
-import {annotationToTaglines} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParserRuleContext} from 'antlr4ts';
 import {Timer} from '../timing';
@@ -216,6 +198,13 @@ class ImportsAndTablesStep implements TranslationStep {
       return parseReq;
     }
 
+    // Every reference this step would register — connection dialects,
+    // imports, table schemas — is for a construct that's forbidden in
+    // restricted code.
+    if (that.root.restrictedMode) {
+      return {timingInfo: parseReq.timingInfo};
+    }
+
     if (!this.parseReferences) {
       this.parseReferences = findReferences(
         that,
@@ -223,12 +212,9 @@ class ImportsAndTablesStep implements TranslationStep {
         parseReq.parse.root
       );
 
-      for (const ref in this.parseReferences.tables) {
-        that.root.schemaZone.reference(ref, {
-          url: that.sourceURL,
-          range: this.parseReferences.tables[ref].firstReference,
-        });
-      }
+      // Register connection dialects and imports immediately. Table
+      // references are deferred until dialects are resolved, because
+      // validating a table path requires knowing its dialect's grammar.
 
       for (const connName in this.parseReferences.connectionDialects) {
         that.root.connectionDialectZone.reference(connName, {
@@ -276,17 +262,47 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     let allMissing: DataRequestResponse = {};
+
+    // A path can only be canonicalized once its dialect is known; references
+    // whose dialect isn't resolved yet are skipped and re-scanned next round.
+    // Invalid paths are dropped here and re-reported by the AST step.
+    // tableRequests feeds the missing-table loop below.
+    const tableRequests: Record<
+      string,
+      {connectionName: string; tablePath: string}
+    > = {};
+    for (const rawKey in this.parseReferences.tables) {
+      const info = this.parseReferences.tables[rawKey];
+      const dialectName = that.root.connectionDialectZone.get(
+        info.connectionName
+      );
+      if (dialectName === undefined) continue;
+      const result = getDialect(dialectName).sqlValidateTableName(
+        info.tablePath
+      );
+      if (!result.ok) continue;
+      const key = `${info.connectionName}:${result.canonical}`;
+      tableRequests[key] = {
+        connectionName: info.connectionName,
+        tablePath: result.canonical,
+      };
+      that.root.schemaZone.reference(key, {
+        url: that.sourceURL,
+        range: info.firstReference,
+      });
+    }
+
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
       const tables = {};
       for (const key of missingTables) {
-        const info = this.parseReferences.tables[key];
-        tables[key] = {
-          connectionName: info.connectionName,
-          tablePath: info.tablePath,
-        };
+        const request = tableRequests[key];
+        if (request === undefined) continue;
+        tables[key] = request;
       }
-      allMissing = {tables};
+      if (Object.keys(tables).length > 0) {
+        allMissing = {tables};
+      }
     }
 
     const missingDialects = that.root.connectionDialectZone.getUndefined();
@@ -359,7 +375,8 @@ class ASTStep implements TranslationStep {
     const secondPass = new MalloyToAST(
       parse,
       that.root.logger,
-      that.compilerFlagSrc
+      that.compilerFlagSrc,
+      that.root.restrictedMode
     );
     const {ast: newAST, compilerFlagSrc, timingInfo} = secondPass.run();
     stepTimer.contribute([timingInfo]);
@@ -509,36 +526,6 @@ class HelpContextStep implements TranslationStep {
   }
 }
 
-class ModelAnnotationStep implements TranslationStep {
-  response?: ModelAnnotationResponse;
-  constructor(readonly parseStep: ParseStep) {}
-
-  step(
-    that: MalloyTranslation,
-    extendingModel?: ModelDef
-  ): ModelAnnotationResponse {
-    if (!this.response) {
-      const tryParse = this.parseStep.step(that);
-      if (!tryParse.parse || tryParse.final) {
-        return tryParse;
-      } else {
-        const modelAnnotation = walkForModelAnnotation(
-          that,
-          tryParse.parse.tokenStream,
-          tryParse.parse
-        );
-        this.response = {
-          modelAnnotation: {
-            ...modelAnnotation,
-            inherits: extendingModel?.annotation,
-          },
-        };
-      }
-    }
-    return this.response;
-  }
-}
-
 class TablePathInfoStep implements TranslationStep {
   response?: TablePathResponse;
   constructor(readonly parseStep: ParseStep) {}
@@ -585,12 +572,17 @@ class TranslateStep implements TranslationStep {
       };
     }
 
-    // begin with the compiler flags of the model we are extending
+    // Layer the extending model's compiler flags on top of whatever was
+    // there already. In production the array starts empty so push vs.
+    // overwrite produce the same result; the push lets constructor-time
+    // seeding (e.g. TestTranslator's compilerFlags option) survive.
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
-      that.compilerFlagSrc = annotationToTaglines(
-        extendingModel.annotation,
-        /^##! /
+      // Compiler flags from the extending base's `##` annotations. NOTE: `##!`
+      // flag semantics are still to be settled; this keeps the existing
+      // behavior (flags from the base model) green and is not the final design.
+      that.compilerFlagSrc.push(
+        ...new Annotations(getModelAnnotations(extendingModel)).texts('!')
       );
 
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
@@ -670,7 +662,6 @@ export abstract class MalloyTranslation {
   }
 
   readonly parseStep: ParseStep;
-  readonly modelAnnotationStep: ModelAnnotationStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
   readonly astStep: ASTStep;
   readonly metadataStep: MetadataStep;
@@ -687,7 +678,7 @@ export abstract class MalloyTranslation {
     public grammarRule = 'malloyDocument'
   ) {
     this.childTranslators = new Map<string, MalloyTranslation>();
-    this.modelDef = mkModelDef(sourceURL);
+    this.modelDef = mkModelDef(sourceURL, mkModelID(sourceURL));
     /**
      * This is sort of the makefile for the translation, all the steps
      * and the dependencies of the steps are declared here. Then when
@@ -696,7 +687,6 @@ export abstract class MalloyTranslation {
      * things will happen automatically.
      */
     this.parseStep = new ParseStep();
-    this.modelAnnotationStep = new ModelAnnotationStep(this.parseStep);
     this.metadataStep = new MetadataStep(this.parseStep);
     this.completionsStep = new CompletionsStep(this.parseStep);
     this.helpContextStep = new HelpContextStep(this.parseStep);
@@ -927,10 +917,6 @@ export abstract class MalloyTranslation {
     return this.metadataStep.step(this);
   }
 
-  modelAnnotation(extendingModel?: ModelDef): ModelAnnotationResponse {
-    return this.modelAnnotationStep.step(this, extendingModel);
-  }
-
   tablePathInfo(): TablePathResponse {
     return this.tablePathInfoStep.step(this);
   }
@@ -1027,7 +1013,8 @@ export class MalloyTranslator extends MalloyTranslation {
     rootURL: string,
     importURL: string | null = null,
     preload: ParseUpdate | null = null,
-    private readonly eventStream: EventStream | null = null
+    private readonly eventStream: EventStream | null = null,
+    readonly restrictedMode: boolean = false
   ) {
     super(rootURL, importURL);
     this.root = this;
@@ -1048,6 +1035,19 @@ export class MalloyTranslator extends MalloyTranslation {
     for (const url in dd.translations) {
       this.pretranslatedModels.set(url, dd.translations[url]);
     }
+  }
+
+  private lockZonesIfRestricted(): void {
+    if (!this.restrictedMode) return;
+    this.schemaZone.lock();
+    this.importZone.lock();
+    this.sqlQueryZone.lock();
+    this.connectionDialectZone.lock();
+  }
+
+  translate(extendingModel?: ModelDef): TranslateResponse {
+    this.lockZonesIfRestricted();
+    return super.translate(extendingModel);
   }
 
   logError<T extends MessageCode>(

@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -45,6 +27,7 @@ import type {
   AggregateUngrouping,
 } from '../../../model/malloy_types';
 import {
+  activeName,
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
@@ -60,6 +43,7 @@ import {
   TD,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
+import {typeDefToString} from '../../../model/utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
 import type {FieldReference} from '../query-items/field-references';
@@ -76,6 +60,18 @@ import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
 import {mergeRefSummaries} from '../../composite-source-utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
+
+// Built-in functions that take a string literal of user-supplied SQL
+// and emit it directly. Gated by experimental.sql_functions in plain
+// Malloy; rejected unconditionally in restricted queries because they
+// are a raw-SQL escape hatch by definition.
+const SQL_FUNCTION_NAMES = [
+  'sql_number',
+  'sql_string',
+  'sql_date',
+  'sql_timestamp',
+  'sql_boolean',
+];
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -103,6 +99,15 @@ export class ExprFunc extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
+    if (this.isRaw && this.isRestricted()) {
+      const typeStr = this.explicitType
+        ? typeDefToString(this.explicitType)
+        : '';
+      return this.loggedErrorExpr(
+        'restricted-construct-forbidden',
+        `\`${this.name}!${typeStr}(...)\` cannot be used in a restricted query — direct SQL function calls (\`!type(...)\`) are not permitted.`
+      );
+    }
     return this.getPropsExpression(fs);
   }
 
@@ -378,15 +383,13 @@ export class ExprFunc extends ExpressionDef {
       frag.partitionBy = partitionByFields;
     }
     const sqlFunctionFieldUsage: FieldUsage = [];
-    if (
-      [
-        'sql_number',
-        'sql_string',
-        'sql_date',
-        'sql_timestamp',
-        'sql_boolean',
-      ].includes(func.name)
-    ) {
+    if (SQL_FUNCTION_NAMES.includes(func.name)) {
+      if (this.isRestricted()) {
+        return this.loggedErrorExpr(
+          'restricted-construct-forbidden',
+          `\`${this.name}(...)\` cannot be used in a restricted query — the \`sql_*\` function family emits user-supplied SQL directly, which is not permitted.`
+        );
+      }
       if (!this.inExperiment('sql_functions', true)) {
         return this.loggedErrorExpr(
           'sql-functions-experiment-not-enabled',
@@ -428,7 +431,11 @@ export class ExprFunc extends ExpressionDef {
               );
             }
             if (result.found.refType === 'parameter') {
-              expr.push({node: 'parameter', path: part.path});
+              expr.push({
+                node: 'parameter',
+                path: part.path,
+                at: this.args[0].location,
+              });
             } else {
               sqlFunctionFieldUsage.push({
                 path: part.path,
@@ -723,10 +730,10 @@ function isDataTypeMatch(
     const genericsSet: GenericAssignment[] = [];
     const paramFieldsByName = new Map<string, FunctionParameterFieldDef>();
     for (const field of paramT.fields) {
-      paramFieldsByName.set(field.as ?? field.name, field);
+      paramFieldsByName.set(activeName(field), field);
     }
     for (const field of arg.fields) {
-      const match = paramFieldsByName.get(field.as ?? field.name);
+      const match = paramFieldsByName.get(activeName(field));
       if (match === undefined) {
         return {dataTypeMatch: false, genericsSet: []};
       }

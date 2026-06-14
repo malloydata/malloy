@@ -1,31 +1,14 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {FieldDef, StructDef} from '../../../model/malloy_types';
 import {
+  activeName,
   isJoined,
   type AccessModifierLabel,
-  type Annotation,
+  type AnnotationsDef,
   type DocumentLocation,
   type SourceDef,
 } from '../../../model/malloy_types';
@@ -164,7 +147,7 @@ export class RefinedSpace extends DynamicSpace {
     }
   }
 
-  addNotes(notes: Map<string, Annotation>): void {
+  addNotes(notes: Map<string, AnnotationsDef>): void {
     for (const [symbol, note] of notes) {
       this.newNotes.set(symbol, note);
     }
@@ -186,7 +169,7 @@ function editJoinsFromIncludeState(
   if (isJoin) {
     if (joinedState.fieldsToInclude) {
       fields = from.fields.filter(f =>
-        joinedState.fieldsToInclude?.has(f.as ?? f.name)
+        joinedState.fieldsToInclude?.has(activeName(f))
       );
     } else {
       fields = from.fields;
@@ -197,13 +180,13 @@ function editJoinsFromIncludeState(
   // const fields = from.fields;
   const updatedFields: FieldDef[] = [];
   for (const field of fields) {
-    const name = field.as ?? field.name;
+    const name = activeName(field);
     // TODO ensure you can't make it more permissive here...
     const accessModifier =
       joinedState.modifiers.get(name) ?? field.accessModifier;
     const notes = joinedState.notes.get(name);
     const rename = joinedState.renames.find(
-      r => r.name.nameString === (field.as ?? field.name)
+      r => r.name.nameString === activeName(field)
     );
     const editedField: FieldDef = isJoin
       ? {
@@ -211,20 +194,20 @@ function editJoinsFromIncludeState(
           as: rename ? rename.name.nameString : field.as,
           accessModifier:
             accessModifier === 'public' ? undefined : accessModifier,
-          annotation: notes
+          annotations: notes
             ? {
-                inherits: field.annotation,
+                inherits: field.annotations,
                 blockNotes: notes.blockNotes,
                 notes: notes.notes,
               }
-            : field.annotation,
+            : field.annotations,
         }
       : {...field};
     if (isJoined(editedField)) {
       updatedFields.push({
         ...editedField,
         fields: editJoinsFromIncludeState(
-          [...path, field.as ?? field.name],
+          [...path, activeName(field)],
           editedField,
           includeState
         ),

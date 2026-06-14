@@ -1,25 +1,7 @@
 /* eslint-disable no-console */
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {inspect} from 'util';
@@ -41,6 +23,7 @@ import type {
   UserTypeDef,
 } from '../../model/malloy_types';
 import {
+  activeName,
   isQuerySegment,
   isSourceDef,
   isUserTypeDef,
@@ -65,6 +48,7 @@ import type {
 } from '../parse-log';
 import type {EventStream} from '../../runtime_types';
 import {sqlKey} from '../../model/sql_block';
+import {mkModelDef} from '../../model/utils';
 
 export function pretty(thing: unknown): string {
   return inspect(thing, {breakLength: 100, depth: Infinity});
@@ -365,6 +349,23 @@ export class TestChildTranslator extends MalloyChildTranslator {
 }
 
 const testURI = 'internal://test/langtests/root.malloy';
+
+export interface TestTranslatorOptions {
+  rootRule?: string;
+  importBaseURL?: string | null;
+  eventStream?: EventStream | null;
+  internalModel?: ModelDef;
+  restrictedMode?: boolean;
+  /**
+   * Each entry is a compiler-flag tag fragment — the content that
+   * would follow `##! ` in a Malloy source annotation. Rendered to
+   * `##! <flag>\n` and pushed onto compilerFlagSrc before any
+   * TranslateStep seeding, so the flags are active during AST-build
+   * inExperiment() checks.
+   */
+  compilerFlags?: string[];
+}
+
 export class TestTranslator extends MalloyTranslator {
   allDialectsEnabled = true;
   testRoot?: TestRoot;
@@ -397,11 +398,7 @@ export class TestTranslator extends MalloyTranslator {
    */
 
   internalModel: ModelDef = {
-    name: testURI,
-    exports: [],
-    queryList: [],
-    sourceRegistry: {},
-    dependencies: {},
+    ...mkModelDef(testURI, testURI),
     contents: {
       _db_: {type: 'connection', name: '_db_'},
       _bq_: {type: 'connection', name: '_bq_'},
@@ -453,16 +450,19 @@ export class TestTranslator extends MalloyTranslator {
 
   constructor(
     readonly testSrc: string,
-    importBaseURL: string | null = null,
-    eventStream: EventStream | null = null,
-    rootRule = 'malloyDocument',
-    internalModel?: ModelDef
+    options: TestTranslatorOptions = {}
   ) {
-    super(testURI, importBaseURL, null, eventStream);
-    this.grammarRule = rootRule;
+    super(
+      testURI,
+      options.importBaseURL ?? null,
+      null,
+      options.eventStream ?? null,
+      options.restrictedMode ?? false
+    );
+    this.grammarRule = options.rootRule ?? 'malloyDocument';
     this.importZone.define(testURI, testSrc);
-    if (internalModel !== undefined) {
-      this.internalModel = internalModel;
+    if (options.internalModel !== undefined) {
+      this.internalModel = options.internalModel;
     }
     for (const actualSchema of mockSchema) {
       this.schemaZone.define(
@@ -472,6 +472,9 @@ export class TestTranslator extends MalloyTranslator {
     }
     this.connectionDialectZone.define('_db_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
+    for (const flag of options.compilerFlags ?? []) {
+      this.compilerFlagSrc.push(`##! ${flag}\n`);
+    }
   }
 
   translate(): TranslateResponse {
@@ -594,9 +597,10 @@ export class BetaExpression extends TestTranslator {
   constructor(
     src: string,
     model?: ModelDef,
-    readonly sourceName: string = 'ab'
+    readonly sourceName: string = 'ab',
+    options: Omit<TestTranslatorOptions, 'rootRule' | 'internalModel'> = {}
   ) {
-    super(src, null, null, 'debugExpr', model);
+    super(src, {...options, rootRule: 'debugExpr', internalModel: model});
   }
 
   private testFS() {
@@ -644,7 +648,7 @@ export function getModelQuery(modelDef: ModelDef, name: string): Query {
 
 export function getFieldDef(source: StructDef, name: string): FieldDef {
   for (const f of source.fields) {
-    if (f.as ?? f.name === name) {
+    if (activeName(f) === name) {
       return f;
     }
   }
@@ -661,7 +665,7 @@ export function getQueryFieldDef(
         if (name === f.path[f.path.length - 1]) {
           return f;
         }
-      } else if (f.as ?? f.name === name) {
+      } else if (activeName(f) === name) {
         return f;
       }
     }
@@ -711,31 +715,33 @@ export function model(
   };
 }
 
-export function makeModelFunc(options: {
-  model?: ModelDef;
-  prefix?: string;
-  wrap?: (code: string) => string;
-}) {
+export function makeModelFunc(
+  options: TestTranslatorOptions & {
+    prefix?: string;
+    wrap?: (code: string) => string;
+  }
+) {
   return function model(
     unmarked: TemplateStringsArray,
     ...marked: string[]
   ): HasTranslator<TestTranslator> {
     const ms = markSource(unmarked, ...marked);
+    const {prefix, wrap, ...ttOptions} = options;
     return {
       ...ms,
       translator: new TestTranslator(
-        (options.prefix ?? '') +
-          (options.wrap ? options.wrap(ms.code) : ms.code),
-        null,
-        null,
-        undefined,
-        options?.model
+        (prefix ?? '') + (wrap ? wrap(ms.code) : ms.code),
+        ttOptions
       ),
     };
   };
 }
 
-export function makeExprFunc(model: ModelDef, sourceName: string) {
+export function makeExprFunc(
+  model?: ModelDef,
+  sourceName: string = 'ab',
+  options: Omit<TestTranslatorOptions, 'rootRule' | 'internalModel'> = {}
+) {
   return function expr(
     unmarked: TemplateStringsArray,
     ...marked: string[]
@@ -743,7 +749,7 @@ export function makeExprFunc(model: ModelDef, sourceName: string) {
     const ms = markSource(unmarked, ...marked);
     return {
       ...ms,
-      translator: new BetaExpression(ms.code, model, sourceName),
+      translator: new BetaExpression(ms.code, model, sourceName, options),
     };
   };
 }

@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {languages as Monaco} from 'monaco-editor';
@@ -199,6 +181,19 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\bpublic\b/, 'keyword.control.public'],
       [/\bprivate\b/, 'keyword.control.private'],
       [/\binclude\b/, 'keyword.control.include'],
+      [/\bas\b/, 'keyword.control.as'],
+      [/\bfrom\b/, 'keyword.control.from'],
+      [/\bexport\b/, 'keyword.control.export'],
+      [/\bcase\b/, 'keyword.control.case'],
+      [/\bthen\b/, 'keyword.control.then'],
+      [/\bend\b/, 'keyword.control.end'],
+      [/\bfilter\b/, 'keyword.control.filter'],
+      [/\bin\b/, 'keyword.other.in'],
+      [/\blike\b/, 'keyword.other.like'],
+      [/\binner\b/, 'keyword.other.inner'],
+      [/\bleft\b/, 'keyword.other.left'],
+      [/\bright\b/, 'keyword.other.right'],
+      [/\bfull\b/, 'keyword.other.full'],
     ],
     properties: [
       [/\baccept\b/, 'keyword.control.accept'],
@@ -236,6 +231,8 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\bview\b/, 'keyword.control.view'],
       [/\bwhere\b/, 'keyword.control.where'],
       [/\bdeclare\b/, 'keyword.control.declare'],
+      [/\btype\b/, 'keyword.control.type'],
+      [/\bgiven\b/, 'keyword.control.given'],
     ],
     functions: [
       [
@@ -243,7 +240,7 @@ export const monarch: Monaco.IMonarchLanguage = {
         ['entity.name.function', '', 'entity.name.function.modifier'],
       ],
       [
-        /\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|UNGROUPED)(\s*\()/,
+        /\b(ALL|AVG|CAST|COMPOSE|COUNT|EXCLUDE|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|UNGROUPED)(\s*\()/,
         ['entity.name.function', ''],
       ],
       [/\b([a-zA-Z_][a-zA-Z_0-9]*)(\s*\()/, ['entity.name.function', '']],
@@ -267,6 +264,7 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\bstring\b/, 'entity.name.type.string'],
       [/\bnumber\b/, 'entity.name.type.number'],
       [/\bdate\b/, 'entity.name.type.date'],
+      [/\btimestamptz\b/, 'entity.name.type.timestamptz'],
       [/\btimestamp\b/, 'entity.name.type.timestamp'],
       [/\bboolean\b/, 'entity.name.type.boolean'],
     ],

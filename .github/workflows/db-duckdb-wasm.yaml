@@ -8,18 +8,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v8
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Use Node.js
+          name: workspace
+      - name: Extract workspace
+        run: tar --use-compress-program='zstd -d -T0' -xf workspace.tzst && rm workspace.tzst
+      - name: Use Node.js 24.x
         uses: actions/setup-node@v5
         with:
-          node-version: 20.x
-      - name: npm install, build, and test
-        run: |
-          npm ci --loglevel error
-          npm run build
-          npm run build-duckdb-db
-          npm run ci-duckdb-wasm
+          node-version: 24.x
+      - name: Test
+        run: npm run ci-duckdb-wasm
         env:
           CI: true

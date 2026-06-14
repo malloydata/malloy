@@ -1,5 +1,5 @@
 import type {Tag} from '@malloydata/malloy-tag';
-import {tagFromAnnotations} from '../util';
+import {tagFromAnnotations} from '@malloydata/malloy';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {
   BooleanFieldInfo,
@@ -231,8 +231,8 @@ export function shouldRenderAs({
   return result;
 }
 
-export function tagFor(field: Malloy.DimensionInfo, prefix = '# ') {
-  return tagFromAnnotations(field.annotations, prefix);
+export function tagFor(field: Malloy.DimensionInfo, route = '') {
+  return tagFromAnnotations(field.annotations, route);
 }
 
 export function extractExpressionFromTag(

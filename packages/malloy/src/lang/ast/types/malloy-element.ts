@@ -1,43 +1,25 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {getDialect} from '../../../dialect';
 import type {
-  Annotation,
+  AnnotationsDef,
   DocumentLocation,
   DocumentReference,
   Given,
   GivenID,
   ModelDef,
-  ModelAnnotation,
+  ModelAnnotationEntry,
+  ModelID,
   NamedModelObject,
   Query,
   SourceID,
   SourceRegistryValue,
-  StructDef,
 } from '../../../model/malloy_types';
 import {isSourceDef, isPersistableSourceDef} from '../../../model/malloy_types';
-import {mkModelDef} from '../../../model/utils';
+import {mkModelDef, mkModelID} from '../../../model/utils';
 import {Tag} from '@malloydata/malloy-tag';
 import type {
   LogMessageOptions,
@@ -57,7 +39,6 @@ import type {ModelEntry} from './model-entry';
 import type {NameSpace} from './name-space';
 import type {Noteable} from './noteable';
 import {isNoteable, extendNoteMethod} from './noteable';
-import {v5 as uuidv5} from 'uuid';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -150,7 +131,7 @@ export abstract class MalloyElement {
           text: key,
           definition: {
             type: result.entry.type,
-            annotation: result.entry.annotation,
+            annotations: result.entry.annotations,
             location: result.entry.location,
           },
           location: reference.location,
@@ -161,7 +142,7 @@ export abstract class MalloyElement {
           text: key,
           definition: {
             type: result.entry.type,
-            annotation: result.entry.annotation,
+            annotations: result.entry.annotations,
             location: result.entry.location,
           },
           location: reference.location,
@@ -190,6 +171,10 @@ export abstract class MalloyElement {
     return undefined;
   }
 
+  isRestricted(): boolean {
+    return this.translator()?.root.restrictedMode ?? false;
+  }
+
   setTranslator(x: MalloyTranslation): void {
     this.xlate = x;
   }
@@ -201,6 +186,15 @@ export abstract class MalloyElement {
   private get sourceURL() {
     const trans = this.translator();
     return trans?.sourceURL || '(missing)';
+  }
+
+  /**
+   * The {@link ModelID} of the document this element is being compiled in — the
+   * key under which this model's `##` annotations and import/extend edges are
+   * recorded in `ModelDef.modelAnnotations`.
+   */
+  get modelID(): ModelID {
+    return mkModelID(this.translator()?.sourceURL);
   }
 
   private readonly logged = new Set<string>();
@@ -290,16 +284,21 @@ export abstract class MalloyElement {
     return asString;
   }
 
-  *walk(): Generator<MalloyElement> {
+  *allChildren(): Generator<MalloyElement> {
     for (const kidLabel of Object.keys(this.children)) {
       const kiddle = this.children[kidLabel];
       if (kiddle instanceof MalloyElement) {
         yield kiddle;
       } else {
-        for (const k of kiddle) {
-          yield k;
-        }
+        yield* kiddle;
       }
+    }
+  }
+
+  *walk(): Generator<MalloyElement> {
+    for (const child of this.allChildren()) {
+      yield child;
+      yield* child.walk();
     }
   }
 
@@ -322,7 +321,7 @@ export abstract class MalloyElement {
   }
 
   needs(doc: Document): ModelDataRequest | undefined {
-    for (const child of this.walk()) {
+    for (const child of this.allChildren()) {
       const childNeeds = child.needs(doc);
       if (childNeeds) return childNeeds;
     }
@@ -444,7 +443,7 @@ export class DocStatementList
   execCursor = 0;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: Annotation;
+  note?: AnnotationsDef;
   noteCursor = 0;
   executeList(doc: Document): ModelDataRequest {
     while (this.execCursor < this.elements.length) {
@@ -476,24 +475,6 @@ export class DocStatementList
     }
     return undefined;
   }
-}
-
-const docAnnotationNameSpace = '5a79a191-06bc-43cf-9b12-58741cd82970';
-
-function annotationNotes(an: Annotation): string[] {
-  const ret = an.inherits ? annotationNotes(an.inherits) : [];
-  if (an.blockNotes) {
-    ret.push(...an.blockNotes.map(n => n.text));
-  }
-  if (an.notes) {
-    ret.push(...an.notes.map(n => n.text));
-  }
-  return ret;
-}
-
-function annotationID(a: Annotation): string {
-  const allStrs = annotationNotes(a).join('');
-  return uuidv5(allStrs, docAnnotationNameSpace);
 }
 
 /**
@@ -536,17 +517,48 @@ export class Document extends MalloyElement implements NameSpace {
   documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
   documentGivens = new Map<GivenID, Given>();
+  /** {@link ModelAnnotationEntry} of every imported/extended model in the
+   *  closure, keyed by ModelID, accumulated as imports/extends are processed;
+   *  copied into the result `modelAnnotations` in {@link modelDef}, which then
+   *  adds this model's own self-entry. */
+  documentModelAnnotations: Record<ModelID, ModelAnnotationEntry> = {};
+  /** This model's **direct** import/extend predecessors, in fold order — the
+   *  extend-base prepended as `import₀` (added first by {@link initModelDef}),
+   *  then each `import`ed model's id appended. Becomes the self-entry's
+   *  `inheritsFrom` in {@link modelDef}. */
+  documentInheritsFrom: ModelID[] = [];
+  // When an `export { … }` statement appears, the document switches from
+  // "everything declared here is exported" to "only names in this set are
+  // exported." Undefined means no export statement has been seen.
+  explicitExports: Set<string> | undefined;
   queryList: Query[] = [];
   statements: DocStatementList;
   didInitModel = false;
   modelWasModified = false;
-  annotation: Annotation = {};
+  annotations: AnnotationsDef = {};
   experiments = new Tag({});
 
   constructor(statements: (DocStatement | DocStatementList)[]) {
     super();
     this.statements = new DocStatementList(statements);
     this.has({statements: statements});
+  }
+
+  /**
+   * Merge another model's `##` annotation closure into this document and record
+   * it as a **direct** import/extend predecessor (its id appended to
+   * {@link documentInheritsFrom}). Shared by `import` and the extend-base init
+   * (`ImportStatement` and {@link initModelDef}) — they differ only in
+   * namespace/export copying, never in the annotation fold. First-writer wins
+   * on a closure-id collision (the diamond's shared model keeps one entry).
+   */
+  contributeModelAnnotations(other: ModelDef): void {
+    for (const [id, entry] of Object.entries(other.modelAnnotations)) {
+      if (!(id in this.documentModelAnnotations)) {
+        this.documentModelAnnotations[id] = entry;
+      }
+    }
+    this.documentInheritsFrom.push(other.modelID);
   }
 
   initModelDef(extendingModelDef: ModelDef | undefined): void {
@@ -556,11 +568,15 @@ export class Document extends MalloyElement implements NameSpace {
     this.documentModel = new Map<string, ModelEntry>();
     this.documentSrcRegistry = {};
     this.documentGivens = new Map<GivenID, Given>();
+    this.explicitExports = undefined;
     this.queryList = [];
     if (extendingModelDef) {
-      if (extendingModelDef.annotation) {
-        this.annotation.inherits = extendingModelDef.annotation;
-      }
+      // Extend-base is an implicit `import₀`: the base is this model's first
+      // direct predecessor (registered before any `import` runs), and its whole
+      // annotation closure comes along so anything the base imported stays
+      // resolvable. The base's own `##` rides the `inheritsFrom` edge, not a
+      // linear `inherits` chain.
+      this.contributeModelAnnotations(extendingModelDef);
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
         const entry = {...orig};
         if (
@@ -589,16 +605,6 @@ export class Document extends MalloyElement implements NameSpace {
     if (needs === undefined) {
       this.checkGivenAliasCollisions();
       this.checkQueryGivenSatisfiability();
-      for (const q of this.queryList) {
-        if (q.modelAnnotation === undefined && modelDef.annotation) {
-          q.modelAnnotation = modelDef.annotation;
-        }
-      }
-    }
-    if (modelDef.annotation) {
-      for (const sd of this.modelAnnotationTodoList) {
-        sd.modelAnnotation ||= modelDef.annotation;
-      }
     }
     const ret: DocumentCompileResult = {
       modelDef: {
@@ -609,11 +615,6 @@ export class Document extends MalloyElement implements NameSpace {
       modelWasModified: this.modelWasModified,
     };
     return ret;
-  }
-
-  private modelAnnotationTodoList: StructDef[] = [];
-  rememberToAddModelAnnotations(sd: StructDef) {
-    this.modelAnnotationTodoList.push(sd);
   }
 
   private checkGivenAliasCollisions(): void {
@@ -692,24 +693,29 @@ export class Document extends MalloyElement implements NameSpace {
 
   hasAnnotation(): boolean {
     return (
-      (this.annotation.notes && this.annotation.notes.length > 0) ||
-      this.annotation.inherits !== undefined
+      (this.annotations.notes && this.annotations.notes.length > 0) ||
+      this.annotations.inherits !== undefined
     );
   }
 
-  currentModelAnnotation(): ModelAnnotation | undefined {
+  currentModelAnnotation(): AnnotationsDef | undefined {
     if (this.hasAnnotation()) {
-      const ret = {...this.annotation, id: ''};
-      ret.id = annotationID(ret);
-      return ret;
+      return {...this.annotations};
     }
   }
 
   modelDef(): ModelDef {
-    const def = mkModelDef('');
-    if (this.hasAnnotation()) {
-      def.annotation = this.currentModelAnnotation();
-    }
+    const def = mkModelDef('', this.modelID);
+    def.modelAnnotations = {...this.documentModelAnnotations};
+    // Always record the self-entry — even with no own `##`, its `inheritsFrom`
+    // carries this model's import/extend edges, which the fold needs.
+    def.modelAnnotations[def.modelID] = {
+      ownNotes: this.currentModelAnnotation() ?? {},
+      inheritsFrom: [...this.documentInheritsFrom],
+    };
+    const explicit = this.explicitExports;
+    const isExported = (name: string, modelEntry: ModelEntry): boolean =>
+      explicit ? explicit.has(name) : modelEntry.exported === true;
     for (const [name, modelEntry] of this.documentModel) {
       const entryDef = modelEntry.entry;
       if (
@@ -717,20 +723,12 @@ export class Document extends MalloyElement implements NameSpace {
         entryDef.type === 'query' ||
         entryDef.type === 'userType'
       ) {
-        if (modelEntry.exported) {
+        if (isExported(name, modelEntry)) {
           def.exports.push(name);
         }
-        if (entryDef.type === 'userType') {
-          def.contents[name] = {...entryDef};
-        } else {
-          const newEntry = {...entryDef};
-          if (newEntry.modelAnnotation === undefined && def.annotation) {
-            newEntry.modelAnnotation = def.annotation;
-          }
-          def.contents[name] = newEntry;
-        }
+        def.contents[name] = {...entryDef};
       } else if (entryDef.type === 'given') {
-        if (modelEntry.exported) {
+        if (isExported(name, modelEntry)) {
           def.exports.push(name);
         }
         def.contents[name] = {...entryDef};

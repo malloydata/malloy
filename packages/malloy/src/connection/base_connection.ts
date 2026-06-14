@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {SQLSourceRequest} from '../lang/translate-response';
@@ -15,6 +13,7 @@ import type {
 } from '../model/malloy_types';
 import {sqlKey} from '../model/sql_block';
 import type {RunSQLOptions} from '../run_sql_options';
+import {validateCanonicalTablePath} from './validate_table_path';
 import type {
   Connection,
   FetchSchemaOptions,
@@ -114,6 +113,11 @@ export abstract class BaseConnection implements Connection {
     const errors: {[name: string]: string} = {};
 
     for (const [tableName, tablePath] of Object.entries(missing)) {
+      const invalid = validateCanonicalTablePath(this.dialectName, tablePath);
+      if (invalid !== undefined) {
+        errors[tableName] = invalid;
+        continue;
+      }
       const inCache = await this.checkSchemaCache<TableSourceDef>(
         tablePath,
         'table',

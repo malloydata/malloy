@@ -1,0 +1,178 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+// These modules do not load under the node test env; the stubs document why.
+jest.mock('@/component/chart/chart-layout-settings', () =>
+  jest.requireActual('@/plugins/spec-test-support/chart-layout-settings-stub')
+);
+jest.mock('@/component/renderer/apply-renderer', () =>
+  jest.requireActual('@/plugins/spec-test-support/apply-renderer-stub')
+);
+jest.mock('@/component/chart/chart-v2', () =>
+  jest.requireActual('@/plugins/spec-test-support/chart-v2-stub')
+);
+// ESM-only packages the plugin module imports but these tests never call.
+jest.mock('vega', () => ({}));
+jest.mock('vega-interpreter', () => ({}));
+jest.mock('solid-js/jsx-runtime', () => ({}));
+
+import {
+  describeChartLabelTests,
+  runChartQuery,
+  fakeTooltipItem,
+  fakeTooltipView,
+  SOURCE,
+  SOURCE4,
+} from '@/plugins/spec-test-support/harness';
+import type {VegaChartProps} from '@/component/types';
+import {getBarChartSettings} from '@/plugins/bar-chart/get-bar_chart-settings';
+import {
+  generateBarChartVegaSpecV2,
+  type BarChartSpecInputs,
+} from '@/plugins/bar-chart/generate-bar_chart-vega-spec';
+import {BarChartPluginFactory} from '@/plugins/bar-chart/bar-chart-plugin';
+
+async function buildBar(source: string, query: string) {
+  const {root, rootCell, metadata} = await runChartQuery(source, query);
+  const settings = getBarChartSettings(root);
+  const plugin: BarChartSpecInputs = {
+    field: root,
+    chartDisplay: {size: {}},
+    getMetadata: () => ({type: 'bar', field: root, settings}),
+  };
+  return {props: generateBarChartVegaSpecV2(metadata, plugin), rootCell};
+}
+
+async function buildBarProps(
+  source: string,
+  query: string
+): Promise<VegaChartProps> {
+  return (await buildBar(source, query)).props;
+}
+
+describeChartLabelTests('bar_chart', buildBarProps);
+
+describe('bar_chart honors # label tags in default tooltips', () => {
+  test('measure-series tooltip labels use the # label tags, not field names', async () => {
+    const props = await buildBarProps(
+      SOURCE,
+      `
+      # bar_chart
+      run: data -> {
+        group_by:
+          # label="Audience"
+          audience_name
+        aggregate:
+          # y
+          # label="Reach (HH)"
+          total_reach is reach.sum()
+          # y
+          # label="Avg Reach"
+          avg_reach is reach.avg()
+      }
+      `
+    );
+    const records = [
+      {x: 'Total Universe (HH)', y: 75, series: 'total_reach'},
+      {x: 'Total Universe (HH)', y: 30, series: 'avg_reach'},
+    ];
+    const tooltip = props.getTooltipData?.(
+      fakeTooltipItem('x_highlight', {x: 'Total Universe (HH)', v: records}),
+      fakeTooltipView()
+    );
+    expect(tooltip?.entries.map(e => e.label)).toEqual([
+      'Reach (HH)',
+      'Avg Reach',
+    ]);
+  }, 60000);
+
+  test('dimensional-series tooltip labels stay series values, not labels', async () => {
+    const props = await buildBarProps(
+      SOURCE,
+      `
+      # bar_chart
+      run: data -> {
+        group_by:
+          # label="Audience"
+          audience_name
+          # label="Quarter"
+          period
+        aggregate:
+          # label="Reach (HH)"
+          total_reach is reach.sum()
+      }
+      `
+    );
+    const records = [{x: 'Total Universe (HH)', y: 75, series: '1Q26'}];
+    const tooltip = props.getTooltipData?.(
+      fakeTooltipItem('x_highlight', {x: 'Total Universe (HH)', v: records}),
+      fakeTooltipView()
+    );
+    expect(tooltip?.entries.map(e => e.label)).toEqual(['1Q26']);
+  }, 60000);
+
+  test('custom # tooltip entries use the # label tag, not the field name', async () => {
+    const {props, rootCell} = await buildBar(
+      SOURCE,
+      `
+      # bar_chart
+      run: data -> {
+        group_by:
+          # label="Audience"
+          audience_name
+        aggregate:
+          # label="Reach (HH)"
+          total_reach is reach.sum()
+          # tooltip
+          # label="Avg Reach"
+          avg_reach is reach.avg()
+      }
+      `
+    );
+    const records = [
+      {
+        x: 'Total Universe (HH)',
+        y: 75,
+        series: 'total_reach',
+        __row: rootCell.rows[0],
+      },
+    ];
+    const tooltip = props.getTooltipData?.(
+      fakeTooltipItem('x_highlight', {x: 'Total Universe (HH)', v: records}),
+      fakeTooltipView()
+    );
+    expect(tooltip?.entries.map(e => e.label)).toEqual([
+      'Reach (HH)',
+      'Avg Reach',
+    ]);
+  }, 60000);
+});
+
+describe('bar_chart synthetic multi-series field', () => {
+  test('legend title joins the # label tags of the tagged series fields', async () => {
+    const {root, rootCell, metadata} = await runChartQuery(
+      SOURCE4,
+      `
+      # bar_chart
+      run: data4 -> {
+        group_by:
+          audience_name
+          # series
+          # label="Quarter"
+          period
+          # series
+          # label="Region"
+          region
+        aggregate: total_reach is reach.sum()
+      }
+      `
+    );
+    const plugin = BarChartPluginFactory.create(root);
+    plugin.processData?.(root, rootCell);
+    expect(plugin.syntheticSeriesField?.getLabel()).toBe('Quarter - Region');
+    const {spec} = generateBarChartVegaSpecV2(metadata, plugin);
+    expect(spec.legends?.[0]?.title).toBe('Quarter - Region');
+  }, 60000);
+});

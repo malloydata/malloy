@@ -61,6 +61,8 @@ import {
 import {isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
 import type {Dialect, QueryInfo} from '../dialect';
+import {MalloyCompileError} from './malloy_compile_error';
+import {lookupGivenValue} from './given_binding';
 
 const NUMERIC_DECIMAL_PRECISION = 9;
 
@@ -235,6 +237,27 @@ function compileExpr<T extends Expr>(
         const oneOf = expr.kids.oneOf.map(o => o.sql).join(',');
         return `${expr.kids.e.sql} ${expr.not ? 'NOT IN' : 'IN'} (${oneOf})`;
       }
+      case 'inGiven': {
+        const bound = resolveGivenBoundExpr(context, expr.givenRef);
+        // null binding collapses to empty-set semantics — not the SQL
+        // `IN (NULL)` shape, which has confusing NULL-membership rules.
+        if (bound.node === 'null') {
+          return expr.not ? 'TRUE' : 'FALSE';
+        }
+        if (bound.node !== 'arrayLiteral') {
+          throw new Error(
+            `Internal compiler error: 'inGiven' bound to '${bound.node}', expected 'arrayLiteral'. The translator should have rejected a non-array given here.`
+          );
+        }
+        if (bound.kids.values.length === 0) {
+          return expr.not ? 'TRUE' : 'FALSE';
+        }
+        const elemSqls = bound.kids.values.map(v =>
+          exprToSQL(resultSet, context, v, state)
+        );
+        const verb = expr.not ? 'NOT IN' : 'IN';
+        return `${expr.e.sql} ${verb} (${elemSqls.join(',')})`;
+      }
       case 'like':
       case '!like': {
         const likeIt = expr.node === 'like' ? 'LIKE' : 'NOT LIKE';
@@ -334,28 +357,38 @@ function generateAppliedFilter(
     if (argument?.value) {
       filterExpr = argument.value;
     } else {
-      throw new Error(
-        `Parameter ${name} was expected to be a filter expression`
+      throw new MalloyCompileError(
+        `Parameter '${name}' has no value, but a filter expression is required here.`,
+        'compiler-filter-parameter-no-value',
+        filterExpr.at
       );
     }
   }
   if (filterExpr.node === 'given') {
-    const id = filterExpr.id;
-    const supplied = context.prepareResultOptions?.resolvedGivens?.get(id);
+    const supplied = context.prepareResultOptions?.resolvedGivens?.get(
+      filterExpr.id
+    );
     if (supplied !== undefined) {
       filterExpr = supplied;
     } else {
-      const decl = context.getModel().givens[id];
+      const decl = context.getModel().givens[filterExpr.id];
       if (decl?.default !== undefined) {
         filterExpr = decl.default;
       } else {
-        throw new Error(unsatisfiedGivenMessage(filterExpr.refName));
+        throw new MalloyCompileError(
+          unsatisfiedGivenMessage(filterExpr.refName),
+          'compiler-given-no-value',
+          filterExpr.at
+        );
       }
     }
   }
   if (filterExpr.node !== 'filterLiteral') {
-    throw new Error(
-      'Can only use filter expression literals or parameters as filter expressions'
+    throw new MalloyCompileError(
+      "Filter context requires a filter-expression literal (e.g., `f'...'`) " +
+        `or a parameter that resolves to one; got node '${filterExpr.node}'.`,
+      'compiler-filter-not-literal',
+      undefined
     );
   }
   const filterSrc = filterExpr.filterSrc;
@@ -376,10 +409,19 @@ function generateAppliedFilter(
       fParse = TemporalFilterExpression.parse(filterSrc);
       break;
     default:
-      throw new Error(`unsupported filter type ${filterMatchExpr.dataType}`);
+      throw new MalloyCompileError(
+        `Filter type '${filterMatchExpr.dataType}' is not supported. ` +
+          'Supported filter types: string, number, boolean, date, timestamp, timestamptz.',
+        'compiler-filter-type-unsupported',
+        undefined
+      );
   }
   if (fParse.log.length > 0) {
-    throw new Error(`Filter expression parse error: ${fParse.log[0]}`);
+    throw new MalloyCompileError(
+      `Filter expression parse error: ${fParse.log[0]}.`,
+      'compiler-filter-parse-error',
+      undefined
+    );
   }
 
   return FilterCompilers.compile(
@@ -758,7 +800,7 @@ export function generateFieldFragment(
   state: GenerateState
 ): string {
   // find the structDef and return the path to the field...
-  const fieldRef = context.getFieldByName(expr.path);
+  const fieldRef = context.getFieldByName(expr.path, expr.at);
   if (hasExpression(fieldRef.fieldDef)) {
     const ret = exprToSQL(
       resultSet,
@@ -814,7 +856,34 @@ export function generateParameterFragment(
   if (argument?.value) {
     return exprToSQL(resultSet, context, argument.value, state);
   }
-  throw new Error(`Can't generate SQL, no value for ${expr.path}`);
+  throw new MalloyCompileError(
+    `Parameter '${expr.path.join('.')}' has no value supplied.`,
+    'compiler-parameter-no-value',
+    expr.at
+  );
+}
+
+/**
+ * Resolve a given to the Expr that should stand in for it at SQL emit:
+ * supplied value if the caller bound one, otherwise the declaration's
+ * default. Throws when neither is available — that case is a query the
+ * compiler can't satisfy.
+ *
+ * Shared by `generateGivenFragment` ($NAME directly in an expression)
+ * and the `'inGiven'` SQL-emit case ($ARR in `expr in $ARR`).
+ */
+function resolveGivenBoundExpr(context: QueryStruct, ref: GivenRefNode): Expr {
+  const value = lookupGivenValue(
+    context.prepareResultOptions?.resolvedGivens,
+    context.getModel().givens,
+    ref.id
+  );
+  if (value !== undefined) return value;
+  throw new MalloyCompileError(
+    unsatisfiedGivenMessage(ref.refName),
+    'compiler-given-no-value',
+    ref.at
+  );
 }
 
 export function generateGivenFragment(
@@ -823,18 +892,10 @@ export function generateGivenFragment(
   expr: GivenRefNode,
   state: GenerateState
 ): string {
-  const id = expr.id;
-  const supplied = context.prepareResultOptions?.resolvedGivens?.get(id);
-  if (supplied !== undefined) {
-    return exprToSQL(resultSet, context, supplied, state);
-  }
-  // The default may itself be a `$OTHER`-bearing expression — recursive
+  // The bound expr may itself be a `$OTHER`-bearing expression; recursive
   // compile handles default chains.
-  const decl = context.getModel().givens[id];
-  if (decl?.default !== undefined) {
-    return exprToSQL(resultSet, context, decl.default, state);
-  }
-  throw new Error(unsatisfiedGivenMessage(expr.refName));
+  const bound = resolveGivenBoundExpr(context, expr);
+  return exprToSQL(resultSet, context, bound, state);
 }
 
 function unsatisfiedGivenMessage(refName: string): string {
@@ -884,7 +945,11 @@ export function generateUngroupedFragment(
   state: GenerateState
 ): string {
   if (state.totalGroupSet !== -1) {
-    throw new Error('Already in ALL.  Cannot nest within an all calcuation.');
+    throw new MalloyCompileError(
+      "Cannot nest 'all()' or 'exclude()' inside another 'all()' calculation.",
+      'compiler-nested-ungroup',
+      undefined
+    );
   }
 
   let totalGroupSet;

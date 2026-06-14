@@ -2,74 +2,65 @@
 
 The `malloy-render` package handles visualization and rendering of Malloy query results. It transforms query results into rich, interactive visualizations and tables.
 
-**Related docs:** [README.md](./README.md) for public-facing installation and usage, [DEVELOPING.md](./DEVELOPING.md) for the local development workflow, [docs/validation.md](./docs/validation.md) for the renderer validation contract.
+**Related docs:** [README.md](./README.md) for public-facing installation and usage, [DEVELOPING.md](./DEVELOPING.md) for the local development workflow, [docs/validation.md](./docs/validation.md) for the renderer validation contract, [docs/plugin-system.md](./docs/plugin-system.md) / [docs/plugin-api-reference.md](./docs/plugin-api-reference.md) / [docs/plugin-quick-start.md](./docs/plugin-quick-start.md) for plugin authoring, [docs/renderer_tags_overview.md](./docs/renderer_tags_overview.md) and [docs/renderer_tag_cheatsheet.md](./docs/renderer_tag_cheatsheet.md) for the user-facing tag vocabulary.
 
-## Purpose
+Built on **Solid.js** (reactive UI) and **Vega** (declarative charts).
 
-Malloy queries return structured data with metadata about how it should be displayed. The render package:
-- Interprets query result metadata
-- Generates appropriate visualizations
-- Provides interactive data exploration
-- Supports multiple rendering formats
+## Distribution & Public Surface
 
-## Technology Stack
+Ships as a **single UMD bundle** (`dist/module/index.umd.js`). `package.json` `exports` declares one entry; there are no subpath imports, no public ESM, no headless entry. All integration goes through `MalloyRenderer` (or the legacy `HTMLView`, still exported for the VS Code notebook schema view).
 
-### Solid.js
-The rendering system uses **Solid.js** as its reactive UI framework.
+Two non-obvious consequences:
 
-### Vega
-The package uses **Vega** for declarative data visualizations.
+- **`@malloydata/malloy-tag` is a runtime dependency for type resolution only.** The UMD inlines malloy-tag (vite `external: []`); nothing escapes to `require()` at runtime. But the published `.d.ts` files (`api/plugin-types.d.ts`, `data_tree/fields/base.d.ts`, `util.d.ts`, etc.) re-export `Tag`, so consumer TypeScript needs the package installed.
+- **The UMD cannot be loaded in Node without a DOM stub.** Solid.js calls `delegateEvents()` at module-eval time and reads `window.document`. The headless validator (`@malloydata/render-validator`) installs and removes global `window`/`document`/`navigator` stubs around its `require()` of this package; any other Node consumer must do the same.
 
-## Rendering Process
+`dist/module/index.mjs` exists but is not an exports entry — treat as internal.
 
-```
-Query Results + Metadata → Renderer → Visualization Selection → Vega Spec / Table → UI Output
-```
+### Public API
 
-**Steps:**
-1. Query results arrive with rendering metadata
-2. Renderer examines result structure and annotations
-3. Appropriate visualization type is selected
-4. Vega specification is generated (for charts) or table is formatted
-5. UI components render the visualization
-
-## Rendering Hints
-
-The renderer respects annotations and metadata from Malloy models:
-
-- **Renderer annotations** (prefix `# `) provide display hints
-- **Field types** influence default visualizations
-- **Data structure** (nested, flat, aggregated) affects rendering choices
-- **User preferences** can override defaults
-
-## Visualization Types
-
-The renderer supports various output formats:
-
-- **Tables** - Default for most query results
-- **Bar charts** - For categorical comparisons
-- **Line charts** - For time series data
-- **Scatter plots** - For correlation analysis
-- **Nested tables** - For hierarchical data
-- **Sparklines** - For inline visualizations
-- And more...
-
-## Package Integration
-
-The render package integrates with:
-- **malloy-core** - Consumes query results and metadata
-- **VS Code extension** - Provides visualization in editor
-- **Web applications** - Can be embedded in web apps
-- **Reports** - Generates static visualizations
+- `MalloyRenderer(options)` — factory; plugins registered here.
+- `renderer.createViz(vizOptions)` → `MalloyViz` — per-result instance.
+- `viz.setResult(result)` → `viz.render(element)` → optional `viz.remove()`. Tag validation runs in `setResult`; rendering can be skipped for headless use.
+- `viz.getLogs()` — accumulated warnings/errors (consumed by VS Code diagnostics and `@malloydata/render-validator`).
+- `viz.getHTML()` — off-screen render to HTML string for export/clipboard.
+- Consumer callbacks via `createViz` options: `onDrill(DrillData)`, `onReady()`, `onClick`, plus `tableConfig`.
+- Theming is bridged via `--malloy-*` CSS custom properties on the host element.
 
 ## Architecture
 
 ### Two Renderers
-- **New renderer** (`src/component/`) - Solid.js-based, the default
-- **Legacy renderer** (`src/html/`) - HTML string-based, activated with `## renderer_legacy` model tag
+- **New renderer** (`src/component/`) — Solid.js, the default.
+- **Legacy renderer** (`src/html/`) — HTML strings, activated with `## renderer_legacy`. Still publicly exported as `HTMLView`. A few renderers (scatter, maps) still exist only here.
+
+### Internal Data Model (the data tree)
+
+`src/data_tree/` is the spine the rest of the renderer operates on. A `Malloy.Result` becomes two parallel trees rooted at a `RootField`:
+
+- **Fields** (`fields/`) — the *schema*. One class per type: `RootField` (wraps the result's dimension fields) → `RepeatedRecordField` → `ArrayField`, plus `RecordField` and the atomic fields (`NumberField`, `StringField`, `DateField`, …). `getFieldType()` / the `FieldType` enum are what plugin `matches()` switches on.
+- **Cells** (`cells/`) — the *data*, a parallel hierarchy (`RepeatedRecordCell`, `RecordCell`, `NumberCell`, …); each cell knows its `Field`. Renderers walk cells; a plugin receives `RenderProps.dataColumn: Cell`.
+
+Worth knowing before editing here:
+- `RepeatedRecordField` extends `ArrayField` and carries dedup machinery (`nestedRecordField`, lazy `elementField`, `skipTagParsing`) so child fields aren't re-created/re-parsed per row — see [docs/plans/field-creation-analysis.md](docs/plans/field-creation-analysis.md). Conceptually it's a *table*, not an array; the inheritance is historical.
+- `field.key` (`JSON.stringify(field.path)`) is the registry key; `field.path` is the access path from the root.
+
+### Dispatch
+
+`RenderFieldMetadata` (`src/render-field-metadata.ts`) is the orchestrator: for each field it runs every plugin factory's `matches()` and attaches the first hit. At render time, `applyRenderer` (`src/component/renderer/apply-renderer.tsx`) uses the plugin if one matched, otherwise switches on the field's precomputed `renderAs()` value (`table`, `dashboard`, `link`, `image`, `list`, `cell`, `chart`, or a plugin name; last-declared renderer tag wins, and legacy `bar_chart`/`line_chart` are normalized into the `viz` namespace by `convertLegacyToVizTag`).
+
+A parent renderer hands options to a child via `RenderProps.customProps`, keyed by renderer name — e.g. `customProps.table.shouldFillWidth`, `customProps.big_value.embedded`. This is how the dashboard configures the tiles it nests.
+
+**Two similarly-named classes, don't confuse them:** `RenderFieldMetadata` (above — field registry, plugin instantiation, tag validation, all at setup time) is *not* `RenderResultMetadata` (chart-oriented: column min/max, row counts, precompiled Vega runtimes; built by `getResultMetadata` in `render-result-metadata.ts`). The chart/Vega pipeline, the cross-chart interaction store (`ResultStore` / brushes), and the how-to for adding a chart live in [DEVELOPING.md](DEVELOPING.md) and are not duplicated here.
 
 ### Tag System
 Render annotations use the Malloy Tag API to check for rendering hints. For tag language syntax, see [packages/malloy-tag/CONTEXT.md](../malloy-tag/CONTEXT.md).
+
+**Two annotation routes.** Every field exposes two tags, both parsed from the same `Malloy.Annotation[]` strings but on different routes (`parsePrefix`):
+- `field.tag` (route `''`) — user-authored **render hints** (`# bar_chart`, `# currency`, `# label`). This is what the plugin system and validation act on.
+- `field.metadataTag` (route `malloy`) — **compiler-emitted query metadata**: `calculation` (→ `wasCalculation()`, i.e. measure-ness), `drill_*`, `source`/`parameters`, `ordered_by`, `query_timezone`, `reference_id`, plus serialized `Malloy.Expression`/`LiteralValue` objects.
+
+The `malloy` route is a metadata **side-channel**, not a renderer concept: rather than widen the typed stable interface, core's `to_stable.ts` (`writeMalloyObjectToTag`) serializes structured metadata into annotation strings under `#(malloy)`, and the renderer reverses it in `data_tree/utils.ts` (`extractMalloyObjectFromTag`). The encoding and ownership are core's; the renderer is only a consumer. Consequence: this metadata is **untyped at the interface boundary and versioned by convention** — that's why the renderer parses tags to reconstruct an `Expression`. Drilling (`data_tree/drilling.ts`, surfaced via the `onDrill(DrillData)` callback) is rebuilt entirely from these `drill_*` metadata tags; timezone resolution (`getEffectiveQueryTimezone`) walks `query_timezone` up the same channel.
+
 Low-level Tag API patterns (primarily for setup-time resolution/validation code):
 - `field.tag.has('pivot')` - Check if a tag exists
 - `field.tag.text('label')` - Get a text property
@@ -93,14 +84,10 @@ For non-visual logic (settings serialization, tag parsing, drill query behavior,
 
 ## Plugin System
 
-Render plugins are the mechanism for adding new visualization types to the renderer. Each plugin is a factory that matches fields based on their tags and data type, then creates an instance that renders the visualization.
+Plugins add visualization types. Two parts:
 
-### Plugin Architecture
-
-A plugin has two parts:
-
-1. **`RenderPluginFactory`** — Registered globally. Decides whether a field should use this plugin (`matches()`) and creates instances (`create()`).
-2. **`RenderPluginInstance`** — Created per-field. Handles rendering, data processing, and metadata.
+1. **`RenderPluginFactory`** — registered globally; `matches()` decides applicability, `create()` builds instances.
+2. **`RenderPluginInstance`** — per-field; handles rendering, data processing, metadata.
 
 ```
 RenderPluginFactory.matches(field, tag, fieldType)
@@ -181,14 +168,10 @@ Important:
 
 #### 2. Register the Plugin
 
-Plugins are registered when creating a `MalloyRenderer`:
-
 ```typescript
 import {MalloyRenderer} from '@malloydata/render';
 
-const renderer = new MalloyRenderer({
-  plugins: [MyPluginFactory],
-});
+const renderer = new MalloyRenderer({plugins: [MyPluginFactory]});
 ```
 
 ### Plugin Lifecycle
@@ -211,11 +194,9 @@ getLogs()
   → Returns all collected warnings and errors
 ```
 
-For headless validation workflows, `setResult()` + `getLogs()` can be used without rendering.
-
 ### Validation
 
-Renderer tags are validated during `setResult()` and the resulting log messages drive the VS Code Problems panel and the headless `@malloydata/render-validator` package. **Before adding tags, validation rules, or plugin error throws, read [docs/validation.md](docs/validation.md).** It covers what validation is, how it works, where new checks go, and the pre-PR checklist that keeps the validator honest.
+Renderer tags are validated during `setResult()`; the log messages drive the VS Code Problems panel and the headless `@malloydata/render-validator`. **Before adding tags, validation rules, or plugin error throws, read [docs/validation.md](docs/validation.md).**
 
 The short version for plugin authors:
 - Tag-quality errors (wrong type, invalid enum, structural rule) belong in `validateFieldTags()` with `log.error(msg, tagRef)` so source locations survive.
@@ -224,10 +205,8 @@ The short version for plugin authors:
 
 ### Rendering Modes
 
-Plugins can render in two modes:
-
-- **`solidjs`** — Return a `JSXElement` from `renderComponent()`. Used by built-in chart and table plugins.
-- **`dom`** — Implement `renderToDOM(container, props)` for direct DOM manipulation. Useful for third-party libraries that need a DOM node. Optionally implement `cleanup(container)`.
+- **`solidjs`** — return a `JSXElement` from `renderComponent()`. Used by built-in charts and tables.
+- **`dom`** — implement `renderToDOM(container, props)` for direct DOM manipulation (for third-party libraries that need a DOM node). Optional `cleanup(container)`.
 
 ### Core Viz Plugins
 
@@ -235,8 +214,5 @@ Plugins that implement `CoreVizPluginMethods` (settings schema, serialization to
 
 ## Important Notes
 
-- Rendering is **separate from query execution** - it only processes results
-- The renderer is **stateless** - same results produce same visualizations
-- Visualizations respect **user accessibility** preferences where possible
-- The package is designed to be **embeddable** in various contexts
-- **Never run the full test suite** without restrictions - use targeted tests or storybook
+- The renderer is **stateless** — same result produces the same visualization.
+- **Never run the full test suite** without restrictions — use targeted tests or storybook.

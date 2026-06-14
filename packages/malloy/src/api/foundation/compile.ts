@@ -34,12 +34,27 @@ import {MALLOY_VERSION} from '../../version';
 import type {CacheManager} from './cache';
 import {readURL, getInvalidationKey, isInternalURL} from './readers';
 import {Parse} from './document';
-import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
+import {v4 as uuidv4} from 'uuid';
+import type {
+  ParseOptions,
+  CompileOptions,
+  CompileQueryOptions,
+  CompileMethod,
+} from './types';
 import type {PreparedResult} from './core';
-import {Model, Explore} from './core';
+import {Model, Explore, pseudoModelFor} from './core';
 import {Result, DataRecord} from './result';
 
-const MALLOY_INTERNAL_URL = 'internal://internal.malloy';
+/**
+ * Mint the synthetic URL for an inline (URL-less) compile. Each call is
+ * unique, so two inline models — or an inline base and its inline extension —
+ * never collide on identity. Stays under the `internal://` scheme so it
+ * remains uncacheable (see `isInternalURL`). The `method` segment is a
+ * diagnostic label only.
+ */
+function mkInternalURL(method: CompileMethod = 'loadModel'): string {
+  return `internal://${method}/${uuidv4()}`;
+}
 
 // =============================================================================
 // Types
@@ -116,6 +131,16 @@ export class MalloyError extends Error {
 // Malloy Static Class
 // =============================================================================
 
+type CompileRequest = Compilable &
+  CompileOptions &
+  CompileQueryOptions &
+  ParseOptions & {
+    urlReader: URLReader;
+    connections: LookupConnection<InfoConnection>;
+    model?: Model;
+    cacheManager?: CacheManager;
+  };
+
 export class Malloy {
   public static get version(): string {
     return MALLOY_VERSION;
@@ -163,7 +188,7 @@ export class Malloy {
     invalidationKey?: InvalidationKey
   ): Parse {
     if (url === undefined) {
-      url = new URL(MALLOY_INTERNAL_URL);
+      url = new URL(mkInternalURL(options?.method));
     }
     let importBaseURL = url;
     if (options?.importBaseURL) {
@@ -175,7 +200,8 @@ export class Malloy {
       {
         urls: {[url.toString()]: source},
       },
-      eventStream
+      eventStream,
+      options?.restrictedMode ?? false
     );
     if (options?.testEnvironment) {
       translator.allDialectsEnabled = true;
@@ -264,27 +290,28 @@ export class Malloy {
    * @param model A compiled model to build upon (optional).
    * @return A (promise of a) compiled `Model`.
    */
-  public static async compile({
-    url,
-    source,
-    parse,
-    urlReader,
-    connections,
-    model,
-    refreshSchemaCache,
-    noThrowOnError,
-    eventStream,
-    importBaseURL,
-    cacheManager,
-  }: {
-    urlReader: URLReader;
-    connections: LookupConnection<InfoConnection>;
-    model?: Model;
-    cacheManager?: CacheManager;
-  } & Compilable &
-    CompileOptions &
-    CompileQueryOptions &
-    ParseOptions): Promise<Model> {
+  public static async compile(req: CompileRequest): Promise<Model> {
+    let {url, source, importBaseURL, cacheManager} = req;
+    const {
+      parse,
+      urlReader,
+      connections,
+      model,
+      refreshSchemaCache,
+      noThrowOnError,
+      eventStream,
+      restrictedMode,
+      method,
+    } = req;
+    if (restrictedMode) {
+      // Restricted-mode compiles do not participate in the model-def
+      // cache. The cache key is the URL, but restricted vs. unrestricted
+      // produces different validation outcomes, so allowing a restricted
+      // compile to serve from (or write to) the same cache as
+      // unrestricted compiles would let restricted mode be bypassed by a
+      // prior unrestricted compile of the same URL.
+      cacheManager = undefined;
+    }
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
       refreshTimestamp =
@@ -299,7 +326,7 @@ export class Malloy {
       if (parse !== undefined) {
         url = new URL(parse._translator.sourceURL);
       } else {
-        url = new URL(MALLOY_INTERNAL_URL);
+        url = new URL(mkInternalURL(method));
       }
     }
     const invalidationKeys: {[url: string]: InvalidationKey} = {};
@@ -323,6 +350,17 @@ export class Malloy {
     // It's not cached, so we may need to get the actual source
     const _url = url.toString();
     if (parse !== undefined) {
+      // A pre-parsed translator's restrictedMode was fixed at parse
+      // time and cannot be changed here. Loudly reject mismatched
+      // requests rather than silently inheriting the parse-time value.
+      if (
+        restrictedMode !== undefined &&
+        parse._translator.restrictedMode !== restrictedMode
+      ) {
+        throw new Error(
+          `Malloy.compile: restrictedMode (${restrictedMode}) does not match the pre-parsed translator's restrictedMode (${parse._translator.restrictedMode}). Set restrictedMode at parse time.`
+        );
+      }
       translator = parse._translator;
       const invalidationKey =
         parse._invalidationKey ?? (await getInvalidationKey(urlReader, url));
@@ -342,7 +380,8 @@ export class Malloy {
         {
           urls: {[_url]: source},
         },
-        eventStream
+        eventStream,
+        restrictedMode ?? false
       );
     }
     for (;;) {
@@ -429,7 +468,6 @@ export class Malloy {
             }
           }
         }
-        const {modelAnnotation} = translator.modelAnnotation(model?._modelDef);
         if (result.tables) {
           // collect tables by connection name since there may be multiple connections
           const tablesByConnection: Map<
@@ -461,7 +499,6 @@ export class Malloy {
                   tablePathByKey,
                   {
                     refreshTimestamp,
-                    modelAnnotation,
                   }
                 );
               translator.update({tables, errors: {tables: errors}});
@@ -506,7 +543,6 @@ export class Malloy {
             const conn = await connections.lookupConnection(connectionName);
             const resolved = await conn.fetchSchemaForSQLStruct(toCompile, {
               refreshTimestamp,
-              modelAnnotation,
             });
             if (resolved.error) {
               translator.update({
@@ -707,7 +743,7 @@ export class Malloy {
     let sql: string;
     let resultExplore: Explore;
     if (sqlStruct) {
-      resultExplore = new Explore(sqlStruct);
+      resultExplore = new Explore(pseudoModelFor(sqlStruct), sqlStruct);
       sql = sqlStruct.selectStr;
     } else if (preparedResult !== undefined) {
       resultExplore = preparedResult.resultExplore;

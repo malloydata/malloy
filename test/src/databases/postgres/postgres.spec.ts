@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {DateTime} from 'luxon';
@@ -92,18 +74,18 @@ describe('Postgres tests', () => {
     }
   }
 
-  it('will quote to properly access mixed case table name', async () => {
+  it('user quoting works for mixed case table name', async () => {
     if (await oneExists(runtime, 'public."UpperTablePublic"')) {
       await expect(`
-        run: postgres.table('public.UpperTablePublic') -> { select: one }
+        run: postgres.table('public."UpperTablePublic"') -> { select: one }
       `).toMatchResult(testModel, {one: 1});
     }
   });
 
-  it('quote to properly access mixes case schema name', async () => {
+  it('user quoting works for mixed case schema name', async () => {
     if (await oneExists(runtime, '"UpperSchema"."UpperSchemaUpperTable"')) {
       await expect(`
-        run: postgres.table('UpperSchema.UpperSchemaUpperTable') -> { select: one }
+        run: postgres.table('"UpperSchema"."UpperSchemaUpperTable"') -> { select: one }
       `).toMatchResult(testModel, {one: 1});
     }
   });

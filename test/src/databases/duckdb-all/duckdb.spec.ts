@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {DateTime} from 'luxon';
@@ -41,6 +23,38 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       run: duckdb.table('test/data/duckdb/flights/part.*.parquet') -> {
         top: 1
         group_by: carrier;
+      }
+    `).toMatchResult(testModel, {carrier: 'AA'});
+  });
+
+  // DuckDB's table-path grammar (validated by dialect.sqlValidateTableName)
+  // is a superset of the standard "dotted identifier path" because DuckDB
+  // accepts string-literal-form table names that resolve to files via
+  // replacement scans. These tests exercise the DuckDB-only shapes.
+  // (The validator itself is unit-tested in
+  // packages/malloy/src/dialect/escape.spec.ts; these are end-to-end
+  // checks that the full pipeline — validate → schema fetch → query —
+  // works for shapes the cross-dialect tests can't cover.)
+
+  it('table path with relative-path file-name convenience', async () => {
+    // Dashes/dots-as-extension force the FilePathConvenience branch,
+    // which wraps the input in single quotes at the SQL level.
+    await expect(`
+      run: duckdb.table('test/data/duckdb/words.parquet') -> {
+        top: 1
+        group_by: word
+        order_by: word
+      }
+    `).toMatchResult(testModel, {});
+  });
+
+  it('table path with ? glob wildcard', async () => {
+    // Single-char glob matches part.0.parquet, part.1.parquet,
+    // part.2.parquet.
+    await expect(`
+      run: duckdb.table('test/data/duckdb/flights/part.?.parquet') -> {
+        top: 1
+        group_by: carrier
       }
     `).toMatchResult(testModel, {carrier: 'AA'});
   });

@@ -8,6 +8,8 @@ import {TestSelect} from '../test-select';
 import {MalloyConfig, Runtime} from '@malloydata/malloy';
 import type {URLReader} from '@malloydata/malloy';
 import type {GivenValue} from '@malloydata/malloy';
+import {mkTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 const runtime = runtimeFor('duckdb');
 
@@ -207,6 +209,33 @@ describe('givens — runtime supply path (Stage 4)', () => {
       .loadQueryByName('q')
       .run({givens: {BEFORE: '2024-01-01 12:30:00'}});
     expect(rSp.data.path(0, 'ct').value).toBe(1);
+  });
+
+  test('date-literal default morphs to timestamp and filters flights.dep_time', async () => {
+    // Exercises the morphic default path in define-given: the declared
+    // type is `timestamp`, the default `@2003-01-01` is a date literal,
+    // and the AST converts it to a timestamp expression so the default
+    // can drive a timestamp-column comparison at runtime.
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: BEFORE :: timestamp is @2003-01-01
+      query: q is duckdb.table('malloytest.flights') -> {
+        where: dep_time < $BEFORE
+        aggregate: ct is count()
+      }
+    `);
+    // No caller supply — the morphed default drives the cutoff.
+    const def = await model.loadQueryByName('q').run();
+    const defaultCt = def.data.path(0, 'ct').value;
+    expect(typeof defaultCt).toBe('number');
+    expect(defaultCt).toBeGreaterThan(0);
+    // Override with a tighter cutoff — count must drop.
+    const tight = await model
+      .loadQueryByName('q')
+      .run({givens: {BEFORE: '2002-01-01 00:00:00'}});
+    expect(Number(tight.data.path(0, 'ct').value)).toBeLessThan(
+      Number(defaultCt)
+    );
   });
 
   test('naive timestamp given rejects offset-bearing strings', async () => {
@@ -732,7 +761,7 @@ describe('givens — finalizeGivens (Stage 4e)', () => {
         )
         .loadQueryByName('q')
         .run()
-    ).rejects.toThrow(/finalized given.*no resolved value.*STATE/);
+    ).rejects.toThrow(/finalized given 'STATE' has no resolved value/i);
   });
 
   test('unsatisfied finalize entry does NOT block a query that does not reference it', async () => {
@@ -779,5 +808,263 @@ describe('givens — finalizeGivens (Stage 4e)', () => {
       .loadQueryByName('q')
       .run();
     expect(result.data.path(0, 'state').value).toBe('CA');
+  });
+});
+
+describe('givens — `expr in $arrayGiven` (Pattern B)', () => {
+  test('basic in $ARR filters rows to those whose value is in the array', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: ALLOWED_STATES :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state in $ALLOWED_STATES
+        group_by: state
+        order_by: state
+      }
+    `);
+    const result = await model.loadQueryByName('q').run({
+      givens: {ALLOWED_STATES: ['CA', 'NY', 'TX']},
+    });
+    const states = result.data.toObject().map(r => r['state']);
+    expect(states.sort()).toEqual(['CA', 'NY', 'TX']);
+  });
+
+  test('not-in form negates membership', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: EXCLUDED :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state not in $EXCLUDED
+        where: state ? 'CA' | 'NY' | 'TX' | 'AZ'
+        group_by: state
+        order_by: state
+      }
+    `);
+    // The first where narrows to the four states; the second tests whether
+    // not-in actually excludes the named ones from the survivors.
+    const r1 = (
+      await model.loadQueryByName('q').run({givens: {EXCLUDED: []}})
+    ).data
+      .toObject()
+      .map(r => r['state']);
+    const r2 = (
+      await model
+        .loadQueryByName('q')
+        .run({givens: {EXCLUDED: ['CA', 'NY', 'TX']}})
+    ).data
+      .toObject()
+      .map(r => r['state']);
+    expect(r1.sort()).toEqual(['AZ', 'CA', 'NY', 'TX']);
+    expect(r2).toEqual(['AZ']);
+  });
+
+  test('empty array evaluates to FALSE for IN, TRUE for NOT IN', async () => {
+    // IN form: no rows match.
+    const inModel = runtime.loadModel(`
+      ##! experimental.givens
+      given: ALLOWED :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state in $ALLOWED
+        group_by: state
+      }
+    `);
+    const inR = await inModel.loadQueryByName('q').run({givens: {ALLOWED: []}});
+    expect(inR.data.toObject().length).toBe(0);
+
+    // NOT IN form: all rows match.
+    const notInModel = runtime.loadModel(`
+      ##! experimental.givens
+      given: EXCLUDED :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state not in $EXCLUDED
+        group_by: state
+      }
+    `);
+    const notInR = await notInModel
+      .loadQueryByName('q')
+      .run({givens: {EXCLUDED: []}});
+    expect(notInR.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('null bound is treated as empty', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: ALLOWED :: string[]
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state in $ALLOWED
+        group_by: state
+      }
+    `);
+    const result = await model
+      .loadQueryByName('q')
+      .run({givens: {ALLOWED: null}});
+    expect(result.data.toObject().length).toBe(0);
+  });
+
+  test('declaration default is used when caller supplies nothing', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: ALLOWED :: string[] is ['CA', 'NY']
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: state in $ALLOWED
+        group_by: state
+        order_by: state
+      }
+    `);
+    const result = await model.loadQueryByName('q').run();
+    const states = result.data.toObject().map(r => r['state']);
+    expect(states.sort()).toEqual(['CA', 'NY']);
+  });
+
+  test('number array — exact membership against a fixed fixture', async () => {
+    // Demonstrates the proper test pattern for an inGiven against a
+    // known dataset: inline data via mkTestModel, declaration-default
+    // for the given so toMatchRows can run a self-contained query
+    // string, exact row assertion via toMatchRows.
+    const tm = mkTestModel(runtime, {
+      widgets: [
+        {id: 1, size: 10},
+        {id: 2, size: 20},
+        {id: 3, size: 30},
+      ],
+    });
+    await expect(`
+      ##! experimental.givens
+      given: SIZES :: number[] is [10, 30]
+      run: widgets -> {
+        where: size in $SIZES
+        select: id
+        order_by: id
+      }
+    `).toMatchRows(tm, [{id: 1}, {id: 3}]);
+  });
+});
+
+describe('givens — `inline` (Pattern A)', () => {
+  test('inline boolean gate becomes a literal in SQL', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        ROLE :: string
+        inline IS_ADMIN :: boolean is $ROLE = 'admin'
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $IS_ADMIN
+        group_by: state
+      }
+    `);
+    // ROLE != admin → gate is false → no rows.
+    const denied = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'viewer'}});
+    expect(denied.data.toObject().length).toBe(0);
+    // ROLE == admin → gate is true → rows come through (limited by
+    // Malloy's default 10).
+    const allowed = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'admin'}});
+    expect(allowed.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('inline gate composed from $arrayGiven membership', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        CAPABILITIES :: string[]
+        inline CAN_READ :: boolean is 'read_orders' in $CAPABILITIES
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $CAN_READ
+        group_by: state
+      }
+    `);
+    const withCap = await model
+      .loadQueryByName('q')
+      .run({givens: {CAPABILITIES: ['read_orders', 'view']}});
+    expect(withCap.data.toObject().length).toBeGreaterThan(0);
+
+    const withoutCap = await model
+      .loadQueryByName('q')
+      .run({givens: {CAPABILITIES: ['view']}});
+    expect(withoutCap.data.toObject().length).toBe(0);
+  });
+
+  test('inline default with a constant has no $-deps but still works', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: inline GATE :: boolean is true
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $GATE
+        group_by: state
+      }
+    `);
+    const result = await model.loadQueryByName('q').run();
+    expect(result.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('multiple inline gates combine with `and`/`or` correctly', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        ROLE :: string
+        CAPS :: string[]
+        inline IS_ADMIN :: boolean is $ROLE = 'admin'
+        inline HAS_READ :: boolean is 'read' in $CAPS
+        inline CAN_QUERY :: boolean is $IS_ADMIN or $HAS_READ
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $CAN_QUERY
+        group_by: state
+      }
+    `);
+    // Admin with no caps → CAN_QUERY = true
+    const adminPath = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'admin', CAPS: []}});
+    expect(adminPath.data.toObject().length).toBeGreaterThan(0);
+
+    // Non-admin with caps → CAN_QUERY = true via has-read.
+    const capsPath = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'viewer', CAPS: ['read']}});
+    expect(capsPath.data.toObject().length).toBeGreaterThan(0);
+
+    // Non-admin without caps → CAN_QUERY = false → no rows.
+    const denied = await model
+      .loadQueryByName('q')
+      .run({givens: {ROLE: 'viewer', CAPS: []}});
+    expect(denied.data.toObject().length).toBe(0);
+  });
+
+  test('inline gate falls back to a referenced regular given default when unsupplied', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        REV_REC_METHOD :: string[] is ['__NO_METHOD__']
+        inline NO_METHOD_RESTRICTIONS :: boolean is '__NO_METHOD__' in $REV_REC_METHOD
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $NO_METHOD_RESTRICTIONS
+        group_by: state
+      }
+    `);
+    // REV_REC_METHOD is NOT supplied → must fall back to its declared
+    // default ['__NO_METHOD__'] → inline gate is true → rows come through.
+    const result = await model.loadQueryByName('q').run();
+    expect(result.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('inline gate referencing an unsupplied no-default given is a clear runtime error', async () => {
+    // CAP is surfaced with no default → satisfiability passes, but
+    // omitting it at run time leaves the inline gate nothing to fold.
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        CAP :: string[]
+        inline CAN_READ :: boolean is 'read' in $CAP
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $CAN_READ
+        group_by: state
+      }
+    `);
+    await expect(model.loadQueryByName('q').run()).rejects.toThrow(
+      /Inline given depends on 'CAP', which has no supplied value and no default/
+    );
   });
 });

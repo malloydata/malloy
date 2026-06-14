@@ -1,11 +1,10 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import * as Malloy from '@malloydata/malloy-interfaces';
+import {v4 as uuidv4} from 'uuid';
 import type {LogMessage} from '../lang';
 import {MalloyTranslator} from '../lang';
 import type {ParseUpdate} from '../lang/parse-malloy';
@@ -21,14 +20,18 @@ import type {
 import {
   isSourceDef,
   mkFieldDef,
+  getModelAnnotations,
   QueryModel,
   refIsStructDef,
   safeRecordGet,
 } from '../model';
-import {modelDefToModelInfo, writeLiteralToTag} from '../to_stable';
+import {
+  modelDefToModelInfo,
+  toStableAnnotations,
+  writeLiteralToTag,
+} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
 import type {SQLSourceRequest} from '../lang/translate-response';
-import {annotationToTaglines} from '../annotation';
 import {Tag} from '@malloydata/malloy-tag';
 import {DEFAULT_LOG_RANGE, mapLogs, nodeToLiteralValue} from './util';
 import {Timer} from '../timing';
@@ -117,7 +120,7 @@ function convertDimension(field: Malloy.DimensionInfo): AtomicFieldDef {
   const typeDef = typeDefFromField(field.type);
   return {
     ...mkFieldDef(typeDef, field.name),
-    annotation:
+    annotations:
       field.annotations && field.annotations.length
         ? {
             notes: field.annotations?.map(a => ({
@@ -584,7 +587,7 @@ export function newCompileQueryState(
   const needs = {
     ...(request.compiler_needs ?? {}),
   };
-  const queryURL = 'internal://query.malloy';
+  const queryURL = `internal://query/${uuidv4()}`;
   needs.files = [
     {
       url: queryURL,
@@ -640,11 +643,9 @@ export function statedCompileQuery(
         defaultRowLimit: state.defaultRowLimit,
       });
       timer.contribute([sqlTimer.stop()]);
-      const modelAnnotations = annotationToTaglines(
-        result.modelDef.annotation
-      ).map(l => ({
-        value: l,
-      }));
+      const modelAnnotations = toStableAnnotations(
+        getModelAnnotations(result.modelDef)
+      );
       let source: StructDef;
       if (query.compositeResolvedSourceDef) {
         source = query.compositeResolvedSourceDef;
@@ -660,11 +661,7 @@ export function statedCompileQuery(
         }
       }
 
-      const sourceAnnotations = annotationToTaglines(source.annotation).map(
-        l => ({
-          value: l,
-        })
-      );
+      const sourceAnnotations = toStableAnnotations(source.annotations);
       const sourceMetadataTag = Tag.withPrefix('#(malloy) ');
       sourceMetadataTag.set(['source', 'name'], translatedQuery.sourceExplore);
       const sourceArguments =

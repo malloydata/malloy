@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {spawnSync} from 'child_process';
@@ -103,11 +85,9 @@ describe('DuckDBConnection', () => {
       expect(runRawSQL).toHaveBeenCalledTimes(2);
     });
 
-    it('quotes file-path table names containing dashes', async () => {
-      // Bug repro: `duckdb.table('arrests-latest.parquet')` failed because
-      // the dash made DuckDB parse `arrests-latest.parquet` as subtraction.
+    it('fetches schema for a single-quoted file-path table', async () => {
       await connection.fetchSchemaForTables(
-        {'dashed': 'arrests-latest.parquet'},
+        {'dashed': "'arrests-latest.parquet'"},
         {}
       );
       expect(runRawSQL).toHaveBeenCalledWith(
@@ -115,14 +95,14 @@ describe('DuckDBConnection', () => {
       );
     });
 
-    it('leaves bare table identifiers unquoted', async () => {
+    it('fetches schema for a bare identifier', async () => {
       await connection.fetchSchemaForTables({'plain': 'plain_table'}, {});
       expect(runRawSQL).toHaveBeenCalledWith(
         'DESCRIBE SELECT * FROM plain_table'
       );
     });
 
-    it('leaves schema-qualified identifiers unquoted', async () => {
+    it('fetches schema for a schema-qualified identifier path', async () => {
       await connection.fetchSchemaForTables(
         {'qualified': 'main.qualified_table'},
         {}

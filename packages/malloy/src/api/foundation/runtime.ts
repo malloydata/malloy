@@ -16,8 +16,11 @@ import type {
   GivenValue,
   VirtualMap,
 } from '../../model';
-import {isSourceDef, mkSafeRecord} from '../../model';
+import {isSourceDef, mkSafeRecord, MalloyCompileError} from '../../model';
+import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
+import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
+import {isBuildManifestEntry} from './config';
 import type {Dialect} from '../../dialect';
 import type {RunSQLOptions} from '../../run_sql_options';
 import {rowDataToNumber} from '../../api/row_data_utils';
@@ -28,7 +31,7 @@ import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
 import type {PreparedResult, Explore} from './core';
 import {Model, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
-import {Malloy} from './compile';
+import {Malloy, MalloyError} from './compile';
 
 // =============================================================================
 // Type Aliases
@@ -325,6 +328,17 @@ export class Runtime {
           const parsed: unknown = JSON.parse(text);
           if (!isBuildManifestShape(parsed)) {
             throw new Error('manifest is not an object with an "entries" map');
+          }
+          for (const [buildId, entry] of Object.entries(parsed.entries)) {
+            if (!isBuildManifestEntry(entry)) {
+              throw new Error(
+                `Manifest entry '${buildId}' is missing a string tableName`
+              );
+            }
+            requireCanonicalTablePathAnyDialect(
+              entry.tableName,
+              `Manifest entry '${buildId}'`
+            );
           }
           return parsed;
         } catch (e) {
@@ -696,9 +710,7 @@ export class SingleConnectionRuntime<
 
   // quote a column name
   quote(column: string): string {
-    return getDialect(this.connection.dialectName).sqlMaybeQuoteIdentifier(
-      column
-    );
+    return getDialect(this.connection.dialectName).sqlQuoteIdentifier(column);
   }
 
   get dialect(): Dialect {
@@ -832,6 +844,69 @@ export class ModelMaterializer extends FluentState<Model> {
   }
 
   /**
+   * Load a Malloy query whose text comes from an untrusted source — an
+   * MCP client, an LLM-authored query, a UI field, an HTTP request body
+   * — and should compile against this already-loaded trusted model.
+   * Use this in preference to `loadQuery` when the caller of your
+   * service is not the author of the model and may write Malloy that
+   * reaches past the model's curated surface.
+   *
+   * Restricted-mode compilation rejects these constructs:
+   *
+   * - `import` statements
+   * - `given:` declarations (restricted queries may still reference
+   *   givens the model declared, via `$NAME`)
+   * - `##!` compiler-flag annotations
+   * - `connection.table(...)` and `connection.sql(...)` source forms
+   * - `name!type(args)` raw-SQL function calls
+   * - The `sql_*` family of built-in functions (`sql_number`,
+   *   `sql_string`, `sql_date`, `sql_timestamp`, `sql_boolean`)
+   *
+   * The model's existing surface — sources, queries, dimensions,
+   * measures, functions, givens declared by the model author — is
+   * fully available regardless of whether the model's own definitions
+   * use any of the forbidden constructs.
+   *
+   * Errors reach the caller in the same way as any other Malloy
+   * compile: `.validate()` returns a `LogMessage[]`, and `.run()` /
+   * `.getPreparedResult()` / `.getSQL()` throw `MalloyError` whose
+   * `.problems` is the same array. The list holds every compile
+   * problem — ordinary translator and SQL-compile errors as well as
+   * restricted-mode rejections. The restricted-mode subset is
+   * identifiable by `code: 'restricted-construct-forbidden'` and
+   * `errorTag: 'restricted-mode'`; restricted-mode rejection messages
+   * quote the offending source text and state the rule. Multiple
+   * violations are reported in one compile.
+   *
+   * The input is required to be a string. Restricted text arrives from
+   * an untrusted caller as bytes the host already has in hand; there
+   * is no host-side trust mechanism for fetching it via a URL.
+   *
+   * @param text The Malloy text to compile as a restricted query.
+   * @return A `QueryMaterializer` capable of materializing or running
+   *   the query.
+   */
+  public loadRestrictedQuery(text: string): QueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      const urlReader = this.runtime.urlReader;
+      const connections = this.runtime.connections;
+      const testEnvironment = this.runtime.isTestRuntime ? true : undefined;
+      const model = await this.getModel();
+      const queryModel = await Malloy.compile({
+        source: text,
+        restrictedMode: true,
+        method: 'query',
+        urlReader,
+        connections,
+        model,
+        testEnvironment,
+        ...this.compileQueryOptions,
+      });
+      return queryModel.preparedQuery;
+    });
+  }
+
+  /**
    * Extend a Malloy model by URL or contents.
    *
    * @param source The model URL or contents to load and (eventually) compile.
@@ -862,6 +937,7 @@ export class ModelMaterializer extends FluentState<Model> {
           urlReader,
           connections,
           model,
+          method: 'extendModel',
           refreshSchemaCache: options?.refreshSchemaCache,
           noThrowOnError: options?.noThrowOnError,
           importBaseURL: options?.importBaseURL,
@@ -1045,30 +1121,61 @@ export class ModelMaterializer extends FluentState<Model> {
   public getModel(): Promise<Model> {
     return this.materialize();
   }
+
+  /**
+   * Compile this model and return any problems as structured
+   * `LogMessage`s; empty array means clean. Non-throwing.
+   *
+   * Only translator-time problems surface here; SQL-compile problems
+   * are per-query and live on `QueryMaterializer.validate()`.
+   *
+   * A subsequent `getModel()` reuses the cached materialize.
+   */
+  public async validate(): Promise<LogMessage[]> {
+    try {
+      await this.materialize();
+      return [];
+    } catch (e) {
+      if (e instanceof MalloyError) return e.problems;
+      if (e instanceof Error) {
+        return [
+          {
+            message:
+              'Internal compiler error (likely a Malloy bug — please file ' +
+              `an issue): ${e.message}`,
+            severity: 'error',
+            code: 'compiler-bug',
+          },
+        ];
+      }
+      throw e;
+    }
+  }
 }
 
 // =============================================================================
 // QueryMaterializer
 // =============================================================================
 
-function runSQLOptionsWithAnnotations(
-  preparedResult: PreparedResult,
-  givenOptions?: RunSQLOptions
-): RunSQLOptions {
-  return {
-    queryAnnotation: preparedResult.annotation,
-    modelAnnotation: preparedResult.modelAnnotation,
-    ...givenOptions,
-  };
-}
-
 /**
  * An object representing the task of loading a `Query`, capable of
  * materializing the query (via `getPreparedQuery()`) or extending the task to load
  * prepared results or run the query (via e.g. `loadPreparedResult()` or `run()`).
  */
+type CompileAttempt = {
+  preparedResult?: PreparedResult;
+  problems: LogMessage[];
+};
+
 export class QueryMaterializer extends FluentState<PreparedQuery> {
   private readonly compileQueryOptions: CompileQueryOptions | undefined;
+  /**
+   * Memoizes the no-options compile so `validate()` + a follow-up
+   * `getPreparedResult()` / `run()` shares one compilation. Calls with
+   * explicit options bypass — options aren't hashed.
+   */
+  private _compileAttempt: Promise<CompileAttempt> | undefined;
+
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<PreparedQuery>,
@@ -1079,6 +1186,80 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   }
 
   /**
+   * `MalloyError` (translator) is unwrapped into its `problems` array.
+   * `MalloyCompileError` (SQL compiler) becomes one structured problem.
+   * Any other `Error` is treated as an invariant violation and surfaces
+   * as one `code: 'compiler-bug'` problem.
+   */
+  private async _compileAndCollect(
+    options?: CompileQueryOptions
+  ): Promise<CompileAttempt> {
+    try {
+      const preparedResult =
+        await this.loadPreparedResult(options).getPreparedResult();
+      return {preparedResult, problems: []};
+    } catch (e) {
+      if (e instanceof MalloyError) {
+        return {problems: e.problems};
+      }
+      if (e instanceof MalloyCompileError) {
+        return {
+          problems: [
+            {
+              message: e.message,
+              severity: 'error',
+              code: e.code,
+              at: e.at,
+            },
+          ],
+        };
+      }
+      if (e instanceof Error) {
+        return {
+          problems: [
+            {
+              message:
+                'Internal compiler error (likely a Malloy bug — please file ' +
+                `an issue): ${e.message}`,
+              severity: 'error',
+              code: 'compiler-bug',
+            },
+          ],
+        };
+      }
+      throw e;
+    }
+  }
+
+  private compileAttempt(
+    options?: CompileQueryOptions
+  ): Promise<CompileAttempt> {
+    if (options === undefined && this._compileAttempt) {
+      return this._compileAttempt;
+    }
+    const p = this._compileAndCollect(options);
+    if (options === undefined) {
+      this._compileAttempt = p;
+    }
+    return p;
+  }
+
+  /**
+   * Compile this query and return any problems as structured
+   * `LogMessage`s; empty array means clean. Non-throwing.
+   *
+   * Surfaces translator-time errors (may be several) and compile-time
+   * errors (at most one — the compiler is fail-fast). LogMessages carry
+   * `code` and, where the IR has it, `at: DocumentLocation`.
+   *
+   * A subsequent no-options `getPreparedResult()` / `getSQL()` / `run()`
+   * reuses the cached compile.
+   */
+  public async validate(options?: CompileQueryOptions): Promise<LogMessage[]> {
+    return (await this.compileAttempt(options)).problems;
+  }
+
+  /**
    * Run this loaded `Query`.
    *
    * @return The query results from running this loaded query.
@@ -1086,8 +1267,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   async run(options?: RunSQLOptions & CompileQueryOptions): Promise<Result> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult(options);
-    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
-    return Malloy.run({connections, preparedResult, options: finalOptions});
+    return Malloy.run({connections, preparedResult, options});
   }
 
   async *runStream(
@@ -1095,11 +1275,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   ): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult(options);
     const connections = this.runtime.connections;
-    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     const stream = Malloy.runStream({
       connections,
       preparedResult,
-      options: finalOptions,
+      options,
     });
     for await (const row of stream) {
       yield row;
@@ -1131,6 +1310,15 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         mergedOptions.buildManifest ??
         (await this.runtime._resolveBuildManifest());
 
+      if (buildManifest) {
+        for (const [buildId, entry] of Object.entries(buildManifest.entries)) {
+          requireCanonicalTablePathAnyDialect(
+            entry.tableName,
+            `Manifest entry '${buildId}'`
+          );
+        }
+      }
+
       // If we have a manifest with entries, compute connectionDigests for lookups.
       // TODO: This is inefficient - we call getBuildPlan just to find connection names.
       // Consider adding a listConnections() method to LookupConnection, or caching this.
@@ -1144,12 +1332,19 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         buildManifest = undefined;
       }
       if (buildManifest) {
-        const modelTag = preparedQuery.model.tagParse({prefix: /^##! /}).tag;
+        // Resolved model annotations (the import/extend fold), so the
+        // `experimental.persistence` flag carries across extend.
+        const modelTag =
+          preparedQuery.model.modelAnnotations.parseAsTag('!').tag;
         if (!modelTag.has('experimental', 'persistence')) {
           if (explicitManifest) {
             // Explicitly passed non-empty manifest requires persistence support
-            throw new Error(
-              'Model must have ##! experimental.persistence to use buildManifest'
+            throw new MalloyCompileError(
+              'A non-empty `buildManifest` was supplied, but the model is ' +
+                'missing `##! experimental.persistence`. Add the flag to the ' +
+                'model or pass `EMPTY_BUILD_MANIFEST` to suppress substitution.',
+              'runtime-manifest-needs-persistence-flag',
+              undefined
             );
           }
           // Runtime-level manifest (e.g. from config): silently ignore
@@ -1171,6 +1366,16 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
 
       // Use virtualMap from options if provided, otherwise fall back to Runtime's.
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
+      if (virtualMap) {
+        for (const [connName, inner] of virtualMap) {
+          for (const [virtualName, tablePath] of inner) {
+            requireCanonicalTablePathAnyDialect(
+              tablePath,
+              `virtualMap entry '${connName}.${virtualName}'`
+            );
+          }
+        }
+      }
 
       // Per-query supply for a finalized given is rejected at API entry
       // — the finalized-givens set is the runtime's "this can't be
@@ -1180,8 +1385,11 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       if (finalizedSet.size > 0 && mergedOptions.givens) {
         for (const name of Object.keys(mergedOptions.givens)) {
           if (finalizedSet.has(name)) {
-            throw new Error(
-              `Cannot supply '${name}' per-query: it is finalized at the runtime layer (config.finalizeGivens).`
+            throw new MalloyCompileError(
+              `Cannot supply given '${name}' per-query: it is finalized at ` +
+                'the runtime layer via `config.finalizeGivens`.',
+              'runtime-given-finalized',
+              undefined
             );
           }
         }
@@ -1211,7 +1419,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       const queryGivenUsage = preparedQuery._query.givenUsage ?? [];
       if (finalizedSet.size > 0 && queryGivenUsage.length > 0) {
         const referencedIds = new Set(queryGivenUsage.map(g => g.id));
-        const missing: string[] = [];
+        const missingProblems: LogMessage[] = [];
         for (const [surfaceName, entry] of Object.entries(
           preparedQuery._modelDef.contents
         )) {
@@ -1219,11 +1427,21 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
           if (!referencedIds.has(entry.id)) continue;
           if (!finalizedSet.has(surfaceName)) continue;
           if (mergedGivens && surfaceName in mergedGivens) continue;
-          missing.push(surfaceName);
+          const firstUse = queryGivenUsage.find(u => u.id === entry.id);
+          missingProblems.push({
+            message:
+              `Finalized given '${surfaceName}' has no resolved value. ` +
+              'It must be supplied in `givensPath` or in the Runtime ' +
+              "constructor's `givens`.",
+            severity: 'error',
+            code: 'runtime-given-finalized-missing',
+            at: firstUse?.at,
+          });
         }
-        if (missing.length > 0) {
-          throw new Error(
-            `Query references finalized given(s) with no resolved value: ${missing.join(', ')}. Each finalized given the query needs must have a value in givensPath or in the Runtime constructor's \`givens\`.`
+        if (missingProblems.length > 0) {
+          throw new MalloyError(
+            missingProblems.map(p => p.message).join('\n'),
+            missingProblems
           );
         }
       }
@@ -1247,12 +1465,21 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Materialize the prepared result of this loaded query.
    *
+   * Throws `MalloyError` on failure, with `.problems` populated for both
+   * translator and compiler errors. For non-throwing access to the same
+   * problem list, use `validate()`.
+   *
    * @return A promise of the prepared result of this loaded query.
    */
-  public getPreparedResult(
+  public async getPreparedResult(
     options?: CompileQueryOptions
   ): Promise<PreparedResult> {
-    return this.loadPreparedResult(options).getPreparedResult();
+    const attempt = await this.compileAttempt(options);
+    if (attempt.preparedResult) return attempt.preparedResult;
+    throw new MalloyError(
+      attempt.problems.map(p => p.message).join('\n') || 'Compilation failed.',
+      attempt.problems
+    );
   }
 
   /**
@@ -1309,11 +1536,10 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   async run(options?: RunSQLOptions): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     return Malloy.run({
       connections,
       preparedResult,
-      options: finalOptions,
+      options,
     });
   }
 
@@ -1322,11 +1548,10 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   }): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     const stream = Malloy.runStream({
       connections,
       preparedResult,
-      options: finalOptions,
+      options,
     });
     for await (const row of stream) {
       yield row;

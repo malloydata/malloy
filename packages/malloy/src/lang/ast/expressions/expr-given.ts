@@ -56,7 +56,7 @@ export class GivenReference extends ExpressionDef {
       location: this.location,
       definition: {
         type: typeDefToString(given.type),
-        annotation: given.annotation,
+        annotations: given.annotations,
         location: given.location,
         defaultText: given.defaultText,
       },
@@ -65,6 +65,7 @@ export class GivenReference extends ExpressionDef {
       node: 'given',
       id: entry.id,
       refName: this.name,
+      at: this.location,
     };
     return {
       ...literalExprValue({value: refNode, dataType: given.type}),

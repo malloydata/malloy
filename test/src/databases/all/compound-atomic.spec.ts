@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
@@ -37,7 +35,7 @@ describe.each(runtimes.runtimeList)(
   (conName, runtime) => {
     const testModel = wrapTestModel(runtime, '');
     const supportsNestedArrays = runtime.dialect.nestedArrays;
-    const quote = runtime.dialect.sqlMaybeQuoteIdentifier;
+    const quote = (s: string) => runtime.dialect.sqlQuoteIdentifier(s);
 
     const empty = `${conName}.sql("SELECT 0 as z")`;
     function arraySelectVal(...val: number[]): string {

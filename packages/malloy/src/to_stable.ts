@@ -1,12 +1,11 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import * as Malloy from '@malloydata/malloy-interfaces';
 import type {
+  AnnotationsDef,
   AtomicTypeDef,
   DateUnit,
   Expr,
@@ -14,7 +13,6 @@ import type {
   FilterCondition,
   JoinType,
   ModelDef,
-  Query,
   RecordTypeDef,
   RepeatedRecordTypeDef,
   ResultMetadataDef,
@@ -23,6 +21,7 @@ import type {
   TimestampUnit,
 } from './model';
 import {
+  activeName,
   expressionIsAggregate,
   expressionIsScalar,
   isAtomic,
@@ -35,7 +34,7 @@ import {
   getResultStructDefForQuery,
   getResultStructDefForView,
 } from './model';
-import {annotationToTaglines} from './annotation';
+import {Annotations} from './api/foundation/annotation';
 import {Tag} from '@malloydata/malloy-tag';
 
 export function sourceDefToSourceInfo(sourceDef: SourceDef): Malloy.SourceInfo {
@@ -63,12 +62,12 @@ export function sourceDefToSourceInfo(sourceDef: SourceDef): Malloy.SourceInfo {
       : undefined;
 
   const sourceInfo: Malloy.SourceInfo = {
-    name: sourceDef.as ?? sourceDef.name,
+    name: activeName(sourceDef),
     schema: {
       fields: convertFieldInfos(sourceDef, sourceDef.fields),
     },
     parameters,
-    annotations: getAnnotationsFromField(sourceDef),
+    annotations: toStableAnnotations(sourceDef.annotations),
   };
   return sourceInfo;
 }
@@ -88,7 +87,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
       });
     } else if (entry.type === 'query') {
       const outputStruct = getResultStructDefForQuery(modelDef, entry);
-      const annotations = getAnnotationsFromField(entry);
+      const annotations = toStableAnnotations(entry.annotations);
       const resultMetadataAnnotation = outputStruct.resultMetadata
         ? getResultStructMetadataAnnotation(
             outputStruct,
@@ -112,7 +111,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   }
   for (const query of modelDef.queryList) {
     const outputStruct = getResultStructDefForQuery(modelDef, query);
-    const annotations = getAnnotationsFromField(query);
+    const annotations = toStableAnnotations(query.annotations);
     const resultMetadataAnnotation = outputStruct.resultMetadata
       ? getResultStructMetadataAnnotation(
           outputStruct,
@@ -172,13 +171,15 @@ function convertParameterDefaultValue(
   }
 }
 
-function getAnnotationsFromField(
-  field: FieldDef | Query | SourceDef
+/**
+ * IR annotation → stable `Malloy.Annotation[]` shape used across `to_stable`
+ * and the api surfaces. The stable shape carries the raw annotation strings;
+ * routes are derivable at the consumer via `parsePrefix` (`./prefix.ts`).
+ */
+export function toStableAnnotations(
+  annot: AnnotationsDef | undefined
 ): Malloy.Annotation[] {
-  const taglines = annotationToTaglines(field.annotation);
-  return taglines.map(tagline => ({
-    value: tagline,
-  }));
+  return new Annotations(annot).texts().map(value => ({value}));
 }
 
 export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
@@ -186,10 +187,7 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
   for (const field of fields) {
     const isPublic = field.accessModifier === undefined;
     if (!isPublic) continue;
-    const taglines = annotationToTaglines(field.annotation);
-    const rawAnnotations: Malloy.Annotation[] = taglines.map(tagline => ({
-      value: tagline,
-    }));
+    const rawAnnotations = toStableAnnotations(field.annotations);
     const annotations = rawAnnotations.length > 0 ? rawAnnotations : undefined;
     if (isTurtle(field)) {
       const outputStruct = getResultStructDefForView(source, field);
@@ -205,7 +203,7 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       ];
       const fieldInfo: Malloy.FieldInfo = {
         kind: 'view',
-        name: field.as ?? field.name,
+        name: activeName(field),
         annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
         schema: {fields: convertFieldInfos(outputStruct, outputStruct.fields)},
       };
@@ -234,7 +232,7 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       ];
       const fieldInfo: Malloy.FieldInfo = {
         kind: aggregate ? 'measure' : 'dimension',
-        name: field.as ?? field.name,
+        name: activeName(field),
         type: typeDefToType(field),
         annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
       };
@@ -242,7 +240,7 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
     } else if (isJoinedSource(field)) {
       const fieldInfo: Malloy.FieldInfo = {
         kind: 'join',
-        name: field.as ?? field.name,
+        name: activeName(field),
         annotations,
         schema: {
           fields: convertFieldInfos(field, field.fields),
@@ -384,8 +382,7 @@ export function getResultStructMetadataAnnotation(
       const orderBy = resultMetadata.orderBy[i];
       const orderByField =
         typeof orderBy.field === 'number'
-          ? (field.fields[orderBy.field - 1].as ??
-            field.fields[orderBy.field - 1].name)
+          ? activeName(field.fields[orderBy.field - 1])
           : orderBy.field;
       const direction = orderBy.dir ?? null;
       tag.set(['ordered_by', i, orderByField], direction);
@@ -489,13 +486,8 @@ function convertRecordType(
           }
         }
       }
-      if (f.annotation) {
-        const taglines = annotationToTaglines(f.annotation);
-        annotations.push(
-          ...taglines.map(tagline => ({
-            value: tagline,
-          }))
-        );
+      if (f.annotations) {
+        annotations.push(...toStableAnnotations(f.annotations));
       }
       if (isAtomic(f)) {
         return {

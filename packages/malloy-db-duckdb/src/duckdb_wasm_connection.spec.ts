@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {wrapTestModel} from '@malloydata/malloy/test';
@@ -164,6 +146,27 @@ FROM read_parquet("inventory_items2.parquet")
     const result = await connection.runSQL("SELECT DATE '2024-01-15' AS d");
     expect(result.rows[0]['d']).toBeInstanceOf(Date);
     expect((result.rows[0]['d'] as Date).toISOString()).toContain('2024-01-15');
+  });
+});
+
+describe('workingDirectory file:// URL handling', () => {
+  // `workingDirectory` defaults to `config.rootDirectory`, a URL string. It must
+  // reach DuckDB-Wasm's FILE_SEARCH_PATH as a plain virtual-FS path, not a
+  // `file:` URL — otherwise relative reads resolve against nothing.
+  const connection = new DuckDBWASMConnection({
+    name: 'duckdb',
+    workingDirectory: 'file:///work/data%20dir',
+  });
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  it('decodes the file:// URL into the FILE_SEARCH_PATH', async () => {
+    const result = await connection.runSQL(
+      "SELECT current_setting('file_search_path') AS search_path"
+    );
+    expect(result.rows[0]['search_path']).toBe('/work/data dir');
   });
 });
 

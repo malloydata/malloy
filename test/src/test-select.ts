@@ -485,7 +485,7 @@ export class TestSelect {
 
         if (idx === 0) {
           // First row: include column aliases and explicit casts if needed
-          const quotedName = this.dialect.sqlMaybeQuoteIdentifier(colName);
+          const quotedName = this.dialect.sqlQuoteIdentifier(colName);
           if (typedValue.needsCast) {
             const sqlType = this.dialect.malloyTypeToSQLType(
               typedValue.malloyType
@@ -519,7 +519,7 @@ export class TestSelect {
 
     // Multiple rows: double wrap - inner for sorting, outer for column selection
     const quotedColumns = columnList
-      .map(col => this.dialect.sqlMaybeQuoteIdentifier(col))
+      .map(col => this.dialect.sqlQuoteIdentifier(col))
       .join(', ');
     const innerQuery = selects.join('\nUNION ALL ');
 

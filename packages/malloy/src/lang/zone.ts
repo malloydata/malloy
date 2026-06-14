@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {DocumentLocation} from '../model/malloy_types';
@@ -59,8 +41,13 @@ export type ZoneEntry<T> = EntryPresent<T> | ReferenceEntry | EntryErrored;
 export class Zone<TValue> {
   zone: Map<string, ZoneEntry<TValue>>;
   location: Record<string, DocumentLocation> = {};
+  private locked = false;
   constructor() {
     this.zone = new Map<string, ZoneEntry<TValue>>();
+  }
+
+  lock(): void {
+    this.locked = true;
   }
 
   get(str: string): TValue | undefined {
@@ -87,6 +74,7 @@ export class Zone<TValue> {
    * @param val
    */
   define(str: string, val: TValue): void {
+    if (this.locked) return;
     this.zone.set(str, {status: 'present', value: val});
   }
 
@@ -96,6 +84,7 @@ export class Zone<TValue> {
    * @param loc The location of the reference
    */
   reference(str: string, loc: DocumentLocation): void {
+    if (this.locked) return;
     const zst = this.zone.get(str);
     if (zst?.status === undefined) {
       this.zone.set(str, {status: 'reference', firstReference: loc});
@@ -125,6 +114,7 @@ export class Zone<TValue> {
     updateData: ZoneData<TValue> | undefined,
     errorData: Record<string, string> | undefined
   ): void {
+    if (this.locked) return;
     if (updateData) {
       for (const [updateKey, updateVal] of Object.entries(updateData)) {
         if (updateVal !== undefined) {

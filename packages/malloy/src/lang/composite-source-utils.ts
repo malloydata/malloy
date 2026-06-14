@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -31,12 +29,13 @@ import type {
   AggregateUngrouping,
   RequiredGroupBy,
   DocumentLocation,
-  Annotation,
+  AnnotationsDef,
   PartitionCompositeDesc,
   FilterCondition,
   StructDef,
 } from '../model/malloy_types';
 import {
+  activeName,
   expressionIsScalar,
   fieldUsageFrom,
   givenUsageFrom,
@@ -54,7 +53,7 @@ import {
 } from '../model/malloy_types';
 import {isNotUndefined} from './utils';
 import {pathToKey} from '../model/utils';
-import {annotationToTag} from '../annotation';
+import {Annotations} from '../api/foundation/annotation';
 
 type CompositeCouldNotFindFieldError = {
   code: 'could_not_find_field';
@@ -134,7 +133,7 @@ function _resolveCompositeSources(
       const fieldNames = new Set<string>();
       for (const field of inputSource.fields) {
         if (field.accessModifier !== 'private') {
-          fieldNames.add(field.as ?? field.name);
+          fieldNames.add(activeName(field));
         }
       }
 
@@ -205,17 +204,17 @@ function _resolveCompositeSources(
         }
         base = {
           ...resolveInner.success,
-          annotation: composeAnnotations(
-            base.annotation,
-            resolveInner.success.annotation
+          annotations: composeAnnotations(
+            base.annotations,
+            resolveInner.success.annotations
           ),
         };
       } else {
         base = {
           ...inputSource,
-          annotation: composeAnnotations(
-            base.annotation,
-            inputSource.annotation
+          annotations: composeAnnotations(
+            base.annotations,
+            inputSource.annotations
           ),
         };
       }
@@ -730,12 +729,12 @@ function getPartitionCompositeFilter(
 }
 
 export function getPartitionCompositeDesc(
-  annotation: Annotation | undefined,
+  annotations: AnnotationsDef | undefined,
   structDef: StructDef,
   logTo: MalloyElement
 ): PartitionCompositeDesc | undefined {
-  if (annotation === undefined) return undefined;
-  const compilerFlags = annotationToTag(annotation, {prefix: /^#!\s*/}).tag;
+  if (annotations === undefined) return undefined;
+  const compilerFlags = new Annotations(annotations).parseAsTag('!').tag;
   const partitionCompositeTag = compilerFlags.tag(
     'experimental',
     'partition_composite'
@@ -781,7 +780,7 @@ export function getPartitionCompositeDesc(
     partitions.push({id, fields});
   }
   for (const field of [partitionField, ...allFields]) {
-    const def = structDef.fields.find(f => (f.as ?? f.name) === field);
+    const def = structDef.fields.find(f => activeName(f) === field);
     if (def === undefined) {
       logTo.logError(
         'invalid-partition-composite',
@@ -789,14 +788,14 @@ export function getPartitionCompositeDesc(
       );
     }
   }
-  const compositeFields = structDef.fields.map(f => f.as ?? f.name);
+  const compositeFields = structDef.fields.map(f => activeName(f));
   return {partitionField, partitions, compositeFields};
 }
 
 function composeAnnotations(
-  base: Annotation | undefined,
-  slice: Annotation | undefined
-): Annotation | undefined {
+  base: AnnotationsDef | undefined,
+  slice: AnnotationsDef | undefined
+): AnnotationsDef | undefined {
   if (base === undefined) return slice;
   if (slice === undefined) return base;
   const notes = [...(base.notes ?? []), ...(slice.notes ?? [])];
@@ -812,7 +811,7 @@ function mergeFields(...fields: FieldDef[][]): FieldDef[] {
   const fieldsByName: {[name: string]: FieldDef} = {};
   for (const list of fields) {
     for (const field of list) {
-      fieldsByName[field.as ?? field.name] = field;
+      fieldsByName[activeName(field)] = field;
     }
   }
   return Object.values(fieldsByName);
@@ -831,7 +830,7 @@ function genRootFields(
   const headJoinName = joinPath[0];
   const fieldsByName: {[name: string]: FieldDef} = {};
   for (const field of rootFields) {
-    fieldsByName[field.as ?? field.name] = field;
+    fieldsByName[activeName(field)] = field;
   }
   const join = fieldsByName[headJoinName];
   if (join === undefined) {
@@ -875,7 +874,7 @@ function processJoins(
   const fieldsByName: {[name: string]: FieldDef} = {};
   const errors: {error: CompositeError; firstUsage: FieldUsageEntry}[] = [];
   for (const field of base.fields) {
-    fieldsByName[field.as ?? field.name] = field;
+    fieldsByName[activeName(field)] = field;
   }
   for (const [joinName, joinedUsage] of Object.entries(
     categorizedFieldUsage.joinUsage
@@ -936,7 +935,7 @@ function processJoins(
     fieldsByName[joinName] = {
       ...resolved.success,
       join: join.join,
-      as: join.as ?? join.name,
+      as: activeName(join),
       onExpression: join.onExpression,
     };
     base.fields = Object.values(fieldsByName);
@@ -1677,7 +1676,7 @@ function buildNamespace(fields: FieldDef[]): Namespace {
   };
 
   for (const field of fields) {
-    const name = field.as ?? field.name;
+    const name = activeName(field);
     namespace.fields[name] = field;
 
     // If it's a join with nested fields, recursively build its hierarchy
@@ -1709,7 +1708,7 @@ function inNamespace(path: string[], space: Namespace): FieldDef | undefined {
 
 function lookup(field: string[], fields: FieldDef[]): FieldDef {
   const [head, ...rest] = field;
-  const def = fields.find(f => (f.as ?? f.name) === head);
+  const def = fields.find(f => activeName(f) === head);
   if (def === undefined) {
     throw new Error(
       `No definition for ${head} when resolving composite source`

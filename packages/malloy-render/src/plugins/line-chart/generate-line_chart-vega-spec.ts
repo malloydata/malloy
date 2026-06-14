@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -14,6 +12,10 @@ import type {
 } from '@/component/types';
 import {getChartLayoutSettings} from '@/component/chart/chart-layout-settings';
 import {createMeasureAxis} from '@/component/vega/measure-axis';
+import {
+  MEASURE_SERIES_LABEL_SCALE,
+  getMeasureSeriesLabelScale,
+} from '@/component/vega/measure-series-label-scale';
 import type {
   Axis,
   Config,
@@ -39,6 +41,7 @@ import {Field} from '@/data_tree';
 import {NULL_SYMBOL, type RenderTimeStringOptions} from '@/util';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
+import type {SyntheticSeriesField} from '@/plugins/synthetic-series-field';
 
 type LineDataRecord = {
   x: string | number;
@@ -87,9 +90,22 @@ export interface LineChartSettings {
   interactive: boolean;
 }
 
+/**
+ * The slice of the line chart plugin instance the spec generator reads,
+ * narrowed so tests can construct a real, fully typed value.
+ */
+export type LineChartSpecInputs = Pick<
+  LineChartPluginInstance,
+  | 'getMetadata'
+  | 'field'
+  | 'chartDisplay'
+  | 'getTopNSeries'
+  | 'syntheticSeriesField'
+>;
+
 export function generateLineChartVegaSpecV2(
   metadata: RenderMetadata,
-  plugin: LineChartPluginInstance,
+  plugin: LineChartSpecInputs,
   vegaConfig?: Config
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
@@ -120,7 +136,9 @@ export function generateLineChartVegaSpecV2(
   };
 
   const yField = explore.fieldAt(yFieldPath);
-  let seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+  let seriesField: Field | SyntheticSeriesField | null = seriesFieldPath
+    ? explore.fieldAt(seriesFieldPath)
+    : null;
 
   // Use synthetic series field for YoY mode
   if (settings.mode === 'yoy' && plugin.syntheticSeriesField) {
@@ -228,7 +246,7 @@ export function generateLineChartVegaSpecV2(
     ? createMeasureAxis({
         type: 'y',
         title: settings.yChannel.fields
-          .map(f => explore.fieldAt(f).name)
+          .map(f => explore.fieldAt(f).getLabel())
           .join(', '),
         tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
         labelLimit: chartSettings.yAxis.width + 10,
@@ -779,7 +797,7 @@ export function generateLineChartVegaSpecV2(
       {
         orient: 'bottom',
         scale: 'xscale',
-        title: xField.name,
+        title: xField.getLabel(),
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
@@ -830,11 +848,11 @@ export function generateLineChartVegaSpecV2(
           (a, b) => Math.max(a, b?.toString().length ?? 1),
           0
         );
-        maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+        maxCharCt = Math.max(maxCharCt, seriesField!.getLabel().length);
       }
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
-        (max, f) => Math.max(max, f.length),
+        (max, f) => Math.max(max, explore.fieldAt(f).getLabel().length),
         maxCharCt
       );
     }
@@ -855,10 +873,15 @@ export function generateLineChartVegaSpecV2(
       offset: 4,
     };
     (spec.padding as VegaPadding).right = legendSize;
+    if (isMeasureSeries && !isDimensionalSeries) {
+      spec.scales!.push(
+        getMeasureSeriesLabelScale(explore, settings.yChannel.fields)
+      );
+    }
     spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
-      title: seriesField ? seriesField.name : '',
+      title: seriesField ? seriesField.getLabel() : '',
       orient: 'right',
       ...legendSettings,
       values:
@@ -874,6 +897,9 @@ export function generateLineChartVegaSpecV2(
           name: 'legend_labels',
           interactive: true,
           update: {
+            ...(isMeasureSeries && !isDimensionalSeries
+              ? {text: {scale: MEASURE_SERIES_LABEL_SCALE, field: 'value'}}
+              : {}),
             fillOpacity: [
               {
                 test: 'brushSeriesIn === datum.value',
@@ -1103,6 +1129,10 @@ export function generateLineChartVegaSpecV2(
           ? renderNumericField(field, value)
           : String(value);
       };
+      const entryLabel = (rec: LineDataRecord) =>
+        isDimensionalSeries
+          ? rec.series
+          : explore.fieldAt([rec.series]).getLabel();
 
       // Tooltip records for the highlighted points
       if (['x_hit_target', 'ref_line_targets'].includes(markName)) {
@@ -1137,7 +1167,7 @@ export function generateLineChartVegaSpecV2(
         tooltipData = {
           title: [title],
           entries: sortedRecords.map(rec => ({
-            label: rec.series,
+            label: entryLabel(rec),
             value: formatY(rec),
             highlight: false,
             color: colorScale(rec.series),
@@ -1188,7 +1218,7 @@ export function generateLineChartVegaSpecV2(
           title: [title],
           entries: sortedRecords.map(rec => {
             return {
-              label: rec.series,
+              label: entryLabel(rec),
               value: formatY(rec),
               highlight: highlightedSeries === rec.series,
               color: colorScale(rec.series),

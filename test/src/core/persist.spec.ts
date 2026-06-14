@@ -1721,6 +1721,25 @@ describe('source persistence', () => {
       expect(() => model.getBuildPlan()).toThrow('experimental.persistence');
     });
 
+    it('getBuildPlan inherits experimental.persistence across extendModel', async () => {
+      // The base declares the flag; the extension does not. `##!` carries across
+      // extend, and the persistence gate reads the resolved (folded) model
+      // annotations — so getBuildPlan on the extension must still work.
+      const base = wrapTestModel(
+        tstRuntime,
+        `${PERSIST_ANNOTATION}\n${FLIGHTS_SOURCE}`
+      ).model;
+      const extended = base.extendModel(`
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+      const model = await extended.getModel();
+      expect(() => model.getBuildPlan()).not.toThrow();
+    });
+
     it('running query with non-empty buildManifest throws without experimental.persistence annotation', async () => {
       const testModel = wrapTestModel(
         tstRuntime,

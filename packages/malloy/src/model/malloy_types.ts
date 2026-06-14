@@ -1,25 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -125,6 +106,7 @@ export type Expr =
   | NullNode
   | CaseExpr
   | InCompareExpr
+  | InGivenExpr
   | CompositeFieldExpr
   | ErrorNode;
 
@@ -255,12 +237,14 @@ export interface SourceReferenceNode extends ExprLeaf {
 export interface ParameterNode extends ExprLeaf {
   node: 'parameter';
   path: string[];
+  at?: DocumentLocation;
 }
 
 export interface GivenRefNode extends ExprLeaf {
   node: 'given';
   id: GivenID;
   refName: string;
+  at?: DocumentLocation;
 }
 
 export interface NowNode extends ExprLeaf {
@@ -483,6 +467,20 @@ export interface InCompareExpr extends ExprWithKids {
   kids: {e: Expr; oneOf: Expr[]};
 }
 
+/**
+ * Test against a runtime-bound array given: `expr in $ARRAY_GIVEN`.
+ *
+ * Uses ExprE (one child `e`, the LHS). The given reference is embedded
+ * as a top-level field rather than a kid so the auto-visitor in
+ * `compileExpr` doesn't descend into it; resolution and per-element
+ * SQL emission happen in the `case 'inGiven':` handler.
+ */
+export interface InGivenExpr extends ExprE {
+  node: 'inGiven';
+  not: boolean;
+  givenRef: GivenRefNode;
+}
+
 export type ExpressionType =
   | 'scalar'
   | 'aggregate'
@@ -554,7 +552,7 @@ export type Argument = Parameter;
  */
 export type GivenTypeDef = AtomicTypeDef | FilterExpressionParamTypeDef;
 
-export interface Given extends HasLocation, HasAnnotation {
+export interface Given extends HasLocation, HasAnnotations {
   /** The name as written at the declaration site. Used by diagnostics
    *  that need a readable surface name out of an opaque GivenID. */
   name: string;
@@ -575,6 +573,11 @@ export interface Given extends HasLocation, HasAnnotation {
    *  its own default. Empty/undefined when the default is a closed
    *  literal. */
   givenUsage?: GivenUsage;
+  /** Marked with the `inline` modifier — the default is eager-evaluated
+   *  to a literal at bind time and substituted as that literal in SQL.
+   *  Translator validates the default is eager-evaluable; bind-time
+   *  evaluator (`model/inline_expr.ts`) performs the reduction. */
+  inline?: boolean;
 }
 
 export interface GivenEntry {
@@ -619,7 +622,7 @@ export interface DocumentLocation {
  * the references, and in that case, this should include something like an
  * index or pointer to the full definition elsewhere in the model.
  */
-export interface LightweightDefinition extends HasLocation, HasAnnotation {
+export interface LightweightDefinition extends HasLocation, HasAnnotations {
   type: string;
 }
 
@@ -676,14 +679,24 @@ export interface HasLocation {
   location?: DocumentLocation;
 }
 
-export interface HasAnnotation {
-  annotation?: Annotation;
+export interface HasAnnotations {
+  annotations?: AnnotationsDef;
 }
 
 /** All names have their source names and how they will appear in the symbol table that owns them */
 export interface AliasedName {
   name: string;
   as?: string;
+}
+
+/**
+ * The name an `AliasedName` goes by in its current context: its `as` binding
+ * if it has one, otherwise its intrinsic `name`. This is the only correct way
+ * to ask "what is this called here" — see the `name`/`as` invariant in
+ * model/CONTEXT.md.
+ */
+export function activeName(an: AliasedName): string {
+  return an.as ?? an.name;
 }
 
 /** all named objects have a type an a name (optionally aliased) */
@@ -865,7 +878,7 @@ export function canOrderBy(s: string) {
  */
 
 export interface FieldBase
-  extends NamedObject, Expression, ResultMetadata, HasAnnotation {
+  extends NamedObject, Expression, ResultMetadata, HasAnnotations {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
@@ -1223,15 +1236,14 @@ export interface Filtered {
 export interface TurtleSegment extends Filtered {
   name: string;
 }
-export interface Pipeline {
+export interface Pipeline extends HasAnnotations, HasLocation {
   pipeline: PipeSegment[];
 }
-export interface Query extends Pipeline, Filtered, HasLocation, HasAnnotation {
+export interface Query extends Pipeline, Filtered {
   type?: 'query';
   name?: string;
   structRef: StructRef;
   sourceArguments?: SafeRecord<Argument>;
-  modelAnnotation?: Annotation;
   compositeResolvedSourceDef?: SourceDef;
   // Dedup'd union of every segment's `expandedGivenUsage` (and nested turtle
   // stages'). Populated when the Query is finalized; consumers that need the
@@ -1495,7 +1507,7 @@ export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
 export type AccessModifierLabel = NonDefaultAccessModifierLabel | 'public';
 
-export interface TurtleDef extends NamedObject, Pipeline, HasAnnotation {
+export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   refSummary?: RefSummary;
@@ -1504,9 +1516,8 @@ export interface TurtleDef extends NamedObject, Pipeline, HasAnnotation {
 
 export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
-interface StructDefBase extends HasLocation, NamedObject, HasAnnotation {
+interface StructDefBase extends HasLocation, NamedObject, HasAnnotations {
   type: string;
-  modelAnnotation?: ModelAnnotation;
   fields: FieldDef[];
   /** Marker for error placeholder structs created by ErrorFactory */
   errorFactory?: boolean;
@@ -1572,6 +1583,14 @@ export type GivenID = string;
 
 /** Hash of (connectionDigest, sql) - uniquely identifies a built artifact */
 export type BuildID = string;
+
+/**
+ * Identifies the model a definition came from. Either a real model URL or a
+ * synthetic `"internal <uuid>"` for URL-less models. The space makes the
+ * synthetic form an illegal URL, so it can never collide with a real model
+ * URL. Created with `mkModelID`.
+ */
+export type ModelID = string;
 
 /**
  * Reference to a source in modelDef.contents by name.
@@ -1967,7 +1986,7 @@ export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
 // Queries have fields like this ..
 
-export interface RefToField extends HasAnnotation {
+export interface RefToField extends HasAnnotations {
   type: 'fieldref';
   path: string[];
   at?: DocumentLocation;
@@ -1983,20 +2002,12 @@ export type TypedDef =
   | RefToField
   | StructDef;
 
-/** Get the output name for a NamedObject */
-export function getIdentifier(n: AliasedName): string {
-  if (n.as !== undefined) {
-    return n.as;
-  }
-  return n.name;
-}
-
-export interface UserTypeFieldDef extends HasAnnotation {
+export interface UserTypeFieldDef extends HasAnnotations {
   name: string;
   typeDef: AtomicTypeDef;
 }
 
-export interface UserTypeDef extends NamedObject, HasAnnotation {
+export interface UserTypeDef extends NamedObject, HasAnnotations {
   type: 'userType';
   fields: UserTypeFieldDef[];
 }
@@ -2020,6 +2031,7 @@ export interface DependencyTree {
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
+  modelID: ModelID;
   exports: string[];
   contents: SafeRecord<NamedModelObject>;
   /**
@@ -2030,7 +2042,17 @@ export interface ModelDef {
    */
   sourceRegistry: Record<SourceID, SourceRegistryValue>;
   givens?: Record<GivenID, Given>;
-  annotation?: ModelAnnotation;
+  /**
+   * Model (`##`) annotations of every model involved in this compile, keyed by
+   * {@link ModelID} — this model plus everything it imported or extended (the
+   * whole closure, so any model's annotations are answerable from this
+   * `ModelDef` alone, even after it crosses the wire). Each entry carries that
+   * model's own `##` (`ownNotes`) and its direct import/extend predecessors
+   * (`inheritsFrom`, the DAG of edges, extend-base prepended as `import₀`).
+   * {@link getModelAnnotations} folds `inheritsFrom` from any model to produce
+   * that model's deduped, ordered annotation set.
+   */
+  modelAnnotations: Record<ModelID, ModelAnnotationEntry>;
   queryList: Query[];
   dependencies: DependencyTree;
   references?: DocumentReference[];
@@ -2041,19 +2063,43 @@ export interface ModelDef {
 export type NamedSourceDefs = SafeRecord<SourceDef>;
 export type NamedModelObjects = SafeRecord<NamedModelObject>;
 
-/** Malloy source annotations attached to objects */
-export interface Annotation {
-  inherits?: Annotation;
+/** Bundle of source annotations attached to one object: the `notes` and
+ *  `blockNotes` written on it, plus the bundle from the spiritual parent
+ *  via `inherits`. The IR shape paired with the `Annotations` view class.
+ *
+ *  This is the one annotation bundle type for both `#` object annotations (on
+ *  fields, views, sources, queries, …) and `##` model annotations. Object
+ *  annotations carry no model provenance: `##` is model-level, resolved by
+ *  folding {@link ModelDef.modelAnnotations} keyed by {@link ModelID}, not by
+ *  per-object stamping. A model's own `##` is just an `AnnotationsDef` whose
+ *  `inherits` chain is unused as stored (`ModelAnnotationEntry.ownNotes`) and,
+ *  when returned by {@link getModelAnnotations}, *is* the folded order (local at the
+ *  top) so the `Annotations` view / `notesInOrder` read it with no new code. */
+export interface AnnotationsDef {
+  inherits?: AnnotationsDef;
   blockNotes?: Note[];
   notes?: Note[];
 }
 export interface Note {
   text: string;
   at: DocumentLocation;
+  /**
+   * For multi-line annotations (`#|`…`|#`): characters of leading whitespace
+   * removed from each body line by the dedent pass. Used to map
+   * payload-parser error columns back to source
+   * (`source_col = indentStripped + parser_col` for body lines). Omitted for
+   * single-line annotations and for multi-line annotations with no common
+   * indent.
+   */
+  indentStripped?: number;
 }
-/** Annotations with a uuid to make it easier to stream */
-export interface ModelAnnotation extends Annotation {
-  id: string;
+/** One model's entry in {@link ModelDef.modelAnnotations}: its own `##`
+ *  (`ownNotes`) plus its **direct** import/extend predecessors (`inheritsFrom`),
+ *  in fold order with the extend-base prepended as `import₀`. Direct edges only
+ *  — the lineage DAG, not the resolved order; {@link getModelAnnotations} resolves. */
+export interface ModelAnnotationEntry {
+  ownNotes: AnnotationsDef;
+  inheritsFrom: ModelID[];
 }
 
 export type QueryScalar =
@@ -2102,7 +2148,7 @@ export interface DrillSource {
   sourceArguments?: SafeRecord<Argument>;
 }
 
-export interface CompiledQuery extends DrillSource, HasAnnotation {
+export interface CompiledQuery extends DrillSource, HasAnnotations {
   structs: SourceDef[];
   sql: string;
   lastStageName: string;

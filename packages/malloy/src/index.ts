@@ -1,25 +1,8 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
+
 export {
   DuckDBDialect,
   StandardSQLDialect,
@@ -43,6 +26,8 @@ export {
   literal,
   spread,
   Dialect,
+  decodeDottedTablePath,
+  validateDottedTablePath,
 } from './dialect';
 export type {
   DialectFieldList,
@@ -52,6 +37,11 @@ export type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
+  DecodeDottedTablePathResult,
+  DottedTablePathOptions,
+  TablePathEscapeStyle,
+  TablePathSegment,
+  ValidateTablePathResult,
 } from './dialect';
 // TODO tighten up exports
 export type {
@@ -103,7 +93,6 @@ export type {
   DocumentRange,
   DocumentPosition,
   Sampling,
-  Annotation,
   BasicAtomicTypeDef,
   BasicAtomicDef,
   AtomicTypeDef,
@@ -270,7 +259,22 @@ export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
 export * as API from './api';
 export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';
-export {annotationToTag, annotationToTaglines} from './annotation';
+export {Annotations, RoutedNote} from './api/foundation/annotation';
+export {
+  routeOf,
+  payloadOf,
+  annotationsForRoute,
+  tagFromAnnotations,
+} from './api/annotation-utils';
+/** @deprecated — use the `.annotations` view on a Foundation entity
+ *  (`entity.annotations.parseAsTag(route)` / `.texts(route)`). */
+export {
+  annotationToTag,
+  annotationToTaglines,
+} from './api/foundation/annotation';
 export type {BuildGraph, BuildNode, BuildPlan} from './api/foundation';
 export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';
+export {Reference} from './api/foundation';
+export type {ReferenceKind} from './api/foundation';
+export type {ImportLocation} from './model';
 export {makeDigest} from './model';

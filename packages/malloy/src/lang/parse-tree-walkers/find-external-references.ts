@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {CommonTokenStream} from 'antlr4ts';
@@ -35,7 +17,7 @@ type NeedImports = Record<string, DocumentRange>;
 type NeedTables = Record<
   string,
   {
-    connectionName: string | undefined;
+    connectionName: string;
     tablePath: string;
     firstReference: DocumentRange;
   }
@@ -79,7 +61,7 @@ class FindExternalReferences implements MalloyParserListener {
   ) {}
 
   registerTableReference(
-    connectionName: string | undefined,
+    connectionName: string,
     tablePath: string,
     reference: DocumentRange
   ) {
@@ -98,6 +80,11 @@ class FindExternalReferences implements MalloyParserListener {
     const tablePath = getPlainString(pcx.tablePath());
     const reference = this.trans.rangeFromContext(pcx);
     this.registerTableReference(connId, tablePath, reference);
+    // Register a need for the connection's dialect so the validator in
+    // ImportsAndTablesStep can run against it.
+    if (!this.needConnectionDialects[connId]) {
+      this.needConnectionDialects[connId] = {firstReference: reference};
+    }
   }
 
   enterVirtualSource(pcx: parser.VirtualSourceContext) {
@@ -118,34 +105,10 @@ class FindExternalReferences implements MalloyParserListener {
 }
 
 export function constructTableKey(
-  connectionName: string | undefined,
+  connectionName: string,
   tablePath: string
 ): string {
-  return connectionName === undefined
-    ? tablePath
-    : `${connectionName}:${tablePath}`;
-}
-
-/**
- * This function parses an old-style `tableURI` into a connection name and
- * table path. The name includes `deprecated` because it should only be used
- * in the (deprecated) old-style `table('conn:tab')` syntax. Any use of this
- * anywhere else is bad.
- * @param tableURI The sting that is passed into the `table('conn:tab')` syntax.
- * @returns A connection name and table path.
- * @deprecated
- */
-export function deprecatedParseTableURI(tableURI: string): {
-  connectionName?: string;
-  tablePath: string;
-} {
-  const parts = tableURI.match(/^([^:]*):(.*)$/);
-  if (parts) {
-    const [, firstPart, secondPart] = parts;
-    return {connectionName: firstPart, tablePath: secondPart};
-  } else {
-    return {tablePath: tableURI};
-  }
+  return `${connectionName}:${tablePath}`;
 }
 
 export interface FindReferencesData {

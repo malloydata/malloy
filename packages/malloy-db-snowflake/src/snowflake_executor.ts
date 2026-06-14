@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -26,6 +8,7 @@ import type {
   RowStatement,
   Connection,
   ConnectionOptions,
+  Binds,
 } from 'snowflake-sdk';
 import snowflake from 'snowflake-sdk';
 import type {Pool, Options as PoolOptions} from 'generic-pool';
@@ -166,7 +149,8 @@ export class SnowflakeExecutor {
     sqlText: string,
     conn: Connection,
     options?: RunSQLOptions,
-    timeoutMs?: number
+    timeoutMs?: number,
+    binds?: Binds
   ): Promise<QueryData> {
     const abortSignal = options?.abortSignal;
     // Fail fast if already aborted before we even start executing
@@ -185,6 +169,7 @@ export class SnowflakeExecutor {
       try {
         _statement = conn.execute({
           sqlText,
+          binds,
           complete: (
             err: SnowflakeError | undefined,
             _stmt: RowStatement,
@@ -283,11 +268,12 @@ export class SnowflakeExecutor {
   public async batch(
     sqlText: string,
     options?: RunSQLOptions,
-    timeoutMs?: number
+    timeoutMs?: number,
+    binds?: Binds
   ): Promise<QueryData> {
     return await this.pool_.use(async (conn: Connection) => {
       await this.ensureSessionInitialized(conn, options, timeoutMs);
-      return await this._execute(sqlText, conn, options, timeoutMs);
+      return await this._execute(sqlText, conn, options, timeoutMs, binds);
     });
   }
 
@@ -302,12 +288,13 @@ export class SnowflakeExecutor {
   public async tryBatch(
     sqlText: string,
     options?: RunSQLOptions,
-    timeoutMs?: number
+    timeoutMs?: number,
+    binds?: Binds
   ): Promise<QueryData | undefined> {
     return await this.pool_.use(async (conn: Connection) => {
       await this.ensureSessionInitialized(conn, options, timeoutMs);
       try {
-        return await this._execute(sqlText, conn, options, timeoutMs);
+        return await this._execute(sqlText, conn, options, timeoutMs, binds);
       } catch {
         return undefined;
       }

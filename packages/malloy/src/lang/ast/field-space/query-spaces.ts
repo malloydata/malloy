@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import * as model from '../../../model/malloy_types';
@@ -286,7 +268,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         this.addValidatedCompositeFieldUserFromEntry(name, referenceField);
       } else {
         const entry = new RefineFromSpaceField(field);
-        const name = field.as ?? field.name;
+        const name = model.activeName(field);
         this.setEntry(name, entry);
         this.addValidatedCompositeFieldUserFromEntry(name, entry);
       }
@@ -323,7 +305,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       name = queryFieldDef.path[queryFieldDef.path.length - 1];
       location = queryFieldDef.at;
     } else {
-      name = queryFieldDef.as ?? queryFieldDef.name;
+      name = model.activeName(queryFieldDef);
       location = queryFieldDef.location;
     }
     let ret: model.FieldDef;
@@ -365,8 +347,8 @@ export abstract class QuerySpace extends QueryOperationSpace {
       throw new Error('Invalid type for fieldref');
     }
     ret.location = ret.location ?? this.astEl.location;
-    if (queryFieldDef.annotation) {
-      ret.annotation = queryFieldDef.annotation;
+    if (queryFieldDef.annotations) {
+      ret.annotations = queryFieldDef.annotations;
     }
     return ret;
   }
@@ -384,7 +366,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
     if (primaryKeyField.type === 'fieldref') {
       return primaryKeyField.path[primaryKeyField.path.length - 1];
     } else {
-      return primaryKeyField.as ?? primaryKeyField.name;
+      return model.activeName(primaryKeyField);
     }
   }
 

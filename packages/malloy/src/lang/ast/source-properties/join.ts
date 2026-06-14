@@ -1,35 +1,17 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
-  Annotation,
+  AnnotationsDef,
   JoinFieldDef,
   JoinType,
   MatrixOperation,
   SourceDef,
   AccessModifierLabel,
 } from '../../../model/malloy_types';
-import {isSourceDef, isJoinable} from '../../../model/malloy_types';
+import {activeName, isSourceDef, isJoinable} from '../../../model/malloy_types';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
@@ -58,7 +40,7 @@ export abstract class Join
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   abstract sourceExpr: SourceQueryElement;
-  note?: Annotation;
+  note?: AnnotationsDef;
 
   makeEntry(fs: DynamicSpace) {
     fs.newEntry(
@@ -107,18 +89,16 @@ export class KeyJoin extends Join {
     }
     const joinStruct: JoinFieldDef = {
       ...sourceDef,
-      name: this.name.refString,
+      as: this.name.refString,
       join: 'one',
       matrixOperation: 'left',
       onExpression: {node: 'error', message: "('join fixup'='not done yet')"},
       location: this.location,
     };
-    delete joinStruct.as;
 
     if (this.note) {
-      joinStruct.annotation = this.note;
+      joinStruct.annotations = {...this.note};
     }
-    this.document()?.rememberToAddModelAnnotations(joinStruct);
     return joinStruct;
   }
 
@@ -126,7 +106,7 @@ export class KeyJoin extends Join {
     const exprX = this.keyExpr.getExpression(outer);
     if (isSourceDef(inStruct) && inStruct.primaryKey) {
       const pkey = inStruct.fields.find(
-        f => (f.as || f.name) === inStruct.primaryKey
+        f => activeName(f) === inStruct.primaryKey
       );
       if (pkey) {
         if (pkey.type === exprX.type) {
@@ -225,16 +205,14 @@ export class ExpressionJoin extends Join {
     }
     const joinStruct: JoinFieldDef = {
       ...sourceDef,
-      name: this.name.refString,
+      as: this.name.refString,
       join: this.joinType,
       matrixOperation,
       location: this.location,
     };
-    delete joinStruct.as;
     if (this.note) {
-      joinStruct.annotation = this.note;
+      joinStruct.annotations = {...this.note};
     }
-    this.document()?.rememberToAddModelAnnotations(joinStruct);
     return joinStruct;
   }
 }

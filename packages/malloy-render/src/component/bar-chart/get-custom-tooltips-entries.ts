@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {ChartTooltipEntry, MalloyVegaDataRecord} from '@/component/types';
@@ -23,7 +21,7 @@ export function getCustomTooltipEntries({
   customTooltipFields.forEach(f => {
     records.forEach(rec => {
       customEntries.push({
-        label: f.name,
+        label: f.getLabel(),
         value: () =>
           applyRenderer({
             dataColumn: rec.__row.column(f.name),

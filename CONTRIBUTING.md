@@ -50,8 +50,11 @@ use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://docs.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
 
-All pull requests must pass tests. Outside contributors should contact the Malloy
-team via the `#developing` channel on the [Malloy Slack](https://malloydata.github.io/slack).
+All pull requests must pass tests. Because some tests use database credentials
+that only the Malloy team's CI holds, **CI doesn't run automatically on fork
+PRs** — a Malloy team member reviews and triggers it. If your PR is ready and CI
+hasn't run, reach out via the `#developing` channel on the
+[Malloy Slack](https://malloydata.github.io/slack).
 
 ## Code of Conduct
 

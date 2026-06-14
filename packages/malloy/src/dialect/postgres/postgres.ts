@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {indent} from '../../model/utils';
@@ -124,12 +106,9 @@ export class PostgresDialect extends PostgresBase {
   likeEscape = false;
   maxIdentifierLength = 63;
 
-  quoteTablePath(tablePath: string): string {
-    return tablePath
-      .split('.')
-      .map(part => `"${part}"`)
-      .join('.');
-  }
+  // Postgres bare-identifier continuation allows `$` (verified against
+  // the live engine: `postgres.table('foo$bar')` resolves successfully).
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN GENERATE_SERIES(0,${groupSetCount},1) as group_set`;
@@ -224,7 +203,8 @@ export class PostgresDialect extends PostgresBase {
       return `(${parentAlias}->>'__row_id')`;
     }
     if (parentType !== 'table') {
-      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},'${childName}')`;
+      const nameLit = this.sqlLiteralString(childName);
+      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},${nameLit})`;
       switch (childType) {
         case 'string':
           break;
@@ -236,12 +216,12 @@ export class PostgresDialect extends PostgresBase {
         case 'record':
         case 'array[record]':
         case 'sql native':
-          ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
+          ret = `JSONB_EXTRACT_PATH(${parentAlias},${nameLit})`;
           break;
       }
       return ret;
     } else {
-      const child = this.sqlMaybeQuoteIdentifier(childName);
+      const child = this.sqlQuoteIdentifier(childName);
       return `${parentAlias}.${child}`;
     }
   }
@@ -399,14 +379,6 @@ export class PostgresDialect extends PostgresBase {
     return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
-  }
-
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
@@ -471,7 +443,7 @@ export class PostgresDialect extends PostgresBase {
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const props: string[] = [];
     for (const [kName, kVal] of Object.entries(lit.kids)) {
-      props.push(`'${kName}',${kVal.sql}`);
+      props.push(`${this.sqlLiteralString(kName)},${kVal.sql}`);
     }
     return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
   }

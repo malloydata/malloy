@@ -1,23 +1,6 @@
-/* Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {PooledPostgresConnection} from './postgres_connection';
@@ -157,6 +140,20 @@ describe('postgres schema reading', () => {
         type: 'timestamp',
       });
     }
+    await connection.close();
+  });
+
+  it('parameterizes information_schema lookups for quoted identifiers containing single quotes', async () => {
+    const connection = new PooledPostgresConnection('postgres');
+    // Postgres quoted identifiers may legitimately contain `'`. Pre-fix, the
+    // table value was interpolated into the WHERE clause, producing malformed
+    // SQL like `table_name = 'O'Brien'` (Postgres syntax-errors before any
+    // rows come back). The parameterized path binds the value, so the lookup
+    // simply returns no rows and surfaces as "Unable to read schema."
+    const tablePath = 'public."O\'Brien"';
+    const result = await connection.fetchTableSchema(tablePath, tablePath);
+    expect(typeof result).toBe('string');
+    expect(result as string).toMatch(/Unable to read schema/);
     await connection.close();
   });
 

@@ -1,29 +1,10 @@
 /*
- * Copyright 2023 Google LLC
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import type {ParseTree} from 'antlr4ts/tree';
+import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import type * as parse from './lib/Malloy/MalloyParser';
@@ -37,6 +18,7 @@ import type {
 import {makeLogMessage} from './parse-log';
 import type {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
+import {parsePrefix} from './annotation-prefix';
 import type {FieldDeclarationConstructor} from './ast';
 import {TableSource} from './ast';
 import type {HasString, HasID} from './parse-utils';
@@ -47,7 +29,7 @@ import {
   getShortString,
   idToStr,
   getPlainString,
-  getAnnotationText,
+  noteFromAnnotation,
 } from './parse-utils';
 import type {
   AccessModifierLabel,
@@ -69,7 +51,7 @@ import {
 } from '../model/malloy_types';
 import type {Tag} from '@malloydata/malloy-tag';
 import {parseAnnotation} from '@malloydata/malloy-tag';
-import {isNotUndefined, rangeFromContext} from './utils';
+import {isNotUndefined, rangeFromContext, rangeFromToken} from './utils';
 import {isFilterable} from '@malloydata/malloy-filter';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {Timer} from '../timing';
@@ -101,7 +83,7 @@ const DEFAULT_COMPILER_FLAGS = [];
 const LEGAL_FILTER_TYPES =
   'string, number, boolean, date, timestamp, timestamptz';
 
-type HasAnnotations = ParserRuleContext & {
+type AnnotatedCtx = ParserRuleContext & {
   annotation: () => parse.AnnotationContext[];
 };
 
@@ -120,7 +102,8 @@ export class MalloyToAST
   constructor(
     readonly parseInfo: MalloyParseInfo,
     readonly msgLog: MessageLogger,
-    compilerFlagSrc: string[]
+    compilerFlagSrc: string[],
+    readonly restrictedMode: boolean = false
   ) {
     super();
     this.timer = new Timer('generate_ast');
@@ -275,13 +258,23 @@ export class MalloyToAST
     return new ast.Unimplemented();
   }
 
+  /**
+   * Attach a source location to an AST element and return it. The range
+   * is taken from the supplied parse-tree node — either a
+   * `ParserRuleContext` (entire rule's token span) or a `TerminalNode`
+   * (just that one token).
+   */
   protected astAt<MT extends ast.MalloyElement>(
     el: MT,
-    cx: ParserRuleContext
+    cx: ParserRuleContext | TerminalNode
   ): MT {
+    const range =
+      cx instanceof ParserRuleContext
+        ? this.rangeFromContext(cx)
+        : rangeFromToken(this.parseInfo.sourceInfo, cx.symbol);
     el.location = {
       url: this.parseInfo.sourceURL,
-      range: this.rangeFromContext(cx),
+      range,
     };
     return el;
   }
@@ -371,15 +364,29 @@ export class MalloyToAST
   }
 
   protected getAnnotation(cx: parse.AnnotationContext): Note {
-    const text = getAnnotationText(cx, (wcx, msg) => {
-      this.contextError(wcx, 'block-annotation-warning', msg, {
-        severity: 'warn',
-      });
-    });
-    return {text: text, at: this.getLocation(cx)};
+    const note = noteFromAnnotation(cx, this.parseInfo);
+    this.warnIfMalformedPrefix(note.text, cx);
+    return note;
   }
 
-  protected getNotes(cx: HasAnnotations): Note[] {
+  /**
+   * Warn if the annotation prefix is not a well-formed route. The note is still
+   * stored either way — the malformation only drives the diagnostic, never the
+   * IR. Warnings fire at note construction; inherited annotations carry no
+   * malformation marker through the IR and are not re-warned by importers.
+   */
+  private warnIfMalformedPrefix(text: string, cx: ParserRuleContext): void {
+    const parsed = parsePrefix(text);
+    if (parsed.malformation === undefined) return;
+    // The slice up to contentIndex is "prefix + separator"; trim trailing
+    // whitespace to land on the prefix the user wrote. (A no-content single-
+    // line note like `#malformed\n` exposes this: contentIndex === text.length
+    // but the slice still ends at the `\n`.)
+    const prefix = text.slice(0, parsed.contentIndex).replace(/\s+$/, '');
+    this.contextError(cx, parsed.malformation, {prefix});
+  }
+
+  protected getNotes(cx: AnnotatedCtx): Note[] {
     return cx.annotation().map(a => this.getAnnotation(a));
   }
 
@@ -448,7 +455,24 @@ export class MalloyToAST
         );
       }
     }
-    const decl = new ast.GivenDeclaration(name, typeDef, defVal);
+    // The modifier slot accepts any identifier and rejects anything but
+    // `inline` at AST-build — this keeps `inline` from being a reserved
+    // word elsewhere in the language (fields, sources, view names, etc.
+    // can still be called `inline`). The cost: a slightly later error
+    // surface if someone misspells the modifier.
+    // Case-insensitive match: Malloy keywords are case-insensitive in
+    // the lexer, so accept `inline`, `INLINE`, `Inline`, etc.
+    const modCx = pcx.givenModifier();
+    let inline = false;
+    if (modCx) {
+      const modText = getId(modCx);
+      if (modText.toLowerCase() === 'inline') {
+        inline = true;
+      } else {
+        this.contextError(modCx, 'invalid-given-modifier', {modifier: modText});
+      }
+    }
+    const decl = new ast.GivenDeclaration(name, typeDef, defVal, inline);
     decl.extendNote({notes: this.getNotes(pcx.tags())});
     return this.astAt(decl, pcx);
   }
@@ -2062,6 +2086,14 @@ export class MalloyToAST
     return this.parseTime(pcx, ast.LiteralYear.parse);
   }
 
+  visitExportStatement(pcx: parse.ExportStatementContext): ast.ExportStatement {
+    const items = pcx.exportItem().map(itemCx => {
+      const idCx = itemCx.id();
+      return this.astAt(new ast.ExportItem(idToStr(idCx)), idCx);
+    });
+    return this.astAt(new ast.ExportStatement(items), pcx);
+  }
+
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
     const url = this.getPlainStringFrom(pcx.importURL());
     const importStmt = this.astAt(
@@ -2102,6 +2134,15 @@ export class MalloyToAST
 
   updateCompilerFlags(tags: ast.ModelAnnotation) {
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+    if (this.restrictedMode) {
+      // `##!` lines in restricted text never become active flags. The
+      // user-facing rejection is logged at execute time (see
+      // ModelAnnotation.execute) so it doesn't short-circuit ASTStep,
+      // which lets every other restricted-mode violation in the same
+      // compile log its own diagnostic.
+      this.timer.contribute([parseCompilerFlagsTimer.stop()]);
+      return;
+    }
     const newLines = tags.getCompilerFlagLines();
     if (newLines.length > 0) {
       const oldLength = this.compilerFlagSrc.length;
@@ -2128,14 +2169,15 @@ export class MalloyToAST
         this.contextError(
           pcx,
           'unclosed-block-annotation',
-          'Block annotation is not closed, add correctly indented "|##"'
+          'Multi-line annotation is not closed, add correctly indented "|##"'
         );
       }
     }
-    const allNotes = pcx.docAnnotation().map(a => ({
-      text: getAnnotationText(a),
-      at: this.getLocation(pcx),
-    }));
+    const allNotes: Note[] = pcx.docAnnotation().map(a => {
+      const note = noteFromAnnotation(a, this.parseInfo);
+      this.warnIfMalformedPrefix(note.text, a);
+      return note;
+    });
     const tags = new ast.ModelAnnotation(allNotes);
     this.updateCompilerFlags(tags);
     return tags;
@@ -2152,7 +2194,7 @@ export class MalloyToAST
       this.contextError(
         pcx,
         'unclosed-block-annotation',
-        'Block annotation is not closed, add correctly indented "|#"'
+        'Multi-line annotation is not closed, add correctly indented "|#"'
       );
     } else {
       this.contextError(
@@ -2175,7 +2217,7 @@ export class MalloyToAST
       this.contextError(
         pcx,
         'unclosed-block-annotation',
-        'Block annotation is not closed, add correctly indented "|##"'
+        'Multi-line annotation is not closed, add correctly indented "|##"'
       );
     } else {
       this.contextError(
@@ -2529,6 +2571,18 @@ export class MalloyToAST
       new ast.ExprIsNull(this.getFieldExpr(expr), pcx.NOT() ? '!=' : '='),
       pcx
     );
+  }
+
+  visitExprInGiven(pcx: parse.ExprInGivenContext): ast.ExprInGiven {
+    this.inExperiment('givens', pcx);
+    const lhs = this.getFieldExpr(pcx.fieldExpr());
+    const isNot = !!pcx.NOT();
+    const givenName = pcx.GIVEN_REF().text.slice(1);
+    const givenRef = this.astAt(
+      new ast.GivenReference(givenName),
+      pcx.GIVEN_REF()
+    );
+    return this.astAt(new ast.ExprInGiven(lhs, isNot, givenRef), pcx);
   }
 
   visitExprWarnIn(pcx: parse.ExprWarnInContext): ast.ExprLegacyIn {

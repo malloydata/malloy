@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
@@ -1831,11 +1813,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     });
 
-    // TODO remove the need for the `##! unsafe_complex_select_query` compiler flag
     it('can be used in a select', async () => {
       await expect(`
         ##! experimental { function_order_by partition_by }
-        ##! unsafe_complex_select_query
         run: state_facts -> {
           select: state, births, popular_name
           calculate: prev_births_by_name is lag(births) {
@@ -1867,11 +1847,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       );
     });
-    // TODO remove the need for the `##! unsafe_complex_select_query` compiler flag
     it('can be used in a select in a composite source', async () => {
       await expect(`
         ##! experimental { function_order_by partition_by composite_sources }
-        ##! unsafe_complex_select_query
         source: state_facts_composite is compose(state_facts, state_facts)
         run: state_facts_composite -> {
           select: state, births, popular_name
