@@ -21,23 +21,15 @@
 
 ## What is Malloy?
 
-Malloy is an open source language for describing data relationships and transformations. It is both a semantic modeling layer and a query language that compiles to SQL. Malloy doesn't replace SQL; it adds a layer of **meaning** that runs on your existing data warehouse. Define your measures, joins, and business logic once, then reuse them without copy-pasting SQL snippets across queries and dashboards.
+Malloy is an open source language for describing data relationships and transformations. It is both a semantic modeling language and a query language that uses an existing SQL engine to execute queries.
 
 **Supported SQL engines:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks
 
-Malloy is built for analytics engineers, SQL teams, and developers building data apps who need measures, joins, and views to mean the same thing across every dashboard, notebook, and pipeline, especially when the data is nested.
+## Why Malloy?
 
-SQL gives you maximum flexibility, which is what you want when one analyst is asking one-off questions. On a team, that same flexibility produces duplicated joins, fan-out bugs, and measures that drift across dashboards or applications.
+Malloy is useful because it lets you describe analytics in terms of the data model, not just as one-off SQL queries. SQL is powerful, and Malloy is built to use that power, but analytical SQL often makes you work through the mechanics of the database schema: how tables connect, what to calculate, and how to shape the result. Malloy lets more of that logic live in the model, so it can be reused instead of rewritten for every query.
 
-Concretely:
-
-| Pain point | How Malloy solves it |
-|---|---|
-| Joins duplicated everywhere | Define joins once in a source, reuse across every query |
-| Aggregation fans out silently | Symmetric aggregates make `count()`, `sum()`, and `avg()` fan-out safe |
-| Measures drift across dashboards | Define each measure once; change it in one place and every query reflects it |
-| Nested data requires boilerplate | Native nested and repeated fields, no unnesting required |
-| Multi-step transforms are hard to read | Pipe operator `->` chains transformations, like a Unix pipeline |
+This gives teams a higher-level way to work with data while still running on the databases they already use. Instead of starting from tables, joins, and query mechanics, Malloy lets users start closer to the questions they want to ask about the data. The result is a more actionable query layer for analytics: easier to read, easier to share, and easier to build on than SQL alone.
 
 <br>
 <p>
@@ -75,27 +67,49 @@ Follow the instructions for [connecting Malloy to your database](https://docs.ma
 To use Malloy in Node.js, install the compiler and a database connector. For example:
 
 ```bash
-npm install @malloydata/malloy @malloydata/db-duckdb
+npm install @malloydata/malloy @malloydata/malloy-connections
 ```
+
+Importing @malloydata/malloy-connections registers all supported database backends.
 
 Run a query from Node.js:
 
 ```javascript
-const malloy = require("@malloydata/malloy");
-const duckdb = require("@malloydata/db-duckdb");
+require('@malloydata/malloy-connections');
 
-const connection = new duckdb.DuckDBConnection("duckdb");
-const runtime = new malloy.SingleConnectionRuntime({ connection });
+const {MalloyConfig, Runtime} = require('@malloydata/malloy');
 
-const query = runtime.loadQuery(`
-  run: duckdb.sql('SELECT 1 AS one UNION ALL SELECT 2 AS one') -> {
-    aggregate: total is sum(one)
-  }
-`);
+async function main() {
+  const config = new MalloyConfig({
+    includeDefaultConnections: true,
+  });
+  const runtime = new Runtime({config});
 
-query.run().then(result => console.log(result.data.value));
-// [ { total: 3 } ]
+  const result = await runtime.loadQuery(`
+    source: sales is duckdb.sql("""
+      SELECT * FROM (VALUES
+        ('books', 20),
+        ('books', 30),
+        ('games', 40)
+      ) AS sales(category, revenue)
+    """) extend {
+      measure: total_revenue is revenue.sum()
+    }
+
+    run: sales -> {
+      group_by: category
+      aggregate: total_revenue
+    }
+  `).run();
+
+  console.table(result.data.toObject());
+  await runtime.shutdown();
+}
+
+main().catch(console.error);
 ```
+
+This defines `total_revenue` once in the semantic model, then uses it by name in the query. Other databases can be configured through MalloyConfig.
 
 ### Run Malloy from the command line
 
@@ -120,17 +134,6 @@ npx @malloy-publisher/server --port 4000 --server_root path/to/your/models
 ```
 
 Open `http://localhost:4000` to browse models, run queries, and grab MCP endpoints. See the [Publisher repo](https://github.com/malloydata/publisher) for setup, sample models, and deployment options.
-
----
-
-## How Does Malloy Compare?
-
-| Tool | Key difference from Malloy |
-|---|---|
-| **Raw SQL** | No semantic layer; measures are copy-pasted into every query and fan-out bugs are silent |
-| **LookML** | Proprietary and locked to Looker; Malloy is open source and targets any SQL warehouse |
-| **dbt metrics / MetricFlow** | Definition-only; you still write SQL to consume metrics. Malloy is a full query language |
-| **Cube** | JavaScript/YAML configuration; Malloy is a typed, composable query language |
 
 ---
 
@@ -174,24 +177,6 @@ These are two simple examples. The [10-minute quickstart](https://docs.malloydat
 
 ---
 
-## Packages
-
-This monorepo ships the core compiler, database connectors, and rendering utilities as separate npm packages:
-
-| Package | Description |
-|---|---|
-| [`@malloydata/malloy`](https://www.npmjs.com/package/@malloydata/malloy) | Core compiler & runtime |
-| [`@malloydata/db-duckdb`](https://www.npmjs.com/package/@malloydata/db-duckdb) | DuckDB connector (also supports MotherDuck and MSSQL via extensions) |
-| [`@malloydata/db-bigquery`](https://www.npmjs.com/package/@malloydata/db-bigquery) | BigQuery connector |
-| [`@malloydata/db-snowflake`](https://www.npmjs.com/package/@malloydata/db-snowflake) | Snowflake connector |
-| [`@malloydata/db-postgres`](https://www.npmjs.com/package/@malloydata/db-postgres) | PostgreSQL connector |
-| [`@malloydata/db-mysql`](https://www.npmjs.com/package/@malloydata/db-mysql) | MySQL connector |
-| [`@malloydata/db-trino`](https://www.npmjs.com/package/@malloydata/db-trino) | Trino / Presto connector |
-| [`@malloydata/db-databricks`](https://www.npmjs.com/package/@malloydata/db-databricks) | Databricks connector |
-| [`@malloydata/render`](https://www.npmjs.com/package/@malloydata/render) | Result rendering / charting |
-
----
-
 ## Documentation
 
 | Resource | Description |
@@ -207,7 +192,6 @@ This monorepo ships the core compiler, database connectors, and rendering utilit
 ## Community
 
 - **[Slack](https://malloydata.github.io/slack)**: ask questions, share models, meet other users
-- **[GitHub Discussions](https://github.com/malloydata/malloy/discussions)**: longer-form conversations and RFCs
 - **[GitHub Issues](https://github.com/malloydata/malloy/issues)**: bug reports and feature requests
 - **[YouTube](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg)**: demos and tutorials
 
@@ -215,20 +199,10 @@ This monorepo ships the core compiler, database connectors, and rendering utilit
 
 ## Contributing
 
-We welcome bug fixes, new database connectors, documentation, and examples.
-
-1. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for licensing and DCO requirements
-2. Read [`developing.md`](developing.md) to set up your local environment
-3. Pick up an issue tagged [`good first issue`](https://github.com/malloydata/malloy/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) or propose something new in Slack
+If you would like to contribute to Malloy, please read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`developing.md`](developing.md), and feel free to contact us on slack.
 
 ---
 
 ## Security
 
 To report a security vulnerability, please follow our [Security Policy](SECURITY.md) rather than opening a public issue.
-
----
-
-## License
-
-Malloy is released under the [MIT License](LICENSE).
