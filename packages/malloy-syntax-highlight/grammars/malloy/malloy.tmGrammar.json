@@ -245,7 +245,7 @@
       ]
     },
     "tags": {
-      "comment": "Malloy annotations are ROUTED (annotation-prefix.ts parsePrefix; docs.malloydata.dev/documentation/language/tags). The sigil is ##? then an optional block '|'; the route follows it (up to first whitespace) and decides how the content reads. Tag routes — empty (MOTLY) and the claimed sigils ! @ : — carry tag property-language → tag styling. The documentation route (\") and app-defined bracketed routes ( () <> [] {} ) carry prose/markdown/JSON → documentation styling. Routes apply identically to single-line (#/##) and block (#|/##|) forms. The doc-route fragment is repeated per rule because TextMate has no regex variables; (?!docroute) on the tag rules both implements the split and keeps the prefix-sharing begin scanner from dropping the shorter tag begins. v1: bare tag values share the tag-name scope; tag-route block bodies get tag-content treatment.",
+      "comment": "Malloy annotations are ROUTED (annotation-prefix.ts parsePrefix; docs.malloydata.dev/documentation/language/tags). The sigil is ##? then an optional block '|'; the route follows it (up to first whitespace) and decides how the content reads. Tag routes — empty (MOTLY) and the claimed sigils ! @ : — carry tag property-language → tag styling. The documentation route (\") and app-defined bracketed routes ( () <> [] {} ) carry prose/markdown/JSON → documentation styling. Routes apply identically to single-line (#/##) and block (#|/##|) forms. The doc-route fragment is repeated per rule because TextMate has no regex variables; (?!docroute) on the tag rules both implements the split and keeps the prefix-sharing begin scanner from dropping the shorter tag begins. Tag-route bodies (line and block alike) embed source.motly — the MOTLY tag-property language (@malloydata/motly-ts-parser) — so keys, values, references, @-literals, arrays, and nested blocks highlight as MOTLY.",
       "patterns": [
         {
           "begin": "^([ \\t]*)(##\\|(?:\"|\\([^\\s)]*\\)|<[^\\s>]*>|\\[[^\\s\\]]*\\]|\\{[^\\s}]*\\}))",
@@ -278,7 +278,7 @@
           "name": "meta.annotation.block.malloy",
           "patterns": [
             {
-              "include": "#tag-content"
+              "include": "source.motly"
             }
           ]
         },
@@ -313,7 +313,7 @@
           "name": "meta.annotation.block.malloy",
           "patterns": [
             {
-              "include": "#tag-content"
+              "include": "source.motly"
             }
           ]
         },
@@ -338,37 +338,11 @@
           "name": "meta.annotation.line.malloy",
           "patterns": [
             {
-              "include": "#tag-content"
+              "include": "source.motly"
             }
           ]
         }
-      ],
-      "repository": {
-        "tag-content": {
-          "patterns": [
-            {
-              "match": "\"[^\"#]*\"",
-              "name": "string.quoted.double.malloy"
-            },
-            {
-              "match": "=",
-              "name": "keyword.operator.assignment.malloy"
-            },
-            {
-              "match": "-(?=[A-Za-z_])",
-              "name": "keyword.operator.negation.malloy"
-            },
-            {
-              "match": "[0-9][A-Za-z_0-9.]*",
-              "name": "constant.numeric.malloy"
-            },
-            {
-              "match": "[A-Za-z_][A-Za-z_0-9.]*",
-              "name": "entity.name.tag.malloy"
-            }
-          ]
-        }
-      }
+      ]
     },
     "strings": {
       "comment": "Order matters: f-/s-/r- prefixed forms begin one char earlier than a bare quote so they win by start position; among same-start ties the triple forms are listed before the single/double forms. Filter (f...) and raw (s...) bodies are opaque in v1 — no inner patterns. The bare triple string has NO interpolation pattern, so %{ } inside it stays plain string text (interpolation is only legal inside .sql(), handled by #sql-string).",
