@@ -129,18 +129,7 @@
     "functions": {
       "patterns": [
         {
-          "match": "(?i)\\b(count)(\\s*\\()(distinct)",
-          "captures": {
-            "1": {
-              "name": "support.function.malloy"
-            },
-            "3": {
-              "name": "support.function.malloy"
-            }
-          }
-        },
-        {
-          "match": "(?i)\\b(all|avg|cast|compose|count|exclude|first|format|last|lcase|len|max|mid|min|mod|now|round|sum|ucase|ungrouped)(\\s*\\()",
+          "match": "(?i)\\b(all|avg|cast|compose|count|exclude|max|min|sum)(\\s*\\()",
           "captures": {
             "1": {
               "name": "support.function.malloy"
@@ -513,7 +502,7 @@
     "constants": {
       "patterns": [
         {
-          "match": "(?i)\\b(false|null|true)\\b",
+          "match": "(?i)\\b(false|now|null|true)\\b",
           "name": "constant.language.malloy"
         },
         {
@@ -534,11 +523,11 @@
       "comment": "Two buckets, both keyword.control.malloy. Colon-keywords (the lexer tokens that REQUIRE a trailing ':') only highlight in keyword position via a (?=:) lookahead — so a field named `query`/`index`/`sample` is NOT mis-colored, and the ':' itself stays uncolored. No \\s* before the ':' on purpose (mtoy is killing the lexer's SPACE* allowance; don't replicate it). Bare keywords (incl. dual-form extend/internal/private/public/source) match anywhere, matching their bare lexer tokens.",
       "patterns": [
         {
-          "match": "(?i)\\b(accept|aggregate|calculate|calculation|connection|declare|dimension|drill|except|given|group_by|grouped_by|having|index|join_cross|join_many|join_one|limit|measure|nest|order_by|partition_by|primary_key|project|query|rename|run|sample|select|timezone|top|type|view|where)(?=:)",
+          "match": "(?i)\\b(accept|aggregate|calculate|calculation|connection|declare|dimension|drill|except|given|group_by|grouped_by|having|index|join_cross|join_many|join_one|limit|measure|nest|order_by|partition_by|primary_key|query|rename|run|sample|select|timezone|top|type|view|where)(?=:)",
           "name": "keyword.control.malloy"
         },
         {
-          "match": "(?i)\\b(as|asc|by|case|condition|desc|else|end|export|extend|filter|for|from|full|has|import|include|inner|internal|left|on|pick|private|public|refine|right|source|then|to|virtual|when|with)\\b",
+          "match": "(?i)\\b(as|asc|by|case|desc|distinct|else|end|export|extend|filter|from|full|has|import|include|inner|internal|is|left|on|pick|private|public|right|source|then|when|with)\\b",
           "name": "keyword.control.malloy"
         }
       ]
@@ -546,7 +535,7 @@
     "keywords": {
       "patterns": [
         {
-          "match": "(?i)\\b(and|in|is|like|not|or)\\b",
+          "match": "(?i)\\b(and|for|in|like|not|or|to)\\b",
           "name": "keyword.operator.malloy"
         }
       ]

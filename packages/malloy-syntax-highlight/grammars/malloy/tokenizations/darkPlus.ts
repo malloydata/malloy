@@ -150,8 +150,8 @@ export default [
         {startIndex: 7, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 8,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 10, type: ['source.malloy'], color: '#000000'},
         {
@@ -180,8 +180,8 @@ export default [
         {startIndex: 40, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 41,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 43, type: ['source.malloy'], color: '#000000'},
         {
@@ -216,8 +216,8 @@ export default [
         {startIndex: 16, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 17,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 19, type: ['source.malloy'], color: '#000000'},
         {
@@ -317,8 +317,8 @@ export default [
         {startIndex: 7, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 8,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 10, type: ['source.malloy'], color: '#000000'},
         {
@@ -335,8 +335,8 @@ export default [
         {startIndex: 24, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 25,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 27, type: ['source.malloy'], color: '#000000'},
         {
@@ -438,8 +438,8 @@ export default [
         {startIndex: 24, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 25,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 27, type: ['source.malloy'], color: '#000000'},
         {
@@ -505,8 +505,8 @@ export default [
         {startIndex: 84, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 85,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 87, type: ['source.malloy'], color: '#000000'},
         {
@@ -583,8 +583,8 @@ export default [
         {startIndex: 11, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 12,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 14, type: ['source.malloy'], color: '#000000'},
         {
@@ -655,8 +655,8 @@ export default [
         {startIndex: 19, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 20,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 22, type: ['source.malloy'], color: '#000000'},
         {
@@ -754,8 +754,8 @@ export default [
         {startIndex: 9, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 10,
-          type: ['source.malloy', 'support.function.malloy'],
-          color: '#DCDCAA',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 18, type: ['source.malloy'], color: '#000000'},
         {
@@ -779,8 +779,8 @@ export default [
         {startIndex: 6, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 7,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 9, type: ['source.malloy'], color: '#000000'},
         {
@@ -824,8 +824,8 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 2, type: ['source.malloy'], color: '#000000'},
         {
@@ -917,8 +917,8 @@ export default [
         {startIndex: 21, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 22,
-          type: ['source.malloy', 'keyword.control.malloy'],
-          color: '#C586C0',
+          type: ['source.malloy', 'keyword.operator.malloy'],
+          color: '#D4D4D4',
         },
         {startIndex: 25, type: ['source.malloy'], color: '#000000'},
         {
@@ -1524,8 +1524,8 @@ export default [
         {startIndex: 12, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 13,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 15, type: ['source.malloy'], color: '#000000'},
         {
@@ -1903,8 +1903,8 @@ export default [
         {startIndex: 15, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 16,
-          type: ['source.malloy', 'keyword.operator.malloy'],
-          color: '#D4D4D4',
+          type: ['source.malloy', 'keyword.control.malloy'],
+          color: '#C586C0',
         },
         {startIndex: 18, type: ['source.malloy'], color: '#000000'},
         {

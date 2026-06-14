@@ -130,7 +130,7 @@
     },
     {
       "name": "SQL block: a \"\"\" string as an argument to connection.sql(...) IS SQL",
-      "note": "SQL-ness comes from the .sql() context, NOT the \"\"\" delimiter. The lexer cannot know this (it just sees SQL_BEGIN); the grammar must trigger SQL off the .sql( context.",
+      "note": "SQL comes from the .sql() context, not the \"\"\" delimiter; the lexer cannot tell.",
       "code": "run: duckdb.sql(\"\"\"SELECT 1\"\"\")",
       "expect": [
         {
@@ -147,7 +147,7 @@
     },
     {
       "name": "SQL block: a SHORT string in connection.sql(...) is ALSO SQL",
-      "note": "Lexer sees only SQ_STRING (a plain string) — false negative. Any string in .sql() is SQL; only the .sql() context tells you so.",
+      "note": "Any string in .sql() is SQL; the lexer sees only SQ_STRING.",
       "code": "run: duckdb.sql('SELECT 1')",
       "expect": [
         {
@@ -159,7 +159,7 @@
     },
     {
       "name": "bare \"\"\" is a MULTI-LINE STRING, not SQL",
-      "note": "Lexer fires SQL_BEGIN/SQL_END here too — false positive. Outside .sql(), \"\"\" is just a multi-line string literal. lexer != scope: the drift test checks the boundary, the scope is authored from parser semantics.",
+      "note": "Bare \"\"\" is a string, not SQL; the lexer over-fires SQL_BEGIN, so scope follows the parser.",
       "code": "dimension: doc is \"\"\"line one\nline two\"\"\"",
       "expect": [
         {
@@ -183,7 +183,11 @@
           "lexer": "OPEN_CODE",
           "scope": "punctuation.section.embedded.begin.malloy"
         },
-        {"text": "x", "lexer": "IDENTIFIER", "scope": "variable.other.malloy"},
+        {
+          "text": "x",
+          "lexer": "IDENTIFIER",
+          "scope": "variable.other.malloy"
+        },
         {
           "text": "}",
           "lexer": "CCURLY",
@@ -193,7 +197,7 @@
     },
     {
       "name": "%{...} inside a BARE \"\"\" string is NOT an interpolation — plain string text",
-      "note": "Compiler raises illegal-query-interpolation-outside-sql-block. The lexer still emits OPEN_CODE/CCURLY (blind to context); the highlighter must keep the whole span as string and NOT treat %{ } as an embedded section. This is the case TextMate gets right by giving the bare-\"\"\" rule no interpolation pattern.",
+      "note": "Outside .sql(), %{ } is plain string text, not an interpolation.",
       "code": "dimension: bad is \"\"\"x %{ y } z\"\"\"",
       "expect": [
         {
@@ -210,7 +214,7 @@
     },
     {
       "name": "annotation: bare object tag",
-      "note": "The lexer makes the whole line one ANNOTATION token — tag CONTENT is not sub-lexed (the tag parser does that). So drift assertions on tag parts all map to ANNOTATION; the grammar is what sub-divides into marker / tag-name / value.",
+      "note": "The lexer emits one ANNOTATION token; the grammar sub-divides the tag content.",
       "code": "# bar_chart",
       "expect": [
         {
@@ -312,7 +316,7 @@
     },
     {
       "name": "block object annotation #| ... |# (column-matched close)",
-      "note": "Lexer emits BLOCK_ANNOTATION_BEGIN / _TEXT / _END; the column match is approximated in TextMate by a leading-whitespace backreference. v1 applies tag-content to block bodies, so prose used as a comment is colored as tags — flagged as a possible future muting decision.",
+      "note": "Block close is column-matched, approximated by a leading-whitespace backreference.",
       "code": "#|\n  size=large\n|#",
       "expect": [
         {
@@ -350,7 +354,7 @@
     },
     {
       "name": "documentation route #\" — NOT a tag, styled like documentation",
-      "note": "Per docs.malloydata.dev/documentation/language/tags, #\" is the Explorer-description route; content is markdown/prose, not tag property-language. Lexer still emits one ANNOTATION token (the route is a tag-parser concern); the grammar distinguishes #\" from # to style content as documentation, NOT entity.name.tag. Word 'tag' chosen in the text to prove it is NOT colored as a tag.",
+      "note": "#\" is the documentation route: prose, not tags.",
       "code": "#\" This is a tag-free documentation line",
       "expect": [
         {
@@ -383,7 +387,7 @@
     },
     {
       "name": "bracketed app route #(name) — content is app-defined, styled as documentation",
-      "note": "parsePrefix routes #(viz) to the opaque app route 'viz' (brackets stripped, no malformation). Content format is app-defined (JSON/markdown/...), so v1 styles it as documentation, not tags. Word 'config' proves it is not tag-colored.",
+      "note": "Bracketed routes carry app-defined content: documentation, not tags.",
       "code": "#(viz) renderer config goes here",
       "expect": [
         {
@@ -400,7 +404,7 @@
     },
     {
       "name": "block with app route #|(name) … |# — routes apply to blocks too",
-      "note": "The block | is part of the sigil; the route follows it. A bracketed route makes the whole block documentation, not tags — even though the empty-route #| block above is tags. This is the case that proves block forms are routed.",
+      "note": "Routes apply to blocks too; a bracketed route makes the whole block documentation.",
       "code": "#|(forYourConsideration)\n  this is not a tag\n|#",
       "expect": [
         {
@@ -422,17 +426,24 @@
     },
     {
       "name": "keyword coverage: json type",
-      "note": "Newly added keywords (json/this/condition/has/virtual/calculation) were uncolored before. Scopes match each section's existing convention (no .malloy suffix — that blanket rename is deferred).",
       "code": "dimension: j is x::json",
       "expect": [
-        {"text": "json", "lexer": "JSON", "scope": "storage.type.malloy"}
+        {
+          "text": "json",
+          "lexer": "JSON",
+          "scope": "storage.type.malloy"
+        }
       ]
     },
     {
       "name": "keyword coverage: this reference",
       "code": "this",
       "expect": [
-        {"text": "this", "lexer": "THIS", "scope": "variable.language.malloy"}
+        {
+          "text": "this",
+          "lexer": "THIS",
+          "scope": "variable.language.malloy"
+        }
       ]
     },
     {
@@ -447,24 +458,13 @@
       ]
     },
     {
-      "name": "keyword coverage: virtual",
-      "code": "virtual",
+      "name": "source-builder .virtual() is a function like .table() (NOT a control keyword)",
+      "code": "source: v is duckdb.virtual('x')",
       "expect": [
         {
           "text": "virtual",
           "lexer": "VIRTUAL",
-          "scope": "keyword.control.malloy"
-        }
-      ]
-    },
-    {
-      "name": "keyword coverage: condition",
-      "code": "condition",
-      "expect": [
-        {
-          "text": "condition",
-          "lexer": "CONDITION",
-          "scope": "keyword.control.malloy"
+          "scope": "entity.name.function.malloy"
         }
       ]
     },
@@ -472,12 +472,32 @@
       "name": "keyword coverage: has",
       "code": "has",
       "expect": [
-        {"text": "has", "lexer": "HAS", "scope": "keyword.control.malloy"}
+        {
+          "text": "has",
+          "lexer": "HAS",
+          "scope": "keyword.control.malloy"
+        }
+      ]
+    },
+    {
+      "name": "distinct is an expression keyword inside count(distinct …)",
+      "code": "aggregate: c is count(distinct flight_id)",
+      "expect": [
+        {
+          "text": "count",
+          "lexer": "COUNT",
+          "scope": "support.function.malloy"
+        },
+        {
+          "text": "distinct",
+          "lexer": "DISTINCT",
+          "scope": "keyword.control.malloy"
+        }
       ]
     },
     {
       "name": "colon-keyword in field position is NOT a keyword (the (?=:) win)",
-      "note": "group_by: carries its colon → keyword. The bare `query` after it is a field reference — the lexer emits IDENTIFIER, not QUERY (which requires a colon) — so it must be a variable, not a keyword. This is exactly the 'bad thing' a per-word match caused; the (?=:) lookahead fixes it while leaving the colon uncolored.",
+      "note": "Bare query has no colon, so it is a field, not a keyword.",
       "code": "group_by: query",
       "expect": [
         {
