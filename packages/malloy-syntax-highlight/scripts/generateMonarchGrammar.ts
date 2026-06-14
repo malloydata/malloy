@@ -520,6 +520,9 @@ function generateMonarchRules(
   const patterns = scope.patterns ? scope.patterns : [scope];
   for (const pattern of patterns) {
     if (pattern.include) {
+      // Annotations are Monarch-divergent — routed/column-matched tags need
+      // cross-state backreferences Monarch lacks — so #tags is not generated.
+      if (pattern.include === '#tags') continue;
       state.push({
         include: textmateToMonarchInclude(pattern.include),
       });
@@ -600,11 +603,9 @@ tokenizer: {
     appendFileSync(filename, `\t${key}: [\n`, 'utf-8');
     for (const rule of rules) {
       if (!Array.isArray(rule)) {
-        // This line comments out the include rule for tags. Remove this once the TextMate grammar
-        // has been updated to reflect the new tag DSL
         appendFileSync(
           filename,
-          `${rule.include === '@tags' ? '//' : ''}${inspect(rule, {
+          `${inspect(rule, {
             depth: null,
           })},\n`,
           'utf-8'
