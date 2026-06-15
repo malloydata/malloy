@@ -34,6 +34,10 @@ import {
   renderDateTimeField,
 } from '@/component/render-numeric-field';
 import {createMeasureAxis} from '@/component/vega/measure-axis';
+import {
+  MEASURE_SERIES_LABEL_SCALE,
+  getMeasureSeriesLabelScale,
+} from '@/component/vega/measure-series-label-scale';
 import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
 import {getMarkName} from '@/component/vega/vega-utils';
 import type {CellValue, RecordCell} from '@/data_tree';
@@ -41,6 +45,7 @@ import {Field} from '@/data_tree';
 import {NULL_SYMBOL} from '@/util';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {BarChartPluginInstance} from './bar-chart-plugin';
+import type {SyntheticSeriesField} from '@/plugins/synthetic-series-field';
 
 type BarDataRecord = {
   x: string | number;
@@ -74,7 +79,7 @@ function getLimitedData({
   xLimitSetting,
 }: {
   xField: Field;
-  seriesField?: Field | null;
+  seriesField?: Field | SyntheticSeriesField | null;
   maxSeries?: number;
   maxSizePerBar?: number;
   isGrouping: boolean;
@@ -113,9 +118,23 @@ function getLimitedData({
   };
 }
 
+/**
+ * The slice of the bar chart plugin instance the spec generator reads,
+ * narrowed so tests can construct a real, fully typed value.
+ */
+export type BarChartSpecInputs = Pick<
+  BarChartPluginInstance,
+  | 'getMetadata'
+  | 'field'
+  | 'chartDisplay'
+  | 'getTopNSeries'
+  | 'syntheticSeriesField'
+  | 'hasMultipleSeriesFields'
+>;
+
 export function generateBarChartVegaSpecV2(
   metadata: RenderMetadata,
-  plugin: BarChartPluginInstance,
+  plugin: BarChartSpecInputs,
   vegaConfig?: Config
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
@@ -138,7 +157,9 @@ export function generateBarChartVegaSpecV2(
   const xField = explore.fieldAt(xFieldPath);
   const xIsDateorTime = xField.isTime();
   const yField = explore.fieldAt(yFieldPath);
-  let seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+  let seriesField: Field | SyntheticSeriesField | null = seriesFieldPath
+    ? explore.fieldAt(seriesFieldPath)
+    : null;
 
   // Use synthetic field if available (for multiple series)
   if (plugin.syntheticSeriesField) {
@@ -272,7 +293,7 @@ export function generateBarChartVegaSpecV2(
     ? createMeasureAxis({
         type: 'y',
         title: settings.yChannel.fields
-          .map(f => explore.fieldAt(f).name)
+          .map(f => explore.fieldAt(f).getLabel())
           .join(', '),
         tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
         labelLimit: chartSettings.yAxis.width + 10,
@@ -715,7 +736,7 @@ export function generateBarChartVegaSpecV2(
       {
         orient: 'bottom',
         scale: 'xscale',
-        title: xField.name,
+        title: xField.getLabel(),
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
@@ -769,14 +790,14 @@ export function generateBarChartVegaSpecV2(
         (a, b) => Math.max(a, b?.toString().length ?? 1),
         0
       );
-      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      maxCharCt = Math.max(maxCharCt, seriesField!.getLabel().length);
     } else if (isDimensionalSeries) {
       // Legend size is by legend title or the longest legend value
       maxCharCt = seriesField!.maxString?.length ?? 0;
-      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      maxCharCt = Math.max(maxCharCt, seriesField!.getLabel().length);
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
-        (max, f) => Math.max(max, f.length),
+        (max, f) => Math.max(max, explore.fieldAt(f).getLabel().length),
         maxCharCt
       );
     }
@@ -797,10 +818,15 @@ export function generateBarChartVegaSpecV2(
     };
 
     (spec.padding as VegaPadding).right = legendSize;
+    if (isMeasureSeries && !isDimensionalSeries) {
+      spec.scales!.push(
+        getMeasureSeriesLabelScale(explore, settings.yChannel.fields)
+      );
+    }
     spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
-      title: seriesField ? seriesField.name : '',
+      title: seriesField ? seriesField.getLabel() : '',
       orient: 'right',
       ...legendSettings,
       values:
@@ -816,6 +842,9 @@ export function generateBarChartVegaSpecV2(
           name: 'legend_labels',
           interactive: true,
           update: {
+            ...(isMeasureSeries && !isDimensionalSeries
+              ? {text: {scale: MEASURE_SERIES_LABEL_SCALE, field: 'value'}}
+              : {}),
             fillOpacity: [
               {
                 test: 'brushSeriesIn === datum.value',
@@ -1003,6 +1032,10 @@ export function generateBarChartVegaSpecV2(
           ? renderNumericField(field, value)
           : String(value);
       };
+      const entryLabel = (rec: BarDataRecord) =>
+        isDimensionalSeries
+          ? rec.series
+          : explore.fieldAt([rec.series]).getLabel();
 
       // Tooltip records for the highlight bars
       if (getMarkName(item) === 'x_highlight') {
@@ -1019,7 +1052,7 @@ export function generateBarChartVegaSpecV2(
         tooltipData = {
           title: [title],
           entries: records.map(rec => ({
-            label: rec.series,
+            label: entryLabel(rec),
             value: formatY(rec),
             highlight: false,
             color: colorScale(rec.series),
@@ -1045,7 +1078,7 @@ export function generateBarChartVegaSpecV2(
           title: [title],
           entries: records.map(rec => {
             return {
-              label: rec.series,
+              label: entryLabel(rec),
               value: formatY(rec),
               highlight: highlightedSeries === rec.series,
               color: colorScale(rec.series),

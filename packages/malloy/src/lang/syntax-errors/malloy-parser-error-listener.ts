@@ -220,11 +220,6 @@ export const malloyCustomErrorCases: ErrorCase[] = [
   },
   {
     errorMessage:
-      "The 'project:' keyword is no longer supported. Use 'select:' instead.",
-    offendingSymbol: MalloyParser.PROJECT,
-  },
-  {
-    errorMessage:
       "Unsupported keyword 'as'. Use 'is' to name something (ex: `dimension: name is expression`)",
     offendingSymbolTextOptions: ['as'],
     ruleContextOptions: ['isDefine'],

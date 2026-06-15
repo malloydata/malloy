@@ -64,6 +64,7 @@
     "profile": "ts-node scripts/profiler",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
+    "setup-new-checkout": "scripts/setup-new-checkout.sh",
     "ping-db": "ts-node ./test/bin/ping_db.ts"
   },
   "devDependencies": {
@@ -73,7 +74,7 @@
     "@malloydata/db-bigquery": "*",
     "@malloydata/db-mysql": "*",
     "@malloydata/malloy": "*",
-    "@malloydata/motly-ts-parser": "^0.7.1",
+    "@malloydata/motly-ts-parser": "^0.9.0",
     "@malloydata/render": "*",
     "@types/fs-extra": "^9.0.13",
     "@types/jest": "^29.0.3",

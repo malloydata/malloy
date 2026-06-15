@@ -313,18 +313,6 @@ describe('custom error messages', () => {
       );
     });
 
-    test('use of project instead of select', () => {
-      expect(`
-          run: a -> {
-            project: *
-          }
-        `).toLogAtLeast(
-        errorMessage(
-          "The 'project:' keyword is no longer supported. Use 'select:' instead."
-        )
-      );
-    });
-
     test('unexpected us of "as" in select query', () => {
       expect(`
           run: a -> {

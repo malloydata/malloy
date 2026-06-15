@@ -62,6 +62,7 @@ import {isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
 import type {Dialect, QueryInfo} from '../dialect';
 import {MalloyCompileError} from './malloy_compile_error';
+import {lookupGivenValue} from './given_binding';
 
 const NUMERIC_DECIMAL_PRECISION = 9;
 
@@ -872,10 +873,12 @@ export function generateParameterFragment(
  * and the `'inGiven'` SQL-emit case ($ARR in `expr in $ARR`).
  */
 function resolveGivenBoundExpr(context: QueryStruct, ref: GivenRefNode): Expr {
-  const supplied = context.prepareResultOptions?.resolvedGivens?.get(ref.id);
-  if (supplied !== undefined) return supplied;
-  const decl = context.getModel().givens[ref.id];
-  if (decl?.default !== undefined) return decl.default;
+  const value = lookupGivenValue(
+    context.prepareResultOptions?.resolvedGivens,
+    context.getModel().givens,
+    ref.id
+  );
+  if (value !== undefined) return value;
   throw new MalloyCompileError(
     unsatisfiedGivenMessage(ref.refName),
     'compiler-given-no-value',

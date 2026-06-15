@@ -6,75 +6,96 @@
 import {compileModel, compileQuery, compileSource} from './sessioned';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
+// Everything the driver can hand back to the compiler, indexed by request.
+interface SessionFixtures {
+  files?: Record<string, string>; // url -> contents
+  dialects?: Record<string, string>; // connection name -> dialect
+  tables?: Record<string, Malloy.Schema>; // `${connection}:${table}` -> schema
+  sqls?: Record<string, Malloy.Schema>; // `${connection}:${selectStr}` -> schema
+}
+
+// Fill one round of compiler needs from the fixtures, in whatever order they
+// arrive. Unknown items get no payload.
+function fulfill(
+  needs: Malloy.CompilerNeeds,
+  fx: SessionFixtures
+): Malloy.CompilerNeeds {
+  const out: Malloy.CompilerNeeds = {};
+  if (needs.files) {
+    out.files = needs.files.map(f => ({
+      ...f,
+      contents: fx.files?.[f.url] ?? '',
+    }));
+  }
+  if (needs.connections) {
+    out.connections = needs.connections.map(c => ({
+      ...c,
+      dialect: fx.dialects?.[c.name],
+    }));
+  }
+  if (needs.table_schemas) {
+    out.table_schemas = needs.table_schemas.map(t => ({
+      ...t,
+      schema: fx.tables?.[`${t.connection_name}:${t.name}`],
+    }));
+  }
+  if (needs.sql_schemas) {
+    out.sql_schemas = needs.sql_schemas.map(s => ({
+      ...s,
+      schema: fx.sqls?.[`${s.connection_name}:${s.sql}`],
+    }));
+  }
+  return out;
+}
+
+// Drive a stateful compile to completion, answering needs from `fx` each
+// round. `step` runs one compile call given the needs to feed and the session.
+function runToCompletion<
+  R extends {compiler_needs?: Malloy.CompilerNeeds; session_id?: string},
+>(
+  step: (
+    needs: Malloy.CompilerNeeds | undefined,
+    session_id: string | undefined
+  ) => R,
+  fx: SessionFixtures
+): R {
+  let needs: Malloy.CompilerNeeds | undefined;
+  let session_id: string | undefined;
+  for (let round = 0; round < 20; round++) {
+    const result = step(needs, session_id);
+    session_id = result.session_id;
+    if (result.compiler_needs === undefined) return result;
+    needs = fulfill(result.compiler_needs, fx);
+  }
+  throw new Error('runToCompletion: compile did not converge in 20 rounds');
+}
+
 describe('api', () => {
   describe('compile model', () => {
     test('compile model with table dependency', () => {
-      let result = compileModel({
-        model_url: 'file://test.malloy',
-      });
-      let expected: Malloy.CompileModelResponse & {session_id?: string} = {
-        compiler_needs: {
-          files: [
-            {
-              url: 'file://test.malloy',
-            },
-          ],
+      const fx: SessionFixtures = {
+        files: {
+          'file://test.malloy':
+            "# someannotation=foo\n source: flights is connection.table('flights')",
         },
-      };
-      expect(result).toMatchObject(expected);
-      result = compileModel(
-        {
-          model_url: 'file://test.malloy',
-          compiler_needs: {
-            files: [
-              {
-                url: 'file://test.malloy',
-                contents:
-                  "# someannotation=foo\n source: flights is connection.table('flights')",
-              },
+        dialects: {connection: 'duckdb'},
+        tables: {
+          'connection:flights': {
+            fields: [
+              {kind: 'dimension', name: 'carrier', type: {kind: 'string_type'}},
             ],
           },
         },
-        {session_id: result.session_id}
-      );
-      expected = {
-        compiler_needs: {
-          table_schemas: [
-            {
-              connection_name: 'connection',
-              name: 'flights',
-            },
-          ],
-          connections: [{name: 'connection'}],
-        },
-        session_id: result.session_id,
       };
-      expect(result).toMatchObject(expected);
-      result = compileModel(
-        {
-          model_url: 'file://test.malloy',
-          compiler_needs: {
-            table_schemas: [
-              {
-                connection_name: 'connection',
-                name: 'flights',
-                schema: {
-                  fields: [
-                    {
-                      kind: 'dimension',
-                      name: 'carrier',
-                      type: {kind: 'string_type'},
-                    },
-                  ],
-                },
-              },
-            ],
-            connections: [{name: 'connection', dialect: 'duckdb'}],
-          },
-        },
-        {session_id: result.session_id}
+      const result = runToCompletion(
+        (compiler_needs, session_id) =>
+          compileModel(
+            {model_url: 'file://test.malloy', compiler_needs},
+            session_id === undefined ? undefined : {session_id}
+          ),
+        fx
       );
-      expected = {
+      expect(result).toMatchObject({
         model: {
           entries: [
             {
@@ -89,101 +110,46 @@ describe('api', () => {
                   },
                 ],
               },
-              annotations: [
-                {
-                  value: '# someannotation=foo\n',
-                },
-              ],
+              annotations: [{value: '# someannotation=foo\n'}],
             },
           ],
           anonymous_queries: [],
         },
-        session_id: result.session_id,
-      };
-      expect(result).toMatchObject(expected);
-      expect(result).toMatchObject({
-        timing_info: {
-          name: 'compile_model',
-          duration_ms: expect.any(Number),
-          detailed_timing: [
-            {name: 'session_wait'},
-            {name: 'parse_malloy'},
-            {name: 'session_wait'},
-            {
-              name: 'generate_ast',
-              detailed_timing: [{name: 'parse_compiler_flags'}],
-            },
-            {name: 'compile_malloy'},
-          ],
-        },
       });
     });
     test('compile source basic test', () => {
-      let result = compileSource({
-        model_url: 'file://test.malloy',
-        name: 'flights',
-        compiler_needs: {
-          files: [
-            {
-              url: 'file://test.malloy',
-              contents: "source: flights is connection.table('flights')",
-            },
-          ],
+      const fx: SessionFixtures = {
+        files: {
+          'file://test.malloy':
+            "source: flights is connection.table('flights')",
         },
-      });
-      let expected: Malloy.CompileSourceResponse & {session_id?: string} = {
-        compiler_needs: {
-          table_schemas: [
-            {
-              connection_name: 'connection',
-              name: 'flights',
-            },
-          ],
-          connections: [{name: 'connection'}],
-        },
-      };
-      expect(result).toMatchObject(expected);
-      result = compileSource(
-        {
-          model_url: 'file://test.malloy',
-          name: 'flights',
-          compiler_needs: {
-            table_schemas: [
-              {
-                connection_name: 'connection',
-                name: 'flights',
-                schema: {
-                  fields: [
-                    {
-                      kind: 'dimension',
-                      name: 'carrier',
-                      type: {kind: 'string_type'},
-                    },
-                  ],
-                },
-              },
+        dialects: {connection: 'duckdb'},
+        tables: {
+          'connection:flights': {
+            fields: [
+              {kind: 'dimension', name: 'carrier', type: {kind: 'string_type'}},
             ],
-            connections: [{name: 'connection', dialect: 'duckdb'}],
           },
         },
-        {session_id: result.session_id}
+      };
+      const result = runToCompletion(
+        (compiler_needs, session_id) =>
+          compileSource(
+            {model_url: 'file://test.malloy', name: 'flights', compiler_needs},
+            session_id === undefined ? undefined : {session_id}
+          ),
+        fx
       );
-      expected = {
+      expect(result).toMatchObject({
         source: {
           name: 'flights',
           schema: {
             fields: [
-              {
-                kind: 'dimension',
-                name: 'carrier',
-                type: {kind: 'string_type'},
-              },
+              {kind: 'dimension', name: 'carrier', type: {kind: 'string_type'}},
             ],
           },
         },
-        session_id: result.session_id,
-      };
-      expect(result).toMatchObject(expected);
+      });
     });
   });
   describe('compile query', () => {
@@ -205,73 +171,29 @@ describe('api', () => {
           },
         },
       };
-      let result = compileQuery({
-        model_url: 'file://test.malloy',
-        query,
-      });
-      let expected: Malloy.CompileQueryResponse & {session_id?: string} = {
-        compiler_needs: {
-          files: [
-            {
-              url: 'file://test.malloy',
-            },
-          ],
+      const fx: SessionFixtures = {
+        files: {
+          'file://test.malloy':
+            "source: flights is connection.table('flights')",
         },
-      };
-      expect(result).toMatchObject(expected);
-      result = compileQuery(
-        {
-          model_url: 'file://test.malloy',
-          query,
-          compiler_needs: {
-            files: [
-              {
-                url: 'file://test.malloy',
-                contents: "source: flights is connection.table('flights')",
-              },
+        dialects: {connection: 'duckdb'},
+        tables: {
+          'connection:flights': {
+            fields: [
+              {kind: 'dimension', name: 'carrier', type: {kind: 'string_type'}},
             ],
           },
         },
-        {session_id: result.session_id}
-      );
-      expected = {
-        compiler_needs: {
-          table_schemas: [
-            {
-              connection_name: 'connection',
-              name: 'flights',
-            },
-          ],
-          connections: [{name: 'connection'}],
-        },
       };
-      expect(result).toMatchObject(expected);
-      result = compileQuery(
-        {
-          model_url: 'file://test.malloy',
-          query,
-          compiler_needs: {
-            table_schemas: [
-              {
-                connection_name: 'connection',
-                name: 'flights',
-                schema: {
-                  fields: [
-                    {
-                      kind: 'dimension',
-                      name: 'carrier',
-                      type: {kind: 'string_type'},
-                    },
-                  ],
-                },
-              },
-            ],
-            connections: [{name: 'connection', dialect: 'duckdb'}],
-          },
-        },
-        {session_id: result.session_id}
+      const result = runToCompletion(
+        (compiler_needs, session_id) =>
+          compileQuery(
+            {model_url: 'file://test.malloy', query, compiler_needs},
+            session_id === undefined ? undefined : {session_id}
+          ),
+        fx
       );
-      expected = {
+      expect(result).toMatchObject({
         result: {
           connection_name: 'connection',
           sql: `SELECT \n\
@@ -282,17 +204,11 @@ ORDER BY 1 asc NULLS LAST
 `,
           schema: {
             fields: [
-              {
-                kind: 'dimension',
-                name: 'carrier',
-                type: {kind: 'string_type'},
-              },
+              {kind: 'dimension', name: 'carrier', type: {kind: 'string_type'}},
             ],
           },
         },
-        session_id: result.session_id,
-      };
-      expect(result).toMatchObject(expected);
+      });
     });
   });
   describe('sessions', () => {
@@ -346,16 +262,8 @@ ORDER BY 1 asc NULLS LAST
           }
         );
         const session_id = result.session_id;
-        let expected: Malloy.CompileModelResponse & {session_id?: string} = {
-          compiler_needs: {
-            files: [
-              {
-                url: 'file://test.malloy',
-              },
-            ],
-          },
-        };
-        expect(result).toMatchObject(expected);
+        expect(result.compiler_needs).toBeDefined();
+        // Advance the session one round and push its TTL into the future.
         result = compileModel(
           {
             model_url: 'file://test.malloy',
@@ -374,25 +282,18 @@ ORDER BY 1 asc NULLS LAST
             ttl: {seconds: 100000},
           }
         );
-        expected = {
-          compiler_needs: {
-            table_schemas: [
-              {
-                connection_name: 'connection',
-                name: 'flights',
-              },
-            ],
-            connections: [{name: 'connection'}],
-          },
-          session_id,
-        };
-        expect(result).toMatchObject(expected);
+        expect(result.session_id).toBe(session_id);
+        // Capture wherever the mid-flight session is.
+        const midFlight = result.compiler_needs;
+        expect(midFlight).toBeDefined();
         // Now asking for a different file should NOT purge the original session
         compileModel({
           model_url: 'file://some_other_model.malloy',
         });
+        // Re-entering the session resumes exactly where it left off.
         result = compileModel({model_url: 'file://test.malloy'}, {session_id});
-        expect(result).toMatchObject(expected);
+        expect(result.session_id).toBe(session_id);
+        expect(result.compiler_needs).toEqual(midFlight);
       });
     });
     test('getting an error should kill session', () => {

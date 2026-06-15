@@ -97,7 +97,8 @@ if (errors.length > 0) {
   }
   process.exit(1);
 }
-const allConfig = session.getMot({env: process.env});
+const result = session.finish();
+const allConfig = result.getMot({env: process.env});
 
 function validateTarget(name) {
   const config = allConfig.get(name);

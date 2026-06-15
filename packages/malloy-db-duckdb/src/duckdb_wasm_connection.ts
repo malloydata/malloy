@@ -226,6 +226,23 @@ export interface DuckDBWasmOptions extends ConnectionConfig {
   workingDirectory?: string;
   setupSQL?: string;
 }
+// `workingDirectory` defaults to `config.rootDirectory`, which the config
+// stack carries as a URL string. DuckDB-Wasm's virtual filesystem wants a plain
+// POSIX path; a `file://` URL left intact becomes a bogus FILE_SEARCH_PATH and
+// breaks relative reads. Decode file URLs to their path. Browser-safe — uses
+// the WHATWG `URL` (the native connection's Node `fileURLToPath` is unavailable
+// here). Plain paths and non-file schemes pass through untouched.
+function fileURLToVirtualPath(input: string): string {
+  if (!/^file:\/\//i.test(input)) {
+    return input;
+  }
+  const decoded = decodeURIComponent(new URL(input).pathname);
+  // Drop a trailing separator but keep the filesystem root '/'.
+  return decoded.length > 1 && decoded.endsWith('/')
+    ? decoded.slice(0, -1)
+    : decoded;
+}
+
 export abstract class DuckDBWASMConnection extends DuckDBCommon {
   private additionalExtensions: string[] = [];
   public readonly name: string;
@@ -260,7 +277,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         this.databasePath = arg2;
       }
       if (typeof workingDirectory === 'string') {
-        this.workingDirectory = workingDirectory;
+        this.workingDirectory = fileURLToVirtualPath(workingDirectory);
       }
       if (queryOptions) {
         this.queryOptions = queryOptions;
@@ -274,7 +291,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         this.databasePath = arg.databasePath;
       }
       if (typeof arg.workingDirectory === 'string') {
-        this.workingDirectory = arg.workingDirectory;
+        this.workingDirectory = fileURLToVirtualPath(arg.workingDirectory);
       }
       if (typeof arg.motherDuckToken === 'string') {
         this.motherDuckToken = arg.motherDuckToken;

@@ -4,6 +4,7 @@
  */
 
 import path from 'path';
+import {fileURLToPath} from 'url';
 import {makeDigest} from '@malloydata/malloy';
 import type {
   ConnectionConfig,
@@ -223,7 +224,10 @@ export function normalizeDuckDBConfig(
     );
   }
 
-  const databasePath = canonicalizeDatabasePath(rawDatabasePath);
+  const databasePath = canonicalizeDatabasePath(
+    rawDatabasePath,
+    workingDirectory
+  );
   const isMotherDuck = isMotherDuckPath(databasePath);
   if (restricted && !isAllowedClosedNetworkDatabasePath(databasePath)) {
     throw new DuckDBConfigValidationError(
@@ -561,11 +565,45 @@ function deriveRestrictedSecretDirectory({
   );
 }
 
-function canonicalizeDatabasePath(databasePath: string): string {
+// A relative `databasePath` resolves against `workingDirectory` (which itself
+// defaults to the project root via `{config: 'rootDirectory'}`), keeping a
+// config file portable — `databasePath: "analytics.duckdb"` names the database
+// alongside the project regardless of where the host process is launched.
+// `:memory:` and remote schemes are taken as-is; absolute paths ignore the
+// base; with no `workingDirectory` set, a relative path falls back to the cwd.
+function canonicalizeDatabasePath(
+  databasePath: string,
+  workingDirectory: string | undefined
+): string {
   if (databasePath === ':memory:' || isLikelyRemoteDatabasePath(databasePath)) {
     return databasePath;
   }
-  return canonicalizeConfigPath(databasePath, 'databasePath');
+  return canonicalizeConfigPath(databasePath, 'databasePath', {
+    baseDirectory: workingDirectory,
+  });
+}
+
+// A config path can arrive as a `file://` URL rather than a plain path —
+// notably `workingDirectory`, which defaults to `config.rootDirectory` (the
+// config stack carries it as a URL string). Left as a URL, `path.resolve`
+// treats `file:` as a relative segment and joins it to the process cwd,
+// silently breaking relative `read_parquet`/glob resolution. Decode file URLs
+// to a real path so every downstream consumer (FILE_SEARCH_PATH,
+// allowed_directories, …) sees one. Plain paths and non-file schemes pass
+// through untouched; a malformed file URL throws and surfaces as the caller's
+// field-specific validation error.
+function maybeFileURLToPath(input: string): string {
+  // Cheap guard so plain paths (the common case) skip URL parsing entirely.
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(input)) {
+    return input;
+  }
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    return input; // not a URL — treat as a plain path
+  }
+  return url.protocol === 'file:' ? fileURLToPath(url) : input;
 }
 
 function canonicalizeConfigPath(
@@ -574,7 +612,7 @@ function canonicalizeConfigPath(
   options: pathSecurity.CanonicalPathOptions = {}
 ): string {
   try {
-    return pathSecurity.canonicalizePath(input, options);
+    return pathSecurity.canonicalizePath(maybeFileURLToPath(input), options);
   } catch (error) {
     throw new DuckDBConfigValidationError(
       `${fieldName} is invalid: ${errorMessage(error)}`

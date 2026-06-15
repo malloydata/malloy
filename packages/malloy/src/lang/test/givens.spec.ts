@@ -1793,6 +1793,28 @@ describe('inline givens', () => {
     `).toTranslate();
   });
 
+  test('inline referencing a regular given with a reducible default translates cleanly', () => {
+    expect(givensModel`
+      given:
+        REV_REC_METHOD :: string[] is ['__NO_METHOD__']
+        inline NO_METHOD_RESTRICTIONS :: boolean is '__NO_METHOD__' in $REV_REC_METHOD
+    `).toTranslate();
+  });
+
+  test('inline reaching a non-reducible default through a reference is a translate-time error', () => {
+    // `N`'s default `1 + 1` isn't inline-reducible; an inline gate that
+    // can fall back to it is rejected, naming the reference.
+    expect(givensModel`
+      given:
+        N :: number is 1 + 1
+        inline BIG :: boolean is $N > 0
+    `).toLog(
+      errorMessage(
+        /inline given `BIG` references `N`, whose default uses operator\(s\) not allowed/
+      )
+    );
+  });
+
   test('inline given filtered out of Model.givens introspection', () => {
     const t = givensModel`
       given:
