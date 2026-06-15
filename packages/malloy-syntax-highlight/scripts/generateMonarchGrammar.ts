@@ -520,9 +520,16 @@ function generateMonarchRules(
   const patterns = scope.patterns ? scope.patterns : [scope];
   for (const pattern of patterns) {
     if (pattern.include) {
-      // Annotations are Monarch-divergent — routed/column-matched tags need
-      // cross-state backreferences Monarch lacks — so #tags is not generated.
-      if (pattern.include === '#tags') continue;
+      // Some rules are Monarch-divergent and are not generated:
+      //  - #tags: routed/column-matched annotations need cross-state
+      //    backreferences Monarch lacks.
+      //  - #sql-string: the .sql(...) embedding is a nested begin/end (the
+      //    string may sit on a different line from the `(`) whose multi-line
+      //    embedding Monarch can't express. Both are exercised only in
+      //    monarchDivergentTestInput.
+      if (pattern.include === '#tags' || pattern.include === '#sql-string') {
+        continue;
+      }
       state.push({
         include: textmateToMonarchInclude(pattern.include),
       });

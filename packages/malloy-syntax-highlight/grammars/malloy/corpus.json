@@ -169,6 +169,62 @@
       ]
     },
     {
+      "name": "SQL block: backtick-quoted connection (connectionId is an `id` = IDENTIFIER | BQ_STRING)",
+      "code": "run: `my conn`.sql(\"SELECT 1\")",
+      "expect": [
+        {
+          "text": "`my conn`",
+          "lexer": "BQ_STRING",
+          "scope": "variable.other.malloy"
+        },
+        {
+          "text": "SELECT 1",
+          "lexer": "DQ_STRING",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: Unicode connection name (ID_CHAR is [\\p{Alphabetic}_], not just A-Z)",
+      "code": "run: café.sql('SELECT 1')",
+      "expect": [
+        {
+          "text": "café",
+          "lexer": "IDENTIFIER",
+          "scope": "variable.other.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: a raw s'...' string argument is SQL too",
+      "note": "The s prefix is consumed; the quote opens the SQL string. Lexer sees one RAW_SQ.",
+      "code": "run: duckdb.sql(s'SELECT 1')",
+      "expect": [
+        {
+          "text": "SELECT 1",
+          "lexer": "RAW_SQ",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: the string may sit on a different line from .sql(",
+      "note": "Newlines/whitespace between .sql(, the string, and ) — the nested rule spans lines.",
+      "code": "foo.sql(\n\"SELECT * FROM STUFF\"\n)",
+      "expect": [
+        {
+          "text": "foo",
+          "lexer": "IDENTIFIER",
+          "scope": "variable.other.malloy"
+        },
+        {
+          "text": "SELECT * FROM STUFF",
+          "lexer": "DQ_STRING",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
       "name": "bare \"\"\" is a MULTI-LINE STRING, not SQL",
       "note": "Bare \"\"\" is a string, not SQL; the lexer over-fires SQL_BEGIN, so scope follows the parser.",
       "code": "dimension: doc is \"\"\"line one\nline two\"\"\"",

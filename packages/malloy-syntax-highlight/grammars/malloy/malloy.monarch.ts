@@ -13,7 +13,6 @@ export const monarch: Monaco.IMonarchLanguage = {
   tokenizer: {
     root: [{include: '@malloy_language'}],
     malloy_language: [
-      {include: '@sql_string'},
       {include: '@comments'},
       {include: '@strings'},
       {include: '@given'},
@@ -28,80 +27,6 @@ export const monarch: Monaco.IMonarchLanguage = {
       {include: '@constants'},
       {include: '@timeframes'},
       {include: '@identifiers_unquoted'},
-    ],
-    sql_string: [
-      [
-        /(\b[A-Za-z_][A-Za-z_0-9]*)(\s*\.\s*)((?:sql))(\s*\(\s*)(""")/,
-        [
-          'variable.other.malloy',
-          '',
-          'keyword.control.sql.malloy',
-          '',
-          {
-            next: '@sql_end_0',
-            nextEmbedded: 'sql',
-            token: 'punctuation.definition.string.begin.sql.malloy',
-          },
-        ],
-      ],
-      [
-        /(\b[A-Za-z_][A-Za-z_0-9]*)(\s*\.\s*)((?:sql))(\s*\(\s*)(")/,
-        [
-          'variable.other.malloy',
-          '',
-          'keyword.control.sql.malloy',
-          '',
-          {
-            next: '@sql_end_1',
-            nextEmbedded: 'sql',
-            token: 'punctuation.definition.string.begin.sql.malloy',
-          },
-        ],
-      ],
-      [
-        /(\b[A-Za-z_][A-Za-z_0-9]*)(\s*\.\s*)((?:sql))(\s*\(\s*)(')/,
-        [
-          'variable.other.malloy',
-          '',
-          'keyword.control.sql.malloy',
-          '',
-          {
-            next: '@sql_end_2',
-            nextEmbedded: 'sql',
-            token: 'punctuation.definition.string.begin.sql.malloy',
-          },
-        ],
-      ],
-    ],
-    sql_end_0: [
-      [
-        /"""/,
-        {
-          next: '@pop',
-          nextEmbedded: '@pop',
-          token: 'punctuation.definition.string.end.sql.malloy',
-        },
-      ],
-    ],
-    sql_end_1: [
-      [
-        /"/,
-        {
-          next: '@pop',
-          nextEmbedded: '@pop',
-          token: 'punctuation.definition.string.end.sql.malloy',
-        },
-      ],
-    ],
-    sql_end_2: [
-      [
-        /'/,
-        {
-          next: '@pop',
-          nextEmbedded: '@pop',
-          token: 'punctuation.definition.string.end.sql.malloy',
-        },
-      ],
     ],
     comments: [
       [/\/\*/, {next: '@comment_block_end', token: 'comment.block'}],
