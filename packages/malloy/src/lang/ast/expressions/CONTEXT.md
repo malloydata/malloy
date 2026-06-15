@@ -65,9 +65,10 @@ partialTest             : partialCompare | IS NOT? NULL ;
 partialCompare          : compareOp fieldExpr ;
 ```
 
-`in [...]` and `in $given` are listed as standalone `fieldExpr` alternatives (lines
-`exprWarnIn`, `exprInGiven`), not under `partialTest`. The parser will not produce the
-right tree for `x ? in [1, 2, 3]`.
+`in [...]` and `in $given` always bind their LHS in the grammar
+(`fieldExpr NOT? IN …`), so they can only appear in `partialAllowedFieldExpr` as a
+complete expression with a bound LHS — not as a bare `partialTest`. The parser will not
+produce the right tree for `x ? in [1, 2, 3]`.
 
 ### 2. No partial-in AST node
 
