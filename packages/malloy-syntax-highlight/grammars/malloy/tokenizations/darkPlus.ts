@@ -1405,7 +1405,11 @@ export default [
           ],
           color: '#D4D4D4',
         },
-        {startIndex: 3, type: ['source.malloy'], color: '#000000'},
+        {
+          startIndex: 3,
+          type: ['source.malloy', 'meta.embedded.block.sql.malloy'],
+          color: '#D4D4D4',
+        },
       ],
     },
   ],

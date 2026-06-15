@@ -93,34 +93,42 @@
       ]
     },
     "sql-string": {
-      "comment": "SQL-ness is the .sql() context, not the delimiter — any string argument to connection.sql(...) is SQL. ONE combined rule, not three per-quote siblings: vscode-textmate's begin scanner drops shorter begins that share a prefix with a longer one, so separate \"\"\"/\"/' rules leave only \"\"\" working. The opening quote is captured (group 5) and the end back-references it (\\5), so all three close correctly. #malloy-in-sql gives \"\"\" blocks their %{ } interpolation; it also (harmlessly) applies inside short SQL strings, where %{ } is not real interpolation but is vanishingly rare.",
+      "comment": "SQL-ness is the .sql() CONTEXT, not the delimiter — any string argument to connection.sql(...) is SQL (grammar: connectionId DOT SQL OPAREN (sqlString|shortString) CPAREN; connectionId is an `id`). Two NESTED rules so the string can sit on a different line from `.sql(` — a single begin regex cannot span the newline. The OUTER rule opens at `connection.sql(` and closes at the matching `)`; the INNER rule matches the string argument wherever it lands. connection matches an `id`: a Unicode identifier ([\\p{Alphabetic}_]… mirrors the lexer's ID_CHAR) or a backtick-quoted name. The inner quote absorbs an optional raw `s` prefix but captures only the quote, so the \\1 end back-reference closes all of '…', \"…\", s'…', s\"…\", and \"\"\"…\"\"\". #malloy-in-sql gives blocks their %{ } interpolation (harmless inside short/raw strings, where it is vanishingly rare).",
       "patterns": [
         {
-          "begin": "(\\b[A-Za-z_][A-Za-z_0-9]*)(\\s*\\.\\s*)((?i:sql))(\\s*\\(\\s*)(\"\"\"|\"|')",
-          "end": "\\5",
+          "begin": "(`[^`]*`|[\\p{Alphabetic}_][\\p{Alphabetic}_0-9]*)(\\s*\\.\\s*)((?i:sql))(\\s*\\(\\s*)",
+          "end": "\\)",
           "beginCaptures": {
             "1": {
               "name": "variable.other.malloy"
             },
             "3": {
               "name": "keyword.control.sql.malloy"
-            },
-            "5": {
-              "name": "punctuation.definition.string.begin.sql.malloy"
-            }
-          },
-          "endCaptures": {
-            "0": {
-              "name": "punctuation.definition.string.end.sql.malloy"
             }
           },
           "name": "meta.embedded.block.sql.malloy",
           "patterns": [
             {
-              "include": "#malloy-in-sql"
-            },
-            {
-              "include": "source.sql"
+              "begin": "(?:[sS]\\s*)?(\"\"\"|\"|')",
+              "end": "\\1",
+              "beginCaptures": {
+                "1": {
+                  "name": "punctuation.definition.string.begin.sql.malloy"
+                }
+              },
+              "endCaptures": {
+                "0": {
+                  "name": "punctuation.definition.string.end.sql.malloy"
+                }
+              },
+              "patterns": [
+                {
+                  "include": "#malloy-in-sql"
+                },
+                {
+                  "include": "source.sql"
+                }
+              ]
             }
           ]
         }
