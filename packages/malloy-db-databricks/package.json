@@ -22,7 +22,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@databricks/sql": "^1.8.4",
+    "@databricks/sql": "1.15.0",
     "@malloydata/malloy": "0.0.412",
     "@types/node": "^22.7.4"
   }
