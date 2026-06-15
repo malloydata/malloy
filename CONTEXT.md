@@ -120,6 +120,10 @@ Each database has its own package with connection handling and dialect-specific 
 - `malloy-db-trino/` - Trino/Presto adapter
 - `malloy-db-publisher/` - Publishing/caching layer
 
+#### Native-dependency pins (do not loosen casually)
+
+`snowflake-sdk` (`2.3.1`) and `@databricks/sql` (`1.15.0`) are pinned to exact, pre-native versions, not `^` ranges. Why isn't visible here: downstream clients (the VS Code extension, `malloy-cli`) bundle with esbuild, which can't bundle native `.node` binaries. Newer driver releases ship them, so an unpinned range floats one in and breaks those builds — caught only in their CI. Bumping past these requires externalize-and-ship work in each client first (their `check-native` guard trips otherwise).
+
 ### Supporting Libraries
 - `malloy-interfaces/` - TypeScript interfaces and Thrift-generated types
 - `malloy-render/` - Data visualization and rendering (see [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md))
