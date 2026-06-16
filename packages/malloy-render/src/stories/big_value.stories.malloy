@@ -344,4 +344,25 @@ source: big_value_orders is duckdb.table("static/data/order_items.parquet") exte
       limit: 24
     }
   }
+
+  // MISCONFIGURED: a child-only `# big_value { sparkline=... }` placed on the
+  // view itself, with no activating `# big_value`. The renderer declines to
+  // match it, so it used to render as "[object Object]". It now surfaces the
+  // validation error instead.
+  #(story)
+  # big_value { sparkline=mis_trend }
+  view: misconfigured_big_value is {
+    aggregate:
+      # label="Total Sales"
+      total_sales
+
+    # line_chart { size=spark }
+    # hidden
+    nest: mis_trend is {
+      group_by: order_month
+      aggregate: total_sales
+      order_by: order_month
+      limit: 24
+    }
+  }
 }

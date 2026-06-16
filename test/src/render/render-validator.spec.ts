@@ -383,6 +383,23 @@ describe('render tag validation', () => {
       expectError(logs, 'only valid on basic fields');
       expectNoWarnings(logs);
     });
+
+    it('errors when a child-only big_value (sparkline) is on the view itself', async () => {
+      // The exact shape that rendered as "[object Object]" in Publisher: a
+      // child-only `# big_value { sparkline=... }` placed on a view with no
+      // activating big_value. The renderer declines to match it, so this error
+      // must surface (now recorded on the field and rendered, see apply-renderer).
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as val") extend {
+          # big_value { sparkline=trend }
+          view: q is {
+            aggregate: total is count()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'only valid on basic fields');
+    });
   });
 
   describe('chart y-channel must be numeric', () => {

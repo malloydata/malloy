@@ -92,7 +92,10 @@ export function MalloyRender(props: MalloyRenderProps) {
   return (
     <ErrorBoundary
       fallback={errorProps => {
-        const message = () => errorProps.error?.message ?? errorProps;
+        // Solid hands the thrown value to the fallback directly; show its
+        // message or stringify it. The old code let the raw object fall through
+        // as a JSX child, which rendered as an empty error box.
+        const message = () => errorProps?.message ?? String(errorProps);
         props?.onError?.(errorProps);
         return <ErrorMessage message={message()} />;
       }}
