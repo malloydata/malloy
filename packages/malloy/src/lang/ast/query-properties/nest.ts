@@ -40,6 +40,22 @@ export class NestFieldDeclaration
           ? pipeline[0].refSummary
           : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
+      // A nested `select:` (project) is compiled by collapsing its rows into a
+      // `LIST(...)` aggregate. A `limit:` on that terminal stage is implemented
+      // with a `ROW_NUMBER()` ordered by the projected fields, but those fields
+      // no longer exist as columns once they have been listed -- producing
+      // invalid SQL at run time. Reject it at compile time instead.
+      const lastStage = checkedPipeline[checkedPipeline.length - 1];
+      if (
+        lastStage &&
+        model.isProjectSegment(lastStage) &&
+        lastStage.limit !== undefined
+      ) {
+        this.logError(
+          'limit-in-nested-select',
+          'Cannot use `limit:` in a nested `select:` query'
+        );
+      }
       const pipelineWithDrillPaths = attachDrillPaths(
         checkedPipeline,
         this.name

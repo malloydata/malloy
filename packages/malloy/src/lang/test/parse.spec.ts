@@ -900,9 +900,9 @@ describe('extend and refine', () => {
   });
 
   describe('nests', () => {
-    test('explicit refine in nest', () => {
+    test('refine in nest', () => {
       expect(`source: c is a extend {
-        view: x is { select: * }
+        view: x is { group_by: ai }
       }
 
       run: c -> {
@@ -910,14 +910,49 @@ describe('extend and refine', () => {
       }`).toTranslate();
     });
 
-    test('refine in nest', () => {
+    // A nested `select:` (project) is collapsed into a `LIST(...)` aggregate, so
+    // a `limit:` on it would be applied with a `ROW_NUMBER()` ordered by columns
+    // which no longer exist -- generating invalid SQL. It must be a compile error.
+    test('limit on inline nested select is illegal', () => {
+      expect(
+        'run: a -> { group_by: ai; nest: n is { select: astr; limit: 1 } }'
+      ).toLog(error('limit-in-nested-select'));
+    });
+
+    test('limit on refined nested select is illegal', () => {
       expect(`source: c is a extend {
         view: x is { select: * }
       }
 
       run: c -> {
         nest: x + { limit: 1 }
-      }`).toTranslate();
+      }`).toLog(error('limit-in-nested-select'));
+    });
+
+    test('limit on referenced nested select is illegal', () => {
+      expect(`source: c is a extend {
+        view: x is { select: astr; limit: 200 }
+      }
+
+      run: c -> { group_by: ai; nest: x }`).toLog(
+        error('limit-in-nested-select')
+      );
+    });
+
+    test('nested select without a limit is legal', () => {
+      expect(
+        'run: a -> { group_by: ai; nest: n is { select: astr } }'
+      ).toTranslate();
+    });
+
+    test('limit on a nested reduce is legal', () => {
+      expect(
+        'run: a -> { group_by: ai; nest: n is { group_by: astr; limit: 1 } }'
+      ).toTranslate();
+    });
+
+    test('limit on a top-level select is legal', () => {
+      expect('run: a -> { select: astr; limit: 1 }').toTranslate();
     });
   });
 });

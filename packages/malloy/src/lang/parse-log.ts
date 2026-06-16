@@ -195,6 +195,7 @@ type MessageParameterTypes = {
   'refinement-of-index-segment': string;
   'incompatible-segment-for-select-refinement': string;
   'illegal-operation-in-select-segment': string;
+  'limit-in-nested-select': string;
   'limit-already-specified': string;
   'ordering-already-specified': string;
   'incompatible-segment-for-reduce-refinement': string;
