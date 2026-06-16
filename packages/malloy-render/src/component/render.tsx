@@ -92,7 +92,13 @@ export function MalloyRender(props: MalloyRenderProps) {
   return (
     <ErrorBoundary
       fallback={errorProps => {
-        const message = () => errorProps.error?.message ?? errorProps;
+        // Resolve the message from any shape the boundary may receive: an
+        // `{error}` wrapper, a thrown Error, or a raw string. The previous
+        // `errorProps.error?.message ?? errorProps` fell through to the error
+        // object itself, which renders as nothing (an empty error box) when used
+        // as a JSX child, so coerce to a string explicitly.
+        const message = () =>
+          errorProps.error?.message ?? errorProps.message ?? String(errorProps);
         props?.onError?.(errorProps);
         return <ErrorMessage message={message()} />;
       }}
