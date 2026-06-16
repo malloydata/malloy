@@ -57,9 +57,9 @@ export class NestFieldDeclaration
         ) {
           this.logError(
             'limit-in-nested-select',
-            'Cannot use `limit:` in a nested `select:` -- limiting a nested ' +
-              'projection needs a materialized row set, so put the `limit:` in ' +
-              'a later stage, e.g. `{ select: ... } -> { select: ...; limit: N }`'
+            'Cannot use `limit:` directly in a nested `select:`. To limit the ' +
+              'rows, do the `select:` first and limit it in a second stage, ' +
+              'e.g. `{ select: ... } -> { select: ...; limit: N }`'
           );
         }
       }
