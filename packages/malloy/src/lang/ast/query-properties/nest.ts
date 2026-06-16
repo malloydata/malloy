@@ -40,14 +40,15 @@ export class NestFieldDeclaration
           ? pipeline[0].refSummary
           : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
-      // A single-stage nested `select:` (project) is collapsed inline into a
-      // `LIST(...)` aggregate at the parent's group set, so its fields never
-      // exist as flat columns. A `limit:` on it is implemented with a
-      // `ROW_NUMBER()` that orders/partitions by those (now absent) columns,
-      // producing invalid SQL on every dialect. Reject it at compile time.
-      // (A multi-stage nest applies the limit in its own materialized stage
-      // before the collapse, so it is left alone. See issue #2895 for the fix
-      // that would make the single-stage form work.)
+      // A `limit:` on a single-stage nested `select:` can't be made correct:
+      // the whole query is one fanned-out `group_set` scan, and a projection
+      // has no grouping to collapse that fan-out, so its rows are the
+      // replicated/join-multiplied scan rather than a real relation. Limiting
+      // them ranks a phantom row set (wrong results, not just invalid SQL).
+      // A real select needs a materialized relation -- the two-stage form
+      // `{ select: ... } -> { select: ...; limit: N }`, where the pipeline
+      // boundary materializes the rows. So this is by design, not a TODO; a
+      // multi-stage nest is left alone. See issue #2895 for the full reasoning.
       if (checkedPipeline.length === 1) {
         const onlyStage = checkedPipeline[0];
         if (
@@ -56,9 +57,9 @@ export class NestFieldDeclaration
         ) {
           this.logError(
             'limit-in-nested-select',
-            'Cannot use `limit:` in a nested `select:` yet -- move the ' +
-              '`limit:` to a later stage, e.g. ' +
-              '`{ select: ... } -> { select: ...; limit: N }`'
+            'Cannot use `limit:` in a nested `select:` -- limiting a nested ' +
+              'projection needs a materialized row set, so put the `limit:` in ' +
+              'a later stage, e.g. `{ select: ... } -> { select: ...; limit: N }`'
           );
         }
       }
