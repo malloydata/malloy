@@ -910,9 +910,12 @@ describe('extend and refine', () => {
       }`).toTranslate();
     });
 
-    // A nested `select:` (project) is collapsed into a `LIST(...)` aggregate, so
-    // a `limit:` on it would be applied with a `ROW_NUMBER()` ordered by columns
-    // which no longer exist -- generating invalid SQL. It must be a compile error.
+    // A single-stage nested `select:` (project) is collapsed inline into a
+    // `LIST(...)` aggregate, so a `limit:` on it would be applied with a
+    // `ROW_NUMBER()` ordered by columns which no longer exist -- generating
+    // invalid SQL on every dialect. It must be a compile error. A multi-stage
+    // nest is fine (the limit lands in its own materialized stage); see the
+    // legal case below and issue #2895.
     test('limit on inline nested select is illegal', () => {
       expect(
         'run: a -> { group_by: ai; nest: n is { select: astr; limit: 1 } }'
@@ -948,6 +951,12 @@ describe('extend and refine', () => {
     test('limit on a nested reduce is legal', () => {
       expect(
         'run: a -> { group_by: ai; nest: n is { group_by: astr; limit: 1 } }'
+      ).toTranslate();
+    });
+
+    test('limit on a multi-stage nested select is legal', () => {
+      expect(
+        'run: a -> { group_by: ai; nest: n is { select: astr } -> { select: astr; limit: 1 } }'
       ).toTranslate();
     });
 

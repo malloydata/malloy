@@ -40,21 +40,27 @@ export class NestFieldDeclaration
           ? pipeline[0].refSummary
           : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
-      // A nested `select:` (project) is compiled by collapsing its rows into a
-      // `LIST(...)` aggregate. A `limit:` on that terminal stage is implemented
-      // with a `ROW_NUMBER()` ordered by the projected fields, but those fields
-      // no longer exist as columns once they have been listed -- producing
-      // invalid SQL at run time. Reject it at compile time instead.
-      const lastStage = checkedPipeline[checkedPipeline.length - 1];
-      if (
-        lastStage &&
-        model.isProjectSegment(lastStage) &&
-        lastStage.limit !== undefined
-      ) {
-        this.logError(
-          'limit-in-nested-select',
-          'Cannot use `limit:` in a nested `select:` query'
-        );
+      // A single-stage nested `select:` (project) is collapsed inline into a
+      // `LIST(...)` aggregate at the parent's group set, so its fields never
+      // exist as flat columns. A `limit:` on it is implemented with a
+      // `ROW_NUMBER()` that orders/partitions by those (now absent) columns,
+      // producing invalid SQL on every dialect. Reject it at compile time.
+      // (A multi-stage nest applies the limit in its own materialized stage
+      // before the collapse, so it is left alone. See issue #2895 for the fix
+      // that would make the single-stage form work.)
+      if (checkedPipeline.length === 1) {
+        const onlyStage = checkedPipeline[0];
+        if (
+          model.isProjectSegment(onlyStage) &&
+          onlyStage.limit !== undefined
+        ) {
+          this.logError(
+            'limit-in-nested-select',
+            'Cannot use `limit:` in a nested `select:` yet -- move the ' +
+              '`limit:` to a later stage, e.g. ' +
+              '`{ select: ... } -> { select: ...; limit: N }`'
+          );
+        }
       }
       const pipelineWithDrillPaths = attachDrillPaths(
         checkedPipeline,
