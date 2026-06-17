@@ -95,21 +95,25 @@ interface OutputPipelinedSQL {
 
 type StageGroupMaping = {fromGroup: number; toGroup: number};
 
-// One item in a stage's SELECT list, paired with the identifier it produces.
-// Keeping the expression and its output name together is deliberate: the
-// SELECT list, the pipelined-stage carry-forward list, and the group_set remap
-// list are all derived from the same data, so the name a column is referenced
-// by downstream can never drift from the name the stage actually emitted.
+// One item in a stage's SELECT list, paired with the identifier it produces and
+// whether it participates in the GROUP BY. Keeping these together is deliberate:
+// the SELECT list, the GROUP BY positions, the pipelined-stage carry-forward
+// list, and the group_set remap list are all derived from this one array, so
+// none of them can drift from the columns the stage actually emitted.
 interface StageOutputColumn {
   sql: string; // full SELECT-list item, e.g. `<expr> as "f1__0"` or `group_set`
   name: string; // quoted identifier this item produces in the stage output
+  isDimension: boolean; // is this column part of the GROUP BY?
+}
+
+// 1-based SELECT positions of the dimension columns, for `GROUP BY 1,2,...`.
+function groupByPositions(columns: StageOutputColumn[]): number[] {
+  return columns.flatMap((c, i) => (c.isDimension ? [i + 1] : []));
 }
 
 type StageOutputContext = {
   columns: StageOutputColumn[];
   lateralJoinSQLExpressions: LateralJoinExpression[];
-  dimensionIndexes: number[]; // which indexes are dimensions
-  fieldIndex: number;
   groupsAggregated: StageGroupMaping[]; // which groups were aggregated
   outputPipelinedSQL: OutputPipelinedSQL[]; // secondary stages for turtles.
 };
@@ -1402,7 +1406,11 @@ export class QueryQuery extends QueryField {
                 sql: exp,
                 name: outputName,
               });
-              output.columns.push({sql: outputFieldName, name: outputName});
+              output.columns.push({
+                sql: outputFieldName,
+                name: outputName,
+                isDimension: true,
+              });
               if (fi.f.fieldDef.type === 'number') {
                 const outputNameString = this.parent.dialect.sqlQuoteIdentifier(
                   `${name}__${resultSet.groupSet}_string`
@@ -1411,8 +1419,8 @@ export class QueryQuery extends QueryField {
                 output.columns.push({
                   sql: outputFieldNameString,
                   name: outputNameString,
+                  isDimension: true,
                 });
-                output.dimensionIndexes.push(output.fieldIndex++);
                 output.lateralJoinSQLExpressions.push({
                   sql: `CAST(${exp} as STRING)`,
                   name: outputNameString,
@@ -1424,15 +1432,15 @@ export class QueryQuery extends QueryField {
               output.columns.push({
                 sql: `${exp} as ${outputName}`,
                 name: outputName,
+                isDimension: true,
               });
             }
-            output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isBasicCalculation(fi.f)) {
             output.columns.push({
               sql: `${exp} as ${outputName}`,
               name: outputName,
+              isDimension: false,
             });
-            output.fieldIndex++;
           }
         }
       } else if (fi instanceof FieldInstanceResult) {
@@ -1445,8 +1453,11 @@ export class QueryQuery extends QueryField {
             outputName,
             output.outputPipelinedSQL
           );
-          output.columns.push({sql: `${s} as ${outputName}`, name: outputName});
-          output.fieldIndex++;
+          output.columns.push({
+            sql: `${s} as ${outputName}`,
+            name: outputName,
+            isDimension: false,
+          });
         }
       }
     }
@@ -1474,8 +1485,8 @@ export class QueryQuery extends QueryField {
             resultSet.groupSet
           }`,
           name: `__delete__${resultSet.groupSet}`,
+          isDimension: false,
         });
-        output.fieldIndex++;
       }
     }
   }
@@ -1709,9 +1720,7 @@ export class QueryQuery extends QueryField {
     const wheres = this.generateSQLWhereTurtled();
 
     const f: StageOutputContext = {
-      dimensionIndexes: [1],
-      fieldIndex: 2,
-      columns: [{sql: 'group_set', name: 'group_set'}],
+      columns: [{sql: 'group_set', name: 'group_set', isDimension: true}],
       lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
@@ -1727,7 +1736,7 @@ export class QueryQuery extends QueryField {
       );
     }
 
-    const groupBy = 'GROUP BY ' + f.dimensionIndexes.join(',') + '\n';
+    const groupBy = 'GROUP BY ' + groupByPositions(f.columns).join(',') + '\n';
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
@@ -1777,8 +1786,8 @@ export class QueryQuery extends QueryField {
             output.columns.push({
               sql: `${exp} as ${sqlFieldName}`,
               name: sqlFieldName,
+              isDimension: true,
             });
-            output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isBasicCalculation(fi.f)) {
             const exp = this.parent.dialect.sqlAnyValue(
               resultSet.groupSet,
@@ -1787,8 +1796,8 @@ export class QueryQuery extends QueryField {
             output.columns.push({
               sql: `${exp} as ${sqlFieldName}`,
               name: sqlFieldName,
+              isDimension: false,
             });
-            output.fieldIndex++;
           }
         }
       } else if (fi instanceof FieldInstanceResult) {
@@ -1809,8 +1818,8 @@ export class QueryQuery extends QueryField {
           output.columns.push({
             sql: `${s} as ${sqlFieldName}`,
             name: sqlFieldName,
+            isDimension: false,
           });
-          output.fieldIndex++;
         } else {
           this.generateDepthNFields(depth, fi, output, stageWriter);
         }
@@ -1827,7 +1836,11 @@ export class QueryQuery extends QueryField {
           groupSetSQL += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
         }
         groupSetSQL += 'ELSE group_set END as group_set';
-        output.columns[0] = {sql: groupSetSQL, name: 'group_set'};
+        output.columns[0] = {
+          sql: groupSetSQL,
+          name: 'group_set',
+          isDimension: true,
+        };
       }
       // For hasLateralColumnAliasInSelect, the remap is handled in
       // generateSQLDepthN to avoid adding it multiple times from recursion.
@@ -1841,9 +1854,7 @@ export class QueryQuery extends QueryField {
   ): string {
     let s = 'SELECT \n';
     const f: StageOutputContext = {
-      dimensionIndexes: [1],
-      fieldIndex: 2,
-      columns: [{sql: 'group_set', name: 'group_set'}],
+      columns: [{sql: 'group_set', name: 'group_set', isDimension: true}],
       lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
@@ -1866,7 +1877,7 @@ export class QueryQuery extends QueryField {
         groupSetSQL += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
       }
       groupSetSQL += 'ELSE group_set END as __remapped_group_set';
-      f.columns[0] = {sql: groupSetSQL, name: 'group_set'};
+      f.columns[0] = {sql: groupSetSQL, name: 'group_set', isDimension: true};
     }
 
     s += indent(f.columns.map(c => c.sql).join(',\n')) + '\n';
@@ -1875,8 +1886,9 @@ export class QueryQuery extends QueryField {
     if (where.length > 0) {
       s += `WHERE ${where}\n`;
     }
-    if (f.dimensionIndexes.length > 0) {
-      s += `GROUP BY ${f.dimensionIndexes.join(',')}\n`;
+    const dimensionPositions = groupByPositions(f.columns);
+    if (dimensionPositions.length > 0) {
+      s += `GROUP BY ${dimensionPositions.join(',')}\n`;
     }
 
     this.resultStage = stageWriter.addStage(s);
@@ -1908,9 +1920,7 @@ export class QueryQuery extends QueryField {
     // are the final output names (unsuffixed), not the group-set-suffixed form.
     // A following pipelined stage carries them forward by name.
     const columns: StageOutputColumn[] = [];
-    let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
-    const dimensionIndexes: number[] = [];
     for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
@@ -1922,8 +1932,8 @@ export class QueryQuery extends QueryField {
                   `${name}__${this.rootResult.groupSet}`
                 ) + ` as ${sqlName}`,
               name: sqlName,
+              isDimension: true,
             });
-            dimensionIndexes.push(fieldIndex++);
           } else if (isBasicCalculation(fi.f)) {
             columns.push({
               sql: this.parent.dialect.sqlAnyValueLastTurtle(
@@ -1934,8 +1944,8 @@ export class QueryQuery extends QueryField {
                 sqlName
               ),
               name: sqlName,
+              isDimension: false,
             });
-            fieldIndex++;
           }
         }
       } else if (fi instanceof FieldInstanceResult) {
@@ -1948,8 +1958,8 @@ export class QueryQuery extends QueryField {
               outputPipelinedSQL
             )} as ${sqlName}`,
             name: sqlName,
+            isDimension: false,
           });
-          fieldIndex++;
         } else if (fi.firstSegment.type === 'project') {
           columns.push({
             sql: this.parent.dialect.sqlAnyValueLastTurtle(
@@ -1960,8 +1970,8 @@ export class QueryQuery extends QueryField {
               sqlName
             ),
             name: sqlName,
+            isDimension: false,
           });
-          fieldIndex++;
         }
       }
     }
@@ -1972,8 +1982,9 @@ export class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
-    if (dimensionIndexes.length > 0) {
-      s += `GROUP BY ${dimensionIndexes.join(',')}\n`;
+    const dimensionPositions = groupByPositions(columns);
+    if (dimensionPositions.length > 0) {
+      s += `GROUP BY ${dimensionPositions.join(',')}\n`;
     }
 
     // order by
