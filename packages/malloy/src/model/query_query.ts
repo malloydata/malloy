@@ -89,6 +89,19 @@ function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
 }
 
+/**
+ * Is this result's row limit applied by the ROW_NUMBER "shave" in
+ * generateSQLHavingLimit? A nested projection's is not: its limit slices its
+ * array-agg (see sqlAggregateTurtle), because a projection has no group-by
+ * columns for the shave to partition and order on.
+ */
+function usesShaveLimit(result: FieldInstanceResult): boolean {
+  if (result.getLimit() === undefined) return false;
+  const isNestedProjection =
+    result.parent !== undefined && result.firstSegment.type === 'project';
+  return !isNestedProjection;
+}
+
 interface OutputPipelinedSQL {
   sqlFieldName: string;
   pipelineSQL: string;
@@ -1522,16 +1535,8 @@ export class QueryQuery extends QueryField {
 
     const resultsWithHavingOrLimit = this.rootResult.selectStructs(
       [],
-      (result: FieldInstanceResult) => {
-        if (result.hasHaving) return true;
-        if (result.getLimit() === undefined) return false;
-        // A nested projection applies its limit by slicing its array-agg
-        // (see sqlAggregateTurtle), not via the ROW_NUMBER shave: a projection
-        // has no group-by columns for the shave to reference.
-        const isNestedProjection =
-          result.parent !== undefined && result.firstSegment.type === 'project';
-        return !isNestedProjection;
-      }
+      (result: FieldInstanceResult) =>
+        result.hasHaving || usesShaveLimit(result)
     );
 
     if (resultsWithHavingOrLimit.length > 0) {
@@ -1540,7 +1545,7 @@ export class QueryQuery extends QueryField {
         [],
         (_result: FieldInstanceResult) => true
       )) {
-        const hasLimit = result.getLimit() !== undefined;
+        const hasLimit = usesShaveLimit(result);
         hasResultsWithChildren ||=
           result.childGroups.length > 1 && (hasLimit || result.hasHaving);
         hasAnyLimits ||= hasLimit;
