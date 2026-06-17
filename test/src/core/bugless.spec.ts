@@ -21,6 +21,20 @@ describe('misc tests for regressions that have no better home', () => {
     `).toMatchResult(testModel, {});
   });
 
+  test('ambiguous output names are auto-renamed and runnable', async () => {
+    // `carrier` and `f2.carrier` both want the name `carrier`; the second is
+    // renamed to `f2_carrier`. The query must compile to runnable SQL.
+    const query = runtime.loadQuery(`
+      run: duckdb.table('malloytest.flights') extend {
+        join_one: f2 is duckdb.table('malloytest.flights') on carrier = f2.carrier
+      } -> { group_by: carrier, f2.carrier; limit: 1 }
+    `);
+    const result = await query.run();
+    const schema = result.resultExplore;
+    expect(schema.getFieldByName('carrier')).toBeDefined();
+    expect(schema.getFieldByName('f2_carrier')).toBeDefined();
+  });
+
   test('result data structure contains time zones for nested queries', async () => {
     const query = runtime.loadQuery(`
       run: duckdb.table('malloytest.flights') -> {
