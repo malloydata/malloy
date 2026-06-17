@@ -205,6 +205,7 @@ type MessageParameterTypes = {
   'invalid-type-for-field-definition': string;
   'circular-reference-in-field-definition': string;
   'output-name-conflict': string;
+  'output-field-auto-renamed': string;
   'select-of-view': string;
   'select-of-analytic': string;
   'select-of-aggregate': string;
