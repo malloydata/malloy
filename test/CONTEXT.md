@@ -59,7 +59,23 @@ expect(actualResult).malloyResultMatches(expectedResult);
 - Null vs undefined equivalence
 - Result ordering (when not semantically important)
 
-## Database Setup
+### test.when — conditional tests (`test/jest.setup.ts`)
+For a test that only applies to some dialects/conditions, use `test.when` —
+**not** an `if` wrapping a `test()` call.
+
+```typescript
+test.when(runtime.dialect.supportsNestedProjectionLimit)(
+  'limit on a projection nest caps array length',
+  async () => { ... }
+);
+```
+
+`test.when(condition)` returns `test` when the condition holds and a skipping
+`test` otherwise, so the test name is **always declared statically**. That's
+what lets the VS Code Jest decorators (the per-test run/debug gutter icons)
+discover and run it individually. Writing `if (condition) { test(...) }` hides
+the `test()` call inside a branch, so the IDE can't see it and the
+run-single-test affordance disappears. `it.when` is the same for `it`.
 
 ### DuckDB
 DuckDB tests require building the test database:
