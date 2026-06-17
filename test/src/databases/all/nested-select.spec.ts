@@ -163,27 +163,54 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     );
 
+    // A projection-FIRST multi-stage nest (issue #2899): the stage that
+    // re-pipes the nested array must carry the prior CTE's group-set-suffixed
+    // columns forward, not the query's final names. Broke only on dialects
+    // without SELECT * REPLACE (Trino); guarded here without a `limit:` so it
+    // isolates the carry-forward from the array-agg slice the limit case adds.
+    test.when(runtime.dialect.supportsPipelinesInViews)(
+      'multi-stage: a projection first stage carries forward',
+      async () => {
+        await expect(`
+          run: ${table} -> {
+            group_by: f1 is substr(popular_name, 1, 1)
+            nest: m is { select: popular_name } -> { select: popular_name }
+          }
+        `).toMatchResult(tm, {
+          f1: 'A',
+          m: [
+            {popular_name: 'Ava'},
+            {popular_name: 'Ava'},
+            {popular_name: 'Ava'},
+          ],
+        });
+      }
+    );
+
     // The first stage of a multi-stage nest is still a projection: its `limit:`
     // folds into that stage's array-agg ("compile the first stage and stop").
-    // This is CORRECT on duckdb, but SKIPPED pending #2899 — a pre-existing
-    // Trino multi-stage stage-combination bug (the carry-forward stage
-    // references final names `f1`/`m` instead of the suffixed `f1__0`/`m__0`)
-    // makes it fail there, independent of this change. Once #2899 lands, change
-    // `test.skip` to `test.when(runtime.dialect.supportsPipelinesInViews)`.
-    test.skip('multi-stage: a projection first-stage limit caps that stage', async () => {
-      await expect(`
+    // This composes the projection-`limit:` fix here with the multi-stage
+    // stage-combination fix from #2899 (the carry-forward stage now references
+    // the group-set-suffixed names the prior CTE produced, e.g. `f1__0`/`m__0`,
+    // not the final names) -- so it runs wherever pipelined nests are
+    // supported, Trino included.
+    test.when(runtime.dialect.supportsPipelinesInViews)(
+      'multi-stage: a projection first-stage limit caps that stage',
+      async () => {
+        await expect(`
           run: ${table} -> {
             group_by: f1 is substr(popular_name, 1, 1)
             nest: m is { select: popular_name; limit: 3 } -> { select: popular_name }
           }
         `).toMatchResult(tm, {
-        f1: 'A',
-        m: [
-          {popular_name: 'Ava'},
-          {popular_name: 'Ava'},
-          {popular_name: 'Ava'},
-        ],
-      });
-    });
+          f1: 'A',
+          m: [
+            {popular_name: 'Ava'},
+            {popular_name: 'Ava'},
+            {popular_name: 'Ava'},
+          ],
+        });
+      }
+    );
   });
 });
