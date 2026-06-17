@@ -136,8 +136,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     );
 
+    // Filtered to one popular_name so the result is a single deterministic row:
+    // a top-level order_by is NOT preserved through a multi-stage nest's
+    // carry-forward stage on non-REPLACE dialects (Trino), so a multi-row form
+    // here would be order-nondeterministic.
     const multiStageQuery = `
       run: ${table} -> {
+        where: popular_name = 'Ava'
         group_by: f1 is substr(popular_name, 1, 1)
         nest: m is {
           group_by: popular_name
@@ -150,7 +155,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     test.when(runtime.dialect.supportsPipelinesInViews)(
       'multi-stage nest works',
       async () => {
-        await expect(multiStageQuery).toMatchResult(tm, {});
+        // Group 'A' is all "Ava", so the reduce first stage distincts it to one
+        // row and the projection second stage passes that through.
+        await expect(multiStageQuery).toMatchResult(tm, {
+          f1: 'A',
+          m: [{popular_name: 'Ava'}],
+        });
       }
     );
 
