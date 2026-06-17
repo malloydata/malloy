@@ -192,6 +192,41 @@ IR → QueryQuery → Expression Compiler → Dialect-Specific SQL + Metadata
 4. Ensures proper scoping and aliasing
 5. Produces executable SQL string
 
+#### Nests, the `group_set` fan-out, and the column-name trap
+
+A query and its nests compile to **one scan**, cross-joined against a `group_set`
+integer table (`sqlGroupSetTable`) that replicates each base row once per grouping
+grain. Each grain owns a `group_set` number (0 = top query, 1 = a nest, 2 = a deeper
+nest); per group_set, scalars become `CASE WHEN group_set=N …` and nests an array-agg
+`… FILTER (WHERE group_set=N)`. `computeGroups` (`field_instance.ts`) assigns the
+numbers — a `reduce` nest recurses and gets its own group_set; a `project` nest rides
+the enclosing group_set (it's grain-preserving, one element per in-scope row).
+
+**The trap:** grouped stages emit columns named `name__groupSet` (`f1__0`, `m__0`) plus
+a literal `group_set` column; only the final combine stage renames them to user names
+(`"f1__0" as "f1"`). So a follow-on stage must reference the names the prior stage
+**actually emitted** (suffixed), not the final names — getting this wrong was #2899. To
+keep it straight, a stage's SELECT is built as one `StageOutputColumn[]` (`{sql, name,
+isDimension}`); the SELECT list, the `GROUP BY` positions, the pipelined carry-forward
+list, and the group_set remap list are **all derived from that one array**, so a
+column's downstream name can't drift from what the stage emitted.
+
+**Multi-stage nests — "compile the first stage, then stop."** For a nest pipeline of
+length > 1, `generateTurtlePipelineSQL` compiles `pipeline[0]` to its array-agg, then
+unnests that array and compiles the rest as a fresh recursive `QueryQuery`. Stitching
+the remainder back is a dialect fork: `supportUnnestArrayAgg` dialects (duckdb) inline a
+correlated subquery; others (Trino) push it through `generatePipelinedStages`, which
+emits a carry-forward CTE — `SELECT * replace (…)` when `supportsSelectReplace`, else an
+explicit column list.
+
+**Verifying nest codegen needs the right dialect.** These paths are gated by dialect
+flags that `precheck` (duckdb) does not exercise: the explicit carry-forward list is
+reached **only** by Trino (`supportsSelectReplace=false`), the group_set remap **only**
+by Databricks (`hasLateralColumnAliasInSelect`), and the lateral-join-bag `GROUP BY` by
+BigQuery/standardsql and Databricks (`cantPartitionWindowFunctionsOnExpressions`). A
+green duckdb precheck says nothing about them — run `ci-trino`/`ci-databricks`/
+`ci-bigquery` (or a single-dialect connection).
+
 ### 2. Expression Compiler (expression_compiler.ts)
 
 Compiles IR expression trees into SQL expressions.
