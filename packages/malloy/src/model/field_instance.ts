@@ -362,7 +362,8 @@ export class FieldInstanceResult implements FieldInstance {
           // in-scope row), so it rides on the enclosing scope's group_set
           // rather than getting its own. Without this it pins to group_set 0,
           // and inside a deeper nest its array-agg FILTER never lines up with
-          // the enclosing group_set, producing empty arrays.
+          // the enclosing group_set, producing empty arrays. (A first-stage
+          // projection; any following stages recurse in their own scope.)
           fir.groupSet = this.groupSet;
         }
       }

@@ -42,22 +42,32 @@ These tests are particularly important for verifying that Malloy's abstraction w
 
 ## Custom Test Utilities
 
-### malloyResultMatches Matcher
-Custom Jest matcher for comparing query results across different databases.
+### Result matchers (`toMatchResult` / `toEqualResult` / `toMatchRows` / `toMatchPaths`)
+Custom Jest matchers (in `packages/malloy/src/test/resultMatchers.ts`) for asserting
+Malloy query results. The **subject is the query string** and the matcher runs it
+internally, does schema-aware nested comparison, and — critically — **prints the
+generated SQL when the query fails or a value mismatches** (the fastest way to
+diagnose a dialect issue). There is **no** `malloyResultMatches` matcher (an older
+name; these replaced it).
 
-**Purpose:**
-Different databases may format results slightly differently (date formatting, float precision, etc.). This matcher provides fuzzy comparison that accounts for these differences while still verifying semantic correctness.
+**Setup:** `import '@malloydata/malloy/test/matchers';` to register them, and build a
+`TestModel` (`{model, dialect}`) — `wrapTestModel(runtime, source)` makes one from a
+live DB runtime, or `mkTestModel(...)` to define inline data.
 
 **Usage:**
 ```typescript
-expect(actualResult).malloyResultMatches(expectedResult);
+const tm = wrapTestModel(runtime, '');           // or mkTestModel(...)
+await expect(`run: ${db}.table('malloytest.state_facts') -> { ... }`)
+  .toMatchResult(tm, {f1: 'A', names: [{popular_name: 'Ava'}]});  // partial: extra rows/fields ok
+await expect(`run: ...`).toEqualResult(tm, [{...}, {...}]);        // exact rows + fields
+await expect(`run: ...`).toMatchPaths(tm, {'by2.names.popular_name': 'Ava'}); // dotted-path probe
 ```
-
-**What it handles:**
-- Float precision differences
-- Date/timestamp format variations
-- Null vs undefined equivalence
-- Result ordering (when not semantically important)
+Pass `{debug: true}` (or a `# test.debug` tag) to force a data + SQL dump even on pass.
+Expected values are plain POJOs shaped like the data (nested arrays/records included);
+the matcher navigates them, so you never index the raw result yourself. It handles
+cross-dialect value differences (bigint/number, MySQL boolean 0/1, date/timestamp).
+**Rejections** (a query that should error) aren't a result match — use
+`await expect(runQuery(tm.model, src)).rejects.toThrow(/.../)`.
 
 ### test.when — conditional tests (`test/jest.setup.ts`)
 For a test that only applies to some dialects/conditions, use `test.when` —

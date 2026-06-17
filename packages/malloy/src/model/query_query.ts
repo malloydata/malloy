@@ -83,6 +83,7 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getCompiledSQL} from './sql_compiled';
 import {mkBuildID} from './source_def_utils';
 import {MalloyCompileError} from './malloy_compile_error';
+import {nestStrategy} from './nest-capability';
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -1463,15 +1464,12 @@ export class QueryQuery extends QueryField {
     for (const [, field] of resultStruct.allFields) {
       if (field.type === 'query') {
         const fir = field as FieldInstanceResult;
-        // A single-stage projection nest's `where:` folds into its array-agg
+        // A projection first stage's `where:` folds into its array-agg
         // condition (see generateTurtleSQL / sqlAggregateTurtle), not a
         // scan-level WHERE: it rides its enclosing group_set, so a WHERE here
         // can't isolate it from the parent, and its childGroups is empty (no
         // group_set of its own) which would emit a broken `group_set IN ()`.
-        const isSingleStageProjection =
-          fir.firstSegment.type === 'project' &&
-          fir.turtleDef.pipeline.length === 1;
-        if (!isSingleStageProjection) {
+        if (fir.firstSegment.type !== 'project') {
           const turtleWhere = this.generateSQLFilters(fir, 'where');
           if (turtleWhere.present()) {
             const groupSets = fir.childGroups.join(',');
@@ -2057,6 +2055,23 @@ export class QueryQuery extends QueryField {
     sqlFieldName: string,
     outputPipelinedSQL: OutputPipelinedSQL[]
   ): string {
+    // How to emit this nest's first stage — and the last line of defense before
+    // broken SQL for IR that didn't pass through the translator (cached,
+    // deserialized, or query-builder IR). Same `nestStrategy` the translator
+    // uses, so the two can't disagree.
+    const pipeline = resultStruct.turtleDef.pipeline;
+    const strategy = nestStrategy(
+      pipeline[0],
+      this.parent.dialect,
+      pipeline.length > 1
+    );
+    if (strategy.kind === 'unsupported') {
+      throw new MalloyCompileError(
+        `dialect '${this.parent.dialect.name}' cannot emit this nested query (${strategy.reason})`,
+        strategy.reason,
+        resultStruct.turtleDef.location
+      );
+    }
     // calculate the ordering.
     const compiledOrderBy: CompiledOrderBy[] = [];
     let orderingField;
@@ -2110,36 +2125,23 @@ export class QueryQuery extends QueryField {
         );
       }
     } else {
-      // A projection nest applies its limit by slicing the array-agg (it has no
-      // group-by keys to ROW_NUMBER-shave on) and its `where:` by folding into
-      // the array-agg's group_set condition (it rides the enclosing group_set,
-      // so a scan-level WHERE can't isolate it); a reduce nest keeps the shave
-      // and the scan-level WHERE.
+      // A projection first stage applies its own `limit:` by slicing the
+      // array-agg (it has no group-by keys to ROW_NUMBER-shave on) and its
+      // `where:` by folding into the array-agg's group_set condition (it rides
+      // the enclosing group_set, so a scan-level WHERE can't isolate it). This
+      // is a first-stage question: if more stages follow, they consume this
+      // (limited/filtered) array via the recursion in generateTurtlePipelineSQL.
+      // A reduce first stage keeps the shave and the scan-level WHERE.
       let limit: number | undefined;
       let filterSQL: string | undefined;
-      // Only a single-stage projection nest collapses to one array-agg; a
-      // multi-stage nest (even one whose first stage is `select`) keeps its
-      // pipeline, so its `where:`/`limit:` belong to a stage, not this aggregate.
-      const isSingleStageProjection =
-        resultStruct.firstSegment.type === 'project' &&
-        resultStruct.turtleDef.pipeline.length === 1;
-      if (isSingleStageProjection) {
-        limit = resultStruct.getLimit();
+      if (strategy.kind === 'project') {
+        limit = strategy.limit;
         const where = this.generateSQLFilters(resultStruct, 'where');
         if (where.present()) {
           filterSQL = where.sql();
         }
       }
-      if (
-        limit !== undefined &&
-        !this.parent.dialect.supportsNestedProjectionLimit
-      ) {
-        throw new MalloyCompileError(
-          `'${this.parent.dialect.name}' does not support 'limit:' on a nested 'select:'`,
-          'nested-projection-limit-unsupported',
-          resultStruct.turtleDef.location
-        );
-      }
+      // (capability is guarded by nestStrategy at the top of this method)
       ret = this.parent.dialect.sqlAggregateTurtle(
         resultStruct.groupSet,
         dialectFieldList,

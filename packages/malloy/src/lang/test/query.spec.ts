@@ -839,6 +839,13 @@ describe('query:', () => {
         'run: a->{ select: astr, ai calculate: num is lag(ai) }'
       ).toTranslate();
     });
+    test('nest illegal in a select segment', () => {
+      // A nest needs a grouping grain, so it may appear only in a grouping
+      // segment; in a select it forces a grouping/select collision.
+      expect(
+        markSource`run: a->{ select: astr; ${'nest: b is { group_by: ai }'} }`
+      ).toLog(errorMessage('Use of grouping is not allowed in a select query'));
+    });
     test('aggregate reference', () => {
       const doc = model`run: a->{ aggregate: ai.sum() }`;
       expect(doc).toTranslate();

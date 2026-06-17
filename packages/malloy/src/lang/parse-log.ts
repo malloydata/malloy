@@ -93,6 +93,9 @@ type MessageParameterTypes = {
   'pick-non-atomic-type': string;
   'experiment-not-enabled': {experimentId: string};
   'experimental-dialect-not-enabled': {dialect: string};
+  'nesting-unsupported': {dialect: string};
+  'nested-multi-stage-unsupported': {dialect: string};
+  'nested-projection-limit-unsupported': {dialect: string};
   'sql-native-not-allowed-in-expression': {
     rawType: string | undefined;
   };
@@ -459,6 +462,11 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   }),
   'experimental-dialect-not-enabled': e =>
     `Requires compiler flag '##! experimental.dialect.${e.dialect}'`,
+  'nesting-unsupported': e => `'${e.dialect}' does not support nested queries`,
+  'nested-multi-stage-unsupported': e =>
+    `'${e.dialect}' does not support a multi-stage pipeline ('->') in a nested query`,
+  'nested-projection-limit-unsupported': e =>
+    `'${e.dialect}' does not support 'limit:' on a nested 'select:'`,
   'pick-missing-else': "pick incomplete, missing 'else'",
   'pick-missing-value': 'pick with no value can only be used with apply',
   'pick-illegal-partial': 'pick with partial when can only be used with apply',
