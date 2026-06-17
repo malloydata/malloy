@@ -22,17 +22,18 @@ describe('misc tests for regressions that have no better home', () => {
   });
 
   test('ambiguous output names are auto-renamed and runnable', async () => {
-    // `carrier` and `f2.carrier` both want the name `carrier`; the second is
-    // renamed to `f2_carrier`. The query must compile to runnable SQL.
+    // `state` and `s2.state` both want the name `state`; the second is renamed
+    // to `s2_state`. The query must compile to runnable SQL. (Small table with
+    // a 1:1 self-join, so the query stays cheap.)
     const query = runtime.loadQuery(`
-      run: duckdb.table('malloytest.flights') extend {
-        join_one: f2 is duckdb.table('malloytest.flights') on carrier = f2.carrier
-      } -> { group_by: carrier, f2.carrier; limit: 1 }
+      run: duckdb.table('malloytest.state_facts') extend {
+        join_one: s2 is duckdb.table('malloytest.state_facts') on state = s2.state
+      } -> { group_by: state, s2.state; limit: 1 }
     `);
     const result = await query.run();
     const schema = result.resultExplore;
-    expect(schema.getFieldByName('carrier')).toBeDefined();
-    expect(schema.getFieldByName('f2_carrier')).toBeDefined();
+    expect(schema.getFieldByName('state')).toBeDefined();
+    expect(schema.getFieldByName('s2_state')).toBeDefined();
   });
 
   test('result data structure contains time zones for nested queries', async () => {
