@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-databricks",
-  "version": "0.0.413",
+  "version": "0.0.414",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@databricks/sql": "1.15.0",
-    "@malloydata/malloy": "0.0.413",
+    "@malloydata/malloy": "0.0.414",
     "@types/node": "^22.7.4"
   }
 }
