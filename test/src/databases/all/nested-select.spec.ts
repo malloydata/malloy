@@ -86,9 +86,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     if (runtime.dialect.supportsNestedProjectionLimit) {
       test('limit on a projection nest caps array length', async () => {
         const {data} = await runQuery(model, limitQuery);
-        const lengths = data.map(row =>
-          Array.isArray(row.names) ? row.names.length : -1
-        );
+        const lengths = data.map(row => {
+          const names = row['names'];
+          return Array.isArray(names) ? names.length : -1;
+        });
         for (const len of lengths) {
           expect(len).toBeLessThanOrEqual(3);
         }
