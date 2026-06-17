@@ -1514,8 +1514,16 @@ export class QueryQuery extends QueryField {
 
     const resultsWithHavingOrLimit = this.rootResult.selectStructs(
       [],
-      (result: FieldInstanceResult) =>
-        result.hasHaving || result.getLimit() !== undefined
+      (result: FieldInstanceResult) => {
+        if (result.hasHaving) return true;
+        if (result.getLimit() === undefined) return false;
+        // A nested projection applies its limit by slicing its array-agg
+        // (see sqlAggregateTurtle), not via the ROW_NUMBER shave: a projection
+        // has no group-by columns for the shave to reference.
+        const isNestedProjection =
+          result.parent !== undefined && result.firstSegment.type === 'project';
+        return !isNestedProjection;
+      }
     );
 
     if (resultsWithHavingOrLimit.length > 0) {
@@ -2092,10 +2100,27 @@ export class QueryQuery extends QueryField {
         );
       }
     } else {
+      // A projection nest applies its limit by slicing the array-agg (it has no
+      // group-by keys to ROW_NUMBER-shave on); a reduce nest keeps the shave.
+      const limit =
+        resultStruct.firstSegment.type === 'project'
+          ? resultStruct.getLimit()
+          : undefined;
+      if (
+        limit !== undefined &&
+        !this.parent.dialect.supportsNestedProjectionLimit
+      ) {
+        throw new MalloyCompileError(
+          `'${this.parent.dialect.name}' does not support 'limit:' on a nested 'select:'`,
+          'nested-projection-limit-unsupported',
+          resultStruct.turtleDef.location
+        );
+      }
       ret = this.parent.dialect.sqlAggregateTurtle(
         resultStruct.groupSet,
         dialectFieldList,
-        orderBy
+        orderBy,
+        limit
       );
     }
 

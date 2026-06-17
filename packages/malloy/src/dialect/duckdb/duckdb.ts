@@ -81,6 +81,7 @@ export class DuckDBDialect extends PostgresBase {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   supportsCountApprox = true;
 
   // DuckDB UNNEST in LATERAL JOINs doesn't preserve array element order
@@ -128,13 +129,18 @@ export class DuckDBDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number
   ): string {
     const fields = fieldList
       .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(', ');
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    return `COALESCE(LIST({${fields}} ${orderByClause}) FILTER (WHERE group_set=${groupSet}),[])`;
+    const list = `LIST({${fields}} ${orderByClause}) FILTER (WHERE group_set=${groupSet})`;
+    // A projection nest's limit is applied by slicing the aggregated array
+    // (duckdb lists are 1-based, inclusive).
+    const limited = limit !== undefined ? `(${list})[1:${limit}]` : list;
+    return `COALESCE(${limited},[])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
