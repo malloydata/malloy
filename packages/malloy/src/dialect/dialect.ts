@@ -201,6 +201,14 @@ export abstract class Dialect {
   // Snowflake can't yet support pipelines in nested views.
   supportsPipelinesInViews = true;
 
+  // Can the dialect apply a `limit:` to a nested `select:` (a projection
+  // nest)? A projection has no group-by keys to ROW_NUMBER-shave on, so the
+  // limit is applied by limiting/slicing the aggregated array inside
+  // `sqlAggregateTurtle`. Defaults false so a new dialect must consciously
+  // opt in (and implement the slice) rather than silently dropping the limit;
+  // the compiler rejects projection `limit:` when this is false.
+  supportsNestedProjectionLimit = false;
+
   // Some dialects don't supporrt arrays (mysql)
   supportsArraysInData = true;
 
@@ -428,10 +436,17 @@ export abstract class Dialect {
   abstract sqlAnyValue(groupSet: number, fieldName: string): string;
 
   // can array agg or any_value a struct...
+  // `limit`, when set, is a projection nest's row limit applied by slicing the
+  // aggregated array (a projection has no group-by keys to ROW_NUMBER-shave on).
+  // `filterSQL`, when set, is a projection nest's `where:` as a boolean SQL
+  // expression; it folds into the per-element group_set condition (a projection
+  // rides its enclosing group_set, so a scan-level WHERE can't isolate it).
   abstract sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string;
 
   // Format a CompiledOrderBy[] into an ORDER BY clause string for use

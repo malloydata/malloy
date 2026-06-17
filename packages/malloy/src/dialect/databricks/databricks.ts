@@ -91,6 +91,7 @@ export class DatabricksDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   hasLateralColumnAliasInSelect = true;
   cantPartitionWindowFunctionsOnExpressions = true;
   experimental = false;
@@ -214,14 +215,23 @@ export class DatabricksDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const namedStruct = this.buildNamedStructExpression(fieldList);
-    const collectExpr = `COLLECT_LIST(${namedStruct}) FILTER (WHERE group_set=${groupSet})`;
-    if (!orderBy || orderBy.length === 0) {
-      return collectExpr;
-    }
-    return `ARRAY_SORT(${collectExpr}, (l, r) -> ${this.buildArraySortComparator(orderBy)})`;
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
+    const collectExpr = `COLLECT_LIST(${namedStruct}) FILTER (WHERE group_set=${groupSet}${filter})`;
+    // COLLECT_LIST is unordered, so ordering is done post-aggregation via
+    // ARRAY_SORT — the limit must slice the *ordered* array.
+    const ordered =
+      !orderBy || orderBy.length === 0
+        ? collectExpr
+        : `ARRAY_SORT(${collectExpr}, (l, r) -> ${this.buildArraySortComparator(
+            orderBy
+          )})`;
+    // SLICE(array, start, length) is 1-based; length n keeps the first n.
+    return limit !== undefined ? `SLICE(${ordered}, 1, ${limit})` : ordered;
   }
 
   // Build a lambda comparator for ARRAY_SORT that handles multi-field

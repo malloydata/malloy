@@ -357,6 +357,14 @@ export class FieldInstanceResult implements FieldInstance {
           if (r.maxDepth > maxDepth) {
             maxDepth = r.maxDepth;
           }
+        } else if (fir.firstSegment.type === 'project') {
+          // A projection nest is grain-preserving (one array element per
+          // in-scope row), so it rides on the enclosing scope's group_set
+          // rather than getting its own. Without this it pins to group_set 0,
+          // and inside a deeper nest its array-agg FILTER never lines up with
+          // the enclosing group_set, producing empty arrays. (A first-stage
+          // projection; any following stages recurse in their own scope.)
+          fir.groupSet = this.groupSet;
         }
       }
     }

@@ -134,6 +134,10 @@ export class MySQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
+  // MySQL builds nested arrays with GROUP_CONCAT (not an array type), which has
+  // no in-expression slice; limiting would need query-level ROW_NUMBER plumbing
+  // the sqlAggregateTurtle seam doesn't expose. Left false (default) explicitly.
+  supportsNestedProjectionLimit = false;
   compoundObjectInSchema = false;
   booleanType: BooleanTypeSupport = 'simulated';
   orderByClause: OrderByClauseType = 'ordinal';
@@ -200,12 +204,15 @@ export class MySQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    _limit?: number,
+    filterSQL?: string
   ): string {
     const separator = ',';
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
     let gc = `GROUP_CONCAT(
-      IF(group_set=${groupSet},
+      IF(group_set=${groupSet}${filter},
         JSON_OBJECT(${this.mapFields(fieldList)})
         , null
         )

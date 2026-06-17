@@ -106,6 +106,7 @@ export class SnowflakeDialect extends Dialect {
   supportsSumDistinctFunction = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   defaultSampling = {rows: 50000};
   supportsHyperLogLog = true;
 
@@ -154,14 +155,22 @@ export class SnowflakeDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const orderByClause = orderBy
       ? ` WITHIN GROUP (${this.sqlTurtleOrderByClause(orderBy)})`
       : '';
-    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
-    return `COALESCE(${aggClause}, [])`;
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
+    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet}${filter} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
+    // ARRAY_SLICE is 0-based, end-exclusive, so (0, n) keeps the first n.
+    const limited =
+      limit !== undefined
+        ? `ARRAY_SLICE(${aggClause}, 0, ${limit})`
+        : aggClause;
+    return `COALESCE(${limited}, [])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

@@ -83,9 +83,23 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getCompiledSQL} from './sql_compiled';
 import {mkBuildID} from './source_def_utils';
 import {MalloyCompileError} from './malloy_compile_error';
+import {nestStrategy} from './nest-capability';
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
+}
+
+/**
+ * Is this result's row limit applied by the ROW_NUMBER "shave" in
+ * generateSQLHavingLimit? A nested projection's is not: its limit slices its
+ * array-agg (see sqlAggregateTurtle), because a projection has no group-by
+ * columns for the shave to partition and order on.
+ */
+function usesShaveLimit(result: FieldInstanceResult): boolean {
+  if (result.getLimit() === undefined) return false;
+  const isNestedProjection =
+    result.parent !== undefined && result.firstSegment.type === 'project';
+  return !isNestedProjection;
 }
 
 interface OutputPipelinedSQL {
@@ -1463,13 +1477,20 @@ export class QueryQuery extends QueryField {
     for (const [, field] of resultStruct.allFields) {
       if (field.type === 'query') {
         const fir = field as FieldInstanceResult;
-        const turtleWhere = this.generateSQLFilters(fir, 'where');
-        if (turtleWhere.present()) {
-          const groupSets = fir.childGroups.join(',');
-          wheres.add(
-            `(group_set NOT IN (${groupSets})` +
-              ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
-          );
+        // A projection first stage's `where:` folds into its array-agg
+        // condition (see generateTurtleSQL / sqlAggregateTurtle), not a
+        // scan-level WHERE: it rides its enclosing group_set, so a WHERE here
+        // can't isolate it from the parent, and its childGroups is empty (no
+        // group_set of its own) which would emit a broken `group_set IN ()`.
+        if (fir.firstSegment.type !== 'project') {
+          const turtleWhere = this.generateSQLFilters(fir, 'where');
+          if (turtleWhere.present()) {
+            const groupSets = fir.childGroups.join(',');
+            wheres.add(
+              `(group_set NOT IN (${groupSets})` +
+                ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
+            );
+          }
         }
         wheres.addChain(this.generateSQLWhereChildren(fir));
       }
@@ -1515,7 +1536,7 @@ export class QueryQuery extends QueryField {
     const resultsWithHavingOrLimit = this.rootResult.selectStructs(
       [],
       (result: FieldInstanceResult) =>
-        result.hasHaving || result.getLimit() !== undefined
+        result.hasHaving || usesShaveLimit(result)
     );
 
     if (resultsWithHavingOrLimit.length > 0) {
@@ -1524,7 +1545,7 @@ export class QueryQuery extends QueryField {
         [],
         (_result: FieldInstanceResult) => true
       )) {
-        const hasLimit = result.getLimit() !== undefined;
+        const hasLimit = usesShaveLimit(result);
         hasResultsWithChildren ||=
           result.childGroups.length > 1 && (hasLimit || result.hasHaving);
         hasAnyLimits ||= hasLimit;
@@ -2039,6 +2060,23 @@ export class QueryQuery extends QueryField {
     sqlFieldName: string,
     outputPipelinedSQL: OutputPipelinedSQL[]
   ): string {
+    // How to emit this nest's first stage — and the last line of defense before
+    // broken SQL for IR that didn't pass through the translator (cached,
+    // deserialized, or query-builder IR). Same `nestStrategy` the translator
+    // uses, so the two can't disagree.
+    const pipeline = resultStruct.turtleDef.pipeline;
+    const strategy = nestStrategy(
+      pipeline[0],
+      this.parent.dialect,
+      pipeline.length > 1
+    );
+    if (strategy.kind === 'unsupported') {
+      throw new MalloyCompileError(
+        `dialect '${this.parent.dialect.name}' cannot emit this nested query (${strategy.reason})`,
+        strategy.reason,
+        resultStruct.turtleDef.location
+      );
+    }
     // calculate the ordering.
     const compiledOrderBy: CompiledOrderBy[] = [];
     let orderingField;
@@ -2092,10 +2130,29 @@ export class QueryQuery extends QueryField {
         );
       }
     } else {
+      // A projection first stage applies its own `limit:` by slicing the
+      // array-agg (it has no group-by keys to ROW_NUMBER-shave on) and its
+      // `where:` by folding into the array-agg's group_set condition (it rides
+      // the enclosing group_set, so a scan-level WHERE can't isolate it). This
+      // is a first-stage question: if more stages follow, they consume this
+      // (limited/filtered) array via the recursion in generateTurtlePipelineSQL.
+      // A reduce first stage keeps the shave and the scan-level WHERE.
+      let limit: number | undefined;
+      let filterSQL: string | undefined;
+      if (strategy.kind === 'project') {
+        limit = strategy.limit;
+        const where = this.generateSQLFilters(resultStruct, 'where');
+        if (where.present()) {
+          filterSQL = where.sql();
+        }
+      }
+      // (capability is guarded by nestStrategy at the top of this method)
       ret = this.parent.dialect.sqlAggregateTurtle(
         resultStruct.groupSet,
         dialectFieldList,
-        orderBy
+        orderBy,
+        limit,
+        filterSQL
       );
     }
 

@@ -113,6 +113,7 @@ export class TrinoDialect extends PostgresBase {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   cantPartitionWindowFunctionsOnExpressions = false;
   orderByClause: OrderByClauseType = 'output_name';
   nullMatchesFunctionSignature = false;
@@ -175,12 +176,17 @@ export class TrinoDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    return `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause}) FILTER (WHERE group_set=${groupSet})`;
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
+    const arrayAgg = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause}) FILTER (WHERE group_set=${groupSet}${filter})`;
+    // SLICE(array, start, length) is 1-based; length n keeps the first n.
+    return limit !== undefined ? `SLICE(${arrayAgg}, 1, ${limit})` : arrayAgg;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
