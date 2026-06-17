@@ -130,13 +130,15 @@ export class DuckDBDialect extends PostgresBase {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
-    limit?: number
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = fieldList
       .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(', ');
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    const list = `LIST({${fields}} ${orderByClause}) FILTER (WHERE group_set=${groupSet})`;
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
+    const list = `LIST({${fields}} ${orderByClause}) FILTER (WHERE group_set=${groupSet}${filter})`;
     // A projection nest's limit is applied by slicing the aggregated array
     // (duckdb lists are 1-based, inclusive).
     const limited = limit !== undefined ? `(${list})[1:${limit}]` : list;

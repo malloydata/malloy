@@ -438,11 +438,15 @@ export abstract class Dialect {
   // can array agg or any_value a struct...
   // `limit`, when set, is a projection nest's row limit applied by slicing the
   // aggregated array (a projection has no group-by keys to ROW_NUMBER-shave on).
+  // `filterSQL`, when set, is a projection nest's `where:` as a boolean SQL
+  // expression; it folds into the per-element group_set condition (a projection
+  // rides its enclosing group_set, so a scan-level WHERE can't isolate it).
   abstract sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
-    limit?: number
+    limit?: number,
+    filterSQL?: string
   ): string;
 
   // Format a CompiledOrderBy[] into an ORDER BY clause string for use

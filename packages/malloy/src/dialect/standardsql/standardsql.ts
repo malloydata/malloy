@@ -216,7 +216,8 @@ export class StandardSQLDialect extends Dialect {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
-    limit?: number
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = fieldList
       .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
@@ -224,7 +225,8 @@ export class StandardSQLDialect extends Dialect {
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
     // BigQuery ARRAY_AGG takes LIMIT as its final sub-clause, after ORDER BY.
     const limitClause = limit !== undefined ? ` LIMIT ${limit}` : '';
-    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderByClause}${limitClause})`;
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
+    return `ARRAY_AGG(CASE WHEN group_set=${groupSet}${filter} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderByClause}${limitClause})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

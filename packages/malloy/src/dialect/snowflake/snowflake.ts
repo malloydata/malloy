@@ -156,13 +156,15 @@ export class SnowflakeDialect extends Dialect {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
-    limit?: number
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const orderByClause = orderBy
       ? ` WITHIN GROUP (${this.sqlTurtleOrderByClause(orderBy)})`
       : '';
-    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
+    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet}${filter} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
     // ARRAY_SLICE is 0-based, end-exclusive, so (0, n) keeps the first n.
     const limited =
       limit !== undefined

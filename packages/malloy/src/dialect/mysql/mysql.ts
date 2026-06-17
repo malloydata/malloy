@@ -204,12 +204,15 @@ export class MySQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    _limit?: number,
+    filterSQL?: string
   ): string {
     const separator = ',';
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
     let gc = `GROUP_CONCAT(
-      IF(group_set=${groupSet},
+      IF(group_set=${groupSet}${filter},
         JSON_OBJECT(${this.mapFields(fieldList)})
         , null
         )

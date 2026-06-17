@@ -216,10 +216,12 @@ export class DatabricksDialect extends Dialect {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
-    limit?: number
+    limit?: number,
+    filterSQL?: string
   ): string {
     const namedStruct = this.buildNamedStructExpression(fieldList);
-    const collectExpr = `COLLECT_LIST(${namedStruct}) FILTER (WHERE group_set=${groupSet})`;
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
+    const collectExpr = `COLLECT_LIST(${namedStruct}) FILTER (WHERE group_set=${groupSet}${filter})`;
     // COLLECT_LIST is unordered, so ordering is done post-aggregation via
     // ARRAY_SORT — the limit must slice the *ordered* array.
     const ordered =

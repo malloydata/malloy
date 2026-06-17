@@ -134,11 +134,13 @@ export class PostgresDialect extends PostgresBase {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
-    limit?: number
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = this.mapFields(fieldList);
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    const arrayAgg = `(ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderByClause} ) FILTER (WHERE group_set=${groupSet}))`;
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
+    const arrayAgg = `(ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderByClause} ) FILTER (WHERE group_set=${groupSet}${filter}))`;
     // Slice the native ARRAY (1-based, inclusive) before TO_JSONB turns it into
     // a single jsonb value — a jsonb scalar can't be range-sliced.
     const limited = limit !== undefined ? `${arrayAgg}[1:${limit}]` : arrayAgg;

@@ -1463,13 +1463,23 @@ export class QueryQuery extends QueryField {
     for (const [, field] of resultStruct.allFields) {
       if (field.type === 'query') {
         const fir = field as FieldInstanceResult;
-        const turtleWhere = this.generateSQLFilters(fir, 'where');
-        if (turtleWhere.present()) {
-          const groupSets = fir.childGroups.join(',');
-          wheres.add(
-            `(group_set NOT IN (${groupSets})` +
-              ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
-          );
+        // A single-stage projection nest's `where:` folds into its array-agg
+        // condition (see generateTurtleSQL / sqlAggregateTurtle), not a
+        // scan-level WHERE: it rides its enclosing group_set, so a WHERE here
+        // can't isolate it from the parent, and its childGroups is empty (no
+        // group_set of its own) which would emit a broken `group_set IN ()`.
+        const isSingleStageProjection =
+          fir.firstSegment.type === 'project' &&
+          fir.turtleDef.pipeline.length === 1;
+        if (!isSingleStageProjection) {
+          const turtleWhere = this.generateSQLFilters(fir, 'where');
+          if (turtleWhere.present()) {
+            const groupSets = fir.childGroups.join(',');
+            wheres.add(
+              `(group_set NOT IN (${groupSets})` +
+                ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
+            );
+          }
         }
         wheres.addChain(this.generateSQLWhereChildren(fir));
       }
@@ -2101,11 +2111,25 @@ export class QueryQuery extends QueryField {
       }
     } else {
       // A projection nest applies its limit by slicing the array-agg (it has no
-      // group-by keys to ROW_NUMBER-shave on); a reduce nest keeps the shave.
-      const limit =
-        resultStruct.firstSegment.type === 'project'
-          ? resultStruct.getLimit()
-          : undefined;
+      // group-by keys to ROW_NUMBER-shave on) and its `where:` by folding into
+      // the array-agg's group_set condition (it rides the enclosing group_set,
+      // so a scan-level WHERE can't isolate it); a reduce nest keeps the shave
+      // and the scan-level WHERE.
+      let limit: number | undefined;
+      let filterSQL: string | undefined;
+      // Only a single-stage projection nest collapses to one array-agg; a
+      // multi-stage nest (even one whose first stage is `select`) keeps its
+      // pipeline, so its `where:`/`limit:` belong to a stage, not this aggregate.
+      const isSingleStageProjection =
+        resultStruct.firstSegment.type === 'project' &&
+        resultStruct.turtleDef.pipeline.length === 1;
+      if (isSingleStageProjection) {
+        limit = resultStruct.getLimit();
+        const where = this.generateSQLFilters(resultStruct, 'where');
+        if (where.present()) {
+          filterSQL = where.sql();
+        }
+      }
       if (
         limit !== undefined &&
         !this.parent.dialect.supportsNestedProjectionLimit
@@ -2120,7 +2144,8 @@ export class QueryQuery extends QueryField {
         resultStruct.groupSet,
         dialectFieldList,
         orderBy,
-        limit
+        limit,
+        filterSQL
       );
     }
 

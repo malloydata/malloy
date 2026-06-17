@@ -177,12 +177,14 @@ export class TrinoDialect extends PostgresBase {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
-    limit?: number
+    limit?: number,
+    filterSQL?: string
   ): string {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    const arrayAgg = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause}) FILTER (WHERE group_set=${groupSet})`;
+    const filter = filterSQL ? ` AND ${filterSQL}` : '';
+    const arrayAgg = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause}) FILTER (WHERE group_set=${groupSet}${filter})`;
     // SLICE(array, start, length) is 1-based; length n keeps the first n.
     return limit !== undefined ? `SLICE(${arrayAgg}, 1, ${limit})` : arrayAgg;
   }
