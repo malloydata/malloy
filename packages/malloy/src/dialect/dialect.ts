@@ -137,6 +137,27 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
+/**
+ * The per-element condition for an aggregate turtle (sqlAggregateTurtle). On
+ * the normal path it gates each row by its group_set (and a projection's own
+ * `where:`). On the single-group-set fast path `groupSet` is `undefined` --
+ * there is no group_set column, every row is in the one group -- so the
+ * condition is just the `where:`, or `undefined` to include unconditionally.
+ * Callers wrap the result in whatever form the dialect uses (`FILTER (WHERE
+ * ...)`, `CASE WHEN ... THEN`, `IF(...)`).
+ */
+export function turtleGroupSetCondition(
+  groupSet: number | undefined,
+  filterSQL: string | undefined
+): string | undefined {
+  if (groupSet === undefined) {
+    return filterSQL;
+  }
+  return filterSQL
+    ? `group_set=${groupSet} AND ${filterSQL}`
+    : `group_set=${groupSet}`;
+}
+
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
@@ -441,8 +462,12 @@ export abstract class Dialect {
   // `filterSQL`, when set, is a projection nest's `where:` as a boolean SQL
   // expression; it folds into the per-element group_set condition (a projection
   // rides its enclosing group_set, so a scan-level WHERE can't isolate it).
+  // `groupSet` is `undefined` on the single-group-set fast path: there is no
+  // group_set column to filter on (every row is in the one group), so the
+  // array-agg omits its `FILTER (WHERE group_set=N)` and keeps only a
+  // projection's own `where:` (filterSQL), if any.
   abstract sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
     limit?: number,

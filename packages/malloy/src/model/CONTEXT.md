@@ -202,6 +202,17 @@ nest); per group_set, scalars become `CASE WHEN group_set=N …` and nests an ar
 numbers — a `reduce` nest recurses and gets its own group_set; a `project` nest rides
 the enclosing group_set (it's grain-preserving, one element per in-scope row).
 
+**One group set, no fan-out.** When the only nests are single-stage grain-preserving
+projections — no `reduce` nest, ungrouping, or total, so `maxGroupSet === 0` — there is
+nothing to demux: the cross-join, the `group_set` column, the `FILTER`/`CASE WHEN
+group_set=N`, and the combine stage are all degenerate. `canUseSingleGroupSetSQL` detects
+this and routes to `generateSimpleSQL` (the emitter a non-nested query uses, extended to
+emit each projection nest as an array-agg in the one `SELECT`). That array-agg passes
+`groupSet: undefined` to `sqlAggregateTurtle` (no `FILTER (WHERE group_set=N)`), and
+`FieldInstanceResultRoot.emitsGroupSet = false` keeps aggregate/window expressions from
+gating on a `group_set` column that isn't there. The output is the single `GROUP BY` a
+person would write by hand — no CTE, no fan-out.
+
 **The trap:** grouped stages emit columns named `name__groupSet` (`f1__0`, `m__0`) plus
 a literal `group_set` column; only the final combine stage renames them to user names
 (`"f1__0" as "f1"`). So a follow-on stage must reference the names the prior stage

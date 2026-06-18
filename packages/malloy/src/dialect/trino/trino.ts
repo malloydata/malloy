@@ -34,6 +34,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
 } from '../dialect';
+import {turtleGroupSetCondition} from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {
   PRESTO_DIALECT_FUNCTIONS,
@@ -174,7 +175,7 @@ export class TrinoDialect extends PostgresBase {
   }
   // can array agg or any_value a struct...
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
     limit?: number,
@@ -183,8 +184,9 @@ export class TrinoDialect extends PostgresBase {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    const filter = filterSQL ? ` AND ${filterSQL}` : '';
-    const arrayAgg = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause}) FILTER (WHERE group_set=${groupSet}${filter})`;
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const filterClause = cond ? ` FILTER (WHERE ${cond})` : '';
+    const arrayAgg = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause})${filterClause}`;
     // SLICE(array, start, length) is 1-based; length n keeps the first n.
     return limit !== undefined ? `SLICE(${arrayAgg}, 1, ${limit})` : arrayAgg;
   }

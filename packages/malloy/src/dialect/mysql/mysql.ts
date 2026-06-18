@@ -37,7 +37,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz} from '../dialect';
+import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -202,7 +202,7 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
     _limit?: number,
@@ -210,12 +210,16 @@ export class MySQLDialect extends Dialect {
   ): string {
     const separator = ',';
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    const filter = filterSQL ? ` AND ${filterSQL}` : '';
-    let gc = `GROUP_CONCAT(
-      IF(group_set=${groupSet}${filter},
-        JSON_OBJECT(${this.mapFields(fieldList)})
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const json = `JSON_OBJECT(${this.mapFields(fieldList)})`;
+    const element = cond
+      ? `IF(${cond},
+        ${json}
         , null
-        )
+        )`
+      : json;
+    let gc = `GROUP_CONCAT(
+      ${element}
       ${orderByClause}
       SEPARATOR '${separator}'
     )`;
