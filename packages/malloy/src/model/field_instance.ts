@@ -599,6 +599,11 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
   joins = new Map<string, JoinInstance>();
   havings = new AndChain();
   isComplexQuery = false;
+  // True when the query emits a `group_set` column to demux fanned-out rows
+  // (the general path). The single-group-set fast path (generateSingleGroupSetSQL)
+  // sets this false: there is no group_set column, so aggregate and window
+  // expressions must not wrap themselves in `CASE WHEN group_set=N`.
+  emitsGroupSet = true;
   queryUsesPartitioning = false;
   computeOnlyGroups: number[] = [];
   elimatedComputeGroups = false;

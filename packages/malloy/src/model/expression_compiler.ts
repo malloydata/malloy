@@ -189,7 +189,7 @@ function compileExpr<T extends Expr>(
             `Internal Error: Unknown aggregate function ${expr.function}`
           );
         }
-        if (resultSet.root().isComplexQuery) {
+        if (resultSet.root().isComplexQuery && resultSet.root().emitsGroupSet) {
           let groupSet = resultSet.groupSet;
           if (state.totalGroupSet !== -1) {
             groupSet = state.totalGroupSet;
@@ -551,7 +551,8 @@ function generateAnalyticFragment(
   partitionByFields?: string[],
   funcOrdering?: string
 ): string {
-  const isComplex = resultStruct.root().isComplexQuery;
+  const isComplex =
+    resultStruct.root().isComplexQuery && resultStruct.root().emitsGroupSet;
   const partitionFields = getAnalyticPartitions(
     resultStruct,
     partitionByFields

@@ -33,7 +33,7 @@ import type {
   OrderByRequest,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz} from '../dialect';
+import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {DATABRICKS_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -213,15 +213,16 @@ export class DatabricksDialect extends Dialect {
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined,
     limit?: number,
     filterSQL?: string
   ): string {
     const namedStruct = this.buildNamedStructExpression(fieldList);
-    const filter = filterSQL ? ` AND ${filterSQL}` : '';
-    const collectExpr = `COLLECT_LIST(${namedStruct}) FILTER (WHERE group_set=${groupSet}${filter})`;
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const filterClause = cond ? ` FILTER (WHERE ${cond})` : '';
+    const collectExpr = `COLLECT_LIST(${namedStruct})${filterClause}`;
     // COLLECT_LIST is unordered, so ordering is done post-aggregation via
     // ARRAY_SORT — the limit must slice the *ordered* array.
     const ordered =

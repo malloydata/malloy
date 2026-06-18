@@ -1299,16 +1299,37 @@ export class QueryQuery extends QueryField {
     return s;
   }
 
+  /**
+   * The single-scan form, with no `group_set` fan-out: one `SELECT` over the
+   * scan, grouped by the dimensions. Used both for a query with no nests and --
+   * via canUseSingleGroupSetSQL -- for one whose only nests are single-stage
+   * grain-preserving projections, which become an array-agg in the same SELECT.
+   * That array-agg needs no `FILTER (WHERE group_set=N)` (every row is in the
+   * one group), and aggregate/window expressions must not gate themselves by
+   * group_set either, so emitsGroupSet is cleared (see FieldInstanceResultRoot).
+   */
   generateSimpleSQL(stageWriter: StageWriter): string {
+    this.rootResult.emitsGroupSet = false;
     let s = '';
     s += 'SELECT \n';
     const fields: string[] = [];
+    const outputPipelinedSQL: OutputPipelinedSQL[] = [];
 
-    for (const [name, field] of this.rootResult.allFields) {
-      const fi = field as FieldInstanceField;
+    for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
-      if (fi.fieldUsage.type === 'result') {
-        fields.push(` ${fi.generateExpression()} as ${sqlName}`);
+      if (fi instanceof FieldInstanceField) {
+        if (fi.fieldUsage.type === 'result') {
+          fields.push(` ${fi.generateExpression()} as ${sqlName}`);
+        }
+      } else if (fi instanceof FieldInstanceResult) {
+        const turtle = this.generateTurtleSQL(
+          fi,
+          stageWriter,
+          sqlName,
+          outputPipelinedSQL,
+          true
+        );
+        fields.push(` ${turtle} as ${sqlName}`);
       }
     }
     s += indent(fields.join(',\n')) + '\n';
@@ -1343,7 +1364,48 @@ export class QueryQuery extends QueryField {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
     this.resultStage = stageWriter.addStage(s);
+    // Consumes any pipelined turtle output. The nests that reach here are
+    // single-stage (canUseSingleGroupSetSQL), so outputPipelinedSQL is empty and
+    // this is a no-op; kept so the function stays correct if that guard widens.
+    this.resultStage = this.generatePipelinedStages(
+      outputPipelinedSQL,
+      this.resultStage,
+      stageWriter,
+      []
+    );
     return this.resultStage;
+  }
+
+  /**
+   * Can this query take the single-group-set fast path? True when the query
+   * needs no group-set fan-out: it has nests (so it's "complex") but every one
+   * is a single-stage grain-preserving projection riding group_set 0, and there
+   * are no reduce nests, ungroupings, or totals (all of which would mint a
+   * second group set and push maxGroupSet above 0). Anything outside that shape
+   * falls back to the general demux path, which is correct for every case.
+   */
+  canUseSingleGroupSetSQL(): boolean {
+    if (this.maxGroupSet !== 0) return false;
+    if (this.firstSegment.type !== 'reduce') return false;
+    for (const [, fi] of this.rootResult.allFields) {
+      if (fi instanceof FieldInstanceResult) {
+        if (fi.firstSegment.type !== 'project') return false;
+        if (fi.turtleDef.pipeline.length !== 1) return false;
+        if (fi.getRepeatedResultType() !== 'nested') return false;
+        // A `calculate:` inside a `select:` would put a window function inside
+        // the array-agg, which no dialect allows; leave it on the general path.
+        for (const [, nestField] of fi.allFields) {
+          if (
+            nestField instanceof FieldInstanceField &&
+            hasExpression(nestField.f.fieldDef) &&
+            expressionIsAnalytic(nestField.f.fieldDef.expressionType)
+          ) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 
   // This probably should be generated in a dialect independat way.
@@ -2111,7 +2173,12 @@ export class QueryQuery extends QueryField {
     resultStruct: FieldInstanceResult,
     stageWriter: StageWriter,
     sqlFieldName: string,
-    outputPipelinedSQL: OutputPipelinedSQL[]
+    outputPipelinedSQL: OutputPipelinedSQL[],
+    // The single-group-set fast path (generateSingleGroupSetSQL) has no
+    // group_set column to filter on: every row is in the one group. The
+    // array-agg drops its `FILTER (WHERE group_set=N)` and keeps only a
+    // projection's own `where:`.
+    omitGroupSetFilter = false
   ): string {
     // How to emit this nest's first stage — and the last line of defense before
     // broken SQL for IR that didn't pass through the translator (cached,
@@ -2201,7 +2268,7 @@ export class QueryQuery extends QueryField {
       }
       // (capability is guarded by nestStrategy at the top of this method)
       ret = this.parent.dialect.sqlAggregateTurtle(
-        resultStruct.groupSet,
+        omitGroupSetFilter ? undefined : resultStruct.groupSet,
         dialectFieldList,
         orderBy,
         limit,
@@ -2322,11 +2389,13 @@ export class QueryQuery extends QueryField {
     this.rootResult.assignFieldsToGroups();
 
     this.rootResult.isComplexQuery ||= this.maxDepth > 0 || r.isComplex;
-    if (this.rootResult.isComplexQuery) {
+    // A complex query needs the group-set fan-out unless it has just one group
+    // set (only single-stage projection nests), in which case generateSimpleSQL
+    // emits the same no-fan-out form a non-nested query gets.
+    if (this.rootResult.isComplexQuery && !this.canUseSingleGroupSetSQL()) {
       return this.generateComplexSQL(stageWriter);
-    } else {
-      return this.generateSimpleSQL(stageWriter);
     }
+    return this.generateSimpleSQL(stageWriter);
   }
 
   generateSQLFromPipeline(stageWriter: StageWriter): {

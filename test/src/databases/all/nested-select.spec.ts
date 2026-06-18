@@ -50,6 +50,23 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       });
     });
 
+    test('single-group-set nest emits no group_set fan-out', async () => {
+      // The point of the single-group-set path: a top-level group_by whose only
+      // nests are projections needs no demux, so the SQL carries no `group_set`
+      // column/FILTER/CASE and no cross-join. The result assertions here pass on
+      // the general fan-out path too, so this pins the *shape* the change exists
+      // to produce -- without it, a revert to the fan-out path goes unnoticed.
+      const sql = await runtime
+        .loadQuery(
+          `run: ${table} -> {
+            group_by: f is substr(popular_name, 1, 1)
+            nest: names is { select: popular_name }
+          }`
+        )
+        .getSQL();
+      expect(sql).not.toMatch(/group_set/);
+    });
+
     test('depth-3 projection nest is populated', async () => {
       await expect(`
         run: ${table} -> {
