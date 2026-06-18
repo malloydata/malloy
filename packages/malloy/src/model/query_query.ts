@@ -102,6 +102,14 @@ function usesShaveLimit(result: FieldInstanceResult): boolean {
   return !isNestedProjection;
 }
 
+/** Is this an analytic (window) field -- a `calculate:`? */
+function fieldIsAnalytic(fi: FieldInstanceField): boolean {
+  return (
+    hasExpression(fi.f.fieldDef) &&
+    expressionIsAnalytic(fi.f.fieldDef.expressionType)
+  );
+}
+
 interface OutputPipelinedSQL {
   sqlFieldName: string;
   pipelineSQL: string;
@@ -1388,7 +1396,12 @@ export class QueryQuery extends QueryField {
     if (this.maxGroupSet !== 0) return false;
     if (this.firstSegment.type !== 'reduce') return false;
     for (const [, fi] of this.rootResult.allFields) {
-      if (fi instanceof FieldInstanceResult) {
+      if (fi instanceof FieldInstanceField) {
+        // A root-level `calculate:` (window) needs the general path's analytic
+        // handling: on dialects that can't partition a window on an expression
+        // (BigQuery) it rides a lateral-join bag this path doesn't build.
+        if (fieldIsAnalytic(fi)) return false;
+      } else if (fi instanceof FieldInstanceResult) {
         if (fi.firstSegment.type !== 'project') return false;
         if (fi.turtleDef.pipeline.length !== 1) return false;
         if (fi.getRepeatedResultType() !== 'nested') return false;
@@ -1397,8 +1410,7 @@ export class QueryQuery extends QueryField {
         for (const [, nestField] of fi.allFields) {
           if (
             nestField instanceof FieldInstanceField &&
-            hasExpression(nestField.f.fieldDef) &&
-            expressionIsAnalytic(nestField.f.fieldDef.expressionType)
+            fieldIsAnalytic(nestField)
           ) {
             return false;
           }
