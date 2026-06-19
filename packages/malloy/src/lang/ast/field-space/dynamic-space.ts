@@ -105,6 +105,10 @@ export abstract class DynamicSpace
       }
 
       this.sourceDef = {...this.fromSource, fields: []};
+      // This is a freshly built (modified) source: it presents a new exported
+      // shape, so it is no longer a reference to the source it was built from.
+      // DefineSource resets referenceID to this source's own sourceID.
+      delete this.sourceDef.referenceID;
       this.sourceDef.parameters = parameters;
       const fieldIndices = new Map<string, number>();
       // Need to process the entities in specific order
@@ -188,6 +192,7 @@ export abstract class DynamicSpace
   emptyStructDef(): SourceDef {
     const ret = {...this.fromSource};
     ret.fields = [];
+    delete ret.referenceID;
     return ret;
   }
 }

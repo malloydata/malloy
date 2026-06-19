@@ -18,7 +18,7 @@ import type {
   SourceID,
   SourceRegistryValue,
 } from '../../../model/malloy_types';
-import {isSourceDef, isPersistableSourceDef} from '../../../model/malloy_types';
+import {isSourceDef} from '../../../model/malloy_types';
 import {mkModelDef, mkModelID} from '../../../model/utils';
 import {Tag} from '@malloydata/malloy-tag';
 import type {
@@ -768,12 +768,9 @@ export class Document extends MalloyElement implements NameSpace {
 
     this.documentModel.set(str, ent);
 
-    // Maintain sourceRegistry for persistable sources with sourceID
-    if (
-      isSourceDef(ent.entry) &&
-      isPersistableSourceDef(ent.entry) &&
-      ent.entry.sourceID
-    ) {
+    // Maintain the source-id table so sourceID/referenceID values resolve to
+    // their SourceDef. Every named source is registered by its sourceID.
+    if (isSourceDef(ent.entry) && ent.entry.sourceID) {
       this.documentSrcRegistry[ent.entry.sourceID] = {
         entry: {
           type: 'source_registry_reference',

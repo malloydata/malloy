@@ -131,7 +131,10 @@ export class NamedSource extends Source {
     } else {
       this.document()?.checkExperimentalDialect(this, entry.dialect);
       if (isSourceDef(entry)) {
-        return {...entry};
+        // This struct is created as an unmodified reference to `entry`. Mark it
+        // with entry's own identity; the modification path (DynamicSpace) clears
+        // this so only true references carry a referenceID.
+        return {...entry, referenceID: entry.sourceID};
       }
     }
     // I think this is now a never

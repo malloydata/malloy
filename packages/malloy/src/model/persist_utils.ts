@@ -190,7 +190,7 @@ export function findPersistentDependencies(
   }
 
   function processJoinedSource(source: SourceDef): BuildNode[] {
-    // If it has a sourceID, go through the registry
+    // If it has an sourceID, go through the registry
     if (isPersistableSourceDef(source) && source.sourceID) {
       return processSourceID(source.sourceID);
     }

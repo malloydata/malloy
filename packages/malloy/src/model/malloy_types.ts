@@ -1537,6 +1537,22 @@ interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
   primaryKey?: PrimaryKeyRef;
   dialect: string;
   partitionComposite?: PartitionCompositeDesc;
+  /**
+   * Identity of this source's own definition (`name@modelURL`). Set for every
+   * source when it is defined. The persistence machinery reads this (gated by
+   * `isPersistableSourceDef`).
+   */
+  sourceID?: SourceID;
+  /**
+   * Set only when this source was created as an unmodified reference to another
+   * source (`source: a is b`, or a plain join) — then it holds the `sourceID`
+   * of the *immediately* referenced source. Absent when the source defines its
+   * own shape (table/sql/query, or a modified/extended source). So
+   * `referenceID !== undefined` means "created as a reference", and the value
+   * resolves through `ModelDef.sourceRegistry` to the referenced source and its
+   * namespace name (see `sourceNamespaceReference`).
+   */
+  referenceID?: SourceID;
 }
 /** which field is the primary key in this struct */
 export type PrimaryKeyRef = string;
@@ -1575,7 +1591,7 @@ export function isSegmentSource(
   return 'type' in f && (f.type === 'sql_select' || f.type === 'query_source');
 }
 
-/** Format: "name@modelUrl" - uniquely identifies a source for persistence */
+/** Format: "name@modelUrl" - uniquely identifies a defined source */
 export type SourceID = string;
 
 /** Created with `mkGivenID`. */
@@ -1626,7 +1642,6 @@ export function isSourceRegistryReference(
 }
 
 export interface PersistableSourceProperties {
-  sourceID?: SourceID;
   extends?: SourceID;
   persistent?: boolean;
 }
@@ -1683,13 +1698,17 @@ export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
 /**
  * Union of all source definition types.
  *
- * IMPORTANT: Never use object spread to copy a SourceDef. Use the factory
- * methods in source_def_utils.ts to merge changes into a source def:
+ * When building a *persisted/derived* source in the compiler, use the factory
+ * methods in source_def_utils.ts rather than object spread:
  * - mkSQLSourceDef(base, ...) - create SQLSourceDef from base
  * - mkQuerySourceDef(base, ...) - create QuerySourceDef from base
  *
- * These factories explicitly copy only safe fields, preventing accidental
- * propagation of sourceID/extends which must only be set in DefineSource.
+ * These factories explicitly copy only safe fields, dropping the identity
+ * fields (sourceID/referenceID/extends/persistent) so they are not propagated
+ * onto a freshly built source. In the translator, by contrast, object spread is
+ * used deliberately to *carry* sourceID/referenceID through an unmodified
+ * reference; DefineSource then sets them, and DynamicSpace clears referenceID
+ * on the modification path.
  */
 export type SourceDef =
   | TableSourceDef

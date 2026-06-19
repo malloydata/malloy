@@ -66,7 +66,11 @@ import {
   findPersistentDependencies,
   minimalBuildGraph,
 } from '../../model/persist_utils';
-import {resolveSourceID, mkBuildID} from '../../model/source_def_utils';
+import {
+  resolveSourceID,
+  sourceNamespaceReference,
+  mkBuildID,
+} from '../../model/source_def_utils';
 import {
   evaluateInlineGivens,
   resolveSuppliedGivens,
@@ -320,6 +324,22 @@ export class Explore extends Entity implements Taggable {
 
   public get source(): Explore | undefined {
     return this.sourceExplore;
+  }
+
+  /**
+   * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHANGE WITHOUT NOTICE
+   *
+   * If this source was created as an unmodified reference to a source that is in
+   * this model's namespace (`source: a is b`, or a plain join), return that
+   * source as it appears in the namespace — read `.name` for the name it goes by
+   * here. Returns undefined when this source defines its own shape (a table,
+   * SQL, query, or modified/extended source), or when the referenced source is
+   * not in this model's namespace.
+   */
+  public referencedSource(): Explore | undefined {
+    if (!isSourceDef(this._structDef)) return undefined;
+    const ref = sourceNamespaceReference(this._ownerModelDef, this._structDef);
+    return ref ? new Explore(this._ownerModelDef, ref.source) : undefined;
   }
 
   public isIntrinsic(): boolean {
