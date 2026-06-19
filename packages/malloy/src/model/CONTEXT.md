@@ -56,9 +56,12 @@ table", which registers every named source by its `sourceID`):
   immediate target is always a namespace entry, since you could only write
   `is b` where `b` resolved by name). Helpers: `resolveSourceRef` (id →
   SourceDef), `sourceNamespaceReference` (SourceDef → `{name, source}` when it
-  references a namespace entry). The Foundation `Explore` exposes this as one
-  method, `referencedSource()` — the referenced namespace source (read `.name`),
-  or undefined when the source defines its own shape — rather than the raw ids.
+  references a namespace entry). The Foundation `Explore` exposes two views of
+  this without leaking the field name: `referenceSourceID` (a comparable id of
+  the referenced source — equal for two sources that refer to the same thing,
+  even when it can't be named here) and `referencedSource()` (the referenced
+  namespace source, read `.name`). Both are undefined when the source defines
+  its own shape.
 
 **Type Definitions:**
 - **`BasicAtomicType`** - String union of simple type names (`string | number | boolean | date | timestamp | timestamptz | json | sql native | error`). Guard: `isBasicAtomicType()`.

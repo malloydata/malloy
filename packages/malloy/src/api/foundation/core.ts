@@ -329,6 +329,21 @@ export class Explore extends Entity implements Taggable {
   /**
    * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHANGE WITHOUT NOTICE
    *
+   * If this source was created as an unmodified reference to another source, a
+   * stable identifier of the source it refers to; undefined when this source
+   * defines its own shape. Two sources that refer to the same thing share this
+   * id, so it can be compared to tell whether two otherwise un-nameable sources
+   * are the same — even when the referenced source can't be named here.
+   */
+  public get referenceSourceID(): string | undefined {
+    return isSourceDef(this._structDef)
+      ? this._structDef.referenceID
+      : undefined;
+  }
+
+  /**
+   * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHANGE WITHOUT NOTICE
+   *
    * If this source was created as an unmodified reference to a source that is in
    * this model's namespace (`source: a is b`, or a plain join), return that
    * source as it appears in the namespace — read `.name` for the name it goes by

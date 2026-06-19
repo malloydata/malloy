@@ -39,4 +39,18 @@ describe('Explore source-reference introspection', () => {
     `);
     expect(model.getExploreByName('ext').referencedSource()).toBeUndefined();
   });
+
+  test('two sources referencing the same thing share referenceSourceID', () => {
+    const model = modelOf(`
+      source: base is _db_.table('aTable')
+      source: refA is base
+      source: refB is base
+    `);
+    const a = model.getExploreByName('refA').referenceSourceID;
+    const b = model.getExploreByName('refB').referenceSourceID;
+    expect(a).toBeDefined();
+    expect(a).toBe(b);
+    // a source that defines its own shape has no referenceSourceID
+    expect(model.getExploreByName('base').referenceSourceID).toBeUndefined();
+  });
 });
