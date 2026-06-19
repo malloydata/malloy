@@ -224,6 +224,80 @@ describe('db:BigQuery', () => {
     });
   });
 
+  describe('table path project qualification', () => {
+    // The default project (BigQuery's defaultProjectId / connection
+    // `projectId`) must end up in the stored tablePath so it lands in the
+    // emitted SQL. Otherwise an unqualified `dataset.table` resolves against
+    // the job's billing/ambient project rather than the default project.
+    const emptySchema = {
+      schema: {fields: []},
+      needsTableSuffixPseudoColumn: false,
+      needsPartitionTimePseudoColumn: false,
+      needsPartitionDatePseudoColumn: false,
+    };
+
+    function makeConnection(
+      projectId = 'my-default-project'
+    ): BigQueryConnection {
+      const conn = new BigQueryConnection({name: 'qualify_test', projectId});
+      jest.spyOn(conn, 'getTableFieldSchema').mockResolvedValue(emptySchema);
+      return conn;
+    }
+
+    async function tablePathOf(
+      conn: BigQueryConnection,
+      tablePath: string
+    ): Promise<string> {
+      const tableDef = await conn.fetchTableSchema('t', tablePath);
+      if (typeof tableDef === 'string') {
+        throw new Error(tableDef);
+      }
+      return tableDef.tablePath;
+    }
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('prepends the default project to a 2-part table path', async () => {
+      expect(await tablePathOf(makeConnection(), 'malloytest.carriers')).toBe(
+        'my-default-project.malloytest.carriers'
+      );
+    });
+
+    it('leaves a fully-qualified 3-part table path unchanged', async () => {
+      expect(
+        await tablePathOf(makeConnection(), 'other-project.malloytest.carriers')
+      ).toBe('other-project.malloytest.carriers');
+    });
+
+    it('prepends the project but leaves a quoted segment verbatim', async () => {
+      // The user's text is pasted as written; we only add the project in front.
+      expect(
+        await tablePathOf(makeConnection(), 'malloytest.`weird table`')
+      ).toBe('my-default-project.malloytest.`weird table`');
+    });
+
+    it('quotes a project id that BigQuery requires quoted', async () => {
+      // A legacy domain-scoped project id is not a bare identifier, so the one
+      // segment we render ourselves gets backtick-quoted.
+      expect(
+        await tablePathOf(
+          makeConnection('google.com:acme'),
+          'malloytest.carriers'
+        )
+      ).toBe('`google.com:acme`.malloytest.carriers');
+    });
+
+    it('leaves a whole-backtick path verbatim (one segment, not two)', async () => {
+      // `\`dataset.table\`` decodes to a single quoted segment, so the
+      // two-segment rule does not fire and we touch nothing.
+      expect(await tablePathOf(makeConnection(), '`my dataset.events_*`')).toBe(
+        '`my dataset.events_*`'
+      );
+    });
+  });
+
   describe('Caching', () => {
     let getTableFieldSchema: jest.SpyInstance;
     let getSQLBlockSchema: jest.SpyInstance;
