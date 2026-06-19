@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {
@@ -33,6 +15,7 @@ import {
 import './parse-expects';
 import {diff} from 'jest-diff';
 import type {AnnotationsDef, Note} from '../../model/malloy_types';
+import {getModelAnnotations} from '../../model';
 import {
   collectAnnotations,
   annotationToTag,
@@ -260,7 +243,7 @@ describe('document annotation', () => {
     expect(m).toTranslate();
     const model = m.translate()?.modelDef;
     expect(model).toBeDefined();
-    const notes = model?.annotations;
+    const notes = model && model.modelAnnotations[model.modelID]?.ownNotes;
     expect(notes).matchesAnnotation({notes: ['## model1\n', '## model2\n']});
   });
   test('annotations and renamed fields', () => {
@@ -308,17 +291,73 @@ describe('document annotation', () => {
     expect(m).toTranslate();
     expect(m.translator.getCompilerFlags().has('flagThis')).toBeTruthy();
   });
-  test('extended models inherit model flags', () => {
+  test('extended models fold in the base model annotations', () => {
     const first = model`## from=1\n`;
     expect(first).toTranslate();
     const firstModel = first.translator.translate()?.modelDef;
     expect(firstModel).toBeDefined();
+    // Real `extendModel` compiles the extension under a fresh URL, so base and
+    // extension have distinct modelIDs. Every TestTranslator shares one URL, so
+    // re-key the base to a standalone identity (its own `##`, no predecessors)
+    // and model the real case.
+    const baseID = 'internal://test/langtests/base.malloy';
+    firstModel!.modelAnnotations = {
+      [baseID]: {
+        ownNotes: firstModel!.modelAnnotations[firstModel!.modelID].ownNotes,
+        inheritsFrom: [],
+      },
+    };
+    firstModel!.modelID = baseID;
     const second = model`## from=2\n`;
     second.translator.internalModel = firstModel!;
     const secondModel = second.translator.translate()?.modelDef;
-    expect(secondModel?.annotations).matchesAnnotation({
+    // The extend-base's `##` rides the `inheritsFrom` edge, not `ownNotes`, so
+    // it surfaces only through the fold — base first, then this model's own.
+    expect(secondModel && getModelAnnotations(secondModel)).matchesAnnotation({
       inherits: {notes: ['## from=1\n']},
       notes: ['## from=2\n'],
+    });
+  });
+});
+describe('model annotation cross-file fold', () => {
+  const CHILD = 'internal://test/langtests/child';
+  const MID = 'internal://test/langtests/mid';
+
+  /** Compile `main` importing the given files, and return the running model's
+   *  folded `##` — the one bundle every object in the model reports. Running
+   *  real multi-file compilation proves the wiring the unit tests assume:
+   *  `import` records the predecessor edge and merges the closure. */
+  function foldOf(main: string, urls: Record<string, string>): AnnotationsDef {
+    const t = new TestTranslator(main);
+    t.update({urls});
+    expect(t).toTranslate();
+    return getModelAnnotations(t.translate().modelDef!);
+  }
+
+  test("an importer's `##` folds after the imported model's (local wins)", () => {
+    expect(
+      foldOf('import "child"\n## -flag\n', {[CHILD]: '## flag\n'})
+    ).matchesAnnotation({
+      inherits: {notes: ['## flag\n']},
+      notes: ['## -flag\n'],
+    });
+  });
+
+  test('an imported model `##` comes through when the importer has none', () => {
+    expect(
+      foldOf('import "child"\nsource: x is a', {[CHILD]: '## theme=foo\n'})
+    ).matchesAnnotation({notes: ['## theme=foo\n']});
+  });
+
+  test('transitive import folds the whole chain, ancestral first', () => {
+    expect(
+      foldOf('import "mid"\n## main\n', {
+        [MID]: 'import "child"\n## mid\n',
+        [CHILD]: '## child\n',
+      })
+    ).matchesAnnotation({
+      inherits: {inherits: {notes: ['## child\n']}, notes: ['## mid\n']},
+      notes: ['## main\n'],
     });
   });
 });
@@ -916,7 +955,7 @@ describe('multi-line annotations', () => {
     expect(m).toTranslate();
     const md = m.translate()?.modelDef;
     expect(md).toBeDefined();
-    expect(md!.annotations).matchesAnnotation({
+    expect(md!.modelAnnotations[md!.modelID]?.ownNotes).matchesAnnotation({
       notes: ['##|\nmodel content'],
     });
   });
@@ -977,7 +1016,7 @@ describe('multi-line annotations', () => {
     expect(m).toTranslate();
     const md = m.translate()?.modelDef;
     expect(md).toBeDefined();
-    expect(md!.annotations).matchesAnnotation({
+    expect(md!.modelAnnotations[md!.modelID]?.ownNotes).matchesAnnotation({
       notes: ['## modelNote\n'],
     });
   });

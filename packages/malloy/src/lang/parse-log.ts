@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -111,6 +93,9 @@ type MessageParameterTypes = {
   'pick-non-atomic-type': string;
   'experiment-not-enabled': {experimentId: string};
   'experimental-dialect-not-enabled': {dialect: string};
+  'nesting-unsupported': {dialect: string};
+  'nested-multi-stage-unsupported': {dialect: string};
+  'nested-projection-limit-unsupported': {dialect: string};
   'sql-native-not-allowed-in-expression': {
     rawType: string | undefined;
   };
@@ -223,6 +208,7 @@ type MessageParameterTypes = {
   'invalid-type-for-field-definition': string;
   'circular-reference-in-field-definition': string;
   'output-name-conflict': string;
+  'output-field-auto-renamed': string;
   'select-of-view': string;
   'select-of-analytic': string;
   'select-of-aggregate': string;
@@ -339,6 +325,11 @@ type MessageParameterTypes = {
   'in-given-type-mismatch': {lhsType: string; elementType: string};
   'inline-no-default': {name: string};
   'inline-bad-operator': {name: string; operators: string};
+  'inline-bad-operator-in-ref': {
+    name: string;
+    refName: string;
+    operators: string;
+  };
   'invalid-given-modifier': {modifier: string};
   'illegal-filter-type': string;
   'invalid-source-from-given': string;
@@ -472,6 +463,11 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   }),
   'experimental-dialect-not-enabled': e =>
     `Requires compiler flag '##! experimental.dialect.${e.dialect}'`,
+  'nesting-unsupported': e => `'${e.dialect}' does not support nested queries`,
+  'nested-multi-stage-unsupported': e =>
+    `'${e.dialect}' does not support a multi-stage pipeline ('->') in a nested query`,
+  'nested-projection-limit-unsupported': e =>
+    `'${e.dialect}' does not support 'limit:' on a nested 'select:'`,
   'pick-missing-else': "pick incomplete, missing 'else'",
   'pick-missing-value': 'pick with no value can only be used with apply',
   'pick-illegal-partial': 'pick with partial when can only be used with apply',
@@ -513,6 +509,8 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `inline given \`${e.name}\` must have a value — there is nothing to inline without one`,
   'inline-bad-operator': e =>
     `inline given \`${e.name}\` uses operator(s) not allowed in inline expressions: ${e.operators}`,
+  'inline-bad-operator-in-ref': e =>
+    `inline given \`${e.name}\` references \`${e.refName}\`, whose default uses operator(s) not allowed in inline expressions: ${e.operators}`,
   'invalid-given-modifier': e =>
     `Unknown modifier \`${e.modifier}\` on \`given:\` declaration; the only modifier allowed here is \`inline\``,
   'restricted-construct-forbidden': e => ({

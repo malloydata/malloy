@@ -51,6 +51,8 @@ getLogs()
 
 4. **Unread-tag detection** — After validation, any tag property the user wrote that no resolver, validator, or ownership spec touched becomes a warning. This is the safety net for misspellings and unknown tags.
 
+**Render-time surfacing.** A producer-#1 error on a field that then ends up with no matching renderer (it would otherwise stringify to `[object Object]` in the result panel) is also shown inline at render time, using the same `ErrorMessage` UI as producer #3's red tile (`apply-renderer`'s `default` branch reads `field.getValidationErrors()`). This is the decline-side counterpart to a plugin throw: when a renderer *declines* a field a validator has flagged, the user sees the error in the render, not only in the Problems panel. Fields that render fine (scalars, the `none` chart-child case, built-in renderers) are untouched.
+
 ### Tag ownership
 
 A renderer "owns" a tag when removing the renderer would make the tag meaningless (e.g., `viz.x` only matters when a chart is active). Ownership is declared on the factory:

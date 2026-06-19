@@ -18,7 +18,7 @@ import type {
   TurtleDefPlusFilters,
   TurtleDef,
 } from './malloy_types';
-import {isSourceDef, getIdentifier, isAtomic} from './malloy_types';
+import {activeName, isSourceDef, isAtomic} from './malloy_types';
 import {StageWriter} from './stage_writer';
 import {StandardSQLDialect, type Dialect} from '../dialect';
 import type {Connection} from '../connection/types';
@@ -55,7 +55,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       // metadata, not queryable, and are skipped.
       if (isSourceDef(s)) {
         this.structs.set(
-          getIdentifier(s),
+          activeName(s),
           new QueryStruct(s, undefined, {model: this}, {})
         );
       } else if (
@@ -148,7 +148,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     if (emitFinalStage && q.parent.dialect.hasFinalStage) {
       // const fieldNames: string[] = [];
       // for (const f of ret.outputStruct.fields) {
-      //   fieldNames.push(getIdentifier(f));
+      //   fieldNames.push(activeName(f));
       // }
       const fieldNames: string[] = [];
       for (const f of ret.outputStruct.fields) {
@@ -218,9 +218,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     );
     const structRef = query.compositeResolvedSourceDef ?? query.structRef;
     const sourceExplore =
-      typeof structRef === 'string'
-        ? structRef
-        : structRef.as || structRef.name;
+      typeof structRef === 'string' ? structRef : activeName(structRef);
     const sourceArguments =
       query.sourceArguments ??
       (typeof structRef === 'string' ? undefined : structRef.arguments);

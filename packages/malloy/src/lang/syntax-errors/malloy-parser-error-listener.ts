@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {ANTLRErrorListener, Token} from 'antlr4ts';
@@ -219,11 +217,6 @@ export const malloyCustomErrorCases: ErrorCase[] = [
     offendingSymbol: MalloyParser.OPAREN,
     ruleContextOptions: ['vExpr'],
     precedingTokenOptions: [[MalloyParser.IDENTIFIER]],
-  },
-  {
-    errorMessage:
-      "The 'project:' keyword is no longer supported. Use 'select:' instead.",
-    offendingSymbol: MalloyParser.PROJECT,
   },
   {
     errorMessage:

@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 /*
@@ -83,10 +65,15 @@ export const commonTestInput = [
   ["/'regexp string /*-- \\escapes\\uFFFF \\'more\\"],
   ['"/* -- \\e\\uFFFF \\\'\\'],
   ["state ~ 'CA' | r'M.' | \"CO\" | /'O.'  -- end"],
-  ['run: duckdb.sql("""', '  SELECT 1', '""")'],
 ];
 
 export const monarchDivergentTestInput = [
+  // Embedded SQL diverges by engine: TextMate paints the region's
+  // meta.embedded.block.sql wrapper over the whole block (delimiters + body),
+  // while Monarch's nextEmbedded hands the body to the SQL language and can't
+  // carry the outer scope — so the region background can't match. Real SQL
+  // highlighting still works in both via the source.sql include.
+  ['run: duckdb.sql("""', '  SELECT 1', '""")'],
   ['#|', '  renderer=sparkline size=large', '|#', 'dimension: x is 1'],
   ['##|', '  model_tag=value', '|##'],
   [

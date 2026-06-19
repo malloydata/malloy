@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {
@@ -22,6 +20,7 @@ import type {
   TypeDesc,
 } from '../../../model/malloy_types';
 import {
+  activeName,
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
@@ -183,7 +182,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
             return undefined;
           } else {
             if (isAtomic(f) && expressionIsScalar(f.expressionType))
-              return f.as ?? f.name;
+              return activeName(f);
           }
         })
         .filter(isNotUndefined);
@@ -215,7 +214,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
         if (f.type === 'fieldref') {
           return f.path[f.path.length - 1] === name.refString;
         } else {
-          return f.as ?? f.name === name.refString;
+          return activeName(f) === name.refString;
         }
       });
       if (field === undefined) {
@@ -464,7 +463,7 @@ export function attachDrillPaths(
           return updateNestedDrillPaths(f, nestName);
         }
         const fieldName =
-          f.type === 'fieldref' ? f.path[f.path.length - 1] : (f.as ?? f.name);
+          f.type === 'fieldref' ? f.path[f.path.length - 1] : activeName(f);
 
         return {
           ...f,

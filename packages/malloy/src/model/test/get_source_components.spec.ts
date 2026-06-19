@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {Model} from '../../api/foundation';
@@ -14,18 +12,15 @@ import type {
   ModelDef,
   SourceDef,
 } from '../malloy_types';
+import {mkModelDef} from '../utils';
 
 // Helper function to create a Model instance with a specific explore
 function createModelWithExplore(exploreDef: SourceDef): Model {
   const modelDef: ModelDef = {
-    name: 'test_model',
-    exports: [],
+    ...mkModelDef('test_model'),
     contents: {
       [exploreDef.name]: exploreDef,
     },
-    sourceRegistry: {},
-    queryList: [],
-    dependencies: {},
   };
 
   return new Model(modelDef, [], []);
@@ -305,14 +300,10 @@ describe('Explore.getSourceComponents', () => {
 
     // Mock the PreparedQuery for this specific test
     jest.spyOn(model, '_modelDef', 'get').mockReturnValue({
-      name: 'test_model',
-      exports: [],
+      ...mkModelDef('test_model'),
       contents: {
         'query_source_explore': querySourceExplore,
       },
-      sourceRegistry: {},
-      queryList: [],
-      dependencies: {},
     });
 
     const result = model

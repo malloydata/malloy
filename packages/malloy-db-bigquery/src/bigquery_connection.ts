@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -371,16 +353,20 @@ export class BigQueryConnection
     };
   }
 
-  // The whole-backtick form `` `proj.dataset.table` `` parses as one
-  // quoted segment, but the metadata API still wants the parts
-  // separately — split its decoded body on `.` to recover them.
-  private decodeTablePathSegments(tablePath: string): string[] {
-    const result = decodeDottedTablePath(tablePath, {
+  private decodeTablePath(tablePath: string) {
+    return decodeDottedTablePath(tablePath, {
       quoteChar: '`',
       escapeStyle: 'backslash',
       bareIdentRegex: this.dialect.tablePathBareIdentRegex,
       dialectName: 'BigQuery',
     });
+  }
+
+  // The whole-backtick form `` `proj.dataset.table` `` parses as one
+  // quoted segment, but the metadata API still wants the parts
+  // separately — split its decoded body on `.` to recover them.
+  private decodeTablePathSegments(tablePath: string): string[] {
+    const result = this.decodeTablePath(tablePath);
     if (!result.ok) return [tablePath];
     if (result.segments.length === 1 && result.segments[0].quoted) {
       return result.segments[0].value.split('.');
@@ -603,21 +589,46 @@ export class BigQueryConnection
     }
   }
 
+  // tablePath is pasted into the FROM clause verbatim — we never edit the
+  // characters the user wrote. The default project is the one sanctioned
+  // addition: BigQuery resolves an unqualified `dataset.table` against the
+  // job's billing/ambient project, so when the user omits the project we
+  // prepend it as a new leading segment. We do this exactly when the user
+  // wrote a two-segment path; anything else (a single segment, an already-
+  // qualified path, or a path wrapped entirely in backticks — which decodes
+  // to one segment) is left as written, and the user supplies the project.
+  // The project is the one segment we render ourselves, so we quote it if
+  // BigQuery requires it (e.g. a legacy `domain.com:project` id).
+  private qualifyTablePath(tablePath: string): string {
+    const decoded = this.decodeTablePath(tablePath);
+    if (!decoded.ok || decoded.segments.length !== 2) {
+      return tablePath;
+    }
+    return `${this.encodeProjectSegment(this.projectId)}.${tablePath}`;
+  }
+
+  private encodeProjectSegment(project: string): string {
+    // Leave it bare only if the whole id is a bare table-path segment (the
+    // regex anchors the start, so require it to match end to end); otherwise
+    // quote it the way BigQuery would any other identifier.
+    const bare = this.dialect.tablePathBareIdentRegex.exec(project);
+    if (bare && bare[0] === project) {
+      return project;
+    }
+    return this.dialect.sqlQuoteIdentifier(project);
+  }
+
   async fetchTableSchema(
     tableName: string,
     tablePath: string
   ): Promise<TableSourceDef | string> {
-    // Keep the canonical tablePath (which may be backtick-wrapped for
-    // wildcard tables) for downstream SQL emission. The metadata lookup
-    // wants the unwrapped form, which `getTableFieldSchema` handles via
-    // `normalizeTablePath`.
     try {
       const tableFieldSchema = await this.getTableFieldSchema(tablePath);
       const tableDef: TableSourceDef = {
         type: 'table',
         name: tableName,
         dialect: this.dialectName,
-        tablePath,
+        tablePath: this.qualifyTablePath(tablePath),
         connection: this.name,
         fields: [],
       };

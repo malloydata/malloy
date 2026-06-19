@@ -47,7 +47,6 @@ export const SECTION_TOKENS = new Set<number>([
   L.PARTITION_BY,
   L.PRIMARY_KEY,
   L.PRIVATE,
-  L.PROJECT,
   L.PUBLIC,
   L.QUERY,
   L.RENAME,
@@ -91,8 +90,7 @@ export const CALL_HUG_AFTER = new Set<number>([
   L.COMPOSE,
   L.CAST,
   L.NOW,
-  L.LAST,
-  // Ungrouped / level-modifier function-style calls.
+  // Level-modifier function-style calls.
   L.ALL,
   L.EXCLUDE,
   // Timeframe truncation keywords used as functions: year(x), month(x), …

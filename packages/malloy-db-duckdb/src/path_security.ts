@@ -8,6 +8,10 @@ import path from 'path';
 
 export interface CanonicalPathOptions {
   mustExist?: boolean;
+  // Anchor for relative inputs. Defaults to the process cwd (plain
+  // `path.resolve`). Absolute inputs ignore it. Lets a config path resolve
+  // against the project root rather than wherever the host happens to run.
+  baseDirectory?: string;
 }
 
 export function isPosixHost(): boolean {
@@ -16,13 +20,16 @@ export function isPosixHost(): boolean {
 
 export function canonicalizePath(
   input: string,
-  {mustExist = false}: CanonicalPathOptions = {}
+  {mustExist = false, baseDirectory}: CanonicalPathOptions = {}
 ): string {
   if (input.trim() === '') {
     throw new Error('path must not be empty');
   }
 
-  const resolved = path.resolve(input);
+  const resolved =
+    baseDirectory !== undefined
+      ? path.resolve(baseDirectory, input)
+      : path.resolve(input);
   const canonical = (() => {
     try {
       return fs.realpathSync.native(resolved);

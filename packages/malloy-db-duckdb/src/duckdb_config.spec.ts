@@ -6,6 +6,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import {pathToFileURL} from 'url';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {
   buildDuckDBShareKey,
@@ -72,6 +73,75 @@ describe('normalizeDuckDBConfig', () => {
     expect(() =>
       normalizeDuckDBConfig(baseConfig({workingDirectory: ''}))
     ).toThrow('workingDirectory is invalid: path must not be empty');
+  });
+
+  it('accepts a file:// URL workingDirectory and resolves it to a path', () => {
+    // `workingDirectory` defaults to `config.rootDirectory`, which the config
+    // stack carries as a URL string — make sure it lands as a real OS path and
+    // not a `file:`-prefixed segment joined to the process cwd.
+    const normalized = normalizeDuckDBConfig(
+      baseConfig({workingDirectory: pathToFileURL(workingDirectory).toString()})
+    );
+
+    expect(normalized.workingDirectory).toEqual(canonical(workingDirectory));
+  });
+
+  it('resolves a relative databasePath against workingDirectory', () => {
+    const normalized = normalizeDuckDBConfig(
+      baseConfig({workingDirectory, databasePath: 'analytics.duckdb'})
+    );
+
+    expect(normalized.databasePath).toEqual(
+      path.join(canonical(workingDirectory), 'analytics.duckdb')
+    );
+  });
+
+  it('resolves a relative databasePath against a file:// URL workingDirectory', () => {
+    const normalized = normalizeDuckDBConfig(
+      baseConfig({
+        workingDirectory: pathToFileURL(workingDirectory).toString(),
+        databasePath: 'nested/analytics.duckdb',
+      })
+    );
+
+    expect(normalized.databasePath).toEqual(
+      path.join(canonical(workingDirectory), 'nested', 'analytics.duckdb')
+    );
+  });
+
+  it('leaves an absolute databasePath untouched by workingDirectory', () => {
+    // A real file so the result is the path verbatim (no missing-leaf
+    // canonicalization) — proving an absolute path passes through and is not
+    // re-anchored under workingDirectory.
+    const absolute = path.join(allowedA, 'analytics.duckdb');
+    fs.writeFileSync(absolute, '');
+    const normalized = normalizeDuckDBConfig(
+      baseConfig({workingDirectory, databasePath: absolute})
+    );
+
+    expect(normalized.databasePath).toEqual(canonical(absolute));
+    expect(normalized.databasePath).not.toContain(canonical(workingDirectory));
+  });
+
+  it('falls back to cwd for a relative databasePath with no workingDirectory', () => {
+    const normalized = normalizeDuckDBConfig(
+      baseConfig({databasePath: 'analytics.duckdb'})
+    );
+
+    expect(normalized.databasePath).toEqual(
+      path.join(canonical(process.cwd()), 'analytics.duckdb')
+    );
+  });
+
+  it('does not resolve :memory: or remote databasePaths against workingDirectory', () => {
+    expect(
+      normalizeDuckDBConfig(baseConfig({workingDirectory})).databasePath
+    ).toEqual(':memory:');
+    expect(
+      normalizeDuckDBConfig(
+        baseConfig({workingDirectory, databasePath: 'md:malloy'})
+      ).databasePath
+    ).toEqual('md:malloy');
   });
 
   it('does not invent allowedDirectories outside sandboxed mode', () => {

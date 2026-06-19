@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -40,12 +38,13 @@ import {
   barChartSettingsSchema,
 } from './bar-chart-settings';
 import {barChartSettingsToTag} from './settings-to-tag';
+import type {SyntheticSeriesField} from '@/plugins/synthetic-series-field';
 
 export interface BarChartPluginInstance extends CoreVizPluginInstance<BarChartPluginMetadata> {
   getTopNSeries?: (maxSeries: number) => (string | number | boolean)[];
   field: NestField;
   chartDisplay: ChartDisplayConfig;
-  syntheticSeriesField?: Field;
+  syntheticSeriesField?: SyntheticSeriesField;
   hasMultipleSeriesFields?: boolean;
 }
 
@@ -198,19 +197,12 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
           }
 
           if (hasMultipleSeriesFields) {
-            // Create synthetic field
             pluginInstance.syntheticSeriesField = {
               name: seriesFields.map(f => f.name).join(' - '),
+              getLabel: () => seriesFields.map(f => f.getLabel()).join(' - '),
               valueSet: concatenatedValues,
               referenceId: '__synthetic_concatenated_series__',
-              // Minimal Field interface implementation
-              isTime: () => false,
-              isDate: () => false,
-              isBasic: () => true,
-              isNumber: () => false,
-              isString: () => true,
-              isBoolean: () => false,
-            } as unknown as Field;
+            };
           }
         },
 

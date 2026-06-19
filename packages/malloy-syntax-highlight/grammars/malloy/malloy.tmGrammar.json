@@ -1,59 +1,135 @@
 {
   "scopeName": "source.malloy",
-  "patterns": [{ "include": "#malloy-language" }],
+  "patterns": [
+    {
+      "include": "#malloy-language"
+    }
+  ],
   "repository": {
     "malloy-language": {
       "patterns": [
-        { "include": "#sql-string" },
-        { "include": "#comments" },
-        { "include": "#tags" },
-        { "include": "#strings" },
-        { "include": "#numbers" },
-        { "include": "#keywords" },
-        { "include": "#properties" },
-        { "include": "#functions" },
-        { "include": "#datetimes" },
-        { "include": "#identifiers-quoted" },
-        { "include": "#types" },
-        { "include": "#constants" },
-        { "include": "#timeframes" },
-        { "include": "#identifiers-unquoted" }
+        {
+          "include": "#sql-string"
+        },
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#tags"
+        },
+        {
+          "include": "#strings"
+        },
+        {
+          "include": "#given"
+        },
+        {
+          "include": "#percent"
+        },
+        {
+          "include": "#numbers"
+        },
+        {
+          "include": "#keywords"
+        },
+        {
+          "include": "#properties"
+        },
+        {
+          "include": "#functions"
+        },
+        {
+          "include": "#datetimes"
+        },
+        {
+          "include": "#identifiers-quoted"
+        },
+        {
+          "include": "#types"
+        },
+        {
+          "include": "#constants"
+        },
+        {
+          "include": "#timeframes"
+        },
+        {
+          "include": "#identifiers-unquoted"
+        }
       ]
     },
     "malloy-matched": {
       "begin": "{",
       "end": "}",
       "patterns": [
-        { "include": "#malloy-matched" },
-        { "include": "#malloy-language" }
+        {
+          "include": "#malloy-matched"
+        },
+        {
+          "include": "#malloy-language"
+        }
       ]
     },
     "malloy-in-sql": {
-      "begin": "%{",
-      "name": "source.malloy-in-sql",
-      "end": "}%?",
+      "begin": "%\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.section.embedded.begin.malloy"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.embedded.end.malloy"
+        }
+      },
       "patterns": [
-        { "include": "#malloy-matched" },
-        { "include": "#malloy-language" }
+        {
+          "include": "#malloy-matched"
+        },
+        {
+          "include": "#malloy-language"
+        }
       ]
     },
     "sql-string": {
+      "comment": "SQL-ness is the .sql() CONTEXT, not the delimiter — any string argument to connection.sql(...) is SQL (grammar: connectionId DOT SQL OPAREN (sqlString|shortString) CPAREN; connectionId is an `id`). Two NESTED rules so the string can sit on a different line from `.sql(` — a single begin regex cannot span the newline. The OUTER rule opens at `connection.sql(` and closes at the matching `)`; the INNER rule matches the string argument wherever it lands. connection matches an `id`: a Unicode identifier ([\\p{Alphabetic}_]… mirrors the lexer's ID_CHAR) or a backtick-quoted name. The inner quote absorbs an optional raw `s` prefix but captures only the quote, so the \\1 end back-reference closes all of '…', \"…\", s'…', s\"…\", and \"\"\"…\"\"\". #malloy-in-sql gives blocks their %{ } interpolation (harmless inside short/raw strings, where it is vanishingly rare).",
       "patterns": [
         {
-          "begin": "(\\b[A-Za-z_][A-Za-z_0-9]*)(\\s*\\.\\s*)(sql)(\\s*\\(\\s*)(\"\"\")",
-          "end": "\"\"\"",
+          "begin": "(`[^`]*`|[\\p{Alphabetic}_][\\p{Alphabetic}_0-9]*)(\\s*\\.\\s*)((?i:sql))(\\s*\\(\\s*)",
+          "end": "\\)",
           "beginCaptures": {
-            "1": { "name": "variable.other" },
-            "3": { "name": "keyword.control.sql" },
-            "5": { "name": "punctuation.sql-block.open" }
+            "1": {
+              "name": "variable.other.malloy"
+            },
+            "3": {
+              "name": "keyword.control.sql.malloy"
+            }
           },
-          "endCaptures": {
-            "0": { "name": "punctuation.sql-block.close" }
-          },
-          "name": "source.sql",
+          "name": "meta.embedded.block.sql.malloy",
           "patterns": [
-            { "include": "#malloy-in-sql" },
-            { "include": "source.sql" }
+            {
+              "begin": "(?:[sS]\\s*)?(\"\"\"|\"|')",
+              "end": "\\1",
+              "beginCaptures": {
+                "1": {
+                  "name": "punctuation.definition.string.begin.sql.malloy"
+                }
+              },
+              "endCaptures": {
+                "0": {
+                  "name": "punctuation.definition.string.end.sql.malloy"
+                }
+              },
+              "patterns": [
+                {
+                  "include": "#malloy-in-sql"
+                },
+                {
+                  "include": "source.sql"
+                }
+              ]
+            }
           ]
         }
       ]
@@ -61,29 +137,30 @@
     "functions": {
       "patterns": [
         {
-          "match": "(?i)\\b(count)(\\s*\\()(distinct)",
+          "match": "(?i)\\b(all|avg|cast|compose|count|exclude|max|min|sum)(\\s*\\()",
           "captures": {
-            "1": { "name": "entity.name.function" },
-            "3": { "name": "entity.name.function.modifier" }
+            "1": {
+              "name": "support.function.malloy"
+            }
           }
         },
         {
-          "match": "(?i)\\b(ALL|AVG|CAST|COMPOSE|COUNT|EXCLUDE|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|UNGROUPED)(\\s*\\()",
+          "match": "(?i)\\b([a-zA-Z_][a-zA-Z_0-9]*)(!)(timestamp|number|string|boolean|date|json)?(\\s*\\()",
           "captures": {
-            "1": { "name": "entity.name.function" }
+            "1": {
+              "name": "entity.name.function.malloy"
+            },
+            "3": {
+              "name": "storage.type.malloy"
+            }
           }
         },
         {
           "match": "(?i)\\b([a-zA-Z_][a-zA-Z_0-9]*)(\\s*\\()",
           "captures": {
-            "1": { "name": "entity.name.function" }
-          }
-        },
-        {
-          "match": "(?i)\\b([a-zA-Z_][a-zA-Z_0-9]*)(!)(timestamp|number|string|boolean|date)?(\\s*\\()",
-          "captures": {
-            "1": { "name": "entity.name.function" },
-            "3": { "name": "entity.name.type" }
+            "1": {
+              "name": "entity.name.function.malloy"
+            }
           }
         }
       ]
@@ -104,7 +181,7 @@
       "patterns": [
         {
           "match": "`[^`]*`",
-          "name": "variable.other.quoted"
+          "name": "variable.other.quoted.malloy"
         }
       ]
     },
@@ -112,19 +189,27 @@
       "patterns": [
         {
           "match": "(?i)\\b[A-Za-z_][A-Za-z_0-9]*\\b",
-          "name": "variable.other"
+          "name": "variable.other.malloy"
         }
       ]
+    },
+    "given": {
+      "match": "\\$[A-Za-z_][A-Za-z0-9_]*",
+      "name": "variable.parameter.malloy"
+    },
+    "percent": {
+      "match": "[0-9]+%",
+      "name": "constant.numeric.percentage.malloy"
     },
     "timeframes": {
       "patterns": [
         {
           "match": "(?i)\\b((year|quarter|month|week|day|hour|minute|second)s?)\\b",
-          "name": "keyword.other.timeframe"
+          "name": "keyword.other.timeframe.malloy"
         },
         {
           "match": "(?i)\\b(day_of_year|day_of_month)\\b",
-          "name": "keyword.other.timeframe"
+          "name": "keyword.other.timeframe.malloy"
         }
       ]
     },
@@ -134,10 +219,14 @@
           "begin": "/\\*",
           "end": "\\*/",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.comment.begin" }
+            "0": {
+              "name": "punctuation.definition.comment.begin"
+            }
           },
           "endCaptures": {
-            "0": { "name": "punctuation.definition.comment.end" }
+            "0": {
+              "name": "punctuation.definition.comment.end"
+            }
           },
           "name": "comment.block"
         },
@@ -145,7 +234,9 @@
           "begin": "//",
           "end": "\\n",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.comment" }
+            "0": {
+              "name": "punctuation.definition.comment"
+            }
           },
           "name": "comment.line.double-slash"
         },
@@ -153,142 +244,216 @@
           "begin": "--",
           "end": "\\n",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.comment" }
+            "0": {
+              "name": "punctuation.definition.comment"
+            }
           },
           "name": "comment.line.double-hyphen"
         }
       ]
     },
     "tags": {
+      "comment": "Malloy annotations are ROUTED (annotation-prefix.ts parsePrefix; docs.malloydata.dev/documentation/language/tags). The sigil is ##? then an optional block '|'; the route follows it (up to first whitespace) and decides how the content reads. Tag routes — empty (MOTLY) and the claimed sigils ! @ : — carry tag property-language → tag styling. The documentation route (\") and app-defined bracketed routes ( () <> [] {} ) carry prose/markdown/JSON → documentation styling. Routes apply identically to single-line (#/##) and block (#|/##|) forms. The doc-route fragment is repeated per rule because TextMate has no regex variables; (?!docroute) on the tag rules both implements the split and keeps the prefix-sharing begin scanner from dropping the shorter tag begins. Tag-route bodies (line and block alike) embed source.motly — the MOTLY tag-property language (@malloydata/motly-ts-parser) — so keys, values, references, @-literals, arrays, and nested blocks highlight as MOTLY.",
       "patterns": [
         {
-          "begin": "^([ \\t]*)##\\|",
-          "end": "^\\1\\|##",
+          "begin": "^([ \\t]*)(##\\|(?:\"|\\([^\\s)]*\\)|<[^\\s>]*>|\\[[^\\s\\]]*\\]|\\{[^\\s}]*\\}))",
+          "end": "^\\1(\\|##)",
           "beginCaptures": {
-            "0": { "name": "support.type.property-name.json" }
+            "2": {
+              "name": "punctuation.definition.annotation.begin.malloy"
+            }
           },
           "endCaptures": {
-            "0": { "name": "support.type.property-name.json" }
+            "1": {
+              "name": "punctuation.definition.annotation.end.malloy"
+            }
           },
-          "name": "comment.line.double-slash",
-          "patterns": [{ "include": "#tag-values" }]
+          "name": "comment.block.documentation.malloy"
         },
         {
-          "begin": "^([ \\t]*)#\\|",
-          "end": "^\\1\\|#(?!#)",
+          "begin": "^([ \\t]*)(##\\|)(?!(?:\"|\\([^\\s)]*\\)|<[^\\s>]*>|\\[[^\\s\\]]*\\]|\\{[^\\s}]*\\}))",
+          "end": "^\\1(\\|##)",
           "beginCaptures": {
-            "0": { "name": "support.type.property-name.json" }
+            "2": {
+              "name": "punctuation.definition.annotation.begin.malloy"
+            }
           },
           "endCaptures": {
-            "0": { "name": "support.type.property-name.json" }
+            "1": {
+              "name": "punctuation.definition.annotation.end.malloy"
+            }
           },
-          "name": "comment.line.double-slash",
-          "patterns": [{ "include": "#tag-values" }]
+          "name": "meta.annotation.block.malloy",
+          "patterns": [
+            {
+              "include": "source.motly"
+            }
+          ]
         },
         {
-          "match": "##\\n",
-          "name": "string.quoted",
-          "captures": {
-            "0": { "name": "string.quoted" }
-          }
-        },
-        {
-          "begin": "#\"",
-          "end": "\\n",
+          "begin": "^([ \\t]*)(#\\|(?:\"|\\([^\\s)]*\\)|<[^\\s>]*>|\\[[^\\s\\]]*\\]|\\{[^\\s}]*\\}))",
+          "end": "^\\1(\\|#)(?!#)",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.comment" }
+            "2": {
+              "name": "punctuation.definition.annotation.begin.malloy"
+            }
           },
-          "name": "comment.line.double-slash"
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.annotation.end.malloy"
+            }
+          },
+          "name": "comment.block.documentation.malloy"
         },
         {
-          "match": "#\\n",
-          "name": "string.quoted",
-          "captures": {
-            "0": { "name": "string.quoted" }
-          }
-        },
-        {
-          "begin": "#\\s",
-          "end": "\\n",
+          "begin": "^([ \\t]*)(#\\|)(?!(?:\"|\\([^\\s)]*\\)|<[^\\s>]*>|\\[[^\\s\\]]*\\]|\\{[^\\s}]*\\}))",
+          "end": "^\\1(\\|#)(?!#)",
           "beginCaptures": {
-            "0": { "name": "support.type.property-name.json" }
+            "2": {
+              "name": "punctuation.definition.annotation.begin.malloy"
+            }
           },
-          "name": "comment.line.double-slash",
-          "patterns": [{ "include": "#tag-values" }]
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.annotation.end.malloy"
+            }
+          },
+          "name": "meta.annotation.block.malloy",
+          "patterns": [
+            {
+              "include": "source.motly"
+            }
+          ]
         },
         {
-          "begin": "##\\s",
-          "end": "\\n",
+          "begin": "(##?(?:\"|\\([^\\s)]*\\)|<[^\\s>]*>|\\[[^\\s\\]]*\\]|\\{[^\\s}]*\\}))",
+          "end": "$",
           "beginCaptures": {
-            "0": { "name": "support.type.property-name.json" }
+            "1": {
+              "name": "punctuation.definition.annotation.malloy"
+            }
           },
-          "name": "comment.line.double-slash",
-          "patterns": [{ "include": "#tag-values" }]
+          "name": "comment.line.documentation.malloy"
         },
         {
-          "begin": "#",
-          "end": "\\n",
+          "begin": "(##?)(?![|\"(\\[<{])",
+          "end": "$",
           "beginCaptures": {
-            "0": { "name": "string.quoted" }
+            "1": {
+              "name": "punctuation.definition.annotation.malloy"
+            }
           },
-          "name": "string.quoted"
+          "name": "meta.annotation.line.malloy",
+          "patterns": [
+            {
+              "include": "source.motly"
+            }
+          ]
         }
-      ],
-      "repository": {
-        "tag-values": {
-          "name": "support.type.property-name.json",
-          "match": "(-)?((?:[^\\s=#]+)|(?:\"[^#]+\"))(?:\\s*(=)\\s*((?:[^\\s=#]+)|(?:\"[^#]+\")))?",
-          "captures": {
-            "1": { "name": "keyword.control.negate" },
-            "2": { "name": "support.type.property-name.json" },
-            "3": { "name": "keyword.operator.comparison.ts" },
-            "4": { "name": "string.quoted" }
-          }
-        }
-      }
+      ]
     },
     "strings": {
+      "comment": "Order matters: f-/s-/r- prefixed forms begin one char earlier than a bare quote so they win by start position; among same-start ties the triple forms are listed before the single/double forms. Filter (f...) and raw (s...) bodies are opaque in v1 — no inner patterns. The bare triple string has NO interpolation pattern, so %{ } inside it stays plain string text (interpolation is only legal inside .sql(), handled by #sql-string).",
       "patterns": [
         {
-          "begin": "'",
-          "end": "'",
-          "beginCaptures": {
-            "0": { "name": "punctuation.definition.string.begin" }
-          },
-          "endCaptures": {
-            "0": { "name": "punctuation.definition.string.end" }
-          },
-          "name": "string.quoted.single",
-          "patterns": [{ "include": "#escapes" }]
+          "begin": "(?i)\\bf'''",
+          "end": "'''",
+          "name": "string.quoted.filter.malloy"
         },
         {
-          "begin": "\"",
+          "begin": "(?i)\\bf\"\"\"",
+          "end": "\"\"\"",
+          "name": "string.quoted.filter.malloy"
+        },
+        {
+          "begin": "(?i)\\bf'",
+          "end": "'",
+          "name": "string.quoted.filter.malloy"
+        },
+        {
+          "begin": "(?i)\\bf\"",
           "end": "\"",
-          "beginCaptures": {
-            "0": { "name": "punctuation.definition.string.begin" }
-          },
-          "endCaptures": {
-            "0": { "name": "punctuation.definition.string.end" }
-          },
-          "name": "string.quoted.double",
-          "patterns": [{ "include": "#escapes" }]
+          "name": "string.quoted.filter.malloy"
+        },
+        {
+          "begin": "(?i)\\bf`",
+          "end": "`",
+          "name": "string.quoted.filter.malloy"
+        },
+        {
+          "begin": "(?i)\\bs'",
+          "end": "'",
+          "name": "string.quoted.raw.single.malloy"
+        },
+        {
+          "begin": "(?i)\\bs\"",
+          "end": "\"",
+          "name": "string.quoted.raw.double.malloy"
+        },
+        {
+          "begin": "(?i)[r/]'",
+          "end": "'",
+          "name": "string.regexp.malloy",
+          "patterns": [
+            {
+              "include": "#regex-escapes"
+            }
+          ]
         },
         {
           "begin": "\"\"\"",
           "end": "\"\"\"",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.string.begin" }
+            "0": {
+              "name": "punctuation.definition.string.begin.malloy"
+            }
           },
           "endCaptures": {
-            "0": { "name": "punctuation.definition.string.end" }
+            "0": {
+              "name": "punctuation.definition.string.end.malloy"
+            }
           },
-          "name": "string.quoted.triple"
+          "name": "string.quoted.triple.malloy"
         },
         {
-          "begin": "(?i)[r/]'",
+          "begin": "'",
           "end": "'",
-          "name": "string.regexp",
-          "patterns": [{ "include": "#regex-escapes" }]
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.malloy"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.malloy"
+            }
+          },
+          "name": "string.quoted.single.malloy",
+          "patterns": [
+            {
+              "include": "#escapes"
+            }
+          ]
+        },
+        {
+          "begin": "\"",
+          "end": "\"",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.malloy"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.malloy"
+            }
+          },
+          "name": "string.quoted.double.malloy",
+          "patterns": [
+            {
+              "include": "#escapes"
+            }
+          ]
         }
       ],
       "repository": {
@@ -296,14 +461,18 @@
           "name": "constant.character.escape",
           "match": "\\\\(u[A-Fa-f0-9]{4}|.)",
           "captures": {
-            "0": { "name": "constant.character.escape" }
+            "0": {
+              "name": "constant.character.escape"
+            }
           }
         },
         "regex-escapes": {
           "name": "constant.character.escape",
           "match": "\\\\.",
           "captures": {
-            "0": { "name": "constant.character.escape" }
+            "0": {
+              "name": "constant.character.escape"
+            }
           }
         }
       }
@@ -315,324 +484,41 @@
     "constants": {
       "patterns": [
         {
-          "match": "(?i)\\bnull\\b",
-          "name": "constant.language.null"
+          "match": "(?i)\\b(false|now|null|true)\\b",
+          "name": "constant.language.malloy"
         },
         {
-          "match": "(?i)\\btrue\\b",
-          "name": "constant.language.true"
-        },
-        {
-          "match": "(?i)\\bfalse\\b",
-          "name": "constant.language.false"
+          "match": "(?i)\\bthis\\b",
+          "name": "variable.language.malloy"
         }
       ]
     },
     "types": {
       "patterns": [
         {
-          "match": "(?i)\\bstring\\b",
-          "name": "entity.name.type.string"
-        },
-        {
-          "match": "(?i)\\bnumber\\b",
-          "name": "entity.name.type.number"
-        },
-        {
-          "match": "(?i)\\bdate\\b",
-          "name": "entity.name.type.date"
-        },
-        {
-          "match": "(?i)\\btimestamptz\\b",
-          "name": "entity.name.type.timestamptz"
-        },
-        {
-          "match": "(?i)\\btimestamp\\b",
-          "name": "entity.name.type.timestamp"
-        },
-        {
-          "match": "(?i)\\bboolean\\b",
-          "name": "entity.name.type.boolean"
+          "match": "(?i)\\b(boolean|date|json|number|string|timestamp|timestamptz)\\b",
+          "name": "storage.type.malloy"
         }
       ]
     },
     "properties": {
+      "comment": "Two buckets, both keyword.control.malloy. Colon-keywords (the lexer tokens that REQUIRE a trailing ':') only highlight in keyword position via a (?=:) lookahead — so a field named `query`/`index`/`sample` is NOT mis-colored, and the ':' itself stays uncolored. No \\s* before the ':' on purpose (mtoy is killing the lexer's SPACE* allowance; don't replicate it). Bare keywords (incl. dual-form extend/internal/private/public/source) match anywhere, matching their bare lexer tokens.",
       "patterns": [
         {
-          "match": "(?i)\\baccept\\b",
-          "name": "keyword.control.accept"
-        },
-       {
-          "match": "(?i)\\bselect\\b",
-          "name": "keyword.control.select"
+          "match": "(?i)\\b(accept|aggregate|calculate|calculation|connection|declare|dimension|drill|except|given|group_by|grouped_by|having|index|join_cross|join_many|join_one|limit|measure|nest|order_by|partition_by|primary_key|query|rename|run|sample|select|timezone|top|type|view|where)(?=:)",
+          "name": "keyword.control.malloy"
         },
         {
-          "match": "(?i)\\bconnection\\b",
-          "name": "keyword.control.connection"
-        },
-        {
-          "match": "(?i)\\brun\\b",
-          "name": "keyword.control.run"
-        },
-        {
-          "match": "(?i)\\bextend\\b",
-          "name": "keyword.control.extend"
-        },
-        {
-          "match": "(?i)\\brefine\\b",
-          "name": "keyword.control.refine"
-        },
-        {
-          "match": "(?i)\\baggregate\\b",
-          "name": "keyword.control.aggregate"
-        },
-        {
-          "match": "(?i)\\bsample\\b",
-          "name": "keyword.control.sample"
-        },
-        {
-          "match": "(?i)\\bcalculate\\b",
-          "name": "keyword.control.calculate"
-        },
-        {
-          "match": "(?i)\\btimezone\\b",
-          "name": "keyword.control.timezone"
-        },
-        {
-          "match": "(?i)\\bdimension\\b",
-          "name": "keyword.control.dimension"
-        },
-        {
-          "match": "(?i)\\bexcept\\b",
-          "name": "keyword.control.except"
-        },
-        {
-          "match": "(?i)\\bsource\\b",
-          "name": "keyword.control.source"
-        },
-        {
-          "match": "(?i)\\bgroup_by\\b",
-          "name": "keyword.control.group_by"
-        },
-        {
-          "match": "(?i)\\bdrill\\b",
-          "name": "keyword.control.drill"
-        },
-        {
-          "match": "(?i)\\bgrouped_by\\b",
-          "name": "keyword.control.grouped_by"
-        },
-        {
-          "match": "(?i)\\bhaving\\b",
-          "name": "keyword.control.having"
-        },
-        {
-          "match": "(?i)\\bindex\\b",
-          "name": "keyword.control.index"
-        },
-        {
-          "match": "(?i)\\bjoin_one\\b",
-          "name": "keyword.control.join_one"
-        },
-        {
-          "match": "(?i)\\bwith\\b",
-          "name": "keyword.control.with"
-        },
-        {
-          "match": "(?i)\\bjoin_many\\b",
-          "name": "keyword.control.join_many"
-        },
-        {
-          "match": "(?i)\\bjoin_cross\\b",
-          "name": "keyword.control.join_cross"
-        },
-        {
-          "match": "(?i)\\blimit\\b",
-          "name": "keyword.control.limit"
-        },
-        {
-          "match": "(?i)\\bmeasure\\b",
-          "name": "keyword.control.measure"
-        },
-        {
-          "match": "(?i)\\bnest\\b",
-          "name": "keyword.control.nest"
-        },
-        {
-          "match": "(?i)\\border_by\\b",
-          "name": "keyword.control.order_by"
-        },
-        {
-          "match": "(?i)\\bpartition_by\\b",
-          "name": "keyword.control.partition_by"
-        },
-        {
-          "match": "(?i)\\bprimary_key\\b",
-          "name": "keyword.control.primary_key"
-        },
-        {
-          "match": "(?i)\\bproject\\b",
-          "name": "keyword.control.project"
-        },
-        {
-          "match": "(?i)\\bquery\\b",
-          "name": "keyword.control.query"
-        },
-        {
-          "match": "(?i)\\brename\\b",
-          "name": "keyword.control.rename"
-        },
-        {
-          "match": "(?i)\\btop\\b",
-          "name": "keyword.control.top"
-        },
-        {
-          "match": "(?i)\\bview\\b",
-          "name": "keyword.control.view"
-        },
-        {
-          "match": "(?i)\\bwhere\\b",
-          "name": "keyword.control.where"
-        },
-        {
-          "match": "(?i)\\bdeclare\\b",
-          "name": "keyword.control.declare"
-        },
-        {
-          "match": "(?i)\\btype\\b",
-          "name": "keyword.control.type"
-        },
-        {
-          "match": "(?i)\\bgiven\\b",
-          "name": "keyword.control.given"
+          "match": "(?i)\\b(as|asc|by|case|desc|distinct|else|end|export|extend|filter|from|full|has|import|include|inner|internal|is|left|on|pick|private|public|right|source|then|when|with)\\b",
+          "name": "keyword.control.malloy"
         }
       ]
     },
     "keywords": {
       "patterns": [
         {
-          "match": "(?i)\\bis\\b",
-          "name": "keyword.control.is"
-        },
-        {
-          "match": "(?i)\\bon\\b",
-          "name": "keyword.control.on"
-        },
-        {
-          "match": "(?i)\\bnot\\b",
-          "name": "keyword.other.not"
-        },
-        {
-          "match": "(?i)\\bor\\b",
-          "name": "keyword.other.or"
-        },
-        {
-          "match": "(?i)\\bdesc\\b",
-          "name": "keyword.control.desc"
-        },
-        {
-          "match": "(?i)\\bby\\b",
-          "name": "keyword.control.by"
-        },
-        {
-          "match": "(?i)\\band\\b",
-          "name": "keyword.other.and"
-        },
-        {
-          "match": "(?i)\\basc\\b",
-          "name": "keyword.control.asc"
-        },
-        {
-          "match": "(?i)\\bfor\\b",
-          "name": "keyword.other.for"
-        },
-        {
-          "match": "(?i)\\belse\\b",
-          "name": "keyword.other.else"
-        },
-        {
-          "match": "(?i)\\bto\\b",
-          "name": "keyword.other.to"
-        },
-        {
-          "match": "(?i)\\bwhen\\b",
-          "name": "keyword.other.when"
-        },
-        {
-          "match": "(?i)\\bpick\\b",
-          "name": "keyword.other.pick"
-        },
-        {
-          "match": "(?i)\\bimport\\b",
-          "name": "keyword.control.import"
-        },
-        {
-          "match": "(?i)\\binternal\\b",
-          "name": "keyword.control.internal"
-        },
-        {
-          "match": "(?i)\\bpublic\\b",
-          "name": "keyword.control.public"
-        },
-        {
-          "match": "(?i)\\bprivate\\b",
-          "name": "keyword.control.private"
-        },
-        {
-          "match": "(?i)\\binclude\\b",
-          "name": "keyword.control.include"
-        },
-        {
-          "match": "(?i)\\bas\\b",
-          "name": "keyword.control.as"
-        },
-        {
-          "match": "(?i)\\bfrom\\b",
-          "name": "keyword.control.from"
-        },
-        {
-          "match": "(?i)\\bexport\\b",
-          "name": "keyword.control.export"
-        },
-        {
-          "match": "(?i)\\bcase\\b",
-          "name": "keyword.control.case"
-        },
-        {
-          "match": "(?i)\\bthen\\b",
-          "name": "keyword.control.then"
-        },
-        {
-          "match": "(?i)\\bend\\b",
-          "name": "keyword.control.end"
-        },
-        {
-          "match": "(?i)\\bfilter\\b",
-          "name": "keyword.control.filter"
-        },
-        {
-          "match": "(?i)\\bin\\b",
-          "name": "keyword.other.in"
-        },
-        {
-          "match": "(?i)\\blike\\b",
-          "name": "keyword.other.like"
-        },
-        {
-          "match": "(?i)\\binner\\b",
-          "name": "keyword.other.inner"
-        },
-        {
-          "match": "(?i)\\bleft\\b",
-          "name": "keyword.other.left"
-        },
-        {
-          "match": "(?i)\\bright\\b",
-          "name": "keyword.other.right"
-        },
-        {
-          "match": "(?i)\\bfull\\b",
-          "name": "keyword.other.full"
+          "match": "(?i)\\b(and|for|in|like|not|or|to)\\b",
+          "name": "keyword.operator.malloy"
         }
       ]
     }

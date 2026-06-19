@@ -15,7 +15,12 @@ import type {
   AtomicTypeDef,
   QueryValue,
 } from '../../model';
-import {isRepeatedRecord, isBasicArray, isCompoundArrayData} from '../../model';
+import {
+  activeName,
+  isRepeatedRecord,
+  isBasicArray,
+  isCompoundArrayData,
+} from '../../model';
 import {
   rowDataToNumber,
   rowDataToSerializedBigint,
@@ -639,7 +644,7 @@ function walkQueryRecord(
 ): QueryRecord {
   const result: QueryRecord = {};
   for (const fieldDef of structDef.fields) {
-    const fieldName = fieldDef.as ?? fieldDef.name;
+    const fieldName = activeName(fieldDef);
     const value = row[fieldName];
     result[fieldName] = walkValue(value, fieldDef, normalizers);
   }
