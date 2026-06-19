@@ -4,7 +4,11 @@
  */
 
 import type {AnnotationsDef, StructDef} from '../../../model/malloy_types';
-import {activeName, isPersistableSourceDef} from '../../../model/malloy_types';
+import {
+  activeName,
+  isPersistableSourceDef,
+  isSourceDef,
+} from '../../../model/malloy_types';
 import {mkSourceID} from '../../../model/source_def_utils';
 import {checkPersistAnnotation} from '../../../model/persist_utils';
 import {ErrorFactory} from '../error-factory';
@@ -70,9 +74,16 @@ export class DefineSource
           }
         : {...this.note};
     }
-    if (isPersistableSourceDef(entry)) {
+    if (isSourceDef(entry)) {
+      // Every source gets a stable identity for its own definition. referenceID
+      // is left as it arrived: set to the referenced source's sourceID for an
+      // unmodified rename (`source: a is b`), and absent for a source that
+      // defines its own shape (table/sql/query, or a modified/extended source,
+      // which DynamicSpace cleared).
       entry.sourceID = mkSourceID(this.name, this.location?.url);
-      entry.persistent = checkPersistAnnotation(entry).persist;
+      if (isPersistableSourceDef(entry)) {
+        entry.persistent = checkPersistAnnotation(entry).persist;
+      }
     }
     entry.partitionComposite =
       getPartitionCompositeDesc(

@@ -33,6 +33,36 @@ The name a thing goes by in a given context is therefore **`activeName(x)` = `x.
 
 **Corollary for writers:** to rebind a def, set `as`. Never assign `name` and never `delete x.as` to "reset" a name — doing so destroys any identity payload `name` carried. (This was the cause of the joined-virtual-source bug: the join wrote the join name into `name` and deleted `as`, erasing the `virtualMap` key.)
 
+**Source identity (`sourceID` / `referenceID`):**
+
+Every `SourceDef` carries `SourceID` (`name@modelURL`) identity fields, set in
+the translator and resolvable through `ModelDef.sourceRegistry` (the "source-id
+table", which registers every named source by its `sourceID`):
+
+- **`sourceID`** — the identity of this source's *own definition*. Set for every
+  source in `DefineSource`. Unlike `as`, it is captured once at definition and
+  preserved across imports, so it is stable identity. The persistence machinery
+  reads it (gated by `isPersistableSourceDef`); `extends` (persistable only)
+  points at the base source's `sourceID`.
+- **`referenceID`** — set *only* when this source was created as an unmodified
+  reference to another source (`source: a is b`, or a plain join), holding the
+  `sourceID` of the *immediately* referenced source. Set in `NamedSource`
+  (`{...entry, referenceID: entry.sourceID}`) and cleared on the modification
+  path (`DynamicSpace.structDef`), so a table/sql/query source or an
+  `extend`/`include` has no `referenceID`. Thus **`referenceID !== undefined`
+  means "created as a reference"** — no `sourceID` comparison, so it is correct
+  for joins too — and the value resolves through the source-id table to the
+  referenced source and the name it goes by in this model's namespace (the
+  immediate target is always a namespace entry, since you could only write
+  `is b` where `b` resolved by name). Helpers: `resolveSourceRef` (id →
+  SourceDef), `sourceNamespaceReference` (SourceDef → `{name, source}` when it
+  references a namespace entry). The Foundation `Explore` exposes two views of
+  this without leaking the field name: `referenceSourceID` (a comparable id of
+  the referenced source — equal for two sources that refer to the same thing,
+  even when it can't be named here) and `referencedSource()` (the referenced
+  namespace source, read `.name`). Both are undefined when the source defines
+  its own shape.
+
 **Type Definitions:**
 - **`BasicAtomicType`** - String union of simple type names (`string | number | boolean | date | timestamp | timestamptz | json | sql native | error`). Guard: `isBasicAtomicType()`.
 - **`BasicAtomicTypeDef`** - TypeDef union for basic types (each variant may carry metadata, e.g. `NumberTypeDef` has optional `numberType`)
