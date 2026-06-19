@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {errorMessage} from './test-translator';
@@ -312,18 +310,6 @@ describe('custom error messages', () => {
           }
         `).toLogAtLeast(
         errorMessage('Use of grouping is not allowed in a select query')
-      );
-    });
-
-    test('use of project instead of select', () => {
-      expect(`
-          run: a -> {
-            project: *
-          }
-        `).toLogAtLeast(
-        errorMessage(
-          "The 'project:' keyword is no longer supported. Use 'select:' instead."
-        )
       );
     });
 

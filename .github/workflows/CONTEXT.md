@@ -42,6 +42,7 @@ The artifact pattern (build once, fan out) lives entirely inside `release.yaml` 
 - **One trusted publisher per package** — can't trust both `release.yaml` and `prerelease.yaml`; a second registration 409s.
 - **Matching is on the top-level caller workflow filename**, not a reusable workflow it calls.
 - **OIDC auto-enables provenance, which requires `repository.url`** in each published package.json (`{ "type": "git", "url": "https://github.com/malloydata/malloy" }`). Missing it → publish fails with a `422 ... provenance` error. This is the likely failure when adding a new package.
+- **Each package's `LICENSE` is injected at publish time, not committed.** The publish loop copies the root `LICENSE` into every package dir right before `npm publish`, so the MIT text ships in each tarball (npm auto-bundles a package-root `LICENSE` even with a `files` allowlist). Per-file headers are only short `SPDX-License-Identifier: MIT` tags, so this copy is what carries the actual license text plus the historical Google/Meta notices to consumers. `packages/*/LICENSE` is gitignored — don't commit one, and don't drop the `cp` as cleanup.
 
 **Adding a published package:** add the `repository` field, then register the trusted publisher (the two failure modes above).
 

@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 // import {
@@ -55,7 +37,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz} from '../dialect';
+import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -152,6 +134,10 @@ export class MySQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
+  // MySQL builds nested arrays with GROUP_CONCAT (not an array type), which has
+  // no in-expression slice; limiting would need query-level ROW_NUMBER plumbing
+  // the sqlAggregateTurtle seam doesn't expose. Left false (default) explicitly.
+  supportsNestedProjectionLimit = false;
   compoundObjectInSchema = false;
   booleanType: BooleanTypeSupport = 'simulated';
   orderByClause: OrderByClauseType = 'ordinal';
@@ -216,17 +202,24 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    _limit?: number,
+    filterSQL?: string
   ): string {
     const separator = ',';
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    let gc = `GROUP_CONCAT(
-      IF(group_set=${groupSet},
-        JSON_OBJECT(${this.mapFields(fieldList)})
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const json = `JSON_OBJECT(${this.mapFields(fieldList)})`;
+    const element = cond
+      ? `IF(${cond},
+        ${json}
         , null
-        )
+        )`
+      : json;
+    let gc = `GROUP_CONCAT(
+      ${element}
       ${orderByClause}
       SEPARATOR '${separator}'
     )`;

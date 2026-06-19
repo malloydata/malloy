@@ -18,6 +18,11 @@ export interface Taggable {
    */
   readonly annotations: Annotations;
   /**
+   * The model annotations for this object, resolved across its import/extend
+   * lineage. Empty for an object with no model in hand.
+   */
+  readonly modelAnnotations: Annotations;
+  /**
    * @deprecated The RegExp form cannot see multi-line annotations
    * (`#|`…`|#`) and cannot report content offsets for error mapping. Use
    * `annotations.parseAsTag(route)` instead.

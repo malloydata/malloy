@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {annotationToTag} from '@malloydata/malloy';
@@ -268,6 +250,23 @@ describe('tags in results', () => {
     const result = await query.run();
     const modelTags = result.modelTag;
     expect(modelTags.text('from')).toEqual('cell2');
+  });
+  test('inline compiles get distinct, method-labeled model ids', async () => {
+    const src = 'source: one is duckdb.sql("select 1")';
+    const m1 = await runtime.loadModel(src).getModel();
+    const m2 = await runtime.loadModel(src).getModel();
+    const extended = await runtime
+      .loadModel(src)
+      .extendModel('## x=1')
+      .getModel();
+
+    // A URL-less compile is labeled by the operation that made it.
+    expect(m1._modelDef.modelID).toMatch(/^internal:\/\/loadModel\//);
+    expect(extended._modelDef.modelID).toMatch(/^internal:\/\/extendModel\//);
+
+    // Two inline compiles of identical text are still distinct models — they
+    // must not collide on identity (the bug a shared constant URL caused).
+    expect(m1._modelDef.modelID).not.toEqual(m2._modelDef.modelID);
   });
   test('nested fields of same field do not share tags', async () => {
     const loaded = runtime.loadQuery(`

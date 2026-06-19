@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {
@@ -27,6 +9,8 @@ import {
   markSource,
   getSelectOneStruct,
   errorMessage,
+  warningMessage,
+  getQueryFieldDef,
   error,
 } from './test-translator';
 import './parse-expects';
@@ -197,9 +181,9 @@ describe('error handling', () => {
       errorMessage("Output already has a field named 'astr'")
     );
   });
-  test('detect join tail overlap existing ref', () => {
+  test('join tail overlap auto-renames with a warning', () => {
     expect(markSource`run: ab -> { group_by: astr, ${'b.astr'} }`).toLog(
-      errorMessage("Output already has a field named 'astr'")
+      warningMessage(/'b\.astr' was renamed to 'b_astr'/)
     );
   });
   test('undefined in expression with regex compare', () => {
@@ -211,12 +195,15 @@ describe('error handling', () => {
       `
     ).toLog(errorMessage("'meaning_of_life' is not defined"));
   });
-  test('detect output collision on join references', () => {
-    expect(`
-      run: ab -> {
-        group_by: astr, b.astr
-      }
-    `).toLog(errorMessage("Output already has a field named 'astr'"));
+  test('output collision on join reference renames the second field', () => {
+    const m = new TestTranslator('run: ab -> { group_by: astr, b.astr }');
+    const seg = m.getQuery(0)?.pipeline[0];
+    expect(seg).toBeDefined();
+    // first `astr` keeps its name (a bare reference), `b.astr` is renamed
+    const kept = getQueryFieldDef(seg!, 'astr');
+    expect(kept.type).toBe('fieldref');
+    const renamed = getQueryFieldDef(seg!, 'b_astr');
+    expect(renamed.type).toBe('string');
   });
   test('rejoin a query is renamed', () => {
     expect(`

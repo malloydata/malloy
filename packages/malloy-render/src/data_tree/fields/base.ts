@@ -42,6 +42,7 @@ export abstract class FieldBase {
   private _resolvedLabel: string | undefined;
   private _dashboardChildConfig: unknown = undefined;
   private _columnConfig: unknown = undefined;
+  private _validationErrors: string[] = [];
 
   // Get the plugins registered for this field
   getPlugins(): RenderPluginInstance[] {
@@ -110,6 +111,16 @@ export abstract class FieldBase {
 
   setColumnConfig(config: unknown): void {
     this._columnConfig = config;
+  }
+
+  // Validation errors recorded at setup (validateFieldTags) so applyRenderer can
+  // surface them instead of stringifying an unrenderable value to '[object Object]'.
+  addValidationError(message: string): void {
+    this._validationErrors.push(message);
+  }
+
+  getValidationErrors(): string[] {
+    return this._validationErrors;
   }
 
   renderAs(): string {

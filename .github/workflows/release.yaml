@@ -19,7 +19,7 @@ jobs:
           npm run build-duckdb-db
       - name: Tar workspace
         run: tar --exclude='./.git' --use-compress-program='zstd -3 -T0' -cf /tmp/workspace.tzst .
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: workspace
           path: /tmp/workspace.tzst
@@ -30,7 +30,7 @@ jobs:
     needs: pull_and_build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: workspace
       - name: Extract workspace
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ssh-key: ${{ secrets.MALLOY_GHAPI }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: workspace
       - name: Extract workspace
@@ -78,6 +78,11 @@ jobs:
               echo "SKIPPED $PKG_NAME@$VERSION (already published)"
             else
               echo Publishing $PKG_NAME $VERSION
+              # MIT requires the license text to travel with the package. The
+              # per-file headers are short SPDX tags, so copy the full LICENSE
+              # into the package root (npm auto-bundles it). Kept out of git;
+              # see .gitignore for packages/*/LICENSE.
+              cp LICENSE "$package/LICENSE"
               npm publish -w $package --access=public
             fi
           done

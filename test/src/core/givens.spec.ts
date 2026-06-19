@@ -1032,4 +1032,39 @@ describe('givens — `inline` (Pattern A)', () => {
       .run({givens: {ROLE: 'viewer', CAPS: []}});
     expect(denied.data.toObject().length).toBe(0);
   });
+
+  test('inline gate falls back to a referenced regular given default when unsupplied', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        REV_REC_METHOD :: string[] is ['__NO_METHOD__']
+        inline NO_METHOD_RESTRICTIONS :: boolean is '__NO_METHOD__' in $REV_REC_METHOD
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $NO_METHOD_RESTRICTIONS
+        group_by: state
+      }
+    `);
+    // REV_REC_METHOD is NOT supplied → must fall back to its declared
+    // default ['__NO_METHOD__'] → inline gate is true → rows come through.
+    const result = await model.loadQueryByName('q').run();
+    expect(result.data.toObject().length).toBeGreaterThan(0);
+  });
+
+  test('inline gate referencing an unsupplied no-default given is a clear runtime error', async () => {
+    // CAP is surfaced with no default → satisfiability passes, but
+    // omitting it at run time leaves the inline gate nothing to fold.
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given:
+        CAP :: string[]
+        inline CAN_READ :: boolean is 'read' in $CAP
+      query: q is duckdb.table('malloytest.state_facts') -> {
+        where: $CAN_READ
+        group_by: state
+      }
+    `);
+    await expect(model.loadQueryByName('q').run()).rejects.toThrow(
+      /Inline given depends on 'CAP', which has no supplied value and no default/
+    );
+  });
 });

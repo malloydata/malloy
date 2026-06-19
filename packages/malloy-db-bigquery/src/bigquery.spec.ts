@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type * as malloy from '@malloydata/malloy';
@@ -239,6 +221,80 @@ describe('db:BigQuery', () => {
       } finally {
         await conn.close();
       }
+    });
+  });
+
+  describe('table path project qualification', () => {
+    // The default project (BigQuery's defaultProjectId / connection
+    // `projectId`) must end up in the stored tablePath so it lands in the
+    // emitted SQL. Otherwise an unqualified `dataset.table` resolves against
+    // the job's billing/ambient project rather than the default project.
+    const emptySchema = {
+      schema: {fields: []},
+      needsTableSuffixPseudoColumn: false,
+      needsPartitionTimePseudoColumn: false,
+      needsPartitionDatePseudoColumn: false,
+    };
+
+    function makeConnection(
+      projectId = 'my-default-project'
+    ): BigQueryConnection {
+      const conn = new BigQueryConnection({name: 'qualify_test', projectId});
+      jest.spyOn(conn, 'getTableFieldSchema').mockResolvedValue(emptySchema);
+      return conn;
+    }
+
+    async function tablePathOf(
+      conn: BigQueryConnection,
+      tablePath: string
+    ): Promise<string> {
+      const tableDef = await conn.fetchTableSchema('t', tablePath);
+      if (typeof tableDef === 'string') {
+        throw new Error(tableDef);
+      }
+      return tableDef.tablePath;
+    }
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('prepends the default project to a 2-part table path', async () => {
+      expect(await tablePathOf(makeConnection(), 'malloytest.carriers')).toBe(
+        'my-default-project.malloytest.carriers'
+      );
+    });
+
+    it('leaves a fully-qualified 3-part table path unchanged', async () => {
+      expect(
+        await tablePathOf(makeConnection(), 'other-project.malloytest.carriers')
+      ).toBe('other-project.malloytest.carriers');
+    });
+
+    it('prepends the project but leaves a quoted segment verbatim', async () => {
+      // The user's text is pasted as written; we only add the project in front.
+      expect(
+        await tablePathOf(makeConnection(), 'malloytest.`weird table`')
+      ).toBe('my-default-project.malloytest.`weird table`');
+    });
+
+    it('quotes a project id that BigQuery requires quoted', async () => {
+      // A legacy domain-scoped project id is not a bare identifier, so the one
+      // segment we render ourselves gets backtick-quoted.
+      expect(
+        await tablePathOf(
+          makeConnection('google.com:acme'),
+          'malloytest.carriers'
+        )
+      ).toBe('`google.com:acme`.malloytest.carriers');
+    });
+
+    it('leaves a whole-backtick path verbatim (one segment, not two)', async () => {
+      // `\`dataset.table\`` decodes to a single quoted segment, so the
+      // two-segment rule does not fire and we touch nothing.
+      expect(await tablePathOf(makeConnection(), '`my dataset.events_*`')).toBe(
+        '`my dataset.events_*`'
+      );
     });
   });
 

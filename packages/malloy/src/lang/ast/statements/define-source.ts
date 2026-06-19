@@ -1,28 +1,14 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {AnnotationsDef, StructDef} from '../../../model/malloy_types';
-import {activeName, isPersistableSourceDef} from '../../../model/malloy_types';
+import {
+  activeName,
+  isPersistableSourceDef,
+  isSourceDef,
+} from '../../../model/malloy_types';
 import {mkSourceID} from '../../../model/source_def_utils';
 import {checkPersistAnnotation} from '../../../model/persist_utils';
 import {ErrorFactory} from '../error-factory';
@@ -82,12 +68,22 @@ export class DefineSource
     };
     if (this.note) {
       entry.annotations = structDef.annotations
-        ? {...this.note, inherits: structDef.annotations}
-        : this.note;
+        ? {
+            ...this.note,
+            inherits: structDef.annotations,
+          }
+        : {...this.note};
     }
-    if (isPersistableSourceDef(entry)) {
+    if (isSourceDef(entry)) {
+      // Every source gets a stable identity for its own definition. referenceID
+      // is left as it arrived: set to the referenced source's sourceID for an
+      // unmodified rename (`source: a is b`), and absent for a source that
+      // defines its own shape (table/sql/query, or a modified/extended source,
+      // which DynamicSpace cleared).
       entry.sourceID = mkSourceID(this.name, this.location?.url);
-      entry.persistent = checkPersistAnnotation(entry).persist;
+      if (isPersistableSourceDef(entry)) {
+        entry.persistent = checkPersistAnnotation(entry).persist;
+      }
     }
     entry.partitionComposite =
       getPartitionCompositeDesc(

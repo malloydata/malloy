@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -155,6 +137,27 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
+/**
+ * The per-element condition for an aggregate turtle (sqlAggregateTurtle). On
+ * the normal path it gates each row by its group_set (and a projection's own
+ * `where:`). On the single-group-set fast path `groupSet` is `undefined` --
+ * there is no group_set column, every row is in the one group -- so the
+ * condition is just the `where:`, or `undefined` to include unconditionally.
+ * Callers wrap the result in whatever form the dialect uses (`FILTER (WHERE
+ * ...)`, `CASE WHEN ... THEN`, `IF(...)`).
+ */
+export function turtleGroupSetCondition(
+  groupSet: number | undefined,
+  filterSQL: string | undefined
+): string | undefined {
+  if (groupSet === undefined) {
+    return filterSQL;
+  }
+  return filterSQL
+    ? `group_set=${groupSet} AND ${filterSQL}`
+    : `group_set=${groupSet}`;
+}
+
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
@@ -218,6 +221,14 @@ export abstract class Dialect {
 
   // Snowflake can't yet support pipelines in nested views.
   supportsPipelinesInViews = true;
+
+  // Can the dialect apply a `limit:` to a nested `select:` (a projection
+  // nest)? A projection has no group-by keys to ROW_NUMBER-shave on, so the
+  // limit is applied by limiting/slicing the aggregated array inside
+  // `sqlAggregateTurtle`. Defaults false so a new dialect must consciously
+  // opt in (and implement the slice) rather than silently dropping the limit;
+  // the compiler rejects projection `limit:` when this is false.
+  supportsNestedProjectionLimit = false;
 
   // Some dialects don't supporrt arrays (mysql)
   supportsArraysInData = true;
@@ -446,10 +457,21 @@ export abstract class Dialect {
   abstract sqlAnyValue(groupSet: number, fieldName: string): string;
 
   // can array agg or any_value a struct...
+  // `limit`, when set, is a projection nest's row limit applied by slicing the
+  // aggregated array (a projection has no group-by keys to ROW_NUMBER-shave on).
+  // `filterSQL`, when set, is a projection nest's `where:` as a boolean SQL
+  // expression; it folds into the per-element group_set condition (a projection
+  // rides its enclosing group_set, so a scan-level WHERE can't isolate it).
+  // `groupSet` is `undefined` on the single-group-set fast path: there is no
+  // group_set column to filter on (every row is in the one group), so the
+  // array-agg omits its `FILTER (WHERE group_set=N)` and keeps only a
+  // projection's own `where:` (filterSQL), if any.
   abstract sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string;
 
   // Format a CompiledOrderBy[] into an ORDER BY clause string for use
@@ -567,6 +589,38 @@ export abstract class Dialect {
   identifierEscapeStyle: EscapeStyleValue = EscapeStyle.Unset;
 
   /**
+   * Escape the body of a backslash-style quoted token (`EscapeStyle.Backslash`
+   * dialects) — the backslash, the closing `delim`, and newline/CR/tab. The
+   * newline matters: BigQuery rejects a raw one ("Unclosed string literal").
+   * `\0` / U+2028 / U+2029 are passed through (no evidence they break a lexer).
+   */
+  protected escapeBackslashStyle(body: string, delim: string): string {
+    let out = '';
+    for (const ch of body) {
+      switch (ch) {
+        case '\\':
+          out += '\\\\';
+          break;
+        case '\n':
+          out += '\\n';
+          break;
+        case '\r':
+          out += '\\r';
+          break;
+        case '\t':
+          out += '\\t';
+          break;
+        case delim:
+          out += '\\' + delim;
+          break;
+        default:
+          out += ch;
+      }
+    }
+    return out;
+  }
+
+  /**
    * Wrap an identifier in the dialect's quote character, escaping any
    * embedded quote characters per the dialect's `identifierEscapeStyle`.
    * This is the only safe way to render a user-controlled identifier
@@ -585,11 +639,7 @@ export abstract class Dialect {
       return q + identifier.split(q).join(q + q) + q;
     }
     if (this.identifierEscapeStyle === EscapeStyle.Backslash) {
-      const escaped = identifier
-        .replace(/\\/g, '\\\\')
-        .split(q)
-        .join('\\' + q);
-      return q + escaped + q;
+      return q + this.escapeBackslashStyle(identifier, q) + q;
     }
     throw new Error(
       `${this.name}: identifierEscapeStyle is not set. ` +
@@ -943,8 +993,7 @@ export abstract class Dialect {
       return "'" + literal.split("'").join("''") + "'";
     }
     if (this.stringLiteralStyle === 'backslash') {
-      const escaped = literal.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      return "'" + escaped + "'";
+      return "'" + this.escapeBackslashStyle(literal, "'") + "'";
     }
     throw new Error(
       `${this.name}: stringLiteralStyle is not set. ` +
@@ -954,10 +1003,8 @@ export abstract class Dialect {
   }
 
   /**
-   * Render a Malloy regex literal as a SQL string literal. Defaults to
-   * `sqlLiteralString` — the regex engine receives whatever bytes the
-   * SQL parser decodes, and `sqlLiteralString` already produces a
-   * correctly decoding literal for both escape styles.
+   * Render a Malloy regex literal. Defaults to `sqlLiteralString`: the regex
+   * engine receives whatever the SQL parser decodes, which is already correct.
    */
   sqlLiteralRegexp(literal: string): string {
     return this.sqlLiteralString(literal);

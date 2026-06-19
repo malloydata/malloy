@@ -6,11 +6,11 @@
 /**
  * SourceDef Utilities for Persistence
  *
- * Key invariant: sourceID is ONLY assigned in DefineSource when a source
- * gets a name. Factory functions explicitly copy only the fields they need,
- * never using spread, to prevent accidental propagation of sourceID/extends.
- *
- * The `extends` property is set by callers when processing extend blocks.
+ * Key invariant: a source's identity fields (sourceID, referenceID, extends)
+ * are assigned in the translator (DefineSource / the reference path), never by
+ * these compiler factories. The factory functions explicitly copy only the
+ * fields they need, never using spread, so identity is not propagated onto a
+ * freshly built source.
  */
 
 import type {
@@ -78,7 +78,6 @@ export function mkQuerySourceDef(
 
     // StructDefBase
     annotations: base.annotations,
-    modelAnnotations: base.modelAnnotations,
     fields: base.fields,
 
     // Filtered
@@ -97,8 +96,9 @@ export function mkQuerySourceDef(
     partitionComposite: base.partitionComposite,
     errorFactory: base.errorFactory,
 
-    // PersistableSourceProperties - explicitly NOT copied
+    // Identity fields - explicitly NOT copied
     // sourceID: undefined,
+    // referenceID: undefined,
     // extends: undefined,
     // persistent: undefined,
   };
@@ -130,7 +130,6 @@ export function mkSQLSourceDef(
 
     // StructDefBase
     annotations: base.annotations,
-    modelAnnotations: base.modelAnnotations,
     fields: base.fields,
 
     // Filtered
@@ -149,8 +148,9 @@ export function mkSQLSourceDef(
     partitionComposite: base.partitionComposite,
     errorFactory: base.errorFactory,
 
-    // PersistableSourceProperties - explicitly NOT copied
+    // Identity fields - explicitly NOT copied
     // sourceID: undefined,
+    // referenceID: undefined,
     // extends: undefined,
     // persistent: undefined,
   };
@@ -181,28 +181,68 @@ export function mkTableSourceDef(
 // =============================================================================
 
 /**
- * Resolve a sourceID to a SourceDef using the sourceRegistry.
+ * Resolve a SourceID (a source's own `sourceID`, or a `referenceID` pointing at
+ * one) to its SourceDef using the sourceRegistry, returning any kind of source.
  *
  * @param modelDef The model definition containing the registry
- * @param sourceID The sourceID to resolve
+ * @param sourceID The SourceID to resolve
  * @returns The SourceDef if found, undefined otherwise
  */
-export function resolveSourceID(
+export function resolveSourceRef(
   modelDef: ModelDef,
   sourceID: SourceID
-): PersistableSourceDef | undefined {
+): SourceDef | undefined {
   const value = modelDef.sourceRegistry[sourceID];
   if (!value) return undefined;
 
   if (isSourceRegistryReference(value.entry)) {
     const obj = safeRecordGet(modelDef.contents, value.entry.name);
-    return obj && isSourceDef(obj) && isPersistableSourceDef(obj)
-      ? obj
-      : undefined;
+    return obj && isSourceDef(obj) ? obj : undefined;
   }
 
-  // It's a PersistableSourceDef
   return value.entry;
+}
+
+/**
+ * Resolve a sourceID to a persistable SourceDef using the sourceRegistry.
+ *
+ * @param modelDef The model definition containing the registry
+ * @param sourceID The sourceID to resolve
+ * @returns The PersistableSourceDef if found, undefined otherwise
+ */
+export function resolveSourceID(
+  modelDef: ModelDef,
+  sourceID: SourceID
+): PersistableSourceDef | undefined {
+  const sd = resolveSourceRef(modelDef, sourceID);
+  return sd && isPersistableSourceDef(sd) ? sd : undefined;
+}
+
+/** The namespace entry a source refers to (see `sourceNamespaceReference`). */
+export interface NamespaceReference {
+  /** The name this source is bound to in `modelDef.contents`. */
+  name: string;
+  /** The referenced source. */
+  source: SourceDef;
+}
+
+/**
+ * If `sd` was created as an unmodified reference to another source
+ * (`sd.referenceID` is set) and that source is present in this model's
+ * namespace, return it together with the name it goes by. Returns undefined
+ * when `sd` defines its own shape, or when the referenced source is not in this
+ * model's namespace (e.g. an imported source whose own target wasn't imported).
+ */
+export function sourceNamespaceReference(
+  modelDef: ModelDef,
+  sd: SourceDef
+): NamespaceReference | undefined {
+  if (sd.referenceID === undefined) return undefined;
+  const value = modelDef.sourceRegistry[sd.referenceID];
+  if (!value || !isSourceRegistryReference(value.entry)) return undefined;
+  const name = value.entry.name;
+  const source = safeRecordGet(modelDef.contents, name);
+  return source && isSourceDef(source) ? {name, source} : undefined;
 }
 
 /**

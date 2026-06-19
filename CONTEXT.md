@@ -120,6 +120,10 @@ Each database has its own package with connection handling and dialect-specific 
 - `malloy-db-trino/` - Trino/Presto adapter
 - `malloy-db-publisher/` - Publishing/caching layer
 
+#### Native-dependency pins (do not loosen casually)
+
+`snowflake-sdk` (`2.3.1`) and `@databricks/sql` (`1.15.0`) are pinned to exact, pre-native versions, not `^` ranges. Why isn't visible here: downstream clients (the VS Code extension, `malloy-cli`) bundle with esbuild, which can't bundle native `.node` binaries. Newer driver releases ship them, so an unpinned range floats one in and breaks those builds — caught only in their CI. Bumping past these requires externalize-and-ship work in each client first (their `check-native` guard trips otherwise).
+
 ### Supporting Libraries
 - `malloy-interfaces/` - TypeScript interfaces and Thrift-generated types
 - `malloy-render/` - Data visualization and rendering (see [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md))
@@ -311,6 +315,8 @@ For new files, this is the current correct copyright text (here in C/Java/Javasc
 ```
 
 **Do not copy the header from a neighboring file.** Most existing files were created when the project used a longer Google MIT header; the short SPDX form above is what every *new* file must use. The neighboring-file pattern is the most common way to end up with the wrong header by accident. Always use the exact block above for new files, regardless of what the rest of the directory looks like.
+
+This same header is also recorded in the root [`LICENSE`](LICENSE) file, in its "SOURCE FILE HEADER" section.
 
 ## Commit and PR Guidelines
 

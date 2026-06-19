@@ -4,3 +4,4 @@ tsconfig*
 *.spec.*
 storybook-static
 CONTEXT.md
+dist/module/plugins/spec-test-support

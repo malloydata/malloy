@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {
@@ -39,6 +37,15 @@ export abstract class PostgresBase extends Dialect {
   stringLiteralStyle = EscapeStyle.Doubled;
   identifierEscapeStyle = EscapeStyle.Doubled;
   identifierQuoteChar = '"';
+
+  // A raw newline in a doubled literal is valid SQL but gets mangled by the
+  // SQL indenter (indent() in model/utils.ts), so encode it. Postgres/DuckDB
+  // use an E'...' escape string; Trino/Presto override with U&'...'.
+  sqlLiteralString(literal: string): string {
+    return literal.includes('\n')
+      ? `E'${this.escapeBackslashStyle(literal, "'")}'`
+      : super.sqlLiteralString(literal);
+  }
 
   sqlNowExpr(): string {
     return 'LOCALTIMESTAMP';
