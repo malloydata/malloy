@@ -42,6 +42,23 @@ Holds open: `uuid` — 2×medium.
 
 Revisit when: a deliberate uuid migration, or a high/critical uuid advisory lands.
 
+### duckdb-wasm — `@motherduck/wasm-client` held at `^0.6.6`
+Owned by `packages/malloy-db-duckdb` (the duckdb-wasm browser connector,
+`src/duckdb_wasm_connection_browser.ts`). Held because that code is written
+against the old 0.6 API: `0.8` renamed the type exports (`DuckDBDate`,
+`DuckDBDecimal`, `DuckDBList`, the `DuckDBTimestamp*` family, …) and reshaped
+`SpecialDuckDBValue`, so the bump fails `tsc`. It rode the minor/patch group as a
+"minor" — the **0.x trap**, where a 0.x minor is allowed to break — and broke the
+#2911 group build. Now ignored for **all** versions in `dependabot.yml`, matching
+the `@dependabot ignore @motherduck/wasm-client` comment on #2911. (That comment
+lives only in Dependabot's memory; this row + the `ignore` are the durable record.)
+
+Cost: the duckdb-wasm connector can't take `@motherduck/wasm-client` updates, and
+latest is `1.5.3-r.2` — so it's far behind, and the gap grows.
+
+Revisit when: a deliberate migration of `duckdb_wasm_connection_browser.ts` to the
+new `@motherduck/wasm-client` API.
+
 ## Not pins — context, so this list stays short
 
 - **Connector SDKs other than Snowflake** (`trino-client`, `@databricks/sql`,

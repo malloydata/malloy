@@ -15,6 +15,13 @@ updates:
       # unmergeable security PR. The alert stays visible; see dependabot-pins.md.
       - dependency-name: "uuid"
         update-types: ["version-update:semver-major"]
+      # @motherduck/wasm-client held at ^0.6.6: the duckdb-wasm connector
+      # (packages/malloy-db-duckdb) is written against the old 0.6 API. The 0.8
+      # "minor" reshaped the type exports / SpecialDuckDBValue — a 0.x minor that
+      # breaks — so it broke the #2911 group build; latest is 1.5.3-r.2, so moving
+      # it is a deliberate connector migration. No update-types = hold all
+      # versions (matches the @dependabot ignore comment). See dependabot-pins.md.
+      - dependency-name: "@motherduck/wasm-client"
     groups:
       # Not for fragmentation (the per-platform node-bindings are transitive here,
       # so they never fan out). It's a deliberate callout: a duckdb bump has
