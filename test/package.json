@@ -32,12 +32,12 @@
     "@malloydata/render-validator": "0.0.416",
     "events": "^3.3.0",
     "jsdom": "^22.1.0",
-    "luxon": "^3.5.0",
+    "luxon": "^3.7.2",
     "madge": "^6.0.0"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.1",
-    "@types/luxon": "^3.5.0"
+    "@types/luxon": "^3.7.2"
   },
   "overrides": {
     "typescript": "^6.0.3"
