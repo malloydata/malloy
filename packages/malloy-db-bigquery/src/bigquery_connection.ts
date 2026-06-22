@@ -15,6 +15,7 @@ import type bigquery from '@google-cloud/bigquery/build/src/types';
 import type {ResourceStream} from '@google-cloud/paginator';
 import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
+import {inspect} from 'node:util';
 import type {
   Connection,
   ConnectionConfig,
@@ -104,6 +105,13 @@ export class BigQueryAuthenticationError extends Error {
 }
 
 const maybeRewriteError = (e: Error | unknown): Error => {
+  // TEMP bigquery-8 diagnostic (revert once CI reveals the cause): the bigquery-8
+  // stack reports "Unexpected Gaxios Error", which is gaxios-7's wrapper for a
+  // non-Error thrown by the transport. Dump the full value (incl. the wrapped
+  // cause) so the CI log shows what is actually being thrown.
+  console.error(
+    '[bq8-diag] caught error:\n' + inspect(e, {depth: 8, getters: true})
+  );
   // GaxiosError happens if credentials are revoked (for example, client.revokeCredentials()) or if
   // the refresh token is invalid
   // ApiErrors happen if token is revoked (for example, client.revokeToken(creds.access_token!))
