@@ -15,6 +15,30 @@ updates:
       # unmergeable security PR. The alert stays visible; see dependabot-pins.md.
       - dependency-name: "uuid"
         update-types: ["version-update:semver-major"]
+      # @motherduck/wasm-client held at ^0.6.6: the duckdb-wasm connector
+      # (packages/malloy-db-duckdb) is written against the old 0.6 API. The 0.8
+      # "minor" reshaped the type exports / SpecialDuckDBValue — a 0.x minor that
+      # breaks — so it broke the #2911 group build; latest is 1.5.3-r.2, so moving
+      # it is a deliberate connector migration. No update-types = hold all
+      # versions (matches the @dependabot ignore comment). See dependabot-pins.md.
+      - dependency-name: "@motherduck/wasm-client"
+      # vscode-textmate held at 9.0.0: our generateMonarchGrammar.ts deep-imports
+      # internal paths (vscode-textmate/release/theme, /rawGrammar) and rule types
+      # that 9.3.2 — an in-range MINOR — stopped exporting, breaking the
+      # syntax-highlight codegen in #2911. Also exact-pinned in
+      # malloy-syntax-highlight/package.json (^9.0.0 would resolve the breaker on a
+      # fresh install). The real fix is issue #2918; see dependabot-pins.md.
+      - dependency-name: "vscode-textmate"
+      # snowflake-sdk is exact-pinned (2.3.1) in malloy-db-snowflake; ignore here
+      # so Dependabot stops proposing bumps that would otherwise ride the
+      # connectors group. Deliberate bumps happen by hand against live Snowflake
+      # CI. See dependabot-pins.md.
+      - dependency-name: "snowflake-sdk"
+      # vega-lite held at v5 (the renderer's Vega 5->6 upgrade is deferred). It's a
+      # direct dep, so its major opens a recurring monthly PR; ignore the major so
+      # it stops squatting the limit. v5 minors still flow. See dependabot-pins.md.
+      - dependency-name: "vega-lite"
+        update-types: ["version-update:semver-major"]
     groups:
       # Not for fragmentation (the per-platform node-bindings are transitive here,
       # so they never fan out). It's a deliberate callout: a duckdb bump has
@@ -33,6 +57,24 @@ updates:
           - "prettier"
         update-types:
           - "major"
+      # Connector SDKs are high-blast-radius — native bits, dialect-specific, only
+      # meaningfully verified against their live DB CI. Group them so any connector
+      # bump lands as its own deliberate PR instead of riding the routine
+      # minor/patch merge (which is how a @databricks/sql bump slipped in, and how
+      # the motherduck/vscode-textmate breakers poisoned #2911). Held connectors
+      # (snowflake-sdk, @motherduck/*) are also in the ignore list, so they won't
+      # appear here. Placed before minor-and-patch so connector deps match here first.
+      connectors:
+        patterns:
+          - "@google-cloud/*"
+          - "@databricks/*"
+          - "@prestodb/*"
+          - "trino-client"
+          - "snowflake-sdk"
+          - "@motherduck/*"
+          - "mysql2"
+          - "pg"
+          - "pg-query-stream"
       minor-and-patch:
         patterns:
           - "*"

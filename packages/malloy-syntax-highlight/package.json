@@ -40,6 +40,6 @@
     "karma-spec-reporter": "^0.0.36",
     "monaco-editor": "^0.41.0",
     "vscode-oniguruma": "^1.7.0",
-    "vscode-textmate": "^9.0.0"
+    "vscode-textmate": "9.0.0"
   }
 }
