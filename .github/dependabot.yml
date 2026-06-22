@@ -48,6 +48,16 @@ updates:
       # (pg/pg-cursor/pg-query-stream move together); the real fix is issue #2928.
       - dependency-name: "pg"
       - dependency-name: "pg-query-stream"
+      # @google-cloud/bigquery + common + paginator held at v7/v5 (a coupled set).
+      # bigquery 8 -> common 6 -> google-auth-library 10 -> gaxios 7, and gaxios 7
+      # does an ESM-only dynamic import() that fails under jest without
+      # --experimental-vm-modules; that flag can't be made invisible for
+      # `npx jest FILE` and is experimental, so we hold v7. Pinned to best-v7 in
+      # malloy-db-bigquery/package.json. Unpin per issue #2932 (jest->vitest, or
+      # the ESM-only import going away).
+      - dependency-name: "@google-cloud/bigquery"
+      - dependency-name: "@google-cloud/common"
+      - dependency-name: "@google-cloud/paginator"
     groups:
       # Not for fragmentation (the per-platform node-bindings are transitive here,
       # so they never fan out). It's a deliberate callout: a duckdb bump has
