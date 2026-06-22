@@ -48,7 +48,7 @@
     "@storybook/addon-interactions": "^8.6.18",
     "@storybook/addon-links": "^8.6.15",
     "@storybook/blocks": "^8.6.15",
-    "@storybook/builder-vite": "^8.6.15",
+    "@storybook/builder-vite": "^10.4.6",
     "@storybook/html": "^8.6.15",
     "@storybook/html-vite": "^8.6.15",
     "@storybook/manager-api": "^8.6.18",
