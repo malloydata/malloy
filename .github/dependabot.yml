@@ -1,0 +1,49 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 10
+    ignore:
+      # @types/node tracks the Node major; keep it pinned to our runtime (24)
+      # rather than chasing the current/odd Node line.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # uuid is deliberately held at v8 (the fix is a v11/v14 major). This is the
+      # only ignore for a held dependency — it was the one emitting an
+      # unmergeable security PR. The alert stays visible; see dependabot-pins.md.
+      - dependency-name: "uuid"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # Not for fragmentation (the per-platform node-bindings are transitive here,
+      # so they never fan out). It's a deliberate callout: a duckdb bump has
+      # downstream blast radius, so it gets its own PR to be merged on purpose
+      # instead of buried in the monthly minor/patch pile.
+      duckdb:
+        patterns:
+          - "@duckdb/*"
+      toolchain:
+        patterns:
+          - "gts"
+          - "typescript"
+          - "eslint"
+          - "eslint-*"
+          - "@typescript-eslint/*"
+          - "prettier"
+        update-types:
+          - "major"
+      minor-and-patch:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@duckdb/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Security PRs fire on advisory publication, NOT the monthly schedule.
+      # This only collapses advisories that land in the same run into one PR.
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"

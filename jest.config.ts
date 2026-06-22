@@ -1,6 +1,6 @@
 import type {Config} from 'jest';
 
-process.env.TZ = 'America/Los_Angeles';
+process.env['TZ'] = 'America/Los_Angeles';
 
 const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
 
