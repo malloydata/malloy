@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "http-server": "^14.1.1",
-    "rimraf": "^6.0.1",
+    "rimraf": "^6.1.3",
     "typedoc": "^0.28.19"
   }
 }
