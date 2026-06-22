@@ -7,7 +7,7 @@
     "noImplicitReturns": true,
     "jsx": "react-jsx",
     "jsxImportSource": "solid-js",
-    "lib": ["dom", "es2021"],
+    "lib": ["dom", "es2021", "es2022.array", "es2022.string"],
     "paths": {
       "@/*": ["./src/*"]
     },
