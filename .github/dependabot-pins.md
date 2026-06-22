@@ -86,6 +86,21 @@ Cost: held one minor behind; no security advisory rides on it.
 Revisit when: issue #2918 — stop deep-importing vscode-textmate internals, then
 unpin. (Relates to the textmate-grammar-rebuild work.)
 
+### Postgres — `pg` + `pg-query-stream` held as a coupled set
+Owned by `packages/malloy-db-postgres`. `pg-query-stream` pulls `pg-cursor`, which
+**deep-imports `pg`'s internal `lib/result.js`**. The connectors-group PR #2923
+bumped `pg` 8.7→8.22, skewing those versions, and `pg-cursor` could no longer
+resolve the internal path — which broke module resolution in **every** dialect's
+test suite (the shared harness loads the postgres path), not just postgres. `pg`,
+`pg-cursor`, and `pg-query-stream` are a **coupled set** that must move together
+(like the gts/eslint cluster). `pg` is exact-pinned to `8.7.3` in `package.json`
+(the `^8.7.1` range admitted the breaker on a fresh install); both are `ignore`d.
+
+Cost: postgres connector held a few minors behind; no security advisory rides on it.
+
+Revisit when: issue #2928 — bump `pg` + `pg-cursor` + `pg-query-stream` together to
+compatible versions, verify `db-postgres` + the shared harness, then unpin.
+
 ## Not pins — context, so this list stays short
 
 - **Connector SDKs other than Snowflake** (`trino-client`, `@databricks/sql`,
