@@ -23,9 +23,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@google-cloud/bigquery": "^7.3.0",
-    "@google-cloud/common": "^5.0.1",
-    "@google-cloud/paginator": "^5.0.0",
+    "@google-cloud/bigquery": "^8.3.1",
+    "@google-cloud/common": "^6.0.1",
+    "@google-cloud/paginator": "^6.0.2",
     "@malloydata/malloy": "0.0.416",
     "gaxios": "^4.2.0"
   }

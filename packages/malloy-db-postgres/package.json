@@ -24,8 +24,8 @@
   },
   "dependencies": {
     "@malloydata/malloy": "0.0.416",
-    "@types/pg": "^8.6.1",
-    "pg": "^8.7.1",
-    "pg-query-stream": "4.2.3"
+    "@types/pg": "^8.20.0",
+    "pg": "^8.22.0",
+    "pg-query-stream": "4.16.0"
   }
 }
