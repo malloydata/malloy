@@ -33,7 +33,7 @@
     "events": "^3.3.0",
     "jsdom": "^22.1.0",
     "luxon": "^3.7.2",
-    "madge": "^6.0.0"
+    "madge": "^8.0.0"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.1",
