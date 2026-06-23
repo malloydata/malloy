@@ -187,6 +187,10 @@ export class PostgresConnection
     return makeDigest('postgres', this.name);
   }
 
+  protected dejsonRow(row: QueryRecord): QueryRecord {
+    return (row as {row: QueryRecord}).row;
+  }
+
   public get supportsNesting(): boolean {
     return true;
   }
@@ -227,7 +231,7 @@ export class PostgresConnection
     }
     if (deJSON) {
       for (let i = 0; i < result.rows.length; i++) {
-        result.rows[i] = result.rows[i].row;
+        result.rows[i] = this.dejsonRow(result.rows[i]);
       }
     }
     await client.end();
@@ -459,7 +463,7 @@ export class PostgresConnection
     const rowStream = client.query(query);
     let index = 0;
     for await (const row of rowStream) {
-      yield row.row as QueryRecord;
+      yield this.dejsonRow(row);
       index += 1;
       if (
         (rowLimit !== undefined && index >= rowLimit) ||
@@ -574,7 +578,7 @@ export class PooledPostgresConnection
     }
     if (deJSON) {
       for (let i = 0; i < result.rows.length; i++) {
-        result.rows[i] = result.rows[i].row;
+        result.rows[i] = this.dejsonRow(result.rows[i]);
       }
     }
     return {
@@ -597,7 +601,7 @@ export class PooledPostgresConnection
     const client = await pool.connect();
     const resultStream: QueryStream = client.query(query);
     for await (const row of resultStream) {
-      yield row.row as QueryRecord;
+      yield this.dejsonRow(row);
       index += 1;
       if (
         (rowLimit !== undefined && index >= rowLimit) ||

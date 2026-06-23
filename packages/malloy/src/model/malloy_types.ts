@@ -221,6 +221,7 @@ export interface SpreadExpr extends ExprE {
   node: 'spread';
   prefix: string | undefined;
   suffix: string | undefined;
+  separator?: string;
 }
 
 export interface FieldnameNode extends ExprLeaf {

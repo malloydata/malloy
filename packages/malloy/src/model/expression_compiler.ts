@@ -455,13 +455,13 @@ function expandFunctionCall(
   orderBy: string | undefined,
   limit: string | undefined
 ) {
-  function withCommas(es: Expr[]): SQLExprElement[] {
+  function joinWith(es: Expr[], separator: string): SQLExprElement[] {
     const ret: SQLExprElement[] = [];
     for (let i = 0; i < es.length; ) {
       ret.push(es[i]);
       i += 1;
       if (i < es.length) {
-        ret.push(',');
+        ret.push(separator);
       }
     }
     return ret;
@@ -483,14 +483,14 @@ function expandFunctionCall(
         return fragment;
       }
       const spread = entry.argIndexes.map(argIndex => args[argIndex]);
-      return composeSQLExpr(withCommas(spread));
+      return composeSQLExpr(joinWith(spread, fragment.separator ?? ','));
     } else if (fragment.node === 'function_parameter') {
       const entry = paramMap.get(fragment.name);
       if (entry === undefined) {
         return fragment;
       } else if (entry.param.isVariadic) {
         const spread = entry.argIndexes.map(argIndex => args[argIndex]);
-        return composeSQLExpr(withCommas(spread));
+        return composeSQLExpr(joinWith(spread, ','));
       } else {
         return args[entry.argIndexes[0]];
       }
@@ -638,7 +638,18 @@ function generateAnalyticFragment(
 
   const funcSQL = exprToSQL(resultStruct, context, expr, state);
 
-  let retExpr = `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
+  const defaultParamIndex = overload.params.findIndex(
+    p => p.name === 'default'
+  );
+  const defaultSQL =
+    defaultParamIndex >= 0 && args[defaultParamIndex] !== undefined
+      ? exprToSQL(resultStruct, context, args[defaultParamIndex], state)
+      : undefined;
+
+  let retExpr = context.dialect.sqlAnalyticWindowDefault(
+    `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`,
+    defaultSQL
+  );
   if (isComplex) {
     retExpr = `CASE WHEN group_set=${resultStruct.groupSet} THEN ${retExpr} END`;
   }

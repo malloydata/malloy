@@ -1119,6 +1119,13 @@ export abstract class Dialect {
     return `ORDER BY ${orderTerms.join(',')}`;
   }
 
+  sqlAnalyticWindowDefault(
+    windowSQL: string,
+    _defaultSQL: string | undefined
+  ): string {
+    return windowSQL;
+  }
+
   sqlTzStr(qi: QueryInfo): string {
     return `"${qi.queryTimezone}"`;
   }

@@ -43,9 +43,10 @@ export function arg(name: string): Expr {
 export function spread(
   e: Expr,
   prefix: string | undefined = undefined,
-  suffix: string | undefined = undefined
+  suffix: string | undefined = undefined,
+  separator: string | undefined = undefined
 ): Expr {
-  return {node: 'spread', e, prefix, suffix};
+  return {node: 'spread', e, prefix, suffix, separator};
 }
 
 export function sql(

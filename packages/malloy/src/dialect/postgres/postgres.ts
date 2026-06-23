@@ -338,10 +338,7 @@ export class PostgresDialect extends PostgresBase {
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const hashKey = this.sqlSumDistinctHashedKey(key);
 
-    // PostgreSQL requires CAST to NUMERIC before ROUND, which is different
-    // than the generic implementation of sqlSumDistinct, but is OK in
-    // PostgreSQL because NUMERIC has arbitrary precision.
-    const roundedValue = `ROUND(CAST(COALESCE(${value}, 0) AS NUMERIC), 9)`;
+    const roundedValue = `ROUND(CAST(COALESCE(${value}, 0) AS ${this.defaultDecimalType}), 9)`;
     const sumSQL = `SUM(DISTINCT ${roundedValue} + ${hashKey}) - SUM(DISTINCT ${hashKey})`;
     const ret = `CAST(${sumSQL} AS DOUBLE PRECISION)`;
 
