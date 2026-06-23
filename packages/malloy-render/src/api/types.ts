@@ -17,6 +17,13 @@ export type {RenderFieldMetadata} from '@/render-field-metadata';
 /**
  * Explicit theme overrides applied by the embedder.
  *
+ * @experimental Provisional surface, not the finished theming feature.
+ * The property set here is deliberately narrow (mostly table and font
+ * chrome) and will be superseded by a designed theme that also covers the
+ * categorical chart palette, typography by role, and continuous color
+ * schemes. Expect this interface to change; pin a renderer version if you
+ * depend on its current shape.
+ *
  * Resolution order (highest wins): explicit theme key here, then
  * `# theme.<key>` on the result, then `## theme.<key>` on the model,
  * then the CSS fallback `var(--malloy-theme--<kebab>)`. Every key is
@@ -57,6 +64,12 @@ export interface MalloyExplicitTheme {
   fontFamily?: string;
   background?: string;
   /**
+   * @experimental Provisional, and the last bespoke color knob of this
+   * kind. `mapColor` is the one property that crosses from chrome into
+   * chart-data color; it is kept as a one-off to unblock current embedders.
+   * Further color or theme surface will arrive through the designed theme,
+   * not as additional standalone properties like this one.
+   *
    * Saturated end of the gradient used by sequential color scales on
    * `# shape_map` and `# segment_map` choropleth visualizations.
    *
@@ -93,6 +106,10 @@ export interface MalloyRendererOptions {
    * Optional explicit theme overrides. Keys here take precedence over
    * any `# theme.*` annotations on the result and over the renderer's
    * own CSS variable defaults. See {@link MalloyExplicitTheme}.
+   *
+   * @experimental Provisional surface, the shape may change. This is not
+   * yet the finished theming feature; see {@link MalloyExplicitTheme} for
+   * the current property set and that caveat.
    */
   theme?: MalloyExplicitTheme;
 }
