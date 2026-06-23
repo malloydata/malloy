@@ -9,7 +9,7 @@ each pin, is its "Revisit when" now true, and has its cost escalated (a new
 critical behind it)?
 
 **Two surfaces per pin.** A pinned *direct* dependency (`snowflake-sdk`,
-`vega-lite`, `@motherduck/wasm-client`, `vscode-textmate`, `uuid`) emits its own
+`vega-lite`, `@motherduck/wasm-client`, `vscode-textmate`) emits its own
 recurring version-update PR, so each is `ignore`d in `dependabot.yml` to stop it
 squatting the PR limit — and exact-pinned in its `package.json` where the existing
 range would otherwise let a fresh `npm install` resolve the bad version. The
@@ -22,7 +22,8 @@ The npm ecosystem is migrating to ESM-only packages. Our code ships CommonJS and
 our tests run under jest's CJS runtime, so an ESM-only dep can fail to load. But
 **not every ESM-only major is a hold** — split them before deciding:
 
-- **Class 1 — static ESM** (plain `import`/`export`, e.g. `@noble/hashes` v2).
+- **Class 1 — static ESM** (plain `import`/`export`, e.g. `@noble/hashes` v2,
+  `uuid` v14 — whose `node` export condition is itself ESM).
   jest's default `transformIgnorePatterns` skips `node_modules`, so it sees the raw
   `import` and throws *"Cannot use import statement outside a module."* The fix is
   to **transform** it: add the package to `transformIgnoreModules` in
@@ -71,15 +72,6 @@ alert-only). Render-owned only (nothing else pulls them), so the renderer is the
 sole place that clears them.
 
 Revisit when: the renderer's Vega 5→6 upgrade.
-
-### uuid — held at `^8`
-Direct in `@malloydata/malloy`, and transitive through the cloud SDKs. The only
-fix is v11/v14 (six majors). This is the **only** pin that also gets an `ignore`
-in `dependabot.yml`, because it was the one emitting an unmergeable PR.
-
-Holds open: `uuid` — 2×medium.
-
-Revisit when: a deliberate uuid migration, or a high/critical uuid advisory lands.
 
 ### duckdb-wasm — `@motherduck/wasm-client` held at `^0.6.6`
 Owned by `packages/malloy-db-duckdb` (the duckdb-wasm browser connector,

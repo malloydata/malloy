@@ -13,6 +13,7 @@ process.env.TZ = 'America/Los_Angeles';
 const transformIgnoreModules = [
   '@motherduck/wasm-client',
   '@noble/hashes',
+  'uuid',
 ].join('|');
 
 const config: Config = {
