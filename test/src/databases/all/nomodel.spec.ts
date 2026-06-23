@@ -561,12 +561,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  it(`nest/unnest -basic - ${databaseName}`, async () => {
-    // in a joined table when the joined is leafiest
-    //  we need to make sure we don't count rows that
-    //  don't match the join.
-    const testModel = wrapTestModel(runtime, '');
-    await expect(`
+  it.when(runtime.supportsNesting)(
+    `nest/unnest -basic - ${databaseName}`,
+    async () => {
+      // in a joined table when the joined is leafiest
+      //  we need to make sure we don't count rows that
+      //  don't match the join.
+      const testModel = wrapTestModel(runtime, '');
+      await expect(`
       run: ${databaseName}.table('malloytest.state_facts') -> {
         group_by: state
         aggregate: c is airport_count.sum()
@@ -579,11 +581,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         aggregate: p.d.sum()
       }
       `).toMatchResult(testModel, {
-      state: 'TX',
-      c: 1845,
-      d: 1845,
-    });
-  });
+        state: 'TX',
+        c: 1845,
+        d: 1845,
+      });
+    }
+  );
 
   it(`count at root should not use distinct key - ${databaseName}`, async () => {
     const q = await runtime
@@ -598,7 +601,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(q.sql.toLowerCase()).not.toContain('distinct');
   });
 
-  it.when(runtime.dialect.supportsLeftJoinUnnest)(
+  it.when(runtime.supportsNesting && runtime.dialect.supportsLeftJoinUnnest)(
     `leafy nested count - ${databaseName}`,
     async () => {
       // in a joined table when the joined is leafiest
@@ -953,9 +956,13 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     expect(result.data.path(0, 'carrier').string.value).toBe('AA');
   });
 
-  it(`all with parameters - basic  - ${databaseName}`, async () => {
-    const testModel = wrapTestModel(runtime, '');
-    await expect(`
+  // exclude() partitions a window on a CASE expression; Redshift's planner rejects that and
+  // has no LATERAL-subquery escape hatch (the path BigQuery/Databricks use).
+  it.when(databaseName !== 'redshift')(
+    `all with parameters - basic  - ${databaseName}`,
+    async () => {
+      const testModel = wrapTestModel(runtime, '');
+      await expect(`
       run: ${databaseName}.table('malloytest.state_facts') extend  {
         measure: total_births is births.sum()
       } -> {
@@ -966,10 +973,11 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           all_name is exclude(total_births, state)
       }
     `).toMatchResult(testModel, {
-      all_births: 295727065,
-      all_name: 197260594,
-    });
-  });
+        all_births: 295727065,
+        all_name: 197260594,
+      });
+    }
+  );
 
   test.when(runtime.supportsNesting)(
     `all with parameters - nest  - ${databaseName}`,

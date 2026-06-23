@@ -98,7 +98,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
   });
 
   // Array Tests - Inferred
-  test(`${db} inferred arrays`, async () => {
+  test.when(runtime.supportsNesting)(`${db} inferred arrays`, async () => {
     const sql = ts.generate({
       string_array: ['a', 'b', 'c'],
       number_array: [1, 2, 3],
@@ -109,24 +109,28 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
   });
 
   // Array Tests - Explicit mk_array
-  test(`${db} explicit array creation with mk_array`, async () => {
-    const sql = ts.generate({
-      string_arr: ts.mk_array(['a', 'b', 'c']),
-      number_arr: ts.mk_array([1, 2, 3]),
-      typed_arr: ts.mk_array([ts.mk_int(1), ts.mk_int(2), ts.mk_int(3)]),
-    });
-    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
-      {
-        string_arr: ['a', 'b', 'c'],
-        number_arr: [1, 2, 3],
-        typed_arr: [1, 2, 3],
-      },
-    ]);
-  });
+  test.when(runtime.supportsNesting)(
+    `${db} explicit array creation with mk_array`,
+    async () => {
+      const sql = ts.generate({
+        string_arr: ts.mk_array(['a', 'b', 'c']),
+        number_arr: ts.mk_array([1, 2, 3]),
+        typed_arr: ts.mk_array([ts.mk_int(1), ts.mk_int(2), ts.mk_int(3)]),
+      });
+      await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
+        {
+          string_arr: ['a', 'b', 'c'],
+          number_arr: [1, 2, 3],
+          typed_arr: [1, 2, 3],
+        },
+      ]);
+    }
+  );
 
   // mysql and postgres don't have literal records that Malloy can read
   // so when reading a record, it will just see json
-  const testRecords = db !== 'mysql' && db !== 'postgres';
+  const testRecords =
+    db !== 'mysql' && db !== 'postgres' && runtime.supportsNesting;
 
   describe('tests involving records', () => {
     // Record Tests - Inferred

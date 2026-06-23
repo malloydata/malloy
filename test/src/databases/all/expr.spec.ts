@@ -134,7 +134,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   // simple turtle expressions
-  it('simple turtle', async () => {
+  test.when(runtime.supportsNesting)('simple turtle', async () => {
     await expect(`
       // # test.debug
       run:  ${databaseName}.table('malloytest.state_facts') -> {
@@ -153,7 +153,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  it('double turtle', async () => {
+  test.when(runtime.supportsNesting)('double turtle', async () => {
     await expect(`
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         aggregate: airport_count.sum()
@@ -180,7 +180,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  it('double turtle - pipeline', async () => {
+  test.when(runtime.supportsNesting)('double turtle - pipeline', async () => {
     await expect(`
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         aggregate: airport_count.sum()

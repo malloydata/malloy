@@ -31,7 +31,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(data.length).toBe(3);
     });
 
-    test('limit nest one', async () => {
+    test.when(runtime.supportsNesting)('limit nest one', async () => {
       const {data} = await runQuery(
         testModel,
         `
@@ -52,7 +52,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(data[0]).toHaveProperty('one.0.state', 'AZ');
     });
 
-    test('limit nest with having', async () => {
+    test.when(runtime.supportsNesting)('limit nest with having', async () => {
       const {data} = await runQuery(
         testModel,
         `
@@ -74,10 +74,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(data[0]).toHaveProperty('one.0.state', 'AK');
     });
 
-    test('limit two nests with having', async () => {
-      const {data} = await runQuery(
-        testModel,
-        `
+    test.when(runtime.supportsNesting)(
+      'limit two nests with having',
+      async () => {
+        const {data} = await runQuery(
+          testModel,
+          `
         run: ${databaseName}.table('malloytest.state_facts') -> {
           nest: name is {
             group_by: popular_name
@@ -91,18 +93,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
         `
-      );
-      expect(data.length).toBe(1);
-      expect(data[0]).toHaveProperty('name.length', 3);
-      expect(data[0]).toHaveProperty('name.0.popular_name', 'Sophia');
-      expect(data[0]).toHaveProperty('by_state.length', 2);
-      expect(data[0]).toHaveProperty('by_state.0.state', 'AK');
-    });
+        );
+        expect(data.length).toBe(1);
+        expect(data[0]).toHaveProperty('name.length', 3);
+        expect(data[0]).toHaveProperty('name.0.popular_name', 'Sophia');
+        expect(data[0]).toHaveProperty('by_state.length', 2);
+        expect(data[0]).toHaveProperty('by_state.0.state', 'AK');
+      }
+    );
 
-    test('limit 2 stage second with nest with having', async () => {
-      const {data} = await runQuery(
-        testModel,
-        `
+    test.when(runtime.supportsNesting)(
+      'limit 2 stage second with nest with having',
+      async () => {
+        const {data} = await runQuery(
+          testModel,
+          `
         run: ${databaseName}.table('malloytest.state_facts') -> {
           select: *
         } -> {
@@ -116,14 +121,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
         `
-      );
-      expect(data.length).toBe(3);
-      expect(data[0]).toMatchObject({popular_name: 'Sophia'});
-      expect(data[0]).toHaveProperty('one.length', 2);
-      expect(data[0]).toHaveProperty('one.0.state', 'AK');
-    });
+        );
+        expect(data.length).toBe(3);
+        expect(data[0]).toMatchObject({popular_name: 'Sophia'});
+        expect(data[0]).toHaveProperty('one.length', 2);
+        expect(data[0]).toHaveProperty('one.0.state', 'AK');
+      }
+    );
 
-    test('limit index 2 stage', async () => {
+    test.when(runtime.supportsNesting)('limit index 2 stage', async () => {
       const {data} = await runQuery(
         testModel,
         `
@@ -150,10 +156,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(data[1]).toHaveProperty('values.0.weight', 24);
     });
 
-    test('limit select - in pipeline', async () => {
-      const {data} = await runQuery(
-        testModel,
-        `
+    test.when(runtime.supportsNesting)(
+      'limit select - in pipeline',
+      async () => {
+        const {data} = await runQuery(
+          testModel,
+          `
         run: ${databaseName}.table('malloytest.state_facts') -> {
           group_by: popular_name
           aggregate: c is count()
@@ -168,9 +176,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           limit: 2
         }
         `
-      );
-      expect(data.length).toBe(2);
-    });
+        );
+        expect(data.length).toBe(2);
+      }
+    );
 
     test.when(
       runtime.supportsNesting &&

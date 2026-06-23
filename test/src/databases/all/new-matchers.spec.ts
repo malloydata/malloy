@@ -68,20 +68,23 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
       });
     });
 
-    test('arrays with type inference', async () => {
-      const tm = mkTestModel(runtime, {
-        data: [
-          {
-            string_array: ['a', 'b', 'c'],
-            number_array: [1, 2, 3],
-          },
-        ],
-      });
-      await expect('run: data -> { select: * }').toMatchResult(tm, {
-        string_array: ['a', 'b', 'c'],
-        number_array: [1, 2, 3],
-      });
-    });
+    test.when(runtime.supportsNesting)(
+      'arrays with type inference',
+      async () => {
+        const tm = mkTestModel(runtime, {
+          data: [
+            {
+              string_array: ['a', 'b', 'c'],
+              number_array: [1, 2, 3],
+            },
+          ],
+        });
+        await expect('run: data -> { select: * }').toMatchResult(tm, {
+          string_array: ['a', 'b', 'c'],
+          number_array: [1, 2, 3],
+        });
+      }
+    );
   });
 
   describe('toMatchResult (partial matching)', () => {
