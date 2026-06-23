@@ -1,0 +1,30 @@
+{
+  "name": "@malloydata/db-redshift",
+  "version": "0.0.416",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest --config=../../jest.config.js",
+    "build": "tsc --build",
+    "dev": "tsc --build",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@malloydata/db-postgres": "0.0.416",
+    "@malloydata/malloy": "0.0.416",
+    "@types/pg": "^8.6.1",
+    "pg": "^8.7.1"
+  }
+}
