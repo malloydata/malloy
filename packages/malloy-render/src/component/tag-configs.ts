@@ -323,7 +323,7 @@ export interface DashboardNestConfig {
  * universal field base.
  */
 export interface DashboardChildConfig {
-  span?: number;
+  colspan?: number;
   subtitle?: string;
   break?: boolean;
   borderless?: boolean;
@@ -412,21 +412,20 @@ export function resolveBuiltInTags(field: Field): void {
       if (field.isNest()) {
         for (const child of field.fields) {
           const childTag = child.tag;
-          // Read each child tag unconditionally so any present span/subtitle/
+          // Read each child tag unconditionally so any present colspan/subtitle/
           // break/borderless is marked read; absent tags need no marking since
           // the unread-tag detector only walks present properties. This is why
           // the dashboard no longer needs childOwnedPaths entries.
           const childConfig: DashboardChildConfig = {};
-          const spanVal = childTag.numeric('span');
-          // Drop out-of-range spans so the field gets its default span;
+          const colspanVal = childTag.numeric('colspan');
+          // Drop invalid colspans so the tile keeps its default of one column;
           // the validator already logged the error.
           if (
-            spanVal !== undefined &&
-            Number.isInteger(spanVal) &&
-            spanVal >= 1 &&
-            spanVal <= 12
+            colspanVal !== undefined &&
+            Number.isInteger(colspanVal) &&
+            colspanVal >= 1
           ) {
-            childConfig.span = spanVal;
+            childConfig.colspan = colspanVal;
           }
           const subtitle = childTag.text('subtitle');
           if (subtitle !== undefined) {

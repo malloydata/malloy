@@ -9,7 +9,7 @@ const BUILT_IN_RENDERER_VALIDATION_SPECS: Record<
 > = {
   dashboard: {
     renderer: 'dashboard',
-    // No childOwnedPaths needed: resolveBuiltInTags reads span/subtitle/
+    // No childOwnedPaths needed: resolveBuiltInTags reads colspan/subtitle/
     // break/borderless on every dashboard child at setup time, which marks
     // them read so the unread-tag detector never warns. Declaring them here
     // too would be redundant.

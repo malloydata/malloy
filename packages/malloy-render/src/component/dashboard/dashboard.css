@@ -41,7 +41,7 @@
     padding-top: 12px;
   }
 
-  .dashboard-row-body.dashboard-grid {
+  .dashboard-row-body.dashboard-columns {
     display: grid;
   }
 
@@ -63,7 +63,7 @@
     transition: box-shadow 0.2s ease;
   }
 
-  .dashboard-grid .dashboard-item {
+  .dashboard-columns .dashboard-item {
     width: auto;
     height: auto;
     min-width: 0;
@@ -73,11 +73,11 @@
   /* Flex mode: without a min-width, fit-content lets items shrink
      indefinitely and flex-wrap never triggers. These values must match
      MIN_WIDTH_ITEM / MIN_WIDTH_MEASURE in dashboard.tsx. */
-  .dashboard-row-body:not(.dashboard-grid) .dashboard-item {
+  .dashboard-row-body:not(.dashboard-columns) .dashboard-item {
     min-width: 300px;
   }
 
-  .dashboard-row-body:not(.dashboard-grid) .dashboard-item-measure {
+  .dashboard-row-body:not(.dashboard-columns) .dashboard-item-measure {
     min-width: 120px;
   }
 
@@ -98,7 +98,7 @@
   /* container-type only works in grid where items get a definite width from the grid;
      in flex mode the containment collapses the card since fit-content + inline-size
      containment creates a circular dependency. */
-  .dashboard-grid .dashboard-item-measure {
+  .dashboard-columns .dashboard-item-measure {
     container-type: inline-size;
   }
 
@@ -180,7 +180,7 @@
     color: var(--malloy-render--dashboard-value-color, #111827);
   }
 
-  .dashboard-grid .dashboard-item-value-measure {
+  .dashboard-columns .dashboard-item-value-measure {
     font-size: clamp(12px, 10cqi, var(--malloy-render--dashboard-value-size, 32px));
   }
 

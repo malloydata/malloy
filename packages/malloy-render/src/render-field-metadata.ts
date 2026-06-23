@@ -515,46 +515,41 @@ export class RenderFieldMetadata {
         );
       }
 
-      // Grid mode is driven by columns/gap only. Mirror the clamping in
-      // resolveDashboardTags so this matches what the renderer actually does:
-      // an invalid columns or gap value falls back to flex, where # span has
-      // no effect. columnsActive distinguishes true columns mode (span
-      // ignored) from a gap-only grid (span honored).
+      // # colspan only does anything in columns mode (a valid columns=N).
+      // Mirror the clamping in resolveDashboardTags: an invalid columns value
+      // falls back to flex mode, where colspan has no effect.
       const columnsActive =
         columnsVal !== undefined &&
         Number.isInteger(columnsVal) &&
         columnsVal >= 1;
-      const hasGrid = columnsActive || (gapVal !== undefined && gapVal >= 0);
 
       // Validate dashboard-owned child tags
       for (const child of field.fields) {
-        const childSpan = child.tag.numeric('span');
-        if (child.tag.has('span') && childSpan === undefined) {
+        const childColspan = child.tag.numeric('colspan');
+        if (child.tag.has('colspan') && childColspan === undefined) {
           // Present but non-numeric (e.g. "foo", "half"). numeric() drops it
-          // to undefined, so flag it rather than let the span silently vanish.
+          // to undefined, so flag it rather than let the colspan silently vanish.
           log.error(
-            `Invalid # span on '${child.name}': expected an integer 1–12, got a non-numeric value. Fix: # span=6.`,
-            child.tag.tag('span')
+            `Invalid # colspan on '${child.name}': expected a positive integer, got a non-numeric value. Fix: # colspan=2.`,
+            child.tag.tag('colspan')
           );
-        } else if (childSpan !== undefined) {
-          const inRange =
-            Number.isInteger(childSpan) && childSpan >= 1 && childSpan <= 12;
-          if (!inRange) {
+        } else if (childColspan !== undefined) {
+          if (!Number.isInteger(childColspan) || childColspan < 1) {
             log.error(
-              `Invalid # span on '${child.name}': expected an integer 1–12, got ${childSpan}. Fix: # span=6.`,
-              child.tag.tag('span')
+              `Invalid # colspan on '${child.name}': expected a positive integer, got ${childColspan}. Fix: # colspan=2.`,
+              child.tag.tag('colspan')
             );
-          } else if (columnsActive) {
-            // Well-formed but not honored here: "Ignored", not "Invalid". The
-            // else-if keeps this from co-firing with the range error above.
+          } else if (!columnsActive) {
+            // Well-formed but inert here: "Ignored", not "Invalid". The else-if
+            // keeps this from co-firing with the validity error above.
             log.warn(
-              `Ignored # span on '${child.name}': span is ignored when parent dashboard '${field.name}' uses columns mode. Fix: remove # span or remove dashboard.columns.`,
-              child.tag.tag('span')
+              `Ignored # colspan on '${child.name}': colspan only applies in columns mode. Fix: add # dashboard { columns=N } to '${field.name}', or remove # colspan.`,
+              child.tag.tag('colspan')
             );
-          } else if (!hasGrid) {
+          } else if (childColspan > columnsVal!) {
             log.warn(
-              `Ignored # span on '${child.name}': span is ignored when parent dashboard '${field.name}' has no grid (no columns or gap). Fix: add # dashboard { gap=16 } (or columns=N) to enable a grid, or remove # span.`,
-              child.tag.tag('span')
+              `# colspan=${childColspan} on '${child.name}' exceeds the ${columnsVal} columns on '${field.name}' and will be clamped to ${columnsVal}. Fix: use a # colspan between 1 and ${columnsVal}, or widen # dashboard { columns }.`,
+              child.tag.tag('colspan')
             );
           }
         }

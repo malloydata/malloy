@@ -407,19 +407,21 @@ When data is limited, charts display informational messages:
 
 Arranges multiple nested views into a dashboard layout. Each nested view is rendered in its own tile.
 
+The dashboard has two layout modes. Flex mode is the default: tiles flow into a row and wrap onto a new row when it fills. Columns mode is entered with `columns=N`: tiles are placed into N equal-width columns.
+
 **Properties:**
 
 - `.table.max_height`: Sets a maximum pixel height for tables rendered within dashboard tiles. Useful for controlling layout with large tables. Set to `'none'` to disable max height.
   - Syntax: `# dashboard { table.max_height=400 }` or `# dashboard { table.max_height=none }`
-- `.columns` (integer): Lays the tiles out in an equal-width grid of N columns that wraps onto new rows as needed. Per-tile `# span` is ignored in this mode.
+- `.columns` (integer): Enters columns mode with N equal-width columns. A tile occupies one column by default and wraps onto a new row when a row fills. Use `# colspan` to make a tile occupy more than one column.
   - Syntax: `# dashboard { columns=3 }`
-- `.gap` (pixels): Sets the spacing between tiles. Setting `gap` also switches the dashboard out of the default flex-wrap layout into the per-row grid (where `# span` is honored). Use `columns` instead if you want an equal-width wrapping grid. Default is 16.
+- `.gap` (pixels): Sets the spacing between tiles, in both flex mode and columns mode. Default is 16.
   - Syntax: `# dashboard { gap=24 }`
 
 **Per-tile tags (applied to a nested view):**
 
-- `# span` (integer 1 to 12): Sets the tile's proportion of its row. Each `# break` group is laid out as one row, and the spans in that row divide it (for example, span=8 beside span=4 gives a wide chart next to a narrow KPI). This is a proportion within a single non-wrapping row, not a wrapping 12-column grid: a row does not wrap when its spans total more than 12, and `# span` only takes effect when the dashboard has a grid (`columns` or `gap`).
-- `# break`: Starts a new row. Tiles after a `# break` begin a fresh row. Works in both the default and grid layouts.
+- `# colspan` (integer): In columns mode, makes the tile occupy that many columns (one by default). When a row's tiles total more than the column count, the overflow wraps onto the next row. Ignored in flex mode.
+- `# break`: Starts a new row. Tiles after a `# break` begin a fresh row. Works in both flex mode and columns mode.
 
 **Example:**
 

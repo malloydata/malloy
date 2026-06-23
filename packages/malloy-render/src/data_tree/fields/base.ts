@@ -86,7 +86,7 @@ export abstract class FieldBase {
   }
 
   /**
-   * Get the pre-resolved dashboard child config (span, subtitle, break,
+   * Get the pre-resolved dashboard child config (colspan, subtitle, break,
    * borderless) for a field that is a direct child of a # dashboard nest.
    * Resolved at setup time so the dashboard component never reads tags at
    * render time. Stored as one per-child config object rather than as

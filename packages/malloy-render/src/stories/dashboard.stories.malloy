@@ -43,8 +43,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // FLEX STORIES: no span/columns/gap signal (break is allowed here too; in
-  // flex it just forces a new wrapping row)
+  // FLEX MODE STORIES: no columns signal (the default). Tiles flow into a
+  // row and wrap when it fills. # break still forces a new wrapping row.
   // ============================================
 
   // ============================================
@@ -164,7 +164,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
 
   // ============================================
   // Table with nested charts inside a dashboard
-  // Should auto-detect sub-nests and get full-width (span 12)
+  // Should auto-detect sub-nests and render full-width
   // ============================================
   #(story)
   # dashboard
@@ -190,8 +190,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Break in flex mode: # break forces a new wrapping row even without a
-  // grid. Span is not used here (it would warn) because there is no grid.
+  // Break in flex mode: # break forces a new wrapping row. # colspan is not
+  // used here because it has no effect in flex mode.
   // ============================================
   #(story)
   # dashboard
@@ -208,7 +208,9 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // GRID STORIES: use span/columns/gap/break tags
+  // COLUMNS MODE STORIES: columns=N, with # colspan to widen a tile and
+  // # break to start a new row. # colspan is on a scale of the column count
+  // (these stories use columns=12 to map the earlier 12-wide proportions).
   // ============================================
 
   // ============================================
@@ -216,7 +218,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // ============================================
   #(story)
   # dashboard { columns = 3 }
-  view: dashboard_columns_3_grid is {
+  view: dashboard_columns_3 is {
     group_by:
       category
     # currency
@@ -231,7 +233,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // ============================================
   #(story)
   # dashboard { columns = 2 }
-  view: dashboard_columns_2_grid is {
+  view: dashboard_columns_2 is {
     group_by:
       category
     # currency
@@ -248,20 +250,20 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Per-item span sets each tile's proportion of its row
-  // span 8 beside span 4 = wide chart next to a narrow KPI
+  // # colspan widens a tile. On a 12-column layout, colspan 8 beside colspan 4
+  // = a wide chart next to a narrow KPI.
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_span_8_4_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_colspan_8_4_columns is {
     group_by:
       category
     aggregate:
-      # span = 4
+      # colspan = 4
       # currency
       avg_retail is retail_price.avg()
     nest:
-      # span = 8
+      # colspan = 8
       by_brand is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
@@ -270,40 +272,39 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Per-item span: three items at 4+4+4
+  // # colspan: three items at 4+4+4 on a 12-column layout (equal thirds)
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_span_equal_thirds_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_colspan_thirds_columns is {
     group_by:
       category
     # currency
     aggregate:
-      # span = 4
+      # colspan = 4
       avg_retail is retail_price.avg()
-      # span = 4
+      # colspan = 4
       sum_retail is retail_price.sum()
-      # span = 4
+      # colspan = 4
       max_retail is retail_price.max()
   }
 
   // ============================================
-  // Per-item span: mixed 6+6 then 12
-  // Two half-width items, then a full-width table
+  // # colspan: 6+6 fills one row, then a full-width (12) table wraps below
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_span_mixed_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_colspan_mixed_columns is {
     group_by:
       category
     # currency
     aggregate:
-      # span = 6
+      # colspan = 6
       avg_retail is retail_price.avg()
-      # span = 6
+      # colspan = 6
       sum_retail is retail_price.sum()
     nest:
-      # span = 12
+      # colspan = 12
       by_brand is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
@@ -312,30 +313,30 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Charts in dashboard: KPIs + line chart + bar chart
+  // Charts in columns mode: KPIs row + two half-width bar charts
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_with_charts_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_with_charts_columns is {
     group_by:
       category
     # currency
     aggregate:
-      # span = 4
+      # colspan = 4
       avg_retail is retail_price.avg()
-      # span = 4
+      # colspan = 4
       sum_retail is retail_price.sum()
-      # span = 4
+      # colspan = 4
       max_retail is retail_price.max()
     nest:
-      # span = 6
+      # colspan = 6
       # bar_chart
       by_brand_bar is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 10
       }
-      # span = 6
+      # colspan = 6
       # bar_chart
       by_brand_count is {
         group_by: brand
@@ -345,11 +346,11 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Dashboard with line charts + table
+  // Columns mode with charts + table at 2 columns
   // ============================================
   #(story)
   # dashboard { columns = 2 }
-  view: dashboard_charts_and_table_grid is {
+  view: dashboard_charts_and_table_columns is {
     group_by:
       category
     nest:
@@ -369,31 +370,31 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Full dashboard: KPIs row, then charts row, then table
+  // Full layout: KPIs row, then a # break, then a charts row
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_full_layout_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_full_layout_columns is {
     group_by:
       category
     # currency
     aggregate:
-      # span = 4
+      # colspan = 4
       avg_retail is retail_price.avg()
-      # span = 4
+      # colspan = 4
       sum_retail is retail_price.sum()
-      # span = 4
+      # colspan = 4
       max_retail is retail_price.max()
     nest:
       # break
-      # span = 6
+      # colspan = 6
       # bar_chart
       by_brand_chart is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 8
       }
-      # span = 6
+      # colspan = 6
       by_brand_table is {
         group_by: brand
         aggregate:
@@ -404,31 +405,31 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Blank spans: 3+3 fills left half, right half empty
+  // Partial row: 3+3 fills the left half, the right half stays empty
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_blank_spans_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_partial_row_columns is {
     group_by:
       category
     # currency
     aggregate:
-      # span = 3
+      # colspan = 3
       avg_retail is retail_price.avg()
-      # span = 3
+      # colspan = 3
       sum_retail is retail_price.sum()
   }
 
   // ============================================
-  // Big values with sparklines in dashboard
+  // Big values with sparklines in columns mode
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_with_sparklines_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_with_sparklines_columns is {
     group_by:
       category
     nest:
-      # span = 4
+      # colspan = 4
       # big_value
       avg_price_card is {
         aggregate:
@@ -446,7 +447,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
           limit: 20
         }
       }
-      # span = 4
+      # colspan = 4
       # big_value
       total_products_card is {
         aggregate:
@@ -462,7 +463,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
           limit: 20
         }
       }
-      # span = 4
+      # colspan = 4
       # big_value
       max_price_card is {
         aggregate:
@@ -483,11 +484,11 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Row break: KPIs then table on new row
+  // Row break: KPIs then a table on a new row (columns=2)
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_with_break_grid is {
+  # dashboard { columns = 2 }
+  view: dashboard_break_columns is {
     group_by:
       category
     # currency
@@ -496,6 +497,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       sum_retail is retail_price.sum()
     nest:
       # break
+      # colspan = 2
       by_brand is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
@@ -504,31 +506,31 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Custom gap spacing
+  // Custom gap spacing in columns mode
   // ============================================
   #(story)
-  # dashboard { gap = 24 }
-  view: dashboard_custom_gap_grid is {
+  # dashboard { columns = 12, gap = 24 }
+  view: dashboard_custom_gap_columns is {
     group_by:
       category
     # currency
     aggregate:
-      # span = 4
+      # colspan = 4
       avg_retail is retail_price.avg()
-      # span = 4
+      # colspan = 4
       sum_retail is retail_price.sum()
-      # span = 4
+      # colspan = 4
       max_retail is retail_price.max()
     nest:
       # break
-      # span = 6
+      # colspan = 6
       # bar_chart
       by_brand_bar is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 8
       }
-      # span = 6
+      # colspan = 6
       by_brand_table is {
         group_by: brand
         aggregate:
@@ -543,28 +545,28 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Verifies that gap=0 is not ignored by falsy checks.
   // ============================================
   #(story)
-  # dashboard { gap = 0 }
-  view: dashboard_gap_zero_grid is {
+  # dashboard { columns = 12, gap = 0 }
+  view: dashboard_gap_zero_columns is {
     group_by:
       category
     # currency
     aggregate:
-      # span = 4
+      # colspan = 4
       avg_retail is retail_price.avg()
-      # span = 4
+      # colspan = 4
       sum_retail is retail_price.sum()
-      # span = 4
+      # colspan = 4
       max_retail is retail_price.max()
     nest:
       # break
-      # span = 6
+      # colspan = 6
       # bar_chart
       by_brand_bar is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 8
       }
-      # span = 6
+      # colspan = 6
       by_brand_table is {
         group_by: brand
         aggregate:
@@ -578,12 +580,12 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // UX mockup: subtitles, big_value centering, table in card
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_ux_mockup_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_ux_mockup_columns is {
     group_by:
       category
     nest:
-      # span = 6
+      # colspan = 6
       # big_value
       avg_price_kpi is {
         aggregate:
@@ -591,7 +593,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
           # currency
           avg_price is retail_price.avg()
       }
-      # span = 6
+      # colspan = 6
       # bar_chart
       # subtitle="Top 10 brands"
       brand_chart is {
@@ -600,7 +602,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
         limit: 10
       }
       # break
-      # span = 12
+      # colspan = 12
       # subtitle="Top 10 brands by average retail price"
       brand_detail is {
         group_by: brand
@@ -615,21 +617,21 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   // Tall chart via size.height inside a dashboard
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_tall_chart_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_tall_chart_columns is {
     group_by:
       category
     # currency
     aggregate:
-      # span = 4
+      # colspan = 4
       avg_retail is retail_price.avg()
-      # span = 4
+      # colspan = 4
       sum_retail is retail_price.sum()
-      # span = 4
+      # colspan = 4
       max_retail is retail_price.max()
     nest:
       # break
-      # span = 12
+      # colspan = 12
       # bar_chart { size.height = 400 }
       # subtitle="Taller chart (400px) via size.height"
       by_brand_tall is {
@@ -640,26 +642,26 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // size=lg chart in a narrow span (3 columns)
+  // size=lg chart in a narrow tile (colspan 3 of 12)
   // Tests: does a 640px preset chart scale down in a ~25% card?
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_lg_chart_narrow_span_grid is {
+  # dashboard { columns = 12 }
+  view: dashboard_lg_chart_narrow_colspan_columns is {
     group_by:
       category
     nest:
-      # span = 3
+      # colspan = 3
       # bar_chart { size = lg }
-      # subtitle="size=lg in span=3 (narrow)"
+      # subtitle="size=lg in colspan=3 (narrow)"
       narrow_lg is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 8
       }
-      # span = 9
+      # colspan = 9
       # bar_chart { size = lg }
-      # subtitle="size=lg in span=9 (wide)"
+      # subtitle="size=lg in colspan=9 (wide)"
       wide_lg is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
@@ -668,27 +670,22 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   // ============================================
-  // Mixed spans: some items have # span, some don't
-  // Tests: non-span items get computed default span
+  // Mixed colspan: one tile sets # colspan, the other defaults to one column
   // ============================================
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_mixed_span_defaults_grid is {
+  # dashboard { columns = 3 }
+  view: dashboard_mixed_colspan_columns is {
     group_by:
       category
-    # currency
-    aggregate:
-      avg_retail is retail_price.avg()
-      sum_retail is retail_price.sum()
     nest:
-      # span = 8
+      # colspan = 2
       # bar_chart
       by_brand is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 10
       }
-      // This table has no # span, so it should get the remaining 4 cols
+      // This table sets no # colspan, so it occupies one column.
       by_dept is {
         group_by: department
         aggregate: avg_retail is retail_price.avg()
@@ -698,13 +695,13 @@ source: products is duckdb.table("static/data/products.parquet") extend {
 
   // ============================================
   // DEFENSIVE FALLBACKS: invalid layout values
-  // Validator logs an error AND the renderer falls back to default
-  // layout instead of feeding broken values into CSS. Each story below
-  // should render successfully (in flex / default span), not as a
-  // broken grid.
+  // Validator logs an error AND the renderer falls back to a default layout
+  // instead of feeding broken values into CSS. Each story below should
+  // render successfully (in flex mode, or columns mode with clamping), not
+  // as broken columns.
   // ============================================
 
-  // Invalid columns: should render as flex (no grid mode triggered).
+  // Invalid columns: should render as flex mode (columns mode not entered).
   #(story)
   # dashboard { columns = -3 }
   view: dashboard_fallback_bad_columns is {
@@ -716,7 +713,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       sum_retail is retail_price.sum()
   }
 
-  // Invalid gap: should render as flex with the default gap; CSS must
+  // Invalid gap: should render as flex mode with the default gap; CSS must
   // not contain `gap: -5px`.
   #(story)
   # dashboard { gap = -5 }
@@ -729,25 +726,25 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       sum_retail is retail_price.sum()
   }
 
-  // Invalid span on one child falls back to its computed default span. The
-  // valid span on the sibling is honored because the dashboard has a grid
-  // (via gap); without a grid, span would be ignored with a warning.
+  // # colspan beyond the column count is clamped to the column count (the
+  // tile fills the row) and the validator warns. The sibling's valid colspan
+  // is honored.
   #(story)
-  # dashboard { gap = 16 }
-  view: dashboard_fallback_bad_span is {
+  # dashboard { columns = 2 }
+  view: dashboard_fallback_colspan_overflow is {
     group_by:
       category
     nest:
-      # span = 15
+      # colspan = 5
       # bar_chart
-      bad_span is {
+      too_wide is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 8
       }
-      # span = 6
+      # colspan = 2
       # bar_chart
-      good_span is {
+      full_width is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 8

@@ -47,6 +47,7 @@ function DashboardItem(props: {
   row: RecordCell;
   maxTableHeight: number | null;
   isMeasure?: boolean;
+  colspan?: number;
 }) {
   const config = useConfig();
   const shouldVirtualizeTable = () => {
@@ -96,6 +97,12 @@ function DashboardItem(props: {
     props.field.getDashboardChildConfig<DashboardChildConfig>();
   const subtitle = childConfig?.subtitle;
 
+  // Position the card in columns mode: # colspan widens it past one column.
+  const cardStyle =
+    props.colspan !== undefined && props.colspan > 1
+      ? {'grid-column': `span ${props.colspan}`}
+      : undefined;
+
   return (
     <div
       class="dashboard-item"
@@ -103,6 +110,7 @@ function DashboardItem(props: {
         'dashboard-item-measure': !!props.isMeasure,
         'dashboard-item-borderless': !!childConfig?.borderless,
       }}
+      style={cardStyle}
       onClick={config.onClick ? handleClick : undefined}
     >
       <div class="dashboard-item-header">
@@ -149,14 +157,11 @@ export function Dashboard(props: {
     return style;
   };
 
-  // Grid is driven purely by the view-level columns/gap settings. # span and
-  // # break used to also flip the dashboard into grid mode, but that made the
-  // mode impossible to negate from an extension (a refinement can't reach back
-  // to drop a child's span/break). Span is now a grid-scoped sizing hint (the
-  // validator warns when it is used without a grid) and break works in both
-  // modes via nonDimensionsGrouped, so the mode is controlled entirely by
-  // columns/gap and round-trips cleanly on a copied dashboard.
-  const useGrid = columns !== undefined || gap !== undefined;
+  // Two layout modes: flex (the default) flows tiles and wraps; columns
+  // (columns=N) places them in N columns, widened per-tile by # colspan. gap
+  // is spacing only, never a mode trigger, so the mode round-trips on a copied
+  // dashboard (drop columns and it falls back to flex).
+  const useColumns = columns !== undefined;
 
   const getColumnsStyle = () => {
     if (columns === undefined) return {};
@@ -166,72 +171,25 @@ export function Dashboard(props: {
   const itemMinWidth = (f: Field): number =>
     f.isBasic() && f.wasCalculation() ? MIN_WIDTH_MEASURE : MIN_WIDTH_ITEM;
 
-  // In columns mode every cell is the same width (repeat(N, 1fr)), so each
-  // column must be wide enough for the group's worst case.
+  // In columns mode every column is the same width (repeat(N, 1fr)), so each
+  // must be wide enough for the group's worst case before the row stacks.
   const getColumnsMinWidth = (group: Field[]): number => {
     if (columns === undefined || group.length === 0) return 0;
     const maxItemMin = Math.max(...group.map(itemMinWidth));
     return columns * maxItemMin + (columns - 1) * gapPx;
   };
 
-  // Compute the effective span for a field
-  const computeSpan = (f: Field): number => {
-    const explicit = childConfigOf(f)?.span;
-    if (explicit !== undefined) return explicit;
-    if (f.isBasic() && f.wasCalculation()) return 3;
-    if (f.isNest()) {
-      const visibleChildren = f.fields.filter(c => !c.isHidden());
-      const weight = visibleChildren.reduce(
-        (sum, c) => sum + (c.isNest() ? 3 : 1),
-        0
-      );
-      if (weight <= 3) return 4;
-      if (weight <= 5) return 6;
-      if (weight <= 8) return 8;
-      return 12;
-    }
-    return 6;
-  };
-
-  // Compute per-row grid config from the items' spans
-  const getRowConfig = (group: Field[]) => {
-    const spans = group.map(f => computeSpan(f));
-    const totalSpan = spans.reduce((a, b) => a + b, 0);
-
-    // Each break-group is a single non-wrapping row; span sets each item's
-    // proportion of that row, not a column in a wrapping 12-col grid. When the
-    // row's spans total 12, use `fr` so items split the full row in proportion
-    // to their spans. When they total less, use `minmax(0, N%)` so each item
-    // takes exactly its share of 12 (span 3 of 12 = 25% width); otherwise two
-    // span=3 items in a half-full row would each stretch to 50% and lose the
-    // sizing intent.
-    const frTemplate =
-      totalSpan >= 12
-        ? spans.map(s => `${s}fr`).join(' ')
-        : spans
-            .map(s => `minmax(0, ${((s / 12) * 100).toFixed(1)}%)`)
-            .join(' ');
-
-    const minWidths = group.map(itemMinWidth);
-    const minRowWidth =
-      minWidths.reduce((a, b) => a + b, 0) + (group.length - 1) * gapPx;
-
-    return {frTemplate, collapseClass: bucketFor(minRowWidth)};
-  };
-
-  const getRowStyle = (group: Field[]) => {
-    if (!useGrid) return {};
-    if (columns !== undefined) return getColumnsStyle();
-    return {'grid-template-columns': getRowConfig(group).frTemplate};
+  // A tile spans one column by default; # colspan widens it. Clamp to the
+  // column count, since CSS clamps a span past the track count anyway.
+  const colspanOf = (f: Field): number => {
+    if (columns === undefined) return 1;
+    return Math.min(childConfigOf(f)?.colspan ?? 1, columns);
   };
 
   const getRowClassList = (group: Field[]) => {
     const classes: Record<string, boolean> = {
-      'dashboard-grid': useGrid,
+      'dashboard-columns': useColumns,
     };
-    if (useGrid && columns === undefined) {
-      classes[getRowConfig(group).collapseClass] = true;
-    }
     if (columns !== undefined) {
       classes[bucketFor(getColumnsMinWidth(group))] = true;
     }
@@ -342,7 +300,7 @@ export function Dashboard(props: {
                       <div
                         class="dashboard-row-body"
                         classList={getRowClassList(group)}
-                        style={getRowStyle(group)}
+                        style={getColumnsStyle()}
                       >
                         <For each={group}>
                           {field => (
@@ -351,6 +309,7 @@ export function Dashboard(props: {
                               row={props.data.rows[virtualRow.index]}
                               isMeasure={field.wasCalculation()}
                               maxTableHeight={maxTableHeight}
+                              colspan={colspanOf(field)}
                             />
                           )}
                         </For>
@@ -393,7 +352,7 @@ export function Dashboard(props: {
                   <div
                     class="dashboard-row-body"
                     classList={getRowClassList(group)}
-                    style={getRowStyle(group)}
+                    style={getColumnsStyle()}
                   >
                     <For each={group}>
                       {field => (
@@ -402,6 +361,7 @@ export function Dashboard(props: {
                           row={row}
                           isMeasure={field.wasCalculation()}
                           maxTableHeight={maxTableHeight}
+                          colspan={colspanOf(field)}
                         />
                       )}
                     </For>
