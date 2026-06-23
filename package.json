@@ -104,7 +104,7 @@
     "typescript": "^6.0.3",
     "unified": "^11.0.5",
     "uuid": "^8.3.2",
-    "yargs": "^17.7.2"
+    "yargs": "^18.0.0"
   },
   "dependencies": {
   },
