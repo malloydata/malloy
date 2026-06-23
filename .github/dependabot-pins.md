@@ -101,6 +101,28 @@ Cost: postgres connector held a few minors behind; no security advisory rides on
 Revisit when: issue #2928 — bump `pg` + `pg-cursor` + `pg-query-stream` together to
 compatible versions, verify `db-postgres` + the shared harness, then unpin.
 
+### BigQuery — `@google-cloud/bigquery` + `common` + `paginator` held at v7/v5
+Owned by `packages/malloy-db-bigquery`, exact-pinned to **best-v7** (`7.9.4` /
+`5.0.2` / `5.0.2`) as a coupled set. bigquery **8** pulls `@google-cloud/common@6`
+→ `google-auth-library@10` → `gaxios@7`, and gaxios 7 does an **ESM-only dynamic
+`import()`** in its token/request path. Under jest's CommonJS VM that throws
+`ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG`, surfaced as "Unexpected Gaxios
+Error" → every bigquery test fails. The only thing that fixes jest is
+`NODE_OPTIONS=--experimental-vm-modules`; babel-transforming gaxios can't help (the
+import target is ESM-only, can't be `require`d). We don't take the flag: it can't
+be made invisible for a bare `npx jest FILE -t NAME` (no project-local
+`NODE_OPTIONS`), so it breaks the single-test workflow, and it's an experimental
+Node API applied suite-wide. **bigquery 8 itself is fine in plain node** — the
+break is jest-only.
+
+Cost: bigquery connector held on the v7 SDK line; whatever transitive security the
+v8 stack would clear stays open.
+
+Revisit when: issue #2932 — when the test runner handles the ESM-only import
+without the experimental flag (jest → vitest, or jest gains stable ESM), or gaxios
+drops the ESM-only `import()`. Then bump the trio together, confirm `db-bigquery`
+**and** the ci-core bigquery `streaming.spec` pass **without** the flag, and unpin.
+
 ## Not pins — context, so this list stays short
 
 - **Connector SDKs other than Snowflake** (`trino-client`, `@databricks/sql`,
