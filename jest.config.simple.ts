@@ -8,7 +8,12 @@ import type {Config} from 'jest';
 
 process.env.TZ = 'America/Los_Angeles';
 
-const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
+// ESM-only deps that ship plain static import/export must be transformed (not
+// ignored) so jest's CJS runtime can load them. See .github/dependabot-pins.md.
+const transformIgnoreModules = [
+  '@motherduck/wasm-client',
+  '@noble/hashes',
+].join('|');
 
 const config: Config = {
   preset: 'ts-jest',

@@ -2,15 +2,31 @@ import type {Config} from 'jest';
 
 process.env['TZ'] = 'America/Los_Angeles';
 
-const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
+// ESM-only deps that ship plain static import/export: jest's CJS runtime can't
+// load them as-is, so they must be transformed (not ignored). See the Class-1
+// ESM note in .github/dependabot-pins.md.
+const transformIgnoreModules = [
+  '@motherduck/wasm-client',
+  '@noble/hashes',
+].join('|');
 
 const defaultConfig: Config = {
   preset: 'ts-jest',
   setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
   testMatch: ['<rootDir>**/*.spec.(ts|js)?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
+  // node_modules is left untransformed except the Class-1 ESM-only deps above,
+  // which must be run through babel to become loadable under jest's CJS runtime.
+  transformIgnorePatterns: [`node_modules/(?!(${transformIgnoreModules})/)`],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/test/tsconfig.json'}],
+    '^.+\\.(js|jsx)$': [
+      'babel-jest',
+      {
+        'presets': ['@babel/preset-env'],
+        'plugins': [['@babel/transform-runtime']],
+      },
+    ],
   },
 };
 

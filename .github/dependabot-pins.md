@@ -16,6 +16,32 @@ range would otherwise let a fresh `npm install` resolve the bad version. The
 *transitive* advisories a pin holds open are alert-only (no PR); those are what's
 listed under each entry.
 
+## ESM-only majors — the two classes (triage before holding)
+
+The npm ecosystem is migrating to ESM-only packages. Our code ships CommonJS and
+our tests run under jest's CJS runtime, so an ESM-only dep can fail to load. But
+**not every ESM-only major is a hold** — split them before deciding:
+
+- **Class 1 — static ESM** (plain `import`/`export`, e.g. `@noble/hashes` v2).
+  jest's default `transformIgnorePatterns` skips `node_modules`, so it sees the raw
+  `import` and throws *"Cannot use import statement outside a module."* The fix is
+  to **transform** it: add the package to `transformIgnoreModules` in
+  **both** `jest.config.ts` (in `defaultConfig`, which every `projects` entry
+  spreads — the top-level `transform` does **not** cascade into `projects`) and
+  `jest.config.simple.ts`. babel-jest then rewrites its ESM to CJS and it loads.
+  **Takeable**, one line. (`@motherduck/wasm-client` is listed there too, but it's
+  held at CJS 0.6, so it doesn't actually exercise this.)
+- **Class 2 — runtime dynamic `import()` of an ESM-only target** (e.g. gaxios 7
+  under `@google-cloud/bigquery` 8). The break isn't syntax jest can transform —
+  it's a `require`-an-ESM call at runtime needing `--experimental-vm-modules`,
+  which we reject (see the BigQuery pin). **A genuine hold**, untouchable by
+  `transformIgnoreModules`.
+
+Note both *compile* under TypeScript; the divide is purely how jest loads them at
+runtime. A Class-1 dep also typically forces small source edits for the package's
+own API changes (noble v2: `/sha256`→`/sha2.js`, `.js` extensions mandatory,
+`Uint8Array`-only inputs via `utf8ToBytes`).
+
 ## Pins (deliberate holds)
 
 ### Snowflake — `snowflake-sdk` pinned exactly at `2.3.1`
