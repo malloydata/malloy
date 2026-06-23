@@ -10,10 +10,10 @@ updates:
       # rather than chasing the current/odd Node line.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # uuid is deliberately held at v8 (the fix is a v11/v14 major). This is the
-      # only ignore for a held dependency — it was the one emitting an
-      # unmergeable security PR. The alert stays visible; see dependabot-pins.md.
-      - dependency-name: "uuid"
+      # @types/jasmine tracks the jasmine-core major, which malloy-syntax-highlight
+      # holds at 5. Ignore the major (currently 6) so it stops re-proposing until a
+      # deliberate jasmine-core 5->6 bump moves both together.
+      - dependency-name: "@types/jasmine"
         update-types: ["version-update:semver-major"]
       # @motherduck/wasm-client held at ^0.6.6: the duckdb-wasm connector
       # (packages/malloy-db-duckdb) is written against the old 0.6 API. The 0.8

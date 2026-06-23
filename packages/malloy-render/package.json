@@ -59,7 +59,7 @@
     "esbuild": "0.28.1",
     "storybook": "^8.6.15",
     "vite": "^6.4.2",
-    "vite-plugin-dts": "^4.5.4",
+    "vite-plugin-dts": "^5.0.2",
     "vite-plugin-solid": "^2.11.12",
     "vite-tsconfig-paths": "^5.1.4"
   }
