@@ -8,7 +8,12 @@ import type {
   TemporalTypeDef,
   TimestampUnit,
 } from '../../../model/malloy_types';
-import {isDateUnit, mkTemporal, TD} from '../../../model/malloy_types';
+import {
+  isBasicAtomicType,
+  isDateUnit,
+  mkTemporal,
+  TD,
+} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
@@ -93,10 +98,29 @@ export class ExprGranularTime extends ExpressionDef {
       return tsVal;
     }
     if (exprVal.type !== 'error') {
-      this.logError(
-        'unsupported-type-for-time-truncation',
-        `Cannot do time truncation on type '${exprVal.type}'`
-      );
+      if (!isBasicAtomicType(exprVal.type)) {
+        // The truncation target has fields (a join/struct/record/array), so it
+        // can't be a time value. The likely intent is a field whose name is a
+        // time unit (e.g. `flight.year`); since `.year` parses as a truncation
+        // and time units are reserved words, that field has to be quoted.
+        const ref = this.expr.drillExpression();
+        const lhs =
+          ref?.kind === 'field_reference'
+            ? [...(ref.path ?? []), ref.name].join('.')
+            : undefined;
+        const quoted = lhs ? `${lhs}.\`${timeframe}\`` : `\`${timeframe}\``;
+        this.logError(
+          'unsupported-type-for-time-truncation',
+          `'.${timeframe}' is a time truncation, but ${
+            lhs ? `'${lhs}'` : 'the left side'
+          } is type '${exprVal.type}', not a time value. If '${timeframe}' is a field name it must be quoted, because it is a reserved word: ${quoted}`
+        );
+      } else {
+        this.logError(
+          'unsupported-type-for-time-truncation',
+          `Cannot do time truncation on type '${exprVal.type}'`
+        );
+      }
     }
     const returnType = {...exprVal};
     if (exprVal.type === 'error') {

@@ -16,6 +16,16 @@ parser: {
   ]
 }
 
+tokenNames: {
+  deps = [lexer]
+  inputs = [
+    "src/lang/grammar/MalloyLexer.g4",
+    "src/lang/grammar/build_token_names.js"
+  ]
+  outputs = ["src/lang/lib/Malloy/keyword-display-names.ts"]
+  commands = ["node src/lang/grammar/build_token_names.js"]
+}
+
 codegen: {
-  deps = [parser]
+  deps = [parser, tokenNames]
 }

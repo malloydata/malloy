@@ -4,8 +4,8 @@
  */
 
 import {v4 as uuidv4, v5 as uuidv5} from 'uuid';
-import {sha256} from '@noble/hashes/sha256';
-import {bytesToHex} from '@noble/hashes/utils';
+import {sha256} from '@noble/hashes/sha2.js';
+import {bytesToHex, utf8ToBytes} from '@noble/hashes/utils.js';
 import type {
   AtomicTypeDef,
   Expr,
@@ -170,7 +170,9 @@ export function makeDigest(...parts: (string | undefined)[]): string {
   const combined = parts
     .map(p => (p === undefined ? '{undefined}' : `${p.length}:${p}`))
     .join('/');
-  return bytesToHex(sha256(combined));
+  // @noble/hashes v2 dropped implicit string hashing; v1 accepted a string and
+  // UTF-8 encoded it internally, so utf8ToBytes here yields the identical digest.
+  return bytesToHex(sha256(utf8ToBytes(combined)));
 }
 
 export function joinWith<T>(els: T[][], sep: T): T[] {
