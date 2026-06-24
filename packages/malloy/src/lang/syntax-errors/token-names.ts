@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {Vocabulary} from 'antlr4ts';
+import type {Parser, Vocabulary} from 'antlr4ts';
 import {Token} from 'antlr4ts';
+import {MalloyParser} from '../lib/Malloy/MalloyParser';
 import {KEYWORD_DISPLAY_NAMES} from '../lib/Malloy/keyword-display-names';
 
 // Pattern tokens have neither a literal nor a keyword spelling to show, so they
@@ -62,4 +63,28 @@ export function describeExpected(
     return undefined;
   }
   return joinOr(displays);
+}
+
+// When a bare-word reserved token appears where a name (IDENTIFIER) was legal,
+// the user meant it as a field name; return a "quote it" message. undefined
+// otherwise, so the caller keeps its normal message.
+export function reservedNameMessage(
+  offending: Token | undefined,
+  expected: number[],
+  recognizer: Parser
+): string | undefined {
+  const text = offending?.text;
+  if (!text || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(text)) return undefined;
+  const symbolic = recognizer.vocabulary.getSymbolicName(offending!.type);
+  if (symbolic === undefined || KEYWORD_DISPLAY_NAMES[symbolic] === undefined) {
+    return undefined;
+  }
+  if (!expected.includes(MalloyParser.IDENTIFIER)) return undefined;
+  // A reserved word followed by '(' is a function call (count()), not a name.
+  // offending is the current token here, so LA(2) is the next on-channel token;
+  // LA fetches it lazily rather than pre-filling the stream.
+  if (recognizer.inputStream.LA(2) === MalloyParser.OPAREN) {
+    return undefined;
+  }
+  return `'${text}' is a reserved word, so to use it as a name you must quote it: \`${text}\``;
 }
