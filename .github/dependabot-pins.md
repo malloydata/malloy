@@ -141,6 +141,29 @@ without the experimental flag (jest → vitest, or jest gains stable ESM), or ga
 drops the ESM-only `import()`. Then bump the trio together, confirm `db-bigquery`
 **and** the ci-core bigquery `streaming.spec` pass **without** the flag, and unpin.
 
+### Node runtime — pinned at `24.16.0` via `.node-version`
+Not a dependency, but a deliberate hold that belongs here. Node **24.17.0** carries
+a `http.Agent` keep-alive socket-reuse regression that makes `node-fetch` (under
+`google-auth-library`/`gaxios`) throw a false `ERR_STREAM_PREMATURE_CLOSE` —
+surfaced as `Invalid response body while trying to fetch
+https://www.googleapis.com/oauth2/v4/token: Premature close` — whenever Google's
+OAuth endpoint closes a pooled idle connection. It hits the ci-core bigquery
+`streaming.spec` (which authenticates to BigQuery and runs live queries), and
+because socket reuse is timing-dependent it presents as an **intermittent** failure,
+not every run.
+
+`.node-version` pins `24.16.0`; the CI workflows read it via
+`actions/setup-node` `node-version-file: '.node-version'` (they previously floated
+`node-version: 24.x` and so silently picked up 24.17.0 while ignoring the committed
+pin). `scripts/ci-env-sanity-check.sh` already asserts `.node-version` exists, so the
+pin has one authoritative source.
+
+Cost: held one Node patch behind until the regression is fixed upstream.
+
+Revisit when: Node ships the keep-alive fix (or `google-auth-library`/`gaxios` stops
+reusing the socket), then bump `.node-version` and confirm the bigquery
+`streaming.spec` is stable across repeated runs.
+
 ## Not pins — context, so this list stays short
 
 - **Connector SDKs other than Snowflake** (`trino-client`, `@databricks/sql`,
