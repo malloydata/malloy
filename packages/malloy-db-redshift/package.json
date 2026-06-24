@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-redshift",
-  "version": "0.0.416",
+  "version": "0.0.417",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,8 +22,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/db-postgres": "0.0.416",
-    "@malloydata/malloy": "0.0.416",
+    "@malloydata/db-postgres": "0.0.417",
+    "@malloydata/malloy": "0.0.417",
     "@types/pg": "^8.6.1",
     "pg": "^8.7.1"
   }

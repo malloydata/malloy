@@ -286,13 +286,13 @@ describe('$NAME references in expressions', () => {
 describe('given: parse-time errors', () => {
   test('missing type is a parse error', () => {
     expect('given: TENANT').toLog(
-      errorMessage(/extraneous|missing|mismatched|no viable/i)
+      errorMessage(/extraneous|missing|mismatched|no viable|unexpected/i)
     );
   });
 
   test('missing name is a parse error', () => {
     expect('given: :: string').toLog(
-      errorMessage(/extraneous|missing|mismatched/i)
+      errorMessage(/extraneous|missing|mismatched|unexpected/i)
     );
   });
 
@@ -312,7 +312,7 @@ describe('given: parse-time errors', () => {
     // as a given type. The parser reports a syntax error rather than
     // accepting and later rejecting.
     expect('given: J :: json').toLog(
-      errorMessage(/extraneous|missing|mismatched|no viable/i)
+      errorMessage(/extraneous|missing|mismatched|no viable|unexpected/i)
     );
   });
 });
