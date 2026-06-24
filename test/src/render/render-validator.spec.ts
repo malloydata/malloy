@@ -402,6 +402,267 @@ describe('render tag validation', () => {
     });
   });
 
+  describe('dashboard', () => {
+    it('errors when # dashboard.columns is non-positive', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard { columns=0 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate: a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'dashboard.columns');
+    });
+
+    it('errors when # dashboard.gap is negative', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard { gap=-5 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate: a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'dashboard.gap');
+    });
+
+    it('does not error when # dashboard.gap is zero', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard { gap=0 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate: a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+    });
+
+    it('errors when # colspan is zero', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan=0
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'colspan');
+    });
+
+    it('errors when # colspan is non-numeric', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan="foo"
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const colspanError = logs.find(
+        l => l.severity === 'error' && l.message.includes('colspan')
+      );
+      expect(colspanError?.message).toContain('Invalid # colspan');
+      expect(colspanError?.message).toContain('non-numeric');
+    });
+
+    it('colspan validity error names the bad value and a fix', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan=0
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const colspanError = logs.find(
+        l => l.severity === 'error' && l.message.includes('colspan')
+      );
+      expect(colspanError?.message).toContain('expected a positive integer');
+      expect(colspanError?.message).toContain('got 0');
+      expect(colspanError?.message).toContain('Fix: # colspan=2');
+    });
+
+    it('honors # colspan in columns mode with no diagnostic', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan=2
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('warns when # colspan exceeds the column count', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan=5
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const colspanError = logs.find(
+        l => l.severity === 'error' && l.message.includes('colspan')
+      );
+      expect(colspanError).toBeUndefined();
+      const warnings = logs.filter(l => l.severity === 'warn');
+      expect(
+        warnings.some(
+          w => w.message.includes('colspan') && w.message.includes('exceeds')
+        )
+      ).toBe(true);
+    });
+
+    it('warns "Ignored" when # colspan is used in flex mode (no columns)', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan=2
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const colspanWarning = logs.find(
+        l => l.severity === 'warn' && l.message.includes('colspan')
+      );
+      expect(colspanWarning?.message).toContain('Ignored # colspan');
+      expect(colspanWarning?.message).toContain('columns mode');
+      expect(colspanWarning?.message).not.toContain('Invalid # colspan');
+    });
+
+    it('gap alone does not enable # colspan (still flex mode)', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { gap=16 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan=2
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      // gap is spacing only, not a mode trigger, so colspan stays inert.
+      const colspanWarning = logs.find(
+        l => l.severity === 'warn' && l.message.includes('colspan')
+      );
+      expect(colspanWarning?.message).toContain('Ignored # colspan');
+      expect(colspanWarning?.message).toContain('columns mode');
+    });
+
+    it('warns flex-mode (not exceeds) for # colspan when columns is invalid', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { columns=0 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan=2
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      // columns=0 is invalid, so the renderer falls back to flex; the colspan
+      // warning must describe the actual state (ignored), not "exceeds".
+      const warnings = logs.filter(l => l.severity === 'warn');
+      expect(
+        warnings.some(
+          w =>
+            w.message.includes('colspan') && w.message.includes('columns mode')
+        )
+      ).toBe(true);
+      expect(warnings.some(w => w.message.includes('exceeds'))).toBe(false);
+    });
+
+    it('a single invalid # colspan yields one diagnostic (no double warning)', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan=0
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      // A single mistake should produce a single diagnostic: the validity
+      // error fires and the "ignored" warning is suppressed by the else-if.
+      const colspanErrors = logs.filter(
+        l => l.severity === 'error' && l.message.includes('colspan')
+      );
+      expect(colspanErrors.length).toBe(1);
+      const colspanWarnings = logs.filter(
+        l => l.severity === 'warn' && l.message.includes('colspan')
+      );
+      expect(colspanWarnings.length).toBe(0);
+    });
+
+    it('coerces a unit-suffixed # colspan (e.g. "2px") to its numeric prefix', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan="2px"
+              a_total is a.sum()
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      // numeric() parseFloats "2px" to 2, so the colspan is treated as 2 and
+      // honored with no diagnostic. The coercion lives in malloy-tag's shared
+      // numeric(); this test pins the current behavior.
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+  });
+
   describe('chart y-channel must be numeric', () => {
     it('errors when # y is on a non-numeric dimension in a bar chart', async () => {
       const logs = await getValidationLogs(`
@@ -684,6 +945,27 @@ describe('render tag validation', () => {
       expectNoWarnings(logs);
     });
 
+    it('no warnings for # colspan, # subtitle, # borderless on dashboard child fields', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b, 3 as c") extend {
+          # dashboard { columns=3 }
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              # colspan=2
+              # subtitle="Total A"
+              a_total is a.sum()
+              # borderless
+              b_total is b.sum()
+              c_total is c.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
     it('no warnings for # tooltip on chart child fields', async () => {
       const logs = await getValidationLogs(`
         source: s is duckdb.sql("SELECT 'A' as category, 1 as value, 'hello' as note") extend {
@@ -856,6 +1138,22 @@ describe('render tag validation', () => {
       const warnings = logs.filter(l => l.severity === 'warn');
       expect(warnings.length).toBeGreaterThan(0);
       expect(warnings.some(w => w.message.includes('break'))).toBe(true);
+    });
+
+    it('warns on # colspan outside dashboard context', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a") extend {
+          view: q is {
+            aggregate:
+              # colspan=2
+              a_total is a.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const warnings = logs.filter(l => l.severity === 'warn');
+      expect(warnings.length).toBeGreaterThan(0);
+      expect(warnings.some(w => w.message.includes('colspan'))).toBe(true);
     });
 
     it('warns on # tooltip outside chart context', async () => {
