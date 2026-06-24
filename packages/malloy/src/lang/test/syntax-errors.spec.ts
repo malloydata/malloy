@@ -63,7 +63,7 @@ describe('custom error messages', () => {
       expect(`
         source: x is a extend
           primary_key: id
-      `).toLogAtLeast(errorMessage("missing '{' at 'primary_key:'"));
+      `).toLogAtLeast(errorMessage("missing '{' before 'primary_key:'"));
     });
 
     test('use of the distinct keyword in a count', () => {
@@ -143,7 +143,7 @@ describe('custom error messages', () => {
           }
         }
         `).toLogAtLeast(
-        errorMessage("extraneous input '{' expecting {BQ_STRING, IDENTIFIER}")
+        errorMessage("unexpected '{', expected a `quoted` name or a name")
       );
     });
 
