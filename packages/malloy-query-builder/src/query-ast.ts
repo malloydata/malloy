@@ -30,14 +30,14 @@ type NonOptionalASTNode<T> = T extends undefined ? never : ASTNode<T>;
 type LiteralOrNode<T> = T extends string
   ? T
   : T extends number
-    ? T
-    : T extends string[]
-      ? T
-      : T extends boolean
-        ? T
-        : undefined extends T
-          ? NonOptionalASTNode<T> | undefined
-          : ASTNode<T>;
+  ? T
+  : T extends string[]
+  ? T
+  : T extends boolean
+  ? T
+  : undefined extends T
+  ? NonOptionalASTNode<T> | undefined
+  : ASTNode<T>;
 
 abstract class ASTNode<T> {
   /**
@@ -2919,6 +2919,16 @@ export class ASTSegmentViewDefinition
   public addWhere(name: string, filterString: string): ASTWhereViewOperation;
   public addWhere(
     name: string,
+    filter: ParsedFilter,
+    conjunction: Malloy.Conjunction
+  ): ASTWhereViewOperation;
+  public addWhere(
+    name: string,
+    filterString: string,
+    conjunction: Malloy.Conjunction
+  ): ASTWhereViewOperation;
+  public addWhere(
+    name: string,
     path: string[],
     filter: ParsedFilter
   ): ASTWhereViewOperation;
@@ -2929,11 +2939,41 @@ export class ASTSegmentViewDefinition
   ): ASTWhereViewOperation;
   public addWhere(
     name: string,
+    path: string[],
+    filter: ParsedFilter,
+    conjunction: Malloy.Conjunction
+  ): ASTWhereViewOperation;
+  public addWhere(
+    name: string,
+    path: string[],
+    filterString: string,
+    conjunction: Malloy.Conjunction
+  ): ASTWhereViewOperation;
+  public addWhere(
+    name: string,
     arg2: string[] | string | ParsedFilter,
-    arg3?: string | ParsedFilter
+    arg3?: string | ParsedFilter | Malloy.Conjunction,
+    arg4?: Malloy.Conjunction
   ): ASTWhereViewOperation {
     const path = Array.isArray(arg2) ? arg2 : [];
-    const filter = arg3 === undefined ? (arg2 as string | ParsedFilter) : arg3;
+    let filter: string | ParsedFilter;
+    let conjunction: Malloy.Conjunction | undefined;
+
+    if (Array.isArray(arg2)) {
+      // Path was provided
+      filter = arg3 as string | ParsedFilter;
+      conjunction = arg4;
+    } else {
+      // No path provided
+      if (arg3 === 'and' || arg3 === 'or') {
+        filter = arg2 as string | ParsedFilter;
+        conjunction = arg3;
+      } else {
+        filter = arg2 as string | ParsedFilter;
+        conjunction = undefined;
+      }
+    }
+
     const filterString =
       typeof filter === 'string' ? filter : serializeFilter(filter);
     const schema = this.getInputSchema();
@@ -2952,6 +2992,7 @@ export class ASTSegmentViewDefinition
         },
         filter: filterString,
       },
+      conjunction,
     });
     this.addOperation(item);
     return item;
@@ -2959,6 +3000,16 @@ export class ASTSegmentViewDefinition
 
   public addHaving(name: string, filter: ParsedFilter): ASTHavingViewOperation;
   public addHaving(name: string, filterString: string): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
+    filter: ParsedFilter,
+    conjunction: Malloy.Conjunction
+  ): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
+    filterString: string,
+    conjunction: Malloy.Conjunction
+  ): ASTHavingViewOperation;
   public addHaving(
     name: string,
     path: string[],
@@ -2971,11 +3022,41 @@ export class ASTSegmentViewDefinition
   ): ASTHavingViewOperation;
   public addHaving(
     name: string,
+    path: string[],
+    filter: ParsedFilter,
+    conjunction: Malloy.Conjunction
+  ): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
+    path: string[],
+    filterString: string,
+    conjunction: Malloy.Conjunction
+  ): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
     arg2: string[] | string | ParsedFilter,
-    arg3?: string | ParsedFilter
+    arg3?: string | ParsedFilter | Malloy.Conjunction,
+    arg4?: Malloy.Conjunction
   ): ASTHavingViewOperation {
     const path = Array.isArray(arg2) ? arg2 : [];
-    const filter = arg3 === undefined ? (arg2 as string | ParsedFilter) : arg3;
+    let filter: string | ParsedFilter;
+    let conjunction: Malloy.Conjunction | undefined;
+
+    if (Array.isArray(arg2)) {
+      // Path was provided
+      filter = arg3 as string | ParsedFilter;
+      conjunction = arg4;
+    } else {
+      // No path provided
+      if (arg3 === 'and' || arg3 === 'or') {
+        filter = arg2 as string | ParsedFilter;
+        conjunction = arg3;
+      } else {
+        filter = arg2 as string | ParsedFilter;
+        conjunction = undefined;
+      }
+    }
+
     const filterString =
       typeof filter === 'string' ? filter : serializeFilter(filter);
     const schema = this.getInputSchema();
@@ -2994,6 +3075,7 @@ export class ASTSegmentViewDefinition
         },
         filter: filterString,
       },
+      conjunction,
     });
     this.addOperation(item);
     return item;

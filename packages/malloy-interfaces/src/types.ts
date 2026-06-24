@@ -657,6 +657,19 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'conjunction': {
+        'type': 'Conjunction',
+        'optional': true,
+        'array': false,
+      },
+    },
+  },
+  'Conjunction': {
+    'type': 'enum',
+    'name': 'Conjunction',
+    'values': {
+      'and': 1,
+      'or': 2,
     },
   },
   'FilterStringApplication': {
@@ -2143,7 +2156,10 @@ export type FilterExpressionType = {
 
 export type FilterOperation = {
   filter: Filter;
+  conjunction?: Conjunction;
 };
+
+export type Conjunction = 'and' | 'or';
 
 export type FilterStringApplication = {
   expression: Expression;
