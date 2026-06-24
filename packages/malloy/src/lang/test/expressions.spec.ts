@@ -54,6 +54,19 @@ describe('expressions', () => {
     test.each(diffable)('timestamp difference - %s', unit => {
       expect(new BetaExpression(`${unit}(ats to @2030)`)).toParse();
     });
+
+    describe('truncation of a non-time value', () => {
+      test('a join/struct suggests quoting the colliding field', () =>
+        expect(model`run: a -> { select: x is aninline.year }`).toLogAtLeast(
+          errorMessage(
+            "'.year' is a time truncation, but 'aninline' is type 'record', not a time value. If 'year' is a field name it must be quoted, because it is a reserved word: aninline.`year`"
+          )
+        ));
+      test('a scalar keeps the generic error', () =>
+        expect(model`run: a -> { select: x is astr.year }`).toLogAtLeast(
+          errorMessage("Cannot do time truncation on type 'string'")
+        ));
+    });
   });
 
   test('field name', () => {

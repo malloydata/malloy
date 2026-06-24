@@ -570,7 +570,33 @@ ordering
   ;
 
 orderBySpec
-  : (INTEGER_LITERAL | fieldName) ( ASC | DESC ) ?
+  : (INTEGER_LITERAL | possibleBadPath) ( ASC | DESC ) ?
+  ;
+
+// order_by names a single (unquoted) output column, but we accept a more
+// permissive reference -- a dotted path and/or reserved-word segments like time
+// units (`flights.dep_year`) -- and let the visitor decide: a lone ordinary
+// name is fine, a lone reserved word must be quoted, a dotted path is never
+// legal here. Reusable wherever a single name is required and a path or a bare
+// keyword is a likely mistake worth a good error. See visitOrderBySpec.
+possibleBadPath
+  : badWord (DOT badWord)*
+  ;
+
+// A name segment that the parser accepts but that may be reserved. `fieldName`
+// is a legal name; everything else is a reserved word the user would have to
+// quote. Keep in sync with the bare keywords in MalloyLexer.g4 -- MINUS `ASC`
+// and `DESC`, which are the order_by direction suffix (allowing them here would
+// make `order_by: foo asc` ambiguous). `timeframe` covers the time units.
+badWord
+  : fieldName
+  | timeframe
+  | ALL | AND | AS | AVG | BOOLEAN | BY | CASE | CAST | COUNT | COMPOSE | DATE
+  | DISTINCT | ELSE | END | EXCLUDE | EXPORT | EXTEND | FALSE | FILTER | FULL
+  | FOR | FROM | HAS | IMPORT | INCLUDE | INNER | IS | IN | INTERNAL_KW | JSON
+  | LEFT | LIKE | MAX | MIN | NOT | NOW | NULL | NUMBER | ON | OR | PICK
+  | PRIVATE_KW | PUBLIC_KW | RIGHT | STRING | SOURCE_KW | SUM | SQL | TABLE
+  | THEN | THIS | TIMESTAMPTZ | TIMESTAMP | TO | TRUE | WHEN | WITH | VIRTUAL
   ;
 
 limitStatement

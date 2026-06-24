@@ -1390,11 +1390,34 @@ export class MalloyToAST
     if (ncx) {
       return new ast.OrderBy(this.getNumber(ncx), dir);
     }
-    const fieldCx = pcx.fieldName();
-    if (fieldCx) {
-      return new ast.OrderBy(this.getFieldName(fieldCx), dir);
+    const pathCx = pcx.possibleBadPath();
+    if (!pathCx) {
+      throw this.internalError(pcx, "can't parse order_by specification");
     }
-    throw this.internalError(pcx, "can't parse order_by specification");
+    const words = pathCx.badWord();
+    const firstField = words[0].fieldName();
+    if (words.length === 1 && firstField) {
+      // A lone ordinary identifier -- the normal, valid order_by target.
+      return new ast.OrderBy(this.getFieldName(firstField), dir);
+    }
+    // Otherwise illegal: a dotted path, and/or a reserved-word segment that
+    // would have to be quoted. Logging an error here prevents translation, so
+    // the throwaway OrderBy below is never evaluated -- it only satisfies the
+    // visitor's contract.
+    const last = words[words.length - 1];
+    const lastFieldCx = last.fieldName();
+    const lastName = lastFieldCx ? lastFieldCx.text : '`' + last.text + '`';
+    const message =
+      words.length > 1
+        ? `order_by takes the name of a field in the query output, not a path ('${pathCx.text}'). ` +
+          `To order by '${last.text}', make it an output field and order by its name` +
+          (lastFieldCx === undefined
+            ? `, quoting it because '${last.text}' is a reserved word: ${lastName}`
+            : `: ${lastName}`) +
+          '.'
+        : `'${last.text}' is a reserved word, so to order by it you must quote it: ${lastName}`;
+    this.contextError(pathCx, 'order-by-bad-reference', message);
+    return new ast.OrderBy(new ast.FieldName('internal_error'), dir);
   }
 
   visitOrdering(pcx: parse.OrderingContext): ast.Ordering {

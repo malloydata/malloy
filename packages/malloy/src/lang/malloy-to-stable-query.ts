@@ -385,17 +385,22 @@ export class MalloyToQuery
     for (const spec of specs) {
       if (spec.INTEGER_LITERAL()) {
         this.notAllowed(spec, 'Indexed order by statements');
-      } else if (spec.fieldName()) {
-        const fieldName = getId(spec.fieldName()!);
-        const direction = spec.ASC() ? 'asc' : spec.DESC() ? 'desc' : undefined;
-        orders.push({
-          kind: 'order_by',
-          direction,
-          field_reference: {name: fieldName},
-        });
-      } else {
+        continue;
+      }
+      // A valid order_by target is a single ordinary name; a dotted path or a
+      // bare reserved word is not representable as a stable query.
+      const words = spec.possibleBadPath()?.badWord() ?? [];
+      const firstField = words.length === 1 ? words[0].fieldName() : undefined;
+      if (!firstField) {
         return null;
       }
+      const fieldName = getId(firstField);
+      const direction = spec.ASC() ? 'asc' : spec.DESC() ? 'desc' : undefined;
+      orders.push({
+        kind: 'order_by',
+        direction,
+        field_reference: {name: fieldName},
+      });
     }
     return orders;
   }

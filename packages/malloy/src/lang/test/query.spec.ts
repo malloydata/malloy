@@ -1046,6 +1046,24 @@ describe('query:', () => {
         expect('run: a -> { order_by: af; group_by: astr }').toLog(
           errorMessage('Unknown field af in output space')
         ));
+      test('order by rejects a dotted path with a helpful error', () =>
+        expect('run: a -> { group_by: astr; order_by: aninline.column }').toLog(
+          errorMessage(
+            "order_by takes the name of a field in the query output, not a path ('aninline.column'). To order by 'column', make it an output field and order by its name: column."
+          )
+        ));
+      test('order by dotted path suggests quoting a reserved segment', () =>
+        expect('run: a -> { group_by: astr; order_by: aninline.year }').toLog(
+          errorMessage(
+            "order_by takes the name of a field in the query output, not a path ('aninline.year'). To order by 'year', make it an output field and order by its name, quoting it because 'year' is a reserved word: `year`."
+          )
+        ));
+      test('order by a bare reserved word suggests quoting', () =>
+        expect('run: a -> { group_by: astr; order_by: year }').toLog(
+          errorMessage(
+            "'year' is a reserved word, so to order by it you must quote it: `year`"
+          )
+        ));
       test('order by asc', () => {
         expect('run: a->{ order_by: astr asc; group_by: astr }').toTranslate();
       });
