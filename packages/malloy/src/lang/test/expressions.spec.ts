@@ -55,6 +55,20 @@ describe('expressions', () => {
       expect(new BetaExpression(`${unit}(ats to @2030)`)).toParse();
     });
 
+    describe('now', () => {
+      test('now is a value', () => expect(expr`now`).compilesTo('{now}'));
+      test('now() compiles as now', () =>
+        expect(expr`now()`).compilesTo('{now}'));
+      test('now() warns that now is not a function', () =>
+        expect(model`run: a -> { select: x is now() }`).toLogAtLeast(
+          warningMessage(
+            "'now' is a value, not a function; the parentheses are unnecessary. Write 'now'."
+          )
+        ));
+      test('now (no parens) does not warn', () =>
+        expect(model`run: a -> { select: x is now }`).toTranslate());
+    });
+
     describe('truncation of a non-time value', () => {
       test('a join/struct suggests quoting the colliding field', () =>
         expect(model`run: a -> { select: x is aninline.year }`).toLogAtLeast(

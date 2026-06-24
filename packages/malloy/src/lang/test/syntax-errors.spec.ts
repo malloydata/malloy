@@ -213,6 +213,43 @@ describe('custom error messages', () => {
     });
   });
 
+  describe('reserved word used as a name', () => {
+    const quoteHint =
+      "'year' is a reserved word, so to use it as a name you must quote it: `year`";
+    test('group_by: a reserved word', () => {
+      expect('run: a -> { group_by: year }').toLogAtLeast(
+        errorMessage(quoteHint)
+      );
+    });
+    test('select: a reserved word', () => {
+      expect('run: a -> { select: year }').toLogAtLeast(
+        errorMessage(quoteHint)
+      );
+    });
+    test('naming a dimension with a reserved word', () => {
+      expect('source: x is a extend { dimension: year is 1 }').toLogAtLeast(
+        errorMessage(quoteHint)
+      );
+    });
+    test('reserved word in a where expression', () => {
+      expect('run: a -> { select: astr; where: timestamp = 1 }').toLogAtLeast(
+        errorMessage(
+          "'timestamp' is a reserved word, so to use it as a name you must quote it: `timestamp`"
+        )
+      );
+    });
+    test('reserved word as a bare source reference', () => {
+      // A backtick-named reserved-word source, referenced bare, suggests quoting.
+      expect(
+        'source: `import` is a extend {}\nrun: import -> { select: * }'
+      ).toLogAtLeast(
+        errorMessage(
+          "'import' is a reserved word, so to use it as a name you must quote it: `import`"
+        )
+      );
+    });
+  });
+
   describe('queryStatement', () => {
     test('misspelled group_by:', () => {
       expect('source: x is a -> { groupBy: name }').toLogAtLeast(

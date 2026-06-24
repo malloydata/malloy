@@ -1630,7 +1630,16 @@ export class MalloyToAST
     return new ast.ExprRegEx(malloyRegex.slice(2, -1));
   }
 
-  visitExprNow(_pcx: parse.ExprNowContext): ast.ExprNow {
+  visitExprNow(pcx: parse.ExprNowContext): ast.ExprNow {
+    if (pcx.OPAREN()) {
+      // `now` is a value, not a function; accept `now()`, warn, compile as `now`.
+      this.contextError(
+        pcx,
+        'now-is-not-a-function',
+        "'now' is a value, not a function; the parentheses are unnecessary. Write 'now'.",
+        {severity: 'warn'}
+      );
+    }
     return new ast.ExprNow();
   }
 
