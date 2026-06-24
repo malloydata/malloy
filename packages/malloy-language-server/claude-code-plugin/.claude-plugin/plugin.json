@@ -1,0 +1,8 @@
+{
+  "name": "malloy-lsp",
+  "version": "1.0.0",
+  "description": "Malloy language intelligence for Claude Code — diagnostics, completions, hover, go-to-definition for .malloy files",
+  "author": {"name": "Malloy Contributors"},
+  "repository": "https://github.com/malloydata/malloy",
+  "keywords": ["malloy", "lsp", "data", "sql"]
+}

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.packages.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true
+  },
+  "references": [
+    {"path": "../malloy"},
+    {"path": "../malloy-malloy-sql"},
+    {"path": "../malloy-interfaces"},
+    {"path": "../malloy-render-validator"}
+  ],
+  "include": ["src/**/*.ts"]
+}
