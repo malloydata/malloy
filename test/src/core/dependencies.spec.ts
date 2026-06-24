@@ -21,6 +21,10 @@ describe('dependencies', () => {
   it('typescript references should not be circular', async () => {
     const deps = await madge('packages', {
       fileExtensions: ['ts'],
+      // This test targets *runtime* cycles. madge 8 follows `import type` edges
+      // by default (madge 6 did not); those are erased by tsc and never form a
+      // runtime cycle, so skip them or harmless type-only loops fail the check.
+      detectiveOptions: {ts: {skipTypeImports: true}},
       excludeRegExp: [
         /malloy\/src\/lang/,
         /malloy-render\/src/,
