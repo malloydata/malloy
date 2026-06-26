@@ -66,6 +66,17 @@ updates:
       - dependency-name: "@google-cloud/bigquery"
       - dependency-name: "@google-cloud/common"
       - dependency-name: "@google-cloud/paginator"
+      # uuid + @noble/hashes held below their ESM-only majors. uuid 12+ and
+      # @noble/hashes 2+ dropped CommonJS (pure ESM), which breaks every downstream
+      # consumer's esbuild bundle and ts-jest runtime — an ESM-only runtime dep leaks
+      # downstream exactly like a native binary, so the core stays CJS. Held on the
+      # last CJS majors (uuid ^11, @noble/hashes ^1) via caret ranges in
+      # packages/malloy/package.json; ignore the MAJOR only so CJS-line minors/patches
+      # still flow. See DEPENDENCY-MANAGEMENT.md.
+      - dependency-name: "uuid"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@noble/hashes"
+        update-types: ["version-update:semver-major"]
     groups:
       # Not for fragmentation (the per-platform node-bindings are transitive here,
       # so they never fan out). It's a deliberate callout: a duckdb bump has

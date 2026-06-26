@@ -4,8 +4,8 @@
  */
 
 import {v4 as uuidv4, v5 as uuidv5} from 'uuid';
-import {sha256} from '@noble/hashes/sha2.js';
-import {bytesToHex, utf8ToBytes} from '@noble/hashes/utils.js';
+import {sha256} from '@noble/hashes/sha256';
+import {bytesToHex, utf8ToBytes} from '@noble/hashes/utils';
 import type {
   AtomicTypeDef,
   Expr,
@@ -170,8 +170,9 @@ export function makeDigest(...parts: (string | undefined)[]): string {
   const combined = parts
     .map(p => (p === undefined ? '{undefined}' : `${p.length}:${p}`))
     .join('/');
-  // @noble/hashes v2 dropped implicit string hashing; v1 accepted a string and
-  // UTF-8 encoded it internally, so utf8ToBytes here yields the identical digest.
+  // @noble/hashes is pinned to v1 (v2 is ESM-only — see DEPENDENCY-MANAGEMENT.md).
+  // v1's sha256 also accepts a string directly, but we utf8-encode explicitly so the
+  // digest is stable and unambiguous (and identical to the v2 form we briefly used).
   return bytesToHex(sha256(utf8ToBytes(combined)));
 }
 

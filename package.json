@@ -101,7 +101,7 @@
     "ts-node": "^10.9.1",
     "typescript": "^6.0.3",
     "unified": "^11.0.5",
-    "uuid": "^14.0.0",
+    "uuid": "^11.1.1",
     "yargs": "^18.0.0"
   },
   "dependencies": {},
