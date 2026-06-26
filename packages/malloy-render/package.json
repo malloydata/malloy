@@ -48,7 +48,7 @@
     "@malloydata/malloy": "0.0.420",
     "@storybook/addon-essentials": "^8.6.18",
     "@storybook/addon-interactions": "^8.6.18",
-    "@storybook/addon-links": "^8.6.15",
+    "@storybook/addon-links": "^10.4.6",
     "@storybook/blocks": "^8.6.15",
     "@storybook/builder-vite": "^8.6.15",
     "@storybook/html": "^8.6.15",
