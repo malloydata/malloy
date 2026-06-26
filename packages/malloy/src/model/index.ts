@@ -48,6 +48,8 @@ export {
 } from './utils';
 export {getModelAnnotations} from './annotation_utils';
 export {constantExprToSQL} from './constant_expression_compiler';
+export {predicateExprToSQL} from './predicate_expression_compiler';
+export type {PredicateExpressionResult} from './predicate_expression_compiler';
 export {getCompiledSQL} from './sql_compiled';
 export {MalloyCompileError} from './malloy_compile_error';
 export {

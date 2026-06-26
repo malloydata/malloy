@@ -18,6 +18,7 @@ import type {
   Given as InternalGiven,
   GivenID,
   GivenTypeDef,
+  GivenValue,
   Query as InternalQuery,
   Pipeline,
   ModelDef,
@@ -57,6 +58,7 @@ import {
   getCompiledSQL,
   getModelAnnotations,
   safeRecordGet,
+  predicateExprToSQL,
 } from '../../model';
 import {mkModelDef} from '../../model/utils';
 import type {Dialect} from '../../dialect';
@@ -562,6 +564,105 @@ export class Explore extends Entity implements Taggable {
       return this.structDef.resultMetadata?.filterList || [];
     }
     return [];
+  }
+
+  private requireGivensExperiment(method: string): void {
+    // Read the resolved model annotations (the import/extend fold) so the flag
+    // carries across `extend`, matching getBuildPlan's gate.
+    const modelTag = this.modelAnnotations.parseAsTag('!').tag;
+    if (!modelTag.has('experimental', 'givens')) {
+      throw new Error(
+        `Model must have ##! experimental.givens to use ${method}`
+      );
+    }
+  }
+
+  /**
+   * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHANGE WITHOUT NOTICE
+   *
+   * The source-level access filters — the `where:` predicates that isolate this
+   * source's data (RLAC). Unlike `.filters` (drill/result filters), these are the
+   * filters marked `isSourceFilter`. Each `FilterCondition` exposes the source
+   * text (`.code`), the walkable expression tree (`.e`), and pre-computed field
+   * and given references (`.refSummary`) — enough to reconstruct a compound
+   * predicate (`or`, cross-column), not just a per-field map.
+   *
+   * Requires the model to declare `##! experimental.givens`.
+   */
+  public get accessFilters(): FilterCondition[] {
+    this.requireGivensExperiment('accessFilters');
+    return (this.sourceStructDef?.filterList ?? []).filter(
+      f => f.isSourceFilter
+    );
+  }
+
+  /**
+   * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHANGE WITHOUT NOTICE
+   *
+   * Compile this source's access predicate (see `accessFilters`) to a single
+   * dialect-appropriate SQL boolean expression for a concrete set of given
+   * values — a bare WHERE fragment (no `WHERE` keyword), in the source's own
+   * dialect. A host splices this into its own SQL to re-apply the source's row
+   * isolation when indexing rows.
+   *
+   * Columns are qualified with `options.tableAlias` (default `base`, which must
+   * be a bare SQL identifier `[A-Za-z_][A-Za-z0-9_]*`); the caller must expose
+   * the source's table under that alias. Predicates that reference a
+   * joined field — directly (`orders.amount`) or via a local dimension that
+   * aliases one — are rejected, since the emitted alias has no entry in the
+   * caller's `FROM`; base-relative columns (including nested record columns) are
+   * fine. An unsatisfied given (no supplied value and no declaration default)
+   * throws, so the predicate fails closed. A source with no access filters
+   * returns `'true'` (no restriction); a caller whose policy requires a predicate
+   * should check `accessFilters` is non-empty first.
+   *
+   * Requires the model to declare `##! experimental.givens` (a bare
+   * `##! experimental` is not sufficient).
+   */
+  public accessFilterSQL(options?: {
+    givens?: Record<string, GivenValue>;
+    tableAlias?: string;
+  }): string {
+    const filters = this.accessFilters; // also enforces the experiment gate
+    const source = this.sourceStructDef;
+    if (!source) {
+      throw new Error(
+        `Cannot get access filter SQL from a struct of type ${this.structDef.type}`
+      );
+    }
+    // The access predicate can only be bound if this model declares every given
+    // it references. A detached Explore (created via `fromJSON`/serialization)
+    // carries the source and annotations but not the model's given declarations,
+    // so binding would otherwise fail deep in the compiler with a confusing
+    // "unknown given". Detect that here and fail with an actionable message.
+    const modelGivens = this._ownerModelDef.givens ?? {};
+    for (const filter of filters) {
+      for (const usage of filter.refSummary?.givenUsage ?? []) {
+        if (!modelGivens[usage.id]) {
+          throw new Error(
+            'accessFilterSQL: the access predicate references givens this ' +
+              "Explore's model does not declare. This usually means the Explore " +
+              'was created via fromJSON/serialization, which does not carry given ' +
+              'declarations — obtain the Explore from a compiled Model instead.'
+          );
+        }
+      }
+    }
+    const resolved = options?.givens
+      ? resolveSuppliedGivens(options.givens, this._ownerModelDef)
+      : new Map<GivenID, Expr>();
+    evaluateInlineGivens(resolved, this._ownerModelDef);
+    const result = predicateExprToSQL(
+      source,
+      filters,
+      modelGivens,
+      resolved.size > 0 ? resolved : undefined,
+      options?.tableAlias ?? 'base'
+    );
+    if (result.error !== undefined) {
+      throw new Error(result.error);
+    }
+    return result.sql;
   }
 
   get limit(): number | undefined {
