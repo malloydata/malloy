@@ -4,7 +4,7 @@ process.env['TZ'] = 'America/Los_Angeles';
 
 // ESM-only deps that ship plain static import/export: jest's CJS runtime can't
 // load them as-is, so they must be transformed (not ignored). See the Class-1
-// ESM note in .github/dependabot-pins.md.
+// ESM note in DEPENDENCY-MANAGEMENT.md.
 const transformIgnoreModules = [
   '@motherduck/wasm-client',
   '@noble/hashes',

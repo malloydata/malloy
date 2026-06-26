@@ -122,7 +122,7 @@ Each database has its own package with connection handling and dialect-specific 
 
 #### Native-dependency pins (do not loosen casually)
 
-`snowflake-sdk` (`2.3.1`) and `@databricks/sql` (`1.15.0`) are pinned to exact, pre-native versions, not `^` ranges. Why isn't visible here: downstream clients (the VS Code extension, `malloy-cli`) bundle with esbuild, which can't bundle native `.node` binaries. Newer driver releases ship them, so an unpinned range floats one in and breaks those builds — caught only in their CI. Bumping past these requires externalize-and-ship work in each client first (their `check-native` guard trips otherwise).
+`snowflake-sdk` (`2.3.1`) and `@databricks/sql` (`1.15.0`) are pinned to exact, pre-native versions, not `^` ranges. Why isn't visible here: downstream clients (the VS Code extension, `malloy-cli`) bundle with esbuild, which can't bundle native `.node` binaries. Newer driver releases ship them, so an unpinned range floats one in and breaks those builds — caught only in their CI. Bumping past these requires externalize-and-ship work in each client first (their `check-native` guard trips otherwise). Full pin ledger, methodology, and revisit triggers: [`DEPENDENCY-MANAGEMENT.md`](DEPENDENCY-MANAGEMENT.md).
 
 ### Supporting Libraries
 - `malloy-interfaces/` - TypeScript interfaces and Thrift-generated types
@@ -334,6 +334,7 @@ For deeper context on specific subsystems, see:
 - [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md) - Data visualization and rendering
 - [test/CONTEXT.md](test/CONTEXT.md) - Test organization and infrastructure
 - [.github/workflows/CONTEXT.md](.github/workflows/CONTEXT.md) - CI and release: what CI runs, the external-PR security model, and npm publishing (OIDC trusted publishing)
+- [DEPENDENCY-MANAGEMENT.md](DEPENDENCY-MANAGEMENT.md) - How we use Dependabot, and every version we deliberately pin/hold — why, what it costs, and when to revisit
 
 ## Maintaining the CONTEXT Tree
 

@@ -2,7 +2,7 @@
 
 CI and release machinery. Read the YAML for mechanics; this covers what's *not* visible there — the structure, the security model, and the publishing rules that bite.
 
-Dependabot (config, the alerts-vs-PRs distinction, and the deliberate-pin ledger) is documented one level up in [`../CONTEXT.md`](../CONTEXT.md) and [`../dependabot-pins.md`](../dependabot-pins.md).
+Dependabot (config, the alerts-vs-PRs distinction, and the deliberate-pin ledger) is documented one level up in [`../CONTEXT.md`](../CONTEXT.md) and [`DEPENDENCY-MANAGEMENT.md`](../../DEPENDENCY-MANAGEMENT.md).
 
 ## CI
 

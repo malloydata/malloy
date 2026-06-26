@@ -19,5 +19,5 @@ only when every owner moves.
 
 **Revisit** when doing a deliberate `snowflake-sdk` upgrade: move the exact pin,
 run the live Snowflake suite, confirm the native chain still builds on every
-platform. The cross-cutting pin ledger is [`.github/dependabot-pins.md`](../../.github/dependabot-pins.md);
+platform. The cross-cutting pin ledger is [`DEPENDENCY-MANAGEMENT.md`](../../DEPENDENCY-MANAGEMENT.md);
 the Dependabot flow is in [`.github/CONTEXT.md`](../../.github/CONTEXT.md).
