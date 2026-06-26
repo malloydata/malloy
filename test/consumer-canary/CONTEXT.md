@@ -50,7 +50,11 @@ downstream:
 
 ## Wiring
 
-`npm run canary` runs both. In CI it's the `consumer-canary` job in
-`.github/workflows/run-tests.yaml` (reusable workflow `consumer-canary.yaml`),
-which consumes the same built-workspace artifact as the dialect jobs — no secrets,
-no database.
+Run it locally with **`npm run test-canary`** — it builds first (the canary
+consumes the built `dist/`, unlike the source-based test suites), then runs both
+checks. `npm run canary` runs the two checks against an already-built workspace
+(`canary:bundle` / `canary:jest` run them individually).
+
+In CI it's the `consumer-canary` job in `.github/workflows/run-tests.yaml`
+(reusable workflow `consumer-canary.yaml`), which runs `npm run canary` against the
+same built-workspace artifact as the dialect jobs — no secrets, no database.

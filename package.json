@@ -64,6 +64,7 @@
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "profile": "ts-node scripts/profiler",
     "malloyc": "ts-node scripts/malloy-to-json",
+    "test-canary": "npm run build && npm run canary",
     "canary": "npm run canary:bundle && npm run canary:jest",
     "canary:bundle": "node test/consumer-canary/bundle-check.mjs",
     "canary:jest": "jest --config test/consumer-canary/jest.config.ts",
