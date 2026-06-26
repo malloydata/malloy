@@ -40,6 +40,9 @@ Tests that run against **all** supported databases to ensure consistent behavior
 
 These tests are particularly important for verifying that Malloy's abstraction works correctly across all supported SQL dialects.
 
+### Consumer-contract canary (`test/consumer-canary/`)
+Not a normal test — it consumes the *built* `@malloydata/*` packages the way a downstream app does (esbuild bundle + plain ts-jest, no babel) to catch native/ESM leaks that malloy's own CI is blind to. Run with `npm run canary`. See [`test/consumer-canary/CONTEXT.md`](consumer-canary/CONTEXT.md).
+
 ## Custom Test Utilities
 
 ### Result matchers (`toMatchResult` / `toEqualResult` / `toMatchRows` / `toMatchPaths`)
