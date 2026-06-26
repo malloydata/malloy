@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-mysql",
-  "version": "0.0.419",
+  "version": "0.0.420",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,7 +23,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.419",
+    "@malloydata/malloy": "0.0.420",
     "@types/node": "^22.20.0",
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "luxon": "^3.7.2",
