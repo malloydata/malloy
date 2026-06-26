@@ -4,7 +4,7 @@
 # tests in the source tree.
 #
 # test/consumer-canary is excluded: its spec deliberately runs under its own plain
-# ts-jest config (the `consumer-canary` CI job, `npm run canary`), not the main
+# ts-jest config (the `consumer-canary` CI job, `npm run consumer-canary`), not the main
 # jest projects, so it never appears in `jest --listTests`. See
 # test/consumer-canary/CONTEXT.md.
 
