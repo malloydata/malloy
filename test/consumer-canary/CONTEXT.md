@@ -19,13 +19,13 @@ way a downstream app does, in malloy's own PR CI.
   db-databricks → native kernel, db-duckdb/native, …), even though the smoke query
   only touches DuckDB. It then runs one real query end-to-end.
 
-- **`bundle-check.mjs`** (`npm run canary:bundle`) — esbuild-bundles the consumer
+- **`bundle-check.mjs`** (`npm run consumer-canary:bundle`) — esbuild-bundles the consumer
   for node, with the same connector-native externals a real consumer uses
   (`@duckdb/*`, `lz4`, `pg-native`). Catches a **new un-bundleable native or a bare
   `require` of an optional native** — the class that broke malloy-cli on
   `pg-native` and the VS Code extension on the databricks kernel.
 
-- **`consume.spec.ts`** + **`jest.config.ts`** (`npm run canary:jest`) — loads the
+- **`consume.spec.ts`** + **`jest.config.ts`** (`npm run consumer-canary:jest`) — loads the
   consumer under a **plain ts-jest config with no babel transform**. Catches an
   **ESM-only published runtime dep** — the class that broke the VS Code extension
   on `uuid` v14 / `@noble/hashes` v2.
@@ -43,18 +43,18 @@ downstream:
 - **bundle-check fails** → a runtime dep is not bundle-safe (a new native, or a
   bare native require). Externalizing it in the consumer is only a band-aid; the
   fix is upstream — see `DEPENDENCY-MANAGEMENT.md`.
-- **canary:jest fails** with "Unexpected token 'export'" / "Cannot use import
+- **consumer-canary:jest fails** with "Unexpected token 'export'" / "Cannot use import
   statement outside a module" → a runtime dep went ESM-only. **Do not** add a
   transform here to silence it — pin the dep to its last CJS-consumable major, the
   way `uuid` and `@noble/hashes` are pinned (`DEPENDENCY-MANAGEMENT.md`).
 
 ## Wiring
 
-Run it locally with **`npm run test-canary`** — it builds first (the canary
+Run it locally with **`npm run test-consumer-canary`** — it builds first (the canary
 consumes the built `dist/`, unlike the source-based test suites), then runs both
-checks. `npm run canary` runs the two checks against an already-built workspace
-(`canary:bundle` / `canary:jest` run them individually).
+checks. `npm run consumer-canary` runs the two checks against an already-built workspace
+(`consumer-canary:bundle` / `consumer-canary:jest` run them individually).
 
 In CI it's the `consumer-canary` job in `.github/workflows/run-tests.yaml`
-(reusable workflow `consumer-canary.yaml`), which runs `npm run canary` against the
+(reusable workflow `consumer-canary.yaml`), which runs `npm run consumer-canary` against the
 same built-workspace artifact as the dialect jobs — no secrets, no database.

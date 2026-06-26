@@ -22,6 +22,6 @@ jobs:
         with:
           node-version-file: '.node-version'
       - name: Consumer canary (bundle + plain ts-jest)
-        run: npm run canary
+        run: npm run consumer-canary
         env:
           CI: true
