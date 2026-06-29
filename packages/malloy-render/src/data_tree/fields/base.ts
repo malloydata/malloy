@@ -40,6 +40,7 @@ export abstract class FieldBase {
   protected _renderAs = '';
   private _tagConfig: unknown = undefined;
   private _resolvedLabel: string | undefined;
+  private _dashboardChildConfig: unknown = undefined;
   private _columnConfig: unknown = undefined;
   private _validationErrors: string[] = [];
 
@@ -82,6 +83,22 @@ export abstract class FieldBase {
 
   setResolvedLabel(label: string | undefined): void {
     this._resolvedLabel = label;
+  }
+
+  /**
+   * Get the pre-resolved dashboard child config (colspan, subtitle, break,
+   * borderless) for a field that is a direct child of a # dashboard nest.
+   * Resolved at setup time so the dashboard component never reads tags at
+   * render time. Stored as one per-child config object rather than as
+   * separate fields, so these dashboard-only concepts do not spread across
+   * the universal field base. Returns undefined for non-dashboard children.
+   */
+  getDashboardChildConfig<T>(): T | undefined {
+    return this._dashboardChildConfig as T | undefined;
+  }
+
+  setDashboardChildConfig(config: unknown): void {
+    this._dashboardChildConfig = config;
   }
 
   /**

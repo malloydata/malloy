@@ -1,10 +1,14 @@
-name: 'DB:DuckDB'
+name: 'Consumer Canary'
 permissions: {}
 
+# Exercises the published @malloydata packages the way a downstream app does —
+# esbuild-bundled for node, and loaded under a plain ts-jest config (no babel
+# transform) — so a producer-green build can't ship a consumer-broken artifact.
+# See test/consumer-canary/CONTEXT.md.
 on: workflow_call
 
 jobs:
-  test-duckdb:
+  consumer-canary:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,7 +21,7 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
-      - name: Test
-        run: npm run ci-duckdb
+      - name: Consumer canary (bundle + plain ts-jest)
+        run: npm run consumer-canary
         env:
           CI: true

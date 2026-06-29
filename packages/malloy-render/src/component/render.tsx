@@ -348,6 +348,11 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
   const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
   const background = getThemeValue('background', localTheme, modelTheme);
 
+  // The dashboard's styling renders from the internal --malloy-theme--dashboard-*
+  // CSS defaults below; it is intentionally NOT exposed as public # theme tag
+  // keys (no getThemeValue reads). Per-dashboard theming is deferred to the
+  // themes design rather than invented as per-component tag keys in a layout
+  // change.
   const css = `
     --malloy-render--table-row-height: ${tableRowHeight};
     --malloy-render--table-body-color: ${tableBodyColor};
@@ -362,7 +367,15 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
     --malloy-render--table-pinned-background: ${tablePinnedBackground};
     --malloy-render--table-pinned-border: ${tablePinnedBorder};
     --malloy-render--background: ${background};
-
+    --malloy-render--dashboard-bg: var(--malloy-theme--dashboard-bg);
+    --malloy-render--dashboard-card-bg: var(--malloy-theme--dashboard-card-bg);
+    --malloy-render--dashboard-card-radius: var(--malloy-theme--dashboard-card-radius);
+    --malloy-render--dashboard-card-padding: var(--malloy-theme--dashboard-card-padding);
+    --malloy-render--dashboard-title-size: var(--malloy-theme--dashboard-title-size);
+    --malloy-render--dashboard-title-weight: var(--malloy-theme--dashboard-title-weight);
+    --malloy-render--dashboard-title-color: var(--malloy-theme--dashboard-title-color);
+    --malloy-render--dashboard-value-size: var(--malloy-theme--dashboard-value-size);
+    --malloy-render--dashboard-gap: var(--malloy-theme--dashboard-gap);
 `;
   return css;
 }

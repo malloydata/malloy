@@ -66,6 +66,10 @@
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "profile": "ts-node scripts/profiler",
     "malloyc": "ts-node scripts/malloy-to-json",
+    "test-consumer-canary": "npm run build && npm run consumer-canary",
+    "consumer-canary": "npm run consumer-canary:bundle && npm run consumer-canary:jest",
+    "consumer-canary:bundle": "node test/consumer-canary/bundle-check.mjs",
+    "consumer-canary:jest": "jest --config test/consumer-canary/jest.config.ts",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
     "setup-new-checkout": "scripts/setup-new-checkout.sh",
     "ping-db": "ts-node ./test/bin/ping_db.ts"
@@ -103,7 +107,7 @@
     "ts-node": "^10.9.1",
     "typescript": "^6.0.3",
     "unified": "^11.0.5",
-    "uuid": "^14.0.0",
+    "uuid": "^11.1.1",
     "yargs": "^18.0.0"
   },
   "dependencies": {},

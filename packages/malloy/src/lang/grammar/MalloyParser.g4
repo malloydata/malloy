@@ -691,7 +691,7 @@ literal
   | (TRUE | FALSE)                              # exprBool
   | HACKY_REGEX                                 # exprRegex
   | filterString                                # filterString_stub
-  | NOW                                         # exprNow
+  | NOW (OPAREN CPAREN)?                         # exprNow
   ;
 
 dateLiteral

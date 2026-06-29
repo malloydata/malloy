@@ -311,6 +311,22 @@ function resolveTableNestTags(field: Field): TableNestConfig {
 
 export interface DashboardNestConfig {
   maxTableHeight: number | null;
+  columns: number | undefined;
+  gap: number | undefined;
+}
+
+/**
+ * Per-child layout config for the direct children of a # dashboard nest.
+ * Resolved once at setup time and stashed on each child via
+ * setDashboardChildConfig, so the dashboard component never reads child
+ * tags at render time and these dashboard-only concepts stay off the
+ * universal field base.
+ */
+export interface DashboardChildConfig {
+  colspan?: number;
+  subtitle?: string;
+  break?: boolean;
+  borderless?: boolean;
 }
 
 function resolveDashboardTags(field: Field): DashboardNestConfig {
@@ -325,7 +341,18 @@ function resolveDashboardTags(field: Field): DashboardNestConfig {
     maxTableHeight = maxTableHeightTag.numeric()!;
   }
 
-  return {maxTableHeight};
+  // Drop out-of-range values so layout falls back to defaults; the
+  // validator emits a clear error so the user knows what's wrong.
+  const rawColumns = dashboardTag?.numeric('columns');
+  const columns =
+    rawColumns !== undefined && Number.isInteger(rawColumns) && rawColumns >= 1
+      ? rawColumns
+      : undefined;
+
+  const rawGap = dashboardTag?.numeric('gap');
+  const gap = rawGap !== undefined && rawGap >= 0 ? rawGap : undefined;
+
+  return {maxTableHeight, columns, gap};
 }
 
 // ---- Resolver dispatch ----
@@ -380,6 +407,39 @@ export function resolveBuiltInTags(field: Field): void {
       break;
     case 'dashboard':
       field.setTagConfig(resolveDashboardTags(field));
+      // Resolve dashboard-owned child tags at setup time so the
+      // dashboard component never reads tags at render time.
+      if (field.isNest()) {
+        for (const child of field.fields) {
+          const childTag = child.tag;
+          // Read each child tag unconditionally so any present colspan/subtitle/
+          // break/borderless is marked read; absent tags need no marking since
+          // the unread-tag detector only walks present properties. This is why
+          // the dashboard no longer needs childOwnedPaths entries.
+          const childConfig: DashboardChildConfig = {};
+          const colspanVal = childTag.numeric('colspan');
+          // Drop invalid colspans so the tile keeps its default of one column;
+          // the validator already logged the error.
+          if (
+            colspanVal !== undefined &&
+            Number.isInteger(colspanVal) &&
+            colspanVal >= 1
+          ) {
+            childConfig.colspan = colspanVal;
+          }
+          const subtitle = childTag.text('subtitle');
+          if (subtitle !== undefined) {
+            childConfig.subtitle = subtitle;
+          }
+          if (childTag.has('break')) {
+            childConfig.break = true;
+          }
+          if (childTag.has('borderless')) {
+            childConfig.borderless = true;
+          }
+          child.setDashboardChildConfig(childConfig);
+        }
+      }
       break;
   }
 }
