@@ -18,6 +18,30 @@ import {PartialBuilder} from '../query-builders/partial-builder';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {modernizeTermsForUserText} from '../../utils';
 
+function queryOperationName(el: QueryProperty): string | undefined {
+  switch (el.elementType) {
+    case 'aggregateList':
+      return 'aggregate:';
+    case 'groupBy':
+      return 'group_by:';
+    case 'index':
+      return 'index:';
+    case 'nestedQueries':
+    case 'nest-field-declaration':
+      return 'nest:';
+    case 'projectStatement':
+      return 'select:';
+    case 'sampleProperty':
+      return 'sample:';
+  }
+}
+
+function queryContextName(queryClass: QueryClass): string {
+  const className = modernizeTermsForUserText(queryClass);
+  const article = className === 'index' ? 'an' : 'a';
+  return `${article} ${className} query`;
+}
+
 export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
   opClass: QueryClass | undefined;
@@ -39,13 +63,14 @@ export class QOpDesc extends ListOf<QueryProperty> {
       if (el.forceQueryClass) {
         if (guessType) {
           if (guessType !== el.forceQueryClass) {
+            const operationName =
+              queryOperationName(el) ??
+              modernizeTermsForUserText(el.forceQueryClass);
             el.logError(
               `illegal-${guessType}-operation`,
-              `Use of ${modernizeTermsForUserText(
-                el.forceQueryClass
-              )} is not allowed in a ${modernizeTermsForUserText(
+              `Use of ${operationName} is not allowed in ${queryContextName(
                 guessType
-              )} query`
+              )}`
             );
           }
         } else {
@@ -89,6 +114,13 @@ export class QOpDesc extends ListOf<QueryProperty> {
   ): OpDesc {
     const build = this.getBuilder(inputFS, isNestIn, this);
     for (const qp of this.list) {
+      if (
+        this.opClass &&
+        qp.forceQueryClass &&
+        qp.forceQueryClass !== this.opClass
+      ) {
+        continue;
+      }
       build.execute(qp);
     }
     const segment = build.finalize(this.refineThis);
