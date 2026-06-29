@@ -138,6 +138,11 @@ const config: Config = {
     },
     {
       ...defaultConfig,
+      displayName: 'db-redshift',
+      roots: ['<rootDir>/packages/malloy-db-redshift/'],
+    },
+    {
+      ...defaultConfig,
       displayName: 'db-presto-trino',
       roots: [
         '<rootDir>/packages/malloy-db-trino/src/',

@@ -23,6 +23,10 @@ import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 import {SnowflakeConnection} from '@malloydata/db-snowflake';
 import {PooledPostgresConnection} from '@malloydata/db-postgres';
+import {
+  PooledRedshiftConnection,
+  RedshiftExecutor,
+} from '@malloydata/db-redshift';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
@@ -85,6 +89,21 @@ export class MySQLTestConnection extends MySQLConnection {
 export class PostgresTestConnection extends PooledPostgresConnection {
   // we probably need a better way to do this.
 
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
+export class RedshiftTestConnection extends PooledRedshiftConnection {
   public async runSQL(
     sqlCommand: string,
     options?: RunSQLOptions
@@ -224,6 +243,13 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           const connOptions = SnowflakeExecutor.getConnectionOptionsFromEnv();
           connection = new SnowflakeTestConnection(dbName, {connOptions});
         }
+        break;
+      case 'redshift':
+        connection = new RedshiftTestConnection(
+          dbName,
+          {},
+          RedshiftExecutor.getConnectionOptionsFromEnv()
+        );
         break;
       case 'trino':
         connection = new TrinoConnection(

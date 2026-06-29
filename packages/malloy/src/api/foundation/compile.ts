@@ -302,6 +302,7 @@ export class Malloy {
       eventStream,
       restrictedMode,
       method,
+      testEnvironment,
     } = req;
     if (restrictedMode) {
       // Restricted-mode compiles do not participate in the model-def
@@ -383,6 +384,10 @@ export class Malloy {
         eventStream,
         restrictedMode ?? false
       );
+    }
+    // Test runtimes enable experimental dialects without the `##! experimental.dialect.NAME` flag.
+    if (testEnvironment) {
+      translator.allDialectsEnabled = true;
     }
     for (;;) {
       const result = translator.translate(model?._modelDef);

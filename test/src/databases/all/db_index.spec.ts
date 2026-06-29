@@ -50,25 +50,28 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
-  it(`index value map  - ${databaseName}`, async () => {
-    const model = await runtime.loadModel(
-      `
+  it.when(runtime.supportsNesting)(
+    `index value map  - ${databaseName}`,
+    async () => {
+      const model = await runtime.loadModel(
+        `
         source: airports is ${databaseName}.table('malloytest.airports') extend {
         }
     `
-    );
-    const result = await model.searchValueMap('airports');
-    // if (result !== undefined) {
-    //   console.log(result[4].values);
-    // } else {
-    //   console.log("no result");
-    // }
-    expect(result).toBeDefined();
-    if (result !== undefined) {
-      expect(result[4].values[0].fieldValue).toBe('WASHINGTON');
-      expect(result[4].values[0].weight).toBe(214);
+      );
+      const result = await model.searchValueMap('airports');
+      // if (result !== undefined) {
+      //   console.log(result[4].values);
+      // } else {
+      //   console.log("no result");
+      // }
+      expect(result).toBeDefined();
+      if (result !== undefined) {
+        expect(result[4].values[0].fieldValue).toBe('WASHINGTON');
+        expect(result[4].values[0].weight).toBe(214);
+      }
     }
-  });
+  );
 
   it(`index no sample rows - ${databaseName}`, async () => {
     await expect(`

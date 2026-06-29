@@ -33,6 +33,12 @@ function literalNum(num: number): Expr {
 describe.each(runtimes.runtimeList)(
   'compound atomic datatypes %s',
   (conName, runtime) => {
+    // Redshift has no record/compound type; recordSelectVal() throws at suite
+    // collection, so skip the whole file rather than crash it.
+    if (!runtime.supportsNesting) {
+      test.skip(`compound atomic datatypes are not supported on ${conName}`, () => {});
+      return;
+    }
     const testModel = wrapTestModel(runtime, '');
     const supportsNestedArrays = runtime.dialect.nestedArrays;
     const quote = (s: string) => runtime.dialect.sqlQuoteIdentifier(s);

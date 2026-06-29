@@ -8,6 +8,7 @@ export {
   StandardSQLDialect,
   TrinoDialect,
   PostgresDialect,
+  RedshiftDialect,
   SnowflakeDialect,
   MySQLDialect,
   DatabricksDialect,

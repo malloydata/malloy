@@ -73,18 +73,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       {
         name: '{a :: number, b :: string}',
         castType: '{a :: number, b :: string}',
-        skip: ['postgres'],
+        skip: ['postgres', 'redshift'],
       },
       {
         name: '{a :: number, b :: string}[]',
         castType: '{a :: number, b :: string}[]',
-        skip: ['postgres'],
+        skip: ['postgres', 'redshift'],
         emptyOn: ['bigquery', 'trino', 'presto'],
       },
       {
         name: '{a :: number, b :: string[]}',
         castType: '{a :: number, b :: string[]}',
-        skip: ['postgres'],
+        skip: ['postgres', 'redshift'],
       },
     ];
 

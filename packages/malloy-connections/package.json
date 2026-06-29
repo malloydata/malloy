@@ -38,6 +38,7 @@
     "@malloydata/db-duckdb": "0.0.421",
     "@malloydata/db-mysql": "0.0.421",
     "@malloydata/db-postgres": "0.0.421",
+    "@malloydata/db-redshift": "0.0.421",
     "@malloydata/db-snowflake": "0.0.421",
     "@malloydata/db-trino": "0.0.421",
     "@malloydata/malloy": "0.0.421"

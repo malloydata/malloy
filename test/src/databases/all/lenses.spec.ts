@@ -146,8 +146,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> d1 + d2 + m
     `).toMatchResult(testModel, {n1: 1, n2: 1, c: 1});
   });
-  it(`nested no name - ${databaseName}`, async () => {
-    await expect(`
+  it.when(runtime.supportsNesting)(
+    `nested no name - ${databaseName}`,
+    async () => {
+      await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
         view: d is { group_by: n }
         view: m is { aggregate: c is count() }
@@ -156,9 +158,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: d + m
       }
     `).toMatchResult(testModel, {d: [{n: 1, c: 1}]});
-  });
-  it(`nested with name - ${databaseName}`, async () => {
-    await expect(`
+    }
+  );
+  it.when(runtime.supportsNesting)(
+    `nested with name - ${databaseName}`,
+    async () => {
+      await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
         view: d is { group_by: n }
         view: m is { aggregate: c is count() }
@@ -167,9 +172,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: y is d + m
       }
     `).toMatchResult(testModel, {y: [{n: 1, c: 1}]});
-  });
-  it(`nested no name with dimension head - ${databaseName}`, async () => {
-    await expect(`
+    }
+  );
+  it.when(runtime.supportsNesting)(
+    `nested no name with dimension head - ${databaseName}`,
+    async () => {
+      await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
         view: m is { aggregate: c is count() }
       }
@@ -177,9 +185,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: n + m
       }
     `).toMatchResult(testModel, {n: [{n: 1, c: 1}]});
-  });
-  it(`nest dimension only - ${databaseName}`, async () => {
-    await expect(`
+    }
+  );
+  it.when(runtime.supportsNesting)(
+    `nest dimension only - ${databaseName}`,
+    async () => {
+      await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
         view: m is { aggregate: c is count() }
       }
@@ -187,7 +198,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: n
       }
     `).toMatchResult(testModel, {n: [{n: 1}]});
-  });
+    }
+  );
   it(`joined dimension in middle of refinements - ${databaseName}`, async () => {
     await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
@@ -197,8 +209,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> m + y.n + { limit: 1 }
     `).toMatchResult(testModel, {'n': 2, 'c': 1});
   });
-  it(`nest joined dimension refined - ${databaseName}`, async () => {
-    await expect(`
+  it.when(runtime.supportsNesting)(
+    `nest joined dimension refined - ${databaseName}`,
+    async () => {
+      await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
         join_one: y is ${databaseName}.sql('SELECT 1 as ${q`n`}') on true
         view: m is { aggregate: c is count() }
@@ -207,7 +221,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: y.n + { limit: 1 }
       }
     `).toMatchResult(testModel, {n: [{n: 1}]});
-  });
+    }
+  );
   it(`joined dimension refined - ${databaseName}`, async () => {
     await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
@@ -217,8 +232,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> y.n + { limit: 1 }
     `).toMatchResult(testModel, {'n': 2});
   });
-  it(`nest joined dimension bare - ${databaseName}`, async () => {
-    await expect(`
+  it.when(runtime.supportsNesting)(
+    `nest joined dimension bare - ${databaseName}`,
+    async () => {
+      await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
         join_one: y is ${databaseName}.sql('SELECT 2 as ${q`n`}') on true
         view: m is { aggregate: c is count() }
@@ -227,7 +244,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: y.n
       }
     `).toMatchResult(testModel, {n: [{n: 2}]});
-  });
+    }
+  );
   it(`joined dimension bare - ${databaseName}`, async () => {
     await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
@@ -237,15 +255,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> y.n
     `).toMatchResult(testModel, {'n': 2});
   });
-  it(`joined dimension nest refinement - ${databaseName}`, async () => {
-    await expect(`
+  it.when(runtime.supportsNesting)(
+    `joined dimension nest refinement - ${databaseName}`,
+    async () => {
+      await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
         join_one: y is ${databaseName}.sql('SELECT 2 as ${q`n`}') on true
         view: m is { aggregate: c is count() }
       }
       run: x -> { nest: m + y.n }
     `).toMatchResult(testModel, {m: [{c: 1, n: 2}]});
-  });
+    }
+  );
   it.skip(`nest measure only in second stage - ${databaseName}`, async () => {
     await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
@@ -256,8 +277,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     `).toMatchResult(testModel, {m: [{c: 1}]});
   });
-  it(`nest dimension only in refinement - ${databaseName}`, async () => {
-    await expect(`
+  it.when(runtime.supportsNesting)(
+    `nest dimension only in refinement - ${databaseName}`,
+    async () => {
+      await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {
         view: m is { aggregate: c is count() }
       }
@@ -265,7 +288,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: n
       }
     `).toMatchResult(testModel, {n: [{n: 1}], c: 1});
-  });
+    }
+  );
   it(`view dimension only - ${databaseName}`, async () => {
     await expect(`
       source: x is ${databaseName}.sql('SELECT 1 as ${q`n`}') extend {

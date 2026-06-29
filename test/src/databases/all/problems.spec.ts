@@ -24,9 +24,11 @@ async function getError<T>(fn: () => Promise<T>) {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const testModel = wrapTestModel(runtime, '');
-  it(`properly quotes nested field names in ${databaseName}`, async () => {
-    const one = runtime.dialect.sqlQuoteIdentifier('one');
-    await expect(`
+  it.when(runtime.supportsNesting)(
+    `properly quotes nested field names in ${databaseName}`,
+    async () => {
+      const one = runtime.dialect.sqlQuoteIdentifier('one');
+      await expect(`
       run: ${databaseName}.sql(""" SELECT 1 as ${one} """) -> {
         nest: foo is {
           group_by: one
@@ -37,9 +39,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
       }`).toMatchResult(testModel, {
-      foo: [{'one': 1, '#': 1, 'deepfoo': [{'one': 1, '#': 1}]}],
-    });
-  });
+        foo: [{'one': 1, '#': 1, 'deepfoo': [{'one': 1, '#': 1}]}],
+      });
+    }
+  );
 
   describe('warnings', () => {
     // NOTE: This test generates SQL errors on the console because of

@@ -124,14 +124,20 @@ expressionModels.forEach((x, databaseName) => {
       await funcTestMultiple(
         ["concat('foo', 'bar')", 'foobar'],
         ["concat(1, 'bar')", '1bar'],
-        [
-          "concat('cons', true)",
-          databaseName === 'postgres'
-            ? 'const'
-            : databaseName === 'mysql'
-              ? 'cons1'
-              : 'construe',
-        ],
+        // Redshift has no boolean->text cast and || rejects a boolean operand, and
+        // the override layer can't see per-arg types to DECODE just the boolean.
+        ...(databaseName === 'redshift'
+          ? []
+          : ([
+              [
+                "concat('cons', true)",
+                databaseName === 'postgres'
+                  ? 'const'
+                  : databaseName === 'mysql'
+                    ? 'cons1'
+                    : 'construe',
+              ],
+            ] as [string, string][])),
         ["concat('foo', @2003)", 'foo2003-01-01'],
         [
           "concat('foo', @2003-01-01 12:00:00)",
@@ -222,6 +228,7 @@ expressionModels.forEach((x, databaseName) => {
       'presto',
       'mysql',
       'databricks',
+      'redshift',
     ].includes(databaseName);
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
@@ -383,10 +390,12 @@ expressionModels.forEach((x, databaseName) => {
     //   });
     // });
 
-    it(`works inside nest - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `
+    it.when(runtime.supportsNesting)(
+      `works inside nest - ${databaseName}`,
+      async () => {
+        const result = await expressionModel
+          .loadQuery(
+            `
           run: state_facts extend { join_one: airports on airports.state = state } -> {
             group_by: state
             nest: q is {
@@ -395,29 +404,33 @@ expressionModels.forEach((x, databaseName) => {
             }
           }
             `
-        )
-        .run();
-      expect(result.data.path(0, 'q', 0, 'row_num').value).toBe(1);
-      expect(result.data.path(0, 'q', 1, 'row_num').value).toBe(2);
-      expect(result.data.path(1, 'q', 0, 'row_num').value).toBe(1);
-      expect(result.data.path(1, 'q', 1, 'row_num').value).toBe(2);
-    });
+          )
+          .run();
+        expect(result.data.path(0, 'q', 0, 'row_num').value).toBe(1);
+        expect(result.data.path(0, 'q', 1, 'row_num').value).toBe(2);
+        expect(result.data.path(1, 'q', 0, 'row_num').value).toBe(1);
+        expect(result.data.path(1, 'q', 1, 'row_num').value).toBe(2);
+      }
+    );
 
-    test(`works outside nest, but with a nest nearby - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `run: state_facts -> {
+    test.when(runtime.supportsNesting)(
+      `works outside nest, but with a nest nearby - ${databaseName}`,
+      async () => {
+        const result = await expressionModel
+          .loadQuery(
+            `run: state_facts -> {
             group_by: state
             calculate: row_num is row_number()
             nest: nested is {
               group_by: state
             }
           }`
-        )
-        .run();
-      expect(result.data.path(0, 'row_num').value).toBe(1);
-      expect(result.data.path(1, 'row_num').value).toBe(2);
-    });
+          )
+          .run();
+        expect(result.data.path(0, 'row_num').value).toBe(1);
+        expect(result.data.path(1, 'row_num').value).toBe(2);
+      }
+    );
   });
 
   describe('rank', () => {
@@ -494,8 +507,10 @@ expressionModels.forEach((x, databaseName) => {
       );
     });
 
-    it(`properly isolated nested calculations - ${databaseName}`, async () => {
-      await expect(`
+    it.when(runtime.supportsNesting)(
+      `properly isolated nested calculations - ${databaseName}`,
+      async () => {
+        await expect(`
             run: ${databaseName}.table('malloytest.airports') -> {
             group_by: faa_region
             aggregate: airport_count is count()
@@ -516,9 +531,10 @@ expressionModels.forEach((x, databaseName) => {
             order_by: id2 desc
           }
       `).toMatchResult(testModel, {
-        id2: 2,
-      });
-    });
+          id2: 2,
+        });
+      }
+    );
   });
 
   describe('lag', () => {
@@ -654,10 +670,12 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('first_value', () => {
-    test(`works in nest - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `
+    test.when(runtime.supportsNesting)(
+      `works in nest - ${databaseName}`,
+      async () => {
+        const result = await expressionModel
+          .loadQuery(
+            `
           run: aircraft -> {
             group_by: state
             where: state is not null
@@ -668,15 +686,16 @@ expressionModels.forEach((x, databaseName) => {
               calculate: first_count is first_value(count())
             }
           }`
-        )
-        .run();
-      expect(result.data.path(0, 'by_county', 1, 'first_count').value).toBe(
-        result.data.path(0, 'by_county', 0, 'aircraft_count').value
-      );
-      expect(result.data.path(1, 'by_county', 1, 'first_count').value).toBe(
-        result.data.path(1, 'by_county', 0, 'aircraft_count').value
-      );
-    });
+          )
+          .run();
+        expect(result.data.path(0, 'by_county', 1, 'first_count').value).toBe(
+          result.data.path(0, 'by_county', 0, 'aircraft_count').value
+        );
+        expect(result.data.path(1, 'by_county', 1, 'first_count').value).toBe(
+          result.data.path(1, 'by_county', 0, 'aircraft_count').value
+        );
+      }
+    );
     it(`works outside nest - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
@@ -862,7 +881,10 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('is_nan', () => {
-    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
+    // Redshift NaN doesn't compare equal to itself for table-materialized values (only as a
+    // leader-node constant), so is_nan - which tests `value = 'NaN'::float8` - can't return true.
+    const noNan = databaseName !== 'mysql' && databaseName !== 'redshift';
+    it.when(noNan)(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["is_nan('NaN'::number)", dbTrue],
         ['is_nan(100)', dbFalse],
@@ -883,7 +905,10 @@ expressionModels.forEach((x, databaseName) => {
           runtime.dialect.resultBoolean(true),
         ],
         ["greatest('a', 'b')", 'b'],
-        ['greatest(1, null, 0)', null],
+        // Redshift GREATEST/LEAST ignore NULLs instead of null-propagating, so skip the null case.
+        ...((databaseName === 'redshift'
+          ? []
+          : [['greatest(1, null, 0)', null]]) as [string, null][]),
         ['greatest(null, null)', null]
       );
     });
@@ -901,7 +926,9 @@ expressionModels.forEach((x, databaseName) => {
           runtime.dialect.resultBoolean(true),
         ],
         ["least('a', 'b')", 'a'],
-        ['least(1, null, 0)', null],
+        ...((databaseName === 'redshift'
+          ? []
+          : [['least(1, null, 0)', null]]) as [string, null][]),
         ['least(null, null)', null]
       );
     });
@@ -997,12 +1024,17 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('rand', () => {
-    it(`is usually not the same value - ${databaseName}`, async () => {
-      // There are around a billion values that rand() can be, so if this
-      // test fails, most likely something is broken. Otherwise, you're the lucky
-      // one in a billion!
-      await funcTest('rand() = rand()', runtime.dialect.resultBoolean(false));
-    });
+    // Redshift folds RANDOM()=RANDOM() to a single per-row evaluation (CSE), so the
+    // two calls always compare equal; the rand→RANDOM() mapping itself is correct.
+    it.when(databaseName !== 'redshift')(
+      `is usually not the same value - ${databaseName}`,
+      async () => {
+        // There are around a billion values that rand() can be, so if this
+        // test fails, most likely something is broken. Otherwise, you're the lucky
+        // one in a billion!
+        await funcTest('rand() = rand()', runtime.dialect.resultBoolean(false));
+      }
+    );
   });
   describe('pi', () => {
     it(`is pi - ${databaseName}`, async () => {
@@ -1405,7 +1437,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   describe('string_agg', () => {
     // Capability matrix: what each dialect supports for string_agg
     const canOrderBy = !['databricks'].includes(databaseName);
-    const canFanout = !['snowflake', 'mysql'].includes(databaseName);
+    const canFanout = !['snowflake', 'mysql', 'redshift'].includes(
+      databaseName
+    );
     const canFanoutOrderBy = ![
       'bigquery',
       'snowflake',
@@ -1413,6 +1447,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       'presto',
       'mysql',
       'databricks',
+      'redshift',
     ].includes(databaseName);
 
     it(`works no order by - ${databaseName}`, async () => {

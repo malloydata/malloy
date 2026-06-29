@@ -325,8 +325,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     `).toMatchResult(testModel, {x: 1});
   });
-  it('reference composite field in nest', async () => {
-    await expect(`
+  it.when(runtime.supportsNesting)(
+    'reference composite field in nest',
+    async () => {
+      await expect(`
       ##! experimental { composite_sources parameters }
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
       run: compose(state_facts, state_facts extend { dimension: x is 1 }) -> {
@@ -335,7 +337,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       }
     `).toMatchResult(testModel, {foo: [{x: 1}]});
-  });
+    }
+  );
   it('composite with select *', async () => {
     await expect(`
       ##! experimental.composite_sources
@@ -346,8 +349,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x -> { select: * }
     `).toMatchResult(testModel, {foo: 1});
   });
-  it('composite with each', async () => {
-    await expect(`
+  it.when(runtime.dialect.supportsArraysInData)(
+    'composite with each',
+    async () => {
+      await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
       source: x is compose(
@@ -358,7 +363,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
       run: x -> { aggregate: foo; group_by: bar, arr.each }
     `).toMatchResult(testModel, {foo: 0});
-  });
+    }
+  );
   it('complex nesting composite without join', async () => {
     await expect(`
       ##! experimental.composite_sources
@@ -494,6 +500,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         },
       },
     });
+    wrappedRuntime.isTestRuntime = true;
     const wrappedTestModel = {
       model: wrappedRuntime.loadModel(''),
       dialect: runtime.dialect,
@@ -520,6 +527,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         },
       },
     });
+    wrappedRuntime.isTestRuntime = true;
     const wrappedTestModel = {
       model: wrappedRuntime.loadModel(''),
       dialect: runtime.dialect,
