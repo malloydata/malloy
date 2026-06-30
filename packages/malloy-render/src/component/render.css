@@ -12,6 +12,15 @@
   --malloy-theme--table-pinned-border: 1px solid #daedf3;
   --malloy-theme--font-family: Inter, system-ui, sans-serif;
   --malloy-theme--background: white;
+  --malloy-theme--dashboard-bg: white;
+  --malloy-theme--dashboard-card-bg: white;
+  --malloy-theme--dashboard-card-radius: 8px;
+  --malloy-theme--dashboard-card-padding: 20px;
+  --malloy-theme--dashboard-title-size: 14px;
+  --malloy-theme--dashboard-title-weight: 500;
+  --malloy-theme--dashboard-title-color: #4a4d54;
+  --malloy-theme--dashboard-value-size: 32px;
+  --malloy-theme--dashboard-gap: 16px;
 
   font-family: var(--malloy-render--font-family);
   font-size: var(--malloy-render--table-font-size);

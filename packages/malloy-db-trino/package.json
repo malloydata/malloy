@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-trino",
-  "version": "0.0.416",
+  "version": "0.0.421",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,14 +23,14 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.416",
-    "@prestodb/presto-js-client": "^1.0.0",
+    "@malloydata/malloy": "0.0.421",
+    "@prestodb/presto-js-client": "^1.1.0",
     "gaxios": "^4.2.0",
-    "luxon": "^3.5.0",
+    "luxon": "^3.7.2",
     "trino-client": "^0.2.2"
   },
   "devDependencies": {
-    "@types/luxon": "^3.5.0"
+    "@types/luxon": "^3.7.2"
   },
   "description": "Malloy is a modern open source language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.",
   "bugs": {

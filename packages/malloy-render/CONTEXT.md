@@ -17,6 +17,20 @@ Two non-obvious consequences:
 
 `dist/module/index.mjs` exists but is not an exports entry — treat as internal.
 
+## Vega is pinned at v5 — a deliberate hold
+
+The renderer is built on **Vega 5** (via `vega-lite ^5`). Moving to the current
+Vega (6) is a major across the whole render stack — the `vega-lite` peer, the
+chart runtime, our typings — i.e. a deliberate renderer upgrade, not a dependency
+bump.
+
+**What the pin costs** — visible on Security → Dependabot alerts: `vega`,
+`vega-functions`, and `vega-expression` carry open advisories (high) whose only
+fix is Vega 6. These are render-owned — nothing else in the monorepo pulls them —
+so the renderer is the sole place that clears them. Recorded in the cross-cutting
+pin ledger [`DEPENDENCY-MANAGEMENT.md`](../../DEPENDENCY-MANAGEMENT.md);
+revisit when we take the Vega 5→6 upgrade.
+
 ### Public API
 
 - `MalloyRenderer(options)` — factory; plugins registered here.

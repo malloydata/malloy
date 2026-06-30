@@ -236,6 +236,8 @@ type MessageParameterTypes = {
   'aggregate-in-where': string;
   'order-by-not-found-in-output': string;
   'order-by-analytic': string;
+  'order-by-bad-reference': string;
+  'now-is-not-a-function': string;
   'illegal-index-operation': string;
   'illegal-project-operation': string;
   'illegal-grouping-operation': string;
