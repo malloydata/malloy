@@ -130,10 +130,6 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
             );
           }
 
-          // Capture the theme that beforeRender populated, for use in this
-          // synchronous render pass.
-          const themeForRender = explicitTheme;
-
           const data = props.dataColumn;
           const fields = data.field.fields;
           const lat1Field = fields[0];
@@ -150,7 +146,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
                   field: colorField.name,
                   type: colorType,
                   axis: {title: colorField.name},
-                  scale: getColorScale(colorType, false, false, themeForRender),
+                  scale: getColorScale(colorType, false, false, explicitTheme),
                 }
               : undefined;
 
@@ -188,7 +184,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
             // the host chrome. `vegaConfigOverride` cannot change this: it
             // merges only into spec.config, which a top-level spec.background
             // shadows in Vega-Lite.
-            background: mapCanvasBackground(themeForRender),
+            background: mapCanvasBackground(explicitTheme),
             config: SEGMENT_MAP_VEGA_CONFIG,
           };
 

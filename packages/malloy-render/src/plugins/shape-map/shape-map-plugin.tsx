@@ -151,10 +151,6 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
             );
           }
 
-          // Capture the theme that beforeRender populated, for use in this
-          // synchronous render pass.
-          const themeForRender = explicitTheme;
-
           const data = props.dataColumn;
           const regionField = data.field.fields[0];
           const colorField = data.field.fields[1];
@@ -169,7 +165,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
                   field: colorField.name,
                   type: colorType,
                   axis: {title: colorField.name},
-                  scale: getColorScale(colorType, false, false, themeForRender),
+                  scale: getColorScale(colorType, false, false, explicitTheme),
                 }
               : undefined;
 
@@ -215,7 +211,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
             // the host chrome. `vegaConfigOverride` cannot change this: it
             // merges only into spec.config, which a top-level spec.background
             // shadows in Vega-Lite.
-            background: mapCanvasBackground(themeForRender),
+            background: mapCanvasBackground(explicitTheme),
             config: SHAPE_MAP_VEGA_CONFIG,
           };
 
