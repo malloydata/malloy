@@ -16,7 +16,7 @@ function propToKebab(prop: keyof MalloyExplicitTheme): string {
 
 // Convert a MalloyExplicitTheme prop name to the matching renderer CSS
 // variable name, e.g. `tableRowHeight` -> `--malloy-render--table-row-height`.
-export function themePropToCssVar(prop: keyof MalloyExplicitTheme): string {
+function themePropToCssVar(prop: keyof MalloyExplicitTheme): string {
   return `--malloy-render--${propToKebab(prop)}`;
 }
 
@@ -58,8 +58,6 @@ export function getThemeValue(
     const value = theme?.text(prop);
     if (typeof value === 'string' && value !== '') return value;
   }
-  // If no theme overrides, fall back to the --malloy-theme-- variable
-  // using the kebab-cased prop name.
   return `var(--malloy-theme--${propToKebab(prop)})`;
 }
 
