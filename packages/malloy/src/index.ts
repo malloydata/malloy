@@ -63,6 +63,15 @@ export type {
   Expr,
   // Needed for drills in render
   FilterCondition,
+  // Walking access predicates (experimental givens): the reference summary on a
+  // FilterCondition and the Expr leaf nodes a consumer narrows on.
+  RefSummary,
+  FieldUsage,
+  FieldUsageEntry,
+  GivenUsage,
+  GivenUsageEntry,
+  FieldnameNode,
+  GivenRefNode,
   // Used in Composer
   Argument,
   Parameter,

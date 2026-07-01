@@ -190,7 +190,9 @@ Most `##!` flags are consumed **at translation time** (the `inExperiment` gates
 in `lang/`). The Foundation API also reads `##! experimental.persistence` at
 **runtime** — off the resolved model annotations (`Model.modelAnnotations`, the
 fold, so it carries across extend) — to gate `getBuildPlan()` / manifest
-substitution. There is deliberately no **SQL-gen-time** `##!` mechanism: the
+substitution. `##! experimental.givens` is gated the same way to guard
+`Explore.accessFilters` / `accessFilterSQL` (the access-predicate inspect + SQL
+emit API). There is deliberately no **SQL-gen-time** `##!` mechanism: the
 former per-object `modelAnnotations` carrier and `modelCompilerFlags()` were
 removed once their only consumer (`unsafe_complex_select_query`, a temporary BQ
 escape hatch) proved unnecessary; the guard it bypassed is now a plain compiler
