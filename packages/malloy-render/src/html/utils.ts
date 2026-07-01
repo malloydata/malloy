@@ -22,6 +22,7 @@ const MAP_GRADIENT_LOW_LIGHT = '#f5f5f5';
 const MAP_GRADIENT_LOW_DARK = '#3a3a3a';
 
 // Default blue 2-stop ramp for sequential (non-heatmap) colour scales.
+// Spread at each use so returned ranges don't alias this shared const.
 const DEFAULT_SEQUENTIAL_RANGE = ['#C2D5EE', '#1A73E8'];
 
 /**
@@ -76,15 +77,15 @@ export function getColorScale(
   switch (type) {
     case 'ordinal':
       return isRectMark
-        ? {range: DEFAULT_SEQUENTIAL_RANGE}
-        : {range: sequentialGradient ?? DEFAULT_SEQUENTIAL_RANGE};
+        ? {range: [...DEFAULT_SEQUENTIAL_RANGE]}
+        : {range: sequentialGradient ?? [...DEFAULT_SEQUENTIAL_RANGE]};
     case 'temporal':
     case 'quantitative':
       return isRectMark
         ? hasOverlappingText
           ? {range: ['#6BA4EE', '#EEA361']}
           : {range: ['#1A73E8', '#E8710A']}
-        : {range: sequentialGradient ?? DEFAULT_SEQUENTIAL_RANGE};
+        : {range: sequentialGradient ?? [...DEFAULT_SEQUENTIAL_RANGE]};
     case 'nominal':
       return hasOverlappingText
         ? {
