@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {Tag} from '@malloydata/malloy-tag';
 import type {Accessor, Setter} from 'solid-js';
 import {
   Show,
@@ -15,6 +14,7 @@ import {
   ErrorBoundary,
 } from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
+import {generateThemeStyle, themeOverridesAsCssVarNames} from './theme';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './render.css?raw';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Used as a directive in JSX
@@ -27,6 +27,7 @@ import type {
   TableConfig,
   VegaConfigHandler,
 } from './types';
+import type {MalloyExplicitTheme} from '@/api/types';
 export type {DrillData} from './types';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getDataTree} from '../data_tree';
@@ -47,6 +48,7 @@ export type MalloyRenderProps = {
   dashboardConfig?: Partial<DashboardConfig>;
   renderFieldMetadata: RenderFieldMetadata;
   useVegaInterpreter?: boolean;
+  theme?: MalloyExplicitTheme;
   onReady?: () => void;
 };
 
@@ -118,6 +120,7 @@ export function MalloyRender(props: MalloyRenderProps) {
             vegaConfigOverride={props.vegaConfigOverride}
             renderFieldMetadata={props.renderFieldMetadata}
             useVegaInterpreter={props.useVegaInterpreter}
+            theme={props.theme}
             onReady={props.onReady}
           />
         </ConfigContext.Provider>
@@ -135,6 +138,7 @@ export function MalloyRenderInner(props: {
   vegaConfigOverride?: VegaConfigHandler;
   renderFieldMetadata: RenderFieldMetadata;
   useVegaInterpreter?: boolean;
+  theme?: MalloyExplicitTheme;
 }) {
   const [parentSize, setParentSize] = createSignal({
     width: 0,
@@ -158,6 +162,7 @@ export function MalloyRenderInner(props: {
         height: parentSize().height - CHART_SIZE_BUFFER,
       },
       useVegaInterpreter: props.useVegaInterpreter,
+      explicitTheme: props.theme,
     });
 
     // Collect style overrides from plugins
@@ -174,6 +179,7 @@ export function MalloyRenderInner(props: {
             height: parentSize().height - CHART_SIZE_BUFFER,
           },
           useVegaInterpreter: props.useVegaInterpreter,
+          explicitTheme: props.theme,
         });
 
         // Collect style overrides from plugin
@@ -215,8 +221,24 @@ export function MalloyRenderInner(props: {
   };
 
   const style = () => {
-    const baseStyles = generateThemeStyle(tags().modelTheme, tags().localTheme);
+    const baseStyles = generateThemeStyle(
+      tags().modelTheme,
+      tags().localTheme,
+      props.theme
+    );
+    // Plugin style overrides come from per-plugin `getStyleOverrides()`
+    // and are concatenated AFTER baseStyles, so they normally win on
+    // CSS-cascade last-wins. Suppress any plugin override whose key was
+    // explicitly set on `props.theme`; otherwise an embedder-supplied
+    // `theme.background` silently loses to plugin-derived defaults
+    // (e.g. bar-chart writing `--malloy-render--background` from its
+    // vegaConfig.background). This intentionally also lets
+    // `theme.background` win over a per-chart `vegaConfigOverride`
+    // background at the container level; that chart's own canvas still
+    // paints its override.
+    const suppressed = themeOverridesAsCssVarNames(props.theme);
     const overrideStyles = Object.entries(metadata().styleOverrides)
+      .filter(([key]) => !suppressed.has(key))
       .map(([key, value]) => `${key}: ${value};`)
       .join('\n');
     return baseStyles + overrideStyles;
@@ -279,103 +301,4 @@ export function MalloyRenderInner(props: {
       </Show>
     </div>
   );
-}
-
-// Get the first valid theme value or fallback to CSS variable
-function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
-  let value: string | undefined;
-  for (const theme of themes) {
-    value = theme?.text(prop);
-    if (typeof value !== 'undefined') break;
-  }
-  // If no theme overrides, convert prop name from camelCase to kebab and pull from --malloy-theme-- variable
-  return (
-    value ??
-    `var(--malloy-theme--${prop
-      .replace(/([a-z])([A-Z])/g, '$1-$2')
-      .toLowerCase()})`
-  );
-}
-
-function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
-  const tableRowHeight = getThemeValue(
-    'tableRowHeight',
-    localTheme,
-    modelTheme
-  );
-  const tableBodyColor = getThemeValue(
-    'tableBodyColor',
-    localTheme,
-    modelTheme
-  );
-  const tableFontSize = getThemeValue('tableFontSize', localTheme, modelTheme);
-  const tableHeaderColor = getThemeValue(
-    'tableHeaderColor',
-    localTheme,
-    modelTheme
-  );
-  const tableHeaderWeight = getThemeValue(
-    'tableHeaderWeight',
-    localTheme,
-    modelTheme
-  );
-  const tableBodyWeight = getThemeValue(
-    'tableBodyWeight',
-    localTheme,
-    modelTheme
-  );
-  const tableBorder = getThemeValue('tableBorder', localTheme, modelTheme);
-  const tableBackground = getThemeValue(
-    'tableBackground',
-    localTheme,
-    modelTheme
-  );
-  const tableGutterSize = getThemeValue(
-    'tableGutterSize',
-    localTheme,
-    modelTheme
-  );
-  const tablePinnedBackground = getThemeValue(
-    'tablePinnedBackground',
-    localTheme,
-    modelTheme
-  );
-  const tablePinnedBorder = getThemeValue(
-    'tablePinnedBorder',
-    localTheme,
-    modelTheme
-  );
-  const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
-  const background = getThemeValue('background', localTheme, modelTheme);
-
-  // The dashboard's styling renders from the internal --malloy-theme--dashboard-*
-  // CSS defaults below; it is intentionally NOT exposed as public # theme tag
-  // keys (no getThemeValue reads). Per-dashboard theming is deferred to the
-  // themes design rather than invented as per-component tag keys in a layout
-  // change.
-  const css = `
-    --malloy-render--table-row-height: ${tableRowHeight};
-    --malloy-render--table-body-color: ${tableBodyColor};
-    --malloy-render--table-font-size: ${tableFontSize};
-    --malloy-render--font-family: ${fontFamily};
-    --malloy-render--table-header-color: ${tableHeaderColor};
-    --malloy-render--table-header-weight: ${tableHeaderWeight};
-    --malloy-render--table-body-weight: ${tableBodyWeight};
-    --malloy-render--table-border: ${tableBorder};
-    --malloy-render--table-background: ${tableBackground};
-    --malloy-render--table-gutter-size: ${tableGutterSize};
-    --malloy-render--table-pinned-background: ${tablePinnedBackground};
-    --malloy-render--table-pinned-border: ${tablePinnedBorder};
-    --malloy-render--background: ${background};
-    --malloy-render--dashboard-bg: var(--malloy-theme--dashboard-bg);
-    --malloy-render--dashboard-card-bg: var(--malloy-theme--dashboard-card-bg);
-    --malloy-render--dashboard-card-radius: var(--malloy-theme--dashboard-card-radius);
-    --malloy-render--dashboard-card-padding: var(--malloy-theme--dashboard-card-padding);
-    --malloy-render--dashboard-title-size: var(--malloy-theme--dashboard-title-size);
-    --malloy-render--dashboard-title-weight: var(--malloy-theme--dashboard-title-weight);
-    --malloy-render--dashboard-title-color: var(--malloy-theme--dashboard-title-color);
-    --malloy-render--dashboard-value-size: var(--malloy-theme--dashboard-value-size);
-    --malloy-render--dashboard-gap: var(--malloy-theme--dashboard-gap);
-`;
-  return css;
 }
