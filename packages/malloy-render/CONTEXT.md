@@ -2,7 +2,7 @@
 
 The `malloy-render` package handles visualization and rendering of Malloy query results. It transforms query results into rich, interactive visualizations and tables.
 
-**Related docs:** [README.md](./README.md) for public-facing installation and usage, [DEVELOPING.md](./DEVELOPING.md) for the local development workflow, [docs/validation.md](./docs/validation.md) for the renderer validation contract, [docs/plugin-system.md](./docs/plugin-system.md) / [docs/plugin-api-reference.md](./docs/plugin-api-reference.md) / [docs/plugin-quick-start.md](./docs/plugin-quick-start.md) for plugin authoring, [docs/renderer_tags_overview.md](./docs/renderer_tags_overview.md) and [docs/renderer_tag_cheatsheet.md](./docs/renderer_tag_cheatsheet.md) for the user-facing tag vocabulary.
+**Related docs:** [README.md](./README.md) for public-facing installation and usage, [DEVELOPING.md](./DEVELOPING.md) for the local development workflow, [docs/validation.md](./docs/validation.md) for the renderer validation contract, [docs/testing.md](./docs/testing.md) for the testing layers and harnesses, [docs/plugin-system.md](./docs/plugin-system.md) / [docs/plugin-api-reference.md](./docs/plugin-api-reference.md) / [docs/plugin-quick-start.md](./docs/plugin-quick-start.md) for plugin authoring, [docs/renderer_tags_overview.md](./docs/renderer_tags_overview.md) and [docs/renderer_tag_cheatsheet.md](./docs/renderer_tag_cheatsheet.md) for the user-facing tag vocabulary.
 
 Built on **Solid.js** (reactive UI) and **Vega** (declarative charts).
 
@@ -93,8 +93,11 @@ The table uses CSS Grid with subgrid. Layout is calculated in `table-layout.ts`:
 - Column ranges are tracked for each field to support nested tables
 
 ### Testing
-Use Storybook (`npm run storybook`) to test visual changes. Stories are in `src/stories/*.stories.malloy`.
-For non-visual logic (settings serialization, tag parsing, drill query behavior, utility formatting), add targeted Jest tests under `src/**/*.spec.ts` where possible.
+Test at the cheapest layer that can observe the behavior — the layers and their harnesses are in **[docs/testing.md](docs/testing.md)**. The short version:
+- **Dispatch & tag config** (`renderAs()`, `tag-configs.ts` resolvers, chart settings) is a function of the result *schema* — test it compile-only with the `RenderFieldMetadata` harness in `src/render-field-metadata.spec.ts`. No query run, no DOM.
+- **Vega spec generation** — `runChartQuery` in `src/plugins/spec-test-support/harness.ts` (runs a query, no DOM).
+- **Validation contract** — `test/src/render/render-validator.spec.ts`, which needs the built UMD bundle (full `npm run build`).
+- **Pixels** — Storybook (`npm run storybook`), stories in `src/stories/*.stories.malloy`.
 
 ## Plugin System
 
