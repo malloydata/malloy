@@ -3,7 +3,6 @@ set -e
 
 SCRIPTDIR=$(cd $(dirname $0); pwd)
 DATADIR=$(dirname $SCRIPTDIR)/data/malloytest-parquet
-DUCKDBDIR=$(dirname $SCRIPTDIR)/data/duckdb
 CONTAINER_NAME="mssql-malloy"
 SA_PASSWORD="Malloy_Test_123"
 DB_NAME="malloytest"
@@ -136,14 +135,6 @@ SELECT mssql_exec('msdb', 'CREATE TABLE malloytest.state_facts (
   births INT NULL, popular_name NVARCHAR(MAX) NULL
 )');
 
-SELECT mssql_exec('msdb', 'CREATE TABLE malloytest.numbers (
-  num INT NULL
-)');
-
-SELECT mssql_exec('msdb', 'CREATE TABLE malloytest.words (
-  word NVARCHAR(MAX) NULL
-)');
-
 SELECT mssql_exec('msdb', 'CREATE TABLE malloytest.alltypes (
   t_int64 BIGINT NULL, t_float64 FLOAT NULL,
   t_numeric DECIMAL(38,9) NULL, t_bignumeric DECIMAL(38,9) NULL,
@@ -161,8 +152,6 @@ INSERT INTO msdb.malloytest.airports SELECT * FROM read_parquet('$DATADIR/airpor
 INSERT INTO msdb.malloytest.carriers SELECT * FROM read_parquet('$DATADIR/carriers.parquet');
 INSERT INTO msdb.malloytest.flights SELECT * FROM read_parquet('$DATADIR/flights.parquet');
 INSERT INTO msdb.malloytest.state_facts SELECT * FROM read_parquet('$DATADIR/state_facts.parquet');
-INSERT INTO msdb.malloytest.numbers SELECT * FROM read_parquet('$DUCKDBDIR/numbers.parquet');
-INSERT INTO msdb.malloytest.words SELECT * FROM read_parquet('$DUCKDBDIR/words.parquet');
 INSERT INTO msdb.malloytest.alltypes SELECT t_int64, t_float64, t_numeric, t_bignumeric, string, t_bool_true, t_bool_false, t_bool_null, t_date, t_datetime, t_timestamp FROM read_parquet('$DATADIR/alltypes.parquet');
 
 -- Verify row counts
@@ -172,8 +161,6 @@ UNION ALL SELECT 'airports', COUNT(*) FROM msdb.malloytest.airports
 UNION ALL SELECT 'carriers', COUNT(*) FROM msdb.malloytest.carriers
 UNION ALL SELECT 'flights', COUNT(*) FROM msdb.malloytest.flights
 UNION ALL SELECT 'state_facts', COUNT(*) FROM msdb.malloytest.state_facts
-UNION ALL SELECT 'numbers', COUNT(*) FROM msdb.malloytest.numbers
-UNION ALL SELECT 'words', COUNT(*) FROM msdb.malloytest.words
 UNION ALL SELECT 'alltypes', COUNT(*) FROM msdb.malloytest.alltypes;
 "
 

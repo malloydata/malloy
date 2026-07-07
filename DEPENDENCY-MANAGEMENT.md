@@ -31,41 +31,55 @@ We may decide to respond to a Dependabot report in one of three ways
 It is important to know that, even for security dependencies, we might have to pin instead of move, and usually this is not really an issue. The security report on the package is a part of the package which we do not actually touch, so it isn't an actual securiry problem for people down stream of the Malloy package.
 
 **A pin has two surfaces, and both are mandatory.** To actually hold a version you
-must (1) **exact-pin** it in the owning package's `package.json` — the existing
-`^range` would otherwise let a fresh `npm install` resolve the bad version — *and*
-(2) **`ignore`** it in `dependabot.yml`, or the next group PR re-bumps it straight
-back. **One without the other is not a pin.** Databricks is the cautionary tale:
-#2888 pinned `package.json` to `1.15.0` but skipped the `ignore`, so connectors-group
-PR #2934 reverted it a week later and shipped the break in `@malloydata/malloy`
-0.0.418. Every entry below names both surfaces. (The *transitive* advisories a pin
-holds open are alert-only — no PR — and are listed under each entry as the cost.)
+must (1) **constrain the range** in the owning package's `package.json` so a fresh
+`npm install` can't reach the bad version — *and* (2) **`ignore`** it in
+`dependabot.yml`, or the next group PR re-bumps it straight back. **One without the
+other is not a pin.** Databricks is the cautionary tale: #2888 pinned `package.json`
+to `1.15.0` but skipped the `ignore`, so connectors-group PR #2934 reverted it a week
+later and shipped the break in `@malloydata/malloy` 0.0.418. Every entry below names
+both surfaces. (The *transitive* advisories a pin holds open are alert-only — no PR —
+and are listed under each entry as the cost.)
 
-### ESM-only majors — triage before holding
+**Caret by default; exact only when the caret can't hold.** Prefer a **caret major-cap**
+(`^11.1.1`) plus a **major-only** `ignore` — it bars the bad *major* while still
+letting CJS-line minors/patches and their security fixes flow (uuid, @noble/hashes,
+vega-lite, `@types/*` all work this way). Drop to a hard **exact pin** (no caret) only
+when you hit a wall: the breaker is *in-range*, so a caret would still resolve it on a
+fresh install (databricks `1.15.0`, pg `8.7.3`, vscode-textmate `9.0.0`). Exact is the
+escalation, not the default.
+
+### ESM-only majors — and the downstream-leak trap
 
 The npm ecosystem is migrating to ESM-only packages. Our code ships CommonJS and our
-tests run under jest's CJS runtime, so an ESM-only dep can fail to load. But **not
-every ESM-only major is a hold** — split them before deciding:
+tests run under jest's CJS runtime, so an ESM-only dep can fail to load. Before holding
+one, two splits matter: *who pays*, and *what kind of break*.
 
-- **Class 1 — static ESM** (plain `import`/`export`, e.g. `@noble/hashes` v2,
-  `uuid` v14 — whose `node` export condition is itself ESM).
-  jest's default `transformIgnorePatterns` skips `node_modules`, so it sees the raw
-  `import` and throws *"Cannot use import statement outside a module."* The fix is
-  to **transform** it: add the package to `transformIgnoreModules` in
-  **both** `jest.config.ts` (in `defaultConfig`, which every `projects` entry
-  spreads — the top-level `transform` does **not** cascade into `projects`) and
-  `jest.config.simple.ts`. babel-jest then rewrites its ESM to CJS and it loads.
-  **Takeable**, one line. (`@motherduck/wasm-client` is listed there too, but it's
-  held at CJS 0.6, so it doesn't actually exercise this.)
-- **Class 2 — runtime dynamic `import()` of an ESM-only target** (e.g. gaxios 7
-  under `@google-cloud/bigquery` 8). The break isn't syntax jest can transform —
-  it's a `require`-an-ESM call at runtime needing `--experimental-vm-modules`,
-  which we reject (see the BigQuery hold). **A genuine hold**, untouchable by
-  `transformIgnoreModules`.
+**Who pays — devDependency vs published runtime dependency.** This is the one we
+learned the hard way.
+- A **devDependency** (never shipped) only has to satisfy *our* jest. An ESM-only one
+  is **takeable**: add it to `transformIgnoreModules` in **both** `jest.config.ts`
+  (in `defaultConfig`, which every `projects` entry spreads — the top-level `transform`
+  does **not** cascade into `projects`) and `jest.config.simple.ts`; babel-jest then
+  rewrites its ESM to CJS and it loads. One line.
+- A **published runtime dependency** of a core package (e.g. `@malloydata/malloy`) is
+  the opposite. The transform fixes *our* tests but **does nothing for consumers** — a
+  downstream app that bundles with esbuild or tests with ts-jest inherits the raw ESM
+  and breaks, and can't even see why. **An ESM-only runtime dep leaks downstream
+  exactly like a native `.node` binary.** So it is *not* takeable; it's a hold — pin to
+  the last CJS-consumable major. This bit us in 0.0.419: `uuid` v14 and `@noble/hashes`
+  v2 were taken as "takeable", green in malloy's own CI, and broke the vscode extension
+  and malloy-cli the moment they consumed it (see the hold below).
 
-Note both *compile* under TypeScript; the divide is purely how jest loads them at
-runtime. A Class-1 dep also typically forces small source edits for the package's
-own API changes (noble v2: `/sha256`→`/sha2.js`, `.js` extensions mandatory,
-`Uint8Array`-only inputs via `utf8ToBytes`).
+**What kind of break — static ESM vs runtime dynamic `import()`.**
+- **Static ESM** (plain `import`/`export`): babel-jest can transform it (devDep case),
+  or you pin (runtime-dep case).
+- **Runtime dynamic `import()` of an ESM-only target** (e.g. gaxios 7 under
+  `@google-cloud/bigquery` 8): not syntax jest can transform — a `require`-an-ESM call
+  at runtime needing `--experimental-vm-modules`, which we reject. A genuine hold
+  regardless (see the BigQuery hold).
+
+(`@motherduck/wasm-client` stays in `transformIgnoreModules` defensively, but it's held
+at CJS 0.6, so it doesn't actually exercise the transform.)
 
 ## Held because the upgrade breaks this repo
 
@@ -220,6 +234,29 @@ per-platform `@databricks/databricks-sql-kernel-*` `.node` binaries, `approve-na
 them in each — then take 1.16.0+ and verify against the live Databricks CI env. Until
 then it's supported-or-rots: the connector is welded to the embedding apps' bundlers,
 so it can't float.
+
+### uuid + @noble/hashes — held below their ESM-only majors
+Owned by `packages/malloy` (core, published as `@malloydata/malloy`). **uuid 12+ and
+@noble/hashes 2+ dropped CommonJS** — pure ESM (`"type": "module"`, no `require`
+build). malloy is CJS and is consumed by apps that bundle with esbuild and test with
+ts-jest, so a pure-ESM runtime dep breaks every consumer's bundle and test runner —
+while malloy's own CI stays green (babel-jest transforms it locally). Same leak as a
+native binary, different mechanism. It shipped in 0.0.419 and broke the vscode
+extension and malloy-cli on the spot; 0.0.420 pins both back to their last CJS majors.
+
+Held: `uuid ^11.1.1` and `@noble/hashes ^1.8.0` in `packages/malloy/package.json`
+(plus the root devDep `uuid`) — caret ranges that cap below the ESM major, with a
+**major-only** `ignore` in `dependabot.yml` so CJS-line minors/patches still flow.
+@noble/hashes also needed two import-path reverts in `model/utils.ts`
+(`/sha2.js`→`/sha256`, drop the `.js`); the digest is byte-identical. Both are out of
+`transformIgnoreModules` now — they're CJS again, so no transform is needed.
+
+Cost: held on uuid 11 / @noble 1; no security advisory rides on either today.
+
+Revisit when: consumers can take ESM — the embedding apps' bundler **and** test runner
+handle ESM-only deps, or `@malloydata/malloy` ships a **bundled** artifact that inlines
+its runtime deps (making consumer module-format moot, and retiring this whole class of
+leak). Until then, the core stays CJS-consumable.
 
 ### Node runtime — pinned at `24.16.0` via `.node-version`
 Not a dependency, but a deliberate hold that belongs here. Node **24.17.0** carries

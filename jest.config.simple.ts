@@ -10,11 +10,9 @@ process.env.TZ = 'America/Los_Angeles';
 
 // ESM-only deps that ship plain static import/export must be transformed (not
 // ignored) so jest's CJS runtime can load them. See DEPENDENCY-MANAGEMENT.md.
-const transformIgnoreModules = [
-  '@motherduck/wasm-client',
-  '@noble/hashes',
-  'uuid',
-].join('|');
+// (uuid and @noble/hashes were pinned to CJS-consumable majors, so they no longer
+// need transforming — an ESM-only runtime dep leaks downstream like a native one.)
+const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
 
 const config: Config = {
   preset: 'ts-jest',

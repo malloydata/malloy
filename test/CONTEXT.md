@@ -40,6 +40,9 @@ Tests that run against **all** supported databases to ensure consistent behavior
 
 These tests are particularly important for verifying that Malloy's abstraction works correctly across all supported SQL dialects.
 
+### Consumer-contract canary (`test/consumer-canary/`)
+Not a normal test — it consumes the *built* `@malloydata/*` packages the way a downstream app does (esbuild bundle + plain ts-jest, no babel) to catch native/ESM leaks that malloy's own CI is blind to. Run locally with `npm run test-consumer-canary` (it builds first). See [`test/consumer-canary/CONTEXT.md`](consumer-canary/CONTEXT.md).
+
 ## Custom Test Utilities
 
 ### Result matchers (`toMatchResult` / `toEqualResult` / `toMatchRows` / `toMatchPaths`)
@@ -158,11 +161,7 @@ The shared cross-database parquet files live in `test/data/malloytest-parquet/` 
 |---|---|
 | duckdb_test.db | Built artifact (from `npm run build-duckdb-db`) |
 | test.json | DuckDB-only test fixture |
-| flights/ (part.0-2.parquet) | DuckDB glob/partitioned read test |
-| flights_partitioned.parquet | Snowflake partition test |
-| numbers.parquet | DuckDB-only (numbers 1–1000) |
-| words.parquet | DuckDB-only (word list) |
-| words_bigger.parquet | DuckDB-only (extended word list) |
+| flights/ (part.0-2.parquet) | DuckDB multi-file glob read test |
 
 ### Common pattern
 
@@ -172,13 +171,13 @@ All cross-database tests (`test/src/databases/all/`) reference tables as `malloy
 
 | Dialect | Method | Files | Notes |
 |---|---|---|---|
-| DuckDB | TS script: `CREATE TABLE AS SELECT FROM parquet_scan()` | `scripts/build_duckdb_test_database.ts` | Run via `npm run build-duckdb-db`. Creates `test/data/duckdb/duckdb_test.db` |
+| DuckDB | TS script: `CREATE TABLE AS SELECT FROM parquet_scan()` | `test/duckdb/load_test_data.sh` (wraps `load_test_data.ts`) | Run via `sh test/duckdb/load_test_data.sh` (or `npm run build-duckdb-db`). Creates `test/data/duckdb/duckdb_test.db` |
 | PostgreSQL | Compressed SQL dump loaded via Docker `psql` | `test/data/postgres/malloytest-postgres.sql.gz` | Docker script: `test/postgres/postgres_start.sh` |
 | MySQL | Compressed SQL dump loaded via Docker | `test/data/mysql/malloytest.mysql.gz` | Docker script: `test/mysql/mysql_start.sh` |
 | BigQuery | Pre-loaded manually in `malloydata-org` project | (none) | No loader script in repo. Data assumed to exist. |
-| Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/uploaddata.sql` | Run via `snowsql -f uploaddata.sql` from `test/snowflake/` |
+| Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/load_test_data.sh` (wraps `load_test_data.sql`) | Run via `sh test/snowflake/load_test_data.sh` (needs the `snowsql` CLI) |
 | Trino/Presto | Docker containers with pre-loaded data | `test/trino/trino_start.sh` | Uses Docker volumes |
-| Databricks | TS script: upload to Volume via REST, `CREATE TABLE AS SELECT FROM read_files()` | `test/databricks/upload_data.ts` | Run manually: `source ~/env/databricks && npx tsx test/databricks/upload_data.ts` |
+| Databricks | TS script: upload to Volume via REST, `CREATE TABLE AS SELECT FROM read_files()` | `test/databricks/load_test_data.sh` (wraps `load_test_data.ts`) | Run manually with the `DATABRICKS_*` env vars set: `sh test/databricks/load_test_data.sh` |
 
 ### Cloud warehouse considerations
 

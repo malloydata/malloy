@@ -15,7 +15,7 @@ _(another common setup is to set the environment variable `MALLOY_DATABASE=duckd
 
 # Building test database for DuckDB
 
-1. At top-level, run `npx ts-node scripts/build_duckdb_test_database.ts`
+1. At top-level, run `sh test/duckdb/load_test_data.sh`
 2. A file called `duckdb_test.db` should be created in the test/data/duckdb folder - tests will automatically look there.
 
 # Starting other database servers

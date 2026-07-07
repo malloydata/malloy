@@ -10,16 +10,7 @@ packages/malloy/src/lang/lib
 packages/**/package-lock.json
 packages/**/.eslintcache
 packages/malloy/src/lang/grammar/.antlr
-demo/**/build
-demo/**/dist
-demo/**/node_modules
-demo/**/tsconfig.tsbuildinfo
-demo/**/package-lock.json
-demo/**/.eslintcache
 node_modules
-demo/malloy-demo-composer/composer_config.json
-demo/malloy-demo-composer/public/js
-demo/malloy-demo-composer/pkg
 vscode-extension/**/build
 vscode-extension/**/dist
 vscode-extension/**/node_modules
@@ -36,7 +27,6 @@ profiler/.clinic
 .env.development.local
 .env.test.local
 .env.production.local
-tsconfig.compile-no-emit.tsbuildinfo
 *.db.wal
 
 npm-debug.log*
@@ -57,7 +47,6 @@ gems/
 .tmp/
 logfile
 .s.PGSQL.5432.lock
-demo/malloy-demo-composer/env
 .env
 test/data/duckdb/duckdb_test.db.wal
 monospace.json
