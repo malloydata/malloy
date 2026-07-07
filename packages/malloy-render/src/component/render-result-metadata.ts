@@ -15,12 +15,21 @@ import {
 } from './tag-utils';
 import type {RootField} from '@/data_tree';
 import type {RenderFieldMetadata} from '@/render-field-metadata';
+import type {MalloyExplicitTheme} from '@/api/types';
 
 export type GetResultMetadataOptions = {
   renderFieldMetadata: RenderFieldMetadata;
   getVegaConfigOverride?: VegaConfigHandler;
   parentSize: {width: number; height: number};
   useVegaInterpreter?: boolean;
+  /**
+   * Operator-level theme passed by the embedding app (e.g. Publisher).
+   * The `# shape_map` and `# segment_map` plugins build their own
+   * colour scales and forward this to {@link getColorScale} so the
+   * gradient picks up the operator's `mapColor` instead of the
+   * hardcoded blue ramp.
+   */
+  explicitTheme?: MalloyExplicitTheme;
 };
 
 export interface FieldVegaInfo {

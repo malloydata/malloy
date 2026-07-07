@@ -407,11 +407,21 @@ When data is limited, charts display informational messages:
 
 Arranges multiple nested views into a dashboard layout. Each nested view is rendered in its own tile.
 
+The dashboard has two layout modes. Flex mode is the default: tiles flow into a row and wrap onto a new row when it fills. Columns mode is entered with `columns=N`: tiles are placed into N equal-width columns.
+
 **Properties:**
 
 - `.table.max_height`: Sets a maximum pixel height for tables rendered within dashboard tiles. Useful for controlling layout with large tables. Set to `'none'` to disable max height.
   - Syntax: `# dashboard { table.max_height=400 }` or `# dashboard { table.max_height=none }`
-- `# break` (applied to a nested view): Inserts a visual break in the dashboard layout, often forcing subsequent items onto a new row or section.
+- `.columns` (integer): Enters columns mode with N equal-width columns. A tile occupies one column by default and wraps onto a new row when a row fills. Use `# colspan` to make a tile occupy more than one column.
+  - Syntax: `# dashboard { columns=3 }`
+- `.gap` (pixels): Sets the spacing between tiles, in both flex mode and columns mode. Default is 16.
+  - Syntax: `# dashboard { gap=24 }`
+
+**Per-tile tags (applied to a nested view):**
+
+- `# colspan` (integer): In columns mode, makes the tile occupy that many columns (one by default). When a row's tiles total more than the column count, the overflow wraps onto the next row. Ignored in flex mode.
+- `# break`: Starts a new row. Tiles after a `# break` begin a fresh row. Works in both flex mode and columns mode.
 
 **Example:**
 

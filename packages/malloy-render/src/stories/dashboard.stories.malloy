@@ -1,8 +1,58 @@
 source: products is duckdb.table("static/data/products.parquet") extend {
 
+  // ============================================
+  // Shared measures and views for legacy stories
+  // ============================================
+
+  measure:
+    product_count is count()
+    total_retail is retail_price.sum()
+    avg_cost is cost.avg()
+    percent_of_products is count() / all(count()) * 100
+
+  view: by_brand is {
+    group_by: brand
+    aggregate:
+      product_count
+      total_retail
+      percent_of_products
+  }
+
+  view: by_department is {
+    group_by: department
+    aggregate:
+      product_count
+      percent_of_products
+  }
+
+  view: by_category is {
+    group_by: category
+    aggregate: product_count
+    order_by: category
+  }
+
+  view: recent_products is {
+    group_by:
+      name
+      brand
+      category
+      department
+      retail_price
+    order_by: retail_price desc
+    limit: 10
+  }
+
+  // ============================================
+  // FLEX MODE STORIES: no columns signal (the default). Tiles flow into a
+  // row and wrap when it fills. # break still forces a new wrapping row.
+  // ============================================
+
+  // ============================================
+  // Basic dashboard: KPIs in cards (default) + table
+  // ============================================
   #(story)
   # dashboard
-  view: dashboard is {
+  view: dashboard_flex is {
     group_by:
       category
     # currency
@@ -17,9 +67,36 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       }
   }
 
+  // ============================================
+  // Borderless KPIs: opt out of card styling
+  // ============================================
   #(story)
   # dashboard
-  view: dashboard_dense is {
+  view: dashboard_borderless_kpis_flex is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      # borderless
+      avg_retail is retail_price.avg()
+      # borderless
+      sum_retail is retail_price.sum()
+      # borderless
+      max_retail is retail_price.max()
+    nest:
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+  }
+
+  // ============================================
+  // Dense KPIs: many measures in cards + custom labels
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_dense_flex is {
     group_by:
       category
     # currency
@@ -49,9 +126,369 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       }
   }
 
+  // ============================================
+  // Legacy dashboard: no new annotations at all.
+  // Mimics real-world dashboards (e.g. malloy-samples/auto_recalls)
+  // with a mix of KPI measures, charts, and tables.
+  // Should look reasonable with zero configuration.
+  // ============================================
   #(story)
   # dashboard
-  view: dashboard_with_break is {
+  view: dashboard_legacy_flex is by_brand + {
+    # line_chart
+    nest: by_category_trend is {
+      group_by: category
+      aggregate: product_count
+    }
+    nest: by_department
+    nest: recent_products
+  }
+
+  // Same legacy structure but more measures
+  #(story)
+  # dashboard
+  view: dashboard_legacy_dense_flex is {
+    group_by: brand
+    # currency
+    aggregate:
+      product_count
+      total_retail
+      avg_cost
+      percent_of_products
+    nest:
+      # bar_chart
+      by_department_chart is by_department
+      by_category
+      recent_products + { limit: 6 }
+  }
+
+  // ============================================
+  // Table with nested charts inside a dashboard
+  // Should auto-detect sub-nests and render full-width
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_table_with_nested_charts_flex is {
+    group_by: category
+    aggregate:
+      product_count
+      total_retail
+    nest:
+      brand_detail is {
+        group_by: brand
+        aggregate:
+          product_count
+          total_retail
+        nest:
+          # bar_chart
+          by_department is {
+            group_by: department
+            aggregate: product_count
+          }
+        limit: 10
+      }
+  }
+
+  // ============================================
+  // Break in flex mode: # break forces a new wrapping row. # colspan is not
+  // used here because it has no effect in flex mode.
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_break_flex is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+      # break
+      avg_retail2 is retail_price.avg()
+      avg_retail3 is retail_price.avg()
+  }
+
+  // ============================================
+  // COLUMNS MODE STORIES: columns=N, with # colspan to widen a tile and
+  // # break to start a new row. # colspan is on a scale of the column count
+  // (these stories use columns=12 to map the earlier 12-wide proportions).
+  // ============================================
+
+  // ============================================
+  // Column count: force 3 equal columns
+  // ============================================
+  #(story)
+  # dashboard { columns = 3 }
+  view: dashboard_columns_3 is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+      max_retail is retail_price.max()
+  }
+
+  // ============================================
+  // Column count: force 2 equal columns
+  // ============================================
+  #(story)
+  # dashboard { columns = 2 }
+  view: dashboard_columns_2 is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+      max_retail is retail_price.max()
+    nest:
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 5
+      }
+  }
+
+  // ============================================
+  // # colspan widens a tile. On a 12-column layout, colspan 8 beside colspan 4
+  // = a wide chart next to a narrow KPI.
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_colspan_8_4_columns is {
+    group_by:
+      category
+    aggregate:
+      # colspan = 4
+      # currency
+      avg_retail is retail_price.avg()
+    nest:
+      # colspan = 8
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+  }
+
+  // ============================================
+  // # colspan: three items at 4+4+4 on a 12-column layout (equal thirds)
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_colspan_thirds_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      # colspan = 4
+      avg_retail is retail_price.avg()
+      # colspan = 4
+      sum_retail is retail_price.sum()
+      # colspan = 4
+      max_retail is retail_price.max()
+  }
+
+  // ============================================
+  // # colspan: 6+6 fills one row, then a full-width (12) table wraps below
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_colspan_mixed_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      # colspan = 6
+      avg_retail is retail_price.avg()
+      # colspan = 6
+      sum_retail is retail_price.sum()
+    nest:
+      # colspan = 12
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+  }
+
+  // ============================================
+  // Charts in columns mode: KPIs row + two half-width bar charts
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_with_charts_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      # colspan = 4
+      avg_retail is retail_price.avg()
+      # colspan = 4
+      sum_retail is retail_price.sum()
+      # colspan = 4
+      max_retail is retail_price.max()
+    nest:
+      # colspan = 6
+      # bar_chart
+      by_brand_bar is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      # colspan = 6
+      # bar_chart
+      by_brand_count is {
+        group_by: brand
+        aggregate: product_count is count()
+        limit: 10
+      }
+  }
+
+  // ============================================
+  // Columns mode with charts + table at 2 columns
+  // ============================================
+  #(story)
+  # dashboard { columns = 2 }
+  view: dashboard_charts_and_table_columns is {
+    group_by:
+      category
+    nest:
+      # bar_chart
+      by_brand_bar is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
+      }
+      by_brand_table is {
+        group_by: brand
+        aggregate:
+          avg_retail is retail_price.avg()
+          product_count is count()
+        limit: 8
+      }
+  }
+
+  // ============================================
+  // Full layout: KPIs row, then a # break, then a charts row
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_full_layout_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      # colspan = 4
+      avg_retail is retail_price.avg()
+      # colspan = 4
+      sum_retail is retail_price.sum()
+      # colspan = 4
+      max_retail is retail_price.max()
+    nest:
+      # break
+      # colspan = 6
+      # bar_chart
+      by_brand_chart is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
+      }
+      # colspan = 6
+      by_brand_table is {
+        group_by: brand
+        aggregate:
+          avg_retail is retail_price.avg()
+          product_count is count()
+        limit: 8
+      }
+  }
+
+  // ============================================
+  // Partial row: 3+3 fills the left half, the right half stays empty
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_partial_row_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      # colspan = 3
+      avg_retail is retail_price.avg()
+      # colspan = 3
+      sum_retail is retail_price.sum()
+  }
+
+  // ============================================
+  // Big values with sparklines in columns mode
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_with_sparklines_columns is {
+    group_by:
+      category
+    nest:
+      # colspan = 4
+      # big_value
+      avg_price_card is {
+        aggregate:
+          # label="Avg Price"
+          # currency
+          # big_value { sparkline=price_trend }
+          avg_price is retail_price.avg()
+        # line_chart { size=spark y.independent=true }
+        # hidden
+        nest: price_trend is {
+          group_by: product_bucket is floor(id / 100)::number
+          # currency
+          aggregate: price is retail_price.avg()
+          order_by: product_bucket
+          limit: 20
+        }
+      }
+      # colspan = 4
+      # big_value
+      total_products_card is {
+        aggregate:
+          # label="Products"
+          # big_value { sparkline=count_trend }
+          product_count is count()
+        # bar_chart { size=spark y.independent=true }
+        # hidden
+        nest: count_trend is {
+          group_by: product_bucket is floor(id / 100)::number
+          aggregate: cnt is count()
+          order_by: product_bucket
+          limit: 20
+        }
+      }
+      # colspan = 4
+      # big_value
+      max_price_card is {
+        aggregate:
+          # label="Max Price"
+          # currency
+          # big_value { sparkline=max_trend }
+          max_price is retail_price.max()
+        # line_chart { size=spark y.independent=true }
+        # hidden
+        nest: max_trend is {
+          group_by: product_bucket is floor(id / 100)::number
+          # currency
+          aggregate: price is retail_price.max()
+          order_by: product_bucket
+          limit: 20
+        }
+      }
+  }
+
+  // ============================================
+  // Row break: KPIs then a table on a new row (columns=2)
+  // ============================================
+  #(story)
+  # dashboard { columns = 2 }
+  view: dashboard_break_columns is {
     group_by:
       category
     # currency
@@ -60,10 +497,257 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       sum_retail is retail_price.sum()
     nest:
       # break
+      # colspan = 2
       by_brand is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 10
+      }
+  }
+
+  // ============================================
+  // Custom gap spacing in columns mode
+  // ============================================
+  #(story)
+  # dashboard { columns = 12, gap = 24 }
+  view: dashboard_custom_gap_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      # colspan = 4
+      avg_retail is retail_price.avg()
+      # colspan = 4
+      sum_retail is retail_price.sum()
+      # colspan = 4
+      max_retail is retail_price.max()
+    nest:
+      # break
+      # colspan = 6
+      # bar_chart
+      by_brand_bar is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
+      }
+      # colspan = 6
+      by_brand_table is {
+        group_by: brand
+        aggregate:
+          avg_retail is retail_price.avg()
+          product_count is count()
+        limit: 8
+      }
+  }
+
+  // ============================================
+  // Gap = 0: items should be flush with no spacing.
+  // Verifies that gap=0 is not ignored by falsy checks.
+  // ============================================
+  #(story)
+  # dashboard { columns = 12, gap = 0 }
+  view: dashboard_gap_zero_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      # colspan = 4
+      avg_retail is retail_price.avg()
+      # colspan = 4
+      sum_retail is retail_price.sum()
+      # colspan = 4
+      max_retail is retail_price.max()
+    nest:
+      # break
+      # colspan = 6
+      # bar_chart
+      by_brand_bar is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
+      }
+      # colspan = 6
+      by_brand_table is {
+        group_by: brand
+        aggregate:
+          avg_retail is retail_price.avg()
+          product_count is count()
+        limit: 8
+      }
+  }
+
+  // ============================================
+  // UX mockup: subtitles, big_value centering, table in card
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_ux_mockup_columns is {
+    group_by:
+      category
+    nest:
+      # colspan = 6
+      # big_value
+      avg_price_kpi is {
+        aggregate:
+          # label="Average Retail Price"
+          # currency
+          avg_price is retail_price.avg()
+      }
+      # colspan = 6
+      # bar_chart
+      # subtitle="Top 10 brands"
+      brand_chart is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      # break
+      # colspan = 12
+      # subtitle="Top 10 brands by average retail price"
+      brand_detail is {
+        group_by: brand
+        aggregate:
+          avg_retail is retail_price.avg()
+          product_count is count()
+        limit: 10
+      }
+  }
+
+  // ============================================
+  // Tall chart via size.height inside a dashboard
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_tall_chart_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      # colspan = 4
+      avg_retail is retail_price.avg()
+      # colspan = 4
+      sum_retail is retail_price.sum()
+      # colspan = 4
+      max_retail is retail_price.max()
+    nest:
+      # break
+      # colspan = 12
+      # bar_chart { size.height = 400 }
+      # subtitle="Taller chart (400px) via size.height"
+      by_brand_tall is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 15
+      }
+  }
+
+  // ============================================
+  // size=lg chart in a narrow tile (colspan 3 of 12)
+  // Tests: does a 640px preset chart scale down in a ~25% card?
+  // ============================================
+  #(story)
+  # dashboard { columns = 12 }
+  view: dashboard_lg_chart_narrow_colspan_columns is {
+    group_by:
+      category
+    nest:
+      # colspan = 3
+      # bar_chart { size = lg }
+      # subtitle="size=lg in colspan=3 (narrow)"
+      narrow_lg is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
+      }
+      # colspan = 9
+      # bar_chart { size = lg }
+      # subtitle="size=lg in colspan=9 (wide)"
+      wide_lg is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
+      }
+  }
+
+  // ============================================
+  // Mixed colspan: one tile sets # colspan, the other defaults to one column
+  // ============================================
+  #(story)
+  # dashboard { columns = 3 }
+  view: dashboard_mixed_colspan_columns is {
+    group_by:
+      category
+    nest:
+      # colspan = 2
+      # bar_chart
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      // This table sets no # colspan, so it occupies one column.
+      by_dept is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        limit: 5
+      }
+  }
+
+  // ============================================
+  // DEFENSIVE FALLBACKS: invalid layout values
+  // Validator logs an error AND the renderer falls back to a default layout
+  // instead of feeding broken values into CSS. Each story below should
+  // render successfully (in flex mode, or columns mode with clamping), not
+  // as broken columns.
+  // ============================================
+
+  // Invalid columns: should render as flex mode (columns mode not entered).
+  #(story)
+  # dashboard { columns = -3 }
+  view: dashboard_fallback_bad_columns is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+  }
+
+  // Invalid gap: should render as flex mode with the default gap; CSS must
+  // not contain `gap: -5px`.
+  #(story)
+  # dashboard { gap = -5 }
+  view: dashboard_fallback_bad_gap is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+  }
+
+  // # colspan beyond the column count is clamped to the column count (the
+  // tile fills the row) and the validator warns. The sibling's valid colspan
+  // is honored.
+  #(story)
+  # dashboard { columns = 2 }
+  view: dashboard_fallback_colspan_overflow is {
+    group_by:
+      category
+    nest:
+      # colspan = 5
+      # bar_chart
+      too_wide is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
+      }
+      # colspan = 2
+      # bar_chart
+      full_width is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 8
       }
   }
 }

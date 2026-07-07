@@ -101,6 +101,17 @@ module.exports = defineConfig([
     },
   },
   {
+    // The consumer-canary's node ESM script (esbuild bundle check).
+    files: ['test/consumer-canary/*.mjs'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: globals.node,
+    },
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     files: ['**/vite.config.*', 'scripts/**'],
     rules: {
       'n/no-unpublished-import': 'off',

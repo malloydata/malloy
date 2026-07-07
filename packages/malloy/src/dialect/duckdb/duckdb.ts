@@ -31,7 +31,14 @@ import type {
   FieldReferenceType,
   IntegerTypeMapping,
 } from '../dialect';
-import {inDays, MIN_INT32, MAX_INT32, MIN_INT128, MAX_INT128} from '../dialect';
+import {
+  inDays,
+  MIN_INT32,
+  MAX_INT32,
+  MIN_INT128,
+  MAX_INT128,
+  turtleGroupSetCondition,
+} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -81,6 +88,7 @@ export class DuckDBDialect extends PostgresBase {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   supportsCountApprox = true;
 
   // DuckDB UNNEST in LATERAL JOINs doesn't preserve array element order
@@ -126,15 +134,24 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = fieldList
       .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(', ');
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    return `COALESCE(LIST({${fields}} ${orderByClause}) FILTER (WHERE group_set=${groupSet}),[])`;
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const list =
+      `LIST({${fields}} ${orderByClause})` +
+      (cond ? ` FILTER (WHERE ${cond})` : '');
+    // A projection nest's limit is applied by slicing the aggregated array
+    // (duckdb lists are 1-based, inclusive).
+    const limited = limit !== undefined ? `(${list})[1:${limit}]` : list;
+    return `COALESCE(${limited},[])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

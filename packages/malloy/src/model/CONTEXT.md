@@ -33,6 +33,36 @@ The name a thing goes by in a given context is therefore **`activeName(x)` = `x.
 
 **Corollary for writers:** to rebind a def, set `as`. Never assign `name` and never `delete x.as` to "reset" a name — doing so destroys any identity payload `name` carried. (This was the cause of the joined-virtual-source bug: the join wrote the join name into `name` and deleted `as`, erasing the `virtualMap` key.)
 
+**Source identity (`sourceID` / `referenceID`):**
+
+Every `SourceDef` carries `SourceID` (`name@modelURL`) identity fields, set in
+the translator and resolvable through `ModelDef.sourceRegistry` (the "source-id
+table", which registers every named source by its `sourceID`):
+
+- **`sourceID`** — the identity of this source's *own definition*. Set for every
+  source in `DefineSource`. Unlike `as`, it is captured once at definition and
+  preserved across imports, so it is stable identity. The persistence machinery
+  reads it (gated by `isPersistableSourceDef`); `extends` (persistable only)
+  points at the base source's `sourceID`.
+- **`referenceID`** — set *only* when this source was created as an unmodified
+  reference to another source (`source: a is b`, or a plain join), holding the
+  `sourceID` of the *immediately* referenced source. Set in `NamedSource`
+  (`{...entry, referenceID: entry.sourceID}`) and cleared on the modification
+  path (`DynamicSpace.structDef`), so a table/sql/query source or an
+  `extend`/`include` has no `referenceID`. Thus **`referenceID !== undefined`
+  means "created as a reference"** — no `sourceID` comparison, so it is correct
+  for joins too — and the value resolves through the source-id table to the
+  referenced source and the name it goes by in this model's namespace (the
+  immediate target is always a namespace entry, since you could only write
+  `is b` where `b` resolved by name). Helpers: `resolveSourceRef` (id →
+  SourceDef), `sourceNamespaceReference` (SourceDef → `{name, source}` when it
+  references a namespace entry). The Foundation `Explore` exposes two views of
+  this without leaking the field name: `referenceSourceID` (a comparable id of
+  the referenced source — equal for two sources that refer to the same thing,
+  even when it can't be named here) and `referencedSource()` (the referenced
+  namespace source, read `.name`). Both are undefined when the source defines
+  its own shape.
+
 **Type Definitions:**
 - **`BasicAtomicType`** - String union of simple type names (`string | number | boolean | date | timestamp | timestamptz | json | sql native | error`). Guard: `isBasicAtomicType()`.
 - **`BasicAtomicTypeDef`** - TypeDef union for basic types (each variant may carry metadata, e.g. `NumberTypeDef` has optional `numberType`)
@@ -191,6 +221,52 @@ IR → QueryQuery → Expression Compiler → Dialect-Specific SQL + Metadata
 3. Generates appropriate SQL constructs (CTEs, subqueries, etc.)
 4. Ensures proper scoping and aliasing
 5. Produces executable SQL string
+
+#### Nests, the `group_set` fan-out, and the column-name trap
+
+A query and its nests compile to **one scan**, cross-joined against a `group_set`
+integer table (`sqlGroupSetTable`) that replicates each base row once per grouping
+grain. Each grain owns a `group_set` number (0 = top query, 1 = a nest, 2 = a deeper
+nest); per group_set, scalars become `CASE WHEN group_set=N …` and nests an array-agg
+`… FILTER (WHERE group_set=N)`. `computeGroups` (`field_instance.ts`) assigns the
+numbers — a `reduce` nest recurses and gets its own group_set; a `project` nest rides
+the enclosing group_set (it's grain-preserving, one element per in-scope row).
+
+**One group set, no fan-out.** When the only nests are single-stage grain-preserving
+projections — no `reduce` nest, ungrouping, or total, so `maxGroupSet === 0` — there is
+nothing to demux: the cross-join, the `group_set` column, the `FILTER`/`CASE WHEN
+group_set=N`, and the combine stage are all degenerate. `canUseSingleGroupSetSQL` detects
+this and routes to `generateSimpleSQL` (the emitter a non-nested query uses, extended to
+emit each projection nest as an array-agg in the one `SELECT`). That array-agg passes
+`groupSet: undefined` to `sqlAggregateTurtle` (no `FILTER (WHERE group_set=N)`), and
+`FieldInstanceResultRoot.emitsGroupSet = false` keeps aggregate/window expressions from
+gating on a `group_set` column that isn't there. The output is the single `GROUP BY` a
+person would write by hand — no CTE, no fan-out.
+
+**The trap:** grouped stages emit columns named `name__groupSet` (`f1__0`, `m__0`) plus
+a literal `group_set` column; only the final combine stage renames them to user names
+(`"f1__0" as "f1"`). So a follow-on stage must reference the names the prior stage
+**actually emitted** (suffixed), not the final names — getting this wrong was #2899. To
+keep it straight, a stage's SELECT is built as one `StageOutputColumn[]` (`{sql, name,
+isDimension}`); the SELECT list, the `GROUP BY` positions, the pipelined carry-forward
+list, and the group_set remap list are **all derived from that one array**, so a
+column's downstream name can't drift from what the stage emitted.
+
+**Multi-stage nests — "compile the first stage, then stop."** For a nest pipeline of
+length > 1, `generateTurtlePipelineSQL` compiles `pipeline[0]` to its array-agg, then
+unnests that array and compiles the rest as a fresh recursive `QueryQuery`. Stitching
+the remainder back is a dialect fork: `supportUnnestArrayAgg` dialects (duckdb) inline a
+correlated subquery; others (Trino) push it through `generatePipelinedStages`, which
+emits a carry-forward CTE — `SELECT * replace (…)` when `supportsSelectReplace`, else an
+explicit column list.
+
+**Verifying nest codegen needs the right dialect.** These paths are gated by dialect
+flags that `precheck` (duckdb) does not exercise: the explicit carry-forward list is
+reached **only** by Trino (`supportsSelectReplace=false`), the group_set remap **only**
+by Databricks (`hasLateralColumnAliasInSelect`), and the lateral-join-bag `GROUP BY` by
+BigQuery/standardsql and Databricks (`cantPartitionWindowFunctionsOnExpressions`). A
+green duckdb precheck says nothing about them — run `ci-trino`/`ci-databricks`/
+`ci-bigquery` (or a single-dialect connection).
 
 ### 2. Expression Compiler (expression_compiler.ts)
 

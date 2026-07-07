@@ -1,7 +1,12 @@
 import type {Config} from 'jest';
 
-process.env.TZ = 'America/Los_Angeles';
+process.env['TZ'] = 'America/Los_Angeles';
 
+// ESM-only deps that ship plain static import/export: jest's CJS runtime can't
+// load them as-is, so they must be transformed (not ignored). See the Class-1
+// ESM note in DEPENDENCY-MANAGEMENT.md. (uuid and @noble/hashes were here until
+// they were pinned to CJS-consumable majors — an ESM-only runtime dep leaks
+// downstream like a native binary, so the core stays CJS.)
 const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
 
 const defaultConfig: Config = {
@@ -9,8 +14,18 @@ const defaultConfig: Config = {
   setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
   testMatch: ['<rootDir>**/*.spec.(ts|js)?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
+  // node_modules is left untransformed except the Class-1 ESM-only deps above,
+  // which must be run through babel to become loadable under jest's CJS runtime.
+  transformIgnorePatterns: [`node_modules/(?!(${transformIgnoreModules})/)`],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/test/tsconfig.json'}],
+    '^.+\\.(js|jsx)$': [
+      'babel-jest',
+      {
+        'presets': ['@babel/preset-env'],
+        'plugins': [['@babel/transform-runtime']],
+      },
+    ],
   },
 };
 

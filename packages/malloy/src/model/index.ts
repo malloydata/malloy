@@ -57,6 +57,9 @@ export {
   mkSQLSourceDef,
   mkTableSourceDef,
   resolveSourceID,
+  resolveSourceRef,
+  sourceNamespaceReference,
   registerSource,
   hasSourceRegistryEntry,
 } from './source_def_utils';
+export type {NamespaceReference} from './source_def_utils';

@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-interfaces",
-  "version": "0.0.413",
+  "version": "0.0.423",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@creditkarma/thrift-typescript": "^3.7.6",
-    "rimraf": "^6.0.1",
+    "rimraf": "^6.1.3",
     "ts-node": "^10.9.2"
   },
   "dependencies": {

@@ -31,6 +31,13 @@ lexer grammar MalloyLexer;
 
 fragment SPACE_CHAR: [ \u000B\t\r\n\u00A0];
 
+// KEYWORDS-BEGIN
+// Every rule between the markers is a keyword whose spelling is harvested by
+// build_token_names.js to produce readable parser-error names. Keep this
+// section to plain keyword rules: case-insensitive letter fragments, one-char
+// literals ('_', ':'), SPACE_CHAR, and ?/* quantifiers only. Anything fancier
+// (literals, patterns, punctuation) belongs below the closing marker.
+
 // colon keywords ...
 ACCEPT: A C C E P T SPACE_CHAR* ':';
 AGGREGATE: A G G R E G A T E SPACE_CHAR* ':';
@@ -140,6 +147,7 @@ WHEN: W H E N ;
 WITH: W I T H ;
 YEAR: Y E A R S?;
 VIRTUAL: V I R T U A L;
+// KEYWORDS-END
 
 fragment SQ: '\'';
 fragment BQ: '`';

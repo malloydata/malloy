@@ -275,12 +275,20 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
             );
           }
 
+          // A host (e.g. the dashboard) can request embedded mode through
+          // customProps, keyed by this plugin's name, the same way the table
+          // renderer reads customProps.table.
+          const bigValueProps = props.customProps?.['big_value'] as
+            | {embedded?: boolean}
+            | undefined;
+
           return (
             <BigValueComponent
               dataColumn={props.dataColumn}
               field={props.field}
               settings={settings}
               tagConfig={tagConfig}
+              embedded={bigValueProps?.embedded}
             />
           );
         },

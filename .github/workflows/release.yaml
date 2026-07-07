@@ -11,7 +11,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 24.x
+          node-version-file: '.node-version'
       - name: Install and build
         run: |
           npm --no-audit --no-fund ci --loglevel error
@@ -38,7 +38,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 24.x
+          node-version-file: '.node-version'
       - name: Precheck (dialect-agnostic tests + duckdb)
         run: npm run precheck
 
@@ -60,7 +60,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 24.x
+          node-version-file: '.node-version'
       - name: Upgrade npm for trusted publishing (OIDC)
         run: npm install -g npm@latest
       - name: Publish and bump version
@@ -72,10 +72,19 @@ jobs:
           PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
           echo Publishing $PACKAGES
           VERSION=$(jq -r .version ./lerna.json)
+          # Accumulate a per-package table for the GitHub Actions run summary.
+          echo "## 📦 npm Release Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Version**: \`$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Tag**: \`latest\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Package | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
           for package in $PACKAGES; do
             PKG_NAME=$(jq -r .name ./$package/package.json)
             if npm view "$PKG_NAME@$VERSION" version &>/dev/null; then
               echo "SKIPPED $PKG_NAME@$VERSION (already published)"
+              echo "| \`$PKG_NAME\` | ⏭️ skipped (already published) |" >> "$GITHUB_STEP_SUMMARY"
             else
               echo Publishing $PKG_NAME $VERSION
               # MIT requires the license text to travel with the package. The
@@ -84,13 +93,17 @@ jobs:
               # see .gitignore for packages/*/LICENSE.
               cp LICENSE "$package/LICENSE"
               npm publish -w $package --access=public
+              echo "| [\`$PKG_NAME\`](https://www.npmjs.com/package/$PKG_NAME/v/$VERSION) | ✅ published |" >> "$GITHUB_STEP_SUMMARY"
             fi
           done
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           # Create GitHub Release with auto-generated notes from PRs
           if gh release view v$VERSION &>/dev/null; then
             echo "SKIPPED release v$VERSION (already exists)"
+            echo "- **GitHub Release**: v$VERSION (already existed)" >> "$GITHUB_STEP_SUMMARY"
           else
             gh release create v$VERSION --generate-notes --title "v$VERSION"
+            echo "- **GitHub Release**: [v$VERSION](https://github.com/malloydata/malloy/releases/tag/v$VERSION)" >> "$GITHUB_STEP_SUMMARY"
           fi
           # Bump version
           npx lerna version patch --exact --yes --no-push --no-git-tag-version

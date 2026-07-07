@@ -4,10 +4,14 @@ build: {
     "src/**/*.tsx",
     "src/**/*.css",
     "vite.config.mts",
-    "tsconfig.json"
+    "tsconfig.json",
+    "tsconfig.type-check.json"
   ]
   outputs = ["dist/module/index.mjs"]
   commands = [
+    # vite bundles the renderer but its dts pass only PRINTS type errors (exit 0).
+    # Run a real tsc first so a type error fails the build. See tsconfig.type-check.json.
+    "npx tsc -p tsconfig.type-check.json",
     "npx vite build --outDir 'dist/module' --config vite.config.mts"
   ]
 }

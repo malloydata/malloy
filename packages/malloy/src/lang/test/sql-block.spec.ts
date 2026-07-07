@@ -189,7 +189,7 @@ describe('connection sql()', () => {
         const src = m.getSourceDef('sql_src');
         expect(src).toBeDefined();
         expect(src?.type).toBe('sql_select');
-        if (src && 'sourceID' in src && src.sourceID) {
+        if (src && src.sourceID) {
           const registryValue = modelDef.sourceRegistry[src.sourceID];
           expect(registryValue).toBeDefined();
           expect(registryValue?.entry).toMatchObject({
@@ -197,7 +197,7 @@ describe('connection sql()', () => {
             name: 'sql_src',
           });
         } else {
-          fail('Expected sql_src to have a sourceID');
+          fail('Expected sql_src to have an sourceID');
         }
       }
     });
@@ -223,7 +223,7 @@ describe('connection sql()', () => {
         expect(extSrc?.type).toBe('sql_select');
 
         // Base source should have sourceID
-        if (baseSrc && 'sourceID' in baseSrc && baseSrc.sourceID) {
+        if (baseSrc && baseSrc.sourceID) {
           const baseSourceID = baseSrc.sourceID;
           expect(baseSourceID).toContain('base_sql@');
 
@@ -234,7 +234,7 @@ describe('connection sql()', () => {
             fail('Expected extended_sql to have extends property');
           }
         } else {
-          fail('Expected base_sql to have a sourceID');
+          fail('Expected base_sql to have an sourceID');
         }
       }
     });

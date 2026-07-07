@@ -33,7 +33,7 @@ import type {
   OrderByRequest,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz} from '../dialect';
+import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {DATABRICKS_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -91,6 +91,7 @@ export class DatabricksDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   hasLateralColumnAliasInSelect = true;
   cantPartitionWindowFunctionsOnExpressions = true;
   experimental = false;
@@ -212,16 +213,26 @@ export class DatabricksDialect extends Dialect {
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const namedStruct = this.buildNamedStructExpression(fieldList);
-    const collectExpr = `COLLECT_LIST(${namedStruct}) FILTER (WHERE group_set=${groupSet})`;
-    if (!orderBy || orderBy.length === 0) {
-      return collectExpr;
-    }
-    return `ARRAY_SORT(${collectExpr}, (l, r) -> ${this.buildArraySortComparator(orderBy)})`;
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const filterClause = cond ? ` FILTER (WHERE ${cond})` : '';
+    const collectExpr = `COLLECT_LIST(${namedStruct})${filterClause}`;
+    // COLLECT_LIST is unordered, so ordering is done post-aggregation via
+    // ARRAY_SORT — the limit must slice the *ordered* array.
+    const ordered =
+      !orderBy || orderBy.length === 0
+        ? collectExpr
+        : `ARRAY_SORT(${collectExpr}, (l, r) -> ${this.buildArraySortComparator(
+            orderBy
+          )})`;
+    // SLICE(array, start, length) is 1-based; length n keeps the first n.
+    return limit !== undefined ? `SLICE(${ordered}, 1, ${limit})` : ordered;
   }
 
   // Build a lambda comparator for ARRAY_SORT that handles multi-field

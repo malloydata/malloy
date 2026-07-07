@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.413",
+  "version": "0.0.423",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/module/index.d.ts",
@@ -15,6 +15,8 @@
   "exports": {
     ".": {
       "types": "./dist/module/index.d.ts",
+      "import": "./dist/module/index.mjs",
+      "require": "./dist/module/index.umd.js",
       "default": "./dist/module/index.umd.js"
     }
   },
@@ -29,38 +31,38 @@
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/malloy-interfaces": "0.0.413",
-    "@malloydata/malloy-tag": "0.0.413",
-    "@tanstack/solid-virtual": "^3.10.4",
+    "@malloydata/malloy-interfaces": "0.0.423",
+    "@malloydata/malloy-tag": "0.0.423",
+    "@tanstack/solid-virtual": "^3.13.29",
     "lodash": "^4.18.1",
-    "luxon": "^3.5.0",
-    "solid-js": "^1.8.15",
+    "luxon": "^3.7.2",
+    "solid-js": "^1.9.13",
     "ssf": "^0.11.2",
-    "us-atlas": "^3.0.0",
+    "us-atlas": "^3.0.1",
     "vega": "^6.2.0",
     "vega-interpreter": "^2.0.0",
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@malloydata/db-duckdb": "0.0.413",
-    "@malloydata/malloy": "0.0.413",
-    "@storybook/addon-essentials": "^8.6.15",
-    "@storybook/addon-interactions": "^8.6.15",
+    "@malloydata/db-duckdb": "0.0.423",
+    "@malloydata/malloy": "0.0.423",
+    "@storybook/addon-essentials": "^8.6.18",
+    "@storybook/addon-interactions": "^8.6.18",
     "@storybook/addon-links": "^8.6.15",
     "@storybook/blocks": "^8.6.15",
     "@storybook/builder-vite": "^8.6.15",
     "@storybook/html": "^8.6.15",
     "@storybook/html-vite": "^8.6.15",
-    "@storybook/manager-api": "^8.6.15",
+    "@storybook/manager-api": "^8.6.18",
     "@storybook/test": "^8.6.15",
-    "@storybook/theming": "^8.6.15",
-    "@storybook/types": "^8.6.15",
-    "@types/luxon": "^3.5.0",
-    "esbuild": "0.25.0",
+    "@storybook/theming": "^8.6.18",
+    "@storybook/types": "^8.6.18",
+    "@types/luxon": "^3.7.2",
+    "esbuild": "0.28.1",
     "storybook": "^8.6.15",
     "vite": "^6.4.2",
-    "vite-plugin-dts": "^4.5.4",
-    "vite-plugin-solid": "^2.10.1",
+    "vite-plugin-dts": "^5.0.2",
+    "vite-plugin-solid": "^2.11.12",
     "vite-tsconfig-paths": "^5.1.4"
   }
 }

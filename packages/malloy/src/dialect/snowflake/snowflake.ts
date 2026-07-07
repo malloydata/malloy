@@ -43,6 +43,7 @@ import {
   qtz,
   MIN_DECIMAL38,
   MAX_DECIMAL38,
+  turtleGroupSetCondition,
 } from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -106,6 +107,7 @@ export class SnowflakeDialect extends Dialect {
   supportsSumDistinctFunction = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   defaultSampling = {rows: 50000};
   supportsHyperLogLog = true;
 
@@ -152,16 +154,26 @@ export class SnowflakeDialect extends Dialect {
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const orderByClause = orderBy
       ? ` WITHIN GROUP (${this.sqlTurtleOrderByClause(orderBy)})`
       : '';
-    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
-    return `COALESCE(${aggClause}, [])`;
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const struct = `OBJECT_CONSTRUCT_KEEP_NULL(${fields})`;
+    const element = cond ? `CASE WHEN ${cond} THEN ${struct} END` : struct;
+    const aggClause = `ARRAY_AGG(${element})${orderByClause}`;
+    // ARRAY_SLICE is 0-based, end-exclusive, so (0, n) keeps the first n.
+    const limited =
+      limit !== undefined
+        ? `ARRAY_SLICE(${aggClause}, 0, ${limit})`
+        : aggClause;
+    return `COALESCE(${limited}, [])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

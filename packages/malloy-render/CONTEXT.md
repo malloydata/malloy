@@ -2,20 +2,32 @@
 
 The `malloy-render` package handles visualization and rendering of Malloy query results. It transforms query results into rich, interactive visualizations and tables.
 
-**Related docs:** [README.md](./README.md) for public-facing installation and usage, [DEVELOPING.md](./DEVELOPING.md) for the local development workflow, [docs/validation.md](./docs/validation.md) for the renderer validation contract, [docs/plugin-system.md](./docs/plugin-system.md) / [docs/plugin-api-reference.md](./docs/plugin-api-reference.md) / [docs/plugin-quick-start.md](./docs/plugin-quick-start.md) for plugin authoring, [docs/renderer_tags_overview.md](./docs/renderer_tags_overview.md) and [docs/renderer_tag_cheatsheet.md](./docs/renderer_tag_cheatsheet.md) for the user-facing tag vocabulary.
+**Related docs:** [README.md](./README.md) for public-facing installation and usage, [DEVELOPING.md](./DEVELOPING.md) for the local development workflow, [docs/validation.md](./docs/validation.md) for the renderer validation contract, [docs/testing.md](./docs/testing.md) for the testing layers and harnesses, [docs/plugin-system.md](./docs/plugin-system.md) / [docs/plugin-api-reference.md](./docs/plugin-api-reference.md) / [docs/plugin-quick-start.md](./docs/plugin-quick-start.md) for plugin authoring, [docs/renderer_tags_overview.md](./docs/renderer_tags_overview.md) and [docs/renderer_tag_cheatsheet.md](./docs/renderer_tag_cheatsheet.md) for the user-facing tag vocabulary.
 
 Built on **Solid.js** (reactive UI) and **Vega** (declarative charts).
 
 ## Distribution & Public Surface
 
-Ships as a **single UMD bundle** (`dist/module/index.umd.js`). `package.json` `exports` declares one entry; there are no subpath imports, no public ESM, no headless entry. All integration goes through `MalloyRenderer` (or the legacy `HTMLView`, still exported for the VS Code notebook schema view).
+`package.json` `exports` declares a single `.` entry with conditions: `import` → `dist/module/index.mjs` (ESM, added in #2945 so ESM consumers like malloy-explorer resolve the ES build), `require`/`default` → the **UMD bundle** (`dist/module/index.umd.js`). There are no subpath imports and no headless entry. All integration goes through `MalloyRenderer` (or the legacy `HTMLView`, still exported for the VS Code notebook schema view).
 
 Two non-obvious consequences:
 
 - **`@malloydata/malloy-tag` is a runtime dependency for type resolution only.** The UMD inlines malloy-tag (vite `external: []`); nothing escapes to `require()` at runtime. But the published `.d.ts` files (`api/plugin-types.d.ts`, `data_tree/fields/base.d.ts`, `util.d.ts`, etc.) re-export `Tag`, so consumer TypeScript needs the package installed.
-- **The UMD cannot be loaded in Node without a DOM stub.** Solid.js calls `delegateEvents()` at module-eval time and reads `window.document`. The headless validator (`@malloydata/render-validator`) installs and removes global `window`/`document`/`navigator` stubs around its `require()` of this package; any other Node consumer must do the same.
+- **The bundle cannot be loaded in Node without a DOM stub** (either condition). Solid.js calls `delegateEvents()` at module-eval time and reads `window.document`. The headless validator (`@malloydata/render-validator`) installs and removes global `window`/`document`/`navigator` stubs around its `require()` of this package; any other Node consumer must do the same.
 
-`dist/module/index.mjs` exists but is not an exports entry — treat as internal.
+## Vega is pinned at v5 — a deliberate hold
+
+The renderer is built on **Vega 5** (via `vega-lite ^5`). Moving to the current
+Vega (6) is a major across the whole render stack — the `vega-lite` peer, the
+chart runtime, our typings — i.e. a deliberate renderer upgrade, not a dependency
+bump.
+
+**What the pin costs** — visible on Security → Dependabot alerts: `vega`,
+`vega-functions`, and `vega-expression` carry open advisories (high) whose only
+fix is Vega 6. These are render-owned — nothing else in the monorepo pulls them —
+so the renderer is the sole place that clears them. Recorded in the cross-cutting
+pin ledger [`DEPENDENCY-MANAGEMENT.md`](../../DEPENDENCY-MANAGEMENT.md);
+revisit when we take the Vega 5→6 upgrade.
 
 ### Public API
 
@@ -79,8 +91,11 @@ The table uses CSS Grid with subgrid. Layout is calculated in `table-layout.ts`:
 - Column ranges are tracked for each field to support nested tables
 
 ### Testing
-Use Storybook (`npm run storybook`) to test visual changes. Stories are in `src/stories/*.stories.malloy`.
-For non-visual logic (settings serialization, tag parsing, drill query behavior, utility formatting), add targeted Jest tests under `src/**/*.spec.ts` where possible.
+Test at the cheapest layer that can observe the behavior — the layers and their harnesses are in **[docs/testing.md](docs/testing.md)**. The short version:
+- **Dispatch & tag config** (`renderAs()`, `tag-configs.ts` resolvers, chart settings) is a function of the result *schema* — test it compile-only with the `RenderFieldMetadata` harness in `src/render-field-metadata.spec.ts`. No query run, no DOM.
+- **Vega spec generation** — `runChartQuery` in `src/plugins/spec-test-support/harness.ts` (runs a query, no DOM).
+- **Validation contract** — `test/src/render/render-validator.spec.ts`, which needs the built UMD bundle (full `npm run build`).
+- **Pixels** — Storybook (`npm run storybook`), stories in `src/stories/*.stories.malloy`.
 
 ## Plugin System
 
