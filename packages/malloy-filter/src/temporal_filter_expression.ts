@@ -31,11 +31,16 @@ export const TemporalFilterExpression = {
     switch (tc.operator) {
       case 'null':
         return notStr(tc, 'null');
+      case 'none':
+        return notStr(tc, 'none');
       case 'in': {
         return notStr(tc, momentToStr(tc.in));
       }
       case '()':
-        return '(' + TemporalFilterExpression.unparse(tc.expr) + ')';
+        return notStr(
+          tc,
+          '(' + TemporalFilterExpression.unparse(tc.expr) + ')'
+        );
       case 'in_last':
         return notStr(tc, durStr(tc));
       case 'last':

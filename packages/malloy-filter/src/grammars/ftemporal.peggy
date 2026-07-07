@@ -19,6 +19,7 @@ temporalUnary
 
 clause
   = NULL { return {operator: 'null'}; }
+  / NONE { return {operator: 'none'}; }
   / "(" _ expr:temporalFilter _ ")" { return {operator: "()", expr}; }
   / BEFORE __ m:moment { return {operator: 'before', before: m}; }
   / STARTING __ m:moment { return {operator: 'before', before: m, not: true}; }
@@ -80,6 +81,7 @@ conjunction
 // Keywords - case insensitive, must not be followed by more id chars
 NOT = "not"i !idChar
 NULL = "null"i !idChar
+NONE = "none"i !idChar
 TO = "to"i !idChar
 NOW = "now"i !idChar
 LAST = "last"i !idChar

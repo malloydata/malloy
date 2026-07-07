@@ -77,6 +77,12 @@ describe('boolean filter expressions', () => {
   test('not null', () => {
     expect('not null').isBooleanFilter({operator: 'null', not: true});
   });
+  test('none', () => {
+    expect('none').isBooleanFilter({operator: 'none'});
+  });
+  test('not none', () => {
+    expect('not none').isBooleanFilter({operator: 'none', not: true});
+  });
   test('not false', () => {
     expect('not false').isBooleanFilter({operator: 'false', not: true});
   });
@@ -94,7 +100,7 @@ describe('boolean filter expressions', () => {
     expect(res.parsed).toBeNull();
     expect(res.log.length).toBe(1);
     expect(res.log[0].message).toBe(
-      "Illegal boolean filter 'tru'. Must be one of true,=true,false,=false,null"
+      "Illegal boolean filter 'tru'. Must be one of true,=true,false,=false,null,none"
     );
   });
 });

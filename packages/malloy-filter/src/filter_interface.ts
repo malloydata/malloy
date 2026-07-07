@@ -13,6 +13,11 @@ interface Negatable {
 
 export interface Null extends FilterOperator<'null'>, Negatable {}
 
+// The "always false" filter — matches nothing. Companion to the empty filter
+// `f''` (which is the null/absent filter, "always true"). Universal across all
+// filter types. `not none` is "always true".
+export interface None extends FilterOperator<'none'>, Negatable {}
+
 export type ChainOp = 'and' | 'or' | ',';
 export function isChainOp(s: string): s is ChainOp {
   return ['and', 'or', ','].includes(s);
@@ -51,6 +56,7 @@ export type StringFilter =
   | StringCondition
   | StringMatch
   | Null
+  | None
   | StringEmpty
   | ClauseChain<StringFilter>
   | ClauseGroup<StringFilter>;
@@ -68,6 +74,7 @@ export function isStringFilter(sc: unknown): sc is StringFilter {
       '=',
       '~',
       'null',
+      'none',
       'empty',
       'and',
       'or',
@@ -83,7 +90,7 @@ export interface BooleanCondition extends Negatable {
   operator: BooleanOperator;
 }
 
-export type BooleanFilter = BooleanCondition | Null;
+export type BooleanFilter = BooleanCondition | Null | None;
 
 export function isBooleanFilter(bc: unknown): bc is BooleanFilter {
   return (
@@ -91,7 +98,7 @@ export function isBooleanFilter(bc: unknown): bc is BooleanFilter {
     bc !== null &&
     'operator' in bc &&
     typeof bc.operator === 'string' &&
-    ['null', 'true', 'false', '=false', '=true'].includes(bc.operator)
+    ['null', 'none', 'true', 'false', '=false', '=true'].includes(bc.operator)
   );
 }
 
@@ -115,6 +122,7 @@ export type NumberFilter =
   | NumberCondition
   | NumberRange
   | Null
+  | None
   | ClauseGroup<NumberFilter>
   | BooleanChain<NumberFilter>;
 
@@ -136,6 +144,7 @@ export function isNumberFilter(sc: unknown): sc is NumberFilter {
       'or',
       '()',
       'null',
+      'none',
     ].includes(sc.operator)
   );
 }
@@ -234,6 +243,7 @@ export interface InMoment extends FilterOperator<'in'>, Negatable {
 
 export type TemporalFilter =
   | Null
+  | None
   | Before
   | After
   | To
@@ -265,6 +275,7 @@ export function isTemporalFilter(sc: unknown): sc is TemporalFilter {
       'next',
       '()',
       'null',
+      'none',
     ].includes(sc.operator)
   );
 }
