@@ -209,7 +209,7 @@ Some packages have codegen steps that generate source files from grammars or con
 - **`packages/malloy`** — ANTLR4 parser from `.g4` grammar files
 - **`packages/malloy-filter`** — Peggy parsers from `.peggy` grammar files
 - **`packages/malloy-malloy-sql`** — Peggy parsers from `.pegjs` grammar files
-- **`packages/malloy-render`** — Vite bundle from TypeScript/Solid sources
+- **`packages/malloy-render`** — Vite bundle from TypeScript/Solid sources, gated by a `tsc` type-check (`tsconfig.type-check.json`) that runs first so type errors fail the build; vite's own dts pass only prints them
 
 These use `scripts/femto-build.js`, a tiny content-hash-based build caching tool. Each package with codegen has a `femto-config.motly` with named targets specifying input globs and commands. femto-build hashes the inputs and skips the commands if nothing changed. Targets can depend on other targets via `deps`. This survives git operations (unlike Make's timestamp-based approach).
 
