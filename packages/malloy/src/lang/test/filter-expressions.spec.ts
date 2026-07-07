@@ -148,6 +148,22 @@ describe('Filter Expressions In Source', () => {
   test('empty temporal filter', () => {
     expect('ats ~ f""').compilesTo('{filterTimestamp ats | }');
   });
+  test('none string filter', () => {
+    expect("astr ~ f'none'").compilesTo('{filterString astr | none}');
+  });
+  test('none boolean filter', () => {
+    expect("abool ~ f'none'").compilesTo('{filterBoolean abool | none}');
+  });
+  test('none numeric filter', () => {
+    expect("ai ~ f'none'").compilesTo('{filterNumber ai | none}');
+  });
+  test('none temporal filter', () => {
+    expect("ats ~ f'none'").compilesTo('{filterTimestamp ats | none}');
+  });
+  test('negated none (per-type syntax)', () => {
+    expect("ai ~ f'not none'").compilesTo('{filterNumber ai | not none}');
+    expect("astr ~ f'-none'").compilesTo('{filterString astr | -none}');
+  });
   test('illegal use of filter expressions', () => {
     expect('source: bada is a extend { dimension:f is f"" }').toLog(
       errorMessage("Cannot define 'f', unexpected type: filter expression")

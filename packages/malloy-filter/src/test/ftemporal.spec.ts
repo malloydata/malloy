@@ -286,6 +286,32 @@ describe('temporal filter expressions', () => {
         expr: {operator: 'null'},
       });
     });
+    test('none', () => {
+      expect('none').isTemporalFilter({operator: 'none'});
+    });
+    test('not none', () => {
+      expect('not none').isTemporalFilter({operator: 'none', not: true});
+    });
+    test('none nested in or', () => {
+      expect('none or today').isTemporalFilter({
+        operator: 'or',
+        members: [{operator: 'none'}, {operator: 'in', in: {moment: 'today'}}],
+      });
+    });
+    // Regression for the group-unparse negation fix: `not (...)` previously
+    // dropped the negation on unparse.
+    test('negated group round-trips', () => {
+      expect('not (null)').isTemporalFilter({
+        operator: '()',
+        not: true,
+        expr: {operator: 'null'},
+      });
+      expect('not (none)').isTemporalFilter({
+        operator: '()',
+        not: true,
+        expr: {operator: 'none'},
+      });
+    });
     test('1 hour', () => {
       expect('1 hour').isTemporalFilter({
         operator: 'in_last',
