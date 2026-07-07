@@ -41,7 +41,7 @@ async function metadataFor(malloySource: string): Promise<RenderFieldMetadata> {
 }
 
 function childField(metadata: RenderFieldMetadata, name: string): Field {
-  const root = metadata.rootField as NestField;
+  const root = metadata.getRootField();
   const field = root.fields.find(f => f.name === name);
   if (!field) {
     throw new Error(`No field named ${name} in result root`);
@@ -57,7 +57,7 @@ describe('dispatch (shouldRenderAs) on the compiled schema', () => {
     const metadata = await metadataFor(`
       query: q is ${SQL_SOURCE} -> { select: val, str }
     `);
-    expect(metadata.rootField.renderAs()).toBe('table');
+    expect(metadata.getRootField().renderAs()).toBe('table');
     expect(childField(metadata, 'val').renderAs()).toBe('cell');
   });
 

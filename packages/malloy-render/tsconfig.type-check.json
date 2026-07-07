@@ -1,0 +1,17 @@
+{
+  // Type-check-only config for the renderer build. The renderer is bundled by
+  // vite (not `tsc --build` like every other package), and vite's dts pass only
+  // *prints* type errors — it never fails. This config lets the femto build run
+  // a real `tsc` that exits non-zero on a type error, restoring the "building
+  // type-checks" invariant the rest of the monorepo gets for free.
+  //
+  // It inherits everything from ./tsconfig.json (include, jsx, paths, lib) and
+  // only: turns emit off (vite owns dist/), and drops `composite` so this runs
+  // as a plain leaf check that resolves @malloydata/* deps from their built
+  // declarations in node_modules — matching how the dts pass resolves them.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false
+  }
+}
