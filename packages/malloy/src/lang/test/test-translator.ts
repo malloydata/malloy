@@ -419,7 +419,6 @@ export class TestTranslator extends MalloyTranslator {
       a: {...aTableDef, primaryKey: 'astr', name: 'a'},
       b: {...aTableDef, primaryKey: 'astr', name: 'b'},
       bq_a: {...bqTableDef, primaryKey: 'astr', name: 'bq_a'},
-      pg_a: {...pgTableDef, primaryKey: 'astr', name: 'pg_a'},
       ab: {
         ...aTableDef,
         primaryKey: 'astr',

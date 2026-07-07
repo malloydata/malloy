@@ -1757,17 +1757,11 @@ export class PersistSource implements Taggable {
     const sd = this.persistableDef;
     const queryModel = this.model.queryModel;
 
-    // Compile with finalize=false: a persist source's SQL defines the data the
-    // materialized table should physically contain (a bare projection), not a
-    // runnable result set. Finalizing appends the dialect's result-serialization
-    // stage (Dialect.sqlFinalStage) whenever Dialect.hasFinalStage is true —
-    // e.g. Postgres wraps the last stage in `row_to_json(...) as row`. If that
-    // wrapper were included, CREATE TABLE AS would store a single JSON column
-    // instead of real columns, and the BuildID (mkBuildID over this SQL) would
-    // not match the serve-time lookup, which resolves persist sources from the
-    // bare (unfinalized) source SELECT. Both effects break query routing to the
-    // materialized table on dialects with a final stage. No-op where
-    // hasFinalStage is false (e.g. BigQuery/duckdb).
+    // Compile with finalize=false so this SQL is the bare source SELECT.
+    // The build-time key (makeBuildId over this SQL) must equal the serve-time
+    // manifest lookup key, which query_query.ts recomputes from the same
+    // unfinalized SELECT; finalizing would diverge the two on dialects with a
+    // final stage (Postgres) and mis-materialize the table.
     if (sd.type === 'sql_select') {
       return getCompiledSQL(
         sd,
