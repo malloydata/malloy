@@ -870,8 +870,7 @@ describe('given: per-Query givenUsage summary', () => {
     // minimal set for that branch. Cases where composite resolution doesn't
     // run (e.g. composites as join targets) are not exercised here — the
     // defensive `composite` arm of `givenUsageOfSource` would conservatively
-    // union over branches if it were ever reached. See "Composite sources
-    // — partial coverage" in ~/ctx/mp/implementation.md.
+    // union over branches if it were ever reached.
     test('non-discriminating query picks the first branch', () => {
       const md = translateOK(`
         ##! experimental.composite_sources

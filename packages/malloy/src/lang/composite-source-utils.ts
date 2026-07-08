@@ -1578,8 +1578,7 @@ export function computeQueryGivenUsage(pipeline: PipeSegment[]): GivenUsage {
 // because composite resolution runs first and `expandRefUsage` is seeded
 // with the resolved branch. If an unresolved `CompositeSourceDef` ever
 // reaches here (e.g. composites in join positions if/when those work),
-// the conservative union over all branches is the safe fallback. See
-// ~/ctx/mp/implementation.md "Composite sources — partial coverage".
+// the conservative union over all branches is the safe fallback.
 export function givenUsageOfSource(sd: SourceDef): GivenUsage {
   const fromFilters = (sd.filterList ?? []).flatMap(f =>
     givenUsageFrom(f.refSummary)
