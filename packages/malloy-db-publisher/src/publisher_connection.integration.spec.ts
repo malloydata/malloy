@@ -21,7 +21,7 @@ describe.skip('db:Publisher Integration Tests', () => {
     try {
       conn = await PublisherConnection.create('bq_demo', {
         connectionUri:
-          'http://localhost:4000/api/v0/projects/malloy-samples/connections/bq_demo',
+          'http://localhost:4000/api/v0/environments/malloy-samples/connections/bq_demo',
       });
       const files = {
         readURL: async (url: URL) => {
@@ -424,7 +424,10 @@ describe.skip('db:Publisher Integration Tests', () => {
     }
     // Test error handling when fetching schema for non-existent table
     await expect(
-      conn.fetchTableSchema('california_schools', 'california_schools')
+      conn.fetchTableSchema(
+        'california_schools',
+        'california_schools.california_schools'
+      )
     ).rejects.toThrow();
   });
 
