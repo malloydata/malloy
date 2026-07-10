@@ -4,6 +4,17 @@ _Breaking changes indicated with \*_
 
 We will use this space to highlight major and/or breaking changes to Malloy.
 
+### \* The `none` filter literal (matches nothing)
+
+Filter expressions gain a `none` keyword — the "always false" companion to the
+empty filter `f''` (which is "always true"). It matches no rows and works for
+every filter type (string, number, boolean, temporal): `where: col ~ f'none'`
+returns nothing; `f'not none'` returns everything.
+
+**Breaking:** `none` is now a reserved keyword in the filter language. To match
+the literal string `"none"` in a string filter, escape it: `f'\none'` (the same
+way `null` and `empty` are escaped).
+
 ## v0.2.x
 
 ### VS Code helper view windows relocated

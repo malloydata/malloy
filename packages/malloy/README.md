@@ -34,8 +34,8 @@ In practice, much of this loop is handled by various database plugins:
 - [Postgres](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-postgres)
 - [Snowflake](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-snowflake)
 
-## Do you have any examples?
+## What's built with these libraries?
 
-You can find a (very) simple example of writing a CLI for executing Malloy queries [here](https://github.com/malloydata/malloy/tree/main/demo/malloy-demo-bq-cli)
+The [Malloy CLI](https://github.com/malloydata/malloy-cli) uses them to run Malloy queries from the command line.
 
-A more realistic and complex use case - we use these libraries to power our VSCode Extension. Some examples can be found [here](https://github.com/malloydata/malloy-vscode-extension/tree/main/src/extension/commands)
+For a more complex use case, our [VS Code extension](https://github.com/malloydata/malloy-vscode-extension) uses them to power a full Malloy editing and query experience.

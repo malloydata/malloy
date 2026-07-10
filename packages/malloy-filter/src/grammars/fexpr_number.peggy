@@ -19,6 +19,7 @@ numberUnary
 
 clause
   = NULL { return {operator: 'null'}; }
+  / NONE { return {operator: 'none'}; }
   / "(" _ expr:numberFilter _ ")" { return {operator: "()", expr}; }
   / open:openInterval _ b:N _ TO _ e:N _ close:closeInterval { return mkRange(open, b, e, close); }
   / "!=" _ n:N nList:(_ "," _ N)* { return {operator: '!=', ...mkValues(n, nList.map(x => x[3]))}; }
@@ -37,6 +38,7 @@ conjunction
 
 NOT = "not"i !idChar { return "not"; }
 NULL = "null"i !idChar
+NONE = "none"i !idChar
 AND = "and"i !idChar
 OR = "or"i !idChar
 TO = "to"i !idChar
