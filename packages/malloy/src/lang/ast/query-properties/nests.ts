@@ -18,6 +18,7 @@ export class Nests
   elementType = 'nestedQueries';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
+  statement = 'nest:';
   constructor(nests: NestFieldDeclaration[]) {
     super(nests);
   }

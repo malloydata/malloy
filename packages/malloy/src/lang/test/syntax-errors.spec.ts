@@ -335,7 +335,7 @@ describe('custom error messages', () => {
             select: ai
           }
         `).toLogAtLeast(
-        errorMessage('Use of select is not allowed in a grouping query')
+        errorMessage('Use of select: is not allowed in a grouping query')
       );
     });
 
@@ -346,7 +346,7 @@ describe('custom error messages', () => {
             group_by: astr
           }
         `).toLogAtLeast(
-        errorMessage('Use of grouping is not allowed in a select query')
+        errorMessage('Use of group_by: is not allowed in a select query')
       );
     });
 

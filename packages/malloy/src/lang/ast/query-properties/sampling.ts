@@ -19,6 +19,7 @@ export class SampleProperty
   elementType = 'sampleProperty';
   queryRefinementStage = LegalRefinementStage.Tail;
   forceQueryClass = QueryClass.Index;
+  statement = 'sample:';
 
   constructor(readonly sample: Sampling) {
     super();

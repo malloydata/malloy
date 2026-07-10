@@ -844,7 +844,44 @@ describe('query:', () => {
       // segment; in a select it forces a grouping/select collision.
       expect(
         markSource`run: a->{ select: astr; ${'nest: b is { group_by: ai }'} }`
-      ).toLog(errorMessage('Use of grouping is not allowed in a select query'));
+      ).toLog(errorMessage('Use of nest: is not allowed in a select query'));
+    });
+    test('group_by illegal in a select segment', () => {
+      expect(markSource`run: a->{ select: astr; ${'group_by: ai'} }`).toLog(
+        errorMessage('Use of group_by: is not allowed in a select query')
+      );
+    });
+    test('aggregate illegal in a select segment', () => {
+      expect(
+        markSource`run: a->{ select: astr; ${'aggregate: c is count()'} }`
+      ).toLog(
+        errorMessage('Use of aggregate: is not allowed in a select query')
+      );
+    });
+    test('index illegal in a select segment', () => {
+      expect(markSource`run: a->{ select: astr; ${'index: *'} }`).toLog(
+        errorMessage('Use of index: is not allowed in a select query')
+      );
+    });
+    test('sample illegal in a select segment', () => {
+      expect(markSource`run: a->{ select: astr; ${'sample: true'} }`).toLog(
+        errorMessage('Use of sample: is not allowed in a select query')
+      );
+    });
+    test('select illegal in a grouping segment', () => {
+      expect(markSource`run: a->{ group_by: astr; ${'select: ai'} }`).toLog(
+        errorMessage('Use of select: is not allowed in a grouping query')
+      );
+    });
+    test('index illegal in a grouping segment', () => {
+      expect(markSource`run: a->{ group_by: astr; ${'index: *'} }`).toLog(
+        errorMessage('Use of index: is not allowed in a grouping query')
+      );
+    });
+    test('select illegal in an index segment', () => {
+      expect(markSource`run: a->{ index: *; ${'select: astr'} }`).toLog(
+        errorMessage('Use of select: is not allowed in an index query')
+      );
     });
     test('aggregate reference', () => {
       const doc = model`run: a->{ aggregate: ai.sum() }`;

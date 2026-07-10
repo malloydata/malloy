@@ -12,7 +12,6 @@ import {isPartialSegment, isProjectSegment} from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
 import type {SourceFieldSpace} from '../types/field-space';
-import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import type {QueryProperty} from '../types/query-property';
 import {QuerySegmentBuilder} from './reduce-builder';
@@ -41,7 +40,7 @@ export class ProjectBuilder
   }
 
   execute(qp: QueryProperty): void {
-    if (qp.elementType === 'having' || qp instanceof GroupBy) {
+    if (qp.elementType === 'having') {
       qp.logError(
         'illegal-operation-in-select-segment',
         'Illegal statement in a select query operation'

@@ -23,6 +23,7 @@ export class NestFieldDeclaration
   elementType = 'nest-field-declaration';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
+  statement = 'nest:';
   turtleDef: model.TurtleDef | undefined = undefined;
 
   queryExecute(executeFor: QueryBuilder) {
