@@ -104,10 +104,13 @@ export class ExprTimeExtract extends ExpressionDef {
             );
           }
         }
-        if (['week', 'month', 'quarter', 'year'].includes(extractTo)) {
+        if (
+          ['week', 'month', 'quarter', 'year'].includes(extractTo) &&
+          (first.type !== 'date' || last.type !== 'date')
+        ) {
           return this.loggedErrorExpr(
             'invalid-timeframe-for-time-measurement',
-            `Cannot measure interval using '${extractTo}'`
+            `Cannot measure interval using '${extractTo}' for '${first.type}' values; calendar interval measurement requires dates`
           );
         }
         if (!isTimestampUnit(extractTo)) {

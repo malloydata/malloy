@@ -565,6 +565,13 @@ ${indent(sql)}
     const to = mf.kids.right;
     let lVal = from.sql;
     let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(mf.units)
+    ) {
+      return `DATE_DIFF('${mf.units}',${lVal},${rVal})`;
+    }
     if (measureMap[mf.units]) {
       const {use: measureIn, ratio} = measureMap[mf.units];
       if (!timestampMeasureable(measureIn)) {
