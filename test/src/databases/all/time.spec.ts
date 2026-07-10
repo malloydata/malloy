@@ -97,58 +97,82 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       `).toMatchResult(testModel, {yd: 365});
       }
     );
+  });
 
-    // MTOY TODO remove or implment
-    // These all are complicated by civul time issues, skipping for now
-    // test.skip('weeks', async () => {
-    //   expect(await sqlEq('week(now.week to now.week + 6 days)', 0)).isSqlEq();
-    //   expect(await sqlEq('week(now.week to now.week + 7 days)', 1)).isSqlEq();
-    //   expect(
-    //     await sqlEq('week(now.week to now.week + 7 days - 1 second)', 0)
-    //   ).isSqlEq();
-    //   expect(await sqlEq('weeks(@2022-10-01 to @2022-10-07)', 0)).isSqlEq();
-    //   expect(await sqlEq('weeks(@2022-10-01 to @2022-10-08)', 1)).isSqlEq();
-    //   expect(await sqlEq('weeks(@2022-10-15 to @2022-10-01)', -2)).isSqlEq();
-    //   expect(await sqlEq('weeks(@2022-10-02 to @2023-10-02)', 52)).isSqlEq();
-    //   expect(
-    //     await sqlEq('weeks(@2022-10-01 12:00 to @2022-10-08 11:59)', 0)
-    //   ).isSqlEq();
-    // });
+  // Measuring a range in a calendar unit (week/month/quarter/year) is defined
+  // only for date-to-date ranges; timestamp ranges still error. The unit is
+  // whole units *completed*, truncated toward zero — a crossed calendar
+  // boundary is not a completed unit. The partial and reverse-partial cases are
+  // what separate this from boundary-crossing; the exact cases guard the other
+  // direction. Every case here runs on all dialects, so any dialect that counts
+  // boundaries instead of completed units fails.
+  describe('date interval measurement', () => {
+    test('weeks', async () => {
+      // exact: 7 days is one completed week
+      expect(await sqlEq('weeks(@2022-10-01 to @2022-10-08)', 1)).isSqlEq();
+      // 6 days: crosses a week boundary but no week is completed
+      expect(await sqlEq('weeks(@2022-10-01 to @2022-10-07)', 0)).isSqlEq();
+      // reverse of the partial: 0, not -1
+      expect(await sqlEq('weeks(@2022-10-07 to @2022-10-01)', 0)).isSqlEq();
+      // exact negative: 14 days
+      expect(await sqlEq('weeks(@2022-10-15 to @2022-10-01)', -2)).isSqlEq();
+      // 365 days is 52 completed weeks (52 * 7 = 364)
+      expect(await sqlEq('weeks(@2022-10-02 to @2023-10-02)', 52)).isSqlEq();
+    });
 
-    // test.skip('months', async () => {
-    //   expect(await sqlEq('months(now to now)', 0)).isSqlEq();
-    //   expect(await sqlEq('months(@2001-01-01 to @2001-02-01)', 1)).isSqlEq();
-    //   expect(await sqlEq('months(@2001-01-01 to @2001-03-01)', 2)).isSqlEq();
-    //   expect(await sqlEq('months(@2001-01-01 to @2002-02-01)', 13)).isSqlEq();
-    //   expect(
-    //     await sqlEq('months(@2022-10-02 12:00 to @2022-11-02 11:59)', 0)
-    //   ).isSqlEq();
-    // });
+    test('months', async () => {
+      // exact
+      expect(await sqlEq('months(@2001-01-01 to @2001-02-01)', 1)).isSqlEq();
+      // Jan 31 + 1 month = Feb 28 > Feb 15: boundary crossed, month not completed
+      expect(await sqlEq('months(@2001-01-31 to @2001-02-15)', 0)).isSqlEq();
+      // reverse of the partial: 0, not -1
+      expect(await sqlEq('months(@2001-02-15 to @2001-01-31)', 0)).isSqlEq();
+      // exact, spanning a year boundary
+      expect(await sqlEq('months(@2001-01-01 to @2002-02-01)', 13)).isSqlEq();
+      // a 28-day February is still one whole month
+      expect(await sqlEq('months(@2021-02-01 to @2021-03-01)', 1)).isSqlEq();
+    });
 
-    // test.skip('quarters', async () => {
-    //   expect(await sqlEq('quarters(now to now + 1 quarter)', 1)).isSqlEq();
-    //   expect(
-    //     await sqlEq('quarters(now.quarter to now.quarter + 27 days)', 0)
-    //   ).isSqlEq();
-    //   expect(await sqlEq('quarters(now to now + 2 quarters)', 2)).isSqlEq();
-    //   expect(await sqlEq('quarters(now to now - 2 quarters)', -2)).isSqlEq();
-    //   expect(
-    //     await sqlEq('quarters(@2022-01-01 12:00 to @2022-04-01 12:00)', 1)
-    //   ).isSqlEq();
-    //   expect(
-    //     await sqlEq('quarters(@2022-01-01 12:00 to @2022-04-01 11:59)', 0)
-    //   ).isSqlEq();
-    // });
+    // Recorded, not resolved. What "+1 month" means off the 31st is undecided
+    // in Malloy, and the engines split on it. Measured 2026-07-10:
+    //   months(@2020-01-31 to @2020-02-29)
+    //     => 1 on duckdb, bigquery, snowflake  (Jan 31 + 1 month clamps to
+    //        Feb 29, which is reached, so one whole month has elapsed)
+    //     => 0 on mysql, postgres, databricks  (day-of-month 31 is never
+    //        reached in February, so no whole month has elapsed)
+    // Both readings are defensible. Pick a convention, then un-skip and set the
+    // expected value; until then this range has no cross-dialect answer.
+    test.skip('end-of-month month arithmetic is undecided', async () => {
+      expect(await sqlEq('months(@2020-01-31 to @2020-02-29)', 1)).isSqlEq();
+    });
 
-    // test.skip('years', async () => {
-    //   expect(await sqlEq('years(@2022 to @2023)', 1)).isSqlEq();
-    //   expect(await sqlEq('years(@2022-01-01 to @2022-12-31)', 0)).isSqlEq();
-    //   expect(await sqlEq('years(@2022 to @2024)', 2)).isSqlEq();
-    //   expect(await sqlEq('years(@2024 to @2022)', -2)).isSqlEq();
-    //   expect(
-    //     await sqlEq('years(@2022-01-01 12:00 to @2024-01-01 11:59)', 1)
-    //   ).isSqlEq();
-    // });
+    test('quarters', async () => {
+      // exact
+      expect(await sqlEq('quarters(@2022-01-01 to @2022-04-01)', 1)).isSqlEq();
+      // Jan 15 + 1 quarter = Apr 15 > Apr 1: boundary crossed, quarter not completed
+      expect(await sqlEq('quarters(@2022-01-15 to @2022-04-01)', 0)).isSqlEq();
+      // reverse of the partial: 0, not -1
+      expect(await sqlEq('quarters(@2022-04-01 to @2022-01-15)', 0)).isSqlEq();
+      // exact
+      expect(await sqlEq('quarters(@2022-01-01 to @2022-07-01)', 2)).isSqlEq();
+      // exact negative
+      expect(await sqlEq('quarters(@2022-07-01 to @2022-01-01)', -2)).isSqlEq();
+    });
+
+    test('years', async () => {
+      // exact
+      expect(await sqlEq('years(@2022-01-01 to @2023-01-01)', 1)).isSqlEq();
+      // Jun 1 + 1 year = Jun 1 2023 > Jan 1 2023: boundary crossed, year not completed
+      expect(await sqlEq('years(@2022-06-01 to @2023-01-01)', 0)).isSqlEq();
+      // reverse of the partial: 0, not -1
+      expect(await sqlEq('years(@2023-01-01 to @2022-06-01)', 0)).isSqlEq();
+      // almost a year, but no boundary crossed and none completed
+      expect(await sqlEq('years(@2022-01-01 to @2022-12-31)', 0)).isSqlEq();
+      // exact
+      expect(await sqlEq('years(@2022-01-01 to @2024-01-01)', 2)).isSqlEq();
+      // exact negative
+      expect(await sqlEq('years(@2024-01-01 to @2022-01-01)', -2)).isSqlEq();
+    });
   });
 
   describe('timestamp truncation', () => {
