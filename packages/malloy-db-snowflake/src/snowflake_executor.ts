@@ -73,24 +73,25 @@ export class SnowflakeExecutor {
 
   public static getConnectionOptionsFromEnv(): ConnectionOptions | undefined {
     const account = process.env['SNOWFLAKE_ACCOUNT'];
-    if (account) {
-      const username = process.env['SNOWFLAKE_USER'];
-      const password = process.env['SNOWFLAKE_PASSWORD'];
-      const warehouse = process.env['SNOWFLAKE_WAREHOUSE'];
-      const database = process.env['SNOWFLAKE_DATABASE'];
-      const schema = process.env['SNOWFLAKE_SCHEMA'];
-      return {
-        account,
-        username,
-        password,
-        warehouse,
-        database,
-        schema,
-        // Return integers as native JS BigInt to preserve precision
-        jsTreatIntegerAsBigInt: true,
-      };
+    if (!account) {
+      return undefined;
     }
-    return undefined;
+    return {
+      ...SnowflakeExecutor.defaultConnectionOptions,
+      account,
+      username: process.env['SNOWFLAKE_USER'],
+      password: process.env['SNOWFLAKE_PASSWORD'],
+      role: process.env['SNOWFLAKE_ROLE'],
+      warehouse: process.env['SNOWFLAKE_WAREHOUSE'],
+      database: process.env['SNOWFLAKE_DATABASE'],
+      schema: process.env['SNOWFLAKE_SCHEMA'],
+      // Key-pair auth requires SNOWFLAKE_AUTHENTICATOR=SNOWFLAKE_JWT.
+      // Names match the Snowflake CLI's; _RAW is PEM text, _FILE a path.
+      authenticator: process.env['SNOWFLAKE_AUTHENTICATOR'],
+      privateKey: process.env['SNOWFLAKE_PRIVATE_KEY_RAW'],
+      privateKeyPath: process.env['SNOWFLAKE_PRIVATE_KEY_FILE'],
+      privateKeyPass: process.env['SNOWFLAKE_PRIVATE_KEY_PASSPHRASE'],
+    };
   }
 
   public static getConnectionOptionsFromToml(

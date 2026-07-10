@@ -4,7 +4,9 @@ permissions: {}
 on:
   workflow_call:
     secrets:
-      SNOWFLAKE_CONNECTION:
+      SNOW_CI_ACCOUNT:
+        required: true
+      SNOW_CI_KEY:
         required: true
 
 jobs:
@@ -22,9 +24,14 @@ jobs:
         with:
           node-version-file: '.node-version'
       - name: Test
-        run: |
-          ./scripts/gen-snowflake-auth.sh
-          npm run ci-snowflake
+        run: npm run ci-snowflake
         env:
           CI: true
-          SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOW_CI_ACCOUNT }}
+          SNOWFLAKE_PRIVATE_KEY_RAW: ${{ secrets.SNOW_CI_KEY }}
+          SNOWFLAKE_AUTHENTICATOR: SNOWFLAKE_JWT
+          SNOWFLAKE_USER: MALLOY_CI
+          SNOWFLAKE_ROLE: MALLOY_CI_ROLE
+          SNOWFLAKE_WAREHOUSE: MALLOY_CI_WH
+          SNOWFLAKE_DATABASE: MALLOYTEST
+          SNOWFLAKE_SCHEMA: malloytest
