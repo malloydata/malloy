@@ -1431,7 +1431,8 @@ export class QueryQuery extends QueryField {
     // everything else is carried through unchanged by its emitted name -- for a
     // grouped stage that is the group-set-suffixed form (e.g. `f1__0`), not the
     // final output name.
-    priorStageColumns: StageOutputColumn[]
+    priorStageColumns: StageOutputColumn[],
+    finalStageOrderBy = ''
   ): string {
     if (outputPipelinedSQL.length === 0) {
       return lastStageName;
@@ -1452,6 +1453,9 @@ export class QueryQuery extends QueryField {
       retSQL = `SELECT ${
         fields.length > 0 ? fields.join(', ') + ',' : ''
       } ${pipelinesSQL} FROM ${lastStageName}`;
+      if (finalStageOrderBy.length > 0) {
+        retSQL += `\n${finalStageOrderBy}`;
+      }
     }
     return stageWriter.addStage(retSQL);
   }
@@ -2083,10 +2087,11 @@ export class QueryQuery extends QueryField {
     }
 
     // order by
-    s += this.genereateSQLOrderBy(
+    const orderBySQL = this.genereateSQLOrderBy(
       this.firstSegment as QuerySegment,
       this.rootResult
     );
+    s += orderBySQL;
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
@@ -2098,7 +2103,8 @@ export class QueryQuery extends QueryField {
       outputPipelinedSQL,
       this.resultStage,
       stageWriter,
-      columns
+      columns,
+      orderBySQL
     );
 
     return this.resultStage;
