@@ -91,7 +91,8 @@ jobs:
     needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
-      SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
+      SNOW_CI_ACCOUNT: ${{ secrets.SNOW_CI_ACCOUNT }}
+      SNOW_CI_KEY: ${{ secrets.SNOW_CI_KEY }}
   db-mysql:
     needs: pull_and_build
     uses: './.github/workflows/db-mysql.yaml'
