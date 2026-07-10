@@ -18,6 +18,7 @@ export class ProjectStatement
 {
   elementType = 'projectStatement';
   forceQueryClass = QueryClass.Project;
+  statement = 'select:';
   queryRefinementStage = LegalRefinementStage.Single;
 
   queryExecute(executeFor: QueryBuilder) {

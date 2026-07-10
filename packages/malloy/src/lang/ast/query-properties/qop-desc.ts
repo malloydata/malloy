@@ -18,24 +18,6 @@ import {PartialBuilder} from '../query-builders/partial-builder';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {modernizeTermsForUserText} from '../../utils';
 
-function queryOperationName(el: QueryProperty): string | undefined {
-  switch (el.elementType) {
-    case 'aggregateList':
-      return 'aggregate:';
-    case 'groupBy':
-      return 'group_by:';
-    case 'index':
-      return 'index:';
-    case 'nestedQueries':
-    case 'nest-field-declaration':
-      return 'nest:';
-    case 'projectStatement':
-      return 'select:';
-    case 'sampleProperty':
-      return 'sample:';
-  }
-}
-
 function queryContextName(queryClass: QueryClass): string {
   const className = modernizeTermsForUserText(queryClass);
   const article = className === 'index' ? 'an' : 'a';
@@ -63,9 +45,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
       if (el.forceQueryClass) {
         if (guessType) {
           if (guessType !== el.forceQueryClass) {
-            const operationName =
-              queryOperationName(el) ??
-              modernizeTermsForUserText(el.forceQueryClass);
+            const operationName = el.statement;
             el.logError(
               `illegal-${guessType}-operation`,
               `Use of ${operationName} is not allowed in ${queryContextName(

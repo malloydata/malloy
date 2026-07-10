@@ -18,4 +18,5 @@ export class Aggregate
   elementType = 'aggregateList';
   readonly queryRefinementStage = LegalRefinementStage.Single;
   readonly forceQueryClass = QueryClass.Grouping;
+  readonly statement = 'aggregate:';
 }

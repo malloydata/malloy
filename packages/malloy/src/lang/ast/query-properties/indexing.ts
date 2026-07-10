@@ -13,6 +13,7 @@ export class Index extends MalloyElement implements QueryPropertyInterface {
   elementType = 'index';
   weightBy?: FieldName;
   forceQueryClass = QueryClass.Index;
+  statement = 'index:';
   queryRefinementStage = undefined;
 
   constructor(readonly fields: FieldReferences) {
