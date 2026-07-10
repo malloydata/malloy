@@ -515,6 +515,24 @@ ${indent(sql)}
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
     const from = df.kids.left;
     const to = df.kids.right;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(df.units)
+    ) {
+      const lVal = from.sql;
+      const rVal = to.sql;
+      const earlier = `LEAST(${lVal}, ${rVal})`;
+      const later = `GREATEST(${lVal}, ${rVal})`;
+      const candidate = `DATEDIFF(${df.units}, ${earlier}, ${later})`;
+      const anniversary = `DATEADD(${df.units}, ${candidate}, ${earlier})`;
+      const measured = `(${candidate} - CASE WHEN ${anniversary} > ${later} THEN 1 ELSE 0 END)`;
+      return `CASE
+        WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
+        WHEN ${rVal} >= ${lVal} THEN ${measured}
+        ELSE -(${measured})
+      END`;
+    }
     let extractUnits = 'nanoseconds';
     if (TD.isDate(from.typeDef) || TD.isDate(to.typeDef)) {
       extractUnits = 'seconds';

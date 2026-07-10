@@ -311,6 +311,31 @@ export class PostgresDialect extends PostgresBase {
     const to = df.kids.right;
     let lVal = from.sql;
     let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(df.units)
+    ) {
+      const earlier = `LEAST(${lVal}, ${rVal})`;
+      const later = `GREATEST(${lVal}, ${rVal})`;
+      const age = `AGE(${later}, ${earlier})`;
+      const months = `(EXTRACT(YEAR FROM ${age}) * 12 + EXTRACT(MONTH FROM ${age}))`;
+      let measured: string;
+      if (df.units === 'week') {
+        measured = `TRUNC((${later} - ${earlier}) / 7.0)`;
+      } else if (df.units === 'month') {
+        measured = months;
+      } else if (df.units === 'quarter') {
+        measured = `TRUNC(${months} / 3.0)`;
+      } else {
+        measured = `EXTRACT(YEAR FROM ${age})`;
+      }
+      return `CASE
+        WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
+        WHEN ${rVal} >= ${lVal} THEN ${measured}
+        ELSE -(${measured})
+      END`;
+    }
     if (inSeconds[df.units]) {
       lVal = `EXTRACT(EPOCH FROM ${lVal})`;
       rVal = `EXTRACT(EPOCH FROM ${rVal})`;
