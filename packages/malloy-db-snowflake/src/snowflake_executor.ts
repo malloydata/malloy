@@ -230,9 +230,17 @@ export class SnowflakeExecutor {
       options,
       timeoutMs
     );
-    // so javascript can parse the dates
+    // so javascript can parse the dates. LTZ is pinned to the same ISO format
+    // as NTZ because Malloy maps TIMESTAMP_LTZ to `timestamp` (and writes its
+    // own timestamp columns as LTZ), so LTZ values reach the same JS parse path.
     await this._execute(
       "ALTER SESSION SET TIMESTAMP_NTZ_OUTPUT_FORMAT='YYYY-MM-DDTHH24:MI:SS.FF3TZH:TZM';",
+      conn,
+      options,
+      timeoutMs
+    );
+    await this._execute(
+      "ALTER SESSION SET TIMESTAMP_LTZ_OUTPUT_FORMAT='YYYY-MM-DDTHH24:MI:SS.FF3TZH:TZM';",
       conn,
       options,
       timeoutMs

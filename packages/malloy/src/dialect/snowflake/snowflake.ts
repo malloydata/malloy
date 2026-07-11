@@ -89,7 +89,12 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'timestamptz': {type: 'timestamptz'},
   'timestamp_tz': {type: 'timestamptz'},
   'timestamp with time zone': {type: 'timestamptz'},
-  /* timestamp_ltz is not supported in malloy snowflake dialect */
+  // TIMESTAMP_LTZ is a genuine instant (persisted UTC); under Malloy's UTC
+  // session pin it is indistinguishable from NTZ, so it maps to `timestamp`
+  // like NTZ. malloyTypeToSQLType writes instants here too.
+  'timestampltz': {type: 'timestamp'},
+  'timestamp_ltz': {type: 'timestamp'},
+  'timestamp with local time zone': {type: 'timestamp'},
 };
 
 export class SnowflakeDialect extends Dialect {
@@ -612,6 +617,13 @@ ${indent(sql)}
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     } else if (malloyType.type === 'timestamptz') {
       return 'TIMESTAMP_TZ';
+    } else if (malloyType.type === 'timestamp') {
+      // A Malloy `timestamp` is an instant, and TIMESTAMP_LTZ is Snowflake's
+      // instant type. Emit it explicitly rather than the bare word TIMESTAMP,
+      // whose type is decided per account (TIMESTAMP_TYPE_MAPPING: NTZ or LTZ).
+      // NTZ only reads as an instant under the UTC session pin; LTZ is correct
+      // without it, and leaves NTZ for the future `datetime` type.
+      return 'TIMESTAMP_LTZ';
     }
     return malloyType.type;
   }
