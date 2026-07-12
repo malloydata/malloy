@@ -21,9 +21,10 @@ import type {
 } from '@malloydata/malloy';
 import {
   DatabricksDialect,
-  sqlKey,
   makeDigest,
   mkFieldDef,
+  resolveRunSQLOptions,
+  sqlKey,
 } from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -214,6 +215,28 @@ export class DatabricksConnection
     return result;
   }
 
+  // Fetch exactly one chunk for user query results. `fetchAll({maxRows})`
+  // treats maxRows as a chunk size and continues until the result is exhausted.
+  // A single fetchChunk therefore avoids downloading rows beyond rowLimit.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async executeLimited(sql: string, rowLimit: number): Promise<any[]> {
+    await this.ensureConnected();
+    const operation = await this.session.executeStatement(sql, {
+      runAsync: true,
+    });
+    try {
+      if (rowLimit === 0) {
+        // Preserve statement execution semantics without fetching a result
+        // chunk. Closing a still-running async operation may cancel it.
+        await operation.finished();
+        return [];
+      }
+      return await operation.fetchChunk({maxRows: rowLimit});
+    } finally {
+      await operation.close();
+    }
+  }
+
   async manifestTemporaryTable(sqlCommand: string): Promise<string> {
     const hash = makeDigest(sqlCommand);
     const tableName = `tt${hash.slice(0, this.dialect.maxIdentifierLength - 2)}`;
@@ -226,15 +249,20 @@ export class DatabricksConnection
     await this.runRawSQL('SELECT 1');
   }
 
-  async runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData> {
-    const result = await this.runRawSQL(sql);
-    if (options?.rowLimit && result.rows.length > options.rowLimit) {
-      return {
-        rows: result.rows.slice(0, options.rowLimit),
-        totalRows: result.totalRows,
-      };
+  async runSQL(
+    sql: string,
+    options: RunSQLOptions = {}
+  ): Promise<MalloyQueryData> {
+    const {rowLimit} = resolveRunSQLOptions(this.queryOptions, options);
+    try {
+      const rows = (await this.executeLimited(sql, rowLimit)) as QueryData;
+      // The SDK exposes no exact total without draining every chunk, which
+      // would defeat rowLimit's fetch cap. Report the rows actually fetched,
+      // matching other backends that cannot obtain total-result metadata.
+      return {rows: rows.slice(0, rowLimit), totalRows: rows.length};
+    } catch (e) {
+      throw new Error(`Databricks SQL error: ${e.message}`);
     }
-    return result;
   }
 
   public getDigest(): string {

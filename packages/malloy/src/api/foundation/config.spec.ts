@@ -9,11 +9,17 @@ import {
   createConnectionsFromConfig,
   registerConnectionType,
 } from '../../connection/registry';
+import {
+  DEFAULT_ROW_LIMIT,
+  queryOptionsFromConnectionConfig,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+} from '../../connection/query_options';
 import type {ConnectionConfig, Connection} from '../../connection/types';
 import type {URLReader} from '../../runtime_types';
 
 let capturedStrictMode: unknown;
 let strictFactoryCalls = 0;
+let capturedRowLimit: unknown;
 
 function mockConnection(name: string, dialectName = 'mock'): Connection {
   return {
@@ -55,11 +61,15 @@ function mockReader(files: Record<string, unknown>): URLReader {
 beforeEach(() => {
   capturedStrictMode = undefined;
   strictFactoryCalls = 0;
+  capturedRowLimit = undefined;
   registerConnectionType('mockdb', {
     displayName: 'MockDB',
-    factory: async (config: ConnectionConfig) =>
-      mockConnection(config.name, 'mockdb-dialect'),
+    factory: async (config: ConnectionConfig) => {
+      capturedRowLimit = queryOptionsFromConnectionConfig(config).rowLimit;
+      return mockConnection(config.name, 'mockdb-dialect');
+    },
     properties: [
+      ROW_LIMIT_CONNECTION_PROPERTY,
       {name: 'host', displayName: 'Host', type: 'string', optional: true},
       {name: 'port', displayName: 'Port', type: 'number', optional: true},
       {
@@ -105,6 +115,20 @@ describe('MalloyConfig.log validation warnings', () => {
 
   it('accepts a valid config', () => {
     expect(configLog({connections: {mydb: {is: 'mockdb'}}})).toEqual([]);
+  });
+
+  it('accepts rowLimit as a registered connection property', () => {
+    expect(
+      configLog({connections: {mydb: {is: 'mockdb', rowLimit: 25}}})
+    ).toEqual([]);
+  });
+
+  it('warns when rowLimit is not a number', () => {
+    const log = configLog({
+      connections: {mydb: {is: 'mockdb', rowLimit: '25'}},
+    });
+    expect(log).toHaveLength(1);
+    expect(log[0].message).toContain('should be a number');
   });
 
   it('reports JSON parse errors (string form)', () => {
@@ -822,6 +846,37 @@ describe('MalloyConfig property defaults and includeDefaultConnections', () => {
     await config.connections.lookupConnection('myref');
     expect(capturedFlavor).toBe('vanilla');
   });
+
+  it('passes the shared rowLimit default to a connection factory', async () => {
+    const config = new MalloyConfig({
+      connections: {mydb: {is: 'mockdb'}},
+    });
+    await config.connections.lookupConnection('mydb');
+    expect(capturedRowLimit).toBe(DEFAULT_ROW_LIMIT);
+  });
+
+  it.each([0, 25])(
+    'passes an explicit rowLimit of %s to a connection factory',
+    async rowLimit => {
+      const config = new MalloyConfig({
+        connections: {mydb: {is: 'mockdb', rowLimit}},
+      });
+      await config.connections.lookupConnection('mydb');
+      expect(capturedRowLimit).toBe(rowLimit);
+    }
+  );
+
+  it.each([-1, 1.5])(
+    'rejects an invalid rowLimit of %s at the factory boundary',
+    async rowLimit => {
+      const config = new MalloyConfig({
+        connections: {mydb: {is: 'mockdb', rowLimit}},
+      });
+      await expect(config.connections.lookupConnection('mydb')).rejects.toThrow(
+        RangeError
+      );
+    }
+  );
 
   it('silently drops unresolved reference-shaped defaults', async () => {
     // No `rootDirectory` in the config overlay (default overlay returns

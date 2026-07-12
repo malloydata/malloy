@@ -6,7 +6,11 @@
 export {SnowflakeConnection} from './snowflake_connection';
 export {buildPoolOptions} from './snowflake_pool_options';
 
-import {registerConnectionType} from '@malloydata/malloy';
+import {
+  queryOptionsFromConnectionConfig,
+  registerConnectionType,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import type {ConnectionOptions} from 'snowflake-sdk';
 import {SnowflakeConnection} from './snowflake_connection';
@@ -23,6 +27,7 @@ registerConnectionType('snowflake', {
       schemaSampleTimeoutMs,
       schemaSampleRowLimit,
       schemaSampleFullScanMaxBytes,
+      rowLimit: _rowLimit,
       poolMin,
       poolMax,
       poolTestOnBorrow,
@@ -36,6 +41,7 @@ registerConnectionType('snowflake', {
     const connOptions = props as unknown as ConnectionOptions;
     return new SnowflakeConnection(name, {
       connOptions,
+      queryOptions: queryOptionsFromConnectionConfig(config),
       setupSQL: typeof setupSQL === 'string' ? setupSQL : undefined,
       timeoutMs:
         typeof timeoutMs === 'number'
@@ -65,6 +71,7 @@ registerConnectionType('snowflake', {
     });
   },
   properties: [
+    ROW_LIMIT_CONNECTION_PROPERTY,
     {name: 'account', displayName: 'Account', type: 'string'},
     {name: 'username', displayName: 'Username', type: 'string', optional: true},
     {

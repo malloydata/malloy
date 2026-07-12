@@ -439,13 +439,12 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   public async *runSQLStream(
     sql: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
+    options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
     if (!this.connection) {
       throw new Error('duckdb-wasm not connected');
     }
-    const defaultOptions = this.readQueryOptions();
-    rowLimit ??= defaultOptions.rowLimit;
+    const {rowLimit, abortSignal} = this.readQueryOptions(options);
     await this.setup();
     const statements = sql.split('-- hack: split on this');
 
@@ -462,7 +461,9 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
 
     let index = 0;
-    for await (const chunk of await this.connection.send(statements[0])) {
+    rowChunks: for await (const chunk of await this.connection.send(
+      statements[0]
+    )) {
       if (done) {
         break;
       }
@@ -471,7 +472,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
           (rowLimit !== undefined && index >= rowLimit) ||
           abortSignal?.aborted
         ) {
-          break;
+          break rowChunks;
         }
         yield unwrapRow(row, chunk.schema);
         index++;

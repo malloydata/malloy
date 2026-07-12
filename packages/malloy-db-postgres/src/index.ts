@@ -9,16 +9,24 @@ export {
 } from './postgres_connection';
 export type {PostgresSSLConfig} from './postgres_connection';
 
-import {registerConnectionType} from '@malloydata/malloy';
+import {
+  queryOptionsFromConnectionConfig,
+  registerConnectionType,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {PostgresConnection} from './postgres_connection';
 
 registerConnectionType('postgres', {
   displayName: 'PostgreSQL',
   factory: async (config: ConnectionConfig) => {
-    return new PostgresConnection(config);
+    return new PostgresConnection(
+      config,
+      queryOptionsFromConnectionConfig(config)
+    );
   },
   properties: [
+    ROW_LIMIT_CONNECTION_PROPERTY,
     {name: 'host', displayName: 'Host', type: 'string', optional: true},
     {name: 'port', displayName: 'Port', type: 'number', optional: true},
     {name: 'username', displayName: 'Username', type: 'string', optional: true},

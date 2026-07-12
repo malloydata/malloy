@@ -19,14 +19,16 @@ import type {
   SQLSourceRequest,
 } from '@malloydata/malloy';
 import {
+  DEFAULT_ROW_LIMIT,
   DuckDBDialect,
   makeDigest,
   mkFieldDef,
+  resolveRunSQLOptions,
   sqlKey,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-export interface DuckDBQueryOptions {
+export interface DuckDBQueryOptions extends RunSQLOptions {
   rowLimit: number;
 }
 
@@ -48,7 +50,7 @@ export abstract class DuckDBCommon
 
   private readonly dialect = new DuckDBDialect();
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
-    rowLimit: 10,
+    rowLimit: DEFAULT_ROW_LIMIT,
   };
 
   public readonly name: string = 'duckdb_common';
@@ -57,17 +59,17 @@ export abstract class DuckDBCommon
     return this.dialect.name;
   }
 
-  protected readQueryOptions(): DuckDBQueryOptions {
-    const options = DuckDBCommon.DEFAULT_QUERY_OPTIONS;
-    if (this.queryOptions) {
-      if (this.queryOptions instanceof Function) {
-        return {...options, ...this.queryOptions()};
-      } else {
-        return {...options, ...this.queryOptions};
-      }
-    } else {
-      return options;
-    }
+  protected readQueryOptions(
+    runOptions: RunSQLOptions = {}
+  ): DuckDBQueryOptions {
+    const connectionOptions =
+      typeof this.queryOptions === 'function'
+        ? this.queryOptions()
+        : this.queryOptions;
+    return resolveRunSQLOptions(
+      {...DuckDBCommon.DEFAULT_QUERY_OPTIONS, ...connectionOptions},
+      runOptions
+    );
   }
 
   constructor(protected queryOptions?: QueryOptionsReader) {
@@ -101,8 +103,7 @@ export abstract class DuckDBCommon
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const defaultOptions = this.readQueryOptions();
-    const rowLimit = options.rowLimit ?? defaultOptions.rowLimit;
+    const {rowLimit} = this.readQueryOptions(options);
 
     const statements = sql.split('-- hack: split on this');
 

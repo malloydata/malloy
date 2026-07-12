@@ -3,14 +3,20 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {registerConnectionType} from '@malloydata/malloy';
+import {
+  queryOptionsFromConnectionConfig,
+  registerConnectionType,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {DuckDBWASMConnection} from './duckdb_wasm_connection_browser';
 
 registerConnectionType('duckdb_wasm', {
   displayName: 'DuckDB',
-  factory: async (config: ConnectionConfig) => new DuckDBWASMConnection(config),
+  factory: async (config: ConnectionConfig) =>
+    new DuckDBWASMConnection(config, queryOptionsFromConnectionConfig(config)),
   properties: [
+    ROW_LIMIT_CONNECTION_PROPERTY,
     {
       name: 'databasePath',
       displayName: 'Database Path',
