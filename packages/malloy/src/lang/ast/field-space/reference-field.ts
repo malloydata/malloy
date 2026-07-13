@@ -74,7 +74,7 @@ export class ReferenceField extends SpaceField {
       if (refTo instanceof SpaceField) {
         const origFd = refTo.constructorFieldDef();
         if (origFd) {
-          const notes = this.fieldRef.note;
+          const notes = this.fieldRef.ownAnnotation;
           if (origFd.annotations || notes) {
             const annotations: AnnotationsDef = {
               ...(notes ?? {}),

@@ -15,12 +15,10 @@ import {
 } from '../../../model/malloy_types';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 
 export abstract class UserTypeMember extends MalloyElement implements Noteable {
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
   constructor(readonly name: string) {
     super();
   }
@@ -40,8 +38,8 @@ export class UserTypeMemberDef extends UserTypeMember {
       name: this.name,
       typeDef: this.typeDef,
     };
-    if (this.note) {
-      field.annotations = {...this.note};
+    if (this.ownAnnotation) {
+      field.annotations = {...this.ownAnnotation};
     }
     return field;
   }
@@ -95,13 +93,13 @@ export class UserTypeMemberIndirect extends UserTypeMember {
       typeDef = mkArrayTypeDef(typeDef);
     }
     const field: UserTypeFieldDef = {name: this.name, typeDef};
-    if (this.note) {
+    if (this.ownAnnotation) {
       field.annotations = modelEntry.entry.annotations
         ? {
-            ...this.note,
+            ...this.ownAnnotation,
             inherits: modelEntry.entry.annotations,
           }
-        : {...this.note};
+        : {...this.ownAnnotation};
     } else if (modelEntry.entry.annotations) {
       field.annotations = {
         inherits: modelEntry.entry.annotations,

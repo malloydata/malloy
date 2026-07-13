@@ -8,7 +8,6 @@ import type {AnnotationsDef, NamedQueryDef} from '../../../model/malloy_types';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {MalloyElement, DocStatementList} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 import type {SourceQueryElement} from '../source-query-elements/source-query-element';
 
 export class DefineQuery
@@ -25,8 +24,7 @@ export class DefineQuery
   }
 
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
 
   execute(doc: Document): void {
     const existing = doc.getEntry(this.name);
@@ -51,10 +49,10 @@ export class DefineQuery
       name: this.name,
       location: this.location,
     };
-    if (this.note) {
+    if (this.ownAnnotation) {
       entry.annotations = entry.annotations
-        ? {...this.note, inherits: entry.annotations}
-        : {...this.note};
+        ? {...this.ownAnnotation, inherits: entry.annotations}
+        : {...this.ownAnnotation};
     }
     doc.setEntry(this.name, {entry, exported: true});
   }

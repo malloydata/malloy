@@ -6,7 +6,7 @@
 
 import type {Config} from 'jest';
 
-process.env.TZ = 'America/Los_Angeles';
+process.env['TZ'] = 'America/Los_Angeles';
 
 // ESM-only deps that ship plain static import/export must be transformed (not
 // ignored) so jest's CJS runtime can load them. See DEPENDENCY-MANAGEMENT.md.

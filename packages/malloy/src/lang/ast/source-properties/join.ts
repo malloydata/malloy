@@ -21,7 +21,6 @@ import type {FieldSpace} from '../types/field-space';
 import type {ModelEntryReference} from '../types/malloy-element';
 import {MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 import type {MakeEntry} from '../types/space-entry';
 import type {SourceQueryElement} from '../source-query-elements/source-query-element';
 import {ErrorFactory} from '../error-factory';
@@ -38,9 +37,8 @@ export abstract class Join
   abstract getStructDef(parameterSpace: ParameterSpace): JoinFieldDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef): void;
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
   abstract sourceExpr: SourceQueryElement;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
 
   makeEntry(fs: DynamicSpace) {
     fs.newEntry(
@@ -96,8 +94,8 @@ export class KeyJoin extends Join {
       location: this.location,
     };
 
-    if (this.note) {
-      joinStruct.annotations = {...this.note};
+    if (this.ownAnnotation) {
+      joinStruct.annotations = {...this.ownAnnotation};
     }
     return joinStruct;
   }
@@ -210,8 +208,8 @@ export class ExpressionJoin extends Join {
       matrixOperation,
       location: this.location,
     };
-    if (this.note) {
-      joinStruct.annotations = {...this.note};
+    if (this.ownAnnotation) {
+      joinStruct.annotations = {...this.ownAnnotation};
     }
     return joinStruct;
   }

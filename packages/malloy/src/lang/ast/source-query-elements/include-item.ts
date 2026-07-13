@@ -11,7 +11,6 @@ import type {
 } from '../query-items/field-references';
 import type {AnnotationsDef} from '../../../model';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 
 // type RenameSpec = {
 //   as: string;
@@ -26,8 +25,7 @@ export abstract class IncludeItem extends MalloyElement {
 export class IncludeAccessItem extends IncludeItem implements Noteable {
   elementType = 'include-access-item';
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
   constructor(
     readonly kind: 'private' | 'public' | 'internal' | undefined,
     readonly fields: IncludeListItem[]
@@ -60,8 +58,7 @@ export class IncludeExceptItem extends IncludeItem {
 export class IncludeListItem extends MalloyElement implements Noteable {
   elementType = 'include-list-item';
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
 
   constructor(
     readonly name: AccessModifierFieldReference | WildcardFieldReference,
