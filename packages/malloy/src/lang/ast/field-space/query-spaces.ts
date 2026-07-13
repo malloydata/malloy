@@ -264,6 +264,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         const fieldReference = new RefineFromFieldReference(
           field.path.map(f => new FieldName(f))
         );
+        fieldReference.ownAnnotation = field.annotations;
         this.astEl.has({fieldReference});
         const referenceField = new ReferenceField(
           fieldReference,

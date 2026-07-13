@@ -729,6 +729,52 @@ describe('query operation annotations', () => {
       expect(note_b?.annotations).matchesAnnotation({inherits: defaultTags});
     }
   });
+  test('bare group_by annotation survives a refined nest', () => {
+    // Same shape as 'group_by ref inherits' above, but the group_by lives in a
+    // view reached through a nest. Its annotation must survive `+ {…}`
+    // refinement, landing in the same slots as an unrefined nest (issue #2979).
+    const m = new TestTranslator(`
+      source: aa is a extend {
+        # blockNote
+        dimension:
+          # note
+          note_a
+          # b4-is
+          is
+          # after-is
+          astr
+        view: base is {
+          # note1
+          group_by:
+          # note2
+          note_a
+          aggregate: c is count()
+        }
+      }
+      run: aa -> { nest: plain   is base }
+      run: aa -> { nest: refined is base + { limit: 10 } }
+    `);
+    expect(m).toTranslate();
+    for (const [i, nestName] of [
+      [0, 'plain'],
+      [1, 'refined'],
+    ] as const) {
+      const q = m.getQuery(i);
+      expect(q).toBeDefined();
+      if (q) {
+        const nest = getQueryFieldDef(q.pipeline[0], nestName);
+        expect(nest.type).toBe('turtle');
+        if (nest.type === 'turtle') {
+          const note_a = getQueryFieldDef(nest.pipeline[0], 'note_a');
+          expect(note_a?.annotations).matchesAnnotation({
+            blockNotes: ['# note1\n'],
+            inherits: defaultTags,
+            notes: ['# note2\n'],
+          });
+        }
+      }
+    }
+  });
   test('annotations preserved from path references', () => {
     const m = model`
       run: a -> {
