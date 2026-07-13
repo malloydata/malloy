@@ -25,7 +25,7 @@
   "dependencies": {
     "@malloydata/malloy": "0.0.424",
     "@prestodb/presto-js-client": "^1.1.0",
-    "gaxios": "^4.2.0",
+    "gaxios": "^7.2.0",
     "luxon": "^3.7.2",
     "trino-client": "^0.2.2"
   },
