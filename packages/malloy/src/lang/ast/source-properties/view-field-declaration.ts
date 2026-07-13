@@ -9,7 +9,6 @@ import {MalloyElement} from '../types/malloy-element';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import type {View} from '../view-elements/view';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {ASTViewField} from '../field-space/ast-view-field';
 import type {MakeEntry} from '../types/space-entry';
@@ -20,8 +19,7 @@ export class ViewFieldDeclaration
 {
   elementType = 'view-field-declaration';
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: model.AnnotationsDef;
+  ownAnnotation?: model.AnnotationsDef;
 
   constructor(
     readonly name: string,
@@ -47,7 +45,7 @@ export class ViewFieldDeclaration
       name: this.name,
       pipeline: checkedPipeline,
       annotations: {
-        ...this.note,
+        ...this.ownAnnotation,
         inherits: annotations,
       },
       location: this.location,

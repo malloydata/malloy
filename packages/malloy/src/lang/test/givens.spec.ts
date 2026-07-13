@@ -187,7 +187,7 @@ describe('given: declarations', () => {
         # label="Tenant"
         TENANT :: string
     `);
-    expect(givens[0].note?.notes?.map(n => n.text)).toEqual([
+    expect(givens[0].ownAnnotation?.notes?.map(n => n.text)).toEqual([
       '# label="Tenant"\n',
     ]);
   });
@@ -202,7 +202,7 @@ describe('given: declarations', () => {
     // Block notes from the `given:` statement are pushed onto each child
     // declaration's note via extendNote, the same way DefineSourceList works.
     for (const g of givens) {
-      const blockNotes = g.note?.blockNotes?.map(n => n.text) ?? [];
+      const blockNotes = g.ownAnnotation?.blockNotes?.map(n => n.text) ?? [];
       expect(blockNotes).toContain('# block_tag\n');
     }
   });

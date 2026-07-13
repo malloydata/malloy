@@ -193,8 +193,8 @@ export function processIncludeList(
           } else {
             joinState.star = item.kind ?? 'inherit';
             joinState.starNote = {
-              notes: f.note?.notes ?? [],
-              blockNotes: item.note?.blockNotes ?? [],
+              notes: f.ownAnnotation?.notes ?? [],
+              blockNotes: item.ownAnnotation?.blockNotes ?? [],
             };
           }
         } else {
@@ -245,10 +245,10 @@ export function processIncludeList(
               joinState.modifiers.set(f.as ?? name, item.kind);
             }
             joinState.fieldsIncluded.add(name);
-            if (f.note || item.note) {
+            if (f.ownAnnotation || item.ownAnnotation) {
               joinState.notes.set(name, {
-                notes: f.note?.notes ?? [],
-                blockNotes: item.note?.blockNotes ?? [],
+                notes: f.ownAnnotation?.notes ?? [],
+                blockNotes: item.ownAnnotation?.blockNotes ?? [],
               });
             }
           }

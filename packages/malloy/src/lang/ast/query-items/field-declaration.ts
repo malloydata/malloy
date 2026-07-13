@@ -33,7 +33,6 @@ import {
   typecheckProject,
 } from './typecheck_utils';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {SpaceField} from '../types/space-field';
 import {DefSpace} from '../field-space/def-space';
@@ -49,8 +48,7 @@ export abstract class AtomicFieldDeclaration
   implements Noteable, MakeEntry
 {
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
 
   constructor(
     readonly expr: ExpressionDef,
@@ -155,8 +153,8 @@ export abstract class AtomicFieldDeclaration
       if (this.exprSrc) {
         ret.code = this.exprSrc;
       }
-      if (this.note) {
-        ret.annotations = {...this.note};
+      if (this.ownAnnotation) {
+        ret.annotations = {...this.ownAnnotation};
       }
       return ret;
     }

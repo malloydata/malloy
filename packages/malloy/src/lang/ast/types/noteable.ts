@@ -10,24 +10,27 @@ import type {AnnotationsDef} from '../../../model/malloy_types';
  */
 export interface Noteable {
   isNoteableObj: true;
-  note?: AnnotationsDef;
-  extendNote(ext: Partial<AnnotationsDef>): void;
+  ownAnnotation?: AnnotationsDef;
+  // Optional hook, run after this element's own annotation is extended.
+  // Container elements (definition lists) implement it to push a block
+  // annotation down onto their members; leaf elements leave it undefined.
+  afterExtendAnnotation?(): void;
 }
 
 export function isNoteable(el: unknown): el is Noteable {
   return (el as Noteable).isNoteableObj;
 }
 
-export function extendNoteMethod(this: Noteable, ext: Partial<AnnotationsDef>) {
-  extendNoteHelper(this, ext);
-}
-
-export function extendNoteHelper(to: Noteable, ext: Partial<AnnotationsDef>) {
+export function extendOwnAnnotation(
+  to: Noteable,
+  ext: Partial<AnnotationsDef>
+) {
   if (
     (ext.notes && ext.notes.length > 0) ||
     (ext.blockNotes && ext.blockNotes.length > 0) ||
     ext.inherits !== undefined
   ) {
-    to.note = {...to.note, ...ext};
+    to.ownAnnotation = {...to.ownAnnotation, ...ext};
+    to.afterExtendAnnotation?.();
   }
 }

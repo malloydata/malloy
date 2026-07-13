@@ -69,7 +69,7 @@ export class NestFieldDeclaration
         name: this.name,
         pipeline: pipelineWithDrillPaths,
         annotations: {
-          ...this.note,
+          ...this.ownAnnotation,
           inherits: annotations,
         },
         location: this.location,

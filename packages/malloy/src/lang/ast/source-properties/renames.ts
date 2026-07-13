@@ -9,14 +9,13 @@ import {RenameSpaceField} from '../field-space/rename-space-field';
 import {DefinitionList} from '../types/definition-list';
 import type {FieldName} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {extendNoteMethod, type Noteable} from '../types/noteable';
+import {type Noteable} from '../types/noteable';
 import type {MakeEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 
 export class RenameField extends MalloyElement implements Noteable, MakeEntry {
   elementType = 'renameField';
-  note?: AnnotationsDef;
-  extendNote = extendNoteMethod;
+  ownAnnotation?: AnnotationsDef;
   readonly isNoteableObj = true;
 
   constructor(
@@ -65,7 +64,7 @@ export class RenameField extends MalloyElement implements Noteable, MakeEntry {
             oldValue.found,
             this.newName,
             this.location,
-            this.note ? {...this.note} : undefined
+            this.ownAnnotation ? {...this.ownAnnotation} : undefined
           )
         );
       } else {
