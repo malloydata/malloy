@@ -27,6 +27,7 @@ import {
   SOURCE4,
 } from '@/plugins/spec-test-support/harness';
 import type {VegaChartProps} from '@/component/types';
+import type {GroupMark} from 'vega';
 import {getBarChartSettings} from '@/plugins/bar-chart/get-bar_chart-settings';
 import {
   generateBarChartVegaSpecV2,
@@ -147,6 +148,51 @@ describe('bar_chart honors # label tags in default tooltips', () => {
       'Reach (HH)',
       'Avg Reach',
     ]);
+  }, 60000);
+});
+
+describe('bar_chart stack without a series', () => {
+  function barEncode(spec: VegaChartProps['spec']) {
+    const group = spec.marks?.find((m): m is GroupMark => m.type === 'group');
+    const bars = group?.marks?.find(m => m.name === 'bars');
+    return bars?.encode?.enter;
+  }
+  function yScaleDomain(spec: VegaChartProps['spec']) {
+    return spec.scales?.find(s => s.name === 'yscale')?.domain;
+  }
+
+  test('uses the unstacked encoding', async () => {
+    const {spec} = await buildBarProps(
+      SOURCE,
+      `
+      # bar_chart.stack
+      run: data -> {
+        group_by: audience_name
+        aggregate: total_reach is reach.sum()
+      }
+      `
+    );
+    const enter = barEncode(spec);
+    expect(enter?.y).toMatchObject({scale: 'yscale', field: 'y'});
+    expect(enter?.y2).toMatchObject({scale: 'yscale', value: 0});
+    expect(yScaleDomain(spec)).toEqual([0, 100]);
+  }, 60000);
+
+  test('still stacks y0/y1 when a series is present', async () => {
+    const {spec} = await buildBarProps(
+      SOURCE,
+      `
+      # bar_chart.stack
+      run: data -> {
+        group_by: audience_name, period
+        aggregate: total_reach is reach.sum()
+      }
+      `
+    );
+    const enter = barEncode(spec);
+    expect(enter?.y).toMatchObject({scale: 'yscale', field: 'y0'});
+    expect(enter?.y2).toMatchObject({scale: 'yscale', field: 'y1'});
+    expect(yScaleDomain(spec)).toMatchObject({data: 'values', field: 'y1'});
   }, 60000);
 });
 
