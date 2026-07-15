@@ -4,7 +4,11 @@
  */
 
 import type {AnnotationsDef, StructDef} from '../../../model/malloy_types';
-import {activeName, isPersistableSourceDef} from '../../../model/malloy_types';
+import {
+  activeName,
+  isPersistableSourceDef,
+  isSourceDef,
+} from '../../../model/malloy_types';
 import {mkSourceID} from '../../../model/source_def_utils';
 import {checkPersistAnnotation} from '../../../model/persist_utils';
 import {ErrorFactory} from '../error-factory';
@@ -12,7 +16,6 @@ import type {HasParameter} from '../parameters/has-parameter';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {MalloyElement, DocStatementList} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 import type {SourceQueryElement} from '../source-query-elements/source-query-element';
 import {getPartitionCompositeDesc} from '../../composite-source-utils';
 
@@ -36,8 +39,7 @@ export class DefineSource
     }
   }
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
 
   execute(doc: Document): void {
     if (doc.modelEntry(this.name)) {
@@ -62,21 +64,28 @@ export class DefineSource
       as: this.name,
       location: this.location,
     };
-    if (this.note) {
+    if (this.ownAnnotation) {
       entry.annotations = structDef.annotations
         ? {
-            ...this.note,
+            ...this.ownAnnotation,
             inherits: structDef.annotations,
           }
-        : {...this.note};
+        : {...this.ownAnnotation};
     }
-    if (isPersistableSourceDef(entry)) {
+    if (isSourceDef(entry)) {
+      // Every source gets a stable identity for its own definition. referenceID
+      // is left as it arrived: set to the referenced source's sourceID for an
+      // unmodified rename (`source: a is b`), and absent for a source that
+      // defines its own shape (table/sql/query, or a modified/extended source,
+      // which DynamicSpace cleared).
       entry.sourceID = mkSourceID(this.name, this.location?.url);
-      entry.persistent = checkPersistAnnotation(entry).persist;
+      if (isPersistableSourceDef(entry)) {
+        entry.persistent = checkPersistAnnotation(entry).persist;
+      }
     }
     entry.partitionComposite =
       getPartitionCompositeDesc(
-        this.note,
+        this.ownAnnotation,
         structDef,
         this.sourceExpr ?? this
       ) ?? structDef.partitionComposite;

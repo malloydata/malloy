@@ -12,6 +12,8 @@
       "es2020.bigint",
       "es2020.string",
       "es2020.symbol.wellknown",
+      "es2022.array",
+      "es2022.string",
       "dom"
     ],
     "module": "commonjs",

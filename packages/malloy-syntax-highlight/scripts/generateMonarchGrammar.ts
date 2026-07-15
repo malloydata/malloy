@@ -125,11 +125,13 @@ function includeToReference(includeString: TextMate.IncludeString) {
  * our Monarch definition defaults to case-insensitive behavior
  */
 function cleanMatchString(matchString: TextMate.RegExpString) {
-  if (matchString.startsWith(TIGNORE_CASE_FLAG)) {
-    return matchString.slice(TIGNORE_CASE_FLAG.length);
-  } else {
-    return matchString;
+  let s = matchString;
+  if (s.startsWith(TIGNORE_CASE_FLAG)) {
+    s = s.slice(TIGNORE_CASE_FLAG.length);
   }
+  // Monarch is globally ignoreCase and uses JS RegExp, which has no inline
+  // flag groups — turn `(?i:…)` into a plain non-capturing group.
+  return s.replaceAll('(?i:', '(?:');
 }
 
 /**
@@ -162,9 +164,16 @@ function numRegexGroups(regex: MonarchRegExpString) {
  * richest themes, so we map this scope name to "comment.line" which does recieve styles
  */
 function translateToken(token: TextMateScopeName) {
-  return token in TOKENS_MAP
-    ? TOKENS_MAP[token as keyof typeof TOKENS_MAP]
-    : token.replaceAll('-', '.');
+  // Our scopes carry a trailing language tag (.malloy); the TOKENS_MAP keys are
+  // language-neutral, so strip it before the lookup. (Monarch tokens are single
+  // — unlike TextMate's stacked scopes — so a delimiter such as
+  // punctuation.definition.string.begin must be remapped to the region's color,
+  // string.quoted, instead of an unstyled punctuation scope.)
+  const map: Record<string, string> = TOKENS_MAP;
+  const base = token.endsWith('.malloy')
+    ? token.slice(0, -'.malloy'.length)
+    : token;
+  return map[base] ?? map[token] ?? token.replaceAll('-', '.');
 }
 
 /**
@@ -271,6 +280,58 @@ function generateRule(
   }
 }
 
+/**
+ * Locates the Nth (1-based) capturing group in a regex string, skipping
+ * non-capturing groups / lookarounds, escapes, and character classes.
+ * Returns the open-paren index, close-paren index, and the inner source.
+ */
+function findNthCapturingGroup(regex: string, n: number) {
+  let count = 0;
+  for (let i = 0; i < regex.length; i++) {
+    const c = regex[i];
+    if (c === '\\') {
+      i++;
+    } else if (c === '[') {
+      i++;
+      while (i < regex.length && regex[i] !== ']') {
+        if (regex[i] === '\\') i++;
+        i++;
+      }
+    } else if (c === '(' && regex[i + 1] !== '?') {
+      count++;
+      if (count === n) {
+        let depth = 1;
+        for (let j = i + 1; j < regex.length; j++) {
+          const cc = regex[j];
+          if (cc === '\\') {
+            j++;
+          } else if (cc === '[') {
+            j++;
+            while (j < regex.length && regex[j] !== ']') {
+              if (regex[j] === '\\') j++;
+              j++;
+            }
+          } else if (cc === '(') {
+            depth++;
+          } else if (cc === ')') {
+            depth--;
+            if (depth === 0) {
+              return {start: i, end: j, inner: regex.slice(i + 1, j)};
+            }
+          }
+        }
+        return undefined;
+      }
+    }
+  }
+  return undefined;
+}
+
+/** Escapes regex metacharacters so a literal can be used as a pattern. */
+function escapeRegexLiteral(literal: string) {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** Parses a begin/end rule according to the logic defined in this package's README */
 function generateBeginEndRule(
   p: TextMateBeginEndRule,
@@ -295,6 +356,42 @@ function generateBeginEndRule(
         ? p.name
         : DEFAULT_TOKEN;
   if (embeddedLanguage) {
+    // An end that back-references an alternation captured in the begin
+    // (e.g. `connection.sql("""|"|') … \5`) can't be expressed in Monarch,
+    // which has no cross-state backreferences. Expand into one embedded state
+    // per alternative, each closing on its own literal. (The TextMate grammar
+    // only uses the combined+backref form to dodge a vscode-textmate scanner
+    // bug; Monarch has no such bug, so per-quote states are the natural shape.)
+    const backref = /^\\(\d+)$/.exec(p.end.trim());
+    const grp = backref
+      ? findNthCapturingGroup(p.begin, +backref[1])
+      : undefined;
+    if (grp) {
+      grp.inner.split('|').forEach((alt, i) => {
+        const beginVariant =
+          p.begin.slice(0, grp.start) +
+          '(' +
+          alt +
+          ')' +
+          p.begin.slice(grp.end + 1);
+        const ref = embeddedLanguage + END_STATE_SUFFIX + '_' + i;
+        state.push(
+          generateRule(beginVariant, beginTextMateTokenInfo, {
+            next: '@' + ref,
+            nextEmbedded: embeddedLanguage,
+          })
+        );
+        if (!tokenizer[ref]) {
+          tokenizer[ref] = [
+            generateRule(escapeRegexLiteral(alt), endTextMateTokenInfo, {
+              next: M_POP,
+              nextEmbedded: M_POP,
+            }),
+          ];
+        }
+      });
+      return;
+    }
     const ref = embeddedLanguage + END_STATE_SUFFIX;
     const beginRule = generateRule(p.begin, beginTextMateTokenInfo, {
       next: '@' + ref,
@@ -309,9 +406,15 @@ function generateBeginEndRule(
       tokenizer[ref] = [endRule];
     }
   } else {
-    const newRef = p.name
-      ? nameToNewRef(p.name)
-      : currentRef + END_STATE_SUFFIX;
+    let newRef = p.name ? nameToNewRef(p.name) : currentRef + END_STATE_SUFFIX;
+    // Disambiguate when several rules share a scope name (e.g. the filter
+    // strings, all named string.quoted.filter.malloy) — otherwise their end
+    // states collide and only the last one survives.
+    if (tokenizer[newRef]) {
+      let k = 2;
+      while (tokenizer[newRef + '_' + k]) k++;
+      newRef = newRef + '_' + k;
+    }
     const beginRule = generateRule(p.begin, beginTextMateTokenInfo, {
       next: '@' + newRef,
     });
@@ -417,6 +520,16 @@ function generateMonarchRules(
   const patterns = scope.patterns ? scope.patterns : [scope];
   for (const pattern of patterns) {
     if (pattern.include) {
+      // Some rules are Monarch-divergent and are not generated:
+      //  - #tags: routed/column-matched annotations need cross-state
+      //    backreferences Monarch lacks.
+      //  - #sql-string: the .sql(...) embedding is a nested begin/end (the
+      //    string may sit on a different line from the `(`) whose multi-line
+      //    embedding Monarch can't express. Both are exercised only in
+      //    monarchDivergentTestInput.
+      if (pattern.include === '#tags' || pattern.include === '#sql-string') {
+        continue;
+      }
       state.push({
         include: textmateToMonarchInclude(pattern.include),
       });
@@ -497,11 +610,9 @@ tokenizer: {
     appendFileSync(filename, `\t${key}: [\n`, 'utf-8');
     for (const rule of rules) {
       if (!Array.isArray(rule)) {
-        // This line comments out the include rule for tags. Remove this once the TextMate grammar
-        // has been updated to reflect the new tag DSL
         appendFileSync(
           filename,
-          `${rule.include === '@tags' ? '//' : ''}${inspect(rule, {
+          `${inspect(rule, {
             depth: null,
           })},\n`,
           'utf-8'

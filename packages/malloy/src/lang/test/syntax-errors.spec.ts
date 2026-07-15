@@ -63,7 +63,7 @@ describe('custom error messages', () => {
       expect(`
         source: x is a extend
           primary_key: id
-      `).toLogAtLeast(errorMessage("missing '{' at 'primary_key:'"));
+      `).toLogAtLeast(errorMessage("missing '{' before 'primary_key:'"));
     });
 
     test('use of the distinct keyword in a count', () => {
@@ -143,7 +143,7 @@ describe('custom error messages', () => {
           }
         }
         `).toLogAtLeast(
-        errorMessage("extraneous input '{' expecting {BQ_STRING, IDENTIFIER}")
+        errorMessage("unexpected '{', expected a `quoted` name or a name")
       );
     });
 
@@ -208,6 +208,43 @@ describe('custom error messages', () => {
       }`).toLogAtLeast(
         errorMessage(
           "Unknown function 'pct_of_total'. You can find available functions here: https://docs.malloydata.dev/documentation/language/functions"
+        )
+      );
+    });
+  });
+
+  describe('reserved word used as a name', () => {
+    const quoteHint =
+      "'year' is a reserved word, so to use it as a name you must quote it: `year`";
+    test('group_by: a reserved word', () => {
+      expect('run: a -> { group_by: year }').toLogAtLeast(
+        errorMessage(quoteHint)
+      );
+    });
+    test('select: a reserved word', () => {
+      expect('run: a -> { select: year }').toLogAtLeast(
+        errorMessage(quoteHint)
+      );
+    });
+    test('naming a dimension with a reserved word', () => {
+      expect('source: x is a extend { dimension: year is 1 }').toLogAtLeast(
+        errorMessage(quoteHint)
+      );
+    });
+    test('reserved word in a where expression', () => {
+      expect('run: a -> { select: astr; where: timestamp = 1 }').toLogAtLeast(
+        errorMessage(
+          "'timestamp' is a reserved word, so to use it as a name you must quote it: `timestamp`"
+        )
+      );
+    });
+    test('reserved word as a bare source reference', () => {
+      // A backtick-named reserved-word source, referenced bare, suggests quoting.
+      expect(
+        'source: `import` is a extend {}\nrun: import -> { select: * }'
+      ).toLogAtLeast(
+        errorMessage(
+          "'import' is a reserved word, so to use it as a name you must quote it: `import`"
         )
       );
     });
@@ -298,7 +335,7 @@ describe('custom error messages', () => {
             select: ai
           }
         `).toLogAtLeast(
-        errorMessage('Use of select is not allowed in a grouping query')
+        errorMessage('Use of select: is not allowed in a grouping query')
       );
     });
 
@@ -309,19 +346,7 @@ describe('custom error messages', () => {
             group_by: astr
           }
         `).toLogAtLeast(
-        errorMessage('Use of grouping is not allowed in a select query')
-      );
-    });
-
-    test('use of project instead of select', () => {
-      expect(`
-          run: a -> {
-            project: *
-          }
-        `).toLogAtLeast(
-        errorMessage(
-          "The 'project:' keyword is no longer supported. Use 'select:' instead."
-        )
+        errorMessage('Use of group_by: is not allowed in a select query')
       );
     });
 

@@ -37,7 +37,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz} from '../dialect';
+import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -134,6 +134,10 @@ export class MySQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
+  // MySQL builds nested arrays with GROUP_CONCAT (not an array type), which has
+  // no in-expression slice; limiting would need query-level ROW_NUMBER plumbing
+  // the sqlAggregateTurtle seam doesn't expose. Left false (default) explicitly.
+  supportsNestedProjectionLimit = false;
   compoundObjectInSchema = false;
   booleanType: BooleanTypeSupport = 'simulated';
   orderByClause: OrderByClauseType = 'ordinal';
@@ -198,17 +202,24 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    _limit?: number,
+    filterSQL?: string
   ): string {
     const separator = ',';
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    let gc = `GROUP_CONCAT(
-      IF(group_set=${groupSet},
-        JSON_OBJECT(${this.mapFields(fieldList)})
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const json = `JSON_OBJECT(${this.mapFields(fieldList)})`;
+    const element = cond
+      ? `IF(${cond},
+        ${json}
         , null
-        )
+        )`
+      : json;
+    let gc = `GROUP_CONCAT(
+      ${element}
       ${orderByClause}
       SEPARATOR '${separator}'
     )`;
@@ -542,8 +553,17 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
-    let lVal = df.kids.left.sql;
-    let rVal = df.kids.right.sql;
+    const from = df.kids.left;
+    const to = df.kids.right;
+    let lVal = from.sql;
+    let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(df.units)
+    ) {
+      return `TIMESTAMPDIFF(${df.units.toUpperCase()}, ${lVal}, ${rVal})`;
+    }
     if (inSeconds[df.units]) {
       lVal = `UNIX_TIMESTAMP(${lVal})`;
       rVal = `UNIX_TIMESTAMP(${rVal})`;

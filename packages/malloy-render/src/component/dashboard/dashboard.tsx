@@ -11,22 +11,48 @@ import type {Field, RecordCell, RecordOrRepeatedRecordCell} from '@/data_tree';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './dashboard.css?raw';
 import {useConfig} from '../render';
-import type {DashboardNestConfig} from '../tag-configs';
+import type {
+  DashboardChildConfig,
+  DashboardNestConfig,
+} from '@/component/tag-configs';
+
+// Per-item minimum widths. Used for:
+//   - bucket assignment (minRowWidth -> row-collapse-{sm,md,lg})
+//   - flex-mode min-width in dashboard.css (keep those values in sync)
+const MIN_WIDTH_MEASURE = 120;
+const MIN_WIDTH_ITEM = 300;
+
+// Default gap. Must match the CSS fallback in dashboard.css
+// (var(--malloy-render--dashboard-gap, 16px)).
+const DEFAULT_GAP_PX = 16;
+
+// Responsive collapse buckets. A row is assigned the first bucket whose
+// threshold is ≥ its minRowWidth; that same bucket's threshold is the
+// @container max-width at which it stacks — see dashboard.css.
+const COLLAPSE_BUCKETS = [
+  {className: 'row-collapse-sm', threshold: 400},
+  {className: 'row-collapse-md', threshold: 600},
+  {className: 'row-collapse-lg', threshold: 900},
+] as const;
+
+const bucketFor = (minRowWidth: number): string => {
+  for (const {className, threshold} of COLLAPSE_BUCKETS) {
+    if (minRowWidth <= threshold) return className;
+  }
+  return COLLAPSE_BUCKETS[COLLAPSE_BUCKETS.length - 1].className;
+};
 
 function DashboardItem(props: {
   field: Field;
   row: RecordCell;
   maxTableHeight: number | null;
   isMeasure?: boolean;
+  colspan?: number;
 }) {
   const config = useConfig();
   const shouldVirtualizeTable = () => {
-    // If dashboard is disabling virtualization, disable table virtualization as well
-    // This is done mainly to support Copy to HTML; not sure if this is correct approach for other scenarios
     if (config.dashboardConfig().disableVirtualization) return false;
-    // If a max height is provided for tables, virtualize them
     else if (props.maxTableHeight) return true;
-    // If no max height is set, then don't virtualize
     else return false;
   };
   const cell = props.row.column(props.field.name);
@@ -35,6 +61,13 @@ function DashboardItem(props: {
     customProps: {
       table: {
         disableVirtualization: !shouldVirtualizeTable(),
+        shouldFillWidth: true,
+      },
+      // Big values inside a dashboard render embedded: the dashboard item
+      // supplies the card chrome, so big-value flattens itself rather than
+      // the dashboard reaching into big-value's internal classes.
+      big_value: {
+        embedded: true,
       },
     },
   });
@@ -60,13 +93,32 @@ function DashboardItem(props: {
     itemStyle['max-height'] = `${props.maxTableHeight}px`;
 
   const title = props.field.getLabel();
+  const childConfig =
+    props.field.getDashboardChildConfig<DashboardChildConfig>();
+  const subtitle = childConfig?.subtitle;
+
+  // Position the card in columns mode: # colspan widens it past one column.
+  const cardStyle =
+    props.colspan !== undefined && props.colspan > 1
+      ? {'grid-column': `span ${props.colspan}`}
+      : undefined;
 
   return (
     <div
       class="dashboard-item"
+      classList={{
+        'dashboard-item-measure': !!props.isMeasure,
+        'dashboard-item-borderless': !!childConfig?.borderless,
+      }}
+      style={cardStyle}
       onClick={config.onClick ? handleClick : undefined}
     >
-      <div class="dashboard-item-title">{title}</div>
+      <div class="dashboard-item-header">
+        <div class="dashboard-item-title">{title}</div>
+        <Show when={subtitle}>
+          <div class="dashboard-item-subtitle">{subtitle}</div>
+        </Show>
+      </div>
       <div
         class="dashboard-item-value"
         classList={{
@@ -86,10 +138,63 @@ export function Dashboard(props: {
 }) {
   MalloyViz.addStylesheet(styles);
   const field = props.data.field;
-  const dashboardConfig = field.getTagConfig<DashboardNestConfig>();
-  // Default to 361 only when no config resolved; preserve null (means "no limit")
+  const dashConfig = field.getTagConfig<DashboardNestConfig>();
+
+  // resolveDashboardTags always returns a config; 361 fallback is a safety net
+  // for unexpected undefined. Preserve null (means "no limit, no virtualization").
   const maxTableHeight =
-    dashboardConfig !== undefined ? dashboardConfig.maxTableHeight : 361;
+    dashConfig !== undefined ? dashConfig.maxTableHeight : 361;
+  const columns = dashConfig?.columns;
+  const gap = dashConfig?.gap;
+  const gapPx = gap ?? DEFAULT_GAP_PX;
+
+  const childConfigOf = (f: Field) =>
+    f.getDashboardChildConfig<DashboardChildConfig>();
+
+  const dashboardStyle = () => {
+    const style: Record<string, string> = {};
+    if (gap !== undefined) style['--malloy-render--dashboard-gap'] = `${gap}px`;
+    return style;
+  };
+
+  // Two layout modes: flex (the default) flows tiles and wraps; columns
+  // (columns=N) places them in N columns, widened per-tile by # colspan. gap
+  // is spacing only, never a mode trigger, so the mode round-trips on a copied
+  // dashboard (drop columns and it falls back to flex).
+  const useColumns = columns !== undefined;
+
+  const getColumnsStyle = () => {
+    if (columns === undefined) return {};
+    return {'grid-template-columns': `repeat(${columns}, 1fr)`};
+  };
+
+  const itemMinWidth = (f: Field): number =>
+    f.isBasic() && f.wasCalculation() ? MIN_WIDTH_MEASURE : MIN_WIDTH_ITEM;
+
+  // In columns mode every column is the same width (repeat(N, 1fr)), so each
+  // must be wide enough for the group's worst case before the row stacks.
+  const getColumnsMinWidth = (group: Field[]): number => {
+    if (columns === undefined || group.length === 0) return 0;
+    const maxItemMin = Math.max(...group.map(itemMinWidth));
+    return columns * maxItemMin + (columns - 1) * gapPx;
+  };
+
+  // A tile spans one column by default; # colspan widens it. Clamp to the
+  // column count, since CSS clamps a span past the track count anyway.
+  const colspanOf = (f: Field): number => {
+    if (columns === undefined) return 1;
+    return Math.min(childConfigOf(f)?.colspan ?? 1, columns);
+  };
+
+  const getRowClassList = (group: Field[]) => {
+    const classes: Record<string, boolean> = {
+      'dashboard-columns': useColumns,
+    };
+    if (columns !== undefined) {
+      classes[bucketFor(getColumnsMinWidth(group))] = true;
+    }
+    return classes;
+  };
 
   const dimensions = () =>
     field.fields.filter(f => {
@@ -112,7 +217,7 @@ export function Dashboard(props: {
   const nonDimensionsGrouped = () => {
     const group: Field[][] = [[]];
     for (const f of nonDimensions()) {
-      if (f.tag.has('break')) {
+      if (childConfigOf(f)?.break) {
         group.push([]);
       }
       const lastGroup = group.at(-1)!;
@@ -138,6 +243,7 @@ export function Dashboard(props: {
   return (
     <div
       class="malloy-dashboard"
+      style={dashboardStyle()}
       ref={el => {
         if (!props.scrollEl) scrollEl = el;
       }}
@@ -171,7 +277,9 @@ export function Dashboard(props: {
                       <For each={dimensions()}>
                         {d => (
                           <div class="dashboard-dimension-wrapper">
-                            <div class="dashboard-dimension-name">{d.name}</div>
+                            <div class="dashboard-dimension-name">
+                              {d.getLabel()}
+                            </div>
                             <div class="dashboard-dimension-value">
                               {
                                 applyRenderer({
@@ -189,7 +297,11 @@ export function Dashboard(props: {
                   </div>
                   <For each={nonDimensionsGrouped()}>
                     {group => (
-                      <div class="dashboard-row-body">
+                      <div
+                        class="dashboard-row-body"
+                        classList={getRowClassList(group)}
+                        style={getColumnsStyle()}
+                      >
                         <For each={group}>
                           {field => (
                             <DashboardItem
@@ -197,6 +309,7 @@ export function Dashboard(props: {
                               row={props.data.rows[virtualRow.index]}
                               isMeasure={field.wasCalculation()}
                               maxTableHeight={maxTableHeight}
+                              colspan={colspanOf(field)}
                             />
                           )}
                         </For>
@@ -218,7 +331,9 @@ export function Dashboard(props: {
                   <For each={dimensions()}>
                     {d => (
                       <div class="dashboard-dimension-wrapper">
-                        <div class="dashboard-dimension-name">{d.name}</div>
+                        <div class="dashboard-dimension-name">
+                          {d.getLabel()}
+                        </div>
                         <div class="dashboard-dimension-value">
                           {
                             applyRenderer({
@@ -234,7 +349,11 @@ export function Dashboard(props: {
               </div>
               <For each={nonDimensionsGrouped()}>
                 {group => (
-                  <div class="dashboard-row-body">
+                  <div
+                    class="dashboard-row-body"
+                    classList={getRowClassList(group)}
+                    style={getColumnsStyle()}
+                  >
                     <For each={group}>
                       {field => (
                         <DashboardItem
@@ -242,6 +361,7 @@ export function Dashboard(props: {
                           row={row}
                           isMeasure={field.wasCalculation()}
                           maxTableHeight={maxTableHeight}
+                          colspan={colspanOf(field)}
                         />
                       )}
                     </For>

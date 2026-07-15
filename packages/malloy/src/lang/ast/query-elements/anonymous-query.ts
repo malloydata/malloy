@@ -8,7 +8,6 @@ import type {AnnotationsDef} from '../../../model';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 import type {SourceQueryElement} from '../source-query-elements/source-query-element';
 
 export class AnonymousQuery
@@ -23,8 +22,7 @@ export class AnonymousQuery
   }
 
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
 
   execute(doc: Document): void {
     const queryObj = this.queryExpr.getQuery();
@@ -36,7 +34,7 @@ export class AnonymousQuery
       return;
     }
     const modelQuery = {...queryObj.query()};
-    const annotation = this.note || {};
+    const annotation = this.ownAnnotation || {};
     if (modelQuery.annotations) {
       annotation.inherits = modelQuery.annotations;
     }

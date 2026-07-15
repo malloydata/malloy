@@ -241,7 +241,7 @@ describe('source locations', () => {
   });
   test('bad query', () => {
     expect(model`run: a -> { group_by: astr; ${'select: *'} }`).toLog(
-      errorMessage(/Use of select is not allowed in a grouping query/)
+      errorMessage(/Use of select: is not allowed in a grouping query/)
     );
   });
 

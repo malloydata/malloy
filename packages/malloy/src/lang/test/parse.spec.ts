@@ -9,6 +9,8 @@ import {
   markSource,
   getSelectOneStruct,
   errorMessage,
+  warningMessage,
+  getQueryFieldDef,
   error,
 } from './test-translator';
 import './parse-expects';
@@ -161,7 +163,7 @@ describe('error handling', () => {
   });
   test('refine cannot change query type', () => {
     expect('run: ab -> aturtle + { select: astr }').toLog(
-      errorMessage(/Use of select is not allowed in a grouping query/)
+      errorMessage(/Use of select: is not allowed in a grouping query/)
     );
   });
   test('undefined field ref in query', () => {
@@ -179,9 +181,9 @@ describe('error handling', () => {
       errorMessage("Output already has a field named 'astr'")
     );
   });
-  test('detect join tail overlap existing ref', () => {
+  test('join tail overlap auto-renames with a warning', () => {
     expect(markSource`run: ab -> { group_by: astr, ${'b.astr'} }`).toLog(
-      errorMessage("Output already has a field named 'astr'")
+      warningMessage(/'b\.astr' was renamed to 'b_astr'/)
     );
   });
   test('undefined in expression with regex compare', () => {
@@ -193,12 +195,15 @@ describe('error handling', () => {
       `
     ).toLog(errorMessage("'meaning_of_life' is not defined"));
   });
-  test('detect output collision on join references', () => {
-    expect(`
-      run: ab -> {
-        group_by: astr, b.astr
-      }
-    `).toLog(errorMessage("Output already has a field named 'astr'"));
+  test('output collision on join reference renames the second field', () => {
+    const m = new TestTranslator('run: ab -> { group_by: astr, b.astr }');
+    const seg = m.getQuery(0)?.pipeline[0];
+    expect(seg).toBeDefined();
+    // first `astr` keeps its name (a bare reference), `b.astr` is renamed
+    const kept = getQueryFieldDef(seg!, 'astr');
+    expect(kept.type).toBe('fieldref');
+    const renamed = getQueryFieldDef(seg!, 'b_astr');
+    expect(renamed.type).toBe('string');
   });
   test('rejoin a query is renamed', () => {
     expect(`

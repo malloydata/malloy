@@ -2,6 +2,8 @@
 
 CI and release machinery. Read the YAML for mechanics; this covers what's *not* visible there — the structure, the security model, and the publishing rules that bite.
 
+Dependabot (config, the alerts-vs-PRs distinction, and the deliberate-pin ledger) is documented one level up in [`../CONTEXT.md`](../CONTEXT.md) and [`DEPENDENCY-MANAGEMENT.md`](../../DEPENDENCY-MANAGEMENT.md).
+
 ## CI
 
 `run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job `needs: pull_and_build`, downloads the artifact, and runs only its dialect-specific setup + `npm run ci-<dialect>` — no per-job rebuild. Fan-out goes to reusable workflows — `main.yaml` (dialect-agnostic `ci-core`, plus `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. `db-motherduck.yaml` is commented out of CI.

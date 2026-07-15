@@ -49,6 +49,9 @@ export const NumberFilterExpression = {
       case 'null': {
         return nc.not ? 'not null' : 'null';
       }
+      case 'none': {
+        return nc.not ? 'not none' : 'none';
+      }
       case 'and':
       case 'or':
         return nc.members

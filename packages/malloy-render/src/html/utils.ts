@@ -6,28 +6,86 @@
 import startCase from 'lodash/startCase';
 import type {RenderDef} from './data_styles';
 import type {RendererOptions} from './renderer_types';
+import type {MalloyExplicitTheme} from '../api/types';
 import {DateTime} from 'luxon';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {Field} from '../data_tree';
 
+/**
+ * Default low end of the gradient generated for `mapColor`. A
+ * near-white neutral grey reads well on most light page chrome. When
+ * the operator picks a very light `mapColor`, `pickGradientLow` swaps
+ * in a darker neutral so the gradient retains visible contrast across
+ * data values.
+ */
+const MAP_GRADIENT_LOW_LIGHT = '#f5f5f5';
+const MAP_GRADIENT_LOW_DARK = '#3a3a3a';
+
+// Default blue 2-stop ramp for sequential (non-heatmap) colour scales.
+// Spread at each use so returned ranges don't alias this shared const.
+const DEFAULT_SEQUENTIAL_RANGE = ['#C2D5EE', '#1A73E8'];
+
+/**
+ * sRGB relative luminance per WCAG 2 (0 = black, 1 = white). Returns
+ * `null` for inputs that don't parse as a 3- or 6-digit hex; callers
+ * fall back to the default low.
+ */
+function hexLuminance(hex: string): number | null {
+  const m = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return null;
+  const s =
+    m[1].length === 3
+      ? m[1][0] + m[1][0] + m[1][1] + m[1][1] + m[1][2] + m[1][2]
+      : m[1];
+  const channels = [0, 2, 4].map(i => parseInt(s.slice(i, i + 2), 16) / 255);
+  const linear = channels.map(v =>
+    v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+  );
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+function pickGradientLow(high: string): string {
+  const lum = hexLuminance(high);
+  // If the operator's mapColor is itself very light (pastel/brand-light),
+  // the default near-white low would produce a near-monochrome gradient.
+  // Swap to a dark neutral in that case so the data values stay
+  // distinguishable.
+  return lum !== null && lum > 0.8
+    ? MAP_GRADIENT_LOW_DARK
+    : MAP_GRADIENT_LOW_LIGHT;
+}
+
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,
   isRectMark: boolean,
-  hasOverlappingText = false
+  hasOverlappingText = false,
+  explicitTheme?: MalloyExplicitTheme
 ): {range: string[]} | undefined {
   if (type === undefined) {
     return undefined;
   }
+  // Sequential scales (ordinal / quantitative / temporal, non-rect)
+  // use the operator's `mapColor` as the saturated end of a 2-stop
+  // gradient when supplied. Rect marks keep their existing palettes and
+  // ignore mapColor: the ordinal rect branch stays on the default blue
+  // gradient, while temporal/quantitative rect heatmaps keep their tuned
+  // orange/blue scheme (tuned for the dual-tone heatmap-with-text
+  // rendering, not a map gradient).
+  const sequentialGradient = explicitTheme?.mapColor
+    ? [pickGradientLow(explicitTheme.mapColor), explicitTheme.mapColor]
+    : null;
   switch (type) {
     case 'ordinal':
-      return {range: ['#C2D5EE', '#1A73E8']};
+      return isRectMark
+        ? {range: [...DEFAULT_SEQUENTIAL_RANGE]}
+        : {range: sequentialGradient ?? [...DEFAULT_SEQUENTIAL_RANGE]};
     case 'temporal':
     case 'quantitative':
       return isRectMark
         ? hasOverlappingText
           ? {range: ['#6BA4EE', '#EEA361']}
           : {range: ['#1A73E8', '#E8710A']}
-        : {range: ['#C2D5EE', '#1A73E8']};
+        : {range: sequentialGradient ?? [...DEFAULT_SEQUENTIAL_RANGE]};
     case 'nominal':
       return hasOverlappingText
         ? {
@@ -55,6 +113,16 @@ export function getColorScale(
             ],
           };
   }
+}
+
+// Resolve the Vega canvas background for the map plugins from the
+// embedder theme. An unset or empty `theme.background` falls back to
+// `'transparent'` so the map blends with the host chrome; only a
+// non-empty value paints the canvas.
+export function mapCanvasBackground(
+  explicitTheme?: MalloyExplicitTheme
+): string {
+  return explicitTheme?.background || 'transparent';
 }
 
 function numberFixedDigits(value: number, digits: number) {

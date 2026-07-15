@@ -25,7 +25,6 @@ import type {ExprValue} from '../types/expr-value';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {DocStatementList, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 
 // `filter<T>` defaults can't be type-checked via TD.eq — the filter
 // expression value shape doesn't match an atomic typeDef. Catch only
@@ -76,8 +75,7 @@ export class GivenDeclaration
 {
   elementType = 'given';
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
   readonly default?: ConstantExpression;
 
   constructor(
@@ -237,7 +235,7 @@ export class GivenDeclaration
       defaultText,
       givenUsage,
       location: this.location,
-      annotations: this.note ? {...this.note} : undefined,
+      annotations: this.ownAnnotation ? {...this.ownAnnotation} : undefined,
       ...(this.inline ? {inline: true} : {}),
     };
     doc.documentGivens.set(id, givenIR);
@@ -261,7 +259,7 @@ export class GivenDeclaration
       },
       definition: {
         type: typeDefToString(this.typeDef),
-        annotations: this.note ? {...this.note} : undefined,
+        annotations: this.ownAnnotation ? {...this.ownAnnotation} : undefined,
         location: this.location,
         defaultText,
       },

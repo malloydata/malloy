@@ -31,6 +31,13 @@ lexer grammar MalloyLexer;
 
 fragment SPACE_CHAR: [ \u000B\t\r\n\u00A0];
 
+// KEYWORDS-BEGIN
+// Every rule between the markers is a keyword whose spelling is harvested by
+// build_token_names.js to produce readable parser-error names. Keep this
+// section to plain keyword rules: case-insensitive letter fragments, one-char
+// literals ('_', ':'), SPACE_CHAR, and ?/* quantifiers only. Anything fancier
+// (literals, patterns, punctuation) belongs below the closing marker.
+
 // colon keywords ...
 ACCEPT: A C C E P T SPACE_CHAR* ':';
 AGGREGATE: A G G R E G A T E SPACE_CHAR* ':';
@@ -58,7 +65,6 @@ ORDER_BY: O R D E R '_' B Y SPACE_CHAR* ':';
 PARTITION_BY: P A R T I T I O N '_' B Y SPACE_CHAR* ':';
 PRIMARY_KEY: P R I M A R Y '_' K E Y SPACE_CHAR* ':';
 PRIVATE: P R I V A T E SPACE_CHAR* ':';
-PROJECT: P R O J E C T SPACE_CHAR* ':';
 PUBLIC: P U B L I C SPACE_CHAR* ':';
 QUERY: Q U E R Y SPACE_CHAR* ':';
 RENAME: R E N A M E SPACE_CHAR* ':';
@@ -82,7 +88,6 @@ BOOLEAN: B O O L E A N;
 BY: B Y ;
 CASE: C A S E ;
 CAST: C A S T ;
-CONDITION: C O N D I T I O N ;
 COUNT: C O U N T ;
 COMPOSE: C O M P O S E ;
 DATE: D A T E;
@@ -108,7 +113,6 @@ IS: I S ;
 IN: I N ;
 INTERNAL_KW: I N T E R N A L ;
 JSON: J S O N;
-LAST: L A S T ;
 LEFT: L E F T ;
 LIKE: L I K E ;
 MAX: M A X;
@@ -138,13 +142,12 @@ TIMESTAMPTZ: T I M E S T A M P T Z;
 TIMESTAMP: T I M E S T A M P;
 TO: T O;
 TRUE: T R U E ;
-TURTLE: T U R T L E;
 WEEK: W E E K S?;
 WHEN: W H E N ;
 WITH: W I T H ;
 YEAR: Y E A R S?;
-UNGROUPED: U N G R O U P E D;
 VIRTUAL: V I R T U A L;
+// KEYWORDS-END
 
 fragment SQ: '\'';
 fragment BQ: '`';

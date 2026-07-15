@@ -32,6 +32,13 @@ export interface BigValueComponentProps {
   settings: BigValueSettings;
   /** Pre-resolved tag data for all child fields */
   tagConfig: BigValueTagConfig;
+  /**
+   * Embedded/flattened mode: the host (e.g. a dashboard) supplies its own
+   * card chrome, so big-value drops its border, shadow and padding and
+   * centers its content. The host opts in via customProps; big-value owns
+   * the resulting styling so the host never reaches into its internals.
+   */
+  embedded?: boolean;
 }
 
 /**
@@ -222,6 +229,7 @@ function BigValueCard(props: {
   info: DisplayFieldInfo;
   size: BigValueSize;
   neutralThreshold: number;
+  embedded?: boolean;
 }) {
   const delta = createMemo(() => {
     if (
@@ -254,6 +262,7 @@ function BigValueCard(props: {
       classList={{
         'malloy-big-value-card--sm': props.size === 'sm',
         'malloy-big-value-card--lg': props.size === 'lg',
+        'malloy-big-value-card--embedded': !!props.embedded,
       }}
     >
       <div class="malloy-big-value-label-container">
@@ -433,7 +442,10 @@ export function BigValueComponent(props: BigValueComponentProps) {
   });
 
   return (
-    <div class="malloy-big-value">
+    <div
+      class="malloy-big-value"
+      classList={{'malloy-big-value--embedded': !!props.embedded}}
+    >
       <Show when={!firstRow()}>
         <BigValueError message="No data to display" />
       </Show>
@@ -450,6 +462,7 @@ export function BigValueComponent(props: BigValueComponentProps) {
               info={info}
               size={props.settings.size}
               neutralThreshold={props.settings.neutralThreshold}
+              embedded={props.embedded}
             />
           )}
         </For>

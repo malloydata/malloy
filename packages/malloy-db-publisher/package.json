@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-publisher",
-  "version": "0.0.408",
+  "version": "0.0.424",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,10 +24,10 @@
     "generate-api-types": "openapi-generator-cli generate -i publisher-api-doc.yaml -g typescript-axios -o src/client/ && node scripts/patch-common.js"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.408",
+    "@malloydata/malloy": "0.0.424",
     "axios": "^1.6.7"
   },
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "^2.32.0"
+    "@openapitools/openapi-generator-cli": "^2.39.0"
   }
 }

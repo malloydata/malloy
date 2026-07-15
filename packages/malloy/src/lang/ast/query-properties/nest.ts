@@ -4,6 +4,7 @@
  */
 
 import * as model from '../../../model/malloy_types';
+import {nestStrategy} from '../../../model/nest-capability';
 import type {FieldSpace} from '../types/field-space';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
@@ -22,6 +23,7 @@ export class NestFieldDeclaration
   elementType = 'nest-field-declaration';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
+  statement = 'nest:';
   turtleDef: model.TurtleDef | undefined = undefined;
 
   queryExecute(executeFor: QueryBuilder) {
@@ -40,6 +42,24 @@ export class NestFieldDeclaration
           ? pipeline[0].refSummary
           : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
+      // Reject — at translate time, with a located message — any stage of this
+      // nest the compiler can't emit for this dialect, rather than producing
+      // broken SQL. The compiler asks segment-at-a-time as it recurses; the
+      // translator holds the whole pipeline, so it asks every stage.
+      const dialect = fs.dialectObj();
+      if (dialect) {
+        for (let i = 0; i < checkedPipeline.length; i++) {
+          const strategy = nestStrategy(
+            checkedPipeline[i],
+            dialect,
+            i < checkedPipeline.length - 1
+          );
+          if (strategy.kind === 'unsupported') {
+            this.logError(strategy.reason, {dialect: dialect.name});
+            break;
+          }
+        }
+      }
       const pipelineWithDrillPaths = attachDrillPaths(
         checkedPipeline,
         this.name
@@ -49,7 +69,7 @@ export class NestFieldDeclaration
         name: this.name,
         pipeline: pipelineWithDrillPaths,
         annotations: {
-          ...this.note,
+          ...this.ownAnnotation,
           inherits: annotations,
         },
         location: this.location,

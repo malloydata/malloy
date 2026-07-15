@@ -40,26 +40,55 @@ Tests that run against **all** supported databases to ensure consistent behavior
 
 These tests are particularly important for verifying that Malloy's abstraction works correctly across all supported SQL dialects.
 
+### Consumer-contract canary (`test/consumer-canary/`)
+Not a normal test — it consumes the *built* `@malloydata/*` packages the way a downstream app does (esbuild bundle + plain ts-jest, no babel) to catch native/ESM leaks that malloy's own CI is blind to. Run locally with `npm run test-consumer-canary` (it builds first). See [`test/consumer-canary/CONTEXT.md`](consumer-canary/CONTEXT.md).
+
 ## Custom Test Utilities
 
-### malloyResultMatches Matcher
-Custom Jest matcher for comparing query results across different databases.
+### Result matchers (`toMatchResult` / `toEqualResult` / `toMatchRows` / `toMatchPaths`)
+Custom Jest matchers (in `packages/malloy/src/test/resultMatchers.ts`) for asserting
+Malloy query results. The **subject is the query string** and the matcher runs it
+internally, does schema-aware nested comparison, and — critically — **prints the
+generated SQL when the query fails or a value mismatches** (the fastest way to
+diagnose a dialect issue). There is **no** `malloyResultMatches` matcher (an older
+name; these replaced it).
 
-**Purpose:**
-Different databases may format results slightly differently (date formatting, float precision, etc.). This matcher provides fuzzy comparison that accounts for these differences while still verifying semantic correctness.
+**Setup:** `import '@malloydata/malloy/test/matchers';` to register them, and build a
+`TestModel` (`{model, dialect}`) — `wrapTestModel(runtime, source)` makes one from a
+live DB runtime, or `mkTestModel(...)` to define inline data.
 
 **Usage:**
 ```typescript
-expect(actualResult).malloyResultMatches(expectedResult);
+const tm = wrapTestModel(runtime, '');           // or mkTestModel(...)
+await expect(`run: ${db}.table('malloytest.state_facts') -> { ... }`)
+  .toMatchResult(tm, {f1: 'A', names: [{popular_name: 'Ava'}]});  // partial: extra rows/fields ok
+await expect(`run: ...`).toEqualResult(tm, [{...}, {...}]);        // exact rows + fields
+await expect(`run: ...`).toMatchPaths(tm, {'by2.names.popular_name': 'Ava'}); // dotted-path probe
+```
+Pass `{debug: true}` (or a `# test.debug` tag) to force a data + SQL dump even on pass.
+Expected values are plain POJOs shaped like the data (nested arrays/records included);
+the matcher navigates them, so you never index the raw result yourself. It handles
+cross-dialect value differences (bigint/number, MySQL boolean 0/1, date/timestamp).
+**Rejections** (a query that should error) aren't a result match — use
+`await expect(runQuery(tm.model, src)).rejects.toThrow(/.../)`.
+
+### test.when — conditional tests (`test/jest.setup.ts`)
+For a test that only applies to some dialects/conditions, use `test.when` —
+**not** an `if` wrapping a `test()` call.
+
+```typescript
+test.when(runtime.dialect.supportsNestedProjectionLimit)(
+  'limit on a projection nest caps array length',
+  async () => { ... }
+);
 ```
 
-**What it handles:**
-- Float precision differences
-- Date/timestamp format variations
-- Null vs undefined equivalence
-- Result ordering (when not semantically important)
-
-## Database Setup
+`test.when(condition)` returns `test` when the condition holds and a skipping
+`test` otherwise, so the test name is **always declared statically**. That's
+what lets the VS Code Jest decorators (the per-test run/debug gutter icons)
+discover and run it individually. Writing `if (condition) { test(...) }` hides
+the `test()` call inside a branch, so the IDE can't see it and the
+run-single-test affordance disappears. `it.when` is the same for `it`.
 
 ### DuckDB
 DuckDB tests require building the test database:
@@ -132,11 +161,7 @@ The shared cross-database parquet files live in `test/data/malloytest-parquet/` 
 |---|---|
 | duckdb_test.db | Built artifact (from `npm run build-duckdb-db`) |
 | test.json | DuckDB-only test fixture |
-| flights/ (part.0-2.parquet) | DuckDB glob/partitioned read test |
-| flights_partitioned.parquet | Snowflake partition test |
-| numbers.parquet | DuckDB-only (numbers 1–1000) |
-| words.parquet | DuckDB-only (word list) |
-| words_bigger.parquet | DuckDB-only (extended word list) |
+| flights/ (part.0-2.parquet) | DuckDB multi-file glob read test |
 
 ### Common pattern
 
@@ -146,13 +171,13 @@ All cross-database tests (`test/src/databases/all/`) reference tables as `malloy
 
 | Dialect | Method | Files | Notes |
 |---|---|---|---|
-| DuckDB | TS script: `CREATE TABLE AS SELECT FROM parquet_scan()` | `scripts/build_duckdb_test_database.ts` | Run via `npm run build-duckdb-db`. Creates `test/data/duckdb/duckdb_test.db` |
+| DuckDB | TS script: `CREATE TABLE AS SELECT FROM parquet_scan()` | `test/duckdb/load_test_data.sh` (wraps `load_test_data.ts`) | Run via `sh test/duckdb/load_test_data.sh` (or `npm run build-duckdb-db`). Creates `test/data/duckdb/duckdb_test.db` |
 | PostgreSQL | Compressed SQL dump loaded via Docker `psql` | `test/data/postgres/malloytest-postgres.sql.gz` | Docker script: `test/postgres/postgres_start.sh` |
 | MySQL | Compressed SQL dump loaded via Docker | `test/data/mysql/malloytest.mysql.gz` | Docker script: `test/mysql/mysql_start.sh` |
 | BigQuery | Pre-loaded manually in `malloydata-org` project | (none) | No loader script in repo. Data assumed to exist. |
-| Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/uploaddata.sql` | Run via `snowsql -f uploaddata.sql` from `test/snowflake/` |
+| Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/load_test_data.sh` (wraps `load_test_data.sql`) | Run via `sh test/snowflake/load_test_data.sh` (needs the `snowsql` CLI) |
 | Trino/Presto | Docker containers with pre-loaded data | `test/trino/trino_start.sh` | Uses Docker volumes |
-| Databricks | TS script: upload to Volume via REST, `CREATE TABLE AS SELECT FROM read_files()` | `test/databricks/upload_data.ts` | Run manually: `source ~/env/databricks && npx tsx test/databricks/upload_data.ts` |
+| Databricks | TS script: upload to Volume via REST, `CREATE TABLE AS SELECT FROM read_files()` | `test/databricks/load_test_data.sh` (wraps `load_test_data.ts`) | Run manually with the `DATABRICKS_*` env vars set: `sh test/databricks/load_test_data.sh` |
 
 ### Cloud warehouse considerations
 

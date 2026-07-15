@@ -40,7 +40,9 @@ export abstract class FieldBase {
   protected _renderAs = '';
   private _tagConfig: unknown = undefined;
   private _resolvedLabel: string | undefined;
+  private _dashboardChildConfig: unknown = undefined;
   private _columnConfig: unknown = undefined;
+  private _validationErrors: string[] = [];
 
   // Get the plugins registered for this field
   getPlugins(): RenderPluginInstance[] {
@@ -84,6 +86,22 @@ export abstract class FieldBase {
   }
 
   /**
+   * Get the pre-resolved dashboard child config (colspan, subtitle, break,
+   * borderless) for a field that is a direct child of a # dashboard nest.
+   * Resolved at setup time so the dashboard component never reads tags at
+   * render time. Stored as one per-child config object rather than as
+   * separate fields, so these dashboard-only concepts do not spread across
+   * the universal field base. Returns undefined for non-dashboard children.
+   */
+  getDashboardChildConfig<T>(): T | undefined {
+    return this._dashboardChildConfig as T | undefined;
+  }
+
+  setDashboardChildConfig(config: unknown): void {
+    this._dashboardChildConfig = config;
+  }
+
+  /**
    * Get the pre-resolved column configuration for this field.
    * Column configs are extracted at setup time (width, height, word_break).
    */
@@ -93,6 +111,16 @@ export abstract class FieldBase {
 
   setColumnConfig(config: unknown): void {
     this._columnConfig = config;
+  }
+
+  // Validation errors recorded at setup (validateFieldTags) so applyRenderer can
+  // surface them instead of stringifying an unrenderable value to '[object Object]'.
+  addValidationError(message: string): void {
+    this._validationErrors.push(message);
+  }
+
+  getValidationErrors(): string[] {
+    return this._validationErrors;
   }
 
   renderAs(): string {

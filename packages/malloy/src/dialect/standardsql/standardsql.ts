@@ -39,6 +39,7 @@ import {
   EscapeStyle,
   MIN_INT64,
   MAX_INT64,
+  turtleGroupSetCondition,
   type LateralJoinExpression,
 } from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -117,6 +118,7 @@ export class StandardSQLDialect extends Dialect {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   cantPartitionWindowFunctionsOnExpressions = true;
   hasModOperator = false;
 
@@ -212,15 +214,22 @@ export class StandardSQLDialect extends Dialect {
 
   // can array agg or any_value a struct...
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = fieldList
       .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderByClause})`;
+    // BigQuery ARRAY_AGG takes LIMIT as its final sub-clause, after ORDER BY.
+    const limitClause = limit !== undefined ? ` LIMIT ${limit}` : '';
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const struct = `STRUCT(${fields}\n  )`;
+    const element = cond ? `CASE WHEN ${cond} THEN ${struct} END` : struct;
+    return `ARRAY_AGG(${element} IGNORE NULLS ${orderByClause}${limitClause})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -484,6 +493,23 @@ ${indent(sql)}
     const to = measure.kids.right;
     let lVal = from.sql;
     let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(measure.units)
+    ) {
+      const earlier = `LEAST(${lVal},${rVal})`;
+      const later = `GREATEST(${lVal},${rVal})`;
+      const unit = measure.units.toUpperCase();
+      const candidate = `DATE_DIFF(${later},${earlier},${unit})`;
+      const anniversary = `DATE_ADD(${earlier}, INTERVAL ${candidate} ${unit})`;
+      const measured = `(${candidate} - CASE WHEN ${anniversary} > ${later} THEN 1 ELSE 0 END)`;
+      return `CASE
+        WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
+        WHEN ${rVal} >= ${lVal} THEN ${measured}
+        ELSE -(${measured})
+      END`;
+    }
     if (measureMap[measure.units]) {
       const {use: measureIn, ratio} = measureMap[measure.units];
       if (!timestampMeasureable(measureIn)) {

@@ -26,6 +26,7 @@ import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import {
   qtz,
+  turtleGroupSetCondition,
   type CompiledOrderBy,
   type DialectFieldList,
   type FieldReferenceType,
@@ -99,6 +100,7 @@ export class PostgresDialect extends PostgresBase {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   experimental = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
@@ -130,13 +132,21 @@ export class PostgresDialect extends PostgresBase {
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = this.mapFields(fieldList);
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderByClause} ) FILTER (WHERE group_set=${groupSet}))),'[]'::JSONB)`;
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const filterClause = cond ? ` FILTER (WHERE ${cond})` : '';
+    const arrayAgg = `(ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderByClause} )${filterClause})`;
+    // Slice the native ARRAY (1-based, inclusive) before TO_JSONB turns it into
+    // a single jsonb value — a jsonb scalar can't be range-sliced.
+    const limited = limit !== undefined ? `${arrayAgg}[1:${limit}]` : arrayAgg;
+    return `COALESCE(TO_JSONB(${limited}),'[]'::JSONB)`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -301,6 +311,31 @@ export class PostgresDialect extends PostgresBase {
     const to = df.kids.right;
     let lVal = from.sql;
     let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(df.units)
+    ) {
+      const earlier = `LEAST(${lVal}, ${rVal})`;
+      const later = `GREATEST(${lVal}, ${rVal})`;
+      const age = `AGE(${later}, ${earlier})`;
+      const months = `(EXTRACT(YEAR FROM ${age}) * 12 + EXTRACT(MONTH FROM ${age}))`;
+      let measured: string;
+      if (df.units === 'week') {
+        measured = `TRUNC((${later} - ${earlier}) / 7.0)`;
+      } else if (df.units === 'month') {
+        measured = months;
+      } else if (df.units === 'quarter') {
+        measured = `TRUNC(${months} / 3.0)`;
+      } else {
+        measured = `EXTRACT(YEAR FROM ${age})`;
+      }
+      return `CASE
+        WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
+        WHEN ${rVal} >= ${lVal} THEN ${measured}
+        ELSE -(${measured})
+      END`;
+    }
     if (inSeconds[df.units]) {
       lVal = `EXTRACT(EPOCH FROM ${lVal})`;
       rVal = `EXTRACT(EPOCH FROM ${rVal})`;

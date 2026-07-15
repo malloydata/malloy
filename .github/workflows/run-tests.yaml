@@ -32,10 +32,10 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Use Node.js 24.x
+      - name: Use Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 24.x
+          node-version-file: '.node-version'
       - name: Install and build
         run: |
           npm ci --loglevel error
@@ -91,7 +91,8 @@ jobs:
     needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
-      SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
+      SNOW_CI_ACCOUNT: ${{ secrets.SNOW_CI_ACCOUNT }}
+      SNOW_CI_KEY: ${{ secrets.SNOW_CI_KEY }}
   db-mysql:
     needs: pull_and_build
     uses: './.github/workflows/db-mysql.yaml'
@@ -105,6 +106,12 @@ jobs:
   db-duckdb-wasm:
     needs: pull_and_build
     uses: './.github/workflows/db-duckdb-wasm.yaml'
+  # Consumes the built @malloydata packages as a downstream app would (esbuild
+  # bundle + plain ts-jest), so native/ESM leaks are caught at PR time instead of
+  # post-publish. No secrets — only needs the built workspace.
+  consumer-canary:
+    needs: pull_and_build
+    uses: './.github/workflows/consumer-canary.yaml'
 
   # I think I have the sorted roughly longest to shortest
   # so the longer running jobs get workers sooner, not sure
@@ -123,6 +130,7 @@ jobs:
       # - db-motherduck
       - db-mysql
       - db-databricks
+      - consumer-canary
     runs-on: ubuntu-latest
     steps:
       - name: Success

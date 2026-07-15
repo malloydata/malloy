@@ -34,6 +34,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
 } from '../dialect';
+import {turtleGroupSetCondition} from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {
   PRESTO_DIALECT_FUNCTIONS,
@@ -113,6 +114,7 @@ export class TrinoDialect extends PostgresBase {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   cantPartitionWindowFunctionsOnExpressions = false;
   orderByClause: OrderByClauseType = 'output_name';
   nullMatchesFunctionSignature = false;
@@ -173,14 +175,20 @@ export class TrinoDialect extends PostgresBase {
   }
   // can array agg or any_value a struct...
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: CompiledOrderBy[] | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
-    return `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause}) FILTER (WHERE group_set=${groupSet})`;
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const filterClause = cond ? ` FILTER (WHERE ${cond})` : '';
+    const arrayAgg = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause})${filterClause}`;
+    // SLICE(array, start, length) is 1-based; length n keeps the first n.
+    return limit !== undefined ? `SLICE(${arrayAgg}, 1, ${limit})` : arrayAgg;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -557,6 +565,13 @@ ${indent(sql)}
     const to = mf.kids.right;
     let lVal = from.sql;
     let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(mf.units)
+    ) {
+      return `DATE_DIFF('${mf.units}',${lVal},${rVal})`;
+    }
     if (measureMap[mf.units]) {
       const {use: measureIn, ratio} = measureMap[mf.units];
       if (!timestampMeasureable(measureIn)) {

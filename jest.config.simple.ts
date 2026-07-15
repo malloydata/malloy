@@ -6,8 +6,12 @@
 
 import type {Config} from 'jest';
 
-process.env.TZ = 'America/Los_Angeles';
+process.env['TZ'] = 'America/Los_Angeles';
 
+// ESM-only deps that ship plain static import/export must be transformed (not
+// ignored) so jest's CJS runtime can load them. See DEPENDENCY-MANAGEMENT.md.
+// (uuid and @noble/hashes were pinned to CJS-consumable majors, so they no longer
+// need transforming — an ESM-only runtime dep leaks downstream like a native one.)
 const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
 
 const config: Config = {

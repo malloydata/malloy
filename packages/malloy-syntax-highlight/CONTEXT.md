@@ -1,100 +1,189 @@
 # Syntax Highlight Package
 
-This package maintains syntax highlighting grammars for three Malloy file types: `.malloy`, `.malloysql`, and `.malloynb` (notebook). It publishes grammar files as static assets (no JS API) for consumption by editors.
+Maintains syntax-highlighting grammars for three Malloy file types — `.malloy`,
+`.malloysql`, `.malloynb` — and publishes them as static assets (no JS API) for
+editors. This doc describes `.malloy`; the other two follow the same shape.
 
-## Two Grammar Systems
+## The corpus is the spec
 
-**TextMate grammar** (`grammars/malloy/malloy.tmGrammar.json`) is the ground truth. It's used by VSCode and defines all syntax patterns using Oniguruma regex. It supports multiple scopes per token, backreferences in end patterns, and nested captures.
+`grammars/malloy/corpus.json` is the source of truth for *what the grammar
+should do*. Each case pairs Malloy source with the tokens it must produce:
 
-**Monarch grammar** (`grammars/malloy/malloy.monarch.ts`) is for Monaco Editor (web-based editors). It uses JavaScript regex and a simpler state-machine model. Currently auto-generated from the TextMate grammar by `scripts/generateMonarchGrammar.ts`.
+```json
+{ "name": "…", "code": "<malloy>",
+  "expect": [ { "text": "…", "lexer": "<TOKEN>", "scope": "<scope>" } ] }
+```
 
-### Key Differences Between the Systems
+- `lexer` is **verified ground truth** — the symbolic token the real
+  `MalloyLexer` emits for that span.
+- `scope` is an **authored design decision** — the TextMate scope the grammar
+  should assign.
 
-| Capability | TextMate | Monarch |
+The corpus is checked two ways, so the grammar can't silently drift from the
+language:
+
+1. **Scope test** (`grammars/malloy/corpus.spec.ts`, Jest) tokenizes each `code`
+   with `vscode-textmate` and asserts every span carries its `scope`.
+2. **Drift test** (`packages/malloy/src/lang/test/syntax-highlight-corpus.spec.ts`,
+   Jest) runs the *real* `MalloyLexer` and asserts every span's `lexer` token
+   still matches the language, and uses `parsePrefix` (the annotation router) as
+   the oracle for annotation routing.
+
+The drift test lives in `packages/malloy` because the lexer is internal there
+(not exported); it reads `corpus.json` by file path, so neither package gains a
+dependency on the other. `corpus.json` is hand-authored and not published — the
+one place new constructs and scope decisions are pinned.
+
+## Two grammar systems
+
+**TextMate** (`grammars/malloy/malloy.tmGrammar.json`) is the ground truth —
+used by VS Code, GitHub (Linguist), and Shiki.
+
+**Monarch** (`grammars/malloy/malloy.monarch.ts`) is for Monaco (web editors).
+It is **generated** from the TextMate grammar by
+`scripts/generateMonarchGrammar.ts` and is never hand-edited — the generator is
+what keeps the two in sync. Edit the TextMate grammar, regenerate, Monarch
+follows.
+
+| | TextMate | Monarch |
 |---|---|---|
 | Regex engine | Oniguruma | JavaScript |
-| Scopes per token | Multiple | One |
-| Backreferences in end patterns | Yes | No |
-| Self-referencing grammars | Yes | No |
-| Embedding levels | Unlimited | One |
+| Scopes per token | many (stacked) | one |
+| Backreferences | yes | no cross-state |
+| Embedding levels | unlimited | one |
 
-### Monarch Generation: Current State and Future Direction
+Monarch is the weaker model, so the generator translates *intent*, not syntax:
 
-The auto-generator (`scripts/generateMonarchGrammar.ts`) handles the bulk of the grammar well (keywords, strings, numbers, comments) but breaks down at the edges. It uses a `TOKENS_MAP` and specificity heuristics to paper over the many-to-one scope mapping, and has a hardcoded hack to comment out the `@tags` include because the tag patterns don't convert cleanly. Block annotations (multi-line `#|...|#`) are another case it can't handle due to backreference requirements.
+- inline `(?i:…)` → `(?:…)` (invalid JS regex; Monarch is globally `ignoreCase`)
+- each begin/end rule gets a unique end-state (rules sharing a scope — e.g. the
+  filter strings — would otherwise collide into one state)
+- a backreferenced alternation end (`("""|"|') … \5`) expands into one state per
+  quote, since Monarch has no cross-state backreferences
+- delimiter scopes (`punctuation.definition.string.*`) remap to the region color
+  suffix-insensitively, because a Monarch token is single and can't also carry
+  the region's `name`
 
-The generator may be replaced by an AI-assisted approach that understands the *intent* of the TextMate grammar and writes idiomatic Monarch patterns achieving the same visual result, rather than mechanically transliterating syntax that doesn't map 1:1.
+**The divergent set** — what Monarch structurally can't do, excluded from its
+parity test: column-matched block annotations, multi-level `%{ }` embedding, and
+painting the `meta.embedded` wrapper over an embedded SQL body. Tags aren't
+highlighted in Monarch at all (the generator omits the `@tags` include).
 
-## File Layout
+## Scope conventions
+
+Standard TextMate vocabulary, grouped by *role* (not per-keyword), each suffixed
+`.malloy`:
+
+- `keyword.control.malloy` — clause/statement keywords (dimension, where,
+  group_by, …) and bare expression keywords (case, when, asc, is, distinct, …)
+- `keyword.operator.malloy` — and, or, not, in, like, to, for
+- `storage.type.malloy` — string, number, date, timestamp(tz), boolean, json
+- `support.function.malloy` — built-in functions at the call site; user
+  functions are `entity.name.function.malloy`
+- `constant.language.malloy` — null, true, false, now
+- `variable.language.malloy` — this · `variable.parameter.malloy` — `$given`
+  refs · `variable.other.malloy` — identifiers
+- `keyword.other.timeframe.malloy` — year/quarter/…/day_of_year
+- the string zoo — `string.quoted.{single,double,triple,raw.*,filter}.malloy`,
+  `string.regexp.malloy`; numbers — `constant.numeric(.percentage).malloy`
+
+The trailing `.malloy` is our own specificity; themes match by *prefix*
+(`keyword.control`, `string.quoted`, …), so the grammar colors correctly under
+any theme without shipping custom rules.
+
+**Colon-keywords** (lexer tokens that require a trailing `:` — dimension, where,
+query, …) only color in keyword position, via a `(?=:)` lookahead, so a field
+named `query` or `sample` isn't mistaken for a keyword. The `:` is left
+uncolored. (No `\s*` before it — the lexer's `SPACE_CHAR*` allowance is being
+removed; don't reintroduce it.)
+
+## Annotations are routed
+
+`#`/`##` are the annotation (tag) markers — **not** comments (`--` and `//` are
+comments). The sigil is `##?` then an optional block `|`; a **route** follows
+(up to the first whitespace) and decides how the content reads — see
+`parsePrefix` in `packages/malloy/src/lang/annotation-prefix.ts`:
+
+- **tag routes** — empty (default) and the claimed sigils `!`, `@`, `:` — carry
+  tag property-language → tag styling (marker as punctuation, names as
+  `entity.name.tag`, `=`/negation as operators, quoted values as strings)
+- **documentation routes** — `"` and the bracketed app routes `()` `<>` `[]`
+  `{}` — carry prose/markdown/JSON → `comment.{line,block}.documentation`
+
+Routes apply identically to single-line (`#`/`##`) and block (`#|`/`##|`) forms.
+Block close is column-matched in the lexer; the grammar approximates it with a
+leading-whitespace backreference (Monarch can't, so blocks are divergent).
+
+## Embedded SQL
+
+SQL-ness comes from the `.sql()` **context**, not the `"""` delimiter:
+`connection.sql('…')`, `("…")`, and `("""…""")` are all SQL, while a bare
+`"""…"""` elsewhere is just a multi-line string. The rule keys on `.sql(`, wraps
+the region in `meta.embedded.block.sql.malloy`, and delegates the body to
+`source.sql` (real SQL coloring comes from the host's SQL grammar); `%{ }`
+interpolations inside a `"""` block re-enter Malloy.
+
+The three quote forms are *one* combined rule (`("""|"|')` with a backreferenced
+end), not three siblings — vscode-textmate's begin scanner silently drops
+shorter begins that share a long prefix, which would leave only `"""` working.
+The generator expands it back into per-quote states for Monarch.
+
+## File layout
 
 ```
-grammars/
-  malloy/
-    malloy.tmGrammar.json       — TextMate grammar (ground truth)
-    malloy.monarch.ts           — Monarch grammar (auto-generated)
-    malloy-language.json        — VSCode language configuration
-    malloyTestInput.ts          — Test input covering all Malloy constructs
-    malloy.spec.ts              — Jest tests (TextMate tokenization)
-    malloy.test.ts              — Karma tests (Monarch parity)
-    tokenizations/darkPlus.ts   — Ground-truth tokenization artifact
-  malloy-sql/                   — TextMate grammar + language config for .malloysql
-  malloy-notebook/              — TextMate grammar + language config for .malloynb
-themes/
-  textmate/                     — VSCode themes (Dark+, Light+, etc.)
-  monaco/                       — Same themes converted for Monaco
-scripts/
-  generateMonarchGrammar.ts     — TextMate → Monarch conversion
-  generateMonarchTheme.ts       — TextMate theme → Monaco theme conversion
-  generateLanguageTokenizationFile.ts — Generate ground-truth tokenization artifacts
-test/
-  testUtils.ts                  — Shared test interfaces
-  generateTextmateTokenizations.ts  — Tokenize via vscode-textmate + oniguruma
-  generateMonarchTokenizations.ts   — Tokenize via Monaco in browser
-  config/                       — Test configurations per grammar/theme combo
+grammars/malloy/
+  malloy.tmGrammar.json     — TextMate grammar (ground truth)
+  malloy.monarch.ts         — Monarch grammar (generated; do NOT edit)
+  malloy-language.json      — VS Code language config
+  corpus.json               — the spec (hand-authored; not published)
+  corpus.spec.ts            — scope test (vscode-textmate)
+  malloyTestInput.ts        — snapshot/parity input (common + monarchDivergent)
+  malloy.spec.ts            — TextMate snapshot test (Jest)
+  malloy.test.ts            — Monarch parity test (Karma)
+  tokenizations/darkPlus.ts — generated snapshot ground truth
+grammars/malloy-sql/, malloy-notebook/  — the other two file types
+themes/textmate/, themes/monaco/        — VS Code themes + Monaco conversions
+scripts/generateMonarchGrammar.ts       — TextMate → Monarch
+scripts/generateLanguageTokenizationFile.ts — regenerate darkPlus
+packages/malloy/src/lang/test/syntax-highlight-corpus.spec.ts — drift/routing test
 ```
 
-## Annotations and Tags in the Grammar
+## Testing surfaces
 
-Malloy objects can have metadata annotations. The grammar highlights these:
+| Test | Where | Engine | Checks |
+|---|---|---|---|
+| Scope | `corpus.spec.ts` | vscode-textmate | grammar assigns the authored `scope` |
+| Drift | `packages/malloy/…/syntax-highlight-corpus.spec.ts` | real MalloyLexer + parsePrefix | `lexer`/route still match the language |
+| Snapshot | `malloy.spec.ts` | vscode-textmate | tokenization unchanged vs `darkPlus.ts` |
+| Parity | `malloy.test.ts` (Karma) | Monaco | Monarch matches TextMate on `commonTestInput` |
 
-- **Single-line**: `# tag=value` (object-level) and `## tag=value` (model-level)
-- **Block (multi-line)**: `#|...|#` (object-level) and `##|...|##` (model-level)
+The corpus tests are the *correctness* oracle; snapshot/parity are
+change-detectors. `malloyTestInput.ts` splits into `commonTestInput` (both
+engines) and `monarchDivergentTestInput` (TextMate only) — **a green Karma run
+means green**, so never put a Monarch-divergent pattern in `commonTestInput`.
 
-Block annotations use a column-matching rule: the closing `|#` must be at the same column as the opening `#|`. The TextMate grammar approximates this using backreferences on leading whitespace. Monarch cannot replicate this.
-
-Tag content within annotations is parsed by `#tag-values` patterns that highlight tag names, `=` operators, and values.
-
-## Testing Workflow
-
-Tests verify that grammars produce correct tokenization (scope names + colors) against VSCode themes.
-
-`malloyTestInput.ts` is split into `commonTestInput` and `monarchDivergentTestInput`. The TextMate (Jest) suite runs the full default export (both); the Monarch (Karma) suite runs `commonTestInput` only. The divergent blocks (tags / block annotations / multi-level embedding) are cases the Monarch generator structurally cannot reproduce — keeping them out of the Karma comparison is deliberate, so **a green Karma run means green, not "ignore the usual failures."** Don't add a Monarch-divergent pattern to `commonTestInput`; if the generator ever gains support, move the block over.
+Karma needs a browser; headless:
+`CHROME_BIN="<chrome>" npx karma start --single-run --browsers ChromeHeadless`.
 
 ```bash
-# Regenerate expected tokenizations after changing the TextMate grammar or test inputs
-npm run gen-malloy-tokens
-
-# Run TextMate grammar tests (Jest, Node.js)
-npm run test-textmate-grammars
-
-# Run Monarch grammar tests (Karma, browser — verifies parity with TextMate)
-npm run test-monarch-grammars
-
-# Regenerate Monarch grammar from TextMate
-npm run gen-malloy-monarch
+npm run gen-malloy-tokens       # regenerate darkPlus after a grammar/input change
+npm run gen-malloy-monarch      # regenerate the Monarch grammar from TextMate
+npm run test-textmate-grammars  # Jest (scope + snapshot)
+npm run test-monarch-grammars   # Karma (Monarch parity)
 ```
 
-### Adding a New Syntax Pattern
+## Adding or changing a construct
 
-1. Edit `malloy.tmGrammar.json` (the ground truth)
-2. Add test input to `malloyTestInput.ts`
-3. Run `npm run gen-malloy-tokens` to regenerate expected tokenizations
-4. Run `npm run test-textmate-grammars` to verify
-5. Run `npm run gen-malloy-monarch` to regenerate the Monarch grammar
-6. Manually verify Monarch output (the generator may need fixes for complex patterns)
+1. Run the snippet through the real lexer to learn its true tokens.
+2. Add a `corpus.json` case — `code`, the verified `lexer` token(s), the
+   intended `scope`(s).
+3. Edit `malloy.tmGrammar.json` until the scope test passes.
+4. `npm run gen-malloy-monarch` and `npm run gen-malloy-tokens`.
+5. Run scope + drift + snapshot tests, then Karma. If the construct is
+   Monarch-divergent, put its `malloyTestInput.ts` block in
+   `monarchDivergentTestInput`.
 
-## npm Package Contents
+## npm package contents
 
-Only grammar files are published:
-- `grammars/**/*.tmGrammar.json` — TextMate grammars
-- `grammars/**/*-language.json` — VSCode language configurations
-- `grammars/**/*.monarch.ts` — Monarch grammars
+Only grammar assets are published (`grammars/**/*.tmGrammar.json`,
+`*-language.json`, `*.monarch.ts`). The corpus, specs, themes, and scripts are
+dev-only.

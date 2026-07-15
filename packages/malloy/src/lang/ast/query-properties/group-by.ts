@@ -18,4 +18,5 @@ export class GroupBy
   elementType = 'groupBy';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
+  statement = 'group_by:';
 }

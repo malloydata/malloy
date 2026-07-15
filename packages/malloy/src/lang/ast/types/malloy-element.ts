@@ -18,7 +18,7 @@ import type {
   SourceID,
   SourceRegistryValue,
 } from '../../../model/malloy_types';
-import {isSourceDef, isPersistableSourceDef} from '../../../model/malloy_types';
+import {isSourceDef} from '../../../model/malloy_types';
 import {mkModelDef, mkModelID} from '../../../model/utils';
 import {Tag} from '@malloydata/malloy-tag';
 import type {
@@ -38,7 +38,7 @@ import {GlobalNameSpace} from './global-name-space';
 import type {ModelEntry} from './model-entry';
 import type {NameSpace} from './name-space';
 import type {Noteable} from './noteable';
-import {isNoteable, extendNoteMethod} from './noteable';
+import {extendOwnAnnotation, isNoteable} from './noteable';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -442,8 +442,7 @@ export class DocStatementList
   elementType = 'topLevelStatements';
   execCursor = 0;
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
   noteCursor = 0;
   executeList(doc: Document): ModelDataRequest {
     while (this.execCursor < this.elements.length) {
@@ -451,8 +450,8 @@ export class DocStatementList
       if (this.noteCursor === this.execCursor) {
         // We only want to set the note on each element once,
         // but we might execute a element multiple times
-        if (this.note && isNoteable(el)) {
-          el.extendNote(this.note);
+        if (this.ownAnnotation && isNoteable(el)) {
+          extendOwnAnnotation(el, this.ownAnnotation);
         }
         this.noteCursor += 1;
       }
@@ -768,12 +767,9 @@ export class Document extends MalloyElement implements NameSpace {
 
     this.documentModel.set(str, ent);
 
-    // Maintain sourceRegistry for persistable sources with sourceID
-    if (
-      isSourceDef(ent.entry) &&
-      isPersistableSourceDef(ent.entry) &&
-      ent.entry.sourceID
-    ) {
+    // Maintain the source-id table so sourceID/referenceID values resolve to
+    // their SourceDef. Every named source is registered by its sourceID.
+    if (isSourceDef(ent.entry) && ent.entry.sourceID) {
       this.documentSrcRegistry[ent.entry.sourceID] = {
         entry: {
           type: 'source_registry_reference',
