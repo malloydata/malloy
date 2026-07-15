@@ -9,15 +9,9 @@ export type LogicalMalloyOperator = 'and' | 'or';
 export type ArithmeticMalloyOperator = '+' | '-' | '*' | '/' | '%';
 export type EqualityMalloyOperator = '~' | '!~' | '=' | '!=';
 export type CompareMalloyOperator =
-  | '<'
-  | '<='
-  | '>'
-  | '>='
-  | EqualityMalloyOperator;
+  '<' | '<=' | '>' | '>=' | EqualityMalloyOperator;
 export type BinaryMalloyOperator =
-  | ArithmeticMalloyOperator
-  | CompareMalloyOperator
-  | LogicalMalloyOperator;
+  ArithmeticMalloyOperator | CompareMalloyOperator | LogicalMalloyOperator;
 
 export function getExprNode(mo: BinaryMalloyOperator): BinaryOperator {
   switch (mo) {

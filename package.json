@@ -100,7 +100,7 @@
     "jest-silent-reporter": "^0.6.0",
     "jest-util": "^29.0.0",
     "lerna": "^9.0.7",
-    "prettier": "^3.0.3",
+    "prettier": "^3.9.5",
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.1",
     "typescript": "^6.0.3",

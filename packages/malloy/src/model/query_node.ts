@@ -311,8 +311,7 @@ export class QueryStruct {
 
   // Injeected factory to break circularity with QueryQuery
   private static turtleFieldMaker:
-    | ((field: TurtleDef, parent: QueryStruct) => QueryField)
-    | undefined;
+    ((field: TurtleDef, parent: QueryStruct) => QueryField) | undefined;
 
   static registerTurtleFieldMaker(
     maker: (field: TurtleDef, parent: QueryStruct) => QueryField

@@ -1171,12 +1171,7 @@ export interface RuntimeContext {
 }
 
 export type ReferenceKind =
-  | 'field'
-  | 'join'
-  | 'explore'
-  | 'query'
-  | 'sqlBlock'
-  | 'given';
+  'field' | 'join' | 'explore' | 'query' | 'sqlBlock' | 'given';
 
 const REFERENCE_KIND_BY_IR_TYPE: Record<
   DocumentReference['type'],

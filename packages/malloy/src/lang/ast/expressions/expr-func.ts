@@ -114,8 +114,7 @@ export class ExprFunc extends ExpressionDef {
   private findFunctionDef(
     dialect: string | undefined
   ):
-    | {found: FunctionDef; error: undefined}
-    | {found: undefined; error: string} {
+    {found: FunctionDef; error: undefined} | {found: undefined; error: string} {
     // TODO this makes functions case-insensitive. This is weird that this is the only place
     // where case insensitivity is thing.
     const normalizedName = this.name.toLowerCase();
@@ -643,8 +642,7 @@ function findOverload(
 }
 
 type InterpolationPart =
-  | {type: 'string'; value: string}
-  | {type: 'interpolation'; path: string[]};
+  {type: 'string'; value: string} | {type: 'interpolation'; path: string[]};
 
 function parseSQLInterpolation(template: string): InterpolationPart[] {
   const parts: InterpolationPart[] = [];

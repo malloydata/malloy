@@ -59,8 +59,7 @@ export abstract class FieldReference
   // does not produce an output column named for its last path element (e.g.
   // index references, view references). Overridden by the references that do.
   protected autoRenameDeclarationCtor():
-    | FieldDeclarationConstructor
-    | undefined {
+    FieldDeclarationConstructor | undefined {
     return undefined;
   }
 

@@ -175,8 +175,7 @@ class ConstantQueryStruct extends QueryStruct {
 }
 
 type ConstantExpressionResult =
-  | {sql: string; error?: undefined}
-  | {sql?: undefined; error: string};
+  {sql: string; error?: undefined} | {sql?: undefined; error: string};
 
 /**
  * Compiles an IR expression containing only constants and parameters to SQL.

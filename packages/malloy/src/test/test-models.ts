@@ -29,10 +29,7 @@ type PrimitiveValue = string | number | boolean | null | bigint;
 
 // Test data value types - can be primitives, arrays, records, or explicit TypedValues
 type TestValue =
-  | PrimitiveValue
-  | TestValue[]
-  | {[key: string]: TestValue}
-  | TypedValue;
+  PrimitiveValue | TestValue[] | {[key: string]: TestValue} | TypedValue;
 
 interface TestDataRow {
   [columnName: string]: TestValue;

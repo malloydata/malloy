@@ -12,8 +12,7 @@ import {
 import type {MalloyElement} from './malloy-element';
 
 export type FieldCollectionMember =
-  | FieldReferenceElement
-  | AtomicFieldDeclaration;
+  FieldReferenceElement | AtomicFieldDeclaration;
 export function isFieldCollectionMember(
   el: MalloyElement
 ): el is FieldCollectionMember {

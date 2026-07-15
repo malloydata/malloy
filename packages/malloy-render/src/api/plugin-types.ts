@@ -54,8 +54,7 @@ export interface DOMRenderPluginInstance<
 }
 
 export type RenderPluginInstance<TMetadata = unknown> =
-  | SolidJSRenderPluginInstance<TMetadata>
-  | DOMRenderPluginInstance<TMetadata>;
+  SolidJSRenderPluginInstance<TMetadata> | DOMRenderPluginInstance<TMetadata>;
 
 export interface CoreVizPluginMethods {
   getSchema(): JSONSchemaObject;

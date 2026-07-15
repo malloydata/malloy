@@ -206,8 +206,7 @@ export interface ArrayBlueprint {
   array: TypeDescElementBlueprintOrNamedGeneric;
 }
 export type TypeDescElementBlueprintOrNamedGeneric =
-  | TypeDescElementBlueprint
-  | NamedGeneric;
+  TypeDescElementBlueprint | NamedGeneric;
 export interface RecordBlueprint {
   record: Record<string, TypeDescElementBlueprintOrNamedGeneric>;
 }
@@ -218,10 +217,7 @@ export interface SQLNativeTypeBlueprint {
 
 export type LeafPlusType = BasicExpressionType | 'any';
 export type TypeDescElementBlueprint =
-  | LeafPlusType
-  | ArrayBlueprint
-  | RecordBlueprint
-  | SQLNativeTypeBlueprint;
+  LeafPlusType | ArrayBlueprint | RecordBlueprint | SQLNativeTypeBlueprint;
 export type NamedGeneric = {generic: string};
 
 export type TypeDescBlueprint =
@@ -587,8 +583,7 @@ function expandImplBlueprint(blueprint: DefinitionBlueprint): {
 
 function expandGenericDefinitions(
   blueprint:
-    | {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]}
-    | undefined
+    {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} | undefined
 ): {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[] | undefined {
   if (blueprint === undefined) return undefined;
   return Object.entries(blueprint).map(([name, acceptibleTypes]) => ({

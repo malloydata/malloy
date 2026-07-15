@@ -16,11 +16,9 @@ export type MonarchTokenizer = {
   [name: ReferenceString]: Monarch.IMonarchLanguageRule[];
 };
 export type MonarchPrimitiveAction =
-  | Monarch.IShortMonarchLanguageAction
-  | Monarch.IShortMonarchLanguageAction[];
+  Monarch.IShortMonarchLanguageAction | Monarch.IShortMonarchLanguageAction[];
 export type MonarchActions = (
-  | Monarch.IShortMonarchLanguageAction
-  | Monarch.IExpandedMonarchLanguageAction
+  Monarch.IShortMonarchLanguageAction | Monarch.IExpandedMonarchLanguageAction
 )[];
 
 export type TextMateRepositoryKey = string;

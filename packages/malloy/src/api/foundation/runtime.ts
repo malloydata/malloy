@@ -119,11 +119,9 @@ export class Runtime {
   private _config: MalloyConfig | undefined;
   private _buildManifest: BuildManifest | undefined;
   private _resolvedBuildManifestPromise:
-    | Promise<BuildManifest | undefined>
-    | undefined;
+    Promise<BuildManifest | undefined> | undefined;
   private _resolvedGivensPromise:
-    | Promise<Record<string, GivenValue> | undefined>
-    | undefined;
+    Promise<Record<string, GivenValue> | undefined> | undefined;
   private _constructorGivensMap: ReadonlyMap<string, GivenValue>;
   private _finalizedGivensSet: ReadonlySet<string>;
   private _virtualMap: VirtualMap | undefined;
