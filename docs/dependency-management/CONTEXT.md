@@ -6,7 +6,7 @@ agent-agnostic runbooks (plain markdown any human or coding agent can follow —
 imposed on contributors):
 
 - [`dependabot-monthly.md`](dependabot-monthly.md) — the monthly version-update pass.
-- `dependabot-security.md` — the security/alert pass (to be written).
+- [`dependabot-security.md`](dependabot-security.md) — the security-advisory sweep + pin release-walk.
 
 ## Methodology
 
