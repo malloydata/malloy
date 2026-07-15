@@ -27,15 +27,7 @@ Malloy is an open source language for describing data relationships and transfor
 
 ## Why Malloy?
 
-Malloy is useful because it lets you describe analytics in terms of the data model, not just as one-off SQL queries. SQL is powerful, and Malloy is built to use that power, but analytical SQL often makes you work through the mechanics of the database schema: how tables connect, what to calculate, and how to shape the result. Malloy lets more of that logic live in the model, so it can be reused instead of rewritten for every query.
-
-This gives teams a higher-level way to work with data while still running on the databases they already use. Instead of starting from tables, joins, and query mechanics, Malloy lets users start closer to the questions they want to ask about the data. The result is a more actionable query layer for analytics: easier to read, easier to share, and easier to build on than SQL alone.
-
-<br>
-<p>
-  <em>“This feels like magic.”</em> -- Lloyd Tabb
-</p>
-
+Malloy is composable: complex analytics built from small, readable pieces. It handles nested data natively — arrays of records, query pipelines — as first-class syntax, not workarounds. And every query you write leaves behind a semantic model, so the work you do to answer one question is already there for the next. Malloy compiles to SQL and embeds SQL, so none of this asks you to leave the database — or the language — you already have.
 
 ---
 
@@ -57,7 +49,7 @@ There are four ways to install Malloy:
 The easiest way to try Malloy is the [VSCode Extension](https://docs.malloydata.dev/documentation/setup/extension.html#installation), which facilitates building Malloy data moels, querying and transforming data, and creating simple visualizations and dashboard.
 You can do this locally, or [try it in the browser (no install)](https://github.dev/malloydata/try-malloy/airports.malloy), which opens a live Malloy notebook in github.dev (GitHub's in-browser VSCode; requires a GitHub sign-in).
 
-Follow the instructions for [connecting Malloy to your database](https://docs.malloydata.dev/documentation/setup/extension.html#database-specific-setup). Supports BigQuery, Snowflake, DuckDB, MotherDuck, PostgreSQL, MySQL, Trino, Presto, or Databricks.
+Follow the instructions for [connecting Malloy to your database](https://docs.malloydata.dev/documentation/setup/extension.html#database-specific-setup).
 
 ![Malloy VSCode Extension — write queries, explore results inline](https://user-images.githubusercontent.com/1093458/182458787-ca228186-c954-4a07-b298-f92dbf91e48d.gif)
 
@@ -140,8 +132,6 @@ Open `http://localhost:4000` to browse models, run queries, and grab MCP endpoin
 
 ## The Malloy Language at a Glance
 
-SQL is the right tool for ad-hoc, single-analyst exploration against one table. Malloy is for the case where several analysts share a warehouse and the definition of "active user" (for example) has to be the same in every dashboard. Because it compiles to SQL, joins, measures, and business rules live in one place and feed every query downstream.
-
 A bare Malloy query reads like an outline of what you want:
 
 **Malloy**
@@ -156,7 +146,10 @@ run: duckdb.table('airports.parquet') -> {
 
 **Equivalent SQL**
 ```sql
-SELECT state, COUNT(*) AS airport_count, AVG(elevation) AS avg_elevation
+SELECT
+  state,
+  COUNT(*) AS airport_count,
+  AVG(elevation) AS avg_elevation
 FROM 'airports.parquet'
 GROUP BY state
 ORDER BY airport_count DESC  -- Malloy orders by first aggregate automatically
