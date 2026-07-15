@@ -20,7 +20,6 @@
     "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@jest/globals": "^29.4.3",
     "@malloydata/db-bigquery": "0.0.424",
     "@malloydata/db-duckdb": "0.0.424",
     "@malloydata/db-postgres": "0.0.424",
@@ -36,6 +35,7 @@
     "madge": "^8.0.0"
   },
   "devDependencies": {
+    "@jest/globals": "^29.4.3",
     "@types/jsdom": "^21.1.1",
     "@types/luxon": "^3.7.2"
   },
