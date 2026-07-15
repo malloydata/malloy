@@ -5,8 +5,8 @@ what we hold, why, what it costs, and when to revisit. The **procedures** live b
 agent-agnostic runbooks (plain markdown any human or coding agent can follow — no tool is
 imposed on contributors):
 
-- [`dependabot-monthly.md`](dependabot-monthly.md) — the monthly version-update pass.
-- [`dependabot-security.md`](dependabot-security.md) — the security-advisory sweep + pin release-walk.
+- [`dependabot-monthly.md`](dependabot-monthly.md) — the monthly Dependabot version-update pass.
+- [`npm-security-audit.md`](npm-security-audit.md) — the `npm audit`-driven security sweep + pin release-walk.
 
 ## Methodology
 
@@ -199,6 +199,20 @@ bumps are made deliberately, not by a lockfile range. Also `ignore`d in
 `dependabot.yml` so Dependabot stops proposing bumps (it would otherwise pull
 snowflake-sdk into the connectors group).
 
+**Judging a fix version — don't probe, defer to this boundary.** `2.3.1` is the **last
+pre-native** release; the pin is a point *inside* the 2.x line, not a semver-major cap.
+A newer 2.x (`2.4.3`, …) is on the *far* side of the native boundary — same npm major,
+wrong side of the line. npm metadata **cannot** tell you which side: the native binary
+loads via a bundled `.node` + `eval('require')` (see below), invisible to `npm view
+version`, `optionalDependencies`, `dependencies`, and install `scripts` alike — a
+security sweep once floated `2.3.1 → 2.4.3` as a "cheap same-major fix" off exactly that
+blind check. It isn't: bumping across this line is the native-chain thrash the pin
+exists to hold, so the `fast-xml-parser` critical below stays a standing cost until a
+deliberate, native-aware bump verified against live Snowflake CI. Same trap on every
+boundary pin — `@databricks/sql 1.15.0` (last pre-native), `uuid ^11` / `@noble/hashes
+^1` (last CJS): the ledger's boundary is authoritative; npm metadata won't show you the
+binary.
+
 There's also a **downstream-bundling** dimension, the same family of problem as
 Databricks: snowflake-sdk's native form loads its binary via `eval('require')`, which
 is invisible to esbuild, so it can't be bundled cleanly into the embedding apps. Part
@@ -228,8 +242,11 @@ This hold is unlike the ones above in *where* it bites: **malloy's own CI passes
 malloy uses the SDK in plain Node, which loads `.node` fine — so nothing here
 catches it. The guard lives only downstream and fires at *release time*, when the
 embedding apps run `malloy-update` + bundle. 1.15.0 is the last pure-JS (thrift)
-release. Not a security hold: 1.16.0 clears nothing 1.15.0 had (`thrift` is
-`^0.16.0` in both); the kernel is the *only* delta, and it's the problem, not a fix.
+release. The hold's *reason* is the native break, not security — but two high
+`thrift` advisories now ride on 1.15.0's `thrift@0.16.0` (see Cost). **1.16.0 clears
+neither** (still `thrift ^0.16.0`) and *adds* the native kernel — a strict regression;
+only **2.0.0** bumps thrift to `^0.23.0`, and it carries the same kernel, so the
+security fix is gated behind the very packaging work below, not a bump we can make now.
 
 The cautionary half — the two-surfaces rule's headline example: **#2888 pinned
 `package.json` to 1.15.0 but did not add the `dependabot.yml` ignore.** A pin
@@ -239,7 +256,14 @@ re-bumped it to 1.16.0, silently reverting #2888, and it shipped in
 fix is both surfaces: exact-pin `1.15.0` in `package.json` **and**
 `ignore: @databricks/*` in `dependabot.yml` (so the connectors group can't squat it).
 
-Cost: databricks connector held one minor behind; no security advisory rides on it.
+Cost: databricks connector held one minor behind. Two high `thrift` advisories ride
+on the held `thrift@0.16.0` — GHSA-r67j-r569-jrwp (uncontrolled recursion, `<0.23.0`)
+and GHSA-526f-jxpj-jmg2 (path traversal / request-response splitting, `<=0.22.0`) —
+both alert-only, no PR. Not a live worry: both are Thrift **server** / adversarial-peer
+surfaces (a malicious message parser, or someone hitting a Thrift *server*), and malloy
+is only a **client** over TLS to the user's own authenticated warehouse, so nothing
+attacker-controlled reaches them. Clears at 2.0.0 (thrift `^0.23.0`) — i.e. with the
+native-packaging work above, not before.
 
 Waiting for: one of two triggers — **(a)** a security advisory, direct or transitive,
 against 1.15.0 (it lights the alerts tab regardless of the ignore), or **(b)** a
