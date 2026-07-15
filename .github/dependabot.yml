@@ -20,19 +20,19 @@ updates:
       # "minor" reshaped the type exports / SpecialDuckDBValue — a 0.x minor that
       # breaks — so it broke the #2911 group build; latest is 1.5.3-r.2, so moving
       # it is a deliberate connector migration. No update-types = hold all
-      # versions (matches the @dependabot ignore comment). See DEPENDENCY-MANAGEMENT.md.
+      # versions (matches the @dependabot ignore comment). See docs/dependency-management/CONTEXT.md.
       - dependency-name: "@motherduck/wasm-client"
       # vscode-textmate held at 9.0.0: our generateMonarchGrammar.ts deep-imports
       # internal paths (vscode-textmate/release/theme, /rawGrammar) and rule types
       # that 9.3.2 — an in-range MINOR — stopped exporting, breaking the
       # syntax-highlight codegen in #2911. Also exact-pinned in
       # malloy-syntax-highlight/package.json (^9.0.0 would resolve the breaker on a
-      # fresh install). The real fix is issue #2918; see DEPENDENCY-MANAGEMENT.md.
+      # fresh install). The real fix is issue #2918; see docs/dependency-management/CONTEXT.md.
       - dependency-name: "vscode-textmate"
       # snowflake-sdk is exact-pinned (2.3.1) in malloy-db-snowflake; ignore here
       # so Dependabot stops proposing bumps that would otherwise ride the
       # connectors group. Deliberate bumps happen by hand against live Snowflake
-      # CI. See DEPENDENCY-MANAGEMENT.md.
+      # CI. See docs/dependency-management/CONTEXT.md.
       - dependency-name: "snowflake-sdk"
       # @databricks/sql exact-pinned (1.15.0) in malloy-db-databricks: 1.16.0 ships a
       # native Rust kernel (eight @databricks/databricks-sql-kernel-* .node binaries)
@@ -40,11 +40,11 @@ updates:
       # own CI passes (plain Node loads .node), so it only breaks downstream at release;
       # #2888 pinned package.json but not here, so connectors-group #2934 re-bumped it
       # and it shipped in 0.0.418. Silent pin: only a security alert resurfaces it. See
-      # DEPENDENCY-MANAGEMENT.md.
+      # docs/dependency-management/CONTEXT.md.
       - dependency-name: "@databricks/*"
       # vega-lite held at v5 (the renderer's Vega 5->6 upgrade is deferred). It's a
       # direct dep, so its major opens a recurring monthly PR; ignore the major so
-      # it stops squatting the limit. v5 minors still flow. See DEPENDENCY-MANAGEMENT.md.
+      # it stops squatting the limit. v5 minors still flow. See docs/dependency-management/CONTEXT.md.
       - dependency-name: "vega-lite"
         update-types: ["version-update:semver-major"]
       # pg + pg-query-stream held: pg-query-stream pulls pg-cursor, which
@@ -72,7 +72,7 @@ updates:
       # downstream exactly like a native binary, so the core stays CJS. Held on the
       # last CJS majors (uuid ^11, @noble/hashes ^1) via caret ranges in
       # packages/malloy/package.json; ignore the MAJOR only so CJS-line minors/patches
-      # still flow. See DEPENDENCY-MANAGEMENT.md.
+      # still flow. See docs/dependency-management/CONTEXT.md.
       - dependency-name: "uuid"
         update-types: ["version-update:semver-major"]
       - dependency-name: "@noble/hashes"
@@ -121,9 +121,3 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      # Security PRs fire on advisory publication, NOT the monthly schedule.
-      # This only collapses advisories that land in the same run into one PR.
-      security:
-        applies-to: security-updates
-        patterns:
-          - "*"

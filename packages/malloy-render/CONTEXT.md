@@ -26,7 +26,7 @@ bump.
 `vega-functions`, and `vega-expression` carry open advisories (high) whose only
 fix is Vega 6. These are render-owned — nothing else in the monorepo pulls them —
 so the renderer is the sole place that clears them. Recorded in the cross-cutting
-pin ledger [`DEPENDENCY-MANAGEMENT.md`](../../DEPENDENCY-MANAGEMENT.md);
+pin ledger [`docs/dependency-management/CONTEXT.md`](../../docs/dependency-management/CONTEXT.md);
 revisit when we take the Vega 5→6 upgrade.
 
 ### Public API

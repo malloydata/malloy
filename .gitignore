@@ -1,5 +1,3 @@
-/docs
-
 # Workspace related exclusions
 packages/**/build
 packages/**/dist
