@@ -98,8 +98,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
       }
 
       const lineChartOptions = pluginOptions as
-        | LineChartPluginOptions
-        | undefined;
+        LineChartPluginOptions | undefined;
       let settings: LineChartSettings;
       const seriesStats = new Map<string, SeriesStats>();
       let runtime: Runtime | undefined;

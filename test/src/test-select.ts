@@ -27,10 +27,7 @@ type PrimitiveValue = string | number | boolean | null;
 
 // Test data value types
 type TestValue =
-  | PrimitiveValue
-  | TestValue[]
-  | {[key: string]: TestValue}
-  | TypedValue;
+  PrimitiveValue | TestValue[] | {[key: string]: TestValue} | TypedValue;
 
 const nullExpr: Expr = {node: 'null'};
 

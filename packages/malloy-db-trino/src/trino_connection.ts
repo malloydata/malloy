@@ -43,10 +43,7 @@ export interface TrinoManagerOptions {
 }
 
 export type TrinoExtraConfigKey =
-  | 'ssl'
-  | 'session'
-  | 'extraCredential'
-  | 'extraHeaders';
+  'ssl' | 'session' | 'extraCredential' | 'extraHeaders';
 
 export interface TrinoConnectionConfiguration {
   server?: string;

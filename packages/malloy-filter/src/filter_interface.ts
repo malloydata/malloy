@@ -150,14 +150,7 @@ export function isNumberFilter(sc: unknown): sc is NumberFilter {
 }
 
 export type TemporalUnit =
-  | 'second'
-  | 'minute'
-  | 'hour'
-  | 'day'
-  | 'week'
-  | 'month'
-  | 'quarter'
-  | 'year';
+  'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
 
 export interface TemporalLiteral {
   moment: 'literal';
@@ -281,10 +274,7 @@ export function isTemporalFilter(sc: unknown): sc is TemporalFilter {
 }
 
 export type FilterExpression =
-  | BooleanFilter
-  | NumberFilter
-  | StringFilter
-  | TemporalFilter;
+  BooleanFilter | NumberFilter | StringFilter | TemporalFilter;
 
 export function isFilterExpression(obj: unknown): obj is FilterExpression {
   return typeof obj === 'object' && obj !== null && 'operator' in obj;
@@ -305,12 +295,7 @@ export interface FilterParserResponse<T extends FilterExpression> {
 }
 
 export type FilterableType =
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'timestamp'
-  | 'timestamptz'
-  | 'date';
+  'string' | 'number' | 'boolean' | 'timestamp' | 'timestamptz' | 'date';
 export function isFilterable(s: string): s is FilterableType {
   return [
     'string',

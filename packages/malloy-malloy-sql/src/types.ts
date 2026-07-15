@@ -46,8 +46,7 @@ export interface ParsedMalloySQLOtherStatementPart {
 }
 
 export type ParsedMalloySQLStatementPart =
-  | ParsedMalloySQLMalloyStatementPart
-  | ParsedMalloySQLOtherStatementPart;
+  ParsedMalloySQLMalloyStatementPart | ParsedMalloySQLOtherStatementPart;
 
 export interface MalloySQLParseResults {
   initialComments: string;
@@ -106,6 +105,4 @@ export interface MalloySQLMarkdownStatement extends MalloySQLStatementBase {
 }
 
 export type MalloySQLStatement =
-  | MalloySQLSQLStatement
-  | MalloySQLMalloyStatement
-  | MalloySQLMarkdownStatement;
+  MalloySQLSQLStatement | MalloySQLMalloyStatement | MalloySQLMarkdownStatement;

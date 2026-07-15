@@ -1475,8 +1475,7 @@ export interface IASTQueryDefinition extends IASTQueryOrViewDefinition {
 }
 
 export type ASTQueryArrowSource =
-  | ASTReferenceQueryArrowSource
-  | ASTRefinementQueryDefinition;
+  ASTReferenceQueryArrowSource | ASTRefinementQueryDefinition;
 export const ASTQueryArrowSource = {
   from(definition: Malloy.QueryArrowSource) {
     switch (definition.kind) {
@@ -3999,8 +3998,7 @@ export class ASTField
    */
   get segment() {
     const groupByOrAggregate = this.parent as
-      | ASTGroupByViewOperation
-      | ASTAggregateViewOperation;
+      ASTGroupByViewOperation | ASTAggregateViewOperation;
     const operationList = groupByOrAggregate.list;
     return operationList.segment;
   }
@@ -4757,8 +4755,7 @@ export class ASTCalculateViewOperation extends ASTObjectNode<
 }
 
 export type ASTFilter =
-  | ASTFilterWithFilterString
-  | ASTFilterWithLiteralEquality;
+  ASTFilterWithFilterString | ASTFilterWithLiteralEquality;
 export const ASTFilter = {
   from(filter: Malloy.Filter) {
     switch (filter.kind) {

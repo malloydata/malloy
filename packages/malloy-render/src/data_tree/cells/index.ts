@@ -53,13 +53,7 @@ export type Cell =
   | SQLNativeCell;
 
 export type CellValue =
-  | string
-  | number
-  | boolean
-  | Date
-  | Cell[]
-  | Record<string, Cell>
-  | null;
+  string | number | boolean | Date | Cell[] | Record<string, Cell> | null;
 
 export const Cell = {
   from(cell: Malloy.Cell, field: Field, parent: NestCell): Cell {

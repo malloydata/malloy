@@ -173,12 +173,7 @@ export interface FilteredExpr extends ExprWithKids {
 }
 
 export type AggregateFunctionType =
-  | 'sum'
-  | 'avg'
-  | 'count'
-  | 'distinct'
-  | 'max'
-  | 'min';
+  'sum' | 'avg' | 'count' | 'distinct' | 'max' | 'min';
 
 export interface AggregateExpr extends ExprE {
   node: 'aggregate';
@@ -339,12 +334,7 @@ export interface RegexMatchExpr extends ExprWithKids {
 }
 
 export type FilterExprType =
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'date'
-  | 'timestamp'
-  | 'timestamptz';
+  'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'timestamptz';
 export function isFilterExprType(s: string): s is FilterExprType {
   return [
     'string',
@@ -389,9 +379,7 @@ export interface TimestamptzLiteralNode extends ExprLeaf {
 }
 
 export type TimeLiteralExpr =
-  | DateLiteralNode
-  | TimestampLiteralNode
-  | TimestamptzLiteralNode;
+  DateLiteralNode | TimestampLiteralNode | TimestamptzLiteralNode;
 
 export function isTimeLiteral(e: Expr): e is TimeLiteralExpr {
   return (
@@ -1090,10 +1078,7 @@ export type ErrorFieldDef = ErrorTypeDef & AtomicFieldDef;
 
 export type JoinType = 'one' | 'many' | 'cross';
 export type JoinRelationship =
-  | 'one_to_one'
-  | 'one_to_many'
-  | 'many_to_one'
-  | 'many_to_many';
+  'one_to_one' | 'one_to_many' | 'many_to_one' | 'many_to_many';
 
 export type MatrixOperation = 'left' | 'right' | 'full' | 'inner';
 
@@ -1211,8 +1196,7 @@ export interface FunctionOrderByDefaultExpression extends ExprLeaf {
 }
 
 export type FunctionOrderBy =
-  | FunctionOrderByExpression
-  | FunctionOrderByDefaultExpression;
+  FunctionOrderByExpression | FunctionOrderByDefaultExpression;
 
 /** reference to a data source */
 // TODO this should be renamed to `SourceRef`
@@ -1623,8 +1607,7 @@ export interface SourceRegistryReference {
  * - PersistableSourceDef: source is not in namespace (hidden dependency), stored directly
  */
 export type SourceRegistryEntry =
-  | SourceRegistryReference
-  | PersistableSourceDef;
+  SourceRegistryReference | PersistableSourceDef;
 
 /**
  * Value in the sourceRegistry, wrapping the entry with persistence info.
@@ -1773,9 +1756,7 @@ export interface NonAtomicTypeDef {
 
 export type ExpressionValueType = AtomicFieldType | NonAtomicType | TurtleType;
 export type ExpressionValueTypeDef =
-  | AtomicTypeDef
-  | NonAtomicTypeDef
-  | TurtleTypeDef;
+  AtomicTypeDef | NonAtomicTypeDef | TurtleTypeDef;
 export type BasicExpressionType = Exclude<
   ExpressionValueType,
   JoinElementType | 'turtle'
@@ -1961,9 +1942,7 @@ export interface ConnectionDef extends NamedObject {
 }
 
 export type TemporalTypeDef =
-  | DateTypeDef
-  | TimestampTypeDef
-  | TimestamptzTypeDef;
+  DateTypeDef | TimestampTypeDef | TimestamptzTypeDef;
 export type BasicAtomicTypeDef =
   | StringTypeDef
   | TemporalTypeDef
@@ -1980,10 +1959,7 @@ export type AtomicTypeDef =
   | RecordTypeDef
   | RepeatedRecordTypeDef;
 export type AtomicFieldDef =
-  | BasicAtomicDef
-  | BasicArrayDef
-  | RecordDef
-  | RepeatedRecordDef;
+  BasicAtomicDef | BasicArrayDef | RecordDef | RepeatedRecordDef;
 
 export function isBasicAtomic(
   fd: FieldDef | QueryFieldDef | AtomicTypeDef
@@ -2015,11 +1991,7 @@ export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
 // All these share the same "type" space
 export type TypedDef =
-  | AtomicTypeDef
-  | JoinFieldDef
-  | TurtleDef
-  | RefToField
-  | StructDef;
+  AtomicTypeDef | JoinFieldDef | TurtleDef | RefToField | StructDef;
 
 export interface UserTypeFieldDef extends HasAnnotations {
   name: string;
@@ -2122,13 +2094,7 @@ export interface ModelAnnotationEntry {
 }
 
 export type QueryScalar =
-  | string
-  | boolean
-  | number
-  | bigint
-  | Date
-  | Buffer
-  | null;
+  string | boolean | number | bigint | Date | Buffer | null;
 
 /** One value in one column of returned data. */
 export type QueryValue = QueryScalar | QueryData | QueryRecord | QueryValue[];

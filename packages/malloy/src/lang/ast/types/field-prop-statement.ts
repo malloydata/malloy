@@ -11,11 +11,7 @@ import {PartitionBy} from '../expressions/partition_by';
 import type {MalloyElement} from './malloy-element';
 
 export type FieldPropStatement =
-  | Filter
-  | Limit
-  | PartitionBy
-  | FunctionOrdering
-  | GroupedBy;
+  Filter | Limit | PartitionBy | FunctionOrdering | GroupedBy;
 
 export function isFieldPropStatement(
   el: MalloyElement

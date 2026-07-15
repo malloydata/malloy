@@ -9,6 +9,4 @@ import type {FieldReference} from '../query-items/field-references';
 import type {NestFieldDeclaration} from '../query-properties/nest';
 
 export type QueryItem =
-  | AtomicFieldDeclaration
-  | FieldReference
-  | NestFieldDeclaration;
+  AtomicFieldDeclaration | FieldReference | NestFieldDeclaration;

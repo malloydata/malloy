@@ -279,8 +279,7 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
           // customProps, keyed by this plugin's name, the same way the table
           // renderer reads customProps.table.
           const bigValueProps = props.customProps?.['big_value'] as
-            | {embedded?: boolean}
-            | undefined;
+            {embedded?: boolean} | undefined;
 
           return (
             <BigValueComponent

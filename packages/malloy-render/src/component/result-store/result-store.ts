@@ -30,9 +30,7 @@ interface BrushDataMeasureRange extends BrushDataBase {
 }
 
 export type BrushData =
-  | BrushDataDimension
-  | BrushDataMeasure
-  | BrushDataMeasureRange;
+  BrushDataDimension | BrushDataMeasure | BrushDataMeasureRange;
 
 export type VegaBrushOutput = {
   sourceId: string;

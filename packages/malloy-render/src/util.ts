@@ -352,13 +352,7 @@ export type ScaleKey = 'k' | 'm' | 'b' | 't' | 'q';
 
 // Suffix format key type
 export type SuffixFormatKey =
-  | 'letter'
-  | 'lower'
-  | 'word'
-  | 'short'
-  | 'finance'
-  | 'scientific'
-  | 'none';
+  'letter' | 'lower' | 'word' | 'short' | 'finance' | 'scientific' | 'none';
 
 // Scale configuration
 const SCALE_CONFIG: Record<ScaleKey, {divisor: number; threshold: number}> = {

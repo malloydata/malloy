@@ -54,14 +54,7 @@ export type PathSegment = string | number;
 export type Path = PathSegment[];
 
 export type TagSetValue =
-  | string
-  | number
-  | boolean
-  | Date
-  | string[]
-  | number[]
-  | Tag
-  | null;
+  string | number | boolean | Date | string[] | number[] | Tag | null;
 
 /**
  * Class for interacting with the parsed output of an annotation

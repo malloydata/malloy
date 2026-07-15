@@ -457,7 +457,7 @@ function expandFunctionCall(
 ) {
   function withCommas(es: Expr[]): SQLExprElement[] {
     const ret: SQLExprElement[] = [];
-    for (let i = 0; i < es.length; ) {
+    for (let i = 0; i < es.length;) {
       ret.push(es[i]);
       i += 1;
       if (i < es.length) {

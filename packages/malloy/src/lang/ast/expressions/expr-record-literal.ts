@@ -14,8 +14,7 @@ import * as TDU from '../typedesc-utils';
 import type {ExprIdReference} from './expr-id-reference';
 
 export type ElementDetails =
-  | {path: ExprIdReference}
-  | {key?: string; value: ExpressionDef};
+  {path: ExprIdReference} | {key?: string; value: ExpressionDef};
 export class RecordElement extends MalloyElement {
   elementType = 'record element';
   value: ExpressionDef;
