@@ -5,8 +5,8 @@ what we hold, why, what it costs, and when to revisit. The **procedures** live b
 agent-agnostic runbooks (plain markdown any human or coding agent can follow — no tool is
 imposed on contributors):
 
-- [`dependabot-monthly.md`](dependabot-monthly.md) — the monthly version-update pass.
-- [`dependabot-security.md`](dependabot-security.md) — the security-advisory sweep + pin release-walk.
+- [`dependabot-monthly.md`](dependabot-monthly.md) — the monthly Dependabot version-update pass.
+- [`npm-security-audit.md`](npm-security-audit.md) — the `npm audit`-driven security sweep + pin release-walk.
 
 ## Methodology
 

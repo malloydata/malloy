@@ -7,8 +7,8 @@ step is unclear or wrong when you run it, fix it here.
 
 The once-a-month walk over Dependabot's **version-update PRs** (`.github/dependabot.yml`
 groups). Not the security alert tab, and not the pin ledger's release review — those are the
-security runbook (`dependabot-security.md`, still to be written), run on advisory
-publication rather than this cadence.
+npm-security-audit runbook (`npm-security-audit.md`), run on advisory publication
+rather than this cadence.
 
 The spine of this runbook is **stop if there are anomalies; don't doggedly make it happen.**
 Exactly one thing merges unattended — the minor-and-patch group, and only on green.

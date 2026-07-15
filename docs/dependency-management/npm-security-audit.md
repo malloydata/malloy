@@ -1,4 +1,8 @@
-# Dependabot — security sweep
+# npm security audit — the shipped-dependency security sweep
+
+Driven by `npm audit`, not Dependabot — Dependabot only appears at the edges (dismissing
+an accepted alert with a reason in §6). The monthly version-update pass *is* the
+Dependabot one; this isn't, which is why it's named for its actual engine.
 
 An agent-agnostic runbook — plain procedure a human or any coding agent can follow. Bind it
 to whatever tool you use; the knowledge lives here in the tree so no contributor is forced
@@ -96,6 +100,17 @@ and can't verify locally:
 
 ```
 Security sweep — N prod findings
+
+37 vulnerabilities (4 low, 19 moderate, 13 high, 1 critical)   ← npm's own summary line
+
+Every CRITICAL and HIGH mapped to the pin it reconciles to (low/moderate stay a count):
+  critical  fast-xml-parser              → Snowflake hold (snowflake-sdk 2.3.1)
+  high      fast-xml-parser, axios       → Snowflake hold
+  high      thrift                       → Databricks hold (@databricks/sql 1.15.0)
+  high      axios, trino-client          → Trino connector maintenance
+  high      vega ×6                      → Vega v5 renderer hold (vega-lite ^5)
+  high      ws, tmp, socket.io-parser    → dev tooling, never ships (out of scope)
+
 ✓ M reconcile to documented holds / known maintenance — no action
 → K safely fixable — staged in <branch>, CI green:  open the PR?
 ~ L a hold's cost changed — ledger update, no action forced:
@@ -104,6 +119,14 @@ Security sweep — N prod findings
     <pkg>  <sev>  — <the one choice in a clause>  → <your lean>
 ```
 
+- **Lead with the severity breakdown.** Reproduce npm's own summary line
+  (`37 vulnerabilities (4 low, 19 moderate, 13 high, 1 critical)`), then name **every
+  critical and high** and the pin it reconciles to — group by pin, and flag the dev-only
+  ones as out of scope. This is the *receipts* for zone ✓: it proves the criticals are
+  **held, not missed**, and it's cheap because criticals/highs are few. Low and moderate
+  stay a count (they're the connector `uuid`/`bn.js`/`axios` churn under the same holds,
+  plus dev tooling). Note the count is npm's full-tree number (it includes dev); the
+  map is where you separate shipped-and-held from dev-only.
 - Zone ✓ is a **count, never a list**.
 - Zone → is **one PR to approve**.
 - Zone ~ is holds that **didn't move but whose cost description shifted**: a fix that got
