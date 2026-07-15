@@ -16,7 +16,7 @@ import type {Config} from 'jest';
  * repo's own jest.config.ts does that, which is precisely why malloy's tests stay
  * green while consumers break. Adding it here would hide the leak this canary
  * exists to catch. A red canary means a runtime dep went ESM-only — pin it (see
- * DEPENDENCY-MANAGEMENT.md), don't transform it away.
+ * docs/dependency-management/CONTEXT.md), don't transform it away.
  */
 const config: Config = {
   rootDir: '.',

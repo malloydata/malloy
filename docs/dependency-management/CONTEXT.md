@@ -1,5 +1,13 @@
 # Dependency management in the Malloy mono-repo
 
+This directory is the dependency-management context node. This file is the **pin ledger** —
+what we hold, why, what it costs, and when to revisit. The **procedures** live beside it as
+agent-agnostic runbooks (plain markdown any human or coding agent can follow — no tool is
+imposed on contributors):
+
+- [`dependabot-monthly.md`](dependabot-monthly.md) — the monthly version-update pass.
+- `dependabot-security.md` — the security/alert pass (to be written).
+
 ## Methodology
 
 We used a tiered strategy, using GitHub's Dependabot as input.  We group these, roughly into these catgories.
@@ -19,8 +27,16 @@ instead of a scatter of one-offs:
 - **`minor-and-patch`** — everything else's in-range minors/patches, folded into one
   PR (duckdb excluded — it gets its own group for the same deliberate-PR reason).
 
-The security check fires on advisory *publication*, not the monthly cadence, and only
-collapses advisories that land in the same run into one PR.
+Dependabot's **automated security updates are turned off** (the repo's
+`automated-security-fixes` setting), and the `security:` group is removed with them. For
+malloy's tree the auto-fix PRs cost more than they give: nearly every advisory is a
+*transitive* dep buried under a package we hold, which Dependabot can't fix by editing a
+manifest line — so it opens nothing, or worse bumps an already-safe *direct* copy to a
+breaking major. uuid #2959 is the cautionary case: it proposed our already-patched
+`11.1.1` → `14.0.0` (the ESM-only major we deliberately hold), fixing none of the
+vulnerable transitive copies. Security is instead monitored deliberately with
+`npm audit --omit=dev`, reconciled against the holds below; the Dependabot alert tab is
+used only to dismiss advisories with a reason.
 
 We may decide to respond to a Dependabot report in one of three ways
 
