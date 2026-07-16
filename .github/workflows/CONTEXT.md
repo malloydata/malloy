@@ -41,7 +41,7 @@ The artifact pattern (build once, fan out) lives entirely inside `release.yaml` 
 
 **Rules that bite (not guessable):**
 
-- **One trusted publisher per package** — can't trust both `release.yaml` and `prerelease.yaml`; a second registration 409s.
+- **One trusted publisher per package** — it is currently bound to `release.yaml`; registering another publishing workflow conflicts with it and returns 409.
 - **Matching is on the top-level caller workflow filename**, not a reusable workflow it calls.
 - **OIDC auto-enables provenance, which requires `repository.url`** in each published package.json (`{ "type": "git", "url": "https://github.com/malloydata/malloy" }`). Missing it → publish fails with a `422 ... provenance` error. This is the likely failure when adding a new package.
 - **Each package's `LICENSE` is injected at publish time, not committed.** The publish loop copies the root `LICENSE` into every package dir right before `npm publish`, so the MIT text ships in each tarball (npm auto-bundles a package-root `LICENSE` even with a `files` allowlist). Per-file headers are only short `SPDX-License-Identifier: MIT` tags, so this copy is what carries the actual license text plus the historical Google/Meta notices to consumers. `packages/*/LICENSE` is gitignored — don't commit one, and don't drop the `cp` as cleanup.
@@ -50,6 +50,6 @@ The artifact pattern (build once, fan out) lives entirely inside `release.yaml` 
 
 **Recovering a partial release:** the publish loop skips already-published versions (npm versions are immutable), so fix the cause, merge, and **re-run at the same version** — don't bump. The version bump is the last step, so a failed release correctly leaves the repo at the version it was finishing.
 
-`prerelease.yaml` is currently inert (not OIDC-wired; the single trusted publisher points at `release.yaml`). Restoring prerelease-on-merge collides with the one-publisher rule — part of the planned publish rework.
+There is no pre-release publishing workflow. The former workflow was removed after going unused for over a year and losing its obsolete token-based authentication. Restoring pre-release publishing requires a design that respects the one-publisher rule above; do not add an `NPM_TOKEN` back.
 
 The CLI (`malloydata/malloy-cli`) and explorer (`malloydata/malloy-explorer`) publish from their own repos with their own registrations.
