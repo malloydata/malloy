@@ -24,6 +24,6 @@
   "dependencies": {
     "@databricks/sql": "1.15.0",
     "@malloydata/malloy": "0.0.424",
-    "@types/node": "^22.20.0"
+    "@types/node": "^24.0.0"
   }
 }

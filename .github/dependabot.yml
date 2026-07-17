@@ -6,13 +6,13 @@ updates:
       interval: "monthly"
     open-pull-requests-limit: 10
     ignore:
-      # @types/node tracks the Node major; keep it pinned to our runtime (24)
-      # rather than chasing the current/odd Node line.
+      # @types/node's major is synchronized from .node-version by
+      # `npm run sync-tracking-types` and verified in CI. Ignore majors so it
+      # cannot run ahead of the runtime; minor/patch updates still flow.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # @types/jasmine tracks the jasmine-core major, which malloy-syntax-highlight
-      # holds at 5. Ignore the major (currently 6) so it stops re-proposing until a
-      # deliberate jasmine-core 5->6 bump moves both together.
+      # @types/jasmine's major is synchronized from jasmine-core by the same
+      # command and CI check. Ignore majors so it cannot run ahead of jasmine-core.
       - dependency-name: "@types/jasmine"
         update-types: ["version-update:semver-major"]
       # @motherduck/wasm-client held at ^0.6.6: the duckdb-wasm connector

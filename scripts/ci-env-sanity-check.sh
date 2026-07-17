@@ -10,4 +10,6 @@ if [ ! -s ".node-version" ]; then
     exit 1
 fi
 
-echo "Sanity check passed: .node-version file exists and is not empty."
+npm run check-tracking-types
+
+echo "Sanity check passed: runtime and tracking type versions are aligned."
