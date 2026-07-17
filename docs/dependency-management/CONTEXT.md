@@ -331,10 +331,19 @@ package locked to the major of the thing it types. Both are `ignore`d for the
 **major only** in `dependabot.yml` (minors/patches still flow); both are documented
 here only because the rule is "everything ignored is written down."
 
-- **`@types/node`** — held to the Node **runtime** major (24). Moves when the runtime
-  major moves (see the Node runtime hold above), not on @types/node's own schedule.
-- **`@types/jasmine`** — held to **jasmine-core**'s major (5). Clears with a
-  deliberate jasmine-core 5→6 bump, which moves both together.
+The ignore is a brake, not a dynamic pin: Dependabot cannot infer one package's
+target major from another file or dependency. `npm run sync-tracking-types` reads
+the tracked source, updates every direct `@types/*` declaration to that major, and
+refreshes the lockfile. `npm run check-tracking-types` is also part of the CI
+environment sanity check, so changing a tracked major without its types fails
+closed. Keep the major-ignore after synchronization so the types cannot run ahead.
+
+- **`@types/node`** — synchronized to the Node runtime major in `.node-version`.
+  When the runtime major changes, run the sync command in the same change; it
+  updates all workspace declarations before `npm install` regenerates the lock.
+- **`@types/jasmine`** — synchronized to **jasmine-core**'s declared major. A
+  deliberate jasmine-core 5→6 bump therefore moves its types to 6 in the same
+  change while the ignore remains in place for later majors.
 
 ## Not pins — context, so this list stays short
 

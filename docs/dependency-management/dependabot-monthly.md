@@ -19,7 +19,10 @@ Do these in roughly this order.
 0) **Orient (read-only).** Read the repo-root `CONTEXT.md`, this directory's `CONTEXT.md`
    (the pin ledger — source of truth for what's held and why), and `.github/dependabot.yml`
    (whose `ignore:` list is the machine-readable set of held package names). You reconcile
-   against these — you don't carry the pin list in your head.
+   against these — you don't carry the pin list in your head. Run
+   `npm run check-tracking-types`; a mismatch means a runtime/library major moved without
+   its paired `@types/*` major. Halt and use `npm run sync-tracking-types` in that upgrade
+   change before continuing.
 
 1) **Gather.** `gh pr list --author 'app/dependabot' --state open --json number,title,createdAt`.
    Classify each PR by its title's group: `minor-and-patch`, `connectors`, `toolchain`, or
