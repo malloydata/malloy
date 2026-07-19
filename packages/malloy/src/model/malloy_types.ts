@@ -2391,6 +2391,13 @@ export function mergeUniqueKeyRequirement(
 
 /**
  * Entry in a BuildManifest for a persisted table.
+ *
+ * `tableName` is a logical dotted table path (bare or quoted segments,
+ * validated by `requireCanonicalTablePathAnyDialect` at ingestion). It is
+ * NOT pasted into SQL verbatim: the render sites re-quote every segment
+ * for the target dialect (`Dialect.sqlQuoteTablePath`), because the
+ * builder creates the table with quoted, case-preserved segments and a
+ * case-folding engine (Snowflake) cannot resolve the bare form.
  */
 export interface BuildManifestEntry {
   tableName: string;

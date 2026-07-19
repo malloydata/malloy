@@ -866,9 +866,12 @@ export class QueryQuery extends QueryField {
             const entry = buildManifest.entries[buildId];
 
             if (entry) {
-              // Found in manifest - use persisted table.
-              // entry.tableName comes from the manifest, assumed canonical.
-              return entry.tableName;
+              // Found in manifest - use persisted table. The manifest name is
+              // a logical dotted path; it must be re-quoted per-dialect here
+              // because the builder CREATEd it with quoted (case-preserved)
+              // segments, and a case-folding engine (Snowflake uppercases
+              // unquoted identifiers) can't resolve it bare.
+              return qs.dialect.sqlQuoteTablePath(entry.tableName);
             }
 
             if (buildManifest.strict) {

@@ -24,7 +24,7 @@ import type {
 import {isRawCast, isBasicAtomic, TD, isDateUnit} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 import type {ValidateTablePathResult} from './table-path';
-import {validateDottedTablePath} from './table-path';
+import {decodeDottedTablePath, validateDottedTablePath} from './table-path';
 
 interface DialectField {
   typeDef: AtomicTypeDef;
@@ -444,6 +444,42 @@ export abstract class Dialect {
       bareIdentRegex: this.tablePathBareIdentRegex,
       dialectName: this.name,
     });
+  }
+
+  /**
+   * Render a dotted table path with every segment quoted for this
+   * dialect. A table created with quoted (case-preserved) segments can
+   * only be read back with quoted segments on a case-folding engine —
+   * Snowflake folds unquoted identifiers to uppercase — so any path
+   * whose producer quoted at CREATE time must be quoted here at read
+   * time, byte-compatibly.
+   *
+   * Accepts bare (`a.b`), quoted (`"a"."b"`), or mixed input: segments
+   * are decoded (delimiters stripped, escapes unescaped) and re-quoted,
+   * so the result carries exactly one quote layer regardless of input
+   * form. A path that doesn't parse as dotted segments for this dialect
+   * (e.g. a DuckDB file path) is returned verbatim — those grammars are
+   * already canonical SQL and have no segments to fold.
+   */
+  sqlQuoteTablePath(tablePath: string): string {
+    if (
+      this.identifierEscapeStyle !== EscapeStyle.Doubled &&
+      this.identifierEscapeStyle !== EscapeStyle.Backslash
+    ) {
+      return tablePath;
+    }
+    const result = decodeDottedTablePath(tablePath, {
+      quoteChar: this.identifierQuoteChar,
+      escapeStyle: this.identifierEscapeStyle,
+      bareIdentRegex: this.tablePathBareIdentRegex,
+      dialectName: this.name,
+    });
+    if (!result.ok) {
+      return tablePath;
+    }
+    return result.segments
+      .map(segment => this.sqlQuoteIdentifier(segment.value))
+      .join('.');
   }
 
   // returns an table that is a 0 based array of numbers

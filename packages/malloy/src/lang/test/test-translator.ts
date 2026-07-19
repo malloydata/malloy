@@ -210,6 +210,18 @@ export const pgTableDef: SourceDef = {
   fields: baseFields,
 };
 
+// Snowflake table definition — Snowflake folds unquoted identifiers to
+// UPPERCASE, so it is the dialect that exercises per-dialect quoting of
+// manifest table paths on the persist serve path (Dialect.sqlQuoteTablePath).
+export const sfTableDef: SourceDef = {
+  type: 'table',
+  name: 'aTable',
+  dialect: 'snowflake',
+  tablePath: 'aTable',
+  connection: '_sf_',
+  fields: baseFields,
+};
+
 /**
  * A TestTranlator never actually talks to connection, instead uses
  * some mocked schema definitions.
@@ -219,6 +231,7 @@ export const mockSchema: TableSourceDef[] = [
   aTableDef,
   bqTableDef,
   pgTableDef,
+  sfTableDef,
   {
     type: 'table',
     name: 'carriers',
@@ -416,6 +429,7 @@ export class TestTranslator extends MalloyTranslator {
       _db_: {type: 'connection', name: '_db_'},
       _bq_: {type: 'connection', name: '_bq_'},
       _pg_: {type: 'connection', name: '_pg_'},
+      _sf_: {type: 'connection', name: '_sf_'},
       a: {...aTableDef, primaryKey: 'astr', name: 'a'},
       b: {...aTableDef, primaryKey: 'astr', name: 'b'},
       bq_a: {...bqTableDef, primaryKey: 'astr', name: 'bq_a'},
@@ -487,6 +501,7 @@ export class TestTranslator extends MalloyTranslator {
     this.connectionDialectZone.define('_db_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
     this.connectionDialectZone.define('_pg_', 'postgres');
+    this.connectionDialectZone.define('_sf_', 'snowflake');
     for (const flag of options.compilerFlags ?? []) {
       this.compilerFlagSrc.push(`##! ${flag}\n`);
     }

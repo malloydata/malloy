@@ -13,6 +13,7 @@ import type {
 import {isSegmentSQL, isSegmentSource, safeRecordGet} from './malloy_types';
 import {mkBuildID} from './source_def_utils';
 import {MalloyCompileError} from './malloy_compile_error';
+import {getDialect} from '../dialect';
 
 /**
  * Callback type for compiling a Query to SQL.
@@ -96,8 +97,14 @@ function expandPersistableSource(
 
       if (entry) {
         // Found in manifest - substitute with subquery from persisted table.
-        // entry.tableName is canonical SQL, supplied by the manifest builder.
-        return `(SELECT * FROM ${entry.tableName})`;
+        // The manifest name is a logical dotted path; re-quote it
+        // per-dialect because the builder CREATEd it with quoted
+        // (case-preserved) segments, and a case-folding engine (Snowflake
+        // uppercases unquoted identifiers) can't resolve it bare.
+        const quoted = getDialect(source.dialect).sqlQuoteTablePath(
+          entry.tableName
+        );
+        return `(SELECT * FROM ${quoted})`;
       }
 
       // Not in manifest
