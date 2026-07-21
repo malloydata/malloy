@@ -87,23 +87,21 @@ describe('db-databricks query metadata (offline)', () => {
   describe('connection digest', () => {
     const digest = (c: DatabricksConnection): string => c.getDigest();
 
-    it('is unchanged by query tags (observability-only)', () => {
-      expect(digest(new DatabricksConnection('dbx', BASE))).toBe(
+    it('excludes query metadata (both tags and session settings)', () => {
+      const base = digest(new DatabricksConnection('dbx', BASE));
+      expect(
         digest(
           new DatabricksConnection('dbx', {...BASE, queryTags: {team: 'fin'}})
         )
-      );
-    });
-
-    it('differs when session settings differ (they affect the session)', () => {
+      ).toBe(base);
       expect(
         digest(
           new DatabricksConnection('dbx', {
             ...BASE,
-            sessionSettings: {ansi_mode: 'true'},
+            sessionSettings: {some_setting: 'x'},
           })
         )
-      ).not.toBe(digest(new DatabricksConnection('dbx', BASE)));
+      ).toBe(base);
     });
   });
 });

@@ -154,20 +154,6 @@ function escapePostgresString(s: string): string {
 // A settable GUC key must be a bare identifier (it is not quoted).
 const POSTGRES_SETTING_KEY = /^[A-Za-z_][A-Za-z0-9_.]*$/;
 
-// Deterministic serialization of session settings for the connection digest.
-// Generic GUCs alter session behaviour (like `setupSQL`, which the digest
-// already folds in), so they belong in connection identity; returns undefined
-// when unset so digests are unchanged for connections that omit them. The
-// observability-only `application_name` is deliberately excluded.
-function digestSessionSettings(
-  settings?: Record<string, string>
-): string | undefined {
-  if (!settings) return undefined;
-  const keys = Object.keys(settings).sort();
-  if (keys.length === 0) return undefined;
-  return JSON.stringify(keys.map(k => [k, settings[k]]));
-}
-
 /**
  * Decode a canonical Postgres dotted-table path into its underlying
  * identifier strings as they appear in `information_schema`. The schema
@@ -283,18 +269,18 @@ export class PostgresConnection
     if (typeof this.configReader !== 'function') {
       const {host, port, username, databaseName, connectionString} =
         this.configReader;
-      const parts: (string | undefined)[] = [
+      // queryMetadata (application_name + session settings) is session metadata
+      // and is deliberately excluded from the connection digest — changing it
+      // must not re-key the connection.
+      return makeDigest(
         'postgres',
         host,
         port !== undefined ? String(port) : undefined,
         username,
         databaseName,
         connectionString,
-        this.setupSQL,
-      ];
-      const sessionSettings = digestSessionSettings(this.sessionSettings);
-      if (sessionSettings !== undefined) parts.push(sessionSettings);
-      return makeDigest(...parts);
+        this.setupSQL
+      );
     }
     // Fall back to connection name if config is async
     return makeDigest('postgres', this.name);

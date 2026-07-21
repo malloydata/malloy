@@ -69,14 +69,10 @@ describe('db-postgres query metadata (offline)', () => {
       sessionSettings?: Record<string, string>;
     }): string => new PostgresConnection({name: 'pg', ...opts}).getDigest();
 
-    it('is unchanged by application_name (observability-only)', () => {
-      expect(digest({})).toBe(digest({applicationName: 'my-app'}));
-    });
-
-    it('differs when session settings differ (they affect the session)', () => {
-      expect(digest({sessionSettings: {search_path: 'analytics'}})).not.toBe(
-        digest({})
-      );
+    it('excludes query metadata (both application_name and session settings)', () => {
+      const base = digest({});
+      expect(digest({applicationName: 'my-app'})).toBe(base);
+      expect(digest({sessionSettings: {some_setting: 'x'}})).toBe(base);
     });
   });
 });

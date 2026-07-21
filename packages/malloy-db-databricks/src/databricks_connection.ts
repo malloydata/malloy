@@ -138,20 +138,6 @@ function escapeDatabricksString(s: string): string {
 // A settable session-setting key must be a bare identifier (it is not quoted).
 const SESSION_SETTING_KEY = /^[A-Za-z_][A-Za-z0-9_.]*$/;
 
-// Deterministic serialization of session settings for the connection digest.
-// Generic session settings alter session behaviour (like `setupSQL`, which the
-// digest already folds in), so they belong in connection identity; returns
-// undefined when unset so digests are unchanged for connections that omit them.
-// Pure query tags are observability-only and deliberately excluded.
-function digestSessionSettings(
-  settings?: Record<string, string>
-): string | undefined {
-  if (!settings) return undefined;
-  const keys = Object.keys(settings).sort();
-  if (keys.length === 0) return undefined;
-  return JSON.stringify(keys.map(k => [k, settings[k]]));
-}
-
 export class DatabricksConnection
   extends BaseConnection
   implements Connection, PersistSQLResults
@@ -301,17 +287,17 @@ export class DatabricksConnection
 
   public getDigest(): string {
     const {host, path, defaultCatalog, defaultSchema} = this.config;
-    const parts: (string | undefined)[] = [
+    // queryMetadata (query tags + session settings) is session metadata and is
+    // deliberately excluded from the connection digest — changing it must not
+    // re-key the connection.
+    return makeDigest(
       'databricks',
       host,
       path,
       defaultCatalog,
       defaultSchema,
-      this.config.setupSQL,
-    ];
-    const sessionSettings = digestSessionSettings(this.config.sessionSettings);
-    if (sessionSettings !== undefined) parts.push(sessionSettings);
-    return makeDigest(...parts);
+      this.config.setupSQL
+    );
   }
 
   canPersist(): this is PersistSQLResults {
