@@ -900,6 +900,17 @@ const MalloyTable: Component<{
     return <TransposeTable data={props.data} rowLimit={props.rowLimit} />;
   }
 
+  // A zero-row table has nothing to lay out. Rendering the header-only table is
+  // pointless and, with shouldFillWidth in a dashboard grid, its column-sizing
+  // ResizeObservers oscillate against the `1fr` track width -> the dashboard
+  // flashes and the tab OOMs (same class of bug as empty charts). Render a
+  // centered "No Data" instead: no table body, no observers, so the layout can't
+  // thrash. The surrounding card + title (dashboard item) are untouched.
+  if (props.data.isRepeatedRecord() && props.data.rows.length === 0) {
+    MalloyViz.addStylesheet(styles);
+    return <div class="malloy-table__no-data">No Data</div>;
+  }
+
   const hasTableCtx = !!useTableContext();
 
   // Build pivot configs for pivot fields
