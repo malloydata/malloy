@@ -63,7 +63,7 @@
     "@duckdb/node-api": "1.5.3-r.2",
     "@malloydata/malloy": "0.0.426",
     "@motherduck/wasm-client": "0.6.6",
-    "apache-arrow": "^17.0.0",
+    "apache-arrow": "^21.2.0",
     "web-worker": "^1.5.0"
   }
 }
