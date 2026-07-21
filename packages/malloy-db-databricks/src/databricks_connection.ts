@@ -122,7 +122,8 @@ export interface DatabricksConfiguration {
   setupSQL?: string;
   // Session metadata applied at session open (connection-layer only in v1):
   // query tags emitted as `SET QUERY_TAGS['<key>'] = '<value>'` and other
-  // allowlisted session settings as `SET <key> = '<value>'`.
+  // session settings as `SET <key> = '<value>'` (keys must be bare
+  // identifiers; which keys are permitted is enforced by the ingestion layer).
   queryTags?: Record<string, string>;
   sessionSettings?: Record<string, string>;
 }
@@ -212,7 +213,7 @@ export class DatabricksConnection
     // Malloy timestamps are UTC wallclock
     await this.executeRaw("SET TIME ZONE 'UTC'");
 
-    // Session metadata (query tags + allowlisted session settings)
+    // Session metadata (query tags + session settings)
     for (const stmt of this.sessionMetadataStatements()) {
       await this.executeRaw(stmt);
     }

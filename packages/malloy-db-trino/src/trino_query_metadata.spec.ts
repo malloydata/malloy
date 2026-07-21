@@ -38,14 +38,14 @@ describe('db-trino queryMetadata wiring (offline)', () => {
         .mockReturnValue({} as any);
       new TrinoConnection('t', undefined, {
         server: 'http://localhost:8080',
-        source: 'credible',
+        source: 'my-app',
         clientTags: ['team:finance', 'env:prod'],
       });
       const opts = createSpy.mock.calls[0][0] as {
         source?: string;
         extraHeaders?: Record<string, string>;
       };
-      expect(opts.source).toBe('credible');
+      expect(opts.source).toBe('my-app');
       expect(opts.extraHeaders?.['X-Trino-Client-Tags']).toBe(
         'team:finance,env:prod'
       );
@@ -67,14 +67,14 @@ describe('db-trino queryMetadata wiring (offline)', () => {
       PrestoClientMock.mockClear();
       new PrestoConnection('p', undefined, {
         server: 'localhost',
-        source: 'credible',
+        source: 'my-app',
         clientTags: ['team:finance', 'env:prod'],
       });
       const cfg = PrestoClientMock.mock.calls[0][0] as {
         source?: string;
         extraHeaders?: Record<string, string>;
       };
-      expect(cfg.source).toBe('credible');
+      expect(cfg.source).toBe('my-app');
       expect(cfg.extraHeaders?.['X-Presto-Client-Tags']).toBe(
         'team:finance,env:prod'
       );

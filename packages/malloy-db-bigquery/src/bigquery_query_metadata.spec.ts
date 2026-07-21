@@ -56,23 +56,23 @@ describe('db-bigquery queryMetadata wiring (offline)', () => {
 
   it('applies connection-default job labels (from queryOptions) to createQueryJob', async () => {
     const {conn, spy} = makeConn({
-      queryMetadata: {bigquery: {jobLabels: {app: 'credible'}}},
+      queryMetadata: {bigquery: {jobLabels: {app: 'my-app'}}},
     });
     await conn.runSQL('SELECT 1');
-    expect(firstJobConfig(spy)['labels']).toEqual({app: 'credible'});
+    expect(firstJobConfig(spy)['labels']).toEqual({app: 'my-app'});
   });
 
   it('merges per-call labels over the connection default (per key)', async () => {
     const {conn, spy} = makeConn({
       queryMetadata: {
-        bigquery: {jobLabels: {app: 'credible', team: 'default'}},
+        bigquery: {jobLabels: {app: 'my-app', team: 'default'}},
       },
     });
     await conn.runSQL('SELECT 1', {
       queryMetadata: {bigquery: {jobLabels: {team: 'finance'}}},
     });
     expect(firstJobConfig(spy)['labels']).toEqual({
-      app: 'credible',
+      app: 'my-app',
       team: 'finance',
     });
   });

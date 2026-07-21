@@ -23,14 +23,14 @@ describe('db-postgres query metadata (offline)', () => {
   it('emits SET application_name + GUCs after SET TIME ZONE at session open', async () => {
     const conn = new PostgresConnection({
       name: 'pg',
-      applicationName: 'credible',
+      applicationName: 'my-app',
       sessionSettings: {statement_timeout: '60s'},
     });
     const {client, calls} = fakeClient();
     await conn.connectionSetup(client);
     expect(calls).toEqual([
       "SET TIME ZONE 'UTC'",
-      "SET application_name = 'credible'",
+      "SET application_name = 'my-app'",
       "SET statement_timeout = '60s'",
     ]);
   });
@@ -45,11 +45,11 @@ describe('db-postgres query metadata (offline)', () => {
   it('escapes single quotes in the application_name value', async () => {
     const conn = new PostgresConnection({
       name: 'pg',
-      applicationName: "cred'ible",
+      applicationName: "my'app",
     });
     const {client, calls} = fakeClient();
     await conn.connectionSetup(client);
-    expect(calls).toContain("SET application_name = 'cred''ible'");
+    expect(calls).toContain("SET application_name = 'my''app'");
   });
 
   it('skips GUC keys that are not bare identifiers', async () => {
@@ -70,7 +70,7 @@ describe('db-postgres query metadata (offline)', () => {
     }): string => new PostgresConnection({name: 'pg', ...opts}).getDigest();
 
     it('is unchanged by application_name (observability-only)', () => {
-      expect(digest({})).toBe(digest({applicationName: 'credible'}));
+      expect(digest({})).toBe(digest({applicationName: 'my-app'}));
     });
 
     it('differs when session settings differ (they affect the session)', () => {

@@ -95,14 +95,14 @@ describe('db-snowflake queryMetadata wiring (offline)', () => {
     const {calls} = installFakeSnowflake();
     const conn = new SnowflakeConnection('sf', {
       connOptions: CONN_OPTIONS,
-      queryOptions: {queryMetadata: {snowflake: {queryTag: 'app:credible'}}},
+      queryOptions: {queryMetadata: {snowflake: {queryTag: 'app:my-app'}}},
     });
     await conn.runSQL('SELECT 1 AS T');
     // Session-init ALTER SESSION statements run before the data query; all of
     // them carry the connection-default tag.
     expect(calls.length).toBeGreaterThan(1);
     for (const c of calls) {
-      expect(c.parameters).toEqual({QUERY_TAG: 'app:credible'});
+      expect(c.parameters).toEqual({QUERY_TAG: 'app:my-app'});
     }
   });
 
@@ -110,7 +110,7 @@ describe('db-snowflake queryMetadata wiring (offline)', () => {
     const {calls} = installFakeSnowflake();
     const conn = new SnowflakeConnection('sf', {
       connOptions: CONN_OPTIONS,
-      queryOptions: {queryMetadata: {snowflake: {queryTag: 'app:credible'}}},
+      queryOptions: {queryMetadata: {snowflake: {queryTag: 'app:my-app'}}},
     });
     await conn.runSQL('SELECT 1 AS T', {
       queryMetadata: {snowflake: {queryTag: 'team:finance'}},
@@ -138,7 +138,7 @@ describe('db-snowflake queryMetadata wiring (offline)', () => {
     const {spy} = installFakeSnowflake();
     new SnowflakeConnection('sf', {
       connOptions: CONN_OPTIONS,
-      queryOptions: {queryMetadata: {snowflake: {queryTag: 'app:credible'}}},
+      queryOptions: {queryMetadata: {snowflake: {queryTag: 'app:my-app'}}},
     });
     const passedConnOptions = spy.mock.calls[0][0] as Record<string, unknown>;
     expect(passedConnOptions['queryTag']).toBeUndefined();

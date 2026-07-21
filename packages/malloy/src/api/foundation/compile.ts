@@ -650,7 +650,7 @@ export class Malloy {
       connection = await connections.lookupConnection(connectionName);
     }
     if (sqlStruct) {
-      const data = await connection.runSQL(sqlStruct.selectStr);
+      const data = await connection.runSQL(sqlStruct.selectStr, options);
       return new Result(
         {
           structs: [sqlStruct],

@@ -90,8 +90,9 @@ interface PostgresConnectionConfiguration {
   connectionString?: string;
   setupSQL?: string;
   // Session metadata applied at session open (connection-layer only in v1):
-  // `SET application_name = '<value>'` plus allowlisted session GUCs as
-  // `SET <key> = '<value>'`. Observability-only; never data identity.
+  // `SET application_name = '<value>'` plus session GUCs as `SET <key> =
+  // '<value>'` (keys must be bare identifiers; which keys are permitted is
+  // enforced by the ingestion layer). application_name is observability-only.
   applicationName?: string;
   sessionSettings?: Record<string, string>;
   // Programmatic callers get pg's full ssl surface (incl. `checkServerIdentity`
@@ -674,7 +675,13 @@ export class PooledPostgresConnection
       this._pool.on('acquire', client => {
         client.query("SET TIME ZONE 'UTC'");
         for (const stmt of this.sessionMetadataStatements()) {
-          client.query(stmt);
+          // Fire-and-forget on the pooled acquire path: a rejected SET (e.g. an
+          // unknown GUC or a bad value) must not surface as an unhandled
+          // promise rejection, which would crash the process on every acquire.
+          // Swallow it — the checkout proceeds with that setting un-applied
+          // rather than failing the query. Strict key/value validation is the
+          // ingestion layer's responsibility.
+          client.query(stmt).catch(() => {});
         }
         if (this.setupSQL) {
           for (const stmt of this.setupSQL.split(';\n')) {

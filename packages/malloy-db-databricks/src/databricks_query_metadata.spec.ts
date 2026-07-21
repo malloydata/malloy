@@ -37,14 +37,14 @@ describe('db-databricks query metadata (offline)', () => {
   it('emits SET QUERY_TAGS and SET settings at session open, after SET TIME ZONE', async () => {
     const conn = new DatabricksConnection('dbx', {
       ...BASE,
-      queryTags: {team: 'finance', app: 'credible'},
+      queryTags: {team: 'finance', app: 'my-app'},
       sessionSettings: {statement_timeout: '60'},
     });
     await connect(conn);
     expect(mockExecCalls).toEqual([
       "SET TIME ZONE 'UTC'",
       "SET QUERY_TAGS['team'] = 'finance'",
-      "SET QUERY_TAGS['app'] = 'credible'",
+      "SET QUERY_TAGS['app'] = 'my-app'",
       "SET statement_timeout = '60'",
     ]);
   });
