@@ -122,8 +122,9 @@ export interface DatabricksConfiguration {
   setupSQL?: string;
   // Session metadata applied at session open (connection-layer only in v1):
   // query tags emitted as `SET QUERY_TAGS['<key>'] = '<value>'` and other
-  // session settings as `SET <key> = '<value>'` (keys must be bare
-  // identifiers; which keys are permitted is enforced by the ingestion layer).
+  // session settings as `SET <key> = '<value>'` (setting keys must be bare
+  // identifiers; whether a setting is valid for the warehouse is the caller's
+  // responsibility).
   queryTags?: Record<string, string>;
   sessionSettings?: Record<string, string>;
 }
@@ -250,16 +251,21 @@ export class DatabricksConnection
 
   // Build the SET statements for the connection-level query tags and session
   // settings, run once at session open. Query tags use Databricks' dedicated
-  // associative-array grammar (`SET QUERY_TAGS['key'] = 'value'`); generic
-  // settings use `SET <key> = 'value'`. Non-identifier setting keys are
-  // skipped (the ingestion layer validates strictly; the driver stays lenient).
+  // associative-array grammar, all set in a single statement per the
+  // SET QUERY_TAGS reference (`SET QUERY_TAGS['k1'] = 'v1', QUERY_TAGS['k2'] =
+  // 'v2'`); generic settings use `SET <key> = 'value'`. Non-identifier setting
+  // keys are skipped so a key can't break out of its position in the emitted
+  // SQL; whether a setting is meaningful for the warehouse is the caller's
+  // responsibility.
   private sessionMetadataStatements(): string[] {
     const statements: string[] = [];
-    for (const [key, value] of Object.entries(this.config.queryTags ?? {})) {
-      statements.push(
-        `SET QUERY_TAGS['${escapeDatabricksString(key)}'] = ` +
-          `'${escapeDatabricksString(value)}'`
-      );
+    const tagAssignments = Object.entries(this.config.queryTags ?? {}).map(
+      ([key, value]) =>
+        `QUERY_TAGS['${escapeDatabricksString(key)}'] = ` +
+        `'${escapeDatabricksString(value)}'`
+    );
+    if (tagAssignments.length > 0) {
+      statements.push(`SET ${tagAssignments.join(', ')}`);
     }
     for (const [key, value] of Object.entries(
       this.config.sessionSettings ?? {}

@@ -91,8 +91,8 @@ interface PostgresConnectionConfiguration {
   setupSQL?: string;
   // Session metadata applied at session open (connection-layer only in v1):
   // `SET application_name = '<value>'` plus session GUCs as `SET <key> =
-  // '<value>'` (keys must be bare identifiers; which keys are permitted is
-  // enforced by the ingestion layer). application_name is observability-only.
+  // '<value>'` (GUC keys must be bare identifiers; whether a GUC is valid is
+  // the caller's responsibility). application_name is observability-only.
   applicationName?: string;
   sessionSettings?: Record<string, string>;
   // Programmatic callers get pg's full ssl surface (incl. `checkServerIdentity`
@@ -545,8 +545,9 @@ export class PostgresConnection
 
   // SET statements for the connection-level application_name and session
   // settings, run at every session open (both the non-pooled and pooled
-  // hooks). Non-identifier GUC keys are skipped — the ingestion layer
-  // validates strictly; the driver stays lenient.
+  // hooks). Non-identifier GUC keys are skipped so a key can't break out of
+  // its position in the emitted SQL; whether a GUC is meaningful is the
+  // caller's responsibility.
   protected sessionMetadataStatements(): string[] {
     const statements: string[] = [];
     if (this.applicationName !== undefined) {
@@ -679,8 +680,8 @@ export class PooledPostgresConnection
           // unknown GUC or a bad value) must not surface as an unhandled
           // promise rejection, which would crash the process on every acquire.
           // Swallow it — the checkout proceeds with that setting un-applied
-          // rather than failing the query. Strict key/value validation is the
-          // ingestion layer's responsibility.
+          // rather than failing the query. Validating that a setting is valid
+          // for the warehouse is the caller's responsibility.
           client.query(stmt).catch(() => {});
         }
         if (this.setupSQL) {

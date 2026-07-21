@@ -43,8 +43,7 @@ describe('db-databricks query metadata (offline)', () => {
     await connect(conn);
     expect(mockExecCalls).toEqual([
       "SET TIME ZONE 'UTC'",
-      "SET QUERY_TAGS['team'] = 'finance'",
-      "SET QUERY_TAGS['app'] = 'my-app'",
+      "SET QUERY_TAGS['team'] = 'finance', QUERY_TAGS['app'] = 'my-app'",
       "SET statement_timeout = '60'",
     ]);
   });

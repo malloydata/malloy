@@ -63,6 +63,14 @@ export interface TrinoConnectionConfiguration {
 
 export type TrinoConnectionOptions = ConnectionConfig;
 
+// Client tags ride in an HTTP header, comma-separated. Drop any tag containing
+// a comma (the separator) or CR/LF (which could inject a header) so a tag can't
+// corrupt the header the connector emits; whether a tag is otherwise meaningful
+// is the caller's responsibility.
+function safeClientTags(tags?: string[]): string[] {
+  return (tags ?? []).filter(t => !/[,\r\n]/.test(t));
+}
+
 export interface BaseRunner {
   runSQL(
     sql: string,
@@ -83,8 +91,9 @@ class PrestoRunner implements BaseRunner {
     const extraHeaders: Record<string, string> = {
       'X-Presto-Session': 'legacy_unnest=true',
     };
-    if (config.clientTags && config.clientTags.length > 0) {
-      extraHeaders['X-Presto-Client-Tags'] = config.clientTags.join(',');
+    const prestoTags = safeClientTags(config.clientTags);
+    if (prestoTags.length > 0) {
+      extraHeaders['X-Presto-Client-Tags'] = prestoTags.join(',');
     }
     const prestoClientConfig: PrestoClientConfig = {
       catalog: config.catalog,
@@ -150,8 +159,9 @@ class TrinoRunner implements BaseRunner {
     const extraHeaders: Record<string, string> = {
       ...(extraConfig.extraHeaders as Record<string, string> | undefined),
     };
-    if (config.clientTags && config.clientTags.length > 0) {
-      extraHeaders['X-Trino-Client-Tags'] = config.clientTags.join(',');
+    const trinoTags = safeClientTags(config.clientTags);
+    if (trinoTags.length > 0) {
+      extraHeaders['X-Trino-Client-Tags'] = trinoTags.join(',');
     }
     this.client = Trino.create({
       ...extraConfig,

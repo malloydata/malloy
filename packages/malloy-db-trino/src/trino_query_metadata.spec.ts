@@ -63,6 +63,21 @@ describe('db-trino queryMetadata wiring (offline)', () => {
       expect(opts.extraHeaders?.['X-Trino-Client-Tags']).toBeUndefined();
     });
 
+    it('Trino: drops client tags containing header-unsafe characters', () => {
+      const createSpy = jest
+        .spyOn(Trino, 'create')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .mockReturnValue({} as any);
+      new TrinoConnection('t', undefined, {
+        server: 'http://localhost:8080',
+        clientTags: ['ok', 'bad\ninject', 'has,comma'],
+      });
+      const opts = createSpy.mock.calls[0][0] as {
+        extraHeaders?: Record<string, string>;
+      };
+      expect(opts.extraHeaders?.['X-Trino-Client-Tags']).toBe('ok');
+    });
+
     it('Presto: passes source + X-Presto-Client-Tags to the client', () => {
       PrestoClientMock.mockClear();
       new PrestoConnection('p', undefined, {
