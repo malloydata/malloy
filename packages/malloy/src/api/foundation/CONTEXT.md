@@ -230,7 +230,7 @@ cache:
 
 - `'idle'` — reversible. Walks the cache and calls `Connection.idle()` on
   each. The cache is preserved so the same Connection objects are reused on
-  next lookup; schema cache and other in-process state survive. The next
+  next lookup; backend state made stale by release may be invalidated. The next
   operation transparently reattaches whatever backend resources `idle()`
   released. Use this between operations in long-lived hosts (a VS Code
   extension, an MCP server, anything that builds Runtimes per request) so
@@ -240,6 +240,8 @@ Implementation specifics:
 
 - `MalloyConfig` owns no connection resources directly — pools, sockets, file handles all live inside individual `Connection` objects. What the managed lookup owns is a lazily-populated `name → Connection` cache.
 - Connections that were never looked up were never constructed and are skipped by both modes.
+- Aliases which resolve to the same `Connection` identity are cleaned up once, in first-seen order. Cleanup is deliberately sequential so two distinct connection identities cannot race over external locks during a bulk shutdown; aggregated errors preserve that same deterministic order.
+- An identity remains quarantined while cleanup is active, and a successfully closed identity is permanently retired from that managed cache. A factory cannot reintroduce either object under a new alias and bypass the lifecycle barrier; a rejected alias construction is removed so a later lookup may retry with a genuinely new object.
 - Wrappers installed via `wrapConnections()` don't interfere — the managed lookup under the wrap still holds the cache, and `runtime.shutdown(...)` forwards through to `config.shutdown(...)` directly, not through the wrap.
 - Legacy constructor forms (`new Runtime({connections})` / `new Runtime({connection})`) build a Runtime with no `MalloyConfig` to forward to; `shutdown()` is a no-op and the caller owns whatever they passed in.
 - `releaseConnections()` is preserved as a deprecated alias for `shutdown('close')`. Existing callers continue to work; new code should call `shutdown(...)` directly.

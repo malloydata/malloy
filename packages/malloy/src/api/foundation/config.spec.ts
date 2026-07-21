@@ -877,9 +877,63 @@ describe('MalloyConfig fail-closed literal string properties', () => {
     );
   });
 
+  it('does not silently treat explicit null as an omitted literal', async () => {
+    const config = new MalloyConfig({
+      connections: {strict: {is: 'strictdb', mode: null}},
+    });
+
+    await expect(config.connections.lookupConnection('strict')).rejects.toThrow(
+      'Connection "strict" property "mode" must be a literal string'
+    );
+    expect(capturedStrictMode).toBeUndefined();
+    expect(strictFactoryCalls).toBe(0);
+    expect(config.log.map(entry => entry.message)).toContain(
+      'connections.strict.mode: must be a literal string, got null'
+    );
+  });
+
+  it('keeps explicit null as unset for ordinary optional properties', async () => {
+    let captured: ConnectionConfig | undefined;
+    registerConnectionType('nullabledb', {
+      displayName: 'NullableDB',
+      factory: async config => {
+        captured = config;
+        return mockConnection(config.name, 'nullabledb-dialect');
+      },
+      properties: [
+        {
+          name: 'mode',
+          displayName: 'Mode',
+          type: 'string',
+          optional: true,
+        },
+      ],
+    });
+    const config = new MalloyConfig({
+      connections: {ordinary: {is: 'nullabledb', mode: null}},
+    });
+
+    await config.connections.lookupConnection('ordinary');
+    expect(captured).toEqual({name: 'ordinary'});
+    expect(config.log).toEqual([]);
+    await config.shutdown('close');
+  });
+
   it('enforces literal string properties in resolved registry configs', async () => {
     const lookup = createConnectionsFromConfig({
       connections: {strict: {is: 'strictdb', mode: {env: 'STRICT_MODE'}}},
+    });
+
+    await expect(lookup.lookupConnection('strict')).rejects.toThrow(
+      'Connection "strict" property "mode" must be a literal string'
+    );
+    expect(capturedStrictMode).toBeUndefined();
+    expect(strictFactoryCalls).toBe(0);
+  });
+
+  it('rejects explicit null in resolved registry configs', async () => {
+    const lookup = createConnectionsFromConfig({
+      connections: {strict: {is: 'strictdb', mode: null}},
     });
 
     await expect(lookup.lookupConnection('strict')).rejects.toThrow(

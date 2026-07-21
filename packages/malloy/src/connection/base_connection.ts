@@ -65,6 +65,20 @@ export abstract class BaseConnection implements Connection {
   ): Promise<SQLSourceDef | string>;
 
   protected schemaCache: Record<string, CachedSchema<StructDef>> = {};
+  private schemaCacheGeneration = 0;
+  private schemaCacheInFlight = new Map<string, symbol>();
+
+  /**
+   * Invalidate cached schemas and fence off fills which began in an older
+   * backend generation. Backends that temporarily release ownership of their
+   * data source must call this before reopening admission.
+   */
+  protected invalidateSchemaCache(): void {
+    this.schemaCacheGeneration++;
+    this.schemaCache = {};
+    this.schemaCacheInFlight.clear();
+  }
+
   protected async checkSchemaCache<T extends StructDef>(
     schemaKey: string,
     schemaType: 'table' | 'sql_select',
@@ -76,21 +90,34 @@ export abstract class BaseConnection implements Connection {
       !cached ||
       (cached.schema && refreshTimestamp && refreshTimestamp > cached.timestamp)
     ) {
+      const generation = this.schemaCacheGeneration;
+      const requestToken = Symbol(schemaKey);
+      this.schemaCacheInFlight.set(schemaKey, requestToken);
       try {
         const cacheResponse = await fillCache();
         if (typeof cacheResponse === 'string') {
           // Don't cache errors - just return them
           return {error: cacheResponse};
         } else {
-          cached = {
+          const filled = {
             schema: cacheResponse,
             timestamp: refreshTimestamp ?? Date.now(),
           };
-          this.schemaCache[schemaKey] = cached;
+          cached = filled;
+          if (
+            generation === this.schemaCacheGeneration &&
+            this.schemaCacheInFlight.get(schemaKey) === requestToken
+          ) {
+            this.schemaCache[schemaKey] = filled;
+          }
         }
       } catch (uncaught) {
         // Don't cache errors - just return them
         return {error: uncaught.message};
+      } finally {
+        if (this.schemaCacheInFlight.get(schemaKey) === requestToken) {
+          this.schemaCacheInFlight.delete(schemaKey);
+        }
       }
     }
     if (cached.error) {

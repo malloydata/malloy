@@ -233,6 +233,7 @@ export type {
   InfoConnection,
   LookupConnection,
   PersistSQLResults,
+  TemporaryTableRunOptions,
   PooledConnection,
   TestableConnection,
   StreamingConnection,
