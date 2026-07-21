@@ -13,6 +13,10 @@ import type {
 import * as pathSecurity from './path_security';
 
 export type DuckDBSecurityPolicy = 'none' | 'local' | 'sandboxed';
+export type DuckDBShareableLockSafety = 'strict' | 'best-effort';
+
+export const DEFAULT_SHAREABLE_ATTACH_ALIAS = 'malloy_db';
+export const NATURAL_SHAREABLE_ATTACH_ALIAS = 'auto';
 
 export interface NormalizedDuckDBSafetyPolicy {
   requiresPosixHost: boolean;
@@ -49,14 +53,22 @@ export interface NormalizedDuckDBConfig {
   motherDuckToken?: string;
   additionalExtensions: string[];
   setupSQL?: string;
-  // User-requested: release the OS file lock between operations so other
-  // tools (malloy-cli, duckdb CLI, another malloy host) can use the same
-  // database file. Implemented by binding the primary database to
-  // `:memory:` and bracketing access with ATTACH/DETACH around the real
-  // file. `effectiveShareable` is `true` only when `shareable` is set AND
-  // the database path is a local file we can attach (not `:memory:`,
-  // MotherDuck, or another remote scheme).
+  // User-requested: release the OS file lock on explicit idle or a cooperative
+  // in-realm handoff so other tools can use the same database file while this
+  // connection object remains reusable. Implemented by binding the primary
+  // database to `:memory:` and ATTACHing/DETACHing the real file.
+  // `effectiveShareable` is `true` only when `shareable` is set AND the
+  // database path is a local file we can attach (not `:memory:`, MotherDuck,
+  // or another remote scheme).
   shareable: boolean;
+  // `best-effort` preserves compatibility on filesystems whose lock
+  // semantics cannot be classified. `strict` applies the conservative
+  // filesystem denylist; both modes retain all identity and lifecycle fences.
+  shareableLockSafety: DuckDBShareableLockSafety;
+  // Catalog identity used by shareable ATTACH. The default retains the
+  // historical `malloy_db` alias. The reserved value `auto` omits `AS` and
+  // discovers DuckDB's natural catalog identity after ATTACH.
+  shareableAttachAlias: string;
   effectiveShareable: boolean;
 }
 
@@ -95,6 +107,17 @@ export function normalizeDuckDBConfig(
   );
   const readOnly = readOptionalBoolean(config, 'readOnly') ?? false;
   const shareable = readOptionalBoolean(config, 'shareable') ?? false;
+  const shareableLockSafety = parseShareableLockSafety(
+    config['shareableLockSafety']
+  );
+  const shareableAttachAlias =
+    readOptionalString(config, 'shareableAttachAlias') ??
+    DEFAULT_SHAREABLE_ATTACH_ALIAS;
+  if (shareableAttachAlias.trim() === '') {
+    throw new DuckDBConfigValidationError(
+      'shareableAttachAlias must not be empty or whitespace'
+    );
+  }
   const additionalExtensions = normalizeExtensions(
     config['additionalExtensions'],
     'additionalExtensions'
@@ -342,6 +365,8 @@ export function normalizeDuckDBConfig(
     additionalExtensions,
     setupSQL: rawSetupSQL,
     shareable,
+    shareableLockSafety,
+    shareableAttachAlias,
     effectiveShareable:
       shareable &&
       databasePath !== ':memory:' &&
@@ -395,6 +420,10 @@ export function sqlStringLiteral(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
+export function sqlIdentifierLiteral(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
 export function sqlStringListLiteral(values: string[]): string {
   return `[${values.map(value => sqlStringLiteral(value)).join(',')}]`;
 }
@@ -410,6 +439,28 @@ const SECURITY_POLICY_VALUES: readonly string[] = [
   'local',
   'sandboxed',
 ];
+
+const SHAREABLE_LOCK_SAFETY_VALUES: readonly DuckDBShareableLockSafety[] = [
+  'strict',
+  'best-effort',
+];
+
+function parseShareableLockSafety(
+  rawValue: ConnectionParameterValue | undefined
+): DuckDBShareableLockSafety {
+  if (rawValue === undefined) return 'best-effort';
+  if (
+    typeof rawValue === 'string' &&
+    SHAREABLE_LOCK_SAFETY_VALUES.includes(rawValue as DuckDBShareableLockSafety)
+  ) {
+    return rawValue as DuckDBShareableLockSafety;
+  }
+  const received =
+    typeof rawValue === 'string' ? `"${rawValue}"` : typeof rawValue;
+  throw new DuckDBConfigValidationError(
+    `shareableLockSafety must be one of ${SHAREABLE_LOCK_SAFETY_VALUES.map(value => `"${value}"`).join(', ')}, got ${received}`
+  );
+}
 
 function isSecurityPolicy(value: string): value is DuckDBSecurityPolicy {
   return SECURITY_POLICY_VALUES.includes(value);

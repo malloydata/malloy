@@ -389,7 +389,7 @@ export class MalloyConfig {
    *
    * - `'idle'` — reversible. Calls `Connection.idle()` on each cached entry
    *   without dropping the cache. The same Connection objects are reused
-   *   on next lookup; schema cache and other in-process state survive.
+   *   on next lookup; a backend may invalidate state made stale by release.
    *   The next operation transparently reattaches any backend resources
    *   that were released. Use this between operations in long-lived hosts
    *   (VSCode, MCP servers, anything that builds Runtimes per request) to

@@ -439,7 +439,7 @@ export class Runtime {
    * - `'idle'` — reversible release. Connections release expensive
    *   resources (DuckDB file locks, socket pools) but stay logically
    *   valid. The same Connection objects are reused on next lookup;
-   *   schema cache and other in-process state survive. Use between
+   *   backend state made stale by release may be invalidated. Use between
    *   operations in long-lived hosts (a VSCode extension, an MCP server,
    *   any host that builds Runtimes per request) so that other writers
    *   can claim resources during idle gaps.
