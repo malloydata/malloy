@@ -20,15 +20,15 @@
     "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@malloydata/db-bigquery": "0.0.425",
-    "@malloydata/db-duckdb": "0.0.425",
-    "@malloydata/db-postgres": "0.0.425",
-    "@malloydata/db-snowflake": "0.0.425",
-    "@malloydata/db-trino": "0.0.425",
-    "@malloydata/malloy": "0.0.425",
-    "@malloydata/malloy-tag": "0.0.425",
-    "@malloydata/render": "0.0.425",
-    "@malloydata/render-validator": "0.0.425",
+    "@malloydata/db-bigquery": "0.0.426",
+    "@malloydata/db-duckdb": "0.0.426",
+    "@malloydata/db-postgres": "0.0.426",
+    "@malloydata/db-snowflake": "0.0.426",
+    "@malloydata/db-trino": "0.0.426",
+    "@malloydata/malloy": "0.0.426",
+    "@malloydata/malloy-tag": "0.0.426",
+    "@malloydata/render": "0.0.426",
+    "@malloydata/render-validator": "0.0.426",
     "events": "^3.3.0",
     "jsdom": "^22.1.0",
     "luxon": "^3.7.2",
@@ -42,5 +42,5 @@
   "overrides": {
     "typescript": "^6.0.3"
   },
-  "version": "0.0.425"
+  "version": "0.0.426"
 }
