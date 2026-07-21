@@ -147,6 +147,41 @@ FROM read_parquet("inventory_items2.parquet")
     expect(result.rows[0]['d']).toBeInstanceOf(Date);
     expect((result.rows[0]['d'] as Date).toISOString()).toContain('2024-01-15');
   });
+
+  it('keeps scoped TEMP capability absent and reuses deterministic manifests', async () => {
+    expect(
+      (
+        connection as unknown as {
+          runSQLWithTemporaryTable?: unknown;
+        }
+      ).runSQLWithTemporaryTable
+    ).toBeUndefined();
+
+    await connection.runRawSQL(
+      'CREATE SEQUENCE wasm_search_materializations START 1'
+    );
+    const materializeSQL =
+      "SELECT nextval('wasm_search_materializations')::INTEGER AS materialization";
+
+    const firstName = await connection.manifestTemporaryTable(materializeSQL);
+    const firstResult = await connection.runSQL(
+      `SELECT materialization FROM ${firstName}`
+    );
+    const secondName = await connection.manifestTemporaryTable(materializeSQL);
+    const secondResult = await connection.runSQL(
+      `SELECT materialization FROM ${secondName}`
+    );
+
+    expect(firstName).toMatch(/^tt(?!s)/);
+    expect(secondName).toBe(firstName);
+    expect(firstResult.rows).toEqual([{materialization: 1}]);
+    expect(secondResult.rows).toEqual([{materialization: 1}]);
+    await expect(
+      connection.runSQL(
+        "SELECT currval('wasm_search_materializations')::INTEGER AS materializations"
+      )
+    ).resolves.toMatchObject({rows: [{materializations: 1}]});
+  });
 });
 
 describe('workingDirectory file:// URL handling', () => {
