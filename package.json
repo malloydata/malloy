@@ -89,7 +89,7 @@
     "babel-jest": "^29.3.1",
     "cross-os": "^1.5.0",
     "csv-stringify": "^5.6.5",
-    "dotenv-cli": "^6.0.0",
+    "dotenv-cli": "^11.0.0",
     "flow-api-translator": "^0.37.0",
     "fs-extra": "^10.1.0",
     "gts": "^7.0.0",
