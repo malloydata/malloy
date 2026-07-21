@@ -51,7 +51,7 @@ try {
   console.error(
     'or a bare require of an optional native. See test/consumer-canary/CONTEXT.md'
   );
-  console.error('and DEPENDENCY-MANAGEMENT.md.\n');
+  console.error('and docs/dependency-management/CONTEXT.md.\n');
   for (const e of err.errors ?? []) {
     console.error(
       '  ' +

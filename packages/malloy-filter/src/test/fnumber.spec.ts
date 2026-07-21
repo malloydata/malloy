@@ -66,6 +66,18 @@ describe('number filter expressions', () => {
   test('not null', () => {
     expect('not null').isNumberFilter({operator: 'null', not: true});
   });
+  test('none', () => {
+    expect('none').isNumberFilter({operator: 'none'});
+  });
+  test('not none', () => {
+    expect('not none').isNumberFilter({operator: 'none', not: true});
+  });
+  test('none nested in or', () => {
+    expect('none or 5').isNumberFilter({
+      operator: 'or',
+      members: [{operator: 'none'}, {operator: '=', values: ['5']}],
+    });
+  });
   test('just N', () => {
     expect('5').isNumberFilter({operator: '=', values: ['5']});
   });

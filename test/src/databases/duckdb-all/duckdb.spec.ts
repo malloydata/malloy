@@ -40,10 +40,10 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     // Dashes/dots-as-extension force the FilePathConvenience branch,
     // which wraps the input in single quotes at the SQL level.
     await expect(`
-      run: duckdb.table('test/data/duckdb/words.parquet') -> {
+      run: duckdb.table('test/data/malloytest-parquet/carriers.parquet') -> {
         top: 1
-        group_by: word
-        order_by: word
+        group_by: code
+        order_by: code
       }
     `).toMatchResult(testModel, {});
   });

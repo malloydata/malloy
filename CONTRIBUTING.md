@@ -47,7 +47,7 @@ $ git commit -s -m 'This is my commit message'
 
 All submissions, including submissions by project members, require review. We
 use GitHub pull requests for this purpose. Consult
-[GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
+[GitHub Help](https://docs.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
 
 All pull requests must pass tests. Because some tests use database credentials
@@ -58,5 +58,4 @@ hasn't run, reach out via the `#developing` channel on the
 
 ## Code of Conduct
 
-This project follows
-[The Linux Foundation's Code of Conduct](https://lfprojects.org/policies/code-of-conduct/).
+This project follows the [Malloy Code of Conduct](CODE_OF_CONDUCT.md).

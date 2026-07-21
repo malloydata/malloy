@@ -150,7 +150,7 @@ When `shareable: true` (and `databasePath` is a local file), the DuckDB connecti
 `projectId` (string), `serviceAccountKeyPath` (file), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `setupSQL` (text, advanced)
 
 **PostgreSQL** (`displayName: "PostgreSQL"`):
-`host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string, advanced), `setupSQL` (text, advanced)
+`host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string, advanced), `setupSQL` (text, advanced), `ssl` (json, advanced)
 
 **Snowflake** (`displayName: "Snowflake"`):
 `account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number, advanced), `schemaSampleTimeoutMs` (number, advanced), `schemaSampleRowLimit` (number, advanced), `schemaSampleFullScanMaxBytes` (number, advanced), `setupSQL` (text, advanced), `poolMin` (number, advanced), `poolMax` (number, advanced), `poolTestOnBorrow` (boolean, advanced)

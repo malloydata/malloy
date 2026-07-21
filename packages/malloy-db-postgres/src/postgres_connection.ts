@@ -36,8 +36,50 @@ import {
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {Client, Pool} from 'pg';
-import type {FieldDef} from 'pg';
+import type {ClientConfig, FieldDef} from 'pg';
 import QueryStream from 'pg-query-stream';
+
+/**
+ * Serializable TLS options for a Postgres connection, forwarded verbatim into
+ * pg's native `Object.assign(clientOptions, ssl)`. This is the subset that can
+ * live in a saved/registry connection config (all PEM strings + booleans).
+ *
+ * Semantics (these mirror pg / Node `tls`, NOT libpq):
+ * - `ssl: true` (or `rejectUnauthorized: true`, the default) → full
+ *   verification against the trust store, including hostname (verify-full).
+ * - `rejectUnauthorized: false` → encrypt but do NOT verify (libpq's
+ *   `sslmode=require` / `no-verify`); use only when you can't verify.
+ * - `ca` pins a trusted CA (PEM, or an array of PEMs).
+ *
+ * `servername` only takes effect when the connection `host` is an IP literal
+ * (e.g. `127.0.0.1`) — pg overwrites `servername` with `host` whenever `host`
+ * is a DNS name like `localhost`, so servername-based verification through a
+ * tunnel requires connecting via IP. When the certificate doesn't match the
+ * host pg connected to, pg throws; the connector annotates that error with
+ * this servername/host guidance.
+ *
+ * verify-ca against a cert with no matching SAN/CN (e.g. Cloud SQL legacy
+ * per-instance certs) needs `checkServerIdentity`, a function — not
+ * expressible here or in `type: 'json'` config. Pass the full pg `ssl`
+ * (`tls.ConnectionOptions`) via the config-reader constructor form
+ * (`new PostgresConnection(name, queryOptions, () => ({..., ssl}))`) for that
+ * case; the serializable options object is limited to this subset.
+ *
+ * `ssl` is passed through literally — `type: 'json'` config is never
+ * reference-resolved (a malloy security invariant), so secret `key`/
+ * `passphrase` material cannot be pulled from an `{env:...}`/overlay
+ * reference. Inject secrets programmatically at construction; never persist
+ * them in a shared connection config. Secrets are never logged.
+ */
+export type PostgresSSLConfig = {
+  ca?: string | string[];
+  cert?: string;
+  key?: string;
+  passphrase?: string;
+  crl?: string | string[];
+  servername?: string;
+  rejectUnauthorized?: boolean;
+};
 
 interface PostgresConnectionConfiguration {
   host?: string;
@@ -47,6 +89,10 @@ interface PostgresConnectionConfiguration {
   databaseName?: string;
   connectionString?: string;
   setupSQL?: string;
+  // Programmatic callers get pg's full ssl surface (incl. `checkServerIdentity`
+  // for verify-ca). Saved/registry config is limited to the serializable
+  // PostgresSSLConfig subset — see PostgresConnectionOptions.
+  ssl?: ClientConfig['ssl'];
 }
 
 interface InfoSchemaColumn {
@@ -73,6 +119,25 @@ type PostgresConnectionConfigurationReader =
 const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
+// pg verifies the server certificate against the host it actually connects to,
+// not `ssl.servername` (which pg drops when the host is a DNS name). When that
+// check fails, pg throws a terse altname error; augment it with how to fix a
+// tunneled connection rather than trying to predict pg's host resolution up
+// front. Mutates and returns the original error so its type and stack survive.
+function addTlsHint(err: unknown): unknown {
+  if (!(err instanceof Error)) return err;
+  const code = (err as {code?: unknown}).code;
+  const isCertHostMismatch =
+    code === 'ERR_TLS_CERT_ALTNAME_INVALID' ||
+    (/certificate/i.test(err.message) &&
+      /altname|does not match/i.test(err.message));
+  if (isCertHostMismatch) {
+    err.message +=
+      "\n[malloy-db-postgres] The server certificate does not match the host pg connected to. pg verifies against the connection host, not ssl.servername, unless the host is an IP. For a tunnel, connect via the DB's IP (e.g. host '127.0.0.1') and set ssl.servername to the real hostname; or omit ssl.servername to verify against the host directly.";
+  }
+  return err;
+}
+
 /**
  * Decode a canonical Postgres dotted-table path into its underlying
  * identifier strings as they appear in `information_schema`. The schema
@@ -92,7 +157,12 @@ function decodeDottedSegments(input: string): string[] | undefined {
 }
 
 export interface PostgresConnectionOptions
-  extends ConnectionConfig, PostgresConnectionConfiguration {}
+  extends ConnectionConfig, Omit<PostgresConnectionConfiguration, 'ssl'> {
+  // Serializable subset only. Full pg TLS options (functions/Buffers) are not
+  // representable in `type: 'json'` config; pass them programmatically via the
+  // `PostgresConnectionConfiguration` (name/configReader) constructor form.
+  ssl?: boolean | PostgresSSLConfig;
+}
 
 export class PostgresConnection
   extends BaseConnection
@@ -191,23 +261,32 @@ export class PostgresConnection
     return true;
   }
 
+  protected buildClientConfig(
+    cfg: PostgresConnectionConfiguration
+  ): ClientConfig {
+    return {
+      user: cfg.username,
+      password: cfg.password,
+      database: cfg.databaseName,
+      port: cfg.port,
+      host: cfg.host,
+      connectionString: cfg.connectionString,
+      ssl: cfg.ssl,
+    };
+  }
+
+  // Runs a connect/query op, annotating pg's terse certificate-mismatch error
+  // with actionable TLS guidance (see addTlsHint).
+  protected async withTlsHint<T>(op: () => Promise<T>): Promise<T> {
+    try {
+      return await op();
+    } catch (e) {
+      throw addTlsHint(e);
+    }
+  }
+
   protected async getClient(): Promise<Client> {
-    const {
-      username: user,
-      password,
-      databaseName: database,
-      port,
-      host,
-      connectionString,
-    } = await this.readConfig();
-    return new Client({
-      user,
-      password,
-      database,
-      port,
-      host,
-      connectionString,
-    });
+    return new Client(this.buildClientConfig(await this.readConfig()));
   }
 
   protected async runPostgresQuery(
@@ -218,7 +297,7 @@ export class PostgresConnection
     values?: unknown[]
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
-    await client.connect();
+    await this.withTlsHint(() => client.connect());
     await this.connectionSetup(client);
 
     let result = await client.query(sqlCommand, values);
@@ -248,7 +327,7 @@ export class PostgresConnection
       name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
     const client = await this.getClient();
-    await client.connect();
+    await this.withTlsHint(() => client.connect());
     await this.connectionSetup(client);
     // 1) Get row-descriptor without fetching data
     const res = await client.query({
@@ -454,7 +533,7 @@ export class PostgresConnection
   ): AsyncIterableIterator<QueryRecord> {
     const query = new QueryStream(sqlCommand);
     const client = await this.getClient();
-    await client.connect();
+    await this.withTlsHint(() => client.connect());
     await this.connectionSetup(client);
     const rowStream = client.query(query);
     let index = 0;
@@ -528,22 +607,7 @@ export class PooledPostgresConnection
 
   async getPool(): Promise<Pool> {
     if (!this._pool) {
-      const {
-        username: user,
-        password,
-        databaseName: database,
-        port,
-        host,
-        connectionString,
-      } = await this.readConfig();
-      this._pool = new Pool({
-        user,
-        password,
-        database,
-        port,
-        host,
-        connectionString,
-      });
+      this._pool = new Pool(this.buildClientConfig(await this.readConfig()));
       this._pool.on('acquire', client => {
         client.query("SET TIME ZONE 'UTC'");
         if (this.setupSQL) {
@@ -567,7 +631,7 @@ export class PooledPostgresConnection
     values?: unknown[]
   ): Promise<MalloyQueryData> {
     const pool = await this.getPool();
-    let result = await pool.query(sqlCommand, values);
+    let result = await this.withTlsHint(() => pool.query(sqlCommand, values));
 
     if (Array.isArray(result)) {
       result = result.pop();
@@ -594,7 +658,7 @@ export class PooledPostgresConnection
     // `QueryStream` as well, but it's not. So instead, we get a client and call
     // `client.query(query)`, which does what it's supposed to.
     const pool = await this.getPool();
-    const client = await pool.connect();
+    const client = await this.withTlsHint(() => pool.connect());
     const resultStream: QueryStream = client.query(query);
     for await (const row of resultStream) {
       yield row.row as QueryRecord;

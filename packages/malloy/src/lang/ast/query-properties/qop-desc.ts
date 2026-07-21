@@ -18,6 +18,12 @@ import {PartialBuilder} from '../query-builders/partial-builder';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {modernizeTermsForUserText} from '../../utils';
 
+function queryContextName(queryClass: QueryClass): string {
+  const className = modernizeTermsForUserText(queryClass);
+  const article = className === 'index' ? 'an' : 'a';
+  return `${article} ${className} query`;
+}
+
 export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
   opClass: QueryClass | undefined;
@@ -39,13 +45,12 @@ export class QOpDesc extends ListOf<QueryProperty> {
       if (el.forceQueryClass) {
         if (guessType) {
           if (guessType !== el.forceQueryClass) {
+            const operationName = el.statement;
             el.logError(
               `illegal-${guessType}-operation`,
-              `Use of ${modernizeTermsForUserText(
-                el.forceQueryClass
-              )} is not allowed in a ${modernizeTermsForUserText(
+              `Use of ${operationName} is not allowed in ${queryContextName(
                 guessType
-              )} query`
+              )}`
             );
           }
         } else {
@@ -89,6 +94,13 @@ export class QOpDesc extends ListOf<QueryProperty> {
   ): OpDesc {
     const build = this.getBuilder(inputFS, isNestIn, this);
     for (const qp of this.list) {
+      if (
+        this.opClass &&
+        qp.forceQueryClass &&
+        qp.forceQueryClass !== this.opClass
+      ) {
+        continue;
+      }
       build.execute(qp);
     }
     const segment = build.finalize(this.refineThis);

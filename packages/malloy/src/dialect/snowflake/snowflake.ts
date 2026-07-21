@@ -89,7 +89,12 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'timestamptz': {type: 'timestamptz'},
   'timestamp_tz': {type: 'timestamptz'},
   'timestamp with time zone': {type: 'timestamptz'},
-  /* timestamp_ltz is not supported in malloy snowflake dialect */
+  // TIMESTAMP_LTZ is a genuine instant (persisted UTC); under Malloy's UTC
+  // session pin it is indistinguishable from NTZ, so it maps to `timestamp`
+  // like NTZ. malloyTypeToSQLType writes instants here too.
+  'timestampltz': {type: 'timestamp'},
+  'timestamp_ltz': {type: 'timestamp'},
+  'timestamp with local time zone': {type: 'timestamp'},
 };
 
 export class SnowflakeDialect extends Dialect {
@@ -515,6 +520,24 @@ ${indent(sql)}
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
     const from = df.kids.left;
     const to = df.kids.right;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(df.units)
+    ) {
+      const lVal = from.sql;
+      const rVal = to.sql;
+      const earlier = `LEAST(${lVal}, ${rVal})`;
+      const later = `GREATEST(${lVal}, ${rVal})`;
+      const candidate = `DATEDIFF(${df.units}, ${earlier}, ${later})`;
+      const anniversary = `DATEADD(${df.units}, ${candidate}, ${earlier})`;
+      const measured = `(${candidate} - CASE WHEN ${anniversary} > ${later} THEN 1 ELSE 0 END)`;
+      return `CASE
+        WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
+        WHEN ${rVal} >= ${lVal} THEN ${measured}
+        ELSE -(${measured})
+      END`;
+    }
     let extractUnits = 'nanoseconds';
     if (TD.isDate(from.typeDef) || TD.isDate(to.typeDef)) {
       extractUnits = 'seconds';
@@ -594,6 +617,13 @@ ${indent(sql)}
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     } else if (malloyType.type === 'timestamptz') {
       return 'TIMESTAMP_TZ';
+    } else if (malloyType.type === 'timestamp') {
+      // A Malloy `timestamp` is an instant, and TIMESTAMP_LTZ is Snowflake's
+      // instant type. Emit it explicitly rather than the bare word TIMESTAMP,
+      // whose type is decided per account (TIMESTAMP_TYPE_MAPPING: NTZ or LTZ).
+      // NTZ only reads as an instant under the UTC session pin; LTZ is correct
+      // without it, and leaves NTZ for the future `datetime` type.
+      return 'TIMESTAMP_LTZ';
     }
     return malloyType.type;
   }

@@ -198,6 +198,18 @@ export const bqTableDef: SourceDef = {
   fields: baseFields,
 };
 
+// Postgres table definition — Postgres is the only dialect with
+// `hasFinalStage = true`, so it is the one that exercises the persist-source
+// finalize=false path (see PersistSource.getSQL).
+export const pgTableDef: SourceDef = {
+  type: 'table',
+  name: 'aTable',
+  dialect: 'postgres',
+  tablePath: 'aTable',
+  connection: '_pg_',
+  fields: baseFields,
+};
+
 /**
  * A TestTranlator never actually talks to connection, instead uses
  * some mocked schema definitions.
@@ -206,6 +218,7 @@ export const bqTableDef: SourceDef = {
 export const mockSchema: TableSourceDef[] = [
   aTableDef,
   bqTableDef,
+  pgTableDef,
   {
     type: 'table',
     name: 'carriers',
@@ -402,6 +415,7 @@ export class TestTranslator extends MalloyTranslator {
     contents: {
       _db_: {type: 'connection', name: '_db_'},
       _bq_: {type: 'connection', name: '_bq_'},
+      _pg_: {type: 'connection', name: '_pg_'},
       a: {...aTableDef, primaryKey: 'astr', name: 'a'},
       b: {...aTableDef, primaryKey: 'astr', name: 'b'},
       bq_a: {...bqTableDef, primaryKey: 'astr', name: 'bq_a'},
@@ -472,6 +486,7 @@ export class TestTranslator extends MalloyTranslator {
     }
     this.connectionDialectZone.define('_db_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
+    this.connectionDialectZone.define('_pg_', 'postgres');
     for (const flag of options.compilerFlags ?? []) {
       this.compilerFlagSrc.push(`##! ${flag}\n`);
     }

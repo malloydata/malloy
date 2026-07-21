@@ -111,7 +111,7 @@ describe('db:Snowflake', () => {
     const y = await conn.fetchSelectSchema(x);
     expect(y.fields).toEqual([
       {name: 'TS_NTZ', type: 'timestamp'},
-      {name: 'TS_LTZ', type: 'sql native', rawType: 'timestamp_ltz'},
+      {name: 'TS_LTZ', type: 'timestamp'},
       {name: 'TS_TZ', type: 'timestamptz'},
     ]);
   });
@@ -410,6 +410,18 @@ describe('numeric value reading', () => {
         ).toMatchResult(testModel, {F: 10.5});
       }
     );
+  });
+
+  describe('timestamp types', () => {
+    // TIMESTAMP_LTZ maps to `timestamp`, so its values reach the JS date parser
+    // through the full result pipeline. This exercises the pinned
+    // TIMESTAMP_LTZ_OUTPUT_FORMAT; under the UTC session pin the naive literal
+    // is read as UTC.
+    it('reads TIMESTAMP_LTZ as a timestamp instant', async () => {
+      await expect(
+        'run: snowflake.sql("SELECT TO_TIMESTAMP_LTZ(\'2024-01-01 12:34:56\') as ts")'
+      ).toMatchResult(testModel, {TS: new Date('2024-01-01T12:34:56.000Z')});
+    });
   });
 });
 

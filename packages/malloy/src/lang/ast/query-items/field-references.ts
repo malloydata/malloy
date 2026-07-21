@@ -18,7 +18,6 @@ import {FieldName} from '../types/field-space';
 import type {LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 import type {MakeEntry} from '../types/space-entry';
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import type {FieldDeclarationConstructor} from './field-declaration';
@@ -49,8 +48,7 @@ export abstract class FieldReference
   implements Noteable, MakeEntry
 {
   readonly isNoteableObj = true;
-  note?: AnnotationsDef;
-  extendNote = extendNoteMethod;
+  ownAnnotation?: AnnotationsDef;
 
   constructor(names: FieldName[]) {
     super(names);
@@ -61,8 +59,7 @@ export abstract class FieldReference
   // does not produce an output column named for its last path element (e.g.
   // index references, view references). Overridden by the references that do.
   protected autoRenameDeclarationCtor():
-    | FieldDeclarationConstructor
-    | undefined {
+    FieldDeclarationConstructor | undefined {
     return undefined;
   }
 
@@ -128,8 +125,8 @@ export abstract class FieldReference
       this.list.map(n => new FieldName(n.refString))
     );
     const decl = new declCtor(new ExprIdReference(renamedRef), autoName);
-    if (this.note) {
-      decl.note = this.note;
+    if (this.ownAnnotation) {
+      decl.ownAnnotation = this.ownAnnotation;
     }
     // Attach under this reference so the synthetic nodes inherit its location
     // and resolve back to the translator for logging.
@@ -337,9 +334,8 @@ export class ViewOrScalarFieldReference extends FieldReference {
 
 export class WildcardFieldReference extends MalloyElement implements Noteable {
   elementType = 'wildcardFieldReference';
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
   except = new Set<string>();
   constructor(readonly joinPath: FieldReference | undefined) {
     super();

@@ -493,6 +493,23 @@ ${indent(sql)}
     const to = measure.kids.right;
     let lVal = from.sql;
     let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(measure.units)
+    ) {
+      const earlier = `LEAST(${lVal},${rVal})`;
+      const later = `GREATEST(${lVal},${rVal})`;
+      const unit = measure.units.toUpperCase();
+      const candidate = `DATE_DIFF(${later},${earlier},${unit})`;
+      const anniversary = `DATE_ADD(${earlier}, INTERVAL ${candidate} ${unit})`;
+      const measured = `(${candidate} - CASE WHEN ${anniversary} > ${later} THEN 1 ELSE 0 END)`;
+      return `CASE
+        WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
+        WHEN ${rVal} >= ${lVal} THEN ${measured}
+        ELSE -(${measured})
+      END`;
+    }
     if (measureMap[measure.units]) {
       const {use: measureIn, ratio} = measureMap[measure.units];
       if (!timestampMeasureable(measureIn)) {

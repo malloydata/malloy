@@ -35,7 +35,7 @@
     "npm": ">=9"
   },
   "scripts": {
-    "clean": "npm run -ws clean",
+    "clean": "npm run -ws clean && rm -f tsconfig.tsbuildinfo",
     "codegen": "npm run -w packages/malloy -w packages/malloy-filter -w packages/malloy-malloy-sql codegen",
     "dev": "npm run -ws --if-present dev",
     "build": "npm run -ws build",
@@ -68,7 +68,7 @@
     "consumer-canary": "npm run consumer-canary:bundle && npm run consumer-canary:jest",
     "consumer-canary:bundle": "node test/consumer-canary/bundle-check.mjs",
     "consumer-canary:jest": "jest --config test/consumer-canary/jest.config.ts",
-    "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
+    "build-duckdb-db": "sh test/duckdb/load_test_data.sh",
     "setup-new-checkout": "scripts/setup-new-checkout.sh",
     "ping-db": "ts-node ./test/bin/ping_db.ts"
   },
@@ -90,7 +90,7 @@
     "cross-os": "^1.5.0",
     "csv-stringify": "^5.6.5",
     "dotenv-cli": "^6.0.0",
-    "flow-api-translator": "^0.36.0",
+    "flow-api-translator": "^0.37.0",
     "fs-extra": "^10.1.0",
     "gts": "^7.0.0",
     "jest": "^29.0.3",
@@ -100,7 +100,7 @@
     "jest-silent-reporter": "^0.6.0",
     "jest-util": "^29.0.0",
     "lerna": "^9.0.7",
-    "prettier": "^3.0.3",
+    "prettier": "^3.9.5",
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.1",
     "typescript": "^6.0.3",
@@ -110,6 +110,7 @@
   },
   "dependencies": {},
   "overrides": {
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "lodash": "^4.18.1"
   }
 }

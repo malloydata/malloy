@@ -68,9 +68,7 @@ export interface TableSizeProbe {
  *     is the acknowledged "can't help you" case from the design doc.
  */
 export type SampleStrategy =
-  | 'full-scan-then-sample'
-  | 'tablesample-only'
-  | 'tablesample-then-limit';
+  'full-scan-then-sample' | 'tablesample-only' | 'tablesample-then-limit';
 
 export function pickSampleStrategy(
   probe: TableSizeProbe | undefined,

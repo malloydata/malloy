@@ -2092,11 +2092,7 @@ export type Field = {
 };
 
 export type FieldInfoType =
-  | 'dimension'
-  | 'measure'
-  | 'join'
-  | 'view'
-  | 'calculate';
+  'dimension' | 'measure' | 'join' | 'view' | 'calculate';
 
 export type FieldInfo =
   | FieldInfoWithDimension
@@ -2285,8 +2281,7 @@ export type MeasureInfo = {
 export type ModelEntryValueType = 'source' | 'query';
 
 export type ModelEntryValue =
-  | ModelEntryValueWithSource
-  | ModelEntryValueWithQuery;
+  ModelEntryValueWithSource | ModelEntryValueWithQuery;
 
 export type ModelEntryValueWithSource = {kind: 'source'} & SourceInfo;
 
@@ -2423,8 +2418,7 @@ export type QueryArrow = {
 export type QueryArrowSourceType = 'refinement' | 'source_reference';
 
 export type QueryArrowSource =
-  | QueryArrowSourceWithRefinement
-  | QueryArrowSourceWithSourceReference;
+  QueryArrowSourceWithRefinement | QueryArrowSourceWithSourceReference;
 
 export type QueryArrowSourceWithRefinement = {
   kind: 'refinement';
@@ -2584,14 +2578,7 @@ export type TimestampLiteral = {
 };
 
 export type TimestampTimeframe =
-  | 'year'
-  | 'quarter'
-  | 'month'
-  | 'week'
-  | 'day'
-  | 'hour'
-  | 'minute'
-  | 'second';
+  'year' | 'quarter' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second';
 
 export type TimestampType = {
   timeframe?: TimestampTimeframe;
@@ -2623,10 +2610,7 @@ export type ViewArrow = {
 };
 
 export type ViewDefinitionType =
-  | 'arrow'
-  | 'view_reference'
-  | 'refinement'
-  | 'segment';
+  'arrow' | 'view_reference' | 'refinement' | 'segment';
 
 export type ViewDefinition =
   | ViewDefinitionWithArrow

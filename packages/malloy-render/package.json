@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.422",
+  "version": "0.0.425",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/module/index.d.ts",
@@ -31,12 +31,12 @@
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/malloy-interfaces": "0.0.422",
-    "@malloydata/malloy-tag": "0.0.422",
-    "@tanstack/solid-virtual": "^3.13.29",
+    "@malloydata/malloy-interfaces": "0.0.425",
+    "@malloydata/malloy-tag": "0.0.425",
+    "@tanstack/solid-virtual": "^3.13.33",
     "lodash": "^4.18.1",
     "luxon": "^3.7.2",
-    "solid-js": "^1.9.13",
+    "solid-js": "^1.9.14",
     "ssf": "^0.11.2",
     "us-atlas": "^3.0.1",
     "vega": "^6.2.0",
@@ -44,8 +44,8 @@
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@malloydata/db-duckdb": "0.0.422",
-    "@malloydata/malloy": "0.0.422",
+    "@malloydata/db-duckdb": "0.0.425",
+    "@malloydata/malloy": "0.0.425",
     "@storybook/addon-essentials": "^8.6.18",
     "@storybook/addon-interactions": "^8.6.18",
     "@storybook/addon-links": "^8.6.15",
@@ -61,7 +61,7 @@
     "esbuild": "0.28.1",
     "storybook": "^8.6.15",
     "vite": "^6.4.2",
-    "vite-plugin-dts": "^5.0.2",
+    "vite-plugin-dts": "^5.0.3",
     "vite-plugin-solid": "^2.11.12",
     "vite-tsconfig-paths": "^5.1.4"
   }

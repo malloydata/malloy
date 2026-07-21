@@ -16,7 +16,6 @@ import type {HasParameter} from '../parameters/has-parameter';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {MalloyElement, DocStatementList} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
-import {extendNoteMethod} from '../types/noteable';
 import type {SourceQueryElement} from '../source-query-elements/source-query-element';
 import {getPartitionCompositeDesc} from '../../composite-source-utils';
 
@@ -40,8 +39,7 @@ export class DefineSource
     }
   }
   readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: AnnotationsDef;
+  ownAnnotation?: AnnotationsDef;
 
   execute(doc: Document): void {
     if (doc.modelEntry(this.name)) {
@@ -66,13 +64,13 @@ export class DefineSource
       as: this.name,
       location: this.location,
     };
-    if (this.note) {
+    if (this.ownAnnotation) {
       entry.annotations = structDef.annotations
         ? {
-            ...this.note,
+            ...this.ownAnnotation,
             inherits: structDef.annotations,
           }
-        : {...this.note};
+        : {...this.ownAnnotation};
     }
     if (isSourceDef(entry)) {
       // Every source gets a stable identity for its own definition. referenceID
@@ -87,7 +85,7 @@ export class DefineSource
     }
     entry.partitionComposite =
       getPartitionCompositeDesc(
-        this.note,
+        this.ownAnnotation,
         structDef,
         this.sourceExpr ?? this
       ) ?? structDef.partitionComposite;

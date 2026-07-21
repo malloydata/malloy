@@ -528,8 +528,17 @@ export class DatabricksDialect extends Dialect {
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
-    let lVal = df.kids.left.sql;
-    let rVal = df.kids.right.sql;
+    const from = df.kids.left;
+    const to = df.kids.right;
+    let lVal = from.sql;
+    let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(df.units)
+    ) {
+      return `TIMESTAMPDIFF(${df.units.toUpperCase()}, ${lVal}, ${rVal})`;
+    }
     if (inSeconds[df.units]) {
       lVal = `UNIX_MICROS(CAST(${lVal} AS TIMESTAMP))`;
       rVal = `UNIX_MICROS(CAST(${rVal} AS TIMESTAMP))`;

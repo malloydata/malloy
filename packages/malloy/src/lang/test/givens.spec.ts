@@ -187,7 +187,7 @@ describe('given: declarations', () => {
         # label="Tenant"
         TENANT :: string
     `);
-    expect(givens[0].note?.notes?.map(n => n.text)).toEqual([
+    expect(givens[0].ownAnnotation?.notes?.map(n => n.text)).toEqual([
       '# label="Tenant"\n',
     ]);
   });
@@ -202,7 +202,7 @@ describe('given: declarations', () => {
     // Block notes from the `given:` statement are pushed onto each child
     // declaration's note via extendNote, the same way DefineSourceList works.
     for (const g of givens) {
-      const blockNotes = g.note?.blockNotes?.map(n => n.text) ?? [];
+      const blockNotes = g.ownAnnotation?.blockNotes?.map(n => n.text) ?? [];
       expect(blockNotes).toContain('# block_tag\n');
     }
   });
@@ -870,8 +870,7 @@ describe('given: per-Query givenUsage summary', () => {
     // minimal set for that branch. Cases where composite resolution doesn't
     // run (e.g. composites as join targets) are not exercised here — the
     // defensive `composite` arm of `givenUsageOfSource` would conservatively
-    // union over branches if it were ever reached. See "Composite sources
-    // — partial coverage" in ~/ctx/mp/implementation.md.
+    // union over branches if it were ever reached.
     test('non-discriminating query picks the first branch', () => {
       const md = translateOK(`
         ##! experimental.composite_sources

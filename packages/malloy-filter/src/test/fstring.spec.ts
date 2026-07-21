@@ -170,6 +170,19 @@ describe('string filter expressions', () => {
   test('is not empty', () => {
     expect('-empty').isStringFilter({operator: 'empty', not: true});
   });
+  test('is none', () => {
+    expect('none').isStringFilter({operator: 'none'});
+    expect('NONE').isStringFilter({operator: 'none'}, 'none');
+  });
+  test('is not none', () => {
+    expect('-none').isStringFilter({operator: 'none', not: true});
+  });
+  test('= none (escaped literal round-trips both ways)', () => {
+    expect('\\none').isStringFilter({operator: '=', values: ['none']});
+  });
+  test('nonesuch is a literal, not the keyword', () => {
+    expect('nonesuch').isStringFilter({operator: '=', values: ['nonesuch']});
+  });
   test('nulldata', () => {
     expect('nulldata').isStringFilter({operator: '=', values: ['nulldata']});
   });

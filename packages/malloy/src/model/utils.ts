@@ -170,7 +170,7 @@ export function makeDigest(...parts: (string | undefined)[]): string {
   const combined = parts
     .map(p => (p === undefined ? '{undefined}' : `${p.length}:${p}`))
     .join('/');
-  // @noble/hashes is pinned to v1 (v2 is ESM-only — see DEPENDENCY-MANAGEMENT.md).
+  // @noble/hashes is pinned to v1 (v2 is ESM-only — see docs/dependency-management/CONTEXT.md).
   // v1's sha256 also accepts a string directly, but we utf8-encode explicitly so the
   // digest is stable and unambiguous (and identical to the v2 form we briefly used).
   return bytesToHex(sha256(utf8ToBytes(combined)));

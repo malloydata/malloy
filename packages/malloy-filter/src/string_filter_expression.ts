@@ -70,6 +70,8 @@ export const StringFilterExpression = {
         return sc.not ? '-null' : 'null';
       case 'empty':
         return sc.not ? '-empty' : 'empty';
+      case 'none':
+        return sc.not ? '-none' : 'none';
     }
   },
 };

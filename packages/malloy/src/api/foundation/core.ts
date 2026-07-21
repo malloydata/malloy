@@ -1171,12 +1171,7 @@ export interface RuntimeContext {
 }
 
 export type ReferenceKind =
-  | 'field'
-  | 'join'
-  | 'explore'
-  | 'query'
-  | 'sqlBlock'
-  | 'given';
+  'field' | 'join' | 'explore' | 'query' | 'sqlBlock' | 'given';
 
 const REFERENCE_KIND_BY_IR_TYPE: Record<
   DocumentReference['type'],
@@ -1757,14 +1752,19 @@ export class PersistSource implements Taggable {
     const sd = this.persistableDef;
     const queryModel = this.model.queryModel;
 
+    // Compile with finalize=false so this SQL is the bare source SELECT.
+    // The build-time key (makeBuildId over this SQL) must equal the serve-time
+    // manifest lookup key, which query_query.ts recomputes from the same
+    // unfinalized SELECT; finalizing would diverge the two on dialects with a
+    // final stage (Postgres) and mis-materialize the table.
     if (sd.type === 'sql_select') {
       return getCompiledSQL(
         sd,
         options ?? {},
-        (query, opts) => queryModel.compileQuery(query, opts).sql
+        (query, opts) => queryModel.compileQuery(query, opts, false).sql
       );
     } else {
-      const compiled = queryModel.compileQuery(sd.query, options);
+      const compiled = queryModel.compileQuery(sd.query, options, false);
       return compiled.sql;
     }
   }

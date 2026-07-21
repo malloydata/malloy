@@ -40,7 +40,7 @@ export function unescape(str: string) {
  */
 export function escape(str: string) {
   const lstr = str.toLowerCase();
-  if (lstr === 'null' || lstr === 'empty') {
+  if (lstr === 'null' || lstr === 'empty' || lstr === 'none') {
     return '\\' + str;
   }
   return str.replace(/([,; |()\\%_-])/g, '\\$1');
@@ -137,6 +137,9 @@ export function matchOp(matchSrc: string): StringFilter {
   }
   if (matchTxt.toLowerCase() === 'empty') {
     return {operator: 'empty'};
+  }
+  if (matchTxt.toLowerCase() === 'none') {
+    return {operator: 'none'};
   }
   return {operator: '=', values: [unescape(matchTxt)]};
 }

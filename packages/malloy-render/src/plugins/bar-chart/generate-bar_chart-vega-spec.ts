@@ -199,6 +199,7 @@ export function generateBarChartVegaSpecV2(
    *************************************/
 
   const isGrouping = hasSeries && !settings.isStack;
+  // Docs: "stack bars when a series is present", so y0/y1 exist only when both hold.
   const isStacking = hasSeries && settings.isStack;
 
   // Calculate min/max across all y columns
@@ -386,9 +387,9 @@ export function generateBarChartVegaSpecV2(
         width: xWidth,
         y: {
           scale: 'yscale',
-          field: settings.isStack ? 'y0' : 'y',
+          field: isStacking ? 'y0' : 'y',
         },
-        y2: settings.isStack
+        y2: isStacking
           ? {'scale': 'yscale', 'field': 'y1'}
           : {'scale': 'yscale', 'value': 0},
       },
@@ -703,7 +704,7 @@ export function generateBarChartVegaSpecV2(
         name: 'yscale',
         nice: true,
         range: 'height',
-        domain: settings.isStack
+        domain: isStacking
           ? {data: 'values', field: 'y1'}
           : (chartSettings.yScale.domain ?? {data: 'values', field: 'y'}),
       },

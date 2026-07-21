@@ -463,9 +463,7 @@ function fieldItemToFragments(
 
 function fieldOperationToFragments(
   operation:
-    | Malloy.GroupBy[]
-    | Malloy.Aggregate[]
-    | Malloy.CalculateOperation[],
+    Malloy.GroupBy[] | Malloy.Aggregate[] | Malloy.CalculateOperation[],
   label: string
 ): Fragment[] {
   const fragments: Fragment[] = [];

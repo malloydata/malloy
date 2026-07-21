@@ -14,8 +14,7 @@
 // take a canonical tablePath apart to talk to a metadata API.
 
 export type ValidateTablePathResult =
-  | {ok: true; canonical: string}
-  | {ok: false; error: string};
+  {ok: true; canonical: string} | {ok: false; error: string};
 
 export interface TablePathSegment {
   /** Decoded segment value: delimiters stripped, escapes unescaped. */
@@ -25,8 +24,7 @@ export interface TablePathSegment {
 }
 
 export type DecodeDottedTablePathResult =
-  | {ok: true; segments: TablePathSegment[]}
-  | {ok: false; error: string};
+  {ok: true; segments: TablePathSegment[]} | {ok: false; error: string};
 
 export type TablePathEscapeStyle = 'doubled' | 'backslash';
 

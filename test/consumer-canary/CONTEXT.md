@@ -42,11 +42,11 @@ downstream:
 
 - **bundle-check fails** → a runtime dep is not bundle-safe (a new native, or a
   bare native require). Externalizing it in the consumer is only a band-aid; the
-  fix is upstream — see `DEPENDENCY-MANAGEMENT.md`.
+  fix is upstream — see `docs/dependency-management/CONTEXT.md`.
 - **consumer-canary:jest fails** with "Unexpected token 'export'" / "Cannot use import
   statement outside a module" → a runtime dep went ESM-only. **Do not** add a
   transform here to silence it — pin the dep to its last CJS-consumable major, the
-  way `uuid` and `@noble/hashes` are pinned (`DEPENDENCY-MANAGEMENT.md`).
+  way `uuid` and `@noble/hashes` are pinned (`docs/dependency-management/CONTEXT.md`).
 
 ## Wiring
 

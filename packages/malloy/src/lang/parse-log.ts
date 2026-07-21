@@ -542,8 +542,7 @@ type MessageCodeAndParameters<T extends MessageCode> = {
 export type AnyMessageCodeAndParameters = MessageCodeAndParameters<MessageCode>;
 
 type MessageFormatter<T extends MessageCode> =
-  | MessageInfo
-  | ((parameters: MessageParameterType<T>) => MessageInfo);
+  MessageInfo | ((parameters: MessageParameterType<T>) => MessageInfo);
 
 type ErrorCodeMessageMap = {
   [key in keyof MessageParameterTypes]: MessageFormatter<key>;
