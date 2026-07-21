@@ -2114,9 +2114,28 @@ export function isCompoundArrayData(v: QueryValue): v is QueryData {
   );
 }
 
+/**
+ * Warehouse-assigned execution ids for the query that produced a result, keyed
+ * by connector name (e.g. Snowflake query id, BigQuery job id/location, Trino
+ * query id). Best-effort and connector-specific; absent when the connector has
+ * no durable server-side id. Reported, not declared — the response-side mirror
+ * of `ConnectionQueryMetadata`, typed loosely for the same reason.
+ */
+export type QueryExecutionMetadata = {
+  snowflake?: Record<string, unknown>;
+  bigquery?: Record<string, unknown>;
+  trino?: Record<string, unknown>;
+};
+
 /** Query execution stats. */
 export type QueryRunStats = {
   queryCostBytes?: number;
+  /**
+   * Warehouse-assigned execution identifiers for this query (Snowflake query
+   * id, BigQuery job id/location, Trino query id). Best-effort. See
+   * {@link QueryExecutionMetadata}.
+   */
+  executionMetadata?: QueryExecutionMetadata;
 };
 
 /** Returned Malloy query data */

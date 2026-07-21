@@ -22,6 +22,24 @@ import {toAsyncGenerator} from '@malloydata/malloy';
 // Disable snowflake-sdk logging by default (issue #2565)
 snowflake.configure({logLevel: 'OFF'});
 
+/** The Snowflake block of `RunSQLOptions.queryMetadata`. */
+interface SnowflakeQueryMetadata {
+  queryTag?: string;
+}
+
+/**
+ * Resolve the Snowflake `QUERY_TAG` from a query's metadata, if present. The
+ * tag is applied per statement via `parameters.QUERY_TAG` (see `_execute`);
+ * the connection-level `connOptions.queryTag` is deliberately never set,
+ * because the SDK overwrites caller-supplied per-statement parameters whenever
+ * it is (snowflake-sdk `statement.js`).
+ */
+export function snowflakeQueryTag(options?: RunSQLOptions): string | undefined {
+  const block = options?.queryMetadata?.snowflake as
+    SnowflakeQueryMetadata | undefined;
+  return typeof block?.queryTag === 'string' ? block.queryTag : undefined;
+}
+
 export interface ConnectionConfigFile {
   // a toml file with snowflake connection settings
   // if not provided, we will try to read ~/.snowflake/config
@@ -56,15 +74,21 @@ export class SnowflakeExecutor {
 
   private pool_: Pool<Connection>;
   private setupSQL: string | undefined;
+  // Connection-level default query tag, applied to every statement (including
+  // runtime-internal ones like schema fetches) unless a per-call queryMetadata
+  // overrides it.
+  private defaultQueryTag: string | undefined;
 
   private sessionInitialized = new WeakMap<Connection, Promise<void>>();
 
   constructor(
     connOptions: ConnectionOptions,
     poolOptions?: PoolOptions,
-    setupSQL?: string
+    setupSQL?: string,
+    defaultQueryTag?: string
   ) {
     this.setupSQL = setupSQL;
+    this.defaultQueryTag = defaultQueryTag;
     this.pool_ = snowflake.createPool(connOptions, {
       ...SnowflakeExecutor.defaultPoolOptions_,
       ...(poolOptions ?? {}),
@@ -151,13 +175,18 @@ export class SnowflakeExecutor {
     conn: Connection,
     options?: RunSQLOptions,
     timeoutMs?: number,
-    binds?: Binds
+    binds?: Binds,
+    capture?: {queryId?: string}
   ): Promise<QueryData> {
     const abortSignal = options?.abortSignal;
     // Fail fast if already aborted before we even start executing
     if (abortSignal?.aborted) {
       throw new Error('Query aborted');
     }
+    // Apply the query tag per statement (never via connOptions.queryTag — the
+    // SDK clobbers per-statement parameters when that is set).
+    const queryTag = snowflakeQueryTag(options) ?? this.defaultQueryTag;
+    const parameters = queryTag ? {QUERY_TAG: queryTag} : undefined;
     let _statement: RowStatement | undefined;
     const cancel = () => {
       _statement?.cancel();
@@ -171,6 +200,7 @@ export class SnowflakeExecutor {
         _statement = conn.execute({
           sqlText,
           binds,
+          parameters,
           complete: (
             err: SnowflakeError | undefined,
             _stmt: RowStatement,
@@ -185,6 +215,15 @@ export class SnowflakeExecutor {
             if (err) {
               reject(err);
             } else {
+              // The warehouse-assigned query id, for response-side execution
+              // metadata (best-effort; never fails the query).
+              if (capture) {
+                try {
+                  capture.queryId = _stmt.getQueryId();
+                } catch {
+                  // getQueryId can throw on statements with no server id; ignore.
+                }
+              }
               // Snowflake occasionally calls complete with no rows (e.g. DDL); without this branch
               // the Promise never settles and generic-pool holds the connection forever.
               resolve(rows ?? []);
@@ -278,11 +317,21 @@ export class SnowflakeExecutor {
     sqlText: string,
     options?: RunSQLOptions,
     timeoutMs?: number,
-    binds?: Binds
+    binds?: Binds,
+    capture?: {queryId?: string}
   ): Promise<QueryData> {
     return await this.pool_.use(async (conn: Connection) => {
       await this.ensureSessionInitialized(conn, options, timeoutMs);
-      return await this._execute(sqlText, conn, options, timeoutMs, binds);
+      // Only the data statement's id is captured — session-init statements run
+      // above without a capture object.
+      return await this._execute(
+        sqlText,
+        conn,
+        options,
+        timeoutMs,
+        binds,
+        capture
+      );
     });
   }
 
@@ -345,6 +394,9 @@ export class SnowflakeExecutor {
       throw new Error('Query aborted');
     }
 
+    // Apply the query tag per statement (see _execute).
+    const queryTag = snowflakeQueryTag(options) ?? this.defaultQueryTag;
+    const parameters = queryTag ? {QUERY_TAG: queryTag} : undefined;
     // Track the statement so abort can cancel it during conn.execute()
     let _statement: RowStatement | undefined;
     const abortSignal = options?.abortSignal;
@@ -363,6 +415,7 @@ export class SnowflakeExecutor {
         _statement = conn.execute({
           sqlText,
           streamResult: true,
+          parameters,
           complete: (err: SnowflakeError | undefined, _stmt: RowStatement) => {
             if (err) {
               if (cancelFromAbort) {

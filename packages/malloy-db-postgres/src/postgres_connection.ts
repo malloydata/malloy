@@ -89,6 +89,11 @@ interface PostgresConnectionConfiguration {
   databaseName?: string;
   connectionString?: string;
   setupSQL?: string;
+  // Session metadata applied at session open (connection-layer only in v1):
+  // `SET application_name = '<value>'` plus allowlisted session GUCs as
+  // `SET <key> = '<value>'`. Observability-only; never data identity.
+  applicationName?: string;
+  sessionSettings?: Record<string, string>;
   // Programmatic callers get pg's full ssl surface (incl. `checkServerIdentity`
   // for verify-ca). Saved/registry config is limited to the serializable
   // PostgresSSLConfig subset — see PostgresConnectionOptions.
@@ -138,6 +143,30 @@ function addTlsHint(err: unknown): unknown {
   return err;
 }
 
+// Escape a value for a single-quoted Postgres string literal (standard SQL:
+// double the single quotes; standard_conforming_strings leaves backslashes
+// literal).
+function escapePostgresString(s: string): string {
+  return s.replace(/'/g, "''");
+}
+
+// A settable GUC key must be a bare identifier (it is not quoted).
+const POSTGRES_SETTING_KEY = /^[A-Za-z_][A-Za-z0-9_.]*$/;
+
+// Deterministic serialization of session settings for the connection digest.
+// Generic GUCs alter session behaviour (like `setupSQL`, which the digest
+// already folds in), so they belong in connection identity; returns undefined
+// when unset so digests are unchanged for connections that omit them. The
+// observability-only `application_name` is deliberately excluded.
+function digestSessionSettings(
+  settings?: Record<string, string>
+): string | undefined {
+  if (!settings) return undefined;
+  const keys = Object.keys(settings).sort();
+  if (keys.length === 0) return undefined;
+  return JSON.stringify(keys.map(k => [k, settings[k]]));
+}
+
 /**
  * Decode a canonical Postgres dotted-table path into its underlying
  * identifier strings as they appear in `information_schema`. The schema
@@ -170,6 +199,8 @@ export class PostgresConnection
 {
   public readonly name: string;
   protected setupSQL: string | undefined;
+  protected applicationName: string | undefined;
+  protected sessionSettings: Record<string, string> | undefined;
   private queryOptionsReader: QueryOptionsReader = {};
   private configReader: PostgresConnectionConfigurationReader = {};
 
@@ -196,9 +227,17 @@ export class PostgresConnection
         this.configReader = configReader;
       }
     } else {
-      const {name, setupSQL, ...configReader} = arg;
+      const {
+        name,
+        setupSQL,
+        applicationName,
+        sessionSettings,
+        ...configReader
+      } = arg;
       this.name = name;
       this.setupSQL = setupSQL;
+      this.applicationName = applicationName;
+      this.sessionSettings = sessionSettings;
       this.configReader = configReader;
     }
     if (queryOptionsReader) {
@@ -243,15 +282,18 @@ export class PostgresConnection
     if (typeof this.configReader !== 'function') {
       const {host, port, username, databaseName, connectionString} =
         this.configReader;
-      return makeDigest(
+      const parts: (string | undefined)[] = [
         'postgres',
         host,
         port !== undefined ? String(port) : undefined,
         username,
         databaseName,
         connectionString,
-        this.setupSQL
-      );
+        this.setupSQL,
+      ];
+      const sessionSettings = digestSessionSettings(this.sessionSettings);
+      if (sessionSettings !== undefined) parts.push(sessionSettings);
+      return makeDigest(...parts);
     }
     // Fall back to connection name if config is async
     return makeDigest('postgres', this.name);
@@ -500,8 +542,29 @@ export class PostgresConnection
     await this.runSQL('SELECT 1');
   }
 
+  // SET statements for the connection-level application_name and session
+  // settings, run at every session open (both the non-pooled and pooled
+  // hooks). Non-identifier GUC keys are skipped — the ingestion layer
+  // validates strictly; the driver stays lenient.
+  protected sessionMetadataStatements(): string[] {
+    const statements: string[] = [];
+    if (this.applicationName !== undefined) {
+      statements.push(
+        `SET application_name = '${escapePostgresString(this.applicationName)}'`
+      );
+    }
+    for (const [key, value] of Object.entries(this.sessionSettings ?? {})) {
+      if (!POSTGRES_SETTING_KEY.test(key)) continue;
+      statements.push(`SET ${key} = '${escapePostgresString(value)}'`);
+    }
+    return statements;
+  }
+
   public async connectionSetup(client: Client): Promise<void> {
     await client.query("SET TIME ZONE 'UTC'");
+    for (const stmt of this.sessionMetadataStatements()) {
+      await client.query(stmt);
+    }
     if (this.setupSQL) {
       for (const stmt of this.setupSQL.split(';\n')) {
         const trimmed = stmt.trim();
@@ -610,6 +673,9 @@ export class PooledPostgresConnection
       this._pool = new Pool(this.buildClientConfig(await this.readConfig()));
       this._pool.on('acquire', client => {
         client.query("SET TIME ZONE 'UTC'");
+        for (const stmt of this.sessionMetadataStatements()) {
+          client.query(stmt);
+        }
         if (this.setupSQL) {
           for (const stmt of this.setupSQL.split(';\n')) {
             const trimmed = stmt.trim();

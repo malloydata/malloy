@@ -78,6 +78,7 @@ export type {
   QueryResult,
   QueryResultDef,
   QueryRunStats,
+  QueryExecutionMetadata,
   QueryScalar,
   NamedQueryDef,
   NamedModelObject,
@@ -215,7 +216,11 @@ export type {
 export type {Overlay, ConfigOverlays} from './api/foundation';
 export type {FilesystemContext, MalloyConfigOptions} from './api/foundation';
 export type {RuntimeContext} from './api/foundation';
-export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
+export type {
+  ConnectionQueryMetadata,
+  QueryOptionsReader,
+  RunSQLOptions,
+} from './run_sql_options';
 export type {
   EventStream,
   ModelString,

@@ -120,6 +120,34 @@ export interface DatabricksConfiguration {
   defaultCatalog?: string;
   defaultSchema?: string;
   setupSQL?: string;
+  // Session metadata applied at session open (connection-layer only in v1):
+  // query tags emitted as `SET QUERY_TAGS['<key>'] = '<value>'` and other
+  // allowlisted session settings as `SET <key> = '<value>'`.
+  queryTags?: Record<string, string>;
+  sessionSettings?: Record<string, string>;
+}
+
+// Escape a value for a single-quoted Databricks/Spark SQL string literal
+// (backslash is the escape character).
+function escapeDatabricksString(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+// A settable session-setting key must be a bare identifier (it is not quoted).
+const SESSION_SETTING_KEY = /^[A-Za-z_][A-Za-z0-9_.]*$/;
+
+// Deterministic serialization of session settings for the connection digest.
+// Generic session settings alter session behaviour (like `setupSQL`, which the
+// digest already folds in), so they belong in connection identity; returns
+// undefined when unset so digests are unchanged for connections that omit them.
+// Pure query tags are observability-only and deliberately excluded.
+function digestSessionSettings(
+  settings?: Record<string, string>
+): string | undefined {
+  if (!settings) return undefined;
+  const keys = Object.keys(settings).sort();
+  if (keys.length === 0) return undefined;
+  return JSON.stringify(keys.map(k => [k, settings[k]]));
 }
 
 export class DatabricksConnection
@@ -184,6 +212,11 @@ export class DatabricksConnection
     // Malloy timestamps are UTC wallclock
     await this.executeRaw("SET TIME ZONE 'UTC'");
 
+    // Session metadata (query tags + allowlisted session settings)
+    for (const stmt of this.sessionMetadataStatements()) {
+      await this.executeRaw(stmt);
+    }
+
     // Set catalog and schema if configured
     if (this.config.defaultCatalog) {
       await this.executeRaw(`USE CATALOG ${this.config.defaultCatalog}`);
@@ -214,6 +247,28 @@ export class DatabricksConnection
     return result;
   }
 
+  // Build the SET statements for the connection-level query tags and session
+  // settings, run once at session open. Query tags use Databricks' dedicated
+  // associative-array grammar (`SET QUERY_TAGS['key'] = 'value'`); generic
+  // settings use `SET <key> = 'value'`. Non-identifier setting keys are
+  // skipped (the ingestion layer validates strictly; the driver stays lenient).
+  private sessionMetadataStatements(): string[] {
+    const statements: string[] = [];
+    for (const [key, value] of Object.entries(this.config.queryTags ?? {})) {
+      statements.push(
+        `SET QUERY_TAGS['${escapeDatabricksString(key)}'] = ` +
+          `'${escapeDatabricksString(value)}'`
+      );
+    }
+    for (const [key, value] of Object.entries(
+      this.config.sessionSettings ?? {}
+    )) {
+      if (!SESSION_SETTING_KEY.test(key)) continue;
+      statements.push(`SET ${key} = '${escapeDatabricksString(value)}'`);
+    }
+    return statements;
+  }
+
   async manifestTemporaryTable(sqlCommand: string): Promise<string> {
     const hash = makeDigest(sqlCommand);
     const tableName = `tt${hash.slice(0, this.dialect.maxIdentifierLength - 2)}`;
@@ -239,14 +294,17 @@ export class DatabricksConnection
 
   public getDigest(): string {
     const {host, path, defaultCatalog, defaultSchema} = this.config;
-    return makeDigest(
+    const parts: (string | undefined)[] = [
       'databricks',
       host,
       path,
       defaultCatalog,
       defaultSchema,
-      this.config.setupSQL
-    );
+      this.config.setupSQL,
+    ];
+    const sessionSettings = digestSessionSettings(this.config.sessionSettings);
+    if (sessionSettings !== undefined) parts.push(sessionSettings);
+    return makeDigest(...parts);
   }
 
   canPersist(): this is PersistSQLResults {

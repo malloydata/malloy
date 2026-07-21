@@ -25,6 +25,7 @@ import type {
   QueryRecord,
   QueryOptionsReader,
   QueryRunStats,
+  QueryExecutionMetadata,
   RunSQLOptions,
   StreamingConnection,
   TableSourceDef,
@@ -84,6 +85,30 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   client_email?: string;
   private_key?: string;
   setupSQL?: string;
+}
+
+/** The BigQuery block of `RunSQLOptions.queryMetadata`. */
+interface BigQueryQueryMetadata {
+  jobLabels?: Record<string, string>;
+}
+
+/** Read the BigQuery job labels out of a query's metadata, if present. */
+function bigQueryJobLabels(
+  options?: RunSQLOptions
+): Record<string, string> | undefined {
+  const block = options?.queryMetadata?.bigquery as
+    BigQueryQueryMetadata | undefined;
+  const labels = block?.jobLabels;
+  return labels && typeof labels === 'object' ? labels : undefined;
+}
+
+/** Merge two label maps (the second wins per key); undefined if both empty. */
+function mergeLabels(
+  base?: Record<string, string>,
+  override?: Record<string, string>
+): Record<string, string> | undefined {
+  if (!base && !override) return undefined;
+  return {...base, ...override};
 }
 
 interface SchemaInfo {
@@ -250,14 +275,18 @@ export class BigQueryConnection
 
   private async _runSQL(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {},
+    options: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<{
     data: MalloyQueryData;
     schema: bigquery.ITableFieldSchema | undefined;
   }> {
+    const {rowLimit, abortSignal} = options;
     const defaultOptions = this.readQueryOptions();
     const pageSize = rowLimit ?? defaultOptions.rowLimit;
+    // Per-call labels; the connection-default labels are merged in
+    // createBigQueryJob so they also cover runtime-internal jobs.
+    const perCallLabels = bigQueryJobLabels(options);
 
     try {
       const queryResultsOptions: QueryResultsOptions = {
@@ -265,11 +294,13 @@ export class BigQueryConnection
         startIndex: rowIndex.toString(),
       };
 
+      const capture: {jobId?: string; location?: string} = {};
       const jobResult = await this.createBigQueryJobAndGetResults(
         sqlCommand,
-        undefined,
+        perCallLabels ? {labels: perCallLabels} : undefined,
         queryResultsOptions,
-        abortSignal
+        abortSignal,
+        capture
       );
 
       const totalRows = +(jobResult[2]?.totalRows
@@ -278,11 +309,21 @@ export class BigQueryConnection
 
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
       const queryCostBytes = jobResult[2]?.totalBytesProcessed;
+      const executionMetadata: QueryExecutionMetadata | undefined =
+        capture.jobId
+          ? {
+              bigquery: {
+                jobId: capture.jobId,
+                ...(capture.location ? {location: capture.location} : {}),
+              },
+            }
+          : undefined;
       const data: MalloyQueryData = {
         rows: jobResult[0],
         totalRows,
         runStats: {
           queryCostBytes: queryCostBytes ? +queryCostBytes : undefined,
+          executionMetadata,
         },
       };
       const schema = jobResult[2]?.schema;
@@ -687,7 +728,8 @@ export class BigQueryConnection
     sqlCommand: string,
     createQueryJobOptions?: Query,
     getQueryResultsOptions?: QueryResultsOptions,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    capture?: {jobId?: string; location?: string}
   ): Promise<
     PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
   > {
@@ -696,6 +738,12 @@ export class BigQueryConnection
         query: sqlCommand,
         ...createQueryJobOptions,
       });
+      // The warehouse-assigned job id/location, for response-side execution
+      // metadata (joins INFORMATION_SCHEMA.JOBS). Best-effort.
+      if (capture) {
+        capture.jobId = job.id ?? undefined;
+        capture.location = job.location ?? undefined;
+      }
       const cancel = () => {
         job.cancel();
       };
@@ -740,12 +788,20 @@ export class BigQueryConnection
     if (options.query) {
       options.query = this.prependSetupSQL(options.query);
     }
+    // The connection-default labels ride the query-options reader and apply to
+    // every job (including runtime-internal ones like schema fetches); any
+    // per-call labels passed in `options.labels` override them per key.
+    const labels = mergeLabels(
+      bigQueryJobLabels(this.readQueryOptions()),
+      options.labels
+    );
     const [job] = await this.bigQuery.createQueryJob({
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
       jobTimeoutMs: Number(this.config.timeoutMs) || TIMEOUT_MS,
       ...options,
+      ...(labels ? {labels} : {}),
     });
     return job;
   }
