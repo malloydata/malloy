@@ -8,6 +8,7 @@ import type {
   JSONSchemaObject,
   JSONSchemaArray,
   JSONSchemaString,
+  JSONSchemaNumber,
   JSONSchemaBoolean,
   JSONSchemaOneOf,
 } from '@/api/json-schema-types';
@@ -19,6 +20,17 @@ export type ComboMarkType = 'bar' | 'line';
 // is implied by the channel: `yChannel` is the left axis, `y2Channel` the right.
 export type ComboYChannel = YChannel & {
   chart: ComboMarkType;
+  // Line-only styling (ignored when `chart` is 'bar'):
+  // stroke width in px (default 2 when unset).
+  lineWidth?: number;
+  // force point (dot) visibility; unset = auto (dots hidden once a series has
+  // more than one point, matching line_chart).
+  showPoints?: boolean;
+  // Explicit axis domain bounds. Pinning both axes to comparable ranges is how
+  // you defuse the misleading-crossover pitfall of independent dual scales.
+  // Either end may be pinned alone; the unpinned end still comes from the data.
+  min?: number;
+  max?: number;
 };
 
 // TypeScript type definition
@@ -80,6 +92,10 @@ export interface IComboChartSettingsSchema extends JSONSchemaObject {
         type: JSONSchemaString;
         independent: JSONSchemaBoolean;
         chart: JSONSchemaString;
+        lineWidth: JSONSchemaNumber;
+        showPoints: JSONSchemaBoolean;
+        min: JSONSchemaNumber;
+        max: JSONSchemaNumber;
       };
     };
     y2Channel: JSONSchemaObject & {
@@ -90,6 +106,10 @@ export interface IComboChartSettingsSchema extends JSONSchemaObject {
         type: JSONSchemaString;
         independent: JSONSchemaBoolean;
         chart: JSONSchemaString;
+        lineWidth: JSONSchemaNumber;
+        showPoints: JSONSchemaBoolean;
+        min: JSONSchemaNumber;
+        max: JSONSchemaNumber;
       };
     };
     interactive: JSONSchemaBoolean;
@@ -190,6 +210,31 @@ export const comboChartSettingsSchema: IComboChartSettingsSchema = {
           enum: ['bar', 'line'],
           default: 'bar',
         },
+        lineWidth: {
+          title: 'Left Line Width',
+          description:
+            'Stroke width (px) when this axis is drawn as a line. Ignored for bars.',
+          type: 'number',
+          minimum: 0,
+        },
+        showPoints: {
+          title: 'Left Line Points',
+          description:
+            'Show point markers on the line. Unset = auto (hidden once a series has more than one point). Ignored for bars.',
+          type: 'boolean',
+        },
+        min: {
+          title: 'Left Axis Min',
+          description:
+            'Pin the bottom of the left axis. Unset = derived from the data.',
+          type: 'number',
+        },
+        max: {
+          title: 'Left Axis Max',
+          description:
+            'Pin the top of the left axis. Unset = derived from the data.',
+          type: 'number',
+        },
       },
       required: ['fields', 'type', 'chart'],
     },
@@ -230,6 +275,31 @@ export const comboChartSettingsSchema: IComboChartSettingsSchema = {
           type: 'string',
           enum: ['bar', 'line'],
           default: 'line',
+        },
+        lineWidth: {
+          title: 'Right Line Width',
+          description:
+            'Stroke width (px) when this axis is drawn as a line. Ignored for bars.',
+          type: 'number',
+          minimum: 0,
+        },
+        showPoints: {
+          title: 'Right Line Points',
+          description:
+            'Show point markers on the line. Unset = auto (hidden once a series has more than one point). Ignored for bars.',
+          type: 'boolean',
+        },
+        min: {
+          title: 'Right Axis Min',
+          description:
+            'Pin the bottom of the right axis. Unset = derived from the data.',
+          type: 'number',
+        },
+        max: {
+          title: 'Right Axis Max',
+          description:
+            'Pin the top of the right axis. Unset = derived from the data.',
+          type: 'number',
         },
       },
       required: ['fields', 'type', 'chart'],

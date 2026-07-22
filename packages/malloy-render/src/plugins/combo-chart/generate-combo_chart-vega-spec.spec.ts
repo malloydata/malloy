@@ -32,6 +32,8 @@ import {
   generateComboChartVegaSpec,
   type ComboChartSpecInputs,
 } from '@/plugins/combo-chart/generate-combo_chart-vega-spec';
+import {comboChartSettingsToTag} from '@/plugins/combo-chart/settings-to-tag';
+import {defaultComboChartSettings} from '@/plugins/combo-chart/combo-chart-settings';
 
 async function buildCombo(source: string, query: string) {
   const {root, rootCell, metadata} = await runChartQuery(source, query);
@@ -173,6 +175,114 @@ describe('combo_chart dual axis structure', () => {
   }, 60000);
 });
 
+describe('combo_chart hover targets', () => {
+  // The full-band `x_highlight` rect is the sole interactive mark; bars, lines
+  // and points must be non-interactive so hover falls through to it and the
+  // tooltip fires on top of a bar/point, not only in the gaps.
+  test('bars, lines and points are non-interactive', async () => {
+    const {spec} = await buildComboProps(
+      SOURCE,
+      `# combo_chart { y.chart=line y2.chart=bar } ${TWO_MEASURES}`
+    );
+    const bars = findMark(spec.marks, 'right_values_bars');
+    const lines = findMark(spec.marks, 'left_values_lines');
+    const points = findMark(spec.marks, 'left_values_points');
+    expect(bars?.interactive).toBe(false);
+    expect(lines?.interactive).toBe(false);
+    expect(points?.interactive).toBe(false);
+    // The highlight target stays interactive (default true, not disabled).
+    const highlight = findMark(spec.marks, 'x_highlight');
+    expect(highlight?.interactive).not.toBe(false);
+  }, 60000);
+});
+
+describe('combo_chart line styling', () => {
+  test('y2.line_width sets the line stroke width', async () => {
+    const {spec} = await buildComboProps(
+      SOURCE,
+      `# combo_chart { y2.line_width=5 } ${TWO_MEASURES}`
+    );
+    const line = findMark(spec.marks, 'right_values_lines');
+    expect((line?.encode?.enter?.strokeWidth as {value: number})?.value).toBe(
+      5
+    );
+  }, 60000);
+
+  test('default line stroke width is 2', async () => {
+    const {spec} = await buildComboProps(
+      SOURCE,
+      `# combo_chart ${TWO_MEASURES}`
+    );
+    const line = findMark(spec.marks, 'right_values_lines');
+    expect((line?.encode?.enter?.strokeWidth as {value: number})?.value).toBe(
+      2
+    );
+  }, 60000);
+
+  test('points=false hides dots; default auto-hides multi-point series', async () => {
+    const forced = await buildComboProps(
+      SOURCE,
+      `# combo_chart { y2.points=false } ${TWO_MEASURES}`
+    );
+    const forcedPoints = findMark(forced.spec.marks, 'right_values_points');
+    expect(
+      (forcedPoints?.encode?.update?.fillOpacity as {value: number})?.value
+    ).toBe(0);
+
+    const auto = await buildComboProps(SOURCE, `# combo_chart ${TWO_MEASURES}`);
+    const autoPoints = findMark(auto.spec.marks, 'right_values_points');
+    // Auto mode carries the count-based signal rule, not a fixed opacity.
+    expect(JSON.stringify(autoPoints?.encode?.update?.fillOpacity)).toContain(
+      'item.mark.group.datum.count'
+    );
+  }, 60000);
+
+  test('settings round-trip: y2 line_width / points serialize back to tags', () => {
+    const tag = comboChartSettingsToTag({
+      ...defaultComboChartSettings,
+      xChannel: {...defaultComboChartSettings.xChannel, fields: ['x']},
+      yChannel: {...defaultComboChartSettings.yChannel, fields: ['a']},
+      y2Channel: {
+        ...defaultComboChartSettings.y2Channel,
+        fields: ['b'],
+        lineWidth: 4,
+        showPoints: false,
+      },
+    });
+    expect(tag.numeric('viz', 'y2', 'line_width')).toBe(4);
+    expect(tag.text('viz', 'y2', 'points')).toBe('false');
+  });
+});
+
+describe('combo_chart axis bounds', () => {
+  test('y.min/y.max and y2.min/y2.max pin the scale domains', async () => {
+    const {props, settings} = await buildCombo(
+      SOURCE,
+      `# combo_chart { y.min=0 y.max=200 y2.max=50 } ${TWO_MEASURES}`
+    );
+    expect(settings.yChannel.min).toBe(0);
+    expect(settings.yChannel.max).toBe(200);
+    expect(settings.y2Channel.max).toBe(50);
+    // domainMin/domainMax pin the endpoints regardless of the domain source
+    // (a fixed domain, the data-driven fallback, or an independent axis).
+    const yscale = props.spec.scales?.find(s => s.name === 'yscale') as {
+      domainMin?: number;
+      domainMax?: number;
+    };
+    expect(yscale?.domainMin).toBe(0);
+    expect(yscale?.domainMax).toBe(200);
+    // Right axis pins only max; min is left unset (data-driven).
+    const yscaleRight = props.spec.scales?.find(
+      s => s.name === 'yscaleRight'
+    ) as {
+      domainMin?: number;
+      domainMax?: number;
+    };
+    expect(yscaleRight?.domainMax).toBe(50);
+    expect(yscaleRight?.domainMin).toBeUndefined();
+  }, 60000);
+});
+
 describe('combo_chart validation', () => {
   test('throws when there is only one measure (no second axis possible)', async () => {
     const {root} = await runChartQuery(
@@ -186,5 +296,14 @@ describe('combo_chart validation', () => {
       `
     );
     expect(() => getComboChartSettings(root)).toThrow(/two measures/);
+  }, 60000);
+
+  test('invalid y.chart falls back to the channel default (bar)', async () => {
+    const {settings} = await buildCombo(
+      SOURCE,
+      `# combo_chart { y.chart=pie } ${TWO_MEASURES}`
+    );
+    // Invalid mark type must not drive behavior; it falls back to the default.
+    expect(settings.yChannel.chart).toBe('bar');
   }, 60000);
 });

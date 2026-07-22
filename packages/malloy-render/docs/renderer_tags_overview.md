@@ -151,13 +151,20 @@ measures.
   - Syntax: `# combo_chart { y2=conversion_rate }`
 - `.y.chart` / `.y2.chart`: Mark type for each axis — `bar` or `line`. Defaults: `y` is `bar`, `y2` is `line`. Assign the marks to get bar-over-line or line-over-bar.
   - Syntax: `# combo_chart { y.chart=line y2.chart=bar }`
+- `.y.line_width` / `.y2.line_width`: Stroke width in px for a line axis (default `2`). Ignored for bar axes.
+  - Syntax: `# combo_chart { y2.line_width=3 }`
+- `.y.points` / `.y2.points`: Show point markers on a line. Default is auto — dots are hidden once a series has more than one point (matching `# line_chart`), shown for a single-point series or on hover. Set `points=true` to always show dots, `points=false` to always hide them. Ignored for bar axes.
+  - Syntax: `# combo_chart { y2.points=false }`
 - `.x`, `.title`, `.subtitle`, `.size`: Similar to `# bar_chart`.
 - `.y.independent` / `.y2.independent`: Controls each axis's domain sharing across nested charts.
+- `.y.min` / `.y.max` / `.y2.min` / `.y2.max`: Pin an axis's domain bounds. Either end can be pinned on its own; the other still comes from the data. Pinning both axes to comparable ranges is how you defuse the misleading-crossover pitfall below.
+  - Syntax: `# combo_chart { y.min=0 y2.min=0 y2.max=100 }`
 
 **Axis scaling:** each axis is scaled independently from its own measures (the
 left/bar axis includes zero). Because the two scales are independent, where the
 bars and line cross is an artifact of the chosen ranges, not the data — use the
-chart to compare *trends*, not absolute crossover points.
+chart to compare *trends*, not absolute crossover points, or pin the axes with
+`y.min`/`y.max`/`y2.min`/`y2.max` to make the crossover meaningful.
 
 **Examples:**
 

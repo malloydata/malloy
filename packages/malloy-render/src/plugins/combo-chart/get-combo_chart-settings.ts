@@ -66,6 +66,35 @@ export function getComboChartSettings(
     return defaultComboChartSettings.yChannel.independent;
   };
 
+  // Per-axis line styling (only meaningful when the channel draws a line).
+  // `line_width` is a stroke width in px; `points` forces dot visibility
+  // (`points=false` hides, `points`/`points=true` shows), unset = auto.
+  const parseLineStyle = (
+    channel: 'y' | 'y2'
+  ): {lineWidth?: number; showPoints?: boolean} => {
+    const lineWidth = vizTag.numeric(channel, 'line_width');
+    const showPoints = vizTag.has(channel, 'points')
+      ? vizTag.text(channel, 'points') !== 'false'
+      : undefined;
+    return {
+      ...(lineWidth !== undefined && {lineWidth}),
+      ...(showPoints !== undefined && {showPoints}),
+    };
+  };
+
+  // Explicit axis domain bounds (`y.min`/`y.max`/`y2.min`/`y2.max`). Either end
+  // may be pinned on its own.
+  const parseAxisBounds = (
+    channel: 'y' | 'y2'
+  ): {min?: number; max?: number} => {
+    const min = vizTag.numeric(channel, 'min');
+    const max = vizTag.numeric(channel, 'max');
+    return {
+      ...(min !== undefined && {min}),
+      ...(max !== undefined && {max}),
+    };
+  };
+
   // X-axis limit
   const xLimit: number | 'auto' =
     vizTag.numeric('x', 'limit') ?? defaultComboChartSettings.xChannel.limit;
@@ -88,6 +117,8 @@ export function getComboChartSettings(
       vizTag.text('y', 'chart'),
       defaultComboChartSettings.yChannel.chart
     ),
+    ...parseLineStyle('y'),
+    ...parseAxisBounds('y'),
   };
 
   const y2Channel: ComboYChannel = {
@@ -98,6 +129,8 @@ export function getComboChartSettings(
       vizTag.text('y2', 'chart'),
       defaultComboChartSettings.y2Channel.chart
     ),
+    ...parseLineStyle('y2'),
+    ...parseAxisBounds('y2'),
   };
 
   // Returns undefined for unknown field refs instead of throwing so bad

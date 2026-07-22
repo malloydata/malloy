@@ -4,20 +4,9 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import type {ComboChartSettings} from './combo-chart-settings';
+import type {ComboChartSettings, ComboYChannel} from './combo-chart-settings';
 import {defaultComboChartSettings} from './combo-chart-settings';
-
-function extractFieldName(fieldPath: string): string {
-  try {
-    const parsed = JSON.parse(fieldPath);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed[parsed.length - 1];
-    }
-  } catch {
-    // If parsing fails, treat as regular string
-  }
-  return fieldPath;
-}
+import {extractFieldName} from '@/plugins/extract-field-name';
 
 export function comboChartSettingsToTag(settings: ComboChartSettings): Tag {
   let tag = new Tag({
@@ -49,6 +38,35 @@ export function comboChartSettingsToTag(settings: ComboChartSettings): Tag {
   if (settings.y2Channel?.chart !== defaultComboChartSettings.y2Channel.chart) {
     tag = tag.set(['viz', 'y2', 'chart'], settings.y2Channel.chart);
   }
+
+  // Line styling, only when set (line-only; a no-op for bar channels).
+  const setLineStyle = (channel: 'y' | 'y2', ch?: ComboYChannel) => {
+    if (!ch) return;
+    if (ch.lineWidth !== undefined) {
+      tag = tag.set(['viz', channel, 'line_width'], ch.lineWidth.toString());
+    }
+    if (ch.showPoints !== undefined) {
+      tag = tag.set(
+        ['viz', channel, 'points'],
+        ch.showPoints ? 'true' : 'false'
+      );
+    }
+  };
+  setLineStyle('y', settings.yChannel);
+  setLineStyle('y2', settings.y2Channel);
+
+  // Explicit axis bounds, only when set.
+  const setAxisBounds = (channel: 'y' | 'y2', ch?: ComboYChannel) => {
+    if (!ch) return;
+    if (ch.min !== undefined) {
+      tag = tag.set(['viz', channel, 'min'], ch.min.toString());
+    }
+    if (ch.max !== undefined) {
+      tag = tag.set(['viz', channel, 'max'], ch.max.toString());
+    }
+  };
+  setAxisBounds('y', settings.yChannel);
+  setAxisBounds('y2', settings.y2Channel);
 
   // Independence settings, only when non-default
   if (

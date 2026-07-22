@@ -367,6 +367,30 @@ const CHART_SIZES = {
 // TODO: read from theme CSS
 const ROW_HEIGHT = 28;
 
+// When d3's `.nice()` ticks stop short of the domain max, the top data point
+// would be clipped at the plot's top edge. Returns the extra virtual chart
+// height needed to keep that top value visible (0 when the top tick already
+// reaches the domain max). Callers subtract this from the top padding. Shared
+// by the primary and secondary (combo) axes so both get the same correction.
+function topTickOverflowExtra(
+  domain: number[],
+  topTick: number | undefined,
+  chartHeight: number
+): number {
+  const maxAxisVal = domain.at(1);
+  const minAxisVal = domain.at(0);
+  if (
+    topTick !== undefined &&
+    maxAxisVal !== undefined &&
+    minAxisVal !== undefined &&
+    topTick < maxAxisVal
+  ) {
+    const offRatio = (maxAxisVal - topTick) / (maxAxisVal - minAxisVal);
+    return chartHeight / (1 - offRatio) - chartHeight;
+  }
+  return 0;
+}
+
 // Compute the width/domain metrics for a single measure axis. Factored out so
 // the secondary (right) axis of a combo chart can be sized with the same rules
 // as the primary axis, without duplicating the label-measuring math.
@@ -383,6 +407,7 @@ function measureAxisMetrics(
   minExtent: number;
   maxExtent: number;
   tickCount: number;
+  topOverflowExtra: number;
   yTitleSize: number;
   labelPadding: number;
   titlePadding: number;
@@ -395,6 +420,12 @@ function measureAxisMetrics(
     .nice()
     .range([chartHeight, 0]);
   const domain = yScale.domain();
+  const tickCount = Math.ceil(chartHeight / 40);
+  const topOverflowExtra = topTickOverflowExtra(
+    domain,
+    yScale.ticks(tickCount).at(-1),
+    chartHeight
+  );
 
   const maxAxisVal = domain.at(1);
   const minAxisVal = domain.at(0);
@@ -462,7 +493,8 @@ function measureAxisMetrics(
     domain,
     minExtent: maxYLabelWidth,
     maxExtent: maxYLabelWidth,
-    tickCount: Math.ceil(chartHeight / 40),
+    tickCount,
+    topOverflowExtra,
     yTitleSize,
     labelPadding: yLabelPadding,
     titlePadding: yTitleOffset,
@@ -530,6 +562,11 @@ export function getChartLayoutSettings(
   const hasYAxis = presetSize !== 'spark';
   let topPadding = presetSize !== 'spark' ? ROW_HEIGHT - 1 : 0; // Subtract 1 to account for top border
   let yTickCount: number | undefined;
+  // Extra height each axis needs so its top data point isn't clipped (see
+  // topTickOverflowExtra). Applied once, below, using the larger of the two so
+  // a dual-axis (combo) chart protects whichever axis needs it.
+  let primaryTopOverflow = 0;
+  let y2TopOverflow = 0;
 
   const fontSettings = getAxisFontSettings(options.vegaConfig);
   const [minVal, maxVal] = options?.getYMinMax?.() ?? [
@@ -617,16 +654,14 @@ export function getChartLayoutSettings(
     );
     yAxisWidth = maxYLabelWidth + 2 * yTitleOffset + yTitleSize + yLabelPadding;
 
-    // Check whether we need to adjust axis values manually
+    // Check whether the top data point would be clipped by short nice() ticks.
     const noOfTicks = Math.ceil(chartHeight / 40);
-    const ticks = yScale.ticks(noOfTicks);
-    const topTick = ticks.at(-1);
-    if (topTick < maxAxisVal) {
-      const offRatio = (maxAxisVal - topTick) / (maxAxisVal - minAxisVal);
-      // adjust chart height
-      const newChartHeight = chartHeight / (1 - offRatio);
-      // adjust chart padding
-      topPadding = Math.max(0, topPadding - (newChartHeight - chartHeight));
+    primaryTopOverflow = topTickOverflowExtra(
+      yScale.domain(),
+      yScale.ticks(noOfTicks).at(-1),
+      chartHeight
+    );
+    if (primaryTopOverflow > 0) {
       // Hardcode # of ticks, or the resize could make room for more ticks and then screw things up
       yTickCount = noOfTicks;
     }
@@ -662,6 +697,17 @@ export function getChartLayoutSettings(
       ...(m.titleFontWeight && {titleFontWeight: m.titleFontWeight}),
     };
     y2Domain = options.independentY2 ? null : m.domain;
+    y2TopOverflow = m.topOverflowExtra;
+  }
+
+  // Reserve top room for whichever axis's top value would otherwise be clipped.
+  // A single subtraction (not one per axis) keeps a dual-axis chart from
+  // double-counting the correction.
+  if (hasYAxis) {
+    topPadding = Math.max(
+      0,
+      topPadding - Math.max(primaryTopOverflow, y2TopOverflow)
+    );
   }
 
   const isSpark = options.size.preset === 'spark';

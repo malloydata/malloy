@@ -38,6 +38,35 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   view: large is sales_and_margin_by_brand
 
   #(story)
+  // Line styling: a thicker line (y2.line_width) and no dots (y2.points=false).
+  # combo_chart { y2.line_width=4 y2.points=false }
+  view: styled_line is sales_and_margin_by_brand
+
+  #(story)
+  // Force dots on (default auto-hides them once a series has >1 point).
+  # combo_chart { y2.points=true }
+  view: forced_points is sales_and_margin_by_brand
+
+  #(story)
+  // Independent axes: both scale domains are null and fall back to the folded
+  // per-axis datasets. Regression check for the spark/independent domain bug.
+  # combo_chart { y.independent y2.independent }
+  view: independent_axes is sales_and_margin_by_brand
+
+  #(story)
+  // Sparkline size: no right axis is computed, so the right scale takes its
+  // fallback domain. The line must still scale to its own measure, not collapse.
+  # size=spark
+  # combo_chart
+  view: spark is sales_and_margin_by_brand
+
+  #(story)
+  // Pinned axis bounds: both axes start at 0 and the right axis is capped, so
+  // the bar/line crossover becomes meaningful instead of an artifact of scale.
+  # combo_chart { y.min=0 y2.min=0 y2.max=200 }
+  view: pinned_axes is sales_and_margin_by_brand
+
+  #(story)
   // Inside a dashboard tile, alongside a single-axis chart.
   # dashboard
   view: in_dashboard is {

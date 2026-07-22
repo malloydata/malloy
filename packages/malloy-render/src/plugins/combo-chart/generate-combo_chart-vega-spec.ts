@@ -100,8 +100,13 @@ export function generateComboChartVegaSpec(
   const brushXSourceId = 'brush-x_' + crypto.randomUUID();
 
   // Per-axis domain min/max across that axis's measures. Bars must start at 0;
-  // a line axis is nice-scaled without forcing 0.
-  const axisMinMax = (paths: string[], includeZero: boolean) => {
+  // a line axis is nice-scaled without forcing 0. Explicit `min`/`max` bounds
+  // (from `y.min`/`y2.max` etc.) override the corresponding end.
+  const axisMinMax = (
+    paths: string[],
+    includeZero: boolean,
+    bounds: {min?: number; max?: number}
+  ) => {
     let min = Infinity;
     let max = -Infinity;
     for (const p of paths) {
@@ -111,15 +116,17 @@ export function generateComboChartVegaSpec(
     }
     if (!isFinite(min)) min = 0;
     if (!isFinite(max)) max = 0;
-    return includeZero
-      ? ([Math.min(0, min), Math.max(0, max)] as [number, number])
-      : ([min, max] as [number, number]);
+    let lo = includeZero ? Math.min(0, min) : min;
+    let hi = includeZero ? Math.max(0, max) : max;
+    if (bounds.min !== undefined) lo = bounds.min;
+    if (bounds.max !== undefined) hi = bounds.max;
+    return [lo, hi] as [number, number];
   };
 
   const leftIsBar = settings.yChannel.chart === 'bar';
   const rightIsBar = settings.y2Channel.chart === 'bar';
-  const leftMinMax = axisMinMax(leftPaths, leftIsBar);
-  const rightMinMax = axisMinMax(rightPaths, rightIsBar);
+  const leftMinMax = axisMinMax(leftPaths, leftIsBar, settings.yChannel);
+  const rightMinMax = axisMinMax(rightPaths, rightIsBar, settings.y2Channel);
 
   const chartSettings = getChartLayoutSettings(explore, {
     size: plugin.chartDisplay.size,
@@ -153,16 +160,34 @@ export function generateComboChartVegaSpec(
       name: 'yscale',
       nice: true,
       range: 'height',
-      domain: chartSettings.yScale.domain ?? {data: 'values', field: 'yLeft'},
+      // Fallback (no precomputed domain: spark size, or `.independent`) is the
+      // per-axis extent of the folded `left_values` dataset. The raw `values`
+      // rows carry only {x, __row, __values}; the measure value lives under
+      // field `y` on the folded dataset, so the domain must read it there.
+      domain: chartSettings.yScale.domain ?? {data: 'left_values', field: 'y'},
+      // Pin either end when explicitly set; holds even for the data-driven
+      // (independent / spark) domain above.
+      ...(settings.yChannel.min !== undefined && {
+        domainMin: settings.yChannel.min,
+      }),
+      ...(settings.yChannel.max !== undefined && {
+        domainMax: settings.yChannel.max,
+      }),
     },
     {
       name: 'yscaleRight',
       nice: true,
       range: 'height',
       domain: chartSettings.y2Scale?.domain ?? {
-        data: 'values',
-        field: 'yRight',
+        data: 'right_values',
+        field: 'y',
       },
+      ...(settings.y2Channel.min !== undefined && {
+        domainMin: settings.y2Channel.min,
+      }),
+      ...(settings.y2Channel.max !== undefined && {
+        domainMax: settings.y2Channel.max,
+      }),
     },
     {
       name: 'color',
@@ -214,6 +239,33 @@ export function generateComboChartVegaSpec(
       domain: paths.map(p => explore.fieldAt(p).name),
       range: {signal: `[0, bandwidth('xscale') * ${1 - BAR_GROUP_PADDING}]`},
     });
+    // Bars are non-interactive so pointer events fall through to the
+    // full-band `x_highlight` rect behind them; that single background target
+    // drives the tooltip/brush for the whole band (see highlightGroup). Without
+    // this, bars (drawn on top) swallow the hover and the tooltip only appears
+    // in the gaps between them.
+    const barMark: RectMark = {
+      name: `${dataName}_bars`,
+      type: 'rect',
+      from: {data: `${dataName}_facet`},
+      zindex: 2,
+      interactive: false,
+      encode: {
+        enter: {
+          x: {
+            offset: {
+              signal: `scale('${offsetScaleName}', datum.series) + bandwidth('xscale') * ${
+                BAR_GROUP_PADDING / 2
+              }`,
+            } as VegaSignalRef,
+          },
+          width: {scale: offsetScaleName, band: 1},
+          y: {scale: scaleName, field: 'y'},
+          y2: {scale: scaleName, value: 0},
+        },
+        update: {fill: {scale: 'color', field: 'series'}},
+      },
+    };
     const group: GroupMark = {
       name: `${dataName}_group`,
       type: 'group',
@@ -222,36 +274,68 @@ export function generateComboChartVegaSpec(
       },
       interactive: false,
       encode: {enter: {x: {scale: 'xscale', field: 'x'}}},
-      marks: [
-        {
-          name: `${dataName}_bars`,
-          type: 'rect',
-          from: {data: `${dataName}_facet`},
-          zindex: 2,
-          encode: {
-            enter: {
-              x: {
-                offset: {
-                  signal: `scale('${offsetScaleName}', datum.series) + bandwidth('xscale') * ${
-                    BAR_GROUP_PADDING / 2
-                  }`,
-                } as VegaSignalRef,
-              },
-              width: {scale: offsetScaleName, band: 1},
-              y: {scale: scaleName, field: 'y'},
-              y2: {scale: scaleName, value: 0},
-            },
-            update: {fill: {scale: 'color', field: 'series'}},
-          },
-        } as RectMark,
-      ],
+      marks: [barMark],
     };
     marks.push(group);
   };
 
   // Build a line + points for a channel on the given scale, positioned at each
   // band's midpoint so it aligns with the categorical x-axis shared with bars.
-  const buildLine = (dataName: string, scaleName: string) => {
+  const buildLine = (
+    channel: ComboYChannel,
+    dataName: string,
+    scaleName: string
+  ) => {
+    // Point (dot) visibility: `points=true`/`false` forces it; otherwise auto —
+    // hidden once a series has more than one point (matching line_chart), shown
+    // for a single-point series or when its x-band is brushed. `count` comes
+    // from the series-facet aggregate below.
+    const pointFillOpacity =
+      channel.showPoints === true
+        ? {value: 1}
+        : channel.showPoints === false
+          ? {value: 0}
+          : [
+              {
+                test: 'isValid(brushXIn) ? indexof(brushXIn, datum.x) > -1 : false',
+                value: 1,
+              },
+              {signal: 'item.mark.group.datum.count > 1 ? 0 : 1'},
+            ];
+
+    const lineMark: LineMark = {
+      name: `${dataName}_lines`,
+      type: 'line',
+      from: {data: `${dataName}_series_facet`},
+      zindex: 3,
+      interactive: false,
+      encode: {
+        enter: {
+          x: {scale: 'xscale', field: 'x', band: 0.5},
+          y: {scale: scaleName, field: 'y'},
+          stroke: {scale: 'color', field: 'series'},
+          strokeWidth: {value: channel.lineWidth ?? 2},
+        },
+      },
+    };
+    const pointMark: SymbolMark = {
+      name: `${dataName}_points`,
+      type: 'symbol',
+      from: {data: `${dataName}_series_facet`},
+      zindex: 4,
+      interactive: false,
+      encode: {
+        enter: {
+          x: {scale: 'xscale', field: 'x', band: 0.5},
+          y: {scale: scaleName, field: 'y'},
+          fill: {scale: 'color', field: 'series'},
+          size: {value: 36},
+        },
+        update: {
+          fillOpacity: pointFillOpacity,
+        },
+      },
+    };
     const seriesGroup: GroupMark = {
       name: `${dataName}_series_group`,
       type: 'group',
@@ -260,39 +344,12 @@ export function generateComboChartVegaSpec(
           data: dataName,
           name: `${dataName}_series_facet`,
           groupby: ['series'],
+          // Per-series point count drives the auto dot-hiding rule above.
+          aggregate: {fields: [''], ops: ['count'], as: ['count']},
         },
       },
       interactive: false,
-      marks: [
-        {
-          name: `${dataName}_lines`,
-          type: 'line',
-          from: {data: `${dataName}_series_facet`},
-          zindex: 3,
-          encode: {
-            enter: {
-              x: {scale: 'xscale', field: 'x', band: 0.5},
-              y: {scale: scaleName, field: 'y'},
-              stroke: {scale: 'color', field: 'series'},
-              strokeWidth: {value: 2},
-            },
-          },
-        } as LineMark,
-        {
-          name: `${dataName}_points`,
-          type: 'symbol',
-          from: {data: `${dataName}_series_facet`},
-          zindex: 4,
-          encode: {
-            enter: {
-              x: {scale: 'xscale', field: 'x', band: 0.5},
-              y: {scale: scaleName, field: 'y'},
-              fill: {scale: 'color', field: 'series'},
-              size: {value: 36},
-            },
-          },
-        } as SymbolMark,
-      ],
+      marks: [lineMark, pointMark],
     };
     marks.push(seriesGroup);
   };
@@ -307,11 +364,38 @@ export function generateComboChartVegaSpec(
     if (channel.chart === 'bar') {
       buildBars(dataName, scaleName, offsetScaleName, channel.fields);
     } else {
-      buildLine(dataName, scaleName);
+      buildLine(channel, dataName, scaleName);
     }
   };
 
   // x-highlight band + record collection for tooltips (faceted over raw values).
+  // This full-height, full-band rect is the only interactive mark in the plot
+  // (bars/lines/points are interactive:false), so it catches hover anywhere in
+  // a band — including on top of a bar or point — and drives the tooltip/brush.
+  const xHighlightMark: RectMark = {
+    name: 'x_highlight',
+    type: 'rect',
+    from: {data: 'x_facet_values'},
+    zindex: 1,
+    encode: {
+      enter: {
+        x: {value: 0},
+        width: {scale: 'xscale', band: 1},
+        y: {value: 0},
+        y2: {signal: 'height'},
+      },
+      update: {
+        fill: {value: '#4c72ba'},
+        fillOpacity: [
+          {
+            test: 'brushXIn && length(brushXIn) > 0 && indexof(brushXIn, datum.x) > -1',
+            value: 0.1,
+          },
+          {value: 0},
+        ],
+      },
+    },
+  };
   const highlightGroup: GroupMark = {
     name: 'x_group',
     type: 'group',
@@ -329,32 +413,7 @@ export function generateComboChartVegaSpec(
     ],
     interactive: false,
     encode: {enter: {x: {scale: 'xscale', field: 'x'}}},
-    marks: [
-      {
-        name: 'x_highlight',
-        type: 'rect',
-        from: {data: 'x_facet_values'},
-        zindex: 1,
-        encode: {
-          enter: {
-            x: {value: 0},
-            width: {scale: 'xscale', band: 1},
-            y: {value: 0},
-            y2: {signal: 'height'},
-          },
-          update: {
-            fill: {value: '#4c72ba'},
-            fillOpacity: [
-              {
-                test: 'brushXIn && length(brushXIn) > 0 && indexof(brushXIn, datum.x) > -1',
-                value: 0.1,
-              },
-              {value: 0},
-            ],
-          },
-        },
-      } as RectMark,
-    ],
+    marks: [xHighlightMark],
   };
   marks.push(highlightGroup);
 
