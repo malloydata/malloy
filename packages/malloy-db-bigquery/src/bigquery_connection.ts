@@ -40,6 +40,7 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
+  labelsWithApplication,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -84,6 +85,54 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   client_email?: string;
   private_key?: string;
   setupSQL?: string;
+}
+
+// BigQuery label grammar: keys and values are lowercase, <=63 chars, and
+// [a-z0-9_-]; keys must start with a lowercase letter. Tags are transformed to
+// fit (lowercase, disallowed chars -> '_', truncate). Labels whose key can't be
+// made valid (e.g. it starts with a digit) or that exceed the 64-label cap are
+// dropped. This is the one connector that reshapes tags; the transform is
+// documented so the divergence from other engines is predictable.
+const BQ_MAX_LABELS = 64;
+const BQ_MAX_LEN = 63;
+
+function sanitizeBigQueryValue(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '_')
+    .slice(0, BQ_MAX_LEN);
+}
+
+function sanitizeBigQueryKey(key: string): string | undefined {
+  const sanitized = sanitizeBigQueryValue(key);
+  return /^[a-z]/.test(sanitized) ? sanitized : undefined;
+}
+
+/** Render a query's tags as BigQuery job labels, transformed to BQ's grammar. */
+function toBigQueryLabels(
+  options?: RunSQLOptions
+): Record<string, string> | undefined {
+  const tags = options?.queryTags;
+  if (!tags) return undefined;
+  const labels = labelsWithApplication(tags);
+  if (!labels) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(labels)) {
+    if (Object.keys(out).length >= BQ_MAX_LABELS) break;
+    const sanitizedKey = sanitizeBigQueryKey(key);
+    if (sanitizedKey === undefined) continue; // can't be a valid BQ key; drop
+    out[sanitizedKey] = sanitizeBigQueryValue(value);
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/** Merge two label maps (the second wins per key); undefined if both empty. */
+function mergeLabels(
+  base?: Record<string, string>,
+  override?: Record<string, string>
+): Record<string, string> | undefined {
+  if (!base && !override) return undefined;
+  return {...base, ...override};
 }
 
 interface SchemaInfo {
@@ -250,14 +299,18 @@ export class BigQueryConnection
 
   private async _runSQL(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {},
+    options: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<{
     data: MalloyQueryData;
     schema: bigquery.ITableFieldSchema | undefined;
   }> {
+    const {rowLimit, abortSignal} = options;
     const defaultOptions = this.readQueryOptions();
     const pageSize = rowLimit ?? defaultOptions.rowLimit;
+    // Per-call labels; the connection-default labels are merged in
+    // createBigQueryJob so they also cover runtime-internal jobs.
+    const perCallLabels = toBigQueryLabels(options);
 
     try {
       const queryResultsOptions: QueryResultsOptions = {
@@ -265,11 +318,13 @@ export class BigQueryConnection
         startIndex: rowIndex.toString(),
       };
 
+      const capture: {jobId?: string; location?: string} = {};
       const jobResult = await this.createBigQueryJobAndGetResults(
         sqlCommand,
-        undefined,
+        perCallLabels ? {labels: perCallLabels} : undefined,
         queryResultsOptions,
-        abortSignal
+        abortSignal,
+        capture
       );
 
       const totalRows = +(jobResult[2]?.totalRows
@@ -283,6 +338,10 @@ export class BigQueryConnection
         totalRows,
         runStats: {
           queryCostBytes: queryCostBytes ? +queryCostBytes : undefined,
+          executionId: capture.jobId,
+          executionInfo: capture.location
+            ? {location: capture.location}
+            : undefined,
         },
       };
       const schema = jobResult[2]?.schema;
@@ -687,7 +746,8 @@ export class BigQueryConnection
     sqlCommand: string,
     createQueryJobOptions?: Query,
     getQueryResultsOptions?: QueryResultsOptions,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    capture?: {jobId?: string; location?: string}
   ): Promise<
     PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
   > {
@@ -696,6 +756,12 @@ export class BigQueryConnection
         query: sqlCommand,
         ...createQueryJobOptions,
       });
+      // The warehouse-assigned job id/location, for response-side execution
+      // metadata (joins INFORMATION_SCHEMA.JOBS). Best-effort.
+      if (capture) {
+        capture.jobId = job.id ?? undefined;
+        capture.location = job.location ?? undefined;
+      }
       const cancel = () => {
         job.cancel();
       };
@@ -740,12 +806,20 @@ export class BigQueryConnection
     if (options.query) {
       options.query = this.prependSetupSQL(options.query);
     }
+    // The connection-default labels ride the query-options reader and apply to
+    // every job (including runtime-internal ones like schema fetches); any
+    // per-call labels passed in `options.labels` override them per key.
+    const labels = mergeLabels(
+      toBigQueryLabels(this.readQueryOptions()),
+      options.labels
+    );
     const [job] = await this.bigQuery.createQueryJob({
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
       jobTimeoutMs: Number(this.config.timeoutMs) || TIMEOUT_MS,
       ...options,
+      ...(labels ? {labels} : {}),
     });
     return job;
   }

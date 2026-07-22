@@ -13,6 +13,7 @@ import type {
   TableSourceDef,
   SQLSourceRequest,
   QueryOptionsReader,
+  QueryTags,
   RunSQLOptions,
   StructDef,
   AtomicTypeDef,
@@ -24,6 +25,7 @@ import {
   sqlKey,
   makeDigest,
   mkFieldDef,
+  labelsWithApplication,
 } from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -120,6 +122,17 @@ export interface DatabricksConfiguration {
   defaultCatalog?: string;
   defaultSchema?: string;
   setupSQL?: string;
+  // Connection-level query tags, applied at session open via Databricks'
+  // associative-array grammar `SET QUERY_TAGS['key'] = 'value'`. `labels`
+  // (with `applicationName` folded in under the reserved `application` key)
+  // become the tag set; case is preserved. Connection-layer only.
+  queryTags?: QueryTags;
+}
+
+// Escape a value for a single-quoted Databricks/Spark SQL string literal
+// (backslash is the escape character).
+function escapeDatabricksString(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 export class DatabricksConnection
@@ -184,6 +197,11 @@ export class DatabricksConnection
     // Malloy timestamps are UTC wallclock
     await this.executeRaw("SET TIME ZONE 'UTC'");
 
+    // Session metadata (query tags + session settings)
+    for (const stmt of this.sessionMetadataStatements()) {
+      await this.executeRaw(stmt);
+    }
+
     // Set catalog and schema if configured
     if (this.config.defaultCatalog) {
       await this.executeRaw(`USE CATALOG ${this.config.defaultCatalog}`);
@@ -214,6 +232,24 @@ export class DatabricksConnection
     return result;
   }
 
+  // Build the SET statement for the connection-level query tags, run once at
+  // session open. Uses Databricks' associative-array grammar, all tags set in a
+  // single statement per the SET QUERY_TAGS reference
+  // (`SET QUERY_TAGS['k1'] = 'v1', QUERY_TAGS['k2'] = 'v2'`). Values are escaped;
+  // case is preserved.
+  private sessionMetadataStatements(): string[] {
+    const labels = this.config.queryTags
+      ? labelsWithApplication(this.config.queryTags)
+      : undefined;
+    if (!labels) return [];
+    const tagAssignments = Object.entries(labels).map(
+      ([key, value]) =>
+        `QUERY_TAGS['${escapeDatabricksString(key)}'] = ` +
+        `'${escapeDatabricksString(value)}'`
+    );
+    return [`SET ${tagAssignments.join(', ')}`];
+  }
+
   async manifestTemporaryTable(sqlCommand: string): Promise<string> {
     const hash = makeDigest(sqlCommand);
     const tableName = `tt${hash.slice(0, this.dialect.maxIdentifierLength - 2)}`;
@@ -239,6 +275,9 @@ export class DatabricksConnection
 
   public getDigest(): string {
     const {host, path, defaultCatalog, defaultSchema} = this.config;
+    // queryMetadata (query tags + session settings) is session metadata and is
+    // deliberately excluded from the connection digest — changing it must not
+    // re-key the connection.
     return makeDigest(
       'databricks',
       host,

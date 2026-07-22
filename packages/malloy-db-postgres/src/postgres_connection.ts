@@ -19,6 +19,7 @@ import type {
   QueryRecord,
   QueryOptionsReader,
   QueryRunStats,
+  QueryTags,
   RunSQLOptions,
   SQLSourceDef,
   TableSourceDef,
@@ -89,6 +90,11 @@ interface PostgresConnectionConfiguration {
   databaseName?: string;
   connectionString?: string;
   setupSQL?: string;
+  // Connection-level query tags, applied at session open. Postgres has no
+  // general key-value tag facility, so only `applicationName` is honored
+  // (`SET application_name = '<value>'`, visible in pg_stat_activity / log
+  // prefixes); `labels` are not applied on Postgres. Connection-layer only.
+  queryTags?: QueryTags;
   // Programmatic callers get pg's full ssl surface (incl. `checkServerIdentity`
   // for verify-ca). Saved/registry config is limited to the serializable
   // PostgresSSLConfig subset — see PostgresConnectionOptions.
@@ -138,6 +144,13 @@ function addTlsHint(err: unknown): unknown {
   return err;
 }
 
+// Escape a value for a single-quoted Postgres string literal (standard SQL:
+// double the single quotes; standard_conforming_strings leaves backslashes
+// literal).
+function escapePostgresString(s: string): string {
+  return s.replace(/'/g, "''");
+}
+
 /**
  * Decode a canonical Postgres dotted-table path into its underlying
  * identifier strings as they appear in `information_schema`. The schema
@@ -170,6 +183,7 @@ export class PostgresConnection
 {
   public readonly name: string;
   protected setupSQL: string | undefined;
+  protected queryTags: QueryTags | undefined;
   private queryOptionsReader: QueryOptionsReader = {};
   private configReader: PostgresConnectionConfigurationReader = {};
 
@@ -196,9 +210,10 @@ export class PostgresConnection
         this.configReader = configReader;
       }
     } else {
-      const {name, setupSQL, ...configReader} = arg;
+      const {name, setupSQL, queryTags, ...configReader} = arg;
       this.name = name;
       this.setupSQL = setupSQL;
+      this.queryTags = queryTags;
       this.configReader = configReader;
     }
     if (queryOptionsReader) {
@@ -243,6 +258,9 @@ export class PostgresConnection
     if (typeof this.configReader !== 'function') {
       const {host, port, username, databaseName, connectionString} =
         this.configReader;
+      // queryMetadata (application_name + session settings) is session metadata
+      // and is deliberately excluded from the connection digest — changing it
+      // must not re-key the connection.
       return makeDigest(
         'postgres',
         host,
@@ -500,8 +518,23 @@ export class PostgresConnection
     await this.runSQL('SELECT 1');
   }
 
+  // SET statements for the connection-level query tags, run at every session
+  // open (both the non-pooled and pooled hooks). Postgres has no general
+  // key-value tag facility, so only `applicationName` is honored; `labels` are
+  // not applied here.
+  protected sessionMetadataStatements(): string[] {
+    const applicationName = this.queryTags?.applicationName;
+    if (applicationName === undefined) return [];
+    return [
+      `SET application_name = '${escapePostgresString(applicationName)}'`,
+    ];
+  }
+
   public async connectionSetup(client: Client): Promise<void> {
     await client.query("SET TIME ZONE 'UTC'");
+    for (const stmt of this.sessionMetadataStatements()) {
+      await client.query(stmt);
+    }
     if (this.setupSQL) {
       for (const stmt of this.setupSQL.split(';\n')) {
         const trimmed = stmt.trim();
@@ -610,6 +643,15 @@ export class PooledPostgresConnection
       this._pool = new Pool(this.buildClientConfig(await this.readConfig()));
       this._pool.on('acquire', client => {
         client.query("SET TIME ZONE 'UTC'");
+        for (const stmt of this.sessionMetadataStatements()) {
+          // Fire-and-forget on the pooled acquire path: a rejected SET (e.g. an
+          // unknown GUC or a bad value) must not surface as an unhandled
+          // promise rejection, which would crash the process on every acquire.
+          // Swallow it — the checkout proceeds with that setting un-applied
+          // rather than failing the query. Validating that a setting is valid
+          // for the warehouse is the caller's responsibility.
+          client.query(stmt).catch(() => {});
+        }
         if (this.setupSQL) {
           for (const stmt of this.setupSQL.split(';\n')) {
             const trimmed = stmt.trim();

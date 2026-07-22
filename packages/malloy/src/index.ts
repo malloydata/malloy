@@ -216,6 +216,15 @@ export type {Overlay, ConfigOverlays} from './api/foundation';
 export type {FilesystemContext, MalloyConfigOptions} from './api/foundation';
 export type {RuntimeContext} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
+export type {QueryTags} from './query_tags';
+export {
+  APPLICATION_LABEL_KEY,
+  QUERY_TAG_MAX_KEY_LENGTH,
+  QUERY_TAG_MAX_VALUE_LENGTH,
+  QUERY_TAG_MAX_LABELS,
+  labelsWithApplication,
+  validateQueryTags,
+} from './query_tags';
 export type {
   EventStream,
   ModelString,
