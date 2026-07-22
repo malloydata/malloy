@@ -73,6 +73,27 @@ describeMySQL('db:MySQL', () => {
       await connection.runRawSQL('DROP TABLE `arrests-latest`');
     }
   });
+
+  it('maps FLOAT columns to number', async () => {
+    // A real FLOAT column must introspect to a Malloy number; otherwise it maps
+    // to `sql native` and can't be used in expressions (e.g. `a.sum()`).
+    await connection.runRawSQL('DROP TABLE IF EXISTS float_agg_test');
+    await connection.runRawSQL('CREATE TABLE float_agg_test (a FLOAT)');
+    try {
+      const res = await connection.fetchSchemaForTables(
+        {t: 'float_agg_test'},
+        {}
+      );
+      expect(res.errors).toEqual({});
+      expect(res.schemas['t']?.fields[0]).toEqual({
+        name: 'a',
+        type: 'number',
+        numberType: 'float',
+      });
+    } finally {
+      await connection.runRawSQL('DROP TABLE float_agg_test');
+    }
+  });
 });
 
 /**
