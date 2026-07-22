@@ -13,7 +13,7 @@ import {RenderLogCollector} from '@/component/render-log-collector';
 import type {Tag} from '@malloydata/malloy-tag';
 import {resolveBuiltInTags} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
-import {convertLegacyToVizTag} from '@/component/tag-utils';
+import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '@/component/tag-utils';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -266,7 +266,10 @@ export class RenderFieldMetadata {
 
     const vizType = tag.text('viz');
     if (vizType !== undefined) {
-      const validVizTypes = ['bar', 'line', 'table', 'dashboard'];
+      // Chart viz types come from the shared VIZ_CHART_TYPES list (so a new
+      // chart like 'combo' is valid here automatically); 'table'/'dashboard'
+      // are the non-chart viz targets.
+      const validVizTypes = [...VIZ_CHART_TYPES, 'table', 'dashboard'];
       if (!validVizTypes.includes(vizType)) {
         log.error(
           `Invalid viz type '${vizType}' on field '${field.name}'. Valid types: ${validVizTypes.join(', ')}`,
@@ -332,7 +335,10 @@ export class RenderFieldMetadata {
       const vizTag = normalizedTag.tag('viz');
       if (vizTag) {
         const childByName = new Map(field.fields.map(f => [f.name, f]));
-        for (const channelName of ['x', 'y', 'series'] as const) {
+        // 'y2' is the combo chart's secondary measure axis; like 'y' it must
+        // reference a numeric field or measure.
+        const measureChannels = ['y', 'y2'];
+        for (const channelName of ['x', 'y', 'y2', 'series'] as const) {
           const refArray = vizTag.textArray(channelName);
           const refs = refArray ?? [];
           const singleRef = vizTag.text(channelName);
@@ -347,13 +353,13 @@ export class RenderFieldMetadata {
               continue;
             }
             if (
-              channelName === 'y' &&
+              measureChannels.includes(channelName) &&
               child.isBasic() &&
               !child.isNumber() &&
               !child.wasCalculation()
             ) {
               log.error(
-                `Chart y-channel field '${ref}' on '${field.name}' must be numeric or a measure; got ${getFieldType(child)}.`,
+                `Chart ${channelName}-channel field '${ref}' on '${field.name}' must be numeric or a measure; got ${getFieldType(child)}.`,
                 vizTag.tag(channelName)
               );
             }
@@ -362,22 +368,30 @@ export class RenderFieldMetadata {
       }
     }
 
-    // --- Embedded # y tag on child field must be numeric or a measure ---
-    if (
-      field.isBasic() &&
-      tag.has('y') &&
-      !field.isNumber() &&
-      !field.wasCalculation()
-    ) {
-      const parent = field.parent;
-      const parentIsChart = parent
-        ?.getPlugins()
-        .some(plugin => plugin.name === 'bar' || plugin.name === 'line');
-      if (parentIsChart) {
-        log.error(
-          `Field '${field.name}' is tagged '# y' but is not numeric or a measure; the chart will pick y from the available measures instead.`,
-          tag.tag('y')
-        );
+    // --- Embedded # y / # y2 tag on child field must be numeric or a measure ---
+    // ('# y2' is the combo chart's secondary axis.)
+    for (const embeddedChannel of ['y', 'y2'] as const) {
+      if (
+        field.isBasic() &&
+        tag.has(embeddedChannel) &&
+        !field.isNumber() &&
+        !field.wasCalculation()
+      ) {
+        const parent = field.parent;
+        const parentIsChart = parent
+          ?.getPlugins()
+          .some(
+            plugin =>
+              plugin.name === 'bar' ||
+              plugin.name === 'line' ||
+              plugin.name === 'combo'
+          );
+        if (parentIsChart) {
+          log.error(
+            `Field '${field.name}' is tagged '# ${embeddedChannel}' but is not numeric or a measure; the chart will pick ${embeddedChannel} from the available measures instead.`,
+            tag.tag(embeddedChannel)
+          );
+        }
       }
     }
 

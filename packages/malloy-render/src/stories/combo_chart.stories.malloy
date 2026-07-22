@@ -1,0 +1,63 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+  measure: total_sales is retail_price.sum()
+  measure: avg_margin is avg(retail_price - cost)
+  measure: order_count is count()
+  dimension: product is name
+
+  // Two measures at very different magnitudes — exactly the case a shared
+  // single y-axis renders uselessly and a dual axis fixes.
+  view: sales_and_margin_by_brand is {
+    group_by: brand
+    aggregate:
+      # label="Total Sales"
+      total_sales
+      # label="Avg Margin"
+      avg_margin
+    limit: 10
+  }
+
+  #(story)
+  // Smart defaults: first measure → bars (left), second → line (right).
+  # combo_chart
+  view: defaults is sales_and_margin_by_brand
+
+  #(story)
+  // Swap the roles: the first measure becomes the line, the second the bars.
+  # combo_chart { y.chart=line y2.chart=bar }
+  view: swapped_marks is sales_and_margin_by_brand
+
+  #(story)
+  // Explicit channel assignment + titles. (Tag blocks are single-line: Malloy
+  // annotations are line-based.)
+  # combo_chart { x=brand y=total_sales y2=avg_margin title='Sales vs. Margin' subtitle='Bars: total sales (left) · Line: avg margin (right)' }
+  view: explicit_channels is sales_and_margin_by_brand
+
+  #(story)
+  # size=lg
+  # combo_chart
+  view: large is sales_and_margin_by_brand
+
+  #(story)
+  // Inside a dashboard tile, alongside a single-axis chart.
+  # dashboard
+  view: in_dashboard is {
+    nest:
+      # combo_chart
+      combo is sales_and_margin_by_brand
+      # bar_chart
+      just_sales is {
+        group_by: brand
+        aggregate: total_sales
+        limit: 10
+      }
+  }
+
+  #(story)
+  // A combo needs two measures; one measure is an error (red tile).
+  # combo_chart
+  view: needs_two_measures is {
+    group_by: brand
+    aggregate: total_sales
+    limit: 10
+  }
+}

@@ -322,6 +322,24 @@ export type ChartLayoutSettings = {
   yScale: {
     domain: number[];
   };
+  // Secondary (right) measure axis, present only for dual-axis charts (combo).
+  // Bar/line charts leave these undefined and are unaffected.
+  y2Axis?: {
+    width: number;
+    minExtent: number;
+    maxExtent: number;
+    tickCount?: number;
+    hidden: boolean;
+    yTitleSize: number;
+    labelPadding: number;
+    titlePadding: number;
+    titleFont: string;
+    titleFontSize: number;
+    titleFontWeight?: FontWeightValue;
+  };
+  y2Scale?: {
+    domain: number[] | null;
+  };
   xField: Field;
   yField: Field;
   padding: {
@@ -349,6 +367,113 @@ const CHART_SIZES = {
 // TODO: read from theme CSS
 const ROW_HEIGHT = 28;
 
+// Compute the width/domain metrics for a single measure axis. Factored out so
+// the secondary (right) axis of a combo chart can be sized with the same rules
+// as the primary axis, without duplicating the label-measuring math.
+function measureAxisMetrics(
+  yField: Field,
+  minVal: number,
+  maxVal: number,
+  chartHeight: number,
+  fontSettings: ReturnType<typeof getAxisFontSettings>,
+  vegaConfig?: Config
+): {
+  width: number;
+  domain: number[];
+  minExtent: number;
+  maxExtent: number;
+  tickCount: number;
+  yTitleSize: number;
+  labelPadding: number;
+  titlePadding: number;
+  titleFont: string;
+  titleFontSize: number;
+  titleFontWeight?: FontWeightValue;
+} {
+  const yScale = scale('linear')()
+    .domain([minVal, maxVal])
+    .nice()
+    .range([chartHeight, 0]);
+  const domain = yScale.domain();
+
+  const maxAxisVal = domain.at(1);
+  const minAxisVal = domain.at(0);
+  const l = locale();
+  const formattedMin = yField.isBasic()
+    ? renderNumericField(yField, minAxisVal)
+    : l.format(',')(minAxisVal);
+  const formattedMax = yField.isBasic()
+    ? renderNumericField(yField, maxAxisVal)
+    : l.format(',')(maxAxisVal);
+
+  const yLabelFontStyles = {
+    fontFamily: fontSettings.yLabel.fontFamily,
+    fontSize: fontSettings.yLabel.fontSize,
+    ...(fontSettings.yLabel.fontWeight && {
+      fontWeight: fontSettings.yLabel.fontWeight,
+    }),
+    width: 'fit-content',
+    opacity: '0',
+    fontVariantNumeric: 'tabular-nums',
+    position: 'absolute',
+  };
+  const yTitleFontStyles = {
+    fontFamily: fontSettings.yTitle.fontFamily,
+    fontSize: fontSettings.yTitle.fontSize,
+    ...(fontSettings.yTitle.fontWeight && {
+      fontWeight: fontSettings.yTitle.fontWeight,
+    }),
+    width: 'fit-content',
+    opacity: '0',
+    position: 'absolute',
+  };
+
+  const yTitleSize = getTextHeightDOM(
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZgy',
+    yTitleFontStyles
+  );
+
+  const axisYTitlePadding = vegaConfig?.axisY?.titlePadding;
+  const axisTitlePadding = vegaConfig?.axis?.titlePadding;
+  const configTitleOffset = vegaConfig?.title?.offset;
+  let yTitleOffset = yTitleSize;
+  if (axisYTitlePadding !== undefined) yTitleOffset = Number(axisYTitlePadding);
+  else if (axisTitlePadding !== undefined)
+    yTitleOffset = Number(axisTitlePadding);
+  else if (configTitleOffset !== undefined)
+    yTitleOffset = Number(configTitleOffset);
+
+  const axisYLabelPadding = vegaConfig?.axisY?.labelPadding;
+  const axisLabelPadding = vegaConfig?.axis?.labelPadding;
+  let yLabelPadding = 6;
+  if (axisYLabelPadding !== undefined)
+    yLabelPadding = Number(axisYLabelPadding);
+  else if (axisLabelPadding !== undefined)
+    yLabelPadding = Number(axisLabelPadding);
+
+  const maxYLabelWidth = Math.max(
+    getTextWidthDOM(formattedMin, yLabelFontStyles),
+    getTextWidthDOM(formattedMax, yLabelFontStyles)
+  );
+  const width = maxYLabelWidth + 2 * yTitleOffset + yTitleSize + yLabelPadding;
+
+  return {
+    width,
+    domain,
+    minExtent: maxYLabelWidth,
+    maxExtent: maxYLabelWidth,
+    tickCount: Math.ceil(chartHeight / 40),
+    yTitleSize,
+    labelPadding: yLabelPadding,
+    titlePadding: yTitleOffset,
+    titleFont: fontSettings.yTitle.fontFamily,
+    titleFontSize: parseInt(fontSettings.yTitle.fontSize),
+    ...(fontSettings.yTitle.fontWeight && {
+      titleFontWeight: fontSettings.yTitle.fontWeight as FontWeightValue,
+    }),
+  };
+}
+
 export function getChartLayoutSettings(
   field: NestField,
   options: {
@@ -360,6 +485,11 @@ export function getChartLayoutSettings(
     getXMinMax?: () => [number, number];
     getYMinMax?: () => [number, number];
     independentY?: boolean;
+    // Secondary (right) measure axis for dual-axis charts (combo). When
+    // provided, a second y-axis is sized and right padding is reserved for it.
+    y2Field?: Field;
+    getY2MinMax?: () => [number, number];
+    independentY2?: boolean;
     vegaConfig?: Config;
   }
 ): ChartLayoutSettings {
@@ -502,6 +632,38 @@ export function getChartLayoutSettings(
     }
   }
 
+  // Secondary (right) measure axis for combo charts.
+  let y2Axis: ChartLayoutSettings['y2Axis'];
+  let y2Domain: number[] | null = null;
+  if (options.y2Field && hasYAxis) {
+    const [min2, max2] = options.getY2MinMax?.() ?? [
+      options.y2Field.minNumber!,
+      options.y2Field.maxNumber!,
+    ];
+    const m = measureAxisMetrics(
+      options.y2Field,
+      min2,
+      max2,
+      chartHeight,
+      fontSettings,
+      options.vegaConfig
+    );
+    y2Axis = {
+      width: m.width,
+      minExtent: m.minExtent,
+      maxExtent: m.maxExtent,
+      tickCount: m.tickCount,
+      hidden: false,
+      yTitleSize: m.yTitleSize,
+      titlePadding: m.titlePadding,
+      labelPadding: m.labelPadding,
+      titleFont: m.titleFont,
+      titleFontSize: m.titleFontSize,
+      ...(m.titleFontWeight && {titleFontWeight: m.titleFontWeight}),
+    };
+    y2Domain = options.independentY2 ? null : m.domain;
+  }
+
   const isSpark = options.size.preset === 'spark';
 
   const xAxisSettings = getXAxisSettings({
@@ -520,7 +682,9 @@ export function getChartLayoutSettings(
         top: topPadding + 1,
         left: yAxisWidth,
         bottom: xAxisSettings.height,
-        right: 8,
+        // Reserve room on the right for the secondary axis when present; the
+        // legend (if any) is added on top of this by the spec generator.
+        right: y2Axis ? y2Axis.width : 8,
       };
 
   // TODO: do we need these different sizes anymore, since all the same?
@@ -551,6 +715,7 @@ export function getChartLayoutSettings(
     yScale: {
       domain: options.independentY ? null : yDomain,
     },
+    ...(y2Axis && {y2Axis, y2Scale: {domain: y2Domain}}),
     padding: isSpark ? {top: 4, left: 0, bottom: 4, right: 0} : padding,
     xField,
     yField,

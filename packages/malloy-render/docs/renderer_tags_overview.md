@@ -136,6 +136,44 @@ aggregate: daily_sales
 }
 ```
 
+### `# combo_chart`
+
+Renders two measures on two **independent** y-axes (a dual-axis chart), for the
+classic "bars + line" comparison of measures with different units or magnitudes
+(e.g. volume vs. rate, count vs. dollars). Requires an x dimension and **two**
+measures.
+
+**Properties:**
+
+- `.y`: Measure(s) on the primary (left) axis. A field ref or array `['m1','m2']`. Auto-filled with the first measure if omitted.
+  - Syntax: `# combo_chart { y=hh_reach }`
+- `.y2`: Measure(s) on the secondary (right) axis. Auto-filled with the second measure if omitted.
+  - Syntax: `# combo_chart { y2=conversion_rate }`
+- `.y.chart` / `.y2.chart`: Mark type for each axis — `bar` or `line`. Defaults: `y` is `bar`, `y2` is `line`. Assign the marks to get bar-over-line or line-over-bar.
+  - Syntax: `# combo_chart { y.chart=line y2.chart=bar }`
+- `.x`, `.title`, `.subtitle`, `.size`: Similar to `# bar_chart`.
+- `.y.independent` / `.y2.independent`: Controls each axis's domain sharing across nested charts.
+
+**Axis scaling:** each axis is scaled independently from its own measures (the
+left/bar axis includes zero). Because the two scales are independent, where the
+bars and line cross is an artifact of the chosen ranges, not the data — use the
+chart to compare *trends*, not absolute crossover points.
+
+**Examples:**
+
+```
+// Smart defaults: first measure → bars (left), second → line (right)
+# combo_chart
+view: reach_and_rate is {
+  group_by: network
+  aggregate: hh_reach, conversion_rate
+}
+
+// Explicit, with swapped marks (line on left, bars on right)
+# combo_chart { x=network y=cpa y.chart=line y2=volume y2.chart=bar }
+view: cpa_and_volume is { ... }
+```
+
 ### `# scatter_chart`
 
 _Note: This currently uses the legacy renderer._
