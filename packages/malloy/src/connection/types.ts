@@ -94,7 +94,7 @@ export interface Connection extends InfoConnection {
    * Run some SQL and yield results.
    *
    * @param sql The SQL to run.
-   * @param options.pageSize Maximum number of results to return at once.
+   * @param options.rowLimit Maximum number of results to return at once.
    * @return The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */

@@ -53,6 +53,20 @@ describe('Streaming tests', () => {
       expect(rows[0].cell('code').string.value).toBe('00A');
     });
 
+    it(`zero row stream - ${databaseName}`, async () => {
+      const stream = runtime
+        .loadModel(
+          `source: airports is ${databaseName}.table('malloytest.airports')`
+        )
+        .loadQuery('run: airports -> { select: code; order_by: code }')
+        .runStream({rowLimit: 0});
+      const rows: DataRecord[] = [];
+      for await (const row of stream) {
+        rows.push(row);
+      }
+      expect(rows).toEqual([]);
+    });
+
     it(`stream to JSON - ${databaseName}`, async () => {
       const stream = runtime
         .loadModel(

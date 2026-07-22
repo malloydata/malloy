@@ -12,6 +12,31 @@ const hasCredentials = !!config.user;
 
 const describeMySQL = hasCredentials ? describe : describe.skip;
 
+describe('MySQL rowLimit', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it.each([
+    ['configured value', undefined, 2],
+    ['per-run override', 3, 3],
+    ['zero', 0, 0],
+  ])('applies %s', async (_name, perRunRowLimit, expectedRows) => {
+    const connection = new MySQLConnection('mysql', {}, {rowLimit: 2});
+    jest.spyOn(connection, 'runRawSQL').mockResolvedValue({
+      rows: Array.from({length: 5}, (_, value) => ({value})),
+      totalRows: 5,
+    });
+
+    const options =
+      perRunRowLimit === undefined ? {} : {rowLimit: perRunRowLimit};
+    const result = await connection.runSQL('SELECT value', options);
+
+    expect(result.rows).toHaveLength(expectedRows);
+    expect(result.totalRows).toBe(5);
+  });
+});
+
 describeMySQL('db:MySQL', () => {
   const connection = new MySQLConnection('mysql', config, {});
 

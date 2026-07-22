@@ -215,6 +215,13 @@ export type {
 export type {Overlay, ConfigOverlays} from './api/foundation';
 export type {FilesystemContext, MalloyConfigOptions} from './api/foundation';
 export type {RuntimeContext} from './api/foundation';
+export {
+  DEFAULT_ROW_LIMIT,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+  queryOptionsFromConnectionConfig,
+  resolveRunSQLOptions,
+} from './connection/query_options';
+export type {ResolvedRunSQLOptions} from './connection/query_options';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
   EventStream,

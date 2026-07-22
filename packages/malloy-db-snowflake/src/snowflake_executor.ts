@@ -424,6 +424,14 @@ export class SnowflakeExecutor {
 
               function handleData(this: Readable, row: QueryRecord) {
                 if (streamEnded) return;
+                if (
+                  options?.rowLimit !== undefined &&
+                  index >= options.rowLimit
+                ) {
+                  _stmt.cancel();
+                  handleEnd();
+                  return;
+                }
                 onData(row);
                 if (
                   options?.rowLimit !== undefined &&
