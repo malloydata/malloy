@@ -1,0 +1,55 @@
+{
+  "name": "@malloydata/malloy-language-server",
+  "version": "0.0.396",
+  "license": "MIT",
+  "description": "Malloy Language Server Protocol implementation — diagnostics, completions, hover, go-to-definition for .malloy files",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "malloy-language-server": "./bin/malloy-language-server.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "index": ["./dist/index.d.ts"],
+      "node": ["./dist/node/index.d.ts"]
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "0.0.396",
+    "@malloydata/malloy-sql": "0.0.396",
+    "@malloydata/malloy-interfaces": "0.0.396",
+    "@malloydata/render-validator": "0.0.396",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.8",
+    "vscode-jsonrpc": "^8.1.0",
+    "vscode-uri": "^3.0.7",
+    "lodash": "^4.17.21"
+  },
+  "optionalDependencies": {
+    "@malloydata/malloy-connections": "0.0.396",
+    "@malloydata/db-publisher": "0.0.396"
+  }
+}
