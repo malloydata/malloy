@@ -27,6 +27,12 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   view: swapped_marks is sales_and_margin_by_brand
 
   #(story)
+  // Bars on both axes: the two groups draw side-by-side within each band (each
+  // on its own y-scale), never stacked on top of each other.
+  # combo_chart { y2.chart=bar }
+  view: bars_both_axes is sales_and_margin_by_brand
+
+  #(story)
   // Explicit channel assignment + titles. (Tag blocks are single-line: Malloy
   // annotations are line-based.)
   # combo_chart { x=brand y=total_sales y2=avg_margin title='Sales vs. Margin' subtitle='Bars: total sales (left) · Line: avg margin (right)' }
@@ -61,10 +67,18 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   view: spark is sales_and_margin_by_brand
 
   #(story)
-  // Pinned axis bounds: both axes start at 0 and the right axis is capped, so
-  // the bar/line crossover becomes meaningful instead of an artifact of scale.
-  # combo_chart { y.min=0 y2.min=0 y2.max=200 }
+  // Pinned axis bounds. `y.min`/`y.max` pin the LEFT axis too, not just the
+  // right: here the left (sales, ~0–32k of data) is pinned to 0–60k so the bars
+  // compress into the lower half, and the right (margin) is pinned to 0–200.
+  // Pinning both is how you make the crossover meaningful instead of an artifact.
+  # combo_chart { y.min=0 y.max=60000 y2.min=0 y2.max=200 }
   view: pinned_axes is sales_and_margin_by_brand
+
+  #(story)
+  // Opt out of the axis-to-mark color tinting (on by default) for plain,
+  // neutral axes.
+  # combo_chart { color_axes=false }
+  view: neutral_axes is sales_and_margin_by_brand
 
   #(story)
   // Inside a dashboard tile, alongside a single-axis chart.

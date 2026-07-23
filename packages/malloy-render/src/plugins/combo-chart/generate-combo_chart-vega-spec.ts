@@ -13,6 +13,7 @@ import type {
 } from '@/component/types';
 import {getChartLayoutSettings} from '@/component/chart/chart-layout-settings';
 import type {
+  Axis,
   Data,
   GroupMark,
   LineMark,
@@ -128,6 +129,14 @@ export function generateComboChartVegaSpec(
   const leftMinMax = axisMinMax(leftPaths, leftIsBar, settings.yChannel);
   const rightMinMax = axisMinMax(rightPaths, rightIsBar, settings.y2Channel);
 
+  // Every bar-drawing measure across both axes, left-then-right (matches the
+  // color scale order). Drives both the shared `xOffset` bar scale and the
+  // per-band width budget used to auto-fit the x limit below.
+  const barPaths = [
+    ...(leftIsBar ? leftPaths : []),
+    ...(rightIsBar ? rightPaths : []),
+  ];
+
   const chartSettings = getChartLayoutSettings(explore, {
     size: plugin.chartDisplay.size,
     metadata,
@@ -144,6 +153,20 @@ export function generateComboChartVegaSpec(
 
   const xValues = [...xField.valueSet.values()];
 
+  // Cap the number of x bands. A numeric `x.limit` is honored directly;
+  // otherwise auto-fit to the plot width, budgeting each band by how many bars
+  // share it (mirrors bar chart). Lines don't widen a band, so a lines-only
+  // combo budgets a single slot per band. Rows outside this set are dropped in
+  // mapMalloyDataToChartData, which sets isDataLimited / the "Showing N of M"
+  // note.
+  const barsPerBand = Math.max(1, barPaths.length);
+  const maxSizePerXGroup = chartSettings.isSpark ? 2 : 8 * barsPerBand;
+  const xLimit =
+    typeof settings.xChannel.limit === 'number'
+      ? settings.xChannel.limit
+      : Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
+  const xValuesToPlot = xValues.slice(0, Math.max(1, xLimit));
+
   /**************************************
    * Scales
    *************************************/
@@ -151,14 +174,15 @@ export function generateComboChartVegaSpec(
     {
       name: 'xscale',
       type: 'band',
-      domain: [...xValues],
+      domain: [...xValuesToPlot],
       range: 'width',
       paddingOuter: 0.05,
       round: true,
     },
     {
       name: 'yscale',
-      nice: true,
+      // Disable nice for sparklines to maximize variation (matches line_chart).
+      nice: chartSettings.isSpark ? false : true,
       range: 'height',
       // Fallback (no precomputed domain: spark size, or `.independent`) is the
       // per-axis extent of the folded `left_values` dataset. The raw `values`
@@ -176,7 +200,7 @@ export function generateComboChartVegaSpec(
     },
     {
       name: 'yscaleRight',
-      nice: true,
+      nice: chartSettings.isSpark ? false : true,
       range: 'height',
       domain: chartSettings.y2Scale?.domain ?? {
         data: 'right_values',
@@ -226,19 +250,12 @@ export function generateComboChartVegaSpec(
     ],
   });
 
-  // Build grouped bars for a channel on the given scale.
-  const buildBars = (
-    dataName: string,
-    scaleName: string,
-    offsetScaleName: string,
-    paths: string[]
-  ) => {
-    scales.push({
-      name: offsetScaleName,
-      type: 'band',
-      domain: paths.map(p => explore.fieldAt(p).name),
-      range: {signal: `[0, bandwidth('xscale') * ${1 - BAR_GROUP_PADDING}]`},
-    });
+  // Build grouped bars for a channel on the given scale. All bar measures
+  // (from either axis) share the single `xOffset` band scale built below, so
+  // bars sit side-by-side within a band even when both axes draw bars — they
+  // never overlap. The scale collapses to a single channel's measures when only
+  // that channel draws bars, preserving the bar+line default's layout.
+  const buildBars = (dataName: string, scaleName: string) => {
     // Bars are non-interactive so pointer events fall through to the
     // full-band `x_highlight` rect behind them; that single background target
     // drives the tooltip/brush for the whole band (see highlightGroup). Without
@@ -254,12 +271,12 @@ export function generateComboChartVegaSpec(
         enter: {
           x: {
             offset: {
-              signal: `scale('${offsetScaleName}', datum.series) + bandwidth('xscale') * ${
+              signal: `scale('xOffset', datum.series) + bandwidth('xscale') * ${
                 BAR_GROUP_PADDING / 2
               }`,
             } as VegaSignalRef,
           },
-          width: {scale: offsetScaleName, band: 1},
+          width: {scale: 'xOffset', band: 1},
           y: {scale: scaleName, field: 'y'},
           y2: {scale: scaleName, value: 0},
         },
@@ -357,16 +374,28 @@ export function generateComboChartVegaSpec(
   const buildChannel = (
     channel: ComboYChannel,
     dataName: string,
-    scaleName: string,
-    offsetScaleName: string
+    scaleName: string
   ) => {
     data.push(channelData(dataName, channel.fields));
     if (channel.chart === 'bar') {
-      buildBars(dataName, scaleName, offsetScaleName, channel.fields);
+      buildBars(dataName, scaleName);
     } else {
       buildLine(channel, dataName, scaleName);
     }
   };
+
+  // Single grouped-bar offset scale shared by both axes, over the union of every
+  // bar-drawing measure (see barPaths), so each bar gets a distinct slot within
+  // the band — side-by-side, never stacked on top of each other. Only built when
+  // at least one axis draws bars.
+  if (barPaths.length > 0) {
+    scales.push({
+      name: 'xOffset',
+      type: 'band',
+      domain: barPaths.map(p => explore.fieldAt(p).name),
+      range: {signal: `[0, bandwidth('xscale') * ${1 - BAR_GROUP_PADDING}]`},
+    });
+  }
 
   // x-highlight band + record collection for tooltips (faceted over raw values).
   // This full-height, full-band rect is the only interactive mark in the plot
@@ -407,7 +436,17 @@ export function generateComboChartVegaSpec(
         name: 'x_facet_values',
         source: 'x_facet',
         transform: [
-          {type: 'aggregate', fields: ['x'], ops: ['values'], as: ['v']},
+          // Re-materialize `x` alongside the collected values so the highlight
+          // band's `datum.x` is defined: the outgoing brush is `[datum.x]` and
+          // the sibling-lit test reads `indexof(brushXIn, datum.x)`. Without the
+          // second (`min`→`x`) aggregate, `datum.x` is undefined and cross-chart
+          // X highlighting never fires (mirrors bar chart).
+          {
+            type: 'aggregate',
+            fields: ['x', 'x'],
+            ops: ['values', 'min'],
+            as: ['v', 'x'],
+          },
         ],
       },
     ],
@@ -417,13 +456,8 @@ export function generateComboChartVegaSpec(
   };
   marks.push(highlightGroup);
 
-  buildChannel(settings.yChannel, 'left_values', 'yscale', 'xOffsetLeft');
-  buildChannel(
-    settings.y2Channel,
-    'right_values',
-    'yscaleRight',
-    'xOffsetRight'
-  );
+  buildChannel(settings.yChannel, 'left_values', 'yscale');
+  buildChannel(settings.y2Channel, 'right_values', 'yscaleRight');
 
   /**************************************
    * Axes
@@ -472,6 +506,28 @@ export function generateComboChartVegaSpec(
   // lines — the standard dual-axis convention is to grid the primary axis only.
   if (rightAxis) {
     rightAxis.axis.grid = false;
+  }
+
+  // Tint each axis's title, ticks and domain line to match its mark's color,
+  // using the same `color` scale the marks read. This makes the two independent
+  // scales read as two separate rulers — the defense against misreading the
+  // bar/line crossover as meaningful (see the axis scaling note in
+  // docs/renderer_tags_overview.md). The numeric value labels are left at the
+  // default (dark) color so they stay legible; the colored title + axis line
+  // carry the binding. Only applied when an axis carries a single measure, so
+  // the color is unambiguous; a multi-measure axis (each measure its own color)
+  // keeps the neutral default. Opt out entirely with `color_axes=false`.
+  const tintAxisToMeasure = (axis: Axis, paths: string[]) => {
+    if (paths.length !== 1) return;
+    const colorRef = {scale: 'color', value: explore.fieldAt(paths[0]).name};
+    axis.encode = axis.encode ?? {};
+    axis.encode.title = {update: {fill: colorRef}};
+    axis.encode.ticks = {update: {stroke: colorRef}};
+    axis.encode.domain = {update: {stroke: colorRef}};
+  };
+  if (settings.colorAxes) {
+    if (leftAxis) tintAxisToMeasure(leftAxis.axis, leftPaths);
+    if (rightAxis) tintAxisToMeasure(rightAxis.axis, rightPaths);
   }
 
   /**************************************
@@ -596,16 +652,27 @@ export function generateComboChartVegaSpec(
       __values: {[name: string]: unknown};
       x: unknown;
     }> = [];
+    // Only rows whose x is in the plotted (capped) band set survive; the rest
+    // are dropped so the cap holds (mirrors bar chart's out-of-limit skip).
+    const plotSet = new Set(xValuesToPlot);
     for (let i = 0; i < data.rows.length; i++) {
       const row = data.rows[i];
       const xValue = getXValue(row);
+      if (!plotSet.has(xValue ?? NULL_SYMBOL)) continue;
       mappedData.push({
         __row: row,
         __values: row.allCellValues(),
         x: xValue ?? NULL_SYMBOL,
       });
     }
-    return {data: mappedData, isDataLimited: false, dataLimitMessage: ''};
+    const isDataLimited = xValues.length > xValuesToPlot.length;
+    return {
+      data: mappedData,
+      isDataLimited,
+      dataLimitMessage: isDataLimited
+        ? `Showing ${xValuesToPlot.length.toLocaleString()} of ${xValues.length.toLocaleString()}`
+        : '',
+    };
   };
 
   /**************************************
@@ -621,12 +688,18 @@ export function generateComboChartVegaSpec(
       const first = records[0];
       if (first) {
         const row = first.__row;
-        const title = xIsDateorTime
-          ? renderDateTimeField(xField, new Date(first.x as number), {
-              isDate: xField.isDate(),
-              timeframe: xField.timeframe,
-            })
-          : String(first.x);
+        // Guard the null x before `new Date()` — an unmapped time value comes
+        // through as NULL_SYMBOL, and `new Date(NULL_SYMBOL)` renders as
+        // "Invalid Date" (matches line_chart's guard).
+        const title =
+          first.x === NULL_SYMBOL
+            ? NULL_SYMBOL
+            : xIsDateorTime
+              ? renderDateTimeField(xField, new Date(first.x as number), {
+                  isDate: xField.isDate(),
+                  timeframe: xField.timeframe,
+                })
+              : String(first.x);
         tooltipData = {
           title: [title],
           entries: allPaths.map(path => {

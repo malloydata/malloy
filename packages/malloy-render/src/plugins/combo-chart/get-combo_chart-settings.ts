@@ -46,10 +46,6 @@ export function getComboChartSettings(
     ? false
     : defaultComboChartSettings.interactive;
 
-  const isSpark =
-    vizTag.text('size') === 'spark' || normalizedTag.text('size') === 'spark';
-  const hideReferences = isSpark;
-
   // X-axis independence
   let xIndependent: boolean | 'auto' =
     defaultComboChartSettings.xChannel.independent;
@@ -98,6 +94,11 @@ export function getComboChartSettings(
   // X-axis limit
   const xLimit: number | 'auto' =
     vizTag.numeric('x', 'limit') ?? defaultComboChartSettings.xChannel.limit;
+
+  // Axis-to-mark color tinting is on by default; `color_axes=false` opts out.
+  const colorAxes = vizTag.has('color_axes')
+    ? vizTag.text('color_axes') !== 'false'
+    : defaultComboChartSettings.colorAxes;
 
   const disableEmbedded =
     vizTag.has('disable_embedded') || defaultComboChartSettings.disableEmbedded;
@@ -234,6 +235,17 @@ export function getComboChartSettings(
     if (second) y2Channel.fields.push(explore.pathTo(second));
   }
 
+  // Dedupe field paths. A measure can arrive on the same channel from more than
+  // one source (e.g. `y=reach` plus a `# y` tag on `reach`), which would draw a
+  // duplicate series + legend entry. Collapse each channel, and drop from y2 any
+  // measure already on y (left axis wins) so a measure never appears on both.
+  // Done before validation so a channel that dedupes to empty still errors.
+  xChannel.fields = [...new Set(xChannel.fields)];
+  yChannel.fields = [...new Set(yChannel.fields)];
+  y2Channel.fields = [...new Set(y2Channel.fields)].filter(
+    p => !yChannel.fields.includes(p)
+  );
+
   // Validation. A combo chart is defined by two independently-scaled measure
   // axes, so it must have an x dimension and at least one measure on each axis.
   // These throw (→ red tile) per docs/validation.md: the user asked for a combo
@@ -254,7 +266,7 @@ export function getComboChartSettings(
     yChannel,
     y2Channel,
     interactive,
-    hideReferences,
+    colorAxes,
     disableEmbedded,
   };
 }

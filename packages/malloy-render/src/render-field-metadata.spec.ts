@@ -151,6 +151,23 @@ describe('dispatch (shouldRenderAs) on the compiled schema', () => {
     expect(invalidVizErrors).toEqual([]);
   });
 
+  test('legacy # combo_chart on a scalar is flagged (needs a nested query)', async () => {
+    // combo_chart, like bar_chart/line_chart, is nest-only: on a scalar it must
+    // produce a source-located "requires a nested query" error, not a bare red
+    // tile. (# viz=combo already went through the 'viz' entry.)
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # combo_chart
+        aggregate: val_sum is sum(val)
+      }
+    `);
+    const errs = metadata.logCollector
+      .getLogs()
+      .filter(l => /'combo_chart'.*requires a nested query/.test(l.message));
+    expect(errs).toHaveLength(1);
+  });
+
   test('# link on a string field renders as link', async () => {
     const metadata = await metadataFor(`
       query: q is ${SQL_SOURCE} -> {

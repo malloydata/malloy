@@ -41,7 +41,9 @@ export interface ComboChartSettings extends Record<string, unknown> {
   // Secondary (right) axis measures.
   y2Channel: ComboYChannel;
   interactive: boolean;
-  hideReferences: boolean;
+  // Tint each axis to its mark's color so the two independent scales read as
+  // separate rulers. On by default; set `color_axes=false` to opt out.
+  colorAxes: boolean;
   disableEmbedded: boolean;
 }
 
@@ -67,7 +69,7 @@ export const defaultComboChartSettings: ComboChartSettings = {
     chart: 'line',
   },
   interactive: true,
-  hideReferences: false,
+  colorAxes: true,
   disableEmbedded: false,
 };
 
@@ -113,7 +115,7 @@ export interface IComboChartSettingsSchema extends JSONSchemaObject {
       };
     };
     interactive: JSONSchemaBoolean;
-    hideReferences: JSONSchemaBoolean;
+    colorAxes: JSONSchemaBoolean;
     disableEmbedded: JSONSchemaBoolean;
   };
 }
@@ -311,11 +313,12 @@ export const comboChartSettingsSchema: IComboChartSettingsSchema = {
       type: 'boolean',
       default: true,
     },
-    hideReferences: {
-      title: 'Hide References',
-      description: 'Whether to hide reference lines and spark styling',
+    colorAxes: {
+      title: 'Color Axes',
+      description:
+        "Tint each axis (title, ticks, axis line) to its mark's color so the two independent scales read as separate rulers. Set false to keep neutral axes.",
       type: 'boolean',
-      default: false,
+      default: true,
     },
     disableEmbedded: {
       title: 'Disable Embedded Tags',
@@ -330,7 +333,7 @@ export const comboChartSettingsSchema: IComboChartSettingsSchema = {
     'yChannel',
     'y2Channel',
     'interactive',
-    'hideReferences',
+    'colorAxes',
     'disableEmbedded',
   ],
   additionalProperties: false,

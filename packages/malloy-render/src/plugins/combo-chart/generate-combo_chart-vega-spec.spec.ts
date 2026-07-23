@@ -34,6 +34,7 @@ import {
 } from '@/plugins/combo-chart/generate-combo_chart-vega-spec';
 import {comboChartSettingsToTag} from '@/plugins/combo-chart/settings-to-tag';
 import {defaultComboChartSettings} from '@/plugins/combo-chart/combo-chart-settings';
+import {NULL_SYMBOL} from '@/util';
 
 async function buildCombo(source: string, query: string) {
   const {root, rootCell, metadata} = await runChartQuery(source, query);
@@ -173,6 +174,71 @@ describe('combo_chart dual axis structure', () => {
       'Avg Reach',
     ]);
   }, 60000);
+
+  // Each axis's title/ticks/domain is tinted to its mark's color (via the
+  // shared `color` scale) so the two independent scales read as separate rulers
+  // — the visual defense against misreading the crossover. Value labels stay
+  // neutral for legibility.
+  test('each single-measure axis is tinted to its mark color', async () => {
+    const {spec} = await buildComboProps(
+      SOURCE,
+      `# combo_chart ${TWO_MEASURES}`
+    );
+    const left = spec.axes?.find(a => a.scale === 'yscale');
+    const right = spec.axes?.find(a => a.scale === 'yscaleRight');
+    // Title + axis line bound to the color scale, keyed by the measure name.
+    expect((left?.encode?.title?.update as {fill: unknown})?.fill).toEqual({
+      scale: 'color',
+      value: 'total_reach',
+    });
+    expect((left?.encode?.domain?.update as {stroke: unknown})?.stroke).toEqual(
+      {scale: 'color', value: 'total_reach'}
+    );
+    expect((right?.encode?.title?.update as {fill: unknown})?.fill).toEqual({
+      scale: 'color',
+      value: 'avg_reach',
+    });
+    // Numeric labels stay legible (not tinted).
+    expect(
+      (left?.encode?.labels?.update as {fill?: unknown})?.fill
+    ).toBeUndefined();
+  }, 60000);
+
+  test('color_axes=false leaves axes neutral', async () => {
+    const {spec} = await buildComboProps(
+      SOURCE,
+      `# combo_chart { color_axes=false } ${TWO_MEASURES}`
+    );
+    const left = spec.axes?.find(a => a.scale === 'yscale');
+    const right = spec.axes?.find(a => a.scale === 'yscaleRight');
+    expect(
+      (left?.encode?.title?.update as {fill?: unknown})?.fill
+    ).toBeUndefined();
+    expect(
+      (right?.encode?.title?.update as {fill?: unknown})?.fill
+    ).toBeUndefined();
+  }, 60000);
+
+  test('a multi-measure axis is not tinted (color would be ambiguous)', async () => {
+    const {spec} = await buildComboProps(
+      SOURCE,
+      `
+      # combo_chart { y=['total_reach','avg_reach'] y2=max_reach }
+      run: data -> {
+        group_by: audience_name
+        aggregate:
+          total_reach is reach.sum()
+          avg_reach is reach.avg()
+          max_reach is reach.max()
+      }
+      `
+    );
+    const left = spec.axes?.find(a => a.scale === 'yscale');
+    // Two measures on the left axis → no single color, so no title tint.
+    expect(
+      (left?.encode?.title?.update as {fill?: unknown})?.fill
+    ).toBeUndefined();
+  }, 60000);
 });
 
 describe('combo_chart hover targets', () => {
@@ -305,5 +371,154 @@ describe('combo_chart validation', () => {
     );
     // Invalid mark type must not drive behavior; it falls back to the default.
     expect(settings.yChannel.chart).toBe('bar');
+  }, 60000);
+});
+
+describe('combo_chart cross-chart X highlighting', () => {
+  // The x_highlight band drives both the outgoing brush (`[datum.x]`) and the
+  // sibling-lit test (`indexof(brushXIn, datum.x)`), so its source dataset must
+  // re-materialize `x`. Aggregating only `values`→`v` leaves datum.x undefined
+  // and the brush never fires (matches bar chart's fields:['x','x']).
+  test('x_facet_values re-materializes x for the highlight band', async () => {
+    const {spec} = await buildComboProps(
+      SOURCE,
+      `# combo_chart ${TWO_MEASURES}`
+    );
+    const group = findMark(spec.marks, 'x_group') as GroupMark;
+    const facet = group.data?.find(d => d.name === 'x_facet_values');
+    const agg = facet?.transform?.find(t => t.type === 'aggregate');
+    expect(agg).toMatchObject({
+      fields: ['x', 'x'],
+      ops: ['values', 'min'],
+      as: ['v', 'x'],
+    });
+  }, 60000);
+});
+
+const TIME_SOURCE =
+  "source: tdata is duckdb.sql(\"SELECT * FROM (VALUES (DATE '2024-01-15', 10), (DATE '2024-02-15', 20)) AS t(event_date, reach)\")";
+const TIME_TWO_MEASURES = `
+  run: tdata -> {
+    group_by: event_date
+    aggregate:
+      total_reach is reach.sum()
+      avg_reach is reach.avg()
+  }
+`;
+
+describe('combo_chart null time-x', () => {
+  // A null time value comes through as NULL_SYMBOL. Without a guard the tooltip
+  // does new Date(NULL_SYMBOL) → "Invalid Date"; line_chart guards it, so must
+  // combo. This asserts the guard on a genuine time x (xIsDateorTime === true).
+  test('tooltip title is NULL_SYMBOL, not "Invalid Date"', async () => {
+    const {props, rootCell} = await buildCombo(
+      TIME_SOURCE,
+      `# combo_chart ${TIME_TWO_MEASURES}`
+    );
+    const records = [{x: NULL_SYMBOL, __row: rootCell.rows[0]}];
+    const tooltip = props.getTooltipData?.(
+      fakeTooltipItem('x_highlight', {x: NULL_SYMBOL, v: records}),
+      fakeTooltipView()
+    );
+    expect(tooltip?.title).toEqual([NULL_SYMBOL]);
+  }, 60000);
+});
+
+describe('combo_chart x limit', () => {
+  // SOURCE has three distinct x values; a numeric x.limit must cap the plotted
+  // bands and surface the drop as isDataLimited + a "Showing N of M" note. The
+  // stub's plotWidth can't reach the auto path, but a numeric limit doesn't
+  // depend on it, so the "limit never applied" bug is fully covered here.
+  test('numeric x.limit caps bands and reports the truncation', async () => {
+    const {props, rootCell} = await buildCombo(
+      SOURCE,
+      `# combo_chart { x.limit=2 } ${TWO_MEASURES}`
+    );
+    const xscale = props.spec.scales?.find(s => s.name === 'xscale') as {
+      domain: unknown[];
+    };
+    expect(xscale.domain).toHaveLength(2);
+
+    const mapped = props.mapMalloyDataToChartData(rootCell);
+    expect(mapped.data).toHaveLength(2);
+    expect(mapped.isDataLimited).toBe(true);
+    expect(mapped.dataLimitMessage).toBe('Showing 2 of 3');
+  }, 60000);
+
+  test('no limit → every band plotted, not flagged as limited', async () => {
+    const {props, rootCell} = await buildCombo(
+      SOURCE,
+      `# combo_chart ${TWO_MEASURES}`
+    );
+    const mapped = props.mapMalloyDataToChartData(rootCell);
+    expect(mapped.data).toHaveLength(3);
+    expect(mapped.isDataLimited).toBe(false);
+    expect(mapped.dataLimitMessage).toBe('');
+  }, 60000);
+});
+
+describe('combo_chart bars on both axes', () => {
+  // Both axes drawing bars must sit side-by-side, never stacked on the same x
+  // slot. A single shared `xOffset` scale over the union of both axes' bar
+  // measures (not one scale per channel) is what gives each bar its own slot.
+  test('both-bar uses one shared xOffset scale over the union of measures', async () => {
+    const {spec} = await buildComboProps(
+      SOURCE,
+      `# combo_chart { y2.chart=bar } ${TWO_MEASURES}`
+    );
+    const offsetScales = (spec.scales ?? []).filter(s =>
+      s.name.startsWith('xOffset')
+    );
+    // Exactly one offset scale (not xOffsetLeft + xOffsetRight).
+    expect(offsetScales.map(s => s.name)).toEqual(['xOffset']);
+    // Its domain is the union of both axes' measures.
+    expect((offsetScales[0] as {domain: string[]}).domain).toEqual([
+      'total_reach',
+      'avg_reach',
+    ]);
+    // Both bar groups position off the shared scale.
+    const leftBars = findMark(spec.marks, 'left_values_bars');
+    const rightBars = findMark(spec.marks, 'right_values_bars');
+    expect((leftBars?.encode?.enter?.width as {scale: string})?.scale).toBe(
+      'xOffset'
+    );
+    expect((rightBars?.encode?.enter?.width as {scale: string})?.scale).toBe(
+      'xOffset'
+    );
+  }, 60000);
+
+  test('single bar channel → xOffset spans only that channel (unchanged layout)', async () => {
+    // Default combo is bars-left + line-right, so only the left measure draws
+    // bars: the offset scale collapses to that one measure, exactly as before.
+    const {spec} = await buildComboProps(
+      SOURCE,
+      `# combo_chart ${TWO_MEASURES}`
+    );
+    const offset = (spec.scales ?? []).find(s => s.name === 'xOffset') as {
+      domain: string[];
+    };
+    expect(offset.domain).toEqual(['total_reach']);
+  }, 60000);
+});
+
+describe('combo_chart measure dedupe', () => {
+  // A measure named both explicitly (y=…) and via an embedded `# y` tag would
+  // otherwise be pushed twice → duplicate series + legend entry.
+  test('a measure listed both explicitly and via # y is not doubled', async () => {
+    const {settings} = await buildCombo(
+      SOURCE,
+      `
+      # combo_chart { y=total_reach y2=avg_reach }
+      run: data -> {
+        group_by: audience_name
+        aggregate:
+          # y
+          total_reach is reach.sum()
+          avg_reach is reach.avg()
+      }
+      `
+    );
+    expect(settings.yChannel.fields).toHaveLength(1);
+    expect(settings.y2Channel.fields).toHaveLength(1);
   }, 60000);
 });

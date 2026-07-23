@@ -320,7 +320,9 @@ export type ChartLayoutSettings = {
     titleFontWeight?: FontWeightValue;
   };
   yScale: {
-    domain: number[];
+    // null when the axis domain is independent (per-row); consumers fall back
+    // to a data-driven domain. Matches y2Scale below.
+    domain: number[] | null;
   };
   // Secondary (right) measure axis, present only for dual-axis charts (combo).
   // Bar/line charts leave these undefined and are unaffected.
@@ -391,9 +393,9 @@ function topTickOverflowExtra(
   return 0;
 }
 
-// Compute the width/domain metrics for a single measure axis. Factored out so
-// the secondary (right) axis of a combo chart can be sized with the same rules
-// as the primary axis, without duplicating the label-measuring math.
+// Compute the width/domain metrics for a single measure axis. Both the primary
+// axis and the secondary (right) axis of a combo chart run through this one
+// helper, so their label-measuring math is shared and can't drift.
 function measureAxisMetrics(
   yField: Field,
   minVal: number,
@@ -573,98 +575,39 @@ export function getChartLayoutSettings(
     yField.minNumber!,
     yField.maxNumber!,
   ];
-  const yScale = scale('linear')()
-    .domain([minVal, maxVal])
-    .nice()
-    .range([chartHeight, 0]);
-  const yDomain = yScale.domain();
 
+  // Primary (left) axis. Sized by the shared measureAxisMetrics helper — the
+  // same path the secondary (combo) axis takes — so the two can't drift. The
+  // nice()'d domain it returns is also what the yScale return uses; for the
+  // spark case (no labels measured) we compute that domain directly.
+  let yDomain: number[];
   if (hasYAxis) {
-    const maxAxisVal = yScale.domain().at(1);
-    const minAxisVal = yScale.domain().at(0);
-    const l = locale();
-    const formattedMin = yField.isBasic()
-      ? renderNumericField(yField, minAxisVal)
-      : l.format(',')(minAxisVal);
-    const formattedMax = yField.isBasic()
-      ? renderNumericField(yField, maxAxisVal)
-      : l.format(',')(maxAxisVal);
-
-    const yLabelFontStyles = {
-      fontFamily: fontSettings.yLabel.fontFamily,
-      fontSize: fontSettings.yLabel.fontSize,
-      ...(fontSettings.yLabel.fontWeight && {
-        fontWeight: fontSettings.yLabel.fontWeight,
-      }),
-      width: 'fit-content',
-      opacity: '0',
-      fontVariantNumeric: 'tabular-nums',
-      position: 'absolute',
-    };
-
-    const yTitleFontStyles = {
-      fontFamily: fontSettings.yTitle.fontFamily,
-      fontSize: fontSettings.yTitle.fontSize,
-      ...(fontSettings.yTitle.fontWeight && {
-        fontWeight: fontSettings.yTitle.fontWeight,
-      }),
-      width: 'fit-content',
-      opacity: '0',
-      position: 'absolute',
-    };
-
-    // Measure the height of title text with capital letters to get accurate vertical spacing
-    yTitleSize = getTextHeightDOM(
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZgy',
-      yTitleFontStyles
+    const m = measureAxisMetrics(
+      yField,
+      minVal,
+      maxVal,
+      chartHeight,
+      fontSettings,
+      options.vegaConfig
     );
-
-    const axisYTitlePadding = options.vegaConfig?.axisY?.titlePadding;
-    const axisTitlePadding = options.vegaConfig?.axis?.titlePadding;
-    const configTitleOffset = options.vegaConfig?.title?.offset;
-
-    if (axisYTitlePadding !== undefined) {
-      yTitleOffset = Number(axisYTitlePadding);
-    } else if (axisTitlePadding !== undefined) {
-      yTitleOffset = Number(axisTitlePadding);
-    } else if (configTitleOffset !== undefined) {
-      yTitleOffset = Number(configTitleOffset);
-    } else {
-      // Default title offset
-      yTitleOffset = yTitleSize;
-    }
-
-    // Repeat this logic for labelPadding, but only check axisY and axis (not title)
-
-    const axisYLabelPadding = options.vegaConfig?.axisY?.labelPadding;
-    const axisLabelPadding = options.vegaConfig?.axis?.labelPadding;
-
-    if (axisYLabelPadding !== undefined) {
-      yLabelPadding = Number(axisYLabelPadding);
-    } else if (axisLabelPadding !== undefined) {
-      yLabelPadding = Number(axisLabelPadding);
-    } else {
-      // Default label padding
-      yLabelPadding = 6;
-    }
-
-    maxYLabelWidth = Math.max(
-      getTextWidthDOM(formattedMin, yLabelFontStyles),
-      getTextWidthDOM(formattedMax, yLabelFontStyles)
-    );
-    yAxisWidth = maxYLabelWidth + 2 * yTitleOffset + yTitleSize + yLabelPadding;
-
-    // Check whether the top data point would be clipped by short nice() ticks.
-    const noOfTicks = Math.ceil(chartHeight / 40);
-    primaryTopOverflow = topTickOverflowExtra(
-      yScale.domain(),
-      yScale.ticks(noOfTicks).at(-1),
-      chartHeight
-    );
+    yAxisWidth = m.width;
+    maxYLabelWidth = m.minExtent;
+    yTitleSize = m.yTitleSize;
+    yTitleOffset = m.titlePadding;
+    yLabelPadding = m.labelPadding;
+    yDomain = m.domain;
+    primaryTopOverflow = m.topOverflowExtra;
     if (primaryTopOverflow > 0) {
-      // Hardcode # of ticks, or the resize could make room for more ticks and then screw things up
-      yTickCount = noOfTicks;
+      // Hardcode # of ticks, or the resize could make room for more ticks and
+      // then screw things up.
+      yTickCount = m.tickCount;
     }
+  } else {
+    yDomain = scale('linear')()
+      .domain([minVal, maxVal])
+      .nice()
+      .range([chartHeight, 0])
+      .domain();
   }
 
   // Secondary (right) measure axis for combo charts.

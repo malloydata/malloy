@@ -203,6 +203,7 @@ export class RenderFieldMetadata {
       'viz',
       'bar_chart',
       'line_chart',
+      'combo_chart',
       'list',
       'list_detail',
       'pivot',
