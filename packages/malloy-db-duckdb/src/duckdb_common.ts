@@ -22,6 +22,7 @@ import {
   DuckDBDialect,
   makeDigest,
   mkFieldDef,
+  sqlWithQueryMetadata,
   sqlKey,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -111,7 +112,10 @@ export abstract class DuckDBCommon
       statements.shift();
     }
 
-    const retVal = await this.runRawSQL(statements[0]);
+    // DuckDB has no native tagging mechanism; fall back to a leading comment.
+    const retVal = await this.runRawSQL(
+      sqlWithQueryMetadata(statements[0], options.queryMetadata)
+    );
     let result = retVal.rows;
     if (result.length > rowLimit) {
       result = result.slice(0, rowLimit);

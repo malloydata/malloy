@@ -21,7 +21,7 @@ import type {
 import {SnowflakeDialect, sqlKey, makeDigest} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-import {SnowflakeExecutor} from './snowflake_executor';
+import {SnowflakeExecutor, snowflakeQueryTag} from './snowflake_executor';
 import {
   accumulateVariantPath,
   buildTopLevelField,
@@ -192,10 +192,14 @@ export class SnowflakeConnection
     }
     this.connOptions = connOptions ?? {};
     this.setupSQL = options?.setupSQL;
+    // The connection-level query tag (from the default queryOptions) is applied
+    // to every statement, including runtime-internal ones (schema fetches) that
+    // don't flow through runSQL's option merge.
     this.executor = new SnowflakeExecutor(
       connOptions,
       options?.poolOptions,
-      this.setupSQL
+      this.setupSQL,
+      snowflakeQueryTag(options?.queryOptions)
     );
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};

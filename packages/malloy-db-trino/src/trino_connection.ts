@@ -21,7 +21,13 @@ import type {
   TestableConnection,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {TrinoDialect, mkFieldDef, sqlKey, makeDigest} from '@malloydata/malloy';
+import {
+  TrinoDialect,
+  mkFieldDef,
+  sqlKey,
+  makeDigest,
+  sqlWithQueryMetadata,
+} from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -93,9 +99,12 @@ class PrestoRunner implements BaseRunner {
   }
   async runSQL(sql: string, options: RunSQLOptions = {}) {
     let ret: PrestoQuery | undefined = undefined;
-    const q = options.rowLimit
-      ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
-      : sql;
+    const q = sqlWithQueryMetadata(
+      options.rowLimit
+        ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
+        : sql,
+      options.queryMetadata
+    );
     let error: string | undefined = undefined;
     try {
       ret = (await this.client.query(q)) || [];
@@ -141,7 +150,9 @@ class TrinoRunner implements BaseRunner {
     });
   }
   async runSQL(sql: string, options: RunSQLOptions = {}) {
-    const result = await this.client.query(sql);
+    const result = await this.client.query(
+      sqlWithQueryMetadata(sql, options.queryMetadata)
+    );
     let queryResult = await result.next();
     if (queryResult.value.error) {
       return {
