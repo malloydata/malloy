@@ -6,18 +6,7 @@
 import {Tag} from '@malloydata/malloy-tag';
 import type {BarChartSettings} from './bar-chart-settings';
 import {defaultBarChartSettings} from './bar-chart-settings';
-
-function extractFieldName(fieldPath: string): string {
-  try {
-    const parsed = JSON.parse(fieldPath);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed[parsed.length - 1];
-    }
-  } catch {
-    // If parsing fails, treat as regular string
-  }
-  return fieldPath;
-}
+import {extractFieldName} from '@/plugins/extract-field-name';
 
 export function barChartSettingsToTag(settings: BarChartSettings): Tag {
   let tag = new Tag({
