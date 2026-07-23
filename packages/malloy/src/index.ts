@@ -222,7 +222,7 @@ export {
   QUERY_METADATA_MAX_VALUE_LENGTH,
   QUERY_METADATA_MAX_PROPERTIES,
   queryMetadataBag,
-  queryMetadataComment,
+  sqlWithQueryMetadata,
   queryMetadataProblems,
   validateQueryMetadata,
 } from './query_metadata';

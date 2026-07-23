@@ -115,3 +115,15 @@ export function queryMetadataComment(meta: QueryMetadata): string {
     .join(' ');
   return `-- ${rendered}\n`;
 }
+
+/**
+ * `sql` with the query-metadata comment prepended, or `sql` unchanged when
+ * there is no metadata to apply. Throws on an invalid bag. Used by connectors
+ * with no per-query-native tag mechanism.
+ */
+export function sqlWithQueryMetadata(
+  sql: string,
+  meta: QueryMetadata | undefined
+): string {
+  return meta ? queryMetadataComment(meta) + sql : sql;
+}

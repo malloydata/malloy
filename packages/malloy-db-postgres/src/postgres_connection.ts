@@ -32,7 +32,7 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
-  queryMetadataComment,
+  sqlWithQueryMetadata,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -501,13 +501,6 @@ export class PostgresConnection
     await this.runSQL('SELECT 1');
   }
 
-  // The property bag as a leading comment, prepended to each data query.
-  protected queryMetadataComment(options?: RunSQLOptions): string {
-    return options?.queryMetadata
-      ? queryMetadataComment(options.queryMetadata)
-      : '';
-  }
-
   public async connectionSetup(client: Client): Promise<void> {
     await client.query("SET TIME ZONE 'UTC'");
     if (this.setupSQL) {
@@ -528,7 +521,7 @@ export class PostgresConnection
     const config = await this.readQueryConfig();
 
     return this.runPostgresQuery(
-      this.queryMetadataComment(options) + sql,
+      sqlWithQueryMetadata(sql, options.queryMetadata),
       options.rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
@@ -541,7 +534,7 @@ export class PostgresConnection
   ): AsyncIterableIterator<QueryRecord> {
     const {rowLimit, abortSignal} = options;
     const query = new QueryStream(
-      this.queryMetadataComment(options) + sqlCommand
+      sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
     );
     const client = await this.getClient();
     await this.withTlsHint(() => client.connect());
@@ -664,7 +657,7 @@ export class PooledPostgresConnection
   ): AsyncIterableIterator<QueryRecord> {
     const {rowLimit, abortSignal} = options;
     const query = new QueryStream(
-      this.queryMetadataComment(options) + sqlCommand
+      sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
     );
     let index = 0;
     // This is a strange hack... `this.pool.query(query)` seems to return the wrong

@@ -7,6 +7,7 @@ import {
   queryMetadataBag,
   queryMetadataComment,
   queryMetadataProblems,
+  sqlWithQueryMetadata,
   validateQueryMetadata,
 } from './query_metadata';
 
@@ -75,5 +76,18 @@ describe('queryMetadataComment', () => {
 
   it('throws on an invalid bag rather than emitting an unsafe comment', () => {
     expect(() => queryMetadataComment({k: 'a"b'})).toThrow();
+  });
+});
+
+describe('sqlWithQueryMetadata', () => {
+  it('prepends the comment when metadata is present', () => {
+    expect(sqlWithQueryMetadata('SELECT 1', {env: 'prod'})).toBe(
+      '-- env="prod"\nSELECT 1'
+    );
+  });
+
+  it('returns the sql unchanged for absent or empty metadata', () => {
+    expect(sqlWithQueryMetadata('SELECT 1', undefined)).toBe('SELECT 1');
+    expect(sqlWithQueryMetadata('SELECT 1', {})).toBe('SELECT 1');
   });
 });

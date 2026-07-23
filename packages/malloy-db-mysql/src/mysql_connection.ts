@@ -22,7 +22,7 @@ import {
   MySQLDialect,
   sqlKey,
   makeDigest,
-  queryMetadataComment,
+  sqlWithQueryMetadata,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import {randomUUID} from 'crypto';
@@ -133,10 +133,7 @@ export class MySQLConnection
 
   runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData> {
     // MySQL has no native tagging mechanism; fall back to a leading comment.
-    const comment = options?.queryMetadata
-      ? queryMetadataComment(options.queryMetadata)
-      : '';
-    return this.runRawSQL(comment + sql);
+    return this.runRawSQL(sqlWithQueryMetadata(sql, options?.queryMetadata));
   }
 
   isPool(): this is PooledConnection {

@@ -26,7 +26,7 @@ import {
   mkFieldDef,
   sqlKey,
   makeDigest,
-  queryMetadataComment,
+  sqlWithQueryMetadata,
 } from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 
@@ -103,14 +103,12 @@ class PrestoRunner implements BaseRunner {
   }
   async runSQL(sql: string, options: RunSQLOptions = {}) {
     let ret: PrestoQuery | undefined = undefined;
-    const comment = options.queryMetadata
-      ? queryMetadataComment(options.queryMetadata)
-      : '';
-    const q =
-      comment +
-      (options.rowLimit
+    const q = sqlWithQueryMetadata(
+      options.rowLimit
         ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
-        : sql);
+        : sql,
+      options.queryMetadata
+    );
     let error: string | undefined = undefined;
     try {
       ret = (await this.client.query(q)) || [];
@@ -162,10 +160,9 @@ class TrinoRunner implements BaseRunner {
     });
   }
   async runSQL(sql: string, options: RunSQLOptions = {}) {
-    const comment = options.queryMetadata
-      ? queryMetadataComment(options.queryMetadata)
-      : '';
-    const result = await this.client.query(comment + sql);
+    const result = await this.client.query(
+      sqlWithQueryMetadata(sql, options.queryMetadata)
+    );
     let queryResult = await result.next();
     if (queryResult.value.error) {
       return {

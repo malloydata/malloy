@@ -12,7 +12,7 @@ import type {
   QueryOptionsReader,
   RunSQLOptions,
 } from '@malloydata/malloy';
-import {makeDigest, queryMetadataComment} from '@malloydata/malloy';
+import {makeDigest, sqlWithQueryMetadata} from '@malloydata/malloy';
 import packageJson from '@malloydata/malloy/package.json';
 import {
   buildDuckDBShareKey,
@@ -473,7 +473,6 @@ export class DuckDBConnection extends DuckDBCommon {
       throw new Error('Connection not open');
     }
 
-    const comment = queryMetadata ? queryMetadataComment(queryMetadata) : '';
     const statements = sql.split('-- hack: split on this');
 
     while (statements.length > 1) {
@@ -481,7 +480,9 @@ export class DuckDBConnection extends DuckDBCommon {
       statements.shift();
     }
 
-    const result = await this.connection.stream(comment + statements[0]);
+    const result = await this.connection.stream(
+      sqlWithQueryMetadata(statements[0], queryMetadata)
+    );
 
     let index = 0;
     for await (const chunk of result.yieldRowObjectJson()) {
