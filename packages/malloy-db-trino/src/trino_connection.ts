@@ -80,9 +80,6 @@ export interface BaseRunner {
 class PrestoRunner implements BaseRunner {
   client: PrestoClient;
   constructor(config: TrinoConnectionConfiguration) {
-    const extraHeaders: Record<string, string> = {
-      'X-Presto-Session': 'legacy_unnest=true',
-    };
     const prestoClientConfig: PrestoClientConfig = {
       catalog: config.catalog,
       host: config.server,
@@ -90,8 +87,7 @@ class PrestoRunner implements BaseRunner {
       schema: config.schema,
       timezone: 'UTC',
       user: config.user || 'anyone',
-      source: config.source,
-      extraHeaders,
+      extraHeaders: {'X-Presto-Session': 'legacy_unnest=true'},
     };
     if (config.user && config.password) {
       prestoClientConfig.basicAuthentication = {
@@ -144,14 +140,8 @@ class TrinoRunner implements BaseRunner {
         // If server isn't a parseable URL, leave it as-is
       }
     }
-    const extraConfig = (config.extraConfig ??
-      {}) as Partial<ConnectionOptions>;
-    const extraHeaders: Record<string, string> = {
-      ...(extraConfig.extraHeaders as Record<string, string> | undefined),
-    };
     this.client = Trino.create({
-      ...extraConfig,
-      ...(Object.keys(extraHeaders).length > 0 ? {extraHeaders} : {}),
+      ...(config.extraConfig as Partial<ConnectionOptions>),
       source: config.source,
       catalog: config.catalog,
       server,
@@ -315,11 +305,7 @@ export abstract class TrinoPrestoConnection
       resultRowToQueryRecord(malloyColumns, row as unknown[], unpack)
     );
 
-    return {
-      rows: malloyRows,
-      totalRows: malloyRows.length,
-      profilingUrl,
-    };
+    return {rows: malloyRows, totalRows: malloyRows.length, profilingUrl};
   }
 
   public async runSQLBlockAndFetchResultSchema(
