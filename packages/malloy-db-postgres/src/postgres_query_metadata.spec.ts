@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {QueryMetadata} from '@malloydata/malloy';
 import type {Client} from 'pg';
 import {PostgresConnection} from './postgres_connection';
 
@@ -20,58 +19,51 @@ function fakeClient(): {client: Client; calls: string[]} {
   return {client, calls};
 }
 
-describe('db-postgres query tags (offline)', () => {
-  it('maps applicationName to SET application_name after SET TIME ZONE', async () => {
-    const conn = new PostgresConnection({
-      name: 'pg',
-      queryMetadata: {applicationName: 'my-app'},
+describe('db-postgres queryMetadata wiring (offline)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  describe('data query — bag prepended as a leading comment', () => {
+    const stubQuery = (conn: PostgresConnection): jest.SpyInstance =>
+      jest
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .spyOn(conn as any, 'runPostgresQuery')
+        .mockResolvedValue({rows: [], totalRows: 0});
+
+    it('prepends the metadata comment to the data statement', async () => {
+      const conn = new PostgresConnection({name: 'pg'});
+      const spy = stubQuery(conn);
+      await conn.runSQL('SELECT 1', {
+        queryMetadata: {application_name: 'my-app', team: 'finance'},
+      });
+      expect(spy.mock.calls[0][0]).toBe(
+        '-- application_name="my-app" team="finance"\nSELECT 1'
+      );
     });
-    const {client, calls} = fakeClient();
-    await conn.connectionSetup(client);
-    expect(calls).toEqual([
-      "SET TIME ZONE 'UTC'",
-      "SET application_name = 'my-app'",
-    ]);
-  });
 
-  it('does not apply labels (Postgres has no general tag facility)', async () => {
-    const conn = new PostgresConnection({
-      name: 'pg',
-      queryMetadata: {applicationName: 'my-app', labels: {team: 'finance'}},
+    it('runs the statement unchanged for absent or empty metadata (no prefix)', async () => {
+      const conn = new PostgresConnection({name: 'pg'});
+      const spy = stubQuery(conn);
+      await conn.runSQL('SELECT 1');
+      await conn.runSQL('SELECT 1', {queryMetadata: {}});
+      expect(spy.mock.calls[0][0]).toBe('SELECT 1');
+      expect(spy.mock.calls[1][0]).toBe('SELECT 1');
     });
-    const {client, calls} = fakeClient();
-    await conn.connectionSetup(client);
-    expect(calls).toEqual([
-      "SET TIME ZONE 'UTC'",
-      "SET application_name = 'my-app'",
-    ]);
-  });
 
-  it('emits only SET TIME ZONE when no query tags are configured', async () => {
-    const conn = new PostgresConnection({name: 'pg'});
-    const {client, calls} = fakeClient();
-    await conn.connectionSetup(client);
-    expect(calls).toEqual(["SET TIME ZONE 'UTC'"]);
-  });
-
-  it('escapes single quotes in the application_name value', async () => {
-    const conn = new PostgresConnection({
-      name: 'pg',
-      queryMetadata: {applicationName: "my'app"},
+    it('throws on an invalid bag', async () => {
+      const conn = new PostgresConnection({name: 'pg'});
+      stubQuery(conn);
+      await expect(
+        conn.runSQL('SELECT 1', {queryMetadata: {'bad key': 'v'}})
+      ).rejects.toThrow(/Invalid query metadata/);
     });
-    const {client, calls} = fakeClient();
-    await conn.connectionSetup(client);
-    expect(calls).toContain("SET application_name = 'my''app'");
   });
 
-  describe('connection digest', () => {
-    const digest = (queryMetadata?: QueryMetadata): string =>
-      new PostgresConnection({name: 'pg', queryMetadata}).getDigest();
-
-    it('excludes query tags', () => {
-      const base = digest();
-      expect(digest({applicationName: 'my-app'})).toBe(base);
-      expect(digest({labels: {team: 'finance'}})).toBe(base);
+  describe('session open', () => {
+    it('sets only SET TIME ZONE at session open', async () => {
+      const conn = new PostgresConnection({name: 'pg'});
+      const {client, calls} = fakeClient();
+      await conn.connectionSetup(client);
+      expect(calls).toEqual(["SET TIME ZONE 'UTC'"]);
     });
   });
 });

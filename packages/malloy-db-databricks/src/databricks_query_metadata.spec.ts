@@ -29,59 +29,30 @@ const connect = (conn: DatabricksConnection): Promise<void> =>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (conn as any).ensureConnected();
 
-describe('db-databricks query tags (offline)', () => {
+describe('db-databricks queryMetadata wiring (offline)', () => {
   beforeEach(() => {
     mockExecCalls.length = 0;
   });
 
-  it('emits one SET QUERY_TAGS statement at session open, after SET TIME ZONE', async () => {
-    const conn = new DatabricksConnection('dbx', {
-      ...BASE,
-      queryMetadata: {applicationName: 'my-app', labels: {team: 'finance'}},
+  it('prepends the metadata comment to the data statement', async () => {
+    const conn = new DatabricksConnection('dbx', {...BASE});
+    await conn.runSQL('SELECT 1', {
+      queryMetadata: {application_name: 'my-app', team: 'finance'},
     });
-    await connect(conn);
-    expect(mockExecCalls).toEqual([
-      "SET TIME ZONE 'UTC'",
-      "SET QUERY_TAGS['team'] = 'finance', QUERY_TAGS['application'] = 'my-app'",
-    ]);
+    expect(mockExecCalls).toContain(
+      '-- application_name="my-app" team="finance"\nSELECT 1'
+    );
   });
 
-  it('emits only SET TIME ZONE when no query tags are configured', async () => {
+  it('sends the statement unchanged when there is no metadata', async () => {
+    const conn = new DatabricksConnection('dbx', {...BASE});
+    await conn.runSQL('SELECT 1');
+    expect(mockExecCalls).toContain('SELECT 1');
+  });
+
+  it('emits only SET TIME ZONE at session open (no tag statements)', async () => {
     const conn = new DatabricksConnection('dbx', {...BASE});
     await connect(conn);
     expect(mockExecCalls).toEqual(["SET TIME ZONE 'UTC'"]);
-  });
-
-  it('uses the QUERY_TAGS associative-array grammar, preserving case', async () => {
-    const conn = new DatabricksConnection('dbx', {
-      ...BASE,
-      queryMetadata: {labels: {CostCenter: 'Eng'}},
-    });
-    await connect(conn);
-    expect(mockExecCalls).toContain("SET QUERY_TAGS['CostCenter'] = 'Eng'");
-  });
-
-  it('escapes single quotes and backslashes in tag values', async () => {
-    const conn = new DatabricksConnection('dbx', {
-      ...BASE,
-      queryMetadata: {labels: {obrien: "a'b\\c"}},
-    });
-    await connect(conn);
-    expect(mockExecCalls).toContain("SET QUERY_TAGS['obrien'] = 'a\\'b\\\\c'");
-  });
-
-  describe('connection digest', () => {
-    const digest = (c: DatabricksConnection): string => c.getDigest();
-
-    it('excludes query tags', () => {
-      expect(
-        digest(
-          new DatabricksConnection('dbx', {
-            ...BASE,
-            queryMetadata: {labels: {team: 'fin'}},
-          })
-        )
-      ).toBe(digest(new DatabricksConnection('dbx', BASE)));
-    });
   });
 });

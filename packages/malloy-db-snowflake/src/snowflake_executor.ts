@@ -17,7 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type {Readable} from 'stream';
 import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
-import {queryMetadataLabels, toAsyncGenerator} from '@malloydata/malloy';
+import {queryMetadataBag, toAsyncGenerator} from '@malloydata/malloy';
 
 // Disable snowflake-sdk logging by default (issue #2565)
 snowflake.configure({logLevel: 'OFF'});
@@ -26,10 +26,10 @@ snowflake.configure({logLevel: 'OFF'});
 const MAX_QUERY_TAG_LENGTH = 2000;
 
 /**
- * Render a query's tags into a Snowflake `QUERY_TAG` value: the label set
- * (with `applicationName` folded in) serialized as JSON, so the structured
- * labels are queryable in `QUERY_HISTORY` / `QUERY_ATTRIBUTION_HISTORY`. Case
- * is preserved. Clamped to Snowflake's 2000-char limit as a runtime backstop.
+ * Render a query's metadata into a Snowflake `QUERY_TAG` value: the property
+ * bag serialized as JSON, so the properties are queryable in `QUERY_HISTORY` /
+ * `QUERY_ATTRIBUTION_HISTORY`. Case is preserved. Clamped to Snowflake's
+ * 2000-char limit as a runtime backstop.
  *
  * The tag is applied per statement via `parameters.QUERY_TAG` (see `_execute`);
  * the connection-level `connOptions.queryTag` is deliberately never set,
@@ -39,9 +39,9 @@ const MAX_QUERY_TAG_LENGTH = 2000;
 export function snowflakeQueryTag(options?: RunSQLOptions): string | undefined {
   const meta = options?.queryMetadata;
   if (!meta) return undefined;
-  const labels = queryMetadataLabels(meta);
-  if (!labels) return undefined;
-  const tag = JSON.stringify(labels);
+  const bag = queryMetadataBag(meta);
+  if (!bag) return undefined;
+  const tag = JSON.stringify(bag);
   return tag.length > MAX_QUERY_TAG_LENGTH
     ? tag.slice(0, MAX_QUERY_TAG_LENGTH)
     : tag;
@@ -182,8 +182,7 @@ export class SnowflakeExecutor {
     conn: Connection,
     options?: RunSQLOptions,
     timeoutMs?: number,
-    binds?: Binds,
-    capture?: {queryId?: string}
+    binds?: Binds
   ): Promise<QueryData> {
     const abortSignal = options?.abortSignal;
     // Fail fast if already aborted before we even start executing
@@ -222,15 +221,6 @@ export class SnowflakeExecutor {
             if (err) {
               reject(err);
             } else {
-              // The warehouse-assigned query id, for response-side execution
-              // metadata (best-effort; never fails the query).
-              if (capture) {
-                try {
-                  capture.queryId = _stmt.getQueryId();
-                } catch {
-                  // getQueryId can throw on statements with no server id; ignore.
-                }
-              }
               // Snowflake occasionally calls complete with no rows (e.g. DDL); without this branch
               // the Promise never settles and generic-pool holds the connection forever.
               resolve(rows ?? []);
@@ -324,21 +314,11 @@ export class SnowflakeExecutor {
     sqlText: string,
     options?: RunSQLOptions,
     timeoutMs?: number,
-    binds?: Binds,
-    capture?: {queryId?: string}
+    binds?: Binds
   ): Promise<QueryData> {
     return await this.pool_.use(async (conn: Connection) => {
       await this.ensureSessionInitialized(conn, options, timeoutMs);
-      // Only the data statement's id is captured — session-init statements run
-      // above without a capture object.
-      return await this._execute(
-        sqlText,
-        conn,
-        options,
-        timeoutMs,
-        binds,
-        capture
-      );
+      return await this._execute(sqlText, conn, options, timeoutMs, binds);
     });
   }
 

@@ -273,21 +273,11 @@ export class SnowflakeConnection
       ...options,
     };
     const rowLimit = effectiveOptions.rowLimit;
-    const capture: {queryId?: string} = {};
-    let rows = await this.executor.batch(
-      sql,
-      effectiveOptions,
-      this.timeoutMs,
-      undefined,
-      capture
-    );
+    let rows = await this.executor.batch(sql, effectiveOptions, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
       rows = rows.slice(0, rowLimit);
     }
-    const runStats: QueryRunStats | undefined = capture.queryId
-      ? {executionId: capture.queryId}
-      : undefined;
-    return {rows, totalRows: rows.length, runStats};
+    return {rows, totalRows: rows.length};
   }
 
   public async *runSQLStream(

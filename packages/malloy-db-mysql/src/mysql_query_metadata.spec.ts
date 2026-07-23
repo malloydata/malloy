@@ -21,14 +21,16 @@ describe('db-mysql queryMetadata wiring (offline)', () => {
   it('prepends the metadata comment to the statement', async () => {
     const conn = makeConn();
     const spy = stubRunRawSQL(conn);
-    await conn.runSQL('SELECT 1', {queryMetadata: {labels: {env: 'prod'}}});
+    await conn.runSQL('SELECT 1', {queryMetadata: {env: 'prod'}});
     expect(spy).toHaveBeenCalledWith('-- env="prod"\nSELECT 1');
   });
 
-  it('runs the statement unchanged when no metadata is present', async () => {
+  it('runs the statement unchanged for absent or empty metadata (no prefix)', async () => {
     const conn = makeConn();
     const spy = stubRunRawSQL(conn);
     await conn.runSQL('SELECT 1');
-    expect(spy).toHaveBeenCalledWith('SELECT 1');
+    await conn.runSQL('SELECT 1', {queryMetadata: {}});
+    expect(spy).toHaveBeenNthCalledWith(1, 'SELECT 1');
+    expect(spy).toHaveBeenNthCalledWith(2, 'SELECT 1');
   });
 });

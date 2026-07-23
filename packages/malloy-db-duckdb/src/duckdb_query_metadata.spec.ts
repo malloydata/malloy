@@ -21,17 +21,19 @@ describe('db-duckdb queryMetadata wiring (offline)', () => {
     const conn = new DuckDBConnection('duckdb');
     const spy = stubRunRawSQL(conn);
     await conn.runSQL('SELECT 1', {
-      queryMetadata: {applicationName: 'my-app', labels: {env: 'prod'}},
+      queryMetadata: {application_name: 'my-app', env: 'prod'},
     });
     expect(spy).toHaveBeenCalledWith(
-      '-- env="prod" application="my-app"\nSELECT 1'
+      '-- application_name="my-app" env="prod"\nSELECT 1'
     );
   });
 
-  it('runs the statement unchanged when no metadata is present', async () => {
+  it('runs the statement unchanged for absent or empty metadata (no prefix)', async () => {
     const conn = new DuckDBConnection('duckdb');
     const spy = stubRunRawSQL(conn);
     await conn.runSQL('SELECT 1');
-    expect(spy).toHaveBeenCalledWith('SELECT 1');
+    await conn.runSQL('SELECT 1', {queryMetadata: {}});
+    expect(spy).toHaveBeenNthCalledWith(1, 'SELECT 1');
+    expect(spy).toHaveBeenNthCalledWith(2, 'SELECT 1');
   });
 });

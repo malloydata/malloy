@@ -3,26 +3,26 @@
  * SPDX-License-Identifier: MIT
  */
 
-// PrestoClient is mocked so we can inspect the client config the driver builds
-// (request-side client tags / source) without a live server.
+// PrestoClient is mocked so we can inspect the SQL the driver sends without a
+// live server.
 jest.mock('@prestodb/presto-js-client', () => ({
   PrestoClient: jest.fn().mockImplementation(() => ({query: jest.fn()})),
 }));
 
 import {PrestoClient} from '@prestodb/presto-js-client';
 import {Trino} from 'trino-client';
-import type {BaseRunner} from './trino_connection';
 import {PrestoConnection, TrinoConnection} from './trino_connection';
 
 const PrestoClientMock = PrestoClient as unknown as jest.Mock;
 
-// A BaseRunner that returns a fixed result (with a query id) and no network.
-function fakeRunner(queryId?: string): BaseRunner {
+// A Trino client mock whose `query` we can inspect; one result page, done.
+function fakeTrinoClient(): {query: jest.Mock} {
   return {
-    runSQL: async () => ({
-      rows: [['hello']],
-      columns: [{name: 'c', type: 'varchar'}],
-      queryId,
+    query: jest.fn().mockReturnValue({
+      next: async () => ({
+        value: {columns: [], data: [], id: 'q1'},
+        done: true,
+      }),
     }),
   };
 }
@@ -30,125 +30,47 @@ function fakeRunner(queryId?: string): BaseRunner {
 describe('db-trino queryMetadata wiring (offline)', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  describe('request side — applicationName -> source, labels -> client tags', () => {
-    it('Trino: maps applicationName to source and labels to X-Trino-Client-Tags', () => {
-      const createSpy = jest
-        .spyOn(Trino, 'create')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .mockReturnValue({} as any);
-      new TrinoConnection('t', undefined, {
+  describe('request side — bag prepended as a leading comment', () => {
+    it('Trino: prepends the metadata comment to the query', async () => {
+      const client = fakeTrinoClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      jest.spyOn(Trino, 'create').mockReturnValue(client as any);
+      const conn = new TrinoConnection('t', undefined, {
         server: 'http://localhost:8080',
-        queryMetadata: {
-          applicationName: 'my-app',
-          labels: {team: 'finance', env: 'prod'},
-        },
       });
-      const opts = createSpy.mock.calls[0][0] as {
-        source?: string;
-        extraHeaders?: Record<string, string>;
-      };
-      expect(opts.source).toBe('my-app');
-      expect(opts.extraHeaders?.['X-Trino-Client-Tags']).toBe(
-        'team:finance,env:prod'
-      );
+      await conn.runSQL('SELECT 1', {queryMetadata: {team: 'finance'}});
+      expect(client.query).toHaveBeenCalledWith('-- team="finance"\nSELECT 1');
     });
 
-    it('Trino: sets no client-tags header when there are no labels', () => {
-      const createSpy = jest
-        .spyOn(Trino, 'create')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .mockReturnValue({} as any);
-      new TrinoConnection('t', undefined, {server: 'http://localhost:8080'});
-      const opts = createSpy.mock.calls[0][0] as {
-        extraHeaders?: Record<string, string>;
-      };
-      expect(opts.extraHeaders?.['X-Trino-Client-Tags']).toBeUndefined();
-    });
-
-    it('Trino: rejects a value that violates the malloy contract (newline)', () => {
-      jest
-        .spyOn(Trino, 'create')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .mockReturnValue({} as any);
-      expect(
-        () =>
-          new TrinoConnection('t', undefined, {
-            server: 'http://localhost:8080',
-            queryMetadata: {labels: {ok: 'v', evil: 'a\nb'}},
-          })
-      ).toThrow(/Invalid query metadata/);
-    });
-
-    it('Trino: drops a (contract-valid) label whose value contains the tag separator', () => {
-      const createSpy = jest
-        .spyOn(Trino, 'create')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .mockReturnValue({} as any);
-      new TrinoConnection('t', undefined, {
+    it('Trino: sends the query unchanged when there is no metadata', async () => {
+      const client = fakeTrinoClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      jest.spyOn(Trino, 'create').mockReturnValue(client as any);
+      const conn = new TrinoConnection('t', undefined, {
         server: 'http://localhost:8080',
-        queryMetadata: {labels: {ok: 'v', csv: 'a,b'}},
       });
-      const opts = createSpy.mock.calls[0][0] as {
-        extraHeaders?: Record<string, string>;
-      };
-      expect(opts.extraHeaders?.['X-Trino-Client-Tags']).toBe('ok:v');
+      await conn.runSQL('SELECT 1');
+      expect(client.query).toHaveBeenCalledWith('SELECT 1');
     });
 
-    it('Presto: maps applicationName to source and labels to X-Presto-Client-Tags', () => {
+    it('Trino: rejects a value that violates the malloy contract (newline)', async () => {
+      const client = fakeTrinoClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      jest.spyOn(Trino, 'create').mockReturnValue(client as any);
+      const conn = new TrinoConnection('t', undefined, {
+        server: 'http://localhost:8080',
+      });
+      await expect(
+        conn.runSQL('SELECT 1', {queryMetadata: {evil: 'a\nb'}})
+      ).rejects.toThrow(/Invalid query metadata/);
+    });
+
+    it('Presto: prepends the metadata comment to the query', async () => {
       PrestoClientMock.mockClear();
-      new PrestoConnection('p', undefined, {
-        server: 'localhost',
-        queryMetadata: {
-          applicationName: 'my-app',
-          labels: {team: 'finance', env: 'prod'},
-        },
-      });
-      const cfg = PrestoClientMock.mock.calls[0][0] as {
-        source?: string;
-        extraHeaders?: Record<string, string>;
-      };
-      expect(cfg.source).toBe('my-app');
-      expect(cfg.extraHeaders?.['X-Presto-Client-Tags']).toBe(
-        'team:finance,env:prod'
-      );
-    });
-  });
-
-  describe('response side — query id into runStats.executionId', () => {
-    it('Trino: surfaces the query id', async () => {
-      jest
-        .spyOn(Trino, 'create')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .mockReturnValue({} as any);
-      const conn = new TrinoConnection('t', undefined, {
-        server: 'http://localhost:8080',
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (conn as any).client = fakeRunner('20240101_000001_abcde');
-      const res = await conn.runSQL('SELECT 1');
-      expect(res.runStats?.executionId).toBe('20240101_000001_abcde');
-    });
-
-    it('Presto: surfaces the query id', async () => {
       const conn = new PrestoConnection('p', undefined, {server: 'localhost'});
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (conn as any).client = fakeRunner('20240101_000002_fghij');
-      const res = await conn.runSQL('SELECT 1');
-      expect(res.runStats?.executionId).toBe('20240101_000002_fghij');
-    });
-
-    it('omits runStats when the runner reports no query id', async () => {
-      jest
-        .spyOn(Trino, 'create')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .mockReturnValue({} as any);
-      const conn = new TrinoConnection('t', undefined, {
-        server: 'http://localhost:8080',
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (conn as any).client = fakeRunner(undefined);
-      const res = await conn.runSQL('SELECT 1');
-      expect(res.runStats).toBeUndefined();
+      await conn.runSQL('SELECT 1', {queryMetadata: {team: 'finance'}});
+      const queryFn = PrestoClientMock.mock.results[0].value.query as jest.Mock;
+      expect(queryFn).toHaveBeenCalledWith('-- team="finance"\nSELECT 1');
     });
   });
 });

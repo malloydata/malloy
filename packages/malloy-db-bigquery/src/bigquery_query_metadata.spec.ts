@@ -46,20 +46,20 @@ function firstJobConfig(spy: jest.SpyInstance): Record<string, unknown> {
 describe('db-bigquery queryMetadata wiring (offline)', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  it('applies per-call labels to createQueryJob', async () => {
+  it('applies the per-call property bag to createQueryJob', async () => {
     const {conn, spy} = makeConn();
-    await conn.runSQL('SELECT 1', {queryMetadata: {labels: {team: 'finance'}}});
+    await conn.runSQL('SELECT 1', {queryMetadata: {team: 'finance'}});
     expect(firstJobConfig(spy)['labels']).toEqual({team: 'finance'});
   });
 
-  it('folds applicationName in under the reserved label key', async () => {
+  it('treats application_name as an ordinary label (BigQuery-transformed)', async () => {
     const {conn, spy} = makeConn();
     await conn.runSQL('SELECT 1', {
-      queryMetadata: {applicationName: 'my-app', labels: {team: 'finance'}},
+      queryMetadata: {application_name: 'my-app', team: 'finance'},
     });
     expect(firstJobConfig(spy)['labels']).toEqual({
+      application_name: 'my-app',
       team: 'finance',
-      application: 'my-app',
     });
   });
 
@@ -67,42 +67,33 @@ describe('db-bigquery queryMetadata wiring (offline)', () => {
     const {conn, spy} = makeConn();
     await conn.runSQL('SELECT 1', {
       queryMetadata: {
-        labels: {
-          'CostCenter': 'Eng Team', // uppercase + space -> lowercased, space -> _
-          '2024plan': 'x', // key starts with a digit -> dropped
-        },
+        'CostCenter': 'Eng Team', // uppercase + space -> lowercased, space -> _
+        '2024plan': 'x', // contract-valid, but BQ needs a leading letter -> dropped
       },
     });
     expect(firstJobConfig(spy)['labels']).toEqual({costcenter: 'eng_team'});
   });
 
-  it('applies connection-default labels (from queryOptions) to createQueryJob', async () => {
-    const {conn, spy} = makeConn({queryMetadata: {applicationName: 'my-app'}});
+  it('applies connection-default metadata (from queryOptions) to createQueryJob', async () => {
+    const {conn, spy} = makeConn({queryMetadata: {application_name: 'my-app'}});
     await conn.runSQL('SELECT 1');
-    expect(firstJobConfig(spy)['labels']).toEqual({application: 'my-app'});
+    expect(firstJobConfig(spy)['labels']).toEqual({application_name: 'my-app'});
   });
 
-  it('merges per-call labels over the connection default (per key)', async () => {
+  it('merges per-call metadata over the connection default (per key)', async () => {
     const {conn, spy} = makeConn({
-      queryMetadata: {labels: {app: 'my-app', team: 'default'}},
+      queryMetadata: {app: 'my-app', team: 'default'},
     });
-    await conn.runSQL('SELECT 1', {queryMetadata: {labels: {team: 'finance'}}});
+    await conn.runSQL('SELECT 1', {queryMetadata: {team: 'finance'}});
     expect(firstJobConfig(spy)['labels']).toEqual({
       app: 'my-app',
       team: 'finance',
     });
   });
 
-  it('sets no labels when no tags are present', async () => {
+  it('sets no labels when no metadata is present', async () => {
     const {conn, spy} = makeConn();
     await conn.runSQL('SELECT 1');
     expect(firstJobConfig(spy)['labels']).toBeUndefined();
-  });
-
-  it('surfaces the job id/location as runStats.executionId/executionInfo', async () => {
-    const {conn} = makeConn();
-    const res = await conn.runSQL('SELECT 1');
-    expect(res.runStats?.executionId).toBe('job-abc');
-    expect(res.runStats?.executionInfo).toEqual({location: 'US'});
   });
 });

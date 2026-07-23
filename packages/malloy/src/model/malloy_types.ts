@@ -2117,19 +2117,6 @@ export function isCompoundArrayData(v: QueryValue): v is QueryData {
 /** Query execution stats. */
 export type QueryRunStats = {
   queryCostBytes?: number;
-  /**
-   * Backend-assigned identifier for the executed statement — Snowflake query
-   * id, BigQuery job id, Trino query id — for correlating a result to the
-   * backend's own query record. Best-effort; absent when the connector has no
-   * durable server-side id (e.g. Postgres). The response-side dual of
-   * `queryMetadata`.
-   */
-  executionId?: string;
-  /**
-   * Additional connector-specific execution details, e.g. BigQuery
-   * `{ location }`. Best-effort.
-   */
-  executionInfo?: Record<string, string>;
 };
 
 /** Returned Malloy query data */

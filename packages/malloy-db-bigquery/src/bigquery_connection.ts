@@ -40,7 +40,7 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
-  queryMetadataLabels,
+  queryMetadataBag,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -88,11 +88,10 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
 }
 
 // BigQuery label grammar: keys and values are lowercase, <=63 chars, and
-// [a-z0-9_-]; keys must start with a lowercase letter. Tags are transformed to
-// fit (lowercase, disallowed chars -> '_', truncate). Labels whose key can't be
-// made valid (e.g. it starts with a digit) or that exceed the 64-label cap are
-// dropped. This is the one connector that reshapes tags; the transform is
-// documented so the divergence from other engines is predictable.
+// [a-z0-9_-]; keys must start with a lowercase letter. Values are transformed
+// to fit (lowercase, disallowed chars -> '_', truncate); a key that can't be
+// made valid (e.g. it starts with a digit) or that exceeds the 64-label cap is
+// dropped.
 const BQ_MAX_LABELS = 64;
 const BQ_MAX_LEN = 63;
 
@@ -114,7 +113,7 @@ function toBigQueryLabels(
 ): Record<string, string> | undefined {
   const meta = options?.queryMetadata;
   if (!meta) return undefined;
-  const labels = queryMetadataLabels(meta);
+  const labels = queryMetadataBag(meta);
   if (!labels) return undefined;
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(labels)) {
@@ -318,13 +317,11 @@ export class BigQueryConnection
         startIndex: rowIndex.toString(),
       };
 
-      const capture: {jobId?: string; location?: string} = {};
       const jobResult = await this.createBigQueryJobAndGetResults(
         sqlCommand,
         perCallLabels ? {labels: perCallLabels} : undefined,
         queryResultsOptions,
-        abortSignal,
-        capture
+        abortSignal
       );
 
       const totalRows = +(jobResult[2]?.totalRows
@@ -338,10 +335,6 @@ export class BigQueryConnection
         totalRows,
         runStats: {
           queryCostBytes: queryCostBytes ? +queryCostBytes : undefined,
-          executionId: capture.jobId,
-          executionInfo: capture.location
-            ? {location: capture.location}
-            : undefined,
         },
       };
       const schema = jobResult[2]?.schema;
@@ -746,8 +739,7 @@ export class BigQueryConnection
     sqlCommand: string,
     createQueryJobOptions?: Query,
     getQueryResultsOptions?: QueryResultsOptions,
-    abortSignal?: AbortSignal,
-    capture?: {jobId?: string; location?: string}
+    abortSignal?: AbortSignal
   ): Promise<
     PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
   > {
@@ -756,12 +748,6 @@ export class BigQueryConnection
         query: sqlCommand,
         ...createQueryJobOptions,
       });
-      // The warehouse-assigned job id/location, for response-side execution
-      // metadata (joins INFORMATION_SCHEMA.JOBS). Best-effort.
-      if (capture) {
-        capture.jobId = job.id ?? undefined;
-        capture.location = job.location ?? undefined;
-      }
       const cancel = () => {
         job.cancel();
       };
