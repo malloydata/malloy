@@ -132,10 +132,10 @@ const MAXIMUM_BYTES_BILLED = String(25 * 1024 * 1024 * 1024);
 const TIMEOUT_MS = 1000 * 60 * 10;
 
 /**
- * Per-call server-side wait for getQueryResults. BigQuery caps how long a single
- * getQueryResults call blocks near this value regardless of the requested
- * timeoutMs, so long-running queries are polled across multiple calls (see
- * getQueryResultsUntilComplete).
+ * How long each getQueryResults call asks to wait for the job to finish before
+ * returning. BigQuery returns after at most ~200s regardless of the requested
+ * value, so this is kept under that ceiling; queries that take longer are
+ * covered by polling across multiple calls (see getQueryResultsUntilComplete).
  */
 const GET_QUERY_RESULTS_POLL_MS = 1000 * 60 * 2;
 
@@ -151,12 +151,13 @@ export function isQueryStillRunningError(e: unknown): boolean {
 
 /**
  * Fetch a job's query results, polling until the job completes or `deadlineMs`
- * elapses. BigQuery caps how long one getQueryResults call blocks server-side
- * (~2 min) no matter what timeoutMs is requested, so a single long wait cannot
- * cover a long-running query (e.g. ML.GENERATE_TEXT over many rows) — it just
- * throws "The query did not complete before ...ms" while the job is still fine.
- * We poll with GET_QUERY_RESULTS_POLL_MS per call until the job finishes or the
- * caller's deadline is reached.
+ * elapses. A single getQueryResults call cannot wait out a slow query: BigQuery
+ * bounds how long one call blocks server-side (its docs note the call typically
+ * returns after ~200s even when a larger timeoutMs is requested), after which
+ * the client throws "The query did not complete before <n>ms" while the job is
+ * still running normally. So for any query that runs longer than one call's
+ * server wait, we re-issue getQueryResults (GET_QUERY_RESULTS_POLL_MS per call)
+ * until the job finishes or the caller's deadline is reached.
  *
  * Also retries a bounded number of times on the transient access-denied error
  * BigQuery intermittently returns when first fetching results (previously a
@@ -766,12 +767,10 @@ export class BigQueryConnection
 
       try {
         // Poll for results until the job completes or the connection's
-        // configured timeout elapses. A single getQueryResults call cannot wait
-        // out a long-running query — BigQuery caps its server-side wait (~2 min)
-        // regardless of the requested timeoutMs — so we loop. The deadline is
-        // config.timeoutMs (the same knob as the job timeout), defaulting to
-        // TIMEOUT_MS; getQueryResultsUntilComplete also absorbs the transient
-        // access-denied error BigQuery intermittently returns on first fetch.
+        // configured timeout elapses; a single getQueryResults call can't wait
+        // out a long-running query (see getQueryResultsUntilComplete). The
+        // deadline is config.timeoutMs, the same knob that bounds the job
+        // timeout, defaulting to TIMEOUT_MS.
         return await getQueryResultsUntilComplete(
           job,
           {
