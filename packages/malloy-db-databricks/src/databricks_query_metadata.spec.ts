@@ -37,7 +37,7 @@ describe('db-databricks query tags (offline)', () => {
   it('emits one SET QUERY_TAGS statement at session open, after SET TIME ZONE', async () => {
     const conn = new DatabricksConnection('dbx', {
       ...BASE,
-      queryTags: {applicationName: 'my-app', labels: {team: 'finance'}},
+      queryMetadata: {applicationName: 'my-app', labels: {team: 'finance'}},
     });
     await connect(conn);
     expect(mockExecCalls).toEqual([
@@ -55,21 +55,19 @@ describe('db-databricks query tags (offline)', () => {
   it('uses the QUERY_TAGS associative-array grammar, preserving case', async () => {
     const conn = new DatabricksConnection('dbx', {
       ...BASE,
-      queryTags: {labels: {'Cost-Center': 'Eng'}},
+      queryMetadata: {labels: {CostCenter: 'Eng'}},
     });
     await connect(conn);
-    expect(mockExecCalls).toContain("SET QUERY_TAGS['Cost-Center'] = 'Eng'");
+    expect(mockExecCalls).toContain("SET QUERY_TAGS['CostCenter'] = 'Eng'");
   });
 
-  it('escapes single quotes and backslashes in tag keys and values', async () => {
+  it('escapes single quotes and backslashes in tag values', async () => {
     const conn = new DatabricksConnection('dbx', {
       ...BASE,
-      queryTags: {labels: {"o'brien": "a'b\\c"}},
+      queryMetadata: {labels: {obrien: "a'b\\c"}},
     });
     await connect(conn);
-    expect(mockExecCalls).toContain(
-      "SET QUERY_TAGS['o\\'brien'] = 'a\\'b\\\\c'"
-    );
+    expect(mockExecCalls).toContain("SET QUERY_TAGS['obrien'] = 'a\\'b\\\\c'");
   });
 
   describe('connection digest', () => {
@@ -80,7 +78,7 @@ describe('db-databricks query tags (offline)', () => {
         digest(
           new DatabricksConnection('dbx', {
             ...BASE,
-            queryTags: {labels: {team: 'fin'}},
+            queryMetadata: {labels: {team: 'fin'}},
           })
         )
       ).toBe(digest(new DatabricksConnection('dbx', BASE)));

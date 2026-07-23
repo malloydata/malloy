@@ -12,7 +12,7 @@ import type {
   QueryOptionsReader,
   RunSQLOptions,
 } from '@malloydata/malloy';
-import {makeDigest} from '@malloydata/malloy';
+import {makeDigest, queryMetadataComment} from '@malloydata/malloy';
 import packageJson from '@malloydata/malloy/package.json';
 import {
   buildDuckDBShareKey,
@@ -464,7 +464,7 @@ export class DuckDBConnection extends DuckDBCommon {
 
   public async *runSQLStream(
     sql: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
+    {rowLimit, abortSignal, queryMetadata}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
     const defaultOptions = this.readQueryOptions();
     rowLimit ??= defaultOptions.rowLimit;
@@ -473,6 +473,7 @@ export class DuckDBConnection extends DuckDBCommon {
       throw new Error('Connection not open');
     }
 
+    const comment = queryMetadata ? queryMetadataComment(queryMetadata) : '';
     const statements = sql.split('-- hack: split on this');
 
     while (statements.length > 1) {
@@ -480,7 +481,7 @@ export class DuckDBConnection extends DuckDBCommon {
       statements.shift();
     }
 
-    const result = await this.connection.stream(statements[0]);
+    const result = await this.connection.stream(comment + statements[0]);
 
     let index = 0;
     for await (const chunk of result.yieldRowObjectJson()) {

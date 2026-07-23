@@ -18,7 +18,12 @@ import type {
   TableSourceDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {MySQLDialect, sqlKey, makeDigest} from '@malloydata/malloy';
+import {
+  MySQLDialect,
+  sqlKey,
+  makeDigest,
+  queryMetadataComment,
+} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import {randomUUID} from 'crypto';
 import * as MYSQL from 'mysql2/promise';
@@ -126,9 +131,12 @@ export class MySQLConnection
     await this.runRawSQL('SELECT 1');
   }
 
-  runSQL(sql: string, _options?: RunSQLOptions): Promise<MalloyQueryData> {
-    // TODO: what are options here?
-    return this.runRawSQL(sql);
+  runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData> {
+    // MySQL has no native tagging mechanism; fall back to a leading comment.
+    const comment = options?.queryMetadata
+      ? queryMetadataComment(options.queryMetadata)
+      : '';
+    return this.runRawSQL(comment + sql);
   }
 
   isPool(): this is PooledConnection {

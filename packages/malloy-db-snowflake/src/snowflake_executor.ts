@@ -17,7 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type {Readable} from 'stream';
 import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
-import {labelsWithApplication, toAsyncGenerator} from '@malloydata/malloy';
+import {queryMetadataLabels, toAsyncGenerator} from '@malloydata/malloy';
 
 // Disable snowflake-sdk logging by default (issue #2565)
 snowflake.configure({logLevel: 'OFF'});
@@ -37,9 +37,9 @@ const MAX_QUERY_TAG_LENGTH = 2000;
  * it is (snowflake-sdk `statement.js`).
  */
 export function snowflakeQueryTag(options?: RunSQLOptions): string | undefined {
-  const tags = options?.queryTags;
-  if (!tags) return undefined;
-  const labels = labelsWithApplication(tags);
+  const meta = options?.queryMetadata;
+  if (!meta) return undefined;
+  const labels = queryMetadataLabels(meta);
   if (!labels) return undefined;
   const tag = JSON.stringify(labels);
   return tag.length > MAX_QUERY_TAG_LENGTH

@@ -10,7 +10,7 @@ import type {
   QueryData,
   QueryOptionsReader,
   QueryRunStats,
-  QueryTags,
+  QueryMetadata,
   RunSQLOptions,
   StructDef,
   TableSourceDef,
@@ -22,7 +22,13 @@ import type {
   TestableConnection,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {TrinoDialect, mkFieldDef, sqlKey, makeDigest} from '@malloydata/malloy';
+import {
+  TrinoDialect,
+  mkFieldDef,
+  sqlKey,
+  makeDigest,
+  validateQueryMetadata,
+} from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -55,11 +61,11 @@ export interface TrinoConnectionConfiguration {
   password?: string;
   setupSQL?: string;
   source?: string;
-  // Connection-level query tags. `applicationName` maps to Trino `source`;
+  // Connection-level query metadata. `applicationName` maps to Trino `source`;
   // `labels` become `key:value` client tags (X-Trino-Client-Tags /
   // X-Presto-Client-Tags — visible in system.runtime.queries and usable in
   // resource-group selectors). Connection-layer only.
-  queryTags?: QueryTags;
+  queryMetadata?: QueryMetadata;
   extraConfig?: Partial<Record<TrinoExtraConfigKey, unknown>>;
 }
 
@@ -68,8 +74,10 @@ export type TrinoConnectionOptions = ConnectionConfig;
 // `labels` become `key:value` client tags, joined into an HTTP header. Drop any
 // tag containing a comma (the separator) or CR/LF (which would corrupt or inject
 // the header); semantic validity of a tag is the caller's responsibility.
-function trinoClientTags(tags?: QueryTags): string[] {
-  const labels = tags?.labels ?? {};
+function trinoClientTags(meta?: QueryMetadata): string[] {
+  if (!meta) return [];
+  validateQueryMetadata(meta);
+  const labels = meta.labels ?? {};
   return Object.entries(labels)
     .map(([key, value]) => `${key}:${value}`)
     .filter(tag => !/[,\r\n]/.test(tag));
@@ -77,7 +85,7 @@ function trinoClientTags(tags?: QueryTags): string[] {
 
 // applicationName maps to Trino's native `source`, falling back to config.source.
 function trinoSource(config: TrinoConnectionConfiguration): string | undefined {
-  return config.queryTags?.applicationName ?? config.source;
+  return config.queryMetadata?.applicationName ?? config.source;
 }
 
 export interface BaseRunner {
@@ -100,7 +108,7 @@ class PrestoRunner implements BaseRunner {
     const extraHeaders: Record<string, string> = {
       'X-Presto-Session': 'legacy_unnest=true',
     };
-    const prestoTags = trinoClientTags(config.queryTags);
+    const prestoTags = trinoClientTags(config.queryMetadata);
     if (prestoTags.length > 0) {
       extraHeaders['X-Presto-Client-Tags'] = prestoTags.join(',');
     }
@@ -168,7 +176,7 @@ class TrinoRunner implements BaseRunner {
     const extraHeaders: Record<string, string> = {
       ...(extraConfig.extraHeaders as Record<string, string> | undefined),
     };
-    const trinoTags = trinoClientTags(config.queryTags);
+    const trinoTags = trinoClientTags(config.queryMetadata);
     if (trinoTags.length > 0) {
       extraHeaders['X-Trino-Client-Tags'] = trinoTags.join(',');
     }

@@ -13,7 +13,7 @@ import type {
   TableSourceDef,
   SQLSourceRequest,
   QueryOptionsReader,
-  QueryTags,
+  QueryMetadata,
   RunSQLOptions,
   StructDef,
   AtomicTypeDef,
@@ -25,7 +25,7 @@ import {
   sqlKey,
   makeDigest,
   mkFieldDef,
-  labelsWithApplication,
+  queryMetadataLabels,
 } from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -122,11 +122,11 @@ export interface DatabricksConfiguration {
   defaultCatalog?: string;
   defaultSchema?: string;
   setupSQL?: string;
-  // Connection-level query tags, applied at session open via Databricks'
+  // Connection-level query metadata, applied at session open via Databricks'
   // associative-array grammar `SET QUERY_TAGS['key'] = 'value'`. `labels`
   // (with `applicationName` folded in under the reserved `application` key)
   // become the tag set; case is preserved. Connection-layer only.
-  queryTags?: QueryTags;
+  queryMetadata?: QueryMetadata;
 }
 
 // Escape a value for a single-quoted Databricks/Spark SQL string literal
@@ -238,8 +238,8 @@ export class DatabricksConnection
   // (`SET QUERY_TAGS['k1'] = 'v1', QUERY_TAGS['k2'] = 'v2'`). Values are escaped;
   // case is preserved.
   private sessionMetadataStatements(): string[] {
-    const labels = this.config.queryTags
-      ? labelsWithApplication(this.config.queryTags)
+    const labels = this.config.queryMetadata
+      ? queryMetadataLabels(this.config.queryMetadata)
       : undefined;
     if (!labels) return [];
     const tagAssignments = Object.entries(labels).map(

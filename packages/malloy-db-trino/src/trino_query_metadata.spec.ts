@@ -27,7 +27,7 @@ function fakeRunner(queryId?: string): BaseRunner {
   };
 }
 
-describe('db-trino queryTags wiring (offline)', () => {
+describe('db-trino queryMetadata wiring (offline)', () => {
   afterEach(() => jest.restoreAllMocks());
 
   describe('request side — applicationName -> source, labels -> client tags', () => {
@@ -38,7 +38,7 @@ describe('db-trino queryTags wiring (offline)', () => {
         .mockReturnValue({} as any);
       new TrinoConnection('t', undefined, {
         server: 'http://localhost:8080',
-        queryTags: {
+        queryMetadata: {
           applicationName: 'my-app',
           labels: {team: 'finance', env: 'prod'},
         },
@@ -65,14 +65,28 @@ describe('db-trino queryTags wiring (offline)', () => {
       expect(opts.extraHeaders?.['X-Trino-Client-Tags']).toBeUndefined();
     });
 
-    it('Trino: drops labels that would corrupt/inject the header', () => {
+    it('Trino: rejects a value that violates the malloy contract (newline)', () => {
+      jest
+        .spyOn(Trino, 'create')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .mockReturnValue({} as any);
+      expect(
+        () =>
+          new TrinoConnection('t', undefined, {
+            server: 'http://localhost:8080',
+            queryMetadata: {labels: {ok: 'v', evil: 'a\nb'}},
+          })
+      ).toThrow(/Invalid query metadata/);
+    });
+
+    it('Trino: drops a (contract-valid) label whose value contains the tag separator', () => {
       const createSpy = jest
         .spyOn(Trino, 'create')
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .mockReturnValue({} as any);
       new TrinoConnection('t', undefined, {
         server: 'http://localhost:8080',
-        queryTags: {labels: {ok: 'v', evil: 'a\nb', csv: 'a,b'}},
+        queryMetadata: {labels: {ok: 'v', csv: 'a,b'}},
       });
       const opts = createSpy.mock.calls[0][0] as {
         extraHeaders?: Record<string, string>;
@@ -84,7 +98,7 @@ describe('db-trino queryTags wiring (offline)', () => {
       PrestoClientMock.mockClear();
       new PrestoConnection('p', undefined, {
         server: 'localhost',
-        queryTags: {
+        queryMetadata: {
           applicationName: 'my-app',
           labels: {team: 'finance', env: 'prod'},
         },

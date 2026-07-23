@@ -2122,7 +2122,7 @@ export type QueryRunStats = {
    * id, BigQuery job id, Trino query id — for correlating a result to the
    * backend's own query record. Best-effort; absent when the connector has no
    * durable server-side id (e.g. Postgres). The response-side dual of
-   * `queryTags`.
+   * `queryMetadata`.
    */
   executionId?: string;
   /**

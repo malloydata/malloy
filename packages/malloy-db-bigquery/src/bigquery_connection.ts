@@ -40,7 +40,7 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
-  labelsWithApplication,
+  queryMetadataLabels,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -112,9 +112,9 @@ function sanitizeBigQueryKey(key: string): string | undefined {
 function toBigQueryLabels(
   options?: RunSQLOptions
 ): Record<string, string> | undefined {
-  const tags = options?.queryTags;
-  if (!tags) return undefined;
-  const labels = labelsWithApplication(tags);
+  const meta = options?.queryMetadata;
+  if (!meta) return undefined;
+  const labels = queryMetadataLabels(meta);
   if (!labels) return undefined;
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(labels)) {

@@ -19,7 +19,7 @@ import type {
   QueryRecord,
   QueryOptionsReader,
   QueryRunStats,
-  QueryTags,
+  QueryMetadata,
   RunSQLOptions,
   SQLSourceDef,
   TableSourceDef,
@@ -33,6 +33,7 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
+  validateQueryMetadata,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -90,11 +91,11 @@ interface PostgresConnectionConfiguration {
   databaseName?: string;
   connectionString?: string;
   setupSQL?: string;
-  // Connection-level query tags, applied at session open. Postgres has no
+  // Connection-level query metadata, applied at session open. Postgres has no
   // general key-value tag facility, so only `applicationName` is honored
   // (`SET application_name = '<value>'`, visible in pg_stat_activity / log
   // prefixes); `labels` are not applied on Postgres. Connection-layer only.
-  queryTags?: QueryTags;
+  queryMetadata?: QueryMetadata;
   // Programmatic callers get pg's full ssl surface (incl. `checkServerIdentity`
   // for verify-ca). Saved/registry config is limited to the serializable
   // PostgresSSLConfig subset — see PostgresConnectionOptions.
@@ -183,7 +184,7 @@ export class PostgresConnection
 {
   public readonly name: string;
   protected setupSQL: string | undefined;
-  protected queryTags: QueryTags | undefined;
+  protected queryMetadata: QueryMetadata | undefined;
   private queryOptionsReader: QueryOptionsReader = {};
   private configReader: PostgresConnectionConfigurationReader = {};
 
@@ -210,10 +211,10 @@ export class PostgresConnection
         this.configReader = configReader;
       }
     } else {
-      const {name, setupSQL, queryTags, ...configReader} = arg;
+      const {name, setupSQL, queryMetadata, ...configReader} = arg;
       this.name = name;
       this.setupSQL = setupSQL;
-      this.queryTags = queryTags;
+      this.queryMetadata = queryMetadata;
       this.configReader = configReader;
     }
     if (queryOptionsReader) {
@@ -523,7 +524,11 @@ export class PostgresConnection
   // key-value tag facility, so only `applicationName` is honored; `labels` are
   // not applied here.
   protected sessionMetadataStatements(): string[] {
-    const applicationName = this.queryTags?.applicationName;
+    if (this.queryMetadata === undefined) return [];
+    // Validate the whole bag at the door (throws on an invalid bag), even
+    // though Postgres only honors `applicationName`.
+    validateQueryMetadata(this.queryMetadata);
+    const applicationName = this.queryMetadata.applicationName;
     if (applicationName === undefined) return [];
     return [
       `SET application_name = '${escapePostgresString(applicationName)}'`,

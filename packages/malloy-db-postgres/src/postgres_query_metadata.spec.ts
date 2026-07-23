@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {QueryTags} from '@malloydata/malloy';
+import type {QueryMetadata} from '@malloydata/malloy';
 import type {Client} from 'pg';
 import {PostgresConnection} from './postgres_connection';
 
@@ -24,7 +24,7 @@ describe('db-postgres query tags (offline)', () => {
   it('maps applicationName to SET application_name after SET TIME ZONE', async () => {
     const conn = new PostgresConnection({
       name: 'pg',
-      queryTags: {applicationName: 'my-app'},
+      queryMetadata: {applicationName: 'my-app'},
     });
     const {client, calls} = fakeClient();
     await conn.connectionSetup(client);
@@ -37,7 +37,7 @@ describe('db-postgres query tags (offline)', () => {
   it('does not apply labels (Postgres has no general tag facility)', async () => {
     const conn = new PostgresConnection({
       name: 'pg',
-      queryTags: {applicationName: 'my-app', labels: {team: 'finance'}},
+      queryMetadata: {applicationName: 'my-app', labels: {team: 'finance'}},
     });
     const {client, calls} = fakeClient();
     await conn.connectionSetup(client);
@@ -57,7 +57,7 @@ describe('db-postgres query tags (offline)', () => {
   it('escapes single quotes in the application_name value', async () => {
     const conn = new PostgresConnection({
       name: 'pg',
-      queryTags: {applicationName: "my'app"},
+      queryMetadata: {applicationName: "my'app"},
     });
     const {client, calls} = fakeClient();
     await conn.connectionSetup(client);
@@ -65,8 +65,8 @@ describe('db-postgres query tags (offline)', () => {
   });
 
   describe('connection digest', () => {
-    const digest = (queryTags?: QueryTags): string =>
-      new PostgresConnection({name: 'pg', queryTags}).getDigest();
+    const digest = (queryMetadata?: QueryMetadata): string =>
+      new PostgresConnection({name: 'pg', queryMetadata}).getDigest();
 
     it('excludes query tags', () => {
       const base = digest();
