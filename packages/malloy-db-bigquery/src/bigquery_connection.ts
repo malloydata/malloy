@@ -131,6 +131,72 @@ const MAXIMUM_BYTES_BILLED = String(25 * 1024 * 1024 * 1024);
  */
 const TIMEOUT_MS = 1000 * 60 * 10;
 
+/**
+ * Per-call server-side wait for getQueryResults. BigQuery caps how long a single
+ * getQueryResults call blocks near this value regardless of the requested
+ * timeoutMs, so long-running queries are polled across multiple calls (see
+ * getQueryResultsUntilComplete).
+ */
+const GET_QUERY_RESULTS_POLL_MS = 1000 * 60 * 2;
+
+/**
+ * True when the BigQuery client threw because a getQueryResults call returned
+ * with the job still running (as opposed to a real failure). The client throws
+ * `Error('The query did not complete before <n>ms')` in that case and exposes
+ * no error code, so the message is the only signal we have.
+ */
+export function isQueryStillRunningError(e: unknown): boolean {
+  return e instanceof Error && /did not complete before \d+ms/.test(e.message);
+}
+
+/**
+ * Fetch a job's query results, polling until the job completes or `deadlineMs`
+ * elapses. BigQuery caps how long one getQueryResults call blocks server-side
+ * (~2 min) no matter what timeoutMs is requested, so a single long wait cannot
+ * cover a long-running query (e.g. ML.GENERATE_TEXT over many rows) — it just
+ * throws "The query did not complete before ...ms" while the job is still fine.
+ * We poll with GET_QUERY_RESULTS_POLL_MS per call until the job finishes or the
+ * caller's deadline is reached.
+ *
+ * Also retries a bounded number of times on the transient access-denied error
+ * BigQuery intermittently returns when first fetching results (previously a
+ * fixed 3-retry loop). `now` is injectable for testing.
+ */
+export async function getQueryResultsUntilComplete(
+  job: Pick<Job, 'getQueryResults'>,
+  getQueryResultsOptions: QueryResultsOptions,
+  deadlineMs: number,
+  now: () => number = Date.now
+): Promise<
+  PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
+> {
+  const startedAt = now();
+  let transientRetries = 0;
+  for (;;) {
+    try {
+      return await job.getQueryResults({
+        timeoutMs: GET_QUERY_RESULTS_POLL_MS,
+        ...getQueryResultsOptions,
+      });
+    } catch (fetchError) {
+      const withinDeadline = now() - startedAt < deadlineMs;
+      // Job still running: keep polling until it completes or the deadline hits.
+      if (isQueryStillRunningError(fetchError)) {
+        if (withinDeadline) {
+          continue;
+        }
+        throw fetchError;
+      }
+      // Otherwise a (possibly transient) fetch error: retry a bounded number of
+      // times while within the deadline, then give up.
+      if (withinDeadline && transientRetries++ < 3) {
+        continue;
+      }
+      throw fetchError;
+    }
+  }
+}
+
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
   extends BaseConnection
@@ -680,9 +746,6 @@ export class BigQueryConnection
     throw lastFetchError;
   }
 
-  // TODO this needs to extend the wait for results using a timeout set by the user,
-  // and probably needs to loop to check for results - BQ docs now say that after ~2min of waiting,
-  // no matter what you set for timeoutMs, they will probably just return.
   private async createBigQueryJobAndGetResults(
     sqlCommand: string,
     createQueryJobOptions?: Query,
@@ -701,17 +764,17 @@ export class BigQueryConnection
       };
       abortSignal?.addEventListener('abort', cancel);
 
-      // TODO we should check if this is still required?
-      // We do a simple retry-loop here, as a temporary fix for a transient
-      // error in which sometimes requesting results from a job yields an
-      // access denied error. It seems that in these cases, simply trying again
-      // solves the problem. This is being currently investigated by
-      // @christopherswenson and @lloydtabb.
-      let lastFetchError;
-      for (let retries = 0; retries < 3; retries++) {
-        try {
-          return await job.getQueryResults({
-            timeoutMs: 1000 * 60 * 2, // TODO - this requires some rethinking, and is a hack to resolve some issues. talk to @bporterfield
+      try {
+        // Poll for results until the job completes or the connection's
+        // configured timeout elapses. A single getQueryResults call cannot wait
+        // out a long-running query — BigQuery caps its server-side wait (~2 min)
+        // regardless of the requested timeoutMs — so we loop. The deadline is
+        // config.timeoutMs (the same knob as the job timeout), defaulting to
+        // TIMEOUT_MS; getQueryResultsUntilComplete also absorbs the transient
+        // access-denied error BigQuery intermittently returns on first fetch.
+        return await getQueryResultsUntilComplete(
+          job,
+          {
             wrapIntegers: {
               integerTypeCastFunction: (val: string | number) => {
                 const num = Number(val);
@@ -722,14 +785,12 @@ export class BigQueryConnection
               },
             },
             ...getQueryResultsOptions,
-          });
-        } catch (fetchError) {
-          lastFetchError = fetchError;
-        } finally {
-          abortSignal?.removeEventListener('abort', cancel);
-        }
+          },
+          Number(this.config.timeoutMs) || TIMEOUT_MS
+        );
+      } finally {
+        abortSignal?.removeEventListener('abort', cancel);
       }
-      throw lastFetchError;
     } catch (e) {
       throw maybeRewriteError(e);
     }
