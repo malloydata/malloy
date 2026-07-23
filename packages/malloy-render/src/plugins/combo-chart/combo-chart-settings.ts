@@ -13,8 +13,11 @@ import type {
   JSONSchemaOneOf,
 } from '@/api/json-schema-types';
 
-// The mark type used to draw a measure on one of the two axes.
-export type ComboMarkType = 'bar' | 'line';
+// The mark types a measure can be drawn as on one of the two axes. Single
+// source of truth: the type, the settings-schema enums, the tag parser, and the
+// dispatch-time validator all derive from this one array.
+export const COMBO_MARK_TYPES = ['bar', 'line'] as const;
+export type ComboMarkType = (typeof COMBO_MARK_TYPES)[number];
 
 // A y channel that also carries which mark type draws its measures. Axis side
 // is implied by the channel: `yChannel` is the left axis, `y2Channel` the right.
@@ -209,7 +212,7 @@ export const comboChartSettingsSchema: IComboChartSettingsSchema = {
           description:
             'Which mark type draws the measures on this axis: "bar" or "line".',
           type: 'string',
-          enum: ['bar', 'line'],
+          enum: [...COMBO_MARK_TYPES],
           default: 'bar',
         },
         lineWidth: {
@@ -275,7 +278,7 @@ export const comboChartSettingsSchema: IComboChartSettingsSchema = {
           description:
             'Which mark type draws the measures on this axis: "bar" or "line".',
           type: 'string',
-          enum: ['bar', 'line'],
+          enum: [...COMBO_MARK_TYPES],
           default: 'line',
         },
         lineWidth: {

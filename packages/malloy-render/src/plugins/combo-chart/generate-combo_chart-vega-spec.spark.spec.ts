@@ -79,3 +79,24 @@ test('spark size disables nice on both y-scales', async () => {
   expect(yscale.nice).toBe(false);
   expect(yscaleRight.nice).toBe(false);
 }, 60000);
+
+test('spark size draws no legend and preserves the near-zero spark padding', async () => {
+  // A combo chart always has >=2 measures, so its legend/right-padding block
+  // (unlike bar/line's, which is gated on having a series) would otherwise fire
+  // even at spark size — swamping a 180px-wide, ~28px-tall glyph with a legend
+  // and ~80px of right padding. It must be skipped when isSpark.
+  const {root, metadata} = await runChartQuery(
+    SOURCE,
+    `# combo_chart ${TWO_MEASURES}`
+  );
+  const settings = getComboChartSettings(root);
+  const plugin: ComboChartSpecInputs = {
+    field: root,
+    chartDisplay: {size: {preset: 'spark'}},
+    getMetadata: () => ({type: 'combo', field: root, settings}),
+  };
+  const {spec} = generateComboChartVegaSpec(metadata, plugin);
+
+  expect(spec.legends).toEqual([]);
+  expect((spec.padding as {right: number}).right).toBe(0);
+}, 60000);

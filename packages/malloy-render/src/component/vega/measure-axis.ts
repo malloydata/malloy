@@ -58,7 +58,10 @@ export function createMeasureAxis({
     titleX: isRight
       ? axisSettings.width - axisSettings.titlePadding
       : -axisSettings.width + axisSettings.titlePadding,
-    titleAlign: isRight ? 'right' : 'left',
+    // Only set titleAlign for the right axis. The left axis has always relied on
+    // Vega's default alignment; setting it explicitly here would shift the title
+    // on every existing bar/line chart (which only ever use the left axis).
+    ...(isRight && {titleAlign: 'right' as const}),
     titleBaseline: 'top',
     encode: {
       labels: {

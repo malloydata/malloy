@@ -14,6 +14,7 @@ import type {Tag} from '@malloydata/malloy-tag';
 import {resolveBuiltInTags} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '@/component/tag-utils';
+import {COMBO_MARK_TYPES} from '@/plugins/combo-chart/combo-chart-settings';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -445,10 +446,9 @@ export class RenderFieldMetadata {
         for (const channel of ['y', 'y2'] as const) {
           const chartVal = vizTag.text(channel, 'chart');
           if (chartVal !== undefined) {
-            const validCharts = ['bar', 'line'];
-            if (!validCharts.includes(chartVal)) {
+            if (!(COMBO_MARK_TYPES as readonly string[]).includes(chartVal)) {
               log.warn(
-                `Unknown ${channel}.chart '${chartVal}' on field '${field.name}'. Valid types: ${validCharts.join(', ')}. Falling back to the default.`,
+                `Unknown ${channel}.chart '${chartVal}' on field '${field.name}'. Valid types: ${COMBO_MARK_TYPES.join(', ')}. Falling back to the default.`,
                 vizTag.tag(channel, 'chart')
               );
             }

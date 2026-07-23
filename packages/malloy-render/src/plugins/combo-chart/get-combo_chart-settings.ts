@@ -9,6 +9,7 @@ import type {Field, NestField} from '@/data_tree';
 import {walkFields} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {
+  COMBO_MARK_TYPES,
   defaultComboChartSettings,
   type ComboChartSettings,
   type ComboMarkType,
@@ -24,7 +25,9 @@ function parseMarkType(
   value: string | undefined,
   fallback: ComboMarkType
 ): ComboMarkType {
-  return value === 'bar' || value === 'line' ? value : fallback;
+  return (COMBO_MARK_TYPES as readonly string[]).includes(value ?? '')
+    ? (value as ComboMarkType)
+    : fallback;
 }
 
 export function getComboChartSettings(
@@ -226,6 +229,11 @@ export function getComboChartSettings(
     const path = explore.pathTo(f);
     return yChannel.fields.includes(path) || y2Channel.fields.includes(path);
   };
+  // Remember whether each axis was assigned by the user vs. auto-picked here, so
+  // we can tell a deliberate two-measure selection from a guess that dropped
+  // extras (validated below).
+  const yWasImplicit = yChannel.fields.length === 0;
+  const y2WasImplicit = y2Channel.fields.length === 0;
   if (yChannel.fields.length === 0) {
     const first = measures.find(f => !isMeasureClaimed(f));
     if (first) yChannel.fields.push(explore.pathTo(first));
@@ -258,6 +266,22 @@ export function getComboChartSettings(
       'Malloy Combo Chart: needs at least two measures — one for the left ' +
         'axis (y) and one for the right axis (y2). Provide a second measure, ' +
         'or use # bar_chart / # line_chart for a single-axis chart.'
+    );
+  }
+  // A combo chart plots exactly two measures (one per axis). If we had to guess
+  // an axis assignment and measures were left unplotted, a different guess was
+  // possible — the choice is ambiguous, so make the user disambiguate rather
+  // than silently dropping data. Mirrors the bar chart's "too many dimensions"
+  // rule. Skipped when both axes were assigned explicitly (leftovers are then
+  // an intentional selection).
+  const plotted = new Set([...yChannel.fields, ...y2Channel.fields]);
+  const unplotted = measures.filter(m => !plotted.has(explore.pathTo(m)));
+  if ((yWasImplicit || y2WasImplicit) && unplotted.length > 0) {
+    throw new Error(
+      `Malloy Combo Chart: ${measures.length} measures found, but a combo ` +
+        'chart plots only two — one on the left axis (y) and one on the right ' +
+        '(y2). Assign them explicitly, e.g. # combo_chart { y=measure_a ' +
+        'y2=measure_b }.'
     );
   }
 

@@ -364,6 +364,47 @@ describe('combo_chart validation', () => {
     expect(() => getComboChartSettings(root)).toThrow(/two measures/);
   }, 60000);
 
+  test('throws on 3+ auto-assigned measures rather than silently dropping them', async () => {
+    // Bare # combo_chart with three measures: the axis assignment is ambiguous
+    // (which two of three?), so it must error instead of quietly plotting the
+    // first two and dropping the third.
+    const {root} = await runChartQuery(
+      SOURCE,
+      `
+      # combo_chart
+      run: data -> {
+        group_by: audience_name
+        aggregate:
+          total_reach is reach.sum()
+          avg_reach is reach.avg()
+          max_reach is reach.max()
+      }
+      `
+    );
+    expect(() => getComboChartSettings(root)).toThrow(
+      /3 measures found.*plots only two/s
+    );
+  }, 60000);
+
+  test('does not throw on 3 measures when axes are assigned explicitly', async () => {
+    // Explicit y=/y2= is a deliberate selection; leftover measures are intended
+    // to be omitted, so no ambiguity error.
+    const {root} = await runChartQuery(
+      SOURCE,
+      `
+      # combo_chart { y=total_reach y2=avg_reach }
+      run: data -> {
+        group_by: audience_name
+        aggregate:
+          total_reach is reach.sum()
+          avg_reach is reach.avg()
+          max_reach is reach.max()
+      }
+      `
+    );
+    expect(() => getComboChartSettings(root)).not.toThrow();
+  }, 60000);
+
   test('invalid y.chart falls back to the channel default (bar)', async () => {
     const {settings} = await buildCombo(
       SOURCE,

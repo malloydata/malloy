@@ -610,34 +610,40 @@ export function generateComboChartVegaSpec(
   /**************************************
    * Legend (one entry per measure)
    *************************************/
-  const maxCharCt = allPaths.reduce(
-    (max, f) => Math.max(max, explore.fieldAt(f).getLabel().length),
-    0
-  );
-  const legendSize = Math.min(
-    LEGEND_MAX,
-    chartSettings.totalWidth * LEGEND_PERC,
-    maxCharCt * 10 + 32
-  );
-  // Legend sits to the right of the secondary axis.
-  (spec.padding as VegaPadding).right =
-    (chartSettings.y2Axis ? chartSettings.y2Axis.width : 8) + legendSize;
-  spec.legends!.push({
-    fill: 'color',
-    title: '',
-    orient: 'right',
-    titleLimit: legendSize - 20,
-    labelLimit: legendSize - 40,
-    padding: 8,
-    offset: 4,
-    encode: {
-      labels: {
-        update: {
-          text: {scale: MEASURE_SERIES_LABEL_SCALE, field: 'value'},
+  // Spark charts are tiny inline glyphs with deliberately near-zero padding
+  // (see getChartLayoutSettings) and no secondary axis; a legend + right
+  // padding would swamp the plot, so skip both — matching how bar/line only
+  // draw a legend when they have a series.
+  if (!chartSettings.isSpark) {
+    const maxCharCt = allPaths.reduce(
+      (max, f) => Math.max(max, explore.fieldAt(f).getLabel().length),
+      0
+    );
+    const legendSize = Math.min(
+      LEGEND_MAX,
+      chartSettings.totalWidth * LEGEND_PERC,
+      maxCharCt * 10 + 32
+    );
+    // Legend sits to the right of the secondary axis.
+    (spec.padding as VegaPadding).right =
+      (chartSettings.y2Axis ? chartSettings.y2Axis.width : 8) + legendSize;
+    spec.legends!.push({
+      fill: 'color',
+      title: '',
+      orient: 'right',
+      titleLimit: legendSize - 20,
+      labelLimit: legendSize - 40,
+      padding: 8,
+      offset: 4,
+      encode: {
+        labels: {
+          update: {
+            text: {scale: MEASURE_SERIES_LABEL_SCALE, field: 'value'},
+          },
         },
       },
-    },
-  });
+    });
+  }
 
   /**************************************
    * Data mapping
