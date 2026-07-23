@@ -127,7 +127,12 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 const MAXIMUM_BYTES_BILLED = String(25 * 1024 * 1024 * 1024);
 
 /**
- * Default timeoutMs value, 10 Mins
+ * Default connection timeoutMs, 10 minutes. Bounds both the BigQuery job
+ * (jobTimeoutMs) and, via getQueryResultsUntilComplete, how long results are
+ * polled. When this connector runs behind an HTTP layer (e.g. the Malloy
+ * Publisher), set the connection's timeoutMs below that layer's socket/request
+ * timeout so a long query is ended by this deadline with a clear error, rather
+ * than racing an opaque socket reset.
  */
 const TIMEOUT_MS = 1000 * 60 * 10;
 
@@ -140,60 +145,158 @@ const TIMEOUT_MS = 1000 * 60 * 10;
 const GET_QUERY_RESULTS_POLL_MS = 1000 * 60 * 2;
 
 /**
- * True when the BigQuery client threw because a getQueryResults call returned
- * with the job still running (as opposed to a real failure). The client throws
- * `Error('The query did not complete before <n>ms')` in that case and exposes
- * no error code, so the message is the only signal we have.
+ * Resolve a connection `timeoutMs` config value (milliseconds, as a string) to a
+ * number, preserving an explicit `'0'` (fail-fast / no wait). Only an unset,
+ * empty, or non-numeric value falls back to `fallback`.
  */
-export function isQueryStillRunningError(e: unknown): boolean {
-  return e instanceof Error && /did not complete before \d+ms/.test(e.message);
+function resolveTimeoutMs(
+  configured: string | undefined,
+  fallback: number
+): number {
+  if (configured === undefined || configured === '') {
+    return fallback;
+  }
+  const parsed = Number(configured);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+/** The result of a single getQueryResults poll. */
+type PollOutcome =
+  | {
+      kind: 'complete';
+      value: PagedResponse<
+        RowMetadata,
+        Query,
+        bigquery.IGetQueryResultsResponse
+      >;
+    }
+  | {kind: 'stillRunning'}
+  | {kind: 'aborted'}
+  | {kind: 'error'; error: unknown};
+
+/**
+ * Issue one getQueryResults call via the callback overload so we can read the
+ * structured `jobComplete` flag rather than pattern-matching the client's error
+ * string. On the still-running path the client invokes the callback with a
+ * synthetic "did not complete before ..." Error *and* an apiResponse whose
+ * `jobComplete === false`; we key off that boolean, which does not drift across
+ * client releases the way the message can. Resolves promptly if `abortSignal`
+ * fires, so a caller's timeout/cancel is not left blocked behind BigQuery's
+ * server-side wait.
+ */
+function pollQueryResults(
+  job: Pick<Job, 'getQueryResults'>,
+  options: QueryResultsOptions,
+  abortSignal?: AbortSignal
+): Promise<PollOutcome> {
+  return new Promise<PollOutcome>(resolve => {
+    let settled = false;
+    const settle = (outcome: PollOutcome) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      abortSignal?.removeEventListener('abort', onAbort);
+      resolve(outcome);
+    };
+    const onAbort = () => settle({kind: 'aborted'});
+    if (abortSignal?.aborted) {
+      settle({kind: 'aborted'});
+      return;
+    }
+    abortSignal?.addEventListener('abort', onAbort);
+    job.getQueryResults(options, (err, rows, nextQuery, apiResponse) => {
+      if (apiResponse?.jobComplete === false) {
+        settle({kind: 'stillRunning'});
+      } else if (err) {
+        settle({kind: 'error', error: err});
+      } else {
+        settle({
+          kind: 'complete',
+          value: [
+            rows ?? [],
+            nextQuery ?? null,
+            apiResponse as bigquery.IGetQueryResultsResponse,
+          ],
+        });
+      }
+    });
+  });
 }
 
 /**
- * Fetch a job's query results, polling until the job completes or `deadlineMs`
- * elapses. A single getQueryResults call cannot wait out a slow query: BigQuery
- * bounds how long one call blocks server-side (its docs note the call typically
- * returns after ~200s even when a larger timeoutMs is requested), after which
- * the client throws "The query did not complete before <n>ms" while the job is
- * still running normally. So for any query that runs longer than one call's
- * server wait, we re-issue getQueryResults (GET_QUERY_RESULTS_POLL_MS per call)
- * until the job finishes or the caller's deadline is reached.
+ * Fetch a job's query results, polling until the job completes, `deadlineMs`
+ * elapses, or the caller aborts. A single getQueryResults call cannot wait out a
+ * slow query: BigQuery bounds how long one call blocks server-side (its docs
+ * note the call typically returns after ~200s even when a larger timeoutMs is
+ * requested) and then reports `jobComplete: false` while the job is still
+ * running normally. So for a query that runs longer than one call's server wait
+ * we re-issue getQueryResults until it finishes.
  *
- * Also retries a bounded number of times on the transient access-denied error
- * BigQuery intermittently returns when first fetching results (previously a
- * fixed 3-retry loop). `now` is injectable for testing.
+ * `deadlineMs` is the connection's configured timeoutMs. `abortSignal` lets the
+ * loop exit promptly on cancel (the caller also cancels the BigQuery job). A
+ * bounded number of retries absorbs the transient access-denied error BigQuery
+ * intermittently returns on first fetch. `now` is injectable for testing.
  */
 export async function getQueryResultsUntilComplete(
   job: Pick<Job, 'getQueryResults'>,
   getQueryResultsOptions: QueryResultsOptions,
   deadlineMs: number,
-  now: () => number = Date.now
+  {
+    abortSignal,
+    now = Date.now,
+  }: {abortSignal?: AbortSignal; now?: () => number} = {}
 ): Promise<
   PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
 > {
   const startedAt = now();
   let transientRetries = 0;
   for (;;) {
-    try {
-      return await job.getQueryResults({
-        timeoutMs: GET_QUERY_RESULTS_POLL_MS,
-        ...getQueryResultsOptions,
-      });
-    } catch (fetchError) {
-      const withinDeadline = now() - startedAt < deadlineMs;
-      // Job still running: keep polling until it completes or the deadline hits.
-      if (isQueryStillRunningError(fetchError)) {
-        if (withinDeadline) {
+    if (abortSignal?.aborted) {
+      throw new Error(
+        'BigQuery getQueryResults was aborted before the query completed.'
+      );
+    }
+    const remainingMs = deadlineMs - (now() - startedAt);
+    if (remainingMs <= 0) {
+      throw new Error(
+        `BigQuery query did not complete within the configured timeout of ${deadlineMs}ms. ` +
+          "Raise the connection's timeoutMs to allow longer-running queries."
+      );
+    }
+    // Clamp the per-poll server wait to what's left of the deadline: a short
+    // timeout then fails fast, and the overall deadline can't be overshot by a
+    // full poll interval. timeoutMs is applied last so a caller-supplied
+    // timeoutMs cannot override the poll interval.
+    const pollTimeoutMs = Math.max(
+      1,
+      Math.min(GET_QUERY_RESULTS_POLL_MS, remainingMs)
+    );
+    const outcome = await pollQueryResults(
+      job,
+      {...getQueryResultsOptions, timeoutMs: pollTimeoutMs},
+      abortSignal
+    );
+    switch (outcome.kind) {
+      case 'complete':
+        return outcome.value;
+      case 'stillRunning':
+        // Keep polling; the abort/deadline checks at the top of the loop decide
+        // whether to continue. A still-running poll never consumes the
+        // transient-retry budget.
+        continue;
+      case 'aborted':
+        throw new Error(
+          'BigQuery getQueryResults was aborted before the query completed.'
+        );
+      case 'error':
+        // A (possibly transient) fetch error — e.g. the intermittent
+        // access-denied BigQuery returns on first fetch. Retry a bounded number
+        // of times, then surface the real error.
+        if (transientRetries++ < 3) {
           continue;
         }
-        throw fetchError;
-      }
-      // Otherwise a (possibly transient) fetch error: retry a bounded number of
-      // times while within the deadline, then give up.
-      if (withinDeadline && transientRetries++ < 3) {
-        continue;
-      }
-      throw fetchError;
+        throw outcome.error;
     }
   }
 }
@@ -343,7 +446,8 @@ export class BigQueryConnection
         ? jobResult[2].totalRows
         : '0');
 
-      // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
+      // jobComplete is guaranteed here: getQueryResultsUntilComplete only
+      // returns once BigQuery reports the job complete (it polls otherwise).
       const queryCostBytes = jobResult[2]?.totalBytesProcessed;
       const data: MalloyQueryData = {
         rows: jobResult[0],
@@ -785,7 +889,8 @@ export class BigQueryConnection
             },
             ...getQueryResultsOptions,
           },
-          Number(this.config.timeoutMs) || TIMEOUT_MS
+          resolveTimeoutMs(this.config.timeoutMs, TIMEOUT_MS),
+          {abortSignal}
         );
       } finally {
         abortSignal?.removeEventListener('abort', cancel);
@@ -804,7 +909,7 @@ export class BigQueryConnection
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
-      jobTimeoutMs: Number(this.config.timeoutMs) || TIMEOUT_MS,
+      jobTimeoutMs: resolveTimeoutMs(this.config.timeoutMs, TIMEOUT_MS),
       ...options,
     });
     return job;
