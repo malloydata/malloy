@@ -181,13 +181,14 @@ const GET_QUERY_RESULTS_POLL_MS = 1000 * 60 * 2;
 /**
  * Resolve a connection `timeoutMs` config value (milliseconds, as a string) to a
  * number, preserving an explicit `'0'` (fail-fast / no wait). Only an unset,
- * empty, or non-numeric value falls back to `fallback`.
+ * blank, or non-numeric value falls back to `fallback` — note a whitespace-only
+ * string must be treated as blank, since `Number('   ')` is `0`, not `NaN`.
  */
-function resolveTimeoutMs(
+export function resolveTimeoutMs(
   configured: string | undefined,
   fallback: number
 ): number {
-  if (configured === undefined || configured === '') {
+  if (configured === undefined || configured.trim() === '') {
     return fallback;
   }
   const parsed = Number(configured);
