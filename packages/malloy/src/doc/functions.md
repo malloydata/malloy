@@ -32,9 +32,17 @@ For aggregate calls written `join.field.agg(…)`, the path field becomes an imp
 
 The match yields the concrete `FunctionOverloadDef`, which is stored on the IR node.
 
-## The IR node is dialect-bound
+## Two dialect roles, in two different phases
 
-Resolution produces a `FunctionCallNode` (`model/malloy_types.ts`) carrying the matched `overload: FunctionOverloadDef`. That overload's `.dialect` field is a map of *every* dialect's template — so the node ships all dialects' SQL, not just the target's. The IR is nonetheless **not dialect-agnostic**: *which* overload resolved (and whether it resolved at all) depended on the compile-time dialect's namespace and on argument types that come from dialect-specific schema. The same source against a different database can produce a different node.
+A function call touches the dialect twice, for two unrelated reasons, in two phases. Keeping them apart is the whole story — and the reason most function-call IR is more portable than "dialect-bound" suggests.
+
+**Template selection — compile time — is the only place the *target* dialect's SQL is chosen.** Resolution produces a `FunctionCallNode` (`model/malloy_types.ts`) carrying the matched `overload: FunctionOverloadDef`, and that overload's `.dialect` field is a map of *every* dialect's template (assembled once in `global-name-space.ts`). So the node ships all dialects' SQL, not just the target's; nothing about the target dialect is baked into the node. The pick happens later, at emit time (below).
+
+**Resolution — translate time — consults the dialect only to reach the dialect's *own* namespace.** `findFunctionDef` looks in the `DialectNameSpace` first (dialect-specific functions like Trino's `max_by`, plus dialect overrides), then falls back to the global standard library. For a plain standard-library call — `upper(aString)`, `round(x)` — nothing dialect-specific matches, so the resolved overload is **identical under every dialect, and under no dialect at all** (`findFunctionDef(undefined)` takes the same global-namespace path); only its per-dialect templates differ.
+
+So "the IR is not dialect-agnostic" is true only for the cases that make it so. A call that resolves to a **dialect-specific** function is the sharp one: `DialectNameSpace` builds its overload with `dialect: {[thisDialect]: …}` and *only* that entry, so the node carries exactly one template — compile it against any other dialect and `expandFunctionCall` hits `overload.dialect[dialect] === undefined` and throws (`expression_compiler.ts`). It is not "different elsewhere," it is *unusable* elsewhere. (Argument types drawn from **dialect-specific schema** are the other source of divergence.) A standard-library call — even one a dialect *overrides*, since overrides merge back into the single all-dialect overload — is genuinely dialect-independent: every template present, resolution invariant, its sole dialect input the compile-time template pick.
+
+And because `findFunctionDef` searches the dialect namespace *before* the global one, whether a given name is portable is itself dialect-relative: `upper` is portable only because no dialect defines its own `upper`, while `max_by` resolves under Trino and is `unknown function` under Postgres. You cannot know a call's portability without knowing which namespace its name resolved in.
 
 ## SQL generation
 
