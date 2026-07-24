@@ -10,8 +10,8 @@
  *
  * Each connector applies it through a per-query mechanism — Snowflake's
  * per-statement `QUERY_TAG` and BigQuery's per-job labels natively, others as a
- * leading SQL comment (see {@link queryMetadataComment}). Session metadata
- * only; it does not affect query results or data identity.
+ * leading SQL comment (see {@link queryMetadataComment}). It never affects
+ * query results or data identity.
  */
 export type QueryMetadata = Record<string, string>;
 

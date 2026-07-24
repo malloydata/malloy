@@ -21,7 +21,7 @@ import type {
 import {SnowflakeDialect, sqlKey, makeDigest} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-import {SnowflakeExecutor, snowflakeQueryTag} from './snowflake_executor';
+import {SnowflakeExecutor} from './snowflake_executor';
 import {
   accumulateVariantPath,
   buildTopLevelField,
@@ -192,14 +192,10 @@ export class SnowflakeConnection
     }
     this.connOptions = connOptions ?? {};
     this.setupSQL = options?.setupSQL;
-    // The connection-level query tag (from the default queryOptions) is applied
-    // to every statement, including runtime-internal ones (schema fetches) that
-    // don't flow through runSQL's option merge.
     this.executor = new SnowflakeExecutor(
       connOptions,
       options?.poolOptions,
-      this.setupSQL,
-      snowflakeQueryTag(options?.queryOptions)
+      this.setupSQL
     );
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
@@ -268,10 +264,11 @@ export class SnowflakeConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const effectiveOptions: RunSQLOptions = {
-      ...this.queryOptions,
-      ...options,
-    };
+    const effectiveOptions: RunSQLOptions = {...this.queryOptions, ...options};
+    // queryMetadata is per-call only; everything else (rowLimit, etc.) inherits
+    // the connection defaults above. Set explicitly here so it cannot fall back
+    // to a connection default.
+    effectiveOptions.queryMetadata = options.queryMetadata;
     const rowLimit = effectiveOptions.rowLimit;
     let rows = await this.executor.batch(sql, effectiveOptions, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
@@ -284,10 +281,13 @@ export class SnowflakeConnection
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
-    const streamQueryOptions = {
+    const streamQueryOptions: RunSQLOptions = {
       ...this.queryOptions,
       ...options,
     };
+    // queryMetadata is per-call only (see runSQL); set explicitly here so it
+    // cannot fall back to a connection default.
+    streamQueryOptions.queryMetadata = options.queryMetadata;
 
     for await (const row of await this.executor.stream(
       sqlCommand,

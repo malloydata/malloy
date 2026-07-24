@@ -81,21 +81,15 @@ export class SnowflakeExecutor {
 
   private pool_: Pool<Connection>;
   private setupSQL: string | undefined;
-  // Connection-level default query tag, applied to every statement (including
-  // runtime-internal ones like schema fetches) unless a per-call queryMetadata
-  // overrides it.
-  private defaultQueryTag: string | undefined;
 
   private sessionInitialized = new WeakMap<Connection, Promise<void>>();
 
   constructor(
     connOptions: ConnectionOptions,
     poolOptions?: PoolOptions,
-    setupSQL?: string,
-    defaultQueryTag?: string
+    setupSQL?: string
   ) {
     this.setupSQL = setupSQL;
-    this.defaultQueryTag = defaultQueryTag;
     this.pool_ = snowflake.createPool(connOptions, {
       ...SnowflakeExecutor.defaultPoolOptions_,
       ...(poolOptions ?? {}),
@@ -191,7 +185,7 @@ export class SnowflakeExecutor {
     }
     // Apply the query tag per statement (never via connOptions.queryTag — the
     // SDK clobbers per-statement parameters when that is set).
-    const queryTag = snowflakeQueryTag(options) ?? this.defaultQueryTag;
+    const queryTag = snowflakeQueryTag(options);
     const parameters = queryTag ? {QUERY_TAG: queryTag} : undefined;
     let _statement: RowStatement | undefined;
     const cancel = () => {
@@ -382,7 +376,7 @@ export class SnowflakeExecutor {
     }
 
     // Apply the query tag per statement (see _execute).
-    const queryTag = snowflakeQueryTag(options) ?? this.defaultQueryTag;
+    const queryTag = snowflakeQueryTag(options);
     const parameters = queryTag ? {QUERY_TAG: queryTag} : undefined;
     // Track the statement so abort can cancel it during conn.execute()
     let _statement: RowStatement | undefined;

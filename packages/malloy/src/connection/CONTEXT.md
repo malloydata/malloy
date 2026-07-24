@@ -171,6 +171,24 @@ The json-typed properties pass through to `trino-client`'s `ConnectionOptions` v
 
 All backends support `setupSQL` (text) — SQL statements run when the connection is first established.
 
+## Query metadata
+
+`RunSQLOptions.queryMetadata` is an optional per-query bag of string properties
+(`Record<string, string>`) for the backend's own bookkeeping — cost
+attribution, workload classification, tracing. It is supplied per call and
+never affects query results or data identity: it is **excluded from
+`getDigest()`**, so changing it never re-keys a connection or a BuildID.
+
+Each connector applies it through a mechanism that attaches per query: Snowflake
+uses a per-statement `QUERY_TAG`, BigQuery per-job labels; every other backend
+prepends it as a leading SQL comment via `sqlWithQueryMetadata(sql, meta)` from
+`@malloydata/malloy` (a no-op when there is no metadata). Core validates the bag
+(`validateQueryMetadata`, which throws): names are `[A-Za-z0-9_]`, values are
+printable ASCII excluding `"`, capped at a small count — enough to keep the
+comment form safe and to map onto every backend. BigQuery additionally
+lowercases/rewrites values to fit its label grammar. There is no
+connection-level default; metadata is per call only.
+
 ## Key Types
 
 ```typescript

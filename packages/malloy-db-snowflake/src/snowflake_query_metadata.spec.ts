@@ -100,29 +100,15 @@ describe('db-snowflake queryMetadata wiring (offline)', () => {
     expect(tagOf(lastCall(calls))).toEqual({team: 'finance'});
   });
 
-  it('applies the connection-default metadata (from queryOptions) to every statement, including session init', async () => {
+  it('does not inherit metadata from the connection default (queryOptions)', async () => {
     const {calls} = installFakeSnowflake();
     const conn = new SnowflakeConnection('sf', {
       connOptions: CONN_OPTIONS,
       queryOptions: {queryMetadata: {application_name: 'my-app'}},
     });
     await conn.runSQL('SELECT 1 AS T');
-    expect(calls.length).toBeGreaterThan(1);
-    for (const c of calls) {
-      expect(tagOf(c)).toEqual({application_name: 'my-app'});
-    }
-  });
-
-  it('lets per-call metadata override the connection default on the data statement', async () => {
-    const {calls} = installFakeSnowflake();
-    const conn = new SnowflakeConnection('sf', {
-      connOptions: CONN_OPTIONS,
-      queryOptions: {queryMetadata: {application_name: 'my-app'}},
-    });
-    await conn.runSQL('SELECT 1 AS T', {
-      queryMetadata: {team: 'finance'},
-    });
-    expect(tagOf(lastCall(calls))).toEqual({team: 'finance'});
+    // queryMetadata is per-call only; a queryOptions default is ignored.
+    expect(lastCall(calls).parameters).toBeUndefined();
   });
 
   it('sets no parameters when no metadata is present', async () => {
@@ -132,13 +118,13 @@ describe('db-snowflake queryMetadata wiring (offline)', () => {
     expect(lastCall(calls).parameters).toBeUndefined();
   });
 
-  it('never injects queryTag into the connection options (per-statement only)', () => {
-    const {spy} = installFakeSnowflake();
-    new SnowflakeConnection('sf', {
-      connOptions: CONN_OPTIONS,
-      queryOptions: {queryMetadata: {application_name: 'my-app'}},
-    });
+  it('never injects queryTag into the connection options (per-statement only)', async () => {
+    const {calls, spy} = installFakeSnowflake();
+    const conn = new SnowflakeConnection('sf', {connOptions: CONN_OPTIONS});
+    await conn.runSQL('SELECT 1 AS T', {queryMetadata: {team: 'finance'}});
+    // The tag rides parameters.QUERY_TAG, never the connection options.
     const passedConnOptions = spy.mock.calls[0][0] as Record<string, unknown>;
     expect(passedConnOptions['queryTag']).toBeUndefined();
+    expect(tagOf(lastCall(calls))).toEqual({team: 'finance'});
   });
 });

@@ -125,15 +125,6 @@ function toBigQueryLabels(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-/** Merge two label maps (the second wins per key); undefined if both empty. */
-function mergeLabels(
-  base?: Record<string, string>,
-  override?: Record<string, string>
-): Record<string, string> | undefined {
-  if (!base && !override) return undefined;
-  return {...base, ...override};
-}
-
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
   needsTableSuffixPseudoColumn: boolean;
@@ -307,8 +298,6 @@ export class BigQueryConnection
     const {rowLimit, abortSignal} = options;
     const defaultOptions = this.readQueryOptions();
     const pageSize = rowLimit ?? defaultOptions.rowLimit;
-    // Per-call labels; the connection-default labels are merged in
-    // createBigQueryJob so they also cover runtime-internal jobs.
     const perCallLabels = toBigQueryLabels(options);
 
     try {
@@ -792,20 +781,12 @@ export class BigQueryConnection
     if (options.query) {
       options.query = this.prependSetupSQL(options.query);
     }
-    // The connection-default labels ride the query-options reader and apply to
-    // every job (including runtime-internal ones like schema fetches); any
-    // per-call labels passed in `options.labels` override them per key.
-    const labels = mergeLabels(
-      toBigQueryLabels(this.readQueryOptions()),
-      options.labels
-    );
     const [job] = await this.bigQuery.createQueryJob({
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
       jobTimeoutMs: Number(this.config.timeoutMs) || TIMEOUT_MS,
       ...options,
-      ...(labels ? {labels} : {}),
     });
     return job;
   }

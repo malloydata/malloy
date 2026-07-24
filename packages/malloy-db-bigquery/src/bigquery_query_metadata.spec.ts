@@ -74,21 +74,11 @@ describe('db-bigquery queryMetadata wiring (offline)', () => {
     expect(firstJobConfig(spy)['labels']).toEqual({costcenter: 'eng_team'});
   });
 
-  it('applies connection-default metadata (from queryOptions) to createQueryJob', async () => {
+  it('does not inherit metadata from the connection default (queryOptions)', async () => {
     const {conn, spy} = makeConn({queryMetadata: {application_name: 'my-app'}});
     await conn.runSQL('SELECT 1');
-    expect(firstJobConfig(spy)['labels']).toEqual({application_name: 'my-app'});
-  });
-
-  it('merges per-call metadata over the connection default (per key)', async () => {
-    const {conn, spy} = makeConn({
-      queryMetadata: {app: 'my-app', team: 'default'},
-    });
-    await conn.runSQL('SELECT 1', {queryMetadata: {team: 'finance'}});
-    expect(firstJobConfig(spy)['labels']).toEqual({
-      app: 'my-app',
-      team: 'finance',
-    });
+    // queryMetadata is per-call only; a queryOptions default is ignored.
+    expect(firstJobConfig(spy)['labels']).toBeUndefined();
   });
 
   it('sets no labels when no metadata is present', async () => {
