@@ -11,7 +11,11 @@ export {
 } from './trino_connection';
 export {TrinoExecutor} from './trino_executor';
 
-import {registerConnectionType} from '@malloydata/malloy';
+import {
+  queryOptionsFromConnectionConfig,
+  registerConnectionType,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+} from '@malloydata/malloy';
 import type {
   ConnectionConfig,
   ConnectionPropertyDefinition,
@@ -64,6 +68,7 @@ function configToTrinoConfig(
 }
 
 const trinoProperties: ConnectionPropertyDefinition[] = [
+  ROW_LIMIT_CONNECTION_PROPERTY,
   {name: 'server', displayName: 'Server', type: 'string', optional: true},
   {name: 'port', displayName: 'Port', type: 'number', optional: true},
   {name: 'catalog', displayName: 'Catalog', type: 'string', optional: true},
@@ -121,6 +126,7 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
 ];
 
 const prestoProperties: ConnectionPropertyDefinition[] = [
+  ROW_LIMIT_CONNECTION_PROPERTY,
   {name: 'server', displayName: 'Server', type: 'string', optional: true},
   {name: 'port', displayName: 'Port', type: 'number', optional: true},
   {name: 'catalog', displayName: 'Catalog', type: 'string', optional: true},
@@ -142,7 +148,7 @@ registerConnectionType('trino', {
   factory: async (config: ConnectionConfig) => {
     return new TrinoConnection(
       config.name,
-      undefined,
+      queryOptionsFromConnectionConfig(config),
       configToTrinoConfig(config)
     );
   },
@@ -154,7 +160,7 @@ registerConnectionType('presto', {
   factory: async (config: ConnectionConfig) => {
     return new PrestoConnection(
       config.name,
-      undefined,
+      queryOptionsFromConnectionConfig(config),
       configToBaseConfig(config)
     );
   },

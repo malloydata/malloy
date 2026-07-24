@@ -21,7 +21,14 @@ import type {
   TestableConnection,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {TrinoDialect, mkFieldDef, sqlKey, makeDigest} from '@malloydata/malloy';
+import {
+  DEFAULT_ROW_LIMIT,
+  TrinoDialect,
+  makeDigest,
+  mkFieldDef,
+  resolveRunSQLOptions,
+  sqlKey,
+} from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -71,7 +78,7 @@ export interface BaseRunner {
   }>;
 }
 
-class PrestoRunner implements BaseRunner {
+export class PrestoRunner implements BaseRunner {
   client: PrestoClient;
   constructor(config: TrinoConnectionConfiguration) {
     const prestoClientConfig: PrestoClientConfig = {
@@ -93,19 +100,19 @@ class PrestoRunner implements BaseRunner {
   }
   async runSQL(sql: string, options: RunSQLOptions = {}) {
     let ret: PrestoQuery | undefined = undefined;
-    const q = options.rowLimit
-      ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
-      : sql;
     let error: string | undefined = undefined;
     try {
-      ret = (await this.client.query(q)) || [];
+      ret = (await this.client.query(sql)) || [];
       // console.log(ret);
     } catch (errorObj) {
       // console.log(error);
       error = errorObj.toString();
     }
     return {
-      rows: ret && ret.data ? ret.data : [],
+      rows:
+        ret && ret.data
+          ? ret.data.slice(0, options.rowLimit ?? ret.data.length)
+          : [],
       columns:
         ret && ret.columns
           ? (ret.columns as {name: string; type: string}[])
@@ -115,7 +122,7 @@ class PrestoRunner implements BaseRunner {
   }
 }
 
-class TrinoRunner implements BaseRunner {
+export class TrinoRunner implements BaseRunner {
   client: Trino;
   constructor(config: TrinoConnectionConfiguration) {
     let server = config.server;
@@ -151,15 +158,19 @@ class TrinoRunner implements BaseRunner {
       };
     }
     const columns = queryResult.value.columns;
+    const queryId = queryResult.value.id;
 
     const outputRows: unknown[][] = [];
     while (
       queryResult !== null &&
-      (!options.rowLimit || outputRows.length < options.rowLimit)
+      (options.rowLimit === undefined || outputRows.length < options.rowLimit)
     ) {
       const rows = queryResult.value.data ?? [];
       for (const row of rows) {
-        if (!options.rowLimit || outputRows.length < options.rowLimit) {
+        if (
+          options.rowLimit === undefined ||
+          outputRows.length < options.rowLimit
+        ) {
           outputRows.push(row as unknown[]);
         }
       }
@@ -168,6 +179,14 @@ class TrinoRunner implements BaseRunner {
       } else {
         break;
       }
+    }
+    if (
+      options.rowLimit !== undefined &&
+      outputRows.length >= options.rowLimit &&
+      queryResult.value.nextUri !== undefined
+    ) {
+      // A cancellation failure must not discard rows already fetched.
+      await this.client.cancel(queryId).catch(() => undefined);
     }
     // console.log(outputRows);
     // console.log(columns);
@@ -181,7 +200,7 @@ export abstract class TrinoPrestoConnection
 {
   protected readonly dialect = new TrinoDialect();
   static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
-    rowLimit: 10,
+    rowLimit: DEFAULT_ROW_LIMIT,
   };
 
   protected setupSQL: string | undefined;
@@ -227,17 +246,20 @@ export abstract class TrinoPrestoConnection
     return this.name;
   }
 
-  private readQueryOptions(): RunSQLOptions {
-    const options = TrinoConnection.DEFAULT_QUERY_OPTIONS;
-    if (this.queryOptions) {
-      if (this.queryOptions instanceof Function) {
-        return {...options, ...this.queryOptions()};
-      } else {
-        return {...options, ...this.queryOptions};
-      }
-    } else {
-      return options;
-    }
+  private readQueryOptions(
+    runOptions: RunSQLOptions = {}
+  ): RunSQLOptions & {rowLimit: number} {
+    const connectionOptions =
+      typeof this.queryOptions === 'function'
+        ? this.queryOptions()
+        : this.queryOptions;
+    return resolveRunSQLOptions(
+      {
+        ...TrinoPrestoConnection.DEFAULT_QUERY_OPTIONS,
+        ...connectionOptions,
+      },
+      runOptions
+    );
   }
 
   public canPersist(): this is PersistSQLResults {
@@ -276,7 +298,10 @@ export abstract class TrinoPrestoConnection
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
     await this.ensureSetup();
-    const r = await this.client.runSQL(sqlCommand, options);
+    const r = await this.client.runSQL(
+      sqlCommand,
+      this.readQueryOptions(options)
+    );
 
     if (r.error) {
       throw new Error(r.error);
@@ -491,7 +516,9 @@ export class PrestoConnection extends TrinoPrestoConnection {
     sql: string,
     structDef: StructDef
   ): Promise<void> {
-    const explainResult = await this.runSQL(`EXPLAIN ${sql}`, {});
+    // Schema discovery needs one EXPLAIN row even when the connection is
+    // configured with rowLimit: 0.
+    const explainResult = await this.runSQL(`EXPLAIN ${sql}`, {rowLimit: 1});
     PrestoConnection.schemaFromExplain(explainResult, structDef, this.dialect);
   }
 

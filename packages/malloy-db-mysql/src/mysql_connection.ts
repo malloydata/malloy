@@ -18,7 +18,12 @@ import type {
   TableSourceDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {MySQLDialect, sqlKey, makeDigest} from '@malloydata/malloy';
+import {
+  makeDigest,
+  MySQLDialect,
+  resolveRunSQLOptions,
+  sqlKey,
+} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import {randomUUID} from 'crypto';
 import * as MYSQL from 'mysql2/promise';
@@ -126,9 +131,16 @@ export class MySQLConnection
     await this.runRawSQL('SELECT 1');
   }
 
-  runSQL(sql: string, _options?: RunSQLOptions): Promise<MalloyQueryData> {
-    // TODO: what are options here?
-    return this.runRawSQL(sql);
+  async runSQL(
+    sql: string,
+    options: RunSQLOptions = {}
+  ): Promise<MalloyQueryData> {
+    const {rowLimit} = resolveRunSQLOptions(this.queryOptions, options);
+    const result = await this.runRawSQL(sql);
+    if (result.rows.length > rowLimit) {
+      result.rows = result.rows.slice(0, rowLimit);
+    }
+    return result;
   }
 
   isPool(): this is PooledConnection {

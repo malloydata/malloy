@@ -98,6 +98,24 @@ Two mechanisms fill in missing values, from two different directions:
 
 DuckDB's `workingDirectory` default, for example, is `{config: "rootDirectory"}`. Any duckdb entry that doesn't explicitly set `workingDirectory` picks up the project root from the `config` overlay. The user never has to know that `workingDirectory` exists.
 
+Every local database connection also exposes an advanced `rowLimit` number property. It caps the rows returned by a query unless that individual run supplies its own `rowLimit`; the shared default is 1000. For example:
+
+```json
+{
+  "connections": {
+    "local": {
+      "is": "duckdb",
+      "databasePath": "analytics.duckdb",
+      "rowLimit": 250
+    }
+  }
+}
+```
+
+`rowLimit` must be a non-negative integer, and zero is valid. It is an execution safety boundary, distinct from Malloy's `limit:` query property, which is compiled into SQL.
+
+Publisher connections accept the same property as an optional local override. When omitted, Publisher sends no `rowLimit`, so the remote connection's own configured value or default remains authoritative.
+
 **`includeDefaultConnections`** — a boolean flag at the top of the config. When `true`, the resolver fabricates one connection entry per registered backend type not already named in `connections`. The fabricated entry has no explicit properties; property defaults then fill it in as usual.
 
 A soloist can get working connections with nothing but:

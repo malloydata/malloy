@@ -5,9 +5,19 @@
 
 export {PublisherConnection} from './publisher_connection';
 
-import {registerConnectionType} from '@malloydata/malloy';
+import {
+  queryOptionsFromConnectionConfig,
+  registerConnectionType,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {PublisherConnection} from './publisher_connection';
+
+// Publisher forwards to a remotely configured connection. Accept a local
+// override, but do not inject the local default over the remote connection's
+// own configured rowLimit.
+const {default: _defaultRowLimit, ...publisherRowLimitProperty} =
+  ROW_LIMIT_CONNECTION_PROPERTY;
 
 registerConnectionType('publisher', {
   displayName: 'Malloy Publisher',
@@ -24,9 +34,14 @@ registerConnectionType('publisher', {
         typeof config['accessToken'] === 'string'
           ? config['accessToken']
           : undefined,
+      queryOptions:
+        config['rowLimit'] === undefined
+          ? undefined
+          : queryOptionsFromConnectionConfig(config),
     });
   },
   properties: [
+    publisherRowLimitProperty,
     {
       name: 'connectionUri',
       displayName: 'Connection URI',

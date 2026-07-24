@@ -8,6 +8,7 @@ The connection subsystem provides database backend abstractions, a centralized r
 - `base_connection.ts` — Abstract base class with schema caching; all backends extend this
 - `registry.ts` — Module-level `Map<string, ConnectionTypeDef>` with register/lookup functions
 - `registry.spec.ts` — Registry tests
+- `query_options.ts` — Shared `rowLimit` property, default, validation, and per-run option resolution
 - `validate_table_path.ts` — Helpers that re-validate a `tablePath` against the destination dialect (or any registered dialect) before it crosses an API boundary into SQL. See [Canonical tablePath invariant](#canonical-tablepath-invariant) below.
 
 ## Canonical tablePath invariant
@@ -35,9 +36,9 @@ import {registerConnectionType} from '@malloydata/malloy';
 registerConnectionType('duckdb', { displayName: 'DuckDB', factory: async ..., properties: [...] });
 ```
 
-Registered backends: `duckdb`, `bigquery`, `postgres`, `snowflake`, `trino`, `presto`, `mysql`, `publisher`
+Registered backends: `duckdb`, `duckdb_wasm`, `bigquery`, `postgres`, `snowflake`, `trino`, `presto`, `mysql`, `databricks`, `publisher`
 
-The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports all 6 database db-\* packages for side-effect registration (not publisher).
+The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports all seven local database packages for side-effect registration (not publisher).
 
 ### ConnectionTypeDef
 
@@ -141,35 +142,40 @@ so the docs site stays in sync. Add to the PR checklist:
 
 ## Per-Backend Properties
 
+All local database types expose `rowLimit` as an advanced number property with a default of 1000. Query execution resolves it in this order: per-run `RunSQLOptions.rowLimit`, connection `rowLimit`, then the shared default. Values must be non-negative integers; zero requests no returned rows. Publisher accepts `rowLimit` as an optional local override but deliberately has no local default: omitting it lets the remote connection's configuration remain authoritative.
+
 **DuckDB** (`displayName: "DuckDB"`):
-`databasePath` (file), `workingDirectory` (string), `motherDuckToken` (secret), `additionalExtensions` (string — comma-separated, factory parses to array), `readOnly` (boolean), `shareable` (boolean), `setupSQL` (text, advanced). The remaining properties — `securityPolicy`, `allowedDirectories`, `enableExternalAccess`, `lockConfiguration`, `autoloadKnownExtensions`, `autoinstallKnownExtensions`, `allowCommunityExtensions`, `allowUnsignedExtensions`, `tempFileEncryption`, `threads`, `memoryLimit`, `tempDirectory`, `extensionDirectory` — are all `advanced: true` (security policy, extension policy, and resource tuning).
+`rowLimit` (number, advanced), `databasePath` (file), `workingDirectory` (string), `motherDuckToken` (secret), `additionalExtensions` (string — comma-separated, factory parses to array), `readOnly` (boolean), `shareable` (boolean), `setupSQL` (text, advanced). The remaining properties — `securityPolicy`, `allowedDirectories`, `enableExternalAccess`, `lockConfiguration`, `autoloadKnownExtensions`, `autoinstallKnownExtensions`, `allowCommunityExtensions`, `allowUnsignedExtensions`, `tempFileEncryption`, `threads`, `memoryLimit`, `tempDirectory`, `extensionDirectory` — are all `advanced: true` (security policy, extension policy, and resource tuning).
 
 When `shareable: true` (and `databasePath` is a local file), the DuckDB connection binds its primary database to `:memory:` and brackets file access with `ATTACH 'path' AS malloy_db; USE malloy_db.main;` in `setupOnce()` and `DETACH malloy_db` in `idle()`. This releases the OS file lock between operations so other tools (`malloy-cli`, the `duckdb` CLI, another malloy host) can open the same file. The `:memory:` primary stays alive across `idle()`, so the `BaseConnection.schemaCache` and any `CREATE TEMPORARY TABLE` state survive a cycle. Shareable connections do not participate in `DuckDBConnection.activeDBs` sharing — each owns its own in-memory instance. `readOnly: true` is honored via `(READ_ONLY)` on the ATTACH so it scopes the real file, not the writable in-memory primary.
 
 **BigQuery** (`displayName: "BigQuery"`):
-`projectId` (string), `serviceAccountKeyPath` (file), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `setupSQL` (text, advanced)
+`rowLimit` (number, advanced), `projectId` (string), `serviceAccountKeyPath` (file), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `setupSQL` (text, advanced)
 
 **PostgreSQL** (`displayName: "PostgreSQL"`):
-`host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string, advanced), `setupSQL` (text, advanced), `ssl` (json, advanced)
+`rowLimit` (number, advanced), `host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string, advanced), `setupSQL` (text, advanced), `ssl` (json, advanced)
 
 **Snowflake** (`displayName: "Snowflake"`):
-`account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number, advanced), `schemaSampleTimeoutMs` (number, advanced), `schemaSampleRowLimit` (number, advanced), `schemaSampleFullScanMaxBytes` (number, advanced), `setupSQL` (text, advanced), `poolMin` (number, advanced), `poolMax` (number, advanced), `poolTestOnBorrow` (boolean, advanced)
+`rowLimit` (number, advanced), `account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number, advanced), `schemaSampleTimeoutMs` (number, advanced), `schemaSampleRowLimit` (number, advanced), `schemaSampleFullScanMaxBytes` (number, advanced), `setupSQL` (text, advanced), `poolMin` (number, advanced), `poolMax` (number, advanced), `poolTestOnBorrow` (boolean, advanced)
 Factory extracts `name`, `setupSQL`, `timeoutMs`, and the three pool fields; passes remaining properties as snowflake-sdk `ConnectionOptions`. The pool fields are assembled into a `generic-pool` options object via `buildPoolOptions()` and shallow-merged with `SnowflakeExecutor.defaultPoolOptions_` (`{min: 1, max: 1, testOnBorrow: true, testOnReturn: true}`); omitting all three preserves the defaults.
 
 **Trino** (`displayName: "Trino"`):
-`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced), `source` (string, advanced), `ssl` (json, advanced), `session` (json, advanced), `extraCredential` (json, advanced), `extraHeaders` (json, advanced)
+`rowLimit` (number, advanced), `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced), `source` (string, advanced), `ssl` (json, advanced), `session` (json, advanced), `extraCredential` (json, advanced), `extraHeaders` (json, advanced)
 The json-typed properties pass through to `trino-client`'s `ConnectionOptions` via `extraConfig`.
 
 **Presto** (`displayName: "Presto"`):
-`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
+`rowLimit` (number, advanced), `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
 
 **MySQL** (`displayName: "MySQL"`):
-`host` (string), `port` (number), `database` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
+`rowLimit` (number, advanced), `host` (string), `port` (number), `database` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
+
+**Databricks** (`displayName: "Databricks"`):
+`rowLimit` (number, advanced), `host` (string, required), `path` (string, required), `token` (secret), `oauthClientId` (string, advanced), `oauthClientSecret` (secret, advanced), `defaultCatalog` (string), `defaultSchema` (string), `setupSQL` (text, advanced)
 
 **Publisher** (`displayName: "Malloy Publisher"`):
-`connectionUri` (string, required), `accessToken` (secret)
+`rowLimit` (number, advanced), `connectionUri` (string, required), `accessToken` (secret)
 
-All backends support `setupSQL` (text) — SQL statements run when the connection is first established.
+All local database backends support `setupSQL` (text) — SQL statements run when the connection is first established.
 
 ## Key Types
 

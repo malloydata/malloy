@@ -10,9 +10,10 @@ import path from 'path';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
-import {mkArrayDef} from '@malloydata/malloy';
+import {MalloyConfig, mkArrayDef} from '@malloydata/malloy';
 import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
 import '@malloydata/malloy/test/matchers';
+import './native';
 
 /*
  * !IMPORTANT
@@ -727,6 +728,75 @@ describe('DuckDBConnection', () => {
         }
       );
     });
+  });
+});
+
+describe('DuckDB rowLimit config', () => {
+  it('applies config, per-run overrides, and zero', async () => {
+    const config = new MalloyConfig({
+      connections: {
+        limited: {
+          is: 'duckdb',
+          databasePath: ':memory:',
+          rowLimit: 3,
+        },
+      },
+    });
+    const connection = await config.connections.lookupConnection('limited');
+    try {
+      expect(
+        (await connection.runSQL('SELECT * FROM range(10)')).rows
+      ).toHaveLength(3);
+      expect(
+        (await connection.runSQL('SELECT * FROM range(10)', {rowLimit: 5})).rows
+      ).toHaveLength(5);
+      expect(
+        (await connection.runSQL('SELECT * FROM range(10)', {rowLimit: 0})).rows
+      ).toHaveLength(0);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('applies the shared default when config omits rowLimit', async () => {
+    const config = new MalloyConfig({
+      connections: {
+        defaulted: {is: 'duckdb', databasePath: ':memory:'},
+      },
+    });
+    const connection = await config.connections.lookupConnection('defaulted');
+    try {
+      expect(
+        (await connection.runSQL('SELECT * FROM range(1005)')).rows
+      ).toHaveLength(1000);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('does not truncate a Malloy limit above the former ten-row cap', async () => {
+    const config = new MalloyConfig({
+      connections: {
+        duckdb: {is: 'duckdb', databasePath: ':memory:'},
+      },
+    });
+    const connection = await config.connections.lookupConnection('duckdb');
+    const runtime = createTestRuntime(connection);
+    try {
+      const result = await runtime
+        .loadQuery(
+          `
+          run: duckdb.sql("SELECT range AS value FROM range(100)") -> {
+            select: *
+            limit: 25
+          }
+        `
+        )
+        .run();
+      expect(result.data.rowCount).toBe(25);
+    } finally {
+      await connection.close();
+    }
   });
 });
 

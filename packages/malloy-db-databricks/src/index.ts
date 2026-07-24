@@ -5,7 +5,11 @@
 
 export {DatabricksConnection} from './databricks_connection';
 
-import {registerConnectionType} from '@malloydata/malloy';
+import {
+  queryOptionsFromConnectionConfig,
+  registerConnectionType,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {DatabricksConnection} from './databricks_connection';
 
@@ -15,31 +19,39 @@ registerConnectionType('databricks', {
     const host = typeof config['host'] === 'string' ? config['host'] : '';
     const path = typeof config['path'] === 'string' ? config['path'] : '';
 
-    return new DatabricksConnection(config.name, {
-      host,
-      path,
-      token: typeof config['token'] === 'string' ? config['token'] : undefined,
-      oauthClientId:
-        typeof config['oauthClientId'] === 'string'
-          ? config['oauthClientId']
-          : undefined,
-      oauthClientSecret:
-        typeof config['oauthClientSecret'] === 'string'
-          ? config['oauthClientSecret']
-          : undefined,
-      defaultCatalog:
-        typeof config['defaultCatalog'] === 'string'
-          ? config['defaultCatalog']
-          : undefined,
-      defaultSchema:
-        typeof config['defaultSchema'] === 'string'
-          ? config['defaultSchema']
-          : undefined,
-      setupSQL:
-        typeof config['setupSQL'] === 'string' ? config['setupSQL'] : undefined,
-    });
+    return new DatabricksConnection(
+      config.name,
+      {
+        host,
+        path,
+        token:
+          typeof config['token'] === 'string' ? config['token'] : undefined,
+        oauthClientId:
+          typeof config['oauthClientId'] === 'string'
+            ? config['oauthClientId']
+            : undefined,
+        oauthClientSecret:
+          typeof config['oauthClientSecret'] === 'string'
+            ? config['oauthClientSecret']
+            : undefined,
+        defaultCatalog:
+          typeof config['defaultCatalog'] === 'string'
+            ? config['defaultCatalog']
+            : undefined,
+        defaultSchema:
+          typeof config['defaultSchema'] === 'string'
+            ? config['defaultSchema']
+            : undefined,
+        setupSQL:
+          typeof config['setupSQL'] === 'string'
+            ? config['setupSQL']
+            : undefined,
+      },
+      queryOptionsFromConnectionConfig(config)
+    );
   },
   properties: [
+    ROW_LIMIT_CONNECTION_PROPERTY,
     {name: 'host', displayName: 'Host', type: 'string'},
     {
       name: 'path',

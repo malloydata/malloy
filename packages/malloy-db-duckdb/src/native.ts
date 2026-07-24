@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {registerConnectionType} from '@malloydata/malloy';
+import {
+  queryOptionsFromConnectionConfig,
+  registerConnectionType,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {DuckDBConnection} from './duckdb_connection';
 
@@ -16,9 +20,13 @@ registerConnectionType('duckdb', {
       options['databasePath'] = options['path'];
       delete options['path'];
     }
-    return new DuckDBConnection(options);
+    return new DuckDBConnection(
+      options,
+      queryOptionsFromConnectionConfig(config)
+    );
   },
   properties: [
+    ROW_LIMIT_CONNECTION_PROPERTY,
     {
       name: 'databasePath',
       displayName: 'Database Path',

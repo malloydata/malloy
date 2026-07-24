@@ -464,10 +464,9 @@ export class DuckDBConnection extends DuckDBCommon {
 
   public async *runSQLStream(
     sql: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
+    options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
-    const defaultOptions = this.readQueryOptions();
-    rowLimit ??= defaultOptions.rowLimit;
+    const {rowLimit, abortSignal} = this.readQueryOptions(options);
     await this.setup();
     if (!this.connection) {
       throw new Error('Connection not open');

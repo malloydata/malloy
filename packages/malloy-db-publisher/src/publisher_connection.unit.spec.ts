@@ -547,7 +547,7 @@ describe('db:Publisher', () => {
         jest.clearAllMocks();
       });
 
-      it('should run SQL query successfully', async () => {
+      it('should run SQL query with the configured row limit', async () => {
         const mockQueryData: MalloyQueryData = {
           rows: [
             {id: 1, name: 'test1'},
@@ -592,17 +592,21 @@ describe('db:Publisher', () => {
           connectionUri:
             'http://test.com/api/v0/projects/test-project/connections/test-connection',
           accessToken: 'test-token',
+          queryOptions: {rowLimit: 1},
         });
 
         const result = await connection.runSQL('SELECT * FROM test_table');
 
-        expect(result).toEqual(mockQueryData);
+        expect(result).toEqual({
+          ...mockQueryData,
+          rows: [mockQueryData.rows[0]],
+        });
         expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
           {
             sqlStatement: 'SELECT * FROM test_table',
-            options: JSON.stringify({}),
+            options: JSON.stringify({rowLimit: 1}),
           },
           {
             headers: {
@@ -657,10 +661,11 @@ describe('db:Publisher', () => {
           connectionUri:
             'http://test.com/api/v0/projects/test-project/connections/test-connection',
           accessToken: 'test-token',
+          queryOptions: {rowLimit: 1},
         });
 
         const options = {
-          rowLimit: 100,
+          rowLimit: 0,
           timeoutMs: 5000,
         };
 
@@ -669,7 +674,7 @@ describe('db:Publisher', () => {
           options
         );
 
-        expect(result).toEqual(mockQueryData);
+        expect(result).toEqual({...mockQueryData, rows: []});
         expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
@@ -777,7 +782,10 @@ describe('db:Publisher', () => {
         expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          {sqlStatement: 'SELECT * FROM test_table', options: '{}'},
+          {
+            sqlStatement: 'SELECT * FROM test_table',
+            options: '{}',
+          },
           {
             headers: {
               Authorization: 'Bearer test-token',

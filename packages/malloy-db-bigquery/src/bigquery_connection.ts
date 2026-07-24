@@ -33,8 +33,10 @@ import type {
   SQLSourceRequest,
 } from '@malloydata/malloy';
 import {
+  DEFAULT_ROW_LIMIT,
   mkArrayDef,
   Malloy,
+  resolveRunSQLOptions,
   StandardSQLDialect,
   toAsyncGenerator,
   sqlKey,
@@ -139,7 +141,7 @@ export class BigQueryConnection
   public readonly name: string;
   private readonly dialect = new StandardSQLDialect();
   static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
-    rowLimit: 10,
+    rowLimit: DEFAULT_ROW_LIMIT,
   };
 
   private bigQuery: BigQuerySDK;
@@ -219,17 +221,17 @@ export class BigQueryConnection
     return setup + '\n' + sql;
   }
 
-  private readQueryOptions(): RunSQLOptions {
-    const options = BigQueryConnection.DEFAULT_QUERY_OPTIONS;
-    if (this.queryOptions) {
-      if (this.queryOptions instanceof Function) {
-        return {...options, ...this.queryOptions()};
-      } else {
-        return {...options, ...this.queryOptions};
-      }
-    } else {
-      return options;
-    }
+  private readQueryOptions(
+    runOptions: RunSQLOptions = {}
+  ): RunSQLOptions & {rowLimit: number} {
+    const connectionOptions =
+      typeof this.queryOptions === 'function'
+        ? this.queryOptions()
+        : this.queryOptions;
+    return resolveRunSQLOptions(
+      {...BigQueryConnection.DEFAULT_QUERY_OPTIONS, ...connectionOptions},
+      runOptions
+    );
   }
 
   public canPersist(): this is PersistSQLResults {
@@ -250,18 +252,19 @@ export class BigQueryConnection
 
   private async _runSQL(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {},
+    options: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<{
     data: MalloyQueryData;
     schema: bigquery.ITableFieldSchema | undefined;
   }> {
-    const defaultOptions = this.readQueryOptions();
-    const pageSize = rowLimit ?? defaultOptions.rowLimit;
+    const {rowLimit: pageSize, abortSignal} = this.readQueryOptions(options);
 
     try {
       const queryResultsOptions: QueryResultsOptions = {
-        maxResults: pageSize,
+        // The paginator treats 0 as "unset", so request one row and enforce
+        // the zero-row contract on the returned array below.
+        maxResults: Math.max(pageSize, 1),
         startIndex: rowIndex.toString(),
       };
 
@@ -279,7 +282,7 @@ export class BigQueryConnection
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
       const queryCostBytes = jobResult[2]?.totalBytesProcessed;
       const data: MalloyQueryData = {
-        rows: jobResult[0],
+        rows: jobResult[0].slice(0, pageSize),
         totalRows,
         runStats: {
           queryCostBytes: queryCostBytes ? +queryCostBytes : undefined,
@@ -764,8 +767,9 @@ export class BigQueryConnection
 
   public runSQLStream(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
+    options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
+    const {rowLimit, abortSignal} = this.readQueryOptions(options);
     const streamBigQuery = (
       onError: (error: Error) => void,
       onData: (data: QueryRecord) => void,
@@ -776,12 +780,13 @@ export class BigQueryConnection
         this: ResourceStream<RowMetadata>,
         rowMetadata: RowMetadata
       ) {
+        if (index >= rowLimit || abortSignal?.aborted) {
+          this.end();
+          return;
+        }
         onData(rowMetadata);
         index += 1;
-        if (
-          (rowLimit !== undefined && index >= rowLimit) ||
-          abortSignal?.aborted
-        ) {
+        if (index >= rowLimit) {
           this.end();
         }
       }

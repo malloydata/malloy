@@ -5,16 +5,24 @@
 
 export {BigQueryConnection} from './bigquery_connection';
 
-import {registerConnectionType} from '@malloydata/malloy';
+import {
+  queryOptionsFromConnectionConfig,
+  registerConnectionType,
+  ROW_LIMIT_CONNECTION_PROPERTY,
+} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {BigQueryConnection} from './bigquery_connection';
 
 registerConnectionType('bigquery', {
   displayName: 'BigQuery',
   factory: async (config: ConnectionConfig) => {
-    return new BigQueryConnection(config);
+    return new BigQueryConnection(
+      config,
+      queryOptionsFromConnectionConfig(config)
+    );
   },
   properties: [
+    ROW_LIMIT_CONNECTION_PROPERTY,
     {
       name: 'projectId',
       displayName: 'Project ID',

@@ -18,7 +18,12 @@ import type {
   TestableConnection,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {SnowflakeDialect, sqlKey, makeDigest} from '@malloydata/malloy';
+import {
+  makeDigest,
+  resolveRunSQLOptions,
+  SnowflakeDialect,
+  sqlKey,
+} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {SnowflakeExecutor} from './snowflake_executor';
@@ -264,10 +269,7 @@ export class SnowflakeConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const effectiveOptions: RunSQLOptions = {
-      ...this.queryOptions,
-      ...options,
-    };
+    const effectiveOptions = resolveRunSQLOptions(this.queryOptions, options);
     const rowLimit = effectiveOptions.rowLimit;
     let rows = await this.executor.batch(sql, effectiveOptions, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
@@ -280,10 +282,7 @@ export class SnowflakeConnection
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
-    const streamQueryOptions = {
-      ...this.queryOptions,
-      ...options,
-    };
+    const streamQueryOptions = resolveRunSQLOptions(this.queryOptions, options);
 
     for await (const row of await this.executor.stream(
       sqlCommand,

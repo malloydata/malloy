@@ -14,9 +14,10 @@ import type {
   SQLSourceRequest,
   TableSourceDef,
   RunSQLOptions,
+  QueryOptionsReader,
   TestableConnection,
 } from '@malloydata/malloy';
-import {makeDigest} from '@malloydata/malloy';
+import {makeDigest, resolveRunSQLOptions} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import type {
   Connection,
@@ -31,6 +32,7 @@ import {AxiosError} from 'axios';
 interface PublisherConnectionOptions {
   connectionUri: string;
   accessToken?: string;
+  queryOptions?: QueryOptionsReader;
 }
 
 export class PublisherConnection
@@ -95,7 +97,8 @@ export class PublisherConnection
       connectionsTestApi,
       connectionAttributes,
       connectionData,
-      options.accessToken
+      options.accessToken,
+      options.queryOptions
     );
     await connection.test();
     return connection;
@@ -116,7 +119,8 @@ export class PublisherConnection
     connectionsTestApi: ConnectionsTestApi,
     connectionAttributes: ConnectionAttributes,
     connectionData: Connection,
-    accessToken: string | undefined
+    accessToken: string | undefined,
+    private readonly queryOptions?: QueryOptionsReader
   ) {
     super();
     this.name = name;
@@ -212,10 +216,11 @@ export class PublisherConnection
     let result = {} as MalloyQueryData;
     try {
       // TODO: Add support for abortSignal.
-      options.abortSignal = undefined;
+      const effectiveOptions = this.resolveRemoteOptions(options);
+      const {abortSignal: _abortSignal, ...remoteOptions} = effectiveOptions;
       const request: PostQuerydataRequest = {
         sqlStatement: sql,
-        options: JSON.stringify(options),
+        options: JSON.stringify(remoteOptions),
       };
       const response = await this.connectionsApi.postQuerydata(
         this.projectName,
@@ -226,6 +231,13 @@ export class PublisherConnection
         }
       );
       result = JSON.parse(response.data.data as string) as MalloyQueryData;
+      result = {
+        ...result,
+        rows:
+          effectiveOptions.rowLimit === undefined
+            ? result.rows
+            : result.rows.slice(0, effectiveOptions.rowLimit),
+      };
     } catch (error: AxiosError | unknown) {
       this.extractAndThrowError(error, 'Failed to execute SQL query');
     }
@@ -238,11 +250,12 @@ export class PublisherConnection
   ): AsyncIterableIterator<QueryRecord> {
     try {
       // TODO: Add support for abortSignal.
-      options.abortSignal = undefined;
+      const effectiveOptions = this.resolveRemoteOptions(options);
+      const {abortSignal: _abortSignal, ...remoteOptions} = effectiveOptions;
       // TODO: Add real streaming support to publisher API.
       const request: PostQuerydataRequest = {
         sqlStatement: sqlCommand,
-        options: JSON.stringify(options),
+        options: JSON.stringify(remoteOptions),
       };
       const response = await this.connectionsApi.postQuerydata(
         this.projectName,
@@ -255,7 +268,11 @@ export class PublisherConnection
       const queryData = JSON.parse(
         response.data.data as string
       ) as MalloyQueryData;
-      for (const row of queryData.rows) {
+      const rows =
+        effectiveOptions.rowLimit === undefined
+          ? queryData.rows
+          : queryData.rows.slice(0, effectiveOptions.rowLimit);
+      for (const row of rows) {
         yield row;
       }
     } catch (error: AxiosError | unknown) {
@@ -278,6 +295,25 @@ export class PublisherConnection
         'Failed to test connection configuration'
       );
     }
+  }
+
+  private resolveRemoteOptions(options: RunSQLOptions): RunSQLOptions {
+    const connectionOptions =
+      typeof this.queryOptions === 'function'
+        ? this.queryOptions()
+        : this.queryOptions;
+    const effectiveOptions = {...connectionOptions, ...options};
+
+    if (
+      connectionOptions?.rowLimit !== undefined ||
+      options.rowLimit !== undefined
+    ) {
+      return {
+        ...effectiveOptions,
+        ...resolveRunSQLOptions(connectionOptions, options),
+      };
+    }
+    return effectiveOptions;
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
