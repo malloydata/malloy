@@ -95,3 +95,98 @@ describe('PersistSource build key matches serve-time manifest lookup', () => {
     expect(routedSQL(model, 'db_rollup', '_db_')).toContain(MATERIALIZED);
   });
 });
+
+describe('build targets exclude extend-derived readers', () => {
+  function buildTargets(model: Model): string[] {
+    return Object.values(model.getBuildPlan().sources)
+      .map(s => s.name)
+      .sort();
+  }
+
+  // The bug this guards: `#@ persist` is a Malloy annotation, so it propagates
+  // onto a source that `extend`s a persisted source. Such a reader must keep
+  // reading the pre-built table (docs: "the extension still reads from the same
+  // pre-built table"), but it must NOT be emitted as its own build target — it
+  // would materialize the base's table a second time under the inherited
+  // `name=`, colliding on one physical coordinate.
+  test('an extend of a persisted source is a reader, not a build target', () => {
+    const model = modelOf(`
+      ##! experimental.persistence
+      #@ persist name="main.base_persist"
+      source: base_persist is _db_.table('aTable') -> {
+        group_by: astr
+        aggregate: n is count()
+      }
+      source: extended_reader is base_persist extend {
+        dimension: astr_upper is upper(astr)
+      }
+    `);
+    expect(buildTargets(model)).toEqual(['base_persist']);
+  });
+
+  test('an extend reader still routes to the base pre-built table', () => {
+    const CONN_DIGEST = 'test-conn-digest';
+    const MATERIALIZED = 'MATERIALIZED_BASE';
+    const model = modelOf(`
+      ##! experimental.persistence
+      #@ persist name="main.base_persist"
+      source: base_persist is _db_.table('aTable') -> {
+        group_by: astr
+        aggregate: n is count()
+      }
+      source: extended_reader is base_persist extend {
+        dimension: astr_upper is upper(astr)
+      }
+      run: extended_reader -> { group_by: astr_upper; aggregate: tot is n.sum() }
+    `);
+    // Manifest is keyed by the ONLY build target (base_persist). Querying the
+    // extension must still route through to that materialized table.
+    const base = persistSourceNamed(model, 'base_persist');
+    const manifest: BuildManifest = {
+      entries: {
+        [base.makeBuildId(CONN_DIGEST, base.getSQL())]: {
+          tableName: MATERIALIZED,
+        },
+      },
+    };
+    const sql = model.getPreparedQuery().getPreparedResult({
+      buildManifest: manifest,
+      connectionDigests: {_db_: CONN_DIGEST},
+    }).sql;
+    expect(sql).toContain(MATERIALIZED);
+  });
+
+  test('a `#@ -persist` extension opts out and is not a build target', () => {
+    const model = modelOf(`
+      ##! experimental.persistence
+      #@ persist name="main.base_persist"
+      source: base_persist is _db_.table('aTable') -> {
+        group_by: astr
+        aggregate: n is count()
+      }
+      #@ -persist
+      source: recomputed is base_persist extend {
+        dimension: astr_upper is upper(astr)
+      }
+    `);
+    expect(buildTargets(model)).toEqual(['base_persist']);
+  });
+
+  test('an extension that DECLARES its own persist IS a distinct build target', () => {
+    const model = modelOf(`
+      ##! experimental.persistence
+      #@ persist name="main.base_persist"
+      source: base_persist is _db_.table('aTable') -> {
+        group_by: astr
+        aggregate: n is count()
+      }
+      #@ persist name="main.child_persist"
+      source: child_persist is base_persist extend {
+        dimension: astr_upper is upper(astr)
+      }
+    `);
+    // A child declaring its OWN persist (a different table) is a legitimate
+    // second materialization and must remain a build target.
+    expect(buildTargets(model)).toEqual(['base_persist', 'child_persist']);
+  });
+});
