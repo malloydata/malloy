@@ -1626,7 +1626,28 @@ export function isSourceRegistryReference(
 
 export interface PersistableSourceProperties {
   extends?: SourceID;
+  /**
+   * Whether this source USES a persisted table — true when `#@ persist` is in
+   * effect after folding the whole annotation chain (own + inherited via
+   * `extend`), unless overridden by `#@ -persist`. Drives read routing
+   * (query_query.ts / sql_compiled.ts): a source with `persistent === true`
+   * reads the pre-built table. An `extend`-derived reader that only inherited
+   * the directive is `persistent === true` (it reads the base's table) — which
+   * is why this flag alone cannot say who OWNS the materialization; see
+   * `persistDeclared`.
+   */
   persistent?: boolean;
+  /**
+   * Whether `#@ persist` is DECLARED on this source's own annotation (not merely
+   * inherited via `extend`). Distinct from `persistent`: only a source that
+   * declares persist is a build TARGET (a table to materialize). An
+   * `extend`-derived reader inherits `persistent` (so it reads the pre-built
+   * table) but has `persistDeclared !== true`, so the build-plan enumeration
+   * excludes it instead of emitting a duplicate materialization of the same
+   * table. Computed at define time from the source's OWN annotation only (see
+   * DefineSource.execute); `#@ -persist` in the own annotation reports false.
+   */
+  persistDeclared?: boolean;
 }
 
 export interface SQLSourceDef

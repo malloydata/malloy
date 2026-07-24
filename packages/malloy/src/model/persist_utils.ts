@@ -4,6 +4,7 @@
  */
 
 import type {
+  AnnotationsDef,
   ModelDef,
   SourceDef,
   SQLPhraseSegment,
@@ -46,6 +47,32 @@ export function checkPersistAnnotation(source: SourceDef): {
   if (!source.annotations) return {persist: false, log: []};
   const {tag, log} = new Annotations(source.annotations).parseAsTag('@');
   return {persist: tag.has('persist'), log};
+}
+
+/**
+ * Whether `#@ persist` is DECLARED on a source's OWN annotation, as opposed to
+ * merely inherited from a source it `extend`s.
+ *
+ * `checkPersistAnnotation` folds the entire annotation chain (including
+ * `inherits`), which is correct for the read/recompute decision (`persistent`):
+ * an `extend`-derived reader SHOULD read the parent's pre-built table. But a
+ * reader is NOT a build target — materializing it would duplicate the parent's
+ * table under the same inherited `name=`. This checks the own annotation alone
+ * (the block/line notes written on this source, with any inherited bundle
+ * dropped) so that only a source that declares persist itself is treated as a
+ * thing to build. `#@ -persist` in the own annotation deletes the key and so
+ * reports false. Errors are not re-logged here — the folded
+ * `checkPersistAnnotation` on the same source already surfaces them.
+ */
+export function checkPersistDeclaredOnOwn(
+  own: AnnotationsDef | undefined
+): boolean {
+  if (!own) return false;
+  const {tag} = new Annotations({
+    notes: own.notes,
+    blockNotes: own.blockNotes,
+  }).parseAsTag('@');
+  return tag.has('persist');
 }
 
 /**
@@ -123,9 +150,17 @@ export function findPersistentDependencies(
     }
 
     const childDeps = processSourceDef(sourceDef);
+    // Compute `persistent` for its side effects (registry cache + tag-parse-error
+    // logging), but gate inclusion on `persistDeclared`: a source is a build
+    // TARGET only if it DECLARES `#@ persist` itself. An `extend`-derived reader
+    // is `persistent` (it reads the parent's pre-built table) but declares
+    // nothing, so — like a non-persistent source — it flattens out, bubbling its
+    // real persisted dependency (the parent) up in its place. Without this, the
+    // reader would be emitted as a second build target that materializes the
+    // parent's table again under the same inherited `name=`, colliding.
     const persistent = isPersistent(sourceID, modelDef, tagParseLog);
 
-    if (persistent) {
+    if (persistent && sourceDef.persistDeclared === true) {
       return [{sourceID, dependsOn: childDeps}];
     } else {
       return childDeps;

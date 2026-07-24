@@ -101,6 +101,7 @@ export function mkQuerySourceDef(
     // referenceID: undefined,
     // extends: undefined,
     // persistent: undefined,
+    // persistDeclared: undefined,
   };
 }
 
@@ -153,6 +154,7 @@ export function mkSQLSourceDef(
     // referenceID: undefined,
     // extends: undefined,
     // persistent: undefined,
+    // persistDeclared: undefined,
   };
 }
 

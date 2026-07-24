@@ -10,7 +10,10 @@ import {
   isSourceDef,
 } from '../../../model/malloy_types';
 import {mkSourceID} from '../../../model/source_def_utils';
-import {checkPersistAnnotation} from '../../../model/persist_utils';
+import {
+  checkPersistAnnotation,
+  checkPersistDeclaredOnOwn,
+} from '../../../model/persist_utils';
 import {ErrorFactory} from '../error-factory';
 import type {HasParameter} from '../parameters/has-parameter';
 import type {DocStatement, Document} from '../types/malloy-element';
@@ -80,7 +83,17 @@ export class DefineSource
       // which DynamicSpace cleared).
       entry.sourceID = mkSourceID(this.name, this.location?.url);
       if (isPersistableSourceDef(entry)) {
+        // `persistent` folds the whole annotation chain (own + inherited via
+        // `extend`) — correct for read routing. `persistDeclared` is computed
+        // from the OWN annotation alone, so only a source that declares persist
+        // itself is treated as a build target; an `extend`-derived reader
+        // inherits `persistent` (reads the pre-built table) but is not rebuilt.
+        // `this.ownAnnotation` is undefined for a plain extension, and for a
+        // modified/extended source `entry.annotations` is a pass-through of the
+        // base's — so the own annotation is the only reliable declared-here
+        // signal here.
         entry.persistent = checkPersistAnnotation(entry).persist;
+        entry.persistDeclared = checkPersistDeclaredOnOwn(this.ownAnnotation);
       }
     }
     entry.partitionComposite =
