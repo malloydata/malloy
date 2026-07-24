@@ -41,8 +41,6 @@ export interface BuildLogExists extends BuildLogEntryBase {
 
 export interface BuildLogBuilt extends BuildLogEntryBase {
   action: 'built';
-  buildStartedAt: string;
-  buildEndedAt: string;
 }
 
 export interface GCLogEntry {
