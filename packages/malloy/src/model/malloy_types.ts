@@ -1708,8 +1708,8 @@ export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
  * - mkQuerySourceDef(base, ...) - create QuerySourceDef from base
  *
  * These factories explicitly copy only safe fields, dropping the identity
- * fields (sourceID/referenceID/extends/persistent) so they are not propagated
- * onto a freshly built source. In the translator, by contrast, object spread is
+ * fields (sourceID/referenceID/extends/persistent/persistDeclared) so they are
+ * not propagated onto a freshly built source. In the translator, by contrast, object spread is
  * used deliberately to *carry* sourceID/referenceID through an unmodified
  * reference; DefineSource then sets them, and DynamicSpace clears referenceID
  * on the modification path.

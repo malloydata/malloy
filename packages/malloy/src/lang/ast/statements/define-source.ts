@@ -83,15 +83,12 @@ export class DefineSource
       // which DynamicSpace cleared).
       entry.sourceID = mkSourceID(this.name, this.location?.url);
       if (isPersistableSourceDef(entry)) {
-        // `persistent` folds the whole annotation chain (own + inherited via
-        // `extend`) — correct for read routing. `persistDeclared` is computed
-        // from the OWN annotation alone, so only a source that declares persist
-        // itself is treated as a build target; an `extend`-derived reader
-        // inherits `persistent` (reads the pre-built table) but is not rebuilt.
-        // `this.ownAnnotation` is undefined for a plain extension, and for a
+        // `persistent` folds the whole annotation chain (read routing);
+        // `persistDeclared` uses the OWN annotation alone (the build-target
+        // signal — see PersistableSourceProperties.persistDeclared).
+        // `this.ownAnnotation` is the only reliable declared-here signal: for a
         // modified/extended source `entry.annotations` is a pass-through of the
-        // base's — so the own annotation is the only reliable declared-here
-        // signal here.
+        // base's, and it is undefined for a plain extension.
         entry.persistent = checkPersistAnnotation(entry).persist;
         entry.persistDeclared = checkPersistDeclaredOnOwn(this.ownAnnotation);
       }
