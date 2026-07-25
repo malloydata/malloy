@@ -364,7 +364,7 @@ src/model/
 ├── sql_compiled.ts               # Compiled SQL output types
 ├── field_instance.ts             # Field instances during compilation
 ├── join_instance.ts              # Join instances during compilation
-├── persist_utils.ts              # Persistence/build-plan utilities
+├── persist_utils.ts              # Persistence/build-plan utilities ([doc/persist/internal.md](../doc/persist/internal.md))
 ├── source_def_utils.ts           # SourceDef manipulation utilities
 ├── utils.ts                      # General compilation utilities (mkModelDef, etc.)
 ├── index.ts                      # Barrel exports

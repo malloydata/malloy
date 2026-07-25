@@ -129,6 +129,14 @@ const config: Config = {
       roots: ['<rootDir>/test/src/databases/duckdb/'],
     },
     {
+      // The teaching builder in scripts/simple_builder is cited as
+      // documentation, so its spec runs in CI to keep it from drifting. It
+      // builds against DuckDB, hence the duckdb job.
+      ...defaultConfig,
+      displayName: 'simple-builder',
+      roots: ['<rootDir>/scripts/simple_builder/'],
+    },
+    {
       ...defaultConfig,
       displayName: 'db-postgres',
       roots: [

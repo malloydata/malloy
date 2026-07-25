@@ -74,12 +74,11 @@ export async function gc(logDirPath: string, sqlPath: string): Promise<void> {
   const gcEntries: GCLogEntry[] = [];
   const now = new Date();
 
+  // Table names in the log are the canonical form the dialect produced at
+  // build time (see canonicalTableName in build.ts), so they are already
+  // safe to interpolate — and may legitimately contain quotes, which a
+  // character blacklist here would reject.
   for (const {buildId, tableName} of toDrop) {
-    if (/[;'"\\]/.test(tableName)) {
-      throw new Error(
-        `Unsafe table name "${tableName}": must not contain ; ' " or \\`
-      );
-    }
     console.log(`  DROP TABLE ${tableName} (${buildId})`);
     sqlStatements.push(`DROP TABLE IF EXISTS ${tableName};`);
     gcEntries.push({action: 'dropped', buildId, tableName});
