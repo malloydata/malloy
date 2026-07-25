@@ -303,7 +303,8 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
 
-    let query = `SELECT
+    const buildSearchQuery = (temporaryTableName: string): string => {
+      let query = `SELECT
               ${fieldNameColumn},
               ${fieldPathColumn},
               ${fieldValueColumn},
@@ -312,7 +313,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
               CASE WHEN lower(${fieldValueColumn}) LIKE lower(${d.sqlLiteralString(
                 searchValue + '%'
               )}) THEN 1 ELSE 0 END as match_first
-            FROM  ${await connection.manifestTemporaryTable(sqlPDT)}
+            FROM  ${temporaryTableName}
             WHERE lower(${fieldValueColumn}) LIKE lower(${d.sqlLiteralString(
               '%' + searchValue + '%'
             )}) ${
@@ -325,19 +326,28 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
             )}) THEN 1 ELSE 0 END DESC, ${weightColumn} DESC
             LIMIT ${limit}
           `;
-    if (d.hasFinalStage) {
-      query = `WITH __stage0 AS(\n${query}\n)\n${d.sqlFinalStage('__stage0', [
-        fieldNameColumn,
-        fieldPathColumn,
-        fieldValueColumn,
-        fieldTypeColumn,
-        weightColumn,
-        'match_first',
-      ])}`;
-    }
-    const result = await connection.runSQL(query, {
-      rowLimit: 1000,
-    });
+      if (d.hasFinalStage) {
+        query = `WITH __stage0 AS(\n${query}\n)\n${d.sqlFinalStage('__stage0', [
+          fieldNameColumn,
+          fieldPathColumn,
+          fieldValueColumn,
+          fieldTypeColumn,
+          weightColumn,
+          'match_first',
+        ])}`;
+      }
+      return query;
+    };
+    const result =
+      typeof connection.runSQLWithTemporaryTable === 'function'
+        ? await connection.runSQLWithTemporaryTable(sqlPDT, buildSearchQuery, {
+            rowLimit: 1000,
+            temporaryTableCache: 'connection-generation',
+          })
+        : await connection.runSQL(
+            buildSearchQuery(await connection.manifestTemporaryTable(sqlPDT)),
+            {rowLimit: 1000}
+          );
     return result.rows.map(row => ({
       ...row,
       weight: rowDataToNumber(row['weight']),

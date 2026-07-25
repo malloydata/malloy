@@ -221,7 +221,17 @@ function compileConnectionProperty(
   value: unknown,
   log: LogMessage[]
 ): ConfigNode | undefined {
-  if (value === undefined || value === null) return undefined;
+  if (value === undefined) return undefined;
+  if (value === null) {
+    if (propDef.requireLiteralString) {
+      log.push(makeWarning(path, 'must be a literal string, got null'));
+      // Preserve the invalid value through default application so lookup can
+      // reject it before the factory runs. Other properties retain the
+      // historical null-as-unset behavior.
+      return {kind: 'value', value};
+    }
+    return undefined;
+  }
 
   if (propDef.type === 'json') {
     return {kind: 'value', value};

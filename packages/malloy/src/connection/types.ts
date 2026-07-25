@@ -112,15 +112,15 @@ export interface Connection extends InfoConnection {
   /**
    * Release expensive backend resources (file locks, sockets, sub-processes,
    * pooled connections) but remain logically valid. The next operation
-   * transparently reattaches whatever was released; schema cache and other
-   * in-process state survive.
+   * transparently reattaches whatever was released. Backend-local state may
+   * be invalidated when an external owner could have changed the data source.
    *
    * The default is a no-op for backends that hold no release-able resources
    * between operations. Backends that hold OS-level resources (DuckDB file
    * locks, persistent socket pools) should override.
    *
-   * Hosts that share a connection across concurrent operations should not
-   * call `idle()` while an operation is in flight.
+   * Implementations must either drain in-flight operations before releasing
+   * resources or document that callers must provide that synchronization.
    */
   idle(): Promise<void>;
 
@@ -146,6 +146,28 @@ export interface PooledConnection extends Connection {
 
 export interface PersistSQLResults extends Connection {
   manifestTemporaryTable(sqlCommand: string): Promise<string>;
+
+  /**
+   * Create, consume, and promptly discard a backend TEMP result in one
+   * logical operation. This optional scoped form lets backends bound TEMP
+   * storage when callers do not need the persistent snapshot-name contract.
+   * The consumer callback must return one read-only query; backends may reject
+   * DDL, DML, or multiple statements so the TEMP object cannot escape cleanup.
+   */
+  runSQLWithTemporaryTable?(
+    sqlCommand: string,
+    buildConsumerSQL: (tableName: string) => string,
+    options?: TemporaryTableRunOptions
+  ): Promise<MalloyQueryData>;
+}
+
+export interface TemporaryTableRunOptions extends RunSQLOptions {
+  /**
+   * Reuse one immutable TEMP snapshot while the backend can prove that its
+   * attached data generation has not changed. Backends which do not support
+   * this mode may ignore it and retain operation-scoped behavior.
+   */
+  temporaryTableCache?: 'connection-generation';
 }
 
 export interface StreamingConnection extends Connection {

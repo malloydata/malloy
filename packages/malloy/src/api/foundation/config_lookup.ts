@@ -16,6 +16,7 @@ import type {
   ManagedConnectionLookup,
 } from '../../connection/registry';
 import type {Connection, ConnectionConfig} from '../../connection/types';
+import {ManagedConnectionCache} from '../../connection/managed_connection_cache';
 import type {ConfigDict, ConfigNode, ConfigReference} from './config_compile';
 import type {ConfigOverlays} from './config_overlays';
 
@@ -53,7 +54,7 @@ export function buildManagedLookup(
   const entries = Object.entries(compiledConnections);
   const firstConnectionName = entries.length > 0 ? entries[0][0] : undefined;
 
-  const cache = new Map<string, Connection>();
+  const cache = new ManagedConnectionCache();
 
   return {
     async lookupConnection(connectionName?: string): Promise<Connection> {
@@ -64,67 +65,58 @@ export function buildManagedLookup(
         throw new Error('No connections defined in config');
       }
 
-      const cached = cache.get(connectionName);
-      if (cached) return cached;
-
-      const compiledEntry = compiledConnections[connectionName];
-      if (!compiledEntry) {
-        throw new Error(
-          `No connection named "${connectionName}" found in config`
-        );
-      }
-
-      const resolved = await resolveCompiledEntry(compiledEntry, overlays, log);
-
-      // compileConnections guarantees `is` is present and a string-valued
-      // literal node — resolveCompiledEntry preserves it. Defensive check
-      // in case a compiler bug sneaks through.
-      if (typeof resolved['is'] !== 'string') {
-        throw new Error(
-          `Connection "${connectionName}" is missing a valid "is" field`
-        );
-      }
-
-      const typeDef = getConnectionTypeDef(resolved.is);
-      if (!typeDef) {
-        throw new Error(
-          `No registered connection type "${resolved.is}" for connection "${connectionName}". ` +
-            'Did you forget to import the connection package?'
-        );
-      }
-
-      const connConfig: ConnectionConfig = {name: connectionName};
-      for (const [key, value] of Object.entries(resolved)) {
-        if (key === 'is') continue;
-        if (value !== undefined && value !== null) {
-          connConfig[key] = value as ConnectionConfig[string];
+      const resolvedName = connectionName;
+      return cache.getOrCreate(resolvedName, async () => {
+        const compiledEntry = compiledConnections[resolvedName];
+        if (!compiledEntry) {
+          throw new Error(
+            `No connection named "${resolvedName}" found in config`
+          );
         }
-      }
 
-      validateConnectionConfigProperties(
-        connectionName,
-        resolved.is,
-        connConfig
-      );
-      const connection = await typeDef.factory(connConfig);
-      cache.set(connectionName, connection);
-      return connection;
+        const resolved = await resolveCompiledEntry(
+          compiledEntry,
+          overlays,
+          log
+        );
+
+        if (typeof resolved['is'] !== 'string') {
+          throw new Error(
+            `Connection "${resolvedName}" is missing a valid "is" field`
+          );
+        }
+
+        // Validate the resolved entry before filtering historical null-as-
+        // unset values out of ConnectionConfig. Security-sensitive literal
+        // strings must distinguish an omitted value from an explicit null.
+        validateConnectionConfigProperties(resolvedName, resolved.is, resolved);
+
+        const typeDef = getConnectionTypeDef(resolved.is);
+        if (!typeDef) {
+          throw new Error(
+            `No registered connection type "${resolved.is}" for connection "${resolvedName}". ` +
+              'Did you forget to import the connection package?'
+          );
+        }
+
+        const connConfig: ConnectionConfig = {name: resolvedName};
+        for (const [key, value] of Object.entries(resolved)) {
+          if (key === 'is') continue;
+          if (value !== undefined && value !== null) {
+            connConfig[key] = value as ConnectionConfig[string];
+          }
+        }
+
+        return typeDef.factory(connConfig);
+      });
     },
 
-    async close(): Promise<void> {
-      const connections = [...cache.values()];
-      cache.clear();
-      for (const conn of connections) {
-        await conn.close();
-      }
+    close(): Promise<void> {
+      return cache.close();
     },
 
-    async idle(): Promise<void> {
-      // Cache is preserved — same Connection objects are reused so that
-      // schema cache and other in-process state survive the idle.
-      for (const conn of cache.values()) {
-        await conn.idle();
-      }
+    idle(): Promise<void> {
+      return cache.idle();
     },
   };
 }

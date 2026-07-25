@@ -81,7 +81,7 @@ describe('DuckDB restricted configuration', () => {
     }
   });
 
-  it('does not share native instances when safety-relevant settings differ', async () => {
+  it('fences differently configured native instances on one physical file', async () => {
     const openConnection = new DuckDBConnection({
       name: 'duckdb-open',
       databasePath: sharedDatabasePath,
@@ -97,9 +97,17 @@ describe('DuckDB restricted configuration', () => {
         workingDirectory,
         securityPolicy: 'local',
       });
-      await closedConnection.runSQL('SELECT 1');
+      await expect(closedConnection.runSQL('SELECT 1')).rejects.toThrow(
+        /already owned by non-shareable/
+      );
 
-      expect(Object.keys(DuckDBConnection.activeDBs)).toHaveLength(2);
+      expect(Object.keys(DuckDBConnection.activeDBs)).toHaveLength(1);
+      await openConnection.close();
+      await expect(closedConnection.runSQL('SELECT 1')).resolves.toMatchObject({
+        rows: [{'1': 1}],
+      });
+
+      expect(Object.keys(DuckDBConnection.activeDBs)).toHaveLength(1);
     } finally {
       await openConnection.close();
       await closedConnection?.close();
@@ -125,10 +133,92 @@ describe('DuckDB restricted configuration', () => {
     });
 
     try {
-      await firstConnection.runSQL('SELECT 1');
-      await secondConnection.runSQL('SELECT 1');
+      await Promise.all([
+        firstConnection.runSQL('SELECT 1'),
+        secondConnection.runSQL('SELECT 1'),
+      ]);
 
       expect(Object.keys(DuckDBConnection.activeDBs)).toHaveLength(1);
+    } finally {
+      await firstConnection.close();
+      await secondConnection.close();
+    }
+  });
+
+  it('inherits locked connection defaults on handles opened after setup', async () => {
+    const firstConnection = new DuckDBConnection({
+      name: 'duckdb-locked-defaults-first',
+      securityPolicy: 'sandboxed',
+      workingDirectory,
+    });
+    let secondConnection: DuckDBConnection | undefined;
+
+    try {
+      await firstConnection.runSQL('SELECT 1');
+      secondConnection = new DuckDBConnection({
+        name: 'duckdb-locked-defaults-second',
+        securityPolicy: 'sandboxed',
+        workingDirectory,
+      });
+
+      const settings = await secondConnection.runSQL(`
+        SELECT
+          current_setting('TimeZone') AS timezone,
+          current_setting('FILE_SEARCH_PATH') AS file_search_path,
+          current_setting('allowed_directories') AS allowed_directories,
+          current_setting('secret_directory') AS secret_directory,
+          current_setting('enable_external_access') AS enable_external_access,
+          current_setting('lock_configuration') AS lock_configuration,
+          current_setting('temp_directory') AS temp_directory,
+          json_valid('{}') AS json_loaded
+      `);
+      expect(settings.rows[0]).toMatchObject({
+        timezone: 'UTC',
+        file_search_path: canonical(workingDirectory),
+        secret_directory: `${canonical(workingDirectory)}/.tmp/.duckdb-secrets`,
+        enable_external_access: false,
+        lock_configuration: true,
+        temp_directory: `${canonical(workingDirectory)}/.tmp`,
+        json_loaded: true,
+      });
+      expect(settings.rows[0]['allowed_directories']).toEqual(
+        expect.arrayContaining([
+          `${canonical(workingDirectory)}/`,
+          `${canonical(workingDirectory)}/.tmp/`,
+        ])
+      );
+      expect(settings.totalRows).toBe(1);
+      expect(Object.keys(DuckDBConnection.activeDBs)).toHaveLength(1);
+    } finally {
+      await firstConnection.close();
+      await secondConnection?.close();
+    }
+  });
+
+  it('isolates connection-local setupSQL when configuration is locked', async () => {
+    const setupSQL = 'CREATE TEMP TABLE session_t AS SELECT 1 AS session_value';
+    const firstConnection = new DuckDBConnection({
+      name: 'locked-setup-first',
+      lockConfiguration: true,
+      setupSQL,
+    });
+    const secondConnection = new DuckDBConnection({
+      name: 'locked-setup-second',
+      lockConfiguration: true,
+      setupSQL,
+    });
+
+    try {
+      await expect(
+        Promise.all([
+          firstConnection.runSQL('SELECT session_value FROM session_t'),
+          secondConnection.runSQL('SELECT session_value FROM session_t'),
+        ])
+      ).resolves.toEqual([
+        {rows: [{session_value: 1}], totalRows: 1},
+        {rows: [{session_value: 1}], totalRows: 1},
+      ]);
+      expect(Object.keys(DuckDBConnection.activeDBs)).toHaveLength(2);
     } finally {
       await firstConnection.close();
       await secondConnection.close();
@@ -158,10 +248,18 @@ describe('DuckDB restricted configuration', () => {
       await connection.runSQL('SELECT 1');
 
       expect(queries).toContain(
-        `SET allowed_directories=['${canonical(workingDirectory)}']`
+        `SET GLOBAL allowed_directories=['${canonical(workingDirectory)}']`
       );
-      expect(queries).toContain('SET enable_external_access=false');
-      expect(queries).toContain("SET TimeZone='UTC'");
+      expect(queries).toContain('SET GLOBAL enable_external_access=false');
+      expect(queries).toContain(
+        `SET GLOBAL FILE_SEARCH_PATH='${canonical(workingDirectory)}'`
+      );
+      expect(queries).toContain(
+        `SET GLOBAL secret_directory='${canonical(
+          workingDirectory
+        )}/.tmp/.duckdb-secrets'`
+      );
+      expect(queries).toContain("SET GLOBAL TimeZone='UTC'");
       expect(queries).toContain("LOAD 'json'");
       expect(queries).toContain("LOAD 'icu'");
       expect(queries).toContain('SET lock_configuration=true');
@@ -170,10 +268,10 @@ describe('DuckDB restricted configuration', () => {
 
       const lockIndex = queries.indexOf('SET lock_configuration=true');
       const allowedIndex = queries.indexOf(
-        `SET allowed_directories=['${canonical(workingDirectory)}']`
+        `SET GLOBAL allowed_directories=['${canonical(workingDirectory)}']`
       );
       const externalAccessIndex = queries.indexOf(
-        'SET enable_external_access=false'
+        'SET GLOBAL enable_external_access=false'
       );
       expect(externalAccessIndex).toBeGreaterThan(allowedIndex);
       expect(externalAccessIndex).toBeLessThan(queries.indexOf("LOAD 'json'"));

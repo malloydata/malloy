@@ -228,6 +228,116 @@ describe('connection registry', () => {
     expect(conn1).toBe(conn2);
   });
 
+  test('quarantines a connection when post-creation callback cleanup fails', async () => {
+    const first = mockConnection('orphan', {name: 'orphan'});
+    const second = mockConnection('orphan', {name: 'orphan'});
+    const cleanupFailure = new Error('injected orphan cleanup failure');
+    const firstClose = first.close as jest.MockedFunction<Connection['close']>;
+    firstClose
+      .mockRejectedValueOnce(cleanupFailure)
+      .mockResolvedValueOnce(undefined);
+    const factory = jest
+      .fn<Promise<Connection>, [ConnectionConfig]>()
+      .mockResolvedValueOnce(first)
+      .mockResolvedValueOnce(second);
+    registerConnectionType('callback-cleanup', {
+      displayName: 'Callback cleanup',
+      factory,
+      properties: [],
+    });
+    const callbackFailure = new Error('injected post-creation failure');
+    const callback = jest.fn().mockImplementationOnce(() => {
+      throw callbackFailure;
+    });
+    const lookup = createConnectionsFromConfig(
+      {connections: {orphan: {is: 'callback-cleanup'}}},
+      callback
+    );
+
+    await expect(lookup.lookupConnection('orphan')).rejects.toThrow(
+      /post-creation callback failed and cleanup also failed/
+    );
+    await expect(lookup.lookupConnection('orphan')).rejects.toThrow(
+      /is quarantined/
+    );
+    expect(factory).toHaveBeenCalledTimes(1);
+
+    await expect(lookup.close()).resolves.toBeUndefined();
+    await expect(lookup.lookupConnection('orphan')).resolves.toBe(second);
+    expect(factory).toHaveBeenCalledTimes(2);
+  });
+
+  test('a failing alias callback does not close an already active identity', async () => {
+    const shared = mockConnection('shared', {name: 'shared'});
+    const sharedClose = shared.close as jest.MockedFunction<
+      Connection['close']
+    >;
+    sharedClose.mockResolvedValue(undefined);
+    const factory = jest.fn(async () => shared);
+    registerConnectionType('shared-callback-identity', {
+      displayName: 'Shared callback identity',
+      factory,
+      properties: [],
+    });
+    const callbackFailure = new Error('injected second-alias callback failure');
+    const callback = jest.fn((name: string) => {
+      if (name === 'second') throw callbackFailure;
+    });
+    const lookup = createConnectionsFromConfig(
+      {
+        connections: {
+          first: {is: 'shared-callback-identity'},
+          second: {is: 'shared-callback-identity'},
+        },
+      },
+      callback
+    );
+
+    await expect(lookup.lookupConnection('first')).resolves.toBe(shared);
+    await expect(lookup.lookupConnection('second')).rejects.toBe(
+      callbackFailure
+    );
+    expect(sharedClose).not.toHaveBeenCalled();
+    await expect(lookup.lookupConnection('first')).resolves.toBe(shared);
+  });
+
+  test('successful callback-failure cleanup permanently retires the identity', async () => {
+    const retired = mockConnection('retired', {name: 'retired'});
+    const retiredClose = retired.close as jest.MockedFunction<
+      Connection['close']
+    >;
+    retiredClose.mockResolvedValue(undefined);
+    const factory = jest.fn(async () => retired);
+    registerConnectionType('retired-callback-identity', {
+      displayName: 'Retired callback identity',
+      factory,
+      properties: [],
+    });
+    const callbackFailure = new Error('injected initial callback failure');
+    const callback = jest.fn((name: string) => {
+      if (name === 'first') throw callbackFailure;
+    });
+    const lookup = createConnectionsFromConfig(
+      {
+        connections: {
+          first: {is: 'retired-callback-identity'},
+          second: {is: 'retired-callback-identity'},
+        },
+      },
+      callback
+    );
+
+    await expect(lookup.lookupConnection('first')).rejects.toBe(
+      callbackFailure
+    );
+    expect(retiredClose).toHaveBeenCalledTimes(1);
+    await expect(lookup.lookupConnection('second')).rejects.toThrow(
+      /retired connection identity/
+    );
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(retiredClose).toHaveBeenCalledTimes(1);
+  });
+
   describe('JSON config values', () => {
     test('passes JSON objects through to factory', async () => {
       const sslConfig = {rejectUnauthorized: false};

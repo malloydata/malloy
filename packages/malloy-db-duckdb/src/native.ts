@@ -157,10 +157,40 @@ registerConnectionType('duckdb', {
       type: 'boolean',
       optional: true,
       description:
-        'When true, release the database file between operations so other ' +
-        'tools (malloy-cli, the duckdb CLI, another malloy host) can use ' +
-        'the same file while this connection is open. Adds a small ' +
-        'per-operation overhead. Default false.',
+        'When true, release the database file when the host idles this ' +
+        'connection, or when another local shareable connection requests ' +
+        'the same target. This lets tools such as malloy-cli and the DuckDB ' +
+        'CLI use the file while the connection object remains reusable. ' +
+        'Default false.',
+    },
+    {
+      name: 'shareableAttachAlias',
+      displayName: 'Shareable Attach Alias',
+      type: 'string',
+      optional: true,
+      advanced: true,
+      default: 'malloy_db',
+      description:
+        'Catalog alias used when shareable is true. The default is ' +
+        '"malloy_db" for backward compatibility. Set to "auto" to preserve ' +
+        "DuckDB's natural catalog name, or set another value for an explicit " +
+        'custom alias.',
+    },
+    {
+      name: 'shareableLockSafety',
+      displayName: 'Shareable Lock Safety',
+      type: 'string',
+      optional: true,
+      advanced: true,
+      requireLiteralString: true,
+      default: 'best-effort',
+      description:
+        'Use "strict" to reject filesystem types whose local lock semantics ' +
+        'Malloy cannot conservatively accept. The default "best-effort" ' +
+        'skips only that statfs preflight while retaining inode, hard-link, ' +
+        'lifecycle, and in-process fencing; it is not a distributed lock. ' +
+        'Creating a new file still requires atomic hard-link publication, so ' +
+        'pre-create the database on filesystems that do not support it.',
     },
     {
       name: 'setupSQL',

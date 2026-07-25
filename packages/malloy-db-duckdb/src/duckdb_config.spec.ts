@@ -10,8 +10,11 @@ import {pathToFileURL} from 'url';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {
   buildDuckDBShareKey,
+  DEFAULT_SHAREABLE_ATTACH_ALIAS,
   DuckDBConfigValidationError,
+  NATURAL_SHAREABLE_ATTACH_ALIAS,
   normalizeDuckDBConfig,
+  sqlIdentifierLiteral,
 } from './duckdb_config';
 import * as pathSecurity from './path_security';
 
@@ -345,6 +348,110 @@ describe('normalizeDuckDBConfig', () => {
     );
 
     expect(normalized.readOnly).toBe(false);
+  });
+
+  it('defaults shareableAttachAlias to the backward-compatible catalog', () => {
+    const normalized = normalizeDuckDBConfig(
+      baseConfig({
+        databasePath: path.join(tempRoot, 'default.duckdb'),
+        shareable: true,
+      })
+    );
+
+    expect(normalized.shareableAttachAlias).toBe(
+      DEFAULT_SHAREABLE_ATTACH_ALIAS
+    );
+    expect(normalized.effectiveShareable).toBe(true);
+  });
+
+  it('defaults shareableLockSafety to best-effort', () => {
+    expect(normalizeDuckDBConfig(baseConfig()).shareableLockSafety).toBe(
+      'best-effort'
+    );
+  });
+
+  it.each(['strict', 'best-effort'] as const)(
+    'preserves the explicit shareableLockSafety %s',
+    shareableLockSafety => {
+      expect(
+        normalizeDuckDBConfig(baseConfig({shareableLockSafety}))
+          .shareableLockSafety
+      ).toBe(shareableLockSafety);
+    }
+  );
+
+  it.each([
+    ['unsafe', '"unsafe"'],
+    [true, 'boolean'],
+  ])('rejects invalid shareableLockSafety %#', (shareableLockSafety, got) => {
+    expect(() =>
+      normalizeDuckDBConfig(
+        baseConfig({
+          shareableLockSafety: shareableLockSafety as never,
+        })
+      )
+    ).toThrow(
+      `shareableLockSafety must be one of "strict", "best-effort", got ${got}`
+    );
+  });
+
+  it.each([NATURAL_SHAREABLE_ATTACH_ALIAS, 'catalog "quoted"'])(
+    'preserves the explicit shareableAttachAlias %s',
+    shareableAttachAlias => {
+      const normalized = normalizeDuckDBConfig(
+        baseConfig({
+          databasePath: path.join(tempRoot, 'explicit.duckdb'),
+          shareable: true,
+          shareableAttachAlias,
+        })
+      );
+
+      expect(normalized.shareableAttachAlias).toBe(shareableAttachAlias);
+    }
+  );
+
+  it('keeps omitted and explicit default aliases in the same share-key class', () => {
+    const databasePath = path.join(tempRoot, 'share-key-alias.duckdb');
+    const omitted = normalizeDuckDBConfig(
+      baseConfig({databasePath, shareable: true})
+    );
+    const explicit = normalizeDuckDBConfig(
+      baseConfig({
+        databasePath,
+        shareable: true,
+        shareableAttachAlias: DEFAULT_SHAREABLE_ATTACH_ALIAS,
+      })
+    );
+
+    expect(buildDuckDBShareKey(omitted)).toBe(buildDuckDBShareKey(explicit));
+  });
+
+  it.each(['', '   ', '\t\n'])(
+    'rejects an empty shareableAttachAlias %#',
+    shareableAttachAlias => {
+      expect(() =>
+        normalizeDuckDBConfig(
+          baseConfig({shareable: true, shareableAttachAlias})
+        )
+      ).toThrow('shareableAttachAlias must not be empty or whitespace');
+    }
+  );
+
+  it('rejects a non-string shareableAttachAlias', () => {
+    expect(() =>
+      normalizeDuckDBConfig(
+        baseConfig({
+          shareable: true,
+          shareableAttachAlias: 42 as unknown as string,
+        })
+      )
+    ).toThrow('shareableAttachAlias must be a string, got number');
+  });
+
+  it('quotes DuckDB identifiers with embedded double quotes', () => {
+    expect(sqlIdentifierLiteral('catalog "quoted"')).toBe(
+      '"catalog ""quoted"""'
+    );
   });
 
   it('builds the same share key for semantically identical allowedDirectories lists', () => {

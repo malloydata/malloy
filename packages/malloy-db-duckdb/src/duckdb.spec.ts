@@ -7,10 +7,11 @@ import {spawnSync} from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import {DuckDBInstance} from '@duckdb/node-api';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
-import {mkArrayDef} from '@malloydata/malloy';
+import {makeDigest, mkArrayDef} from '@malloydata/malloy';
 import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
 import '@malloydata/malloy/test/matchers';
 
@@ -119,24 +120,142 @@ describe('DuckDBConnection', () => {
       const connection2 = new DuckDBConnection('duckdb2');
 
       await connection1.runRawSQL("SET FILE_SEARCH_PATH='/home/user1'");
+      await connection1.runRawSQL("SET TimeZone='America/New_York'");
+      // Initializing a later non-locked handle must not replay the configured
+      // baseline with SET GLOBAL and disturb connection1's session overrides.
+      await connection2.runSQL('SELECT 1');
+      const retained1 = await connection1.runSQL(
+        "SELECT current_setting('FILE_SEARCH_PATH') AS path, current_setting('TimeZone') AS timezone"
+      );
+      expect(retained1).toEqual({
+        rows: [{path: '/home/user1', timezone: 'America/New_York'}],
+        totalRows: 1,
+      });
+
       await connection2.runRawSQL("SET FILE_SEARCH_PATH='/home/user2'");
+      await connection2.runRawSQL("SET TimeZone='America/Los_Angeles'");
 
       const val1 = await connection1.runSQL(
-        "SELECT current_setting('FILE_SEARCH_PATH') AS val"
+        "SELECT current_setting('FILE_SEARCH_PATH') AS val, current_setting('TimeZone') AS timezone"
       );
       const val2 = await connection2.runSQL(
-        "SELECT current_setting('FILE_SEARCH_PATH') AS val"
+        "SELECT current_setting('FILE_SEARCH_PATH') AS val, current_setting('TimeZone') AS timezone"
       );
 
       expect(Object.keys(DuckDBConnection.activeDBs).length).toEqual(1);
       expect(
         Object.values(DuckDBConnection.activeDBs)[0].connections.length
       ).toEqual(3);
-      expect(val1).toEqual({rows: [{val: '/home/user1'}], totalRows: 1});
-      expect(val2).toEqual({rows: [{val: '/home/user2'}], totalRows: 1});
+      expect(val1).toEqual({
+        rows: [{val: '/home/user1', timezone: 'America/New_York'}],
+        totalRows: 1,
+      });
+      expect(val2).toEqual({
+        rows: [{val: '/home/user2', timezone: 'America/Los_Angeles'}],
+        totalRows: 1,
+      });
 
       await connection1.close();
       await connection2.close();
+    });
+
+    it('preserves the default alias digest and versions opt-in catalog identities', async () => {
+      const databasePath = path.join(os.tmpdir(), 'shareable-digest.duckdb');
+      const omitted = new DuckDBConnection({
+        name: 'duckdb_digest_omitted',
+        databasePath,
+        shareable: true,
+      });
+      const natural = new DuckDBConnection({
+        name: 'duckdb_digest_natural',
+        databasePath,
+        shareable: true,
+        shareableAttachAlias: 'auto',
+      });
+      const legacy = new DuckDBConnection({
+        name: 'duckdb_digest_legacy',
+        databasePath,
+        shareable: true,
+        shareableAttachAlias: 'malloy_db',
+      });
+      const custom = new DuckDBConnection({
+        name: 'duckdb_digest_custom',
+        databasePath,
+        shareable: true,
+        shareableAttachAlias: 'custom_catalog',
+      });
+
+      try {
+        const oldShareableDigest = makeDigest(
+          'duckdb',
+          databasePath,
+          undefined,
+          undefined
+        );
+        expect(omitted.getDigest()).toBe(oldShareableDigest);
+        expect(legacy.getDigest()).toBe(oldShareableDigest);
+        expect(natural.getDigest()).not.toBe(oldShareableDigest);
+        expect(custom.getDigest()).not.toBe(oldShareableDigest);
+        expect(custom.getDigest()).not.toBe(natural.getDigest());
+      } finally {
+        await Promise.all([
+          natural.connecting,
+          omitted.connecting,
+          legacy.connecting,
+          custom.connecting,
+        ]);
+        await Promise.all([
+          omitted.close(),
+          natural.close(),
+          legacy.close(),
+          custom.close(),
+        ]);
+      }
+    });
+  });
+
+  describe('temporary table compatibility', () => {
+    it('keeps deterministic TEMP reuse for direct native connections', async () => {
+      const direct = new DuckDBConnection({
+        name: 'duckdb_direct_temp_compatibility',
+        databasePath: ':memory:',
+      });
+      try {
+        expect(direct.runSQLWithTemporaryTable).toBeUndefined();
+        await direct.runSQL('CREATE SEQUENCE direct_materializations START 1');
+        const sql =
+          "SELECT nextval('direct_materializations')::INTEGER AS value";
+        const first = await direct.manifestTemporaryTable(sql);
+        const second = await direct.manifestTemporaryTable(sql);
+
+        expect(first).toBe(second);
+        expect(first).toMatch(/^tt(?!s)/);
+        await expect(
+          direct.runSQL(
+            "SELECT currval('direct_materializations')::INTEGER AS materializations"
+          )
+        ).resolves.toMatchObject({rows: [{materializations: 1}]});
+      } finally {
+        await direct.close();
+      }
+    });
+
+    it('does not expose scoped TEMP for ineffective in-memory shareable mode', async () => {
+      const connection = new DuckDBConnection({
+        name: 'duckdb_ineffective_shareable_temp',
+        databasePath: ':memory:',
+        shareable: true,
+      });
+      try {
+        expect(connection.runSQLWithTemporaryTable).toBeUndefined();
+        await expect(connection.runSQL('SELECT 1 AS v')).resolves.toMatchObject(
+          {
+            rows: [{v: 1}],
+          }
+        );
+      } finally {
+        await connection.close();
+      }
     });
   });
 
@@ -195,7 +314,7 @@ describe('DuckDBConnection', () => {
       }
     });
 
-    it('idle on one of two connections sharing an instance keeps the instance alive', async () => {
+    it('non-shareable idle does not churn a live shared instance', async () => {
       const dbPath = path.join(tempRoot, 'idle-shared-instance.duckdb');
       // Construct sequentially so the second connection's init() finds
       // and reuses the first's activeDBs entry instead of racing it.
@@ -216,22 +335,19 @@ describe('DuckDBConnection', () => {
 
         await a.idle();
 
-        // Refcount went 2 → 1, not 2 → 0. The activeDBs entry survives,
-        // which means the underlying DuckDBInstance was NOT closed and
-        // b's queries continue working. (Same-process verification of
-        // the OS lock is unreliable — DuckDB allows multiple
-        // DuckDBInstances in one process — so we assert on the refcount
-        // bookkeeping instead.)
+        // Legacy non-shareable idle cannot safely disconnect a native
+        // Connection while higher layers retain native-backed state. It is
+        // therefore an explicit no-op: neither the instance nor its two live
+        // connections are churned.
         expect(DuckDBConnection.activeDBs[sharedKey!].connections.length).toBe(
-          1
+          2
         );
         const stillWorks = await b.runSQL('SELECT 99 AS v');
         expect(stillWorks.rows).toEqual([{v: 99}]);
 
-        // a can lazy-reattach, joining the same instance rather than
-        // creating a new one.
-        const reattached = await a.runSQL('SELECT 2 AS v');
-        expect(reattached.rows).toEqual([{v: 2}]);
+        // a remains the same live connection rather than lazily reattaching.
+        const stillLive = await a.runSQL('SELECT 2 AS v');
+        expect(stillLive.rows).toEqual([{v: 2}]);
         expect(DuckDBConnection.activeDBs[sharedKey!].connections.length).toBe(
           2
         );
@@ -241,14 +357,18 @@ describe('DuckDBConnection', () => {
       }
     });
 
-    it('next operation transparently reattaches after idle', async () => {
+    it('non-shareable idle preserves the existing live connection', async () => {
       const dbPath = path.join(tempRoot, 'idle-reattach.duckdb');
       const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
       try {
         await conn.runSQL('CREATE TABLE t (val INTEGER)');
         await conn.runSQL('INSERT INTO t VALUES (42)');
+        const nativeBefore = (conn as unknown as {connection: unknown})
+          .connection;
         await conn.idle();
-        // No explicit reattach call — the next runSQL should just work.
+        expect((conn as unknown as {connection: unknown}).connection).toBe(
+          nativeBefore
+        );
         const result = await conn.runSQL('SELECT val FROM t');
         expect(result.rows).toEqual([{val: 42}]);
       } finally {
@@ -396,9 +516,8 @@ describe('DuckDBConnection', () => {
         await conn.runSQL('DROP TABLE IF EXISTS persisted');
         await conn.runSQL('CREATE TABLE persisted AS SELECT 42 AS v');
 
-        // Assert on the catalog the table actually lives in. `duckdb_tables()`
-        // exposes the database (catalog) name, which is what would distinguish
-        // memory.main.persisted from malloy_db.main.persisted.
+        // Assert on the catalog the table actually lives in. The omitted
+        // alias retains the historical `malloy_db` catalog identity.
         const where = await conn.runSQL(
           "SELECT database_name FROM duckdb_tables() WHERE table_name='persisted'"
         );
@@ -430,21 +549,413 @@ describe('DuckDBConnection', () => {
       }
     });
 
-    it('setupSQL replays after idle reattach', async () => {
+    it('shareable: opt-in auto reads natural catalog views (#2984)', async () => {
+      const caseRoot = path.join(tempRoot, 'issue-2984');
+      fs.mkdirSync(caseRoot, {recursive: true});
+      const dbPath = path.join(caseRoot, 'mydb.duckdb');
+      await createCatalogQualifiedView(dbPath, 'mydb');
+
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_catalog_view',
+        databasePath: dbPath,
+        shareable: true,
+        shareableAttachAlias: 'auto',
+        readOnly: true,
+      });
+      try {
+        const schema = await conn.fetchSchemaForTables(
+          {'catalog_view': 'marts.t1'},
+          {}
+        );
+        expect(schema.schemas['catalog_view']).toBeDefined();
+
+        const first = await conn.runSQL('SELECT v FROM marts.t1');
+        expect(first.rows).toEqual([{v: 42}]);
+
+        await expect(
+          conn.runSQL(
+            'INSERT INTO sqlmesh__marts.marts__t1__3443228196 VALUES (99)'
+          )
+        ).rejects.toThrow(/read.?only/i);
+        await expect(
+          conn.runSQL('SELECT v FROM marts.t1 ORDER BY v')
+        ).resolves.toMatchObject({rows: [{v: 42}]});
+
+        const catalogs = await conn.runSQL(
+          "SELECT database_name FROM duckdb_databases() WHERE database_name = 'mydb'"
+        );
+        expect(catalogs.rows).toEqual([{database_name: 'mydb'}]);
+
+        await conn.idle();
+        const afterIdle = await conn.runSQL('SELECT v FROM marts.t1');
+        expect(afterIdle.rows).toEqual([{v: 42}]);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('shareable: terminally cleans up when natural catalog discovery fails', async () => {
+      const dbPath = path.join(tempRoot, 'shareable-discovery-failure.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_discovery_failure',
+        databasePath: dbPath,
+        shareable: true,
+        shareableAttachAlias: 'auto',
+      });
+      await conn.connecting;
+      const internal = conn as unknown as {
+        readDuckDBCatalogsByOID(): Promise<Map<string, string>>;
+      };
+      const readCatalogs = internal.readDuckDBCatalogsByOID.bind(conn);
+      let readCount = 0;
+      const discoverySpy = jest
+        .spyOn(internal, 'readDuckDBCatalogsByOID')
+        .mockImplementation(async () => {
+          readCount++;
+          if (readCount >= 2) {
+            throw new Error('injected catalog discovery failure');
+          }
+          return readCatalogs();
+        });
+
+      try {
+        await expect(conn.runSQL('SELECT 1')).rejects.toThrow(
+          'injected catalog discovery failure'
+        );
+        expect(probeDuckDBFile(dbPath)).toBe('FREE');
+        await expect(conn.runSQL('SELECT 2')).rejects.toThrow(/closed/);
+      } finally {
+        discoverySpy.mockRestore();
+        await conn.close();
+      }
+    });
+
+    it('shareable: reconciles and remains retryable when ATTACH executes but its wrapper rejects', async () => {
+      const dbPath = path.join(tempRoot, 'shareable-attach-window.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_attach_window',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      await conn.connecting;
+      const internal = conn as unknown as {
+        runDuckDBCommand(sql: string): Promise<void>;
+      };
+      const runCommand = internal.runDuckDBCommand.bind(conn);
+      const commandSpy = jest
+        .spyOn(internal, 'runDuckDBCommand')
+        .mockImplementationOnce(async sql => {
+          expect(sql).toMatch(/^ATTACH /);
+          await runCommand(sql);
+          throw new Error('injected post-ATTACH wrapper failure');
+        });
+
+      try {
+        await expect(conn.runSQL('SELECT 1')).rejects.toThrow(
+          'injected post-ATTACH wrapper failure'
+        );
+        expect(probeDuckDBFile(dbPath)).toBe('FREE');
+        await expect(conn.runSQL('SELECT 2 AS v')).resolves.toMatchObject({
+          rows: [{v: 2}],
+        });
+      } finally {
+        commandSpy.mockRestore();
+        await conn.close();
+      }
+    });
+
+    it('shareable: rolls back ATTACH when selecting the catalog fails', async () => {
+      const dbPath = path.join(tempRoot, 'shareable-use-failure.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_use_failure',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      await conn.connecting;
+      const internal = conn as unknown as {
+        useShareableCatalog(catalog: string): Promise<void>;
+      };
+      const useSpy = jest
+        .spyOn(internal, 'useShareableCatalog')
+        .mockRejectedValueOnce(new Error('injected USE failure'));
+
+      try {
+        await expect(conn.runSQL('SELECT 1')).rejects.toThrow(
+          'injected USE failure'
+        );
+        expect(probeDuckDBFile(dbPath)).toBe('FREE');
+
+        useSpy.mockRestore();
+        await conn.idle();
+        const retry = await conn.runSQL('SELECT 2 AS v');
+        expect(retry.rows).toEqual([{v: 2}]);
+      } finally {
+        useSpy.mockRestore();
+        await conn.close();
+      }
+    });
+
+    it('shareable: terminally cleans up when ATTACH rollback cannot DETACH', async () => {
+      const dbPath = path.join(tempRoot, 'shareable-rollback-failure.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_rollback_failure',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      await conn.connecting;
+      const internal = conn as unknown as {
+        runDuckDBCommand(sql: string): Promise<void>;
+        useShareableCatalog(catalog: string): Promise<void>;
+      };
+      const runCommand = internal.runDuckDBCommand.bind(conn);
+      const commandSpy = jest
+        .spyOn(internal, 'runDuckDBCommand')
+        .mockImplementation(async sql => {
+          if (sql.startsWith('DETACH ')) {
+            throw new Error('injected rollback DETACH failure');
+          }
+          await runCommand(sql);
+        });
+      const useSpy = jest
+        .spyOn(internal, 'useShareableCatalog')
+        .mockRejectedValueOnce(new Error('injected initial USE failure'));
+
+      try {
+        await expect(conn.runSQL('SELECT 1')).rejects.toThrow(
+          /injected initial USE failure.*injected rollback DETACH failure/
+        );
+        expect(probeDuckDBFile(dbPath)).toBe('FREE');
+        await expect(conn.runSQL('SELECT 2')).rejects.toThrow(/closed/);
+      } finally {
+        commandSpy.mockRestore();
+        useSpy.mockRestore();
+        await conn.close();
+      }
+    });
+
+    it('shareable: idle surfaces DETACH failure and remains usable after restoring the catalog', async () => {
+      const dbPath = path.join(
+        tempRoot,
+        'shareable-idle-detach-failure.duckdb'
+      );
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_idle_detach_failure',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      await conn.runSQL('CREATE TABLE retryable (v INTEGER)');
+      await conn.runSQL('INSERT INTO retryable VALUES (11)');
+
+      const internal = conn as unknown as {
+        runDuckDBCommand(sql: string): Promise<void>;
+      };
+      const runCommand = internal.runDuckDBCommand.bind(conn);
+      let rejectedDetach = false;
+      const commandSpy = jest
+        .spyOn(internal, 'runDuckDBCommand')
+        .mockImplementation(async sql => {
+          if (!rejectedDetach && sql.startsWith('DETACH ')) {
+            rejectedDetach = true;
+            throw new Error('injected idle DETACH failure');
+          }
+          await runCommand(sql);
+        });
+
+      try {
+        await expect(conn.idle()).rejects.toThrow(
+          'injected idle DETACH failure'
+        );
+        const afterFailure = await conn.runSQL('SELECT v FROM retryable');
+        expect(afterFailure.rows).toEqual([{v: 11}]);
+
+        commandSpy.mockRestore();
+        await conn.idle();
+        expect(probeDuckDBFile(dbPath)).toBe('FREE');
+      } finally {
+        commandSpy.mockRestore();
+        await conn.close();
+      }
+    });
+
+    it('shareable: terminally cleans up when DETACH and default-catalog restore both fail', async () => {
+      const dbPath = path.join(
+        tempRoot,
+        'shareable-detach-restore-failure.duckdb'
+      );
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_detach_restore_failure',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      await conn.runSQL('SELECT 1');
+
+      const internal = conn as unknown as {
+        runDuckDBCommand(sql: string): Promise<void>;
+      };
+      const runCommand = internal.runDuckDBCommand.bind(conn);
+      let detachFailed = false;
+      const commandSpy = jest
+        .spyOn(internal, 'runDuckDBCommand')
+        .mockImplementation(async sql => {
+          if (sql.startsWith('DETACH ')) {
+            detachFailed = true;
+            throw new Error('injected terminal DETACH failure');
+          }
+          if (
+            detachFailed &&
+            sql.startsWith('USE ') &&
+            !sql.includes('"memory"."main"')
+          ) {
+            throw new Error('injected catalog restore failure');
+          }
+          await runCommand(sql);
+        });
+
+      try {
+        await expect(conn.idle()).rejects.toThrow(
+          /injected terminal DETACH failure.*injected catalog restore failure/
+        );
+        expect(probeDuckDBFile(dbPath)).toBe('FREE');
+        await expect(conn.runSQL('SELECT 2')).rejects.toThrow(/closed/);
+      } finally {
+        commandSpy.mockRestore();
+        await conn.close();
+      }
+    });
+
+    it('shareable: close terminally releases the lock after DETACH failure', async () => {
+      const dbPath = path.join(
+        tempRoot,
+        'shareable-close-detach-failure.duckdb'
+      );
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_close_detach_failure',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      await conn.runSQL('SELECT 1');
+
+      const internal = conn as unknown as {
+        runDuckDBCommand(sql: string): Promise<void>;
+      };
+      const runCommand = internal.runDuckDBCommand.bind(conn);
+      const commandSpy = jest
+        .spyOn(internal, 'runDuckDBCommand')
+        .mockImplementation(async sql => {
+          if (sql.startsWith('DETACH ')) {
+            throw new Error('injected close DETACH failure');
+          }
+          await runCommand(sql);
+        });
+
+      try {
+        await expect(conn.close()).rejects.toThrow(
+          'injected close DETACH failure'
+        );
+        expect(probeDuckDBFile(dbPath)).toBe('FREE');
+        await expect(conn.runSQL('SELECT 2')).rejects.toThrow(/closed/);
+      } finally {
+        commandSpy.mockRestore();
+        await conn.close();
+      }
+    });
+
+    it.each([
+      [
+        'the legacy alias for a reserved natural name',
+        'malloy_db',
+        'memory.duckdb',
+      ],
+      [
+        'an injection-looking quoted alias',
+        'catalog "quoted"; --',
+        'shareable-quoted-alias.duckdb',
+      ],
+    ])(
+      'shareable: supports %s through shareableAttachAlias',
+      async (_description, shareableAttachAlias, filename) => {
+        const dbPath = path.join(tempRoot, filename);
+        const conn = new DuckDBConnection({
+          name: `duckdb_${filename}`,
+          databasePath: dbPath,
+          shareable: true,
+          shareableAttachAlias,
+        });
+        try {
+          await conn.runSQL('CREATE TABLE aliased (v INTEGER)');
+          await conn.runSQL('INSERT INTO aliased VALUES (7)');
+          const where = await conn.runSQL(
+            "SELECT database_name FROM duckdb_tables() WHERE table_name='aliased'"
+          );
+          expect(where.rows).toEqual([{database_name: shareableAttachAlias}]);
+
+          await conn.idle();
+          const afterIdle = await conn.runSQL('SELECT v FROM aliased');
+          expect(afterIdle.rows).toEqual([{v: 7}]);
+        } finally {
+          await conn.close();
+        }
+      }
+    );
+
+    it('shareable: reads a persisted view through a quoted custom catalog alias', async () => {
+      const shareableAttachAlias = 'catalog "quoted"; --';
+      const dbPath = path.join(tempRoot, 'shareable-quoted-view.duckdb');
+      await createAliasedCatalogQualifiedView(dbPath, shareableAttachAlias);
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_quoted_view',
+        databasePath: dbPath,
+        shareable: true,
+        shareableAttachAlias,
+        readOnly: true,
+      });
+
+      try {
+        await expect(
+          conn.runSQL('SELECT v FROM marts.t1')
+        ).resolves.toMatchObject({rows: [{v: 42}]});
+        await conn.idle();
+        await expect(
+          conn.runSQL('SELECT v FROM marts.t1')
+        ).resolves.toMatchObject({rows: [{v: 42}]});
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('shareable: omitted alias preserves historical malloy_db views', async () => {
+      const dbPath = path.join(tempRoot, 'historical-malloy-db-view.duckdb');
+      await createAliasedCatalogQualifiedView(dbPath, 'malloy_db');
+      const conn = new DuckDBConnection({
+        name: 'historical_malloy_db_view',
+        databasePath: dbPath,
+        shareable: true,
+        readOnly: true,
+      });
+
+      try {
+        await expect(
+          conn.runSQL('SELECT v FROM marts.t1')
+        ).resolves.toMatchObject({rows: [{v: 42}]});
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('non-shareable idle does not replay setupSQL', async () => {
       const dbPath = path.join(tempRoot, 'idle-setupsql.duckdb');
       const conn = new DuckDBConnection({
         name: 'duckdb_idle_setup',
         databasePath: dbPath,
-        setupSQL: 'CREATE OR REPLACE MACRO triple(x) AS x * 3',
+        setupSQL: 'CREATE TABLE setup_once (v INTEGER)',
       });
       try {
-        const a = await conn.runSQL('SELECT triple(2) AS v');
-        expect(a.rows).toEqual([{v: 6}]);
+        await conn.runSQL('INSERT INTO setup_once VALUES (6)');
         await conn.idle();
-        // After idle, the DuckDBInstance is closed and the macro is gone.
-        // The reattach must replay setupSQL so the macro exists again.
-        const b = await conn.runSQL('SELECT triple(5) AS v');
-        expect(b.rows).toEqual([{v: 15}]);
+        // Replaying this non-idempotent CREATE would fail. Healthy direct
+        // idle is a no-op and preserves both the handle and setup state.
+        const result = await conn.runSQL('SELECT v FROM setup_once');
+        expect(result.rows).toEqual([{v: 6}]);
       } finally {
         await conn.close();
       }
@@ -729,6 +1240,88 @@ describe('DuckDBConnection', () => {
     });
   });
 });
+
+async function createCatalogQualifiedView(
+  databasePath: string,
+  catalog: string
+): Promise<void> {
+  const instance = await DuckDBInstance.create(databasePath);
+  const connection = await instance.connect();
+  const quotedCatalog = `"${catalog.replace(/"/g, '""')}"`;
+  try {
+    await connection.run('CREATE SCHEMA sqlmesh__marts');
+    await connection.run(
+      'CREATE TABLE sqlmesh__marts.marts__t1__3443228196 (v INTEGER)'
+    );
+    await connection.run(
+      'INSERT INTO sqlmesh__marts.marts__t1__3443228196 VALUES (42)'
+    );
+    await connection.run('CREATE SCHEMA marts');
+    await connection.run(
+      `CREATE VIEW marts.t1 AS SELECT * FROM ${quotedCatalog}.sqlmesh__marts.marts__t1__3443228196`
+    );
+  } finally {
+    connection.disconnectSync();
+    instance.closeSync();
+  }
+}
+
+async function createAliasedCatalogQualifiedView(
+  databasePath: string,
+  catalog: string
+): Promise<void> {
+  const instance = await DuckDBInstance.create(':memory:');
+  const connection = await instance.connect();
+  const quotedCatalog = `"${catalog.replace(/"/g, '""')}"`;
+  const quotedPath = `'${databasePath.replace(/'/g, "''")}'`;
+  let attached = false;
+  try {
+    await connection.run(`ATTACH ${quotedPath} AS ${quotedCatalog}`);
+    attached = true;
+    await connection.run(`CREATE SCHEMA ${quotedCatalog}.sqlmesh__marts`);
+    await connection.run(
+      `CREATE TABLE ${quotedCatalog}.sqlmesh__marts.marts__t1__3443228196 (v INTEGER)`
+    );
+    await connection.run(
+      `INSERT INTO ${quotedCatalog}.sqlmesh__marts.marts__t1__3443228196 VALUES (42)`
+    );
+    await connection.run(`CREATE SCHEMA ${quotedCatalog}.marts`);
+    await connection.run(
+      `CREATE VIEW ${quotedCatalog}.marts.t1 AS SELECT * FROM ${quotedCatalog}.sqlmesh__marts.marts__t1__3443228196`
+    );
+  } finally {
+    if (attached) await connection.run(`DETACH ${quotedCatalog}`);
+    connection.disconnectSync();
+    instance.closeSync();
+  }
+}
+
+function probeDuckDBFile(databasePath: string): string {
+  const result = spawnSync(
+    process.execPath,
+    [
+      '-e',
+      `(async () => {
+        const {DuckDBInstance} = require('@duckdb/node-api');
+        try {
+          const instance = await DuckDBInstance.create(${JSON.stringify(databasePath)});
+          instance.closeSync();
+          process.stdout.write('FREE');
+        } catch (error) {
+          process.stdout.write('HELD: ' + (error && error.message ? error.message.split('\\n')[0] : String(error)));
+        }
+      })();`,
+    ],
+    {encoding: 'utf8', timeout: 10000}
+  );
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(
+      `DuckDB file probe exited with ${result.signal ?? result.status}: ${result.stderr}`
+    );
+  }
+  return result.stdout;
+}
 
 /**
  * Create a basic StructDef for the purpose of passing to
