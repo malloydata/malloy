@@ -2179,4 +2179,194 @@ describe('source persistence', () => {
       expect(sql).toContain('cached.by_carrier');
     });
   });
+
+  // Reported on #3015. Both describes assert the behavior the documentation
+  // describes, so a failure here is the report reproducing.
+  describe('sql_select substitution', () => {
+    // One model, two persisted sources of the two persistable kinds, plus a
+    // third that reaches the sql_select through interpolation.
+    const TWO_KINDS = `${PERSIST_ANNOTATION}
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: qs is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      #@ persist
+      source: ss is ${tstDB}.sql("""
+        SELECT carrier, COUNT(*) as flight_count
+        FROM malloytest.flights
+        GROUP BY carrier
+      """)
+
+      #@ persist
+      source: via_interp is ${tstDB}.sql("""
+        SELECT * FROM %{ ss }
+      """)
+    `;
+
+    // A manifest holding a built table for every persist source in the model.
+    async function manifestForAll(): Promise<BuildManifest> {
+      const model = await wrapTestModel(tstRuntime, TWO_KINDS).model.getModel();
+      const digest = await getDigest();
+      const manifest = createManifest();
+      for (const source of Object.values(model.getBuildPlan().sources)) {
+        addManifestEntry(
+          manifest,
+          source.makeBuildId(digest, source.getSQL()),
+          `cached.${source.name}_table`
+        );
+      }
+      return manifest;
+    }
+
+    async function sqlForQuery(query: string): Promise<string> {
+      const manifest = await manifestForAll();
+      return runtimeWithManifest(manifest)
+        .loadQuery(`${TWO_KINDS}\n${query}`)
+        .getSQL();
+    }
+
+    it('query_source reads its built table', async () => {
+      const sql = await sqlForQuery('run: qs -> { select: * }');
+      expect(sql).toContain('cached.qs_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    // Pending #3016 — a directly-referenced sql_select never reaches the
+    // manifest. The two passing tests around these are the controls: the
+    // other persistable kind substitutes, and the same source substitutes
+    // when interpolation reaches it, so the entry and its key are right.
+    it.skip('sql_select reads its built table', async () => {
+      const sql = await sqlForQuery('run: ss -> { select: * }');
+      expect(sql).toContain('cached.ss_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('sql_select reached by interpolation reads its built table', async () => {
+      // The manifest key and the entry are right — this path finds them.
+      const sql = await sqlForQuery('run: via_interp -> { select: * }');
+      expect(sql).toContain('cached.ss_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it.skip('strict mode catches a missing sql_select entry', async () => {
+      // Strict mode's promise is that a persist source with no manifest entry
+      // throws rather than silently compiling to inline SQL.
+      const strict = createManifest();
+      strict.strict = true;
+      await expect(
+        runtimeWithManifest(strict)
+          .loadQuery(`${TWO_KINDS}\nrun: ss -> { select: * }`)
+          .getSQL()
+      ).rejects.toThrow(/not found in manifest/);
+    });
+
+    it.skip('a join of both kinds substitutes both', async () => {
+      const sql = await sqlForQuery(`
+        run: flights extend {
+          join_one: q is qs on carrier = q.carrier
+          join_one: s is ss on carrier = s.carrier
+        } -> {
+          group_by: carrier
+          aggregate: a is q.flight_count.sum(), b is s.flight_count.sum()
+        }
+      `);
+      expect(sql).toContain('cached.qs_table');
+      expect(sql).toContain('cached.ss_table');
+    });
+  });
+
+  describe('per-call buildManifest on ModelMaterializer.loadQuery', () => {
+    const MODEL = `${PERSIST_ANNOTATION}
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: by_carrier is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+    `;
+    const QUERY = 'run: by_carrier -> { select: * }';
+
+    async function manifestForByCarrier(): Promise<BuildManifest> {
+      const model = await wrapTestModel(tstRuntime, MODEL).model.getModel();
+      const {manifest} = await buildManifestFor(
+        model.getBuildPlan(),
+        'by_carrier',
+        'cached.by_carrier'
+      );
+      return manifest;
+    }
+
+    function plainRuntime() {
+      return new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+    }
+
+    it('applies a manifest passed to the call', async () => {
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadModel(MODEL)
+        .loadQuery(QUERY, {buildManifest: manifest})
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('applies a manifest passed to loadModel', async () => {
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadModel(MODEL, {buildManifest: manifest})
+        .loadQuery(QUERY)
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('EMPTY_BUILD_MANIFEST suppresses the runtime manifest', async () => {
+      // The dangerous direction: asking for unsubstituted SQL and being
+      // handed the substituted form.
+      const manifest = await manifestForByCarrier();
+      const sql = await runtimeWithManifest(manifest)
+        .loadModel(MODEL)
+        .loadQuery(QUERY, {buildManifest: EMPTY_BUILD_MANIFEST})
+        .getSQL();
+      expect(sql).not.toContain('cached.by_carrier');
+      expect(sql).toContain('COUNT(');
+    });
+
+    it('loadQueryByName applies a manifest passed to the call', async () => {
+      // The sibling loaders merge their options; this is the control.
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadModel(`${MODEL}\nquery: named is by_carrier -> { select: * }`)
+        .loadQueryByName('named', {buildManifest: manifest})
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('Runtime.loadQuery applies a manifest passed to the call', async () => {
+      // The other control: the same options on the Runtime entry point.
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadQuery(`${MODEL}\n${QUERY}`, {buildManifest: manifest})
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('applies defaultRowLimit passed to the call', async () => {
+      // buildManifest is not special: nothing in CompileQueryOptions
+      // survives this call.
+      const sql = await plainRuntime()
+        .loadModel(MODEL)
+        .loadQuery('run: flights -> { select: carrier }', {
+          defaultRowLimit: 7,
+        })
+        .getSQL();
+      expect(sql).toContain('LIMIT 7');
+    });
+  });
 });

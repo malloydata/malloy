@@ -813,32 +813,45 @@ export class ModelMaterializer extends FluentState<Model> {
     query: QueryString | QueryURL,
     options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
-    const {refreshSchemaCache, noThrowOnError} = options || {};
+    // `options` spans three interfaces. The parse/compile half is spent here,
+    // compiling the query text; the `CompileQueryOptions` half belongs to the
+    // materializer, which applies it when the query is turned into SQL — so it
+    // has to reach `makeQueryMaterializer` as well, or a `buildManifest` (or
+    // `givens`, or `defaultRowLimit`) passed here is silently ignored.
+    //
+    // Split by naming the parse/compile keys rather than the query ones, so a
+    // query option added later is carried rather than quietly dropped.
+    // `restrictedMode` and `method` are named to hold them back: this entry
+    // point has never honored them, and `loadRestrictedQuery` is how a caller
+    // asks for restricted compilation.
+    const {
+      importBaseURL,
+      testEnvironment,
+      refreshSchemaCache,
+      noThrowOnError,
+      restrictedMode: _restrictedMode,
+      method: _method,
+      ...callQueryOptions
+    } = options ?? {};
+    const compileQueryOptions = {
+      ...this.compileQueryOptions,
+      ...callQueryOptions,
+    };
     return this.makeQueryMaterializer(async () => {
-      const urlReader = this.runtime.urlReader;
-      const connections = this.runtime.connections;
-      if (this.runtime.isTestRuntime) {
-        if (options === undefined) {
-          options = {testEnvironment: true};
-        } else {
-          options = {...options, testEnvironment: true};
-        }
-      }
       const compilable = query instanceof URL ? {url: query} : {source: query};
-      const model = await this.getModel();
       const queryModel = await Malloy.compile({
         ...compilable,
-        urlReader,
-        connections,
-        model,
+        urlReader: this.runtime.urlReader,
+        connections: this.runtime.connections,
+        model: await this.getModel(),
         refreshSchemaCache,
         noThrowOnError,
-        importBaseURL: options?.importBaseURL,
-        testEnvironment: options?.testEnvironment,
-        ...this.compileQueryOptions,
+        importBaseURL,
+        testEnvironment: testEnvironment || this.runtime.isTestRuntime,
+        ...compileQueryOptions,
       });
       return queryModel.preparedQuery;
-    });
+    }, compileQueryOptions);
   }
 
   /**
