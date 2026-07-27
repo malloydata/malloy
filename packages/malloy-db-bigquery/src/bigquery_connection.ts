@@ -90,9 +90,8 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
 // BigQuery label grammar: keys and values are lowercase, <=63 chars, and
 // [a-z0-9_-]; keys must start with a lowercase letter. Values are transformed
 // to fit (lowercase, disallowed chars -> '_', truncate); a key that can't be
-// made valid (e.g. it starts with a digit) or that exceeds the 64-label cap is
-// dropped.
-const BQ_MAX_LABELS = 64;
+// made valid (e.g. it starts with a digit) is dropped. BigQuery's 64-label cap
+// needs no check here: the contract allows fewer properties than that.
 const BQ_MAX_LEN = 63;
 
 function sanitizeBigQueryValue(value: string): string {
@@ -114,7 +113,6 @@ function toBigQueryLabels(
   if (labels === undefined) return undefined;
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(labels)) {
-    if (Object.keys(out).length >= BQ_MAX_LABELS) break;
     const sanitizedKey = sanitizeBigQueryKey(key);
     if (sanitizedKey === undefined) continue; // can't be a valid BQ key; drop
     out[sanitizedKey] = sanitizeBigQueryValue(value);
@@ -804,8 +802,9 @@ export class BigQueryConnection
 
   public runSQLStream(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
+    {rowLimit, abortSignal, queryMetadata}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
+    const labels = toBigQueryLabels(this.queryMetadataBag(queryMetadata));
     const streamBigQuery = (
       onError: (error: Error) => void,
       onData: (data: QueryRecord) => void,
@@ -825,8 +824,9 @@ export class BigQueryConnection
           this.end();
         }
       }
+      const query = this.prependSetupSQL(sqlCommand);
       this.bigQuery
-        .createQueryStream(this.prependSetupSQL(sqlCommand))
+        .createQueryStream(labels ? {query, labels} : query)
         .on('error', onError)
         .on('data', handleData)
         .on('end', onEnd);

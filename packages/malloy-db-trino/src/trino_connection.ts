@@ -63,9 +63,9 @@ export interface BaseRunner {
   runSQL(
     sql: string,
     options: RunSQLOptions,
-    // Query-metadata comment, rendered by the connection. The runner places it
-    // itself, because a runner may wrap the statement it is given.
-    sqlPrefix?: string
+    // Rendered by the connection; the runner places it itself, because a runner
+    // may wrap the statement it is given.
+    queryMetadataComment?: string
   ): Promise<{
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
@@ -94,10 +94,14 @@ class PrestoRunner implements BaseRunner {
     }
     this.client = new PrestoClient(prestoClientConfig);
   }
-  async runSQL(sql: string, options: RunSQLOptions = {}, sqlPrefix = '') {
+  async runSQL(
+    sql: string,
+    options: RunSQLOptions = {},
+    queryMetadataComment = ''
+  ) {
     let ret: PrestoQuery | undefined = undefined;
     const q =
-      sqlPrefix +
+      queryMetadataComment +
       (options.rowLimit
         ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
         : sql);
@@ -145,8 +149,12 @@ class TrinoRunner implements BaseRunner {
       auth: new BasicAuth(config.user!, config.password || ''),
     });
   }
-  async runSQL(sql: string, options: RunSQLOptions = {}, sqlPrefix = '') {
-    const result = await this.client.query(sqlPrefix + sql);
+  async runSQL(
+    sql: string,
+    options: RunSQLOptions = {},
+    queryMetadataComment = ''
+  ) {
+    const result = await this.client.query(queryMetadataComment + sql);
     let queryResult = await result.next();
     if (queryResult.value.error) {
       return {

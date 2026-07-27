@@ -187,8 +187,12 @@ prepends it as a leading SQL comment. The machinery is `protected` on
 connector inherits it and none of it is public API. Each validates the bag and
 throws: names are `[A-Za-z0-9_]`, values are printable ASCII excluding `"`,
 capped at a small count — enough to keep the comment form safe and to map onto
-every backend. BigQuery additionally lowercases/rewrites values to fit its label
-grammar. There is no connection-level default; metadata is per call only.
+every backend. BigQuery additionally rewrites the bag into its own label grammar
+— lowercasing, substituting disallowed characters, and dropping a key it cannot
+make valid (one not starting with a letter). The publisher connector applies
+nothing itself: it forwards the whole `RunSQLOptions` to the remote publisher,
+whose own connector applies the bag there. There is no connection-level default;
+metadata is per call only.
 
 ## Key Types
 

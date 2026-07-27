@@ -23,9 +23,9 @@ export type QueryMetadata = Record<string, string>;
 //   - values: printable ASCII, excluding the double-quote
 //   - a small number of properties
 // Connectors may transform within these rules (e.g. BigQuery lowercases keys).
-export const QUERY_METADATA_MAX_KEY_LENGTH = 128;
-export const QUERY_METADATA_MAX_VALUE_LENGTH = 256;
-export const QUERY_METADATA_MAX_PROPERTIES = 20;
+const QUERY_METADATA_MAX_KEY_LENGTH = 128;
+const QUERY_METADATA_MAX_VALUE_LENGTH = 256;
+const QUERY_METADATA_MAX_PROPERTIES = 20;
 
 const KEY_RE = /^[A-Za-z0-9_]+$/;
 
@@ -39,10 +39,7 @@ function isValidValue(s: string): boolean {
   return true;
 }
 
-/**
- * The ways `meta` violates the contract (empty = conforming). For callers that
- * want to surface problems without throwing.
- */
+/** The ways `meta` violates the contract (empty = conforming). */
 export function queryMetadataProblems(meta: QueryMetadata): string[] {
   const problems: string[] = [];
   const keys = Object.keys(meta);

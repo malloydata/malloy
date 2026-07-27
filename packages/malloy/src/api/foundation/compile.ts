@@ -650,7 +650,11 @@ export class Malloy {
       connection = await connections.lookupConnection(connectionName);
     }
     if (sqlStruct) {
-      const data = await connection.runSQL(sqlStruct.selectStr, options);
+      // Only the metadata: a SQL block's rowLimit/abortSignal handling is what
+      // it was, and changing that is not this feature's business.
+      const data = await connection.runSQL(sqlStruct.selectStr, {
+        queryMetadata: options?.queryMetadata,
+      });
       return new Result(
         {
           structs: [sqlStruct],

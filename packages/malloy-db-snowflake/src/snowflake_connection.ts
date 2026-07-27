@@ -264,14 +264,14 @@ export class SnowflakeConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const effectiveOptions: RunSQLOptions = {...this.queryOptions, ...options};
-    // queryMetadata is per-call only; everything else (rowLimit, etc.) inherits
-    // the connection defaults above. Set explicitly here so it cannot fall back
-    // to a connection default, and validated here so the executor renders a bag
-    // it can trust.
-    effectiveOptions.queryMetadata = this.queryMetadataBag(
-      options.queryMetadata
-    );
+    const effectiveOptions: RunSQLOptions = {
+      ...this.queryOptions,
+      ...options,
+      // queryMetadata is per-call only; everything else (rowLimit, etc.)
+      // inherits the connection defaults. Validated here, so the executor
+      // renders a bag it can trust.
+      queryMetadata: this.queryMetadataBag(options.queryMetadata),
+    };
     const rowLimit = effectiveOptions.rowLimit;
     let rows = await this.executor.batch(sql, effectiveOptions, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
@@ -287,11 +287,9 @@ export class SnowflakeConnection
     const streamQueryOptions: RunSQLOptions = {
       ...this.queryOptions,
       ...options,
+      // per-call only, validated here (see runSQL)
+      queryMetadata: this.queryMetadataBag(options.queryMetadata),
     };
-    // queryMetadata is per-call only, and validated here (see runSQL).
-    streamQueryOptions.queryMetadata = this.queryMetadataBag(
-      options.queryMetadata
-    );
 
     for await (const row of await this.executor.stream(
       sqlCommand,
