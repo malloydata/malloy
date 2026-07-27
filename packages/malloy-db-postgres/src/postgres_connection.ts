@@ -514,14 +514,14 @@ export class PostgresConnection
 
   public async runSQL(
     sql: string,
-    {rowLimit}: RunSQLOptions = {},
+    options: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
     return this.runPostgresQuery(
-      sql,
-      rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
+      this.sqlWithQueryMetadata(sql, options.queryMetadata),
+      options.rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
@@ -529,9 +529,12 @@ export class PostgresConnection
 
   public async *runSQLStream(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
+    options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
-    const query = new QueryStream(sqlCommand);
+    const {rowLimit, abortSignal} = options;
+    const query = new QueryStream(
+      this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
+    );
     const client = await this.getClient();
     await this.withTlsHint(() => client.connect());
     await this.connectionSetup(client);
@@ -649,9 +652,12 @@ export class PooledPostgresConnection
 
   public async *runSQLStream(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
+    options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
-    const query = new QueryStream(sqlCommand);
+    const {rowLimit, abortSignal} = options;
+    const query = new QueryStream(
+      this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
+    );
     let index = 0;
     // This is a strange hack... `this.pool.query(query)` seems to return the wrong
     // type. Because `query` is a `QueryStream`, the result is supposed to be a

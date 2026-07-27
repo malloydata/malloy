@@ -267,6 +267,10 @@ export class SnowflakeConnection
     const effectiveOptions: RunSQLOptions = {
       ...this.queryOptions,
       ...options,
+      // queryMetadata is per-call only; everything else (rowLimit, etc.)
+      // inherits the connection defaults. Validated here, so the executor
+      // renders a bag it can trust.
+      queryMetadata: this.queryMetadataBag(options.queryMetadata),
     };
     const rowLimit = effectiveOptions.rowLimit;
     let rows = await this.executor.batch(sql, effectiveOptions, this.timeoutMs);
@@ -280,9 +284,11 @@ export class SnowflakeConnection
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
-    const streamQueryOptions = {
+    const streamQueryOptions: RunSQLOptions = {
       ...this.queryOptions,
       ...options,
+      // per-call only, validated here (see runSQL)
+      queryMetadata: this.queryMetadataBag(options.queryMetadata),
     };
 
     for await (const row of await this.executor.stream(

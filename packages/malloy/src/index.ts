@@ -216,6 +216,7 @@ export type {Overlay, ConfigOverlays} from './api/foundation';
 export type {FilesystemContext, MalloyConfigOptions} from './api/foundation';
 export type {RuntimeContext} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
+export type {QueryMetadata} from './query_metadata';
 export type {
   EventStream,
   ModelString,

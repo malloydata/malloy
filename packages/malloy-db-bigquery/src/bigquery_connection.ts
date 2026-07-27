@@ -23,6 +23,7 @@ import type {
   PersistSQLResults,
   QueryData,
   QueryRecord,
+  QueryMetadata,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
@@ -84,6 +85,39 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   client_email?: string;
   private_key?: string;
   setupSQL?: string;
+}
+
+// BigQuery label grammar: keys and values are lowercase, <=63 chars, and
+// [a-z0-9_-]; keys must start with a lowercase letter. Values are transformed
+// to fit (lowercase, disallowed chars -> '_', truncate); a key that can't be
+// made valid (e.g. it starts with a digit) is dropped. BigQuery's 64-label cap
+// needs no check here: the contract allows fewer properties than that.
+const BQ_MAX_LEN = 63;
+
+function sanitizeBigQueryValue(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '_')
+    .slice(0, BQ_MAX_LEN);
+}
+
+function sanitizeBigQueryKey(key: string): string | undefined {
+  const sanitized = sanitizeBigQueryValue(key);
+  return /^[a-z]/.test(sanitized) ? sanitized : undefined;
+}
+
+/** Render a query's metadata as BigQuery job labels, in BQ's grammar. */
+function toBigQueryLabels(
+  labels: QueryMetadata | undefined
+): Record<string, string> | undefined {
+  if (labels === undefined) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(labels)) {
+    const sanitizedKey = sanitizeBigQueryKey(key);
+    if (sanitizedKey === undefined) continue; // can't be a valid BQ key; drop
+    out[sanitizedKey] = sanitizeBigQueryValue(value);
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 interface SchemaInfo {
@@ -250,14 +284,18 @@ export class BigQueryConnection
 
   private async _runSQL(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {},
+    options: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<{
     data: MalloyQueryData;
     schema: bigquery.ITableFieldSchema | undefined;
   }> {
+    const {rowLimit, abortSignal} = options;
     const defaultOptions = this.readQueryOptions();
     const pageSize = rowLimit ?? defaultOptions.rowLimit;
+    const perCallLabels = toBigQueryLabels(
+      this.queryMetadataBag(options.queryMetadata)
+    );
 
     try {
       const queryResultsOptions: QueryResultsOptions = {
@@ -267,7 +305,7 @@ export class BigQueryConnection
 
       const jobResult = await this.createBigQueryJobAndGetResults(
         sqlCommand,
-        undefined,
+        perCallLabels ? {labels: perCallLabels} : undefined,
         queryResultsOptions,
         abortSignal
       );
@@ -764,8 +802,9 @@ export class BigQueryConnection
 
   public runSQLStream(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
+    {rowLimit, abortSignal, queryMetadata}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
+    const labels = toBigQueryLabels(this.queryMetadataBag(queryMetadata));
     const streamBigQuery = (
       onError: (error: Error) => void,
       onData: (data: QueryRecord) => void,
@@ -785,8 +824,9 @@ export class BigQueryConnection
           this.end();
         }
       }
+      const query = this.prependSetupSQL(sqlCommand);
       this.bigQuery
-        .createQueryStream(this.prependSetupSQL(sqlCommand))
+        .createQueryStream(labels ? {query, labels} : query)
         .on('error', onError)
         .on('data', handleData)
         .on('end', onEnd);

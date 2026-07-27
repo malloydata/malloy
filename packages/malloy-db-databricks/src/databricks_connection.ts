@@ -227,7 +227,9 @@ export class DatabricksConnection
   }
 
   async runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData> {
-    const result = await this.runRawSQL(sql);
+    const result = await this.runRawSQL(
+      this.sqlWithQueryMetadata(sql, options?.queryMetadata)
+    );
     if (options?.rowLimit && result.rows.length > options.rowLimit) {
       return {
         rows: result.rows.slice(0, options.rowLimit),
