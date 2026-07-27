@@ -163,7 +163,8 @@ export interface FilterCondition extends ExprE {
   // Attached to filters which come from a view rather than direct in the query
   // allows the renderer to know which filters should NOT be included in drill queries
   filterView?: string;
-  stableFilter?: Malloy.Filter;
+  /** Drillable form of this condition. A list because `a and b` decomposes. */
+  stableFilters?: Malloy.Filter[];
   isSourceFilter?: boolean;
 }
 
