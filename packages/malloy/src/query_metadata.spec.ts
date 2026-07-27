@@ -3,13 +3,15 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {
-  queryMetadataBag,
-  queryMetadataComment,
-  queryMetadataProblems,
-  sqlWithQueryMetadata,
-  validateQueryMetadata,
-} from './query_metadata';
+import {BaseConnection} from './connection/base_connection';
+import type {SQLSourceRequest} from './lang/translate-response';
+import type {
+  MalloyQueryData,
+  SQLSourceDef,
+  TableSourceDef,
+} from './model/malloy_types';
+import type {QueryMetadata} from './query_metadata';
+import {queryMetadataProblems, validateQueryMetadata} from './query_metadata';
 
 describe('queryMetadataProblems / validateQueryMetadata', () => {
   it('accepts a conforming bag (mixed case allowed)', () => {
@@ -49,45 +51,86 @@ describe('queryMetadataProblems / validateQueryMetadata', () => {
   });
 });
 
+/**
+ * The bag-applying helpers are protected on BaseConnection — a connector
+ * inherits them, they are not public API. Republish them to test them.
+ */
+class MetadataConnection extends BaseConnection {
+  get name() {
+    return 'test';
+  }
+  get dialectName() {
+    return 'standardsql';
+  }
+  getDigest() {
+    return 'test';
+  }
+  async runSQL(): Promise<MalloyQueryData> {
+    return {rows: [], totalRows: 0};
+  }
+  async fetchTableSchema(): Promise<TableSourceDef | string> {
+    return 'no schemas here';
+  }
+  async fetchSelectSchema(
+    _sqlSource: SQLSourceRequest
+  ): Promise<SQLSourceDef | string> {
+    return 'no schemas here';
+  }
+
+  bag(meta: QueryMetadata | undefined) {
+    return this.queryMetadataBag(meta);
+  }
+  comment(meta: QueryMetadata | undefined) {
+    return this.queryMetadataComment(meta);
+  }
+  withMetadata(sql: string, meta: QueryMetadata | undefined) {
+    return this.sqlWithQueryMetadata(sql, meta);
+  }
+}
+
+const conn = new MetadataConnection();
+
 describe('queryMetadataBag', () => {
   it('returns the bag when non-empty', () => {
-    expect(queryMetadataBag({team: 'fin'})).toEqual({team: 'fin'});
+    expect(conn.bag({team: 'fin'})).toEqual({team: 'fin'});
   });
 
-  it('returns undefined for an empty bag', () => {
-    expect(queryMetadataBag({})).toBeUndefined();
+  it('returns undefined for an absent or empty bag', () => {
+    expect(conn.bag(undefined)).toBeUndefined();
+    expect(conn.bag({})).toBeUndefined();
   });
 
   it('throws on an invalid bag', () => {
-    expect(() => queryMetadataBag({'bad key': 'v'})).toThrow();
+    expect(() => conn.bag({'bad key': 'v'})).toThrow();
   });
 });
 
 describe('queryMetadataComment', () => {
   it('serializes to a single leading comment line', () => {
-    expect(queryMetadataComment({env: 'prod', application_name: 'app'})).toBe(
+    expect(conn.comment({env: 'prod', application_name: 'app'})).toBe(
       '-- env="prod" application_name="app"\n'
     );
   });
 
-  it('returns the empty string for an empty bag', () => {
-    expect(queryMetadataComment({})).toBe('');
+  it('returns the empty string for an absent or empty bag', () => {
+    expect(conn.comment(undefined)).toBe('');
+    expect(conn.comment({})).toBe('');
   });
 
   it('throws on an invalid bag rather than emitting an unsafe comment', () => {
-    expect(() => queryMetadataComment({k: 'a"b'})).toThrow();
+    expect(() => conn.comment({k: 'a"b'})).toThrow();
   });
 });
 
 describe('sqlWithQueryMetadata', () => {
   it('prepends the comment when metadata is present', () => {
-    expect(sqlWithQueryMetadata('SELECT 1', {env: 'prod'})).toBe(
+    expect(conn.withMetadata('SELECT 1', {env: 'prod'})).toBe(
       '-- env="prod"\nSELECT 1'
     );
   });
 
   it('returns the sql unchanged for absent or empty metadata', () => {
-    expect(sqlWithQueryMetadata('SELECT 1', undefined)).toBe('SELECT 1');
-    expect(sqlWithQueryMetadata('SELECT 1', {})).toBe('SELECT 1');
+    expect(conn.withMetadata('SELECT 1', undefined)).toBe('SELECT 1');
+    expect(conn.withMetadata('SELECT 1', {})).toBe('SELECT 1');
   });
 });

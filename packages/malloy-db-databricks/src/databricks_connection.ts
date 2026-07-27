@@ -24,7 +24,6 @@ import {
   sqlKey,
   makeDigest,
   mkFieldDef,
-  sqlWithQueryMetadata,
 } from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -229,7 +228,7 @@ export class DatabricksConnection
 
   async runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData> {
     const result = await this.runRawSQL(
-      sqlWithQueryMetadata(sql, options?.queryMetadata)
+      this.sqlWithQueryMetadata(sql, options?.queryMetadata)
     );
     if (options?.rowLimit && result.rows.length > options.rowLimit) {
       return {

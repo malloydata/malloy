@@ -32,7 +32,6 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
-  sqlWithQueryMetadata,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -521,7 +520,7 @@ export class PostgresConnection
     const config = await this.readQueryConfig();
 
     return this.runPostgresQuery(
-      sqlWithQueryMetadata(sql, options.queryMetadata),
+      this.sqlWithQueryMetadata(sql, options.queryMetadata),
       options.rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
@@ -534,7 +533,7 @@ export class PostgresConnection
   ): AsyncIterableIterator<QueryRecord> {
     const {rowLimit, abortSignal} = options;
     const query = new QueryStream(
-      sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
+      this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
     );
     const client = await this.getClient();
     await this.withTlsHint(() => client.connect());
@@ -657,7 +656,7 @@ export class PooledPostgresConnection
   ): AsyncIterableIterator<QueryRecord> {
     const {rowLimit, abortSignal} = options;
     const query = new QueryStream(
-      sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
+      this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
     );
     let index = 0;
     // This is a strange hack... `this.pool.query(query)` seems to return the wrong

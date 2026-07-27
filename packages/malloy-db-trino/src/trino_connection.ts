@@ -21,13 +21,7 @@ import type {
   TestableConnection,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {
-  TrinoDialect,
-  mkFieldDef,
-  sqlKey,
-  makeDigest,
-  sqlWithQueryMetadata,
-} from '@malloydata/malloy';
+import {TrinoDialect, mkFieldDef, sqlKey, makeDigest} from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -68,7 +62,10 @@ export type TrinoConnectionOptions = ConnectionConfig;
 export interface BaseRunner {
   runSQL(
     sql: string,
-    options: RunSQLOptions
+    options: RunSQLOptions,
+    // Query-metadata comment, rendered by the connection. The runner places it
+    // itself, because a runner may wrap the statement it is given.
+    sqlPrefix?: string
   ): Promise<{
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
@@ -97,14 +94,13 @@ class PrestoRunner implements BaseRunner {
     }
     this.client = new PrestoClient(prestoClientConfig);
   }
-  async runSQL(sql: string, options: RunSQLOptions = {}) {
+  async runSQL(sql: string, options: RunSQLOptions = {}, sqlPrefix = '') {
     let ret: PrestoQuery | undefined = undefined;
-    const q = sqlWithQueryMetadata(
-      options.rowLimit
+    const q =
+      sqlPrefix +
+      (options.rowLimit
         ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
-        : sql,
-      options.queryMetadata
-    );
+        : sql);
     let error: string | undefined = undefined;
     try {
       ret = (await this.client.query(q)) || [];
@@ -149,10 +145,8 @@ class TrinoRunner implements BaseRunner {
       auth: new BasicAuth(config.user!, config.password || ''),
     });
   }
-  async runSQL(sql: string, options: RunSQLOptions = {}) {
-    const result = await this.client.query(
-      sqlWithQueryMetadata(sql, options.queryMetadata)
-    );
+  async runSQL(sql: string, options: RunSQLOptions = {}, sqlPrefix = '') {
+    const result = await this.client.query(sqlPrefix + sql);
     let queryResult = await result.next();
     if (queryResult.value.error) {
       return {
@@ -287,7 +281,11 @@ export abstract class TrinoPrestoConnection
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
     await this.ensureSetup();
-    const r = await this.client.runSQL(sqlCommand, options);
+    const r = await this.client.runSQL(
+      sqlCommand,
+      options,
+      this.queryMetadataComment(options.queryMetadata)
+    );
 
     if (r.error) {
       throw new Error(r.error);

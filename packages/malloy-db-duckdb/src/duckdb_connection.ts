@@ -12,7 +12,7 @@ import type {
   QueryOptionsReader,
   RunSQLOptions,
 } from '@malloydata/malloy';
-import {makeDigest, sqlWithQueryMetadata} from '@malloydata/malloy';
+import {makeDigest} from '@malloydata/malloy';
 import packageJson from '@malloydata/malloy/package.json';
 import {
   buildDuckDBShareKey,
@@ -481,7 +481,7 @@ export class DuckDBConnection extends DuckDBCommon {
     }
 
     const result = await this.connection.stream(
-      sqlWithQueryMetadata(statements[0], queryMetadata)
+      this.sqlWithQueryMetadata(statements[0], queryMetadata)
     );
 
     let index = 0;

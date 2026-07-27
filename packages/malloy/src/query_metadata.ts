@@ -10,8 +10,10 @@
  *
  * Each connector applies it through a per-query mechanism — Snowflake's
  * per-statement `QUERY_TAG` and BigQuery's per-job labels natively, others as a
- * leading SQL comment (see {@link queryMetadataComment}). It never affects
- * query results or data identity.
+ * leading SQL comment. It never affects query results or data identity.
+ *
+ * This is the only name in this file which is public API; a connector reaches
+ * the machinery for applying a bag through `BaseConnection`.
  */
 export type QueryMetadata = Record<string, string>;
 
@@ -79,51 +81,4 @@ export function validateQueryMetadata(meta: QueryMetadata): void {
   if (problems.length > 0) {
     throw new Error(`Invalid query metadata: ${problems.join('; ')}`);
   }
-}
-
-/**
- * Validate the bag (throws on an invalid bag) and return it, or undefined when
- * there is nothing to apply. Connectors that apply the bag to a native
- * key-value mechanism use this.
- */
-export function queryMetadataBag(
-  meta: QueryMetadata
-): Record<string, string> | undefined {
-  validateQueryMetadata(meta);
-  return Object.keys(meta).length > 0 ? meta : undefined;
-}
-
-/**
- * Serialize query metadata into a single leading SQL comment that a connector
- * with no native tag mechanism can prepend to the statement it is about to run,
- * e.g.
- *
- * ```
- * -- NAME1="val1" NAME2="val2"
- * SELECT ...
- * ```
- *
- * The contract guarantees the rendered form is safe (no embedded `"`, no
- * newline). Validates first (throws on an invalid bag); returns the empty
- * string when there is nothing to apply.
- */
-export function queryMetadataComment(meta: QueryMetadata): string {
-  const bag = queryMetadataBag(meta);
-  if (!bag) return '';
-  const rendered = Object.keys(bag)
-    .map(key => `${key}="${bag[key]}"`)
-    .join(' ');
-  return `-- ${rendered}\n`;
-}
-
-/**
- * `sql` with the query-metadata comment prepended, or `sql` unchanged when
- * there is no metadata to apply. Throws on an invalid bag. Used by connectors
- * with no per-query-native tag mechanism.
- */
-export function sqlWithQueryMetadata(
-  sql: string,
-  meta: QueryMetadata | undefined
-): string {
-  return meta ? queryMetadataComment(meta) + sql : sql;
 }

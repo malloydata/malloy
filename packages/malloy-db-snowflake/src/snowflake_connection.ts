@@ -267,8 +267,11 @@ export class SnowflakeConnection
     const effectiveOptions: RunSQLOptions = {...this.queryOptions, ...options};
     // queryMetadata is per-call only; everything else (rowLimit, etc.) inherits
     // the connection defaults above. Set explicitly here so it cannot fall back
-    // to a connection default.
-    effectiveOptions.queryMetadata = options.queryMetadata;
+    // to a connection default, and validated here so the executor renders a bag
+    // it can trust.
+    effectiveOptions.queryMetadata = this.queryMetadataBag(
+      options.queryMetadata
+    );
     const rowLimit = effectiveOptions.rowLimit;
     let rows = await this.executor.batch(sql, effectiveOptions, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
@@ -285,9 +288,10 @@ export class SnowflakeConnection
       ...this.queryOptions,
       ...options,
     };
-    // queryMetadata is per-call only (see runSQL); set explicitly here so it
-    // cannot fall back to a connection default.
-    streamQueryOptions.queryMetadata = options.queryMetadata;
+    // queryMetadata is per-call only, and validated here (see runSQL).
+    streamQueryOptions.queryMetadata = this.queryMetadataBag(
+      options.queryMetadata
+    );
 
     for await (const row of await this.executor.stream(
       sqlCommand,

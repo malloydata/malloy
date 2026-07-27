@@ -17,7 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type {Readable} from 'stream';
 import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
-import {queryMetadataBag, toAsyncGenerator} from '@malloydata/malloy';
+import {toAsyncGenerator} from '@malloydata/malloy';
 
 // Disable snowflake-sdk logging by default (issue #2565)
 snowflake.configure({logLevel: 'OFF'});
@@ -35,12 +35,13 @@ const MAX_QUERY_TAG_LENGTH = 2000;
  * the connection-level `connOptions.queryTag` is deliberately never set,
  * because the SDK overwrites caller-supplied per-statement parameters whenever
  * it is (snowflake-sdk `statement.js`).
+ *
+ * The bag arrives already validated: SnowflakeConnection checks it before
+ * handing it to the executor.
  */
 export function snowflakeQueryTag(options?: RunSQLOptions): string | undefined {
-  const meta = options?.queryMetadata;
-  if (!meta) return undefined;
-  const bag = queryMetadataBag(meta);
-  if (!bag) return undefined;
+  const bag = options?.queryMetadata;
+  if (bag === undefined || Object.keys(bag).length === 0) return undefined;
   const tag = JSON.stringify(bag);
   return tag.length > MAX_QUERY_TAG_LENGTH
     ? tag.slice(0, MAX_QUERY_TAG_LENGTH)

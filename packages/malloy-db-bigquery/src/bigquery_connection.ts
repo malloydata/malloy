@@ -23,6 +23,7 @@ import type {
   PersistSQLResults,
   QueryData,
   QueryRecord,
+  QueryMetadata,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
@@ -40,7 +41,6 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
-  queryMetadataBag,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -107,14 +107,11 @@ function sanitizeBigQueryKey(key: string): string | undefined {
   return /^[a-z]/.test(sanitized) ? sanitized : undefined;
 }
 
-/** Render a query's tags as BigQuery job labels, transformed to BQ's grammar. */
+/** Render a query's metadata as BigQuery job labels, in BQ's grammar. */
 function toBigQueryLabels(
-  options?: RunSQLOptions
+  labels: QueryMetadata | undefined
 ): Record<string, string> | undefined {
-  const meta = options?.queryMetadata;
-  if (!meta) return undefined;
-  const labels = queryMetadataBag(meta);
-  if (!labels) return undefined;
+  if (labels === undefined) return undefined;
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(labels)) {
     if (Object.keys(out).length >= BQ_MAX_LABELS) break;
@@ -298,7 +295,9 @@ export class BigQueryConnection
     const {rowLimit, abortSignal} = options;
     const defaultOptions = this.readQueryOptions();
     const pageSize = rowLimit ?? defaultOptions.rowLimit;
-    const perCallLabels = toBigQueryLabels(options);
+    const perCallLabels = toBigQueryLabels(
+      this.queryMetadataBag(options.queryMetadata)
+    );
 
     try {
       const queryResultsOptions: QueryResultsOptions = {
