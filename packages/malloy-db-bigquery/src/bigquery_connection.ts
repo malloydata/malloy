@@ -180,9 +180,11 @@ const GET_QUERY_RESULTS_POLL_MS = 1000 * 60 * 2;
 
 /**
  * Resolve a connection `timeoutMs` config value (milliseconds, as a string) to a
- * number, preserving an explicit `'0'` (fail-fast / no wait). Only an unset,
- * blank, or non-numeric value falls back to `fallback` — note a whitespace-only
- * string must be treated as blank, since `Number('   ')` is `0`, not `NaN`.
+ * number. An explicit `'0'` is preserved and means "no client-side timeout" at
+ * the call sites (no poll deadline, and `jobTimeoutMs` is omitted), matching the
+ * Snowflake connector. Only an unset, blank, or non-numeric value falls back to
+ * `fallback` — note a whitespace-only string must be treated as blank, since
+ * `Number('   ')` is `0`, not `NaN`.
  */
 export function resolveTimeoutMs(
   configured: string | undefined,
@@ -268,10 +270,12 @@ function pollQueryResults(
  * running normally. So for a query that runs longer than one call's server wait
  * we re-issue getQueryResults until it finishes.
  *
- * `deadlineMs` is the connection's configured timeoutMs. `abortSignal` lets the
- * loop exit promptly on cancel (the caller also cancels the BigQuery job). A
- * bounded number of retries absorbs the transient access-denied error BigQuery
- * intermittently returns on first fetch. `now` is injectable for testing.
+ * `deadlineMs` bounds the total wait (the connection's configured timeoutMs);
+ * pass `Infinity` for no deadline, i.e. poll until the job completes or the
+ * caller aborts. `abortSignal` lets the loop exit promptly on cancel (the caller
+ * also cancels the BigQuery job). A bounded number of retries absorbs the
+ * transient access-denied error BigQuery intermittently returns on first fetch.
+ * `now` is injectable for testing.
  */
 export async function getQueryResultsUntilComplete(
   job: Pick<Job, 'getQueryResults'>,
@@ -928,7 +932,10 @@ export class BigQueryConnection
             },
             ...getQueryResultsOptions,
           },
-          resolveTimeoutMs(this.config.timeoutMs, TIMEOUT_MS),
+          // A configured timeout of 0 means "no client-side limit" (matching
+          // Snowflake): no poll deadline, so poll until the job completes or the
+          // caller aborts.
+          resolveTimeoutMs(this.config.timeoutMs, TIMEOUT_MS) || Infinity,
           {abortSignal}
         );
       } finally {
@@ -944,11 +951,15 @@ export class BigQueryConnection
     if (options.query) {
       options.query = this.prependSetupSQL(options.query);
     }
+    const timeoutMs = resolveTimeoutMs(this.config.timeoutMs, TIMEOUT_MS);
     const [job] = await this.bigQuery.createQueryJob({
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
-      jobTimeoutMs: resolveTimeoutMs(this.config.timeoutMs, TIMEOUT_MS),
+      // A configured timeout of 0 means "no client-side limit" (matching
+      // Snowflake): omit jobTimeoutMs so BigQuery applies its own default rather
+      // than being told to time out at 0ms.
+      ...(timeoutMs > 0 ? {jobTimeoutMs: timeoutMs} : {}),
       ...options,
     });
     return job;

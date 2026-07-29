@@ -16,7 +16,7 @@ describe('resolveTimeoutMs', () => {
     expect(resolveTimeoutMs('   ', DEFAULT)).toBe(DEFAULT);
   });
 
-  it('preserves an explicit "0" as fail-fast', () => {
+  it('preserves an explicit "0" (call sites treat 0 as no-timeout)', () => {
     expect(resolveTimeoutMs('0', DEFAULT)).toBe(0);
   });
 
@@ -61,33 +61,49 @@ function hermeticConnection(steps: Step[], timeoutMs?: string) {
     step(cb);
   });
   const job = {getQueryResults, cancel: jest.fn()};
-  const createQueryJob = jest.fn(async () => [job]);
+  const createQueryJob = jest.fn(async (_options: unknown) => [job]);
   (conn as unknown as {bigQuery: unknown}).bigQuery = {createQueryJob};
   (conn as unknown as {config: {timeoutMs?: string}}).config = {timeoutMs};
   return {conn, getQueryResults, createQueryJob};
 }
 
 describe('BigQueryConnection.runSQL (hermetic, stubbed job)', () => {
-  it('wires config.timeoutMs to the poll deadline: "0" fails fast', async () => {
-    // The job would still be running, but a "0" timeout means the deadline is
-    // already exceeded before the first poll is even issued.
-    const {conn, getQueryResults} = hermeticConnection([stillRunning], '0');
-    await expect(conn.runSQL('SELECT 1')).rejects.toThrow(
-      /configured timeout of 0ms/
-    );
-    expect(getQueryResults).not.toHaveBeenCalled();
-  });
-
-  it('treats a whitespace-only timeoutMs as unset, not fail-fast', async () => {
-    // Regression guard for the wiring: if "   " resolved to 0, this query would
-    // fail fast even though the job is ready. It must fall back to the default.
-    const {conn, getQueryResults} = hermeticConnection(
-      [complete([{n: 7}])],
-      '   '
+  it('treats config.timeoutMs "0" as no timeout: polls through, omits jobTimeoutMs', async () => {
+    // Matches Snowflake: 0 disables the client-side limit. The job is still
+    // running on the first poll, so a fail-fast reading would throw here; instead
+    // it must keep polling to completion, and must not send jobTimeoutMs: 0.
+    const {conn, getQueryResults, createQueryJob} = hermeticConnection(
+      [stillRunning, complete([{n: 5}])],
+      '0'
     );
     const data = await conn.runSQL('SELECT 1');
-    expect(data.rows).toEqual([{n: 7}]);
-    expect(getQueryResults).toHaveBeenCalledTimes(1);
+    expect(data.rows).toEqual([{n: 5}]);
+    expect(getQueryResults).toHaveBeenCalledTimes(2);
+    expect(createQueryJob.mock.calls[0][0]).not.toHaveProperty('jobTimeoutMs');
+  });
+
+  it('passes a positive timeoutMs through to the job as jobTimeoutMs', async () => {
+    const {conn, createQueryJob} = hermeticConnection(
+      [complete([{n: 7}])],
+      '300000'
+    );
+    await conn.runSQL('SELECT 1');
+    expect(createQueryJob.mock.calls[0][0]).toMatchObject({
+      jobTimeoutMs: 300000,
+    });
+  });
+
+  it('treats a whitespace-only timeoutMs as unset (default), not 0', async () => {
+    // Regression guard: if "   " resolved to 0 it would be read as no-timeout and
+    // omit jobTimeoutMs; it must fall back to the default (TIMEOUT_MS, 600000ms).
+    const {conn, createQueryJob} = hermeticConnection(
+      [complete([{n: 1}])],
+      '   '
+    );
+    await conn.runSQL('SELECT 1');
+    expect(createQueryJob.mock.calls[0][0]).toMatchObject({
+      jobTimeoutMs: 600000,
+    });
   });
 
   it('polls a still-running response rather than returning it as empty data', async () => {
