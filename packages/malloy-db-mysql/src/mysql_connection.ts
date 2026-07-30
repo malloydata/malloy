@@ -154,8 +154,7 @@ export class MySQLConnection
   }
 
   canStream(): this is StreamingConnection {
-    // TODO: implement;
-    throw new Error('Method not implemented.2');
+    return false;
   }
 
   async close(): Promise<void> {

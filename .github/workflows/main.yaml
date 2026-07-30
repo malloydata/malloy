@@ -1,15 +1,18 @@
 # The "Core" job runs through all the tests which are not dialect specific.
 # This includes tests which don't touch the database at all, and tests
-# which touch some combination of duckdb,bigquery,postgres but do
-# not need to be once times for each dialect.
+# which touch some combination of duckdb and postgres but do not need to
+# be run once for each dialect.
+#
+# This job holds no secrets, so it runs without waiting for
+# check-permission — it is the feedback external contributors get for
+# free. Keep it that way: ci-core pins MALLOY_DATABASES to credential-free
+# dialects, and postgres comes from the service container below. If a test
+# here ever reaches a credentialed warehouse it will fail rather than
+# silently spend a key, which is the intended tripwire.
 name: Core
 permissions: {}
 
-on:
-  workflow_call:
-    secrets:
-      BIGQUERY_KEY:
-        required: true
+on: workflow_call
 
 jobs:
   main:
@@ -39,10 +42,6 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
-      - name: GCloud auth
-        uses: 'google-github-actions/auth@v3'
-        with:
-          credentials_json: '${{ secrets.BIGQUERY_KEY }}'
       - name: Lint and test
         run: |
           sh scripts/ci-test-sanity-check.sh
