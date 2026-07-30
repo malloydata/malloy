@@ -36,8 +36,9 @@ const pending: Step = () => {};
 // Build a fake job whose getQueryResults plays a scripted sequence of steps
 // (the last step repeats if called again).
 function scriptedJob(steps: Step[]): {
-  job: Pick<Job, 'getQueryResults'>;
+  job: Pick<Job, 'getQueryResults' | 'cancel'>;
   getQueryResults: jest.Mock;
+  cancel: jest.Mock;
 } {
   let i = 0;
   const getQueryResults = jest.fn((_options: unknown, cb: Cb) => {
@@ -45,20 +46,27 @@ function scriptedJob(steps: Step[]): {
     i++;
     step(cb);
   });
+  const cancel = jest.fn(async () => [{}]);
   return {
-    job: {getQueryResults} as unknown as Pick<Job, 'getQueryResults'>,
+    job: {getQueryResults, cancel} as unknown as Pick<
+      Job,
+      'getQueryResults' | 'cancel'
+    >,
     getQueryResults,
+    cancel,
   };
 }
 
 describe('getQueryResultsUntilComplete', () => {
   it('returns immediately when the job is already complete', async () => {
-    const {job, getQueryResults} = scriptedJob([complete()]);
+    const {job, getQueryResults, cancel} = scriptedJob([complete()]);
     const out = await getQueryResultsUntilComplete(job, {}, 600_000, {
       now: () => 0,
     });
     expect(out[0]).toEqual([{n: 1}]);
     expect(getQueryResults).toHaveBeenCalledTimes(1);
+    // No cancel on the happy path.
+    expect(cancel).not.toHaveBeenCalled();
   });
 
   it('polls past "still running" responses until the job completes', async () => {
@@ -82,10 +90,10 @@ describe('getQueryResultsUntilComplete', () => {
     expect(getQueryResults.mock.calls[0][0]).toMatchObject({timeoutMs: 30_000});
   });
 
-  it('gives up with an actionable error once the deadline passes', async () => {
+  it('gives up with an actionable error once the deadline passes, cancelling the job', async () => {
     let t = 0;
     const now = () => t;
-    const {job, getQueryResults} = scriptedJob([
+    const {job, getQueryResults, cancel} = scriptedJob([
       cb => {
         t += 100_000; // each poll advances the clock 100s
         stillRunning(cb);
@@ -98,6 +106,8 @@ describe('getQueryResultsUntilComplete', () => {
     );
     // startedAt=0; polls at t=100s (within 150s) and t=200s (over) -> 2 polls.
     expect(getQueryResults).toHaveBeenCalledTimes(2);
+    // On its own deadline the loop cancels the job rather than leaving it running.
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 
   it('retries a bounded number of times on a transient error, then rethrows', async () => {

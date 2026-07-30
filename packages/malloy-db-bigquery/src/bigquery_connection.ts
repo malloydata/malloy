@@ -178,25 +178,6 @@ const TIMEOUT_MS = 1000 * 60 * 10;
  */
 const GET_QUERY_RESULTS_POLL_MS = 1000 * 60 * 2;
 
-/**
- * Resolve a connection `timeoutMs` config value (milliseconds, as a string) to a
- * number. An explicit `'0'` is preserved and means "no client-side timeout" at
- * the call sites (no poll deadline, and `jobTimeoutMs` is omitted), matching the
- * Snowflake connector. Only an unset, blank, or non-numeric value falls back to
- * `fallback` — note a whitespace-only string must be treated as blank, since
- * `Number('   ')` is `0`, not `NaN`.
- */
-export function resolveTimeoutMs(
-  configured: string | undefined,
-  fallback: number
-): number {
-  if (configured === undefined || configured.trim() === '') {
-    return fallback;
-  }
-  const parsed = Number(configured);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 /** The result of a single getQueryResults poll. */
 type PollOutcome =
   | {
@@ -261,6 +242,16 @@ function pollQueryResults(
   });
 }
 
+/** Cancel a job without letting a cancel failure mask the caller's real error. */
+async function cancelJobQuietly(job: Pick<Job, 'cancel'>): Promise<void> {
+  try {
+    await job.cancel();
+  } catch {
+    // Best-effort: the job may already be finishing or gone; the caller still
+    // reports the timeout that prompted the cancel.
+  }
+}
+
 /**
  * Fetch a job's query results, polling until the job completes, `deadlineMs`
  * elapses, or the caller aborts. A single getQueryResults call cannot wait out a
@@ -270,15 +261,17 @@ function pollQueryResults(
  * running normally. So for a query that runs longer than one call's server wait
  * we re-issue getQueryResults until it finishes.
  *
- * `deadlineMs` bounds the total wait (the connection's configured timeoutMs);
- * pass `Infinity` for no deadline, i.e. poll until the job completes or the
- * caller aborts. `abortSignal` lets the loop exit promptly on cancel (the caller
- * also cancels the BigQuery job). A bounded number of retries absorbs the
- * transient access-denied error BigQuery intermittently returns on first fetch.
- * `now` is injectable for testing.
+ * `deadlineMs` bounds the total wait (the connection's configured timeoutMs).
+ * On reaching it we cancel the job before throwing: BigQuery's jobTimeoutMs
+ * should already be cancelling it server-side, but if that timeout error has not
+ * come back yet, cancelling here stops the job from running (and billing) past
+ * the point we stopped waiting. `abortSignal` lets the loop exit promptly on an
+ * external cancel (the caller cancels the job in that case). A bounded number of
+ * retries absorbs the transient access-denied error BigQuery intermittently
+ * returns on first fetch. `now` is injectable for testing.
  */
 export async function getQueryResultsUntilComplete(
-  job: Pick<Job, 'getQueryResults'>,
+  job: Pick<Job, 'getQueryResults' | 'cancel'>,
   getQueryResultsOptions: QueryResultsOptions,
   deadlineMs: number,
   {
@@ -298,6 +291,7 @@ export async function getQueryResultsUntilComplete(
     }
     const remainingMs = deadlineMs - (now() - startedAt);
     if (remainingMs <= 0) {
+      await cancelJobQuietly(job);
       throw new Error(
         `BigQuery query did not complete within the configured timeout of ${deadlineMs}ms. ` +
           "Raise the connection's timeoutMs to allow longer-running queries."
@@ -894,6 +888,16 @@ export class BigQueryConnection
     throw lastFetchError;
   }
 
+  /**
+   * The effective query timeout in milliseconds. A configured value that is
+   * unset, blank, non-numeric, or 0 falls back to TIMEOUT_MS; only a positive
+   * number overrides the default. This one value bounds both the BigQuery job
+   * (jobTimeoutMs) and how long getQueryResultsUntilComplete polls for results.
+   */
+  private resolvedTimeoutMs(): number {
+    return Number(this.config.timeoutMs) || TIMEOUT_MS;
+  }
+
   private async createBigQueryJobAndGetResults(
     sqlCommand: string,
     createQueryJobOptions?: Query,
@@ -916,8 +920,9 @@ export class BigQueryConnection
         // Poll for results until the job completes or the connection's
         // configured timeout elapses; a single getQueryResults call can't wait
         // out a long-running query (see getQueryResultsUntilComplete). The
-        // deadline is config.timeoutMs, the same knob that bounds the job
-        // timeout, defaulting to TIMEOUT_MS.
+        // deadline is the same resolved timeout that bounds the job's
+        // jobTimeoutMs, so the client stops waiting right about when BigQuery
+        // stops running the job.
         return await getQueryResultsUntilComplete(
           job,
           {
@@ -932,10 +937,7 @@ export class BigQueryConnection
             },
             ...getQueryResultsOptions,
           },
-          // A configured timeout of 0 means "no client-side limit" (matching
-          // Snowflake): no poll deadline, so poll until the job completes or the
-          // caller aborts.
-          resolveTimeoutMs(this.config.timeoutMs, TIMEOUT_MS) || Infinity,
+          this.resolvedTimeoutMs(),
           {abortSignal}
         );
       } finally {
@@ -951,15 +953,14 @@ export class BigQueryConnection
     if (options.query) {
       options.query = this.prependSetupSQL(options.query);
     }
-    const timeoutMs = resolveTimeoutMs(this.config.timeoutMs, TIMEOUT_MS);
     const [job] = await this.bigQuery.createQueryJob({
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
-      // A configured timeout of 0 means "no client-side limit" (matching
-      // Snowflake): omit jobTimeoutMs so BigQuery applies its own default rather
-      // than being told to time out at 0ms.
-      ...(timeoutMs > 0 ? {jobTimeoutMs: timeoutMs} : {}),
+      // Shadow the resolved timeout to the job's server-side limit so BigQuery
+      // cancels a runaway job on its own; getQueryResultsUntilComplete polls up
+      // to the same deadline on the client side.
+      jobTimeoutMs: this.resolvedTimeoutMs(),
       ...options,
     });
     return job;
