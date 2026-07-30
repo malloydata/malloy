@@ -20,13 +20,16 @@ fork can reach a repository secret, and it is `pull_request_target`.**
 | trigger | PR from | workflow file taken from | secrets | `GITHUB_TOKEN` | GitHub's fork-approval gate |
 |---|---|---|---|---|---|
 | `pull_request` | branch in this repo | PR head | yes | per `permissions:` | no |
-| `pull_request` | **fork** | PR head | **none — `${{ secrets.X }}` is empty** | **read-only, hard cap** | **yes** |
+| `pull_request` | **fork** | PR head | **none — `${{ secrets.X }}` is empty** | **write downgraded to read** | **yes** |
 | `pull_request_target` | branch in this repo | base | yes | per `permissions:` | no |
 | `pull_request_target` | **fork** | **base** | **yes** | per `permissions:`, base-repo scoped | **no** |
 
 That bottom row is the entire security problem and the entire reason the rest exists. It is
 not a preference: on `pull_request` from a fork, secrets are unavailable as a platform
-guarantee, with no setting that turns them on. So a maintainer clicking GitHub's built-in
+guarantee, with no setting that turns them on. (The token downgrade in that row is a
+weaker promise than the secret one — an org-level "send write tokens to workflows from
+pull requests" setting can lift it. The secrets guarantee has no such escape hatch.) So a
+maintainer clicking GitHub's built-in
 "Approve and run" still produces a run whose database tests fail for want of credentials —
 which is what happened, and was reverted, in PR #2078.
 
