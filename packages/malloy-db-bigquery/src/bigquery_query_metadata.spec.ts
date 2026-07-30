@@ -7,16 +7,28 @@ import type {QueryOptionsReader} from '@malloydata/malloy';
 import {BigQueryConnection} from './bigquery_connection';
 
 // A fake BigQuery job with just enough surface for createBigQueryJobAndGetResults.
+// getQueryResults uses the callback overload (err, rows, nextQuery, apiResponse)
+// and reports jobComplete so the connector's poll loop settles immediately.
 function fakeJob(id = 'job-abc', location = 'US') {
   return {
     id,
     location,
     cancel: () => {},
-    getQueryResults: async () => [
-      [{n: 1}],
-      null,
-      {totalRows: '1', totalBytesProcessed: '42', schema: {fields: []}},
-    ],
+    getQueryResults: (
+      _options: unknown,
+      cb: (
+        err: unknown,
+        rows: unknown,
+        nextQuery: unknown,
+        apiResponse: unknown
+      ) => void
+    ) =>
+      cb(null, [{n: 1}], null, {
+        jobComplete: true,
+        totalRows: '1',
+        totalBytesProcessed: '42',
+        schema: {fields: []},
+      }),
   };
 }
 
