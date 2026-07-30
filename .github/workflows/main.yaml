@@ -46,6 +46,7 @@ jobs:
         run: |
           sh scripts/ci-test-sanity-check.sh
           sh scripts/ci-env-sanity-check.sh
+          node scripts/ci-permission-sanity-check.js
           npm run lint
           echo CREATE EXTENSION tsm_system_rows\; | psql
           gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
