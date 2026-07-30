@@ -199,8 +199,12 @@ export class SnowflakeConnection
     );
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
-    this.timeoutMs = options?.timeoutMs ?? TIMEOUT_MS;
-    this.schemaSampleTimeoutMs = options?.schemaSampleTimeoutMs ?? 15_000;
+    // A configured 0 (or a blank/non-numeric value that parsed to NaN) falls
+    // back to the default rather than meaning "wait forever", matching the
+    // BigQuery connector. `||` is deliberate over `??`: it also catches 0 and
+    // NaN, not just null/undefined.
+    this.timeoutMs = options?.timeoutMs || TIMEOUT_MS;
+    this.schemaSampleTimeoutMs = options?.schemaSampleTimeoutMs || 15_000;
     this.schemaSampleRowLimit = options?.schemaSampleRowLimit ?? 1000;
     this.schemaSampleFullScanMaxBytes =
       options?.schemaSampleFullScanMaxBytes ?? 100_000_000;
