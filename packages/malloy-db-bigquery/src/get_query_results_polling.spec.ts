@@ -57,6 +57,10 @@ function scriptedJob(steps: Step[]): {
   };
 }
 
+// The loop spaces still-running polls by a minimum interval via wait(); tests
+// inject a no-op so they don't sleep real time.
+const noWait = async () => {};
+
 describe('getQueryResultsUntilComplete', () => {
   it('returns immediately when the job is already complete', async () => {
     const {job, getQueryResults, cancel} = scriptedJob([complete()]);
@@ -77,9 +81,52 @@ describe('getQueryResultsUntilComplete', () => {
     ]);
     const out = await getQueryResultsUntilComplete(job, {}, 600_000, {
       now: () => 0,
+      wait: noWait,
     });
     expect(out[0]).toEqual([{n: 1}]);
     expect(getQueryResults).toHaveBeenCalledTimes(3);
+  });
+
+  it('waits a minimum interval before re-polling when a poll returns early', async () => {
+    // now is constant, so the poll "returned" with no elapsed time; the loop
+    // waits the full floor before the next poll.
+    const wait = jest.fn(async (_ms: number) => {});
+    const {job} = scriptedJob([stillRunning, complete()]);
+    await getQueryResultsUntilComplete(job, {}, 600_000, {now: () => 0, wait});
+    expect(wait).toHaveBeenCalledTimes(1);
+    expect(wait.mock.calls[0][0]).toBe(1000);
+  });
+
+  it('does not wait when a poll already blocked at least the interval', async () => {
+    // The poll advances the clock past the floor, so there is no shortfall.
+    let t = 0;
+    const wait = jest.fn(async (_ms: number) => {});
+    const {job} = scriptedJob([
+      cb => {
+        t += 2000; // poll blocked 2s, longer than the 1s floor
+        stillRunning(cb);
+      },
+      complete(),
+    ]);
+    await getQueryResultsUntilComplete(job, {}, 600_000, {now: () => t, wait});
+    expect(wait).not.toHaveBeenCalled();
+  });
+
+  it('stops promptly when the signal aborts around the inter-poll wait', async () => {
+    // Abort before the loop reaches the (real) inter-poll wait: the wait must
+    // resolve immediately instead of sleeping the floor, and the loop must then
+    // exit rather than issue another poll.
+    const ac = new AbortController();
+    const {job, getQueryResults} = scriptedJob([stillRunning, complete()]);
+    const promise = getQueryResultsUntilComplete(job, {}, 600_000, {
+      abortSignal: ac.signal,
+      now: () => 0,
+    });
+    ac.abort();
+    const start = Date.now();
+    await expect(promise).rejects.toThrow(/aborted/);
+    expect(Date.now() - start).toBeLessThan(500);
+    expect(getQueryResults).toHaveBeenCalledTimes(1);
   });
 
   it('clamps the per-poll timeout to the remaining deadline', async () => {
@@ -132,7 +179,10 @@ describe('getQueryResultsUntilComplete', () => {
       transient('boom-4'),
     ]);
     await expect(
-      getQueryResultsUntilComplete(job, {}, 600_000, {now: () => 0})
+      getQueryResultsUntilComplete(job, {}, 600_000, {
+        now: () => 0,
+        wait: noWait,
+      })
     ).rejects.toThrow('boom-4');
     expect(getQueryResults).toHaveBeenCalledTimes(7);
   });

@@ -43,18 +43,16 @@ function hermeticConnection(steps: Step[], timeoutMs?: string) {
 }
 
 describe('BigQueryConnection.runSQL (hermetic, stubbed job)', () => {
-  it('treats config.timeoutMs "0" as unset: uses the default and polls through', async () => {
+  it('treats config.timeoutMs "0" as unset: uses the default jobTimeoutMs', async () => {
     // 0 falls back to the default (like blank or non-numeric); it means neither
-    // "wait 0ms" nor "wait forever". The job is still running on the first poll,
-    // so the loop must keep polling to completion under the default deadline,
-    // and the job is created with the default jobTimeoutMs.
-    const {conn, getQueryResults, createQueryJob} = hermeticConnection(
-      [stillRunning, complete([{n: 5}])],
+    // "wait 0ms" nor "wait forever". (Poll-through is covered separately, so
+    // this stays a single completed poll to avoid the real inter-poll wait.)
+    const {conn, createQueryJob} = hermeticConnection(
+      [complete([{n: 5}])],
       '0'
     );
     const data = await conn.runSQL('SELECT 1');
     expect(data.rows).toEqual([{n: 5}]);
-    expect(getQueryResults).toHaveBeenCalledTimes(2);
     expect(createQueryJob.mock.calls[0][0]).toMatchObject({
       jobTimeoutMs: 600000,
     });
@@ -77,6 +75,20 @@ describe('BigQueryConnection.runSQL (hermetic, stubbed job)', () => {
     const {conn, createQueryJob} = hermeticConnection(
       [complete([{n: 1}])],
       '   '
+    );
+    await conn.runSQL('SELECT 1');
+    expect(createQueryJob.mock.calls[0][0]).toMatchObject({
+      jobTimeoutMs: 600000,
+    });
+  });
+
+  it('treats a negative timeoutMs as the default', async () => {
+    // Number('-5') is -5, which is truthy, so a bare `|| TIMEOUT_MS` would let
+    // it through as jobTimeoutMs: -5 and blow the deadline on the first poll.
+    // A non-positive value must fall back to the default.
+    const {conn, createQueryJob} = hermeticConnection(
+      [complete([{n: 1}])],
+      '-5'
     );
     await conn.runSQL('SELECT 1');
     expect(createQueryJob.mock.calls[0][0]).toMatchObject({
