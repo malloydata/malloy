@@ -56,6 +56,24 @@ describe('DatabricksConnection timeout + abort', () => {
     expect(cancel).toHaveBeenCalledTimes(1);
   });
 
+  it('times out even if closing the operation hangs', async () => {
+    // close() over an unresponsive connection can hang; the cleanup must not be
+    // awaited on the failure path, or it would swallow the timeout.
+    const {conn, cancel, close} = hermeticConnection({
+      timeoutMs: 1000,
+      fetchAll: never,
+    });
+    close.mockImplementation(() => new Promise<void>(() => {})); // never resolves
+    const promise = conn.runRawSQL('SELECT 1');
+    promise.catch(() => {});
+    await flush();
+    jest.advanceTimersByTime(1000);
+    await expect(promise).rejects.toThrow(
+      /did not complete within the configured timeout of 1000ms/
+    );
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ['zero', 0],
     ['negative', -5],

@@ -232,9 +232,9 @@ export class DatabricksConnection
     if (abortSignal?.aborted) {
       throw new Error('Databricks query was aborted before it started.');
     }
-    const operation = await this.session.executeStatement(sql, {
-      runAsync: true,
-    });
+    // The SDK always submits asynchronously and polls in fetchAll (the runAsync
+    // option is deprecated and ignored), so no execute options are needed.
+    const operation = await this.session.executeStatement(sql);
     const timeoutMs = this.resolvedTimeoutMs();
     let timer: ReturnType<typeof setTimeout> | undefined;
     let onAbort: (() => void) | undefined;
@@ -273,7 +273,16 @@ export class DatabricksConnection
     // erroring after we cancelled) so it is not an unhandled rejection.
     void fetchAll.catch(() => {});
     try {
-      return await Promise.race([fetchAll, guard]);
+      const rows = await Promise.race([fetchAll, guard]);
+      // The operation completed, so closing it is a quick round-trip.
+      await operation.close().catch(() => {});
+      return rows;
+    } catch (e) {
+      // We may be here because the connection is unresponsive (that is why the
+      // query timed out or was aborted); do not block the caller's error on a
+      // close() that could hang on that same connection.
+      void operation.close().catch(() => {});
+      throw e;
     } finally {
       if (timer !== undefined) {
         clearTimeout(timer);
@@ -281,7 +290,6 @@ export class DatabricksConnection
       if (onAbort !== undefined) {
         abortSignal?.removeEventListener('abort', onAbort);
       }
-      await operation.close().catch(() => {});
     }
   }
 
