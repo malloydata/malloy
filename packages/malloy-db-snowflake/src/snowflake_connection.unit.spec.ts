@@ -58,6 +58,14 @@ describe('SnowflakeConnection timeoutMs resolution', () => {
     expect(timeoutArg(batch)).toBe(DEFAULT);
   });
 
+  it('resolves a negative timeoutMs to the default', async () => {
+    // A negative value is truthy, so a bare `||` would let it reach the
+    // executor's setTimeout(cancel) and abort the statement almost immediately.
+    const {conn, batch} = hermeticConnection(-5);
+    await conn.runSQL('SELECT 1');
+    expect(timeoutArg(batch)).toBe(DEFAULT);
+  });
+
   it('returns the executor rows from runSQL', async () => {
     const {conn} = hermeticConnection(300_000);
     const data = await conn.runSQL('SELECT 1');

@@ -199,12 +199,16 @@ export class SnowflakeConnection
     );
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
-    // A configured 0 (or a blank/non-numeric value that parsed to NaN) falls
-    // back to the default rather than meaning "wait forever", matching the
-    // BigQuery connector. `||` is deliberate over `??`: it also catches 0 and
-    // NaN, not just null/undefined.
-    this.timeoutMs = options?.timeoutMs || TIMEOUT_MS;
-    this.schemaSampleTimeoutMs = options?.schemaSampleTimeoutMs || 15_000;
+    // A configured value that is unset, blank, non-numeric, zero, or negative
+    // falls back to the default; only a positive value overrides it, matching
+    // the BigQuery connector. `> 0` guards the negative case a bare `||` would
+    // let through: the executor schedules setTimeout(cancel, timeoutMs), which
+    // with a negative value fires immediately and aborts the statement.
+    const configuredTimeout = Number(options?.timeoutMs);
+    this.timeoutMs = configuredTimeout > 0 ? configuredTimeout : TIMEOUT_MS;
+    const configuredSampleTimeout = Number(options?.schemaSampleTimeoutMs);
+    this.schemaSampleTimeoutMs =
+      configuredSampleTimeout > 0 ? configuredSampleTimeout : 15_000;
     this.schemaSampleRowLimit = options?.schemaSampleRowLimit ?? 1000;
     this.schemaSampleFullScanMaxBytes =
       options?.schemaSampleFullScanMaxBytes ?? 100_000_000;
