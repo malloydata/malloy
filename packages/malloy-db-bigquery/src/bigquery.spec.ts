@@ -433,6 +433,40 @@ describe('numeric value reading', () => {
   });
 });
 
+// getQueryResultsUntilComplete decides "still running" from the apiResponse's
+// jobComplete flag, which the paginator only delivers when autoPaginate is off.
+// The hermetic specs stub that callback, so they cannot notice if the real
+// client stops sending it; this pins the contract against BigQuery itself. It
+// waits for one poll of a running job, not for the query, and scans 0 bytes.
+describe('db:BigQuery getQueryResults contract', () => {
+  it('reports jobComplete false while the job is still running', async () => {
+    const sdk = new BigQuerySDK();
+    const [job] = await sdk.createQueryJob({
+      query: `SELECT COUNT(*) AS n
+              FROM UNNEST(GENERATE_ARRAY(1, 1000000)) a
+              CROSS JOIN UNNEST(GENERATE_ARRAY(1, 300)) b`,
+      useQueryCache: false,
+    });
+    try {
+      const {err, apiResponse} = await new Promise<{
+        err: Error | null;
+        apiResponse?: {jobComplete?: boolean} | null;
+      }>(resolve => {
+        job.getQueryResults(
+          {timeoutMs: 1, autoPaginate: false},
+          (err, _rows, _nextQuery, apiResponse) => resolve({err, apiResponse})
+        );
+      });
+      // An error accompanies the still-running response; what matters is that
+      // the response comes with it, not what the error says.
+      expect(err).toBeTruthy();
+      expect(apiResponse?.jobComplete).toBe(false);
+    } finally {
+      await job.cancel();
+    }
+  });
+});
+
 afterAll(async () => {
   await runtime.connection.close();
 });
