@@ -120,7 +120,17 @@ export interface DatabricksConfiguration {
   defaultCatalog?: string;
   defaultSchema?: string;
   setupSQL?: string;
+  // Client-side query timeout in ms; the operation is cancelled if it runs
+  // longer. Defaults to TIMEOUT_MS (10 min); a non-positive value falls back
+  // to that default.
+  timeoutMs?: number;
 }
+
+/**
+ * Default query timeout, 10 minutes. Bounds how long the client waits for a
+ * statement before cancelling it.
+ */
+const TIMEOUT_MS = 1000 * 60 * 10;
 
 export class DatabricksConnection
   extends BaseConnection
@@ -203,15 +213,84 @@ export class DatabricksConnection
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async executeRaw(sql: string): Promise<any[]> {
+  /**
+   * The effective query timeout in milliseconds. A configured value that is
+   * unset, non-numeric, zero, or negative falls back to TIMEOUT_MS; only a
+   * positive number overrides the default.
+   */
+  private resolvedTimeoutMs(): number {
+    const configured = Number(this.config.timeoutMs);
+    return configured > 0 ? configured : TIMEOUT_MS;
+  }
+
+  private async executeRaw(
+    sql: string,
+    abortSignal?: AbortSignal
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any[]> {
     await this.ensureConnected();
-    const operation = await this.session.executeStatement(sql, {
-      runAsync: true,
+    if (abortSignal?.aborted) {
+      throw new Error('Databricks query was aborted before it started.');
+    }
+    // The SDK always submits asynchronously and polls in fetchAll (the runAsync
+    // option is deprecated and ignored), so no execute options are needed.
+    const operation = await this.session.executeStatement(sql);
+    const timeoutMs = this.resolvedTimeoutMs();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
+
+    // Bound the wait on the client side and cancel the operation (which cancels
+    // the statement server-side too) if it runs past timeoutMs or the caller
+    // aborts. The SDK's server-side queryTimeout is ignored on SQL Warehouses,
+    // so a client-side cancel is the portable mechanism.
+    const guard = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        void operation.cancel().catch(() => {});
+        reject(
+          new Error(
+            `Databricks query did not complete within the configured timeout of ${timeoutMs}ms. ` +
+              "Raise the connection's timeoutMs to allow longer-running queries."
+          )
+        );
+      }, timeoutMs);
+      if (abortSignal) {
+        onAbort = () => {
+          void operation.cancel().catch(() => {});
+          reject(
+            new Error('Databricks query was aborted before it completed.')
+          );
+        };
+        if (abortSignal.aborted) {
+          onAbort();
+        } else {
+          abortSignal.addEventListener('abort', onAbort, {once: true});
+        }
+      }
     });
-    const result = await operation.fetchAll();
-    await operation.close();
-    return result;
+
+    const fetchAll = operation.fetchAll();
+    // Handle a late rejection from the losing side of the race (fetchAll
+    // erroring after we cancelled) so it is not an unhandled rejection.
+    void fetchAll.catch(() => {});
+    try {
+      const rows = await Promise.race([fetchAll, guard]);
+      // The operation completed, so closing it is a quick round-trip.
+      await operation.close().catch(() => {});
+      return rows;
+    } catch (e) {
+      // We may be here because the connection is unresponsive (that is why the
+      // query timed out or was aborted); do not block the caller's error on a
+      // close() that could hang on that same connection.
+      void operation.close().catch(() => {});
+      throw e;
+    } finally {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+      if (onAbort !== undefined) {
+        abortSignal?.removeEventListener('abort', onAbort);
+      }
+    }
   }
 
   async manifestTemporaryTable(sqlCommand: string): Promise<string> {
@@ -228,7 +307,8 @@ export class DatabricksConnection
 
   async runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData> {
     const result = await this.runRawSQL(
-      this.sqlWithQueryMetadata(sql, options?.queryMetadata)
+      this.sqlWithQueryMetadata(sql, options?.queryMetadata),
+      options?.abortSignal
     );
     if (options?.rowLimit && result.rows.length > options.rowLimit) {
       return {
@@ -338,9 +418,12 @@ export class DatabricksConnection
     }
   }
 
-  async runRawSQL(sql: string): Promise<MalloyQueryData> {
+  async runRawSQL(
+    sql: string,
+    abortSignal?: AbortSignal
+  ): Promise<MalloyQueryData> {
     try {
-      const rows = (await this.executeRaw(sql)) as QueryData;
+      const rows = (await this.executeRaw(sql, abortSignal)) as QueryData;
       return {rows, totalRows: rows.length};
     } catch (e) {
       throw new Error(`Databricks SQL error: ${e.message}`);
