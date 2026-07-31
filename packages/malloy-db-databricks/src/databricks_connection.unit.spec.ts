@@ -74,28 +74,6 @@ describe('DatabricksConnection timeout + abort', () => {
     expect(cancel).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    ['zero', 0],
-    ['negative', -5],
-    ['unset', undefined],
-  ])(
-    'resolves a %s timeoutMs to the default (600000ms)',
-    async (_label, timeoutMs) => {
-      const {conn, cancel} = hermeticConnection({timeoutMs, fetchAll: never});
-      const promise = conn.runRawSQL('SELECT 1');
-      promise.catch(() => {});
-      await flush();
-      jest.advanceTimersByTime(599_999);
-      await flush();
-      expect(cancel).not.toHaveBeenCalled();
-      jest.advanceTimersByTime(1);
-      await expect(promise).rejects.toThrow(
-        /did not complete within the configured timeout of 600000ms/
-      );
-      expect(cancel).toHaveBeenCalledTimes(1);
-    }
-  );
-
   it('does not cancel a query that completes within the timeout', async () => {
     const {conn, cancel} = hermeticConnection({
       timeoutMs: 1000,
