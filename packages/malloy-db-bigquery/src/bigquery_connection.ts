@@ -207,9 +207,16 @@ type PollOutcome =
  * string. On the still-running path the client invokes the callback with a
  * synthetic "did not complete before ..." Error *and* an apiResponse whose
  * `jobComplete === false`; we key off that boolean, which does not drift across
- * client releases the way the message can. Resolves promptly if `abortSignal`
- * fires, so a caller's timeout/cancel is not left blocked behind BigQuery's
- * server-side wait.
+ * client releases the way the message can.
+ *
+ * `autoPaginate: false` is forced, not optional: getQueryResults is
+ * paginator-wrapped, and at the default the paginator hands the callback the
+ * error alone, dropping the apiResponse read here — so every still-running poll
+ * would be misread as a fetch error. It does not change what a completed fetch
+ * returns.
+ *
+ * Resolves promptly if `abortSignal` fires, so a caller's timeout/cancel is not
+ * left blocked behind BigQuery's server-side wait.
  */
 function pollQueryResults(
   job: Pick<Job, 'getQueryResults'>,
@@ -232,7 +239,8 @@ function pollQueryResults(
       return;
     }
     abortSignal?.addEventListener('abort', onAbort);
-    job.getQueryResults(options, (err, rows, nextQuery, apiResponse) => {
+    const pollOptions = {...options, autoPaginate: false};
+    job.getQueryResults(pollOptions, (err, rows, nextQuery, apiResponse) => {
       if (apiResponse?.jobComplete === false) {
         settle({kind: 'stillRunning'});
       } else if (err) {
