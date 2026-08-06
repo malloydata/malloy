@@ -14,7 +14,7 @@ export class Boolean extends ExpressionDef {
     super();
   }
 
-  getExpression(): ExprValue {
+  protected computeExpression(): ExprValue {
     return {...TDU.boolT, value: {node: this.value}};
   }
 

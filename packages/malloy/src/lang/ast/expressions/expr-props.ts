@@ -82,7 +82,7 @@ export class ExprProps extends ExpressionDef {
     return expr;
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const partitionBys: PartitionBy[] = [];
     let limit: Limit | undefined;
     const orderBys: FunctionOrdering[] = [];

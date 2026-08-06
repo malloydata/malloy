@@ -18,7 +18,7 @@ export class ExprParens extends ExpressionDef {
     return this.expr.requestExpression(fs);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const subExpr = this.expr.getExpression(fs);
     return {...subExpr, value: {node: '()', e: subExpr.value}};
   }

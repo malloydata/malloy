@@ -21,7 +21,7 @@ function doIsNull(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
 export class ExprNULL extends ExpressionDef {
   elementType = 'NULL';
 
-  getExpression(): ExprValue {
+  protected computeExpression(): ExprValue {
     return literalExprValue({
       dataType: {type: 'null'},
       value: {node: 'null'},
@@ -54,7 +54,7 @@ export class PartialIsNull extends ExpressionDef {
     return undefined;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  protected computeExpression(_fs: FieldSpace): ExprValue {
     return this.loggedErrorExpr(
       'partial-as-value',
       'Partial null check does not have a value'
@@ -76,7 +76,7 @@ export class ExprIsNull extends ExpressionDef {
     this.has({expr});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     return doIsNull(fs, this.op, this.expr);
   }
 }

@@ -103,7 +103,7 @@ export class ExprAlternationTree extends ExpressionDef {
     return undefined;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  protected computeExpression(_fs: FieldSpace): ExprValue {
     return this.loggedErrorExpr(
       'alternation-as-value',
       'Alternation tree has no value'

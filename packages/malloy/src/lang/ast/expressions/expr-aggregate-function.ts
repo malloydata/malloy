@@ -53,7 +53,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   }
   abstract returns(fromExpr: ExprValue): ExprValue;
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     // It is never useful to use output fields in an aggregate expression
     // so we don't even allow them to be referenced at all
     const inputFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;

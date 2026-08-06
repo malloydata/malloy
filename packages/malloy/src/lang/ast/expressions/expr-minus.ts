@@ -17,7 +17,7 @@ export class ExprMinus extends ExpressionDef {
     this.legalChildTypes = [TDU.numberT];
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
     if (TDU.typeIn(expr, this.legalChildTypes)) {
       return {

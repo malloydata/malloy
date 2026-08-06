@@ -118,7 +118,7 @@ export class Pick extends ExpressionDef {
     });
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const pick: CaseExpr = {
       node: 'case',
       kids: {

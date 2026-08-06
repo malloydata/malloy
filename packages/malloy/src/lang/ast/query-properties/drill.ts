@@ -54,7 +54,7 @@ export class DrillField extends ExpressionDef {
     super();
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  protected computeExpression(_fs: FieldSpace): ExprValue {
     return {
       value: this.expr,
       ...this.typeDesc,

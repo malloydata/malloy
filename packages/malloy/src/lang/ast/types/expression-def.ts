@@ -57,9 +57,9 @@ export enum ATNodeType {
 
 /**
  * Root node for any element in an expression. These essentially
- * create a sub-tree in the larger AST. Expression nodes know
- * how to write themselves as SQL (or rather, generate the
- * template for SQL required by the query writer)
+ * create a sub-tree in the larger AST. An ExpressionDef, when
+ * given a FieldSpace, can be evaluated to produce an ExprValue
+ * which is the IR for an Expr along with its type and other metadata.
  */
 export abstract class ExpressionDef extends MalloyElement {
   abstract elementType: string;
@@ -68,12 +68,26 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * Returns the "translation" or template for SQL generation. When asking
+   * Returns the "translation" or Expr tree for SQL generation. When asking
    * for a translation you may pass the types you can accept, allowing
    * the translation code a chance to convert to match your expectations
    * @param space Namespace for looking up field references
+   *
+   * DO NOT OVERRIDE THIS. Expression nodes implement `computeExpression`;
+   * this is the single funnel every evaluation passes through, which is
+   * where evaluation-count instrumentation and (eventually) memoization
+   * live. An override here is invisible to both, and silently restores
+   * the repeated-evaluation cost for that node type.
    */
-  abstract getExpression(fs: FieldSpace): ExprValue;
+  getExpression(fs: FieldSpace): ExprValue {
+    return this.computeExpression(fs);
+  }
+
+  /**
+   * Evaluate this node. Implemented by every expression node; called only
+   * by `getExpression` above, never directly.
+   */
+  protected abstract computeExpression(fs: FieldSpace): ExprValue;
   legalChildTypes = TDU.anyAtomicT;
 
   /**
@@ -210,7 +224,7 @@ export class ExprDuration extends ExpressionDef {
     return super.apply(fs, op, left);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const num = this.n.getExpression(fs);
     return computedErrorExprValue({
       dataType: {type: 'duration'},
