@@ -11,6 +11,7 @@ import type {
   FieldSpace,
   QueryFieldSpace,
 } from '../types/field-space';
+import {currentGeneration} from '../types/field-space';
 import type {LookupResult} from '../types/lookup-result';
 import type {SpaceEntry} from '../types/space-entry';
 import {AbstractParameter} from '../types/space-param';
@@ -100,5 +101,11 @@ export class ParameterSpace implements FieldSpace {
 
   accessProtectionLevel(): AccessModifierLabel {
     return 'private';
+  }
+
+  // Bindings are fixed by the constructor and never change, so this space
+  // contributes no invalidation of its own.
+  generation(): number {
+    return currentGeneration();
   }
 }

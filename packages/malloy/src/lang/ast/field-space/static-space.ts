@@ -28,6 +28,7 @@ import type {
   QueryFieldSpace,
   SourceFieldSpace,
 } from '../types/field-space';
+import {currentGeneration, noteRebinding} from '../types/field-space';
 import {DefinedParameter} from '../types/space-param';
 import {SpaceField} from '../types/space-field';
 import {StructSpaceFieldBase} from './struct-space-field-base';
@@ -102,11 +103,24 @@ export class StaticSpace implements FieldSpace {
     return 'internal';
   }
 
+  /**
+   * StaticSpace itself never rebinds anything after construction, but
+   * DynamicSpace extends it and the three mutators below are the whole
+   * write surface for both -- `memoMap` is private, and every caller
+   * goes through these. That is what makes "every rebinding bumps the
+   * generation" checkable rather than a hope.
+   */
+  generation(): number {
+    return currentGeneration();
+  }
+
   protected dropEntries(): void {
+    noteRebinding();
     this.memoMap = new Map<string, SpaceEntry>();
   }
 
   protected dropEntry(name: string): void {
+    noteRebinding();
     this.map.delete(name);
   }
 
@@ -116,6 +130,7 @@ export class StaticSpace implements FieldSpace {
   }
 
   protected setEntry(name: string, value: SpaceEntry): void {
+    noteRebinding();
     this.map.set(name, value);
   }
 

@@ -9,6 +9,7 @@ import type {BinaryMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace, QueryFieldSpace} from '../types/field-space';
+import {currentGeneration} from '../types/field-space';
 import type {LookupResult} from '../types/lookup-result';
 import type {SpaceEntry} from '../types/space-entry';
 
@@ -52,6 +53,11 @@ export class ConstantFieldSpace implements FieldSpace {
 
   accessProtectionLevel(): AccessModifierLabel {
     return 'private';
+  }
+
+  // Binds nothing at all -- every lookup is an error.
+  generation(): number {
+    return currentGeneration();
   }
 }
 
