@@ -132,13 +132,19 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * This is the operation which makes partial comparison and value trees work
-   * The default implementation merely constructs LEFT OP RIGHT, but specialized
-   * nodes like alternation trees or or partial comparison can control how
-   * the appplication gets generated
+   * This is the operation which makes partial comparison and value trees work.
+   * `this` is the RIGHT operand; the left arrives here as an argument. All of
+   * the magic of malloy expressions eventually flows through here, where an
+   * operator is applied to two values -- depending on the operator and the
+   * value types that may transform the values or even the operator.
+   *
+   * Specialized nodes like alternation trees and partial comparisons override
+   * this to control how the application gets generated. They are the reason
+   * the right operand is in charge: a partial has no bound left operand, and
+   * only learns it here.
    * @param fs The symbol table
    * @param op The operator being applied
-   * @param expr The "other" (besdies 'this') value
+   * @param left The "other" (besides 'this') value
    * @return The translated expression
    */
   apply(
@@ -147,7 +153,54 @@ export abstract class ExpressionDef extends MalloyElement {
     left: ExpressionDef,
     _warnOnComplexTree = false
   ): ExprValue {
-    return applyBinary(fs, left, op, this);
+    if (isEquality(op)) {
+      return equality(fs, left, op, this);
+    }
+    if (isComparison(op)) {
+      return compare(fs, left, op, this);
+    }
+    if (op === '+' || op === '-') {
+      return delta(fs, left, op, this);
+    }
+    if (op === '*') {
+      return numeric(fs, left, op, this);
+    }
+    if (op === '/' || op === '%') {
+      const num = left.getExpression(fs);
+      const denom = this.getExpression(fs);
+      const noGo = unsupportError(left, num, this, denom);
+      if (noGo) return noGo;
+
+      const err = errorCascade('number', num, denom);
+      if (err) return err;
+
+      if (num.type !== 'number') {
+        left.logError(
+          'arithmetic-operation-type-mismatch',
+          'Numerator must be a number'
+        );
+      } else if (denom.type !== 'number') {
+        this.logError(
+          'arithmetic-operation-type-mismatch',
+          'Denominator must be a number'
+        );
+      } else {
+        const divmod: Expr = {
+          node: op,
+          kids: {left: num.value, right: denom.value},
+        };
+        return computedExprValue({
+          dataType: mergeNumberTypes(num, denom, op),
+          value: divmod,
+          from: [num, denom],
+        });
+      }
+      return errorFor('divide type mismatch');
+    }
+    return left.loggedErrorExpr(
+      'unexpected-binary-operator',
+      `Cannot use ${op} operator here`
+    );
   }
 
   canSupportPartitionBy() {
@@ -545,73 +598,6 @@ function delta(
     return duration.apply(fs, op, left);
   }
   return numeric(fs, left, op, right);
-}
-
-/**
- * All of the magic of malloy expressions eventually flows to here,
- * where an operator is applied to two values. Depending on the
- * operator and value types this may involve transformations of
- * the values or even the operator.
- * @param fs FieldSpace for the symbols
- * @param left Left value
- * @param op The operator
- * @param right Right Value
- * @return ExprValue of the expression
- */
-export function applyBinary(
-  fs: FieldSpace,
-  left: ExpressionDef,
-  op: BinaryMalloyOperator,
-  right: ExpressionDef
-): ExprValue {
-  if (isEquality(op)) {
-    return equality(fs, left, op, right);
-  }
-  if (isComparison(op)) {
-    return compare(fs, left, op, right);
-  }
-  if (op === '+' || op === '-') {
-    return delta(fs, left, op, right);
-  }
-  if (op === '*') {
-    return numeric(fs, left, op, right);
-  }
-  if (op === '/' || op === '%') {
-    const num = left.getExpression(fs);
-    const denom = right.getExpression(fs);
-    const noGo = unsupportError(left, num, right, denom);
-    if (noGo) return noGo;
-
-    const err = errorCascade('number', num, denom);
-    if (err) return err;
-
-    if (num.type !== 'number') {
-      left.logError(
-        'arithmetic-operation-type-mismatch',
-        'Numerator must be a number'
-      );
-    } else if (denom.type !== 'number') {
-      right.logError(
-        'arithmetic-operation-type-mismatch',
-        'Denominator must be a number'
-      );
-    } else {
-      const divmod: Expr = {
-        node: op,
-        kids: {left: num.value, right: denom.value},
-      };
-      return computedExprValue({
-        dataType: mergeNumberTypes(num, denom, op),
-        value: divmod,
-        from: [num, denom],
-      });
-    }
-    return errorFor('divide type mismatch');
-  }
-  return left.loggedErrorExpr(
-    'unexpected-binary-operator',
-    `Cannot use ${op} operator here`
-  );
 }
 
 function errorCascade(

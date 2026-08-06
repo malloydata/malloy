@@ -16,9 +16,9 @@ this.right.apply(fs, this.op, this.left)
 ```
 
 The **right** operand controls how the expression is assembled. The default
-`ExpressionDef.apply` just calls `applyBinary(fs, left, op, this)`, which evaluates both
-sides and returns a normal binary node — so ordinary values work transparently without
-knowing anything about `apply`.
+`ExpressionDef.apply` dispatches on the operator, evaluates both sides and returns a
+normal binary node — so ordinary values work transparently without knowing anything
+about `apply`.
 
 Nodes that behave as **partials** override `apply` and substitute their own structure for
 the operator/operands that come in. The critical invariant: **a partial node has no bound
@@ -73,10 +73,9 @@ produce the right tree for `x ? in [1, 2, 3]`.
 ### 2. No partial-in AST node
 
 `ExprLegacyIn` and `ExprInGiven` both bake the LHS into the constructor as `this.expr`.
-Neither overrides `apply`. When `apply` falls through to the base implementation it calls
-`applyBinary(fs, left, op, this)`, which calls `this.getExpression(fs)` — which uses
-`this.expr`, the original bound LHS, completely ignoring the `left` that arrived through
-`apply`.
+Neither overrides `apply`. The base implementation calls `this.getExpression(fs)` — which
+uses `this.expr`, the original bound LHS, completely ignoring the `left` that arrived
+through `apply`.
 
 To support partial `in` you would need a node class (`ExprPartialIn` /
 `ExprPartialInGiven`) that:

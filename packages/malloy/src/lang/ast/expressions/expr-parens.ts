@@ -5,7 +5,7 @@
 
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
-import {applyBinary, ATNodeType, ExpressionDef} from '../types/expression-def';
+import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 
 export class ExprParens extends ExpressionDef {
@@ -32,7 +32,7 @@ export class ExprParens extends ExpressionDef {
     if (this.expr.atNodeType() === ATNodeType.Or) {
       return this.expr.apply(fs, op, left, doWarn);
     }
-    return applyBinary(fs, left, op, this);
+    return super.apply(fs, op, left, doWarn);
   }
 
   atNodeType(): ATNodeType {
