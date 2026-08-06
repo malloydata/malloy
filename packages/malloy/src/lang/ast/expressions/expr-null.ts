@@ -5,17 +5,22 @@
 
 import type {BinaryMalloyOperator, FieldSpace} from '..';
 import type {ExprValue} from '../types/expr-value';
-import {literalExprValue} from '../types/expr-value';
+import {computedExprValue, literalExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
 
 function doIsNull(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  // Build a new value rather than retyping the operand's in place: what
+  // getExpression hands back is shared, and the operand is usually asked for
+  // its value again after this.
   const nullCmp = expr.getExpression(fs);
-  nullCmp.type = 'boolean';
-  nullCmp.value = {
-    node: op === '=' ? 'is-null' : 'is-not-null',
-    e: nullCmp.value,
-  };
-  return nullCmp;
+  return computedExprValue({
+    dataType: {type: 'boolean'},
+    value: {
+      node: op === '=' ? 'is-null' : 'is-not-null',
+      e: nullCmp.value,
+    },
+    from: [nullCmp],
+  });
 }
 
 export class ExprNULL extends ExpressionDef {
