@@ -27,6 +27,13 @@ import type {SpaceEntry} from './space-entry';
  * per-space generation has to forward through every one of those paths, and a
  * path we missed is a stale cache we never notice. We think this simple
  * approach will be good enough for a long time, possibly forever.
+ *
+ * This does not cover a computation which reads something other than a field
+ * space. `GivenReference` ignores the FieldSpace it is handed and reads the
+ * Document namespace, which never moves this counter. Nothing is known to
+ * depend on that, since document definitions happen between statements, but
+ * do not assume a cache is covered here just because it consults a field
+ * space as well.
  */
 let bindingGeneration = 0;
 

@@ -16,7 +16,6 @@ import {
   hasExpression,
   isAtomic,
   isJoined,
-  setFieldUsage,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 
@@ -174,15 +173,22 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       if (structPath && structPath.length > 0) {
         f.structPath = structPath;
       }
+      // `returns` is identity for sum and a shallow copy for avg, so
+      // returnExpr shares the operand's refSummary -- build a new one rather
+      // than writing into it.
       const returnExpr = this.returns(exprVal);
-      if (!this.isSymmetricFunction()) {
-        setFieldUsage(returnExpr, [
-          ...fieldUsageFrom(returnExpr.refSummary),
-          {path: structPath || [], uniqueKeyRequirement: {isCount: false}},
-        ]);
-      }
+      const refSummary = this.isSymmetricFunction()
+        ? returnExpr.refSummary
+        : {
+            ...returnExpr.refSummary,
+            fieldUsage: [
+              ...fieldUsageFrom(returnExpr.refSummary),
+              {path: structPath || [], uniqueKeyRequirement: {isCount: false}},
+            ],
+          };
       return {
         ...returnExpr,
+        refSummary,
         expressionType: 'aggregate',
         value: f,
         evalSpace: 'output',

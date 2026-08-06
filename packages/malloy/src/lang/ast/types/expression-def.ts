@@ -47,6 +47,31 @@ import {
 
 class TypeMismatch extends Error {}
 
+/**
+ * Mark a value as belonging to everyone. Writing into a memoized value writes
+ * into every other holder's copy and into whatever the IR already stored;
+ * freezing turns that from a silent miscompile into a TypeError naming the
+ * line which did it. Own fields only -- walking every Expr on every
+ * evaluation would cost more than the memo saves.
+ */
+function shareable(v: ExprValue): ExprValue {
+  Object.freeze(v);
+  for (const share of [
+    v.value,
+    v.morphic,
+    v.refSummary,
+    v.refSummary?.fieldUsage,
+    v.refSummary?.givenUsage,
+    v.requiresGroupBy,
+    v.ungroupings,
+  ]) {
+    if (share !== undefined) {
+      Object.freeze(share);
+    }
+  }
+  return v;
+}
+
 /** Node types in an alternation tree */
 export enum ATNodeType {
   And,
@@ -73,58 +98,73 @@ export abstract class ExpressionDef extends MalloyElement {
    * the translation code a chance to convert to match your expectations
    * @param space Namespace for looking up field references
    *
-   * DO NOT OVERRIDE THIS. Expression nodes implement `computeExpression`;
-   * this is the single funnel every evaluation passes through, which is
-   * where evaluation-count instrumentation and (eventually) memoization
-   * live. An override here is invisible to both, and silently restores
-   * the repeated-evaluation cost for that node type.
+   * THE RETURNED ExprValue IS SHARED -- TREAT IT AS IMMUTABLE. Asking twice
+   * yields the same object, so to derive a value from one, build a new one:
+   * `{...operand, type: 'boolean'}` or `computedExprValue({…, from: [operand]})`.
+   *
+   * DO NOT OVERRIDE THIS. Nodes implement `computeExpression`; an override
+   * here bypasses the memo, which for `+`/`-` chains is the difference
+   * between linear and exponential compile time.
    */
   getExpression(fs: FieldSpace): ExprValue {
-    const generation = fs.generation();
-    if (this.memoFs === fs && this.memoGen === generation) {
-      if (this.memoValue === undefined) {
-        throw this.internalError(
-          `'${this.elementType}' was asked for its value while computing it`
-        );
-      }
+    const initialGeneration = fs.generation();
+    if (
+      this.memoValue !== undefined &&
+      this.memoFs === fs &&
+      this.memoGen === initialGeneration
+    ) {
       return this.memoValue;
     }
+
+    // If we get here and memoFs is set and memoGen is not set, then somewhere
+    // inside this expression is a recursive call asking this node for the
+    // value it is in the middle of computing. There is nothing to return and
+    // computing one would recurse again, so throw. An abandoned computation
+    // does not look like this -- see the finally below.
+
+    if (this.memoFs !== undefined && this.memoGen === undefined) {
+      throw this.internalError(
+        `ExpressionDef.getExpression memoization failure on ${this.elementType}`
+      );
+    }
+
     this.memoFs = fs;
-    this.memoGen = generation;
-    this.memoValue = undefined;
+    this.memoGen = undefined;
     try {
       const value = this.computeExpression(fs);
-      this.memoValue = value;
+      if (initialGeneration === fs.generation()) {
+        this.memoGen = initialGeneration;
+        this.memoValue = shareable(value);
+      }
       return value;
-    } catch (failed) {
-      // Evaluation can throw (a bad match operator does), and the caller may
-      // recover. Clear the stamp so a retry recomputes instead of mistaking
-      // the empty slot for an evaluation still in progress.
-      this.memoFs = undefined;
-      throw failed;
+    } finally {
+      if (this.memoGen === undefined) {
+        // Threw, or a name was rebound while we ran. Leave no stamp: a caller
+        // which recovers must get a fresh computation, not our remains.
+        this.memoFs = undefined;
+      }
     }
   }
 
   /**
-   * The last value this node computed, and the field space and generation it
-   * was computed against. A hit requires both to match: nodes are evaluated
-   * under more than one field space (a ConstantExpression evaluates its child
-   * against a ConstantFieldSpace no matter what it was handed), and a field
-   * space can rebind a name under us.
+   * The last value this node computed, and what it was computed against.
+   * Three states, distinguished by memoGen:
    *
-   * One slot, not a map, because a node almost always sees a single field
-   * space -- in a survey of the duckdb test suite, 10167 of 10343 nodes saw
-   * exactly one. A node which alternates between two spaces simply misses and
-   * recomputes, which costs time and never correctness.
+   *   memoFs undefined              -- nothing computed, or abandoned
+   *   memoFs set, memoGen undefined -- computing right now, and only that,
+   *                                    since abandoning clears memoFs
+   *   memoFs set, memoGen set       -- memoValue is that computation's result
    *
-   * An occupied stamp with no value means "computing right now", which no
-   * expression should ever see: that is a node asking itself for its own
-   * value, which recursed forever before there was a memo here. Nothing in
-   * the test suite does it -- 0 occurrences across 3986 evaluations -- so
-   * this reports rather than hangs if something ever starts.
+   * Both halves of the stamp are needed: a node can be evaluated under more
+   * than one field space -- ConstantExpression evaluates its child against a
+   * ConstantFieldSpace whatever it was handed -- and a field space can rebind
+   * a name under us.
+   *
+   * One slot, not a map. A node which alternates between two field spaces
+   * simply misses and recomputes, which costs time and never correctness.
    */
   private memoFs?: FieldSpace;
-  private memoGen = -1;
+  private memoGen?: number;
   private memoValue?: ExprValue;
 
   /**
@@ -210,36 +250,7 @@ export abstract class ExpressionDef extends MalloyElement {
       return numeric(fs, left, op, this);
     }
     if (op === '/' || op === '%') {
-      const num = left.getExpression(fs);
-      const denom = this.getExpression(fs);
-      const noGo = unsupportError(left, num, this, denom);
-      if (noGo) return noGo;
-
-      const err = errorCascade('number', num, denom);
-      if (err) return err;
-
-      if (num.type !== 'number') {
-        left.logError(
-          'arithmetic-operation-type-mismatch',
-          'Numerator must be a number'
-        );
-      } else if (denom.type !== 'number') {
-        this.logError(
-          'arithmetic-operation-type-mismatch',
-          'Denominator must be a number'
-        );
-      } else {
-        const divmod: Expr = {
-          node: op,
-          kids: {left: num.value, right: denom.value},
-        };
-        return computedExprValue({
-          dataType: mergeNumberTypes(num, denom, op),
-          value: divmod,
-          from: [num, denom],
-        });
-      }
-      return errorFor('divide type mismatch');
+      return divmod(fs, left, op, this);
     }
     return left.loggedErrorExpr(
       'unexpected-binary-operator',
@@ -605,6 +616,40 @@ function numeric(
     });
   }
   return errorFor('numbers required');
+}
+
+function divmod(
+  fs: FieldSpace,
+  left: ExpressionDef,
+  op: '/' | '%',
+  right: ExpressionDef
+): ExprValue {
+  const num = left.getExpression(fs);
+  const denom = right.getExpression(fs);
+  const noGo = unsupportError(left, num, right, denom);
+  if (noGo) return noGo;
+
+  const err = errorCascade('number', num, denom);
+  if (err) return err;
+
+  if (num.type !== 'number') {
+    left.logError(
+      'arithmetic-operation-type-mismatch',
+      'Numerator must be a number'
+    );
+  } else if (denom.type !== 'number') {
+    right.logError(
+      'arithmetic-operation-type-mismatch',
+      'Denominator must be a number'
+    );
+  } else {
+    return computedExprValue({
+      dataType: mergeNumberTypes(num, denom, op),
+      value: {node: op, kids: {left: num.value, right: denom.value}},
+      from: [num, denom],
+    });
+  }
+  return errorFor('divide type mismatch');
 }
 
 function delta(

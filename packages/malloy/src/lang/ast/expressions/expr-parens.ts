@@ -30,9 +30,12 @@ export class ExprParens extends ExpressionDef {
     doWarn: boolean
   ): ExprValue {
     if (this.expr.atNodeType() === ATNodeType.Or) {
+      // Parens are invisible to `?`/`=`, so hand the tree the operator and
+      // doWarn, which decides whether an un-collapsible `|` list is worth a
+      // warning. The base ignores doWarn, which is why it is not passed on.
       return this.expr.apply(fs, op, left, doWarn);
     }
-    return super.apply(fs, op, left, doWarn);
+    return super.apply(fs, op, left);
   }
 
   atNodeType(): ATNodeType {
