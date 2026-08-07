@@ -191,13 +191,14 @@ says which. `persistent: true` is a table to build. `persistent: false` is a
 route — a source that materializes nothing itself but is how the walk reached
 one that does.
 
-**The two views.** Both callers read this one graph.
+**The two views**, selected by the `keepRoutes` parameter.
 
-`findPersistentDependencies()` is the builder's view: the same function with
-the routes **contracted** out. Contraction, not filtering — dropping a node
-re-parents its dependencies onto everything that pointed at it, so an edge
-survives wherever a route exists. `C (persist) → B (not persist) → A (persist)`
-yields `[{sourceID: A, dependsOn: []}]` as a dependency of C.
+`findPersistentDependencies()` is the builder's view — the same walk with
+`keepRoutes: false`. A route then hands its dependencies straight to whoever
+pointed at it, so an edge survives wherever a route exists.
+`C (persist) → B (not persist) → A (persist)` gives C a direct dependency on A.
+(With routes off, the "did any child survive" clause never fires: a route
+returns its children rather than itself, so there is nothing left to decide.)
 
 `import-statement.ts` takes the whole graph, because the routes are precisely
 what the importing model must be able to re-traverse. A `#@ -persist` wrapper
@@ -211,8 +212,7 @@ dependent that reads it. Returning nothing on a second visit — what this did
 until the build-schedule work — left the second dependent claiming no
 dependencies, which a dependencies-first flatten happened to survive (the
 dependency got built on the first dependent's account) and a schedule of
-independent batches does not. The contraction memoizes on node identity for the
-same reason.
+independent batches does not.
 
 `minimalBuildGraph(deps)` takes the flat forest collected from every model
 object and returns the **roots** — sourceIDs that nothing else depends on —

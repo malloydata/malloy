@@ -91,17 +91,21 @@ function isPersistent(
  * below. For `a(persist) → b → c(persist) → d`, d has nothing beneath it and
  * is dropped, c is kept for being persistent, b is kept for leading to c.
  *
- * Two callers want different things, and both are views of this one graph:
+ * `keepRoutes` selects between the two things callers want:
  *
- * - A **builder** wants only the sources that are tables, with an edge
- *   wherever a route runs between two of them. That is
- *   {@link findPersistentDependencies}, which contracts the non-persistent
- *   nodes out.
- * - An **import** wants every sourceID here, because those are exactly the
- *   ones that must resolve for this walk to be repeatable in the importing
- *   model. Copying only the persistent ones is how an imported source loses
- *   its dependencies — the walk reaches them *through* nodes that are not
+ * - **`true`** — the whole graph. An **import** needs this: every sourceID
+ *   here must resolve for the walk to be repeatable in the importing model,
+ *   and copying only the persistent ones is how an imported source loses its
+ *   dependencies, because the walk reaches them *through* nodes that are not
  *   themselves tables.
+ * - **`false`** — tables only, which is what a **builder** wants. A route
+ *   hands its dependencies straight to whoever pointed at it, so an edge
+ *   survives wherever a route exists. That is
+ *   {@link findPersistentDependencies}.
+ *
+ * With `keepRoutes: false` the "did any child survive" clause never fires —
+ * a route returns its children rather than itself, so nothing is left to
+ * decide.
  *
  * ## The 6 Dependency Paths in the IR
  *
@@ -120,12 +124,15 @@ function isPersistent(
  *
  * @param root The source or query to walk
  * @param modelDef The model definition containing the source registry
- * @returns The graph of persistent sources and the routes that reach them
+ * @param tagParseLog Collects errors from parsing `#@` annotations
+ * @param keepRoutes Keep the non-persistent sources the walk passed through
+ * @returns The graph of persistent sources, with or without their routes
  */
 export function walkPersistentDependencies(
   root: SourceDef | Query,
   modelDef: ModelDef,
-  tagParseLog: LogMessage[] = []
+  tagParseLog: LogMessage[] = [],
+  keepRoutes = true
 ): BuildNode[] {
   // Memoized, not merely visited: a source reached a second time returns the
   // same nodes it returned the first time. Returning [] instead — which this
@@ -135,7 +142,7 @@ export function walkPersistentDependencies(
   // the other reader's account anyway; a schedule of independent batches does
   // not.
   const done = new Map<string, BuildNode[]>();
-  const onStack = new Set<string>();
+  const openIDs = new Set<string>();
 
   function processSourceID(sourceID: string): BuildNode[] {
     const memo = done.get(sourceID);
@@ -144,23 +151,32 @@ export function walkPersistentDependencies(
     }
     // A source cannot reach itself, but a malformed registry could; stop rather
     // than recur forever.
-    if (onStack.has(sourceID)) {
+    if (openIDs.has(sourceID)) {
       return [];
     }
-    onStack.add(sourceID);
+    openIDs.add(sourceID);
 
     const sourceDef = resolveSourceID(modelDef, sourceID);
     let result: BuildNode[] = [];
     if (sourceDef) {
       const dependsOn = processSourceDef(sourceDef);
       const persistent = isPersistent(sourceID, modelDef, tagParseLog);
-      // Kept for being a table, or for being the road to one.
-      if (persistent || dependsOn.length > 0) {
+      if (persistent) {
         result = [{sourceID, persistent, dependsOn}];
+      } else if (keepRoutes) {
+        // A route is worth keeping only if it leads somewhere. A child
+        // survived under this same rule, so one surviving child is the proof
+        // that something persistent lies below.
+        result =
+          dependsOn.length > 0 ? [{sourceID, persistent, dependsOn}] : [];
+      } else {
+        // No routes: hand my dependencies to whoever pointed at me, so an edge
+        // survives wherever a route exists.
+        result = dependsOn;
       }
     }
 
-    onStack.delete(sourceID);
+    openIDs.delete(sourceID);
     done.set(sourceID, result);
     return result;
   }
@@ -277,60 +293,22 @@ export function walkPersistentDependencies(
 }
 
 /**
- * The persistent-only view of a walk: drop every node that is not a table, and
- * hand its children to whoever pointed at it.
- *
- * This is a contraction, not a filter. Removing a node re-parents its
- * dependencies onto everything that depended on it, so an edge survives
- * wherever a route exists — which is what a builder means by "depends on."
- *
- * @param nodes A graph from {@link walkPersistentDependencies}
- * @returns The same graph over persistent nodes only
- */
-function contractToPersistent(nodes: BuildNode[]): BuildNode[] {
-  // Keyed on node identity, not sourceID: the walk shares nodes, and each one
-  // contracts to the same answer however many dependents reach it. Sharing is
-  // preserved on the way out, so the result is a DAG too.
-  const done = new Map<BuildNode, BuildNode[]>();
-
-  function visit(node: BuildNode): BuildNode[] {
-    const memo = done.get(node);
-    if (memo !== undefined) {
-      return memo;
-    }
-    // The walk cannot emit a cycle, but reading the memo before writing it
-    // would spin forever if it ever did.
-    done.set(node, []);
-    const dependsOn = node.dependsOn.flatMap(visit);
-    const result = node.persistent
-      ? [{sourceID: node.sourceID, persistent: true, dependsOn}]
-      : dependsOn;
-    done.set(node, result);
-    return result;
-  }
-
-  return nodes.flatMap(visit);
-}
-
-/**
  * The persistent sources a source or query depends on, as a DAG.
  *
  * A source that is not itself persistent never appears; its persistent
  * dependencies become direct dependencies of whoever referenced it. So
  * `c (persist) → b → a (persist)` yields `[{sourceID: a, dependsOn: []}]`.
  *
- * This is {@link walkPersistentDependencies} with the routes contracted out.
- * A caller that needs to know which sources were *traversed* — an import
- * deciding what to copy — wants the walk itself, not this.
+ * This is {@link walkPersistentDependencies} with the routes left out. A caller
+ * that needs to know which sources were *traversed* — an import deciding what
+ * to copy — wants the routes, so it calls the walk directly.
  */
 export function findPersistentDependencies(
   root: SourceDef | Query,
   modelDef: ModelDef,
   tagParseLog: LogMessage[] = []
 ): BuildNode[] {
-  return contractToPersistent(
-    walkPersistentDependencies(root, modelDef, tagParseLog)
-  );
+  return walkPersistentDependencies(root, modelDef, tagParseLog, false);
 }
 
 /**
