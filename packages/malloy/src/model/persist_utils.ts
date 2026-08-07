@@ -75,15 +75,33 @@ function isPersistent(
 }
 
 /**
- * Find persistent dependencies for a source or query, returning a nested DAG.
+ * Walk everything a source or query references, and return the graph of the
+ * sources that matter to persistence.
  *
- * Walks the full dependency tree but only includes persistent sources in the
- * result. Non-persistent sources are "flattened out" - their persistent
- * dependencies bubble up to become direct dependencies of the caller.
+ * A source is in the graph if it is persistent — something to build — or if it
+ * is the *route* to something persistent. Everything else is dropped; a source
+ * with nothing persistent beneath it is of no interest to anybody.
  *
- * Example: source_c (persist) -> source_b (NOT persist) -> source_a (persist)
- * Returns: [{sourceID: source_a, dependsOn: []}]
- * (source_b is flattened out, source_a becomes direct dependency)
+ * One rule decides both halves, applied on the way back up:
+ *
+ *     keep me if I am persistent, or if any child survived
+ *
+ * The second clause needs no lookahead. A child only survived under this same
+ * rule, so a surviving child *is* the proof that something persistent lies
+ * below. For `a(persist) → b → c(persist) → d`, d has nothing beneath it and
+ * is dropped, c is kept for being persistent, b is kept for leading to c.
+ *
+ * Two callers want different things, and both are views of this one graph:
+ *
+ * - A **builder** wants only the sources that are tables, with an edge
+ *   wherever a route runs between two of them. That is
+ *   {@link findPersistentDependencies}, which contracts the non-persistent
+ *   nodes out.
+ * - An **import** wants every sourceID here, because those are exactly the
+ *   ones that must resolve for this walk to be repeatable in the importing
+ *   model. Copying only the persistent ones is how an imported source loses
+ *   its dependencies — the walk reaches them *through* nodes that are not
+ *   themselves tables.
  *
  * ## The 6 Dependency Paths in the IR
  *
@@ -100,11 +118,11 @@ function isPersistent(
  * Note: CompositeSourceDef.sources[] is ignored - composite sources and
  * persistence may be incompatible features.
  *
- * @param root The source or query to find dependencies for
+ * @param root The source or query to walk
  * @param modelDef The model definition containing the source registry
- * @returns Array of BuildNode representing the persistent dependency DAG
+ * @returns The graph of persistent sources and the routes that reach them
  */
-export function findPersistentDependencies(
+export function walkPersistentDependencies(
   root: SourceDef | Query,
   modelDef: ModelDef,
   tagParseLog: LogMessage[] = []
@@ -114,7 +132,8 @@ export function findPersistentDependencies(
   // did — dropped the second dependent's edge, so in a diamond only one of the
   // two readers recorded the shared dependency and the other claimed to have
   // none. A depth-first flatten hid that, because the dependency got built on
-  // the other reader's account anyway; a leveled schedule does not.
+  // the other reader's account anyway; a schedule of independent batches does
+  // not.
   const done = new Map<string, BuildNode[]>();
   const onStack = new Set<string>();
 
@@ -133,10 +152,12 @@ export function findPersistentDependencies(
     const sourceDef = resolveSourceID(modelDef, sourceID);
     let result: BuildNode[] = [];
     if (sourceDef) {
-      const childDeps = processSourceDef(sourceDef);
-      result = isPersistent(sourceID, modelDef, tagParseLog)
-        ? [{sourceID, dependsOn: childDeps}]
-        : childDeps;
+      const dependsOn = processSourceDef(sourceDef);
+      const persistent = isPersistent(sourceID, modelDef, tagParseLog);
+      // Kept for being a table, or for being the road to one.
+      if (persistent || dependsOn.length > 0) {
+        result = [{sourceID, persistent, dependsOn}];
+      }
     }
 
     onStack.delete(sourceID);
@@ -253,6 +274,63 @@ export function findPersistentDependencies(
     }
     return processSourceDef(root);
   }
+}
+
+/**
+ * The persistent-only view of a walk: drop every node that is not a table, and
+ * hand its children to whoever pointed at it.
+ *
+ * This is a contraction, not a filter. Removing a node re-parents its
+ * dependencies onto everything that depended on it, so an edge survives
+ * wherever a route exists — which is what a builder means by "depends on."
+ *
+ * @param nodes A graph from {@link walkPersistentDependencies}
+ * @returns The same graph over persistent nodes only
+ */
+function contractToPersistent(nodes: BuildNode[]): BuildNode[] {
+  // Keyed on node identity, not sourceID: the walk shares nodes, and each one
+  // contracts to the same answer however many dependents reach it. Sharing is
+  // preserved on the way out, so the result is a DAG too.
+  const done = new Map<BuildNode, BuildNode[]>();
+
+  function visit(node: BuildNode): BuildNode[] {
+    const memo = done.get(node);
+    if (memo !== undefined) {
+      return memo;
+    }
+    // The walk cannot emit a cycle, but reading the memo before writing it
+    // would spin forever if it ever did.
+    done.set(node, []);
+    const dependsOn = node.dependsOn.flatMap(visit);
+    const result = node.persistent
+      ? [{sourceID: node.sourceID, persistent: true, dependsOn}]
+      : dependsOn;
+    done.set(node, result);
+    return result;
+  }
+
+  return nodes.flatMap(visit);
+}
+
+/**
+ * The persistent sources a source or query depends on, as a DAG.
+ *
+ * A source that is not itself persistent never appears; its persistent
+ * dependencies become direct dependencies of whoever referenced it. So
+ * `c (persist) → b → a (persist)` yields `[{sourceID: a, dependsOn: []}]`.
+ *
+ * This is {@link walkPersistentDependencies} with the routes contracted out.
+ * A caller that needs to know which sources were *traversed* — an import
+ * deciding what to copy — wants the walk itself, not this.
+ */
+export function findPersistentDependencies(
+  root: SourceDef | Query,
+  modelDef: ModelDef,
+  tagParseLog: LogMessage[] = []
+): BuildNode[] {
+  return contractToPersistent(
+    walkPersistentDependencies(root, modelDef, tagParseLog)
+  );
 }
 
 /**

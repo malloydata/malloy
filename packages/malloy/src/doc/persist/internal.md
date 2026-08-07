@@ -139,12 +139,13 @@ every named source with a `sourceID` gets a `SourceRegistryReference`.
 **Import population** happens in
 [`lang/ast/statements/import-statement.ts`](../../lang/ast/statements/import-statement.ts).
 For each persistable source being imported, it runs
-`findPersistentDependencies(source, importedModel)` — the walk happens *in the
-imported model*, where the definitions still exist — and collects the sourceIDs
-into `neededSourceIDs`. Each one not already registered locally is looked up in
-the imported model's registry and, if it is a reference there, resolved to the
-actual `SourceDef` before being registered here (the importer cannot resolve it
-by name; it is not in the importer's namespace).
+`walkPersistentDependencies(source, importedModel)` — the walk happens *in the
+imported model*, where the definitions still exist — and collects **every**
+sourceID in the resulting graph into `neededSourceIDs`, routes included. Each
+one not already registered locally is looked up in the imported model's
+registry and, if it is a reference there, resolved to the actual `SourceDef`
+before being registered here (the importer cannot resolve it by name; it is not
+in the importer's namespace).
 
 The result: a model's registry contains everything needed to build its full
 dependency graph. A grandchild defines persistent `source_a`, a child extends it
@@ -160,10 +161,10 @@ dependency needs — it arrived through an import and never went through
 
 ## Dependency walking
 
-`findPersistentDependencies(root, modelDef, tagParseLog)` in
+`walkPersistentDependencies(root, modelDef, tagParseLog)` in
 [`model/persist_utils.ts`](../../model/persist_utils.ts) walks the IR from a
-source or query and returns a `BuildNode[]` DAG of the persistent sources
-reachable from it.
+source or query and returns the `BuildNode` graph of the sources that matter to
+persistence.
 
 The six ways a `SourceDef` can be referenced — this list is the walk:
 
@@ -176,22 +177,46 @@ The six ways a `SourceDef` can be referenced — this list is the walk:
 
 `CompositeSourceDef.sources[]` is deliberately not walked.
 
-Non-persistent sources are **transparent**: the walk goes through them and their
-persistent dependencies bubble up to the caller. `C (persist) → B (not persist)
-→ A (persist)` yields `[{sourceID: A, dependsOn: []}]` — B is flattened out,
-and A becomes a direct dependency of C.
+**What survives the walk.** One rule, applied on the way back up:
+
+> keep me if I am persistent, or if any child survived
+
+The second clause needs no lookahead. A child only survived under this same
+rule, so a surviving child *is* the proof that something persistent lies below.
+For `a (persist) → b → c (persist) → d`: `d` has nothing beneath it and is
+dropped, `c` is kept for being persistent, `b` is kept for leading to `c`.
+
+So a node is in the graph for one of two reasons, and `BuildNode.persistent`
+says which. `persistent: true` is a table to build. `persistent: false` is a
+route — a source that materializes nothing itself but is how the walk reached
+one that does.
+
+**The two views.** Both callers read this one graph.
+
+`findPersistentDependencies()` is the builder's view: the same function with
+the routes **contracted** out. Contraction, not filtering — dropping a node
+re-parents its dependencies onto everything that pointed at it, so an edge
+survives wherever a route exists. `C (persist) → B (not persist) → A (persist)`
+yields `[{sourceID: A, dependsOn: []}]` as a dependency of C.
+
+`import-statement.ts` takes the whole graph, because the routes are precisely
+what the importing model must be able to re-traverse. A `#@ -persist` wrapper
+that adds a join is not a table, but it can be the only way to reach the tables
+beneath it; copy just the persistent nodes and an imported source silently
+arrives with no dependencies at all.
+
+**Memoized, not merely visited**: a source reached a second time returns the
+nodes it returned the first time, so the same node object appears under every
+dependent that reads it. Returning nothing on a second visit — what this did
+until the build-schedule work — left the second dependent claiming no
+dependencies, which a dependencies-first flatten happened to survive (the
+dependency got built on the first dependent's account) and a schedule of
+independent batches does not. The contraction memoizes on node identity for the
+same reason.
 
 `minimalBuildGraph(deps)` takes the flat forest collected from every model
 object and returns the **roots** — sourceIDs that nothing else depends on —
 with their original nested structure intact.
-
-The walk is **memoized, not merely visited**: a source reached a second time
-returns the nodes it returned the first time, so the same node object appears
-under every dependent that reads it. Returning nothing on a second visit — what
-this did until the leveling work — left the second dependent claiming no
-dependencies at all, which a dependencies-first flatten happened to survive
-(the dependency got built on the first dependent's account) and a leveled
-schedule does not.
 
 ## The build plan
 
@@ -363,7 +388,7 @@ or caching, would remove it.
 - [`api/foundation/runtime.ts`](../../api/foundation/runtime.ts) — manifest resolution
 - [`api/foundation/types.ts`](../../api/foundation/types.ts) — `BuildNode`, `BuildGraph`, `CompileQueryOptions`, `EMPTY_BUILD_MANIFEST`
 - [`model/malloy_types.ts`](../../model/malloy_types.ts) — the IR and manifest types
-- [`model/persist_utils.ts`](../../model/persist_utils.ts) — `findPersistentDependencies()`, `minimalBuildGraph()`, `checkPersistAnnotation()`
+- [`model/persist_utils.ts`](../../model/persist_utils.ts) — `walkPersistentDependencies()`, `findPersistentDependencies()`, `minimalBuildGraph()`, `checkPersistAnnotation()`
 - [`model/source_def_utils.ts`](../../model/source_def_utils.ts) — `mkSourceID()`, `mkBuildID()`, registry resolution, source factories
 - [`model/query_query.ts`](../../model/query_query.ts) — substitution for `query_source`
 - [`model/sql_compiled.ts`](../../model/sql_compiled.ts) — substitution for `sql_select`

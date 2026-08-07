@@ -1431,6 +1431,83 @@ describe('source persistence', () => {
       expect(source_a.sourceID).toContain('source_a');
       expect(source_a.dependsOn).toHaveLength(0);
     });
+
+    it('reaches dependencies through a non-persistent wrapper', async () => {
+      // The importing model has to be able to take the same route the walk
+      // took. `joined` is correctly not a table — it adds a join and nothing
+      // else, so it materializes identically to source_a — but it is the only
+      // way to reach either dependency. Copy only the persistent sources and
+      // the route is severed: the plan comes back holding `report` alone, and
+      // two sources the user marked `#@ persist` are never built.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is flights -> {
+            group_by: carrier
+            aggregate: dep_count is count()
+          }
+
+          #@ -persist
+          source: joined is source_a extend {
+            join_one: source_b on carrier = source_b.carrier
+          }
+
+          #@ persist
+          source: report is joined -> {
+            group_by: carrier
+            group_by: n is flight_count
+            group_by: d is source_b.dep_count
+          }
+        `
+      );
+      testFileSpace.setFile(
+        new URL('test://model2.malloy'),
+        `${PERSIST_ANNOTATION}
+          import "test://model1.malloy"
+          run: report -> { select: * }
+        `
+      );
+
+      const direct = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const imported = await tstRuntime
+        .loadModel(new URL('test://model2.malloy'))
+        .getModel();
+
+      const namesIn = (plan: BuildPlan) =>
+        Object.keys(plan.sources)
+          .map(id => id.split('@')[0])
+          .sort();
+
+      // Importing the report must not change what has to be built.
+      expect(namesIn(imported.getBuildPlan())).toEqual([
+        'report',
+        'source_a',
+        'source_b',
+      ]);
+      expect(namesIn(imported.getBuildPlan())).toEqual(
+        namesIn(direct.getBuildPlan())
+      );
+
+      const node = imported.getBuildPlan().graphs[0].nodes[0][0];
+      expect(node.sourceID).toContain('report');
+      expect(node.dependsOn.map(d => d.sourceID.split('@')[0]).sort()).toEqual([
+        'source_a',
+        'source_b',
+      ]);
+      // The wrapper is a route, not a table — it never appears in the plan.
+      expect(node.dependsOn.every(d => d.persistent)).toBe(true);
+    });
   });
 
   describe('cross-model manifest substitution', () => {

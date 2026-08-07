@@ -83,10 +83,21 @@ export interface CompileQueryOptions {
 /**
  * A node in the build graph (recursive DAG structure).
  * Uses sourceID (sourceName@modelURL) for identity.
+ *
+ * A node reached twice is the *same object* both times, so the graph shares
+ * nodes rather than copying them. Anything walking it needs a seen-set on node
+ * identity, or a chain of diamonds is exponential.
  */
 export interface BuildNode {
   /** Source identity: "sourceName@modelURL" */
   sourceID: string;
+  /**
+   * Whether this source is itself something to build.
+   *
+   * A graph can also contain sources that are not — see
+   * {@link BuildGraph} — because they are the route to ones that are.
+   */
+  persistent: boolean;
   /** Dependencies as nested BuildNodes (recursive DAG) */
   dependsOn: BuildNode[];
 }
