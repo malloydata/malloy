@@ -1286,7 +1286,7 @@ describe('source persistence', () => {
       );
     });
 
-    it('detects persistent base through non-persistent imported extend chain', async () => {
+    it('collapses an inherited-persist imported extend chain to the single declaring build target', async () => {
       // Model 1: defines persist source A
       const model1 = `${PERSIST_ANNOTATION}
         ${FLIGHTS_SOURCE}
@@ -1328,32 +1328,21 @@ describe('source persistence', () => {
 
       const plan = model.getBuildPlan();
 
-      // Persistence is inherited through extends chain, so all three sources
-      // are persistent. source_c is the root (nothing depends on it).
-      // All three will generate the same SQL and use the same build artifact.
+      // Only source_a DECLARES `#@ persist`, so it is the single build target.
+      // source_b and source_c inherit `persistent` via `extend` (their reads
+      // still route to source_a's materialized table), but an inherited-only
+      // reader is not itself a build target — materializing it would duplicate
+      // source_a's table. So the chain collapses to one node: source_a.
       expect(plan.graphs).toHaveLength(1);
       const graph = plan.graphs[0];
 
-      // Build graph has 1 level with the root node (source_c)
-      // Dependencies are nested in dependsOn
+      // One build level holding the single declaring target.
       expect(graph.nodes).toHaveLength(1);
       expect(graph.nodes[0]).toHaveLength(1);
 
-      // Root: source_c
-      const source_c = graph.nodes[0][0];
-      expect(source_c.sourceID).toContain('source_c');
-
-      // source_c depends on source_b
-      expect(source_c.dependsOn).toHaveLength(1);
-      const source_b = source_c.dependsOn[0];
-      expect(source_b.sourceID).toContain('source_b');
-
-      // source_b depends on source_a
-      expect(source_b.dependsOn).toHaveLength(1);
-      const source_a = source_b.dependsOn[0];
+      // Root and only target: source_a, with no dependents.
+      const source_a = graph.nodes[0][0];
       expect(source_a.sourceID).toContain('source_a');
-
-      // source_a has no dependencies
       expect(source_a.dependsOn).toHaveLength(0);
     });
 

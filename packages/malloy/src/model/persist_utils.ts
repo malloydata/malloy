@@ -4,6 +4,7 @@
  */
 
 import type {
+  AnnotationsDef,
   ModelDef,
   SourceDef,
   SQLPhraseSegment,
@@ -46,6 +47,26 @@ export function checkPersistAnnotation(source: SourceDef): {
   if (!source.annotations) return {persist: false, log: []};
   const {tag, log} = new Annotations(source.annotations).parseAsTag('@');
   return {persist: tag.has('persist'), log};
+}
+
+/**
+ * Whether `#@ persist` is DECLARED on a source's OWN annotation (the block/line
+ * notes on this source, with any inherited bundle dropped) rather than inherited
+ * from a source it `extend`s. This is the build-target signal — see
+ * `PersistableSourceProperties.persistDeclared`. Unlike `checkPersistAnnotation`,
+ * which folds the whole chain for read routing, this reads the own notes only;
+ * `#@ -persist` there reports false. Errors are not re-logged — the folded
+ * `checkPersistAnnotation` on the same source already surfaces them.
+ */
+export function checkPersistDeclaredOnOwn(
+  own: AnnotationsDef | undefined
+): boolean {
+  if (!own) return false;
+  const {tag} = new Annotations({
+    notes: own.notes,
+    blockNotes: own.blockNotes,
+  }).parseAsTag('@');
+  return tag.has('persist');
 }
 
 /**
@@ -123,9 +144,14 @@ export function findPersistentDependencies(
     }
 
     const childDeps = processSourceDef(sourceDef);
+    // Compute `persistent` for its side effects (registry cache + tag-parse-error
+    // logging), but gate build-target inclusion on `persistDeclared`: only a
+    // source that declares `#@ persist` itself is a target. An inherited-only
+    // reader flattens out, bubbling its real persisted dependency up in its place
+    // (see PersistableSourceProperties.persistDeclared).
     const persistent = isPersistent(sourceID, modelDef, tagParseLog);
 
-    if (persistent) {
+    if (persistent && sourceDef.persistDeclared === true) {
       return [{sourceID, dependsOn: childDeps}];
     } else {
       return childDeps;
