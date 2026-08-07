@@ -48,6 +48,136 @@ describe('drill query', () => {
     expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
+  // A filtered measure carries its own drill_filters. Drilling the CELL must
+  // include them, or the drill lands on a superset of the rows behind the
+  // number that was clicked.
+  test('filtered measure contributes its own filter', async () => {
+    const query = `
+      run: flights_base -> {
+        group_by: carriers.nickname
+        aggregate: flight_count
+        aggregate: wn_flights is flight_count { where: carrier = 'WN' }
+        limit: 1
+      }
+    `;
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const cell = table.rows[0].column('wn_flights');
+    const expDrillQuery = `run: flights_base -> {
+  drill:
+    carriers.nickname = "Southwest",
+    carrier = "WN"
+} + { select: * }`;
+    expect(cell.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  // The row-level drill must NOT pick up a sibling measure's filter — the leaf
+  // branch only fires for the clicked cell.
+  test('row drill is unaffected by a sibling filtered measure', async () => {
+    const query = `
+      run: flights_base -> {
+        group_by: carriers.nickname
+        aggregate: flight_count
+        aggregate: wn_flights is flight_count { where: carrier = 'WN' }
+        limit: 1
+      }
+    `;
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights_base -> { drill: carriers.nickname = "Southwest" } + { select: * }';
+    expect(table.rows[0].getStableDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  // A drill clause reaching through a JOIN must bring that join along, even when
+  // the view it lands on doesn't otherwise need it. Regression: the drill field's
+  // refSummary carried only the field's own usage, so the join was omitted and
+  // the SQL referenced an unjoined alias — it COMPILED, then failed at execution
+  // with a binder error. Hence this runs the query rather than matching text.
+  test('drill through a joined field pulls the join into the query', async () => {
+    const model = `
+      source: flights is flights_base extend {
+        view: by_origin is { group_by: \`Origin Code\`; aggregate: flight_count }
+        view: by_carrier is { group_by: carriers.nickname; aggregate: flight_count }
+      }
+    `;
+    const result = await duckdb
+      .loadModel(baseModel)
+      .extendModel(model)
+      .loadQuery(
+        'run: flights -> by_origin + { drill: by_carrier.nickname = "Southwest" }'
+      )
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    expect(table.rows.length).toBeGreaterThan(0);
+  });
+
+  // `a and b` decomposes into two independent drill clauses. Sound only for
+  // `and`, since drill clauses are conjunctive.
+  test('compound and filter decomposes into separate clauses', async () => {
+    const query = `
+      run: flights_base -> {
+        group_by: carriers.nickname
+        aggregate: flight_count
+        aggregate: wn_short is flight_count { where: carrier = 'WN' and distance = 100 }
+        limit: 1
+      }
+    `;
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery = `run: flights_base -> {
+  drill:
+    carriers.nickname = "Southwest",
+    carrier = "WN",
+    distance = 100
+} + { select: * }`;
+    expect(
+      table.rows[0].column('wn_short').getStableDrillQueryMalloy()
+    ).toEqual(expDrillQuery);
+  });
+
+  // A bare boolean is an implicit `= true`.
+  test('bare boolean filter is stable', async () => {
+    const query = `
+      run: flights_base extend { dimension: is_wn is carrier = 'WN' } -> {
+        group_by: carriers.nickname
+        aggregate: flight_count
+        aggregate: wn is flight_count { where: is_wn }
+        limit: 1
+      }
+    `;
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery = `run: flights_base -> {
+  drill:
+    carriers.nickname = "Southwest",
+    is_wn = true
+} + { select: * }`;
+    expect(table.rows[0].column('wn').getStableDrillQueryMalloy()).toEqual(
+      expDrillQuery
+    );
+  });
+
+  // `or` must NOT decompose — splitting it would widen the predicate. It stays
+  // unstable and falls back to the raw filter code.
+  test('or filter stays unstable', async () => {
+    const query = `
+      run: flights_base -> {
+        group_by: carriers.nickname
+        aggregate: flight_count
+        aggregate: wn_or_aa is flight_count { where: carrier = 'WN' or carrier = 'AA' }
+        limit: 1
+      }
+    `;
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const cell = table.rows[0].column('wn_or_aa');
+    expect(cell.getStableDrillQueryMalloy()).toBeUndefined();
+    expect(cell.getDrillQueryMalloy()).toContain(
+      "carrier = 'WN' or carrier = 'AA'"
+    );
+  });
+
   test('can time truncation field renamed', async () => {
     const query = `
       run: flights_base -> {

@@ -132,6 +132,14 @@ export class Drill extends Filter implements QueryPropertyInterface {
     let previousName = viewName;
     let fieldDef: AtomicFieldDef | undefined = undefined;
     let compareField: Expr | undefined = undefined;
+    // Join usage for the field the drill resolved to. When a view's field is a
+    // reference through a join (`group_by: users.full_name`), the drill's filter
+    // reads `users.first_name`/`last_name` but the field's OWN refSummary only
+    // describes usage inside `users` — it never says `users` itself is used. The
+    // query builder then omits the join and emits SQL referencing an unjoined
+    // alias. Recording the reference path here is what pulls the join in, the
+    // same way ExprIdReference does for an ordinary `where:`.
+    let compareFieldUsage: FieldUsage | undefined = undefined;
     const requiredDimensions: string[][] = [];
     const pathSoFar: string[] = [viewName.name];
     for (const name of path) {
@@ -255,6 +263,9 @@ export class Drill extends Filter implements QueryPropertyInterface {
           if (theFieldDef === undefined || isAtomic(theFieldDef)) {
             fieldDef = theFieldDef;
             compareField = {node: 'field', path: field.path};
+            // `field.path` is the reference AS WRITTEN in the view — e.g.
+            // ['users','full_name'] — so it names the joins to bring along.
+            compareFieldUsage = [{path: field.path, at: name.location}];
           } else {
             name.logError(
               'drill-field-reference-not-field',
@@ -354,7 +365,10 @@ export class Drill extends Filter implements QueryPropertyInterface {
       ...fieldDef,
       evalSpace: 'output',
       expressionType: fieldDef.expressionType ?? 'scalar',
-      refSummary: fieldDef.refSummary,
+      refSummary: mergeRefSummaries(
+        fieldDef.refSummary,
+        mkRefSummary({fieldUsage: compareFieldUsage})
+      ),
     });
     filter.has({drillField});
     const fExpression = new ExprCompare(drillField, '=', value);
@@ -380,15 +394,17 @@ export class Drill extends Filter implements QueryPropertyInterface {
         fExpr.refSummary,
         mkRefSummary({fieldUsage: collectedWhereFieldUsage})
       ),
-      stableFilter: {
-        kind: 'literal_equality',
-        expression: {
-          kind: 'field_reference',
-          name: fieldName.refString,
-          path: reference.list.slice(0, -1).map(f => f.name),
+      stableFilters: [
+        {
+          kind: 'literal_equality',
+          expression: {
+            kind: 'field_reference',
+            name: fieldName.refString,
+            path: reference.list.slice(0, -1).map(f => f.name),
+          },
+          value: value.getStableLiteral(),
         },
-        value: value.getStableLiteral(),
-      },
+      ],
     };
     return exprCond;
   }
