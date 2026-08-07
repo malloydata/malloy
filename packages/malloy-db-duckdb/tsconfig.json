@@ -9,5 +9,6 @@
     {
       "path": "../malloy"
     }
-  ]
+  ],
+  "include": ["src/**/*.ts"]
 }
