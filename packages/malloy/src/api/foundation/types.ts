@@ -4,7 +4,9 @@
  */
 
 import type {EventStream} from '../../runtime_types';
-import type {BuildManifest, GivenValue, VirtualMap} from '../../model';
+import type {BuildID, BuildManifest, GivenValue, VirtualMap} from '../../model';
+import type {LogMessage} from '../../lang';
+import type {PersistSource} from './core';
 
 /**
  * An empty BuildManifest with no entries and strict mode off.
@@ -103,4 +105,53 @@ export interface BuildGraph {
   connectionName: string;
   /** The leveled build nodes */
   nodes: BuildNode[][];
+}
+
+/**
+ * One artifact: a table to build, and every source that maps onto it.
+ *
+ * A `BuildNode` is a source; a `BuildTarget` is a table. The two are not the
+ * same count. `#@ persist` is an annotation, so extending or renaming a
+ * persisted source inherits it — while `extend` never changes the source's
+ * SQL — and several sources routinely name one table. The manifest is keyed by
+ * `BuildID`, so those sources share one entry no matter how many plan nodes
+ * they occupy. `Runtime.getBuildTargets()` does that merge once, in the core,
+ * instead of leaving each builder to discover it by hashing.
+ */
+export interface BuildTarget {
+  /** Manifest key for this artifact: a hash of the connection digest and `sql` */
+  buildId: BuildID;
+  /** The connection this artifact is built on */
+  connectionName: string;
+  /**
+   * The SQL the BuildID is computed from: fully inlined, no manifest
+   * substitution, so it is the same string whatever else has been built.
+   *
+   * It is not the SQL to execute. That one substitutes the tables built so far
+   * — `source.getSQL({buildManifest, connectionDigests})` — so it can only be
+   * computed as the build walks, and only by the builder holding the manifest.
+   */
+  sql: string;
+  /** Targets that must exist before this one can be built */
+  dependsOn: BuildTarget[];
+  /** Every persist source in the model that maps onto this artifact */
+  sources: PersistSource[];
+}
+
+/**
+ * The build schedule for a model: what to build, and in what order.
+ *
+ * `levels` is a topological sort. Every target in a level has all of its
+ * dependencies in an earlier level, so a builder can run a whole level
+ * concurrently and wait for it before starting the next. That is the coarse
+ * guarantee; each target also carries `dependsOn`, so a builder that wants
+ * finer scheduling can start a target the moment its own dependencies finish
+ * rather than at the level boundary. A builder that wants neither can flatten
+ * — the concatenation of the levels is already in dependency order.
+ */
+export interface BuildTargets {
+  /** Targets in build order; everything within one level is independent */
+  levels: BuildTarget[][];
+  /** Errors and warnings from parsing `#@` annotations on persistable sources */
+  tagParseLog: LogMessage[];
 }

@@ -109,6 +109,36 @@ source: by_carrier is flights -> {
 `;
 
 /**
+ * An extension of a persisted source. It inherits `#@ persist` and does not
+ * change the SQL, so it is a second name for the same table.
+ */
+const MODEL_V6 = `${FLIGHTS}
+#@ persist name=by_carrier
+source: by_carrier is flights -> {
+  group_by: carrier
+  aggregate: flight_count
+}
+
+source: enriched is by_carrier extend {
+  dimension: loud_carrier is upper(carrier)
+}
+
+run: enriched -> { select: * }
+`;
+
+/** Two names for one computation — a request the builder cannot honor. */
+const MODEL_V7 = `${FLIGHTS}
+#@ persist name=by_carrier
+source: by_carrier is flights -> {
+  group_by: carrier
+  aggregate: flight_count
+}
+
+#@ persist name=also_by_carrier
+source: also_by_carrier is by_carrier
+`;
+
+/**
  * A name no dialect can express. Grouped by origin so its BuildID differs
  * from V4's — a source already in the manifest is touched without its name
  * being revisited.
@@ -302,6 +332,60 @@ test('build a dependency chain', async () => {
         rebuild.entries.every(e => e.action === 'exists'),
       'both entries survive a rebuild'
     );
+  } finally {
+    await rm(ROOT, {recursive: true, force: true});
+  }
+});
+
+/**
+ * Several sources, one table — the case a builder walking *sources* gets
+ * wrong.
+ *
+ * `enriched` extends `by_carrier`, so it is persistent and shares its SQL,
+ * its BuildID, and its `name=`. There is one table to build. A builder that
+ * iterated sources would issue the same CREATE TABLE twice, and one that
+ * keyed a forced rebuild on the table name would drop and recreate it once
+ * per name.
+ */
+test('an extension of a persisted source is the same table', async () => {
+  await freshRoot();
+
+  try {
+    await writeFile(MODEL_FILE, MODEL_V6);
+    await build(BUILD_OPTS);
+
+    const manifest = await readJSON<BuildManifest>(MANIFEST_FILE);
+    check(
+      Object.keys(manifest.entries).length === 1 &&
+        tableNames(manifest).join() === 'by_carrier',
+      'one entry, one table'
+    );
+
+    const sql = await readFile(SQL_FILE, 'utf-8');
+    check(
+      sql.split('CREATE TABLE').length - 1 === 1,
+      'the table is created once'
+    );
+
+    const log = await buildLogAt(0);
+    check(log.entries.length === 1, 'one thing was built');
+  } finally {
+    await rm(ROOT, {recursive: true, force: true});
+  }
+});
+
+/**
+ * Two names for one computation. The core reports both and takes no position —
+ * a name means nothing to it — so refusing is the builder's call, and this
+ * sample refuses. Honoring one name silently is how the second table a user
+ * asked for disappears.
+ */
+test('two names for one table is an error', async () => {
+  await freshRoot();
+
+  try {
+    await writeFile(MODEL_FILE, MODEL_V7);
+    await expect(build(BUILD_OPTS)).rejects.toThrow(/One table, two names/);
   } finally {
     await rm(ROOT, {recursive: true, force: true});
   }

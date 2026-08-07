@@ -3,7 +3,11 @@
 **Status:** experimental, gated by `##! experimental.persistence`
 
 How `#@ persist` is implemented in `@malloydata/malloy`. For the annotation,
-the manifest format, and the builder contract, see [api.md](api.md).
+the manifest format, and the builder contract, see [api.md](api.md). The design
+of record is **WN-0022** in the
+[whatsnext](https://github.com/malloydata/whatsnext) repository
+(`wns/WN-0022-persistence/`); this document describes the implementation, and
+where the two disagree, WN-0022 says what was meant.
 
 ## Terminology
 
@@ -45,6 +49,14 @@ persistence's own.
 `SourceID` is `"name@url"` (`mkSourceID`), and only named sources get one —
 anonymous sources, inline queries, and intermediate pipeline stages never do.
 `BuildID` is the content hash described [below](#buildid-and-connection-digests).
+
+These are the two identities WN-0022 says a builder has to understand, and they
+are **not one-to-one**: a SourceID names a source, a BuildID names a table, and
+one table routinely has several SourceIDs pointing at it. Nothing in the model
+reconciles them, because a BuildID cannot be computed without a connection. That
+is the whole job of `getBuildTargets` — treating a plan node as a table is the
+mistake the shape invites. The readable form of a SourceID is for debugging
+only; it is conceptually opaque, and nothing should parse it.
 
 The manifest types:
 
@@ -173,6 +185,14 @@ and A becomes a direct dependency of C.
 object and returns the **roots** — sourceIDs that nothing else depends on —
 with their original nested structure intact.
 
+The walk is **memoized, not merely visited**: a source reached a second time
+returns the nodes it returned the first time, so the same node object appears
+under every dependent that reads it. Returning nothing on a second visit — what
+this did until the leveling work — left the second dependent claiming no
+dependencies at all, which a dependencies-first flatten happened to survive
+(the dependency got built on the first dependent's account) and a leveled
+schedule does not.
+
 ## The build plan
 
 `Model.getBuildPlan()` in
@@ -184,15 +204,42 @@ takes `minimalBuildGraph()`, builds a `PersistSource` for every sourceID it
 saw, and groups the roots by connection name.
 
 **`BuildGraph.nodes` is `BuildNode[][]` but always has exactly one level.** The
-type anticipates a leveled schedule; what is emitted today is
-`{connectionName, nodes: [rootNodes]}`, and the actual ordering information
-lives in each root's `dependsOn`. The specs pin this — every
-`plan.graphs[0].nodes` assertion is `toHaveLength(1)`, including the case named
-"dependent sources in different levels". Anything that consumes a build plan
-must recurse into `dependsOn`; walking the levels alone silently skips every
-dependency. `flattenBuildNodes()` in
-[`scripts/simple_builder/build_graph.ts`](../../../../../scripts/simple_builder/build_graph.ts)
-is the correct dependencies-first flatten.
+type anticipates the leveled schedule WN-0022 describes; what is emitted is
+`{connectionName, nodes: [rootNodes]}`, with the ordering information in each
+root's `dependsOn`. The specs pin this — every `plan.graphs[0].nodes` assertion
+is `toHaveLength(1)`, including the case named "dependent sources in different
+levels". The leveling that was missing is in `getBuildTargets` below, computed
+over artifacts rather than sources; the plan itself is unchanged.
+
+## Build targets
+
+`Runtime.getBuildTargets(model)` in
+[`api/foundation/runtime.ts`](../../api/foundation/runtime.ts) is what a builder
+consumes, and `mkBuildTargets(plan, connectionDigests)` in
+[`api/foundation/build_targets.ts`](../../api/foundation/build_targets.ts) is
+the pure part of it: everything except fetching one digest per connection.
+
+The plan enumerates *sources*; a builder needs *tables*. The two counts differ
+by construction — `#@ persist` is inherited and `extend` never changes the SQL,
+so an extension or a rename of a persisted source is another sourceID naming
+the same BuildID. `mkBuildTargets`:
+
+1. unions the plan's edges by sourceID, one entry per source;
+2. computes `getSQL()` and the BuildID for each, and merges sources that agree
+   on `(connectionName, buildId)` into one target;
+3. re-derives the edges between targets, dropping self-edges — an extension
+   depending on its base is one table, not a dependency;
+4. levels by longest path, so a target sits strictly after everything it reads
+   however many routes reach it.
+
+Keying the merge on connection *and* BuildID rather than BuildID alone says
+what a target is. The digest inside a BuildID makes them equivalent in
+practice; the pair does not depend on that being true.
+
+The cycle check in the leveling is unreachable for a well-formed model: a
+target's BuildID SQL contains its dependencies' SQL inline, so two targets
+cannot each contain the other. It throws rather than hangs if that stops
+holding.
 
 ## BuildID and connection digests
 

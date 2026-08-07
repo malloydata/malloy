@@ -27,7 +27,13 @@ import {rowDataToNumber} from '../../api/row_data_utils';
 import type {CacheManager} from './cache';
 import type {MalloyConfig} from './config';
 import {EmptyURLReader, FixedConnectionMap} from './readers';
-import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
+import type {
+  ParseOptions,
+  CompileOptions,
+  CompileQueryOptions,
+  BuildTargets,
+} from './types';
+import {mkBuildTargets} from './build_targets';
 import type {PreparedResult, Explore} from './core';
 import {Model, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
@@ -652,6 +658,38 @@ export class Runtime {
     options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name, options).getPreparedQuery();
+  }
+
+  /**
+   * What a builder has to build for this model, and in what order.
+   *
+   * This is the builder entry point. `Model.getBuildPlan()` is the layer under
+   * it: a graph over persistable *sources*, which is not the same set as the
+   * tables they produce — several sources routinely map onto one table, and
+   * only a connection digest can tell you which. That is why this lives on
+   * Runtime: it holds the connections, so it can finish the answer the plan
+   * can only start.
+   *
+   * Each level can be built concurrently; see {@link BuildTargets}.
+   *
+   * @param model A compiled model with `##! experimental.persistence`
+   * @return The targets to build, leveled, with any annotation parse messages
+   */
+  public async getBuildTargets(model: Model): Promise<BuildTargets> {
+    const plan = model.getBuildPlan();
+    const connectionDigests: Record<string, string> = mkSafeRecord();
+    for (const source of Object.values(plan.sources)) {
+      const connectionName = source.connectionName;
+      if (!(connectionName in connectionDigests)) {
+        const connection =
+          await this.connections.lookupConnection(connectionName);
+        connectionDigests[connectionName] = connection.getDigest();
+      }
+    }
+    return {
+      levels: mkBuildTargets(plan, connectionDigests),
+      tagParseLog: plan.tagParseLog,
+    };
   }
 }
 

@@ -109,27 +109,39 @@ export function findPersistentDependencies(
   modelDef: ModelDef,
   tagParseLog: LogMessage[] = []
 ): BuildNode[] {
-  const visited = new Set<string>();
+  // Memoized, not merely visited: a source reached a second time returns the
+  // same nodes it returned the first time. Returning [] instead — which this
+  // did — dropped the second dependent's edge, so in a diamond only one of the
+  // two readers recorded the shared dependency and the other claimed to have
+  // none. A depth-first flatten hid that, because the dependency got built on
+  // the other reader's account anyway; a leveled schedule does not.
+  const done = new Map<string, BuildNode[]>();
+  const onStack = new Set<string>();
 
   function processSourceID(sourceID: string): BuildNode[] {
-    if (visited.has(sourceID)) {
+    const memo = done.get(sourceID);
+    if (memo !== undefined) {
+      return memo;
+    }
+    // A source cannot reach itself, but a malformed registry could; stop rather
+    // than recur forever.
+    if (onStack.has(sourceID)) {
       return [];
     }
-    visited.add(sourceID);
+    onStack.add(sourceID);
 
     const sourceDef = resolveSourceID(modelDef, sourceID);
-    if (!sourceDef) {
-      return [];
+    let result: BuildNode[] = [];
+    if (sourceDef) {
+      const childDeps = processSourceDef(sourceDef);
+      result = isPersistent(sourceID, modelDef, tagParseLog)
+        ? [{sourceID, dependsOn: childDeps}]
+        : childDeps;
     }
 
-    const childDeps = processSourceDef(sourceDef);
-    const persistent = isPersistent(sourceID, modelDef, tagParseLog);
-
-    if (persistent) {
-      return [{sourceID, dependsOn: childDeps}];
-    } else {
-      return childDeps;
-    }
+    onStack.delete(sourceID);
+    done.set(sourceID, result);
+    return result;
   }
 
   function processSourceDef(source: SourceDef): BuildNode[] {
@@ -245,15 +257,20 @@ export function findPersistentDependencies(
 
 /**
  * Collect all sourceIDs from a BuildNode forest (for analysis only).
+ *
+ * A forest shares nodes — one memoized node is reachable from every dependent
+ * that reads it — so the walk tracks which nodes it has already descended into.
  */
 function collectAllSourceIDs(nodes: BuildNode[]): Set<string> {
   const result = new Set<string>();
-  for (const node of nodes) {
+  const seen = new Set<BuildNode>();
+  function visit(node: BuildNode) {
+    if (seen.has(node)) return;
+    seen.add(node);
     result.add(node.sourceID);
-    for (const id of collectAllSourceIDs(node.dependsOn)) {
-      result.add(id);
-    }
+    for (const dep of node.dependsOn) visit(dep);
   }
+  for (const node of nodes) visit(node);
   return result;
 }
 
@@ -262,14 +279,16 @@ function collectAllSourceIDs(nodes: BuildNode[]): Set<string> {
  */
 function collectAllDependedOn(nodes: BuildNode[]): Set<string> {
   const result = new Set<string>();
-  for (const node of nodes) {
+  const seen = new Set<BuildNode>();
+  function visit(node: BuildNode) {
+    if (seen.has(node)) return;
+    seen.add(node);
     for (const dep of node.dependsOn) {
       result.add(dep.sourceID);
-    }
-    for (const id of collectAllDependedOn(node.dependsOn)) {
-      result.add(id);
+      visit(dep);
     }
   }
+  for (const node of nodes) visit(node);
   return result;
 }
 

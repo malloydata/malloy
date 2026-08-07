@@ -273,7 +273,13 @@ export {
   annotationToTag,
   annotationToTaglines,
 } from './api/foundation/annotation';
-export type {BuildGraph, BuildNode, BuildPlan} from './api/foundation';
+export type {
+  BuildGraph,
+  BuildNode,
+  BuildPlan,
+  BuildTarget,
+  BuildTargets,
+} from './api/foundation';
 export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';
 export {Reference} from './api/foundation';
 export type {ReferenceKind} from './api/foundation';

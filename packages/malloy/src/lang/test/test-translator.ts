@@ -215,10 +215,20 @@ export const pgTableDef: SourceDef = {
  * some mocked schema definitions.
  */
 
+// A second connection of the same dialect as `_db_`, so that two sources can
+// compile to identical SQL on different connections. Persistence needs it: a
+// build target is a table on a connection, and identical SQL is exactly the
+// case where that could be forgotten.
+export const db2TableDef: TableSourceDef = {
+  ...aTableDef,
+  connection: '_db2_',
+};
+
 export const mockSchema: TableSourceDef[] = [
   aTableDef,
   bqTableDef,
   pgTableDef,
+  db2TableDef,
   {
     type: 'table',
     name: 'carriers',
@@ -416,6 +426,7 @@ export class TestTranslator extends MalloyTranslator {
       _db_: {type: 'connection', name: '_db_'},
       _bq_: {type: 'connection', name: '_bq_'},
       _pg_: {type: 'connection', name: '_pg_'},
+      _db2_: {type: 'connection', name: '_db2_'},
       a: {...aTableDef, primaryKey: 'astr', name: 'a'},
       b: {...aTableDef, primaryKey: 'astr', name: 'b'},
       bq_a: {...bqTableDef, primaryKey: 'astr', name: 'bq_a'},
@@ -487,6 +498,7 @@ export class TestTranslator extends MalloyTranslator {
     this.connectionDialectZone.define('_db_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
     this.connectionDialectZone.define('_pg_', 'postgres');
+    this.connectionDialectZone.define('_db2_', TEST_DIALECT);
     for (const flag of options.compilerFlags ?? []) {
       this.compilerFlagSrc.push(`##! ${flag}\n`);
     }

@@ -494,11 +494,19 @@ describe('source persistence', () => {
         const nodeD = graph.nodes[0][0];
         expect(nodeD.sourceID).toMatch(/source_d/);
 
-        const allDeps = getAllSourceIDs(nodeD.dependsOn);
-        expect(allDeps).toHaveLength(3);
-        expect(hasDependency(nodeD.dependsOn, 'source_a')).toBe(true);
-        expect(hasDependency(nodeD.dependsOn, 'source_b')).toBe(true);
-        expect(hasDependency(nodeD.dependsOn, 'source_c')).toBe(true);
+        // Both readers of source_a record the edge to it. A source reached a
+        // second time returns what it returned the first time, so the second
+        // reader is not left claiming it depends on nothing — which is what a
+        // leveled schedule would believe.
+        const [depB, depC] = nodeD.dependsOn;
+        expect(nodeD.dependsOn).toHaveLength(2);
+        expect(depB.sourceID).toMatch(/source_b/);
+        expect(depC.sourceID).toMatch(/source_c/);
+        expect(depB.dependsOn[0].sourceID).toMatch(/source_a/);
+        expect(depC.dependsOn[0].sourceID).toMatch(/source_a/);
+        // ...and it is the same node object both times, not a copy.
+        expect(depB.dependsOn[0]).toBe(depC.dependsOn[0]);
+        expect(getAllSourceIDs(nodeD.dependsOn)).toHaveLength(4);
       });
 
       it('diamond dependency pattern with query_source chains', async () => {
@@ -530,11 +538,19 @@ describe('source persistence', () => {
         const nodeD = graph.nodes[0][0];
         expect(nodeD.sourceID).toMatch(/source_d/);
 
-        const allDeps = getAllSourceIDs(nodeD.dependsOn);
-        expect(allDeps).toHaveLength(3);
-        expect(hasDependency(nodeD.dependsOn, 'source_a')).toBe(true);
-        expect(hasDependency(nodeD.dependsOn, 'source_b')).toBe(true);
-        expect(hasDependency(nodeD.dependsOn, 'source_c')).toBe(true);
+        // Both readers of source_a record the edge to it. A source reached a
+        // second time returns what it returned the first time, so the second
+        // reader is not left claiming it depends on nothing — which is what a
+        // leveled schedule would believe.
+        const [depB, depC] = nodeD.dependsOn;
+        expect(nodeD.dependsOn).toHaveLength(2);
+        expect(depB.sourceID).toMatch(/source_b/);
+        expect(depC.sourceID).toMatch(/source_c/);
+        expect(depB.dependsOn[0].sourceID).toMatch(/source_a/);
+        expect(depC.dependsOn[0].sourceID).toMatch(/source_a/);
+        // ...and it is the same node object both times, not a copy.
+        expect(depB.dependsOn[0]).toBe(depC.dependsOn[0]);
+        expect(getAllSourceIDs(nodeD.dependsOn)).toHaveLength(4);
       });
     });
 

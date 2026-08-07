@@ -1554,8 +1554,11 @@ export class Model implements Taggable {
 
     // Build the sources map from all persistent sourceIDs encountered
     const sourcesMap: Record<string, PersistSource> = {};
+    const seen = new Set<BuildNode>();
     const collectSources = (nodes: BuildNode[]) => {
       for (const node of nodes) {
+        if (seen.has(node)) continue;
+        seen.add(node);
         if (!(node.sourceID in sourcesMap)) {
           const sourceDef = resolveSourceID(this.modelDef, node.sourceID);
           if (sourceDef) {
