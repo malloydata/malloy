@@ -22,7 +22,7 @@ export abstract class BinaryNumeric<
     this.legalChildTypes = [TDU.numberT];
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     return this.right.apply(fs, this.op, this.left);
   }
 }

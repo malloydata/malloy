@@ -42,7 +42,7 @@ export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
     this.legalChildTypes = compareTypes[op];
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     return this.right.apply(fs, this.op, this.left);
   }
 }
@@ -63,7 +63,7 @@ export class ExprEquality extends ExprCompare {
     super(left, op, right);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     return this.right.apply(fs, this.op, this.left, true);
   }
 
@@ -87,7 +87,7 @@ export class ExprLegacyIn extends ExpressionDef {
     this.has({expr, choices});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const lookFor = this.expr.getExpression(fs);
     const oneOf = this.choices.map(e => e.getExpression(fs));
     return computedExprValue({
@@ -119,7 +119,7 @@ export class ExprInGiven extends ExpressionDef {
     this.has({expr, givenRef});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const lookFor = this.expr.getExpression(fs);
     const givenVal = this.givenRef.getExpression(fs);
 

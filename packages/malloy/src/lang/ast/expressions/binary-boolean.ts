@@ -25,7 +25,7 @@ export abstract class BinaryBoolean<
     super({left, right});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const left = this.left.getExpression(fs);
     const right = this.right.getExpression(fs);
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {

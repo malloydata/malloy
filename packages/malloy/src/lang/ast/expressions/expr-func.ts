@@ -98,7 +98,7 @@ export class ExprFunc extends ExpressionDef {
     return true;
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     if (this.isRaw && this.isRestricted()) {
       const typeStr = this.explicitType
         ? typeDefToString(this.explicitType)

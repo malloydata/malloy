@@ -47,6 +47,31 @@ import {
 
 class TypeMismatch extends Error {}
 
+/**
+ * Mark a value as belonging to everyone. Writing into a memoized value writes
+ * into every other holder's copy and into whatever the IR already stored;
+ * freezing turns that from a silent miscompile into a TypeError naming the
+ * line which did it. Own fields only -- walking every Expr on every
+ * evaluation would cost more than the memo saves.
+ */
+function shareable(v: ExprValue): ExprValue {
+  Object.freeze(v);
+  for (const share of [
+    v.value,
+    v.morphic,
+    v.refSummary,
+    v.refSummary?.fieldUsage,
+    v.refSummary?.givenUsage,
+    v.requiresGroupBy,
+    v.ungroupings,
+  ]) {
+    if (share !== undefined) {
+      Object.freeze(share);
+    }
+  }
+  return v;
+}
+
 /** Node types in an alternation tree */
 export enum ATNodeType {
   And,
@@ -57,9 +82,9 @@ export enum ATNodeType {
 
 /**
  * Root node for any element in an expression. These essentially
- * create a sub-tree in the larger AST. Expression nodes know
- * how to write themselves as SQL (or rather, generate the
- * template for SQL required by the query writer)
+ * create a sub-tree in the larger AST. An ExpressionDef, when
+ * given a FieldSpace, can be evaluated to produce an ExprValue
+ * which is the IR for an Expr along with its type and other metadata.
  */
 export abstract class ExpressionDef extends MalloyElement {
   abstract elementType: string;
@@ -68,12 +93,85 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * Returns the "translation" or template for SQL generation. When asking
+   * Returns the "translation" or Expr tree for SQL generation. When asking
    * for a translation you may pass the types you can accept, allowing
    * the translation code a chance to convert to match your expectations
    * @param space Namespace for looking up field references
+   *
+   * THE RETURNED ExprValue IS SHARED -- TREAT IT AS IMMUTABLE. Asking twice
+   * yields the same object, so to derive a value from one, build a new one:
+   * `{...operand, type: 'boolean'}` or `computedExprValue({…, from: [operand]})`.
+   *
+   * DO NOT OVERRIDE THIS. Nodes implement `computeExpression`; an override
+   * here bypasses the memo, which for `+`/`-` chains is the difference
+   * between linear and exponential compile time.
    */
-  abstract getExpression(fs: FieldSpace): ExprValue;
+  getExpression(fs: FieldSpace): ExprValue {
+    const initialGeneration = fs.generation();
+    if (
+      this.memoValue !== undefined &&
+      this.memoFs === fs &&
+      this.memoGen === initialGeneration
+    ) {
+      return this.memoValue;
+    }
+
+    // If we get here and memoFs is set and memoGen is not set, then somewhere
+    // inside this expression is a recursive call asking this node for the
+    // value it is in the middle of computing. There is nothing to return and
+    // computing one would recurse again, so throw. An abandoned computation
+    // does not look like this -- see the finally below.
+
+    if (this.memoFs !== undefined && this.memoGen === undefined) {
+      throw this.internalError(
+        `ExpressionDef.getExpression memoization failure on ${this.elementType}`
+      );
+    }
+
+    this.memoFs = fs;
+    this.memoGen = undefined;
+    try {
+      const value = this.computeExpression(fs);
+      if (initialGeneration === fs.generation()) {
+        this.memoGen = initialGeneration;
+        this.memoValue = shareable(value);
+      }
+      return value;
+    } finally {
+      if (this.memoGen === undefined) {
+        // Threw, or a name was rebound while we ran. Leave no stamp: a caller
+        // which recovers must get a fresh computation, not our remains.
+        this.memoFs = undefined;
+      }
+    }
+  }
+
+  /**
+   * The last value this node computed, and what it was computed against.
+   * Three states, distinguished by memoGen:
+   *
+   *   memoFs undefined              -- nothing computed, or abandoned
+   *   memoFs set, memoGen undefined -- computing right now, and only that,
+   *                                    since abandoning clears memoFs
+   *   memoFs set, memoGen set       -- memoValue is that computation's result
+   *
+   * Both halves of the stamp are needed: a node can be evaluated under more
+   * than one field space -- ConstantExpression evaluates its child against a
+   * ConstantFieldSpace whatever it was handed -- and a field space can rebind
+   * a name under us.
+   *
+   * One slot, not a map. A node which alternates between two field spaces
+   * simply misses and recomputes, which costs time and never correctness.
+   */
+  private memoFs?: FieldSpace;
+  private memoGen?: number;
+  private memoValue?: ExprValue;
+
+  /**
+   * Evaluate this node. Implemented by every expression node; called only
+   * by `getExpression` above, never directly.
+   */
+  protected abstract computeExpression(fs: FieldSpace): ExprValue;
   legalChildTypes = TDU.anyAtomicT;
 
   /**
@@ -118,13 +216,19 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * This is the operation which makes partial comparison and value trees work
-   * The default implementation merely constructs LEFT OP RIGHT, but specialized
-   * nodes like alternation trees or or partial comparison can control how
-   * the appplication gets generated
+   * This is the operation which makes partial comparison and value trees work.
+   * `this` is the RIGHT operand; the left arrives here as an argument. All of
+   * the magic of malloy expressions eventually flows through here, where an
+   * operator is applied to two values -- depending on the operator and the
+   * value types that may transform the values or even the operator.
+   *
+   * Specialized nodes like alternation trees and partial comparisons override
+   * this to control how the application gets generated. They are the reason
+   * the right operand is in charge: a partial has no bound left operand, and
+   * only learns it here.
    * @param fs The symbol table
    * @param op The operator being applied
-   * @param expr The "other" (besdies 'this') value
+   * @param left The "other" (besides 'this') value
    * @return The translated expression
    */
   apply(
@@ -133,7 +237,25 @@ export abstract class ExpressionDef extends MalloyElement {
     left: ExpressionDef,
     _warnOnComplexTree = false
   ): ExprValue {
-    return applyBinary(fs, left, op, this);
+    if (isEquality(op)) {
+      return equality(fs, left, op, this);
+    }
+    if (isComparison(op)) {
+      return compare(fs, left, op, this);
+    }
+    if (op === '+' || op === '-') {
+      return delta(fs, left, op, this);
+    }
+    if (op === '*') {
+      return numeric(fs, left, op, this);
+    }
+    if (op === '/' || op === '%') {
+      return divmod(fs, left, op, this);
+    }
+    return left.loggedErrorExpr(
+      'unexpected-binary-operator',
+      `Cannot use ${op} operator here`
+    );
   }
 
   canSupportPartitionBy() {
@@ -210,7 +332,7 @@ export class ExprDuration extends ExpressionDef {
     return super.apply(fs, op, left);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const num = this.n.getExpression(fs);
     return computedErrorExprValue({
       dataType: {type: 'duration'},
@@ -496,6 +618,40 @@ function numeric(
   return errorFor('numbers required');
 }
 
+function divmod(
+  fs: FieldSpace,
+  left: ExpressionDef,
+  op: '/' | '%',
+  right: ExpressionDef
+): ExprValue {
+  const num = left.getExpression(fs);
+  const denom = right.getExpression(fs);
+  const noGo = unsupportError(left, num, right, denom);
+  if (noGo) return noGo;
+
+  const err = errorCascade('number', num, denom);
+  if (err) return err;
+
+  if (num.type !== 'number') {
+    left.logError(
+      'arithmetic-operation-type-mismatch',
+      'Numerator must be a number'
+    );
+  } else if (denom.type !== 'number') {
+    right.logError(
+      'arithmetic-operation-type-mismatch',
+      'Denominator must be a number'
+    );
+  } else {
+    return computedExprValue({
+      dataType: mergeNumberTypes(num, denom, op),
+      value: {node: op, kids: {left: num.value, right: denom.value}},
+      from: [num, denom],
+    });
+  }
+  return errorFor('divide type mismatch');
+}
+
 function delta(
   fs: FieldSpace,
   left: ExpressionDef,
@@ -531,73 +687,6 @@ function delta(
     return duration.apply(fs, op, left);
   }
   return numeric(fs, left, op, right);
-}
-
-/**
- * All of the magic of malloy expressions eventually flows to here,
- * where an operator is applied to two values. Depending on the
- * operator and value types this may involve transformations of
- * the values or even the operator.
- * @param fs FieldSpace for the symbols
- * @param left Left value
- * @param op The operator
- * @param right Right Value
- * @return ExprValue of the expression
- */
-export function applyBinary(
-  fs: FieldSpace,
-  left: ExpressionDef,
-  op: BinaryMalloyOperator,
-  right: ExpressionDef
-): ExprValue {
-  if (isEquality(op)) {
-    return equality(fs, left, op, right);
-  }
-  if (isComparison(op)) {
-    return compare(fs, left, op, right);
-  }
-  if (op === '+' || op === '-') {
-    return delta(fs, left, op, right);
-  }
-  if (op === '*') {
-    return numeric(fs, left, op, right);
-  }
-  if (op === '/' || op === '%') {
-    const num = left.getExpression(fs);
-    const denom = right.getExpression(fs);
-    const noGo = unsupportError(left, num, right, denom);
-    if (noGo) return noGo;
-
-    const err = errorCascade('number', num, denom);
-    if (err) return err;
-
-    if (num.type !== 'number') {
-      left.logError(
-        'arithmetic-operation-type-mismatch',
-        'Numerator must be a number'
-      );
-    } else if (denom.type !== 'number') {
-      right.logError(
-        'arithmetic-operation-type-mismatch',
-        'Denominator must be a number'
-      );
-    } else {
-      const divmod: Expr = {
-        node: op,
-        kids: {left: num.value, right: denom.value},
-      };
-      return computedExprValue({
-        dataType: mergeNumberTypes(num, denom, op),
-        value: divmod,
-        from: [num, denom],
-      });
-    }
-    return errorFor('divide type mismatch');
-  }
-  return left.loggedErrorExpr(
-    'unexpected-binary-operator',
-    `Cannot use ${op} operator here`
-  );
 }
 
 function errorCascade(

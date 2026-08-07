@@ -33,7 +33,7 @@ export class Case extends ExpressionDef {
     this.has({elseValue, value});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const resultExpr: CaseExpr = {
       node: 'case',
       kids: {
