@@ -18,6 +18,12 @@ type MeasureAxisOptions = {
   showBrushes?: boolean;
   axisSettings: ChartLayoutSettings['yAxis'];
   vegaConfig?: Config;
+  // Which side of the plot the axis sits on. Defaults to 'left' so the bar and
+  // line charts (which never pass it) are unchanged.
+  orient?: 'left' | 'right';
+  // Name of the Vega scale this axis reads. Defaults to 'yscale'. The combo
+  // chart passes 'yscaleRight' for its secondary (right) measure axis.
+  scaleName?: string;
 };
 
 export function createMeasureAxis({
@@ -29,10 +35,13 @@ export function createMeasureAxis({
   showBrushes = true,
   axisSettings,
   vegaConfig,
+  orient = 'left',
+  scaleName = 'yscale',
 }: MeasureAxisOptions) {
+  const isRight = orient === 'right';
   const axis: Axis = {
-    orient: 'left',
-    scale: 'yscale',
+    orient,
+    scale: scaleName,
     title: title,
     tickCount: {'signal': `${tickCount}`},
 
@@ -43,7 +52,16 @@ export function createMeasureAxis({
     // Only set defaults if not provided in axisSettings
     ...(axisSettings.minExtent === undefined && {minExtent: labelLimit}),
     ...(axisSettings.maxExtent === undefined && {maxExtent: labelLimit}),
-    titleX: -axisSettings.width + axisSettings.titlePadding,
+    // Malloy places the y-axis title horizontally at the top of the axis. For a
+    // left axis that means nudging it left of the labels; for a right axis it
+    // sits to the right of the plot edge, right-aligned.
+    titleX: isRight
+      ? axisSettings.width - axisSettings.titlePadding
+      : -axisSettings.width + axisSettings.titlePadding,
+    // Only set titleAlign for the right axis. The left axis has always relied on
+    // Vega's default alignment; setting it explicitly here would shift the title
+    // on every existing bar/line chart (which only ever use the left axis).
+    ...(isRight && {titleAlign: 'right' as const}),
     titleBaseline: 'top',
     encode: {
       labels: {
@@ -64,7 +82,7 @@ export function createMeasureAxis({
                     value: 0,
                   },
                   {
-                    test: 'brushMeasureRangeIn && datum.value >= (brushMeasureRangeIn[0] - (invert("yscale", 0)-invert("yscale", 20))) && datum.value <= (brushMeasureRangeIn[1] + (invert("yscale", 0)-invert("yscale", 20)))',
+                    test: `brushMeasureRangeIn && datum.value >= (brushMeasureRangeIn[0] - (invert("${scaleName}", 0)-invert("${scaleName}", 20))) && datum.value <= (brushMeasureRangeIn[1] + (invert("${scaleName}", 0)-invert("${scaleName}", 20)))`,
                     value: 0,
                   },
                 ]
@@ -77,6 +95,19 @@ export function createMeasureAxis({
       },
     },
   };
+
+  // The interactive hover marks (reference lines, axis overlay, range brush)
+  // are positioned against the left edge of the plot and keyed to the left
+  // scale. They are only meaningful for the primary left axis; a secondary
+  // right axis renders its ticks/labels/title without them in v1.
+  if (isRight) {
+    return {
+      axis,
+      interactiveMarks: [],
+      interactiveSignals: [],
+      brushMeasureEvents: [],
+    };
+  }
 
   const yAxisReferenceLines = createAxisReferenceLines({
     type,
