@@ -182,17 +182,26 @@ export function mkBuildTargets(
       mine.add(childKey);
     }
 
-    // Sources on one target have identical SQL, so they have identical *real*
-    // dependencies — whatever that SQL inlines. What differs between them is
-    // the over-approximation: the walk follows every join, active or not, so a
-    // source can record a dependency its SQL does not contain. Intersecting
-    // keeps every real edge (each source's set is a superset of the real one)
-    // and drops the spurious ones.
+    // Intersect, do not union. Union makes cycles: `source: alias is base
+    // extend { join_one: mid }` where `mid` reads `base` merges alias onto
+    // base's target carrying an edge to `mid`, while `mid` depends on `base`.
+    // Only one of those two edges is real.
     //
-    // Not academic. `source: alias is base extend { join_one: mid }` where
-    // `mid` reads `base`: alias materializes base's table, so it merges onto
-    // base's target and brings an edge to `mid`, which depends on base. Union
-    // makes that a cycle out of two edges of which only one is real.
+    // Intersecting keeps the real ones because **the walk records what a
+    // modification reaches transitively, not just what it names**: a source
+    // extending `mid` records `base` as well, so every source merging onto a
+    // target names that target's real dependencies directly and they appear in
+    // every set. That follows from `DynamicSpace` no longer stamping the
+    // base's sourceID onto a modified def — the walk descends through a
+    // modification rather than resolving it by id.
+    //
+    // So this rests on an invariant that lives in `dynamic-space.ts`. Tighten
+    // the walk to immediate references — which would read as a cleanup — and a
+    // merging source's set collapses to its own key, the self-skip empties it,
+    // and this silently drops every real edge. The symptom is a table built
+    // from inlined SQL instead of reading the one below it: no error, just the
+    // expensive query persistence exists to avoid. `build-targets.spec.ts`
+    // pins both directions.
     if (target.sources.length === 0) {
       target.dependsOn = mine;
     } else {

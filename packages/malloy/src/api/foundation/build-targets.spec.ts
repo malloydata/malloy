@@ -212,6 +212,30 @@ describe('targets come back in dependency order', () => {
     expect(targets[1].dependsOn).toEqual([targets[0]]);
   });
 
+  test('a merged target keeps the dependency it really has', () => {
+    // The positive half of the intersection. `reader` merges onto `mid`, and
+    // the merged target must still depend on `base`.
+    //
+    // This holds because the walk records what a modification reaches
+    // *transitively* — `reader` names `base` directly, not just `mid` — so
+    // both sets contain the real edge and the intersection keeps it. Tighten
+    // the walk to immediate references only and `reader`'s set becomes
+    // `{mid}`, which is its own key, the self-skip empties it, and the
+    // intersection silently drops `base`. The symptom would be a table built
+    // from inlined SQL instead of reading the one below it: no error, just the
+    // expensive query this feature exists to avoid.
+    const targets = targetsOf(`
+      ${ROLLUP}
+      #@ persist name=mid
+      source: mid is rollup -> { group_by: astr; aggregate: t is n.sum() }
+      source: reader is mid extend { dimension: loud is upper(astr) }
+      run: reader -> { select: * }
+    `);
+
+    expect(order(targets)).toEqual([['rollup'], ['mid', 'reader']]);
+    expect(targets[1].dependsOn).toEqual([targets[0]]);
+  });
+
   test('a merged source does not import a dependency the table lacks', () => {
     // `alias` materializes `rollup`'s table, so it merges onto that target —
     // and it joins `mid`, which reads `rollup`. Keeping alias's edge would say

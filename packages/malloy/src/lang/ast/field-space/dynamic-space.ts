@@ -109,6 +109,12 @@ export abstract class DynamicSpace
       // is neither a reference to what it was built from nor that source's own
       // definition. Both identities go; `DefineSource` stamps fresh ones if
       // this ends up with a name, and an inline `extend` never does.
+      //
+      // Dropping `sourceID` also means the persistence walk descends *through*
+      // a modification rather than resolving it by id, so a modified source
+      // records what it reaches transitively. `mkBuildTargets` relies on that
+      // to intersect the dependencies of sources sharing a table; see the
+      // comment there before making the walk name only immediate references.
       delete this.sourceDef.referenceID;
       delete this.sourceDef.sourceID;
       this.sourceDef.parameters = parameters;
