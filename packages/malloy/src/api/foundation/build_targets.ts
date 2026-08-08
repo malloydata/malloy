@@ -189,17 +189,20 @@ export function mkBuildTargets(
     //
     // Intersecting keeps the real ones because of the six-paths list at
     // `walkPersistentDependencies`: those are every way one source's SQL can
-    // incorporate another's, and the walk follows all six. So a source that
-    // compiles to this target's SQL necessarily reaches everything that SQL
-    // inlines — every set here is a superset of the real dependencies, and
-    // what differs between them is only the join over-approximation, which is
-    // what the intersection removes.
+    // incorporate another's — except `CompositeSourceDef.sources[]`, which the
+    // walk skips, and which is why composites and persistence are documented
+    // as incompatible. So a source that compiles to this target's SQL
+    // necessarily reaches everything that SQL inlines: every set here is a
+    // superset of the real dependencies, and what differs between them is only
+    // the join over-approximation, which is what the intersection removes.
     //
-    // The safety therefore rests on that list staying complete. A path added
-    // to the IR and not to the walk would break this as well as the plan, and
-    // the symptom here is quieter: a table built from inlined SQL instead of
-    // reading the one below it. No error, just the expensive query
-    // persistence exists to avoid.
+    // The safety therefore rests on that list staying complete, composites
+    // being its one known and deliberate hole. A path added to the IR and not
+    // to the walk — or composites being made to work with persistence without
+    // revisiting this — would break it, and the symptom here is quieter than a
+    // wrong plan: a table built from inlined SQL instead of reading the one
+    // below it. No error, just the expensive query persistence exists to
+    // avoid.
     if (target.sources.length === 0) {
       target.dependsOn = mine;
     } else {
