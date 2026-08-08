@@ -380,5 +380,7 @@ policy, invisible to the core.
 ## Limitations
 
 - Parameterized sources are not supported with persistence.
-- Composite sources are not supported with persistence; their `sources[]` are
-  deliberately not walked for dependencies.
+- Composite sources were designed out, not overlooked. A composite cannot be
+  persisted, and the walk does not follow its `sources[]`, so a persisted
+  source reached only through a composite is invisible to a builder and nothing
+  says so.

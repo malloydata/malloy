@@ -192,7 +192,11 @@ The six ways a `SourceDef` can be referenced — this list is the walk:
 5. `SQLSourceDef.selectSegments[]` — `%{ }` interpolation
 6. `QuerySourceDef.query` — the inner query of a query source
 
-`CompositeSourceDef.sources[]` is deliberately not walked.
+`CompositeSourceDef.sources[]` is deliberately not walked — persistence was
+designed without composites rather than around them. It is the one hole in "the
+walk follows every route by which SQL inlines SQL", which `mkBuildTargets`
+relies on; harmless while a composite cannot be a target, and to revisit if
+that changes.
 
 **What survives the walk** is decided by one rule, stated at
 `walkPersistentDependencies`: keep a source if it is persistent, or if any
