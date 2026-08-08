@@ -198,6 +198,7 @@ this section.
 ```typescript
 const model = await runtime.loadModel(modelURL).getModel();
 const {connections, tagParseLog} = await runtime.getBuildTargets(model);
+// throws without ##! experimental.persistence
 ```
 
 A **target** is one table:
@@ -215,23 +216,11 @@ query cannot cross a connection, so no dependency does either, and each entry
 in `connections` is a wholly independent build needing no coordination with any
 other.
 
-Within one, `levels` is a topological sort: everything in a level is
-independent, and every dependency sits in an earlier one. A target's level is
-the *longest* path to it, so a diamond builds its shared bottom first, then
-both sides together, then the top. A builder wanting finer scheduling can start
-a target the moment its own `dependsOn` are done rather than waiting at the
-level boundary; one wanting neither can concatenate the levels and walk them in
-order.
-
-The whole thing is two lines of structure:
-
-```typescript
-await Promise.all(connections.map(async ({connectionName, levels}) => {
-  for (const level of levels) {
-    await Promise.all(level.map(target => build(connectionName, target)));
-  }
-}));
-```
+Within one, `targets` is in dependency order — everything a target depends on
+comes before it — so a serial builder is a `for` loop and nothing else. A
+builder that wants concurrency reads `target.dependsOn` and starts each target
+the moment the things it reads are done, which waits on strictly less than
+batching by depth would. `ConnectionBuild` in `types.ts` carries both loops.
 
 `tagParseLog` carries errors from parsing the `#@` annotations. Report them; a
 malformed annotation is a build problem.
@@ -244,27 +233,11 @@ SQL for every persist source in the model. A source whose dialect cannot
 express it throws — from the dialect, with its own message — and takes the
 whole call with it rather than reporting one unbuildable target among many.
 
-Users do reach this: not every generation failure is caught at translation
-time, so a model can compile and still fail here. It is survivable mostly
-because of how persistence gets adopted — a source is usually persisted after
-someone has run the query and looked at the result, so the SQL has generated
-once already. Taking the whole call down is deliberate for now: the throw
-carries its own context, and partial failure has no considered story yet.
-
-**One table, several sources.** `#@ persist` is an annotation, so it is
-inherited, and `extend` never changes the SQL a source compiles to:
-
-```malloy
-#@ persist name=rollup
-source: rollup is flights -> { group_by: carrier; aggregate: n is count() }
-source: enriched is rollup extend { dimension: c is upper(carrier) }
-```
-
-`enriched` is persistent, has `rollup`'s SQL, and therefore `rollup`'s BuildID.
-One table, two sources naming it, one manifest entry — this is the normal case,
-not an edge case. `getBuildTargets` merges them and puts both in
-`target.sources`; the merge is also where you can see two sources asking for
-different `name=` values on one table, which nothing else can detect.
+**One table, several sources** is the normal case, not an edge case —
+`#@ persist` is inherited and `extend` does not change the SQL a source
+compiles to, so extending or renaming a persisted source produces another name
+for the same table. `target.sources` holds all of them, which is also the only
+place two sources asking for different `name=` values on one table can be seen.
 
 ### `getBuildPlan()` — deprecated
 
@@ -358,11 +331,11 @@ referenced are pruned. A separate pass can then drop the orphaned tables.
    in step 4.
 3. **Plan** with `runtime.getBuildTargets(model)`, and cache one
    `connection.getDigest()` per connection name for step 4.
-4. **Build** each connection, level by level. Per target: if the manifest
-   already has `target.buildId`, `touch()` and move on; otherwise
+4. **Build** each connection's targets in the order given. Per target: if the
+   manifest already has `target.buildId`, `touch()` and move on; otherwise
    `CREATE TABLE` from `source.getSQL({buildManifest, connectionDigests})` —
    any of `target.sources` will do, they share the SQL — and `update()` the
-   manifest immediately, so later levels see the table.
+   manifest immediately, so whatever depends on it sees the table.
 5. **Write** `manifest.activeEntries`.
 
 Over several model files, keep one `Manifest` for the whole run. `touch()` and
@@ -397,12 +370,12 @@ A manifest routinely outlives its database — a file deleted, a project copied
 without its data directory, a restore that skipped it — and a builder that
 trusts the entry blindly reports "up to date" over nothing at all.
 
-No builder in this repo or in `malloy-cli` currently checks. A builder that
-wants to can probe before trusting a skip — compiling `source: __x is
-<conn>.table('<tableName>')` and rebuilding if that fails proves the entry can
-actually back a query, rather than that something exists in the catalog. Any
-policy of this kind — age limits, schedules, environment rules — belongs to the
-builder and is invisible to the core.
+Staleness detection is entirely the builder's; the core takes no position. A
+builder that wants it can probe before trusting a skip — compiling `source: __x
+is <conn>.table('<tableName>')` and rebuilding if that fails proves the entry
+can actually back a query, rather than that something merely exists in the
+catalog. Age limits, schedules, environment rules are all the same: builder
+policy, invisible to the core.
 
 ## Limitations
 

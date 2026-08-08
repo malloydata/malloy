@@ -501,8 +501,7 @@ describe('source persistence', () => {
 
         // Both readers of source_a record the edge to it. A source reached a
         // second time returns what it returned the first time, so the second
-        // reader is not left claiming it depends on nothing — which is what a
-        // leveled schedule would believe.
+        // reader is not left claiming it depends on nothing.
         const [depB, depC] = nodeD.dependsOn;
         expect(nodeD.dependsOn).toHaveLength(2);
         expect(depB.sourceID).toMatch(/source_b/);
@@ -545,8 +544,7 @@ describe('source persistence', () => {
 
         // Both readers of source_a record the edge to it. A source reached a
         // second time returns what it returned the first time, so the second
-        // reader is not left claiming it depends on nothing — which is what a
-        // leveled schedule would believe.
+        // reader is not left claiming it depends on nothing.
         const [depB, depC] = nodeD.dependsOn;
         expect(nodeD.dependsOn).toHaveLength(2);
         expect(depB.sourceID).toMatch(/source_b/);
@@ -630,10 +628,7 @@ describe('source persistence', () => {
         // source_c reaches source_a two ways: through source_b, and directly,
         // because source_c's SQL inlines source_b's, which inlines source_a's.
         // Both edges are true, and the direct one is redundant for ordering —
-        // source_b already sits between them. This used to report only the
-        // edge through source_b, because the extended source in source_c's
-        // structRef carried source_b's sourceID and the walk resolved that
-        // through the registry instead of descending into what it held.
+        // source_b already sits between them.
         const directDeps = nodeC.dependsOn.map(d => d.sourceID);
         expect(directDeps.filter(id => id.includes('source_b'))).toHaveLength(
           1
@@ -1552,10 +1547,9 @@ describe('source persistence', () => {
     });
 
     it('a diamond orders both readers after the source they share', async () => {
-      // Two readers of one source, both read by a fourth. The walk used to
-      // record the shared dependency for whichever reader it saw first and
-      // nothing for the other, so the second reader claimed to depend on
-      // nothing and only got a working table because the first one built it.
+      // Two readers of one source, both read by a fourth. Every reader has to
+      // record the shared dependency: one that records no edge can be started
+      // before the table it reads exists.
       testFileSpace.setFile(
         new URL('test://model1.malloy'),
         `${PERSIST_ANNOTATION}
@@ -1677,14 +1671,14 @@ describe('source persistence', () => {
         namesIn(direct.getBuildPlan())
       );
 
+      // The wrapper is a route, not a table, so it is not in the plan at all —
+      // `report` depends on the two tables it reaches through it.
       const node = imported.getBuildPlan().graphs[0].nodes[0][0];
       expect(node.sourceID).toContain('report');
       expect(node.dependsOn.map(d => d.sourceID.split('@')[0]).sort()).toEqual([
         'source_a',
         'source_b',
       ]);
-      // The wrapper is a route, not a table — it never appears in the plan.
-      expect(node.dependsOn.every(d => d.persistent)).toBe(true);
     });
   });
 

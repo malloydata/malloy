@@ -1501,23 +1501,6 @@ export class Model implements Taggable {
   }
 
   /**
-   * Get the build plan for all #@ persist sources.
-   *
-   * Walks through ALL queries and sources in the model, finding any persistent
-   * dependencies they reference (including hidden dependencies from imports).
-   *
-   * Returns a BuildPlan containing:
-   * - `graphs`: Build graphs for root sources only (minimal build set)
-   * - `sources`: Map from sourceId to PersistSource (all persist sources)
-   *
-   * The minimal build set contains only "root" sources - those not depended
-   * on by any other persist source. Each root includes its transitive
-   * dependencies in the dependsOn field, preserving the tree structure
-   * for parallel building.
-   *
-   * @return BuildPlan with graphs and sources map
-   */
-  /**
    * Require the `experimental.persistence` compiler flag.
    *
    * Read off the resolved model annotations (`.modelAnnotations`, the
@@ -1540,12 +1523,12 @@ export class Model implements Taggable {
    * queries. They share one walk, so a source several of them reach is visited
    * once.
    *
-   * This is the raw material `Runtime.getBuildTargets()` folds into tables. It
-   * is not a build plan — nothing here is keyed by artifact, because a model
-   * cannot reach a connection and so cannot compute a BuildID.
+   * This is the raw material {@link Runtime.getBuildTargets} folds into
+   * tables. Nothing here is keyed by artifact: that needs a BuildID, and a
+   * model cannot reach a connection to compute one.
    */
   public _walkPersistSources(tagParseLog: LogMessage[]): PersistWalk {
-    this.requirePersistence('getBuildTargets()');
+    this.requirePersistence('_walkPersistSources()');
     const roots: (SourceDef | InternalQuery)[] = [];
     for (const obj of Object.values(this.modelDef.contents)) {
       if (obj.type === 'query' || isSourceDef(obj)) {
@@ -1567,6 +1550,23 @@ export class Model implements Taggable {
       : undefined;
   }
 
+  /**
+   * Every `#@ persist` source in the model, as a graph keyed by sourceID.
+   *
+   * Walks all queries and sources, including dependencies that arrived through
+   * an import and are in no namespace here, and returns the *roots* — the
+   * sources nothing else depends on — each carrying its dependencies in
+   * `dependsOn`.
+   *
+   * @deprecated A builder wants tables, and this reports sources. Those are not
+   * one to one: several sources routinely map onto one table, so keying on
+   * sourceID leaves every builder to discover the mapping by hashing. Its roots
+   * are computed by sourceID too, so for a persisted source with an extension
+   * the root is the extension and the declaring source is never named. Use
+   * {@link Runtime.getBuildTargets}, which answers in tables.
+   *
+   * @return BuildPlan with graphs and sources map
+   */
   public getBuildPlan(): BuildPlan {
     this.requirePersistence('getBuildPlan()');
 

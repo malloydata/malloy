@@ -1283,10 +1283,11 @@ describe('source:', () => {
       const base = defOf(m, 'base');
       expect(base.sourceID).toBeDefined();
 
-      const query = m.translate().modelDef?.queryList[0];
-      const structRef = query?.structRef;
-      expect(typeof structRef).not.toBe('string');
-      const inlineExtend = structRef as SourceDef;
+      const structRef = m.translate().modelDef?.queryList[0]?.structRef;
+      if (structRef === undefined || typeof structRef === 'string') {
+        fail('the query does not have an inline extend as its structRef');
+      }
+      const inlineExtend = structRef;
       // It has the join; the registry's `base` does not. So it cannot claim to
       // be `base`.
       expect(inlineExtend.fields.some(f => f.name === 'b')).toBe(true);

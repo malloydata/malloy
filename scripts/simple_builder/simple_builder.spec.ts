@@ -284,14 +284,13 @@ test('build → rebuild → gc → gc', async () => {
 });
 
 /**
- * A persist source that depends on another persist source — the case the
- * build plan's shape makes easy to get wrong.
+ * A persist source that depends on another persist source.
  *
- * `getBuildPlan()` returns only roots in `graph.nodes` (here `top_carriers`)
- * and hangs `by_carrier` off its `dependsOn`. A builder that iterates the
- * graph's levels and stops there builds `top_carriers` alone: the dependency
- * is never created, its BuildID is never touched, so it is also pruned from
- * `activeEntries` and a later GC drops the table the built source reads from.
+ * Pins that a dependency is built, built *first*, and read from rather than
+ * inlined. A builder that skipped it would still produce correct results — the
+ * dependent would inline the computation — so the only thing that catches the
+ * mistake is the table's absence from the manifest, and then a later GC
+ * dropping a table the built source reads from.
  */
 test('build a dependency chain', async () => {
   await freshRoot();
@@ -375,9 +374,10 @@ test('an extension of a persisted source is the same table', async () => {
 });
 
 /**
- * Two names for one computation. The core reports both and takes no position —
- * a name means nothing to it — so refusing is the builder's call, and this
- * sample refuses. Honoring one name silently is how the second table a user
+ * Two names for one computation. The core reports both and takes no
+ * position — a name means nothing to it — so refusing is the builder's call,
+ * and this sample refuses. Honoring one name silently is how the second table a
+ * user
  * asked for disappears.
  */
 test('two names for one table is an error', async () => {
@@ -386,8 +386,8 @@ test('two names for one table is an error', async () => {
   try {
     await writeFile(MODEL_FILE, MODEL_V7);
     // The message has to say *where*, because that is the only thing a person
-    // can act on: `by_carrier` and `also_by_carrier`, each at the line it was declared. A name would be ambiguous and a BuildID is
-    // a hash.
+    // can act on: `by_carrier` and `also_by_carrier`, each at the line it
+    // was declared. A name would be ambiguous and a BuildID is a hash.
     await expect(build(BUILD_OPTS)).rejects.toThrow(
       /One table, two names.*test\.malloy:7.*test\.malloy:13/s
     );

@@ -87,17 +87,12 @@ export interface CompileQueryOptions {
  * A node reached twice is the *same object* both times, so the graph shares
  * nodes rather than copying them. Anything walking it needs a seen-set on node
  * identity, or a chain of diamonds is exponential.
+ *
+ * @deprecated Produced only by {@link BuildPlan}. Use `BuildTarget`.
  */
 export interface BuildNode {
   /** Source identity: "sourceName@modelURL" */
   sourceID: string;
-  /**
-   * Whether this source is itself something to build.
-   *
-   * A graph can also contain sources that are not — see
-   * {@link BuildGraph} — because they are the route to ones that are.
-   */
-  persistent: boolean;
   /** Dependencies as nested BuildNodes (recursive DAG) */
   dependsOn: BuildNode[];
 }
@@ -105,16 +100,16 @@ export interface BuildNode {
 /**
  * An ordered build plan for sources on a single connection.
  *
- * The leveled array structure determines build order: sources in the same
- * level can be built in parallel, levels must be built sequentially.
+ * `nodes` is typed for a leveled schedule that was never produced — it always
+ * holds exactly one entry, the roots, with the real ordering in each node's
+ * `dependsOn`.
  *
- * Builders can group graphs by `connectionName` to parallelize across
- * different database connections.
+ * @deprecated Use `BuildTargets`, which reports tables rather than sources.
  */
 export interface BuildGraph {
   /** The connection all sources in this graph run on */
   connectionName: string;
-  /** The leveled build nodes */
+  /** Always one entry: the root nodes */
   nodes: BuildNode[][];
 }
 

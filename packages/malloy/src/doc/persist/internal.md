@@ -194,18 +194,11 @@ The six ways a `SourceDef` can be referenced — this list is the walk:
 
 `CompositeSourceDef.sources[]` is deliberately not walked.
 
-**What survives the walk.** One rule, applied on the way back up:
-
-> keep me if I am persistent, or if any child survived
-
-The second clause needs no lookahead. A child only survived under this same
-rule, so a surviving child *is* the proof that something persistent lies below.
-For `a (persist) → b → c (persist) → d`: `d` has nothing beneath it and is
-dropped, `c` is kept for being persistent, `b` is kept for leading to `c`.
-
-So a source is emitted for one of two reasons, and `PersistNode.persistent`
-says which. `true` is a table to build. `false` is a route — a source that
-materializes nothing itself but is how the walk reached one that does.
+**What survives the walk** is decided by one rule, stated at
+`walkPersistentDependencies`: keep a source if it is persistent, or if any
+child survived. `PersistNode.persistent` says which reason applied — `true` is
+a table to build, `false` is a route, a source that materializes nothing itself
+but is how the walk reached one that does.
 
 **Three consumers, three folds.** None of them builds a graph.
 
@@ -225,11 +218,8 @@ it costs one line rather than a pass.
 deprecated call.
 
 **Memoized, not merely visited**: a source reached a second time reports what
-it reported the first time. Returning nothing on a second visit — what this did
-until the build-schedule work — left the second dependent claiming no
-dependencies, which a dependencies-first flatten happened to survive (the
-dependency got built on the first dependent's account) and a schedule of
-independent batches does not.
+it reported the first time, so every dependent records the edge rather than only
+the first one to arrive.
 
 `minimalBuildGraph(deps)` takes the flat forest collected from every model
 object and returns the **roots** — sourceIDs that nothing else depends on —
@@ -259,22 +249,26 @@ same BuildID. One pass does it, because the walk is in dependency order:
    immediately, minus any that landed on its own key (an extension depending on
    its base is one table, not a dependency);
 3. a route contributes its children's keys upward instead of a key of its own;
-4. finally, targets are grouped by connection and leveled by longest path, so
-   one sits strictly after everything it reads however many routes reach it.
+4. finally `place()` emits each target after everything it depends on — a
+   depth-first post-order walk of the target graph — filing it under its
+   connection.
 
 Keying the merge on connection *and* BuildID rather than BuildID alone says what
 a target is. The digest inside a BuildID makes them equivalent in practice; the
 pair does not depend on that being true.
 
-Connections come first in the result because no dependency crosses one — a
-query cannot — so each is an independent build. Levels are numbered across the
-whole model and then compacted per connection, so one connection's chain never
-pushes another's first table down a level.
+That no dependency crosses a connection is load-bearing enough to be enforced
+rather than assumed: an edge between two connections throws, because a builder
+running them in parallel would otherwise lose the ordering with nothing to warn
+it. It should be unreachable — a query cannot span two connections — but Malloy
+does not yet reject a model that writes one ([#3030]), so it can fire on a
+model that compiled.
 
-The cycle check in the leveling is unreachable for a well-formed model: a
-target's BuildID SQL contains its dependencies' SQL inline, so two targets
-cannot each contain the other. It throws rather than hangs if that stops
-holding.
+[#3030]: https://github.com/malloydata/malloy/issues/3030
+
+The cycle check in `place()` is unreachable for a well-formed model: a target's
+BuildID SQL contains its dependencies' SQL inline, so two targets cannot each
+contain the other. It throws rather than hangs if that stops holding.
 
 ## The build plan (deprecated)
 
@@ -295,10 +289,10 @@ question. Roots are the sources nothing depends on — so for a persisted source
 with an extension, the root is the extension and the declaring source is never
 named at the top level, though they are one table.
 
-**`BuildGraph.nodes` is `BuildNode[][]` but always has exactly one level.** The
-type anticipates the leveled schedule WN-0022 describes; what is emitted is
-`{connectionName, nodes: [rootNodes]}`, with the ordering in each root's
-`dependsOn`. The specs pin this — every `plan.graphs[0].nodes` assertion is
+**`BuildGraph.nodes` is `BuildNode[][]` but always holds exactly one entry.**
+The extra dimension anticipated a batched schedule that was never built; what
+is emitted is `{connectionName, nodes: [rootNodes]}`, with the ordering in each
+root's `dependsOn`. The specs pin it — every `plan.graphs[0].nodes` assertion is
 `toHaveLength(1)`, including the case named "dependent sources in different
 levels".
 

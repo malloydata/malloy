@@ -106,9 +106,9 @@ export type PersistWalk = Generator<PersistNode, SourceID[]>;
  * matter to persistence — in dependency order, each one after everything it
  * depends on.
  *
- * A source is emitted if it is persistent — something to build — or if it is
- * the *route* to something persistent. Everything else is dropped; a source
- * with nothing persistent beneath it is of no interest to anybody.
+ * A source is emitted if it is persistent — something to build — or if it
+ * is the *route* to something persistent. Everything else is dropped; a
+ * source with nothing persistent beneath it is of no interest to anybody.
  *
  * One rule decides both halves, applied on the way back up:
  *
@@ -116,22 +116,12 @@ export type PersistWalk = Generator<PersistNode, SourceID[]>;
  *
  * The second clause needs no lookahead. A child only survived under this same
  * rule, so a surviving child *is* the proof that something persistent lies
- * below. For `a(persist) → b → c(persist) → d`, d has nothing beneath it and
- * is dropped, c is kept for being persistent, b is kept for leading to c.
+ * below. For `a(persist) → b → c(persist) → d`, d has nothing beneath it
+ * and is dropped, c is kept for being persistent, b is kept for leading to c.
  *
- * Both consumers fold this stream rather than building a graph from it:
- *
- * - **`import`** keeps every sourceID, routes included. Those are exactly the
- *   ones that must resolve for this walk to be repeatable in the importing
- *   model, and copying only the persistent ones is how an imported source
- *   loses its dependencies — the walk reaches them *through* sources that are
- *   not themselves tables.
- * - **A builder** wants only the tables. A route contributes its children's
- *   targets to whoever referenced it, so an edge survives wherever a route
- *   exists.
- *
- * Because a node arrives only after everything it depends on, either fold is a
- * single pass with no second lookup.
+ * Because a node arrives only after everything it depends on, a consumer can
+ * fold the stream in a single pass with no second lookup — whether it wants
+ * every source touched, or only the ones that are tables.
  *
  * ## The 6 Dependency Paths in the IR
  *
@@ -163,15 +153,9 @@ export function* walkPersistentDependencies(
   tagParseLog: LogMessage[] = []
 ): PersistWalk {
   // Memoized, not merely visited: a source reached a second time reports the
-  // same answer it gave the first time. Returning nothing instead — which this
-  // did — dropped the second dependent's edge, so in a diamond only one of the
-  // two readers recorded the shared dependency and the other claimed to have
-  // none. A depth-first flatten hid that, because the dependency got built on
-  // the other reader's account anyway; a schedule of independent batches does
-  // not.
-  //
-  // The memo spans every root, so a subtree shared by two model objects is
-  // walked once and yielded once.
+  // same answer it gave the first time, so every dependent records the edge
+  // rather than only the first one to arrive. The memo spans every root, so a
+  // subtree two model objects both reach is walked once and yielded once.
   const done = new Map<SourceID, SourceID[]>();
   const openIDs = new Set<SourceID>();
 
@@ -206,13 +190,11 @@ export function* walkPersistentDependencies(
   }
 
   /** Concatenate what several paths found, without repeating a source. */
-  function* gather(
-    parts: Iterable<() => PersistWalk>
-  ): Generator<PersistNode, SourceID[]> {
+  function* gather(parts: Iterable<PersistWalk>): PersistWalk {
     const found: SourceID[] = [];
     const seen = new Set<SourceID>();
     for (const part of parts) {
-      for (const id of yield* part()) {
+      for (const id of yield* part) {
         if (!seen.has(id)) {
           seen.add(id);
           found.push(id);
@@ -223,30 +205,29 @@ export function* walkPersistentDependencies(
   }
 
   function* processSourceDef(source: SourceDef): PersistWalk {
-    const parts: (() => PersistWalk)[] = [];
+    const parts: PersistWalk[] = [];
 
     // Path 4: PersistableSourceDef.extends
     if (isPersistableSourceDef(source) && source.extends) {
-      const extendsID = source.extends;
-      parts.push(() => processSourceID(extendsID));
+      parts.push(processSourceID(source.extends));
     }
 
     // Path 6: QuerySourceDef.query
     if (source.type === 'query_source') {
-      parts.push(() => processQuery(source.query));
+      parts.push(processQuery(source.query));
     }
 
     // Path 5: SQLSourceDef.selectSegments[]
     if (source.type === 'sql_select' && source.selectSegments) {
       for (const segment of source.selectSegments) {
-        parts.push(() => processSQLSegment(segment));
+        parts.push(processSQLSegment(segment));
       }
     }
 
     // Path 3: SourceDef.fields[] - joins defined on the source
     for (const field of source.fields) {
       if (isJoined(field) && isSourceDef(field)) {
-        parts.push(() => processJoinedSource(field));
+        parts.push(processJoinedSource(field));
       }
     }
 
@@ -254,10 +235,10 @@ export function* walkPersistentDependencies(
   }
 
   function* processQuery(query: Query): PersistWalk {
-    const parts: (() => PersistWalk)[] = [];
+    const parts: PersistWalk[] = [];
 
     // Path 1: Query.structRef
-    parts.push(() => processStructRef(query.structRef));
+    parts.push(processStructRef(query.structRef));
 
     // Path 2: Query.pipeline[].extendSource[]
     for (const segment of query.pipeline) {
@@ -270,7 +251,7 @@ export function* walkPersistentDependencies(
         if (querySegment.extendSource) {
           for (const field of querySegment.extendSource) {
             if (isJoined(field) && isSourceDef(field)) {
-              parts.push(() => processJoinedSource(field));
+              parts.push(processJoinedSource(field));
             }
           }
         }
@@ -322,7 +303,7 @@ export function* walkPersistentDependencies(
 
   // Entry point: a Query has a required 'structRef', a SourceDef does not.
   return yield* gather(
-    roots.map(root => () => {
+    roots.map(root => {
       if ('structRef' in root) {
         return processQuery(root);
       }
@@ -374,16 +355,28 @@ export function findPersistentDependencies(
     }
     contributes.set(
       node.sourceID,
-      node.persistent
-        ? [{sourceID: node.sourceID, persistent: true, dependsOn}]
-        : dependsOn
+      node.persistent ? [{sourceID: node.sourceID, dependsOn}] : dependsOn
     );
     step = walk.next();
   }
 
   // The generator's return value is what the root itself reached — the only
   // thing a `for...of` would throw away.
-  return step.value.flatMap(id => contributes.get(id) ?? []);
+  //
+  // Deduplicated because two routes can land on one table: a source reached
+  // through two different `#@ -persist` wrappers contributes the same node
+  // twice, and this function has always returned each node once.
+  const roots: BuildNode[] = [];
+  const rootSeen = new Set<BuildNode>();
+  for (const id of step.value) {
+    for (const node of contributes.get(id) ?? []) {
+      if (!rootSeen.has(node)) {
+        rootSeen.add(node);
+        roots.push(node);
+      }
+    }
+  }
+  return roots;
 }
 
 /**

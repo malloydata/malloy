@@ -25,11 +25,9 @@
  *      A target is one table: its BuildID, the connection it lives on, and
  *      every source in the model that maps onto it. They arrive grouped by
  *      connection — no dependency ever crosses one, so those groups are
- *      wholly independent builds — and leveled within each: everything in a
- *      level is independent of everything else there, and depends only on
- *      earlier levels.
+ *      wholly independent builds — and in dependency order within each.
  *
- *   4. BUILD — Each connection, level by level. For each target:
+ *   4. BUILD — Each connection's targets, in the order given. For each:
  *      a. If its BuildID is already in the manifest, `touch()` it (marks it
  *         active for GC, but does not rebuild).
  *      b. Otherwise, get the *build SQL* from `source.getSQL({buildManifest,
@@ -43,18 +41,10 @@
  *
  * ## Key insight: a target is a table, not a source
  *
- *   `#@ persist` is an annotation, so extending or renaming a persisted source
- *   inherits it — and `extend` never changes the source's SQL. Four names can
- *   describe one table:
- *
- *     #@ persist name=rollup
- *     source: rollup is flights -> { group_by: carrier; aggregate: n }
- *     source: enriched is rollup extend { dimension: c is upper(carrier) }
- *
- *   `enriched` is persistent, has the same SQL as `rollup`, and therefore the
- *   same BuildID — one table, two sources naming it. `getBuildTargets` does
- *   that merge; both sources appear in `target.sources`. A builder that walked
- *   sources instead would create the same table once per name.
+ *   Several sources routinely name one table — see `BuildTarget` in the API
+ *   types for why. `getBuildTargets` does that merge, and every source that
+ *   named the table is in `target.sources`. A builder walking sources instead
+ *   would create the same table once per name.
  *
  * ## Key insight: the manifest is part of the build loop
  *
@@ -106,16 +96,11 @@
  *   - **Connections:** The CLI uses MalloyConfig to create connections from
  *     a config file. This sample hardcodes a single DuckDB connection.
  *
- *   - **Concurrency:** Connections are independent, and within one, a level is
- *     a set of targets that can be built at the same time. This sample builds
- *     everything one at a time so its SQL script has a stable order. A builder
- *     that wants the parallelism is two nested `Promise.all`s:
- *
- *       await Promise.all(connections.map(async ({levels}) => {
- *         for (const level of levels) {
- *           await Promise.all(level.map(build));
- *         }
- *       }));
+ *   - **Concurrency:** this sample builds everything one at a time so its SQL
+ *     script has a stable order. A builder that wants the parallelism runs the
+ *     connections at once and, within each, starts a target as soon as the
+ *     things it reads are done — see `ConnectionBuild` in the API types for
+ *     both loops.
  */
 
 import {readFile, writeFile, mkdir} from 'fs/promises';
@@ -378,7 +363,7 @@ async function runBuild(
       // `target.sql` is the BuildID SQL — fully inlined, order-independent,
       // already hashed. This is the other one: dependencies built earlier in
       // this run become table references. Because manifest.buildManifest is a
-      // stable reference, any manifest.update() from an earlier level is
+      // stable reference, any manifest.update() from an earlier target is
       // already visible here.
       const buildSQL = source.getSQL({
         buildManifest: manifest.buildManifest,
@@ -402,7 +387,7 @@ async function runBuild(
       console.log(`  Built: ${tableName} (${declared})`);
 
       // Update the manifest IMMEDIATELY after building. This is critical:
-      // targets in later levels that depend on this one will call
+      // later targets that depend on this one will call
       // getSQL({buildManifest, ...}) and see this table name instead of
       // the full inline SQL.
       manifest.update(target.buildId, {tableName});

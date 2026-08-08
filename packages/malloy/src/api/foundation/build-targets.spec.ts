@@ -4,7 +4,7 @@
  */
 
 import {Model} from './core';
-import {mkBuildTargets} from './build_targets';
+import {mkBuildTargets, resolvePersistWalk} from './build_targets';
 import type {BuildTarget, ConnectionBuild} from './types';
 import type {LogMessage} from '../../lang';
 import {TestTranslator} from '../../lang/test/test-translator';
@@ -12,24 +12,40 @@ import {TestTranslator} from '../../lang/test/test-translator';
 const DIGESTS = {
   _db_: 'digest-of-db',
   _db2_: 'digest-of-db2',
-  _pg_: 'digest-of-pg',
 };
 
 // A build target is an artifact, not a source, and the difference only shows
 // up once the SQL has been hashed. These tests take the long way — a real
 // translate, a real getSQL() — because hand-built input could not tell the
 // difference between two sources that share a table and two that don't.
-function connectionsOf(src: string): ConnectionBuild[] {
+function modelOf(src: string): Model {
   const tt = new TestTranslator(`##! experimental.persistence\n${src}`);
   const compiled = tt.translate();
   if (!compiled.modelDef) {
     const problems = (compiled.problems ?? []).map(p => p.message).join('\n');
     throw new Error(`source did not translate:\n${problems}\n${src}`);
   }
-  const model = new Model(compiled.modelDef, [], []);
+  return new Model(compiled.modelDef, [], []);
+}
+
+function connectionsOf(src: string): ConnectionBuild[] {
+  const model = modelOf(src);
   const log: LogMessage[] = [];
-  const nodes = [...model._walkPersistSources(log)];
-  return mkBuildTargets(nodes, model, DIGESTS);
+  return mkBuildTargets(resolvePersistWalk(model, log), DIGESTS);
+}
+
+function connectionNamed(
+  connections: ConnectionBuild[],
+  name: string
+): ConnectionBuild {
+  const found = connections.find(c => c.connectionName === name);
+  if (!found) {
+    throw new Error(
+      `no build for '${name}'; connections are ` +
+        connections.map(c => c.connectionName).join(', ')
+    );
+  }
+  return found;
 }
 
 /** The targets for a model that uses exactly one connection. */
@@ -107,10 +123,9 @@ describe('sources collapse onto the artifacts they build', () => {
   });
 
   test('a deliberate second name collapses, and both names survive', () => {
-    // The wall: BuildID is content, so asking for two tables of one
-    // computation gets one table. The plan used to report two targets and
-    // leave the builder to discover otherwise; now the merge is visible, and
-    // the disagreement is in `sources` for a builder to reject.
+    // BuildID is content, so asking for two tables of one computation gets one
+    // table. Both requests survive in `sources`, which is the only place a
+    // builder can see the disagreement and reject it.
     const targets = targetsOf(`
       ${ROLLUP}
       #@ persist name=rollup_again
@@ -174,8 +189,8 @@ describe('sources collapse onto the artifacts they build', () => {
       run: solo -> { select: * }
     `);
 
-    const db = connections.find(c => c.connectionName === '_db_')!;
-    const db2 = connections.find(c => c.connectionName === '_db2_')!;
+    const db = connectionNamed(connections, '_db_');
+    const db2 = connectionNamed(connections, '_db2_');
     expect(order(db.targets)).toEqual([['base'], ['top']]);
     expect(order(db2.targets)).toEqual([['solo']]);
   });
@@ -194,6 +209,30 @@ describe('targets come back in dependency order', () => {
     `);
 
     expect(order(targets)).toEqual([['rollup'], ['top']]);
+    expect(targets[1].dependsOn).toEqual([targets[0]]);
+  });
+
+  test('a merged source does not import a dependency the table lacks', () => {
+    // `alias` materializes `rollup`'s table, so it merges onto that target —
+    // and it joins `mid`, which reads `rollup`. Keeping alias's edge would say
+    // the table depends on something that depends on it.
+    //
+    // Sources on one target have identical SQL and so identical real
+    // dependencies; the difference between their recorded sets is the walk's
+    // over-approximation, since it follows every join whether the query uses
+    // it or not. Intersecting keeps every real edge and drops that one.
+    const targets = targetsOf(`
+      ${ROLLUP}
+      #@ persist name=mid
+      source: mid is rollup -> { group_by: astr; aggregate: t is n.sum() }
+      source: alias is rollup extend {
+        join_one: mid on astr = mid.astr
+      }
+      run: alias -> { select: * }
+    `);
+
+    expect(order(targets)).toEqual([['alias', 'rollup'], ['mid']]);
+    expect(targets[0].dependsOn).toEqual([]);
     expect(targets[1].dependsOn).toEqual([targets[0]]);
   });
 
@@ -232,14 +271,10 @@ describe('what a target carries', () => {
   });
 
   test('a missing digest names the connection it needed', () => {
-    const tt = new TestTranslator(
-      `##! experimental.persistence\n${ROLLUP}\nrun: rollup -> { select: * }`
-    );
-    const compiled = tt.translate();
-    const model = new Model(compiled.modelDef!, [], []);
-    const nodes = [...model._walkPersistSources([])];
+    const model = modelOf(`${ROLLUP}\nrun: rollup -> { select: * }`);
+    const walk = resolvePersistWalk(model, []);
 
-    expect(() => mkBuildTargets(nodes, model, {})).toThrow('_db_');
+    expect(() => mkBuildTargets(walk, {})).toThrow('_db_');
   });
 
   test('a model with no persist sources has no targets', () => {

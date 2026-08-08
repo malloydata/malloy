@@ -33,7 +33,7 @@ import type {
   CompileQueryOptions,
   BuildTargets,
 } from './types';
-import {mkBuildTargets} from './build_targets';
+import {mkBuildTargets, resolvePersistWalk} from './build_targets';
 import type {PreparedResult, Explore} from './core';
 import {Model, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
@@ -669,22 +669,19 @@ export class Runtime {
    * tell you which. That is why this lives on Runtime: it holds the
    * connections, so it can finish the answer a model can only start.
    *
-   * Connections are independent of one another and each level within one can
-   * be built concurrently; see {@link BuildTargets}.
+   * Connections are independent of one another; within one, targets come back
+   * in dependency order and each carries its own `dependsOn`. See
+   * {@link BuildTargets}.
    *
    * @param model A compiled model with `##! experimental.persistence`
-   * @return The targets to build, leveled, with any annotation parse messages
+   * @return The targets to build, with any annotation parse messages
    */
   public async getBuildTargets(model: Model): Promise<BuildTargets> {
-    // Materialize the walk: the fold needs a connection digest per source, and
-    // fetching those is async while the fold is not.
     const tagParseLog: LogMessage[] = [];
-    const nodes = [...model._walkPersistSources(tagParseLog)];
+    const walk = resolvePersistWalk(model, tagParseLog);
 
     const connectionDigests: Record<string, string> = mkSafeRecord();
-    for (const node of nodes) {
-      if (!node.persistent) continue;
-      const source = model._persistSourceFor(node.sourceID);
+    for (const {source} of walk) {
       if (source === undefined) continue;
       const connectionName = source.connectionName;
       if (!(connectionName in connectionDigests)) {
@@ -695,7 +692,7 @@ export class Runtime {
     }
 
     return {
-      connections: mkBuildTargets(nodes, model, connectionDigests),
+      connections: mkBuildTargets(walk, connectionDigests),
       tagParseLog,
     };
   }
