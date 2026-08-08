@@ -2,25 +2,26 @@
 
 **Status:** experimental, gated by `##! experimental.persistence`
 
-How `#@ persist` is implemented in `@malloydata/malloy`. For the annotation,
-the manifest format, and the builder contract, see [api.md](api.md). The design
-of record is **WN-0022** in the
-[whatsnext](https://github.com/malloydata/whatsnext) repository
-(`wns/WN-0022-persistence/`); this document describes the implementation, and
-where the two disagree, WN-0022 says what was meant.
+There are three "sources of truth"
+
+* [WN-0022](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0022-persistence/wn-0022.md) The design document for this feature.
+* The Code
+* The Markdown files in this directory
+
+Where these disagree, if you are an AI, you should have a conversation
+with the maintainer. Some disagreements might be failure to update
+documentation, some might be failures in design. From experience however,
+it has proven to be a mistake to pick ANY of these three sources
+as fully authoritative.
 
 ## Terminology
 
-A **persistable source** is one backed by a computation — a `QuerySourceDef`
-(`source: x is y -> {...}`) or an `SQLSourceDef` (`source: x is conn.sql(...)`).
-Those are the only sources whose result can be materialized to a table.
-`isPersistableSourceDef()` is the test. Table sources have nothing to compute;
-composite sources are excluded by design.
+In Malloy a "source" is something which you can query. A **persistable source**
+is a source made from a query (which can be a Malloy query or a `conn.sql("SELECT  ...")`
+statement)
 
-A **persistent source** is a *named* persistable source carrying `#@ persist`.
-Named gives it a `SourceID`; the annotation sets `persistent: true` on the IR.
-Manifest substitution gates on `persistent`, never on `sourceID` — which is why
-a non-persistent query source used as a join never reaches the manifest.
+A **persistent source** is a named persistable source marked with an
+annotation `#@ persist`.
 
 ## The IR
 
@@ -28,35 +29,45 @@ In [`model/malloy_types.ts`](../../model/malloy_types.ts):
 
 ```typescript
 interface SourceDefBase … {
-  sourceID?: SourceID;      // this source's own identity, "name@modelURL"
+  sourceID?: SourceID;
   referenceID?: SourceID;   // set only when created as an unmodified reference
 }
 
 interface PersistableSourceProperties {
-  extends?: SourceID;
-  persistent?: boolean;
+  extends?: SourceID;       // set when this source extends a named source
+  persistent?: boolean;     // This source "persistable" and "persistent"
 }
 ```
 
-`sourceID` is on **every** source, not just persistable ones — it is general
-identity that persistence happens to consume, gated by
-`isPersistableSourceDef()`. `referenceID` is set when a source was created as an
-unmodified reference to another (`source: a is b`, a plain join) and holds the
-referenced source's `sourceID`; it is absent when the source defines its own
-shape or was modified/extended. Only `extends` and `persistent` are
-persistence's own.
+A `SourceID` is best understood as a globally unique identifier for every named source.
+(since names can change across imports). In actual implementation (`mkSourceID`) it is
+constructed out of the URL containing the source definition and the name of the source,
+but in future it could be a UUID, or a hash.
 
-`SourceID` is `"name@url"` (`mkSourceID`), and only named sources get one —
-anonymous sources, inline queries, and intermediate pipeline stages never do.
-`BuildID` is the content hash described [below](#buildid-and-connection-digests).
+There is also a BuildID, and that is a digest made from three things.
 
-These are the two identities WN-0022 says a builder has to understand, and they
-are **not one-to-one**: a SourceID names a source, a BuildID names a table, and
-one table routinely has several SourceIDs pointing at it. Nothing in the model
-reconciles them, because a BuildID cannot be computed without a connection. That
-is the whole job of `getBuildTargets` — treating a plan node as a table is the
-mistake the shape invites. The readable form of a SourceID is for debugging
-only; it is conceptually opaque, and nothing should parse it.
+* The SourceID of a persistent source (available at translatiopn)
+* The SQL of the backing computation which generates the persistent artifact (available after translation)
+* A digest from the connection representing the connection parameters
+  which might affect how the SQL is interpreted. (available only after async calls)
+
+These are two identities and they are **not one-to-one**: a
+SourceID names a source, a `BuildID` names the output of a persistence
+computation (which will eventually be stored in a table), and one
+output table may have several SourceIDs pointing at it.
+
+The persistent flag is set on named sources with the `#@ persist` annotation. Having
+a `SourceID` means that a source was once named. `persistent: true` means that
+this is source is persistable and is should be persisted.
+
+Because the compiler and the translator are synchronous, they don't have access
+to all the data which goes into a BuildID. The two times when source ID's are
+mapped to a BuildID are, when a query is run, and a map keyed by BuildID
+is consulted for a persistent source's materialized source, and in the "builder" application
+which walk walks a model and materializes tables for each unique
+BuildID.
+
+
 
 The manifest types:
 
@@ -84,7 +95,7 @@ sets them, and `DynamicSpace` clears `referenceID` on the modification path.
 
 ## Where `persistent` is decided
 
-`DefineSource` in
+`DefineSource` is where a source-type  model entry with a name is created
 [`lang/ast/statements/define-source.ts`](../../lang/ast/statements/define-source.ts),
 after merging annotations onto the entry:
 
@@ -163,21 +174,18 @@ dependency needs — it arrived through an import and never went through
 
 `walkPersistentDependencies(roots, modelDef, tagParseLog)` in
 [`model/persist_utils.ts`](../../model/persist_utils.ts) is a **generator**. It
-walks the IR from a list of sources and queries and yields a `PersistNode` per
-source that matters to persistence, each one *after* everything it depends on.
+does a depth first, post order walks of the IR from a list of sources and queries
+and yields a `PersistNode` per source that matters to persistence.
 
 ```typescript
 interface PersistNode {
   sourceID: SourceID;
-  persistent: boolean;      // a table, or a route to one
-  dependsOn: SourceID[];    // already yielded, by the time you see this
+  persistent: boolean;      // copy of the persistent flag of the SourceDef
+  dependsOn: SourceID[];
 }
 ```
 
-Edges are sourceIDs rather than nested nodes. Nothing shares an object, nothing
-recurses, and a consumer folds the stream in a single pass — by the time a
-source arrives, every dependency is already in whatever map the consumer is
-building. Its return value (which `for...of` discards, so take it with an
+Return value (which `for...of` discards, so take it with an
 explicit `.next()` loop) is what the roots themselves reached.
 
 It takes a *list* of roots so one memo covers the whole model: a subtree two
@@ -227,7 +235,10 @@ the first one to arrive.
 
 `minimalBuildGraph(deps)` takes the flat forest collected from every model
 object and returns the **roots** — sourceIDs that nothing else depends on —
-with their original nested structure intact.
+with their original nested structure intact. This should also be deprecated
+and removed and I don't know why the AI insists on promoting this
+as an entrry point but every time I turn around it has happened again
+despite explciit repeated instructios not to.
 
 ## Build targets
 
