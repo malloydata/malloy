@@ -27,7 +27,13 @@ import {rowDataToNumber} from '../../api/row_data_utils';
 import type {CacheManager} from './cache';
 import type {MalloyConfig} from './config';
 import {EmptyURLReader, FixedConnectionMap} from './readers';
-import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
+import type {
+  ParseOptions,
+  CompileOptions,
+  CompileQueryOptions,
+  BuildTargets,
+} from './types';
+import {mkBuildTargets, resolvePersistWalk} from './build_targets';
 import type {PreparedResult, Explore} from './core';
 import {Model, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
@@ -652,6 +658,43 @@ export class Runtime {
     options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name, options).getPreparedQuery();
+  }
+
+  /**
+   * What a builder has to build for this model, and in what order.
+   *
+   * This is the builder entry point. A model can only enumerate persistable
+   * *sources*, which is not the same set as the tables they produce — several
+   * sources routinely map onto one table, and only a connection digest can
+   * tell you which. That is why this lives on Runtime: it holds the
+   * connections, so it can finish the answer a model can only start.
+   *
+   * Connections are independent of one another; within one, targets come back
+   * in dependency order and each carries its own `dependsOn`. See
+   * {@link BuildTargets}.
+   *
+   * @param model A compiled model with `##! experimental.persistence`
+   * @return The targets to build, with any annotation parse messages
+   */
+  public async getBuildTargets(model: Model): Promise<BuildTargets> {
+    const tagParseLog: LogMessage[] = [];
+    const walk = resolvePersistWalk(model, tagParseLog);
+
+    const connectionDigests: Record<string, string> = mkSafeRecord();
+    for (const {source} of walk) {
+      if (source === undefined) continue;
+      const connectionName = source.connectionName;
+      if (!(connectionName in connectionDigests)) {
+        const connection =
+          await this.connections.lookupConnection(connectionName);
+        connectionDigests[connectionName] = connection.getDigest();
+      }
+    }
+
+    return {
+      connections: mkBuildTargets(walk, connectionDigests),
+      tagParseLog,
+    };
   }
 }
 

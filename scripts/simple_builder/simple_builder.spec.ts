@@ -109,6 +109,36 @@ source: by_carrier is flights -> {
 `;
 
 /**
+ * An extension of a persisted source. It inherits `#@ persist` and does not
+ * change the SQL, so it is a second name for the same table.
+ */
+const MODEL_V6 = `${FLIGHTS}
+#@ persist name=by_carrier
+source: by_carrier is flights -> {
+  group_by: carrier
+  aggregate: flight_count
+}
+
+source: enriched is by_carrier extend {
+  dimension: loud_carrier is upper(carrier)
+}
+
+run: enriched -> { select: * }
+`;
+
+/** Two names for one computation — a request the builder cannot honor. */
+const MODEL_V7 = `${FLIGHTS}
+#@ persist name=by_carrier
+source: by_carrier is flights -> {
+  group_by: carrier
+  aggregate: flight_count
+}
+
+#@ persist name=also_by_carrier
+source: also_by_carrier is by_carrier
+`;
+
+/**
  * A name no dialect can express. Grouped by origin so its BuildID differs
  * from V4's — a source already in the manifest is touched without its name
  * being revisited.
@@ -254,14 +284,13 @@ test('build → rebuild → gc → gc', async () => {
 });
 
 /**
- * A persist source that depends on another persist source — the case the
- * build plan's shape makes easy to get wrong.
+ * A persist source that depends on another persist source.
  *
- * `getBuildPlan()` returns only roots in `graph.nodes` (here `top_carriers`)
- * and hangs `by_carrier` off its `dependsOn`. A builder that iterates the
- * graph's levels and stops there builds `top_carriers` alone: the dependency
- * is never created, its BuildID is never touched, so it is also pruned from
- * `activeEntries` and a later GC drops the table the built source reads from.
+ * Pins that a dependency is built, built *first*, and read from rather than
+ * inlined. A builder that skipped it would still produce correct results — the
+ * dependent would inline the computation — so the only thing that catches the
+ * mistake is the table's absence from the manifest, and then a later GC
+ * dropping a table the built source reads from.
  */
 test('build a dependency chain', async () => {
   await freshRoot();
@@ -301,6 +330,66 @@ test('build a dependency chain', async () => {
       rebuild.entries.length === 2 &&
         rebuild.entries.every(e => e.action === 'exists'),
       'both entries survive a rebuild'
+    );
+  } finally {
+    await rm(ROOT, {recursive: true, force: true});
+  }
+});
+
+/**
+ * Several sources, one table — the case a builder walking *sources* gets
+ * wrong.
+ *
+ * `enriched` extends `by_carrier`, so it is persistent and shares its SQL,
+ * its BuildID, and its `name=`. There is one table to build. A builder that
+ * iterated sources would issue the same CREATE TABLE twice, and one that
+ * keyed a forced rebuild on the table name would drop and recreate it once
+ * per name.
+ */
+test('an extension of a persisted source is the same table', async () => {
+  await freshRoot();
+
+  try {
+    await writeFile(MODEL_FILE, MODEL_V6);
+    await build(BUILD_OPTS);
+
+    const manifest = await readJSON<BuildManifest>(MANIFEST_FILE);
+    check(
+      Object.keys(manifest.entries).length === 1 &&
+        tableNames(manifest).join() === 'by_carrier',
+      'one entry, one table'
+    );
+
+    const sql = await readFile(SQL_FILE, 'utf-8');
+    check(
+      sql.split('CREATE TABLE').length - 1 === 1,
+      'the table is created once'
+    );
+
+    const log = await buildLogAt(0);
+    check(log.entries.length === 1, 'one thing was built');
+  } finally {
+    await rm(ROOT, {recursive: true, force: true});
+  }
+});
+
+/**
+ * Two names for one computation. The core reports both and takes no
+ * position — a name means nothing to it — so refusing is the builder's call,
+ * and this sample refuses. Honoring one name silently is how the second table a
+ * user
+ * asked for disappears.
+ */
+test('two names for one table is an error', async () => {
+  await freshRoot();
+
+  try {
+    await writeFile(MODEL_FILE, MODEL_V7);
+    // The message has to say *where*, because that is the only thing a person
+    // can act on: `by_carrier` and `also_by_carrier`, each at the line it
+    // was declared. A name would be ambiguous and a BuildID is a hash.
+    await expect(build(BUILD_OPTS)).rejects.toThrow(
+      /One table, two names.*test\.malloy:7.*test\.malloy:13/s
     );
   } finally {
     await rm(ROOT, {recursive: true, force: true});
