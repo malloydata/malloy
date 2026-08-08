@@ -187,21 +187,19 @@ export function mkBuildTargets(
     // base's target carrying an edge to `mid`, while `mid` depends on `base`.
     // Only one of those two edges is real.
     //
-    // Intersecting keeps the real ones because **the walk records what a
-    // modification reaches transitively, not just what it names**: a source
-    // extending `mid` records `base` as well, so every source merging onto a
-    // target names that target's real dependencies directly and they appear in
-    // every set. That follows from `DynamicSpace` no longer stamping the
-    // base's sourceID onto a modified def — the walk descends through a
-    // modification rather than resolving it by id.
+    // Intersecting keeps the real ones because of the six-paths list at
+    // `walkPersistentDependencies`: those are every way one source's SQL can
+    // incorporate another's, and the walk follows all six. So a source that
+    // compiles to this target's SQL necessarily reaches everything that SQL
+    // inlines — every set here is a superset of the real dependencies, and
+    // what differs between them is only the join over-approximation, which is
+    // what the intersection removes.
     //
-    // So this rests on an invariant that lives in `dynamic-space.ts`. Tighten
-    // the walk to immediate references — which would read as a cleanup — and a
-    // merging source's set collapses to its own key, the self-skip empties it,
-    // and this silently drops every real edge. The symptom is a table built
-    // from inlined SQL instead of reading the one below it: no error, just the
-    // expensive query persistence exists to avoid. `build-targets.spec.ts`
-    // pins both directions.
+    // The safety therefore rests on that list staying complete. A path added
+    // to the IR and not to the walk would break this as well as the plan, and
+    // the symptom here is quieter: a table built from inlined SQL instead of
+    // reading the one below it. No error, just the expensive query
+    // persistence exists to avoid.
     if (target.sources.length === 0) {
       target.dependsOn = mine;
     } else {

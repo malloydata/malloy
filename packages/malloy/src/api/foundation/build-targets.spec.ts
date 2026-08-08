@@ -213,17 +213,14 @@ describe('targets come back in dependency order', () => {
   });
 
   test('a merged target keeps the dependency it really has', () => {
-    // The positive half of the intersection. `reader` merges onto `mid`, and
-    // the merged target must still depend on `base`.
+    // The positive half of the intersection: `reader` merges onto `mid`, and
+    // the merged target must still depend on `base`. Dropping a real edge is
+    // silent — the table gets built from inlined SQL rather than reading the
+    // one below it — so the negative test above is not enough on its own.
     //
-    // This holds because the walk records what a modification reaches
-    // *transitively* — `reader` names `base` directly, not just `mid` — so
-    // both sets contain the real edge and the intersection keeps it. Tighten
-    // the walk to immediate references only and `reader`'s set becomes
-    // `{mid}`, which is its own key, the self-skip empties it, and the
-    // intersection silently drops `base`. The symptom would be a table built
-    // from inlined SQL instead of reading the one below it: no error, just the
-    // expensive query this feature exists to avoid.
+    // Honest about what this pins: it guards future changes to
+    // `mkBuildTargets`. No edit is known that turns it red, so it documents
+    // the intended behaviour more than it catches a specific regression.
     const targets = targetsOf(`
       ${ROLLUP}
       #@ persist name=mid

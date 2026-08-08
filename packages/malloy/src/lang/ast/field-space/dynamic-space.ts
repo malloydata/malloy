@@ -111,10 +111,9 @@ export abstract class DynamicSpace
       // this ends up with a name, and an inline `extend` never does.
       //
       // Dropping `sourceID` also means the persistence walk descends *through*
-      // a modification rather than resolving it by id, so a modified source
-      // records what it reaches transitively. `mkBuildTargets` relies on that
-      // to intersect the dependencies of sources sharing a table; see the
-      // comment there before making the walk name only immediate references.
+      // an unnamed modification rather than resolving it by id — which is how
+      // an inline `extend` used as a query's structRef stopped hiding the
+      // sources it added.
       delete this.sourceDef.referenceID;
       delete this.sourceDef.sourceID;
       this.sourceDef.parameters = parameters;
