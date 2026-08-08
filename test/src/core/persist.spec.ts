@@ -5,7 +5,12 @@
 
 import {runtimeFor, testFileSpace, DuckDBROTestConnection} from '../runtimes';
 import {wrapTestModel} from '@malloydata/malloy/test';
-import type {BuildNode, BuildManifest, BuildPlan} from '@malloydata/malloy';
+import type {
+  BuildNode,
+  BuildManifest,
+  BuildPlan,
+  BuildTarget,
+} from '@malloydata/malloy';
 import {
   ConnectionRuntime,
   SingleConnectionRuntime,
@@ -622,8 +627,23 @@ describe('source persistence', () => {
         const nodeC = plan.graphs[0].nodes[0][0];
         expect(nodeC.sourceID).toMatch(/source_c/);
 
+        // source_c reaches source_a two ways: through source_b, and directly,
+        // because source_c's SQL inlines source_b's, which inlines source_a's.
+        // Both edges are true, and the direct one is redundant for ordering —
+        // source_b already sits between them. This used to report only the
+        // edge through source_b, because the extended source in source_c's
+        // structRef carried source_b's sourceID and the walk resolved that
+        // through the registry instead of descending into what it held.
+        const directDeps = nodeC.dependsOn.map(d => d.sourceID);
+        expect(directDeps.filter(id => id.includes('source_b'))).toHaveLength(
+          1
+        );
+        expect(directDeps.filter(id => id.includes('source_a'))).toHaveLength(
+          1
+        );
+
         const allDeps = getAllSourceIDs(nodeC.dependsOn);
-        expect(allDeps).toHaveLength(2);
+        expect(allDeps).toHaveLength(3);
         expect(hasDependency(nodeC.dependsOn, 'source_a')).toBe(true);
         expect(hasDependency(nodeC.dependsOn, 'source_b')).toBe(true);
       });
@@ -1430,6 +1450,164 @@ describe('source persistence', () => {
       const source_a = graph.nodes[0][0];
       expect(source_a.sourceID).toContain('source_a');
       expect(source_a.dependsOn).toHaveLength(0);
+    });
+
+    it('an inline extend at the query site still routes to the table', async () => {
+      // `run: persisted extend { ... } -> { ... }` is the ordinary way to use a
+      // persisted source, and the inline extend is not a named source. It finds
+      // its dependency through `extends` rather than through an id of its own,
+      // and it substitutes because substitution keys on `persistent` plus the
+      // SQL hash — an extend changes neither.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: complex_thing is flights -> {
+            group_by: carrier
+            aggregate: n is count()
+          }
+
+          run: complex_thing extend {
+            dimension: loud is upper(carrier)
+          } -> {
+            group_by: loud
+            aggregate: total is n.sum()
+          }
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+
+      // The query's dependency on the persisted source is found.
+      const {connections} = await tstRuntime.getBuildTargets(model);
+      expect(connections).toHaveLength(1);
+      expect(connections[0].targets).toHaveLength(1);
+      const target = connections[0].targets[0];
+      expect(target.sources.map(s => s.name)).toEqual(['complex_thing']);
+
+      // And a query through the inline extend reads the built table.
+      const manifest: BuildManifest = {
+        entries: {[target.buildId]: {tableName: 'cached.complex_thing'}},
+      };
+      const sql = await runtimeWithManifest(manifest)
+        .loadQueryByIndex(new URL('test://model1.malloy'), 0)
+        .getSQL();
+      expect(sql).toContain('cached.complex_thing');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('a named extend is the same table, and routes to it', async () => {
+      // The named counterpart of the test above. `moreComplex` inherits the
+      // whole annotation — `name=` included — and does not change the
+      // materialization SQL, so it is a second name for one table rather than
+      // a second table.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist name=complex_thing
+          source: complex_base is flights -> {
+            group_by: carrier
+            aggregate: n is count()
+          }
+
+          source: more_complex is complex_base extend {
+            dimension: loud is upper(carrier)
+          }
+
+          run: more_complex -> { group_by: loud; aggregate: total is n.sum() }
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const {connections} = await tstRuntime.getBuildTargets(model);
+
+      expect(connections[0].targets).toHaveLength(1);
+      const target = connections[0].targets[0];
+      expect(target.sources.map(s => s.name).sort()).toEqual([
+        'complex_base',
+        'more_complex',
+      ]);
+      // Both inherited the same requested name, so there is nothing to resolve.
+      const asked = target.sources.map(s =>
+        s.annotations.parseAsTag('@').tag.text('name')
+      );
+      expect(new Set(asked)).toEqual(new Set(['complex_thing']));
+
+      const manifest: BuildManifest = {
+        entries: {[target.buildId]: {tableName: 'cached.complex_thing'}},
+      };
+      const sql = await runtimeWithManifest(manifest)
+        .loadQueryByIndex(new URL('test://model1.malloy'), 0)
+        .getSQL();
+      expect(sql).toContain('cached.complex_thing');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('a diamond orders both readers after the source they share', async () => {
+      // Two readers of one source, both read by a fourth. The walk used to
+      // record the shared dependency for whichever reader it saw first and
+      // nothing for the other, so the second reader claimed to depend on
+      // nothing and only got a working table because the first one built it.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: shared is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: lo_side is shared extend { dimension: side is 'lo' } -> { select: * }
+
+          #@ persist
+          source: hi_side is shared extend { dimension: side is 'hi' } -> { select: * }
+
+          #@ persist
+          source: both is ${tstDB}.sql("""
+            SELECT * FROM %{ lo_side } UNION ALL SELECT * FROM %{ hi_side }
+          """)
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const {connections} = await tstRuntime.getBuildTargets(model);
+
+      expect(connections).toHaveLength(1);
+      const targets = connections[0].targets;
+      const nameOf = (t: BuildTarget) =>
+        t.sources
+          .map(s => s.name)
+          .sort()
+          .join('+');
+
+      // Dependencies before dependents, whichever order the walk found them.
+      const at = (n: string) => targets.findIndex(t => nameOf(t) === n);
+      expect(at('shared')).toBeLessThan(at('lo_side'));
+      expect(at('shared')).toBeLessThan(at('hi_side'));
+      expect(at('lo_side')).toBeLessThan(at('both'));
+      expect(at('hi_side')).toBeLessThan(at('both'));
+
+      // Both readers record the shared dependency — not just the first one.
+      const shared = targets[at('shared')];
+      expect(targets[at('lo_side')].dependsOn).toEqual([shared]);
+      expect(targets[at('hi_side')].dependsOn).toEqual([shared]);
+      expect(targets[at('both')].dependsOn.map(nameOf).sort()).toEqual([
+        'hi_side',
+        'lo_side',
+      ]);
     });
 
     it('reaches dependencies through a non-persistent wrapper', async () => {

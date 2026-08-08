@@ -14,6 +14,7 @@ export type {
   BuildGraph,
   BuildTarget,
   BuildTargets,
+  ConnectionBuild,
 } from './types';
 export {EMPTY_BUILD_MANIFEST} from './types';
 

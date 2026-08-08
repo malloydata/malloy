@@ -279,6 +279,7 @@ export type {
   BuildPlan,
   BuildTarget,
   BuildTargets,
+  ConnectionBuild,
 } from './api/foundation';
 export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';
 export {Reference} from './api/foundation';

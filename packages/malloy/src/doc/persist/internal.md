@@ -161,10 +161,27 @@ dependency needs — it arrived through an import and never went through
 
 ## Dependency walking
 
-`walkPersistentDependencies(root, modelDef, tagParseLog)` in
-[`model/persist_utils.ts`](../../model/persist_utils.ts) walks the IR from a
-source or query and returns the `BuildNode` graph of the sources that matter to
-persistence.
+`walkPersistentDependencies(roots, modelDef, tagParseLog)` in
+[`model/persist_utils.ts`](../../model/persist_utils.ts) is a **generator**. It
+walks the IR from a list of sources and queries and yields a `PersistNode` per
+source that matters to persistence, each one *after* everything it depends on.
+
+```typescript
+interface PersistNode {
+  sourceID: SourceID;
+  persistent: boolean;      // a table, or a route to one
+  dependsOn: SourceID[];    // already yielded, by the time you see this
+}
+```
+
+Edges are sourceIDs rather than nested nodes. Nothing shares an object, nothing
+recurses, and a consumer folds the stream in a single pass — by the time a
+source arrives, every dependency is already in whatever map the consumer is
+building. Its return value (which `for...of` discards, so take it with an
+explicit `.next()` loop) is what the roots themselves reached.
+
+It takes a *list* of roots so one memo covers the whole model: a subtree two
+model objects both reach is walked once and yielded once.
 
 The six ways a `SourceDef` can be referenced — this list is the walk:
 
@@ -186,29 +203,29 @@ rule, so a surviving child *is* the proof that something persistent lies below.
 For `a (persist) → b → c (persist) → d`: `d` has nothing beneath it and is
 dropped, `c` is kept for being persistent, `b` is kept for leading to `c`.
 
-So a node is in the graph for one of two reasons, and `BuildNode.persistent`
-says which. `persistent: true` is a table to build. `persistent: false` is a
-route — a source that materializes nothing itself but is how the walk reached
-one that does.
+So a source is emitted for one of two reasons, and `PersistNode.persistent`
+says which. `true` is a table to build. `false` is a route — a source that
+materializes nothing itself but is how the walk reached one that does.
 
-**The two views**, selected by the `keepRoutes` parameter.
+**Three consumers, three folds.** None of them builds a graph.
 
-`findPersistentDependencies()` is the builder's view — the same walk with
-`keepRoutes: false`. A route then hands its dependencies straight to whoever
-pointed at it, so an edge survives wherever a route exists.
-`C (persist) → B (not persist) → A (persist)` gives C a direct dependency on A.
-(With routes off, the "did any child survive" clause never fires: a route
-returns its children rather than itself, so there is nothing left to decide.)
-
-`import-statement.ts` takes the whole graph, because the routes are precisely
+`import-statement.ts` keeps every sourceID, routes included, because those are
 what the importing model must be able to re-traverse. A `#@ -persist` wrapper
 that adds a join is not a table, but it can be the only way to reach the tables
-beneath it; copy just the persistent nodes and an imported source silently
+beneath it; copy just the persistent ones and an imported source silently
 arrives with no dependencies at all.
 
-**Memoized, not merely visited**: a source reached a second time returns the
-nodes it returned the first time, so the same node object appears under every
-dependent that reads it. Returning nothing on a second visit — what this did
+`mkBuildTargets()` keeps a `sourceID → target keys` map. A persistent source
+becomes (or joins) a target and contributes its own key; a route contributes
+whatever its children contributed. That is how an edge survives a route, and
+it costs one line rather than a pass.
+
+`findPersistentDependencies()` folds the stream back into the nested
+`BuildNode[]` that `Model.getBuildPlan()` returns. It exists only for that
+deprecated call.
+
+**Memoized, not merely visited**: a source reached a second time reports what
+it reported the first time. Returning nothing on a second visit — what this did
 until the build-schedule work — left the second dependent claiming no
 dependencies, which a dependencies-first flatten happened to survive (the
 dependency got built on the first dependent's account) and a schedule of
@@ -218,53 +235,72 @@ independent batches does not.
 object and returns the **roots** — sourceIDs that nothing else depends on —
 with their original nested structure intact.
 
-## The build plan
-
-`Model.getBuildPlan()` in
-[`api/foundation/core.ts`](../../api/foundation/core.ts) requires
-`##! experimental.persistence`, read off `modelAnnotations` (the import/extend
-fold) so the flag carries across extend. It walks every entry in
-`modelDef.contents` plus `modelDef.queryList`, unions the dependency forests,
-takes `minimalBuildGraph()`, builds a `PersistSource` for every sourceID it
-saw, and groups the roots by connection name.
-
-**`BuildGraph.nodes` is `BuildNode[][]` but always has exactly one level.** The
-type anticipates the leveled schedule WN-0022 describes; what is emitted is
-`{connectionName, nodes: [rootNodes]}`, with the ordering information in each
-root's `dependsOn`. The specs pin this — every `plan.graphs[0].nodes` assertion
-is `toHaveLength(1)`, including the case named "dependent sources in different
-levels". The leveling that was missing is in `getBuildTargets` below, computed
-over artifacts rather than sources; the plan itself is unchanged.
-
 ## Build targets
 
 `Runtime.getBuildTargets(model)` in
 [`api/foundation/runtime.ts`](../../api/foundation/runtime.ts) is what a builder
-consumes, and `mkBuildTargets(plan, connectionDigests)` in
-[`api/foundation/build_targets.ts`](../../api/foundation/build_targets.ts) is
-the pure part of it: everything except fetching one digest per connection.
+consumes. `Model._walkPersistSources()` supplies the stream — every named source
+and query plus the unnamed queries, as one walk — and `mkBuildTargets(nodes,
+model, connectionDigests)` in
+[`api/foundation/build_targets.ts`](../../api/foundation/build_targets.ts) folds
+it. That split is where the async/sync boundary falls: fetching a digest per
+connection is async, the fold is not, so the Runtime materializes the walk,
+collects the digests it names, and hands both to the fold.
 
-The plan enumerates *sources*; a builder needs *tables*. The two counts differ
-by construction — `#@ persist` is inherited and `extend` never changes the SQL,
-so an extension or a rename of a persisted source is another sourceID naming
-the same BuildID. `mkBuildTargets`:
+The walk emits *sources*; a builder needs *tables*, and the two counts differ by
+construction — `#@ persist` is inherited and `extend` never changes the SQL, so
+an extension or a rename of a persisted source is another sourceID naming the
+same BuildID. One pass does it, because the walk is in dependency order:
 
-1. unions the plan's edges by sourceID, one entry per source;
-2. computes `getSQL()` and the BuildID for each, and merges sources that agree
-   on `(connectionName, buildId)` into one target;
-3. re-derives the edges between targets, dropping self-edges — an extension
-   depending on its base is one table, not a dependency;
-4. levels by longest path, so a target sits strictly after everything it reads
-   however many routes reach it.
+1. a persistent source gets `getSQL()` and a BuildID, and joins the target keyed
+   `(connectionName, buildId)` — creating it if new, appending to
+   `target.sources` if not;
+2. its children's target keys are already known, so its edges are written
+   immediately, minus any that landed on its own key (an extension depending on
+   its base is one table, not a dependency);
+3. a route contributes its children's keys upward instead of a key of its own;
+4. finally, targets are grouped by connection and leveled by longest path, so
+   one sits strictly after everything it reads however many routes reach it.
 
-Keying the merge on connection *and* BuildID rather than BuildID alone says
-what a target is. The digest inside a BuildID makes them equivalent in
-practice; the pair does not depend on that being true.
+Keying the merge on connection *and* BuildID rather than BuildID alone says what
+a target is. The digest inside a BuildID makes them equivalent in practice; the
+pair does not depend on that being true.
+
+Connections come first in the result because no dependency crosses one — a
+query cannot — so each is an independent build. Levels are numbered across the
+whole model and then compacted per connection, so one connection's chain never
+pushes another's first table down a level.
 
 The cycle check in the leveling is unreachable for a well-formed model: a
 target's BuildID SQL contains its dependencies' SQL inline, so two targets
 cannot each contain the other. It throws rather than hangs if that stops
 holding.
+
+## The build plan (deprecated)
+
+`Model.getBuildPlan()` in
+[`api/foundation/core.ts`](../../api/foundation/core.ts) requires
+`##! experimental.persistence`, read off `modelAnnotations` (the import/extend
+fold) so the flag carries across extend. It walks every entry in
+`modelDef.contents` plus `modelDef.queryList` through
+`findPersistentDependencies()`, unions the forests, takes `minimalBuildGraph()`,
+builds a `PersistSource` for every sourceID it saw, and groups the roots by
+connection name.
+
+`getBuildTargets` does not use it, and it is slated for removal once the
+builders have moved. Two things it gets wrong are why:
+
+**Its roots are computed by sourceID**, and a sourceID cannot answer an artifact
+question. Roots are the sources nothing depends on — so for a persisted source
+with an extension, the root is the extension and the declaring source is never
+named at the top level, though they are one table.
+
+**`BuildGraph.nodes` is `BuildNode[][]` but always has exactly one level.** The
+type anticipates the leveled schedule WN-0022 describes; what is emitted is
+`{connectionName, nodes: [rootNodes]}`, with the ordering in each root's
+`dependsOn`. The specs pin this — every `plan.graphs[0].nodes` assertion is
+`toHaveLength(1)`, including the case named "dependent sources in different
+levels".
 
 ## BuildID and connection digests
 

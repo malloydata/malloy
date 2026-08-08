@@ -106,9 +106,18 @@ export abstract class DynamicSpace
 
       this.sourceDef = {...this.fromSource, fields: []};
       // This is a freshly built (modified) source: it presents a new exported
-      // shape, so it is no longer a reference to the source it was built from.
-      // DefineSource resets referenceID to this source's own sourceID.
+      // shape, so it is neither a reference to the source it was built from nor
+      // that source's own definition. Both identities have to go.
+      //
+      // `DefineSource` stamps fresh ones when this ends up with a name, which
+      // is why only `referenceID` was cleared here for so long — the stale
+      // `sourceID` was always overwritten before anyone saw it. An inline
+      // `extend` used as a query's structRef never gets a name, so nothing
+      // overwrote it, and the result claimed to be a definition that was
+      // missing whatever the extend had added. Anything resolving that id
+      // through the registry got the smaller source.
       delete this.sourceDef.referenceID;
+      delete this.sourceDef.sourceID;
       this.sourceDef.parameters = parameters;
       const fieldIndices = new Map<string, number>();
       // Need to process the entities in specific order

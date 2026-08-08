@@ -5,14 +5,21 @@
 
 import {Model} from './core';
 import {mkBuildTargets} from './build_targets';
-import type {BuildTarget} from './types';
+import type {BuildTarget, ConnectionBuild} from './types';
+import type {LogMessage} from '../../lang';
 import {TestTranslator} from '../../lang/test/test-translator';
 
+const DIGESTS = {
+  _db_: 'digest-of-db',
+  _db2_: 'digest-of-db2',
+  _pg_: 'digest-of-pg',
+};
+
 // A build target is an artifact, not a source, and the difference only shows
-// up once the SQL has been hashed. These tests take the plan the long way — a
-// real translate, a real getSQL() — because a hand-built plan could not tell
-// the difference between two sources that share a table and two that don't.
-function targetsOf(src: string): BuildTarget[][] {
+// up once the SQL has been hashed. These tests take the long way — a real
+// translate, a real getSQL() — because hand-built input could not tell the
+// difference between two sources that share a table and two that don't.
+function connectionsOf(src: string): ConnectionBuild[] {
   const tt = new TestTranslator(`##! experimental.persistence\n${src}`);
   const compiled = tt.translate();
   if (!compiled.modelDef) {
@@ -20,26 +27,42 @@ function targetsOf(src: string): BuildTarget[][] {
     throw new Error(`source did not translate:\n${problems}\n${src}`);
   }
   const model = new Model(compiled.modelDef, [], []);
-  return mkBuildTargets(model.getBuildPlan(), {
-    _db_: 'digest-of-db',
-    _db2_: 'digest-of-db2',
-    _pg_: 'digest-of-pg',
-  });
+  const log: LogMessage[] = [];
+  const nodes = [...model._walkPersistSources(log)];
+  return mkBuildTargets(nodes, model, DIGESTS);
+}
+
+/** The targets for a model that uses exactly one connection. */
+function targetsOf(src: string): BuildTarget[] {
+  const connections = connectionsOf(src);
+  if (connections.length === 0) return [];
+  if (connections.length > 1) {
+    throw new Error(
+      `expected one connection, got ${connections.map(c => c.connectionName).join(', ')}`
+    );
+  }
+  return connections[0].targets;
 }
 
 function names(target: BuildTarget): string[] {
   return target.sources.map(s => s.name).sort();
 }
 
-function findTarget(levels: BuildTarget[][], sourceName: string): BuildTarget {
-  const found = levels.flat().find(t => names(t).includes(sourceName));
+/** The source names of each target, in the order they are to be built. */
+function order(targets: BuildTarget[]): string[][] {
+  return targets.map(names);
+}
+
+function findTarget(
+  connections: ConnectionBuild[],
+  sourceName: string
+): BuildTarget {
+  const all = connections.flatMap(c => c.targets);
+  const found = all.find(t => names(t).includes(sourceName));
   if (!found) {
     throw new Error(
       `no target holds '${sourceName}'; targets are ` +
-        levels
-          .flat()
-          .map(t => names(t).join('+'))
-          .join(', ')
+        all.map(t => names(t).join('+')).join(', ')
     );
   }
   return found;
@@ -57,7 +80,7 @@ describe('sources collapse onto the artifacts they build', () => {
   test('an extension of a persisted source is not a second table', () => {
     // `#@ persist` is inherited and `extend` does not change the SQL, so
     // `reader` names the same table `rollup` does.
-    const levels = targetsOf(`
+    const targets = targetsOf(`
       ${ROLLUP}
       source: reader is rollup extend {
         dimension: loud is upper(astr)
@@ -65,23 +88,22 @@ describe('sources collapse onto the artifacts they build', () => {
       run: reader -> { select: * }
     `);
 
-    expect(levels).toHaveLength(1);
-    expect(levels[0]).toHaveLength(1);
-    expect(names(levels[0][0])).toEqual(['reader', 'rollup']);
+    expect(targets).toHaveLength(1);
+    expect(names(targets[0])).toEqual(['reader', 'rollup']);
     // The extension depends on its base, but they are one table: an edge here
     // would be a table waiting on itself.
-    expect(levels[0][0].dependsOn).toEqual([]);
+    expect(targets[0].dependsOn).toEqual([]);
   });
 
   test('a rename is not a second table', () => {
-    const levels = targetsOf(`
+    const targets = targetsOf(`
       ${ROLLUP}
       source: same_thing is rollup
       run: same_thing -> { select: * }
     `);
 
-    expect(levels).toHaveLength(1);
-    expect(names(levels[0][0])).toEqual(['rollup', 'same_thing']);
+    expect(targets).toHaveLength(1);
+    expect(names(targets[0])).toEqual(['rollup', 'same_thing']);
   });
 
   test('a deliberate second name collapses, and both names survive', () => {
@@ -89,15 +111,15 @@ describe('sources collapse onto the artifacts they build', () => {
     // computation gets one table. The plan used to report two targets and
     // leave the builder to discover otherwise; now the merge is visible, and
     // the disagreement is in `sources` for a builder to reject.
-    const levels = targetsOf(`
+    const targets = targetsOf(`
       ${ROLLUP}
       #@ persist name=rollup_again
       source: rollup_again is rollup
       run: rollup_again -> { select: * }
     `);
 
-    expect(levels.flat()).toHaveLength(1);
-    const target = levels[0][0];
+    expect(targets).toHaveLength(1);
+    const target = targets[0];
     expect(names(target)).toEqual(['rollup', 'rollup_again']);
     const requested = target.sources.map(s =>
       s.annotations.parseAsTag('@').tag.text('name')
@@ -106,7 +128,9 @@ describe('sources collapse onto the artifacts they build', () => {
   });
 
   test('identical SQL on two connections stays two tables', () => {
-    const levels = targetsOf(`
+    // And they land in separate ConnectionBuilds, which is the point of the
+    // top-level split: neither waits on the other for anything.
+    const connections = connectionsOf(`
       #@ persist name=here
       source: here is _db_.table('aTable') -> {
         group_by: astr
@@ -121,19 +145,45 @@ describe('sources collapse onto the artifacts they build', () => {
       run: there -> { select: * }
     `);
 
-    const all = levels.flat();
-    expect(all).toHaveLength(2);
-    expect(findTarget(levels, 'here').sql).toEqual(
-      findTarget(levels, 'there').sql
+    expect(connections).toHaveLength(2);
+    expect(connections.flatMap(c => c.targets)).toHaveLength(2);
+    expect(findTarget(connections, 'here').sql).toEqual(
+      findTarget(connections, 'there').sql
     );
-    expect(findTarget(levels, 'here').connectionName).toBe('_db_');
-    expect(findTarget(levels, 'there').connectionName).toBe('_db2_');
+    expect(findTarget(connections, 'here').connectionName).toBe('_db_');
+    expect(findTarget(connections, 'there').connectionName).toBe('_db2_');
+    // Each connection is a build of its own.
+    expect(connections.map(c => c.targets.length)).toEqual([1, 1]);
+  });
+
+  test('each connection gets its own list', () => {
+    // A single list for the whole model would put `solo` and `base` in it
+    // together, and a builder reading it in order would sequence work across
+    // connections that have no relationship at all.
+    const connections = connectionsOf(`
+      #@ persist name=base
+      source: base is _db_.table('aTable') -> {
+        group_by: astr
+        aggregate: n is count()
+      }
+      #@ persist name=top
+      source: top is base -> { group_by: astr; aggregate: t is n.sum() }
+      #@ persist name=solo
+      source: solo is _db2_.table('aTable') -> { group_by: astr }
+      run: top -> { select: * }
+      run: solo -> { select: * }
+    `);
+
+    const db = connections.find(c => c.connectionName === '_db_')!;
+    const db2 = connections.find(c => c.connectionName === '_db2_')!;
+    expect(order(db.targets)).toEqual([['base'], ['top']]);
+    expect(order(db2.targets)).toEqual([['solo']]);
   });
 });
 
-describe('targets are leveled by their dependencies', () => {
-  test('a chain builds one level at a time', () => {
-    const levels = targetsOf(`
+describe('targets come back in dependency order', () => {
+  test('a chain builds bottom up', () => {
+    const targets = targetsOf(`
       ${ROLLUP}
       #@ persist name=top
       source: top is rollup -> {
@@ -143,48 +193,14 @@ describe('targets are leveled by their dependencies', () => {
       run: top -> { select: * }
     `);
 
-    expect(levels).toHaveLength(2);
-    expect(names(levels[0][0])).toEqual(['rollup']);
-    expect(names(levels[1][0])).toEqual(['top']);
-    expect(levels[1][0].dependsOn).toEqual([levels[0][0]]);
-  });
-
-  test('a diamond puts the shared dependency below both readers', () => {
-    // The case the plan used to get wrong: walking `lo_side` recorded the edge to
-    // `rollup`, walking `hi_side` found it already visited and recorded nothing.
-    // Depth-first flattening hid it — `rollup` got built on `lo_side`'s account.
-    // A level cannot hide it: `hi_side` would sit beside the table it reads.
-    const levels = targetsOf(`
-      ${ROLLUP}
-      #@ persist name=lo_side
-      source: lo_side is rollup -> { group_by: astr; aggregate: l is n.sum() }
-      #@ persist name=hi_side
-      source: hi_side is rollup -> { group_by: astr; aggregate: r is n.max() }
-      #@ persist name=both
-      source: both is lo_side extend {
-        join_one: hi_side on astr = hi_side.astr
-      } -> {
-        group_by: astr
-        aggregate: t is l.sum()
-      }
-      run: both -> { select: * }
-    `);
-
-    expect(levels).toHaveLength(3);
-    expect(names(levels[0][0])).toEqual(['rollup']);
-    expect(levels[1].map(names).flat().sort()).toEqual(['hi_side', 'lo_side']);
-    expect(names(levels[2][0])).toEqual(['both']);
-
-    const rollup = levels[0][0];
-    for (const reader of levels[1]) {
-      expect(reader.dependsOn).toEqual([rollup]);
-    }
+    expect(order(targets)).toEqual([['rollup'], ['top']]);
+    expect(targets[1].dependsOn).toEqual([targets[0]]);
   });
 
   test('a dependency reached through an alias still orders the build', () => {
     // `alias` shares `rollup`'s table; `top` reads `alias`. The edge has to
-    // survive the merge, or `top` lands in level 0 beside the table it reads.
-    const levels = targetsOf(`
+    // survive the merge, or `top` comes back with no dependencies.
+    const targets = targetsOf(`
       ${ROLLUP}
       source: alias is rollup extend {
         dimension: loud is upper(astr)
@@ -197,21 +213,19 @@ describe('targets are leveled by their dependencies', () => {
       run: top -> { select: * }
     `);
 
-    expect(levels).toHaveLength(2);
-    expect(names(levels[0][0])).toEqual(['alias', 'rollup']);
-    expect(names(levels[1][0])).toEqual(['top']);
-    expect(levels[1][0].dependsOn).toEqual([levels[0][0]]);
+    expect(order(targets)).toEqual([['alias', 'rollup'], ['top']]);
+    expect(targets[1].dependsOn).toEqual([targets[0]]);
   });
 });
 
 describe('what a target carries', () => {
   test('sql is the BuildID SQL, and buildId is its hash', () => {
-    const levels = targetsOf(`
+    const targets = targetsOf(`
       ${ROLLUP}
       run: rollup -> { select: * }
     `);
 
-    const target = levels[0][0];
+    const target = targets[0];
     const source = target.sources[0];
     expect(target.sql).toBe(source.getSQL());
     expect(target.buildId).toBe(source.makeBuildId('digest-of-db', target.sql));
@@ -223,16 +237,17 @@ describe('what a target carries', () => {
     );
     const compiled = tt.translate();
     const model = new Model(compiled.modelDef!, [], []);
+    const nodes = [...model._walkPersistSources([])];
 
-    expect(() => mkBuildTargets(model.getBuildPlan(), {})).toThrow('_db_');
+    expect(() => mkBuildTargets(nodes, model, {})).toThrow('_db_');
   });
 
   test('a model with no persist sources has no targets', () => {
-    const levels = targetsOf(`
+    const targets = targetsOf(`
       source: plain is _db_.table('aTable')
       run: plain -> { group_by: astr }
     `);
 
-    expect(levels).toEqual([]);
+    expect(targets).toEqual([]);
   });
 });

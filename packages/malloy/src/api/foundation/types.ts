@@ -150,19 +150,52 @@ export interface BuildTarget {
 }
 
 /**
- * The build schedule for a model: what to build, and in what order.
+ * Everything one connection has to build.
  *
- * `levels` is a topological sort. Every target in a level has all of its
- * dependencies in an earlier level, so a builder can run a whole level
- * concurrently and wait for it before starting the next. That is the coarse
- * guarantee; each target also carries `dependsOn`, so a builder that wants
- * finer scheduling can start a target the moment its own dependencies finish
- * rather than at the level boundary. A builder that wants neither can flatten
- * — the concatenation of the levels is already in dependency order.
+ * `targets` is in dependency order — everything a target depends on appears
+ * before it — so the simplest correct builder is a loop:
+ *
+ * ```typescript
+ * for (const target of targets) await build(target);
+ * ```
+ *
+ * A builder that wants concurrency uses `target.dependsOn` and starts each one
+ * the moment its own dependencies finish:
+ *
+ * ```typescript
+ * const done = new Map<BuildTarget, Promise<void>>();
+ * for (const target of targets) {
+ *   done.set(target, (async () => {
+ *     await Promise.all(target.dependsOn.map(d => done.get(d)));
+ *     await build(target);
+ *   })());
+ * }
+ * await Promise.all(done.values());
+ * ```
+ *
+ * That is the maximum available: nothing waits for anything it does not read.
+ * Batching the targets into rounds instead — everything at depth 0, then
+ * everything at depth 1 — is easier to write and strictly worse, because a
+ * target then waits on unrelated work that happens to share its depth.
+ */
+export interface ConnectionBuild {
+  /** The connection everything here is built on */
+  connectionName: string;
+  /** Every table to build, dependencies before dependents */
+  targets: BuildTarget[];
+}
+
+/**
+ * The build schedule for a model.
+ *
+ * Connections come first because they are the largest cut of parallelism: a
+ * query cannot cross a connection, so no dependency ever does either, and each
+ * entry here is a wholly independent build that needs no coordination with any
+ * other.
  */
 export interface BuildTargets {
-  /** Targets in build order; everything within one level is independent */
-  levels: BuildTarget[][];
+  /** One per connection, mutually independent */
+  connections: ConnectionBuild[];
   /** Errors and warnings from parsing `#@` annotations on persistable sources */
   tagParseLog: LogMessage[];
 }

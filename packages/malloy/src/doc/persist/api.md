@@ -197,7 +197,7 @@ this section.
 
 ```typescript
 const model = await runtime.loadModel(modelURL).getModel();
-const {levels, tagParseLog} = await runtime.getBuildTargets(model);
+const {connections, tagParseLog} = await runtime.getBuildTargets(model);
 ```
 
 A **target** is one table:
@@ -210,12 +210,28 @@ A **target** is one table:
 | `dependsOn` | The targets that must exist first |
 | `sources` | Every persist source in the model that maps onto this table |
 
-`levels` is a topological sort: everything in a level is independent, and every
-dependency of a level sits in an earlier one. Build a level — concurrently if
-you want the parallelism — then the next. A builder that wants finer scheduling
-can start a target the moment the targets in its own `dependsOn` are done
-rather than waiting at the level boundary; a builder that wants neither can
-concatenate the levels and walk them in order.
+**Connections come first** because they are the largest cut of parallelism. A
+query cannot cross a connection, so no dependency does either, and each entry
+in `connections` is a wholly independent build needing no coordination with any
+other.
+
+Within one, `levels` is a topological sort: everything in a level is
+independent, and every dependency sits in an earlier one. A target's level is
+the *longest* path to it, so a diamond builds its shared bottom first, then
+both sides together, then the top. A builder wanting finer scheduling can start
+a target the moment its own `dependsOn` are done rather than waiting at the
+level boundary; one wanting neither can concatenate the levels and walk them in
+order.
+
+The whole thing is two lines of structure:
+
+```typescript
+await Promise.all(connections.map(async ({connectionName, levels}) => {
+  for (const level of levels) {
+    await Promise.all(level.map(target => build(connectionName, target)));
+  }
+}));
+```
 
 `tagParseLog` carries errors from parsing the `#@` annotations. Report them; a
 malformed annotation is a build problem.
@@ -250,23 +266,27 @@ not an edge case. `getBuildTargets` merges them and puts both in
 `target.sources`; the merge is also where you can see two sources asking for
 different `name=` values on one table, which nothing else can detect.
 
-### The lower-level plan
+### `getBuildPlan()` — deprecated
 
-`model.getBuildPlan()` is the layer underneath: a graph over persistable
+`model.getBuildPlan()` was the previous builder entry point and is on its way
+out. It returns `{graphs, sources, tagParseLog}`: a graph over persistable
 *sources*, keyed by `sourceID` (`"name@modelURL"`), with no BuildIDs in it
-because a model has no connection to ask. It returns `{graphs, sources,
-tagParseLog}`, where each `BuildGraph` holds root nodes for one connection and
-each root carries its dependency tree in `dependsOn`.
+because a model has no connection to ask for a digest.
 
-A builder does not want this. Walking it means computing the BuildIDs yourself,
-discovering by collision that several nodes are one table, and finding an
-ordering — all of which `getBuildTargets` has already done. It is documented
-because it is public API and because the sourceID graph is what you would reach
-for to answer a question about *sources* rather than tables.
+That is the whole problem with it. A sourceID names a source and a BuildID
+names a table, and they are not one-to-one — so a builder walking the plan has
+to compute the BuildIDs itself, discover by collision that several nodes are
+one table, and find an ordering. Every builder that has done so has got some
+part of it wrong. `getBuildTargets` does all of it once.
 
-`BuildGraph.nodes` is typed `BuildNode[][]` for a leveled schedule that
-`getBuildPlan()` does not produce — it emits a single level of roots. That gap
-is why the leveling lives in `getBuildTargets`.
+Two further quirks, if you are still on it. `BuildGraph.nodes` is typed
+`BuildNode[][]` for a leveled schedule it does not produce — it emits a single
+level holding the roots, with the real ordering in each root's `dependsOn`. And
+those roots are the sources *nothing depends on*, which for a persisted source
+with an extension is the extension, never the source that declared it.
+
+`getBuildTargets` does not use it, and it will be removed once the builders
+have moved.
 
 ### PersistSource
 
@@ -338,11 +358,11 @@ referenced are pruned. A separate pass can then drop the orphaned tables.
    in step 4.
 3. **Plan** with `runtime.getBuildTargets(model)`, and cache one
    `connection.getDigest()` per connection name for step 4.
-4. **Build**, level by level. Per target: if the manifest already has
-   `target.buildId`, `touch()` and move on; otherwise `CREATE TABLE` from
-   `source.getSQL({buildManifest, connectionDigests})` — any of
-   `target.sources` will do, they share the SQL — and `update()` the manifest
-   immediately, so later levels see the table.
+4. **Build** each connection, level by level. Per target: if the manifest
+   already has `target.buildId`, `touch()` and move on; otherwise
+   `CREATE TABLE` from `source.getSQL({buildManifest, connectionDigests})` —
+   any of `target.sources` will do, they share the SQL — and `update()` the
+   manifest immediately, so later levels see the table.
 5. **Write** `manifest.activeEntries`.
 
 Over several model files, keep one `Manifest` for the whole run. `touch()` and

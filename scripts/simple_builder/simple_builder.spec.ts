@@ -385,7 +385,12 @@ test('two names for one table is an error', async () => {
 
   try {
     await writeFile(MODEL_FILE, MODEL_V7);
-    await expect(build(BUILD_OPTS)).rejects.toThrow(/One table, two names/);
+    // The message has to say *where*, because that is the only thing a person
+    // can act on: `by_carrier` and `also_by_carrier`, each at the line it was declared. A name would be ambiguous and a BuildID is
+    // a hash.
+    await expect(build(BUILD_OPTS)).rejects.toThrow(
+      /One table, two names.*test\.malloy:7.*test\.malloy:13/s
+    );
   } finally {
     await rm(ROOT, {recursive: true, force: true});
   }

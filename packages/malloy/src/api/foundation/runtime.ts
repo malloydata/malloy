@@ -663,22 +663,29 @@ export class Runtime {
   /**
    * What a builder has to build for this model, and in what order.
    *
-   * This is the builder entry point. `Model.getBuildPlan()` is the layer under
-   * it: a graph over persistable *sources*, which is not the same set as the
-   * tables they produce — several sources routinely map onto one table, and
-   * only a connection digest can tell you which. That is why this lives on
-   * Runtime: it holds the connections, so it can finish the answer the plan
-   * can only start.
+   * This is the builder entry point. A model can only enumerate persistable
+   * *sources*, which is not the same set as the tables they produce — several
+   * sources routinely map onto one table, and only a connection digest can
+   * tell you which. That is why this lives on Runtime: it holds the
+   * connections, so it can finish the answer a model can only start.
    *
-   * Each level can be built concurrently; see {@link BuildTargets}.
+   * Connections are independent of one another and each level within one can
+   * be built concurrently; see {@link BuildTargets}.
    *
    * @param model A compiled model with `##! experimental.persistence`
    * @return The targets to build, leveled, with any annotation parse messages
    */
   public async getBuildTargets(model: Model): Promise<BuildTargets> {
-    const plan = model.getBuildPlan();
+    // Materialize the walk: the fold needs a connection digest per source, and
+    // fetching those is async while the fold is not.
+    const tagParseLog: LogMessage[] = [];
+    const nodes = [...model._walkPersistSources(tagParseLog)];
+
     const connectionDigests: Record<string, string> = mkSafeRecord();
-    for (const source of Object.values(plan.sources)) {
+    for (const node of nodes) {
+      if (!node.persistent) continue;
+      const source = model._persistSourceFor(node.sourceID);
+      if (source === undefined) continue;
       const connectionName = source.connectionName;
       if (!(connectionName in connectionDigests)) {
         const connection =
@@ -686,9 +693,10 @@ export class Runtime {
         connectionDigests[connectionName] = connection.getDigest();
       }
     }
+
     return {
-      levels: mkBuildTargets(plan, connectionDigests),
-      tagParseLog: plan.tagParseLog,
+      connections: mkBuildTargets(nodes, model, connectionDigests),
+      tagParseLog,
     };
   }
 }

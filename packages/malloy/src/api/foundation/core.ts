@@ -62,9 +62,11 @@ import {mkModelDef} from '../../model/utils';
 import type {Dialect} from '../../dialect';
 import {getDialect} from '../../dialect';
 import type {BuildGraph, BuildNode, CompileQueryOptions} from './types';
+import type {PersistWalk} from '../../model/persist_utils';
 import {
   findPersistentDependencies,
   minimalBuildGraph,
+  walkPersistentDependencies,
 } from '../../model/persist_utils';
 import {
   resolveSourceID,
@@ -1515,16 +1517,58 @@ export class Model implements Taggable {
    *
    * @return BuildPlan with graphs and sources map
    */
-  public getBuildPlan(): BuildPlan {
-    // Require experimental.persistence compiler flag. Read the resolved model
-    // annotations (`.modelAnnotations`, the import/extend fold) rather than this
-    // model's own `##` so the flag carries across extend.
+  /**
+   * Require the `experimental.persistence` compiler flag.
+   *
+   * Read off the resolved model annotations (`.modelAnnotations`, the
+   * import/extend fold) rather than this model's own `##`, so the flag carries
+   * across extend.
+   */
+  private requirePersistence(api: string): void {
     const modelTag = this.modelAnnotations.parseAsTag('!').tag;
     if (!modelTag.has('experimental', 'persistence')) {
       throw new Error(
-        'Model must have ##! experimental.persistence to use getBuildPlan()'
+        `Model must have ##! experimental.persistence to use ${api}`
       );
     }
+  }
+
+  /**
+   * Walk every persistable source this model reaches, in dependency order.
+   *
+   * The roots are every source and query the model names, plus its unnamed
+   * queries. They share one walk, so a source several of them reach is visited
+   * once.
+   *
+   * This is the raw material `Runtime.getBuildTargets()` folds into tables. It
+   * is not a build plan — nothing here is keyed by artifact, because a model
+   * cannot reach a connection and so cannot compute a BuildID.
+   */
+  public _walkPersistSources(tagParseLog: LogMessage[]): PersistWalk {
+    this.requirePersistence('getBuildTargets()');
+    const roots: (SourceDef | InternalQuery)[] = [];
+    for (const obj of Object.values(this.modelDef.contents)) {
+      if (obj.type === 'query' || isSourceDef(obj)) {
+        roots.push(obj);
+      }
+    }
+    roots.push(...this.modelDef.queryList);
+    return walkPersistentDependencies(roots, this.modelDef, tagParseLog);
+  }
+
+  /**
+   * The {@link PersistSource} for a sourceID, or undefined if this model
+   * cannot resolve it.
+   */
+  public _persistSourceFor(sourceID: string): PersistSource | undefined {
+    const sourceDef = resolveSourceID(this.modelDef, sourceID);
+    return sourceDef
+      ? new PersistSource(new Explore(this.modelDef, sourceDef), this)
+      : undefined;
+  }
+
+  public getBuildPlan(): BuildPlan {
+    this.requirePersistence('getBuildPlan()');
 
     const allDeps: BuildNode[] = [];
     const tagParseLog: LogMessage[] = [];
@@ -1705,6 +1749,27 @@ export class PersistSource implements Taggable {
   /** The model annotations resolved for this source. */
   get modelAnnotations(): Annotations {
     return this.explore.modelAnnotations;
+  }
+
+  /**
+   * Where this source was declared: the URL of the model that declared it, and
+   * the range of the `source:` statement.
+   *
+   * This is the handle to report a build failure against. A name is ambiguous
+   * across models, a sourceID is a name and a URL glued together, and a BuildID
+   * is a hash — none of them answer "where do I go to fix this," and a location
+   * does.
+   *
+   * The URL is whatever the model was loaded from, which may be a scheme only
+   * the caller understands. Rendering it for a human is the builder's job for
+   * the same reason `name=` is: the core supplied no URLReader and has no idea
+   * what these URLs mean.
+   *
+   * Undefined for a source with no recorded position — one synthesized rather
+   * than written down.
+   */
+  get location(): DocumentLocation | undefined {
+    return this.persistableDef.location;
   }
 
   /**

@@ -23,11 +23,13 @@
  *
  *   3. PLAN — Call `runtime.getBuildTargets(model)` for the targets to build.
  *      A target is one table: its BuildID, the connection it lives on, and
- *      every source in the model that maps onto it. They come back leveled —
- *      everything in a level is independent of everything else in that level,
- *      and depends only on earlier levels.
+ *      every source in the model that maps onto it. They arrive grouped by
+ *      connection — no dependency ever crosses one, so those groups are
+ *      wholly independent builds — and leveled within each: everything in a
+ *      level is independent of everything else there, and depends only on
+ *      earlier levels.
  *
- *   4. BUILD — Walk the levels in order. For each target:
+ *   4. BUILD — Each connection, level by level. For each target:
  *      a. If its BuildID is already in the manifest, `touch()` it (marks it
  *         active for GC, but does not rebuild).
  *      b. Otherwise, get the *build SQL* from `source.getSQL({buildManifest,
@@ -104,10 +106,16 @@
  *   - **Connections:** The CLI uses MalloyConfig to create connections from
  *     a config file. This sample hardcodes a single DuckDB connection.
  *
- *   - **Concurrency:** A level is a set of targets that can be built at the
- *     same time. This sample builds them one at a time so its SQL script has
- *     a stable order; a builder that wants the parallelism fans out here and
- *     waits at the level boundary.
+ *   - **Concurrency:** Connections are independent, and within one, a level is
+ *     a set of targets that can be built at the same time. This sample builds
+ *     everything one at a time so its SQL script has a stable order. A builder
+ *     that wants the parallelism is two nested `Promise.all`s:
+ *
+ *       await Promise.all(connections.map(async ({levels}) => {
+ *         for (const level of levels) {
+ *           await Promise.all(level.map(build));
+ *         }
+ *       }));
  */
 
 import {readFile, writeFile, mkdir} from 'fs/promises';
@@ -152,6 +160,33 @@ function canonicalTableName(source: PersistSource, requested: string): string {
 }
 
 /**
+ * Where a source was declared, as something a person can act on.
+ *
+ * `PersistSource.location` is the only handle worth reporting against — a name
+ * is ambiguous across models, and a sourceID is a name glued to a URL. The core
+ * hands over the URL it was given and takes no position on rendering it,
+ * because only the caller knows what its URLs mean. This sample loaded
+ * everything from the filesystem, so it prints a path and a line number; a
+ * builder serving models out of a database would print whatever its users
+ * recognize.
+ */
+function declaredAt(source: PersistSource): string {
+  const at = source.location;
+  if (at === undefined) {
+    return '<no recorded location>';
+  }
+  const where = at.url.startsWith('file://')
+    ? path.relative(process.cwd(), fileURLToPath(at.url))
+    : at.url;
+  return `${where}:${at.range.start.line + 1}`;
+}
+
+/** Every declaration behind one table, for reporting. */
+function declaredAtAll(target: BuildTarget): string {
+  return target.sources.map(declaredAt).join(', ');
+}
+
+/**
  * The name to build this target under, or undefined if nobody asked for one.
  *
  * Naming is a builder question, and this is the shape of it that only a
@@ -160,6 +195,9 @@ function canonicalTableName(source: PersistSource, requested: string): string {
  * takes no position — a name means nothing to it. This sample refuses the
  * disagreement, because building one table and honoring one of the two names
  * silently is how a request for a second table gets lost.
+ *
+ * A target holds several declarations, which is exactly what this error needs:
+ * it can point at each place a different name was asked for.
  */
 function requestedName(target: BuildTarget): string | undefined {
   const asked = new Map<string, string[]>();
@@ -167,12 +205,12 @@ function requestedName(target: BuildTarget): string | undefined {
     const name = source.annotations.parseAsTag('@').tag.text('name');
     if (name === undefined) continue;
     const askers = asked.get(name) ?? [];
-    askers.push(source.name);
+    askers.push(declaredAt(source));
     asked.set(name, askers);
   }
   if (asked.size > 1) {
     const conflict = [...asked]
-      .map(([name, askers]) => `'${name}' (${askers.join(', ')})`)
+      .map(([name, askers]) => `'${name}' at ${askers.join(', ')}`)
       .join(' and ');
     throw new Error(
       `One table, two names: ${conflict}. These sources have identical SQL, ` +
@@ -269,21 +307,21 @@ async function runBuild(
   // This lives on the Runtime rather than the Model because a BuildID is a
   // hash of the SQL *and the connection's digest* — the answer can't be
   // finished without a connection.
-  const {levels, tagParseLog} = await runtime.getBuildTargets(model);
+  const {connections, tagParseLog} = await runtime.getBuildTargets(model);
 
   for (const msg of tagParseLog) {
     const loc = msg.at ? ` (${msg.at.url}:${msg.at.range.start.line + 1})` : '';
     console.warn(`WARNING: ${msg.message}${loc}`);
   }
 
-  const targetCount = levels.flat().length;
+  const targetCount = connections.flatMap(c => c.targets).length;
   if (targetCount === 0) {
     console.log('No #@ persist sources found in model');
     return;
   }
 
   console.log(
-    `Found ${targetCount} table(s) to build in ${levels.length} level(s)`
+    `Found ${targetCount} table(s) on ${connections.length} connection(s)`
   );
 
   // The connection digest includes connection-specific settings (database
@@ -300,19 +338,24 @@ async function runBuild(
   const buildStartedAt = now.toISOString();
 
   // =========================================================
-  // STEP 4: BUILD — Walk the levels in order
+  // STEP 4: BUILD — Each connection, in dependency order
   // =========================================================
-  // Everything in a level is independent; every dependency of a level is in
-  // an earlier one. Build a level, then move on.
-  for (const [levelNumber, level] of levels.entries()) {
-    console.log(`\nLevel ${levelNumber}: ${level.length} table(s)`);
+  // Connections are wholly independent of one another — a query can't cross
+  // one, so a dependency can't either. Within a connection, targets arrive with
+  // everything a target depends on ahead of it, so building them in order is
+  // correct with no scheduling of any kind.
+  //
+  // A builder that wants concurrency keeps a promise per target and awaits
+  // `target.dependsOn` before starting each one; see the header.
+  for (const {connectionName, targets} of connections) {
+    console.log(`\nConnection ${connectionName}: ${targets.length} table(s)`);
 
-    for (const target of level) {
-      // Every source that maps onto this table. They share one BuildID, so
-      // they share one entry in the manifest and one CREATE TABLE; any of them
-      // can generate the SQL. The names matter for reporting, and for the
-      // `name=` they each carry.
-      const names = target.sources.map(s => s.name).join(', ');
+    for (const target of targets) {
+      // Every source that maps onto this table shares one BuildID, so they
+      // share one manifest entry and one CREATE TABLE; any of them can
+      // generate the SQL. What differs is where each was declared and what
+      // `name=` each asked for.
+      const declared = declaredAtAll(target);
       const source = target.sources[0];
       const explicitName = requestedName(target);
 
@@ -321,7 +364,7 @@ async function runBuild(
       if (existingEntry) {
         manifest.touch(target.buildId);
 
-        console.log(`  Exists: ${names} -> ${existingEntry.tableName}`);
+        console.log(`  Exists: ${existingEntry.tableName} (${declared})`);
         logEntries.push({
           action: 'exists',
           buildId: target.buildId,
@@ -353,10 +396,10 @@ async function runBuild(
       // timing, since everything else in this loop is bookkeeping:
       //   await conn.runSQL(`CREATE TABLE ${tableName} AS ${buildSQL}`);
       sqlStatements.push(
-        `-- ${names} (${target.buildId})\nCREATE TABLE ${tableName} AS\n${buildSQL};\n`
+        `-- ${declared} (${target.buildId})\nCREATE TABLE ${tableName} AS\n${buildSQL};\n`
       );
 
-      console.log(`  Built: ${names} -> ${tableName}`);
+      console.log(`  Built: ${tableName} (${declared})`);
 
       // Update the manifest IMMEDIATELY after building. This is critical:
       // targets in later levels that depend on this one will call
