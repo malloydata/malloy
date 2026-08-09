@@ -25,7 +25,7 @@ export class QuerySource extends Source {
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
   ): SourceDef {
-    const comp = this.query.queryComp(false);
+    const comp = this.query.queryComp(false, false);
     const queryStruct = mkQuerySourceDef(
       comp.outputStruct,
       comp.query,

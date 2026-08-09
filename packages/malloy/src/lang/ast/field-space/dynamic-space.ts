@@ -130,6 +130,18 @@ export abstract class DynamicSpace
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.getStructDef(parameterSpace);
           if (!ErrorFactory.didCreate(joinStruct)) {
+            // A query runs on one connection, so everything reachable from
+            // the source it runs on must live on that connection. Record and
+            // array joins are part of the row, and so have no connection.
+            if (
+              model.isSourceDef(joinStruct) &&
+              joinStruct.connection !== this.connectionName()
+            ) {
+              field.join.sourceExpr.logError(
+                'join-connection-mismatch',
+                `Cannot join '${name}', which is on connection '${joinStruct.connection}', into a source on connection '${this.connectionName()}'`
+              );
+            }
             fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(joinStruct);
             field.join.fixupJoinOn(this, joinStruct);

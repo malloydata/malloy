@@ -12,7 +12,18 @@ import type {Query} from '../../../model/malloy_types';
 import type {QueryComp} from './query-comp';
 
 export interface QueryElement extends MalloyElement {
-  queryComp(isRefOk: boolean): QueryComp;
+  /**
+   * Both arguments say what looseness the caller will accept.
+   *
+   * @param isRefOk `structRef` may be left as the name of a source. False
+   *   means expand it, which is what a caller writing this query into
+   *   something that must stand on its own needs.
+   * @param isPartialOk The pipeline may contain `partial` segments, whose
+   *   query class is not decided yet. Only the base of a refinement can
+   *   accept those, because the refinement is what decides the class.
+   *   False means the pipeline is finished and the compiler can read it.
+   */
+  queryComp(isRefOk: boolean, isPartialOk: boolean): QueryComp;
   query(isRefOk?: boolean): Query;
 }
 
