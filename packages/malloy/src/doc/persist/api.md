@@ -225,13 +225,10 @@ batching by depth would. `ConnectionBuild` in `types.ts` carries both loops.
 `tagParseLog` carries errors from parsing the `#@` annotations. Report them; a
 malformed annotation is a build problem.
 
-This lives on `Runtime` rather than `Model` because a BuildID hashes the SQL
-*and* the connection's digest, and only a Runtime has connections.
-
-It compiles. A BuildID is a hash of SQL, so getting one means generating the
-SQL for every persist source in the model. A source whose dialect cannot
-express it throws — from the dialect, with its own message — and takes the
-whole call with it rather than reporting one unbuildable target among many.
+It compiles every persist source in the model, because a BuildID is a hash of
+SQL. One whose dialect cannot express it throws — from the dialect, with its
+own message — and takes the whole call rather than reporting one unbuildable
+target among many.
 
 **One table, several sources** is the normal case, not an edge case —
 `#@ persist` is inherited and `extend` does not change the SQL a source
@@ -241,25 +238,16 @@ place two sources asking for different `name=` values on one table can be seen.
 
 ### `getBuildPlan()` — deprecated
 
-`model.getBuildPlan()` was the previous builder entry point and is on its way
-out. It returns `{graphs, sources, tagParseLog}`: a graph over persistable
-*sources*, keyed by `sourceID` (`"name@modelURL"`), with no BuildIDs in it
-because a model has no connection to ask for a digest.
+`model.getBuildPlan()` was the previous entry point and will be removed once
+the builders have moved. It reports *sources* keyed by `sourceID`, and a
+sourceID does not name a table — several sources routinely share one — so a
+builder on it has to compute the BuildIDs, discover the collisions, and find an
+ordering itself. Every builder that tried got some part of it wrong.
 
-That is the whole problem with it. A sourceID names a source and a BuildID
-names a table, and they are not one-to-one — so a builder walking the plan has
-to compute the BuildIDs itself, discover by collision that several nodes are
-one table, and find an ordering. Every builder that has done so has got some
-part of it wrong. `getBuildTargets` does all of it once.
-
-Two further quirks, if you are still on it. `BuildGraph.nodes` is typed
-`BuildNode[][]` for a leveled schedule it does not produce — it emits a single
-level holding the roots, with the real ordering in each root's `dependsOn`. And
-those roots are the sources *nothing depends on*, which for a persisted source
-with an extension is the extension, never the source that declared it.
-
-`getBuildTargets` does not use it, and it will be removed once the builders
-have moved.
+Three traps if you are still on it: `BuildGraph.nodes` is typed `BuildNode[][]`
+but always holds one entry; the ordering is in each node's `dependsOn`; and its
+roots are the sources *nothing depends on*, which for a persisted source with
+an extension is the extension, never the source that declared it.
 
 ### PersistSource
 

@@ -165,20 +165,6 @@ export function mkBuildTargets(
       // A child on my own key is an extension of me — the same table twice,
       // not a dependency.
       if (childKey === key) continue;
-      // Connections are reported as independent builds, which is only sound
-      // because a query cannot span two connections and so a dependency
-      // cannot either. Malloy does not currently reject a model that writes
-      // one — see #3030 — so this can fire on a model that compiled. Better
-      // here than in a builder that ran the two connections in parallel and
-      // lost the ordering with nothing to warn it.
-      const childConnection = mustGet(targets, childKey).connectionName;
-      if (childConnection !== connectionName) {
-        throw new Error(
-          `'${node.sourceID}' on connection '${connectionName}' depends on a ` +
-            `table on '${childConnection}'. Malloy cannot run a query across ` +
-            'two connections, so this model cannot be built.'
-        );
-      }
       mine.add(childKey);
     }
 

@@ -233,13 +233,6 @@ deprecated call.
 it reported the first time, so every dependent records the edge rather than only
 the first one to arrive.
 
-`minimalBuildGraph(deps)` takes the flat forest collected from every model
-object and returns the **roots** — sourceIDs that nothing else depends on —
-with their original nested structure intact. This should also be deprecated
-and removed and I don't know why the AI insists on promoting this
-as an entrry point but every time I turn around it has happened again
-despite explciit repeated instructios not to.
-
 ## Build targets
 
 `Runtime.getBuildTargets(model)` in
@@ -252,38 +245,36 @@ it. That split is where the async/sync boundary falls: fetching a digest per
 connection is async, the fold is not, so the Runtime materializes the walk,
 collects the digests it names, and hands both to the fold.
 
-The walk emits *sources*; a builder needs *tables*, and the two counts differ by
-construction — `#@ persist` is inherited and `extend` never changes the SQL, so
-an extension or a rename of a persisted source is another sourceID naming the
-same BuildID. One pass does it, because the walk is in dependency order:
+The walk emits *sources*, and several can share one table. One pass merges
+them, because the walk is in dependency order:
 
 1. a persistent source gets `getSQL()` and a BuildID, and joins the target keyed
    `(connectionName, buildId)` — creating it if new, appending to
    `target.sources` if not;
 2. its children's target keys are already known, so its edges are written
-   immediately, minus any that landed on its own key (an extension depending on
-   its base is one table, not a dependency);
+   immediately — minus any that landed on its own key (an extension depending
+   on its base is one table, not a dependency), and intersected with what the
+   other sources on this target recorded (see the cycle note below);
 3. a route contributes its children's keys upward instead of a key of its own;
 4. finally `place()` emits each target after everything it depends on — a
    depth-first post-order walk of the target graph — filing it under its
    connection.
 
-Keying the merge on connection *and* BuildID rather than BuildID alone says what
-a target is. The digest inside a BuildID makes them equivalent in practice; the
-pair does not depend on that being true.
+The merge key is connection *and* BuildID. The digest inside a BuildID already
+makes those equivalent; the pair does not rely on that staying true.
 
-That no dependency crosses a connection is load-bearing enough to be enforced
-rather than assumed: an edge between two connections throws, because a builder
-running them in parallel would otherwise lose the ordering with nothing to warn
-it. It should be unreachable — a query cannot span two connections — but Malloy
-does not yet reject a model that writes one ([#3030]), so it can fire on a
-model that compiled.
+Connections are reported as independent builds, which is sound because a query
+cannot span two connections ([#3032]) and so a dependency cannot either.
 
-[#3030]: https://github.com/malloydata/malloy/issues/3030
+[#3032]: https://github.com/malloydata/malloy/pull/3032
 
-The cycle check in `place()` is unreachable for a well-formed model: a target's
-BuildID SQL contains its dependencies' SQL inline, so two targets cannot each
-contain the other. It throws rather than hangs if that stops holding.
+The cycle check in `place()` is not decoration. A *real* edge cannot cycle — a
+target's SQL contains its dependencies' SQL inline, so two targets cannot each
+contain the other — but an edge here is not always real. A source merging onto a
+target brings its own edges, and a join is recorded whether the SQL uses it or
+not, so `alias is base extend { join_one: mid }` where `mid` reads `base` would
+put the merged target and `mid` in a cycle. Intersecting the merged sources'
+edges (step 2 above) is what removes those.
 
 ## The build plan (deprecated)
 
@@ -424,30 +415,80 @@ That last step is why compiling a persistence query costs a build plan. It is
 noted as inefficient in the code; a `listConnections()` on `LookupConnection`,
 or caching, would remove it.
 
-## Key files
+## Glossary
 
-**Core**
+Where a name lives. Deprecated entries are marked; see the sections above for
+what replaced them.
 
-- [`api/foundation/config.ts`](../../api/foundation/config.ts) — `Manifest`, `MalloyConfig`
-- [`api/foundation/core.ts`](../../api/foundation/core.ts) — `Model.getBuildPlan()`, `BuildPlan`, `PersistSource`
-- [`api/foundation/runtime.ts`](../../api/foundation/runtime.ts) — manifest resolution
-- [`api/foundation/types.ts`](../../api/foundation/types.ts) — `BuildNode`, `BuildGraph`, `CompileQueryOptions`, `EMPTY_BUILD_MANIFEST`
-- [`model/malloy_types.ts`](../../model/malloy_types.ts) — the IR and manifest types
-- [`model/persist_utils.ts`](../../model/persist_utils.ts) — `walkPersistentDependencies()`, `findPersistentDependencies()`, `minimalBuildGraph()`, `checkPersistAnnotation()`
-- [`model/source_def_utils.ts`](../../model/source_def_utils.ts) — `mkSourceID()`, `mkBuildID()`, registry resolution, source factories
-- [`model/query_query.ts`](../../model/query_query.ts) — substitution for `query_source`
-- [`model/sql_compiled.ts`](../../model/sql_compiled.ts) — substitution for `sql_select`
+### Types
 
-**Translation**
+| Name | File | What |
+|---|---|---|
+| `BuildID` | `model/malloy_types.ts` | Manifest key: hash of connection digest and SQL |
+| `BuildManifest` | `model/malloy_types.ts` | `BuildID` → table name, plus `strict` |
+| `BuildTarget` | `api/foundation/types.ts` | One table, and every source that maps onto it |
+| `ConnectionBuild` | `api/foundation/types.ts` | One connection's targets, in dependency order |
+| `BuildTargets` | `api/foundation/types.ts` | What `getBuildTargets` returns |
+| `PersistNode` | `model/persist_utils.ts` | One source the walk yields |
+| `PersistWalk` | `model/persist_utils.ts` | The generator's type |
+| `ResolvedNode` | `api/foundation/build_targets.ts` | A `PersistNode` with its `PersistSource` |
+| `PersistableSourceDef` | `model/malloy_types.ts` | `SQLSourceDef \| QuerySourceDef` |
+| `SourceID` | `model/malloy_types.ts` | Identity of a named source |
+| `SourceRegistryValue` | `model/malloy_types.ts` | Registry entry, with the lazy `persist` flag |
+| `BuildNode`, `BuildGraph`, `BuildPlan` | `api/foundation/types.ts`, `core.ts` | *deprecated* — the plan shapes |
 
-- [`lang/ast/statements/define-source.ts`](../../lang/ast/statements/define-source.ts) — `sourceID` and `persistent`
-- [`lang/ast/types/malloy-element.ts`](../../lang/ast/types/malloy-element.ts) — local registry population
-- [`lang/ast/statements/import-statement.ts`](../../lang/ast/statements/import-statement.ts) — registry population across imports
+### Classes
 
-**Tests and samples**
+| Name | File | What |
+|---|---|---|
+| `Manifest` | `api/foundation/config.ts` | Load, touch, update, `activeEntries` |
+| `PersistSource` | `api/foundation/core.ts` | A persist source: `getSQL`, `makeBuildId`, `location`, annotations |
 
-- [`test/src/core/persist.spec.ts`](../../../../../test/src/core/persist.spec.ts) — dependency paths, substitution, strict mode, cross-model imports, Runtime manifest, data equivalence
-- [`scripts/simple_builder/`](../../../../../scripts/simple_builder/) — a teaching builder. Its spec runs in the `simple-builder` jest project (part of `test-duckdb` / `ci-duckdb`) and covers the incremental cycle, GC, dependency chains, and table naming — so the file the docs cite as an example can't drift out of true unnoticed
+### Functions
+
+| Name | File | What |
+|---|---|---|
+| `Runtime.getBuildTargets` | `api/foundation/runtime.ts` | The builder entry point |
+| `mkBuildTargets` | `api/foundation/build_targets.ts` | Folds the walk into targets |
+| `resolvePersistWalk` | `api/foundation/build_targets.ts` | Walks and resolves each node's source |
+| `walkPersistentDependencies` | `model/persist_utils.ts` | The generator; the six paths live here |
+| `Model._walkPersistSources` | `api/foundation/core.ts` | The walk over a whole model |
+| `Model._persistSourceFor` | `api/foundation/core.ts` | `SourceID` → `PersistSource` |
+| `checkPersistAnnotation` | `model/persist_utils.ts` | Parses `#@` and asks `has('persist')` |
+| `isPersistent` | `model/persist_utils.ts` | The lazy flag used while walking |
+| `mkSourceID`, `mkBuildID` | `model/source_def_utils.ts` | Identity constructors |
+| `resolveSourceID`, `resolveSourceRef` | `model/source_def_utils.ts` | Registry lookup |
+| `isPersistableSourceDef` | `model/malloy_types.ts` | The persistable test |
+| `Model.getBuildPlan` | `api/foundation/core.ts` | *deprecated* |
+| `findPersistentDependencies` | `model/persist_utils.ts` | *deprecated* — nested view, for the plan |
+| `minimalBuildGraph` | `model/persist_utils.ts` | *deprecated* — the plan's roots |
+
+### Where persistence touches the translator
+
+| Name | File | What |
+|---|---|---|
+| `DefineSource` | `lang/ast/statements/define-source.ts` | Stamps `sourceID`, resolves `persistent` |
+| `DynamicSpace.structDef` | `lang/ast/field-space/dynamic-space.ts` | Clears both ids on a modification |
+| `RefinedSource` | `lang/ast/source-elements/refined-source.ts` | Sets `extends` |
+| `Document.setEntry` | `lang/ast/types/malloy-element.ts` | Local registry population |
+| `ImportStatement` | `lang/ast/statements/import-statement.ts` | Registry population across imports |
+
+### Substitution
+
+| Name | File | What |
+|---|---|---|
+| `QueryQuery` | `model/query_query.ts` | Substitution for `query_source` |
+| `getCompiledSQL` | `model/sql_compiled.ts` | Substitution for `sql_select` |
+
+### Tests and samples
+
+- `test/src/core/persist.spec.ts` — dependency paths, substitution, strict
+  mode, cross-model imports, Runtime manifest, data equivalence
+- `packages/malloy/src/api/foundation/build-targets.spec.ts` — the merge and
+  the ordering, without a connection
+- `scripts/simple_builder/` — a teaching builder. Its spec runs in the
+  `simple-builder` jest project (part of `test-duckdb` / `ci-duckdb`), so the
+  file the docs cite as an example cannot drift out of true unnoticed
 
 ## Design decisions
 
