@@ -150,6 +150,9 @@ describe('connection sql()', () => {
           -> { select: * }
       `;
       translateWithSchemas(m.translator);
+      // `toLogAtLeast` because `SQLSource` builds its phrases twice, once to
+      // request the schema and once to record the select segments, so the
+      // interpolated query reports this twice.
       expect(m).toLogAtLeast(error('ambiguous-view-type'));
     });
     test('persistable query in interpolation', () => {
