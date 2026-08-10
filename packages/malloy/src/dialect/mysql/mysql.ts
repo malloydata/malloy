@@ -69,6 +69,8 @@ const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'int unsigned': {type: 'number', numberType: 'integer'},
   'bigint unsigned': {type: 'number', numberType: 'bigint'},
   'double': {type: 'number', numberType: 'float'},
+  'float': {type: 'number', numberType: 'float'},
+  'real': {type: 'number', numberType: 'float'},
   'varchar': {type: 'string'},
   'varbinary': {type: 'string'},
   'char': {type: 'string'},
