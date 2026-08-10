@@ -10,6 +10,10 @@ import type {
   RenderFieldRegistry,
 } from '@/registry/types';
 import {RenderLogCollector} from '@/component/render-log-collector';
+import type {
+  GetResultMetadataOptions,
+  RenderMetadata,
+} from '@/component/render-result-metadata';
 import type {Tag} from '@malloydata/malloy-tag';
 import {resolveBuiltInTags} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
@@ -24,6 +28,19 @@ export type OnPluginCreateError = (
   plugins: RenderPluginInstance[]
 ) => void;
 
+/**
+ * Called when an already-created plugin throws from a render-time hook
+ * (`beforeRender` / `getStyleOverrides`). The `plugins` array is the field's
+ * plugin list with the failed plugin already removed — push a replacement onto
+ * it (an error renderer) to have the field report the failure in place.
+ */
+export type OnPluginRenderError = (
+  error: Error,
+  plugin: RenderPluginInstance,
+  field: Field,
+  plugins: RenderPluginInstance[]
+) => void;
+
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
   private rootField: RootField;
@@ -34,7 +51,8 @@ export class RenderFieldMetadata {
     private pluginRegistry: RenderPluginFactory[] = [],
     private pluginOptions: Record<string, unknown> = {},
     private onPluginCreateError?: OnPluginCreateError,
-    logCollector?: RenderLogCollector
+    logCollector?: RenderLogCollector,
+    private onPluginRenderError?: OnPluginRenderError
   ) {
     this.logCollector = logCollector ?? new RenderLogCollector();
     this.registry = new Map();
@@ -177,6 +195,69 @@ export class RenderFieldMetadata {
 
   getFieldEntry(fieldKey: string): RenderFieldRegistryEntry | undefined {
     return this.registry.get(fieldKey);
+  }
+
+  /**
+   * Run every plugin's `beforeRender` hook and collect the style overrides they
+   * publish onto `resultMetadata`.
+   *
+   * Both hooks run behind a guard, mirroring how plugin *creation* failures are
+   * contained in `instantiatePluginsForField`. A plugin that throws is logged
+   * and dropped from its field, and `onPluginRenderError` gets a chance to put
+   * a replacement (an error renderer) in its place, so the failure is reported
+   * on that field instead of taking down the whole render.
+   *
+   * This containment is load-bearing for the caller: this runs inside the
+   * renderer's `metadata` memo, and an escaping throw left that memo undefined,
+   * so every render-time plugin failure surfaced as
+   * `Cannot read properties of undefined (reading 'styleOverrides')` from the
+   * next read of the memo — discarding the real reason, which was never logged.
+   */
+  runPluginsBeforeRender(
+    resultMetadata: RenderMetadata,
+    options: GetResultMetadataOptions
+  ): void {
+    const styleOverrides: Record<string, string> = {};
+
+    for (const field of this.getAllFields()) {
+      // Snapshot: handlePluginRenderError rewrites the field's plugin list.
+      for (const plugin of [...this.getPluginsForField(field.key)]) {
+        try {
+          plugin.beforeRender?.(resultMetadata, options);
+          if (plugin.getStyleOverrides) {
+            Object.assign(styleOverrides, plugin.getStyleOverrides());
+          }
+        } catch (error) {
+          this.handlePluginRenderError(error, plugin, field);
+        }
+      }
+    }
+
+    resultMetadata.styleOverrides = styleOverrides;
+  }
+
+  private handlePluginRenderError(
+    error: unknown,
+    plugin: RenderPluginInstance,
+    field: Field
+  ): void {
+    const msg = error instanceof Error ? error.message : String(error);
+    this.logCollector.error(
+      `Plugin ${plugin.name} failed for field '${field.key}': ${msg}`
+    );
+
+    const entry = this.registry.get(field.key);
+    if (!entry) return;
+
+    // Drop the failed plugin before offering a replacement: applyRenderer reads
+    // plugins.at(0), so leaving it in place would keep rendering the broken one.
+    const plugins = entry.plugins.filter(p => p !== plugin);
+    this.onPluginRenderError?.(error as Error, plugin, field, plugins);
+
+    entry.plugins = plugins;
+    // Goes through setPlugins so the field's cached renderAs is recomputed for
+    // whatever replaced the plugin (or for having no plugin at all).
+    field.setPlugins(plugins);
   }
 
   /**
