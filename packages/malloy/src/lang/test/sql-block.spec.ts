@@ -4,47 +4,22 @@
  */
 
 import {
-  TEST_DIALECT,
   TestTranslator,
-  aTableDef,
+  answerSQLSchemaRequests,
   error,
   errorMessage,
   model,
 } from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
-import type {SQLSourceDef} from '../../model';
-import {sqlKey} from '../../model/sql_block';
-import type {SQLSourceRequest} from '../translate-response';
 
 describe('connection sql()', () => {
   const selStmt = 'SELECT * FROM aTable';
-  function makeSchemaResponse(sql: SQLSourceRequest): {
-    [key: string]: SQLSourceDef;
-  } {
-    const cname = sql.connection || 'bigquery';
-    const key = sqlKey(cname, sql.selectStr);
-    return {
-      [key]: {
-        type: 'sql_select',
-        name: key,
-        dialect: TEST_DIALECT,
-        connection: cname,
-        selectStr: selStmt,
-        fields: aTableDef.fields,
-      },
-    };
-  }
 
+  // These tests read the stored `selectStr` back, so the schema answers with
+  // the original statement rather than whatever interpolation produced.
   function translateWithSchemas(m: TestTranslator): void {
-    for (;;) {
-      const response = m.translate();
-      if (response.compileSQL) {
-        m.update({compileSQL: makeSchemaResponse(response.compileSQL)});
-      } else {
-        break;
-      }
-    }
+    answerSQLSchemaRequests(m, selStmt);
   }
 
   test('source from sql', () => {

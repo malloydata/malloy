@@ -21,7 +21,10 @@ export interface QueryElement extends MalloyElement {
    * @param isPartialOk The pipeline may contain `partial` segments, whose
    *   query class is not decided yet. Only the base of a refinement can
    *   accept those, because the refinement is what decides the class.
-   *   False means the pipeline is finished and the compiler can read it.
+   *   False means the pipeline is finished and the compiler can read it —
+   *   any partial found is made a `reduce` and reported as
+   *   `ambiguous-view-type`, so passing false decides where that error
+   *   lands and when it is logged relative to the rest of the pipeline.
    */
   queryComp(isRefOk: boolean, isPartialOk: boolean): QueryComp;
   query(isRefOk?: boolean): Query;

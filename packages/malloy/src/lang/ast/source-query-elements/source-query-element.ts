@@ -50,8 +50,7 @@ export abstract class SourceQueryElement extends MalloyElement {
    * location. It is one message per failed expression.
    *
    * The case it does not serve is two unrelated complaints about the same
-   * element: a second `sqLog` is dropped. Report those with `logError`
-   * inside a single `isErrorFree()` check, then set `errored` once.
+   * element: a second `sqLog` is dropped. Use `sqClaimError` for those.
    */
   sqLog<T extends MessageCode>(
     code: T,
@@ -63,6 +62,20 @@ export abstract class SourceQueryElement extends MalloyElement {
     }
     this.errored = true;
     return code;
+  }
+
+  /**
+   * Take the one error report this expression is allowed, for an element with
+   * more than one complaint to make. False means something below has already
+   * spoken. True means the caller owns the report and should `logError` each
+   * of its complaints; nothing above will speak after that.
+   */
+  sqClaimError(): boolean {
+    if (!this.isErrorFree()) {
+      return false;
+    }
+    this.errored = true;
+    return true;
   }
 
   /** True until this element, or anything below it, has reported a failure. */

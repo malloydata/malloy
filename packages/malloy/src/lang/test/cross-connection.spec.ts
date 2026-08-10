@@ -10,38 +10,14 @@
  * therefore has to be rejected.
  */
 
-import type {SQLSourceDef} from '../../model';
-import {sqlKey} from '../../model/sql_block';
-import type {TestTranslator} from './test-translator';
 import {
-  TEST_DIALECT,
-  aTableDef,
+  answerSQLSchemaRequests,
   error,
+  errorMessage,
   markSource,
   model,
 } from './test-translator';
 import './parse-expects';
-
-/**
- * Answer every SQL schema request with the schema of `aTable`, on whichever
- * connection asked for it, until the translation stops asking.
- */
-function answerSchemaRequests(translator: TestTranslator): void {
-  for (;;) {
-    const compileSQL = translator.translate().compileSQL;
-    if (compileSQL === undefined) return;
-    const key = sqlKey(compileSQL.connection, compileSQL.selectStr);
-    const schema: SQLSourceDef = {
-      type: 'sql_select',
-      name: key,
-      dialect: TEST_DIALECT,
-      connection: compileSQL.connection,
-      selectStr: compileSQL.selectStr,
-      fields: aTableDef.fields,
-    };
-    translator.update({compileSQL: {[key]: schema}});
-  }
-}
 
 describe('cross connection references are errors', () => {
   describe('joins', () => {
@@ -50,7 +26,12 @@ describe('cross connection references are errors', () => {
         source: xa is _db_.table('aTable')
         source: xb is _db2_.table('aTable')
         run: xa extend { join_one: ${'xb on astr = xb.astr'} } -> { group_by: xb.astr }
-      `).toLog(error('join-connection-mismatch'));
+      `).toLog(
+        errorMessage(
+          "Cannot join 'xb', which is on connection '_db2_', " +
+            "into a source on connection '_db_'"
+        )
+      );
     });
     test('join_many from another connection', () => {
       expect(markSource`
@@ -84,7 +65,25 @@ describe('cross connection references are errors', () => {
         }
       `).toLog(error('join-connection-mismatch'));
     });
-    test('join of a source on another dialect', () => {
+    test('a base whose schema failed does not also report a connection', () => {
+      // The error source stands in for a base whose schema never arrived, and
+      // its connection is a sentinel. Reporting it would put `~unknown~` in
+      // front of a user who has a real error to read already.
+      const translator = model`
+        source: xa is _db_.table('noSuchTable') extend {
+          join_one: a on astr = a.astr
+        }
+      `.translator;
+      translator.translate();
+      translator.update({
+        errors: {tables: {'_db_:noSuchTable': 'no such table'}},
+      });
+      translator.translate();
+      const codes = translator.logger.getLog().map(l => l.code);
+      expect(codes).toContain('failed-to-fetch-table-schema');
+      expect(codes).not.toContain('join-connection-mismatch');
+    });
+    test('the connection check also catches a cross-dialect join', () => {
       expect(markSource`
         run: a extend { join_one: ${'bq_a on astr = bq_a.astr'} } -> { group_by: bq_a.astr }
       `).toLog(error('join-connection-mismatch'));
@@ -151,7 +150,7 @@ describe('cross connection references are errors', () => {
         source: xa is _db2_.table('aTable') -> { group_by: astr }
         source: xs is _db2_.sql("""SELECT * FROM %{ xa -> { select: * } }""")
       `.translator;
-      answerSchemaRequests(translator);
+      answerSQLSchemaRequests(translator);
       expect(translator).toTranslate();
     });
   });

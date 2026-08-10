@@ -864,3 +864,32 @@ export function warningMessage(message: string | RegExp): {
 } {
   return {message, severity: 'warn'};
 }
+
+/**
+ * Drain a translation's SQL schema requests, answering each with the schema of
+ * `aTable` on the connection which asked, until it stops asking. A `sql()`
+ * source needs a schema before the translation can finish, and nothing in a
+ * TestTranslator provides one.
+ *
+ * @param selectStr What to record as the block's SELECT. Defaults to the
+ *   statement which was requested; pass a value to hand back something else.
+ */
+export function answerSQLSchemaRequests(
+  translator: TestTranslator,
+  selectStr?: string
+): void {
+  for (;;) {
+    const compileSQL = translator.translate().compileSQL;
+    if (compileSQL === undefined) return;
+    const key = sqlKey(compileSQL.connection, compileSQL.selectStr);
+    const schema: SQLSourceDef = {
+      type: 'sql_select',
+      name: key,
+      dialect: TEST_DIALECT,
+      connection: compileSQL.connection,
+      selectStr: selectStr ?? compileSQL.selectStr,
+      fields: aTableDef.fields,
+    };
+    translator.update({compileSQL: {[key]: schema}});
+  }
+}

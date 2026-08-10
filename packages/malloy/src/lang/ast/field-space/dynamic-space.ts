@@ -133,8 +133,11 @@ export abstract class DynamicSpace
             // A query runs on one connection, so everything reachable from
             // the source it runs on must live on that connection. Record and
             // array joins are part of the row, and so have no connection.
+            // A base whose schema could not be fetched has the error
+            // connection, which is not worth complaining about twice.
             if (
               model.isSourceDef(joinStruct) &&
+              !ErrorFactory.didCreate(this.fromSource) &&
               joinStruct.connection !== this.connectionName()
             ) {
               field.join.sourceExpr.logError(

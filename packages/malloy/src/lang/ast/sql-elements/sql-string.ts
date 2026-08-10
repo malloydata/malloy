@@ -58,7 +58,9 @@ export class SQLString extends MalloyElement {
             continue;
           }
           valid = false;
-          if (el.isErrorFree()) {
+          // A source can be wrong in both ways at once, and both are worth
+          // saying, so claim the report and then say everything.
+          if (el.sqClaimError()) {
             if (connectionMismatch) {
               el.logError(
                 'sql-source-connection-mismatch',
@@ -71,8 +73,6 @@ export class SQLString extends MalloyElement {
                 'Source is not persistable, cannot be used in SQL'
               );
             }
-            // this works around sqLog error supporession to log both when needed
-            el.errored = true;
           }
         } else {
           el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
