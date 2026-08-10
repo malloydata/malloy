@@ -381,7 +381,7 @@ test('runtime queries with and without manifest', async () => {
     // The sample writes a SQL script rather than executing it, so materialize
     // its output here to query against.
     await connection.runSQL(
-      `CREATE TABLE flights AS SELECT * FROM parquet_scan('${FLIGHTS_PARQUET}')`
+      `CREATE OR REPLACE TABLE flights AS SELECT * FROM parquet_scan('${FLIGHTS_PARQUET}')`
     );
     const buildSql = await readFile(SQL_FILE, 'utf-8');
     for (const stmt of buildSql.split(';\n').filter(s => s.trim())) {

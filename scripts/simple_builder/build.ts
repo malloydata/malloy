@@ -157,8 +157,12 @@ async function runBuild(
 ): Promise<void> {
   const {modelFile, manifestFile, sqlFile, logDir} = opts;
 
+  // OR REPLACE because a build may not be the first thing to touch this
+  // database: two DuckDB connections built with the same options share one
+  // instance, `:memory:` included, so a second build -- or a caller which
+  // made its own connection the same way -- finds the table already there.
   await connection.runSQL(
-    "CREATE TABLE flights AS SELECT * FROM parquet_scan('test/data/malloytest-parquet/flights.parquet')"
+    "CREATE OR REPLACE TABLE flights AS SELECT * FROM parquet_scan('test/data/malloytest-parquet/flights.parquet')"
   );
 
   // Convert with pathToFileURL/fileURLToPath, never by concatenation: a path
