@@ -40,7 +40,7 @@ export class SQLString extends MalloyElement {
     }
   }
 
-  sqlPhrases(): [boolean, SQLPhraseSegment[]] {
+  sqlPhrases(forConnection: string): [boolean, SQLPhraseSegment[]] {
     const ret: SQLPhraseSegment[] = [];
     let valid = true;
     for (const el of this.elements) {
@@ -51,18 +51,46 @@ export class SQLString extends MalloyElement {
         const source = el.getSource();
         if (source) {
           const sourceDef = source.getSourceDef(undefined);
-          if (isPersistableSourceDef(sourceDef)) {
+          const connectionMismatch = sourceDef.connection !== forConnection;
+          const persistable = isPersistableSourceDef(sourceDef);
+          if (!connectionMismatch && persistable) {
             ret.push(sourceDef);
             continue;
           }
+          valid = false;
+          // A source can be wrong in both ways at once, and both are worth
+          // saying, so claim the report and then say everything.
+          if (el.sqClaimError()) {
+            if (connectionMismatch) {
+              el.logError(
+                'sql-source-connection-mismatch',
+                `Source is on connection ${sourceDef.connection}, but this SQL is for ${forConnection}`
+              );
+            }
+            if (!persistable) {
+              el.logError(
+                'invalid-sql-source-interpolation',
+                'Source is not persistable, cannot be used in SQL'
+              );
+            }
+          }
+        } else {
+          el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
+          valid = false;
         }
-        el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
-        valid = false;
       } else {
         // Not a source - try as a query
         const queryObject = el.getQuery();
         if (queryObject) {
-          ret.push(queryObject.query(false));
+          const queryComp = queryObject.queryComp(false, false);
+          if (queryComp.inputStruct.connection !== forConnection) {
+            el.sqLog(
+              'sql-source-connection-mismatch',
+              `Query is on connection ${queryComp.inputStruct.connection}, but this SQL is for ${forConnection}`
+            );
+            valid = false;
+          }
+          ret.push(queryComp.query);
         } else {
           el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
           valid = false;

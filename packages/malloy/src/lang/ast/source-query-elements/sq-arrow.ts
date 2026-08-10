@@ -22,6 +22,12 @@ import type {QueryElement} from '../types/query-element';
  */
 export class SQArrow extends SourceQueryElement {
   elementType = 'sq-arrow';
+  // Built once. Handing out a new element per call recompiles the query and
+  // duplicates any error it reports, because a message is only deduped
+  // against the element which logged it.
+  asQuery?: QueryElement;
+  asSource?: Source;
+
   constructor(
     readonly applyTo: SourceQueryElement,
     readonly operation: View
@@ -30,6 +36,9 @@ export class SQArrow extends SourceQueryElement {
   }
 
   getQuery(): QueryElement | undefined {
+    if (this.asQuery) {
+      return this.asQuery;
+    }
     const lhs = this.applyTo.isSource()
       ? this.applyTo.getSource()
       : this.applyTo.getQuery();
@@ -40,12 +49,15 @@ export class SQArrow extends SourceQueryElement {
       );
       return;
     }
-    const arr = new QueryArrow(lhs, this.operation);
-    this.has({query: arr});
-    return arr;
+    this.asQuery = new QueryArrow(lhs, this.operation);
+    this.has({query: this.asQuery});
+    return this.asQuery;
   }
 
   getSource(): Source | undefined {
+    if (this.asSource) {
+      return this.asSource;
+    }
     const query = this.getQuery();
     if (!query) {
       this.sqLog(
@@ -54,8 +66,8 @@ export class SQArrow extends SourceQueryElement {
       );
       return;
     }
-    const asSource = new QuerySource(query);
-    this.has({asSource});
-    return asSource;
+    this.asSource = new QuerySource(query);
+    this.has({asSource: this.asSource});
+    return this.asSource;
   }
 }

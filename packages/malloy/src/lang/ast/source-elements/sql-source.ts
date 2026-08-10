@@ -33,7 +33,9 @@ export class SQLSource extends Source {
       ? doc.modelDef()
       : undefined;
 
-    const [valid, phrases] = this.select.sqlPhrases();
+    const [valid, phrases] = this.select.sqlPhrases(
+      this.connectionName.refString
+    );
     if (valid) {
       return getSourceRequest(
         phrases,
@@ -153,7 +155,9 @@ export class SQLSource extends Source {
         location: this.location,
       };
       // Use factory to create SQLSourceDef without propagating sourceID/extends
-      const [_valid, phrases] = this.select.sqlPhrases();
+      const [_valid, phrases] = this.select.sqlPhrases(
+        this.connectionName.refString
+      );
       const selectSegments = this.select.containsQueries ? phrases : undefined;
       const locStruct: SQLSourceDef = mkSQLSourceDef(
         baseStruct,

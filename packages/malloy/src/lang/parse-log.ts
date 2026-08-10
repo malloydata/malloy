@@ -262,11 +262,13 @@ type MessageParameterTypes = {
   'unexpected-source-property': string;
   'aggregate-in-source-filter': string;
   'invalid-connection-for-sql-source': string;
+  'sql-source-connection-mismatch': string;
   'failed-to-fetch-sql-source-schema': string;
   'invalid-sql-source': string;
   'non-top-level-sql-source': string;
   'failed-to-fetch-table-schema': string;
   'invalid-connection-for-table-source': string;
+  'join-connection-mismatch': string;
   'join-on-primary-key-type-mismatch': string;
   'join-primary-key-not-found': string;
   'join-with-without-primary-key': string;

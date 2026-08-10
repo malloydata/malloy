@@ -188,6 +188,16 @@ export const aTableDef: TableSourceDef = {
   ],
 };
 
+/**
+ * A second connection speaking the same dialect as `_db_`. This makes a
+ * cross-connection reference which is not also a cross-dialect reference
+ * writable in a test, isolating the connection check from the dialect check.
+ */
+export const db2TableDef: TableSourceDef = {
+  ...aTableDef,
+  connection: '_db2_',
+};
+
 // BigQuery-compatible table definition (no timestamptz support)
 export const bqTableDef: SourceDef = {
   type: 'table',
@@ -217,6 +227,7 @@ export const pgTableDef: SourceDef = {
 
 export const mockSchema: TableSourceDef[] = [
   aTableDef,
+  db2TableDef,
   bqTableDef,
   pgTableDef,
   {
@@ -383,10 +394,14 @@ export class TestTranslator extends MalloyTranslator {
   allDialectsEnabled = true;
   testRoot?: TestRoot;
   /*
-   * There are two connections:
+   * There are four connections:
    *   _db_  - duckdb dialect, with the following tables ...
    *      aTable, malloytest.carriers, malloytest.flights, malloytest.airports
+   *   _db2_ - duckdb dialect, with one table, aTable. A second connection
+   *      on the same dialect as _db_, for cross-connection tests.
    *   _bq_  - bigquery/standardsql dialect, with one table
+   *      aTable
+   *   _pg_  - postgres dialect, with one table
    *      aTable
    *
    * The "aTable" table is a mocked table with one column of each type.
@@ -414,6 +429,7 @@ export class TestTranslator extends MalloyTranslator {
     ...mkModelDef(testURI, testURI),
     contents: {
       _db_: {type: 'connection', name: '_db_'},
+      _db2_: {type: 'connection', name: '_db2_'},
       _bq_: {type: 'connection', name: '_bq_'},
       _pg_: {type: 'connection', name: '_pg_'},
       a: {...aTableDef, primaryKey: 'astr', name: 'a'},
@@ -485,6 +501,7 @@ export class TestTranslator extends MalloyTranslator {
       );
     }
     this.connectionDialectZone.define('_db_', TEST_DIALECT);
+    this.connectionDialectZone.define('_db2_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
     this.connectionDialectZone.define('_pg_', 'postgres');
     for (const flag of options.compilerFlags ?? []) {
@@ -846,4 +863,33 @@ export function warningMessage(message: string | RegExp): {
   severity: LogSeverity;
 } {
   return {message, severity: 'warn'};
+}
+
+/**
+ * Drain a translation's SQL schema requests, answering each with the schema of
+ * `aTable` on the connection which asked, until it stops asking. A `sql()`
+ * source needs a schema before the translation can finish, and nothing in a
+ * TestTranslator provides one.
+ *
+ * @param selectStr What to record as the block's SELECT. Defaults to the
+ *   statement which was requested; pass a value to hand back something else.
+ */
+export function answerSQLSchemaRequests(
+  translator: TestTranslator,
+  selectStr?: string
+): void {
+  for (;;) {
+    const compileSQL = translator.translate().compileSQL;
+    if (compileSQL === undefined) return;
+    const key = sqlKey(compileSQL.connection, compileSQL.selectStr);
+    const schema: SQLSourceDef = {
+      type: 'sql_select',
+      name: key,
+      dialect: TEST_DIALECT,
+      connection: compileSQL.connection,
+      selectStr: selectStr ?? compileSQL.selectStr,
+      fields: aTableDef.fields,
+    };
+    translator.update({compileSQL: {[key]: schema}});
+  }
 }
