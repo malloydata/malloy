@@ -62,9 +62,11 @@ import {mkModelDef} from '../../model/utils';
 import type {Dialect} from '../../dialect';
 import {getDialect} from '../../dialect';
 import type {BuildGraph, BuildNode, CompileQueryOptions} from './types';
+import type {PersistWalk} from '../../model/persist_utils';
 import {
   findPersistentDependencies,
   minimalBuildGraph,
+  walkPersistentDependencies,
 } from '../../model/persist_utils';
 import {
   resolveSourceID,
@@ -1499,32 +1501,74 @@ export class Model implements Taggable {
   }
 
   /**
-   * Get the build plan for all #@ persist sources.
+   * Require the `experimental.persistence` compiler flag.
    *
-   * Walks through ALL queries and sources in the model, finding any persistent
-   * dependencies they reference (including hidden dependencies from imports).
+   * Read off the resolved model annotations (`.modelAnnotations`, the
+   * import/extend fold) rather than this model's own `##`, so the flag carries
+   * across extend.
+   */
+  private requirePersistence(api: string): void {
+    const modelTag = this.modelAnnotations.parseAsTag('!').tag;
+    if (!modelTag.has('experimental', 'persistence')) {
+      throw new Error(
+        `Model must have ##! experimental.persistence to use ${api}`
+      );
+    }
+  }
+
+  /**
+   * Walk every persistable source this model reaches, in dependency order.
    *
-   * Returns a BuildPlan containing:
-   * - `graphs`: Build graphs for root sources only (minimal build set)
-   * - `sources`: Map from sourceId to PersistSource (all persist sources)
+   * The roots are every source and query the model names, plus its unnamed
+   * queries. They share one walk, so a source several of them reach is visited
+   * once.
    *
-   * The minimal build set contains only "root" sources - those not depended
-   * on by any other persist source. Each root includes its transitive
-   * dependencies in the dependsOn field, preserving the tree structure
-   * for parallel building.
+   * This is the raw material {@link Runtime.getBuildTargets} folds into
+   * tables. Nothing here is keyed by artifact: that needs a BuildID, and a
+   * model cannot reach a connection to compute one.
+   */
+  public _walkPersistSources(tagParseLog: LogMessage[]): PersistWalk {
+    this.requirePersistence('_walkPersistSources()');
+    const roots: (SourceDef | InternalQuery)[] = [];
+    for (const obj of Object.values(this.modelDef.contents)) {
+      if (obj.type === 'query' || isSourceDef(obj)) {
+        roots.push(obj);
+      }
+    }
+    roots.push(...this.modelDef.queryList);
+    return walkPersistentDependencies(roots, this.modelDef, tagParseLog);
+  }
+
+  /**
+   * The {@link PersistSource} for a sourceID, or undefined if this model
+   * cannot resolve it.
+   */
+  public _persistSourceFor(sourceID: string): PersistSource | undefined {
+    const sourceDef = resolveSourceID(this.modelDef, sourceID);
+    return sourceDef
+      ? new PersistSource(new Explore(this.modelDef, sourceDef), this)
+      : undefined;
+  }
+
+  /**
+   * Every `#@ persist` source in the model, as a graph keyed by sourceID.
+   *
+   * Walks all queries and sources, including dependencies that arrived through
+   * an import and are in no namespace here, and returns the *roots* — the
+   * sources nothing else depends on — each carrying its dependencies in
+   * `dependsOn`.
+   *
+   * @deprecated A builder wants tables, and this reports sources. Those are not
+   * one to one: several sources routinely map onto one table, so keying on
+   * sourceID leaves every builder to discover the mapping by hashing. Its roots
+   * are computed by sourceID too, so for a persisted source with an extension
+   * the root is the extension and the declaring source is never named. Use
+   * {@link Runtime.getBuildTargets}, which answers in tables.
    *
    * @return BuildPlan with graphs and sources map
    */
   public getBuildPlan(): BuildPlan {
-    // Require experimental.persistence compiler flag. Read the resolved model
-    // annotations (`.modelAnnotations`, the import/extend fold) rather than this
-    // model's own `##` so the flag carries across extend.
-    const modelTag = this.modelAnnotations.parseAsTag('!').tag;
-    if (!modelTag.has('experimental', 'persistence')) {
-      throw new Error(
-        'Model must have ##! experimental.persistence to use getBuildPlan()'
-      );
-    }
+    this.requirePersistence('getBuildPlan()');
 
     const allDeps: BuildNode[] = [];
     const tagParseLog: LogMessage[] = [];
@@ -1554,8 +1598,11 @@ export class Model implements Taggable {
 
     // Build the sources map from all persistent sourceIDs encountered
     const sourcesMap: Record<string, PersistSource> = {};
+    const seen = new Set<BuildNode>();
     const collectSources = (nodes: BuildNode[]) => {
       for (const node of nodes) {
+        if (seen.has(node)) continue;
+        seen.add(node);
         if (!(node.sourceID in sourcesMap)) {
           const sourceDef = resolveSourceID(this.modelDef, node.sourceID);
           if (sourceDef) {
@@ -1702,6 +1749,27 @@ export class PersistSource implements Taggable {
   /** The model annotations resolved for this source. */
   get modelAnnotations(): Annotations {
     return this.explore.modelAnnotations;
+  }
+
+  /**
+   * Where this source was declared: the URL of the model that declared it, and
+   * the range of the `source:` statement.
+   *
+   * This is the handle to report a build failure against. A name is ambiguous
+   * across models, a sourceID is a name and a URL glued together, and a BuildID
+   * is a hash — none of them answer "where do I go to fix this," and a location
+   * does.
+   *
+   * The URL is whatever the model was loaded from, which may be a scheme only
+   * the caller understands. Rendering it for a human is the builder's job for
+   * the same reason `name=` is: the core supplied no URLReader and has no idea
+   * what these URLs mean.
+   *
+   * Undefined for a source with no recorded position — one synthesized rather
+   * than written down.
+   */
+  get location(): DocumentLocation | undefined {
+    return this.persistableDef.location;
   }
 
   /**

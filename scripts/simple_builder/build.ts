@@ -21,18 +21,16 @@
  *      passed to the compiler. Manifest substitution happens in step 4,
  *      when calling `source.getSQL({buildManifest, connectionDigests})`.
  *
- *   3. PLAN — Call `model.getBuildPlan()` to get the dependency graph.
- *      The plan groups sources by connection. Within a connection, the
- *      graph holds the *root* sources; each carries its own dependencies
- *      in `dependsOn`.
+ *   3. PLAN — Call `runtime.getBuildTargets(model)` for the targets to build.
+ *      A target is one table: its BuildID, the connection it lives on, and
+ *      every source in the model that maps onto it. They arrive grouped by
+ *      connection — no dependency ever crosses one, so those groups are
+ *      wholly independent builds — and in dependency order within each.
  *
- *   4. BUILD — Flatten the graph into dependency order (`flattenBuildNodes`)
- *      and walk it. For each source:
- *      a. Compute the BuildID from `source.getSQL()` (no manifest — full
- *         inline SQL) and the connection digest.
- *      b. If the BuildID is already in the manifest, `touch()` it (marks
- *         it active for GC, but does not rebuild).
- *      c. Otherwise, get the *build SQL* from `source.getSQL({buildManifest,
+ *   4. BUILD — Each connection's targets, in the order given. For each:
+ *      a. If its BuildID is already in the manifest, `touch()` it (marks it
+ *         active for GC, but does not rebuild).
+ *      b. Otherwise, get the *build SQL* from `source.getSQL({buildManifest,
  *         connectionDigests})` — this version substitutes already-built
  *         dependencies with their table names — then CREATE TABLE and
  *         `update()` the manifest.
@@ -41,6 +39,13 @@
  *      were touched or updated in this run are included. Entries from prior
  *      builds that were not referenced are pruned — this is how GC works.
  *
+ * ## Key insight: a target is a table, not a source
+ *
+ *   Several sources routinely name one table — see `BuildTarget` in the API
+ *   types for why. `getBuildTargets` does that merge, and every source that
+ *   named the table is in `target.sources`. A builder walking sources instead
+ *   would create the same table once per name.
+ *
  * ## Key insight: the manifest is part of the build loop
  *
  *   `manifest.buildManifest` returns a *stable reference*. When you call
@@ -48,27 +53,29 @@
  *   visible to subsequent `source.getSQL({buildManifest, ...})` calls in
  *   the same build run. This is how dependency chains work:
  *
- *     source A (persist) → builds first, manifest.update(A)
- *     source B (persist, depends on A) → getSQL() sees A's table name
+ *     target A → builds first, manifest.update(A)
+ *     target B (depends on A) → getSQL() sees A's table name
  *
  *   Without this, B's SQL would contain A's full inline SQL instead of a
  *   table reference, producing a different (and much more expensive) query.
  *
- * ## BuildID vs build SQL
+ * ## BuildID SQL vs build SQL
  *
- *   These are two different SQL strings for the same source:
+ *   These are two different SQL strings for the same table:
  *
- *   - **BuildID SQL** — `source.getSQL()` with no options. Produces the
- *     fully-inlined SQL with no manifest substitution. This is hashed
- *     (with the connection digest) to produce the BuildID. The BuildID
- *     must be stable regardless of build order, so it never includes
- *     manifest-substituted table names.
+ *   - **BuildID SQL** — `target.sql`, which is `source.getSQL()` with no
+ *     options: fully inlined, no manifest substitution. Its hash (with the
+ *     connection digest) is the BuildID. The BuildID must be stable
+ *     regardless of build order, so it never includes substituted table
+ *     names. `getBuildTargets` has already computed both.
  *
  *   - **Build SQL** — `source.getSQL({buildManifest, connectionDigests})`.
  *     Dependencies that are already in the manifest are replaced with
  *     their table names. This is the SQL you actually execute in
  *     CREATE TABLE. It's more efficient because it reads from pre-built
- *     tables instead of recomputing dependencies inline.
+ *     tables instead of recomputing dependencies inline. Only the builder
+ *     can compute it, because only the builder knows what it has built so
+ *     far.
  *
  * ## Divergences from malloy-cli
  *
@@ -88,18 +95,23 @@
  *
  *   - **Connections:** The CLI uses MalloyConfig to create connections from
  *     a config file. This sample hardcodes a single DuckDB connection.
+ *
+ *   - **Concurrency:** this sample builds everything one at a time so its SQL
+ *     script has a stable order. A builder that wants the parallelism runs the
+ *     connections at once and, within each, starts a target as soon as the
+ *     things it reads are done — see `ConnectionBuild` in the API types for
+ *     both loops.
  */
 
 import {readFile, writeFile, mkdir} from 'fs/promises';
 import * as path from 'path';
 import {pathToFileURL, fileURLToPath} from 'url';
-import type {Connection, PersistSource} from '@malloydata/malloy';
-import {Malloy, Manifest} from '@malloydata/malloy';
+import type {BuildTarget, Connection, PersistSource} from '@malloydata/malloy';
+import {Runtime, Manifest} from '@malloydata/malloy';
 
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import type {BuilderLog, BuildLogEntry} from './log_types';
 import {logFileName} from './log_types';
-import {flattenBuildNodes} from './build_graph';
 
 export interface BuildOptions {
   modelFile: string;
@@ -130,6 +142,68 @@ function canonicalTableName(source: PersistSource, requested: string): string {
     throw new Error(`Invalid persist name '${requested}': ${result.error}`);
   }
   return result.canonical;
+}
+
+/**
+ * Where a source was declared, as something a person can act on.
+ *
+ * `PersistSource.location` is the only handle worth reporting against — a name
+ * is ambiguous across models, and a sourceID is a name glued to a URL. The core
+ * hands over the URL it was given and takes no position on rendering it,
+ * because only the caller knows what its URLs mean. This sample loaded
+ * everything from the filesystem, so it prints a path and a line number; a
+ * builder serving models out of a database would print whatever its users
+ * recognize.
+ */
+function declaredAt(source: PersistSource): string {
+  const at = source.location;
+  if (at === undefined) {
+    return '<no recorded location>';
+  }
+  const where = at.url.startsWith('file://')
+    ? path.relative(process.cwd(), fileURLToPath(at.url))
+    : at.url;
+  return `${where}:${at.range.start.line + 1}`;
+}
+
+/** Every declaration behind one table, for reporting. */
+function declaredAtAll(target: BuildTarget): string {
+  return target.sources.map(declaredAt).join(', ');
+}
+
+/**
+ * The name to build this target under, or undefined if nobody asked for one.
+ *
+ * Naming is a builder question, and this is the shape of it that only a
+ * builder can answer: several sources map onto one table, each carrying its
+ * own annotation, and they can disagree. The core hands over every source and
+ * takes no position — a name means nothing to it. This sample refuses the
+ * disagreement, because building one table and honoring one of the two names
+ * silently is how a request for a second table gets lost.
+ *
+ * A target holds several declarations, which is exactly what this error needs:
+ * it can point at each place a different name was asked for.
+ */
+function requestedName(target: BuildTarget): string | undefined {
+  const asked = new Map<string, string[]>();
+  for (const source of target.sources) {
+    const name = source.annotations.parseAsTag('@').tag.text('name');
+    if (name === undefined) continue;
+    const askers = asked.get(name) ?? [];
+    askers.push(declaredAt(source));
+    asked.set(name, askers);
+  }
+  if (asked.size > 1) {
+    const conflict = [...asked]
+      .map(([name, askers]) => `'${name}' at ${askers.join(', ')}`)
+      .join(' and ');
+    throw new Error(
+      `One table, two names: ${conflict}. These sources have identical SQL, ` +
+        'so they share a BuildID and can only produce one table. Give them ' +
+        'one name, or make them different computations.'
+    );
+  }
+  return [...asked.keys()][0];
 }
 
 export async function build(opts: BuildOptions): Promise<void> {
@@ -172,20 +246,23 @@ async function runBuild(
     return await readFile(fileURLToPath(url), {encoding: 'utf-8'});
   };
 
-  const connections = {
-    lookupConnection: async (name?: string): Promise<Connection> => {
-      if (!name || name === 'duckdb') {
-        return connection;
-      }
-      throw new Error(`Unknown connection: ${name}`);
+  const runtime = new Runtime({
+    urlReader: {readURL},
+    connections: {
+      lookupConnection: async (name?: string): Promise<Connection> => {
+        if (!name || name === 'duckdb') {
+          return connection;
+        }
+        throw new Error(`Unknown connection: ${name}`);
+      },
     },
-  };
+  });
 
   // =========================================================
   // STEP 1: LOAD — Load existing manifest (or start empty)
   // =========================================================
   // The manifest maps BuildIDs to table names from prior builds. Loading it
-  // lets us skip sources that haven't changed (their BuildID still matches an
+  // lets us skip tables that haven't changed (their BuildID still matches an
   // entry).
   //
   // Only "the file isn't there" means start fresh. A manifest that exists but
@@ -205,52 +282,43 @@ async function runBuild(
   // =========================================================
   // STEP 2: COMPILE — Compile the model
   // =========================================================
-  // Compile the model to get its IR. The manifest is NOT passed here —
-  // the compiler doesn't need it yet. Manifest substitution happens later,
-  // when we call source.getSQL({buildManifest, connectionDigests}) during
-  // the build loop (step 4). That's where already-built dependencies
-  // resolve to table references instead of inline SQL.
-  const modelText = await readFile(modelFile, {encoding: 'utf-8'});
-  const parse = Malloy.parse({
-    source: modelText,
-    url: pathToFileURL(modelFile),
-  });
-  const model = await Malloy.compile({
-    urlReader: {readURL},
-    connections,
-    parse,
-  });
+  // Compile the model to get its IR. The runtime has no manifest set, so
+  // nothing is substituted here — the compiler doesn't need it yet. Manifest
+  // substitution happens later, when we call
+  // source.getSQL({buildManifest, connectionDigests}) during the build loop
+  // (step 4). That's where already-built dependencies resolve to table
+  // references instead of inline SQL.
+  const model = await runtime.getModel(pathToFileURL(modelFile));
 
   // =========================================================
-  // STEP 3: PLAN — Get the build plan from the compiled model
+  // STEP 3: PLAN — Ask what tables this model needs
   // =========================================================
-  // The build plan contains:
-  //   - graphs: one per connection (see step 4 for how to walk one)
-  //   - sources: keyed by sourceID, each a PersistSource with getSQL()
-  //   - tagParseLog: errors from parsing #@ annotations
-  const plan = model.getBuildPlan();
+  // This lives on the Runtime rather than the Model because a BuildID is a
+  // hash of the SQL *and the connection's digest* — the answer can't be
+  // finished without a connection.
+  const {connections, tagParseLog} = await runtime.getBuildTargets(model);
 
-  for (const msg of plan.tagParseLog) {
+  for (const msg of tagParseLog) {
     const loc = msg.at ? ` (${msg.at.url}:${msg.at.range.start.line + 1})` : '';
     console.warn(`WARNING: ${msg.message}${loc}`);
   }
 
-  if (plan.graphs.length === 0) {
+  const targetCount = connections.flatMap(c => c.targets).length;
+  if (targetCount === 0) {
     console.log('No #@ persist sources found in model');
     return;
   }
 
   console.log(
-    `Found ${Object.keys(plan.sources).length} persist sources in ${plan.graphs.length} graph(s)`
+    `Found ${targetCount} table(s) on ${connections.length} connection(s)`
   );
 
-  // Cache connection digests. The connection digest includes
-  // connection-specific settings (database path, search path, etc.).
-  // Two users with different connection configs get different BuildIDs
-  // for the same Malloy source.
-  const connectionDigest = await connection.getDigest();
+  // The connection digest includes connection-specific settings (database
+  // path, search path, etc.), which is why two users with different connection
+  // configs get different BuildIDs for the same Malloy source. Step 4 hands it
+  // back to the compiler so manifest lookups agree with what was built.
   const connectionDigests: Record<string, string> = {
-    duckdb: connectionDigest,
+    duckdb: connection.getDigest(),
   };
 
   const sqlStatements: string[] = [];
@@ -259,55 +327,36 @@ async function runBuild(
   const buildStartedAt = now.toISOString();
 
   // =========================================================
-  // STEP 4: BUILD — Walk graphs in dependency order
+  // STEP 4: BUILD — Each connection, in dependency order
   // =========================================================
-  // Each graph contains the sources for one connection. `graph.nodes` is
-  // typed `BuildNode[][]` — an eventual leveled schedule — but today it
-  // holds a single entry: the *root* sources, those nothing else depends
-  // on. Everything else hangs off each root's `dependsOn` tree:
+  // Connections are wholly independent of one another — a query can't cross
+  // one, so a dependency can't either. Within a connection, targets arrive with
+  // everything a target depends on ahead of it, so building them in order is
+  // correct with no scheduling of any kind.
   //
-  //   graph.nodes = [[ top_carriers ]]
-  //                     └─ dependsOn: [ by_carrier ]
-  //
-  // So iterating `graph.nodes` alone would build `top_carriers` and never
-  // build `by_carrier` — the dependency it reads from. `flattenBuildNodes`
-  // walks the trees depth-first, dependencies before dependents, and drops
-  // the repeats a diamond produces.
-  for (const graph of plan.graphs) {
-    console.log(`\nProcessing graph for connection: ${graph.connectionName}`);
+  // A builder that wants concurrency keeps a promise per target and awaits
+  // `target.dependsOn` before starting each one; see the header.
+  for (const {connectionName, targets} of connections) {
+    console.log(`\nConnection ${connectionName}: ${targets.length} table(s)`);
 
-    for (const node of flattenBuildNodes(graph.nodes.flat())) {
-      const persistSource = plan.sources[node.sourceID];
-      if (!persistSource) {
-        console.error(`  Warning: Source not found for ${node.sourceID}`);
-        continue;
-      }
-
-      // Read the #@ persist annotation for builder-specific properties.
-      // The CLI requires name=...; this sample falls back to a hash prefix.
-      const explicitName = persistSource.annotations
-        .parseAsTag('@')
-        .tag.text('name');
-
-      // --- Compute the BuildID ---
-      // IMPORTANT: BuildID uses the no-options SQL (fully inlined, no manifest
-      // substitution). This ensures the BuildID is stable regardless of build
-      // order — it depends only on the source's SQL and connection config,
-      // not on whether dependencies happen to be built yet.
-      const buildIdSQL = persistSource.getSQL();
-      const buildId = persistSource.makeBuildId(connectionDigest, buildIdSQL);
+    for (const target of targets) {
+      // Every source that maps onto this table shares one BuildID, so they
+      // share one manifest entry and one CREATE TABLE; any of them can
+      // generate the SQL. What differs is where each was declared and what
+      // `name=` each asked for.
+      const declared = declaredAtAll(target);
+      const source = target.sources[0];
+      const explicitName = requestedName(target);
 
       // Already built — just mark it active so it survives GC
-      const existingEntry = manifest.buildManifest.entries[buildId];
+      const existingEntry = manifest.buildManifest.entries[target.buildId];
       if (existingEntry) {
-        manifest.touch(buildId);
+        manifest.touch(target.buildId);
 
-        console.log(
-          `  Exists: ${persistSource.name} -> ${existingEntry.tableName}`
-        );
+        console.log(`  Exists: ${existingEntry.tableName} (${declared})`);
         logEntries.push({
           action: 'exists',
-          buildId,
+          buildId: target.buildId,
           tableName: existingEntry.tableName,
           nameProvided: !!explicitName,
         });
@@ -315,18 +364,20 @@ async function runBuild(
       }
 
       // --- Not yet built: compute the build SQL ---
-      // This version substitutes already-built dependencies with their table
-      // names. Because manifest.buildManifest is a stable reference, any
-      // manifest.update() call from a prior iteration is already visible here.
-      const buildSQL = persistSource.getSQL({
+      // `target.sql` is the BuildID SQL — fully inlined, order-independent,
+      // already hashed. This is the other one: dependencies built earlier in
+      // this run become table references. Because manifest.buildManifest is a
+      // stable reference, any manifest.update() from an earlier target is
+      // already visible here.
+      const buildSQL = source.getSQL({
         buildManifest: manifest.buildManifest,
         connectionDigests,
       });
 
       const nameProvided = !!explicitName;
       const tableName = canonicalTableName(
-        persistSource,
-        explicitName || `persist_${buildId.substring(0, 12)}`
+        source,
+        explicitName || `persist_${target.buildId.substring(0, 12)}`
       );
 
       // NOTE: This sample only generates SQL, it does not execute it. A live
@@ -334,18 +385,23 @@ async function runBuild(
       // timing, since everything else in this loop is bookkeeping:
       //   await conn.runSQL(`CREATE TABLE ${tableName} AS ${buildSQL}`);
       sqlStatements.push(
-        `-- ${persistSource.name} (${node.sourceID})\nCREATE TABLE ${tableName} AS\n${buildSQL};\n`
+        `-- ${declared} (${target.buildId})\nCREATE TABLE ${tableName} AS\n${buildSQL};\n`
       );
 
-      console.log(`  Built: ${persistSource.name} -> ${tableName}`);
+      console.log(`  Built: ${tableName} (${declared})`);
 
       // Update the manifest IMMEDIATELY after building. This is critical:
-      // subsequent sources in this build that depend on this one will call
+      // later targets that depend on this one will call
       // getSQL({buildManifest, ...}) and see this table name instead of
       // the full inline SQL.
-      manifest.update(buildId, {tableName});
+      manifest.update(target.buildId, {tableName});
 
-      logEntries.push({action: 'built', buildId, tableName, nameProvided});
+      logEntries.push({
+        action: 'built',
+        buildId: target.buildId,
+        tableName,
+        nameProvided,
+      });
     }
   }
 

@@ -19,7 +19,11 @@ what to name tables, how to invalidate, what to do about failures, and how to
 handle environments are all the builder's business — see
 [Building persistent sources](#building-persistent-sources).
 
-For the implementation, see [internal.md](internal.md).
+For the implementation, see [internal.md](internal.md). The design of record is
+**WN-0022** in the [whatsnext](https://github.com/malloydata/whatsnext)
+repository (`wns/WN-0022-persistence/`) — what persistence is for and what the
+core deliberately refuses to decide. These two documents describe what the code
+does; where they disagree with WN-0022, WN-0022 says what was meant.
 
 ## Malloy syntax
 
@@ -189,43 +193,65 @@ is a teaching implementation of the same contract with the config discovery,
 multi-connection support, and error reporting stripped out. Read it alongside
 this section.
 
-### The build plan
+### What to build
 
 ```typescript
 const model = await runtime.loadModel(modelURL).getModel();
-const plan = model.getBuildPlan();   // throws without ##! experimental.persistence
+const {connections, tagParseLog} = await runtime.getBuildTargets(model);
+// throws without ##! experimental.persistence
 ```
 
-`BuildPlan` is `{graphs, sources, tagParseLog}`:
+A **target** is one table:
 
-- `graphs: BuildGraph[]` — one per connection, so a builder can work several
-  databases in parallel.
-- `sources: Record<SourceID, PersistSource>` — every persist source reachable
-  from the model, keyed by `sourceID` (`"name@modelURL"`).
-- `tagParseLog: LogMessage[]` — errors from parsing the `#@` annotations.
-  Report these; a malformed annotation is a build problem.
+| Member | Meaning |
+|---|---|
+| `buildId` | The manifest key: a hash of `sql` and the connection's digest |
+| `connectionName` | Where it gets built |
+| `sql` | The BuildID SQL — fully inlined, already hashed. Not the SQL you execute |
+| `dependsOn` | The targets that must exist first |
+| `sources` | Every persist source in the model that maps onto this table |
 
-**Walk `dependsOn`, not the levels.** `BuildGraph.nodes` is typed
-`BuildNode[][]`, which anticipates a leveled schedule, but `getBuildPlan()`
-currently emits a single level holding the *root* nodes — the sources nothing
-else depends on. Each root carries its dependency tree in `dependsOn`, and a
-builder that iterates only `graph.nodes` will never build a dependency. Flatten
-depth-first, dependencies first, as
-[`scripts/simple_builder/build_graph.ts`](../../../../../scripts/simple_builder/build_graph.ts)
-and `malloy-cli`'s copy of it both do:
+**Connections come first** because they are the largest cut of parallelism. A
+query cannot cross a connection, so no dependency does either, and each entry
+in `connections` is a wholly independent build needing no coordination with any
+other.
 
-```typescript
-for (const node of flattenBuildNodes(graph.nodes.flat())) { /* build it */ }
-```
+Within one, `targets` is in dependency order — everything a target depends on
+comes before it — so a serial builder is a `for` loop and nothing else. A
+builder that wants concurrency reads `target.dependsOn` and starts each target
+the moment the things it reads are done, which waits on strictly less than
+batching by depth would. `ConnectionBuild` in `types.ts` carries both loops.
 
-Flattening the whole graph in one call also collapses the repeats a diamond
-produces. (The CLI flattens per root and dedups by `sourceID` afterwards, which
-comes to the same thing; left alone, a repeat visit would simply find the entry
-in the manifest and touch it.)
+`tagParseLog` carries errors from parsing the `#@` annotations. Report them; a
+malformed annotation is a build problem.
+
+It compiles every persist source in the model, because a BuildID is a hash of
+SQL. One whose dialect cannot express it throws — from the dialect, with its
+own message — and takes the whole call rather than reporting one unbuildable
+target among many.
+
+**One table, several sources** is the normal case, not an edge case —
+`#@ persist` is inherited and `extend` does not change the SQL a source
+compiles to, so extending or renaming a persisted source produces another name
+for the same table. `target.sources` holds all of them, which is also the only
+place two sources asking for different `name=` values on one table can be seen.
+
+### `getBuildPlan()` — deprecated
+
+`model.getBuildPlan()` was the previous entry point and will be removed once
+the builders have moved. It reports *sources* keyed by `sourceID`, and a
+sourceID does not name a table — several sources routinely share one — so a
+builder on it has to compute the BuildIDs, discover the collisions, and find an
+ordering itself. Every builder that tried got some part of it wrong.
+
+Three traps if you are still on it: `BuildGraph.nodes` is typed `BuildNode[][]`
+but always holds one entry; the ordering is in each node's `dependsOn`; and its
+roots are the sources *nothing depends on*, which for a persisted source with
+an extension is the extension, never the source that declared it.
 
 ### PersistSource
 
-From `plan.sources[sourceID]`:
+From `target.sources[]`, or `plan.sources[sourceID]`:
 
 | Member | Meaning |
 |---|---|
@@ -291,14 +317,13 @@ referenced are pruned. A separate pass can then drop the orphaned tables.
 1. **Load** the existing manifest, if any, with `Manifest.loadText()`.
 2. **Compile** the model. Do not pass the manifest here; substitution happens
    in step 4.
-3. **Plan** with `model.getBuildPlan()`, and cache one `connection.getDigest()`
-   per connection name.
-4. **Build**, walking each graph's roots and their `dependsOn` trees
-   dependencies-first. Per source: hash `getSQL()` (no options) with the
-   connection digest to get the BuildID; if the manifest already has it,
-   `touch()` and move on; otherwise `CREATE TABLE` from
-   `getSQL({buildManifest, connectionDigests})` and `update()` the manifest
-   immediately, so dependents see the table.
+3. **Plan** with `runtime.getBuildTargets(model)`, and cache one
+   `connection.getDigest()` per connection name for step 4.
+4. **Build** each connection's targets in the order given. Per target: if the
+   manifest already has `target.buildId`, `touch()` and move on; otherwise
+   `CREATE TABLE` from `source.getSQL({buildManifest, connectionDigests})` —
+   any of `target.sources` will do, they share the SQL — and `update()` the
+   manifest immediately, so whatever depends on it sees the table.
 5. **Write** `manifest.activeEntries`.
 
 Over several model files, keep one `Manifest` for the whole run. `touch()` and
@@ -333,15 +358,17 @@ A manifest routinely outlives its database — a file deleted, a project copied
 without its data directory, a restore that skipped it — and a builder that
 trusts the entry blindly reports "up to date" over nothing at all.
 
-`malloy-cli` handles this by probing before it trusts a skip: it compiles
-`source: __x is <conn>.table('<tableName>')` and rebuilds if that fails. Going
-through a real compile means success proves the entry can actually back a
-query, not merely that something exists in the catalog. Any policy of this kind
-— age limits, schedules, environment rules — belongs to the builder and is
-invisible to the core.
+Staleness detection is entirely the builder's; the core takes no position. A
+builder that wants it can probe before trusting a skip — compiling `source: __x
+is <conn>.table('<tableName>')` and rebuilding if that fails proves the entry
+can actually back a query, rather than that something merely exists in the
+catalog. Age limits, schedules, environment rules are all the same: builder
+policy, invisible to the core.
 
 ## Limitations
 
 - Parameterized sources are not supported with persistence.
-- Composite sources are not supported with persistence; their `sources[]` are
-  deliberately not walked for dependencies.
+- Composite sources were designed out, not overlooked. A composite cannot be
+  persisted, and the walk does not follow its `sources[]`, so a persisted
+  source reached only through a composite is invisible to a builder and nothing
+  says so.

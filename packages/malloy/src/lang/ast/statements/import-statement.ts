@@ -14,17 +14,8 @@ import {
   safeRecordGet,
 } from '../../../model/malloy_types';
 import {registerSource} from '../../../model/source_def_utils';
-import {findPersistentDependencies} from '../../../model/persist_utils';
+import {walkPersistentDependencies} from '../../../model/persist_utils';
 import {typeDefToString} from '../../../model/utils';
-import type {BuildNode} from '../../../api/foundation/types';
-
-/** Walk BuildNode tree and collect all sourceIDs */
-function collectSourceIDs(nodes: BuildNode[], into: Set<SourceID>): void {
-  for (const node of nodes) {
-    into.add(node.sourceID);
-    collectSourceIDs(node.dependsOn, into);
-  }
-}
 
 export class ImportSourceName extends MalloyElement {
   elementType = 'importSourceName';
@@ -193,13 +184,17 @@ export class ImportStatement
               importMe.as = dstName;
               doc.setEntry(dstName, {entry: importMe, exported: false});
 
-              // Collect dependencies for persistable sources
+              // Every source the walk touched, routes included — not just the
+              // persistent ones. A `#@ -persist` wrapper that adds a join is
+              // not a table, but it can be the only way to reach the tables
+              // under it, and this model has to be able to take the same route.
               if (isSourceDef(importMe) && isPersistableSourceDef(importMe)) {
-                const deps = findPersistentDependencies(
-                  importMe,
+                for (const found of walkPersistentDependencies(
+                  [importMe],
                   importedModel
-                );
-                collectSourceIDs(deps, neededSourceIDs);
+                )) {
+                  neededSourceIDs.add(found.sourceID);
+                }
               }
             }
           }
