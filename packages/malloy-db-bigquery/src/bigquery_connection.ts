@@ -78,6 +78,10 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   projectId?: string;
   serviceAccountKeyPath?: string;
   serviceAccountKey?: {[key: string]: ConnectionParameterValue};
+  /** The service account key file's contents, as a JSON string. */
+  serviceAccountKeyJson?: string;
+  /** The service account key file's contents, base64-encoded. */
+  serviceAccountKeyJsonBase64?: string;
   location?: string;
   maximumBytesBilled?: string;
   timeoutMs?: string;
@@ -86,6 +90,46 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   private_key?: string;
   setupSQL?: string;
 }
+
+// A service account key that arrives as a *string* rather than as structured
+// config.
+//
+// `serviceAccountKey` is a `json`-typed property, and a json-typed slot takes
+// its value literally: an `{env: "..."}` reference is never resolved in one,
+// because reference indirection into structured config is exactly what the
+// config compiler refuses. A deployment whose credentials live in an
+// environment variable — the normal shape for a server — therefore cannot
+// reach that slot at all, and the literal `{env: "..."}` object it does reach
+// the SDK with fails as "the incoming JSON object does not contain a
+// client_email field". `serviceAccountKeyJson` and its base64 twin are string
+// slots, so a reference resolves and the value arrives here to be parsed.
+//
+// Nothing from `text` reaches the error messages. It is a private key, and
+// JSON.parse's own SyntaxError quotes the input it choked on.
+function credentialsFromJson(text: string, malformed: string): CredentialBody {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(malformed);
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(malformed);
+  }
+  return parsed as CredentialBody;
+}
+
+const MALFORMED_JSON =
+  'serviceAccountKeyJson is not a JSON object. It must hold the entire ' +
+  'service account key file, verbatim.';
+
+// Buffer's base64 decoder ignores characters outside the alphabet rather than
+// rejecting them, so an unencoded key pasted into this slot decodes to garbage
+// instead of throwing. The JSON parse is what catches that, which is why this
+// message names the encoding as the thing to check.
+const MALFORMED_BASE64 =
+  'serviceAccountKeyJsonBase64 did not base64-decode to a JSON object. It ' +
+  'must hold the entire service account key file, base64-encoded.';
 
 // BigQuery label grammar: keys and values are lowercase, <=63 chars, and
 // [a-z0-9_-]; keys must start with a lowercase letter. Values are transformed
@@ -439,11 +483,32 @@ export class BigQueryConnection
     if (typeof arg === 'string') {
       this.name = arg;
     } else {
-      const {name, client_email, private_key, serviceAccountKey, ...args} = arg;
+      // The three key-bearing properties are destructured out of `args`, so a
+      // key never lands in `this.config` — only the credentials object the SDK
+      // needs does.
+      const {
+        name,
+        client_email,
+        private_key,
+        serviceAccountKey,
+        serviceAccountKeyJson,
+        serviceAccountKeyJsonBase64,
+        ...args
+      } = arg;
       this.name = name;
       config = args;
       if (serviceAccountKey) {
         config.credentials = serviceAccountKey;
+      } else if (serviceAccountKeyJson) {
+        config.credentials = credentialsFromJson(
+          serviceAccountKeyJson,
+          MALFORMED_JSON
+        );
+      } else if (serviceAccountKeyJsonBase64) {
+        config.credentials = credentialsFromJson(
+          Buffer.from(serviceAccountKeyJsonBase64, 'base64').toString('utf8'),
+          MALFORMED_BASE64
+        );
       } else if (client_email || private_key) {
         config.credentials = {
           client_email,
