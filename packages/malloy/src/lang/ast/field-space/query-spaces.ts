@@ -20,7 +20,12 @@ import {
 } from '../query-items/field-references';
 import {RefinedSpace} from './refined-space';
 import type {LookupResult} from '../types/lookup-result';
-import {StructSpaceField} from './static-space';
+import {
+  accessAllowed,
+  accessModifierOf,
+  lessPermissiveAccessLevel,
+  StructSpaceField,
+} from './static-space';
 import {QueryInputSpace} from './query-input-space';
 import type {SpaceEntry} from '../types/space-entry';
 import type {
@@ -37,6 +42,12 @@ type TranslatedQueryField = {
   queryFieldDef: model.QueryFieldDef;
   typeDesc: model.TypeDesc;
 };
+
+/** The entries a `*` may see, and the join path written before it */
+export interface WildcardExpansion {
+  joinPath: string[];
+  entries: [string, SpaceEntry][];
+}
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -144,44 +155,72 @@ export abstract class QueryOperationSpace
     return true;
   }
 
-  protected addWild(wild: WildcardFieldReference): void {
+  /**
+   * `*` expands to the fields a reference by name could have reached from
+   * here, so this runs the access checks `StaticSpace.lookup()` runs. It has
+   * to: `entries()` is the raw namespace map, with no access check in it.
+   * Returns undefined, having logged, if the join path before the `*` names
+   * something unreachable or unexpandable.
+   */
+  protected wildcardExpansion(
+    wild: WildcardFieldReference,
+    notDefined: 'wildcard-source-not-defined' | 'wildcard-source-not-found'
+  ): WildcardExpansion | undefined {
     let current: FieldSpace = this.exprSpace;
+    let accessLevel = this.exprSpace.accessProtectionLevel();
     const joinPath: string[] = [];
-    if (wild.joinPath) {
-      // walk path to determine namespace for *
-      for (const pathPart of wild.joinPath.list) {
-        const part = pathPart.refString;
-        joinPath.push(part);
+    // walk path to determine namespace for *
+    for (const pathPart of wild.joinPath?.list ?? []) {
+      const part = pathPart.refString;
+      joinPath.push(part);
 
-        const ent = current.entry(part);
-        if (ent) {
-          if (ent instanceof StructSpaceField) {
-            current = ent.fieldSpace;
-          } else {
-            pathPart.logError(
-              'invalid-wildcard-source',
-              `Field '${part}' does not contain rows and cannot be expanded with '*'`
-            );
-            return;
-          }
-        } else {
-          pathPart.logError(
-            'wildcard-source-not-defined',
-            `No such field as '${part}'`
-          );
-          return;
-        }
+      const ent = current.entry(part);
+      if (ent === undefined) {
+        pathPart.logError(notDefined, `No such field as '${part}'`);
+        return undefined;
       }
+      const modifier = accessModifierOf(ent);
+      if (modifier && !accessAllowed(accessLevel, modifier)) {
+        pathPart.logError('field-not-accessible', `'${part}' is ${modifier}`);
+        return undefined;
+      }
+      if (!(ent instanceof StructSpaceField)) {
+        pathPart.logError(
+          'invalid-wildcard-source',
+          `Field '${part}' does not contain rows and cannot be expanded with '*'`
+        );
+        return undefined;
+      }
+      current = ent.fieldSpace;
+      accessLevel = lessPermissiveAccessLevel(
+        accessLevel,
+        current.accessProtectionLevel()
+      );
     }
+    const entries = current.entries().filter(([name, entry]) => {
+      if (wild.except.has(name) || entry.refType === 'parameter') {
+        return false;
+      }
+      // Skipped rather than reported: an error naming the field would
+      // disclose the name the modifier exists to hide.
+      const modifier = accessModifierOf(entry);
+      return !modifier || accessAllowed(accessLevel, modifier);
+    });
+    return {joinPath, entries};
+  }
+
+  protected addWild(wild: WildcardFieldReference): void {
+    const expansion = this.wildcardExpansion(
+      wild,
+      'wildcard-source-not-defined'
+    );
+    if (expansion === undefined) {
+      return;
+    }
+    const {joinPath, entries} = expansion;
     const dialect = this.dialectObj();
     const expandEntries: {name: string; entry: SpaceEntry}[] = [];
-    for (const [name, entry] of current.entries()) {
-      if (wild.except.has(name)) {
-        continue;
-      }
-      if (entry.refType === 'parameter') {
-        continue;
-      }
+    for (const [name, entry] of entries) {
       if (this.entry(name)) {
         const conflict = this.expandedWild.get(name)?.path.join('.');
         wild.logError(
