@@ -357,29 +357,32 @@ connection name.
 
 ## Compiler substitution
 
-Two sites, one per persistable source type, both gated on `persistent`, both
-reached only when `buildManifest` *and* `connectionDigests` are present.
+`persistedTableFor()` in
+[`model/sql_compiled.ts`](../../model/sql_compiled.ts) is the lookup. It runs
+when the source is `persistent` and both `buildManifest` and
+`connectionDigests` are present. The key is `mkBuildID(connDigest, sql)`, where
+`sql` is `getSourceSQL()` with no options — **the BuildID is always computed
+from manifest-ignorant SQL**, so it does not depend on what is already
+materialized. A hit returns `entry.tableName` unquoted; manifest names are
+canonical. A miss under `strict` throws `runtime-manifest-strict-miss` at the
+source's location, appending `loadError` if present. The compiler may have no
+path to the name the user used to invoke the source, so the error won't be
+very helpful.
 
-**`query_source`** — in `getStructSourceSQL()`
-([`model/query_query.ts`](../../model/query_query.ts)), when the structRef is a
-query source: compile the inner query **with empty options** to get
-manifest-ignorant SQL, `mkBuildID(connDigest, sql)`, look it up. On a hit,
-return `entry.tableName` — as-is, not re-quoted, because manifest table names
-are required to be canonical and are validated on every path in. On a miss with
-`strict`, throw `runtime-manifest-strict-miss`, appending `loadError` when the
-manifest carries one. Otherwise compile normally with the real options, so
-nested dependencies can still resolve.
+Two callers:
 
-**`sql_select`** — `expandPersistableSource()` in
-[`model/sql_compiled.ts`](../../model/sql_compiled.ts) handles `%{ source }`
-segments the same way, except a hit substitutes `(SELECT * FROM <tableName>)`,
-since a segment must be usable as a subquery.
+- **`getStructSourceSQL()`**
+  ([`model/query_query.ts`](../../model/query_query.ts)) — the FROM clause and
+  joins, both persistable types. A hit is used bare, since the call site is
+  `FROM ${structSQL} as ${alias}`. On a miss a `query_source` compiles with the
+  real options and a `sql_select` is parenthesized, so nested dependencies
+  resolve.
+- **`expandPersistableSource()`**
+  ([`model/sql_compiled.ts`](../../model/sql_compiled.ts)) — `%{ }` segments. A
+  hit becomes `(SELECT * FROM <tableName>)`; a segment must work as a subquery.
 
-The invariant tying the two halves together: **the BuildID is always computed
-from manifest-ignorant SQL**. Both sites recompile with empty options rather
-than reusing whatever SQL they are about to emit, so the key a query looks up is
-the key the builder wrote — regardless of how much of the dependency tree
-happened to be materialized on either side.
+`QueryQueryRaw` does not look up. Its source is the `conn.sql(...)` at the run
+site, which is unnamed and so never persistent.
 
 The other half of that invariant is `PersistSource.getSQL()`, which compiles
 with `finalize=false`. On a dialect with a final stage (Postgres wraps in
@@ -477,8 +480,9 @@ what replaced them.
 
 | Name | File | What |
 |---|---|---|
-| `QueryQuery` | `model/query_query.ts` | Substitution for `query_source` |
-| `getCompiledSQL` | `model/sql_compiled.ts` | Substitution for `sql_select` |
+| `persistedTableFor` | `model/sql_compiled.ts` | The lookup: BuildID → table, or the strict throw |
+| `getStructSourceSQL` | `model/query_query.ts` | Caller: the FROM clause and joins |
+| `expandPersistableSource` | `model/sql_compiled.ts` | Caller: `%{ }` segments |
 
 ### Tests and samples
 

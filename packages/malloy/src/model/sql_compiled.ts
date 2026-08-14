@@ -75,6 +75,58 @@ function expandSegment(
 }
 
 /**
+ * Ask the manifest what table backs a persistable source.
+ *
+ * Every place the compiler needs SQL for a persistable source goes through
+ * here, so the rule is stated once: a source marked persistent is looked up
+ * by BuildID, a hit yields the table, a miss under `strict` throws, and
+ * anything else falls through to the source's own SQL.
+ *
+ * The BuildID is always computed from manifest-ignorant SQL — `getSourceSQL`
+ * with no options — so the key a query looks up is the key the builder wrote,
+ * no matter how much of the dependency tree was materialized on either side.
+ *
+ * @return The table name, canonical SQL as the manifest supplied it, or
+ *         undefined when the caller should emit the source's own SQL.
+ */
+export function persistedTableFor(
+  source: PersistableSourceDef,
+  opts: PrepareResultOptions,
+  compileQuery: CompileQueryCallback
+): string | undefined {
+  const {buildManifest, connectionDigests} = opts;
+  if (!buildManifest || !connectionDigests || !source.persistent) {
+    return undefined;
+  }
+  const connDigest = safeRecordGet(connectionDigests, source.connection);
+  if (connDigest === undefined) {
+    return undefined;
+  }
+
+  const buildId = mkBuildID(connDigest, getSourceSQL(source, compileQuery));
+  const entry = buildManifest.entries[buildId];
+  if (entry) {
+    return entry.tableName;
+  }
+
+  if (buildManifest.strict) {
+    // Deliberately unnamed. A source reached through an inline `extend` has
+    // had its identity cleared, and the names still on the struct are the
+    // base's, which may name something else entirely in this model. The
+    // location is the reliable half.
+    const base =
+      `Persisted source not found in manifest (buildId: ${buildId}); ` +
+      'strict manifest mode forbids fallback to live compilation.';
+    throw new MalloyCompileError(
+      buildManifest.loadError ? `${base}\n  ${buildManifest.loadError}` : base,
+      'runtime-manifest-strict-miss',
+      source.location
+    );
+  }
+  return undefined;
+}
+
+/**
  * Expand a PersistableSourceDef, checking manifest for pre-built table.
  * Always returns a subquery form: (SELECT * FROM table) or (inline SQL)
  */
@@ -83,38 +135,10 @@ function expandPersistableSource(
   opts: PrepareResultOptions,
   compileQuery: CompileQueryCallback
 ): string {
-  const {buildManifest, connectionDigests} = opts;
-
-  // Try manifest lookup if we have the required info (only for persistent sources)
-  if (buildManifest && connectionDigests && source.persistent) {
-    const connDigest = safeRecordGet(connectionDigests, source.connection);
-    if (connDigest) {
-      // Get the SQL for this source to compute BuildID (no opts = full SQL)
-      const sql = getSourceSQL(source, compileQuery);
-      const buildId = mkBuildID(connDigest, sql);
-      const entry = buildManifest.entries[buildId];
-
-      if (entry) {
-        // Found in manifest - substitute with subquery from persisted table.
-        // entry.tableName is canonical SQL, supplied by the manifest builder.
-        return `(SELECT * FROM ${entry.tableName})`;
-      }
-
-      // Not in manifest
-      if (buildManifest.strict) {
-        const base =
-          `Persist source '${source.sourceID}' not found in manifest ` +
-          `(buildId: ${buildId}); strict manifest mode forbids fallback ` +
-          'to live compilation.';
-        throw new MalloyCompileError(
-          buildManifest.loadError
-            ? `${base}\n  ${buildManifest.loadError}`
-            : base,
-          'runtime-manifest-strict-miss',
-          source.location
-        );
-      }
-    }
+  // A segment has to be usable as a subquery, so a hit is wrapped.
+  const tableName = persistedTableFor(source, opts, compileQuery);
+  if (tableName !== undefined) {
+    return `(SELECT * FROM ${tableName})`;
   }
 
   // No manifest or not found - expand inline as subquery

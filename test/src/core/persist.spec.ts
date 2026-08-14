@@ -2472,12 +2472,14 @@ describe('source persistence', () => {
       """)
     `;
 
-    // A manifest holding a built table for every persist source in the model.
-    async function manifestForAll(): Promise<BuildManifest> {
+    // A manifest holding a built table for each named persist source, or for
+    // every one of them when no names are given.
+    async function manifestFor(names?: string[]): Promise<BuildManifest> {
       const model = await wrapTestModel(tstRuntime, TWO_KINDS).model.getModel();
       const digest = await getDigest();
       const manifest = createManifest();
       for (const source of Object.values(model.getBuildPlan().sources)) {
+        if (names && !names.includes(source.name)) continue;
         addManifestEntry(
           manifest,
           source.makeBuildId(digest, source.getSQL()),
@@ -2487,8 +2489,11 @@ describe('source persistence', () => {
       return manifest;
     }
 
-    async function sqlForQuery(query: string): Promise<string> {
-      const manifest = await manifestForAll();
+    async function sqlForQuery(
+      query: string,
+      built?: string[]
+    ): Promise<string> {
+      const manifest = await manifestFor(built);
       return runtimeWithManifest(manifest)
         .loadQuery(`${TWO_KINDS}\n${query}`)
         .getSQL();
@@ -2504,7 +2509,7 @@ describe('source persistence', () => {
     // manifest. The two passing tests around these are the controls: the
     // other persistable kind substitutes, and the same source substitutes
     // when interpolation reaches it, so the entry and its key are right.
-    it.skip('sql_select reads its built table', async () => {
+    it('sql_select reads its built table', async () => {
       const sql = await sqlForQuery('run: ss -> { select: * }');
       expect(sql).toContain('cached.ss_table');
       expect(sql).not.toContain('COUNT(');
@@ -2512,12 +2517,14 @@ describe('source persistence', () => {
 
     it('sql_select reached by interpolation reads its built table', async () => {
       // The manifest key and the entry are right — this path finds them.
-      const sql = await sqlForQuery('run: via_interp -> { select: * }');
+      // Only `ss` is built, so via_interp has to reach it rather than being
+      // substituted itself.
+      const sql = await sqlForQuery('run: via_interp -> { select: * }', ['ss']);
       expect(sql).toContain('cached.ss_table');
       expect(sql).not.toContain('COUNT(');
     });
 
-    it.skip('strict mode catches a missing sql_select entry', async () => {
+    it('strict mode catches a missing sql_select entry', async () => {
       // Strict mode's promise is that a persist source with no manifest entry
       // throws rather than silently compiling to inline SQL.
       const strict = createManifest();
@@ -2529,7 +2536,52 @@ describe('source persistence', () => {
       ).rejects.toThrow(/not found in manifest/);
     });
 
-    it.skip('a join of both kinds substitutes both', async () => {
+    it('reads the built table, not the SQL that built it', async () => {
+      // Substitution is only real if the rows come from the table. Build one
+      // whose contents disagree with the source's SQL: a query that reads the
+      // table says 'stale', one that recomputes says 'live'. Before #3016 the
+      // sql_select leg always said 'live' — it looked fresh because it was
+      // never reading what had been built.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+      try {
+        const modelCode = `${PERSIST_ANNOTATION}
+          #@ persist
+          source: ss is ${tstDB}.sql("""SELECT 'live' as tag""")
+
+          run: ss -> { select: * }
+        `;
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const model = await rwRuntime.loadModel(modelCode).getModel();
+        const source = Object.values(model.getBuildPlan().sources)[0];
+        const buildId = source.makeBuildId(rwConn.getDigest(), source.getSQL());
+
+        await rwConn.runSQL(
+          "CREATE TABLE ss_freshness AS SELECT 'stale' as tag"
+        );
+        const manifest = createManifest();
+        addManifestEntry(manifest, buildId, 'ss_freshness');
+        rwRuntime.buildManifest = manifest;
+
+        const built = await rwRuntime.loadQuery(modelCode).run();
+        const recomputed = await rwRuntime
+          .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
+          .run();
+
+        expect(built.data.toObject()).toEqual([{tag: 'stale'}]);
+        expect(recomputed.data.toObject()).toEqual([{tag: 'live'}]);
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('a join of both kinds substitutes both', async () => {
       const sql = await sqlForQuery(`
         run: flights extend {
           join_one: q is qs on carrier = q.carrier
