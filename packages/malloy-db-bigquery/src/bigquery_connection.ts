@@ -78,10 +78,8 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   projectId?: string;
   serviceAccountKeyPath?: string;
   serviceAccountKey?: {[key: string]: ConnectionParameterValue};
-  /** The service account key file's contents, as a JSON string. */
+  /** The key file's contents, as a JSON string or base64-encoded JSON. */
   serviceAccountKeyJson?: string;
-  /** The service account key file's contents, base64-encoded. */
-  serviceAccountKeyJsonBase64?: string;
   location?: string;
   maximumBytesBilled?: string;
   timeoutMs?: string;
@@ -91,45 +89,84 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   setupSQL?: string;
 }
 
-// A service account key that arrives as a *string* rather than as structured
-// config.
-//
-// `serviceAccountKey` is a `json`-typed property, and a json-typed slot takes
-// its value literally: an `{env: "..."}` reference is never resolved in one,
-// because reference indirection into structured config is exactly what the
-// config compiler refuses. A deployment whose credentials live in an
-// environment variable — the normal shape for a server — therefore cannot
-// reach that slot at all, and the literal `{env: "..."}` object it does reach
-// the SDK with fails as "the incoming JSON object does not contain a
-// client_email field". `serviceAccountKeyJson` and its base64 twin are string
-// slots, so a reference resolves and the value arrives here to be parsed.
-//
-// Nothing from `text` reaches the error messages. It is a private key, and
-// JSON.parse's own SyntaxError quotes the input it choked on.
-function credentialsFromJson(text: string, malformed: string): CredentialBody {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error(malformed);
-  }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error(malformed);
-  }
-  return parsed as CredentialBody;
+type JsonObject = {[key: string]: ConnectionParameterValue};
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-const MALFORMED_JSON =
-  'serviceAccountKeyJson is not a JSON object. It must hold the entire ' +
-  'service account key file, verbatim.';
+/**
+ * The two credential shapes the SDK's `credentials` option accepts: a service
+ * account key, and an external account (workload identity federation) config,
+ * which carries no key of its own. Anything else — `{}`, a config file, half a
+ * key — is rejected here rather than at the first query, where it arrives as
+ * "the incoming JSON object does not contain a client_email field" and names
+ * nothing that would lead back to this property.
+ */
+function isCredentialObject(value: JsonObject): boolean {
+  return (
+    (typeof value['client_email'] === 'string' &&
+      typeof value['private_key'] === 'string') ||
+    value['type'] === 'external_account'
+  );
+}
 
-// Buffer's base64 decoder ignores characters outside the alphabet rather than
-// rejecting them, so an unencoded key pasted into this slot decodes to garbage
-// instead of throwing. The JSON parse is what catches that, which is why this
-// message names the encoding as the thing to check.
-const MALFORMED_BASE64 =
-  'serviceAccountKeyJsonBase64 did not base64-decode to a JSON object. It ' +
-  'must hold the entire service account key file, base64-encoded.';
+function isProbablyBase64(text: string): boolean {
+  // `{` is not in the base64 alphabet, so JSON can never be mistaken for an
+  // encoding of itself. Everything else is treated as base64 and allowed to
+  // fail the parse below, which keeps the check to the one thing it can be
+  // certain about.
+  return !text.startsWith('{');
+}
+
+/**
+ * A service account key that arrives as a *string* rather than as structured
+ * config, in either of the two encodings a deployment can produce.
+ *
+ * `serviceAccountKey` is a `json`-typed property, and a json-typed slot takes
+ * its value literally: an `{env: "..."}` reference is never resolved in one,
+ * because reference indirection into structured config is exactly what the
+ * config compiler refuses. A deployment whose credentials live in an
+ * environment variable — the normal shape for a server — therefore cannot
+ * reach that slot at all, and the literal `{env: "..."}` object it does reach
+ * the SDK with fails as "the incoming JSON object does not contain a
+ * client_email field". This is a string slot, so a reference resolves and the
+ * value arrives here to be parsed.
+ *
+ * Base64 is accepted because a JSON object full of quotes and braces survives
+ * a shell, a CI secret editor, and a `.env` file poorly; base64 is one token
+ * that survives all three. Which one arrived is detected rather than declared,
+ * so a deployment that switches encodings doesn't also have to edit config.
+ *
+ * Nothing from `text` reaches the error message. It is a private key, and
+ * JSON.parse's own SyntaxError quotes the input it choked on.
+ */
+function credentialsFromJson(text: string): JsonObject {
+  // Buffer's base64 decoder drops characters outside the alphabet rather than
+  // rejecting them, so a mangled value decodes to garbage instead of throwing.
+  // The parse below is what catches that, which is why one message has to
+  // cover both encodings: at this point either could have been intended.
+  const json = isProbablyBase64(text)
+    ? Buffer.from(text, 'base64').toString('utf8')
+    : text;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error(
+      'serviceAccountKeyJson is neither JSON nor base64-encoded JSON. It ' +
+        'must hold the entire service account key file.'
+    );
+  }
+  if (!isJsonObject(parsed) || !isCredentialObject(parsed)) {
+    throw new Error(
+      'serviceAccountKeyJson parsed but is not a service account key: it ' +
+        'has no client_email and private_key. It must hold the entire key ' +
+        'file, not a fragment of one.'
+    );
+  }
+  return parsed;
+}
 
 // BigQuery label grammar: keys and values are lowercase, <=63 chars, and
 // [a-z0-9_-]; keys must start with a lowercase letter. Values are transformed
@@ -483,8 +520,8 @@ export class BigQueryConnection
     if (typeof arg === 'string') {
       this.name = arg;
     } else {
-      // The three key-bearing properties are destructured out of `args`, so a
-      // key never lands in `this.config` — only the credentials object the SDK
+      // Every key-bearing property is destructured out of `args`, so a key
+      // never lands in `this.config` — only the credentials object the SDK
       // needs does.
       const {
         name,
@@ -492,23 +529,19 @@ export class BigQueryConnection
         private_key,
         serviceAccountKey,
         serviceAccountKeyJson,
-        serviceAccountKeyJsonBase64,
         ...args
       } = arg;
       this.name = name;
       config = args;
+      // Trimmed before it is looked at: a value that came through a here-doc,
+      // a `$(cat key.json)`, or a secret-store copy tends to carry a trailing
+      // newline, and both the encoding sniff and the emptiness check below
+      // would otherwise read it as content.
+      const keyJson = serviceAccountKeyJson?.trim();
       if (serviceAccountKey) {
         config.credentials = serviceAccountKey;
-      } else if (serviceAccountKeyJson) {
-        config.credentials = credentialsFromJson(
-          serviceAccountKeyJson,
-          MALFORMED_JSON
-        );
-      } else if (serviceAccountKeyJsonBase64) {
-        config.credentials = credentialsFromJson(
-          Buffer.from(serviceAccountKeyJsonBase64, 'base64').toString('utf8'),
-          MALFORMED_BASE64
-        );
+      } else if (keyJson) {
+        config.credentials = credentialsFromJson(keyJson);
       } else if (client_email || private_key) {
         config.credentials = {
           client_email,
