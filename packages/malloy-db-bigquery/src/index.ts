@@ -34,6 +34,21 @@ registerConnectionType('bigquery', {
       type: 'json',
       optional: true,
     },
+    // The string-typed twin of `serviceAccountKey`. A `json` slot holds its
+    // value literally — an `{env: "..."}` reference is never resolved in one —
+    // so a deployment holding its key in an environment variable has no way to
+    // use the slot above. This is a `secret` string, where references do
+    // resolve, and the connection parses what arrives.
+    {
+      name: 'serviceAccountKeyJson',
+      displayName: 'Service Account Key (JSON)',
+      type: 'secret',
+      optional: true,
+      description:
+        'The entire service account key file, as JSON or base64-encoded ' +
+        'JSON (detected automatically), for supplying the key from an ' +
+        'environment variable or secret manager rather than from disk.',
+    },
     {
       name: 'location',
       displayName: 'Location',
