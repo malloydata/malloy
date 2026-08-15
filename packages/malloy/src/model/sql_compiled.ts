@@ -75,16 +75,29 @@ function expandSegment(
 }
 
 /**
+ * The options a BuildID's SQL is compiled under.
+ *
+ * Two rules pull in opposite directions and this is where they meet. The
+ * BuildID must not depend on what has already been built, or build order would
+ * change the key — so the manifest and its digests are dropped. But it must
+ * depend on everything that changes the SQL, or two different tables would
+ * share a key — so `virtualMap` and `resolvedGivens` are kept. Both sides of
+ * the contract compile through here: the compiler when it looks a source up,
+ * and `mkBuildTargets` when the builder is told what to build.
+ */
+export function buildIdOptions(
+  opts: PrepareResultOptions
+): PrepareResultOptions {
+  return {virtualMap: opts.virtualMap, resolvedGivens: opts.resolvedGivens};
+}
+
+/**
  * Ask the manifest what table backs a persistable source.
  *
  * Every place the compiler needs SQL for a persistable source goes through
  * here, so the rule is stated once: a source marked persistent is looked up
  * by BuildID, a hit yields the table, a miss under `strict` throws, and
  * anything else falls through to the source's own SQL.
- *
- * The BuildID is always computed from manifest-ignorant SQL — `getSourceSQL`
- * with no options — so the key a query looks up is the key the builder wrote,
- * no matter how much of the dependency tree was materialized on either side.
  *
  * @return The table name, canonical SQL as the manifest supplied it, or
  *         undefined when the caller should emit the source's own SQL.
@@ -103,19 +116,24 @@ export function persistedTableFor(
     return undefined;
   }
 
-  const buildId = mkBuildID(connDigest, getSourceSQL(source, compileQuery));
+  const buildId = mkBuildID(
+    connDigest,
+    getSourceSQL(source, compileQuery, buildIdOptions(opts))
+  );
   const entry = buildManifest.entries[buildId];
   if (entry) {
     return entry.tableName;
   }
 
   if (buildManifest.strict) {
-    // Deliberately unnamed. A source reached through an inline `extend` has
-    // had its identity cleared, and the names still on the struct are the
-    // base's, which may name something else entirely in this model. The
-    // location is the reliable half.
+    // `sourceID` is deleted, not inherited, when a source is modified, so it
+    // either names this source or is absent. `as` and `extends` survive a
+    // modification and would name the base, so neither stands in for it.
+    const named = source.sourceID
+      ? `Persisted source '${source.sourceID}'`
+      : 'Persisted source';
     const base =
-      `Persisted source not found in manifest (buildId: ${buildId}); ` +
+      `${named} not found in manifest (buildId: ${buildId}); ` +
       'strict manifest mode forbids fallback to live compilation.';
     throw new MalloyCompileError(
       buildManifest.loadError ? `${base}\n  ${buildManifest.loadError}` : base,

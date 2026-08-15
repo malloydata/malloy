@@ -692,7 +692,9 @@ export class Runtime {
     }
 
     return {
-      connections: mkBuildTargets(walk, connectionDigests),
+      connections: mkBuildTargets(walk, connectionDigests, {
+        virtualMap: this.virtualMap,
+      }),
       tagParseLog,
     };
   }

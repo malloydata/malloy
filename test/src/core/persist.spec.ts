@@ -10,6 +10,7 @@ import type {
   BuildManifest,
   BuildPlan,
   BuildTarget,
+  VirtualMap,
 } from '@malloydata/malloy';
 import {
   ConnectionRuntime,
@@ -2593,6 +2594,60 @@ describe('source persistence', () => {
       `);
       expect(sql).toContain('cached.qs_table');
       expect(sql).toContain('cached.ss_table');
+    });
+  });
+
+  describe('BuildID SQL carries what changes the SQL', () => {
+    // The BuildID must ignore the manifest and nothing else. A virtualMap
+    // decides what table a virtual source reads, so a BuildID computed without
+    // it cannot be compiled at all — which is what both sides used to do.
+    const VIRTUAL_MODEL = `${PERSIST_ANNOTATION}
+      ##! experimental.virtual_source
+      type: ff is { carrier :: string }
+      source: vf is ${tstDB}.virtual('vflights')::ff
+
+      #@ persist
+      source: by_carrier is vf -> { group_by: carrier }
+
+      run: by_carrier -> { select: * }
+    `;
+
+    const virtualMap: VirtualMap = new Map([
+      [tstDB, new Map([['vflights', 'malloytest.flights']])],
+    ]);
+
+    function virtualRuntime() {
+      const rt = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+      rt.virtualMap = virtualMap;
+      return rt;
+    }
+
+    it('a persisted source over a virtual source can be planned', async () => {
+      const rt = virtualRuntime();
+      const model = await rt.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      expect(connections[0].targets[0].sql).toContain('malloytest.flights');
+    });
+
+    it('and the query finds the table the plan named', async () => {
+      // The whole point of the pair: the key the builder writes is the key the
+      // compiler recomputes. Build from getBuildTargets, then query.
+      const rt = virtualRuntime();
+      const model = await rt.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      const target = connections[0].targets[0];
+
+      const manifest = createManifest();
+      addManifestEntry(manifest, target.buildId, 'cached.virtual_by_carrier');
+      manifest.strict = true;
+      rt.buildManifest = manifest;
+
+      const sql = await rt.loadQuery(VIRTUAL_MODEL).getSQL();
+      expect(sql).toContain('cached.virtual_by_carrier');
+      expect(sql).not.toContain('malloytest.flights');
     });
   });
 

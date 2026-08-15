@@ -361,13 +361,15 @@ connection name.
 [`model/sql_compiled.ts`](../../model/sql_compiled.ts) is the lookup. It runs
 when the source is `persistent` and both `buildManifest` and
 `connectionDigests` are present. The key is `mkBuildID(connDigest, sql)`, where
-`sql` is `getSourceSQL()` with no options — **the BuildID is always computed
-from manifest-ignorant SQL**, so it does not depend on what is already
-materialized. A hit returns `entry.tableName` unquoted; manifest names are
+`sql` is compiled under `buildIdOptions()`: the manifest and its digests are
+dropped, so the BuildID does not depend on what is already materialized;
+`virtualMap` and `resolvedGivens` are kept, because they change the SQL and two
+different tables must not share a key. `mkBuildTargets` compiles the builder's
+side under the same options. A hit returns `entry.tableName` unquoted; manifest names are
 canonical. A miss under `strict` throws `runtime-manifest-strict-miss` at the
-source's location, appending `loadError` if present. The compiler may have no
-path to the name the user used to invoke the source, so the error won't be
-very helpful.
+source's location, appending `loadError` if present. It names the source's
+`sourceID` when there is one; a reference through an inline `extend` has had
+that deleted, so there the error carries only a BuildID and a location.
 
 Two callers:
 
@@ -481,6 +483,7 @@ what replaced them.
 | Name | File | What |
 |---|---|---|
 | `persistedTableFor` | `model/sql_compiled.ts` | The lookup: BuildID → table, or the strict throw |
+| `buildIdOptions` | `model/sql_compiled.ts` | What a BuildID's SQL is compiled under |
 | `getStructSourceSQL` | `model/query_query.ts` | Caller: the FROM clause and joins |
 | `expandPersistableSource` | `model/sql_compiled.ts` | Caller: `%{ }` segments |
 

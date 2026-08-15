@@ -269,14 +269,20 @@ From `target.sources[]`, or `plan.sources[sourceID]`:
 `getSQL()` answers differently depending on whether it is given a manifest, and
 a builder needs both answers:
 
-- **BuildID SQL** — `getSQL()` with no options. Fully inlined, no substitution.
-  This is what gets hashed. Because it never mentions a materialized table, the
-  BuildID is the same no matter what has been built already, so build order
-  cannot change a cache key.
+- **BuildID SQL** — `target.sql`, already computed for you. Fully inlined, no
+  substitution. This is what gets hashed. Because it never mentions a
+  materialized table, the BuildID is the same no matter what has been built
+  already, so build order cannot change a cache key.
 - **Build SQL** — `getSQL({buildManifest, connectionDigests})`. Dependencies
   already in the manifest are replaced by their table names. This is what you
   execute: it reads from the tables you just built instead of recomputing them
   inline.
+
+Anything else that changes a source's SQL has to be passed to *both* — a
+`virtualMap` above all, which decides what table a virtual source reads.
+`getBuildTargets` takes the Runtime's for the BuildID SQL; add it to the
+`getSQL()` call in step 4 as well, or you will build the wrong table under the
+right key.
 
 `getSQL()` compiles with `finalize=false`, so what comes back is the bare
 source `SELECT`. The build-time key must equal the key the compiler recomputes
