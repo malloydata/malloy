@@ -63,11 +63,13 @@
  *
  *   These are two different SQL strings for the same table:
  *
- *   - **BuildID SQL** — `target.sql`, which is `source.getSQL()` with no
- *     options: fully inlined, no manifest substitution. Its hash (with the
- *     connection digest) is the BuildID. The BuildID must be stable
- *     regardless of build order, so it never includes substituted table
- *     names. `getBuildTargets` has already computed both.
+ *   - **BuildID SQL** — `target.sql`, compiled under `buildIdOptions()`:
+ *     fully inlined, no manifest substitution. Its hash (with the connection
+ *     digest) is the BuildID. The BuildID must be stable regardless of build
+ *     order, so it never includes substituted table names.
+ *     `getBuildTargets` has already computed both. A model with virtual
+ *     sources needs a `virtualMap` on the Runtime for this to compile, and
+ *     the same map in the build SQL below.
  *
  *   - **Build SQL** — `source.getSQL({buildManifest, connectionDigests})`.
  *     Dependencies that are already in the manifest are replaced with
