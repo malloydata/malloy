@@ -11,8 +11,11 @@ import {BigQueryConnection} from './bigquery_connection';
 
 registerConnectionType('bigquery', {
   displayName: 'BigQuery',
-  factory: async (config: ConnectionConfig) => {
-    return new BigQueryConnection(config);
+  factory: async (config: ConnectionConfig, rawConfigData) => {
+    // rawConfigData rides in the options bag so `getDigest` can tell which
+    // auth client this connection was given; the constructor keeps it out of
+    // the retained config.
+    return new BigQueryConnection({...config, rawConfigData});
   },
   properties: [
     {
@@ -33,6 +36,25 @@ registerConnectionType('bigquery', {
       displayName: 'Service Account Key',
       type: 'json',
       optional: true,
+    },
+    // A google-auth-library AuthClient, for credentials Malloy cannot build
+    // from config text: impersonation, workload identity federation, a proxied
+    // or test credential. The config file names an overlay, the host registers
+    // it, and the value never appears in the file — which is what `opaque` plus
+    // `source: 'overlay'` say. `mustHaveValue` is the safety half: an overlay
+    // that isn't registered would otherwise drop the property and quietly fall
+    // back to ambient credentials.
+    //
+    // When one is supplied, the SDK resolves the project id through it rather
+    // than through ambient credentials, so set billingProjectId alongside.
+    {
+      name: 'authClient',
+      displayName: 'Auth Client',
+      type: 'opaque',
+      source: 'overlay',
+      mustHaveValue: true,
+      optional: true,
+      description: 'Not settable from the UI; supplied by the host.',
     },
     {
       name: 'location',

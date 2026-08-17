@@ -73,9 +73,16 @@ export type ConnectionParameterValue =
   | Array<ConnectionParameterValue>
   | {[key: string]: ConnectionParameterValue};
 
+/**
+ * A value with no declared shape, supplied by a host overlay rather than
+ * written in a config file — an auth client, a session handle, anything live.
+ * Malloy never inspects one; it carries it from the overlay to the factory.
+ */
+export type OpaqueConnectionValue = object;
+
 export interface ConnectionConfig {
   name: string;
-  [key: string]: ConnectionParameterValue | undefined;
+  [key: string]: ConnectionParameterValue | OpaqueConnectionValue | undefined;
 }
 
 export interface ConnectionMetadata {

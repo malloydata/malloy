@@ -4,6 +4,7 @@
  */
 
 import type {
+  BigQueryOptions,
   Job,
   PagedResponse,
   Query,
@@ -18,6 +19,7 @@ import {GaxiosError} from 'gaxios';
 import type {
   Connection,
   ConnectionConfig,
+  ConnectionConfigEntry,
   ConnectionParameterValue,
   MalloyQueryData,
   PersistSQLResults,
@@ -61,6 +63,33 @@ interface CredentialBody {
   private_key?: string;
 }
 
+/**
+ * A caller-supplied credential. Anything Malloy cannot build from config text
+ * — impersonation, workload identity federation, a proxied or test credential
+ * — arrives as one of these, from a host overlay.
+ */
+type AuthClient = BigQueryOptions['authClient'];
+
+/**
+ * What to hash for the auth client, given the connection's unresolved config.
+ *
+ * An `AuthClient` is a live object with nothing stable to hash, so the digest
+ * uses the reference the config named it by — `{tenantAuth: "acme"}`. Without
+ * it, two connections against the same project holding different impersonated
+ * identities produce the same digest, and so the same BuildIDs, and one
+ * tenant is served rows persisted for another.
+ *
+ * The digest is therefore only as distinguishing as the reference path: an
+ * overlay whose path doesn't vary by identity leaves them indistinguishable
+ * here too.
+ */
+function authIdentityOf(
+  rawConfigData: ConnectionConfigEntry | undefined
+): string | undefined {
+  const reference = rawConfigData?.['authClient'];
+  return reference === undefined ? undefined : JSON.stringify(reference);
+}
+
 interface BigQueryConnectionConfiguration {
   /** This ID is used for Bigquery Table Normalization */
   projectId?: string;
@@ -70,6 +99,7 @@ interface BigQueryConnectionConfiguration {
   timeoutMs?: string;
   billingProjectId?: string;
   credentials?: CredentialBody | {[key: string]: ConnectionParameterValue};
+  authClient?: AuthClient;
   setupSQL?: string;
 }
 
@@ -78,6 +108,13 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   projectId?: string;
   serviceAccountKeyPath?: string;
   serviceAccountKey?: {[key: string]: ConnectionParameterValue};
+  authClient?: AuthClient;
+  /**
+   * The connection's entry as written, before overlay resolution. Set by the
+   * registered factory; needed only so `getDigest` can identify which auth
+   * client this connection got. See `authIdentityOf`.
+   */
+  rawConfigData?: ConnectionConfigEntry;
   location?: string;
   maximumBytesBilled?: string;
   timeoutMs?: string;
@@ -421,6 +458,8 @@ export class BigQueryConnection
 
   private setupSQL: string | undefined;
 
+  private authIdentity: string | undefined;
+
   constructor(
     option: BigQueryConnectionOptions,
     queryOptions?: QueryOptionsReader
@@ -439,8 +478,16 @@ export class BigQueryConnection
     if (typeof arg === 'string') {
       this.name = arg;
     } else {
-      const {name, client_email, private_key, serviceAccountKey, ...args} = arg;
+      const {
+        name,
+        client_email,
+        private_key,
+        serviceAccountKey,
+        rawConfigData,
+        ...args
+      } = arg;
       this.name = name;
+      this.authIdentity = authIdentityOf(rawConfigData);
       config = args;
       if (serviceAccountKey) {
         config.credentials = serviceAccountKey;
@@ -455,6 +502,7 @@ export class BigQueryConnection
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
       credentials: config.credentials,
+      authClient: config.authClient,
       projectId: config.billingProjectId,
     });
 
@@ -503,7 +551,16 @@ export class BigQueryConnection
   }
 
   public getDigest(): string {
-    return makeDigest('bigquery', this.projectId, this.setupSQL);
+    // Appended only when an auth client is in play, so connections that don't
+    // use one keep the digests — and so the persisted tables — they have now.
+    return this.authIdentity === undefined
+      ? makeDigest('bigquery', this.projectId, this.setupSQL)
+      : makeDigest(
+          'bigquery',
+          this.projectId,
+          this.setupSQL,
+          this.authIdentity
+        );
   }
 
   public get supportsNesting(): boolean {

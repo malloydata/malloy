@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type {BigQueryOptions} from '@google-cloud/bigquery';
 import {BigQueryConnection} from './bigquery_connection';
 
 // The callback overload yields (err, rows, nextQuery, apiResponse).
@@ -105,5 +106,63 @@ describe('BigQueryConnection.runSQL (hermetic, stubbed job)', () => {
     expect(data.rows).toEqual([{n: 1}, {n: 2}]);
     expect(data.totalRows).toBe(2);
     expect(getQueryResults).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('BigQueryConnection authClient', () => {
+  // A stand-in for a google-auth AuthClient. Nothing in Malloy inspects one —
+  // that is what `opaque` means — so the double only has to be identifiable.
+  const authClient = {
+    getAccessToken: async () => ({token: 'from-the-host'}),
+  } as unknown as BigQueryOptions['authClient'];
+
+  it('hands a host-supplied auth client to the SDK', async () => {
+    // The SDK wraps what it is given in a GoogleAuth rather than keeping it as
+    // a field, so the claim worth pinning is behavioral: the auth this
+    // connection will actually query with is the host's client, not ambient
+    // credentials. `getClient()` returns the supplied one without any IO.
+    const conn = new BigQueryConnection({
+      name: 'bq',
+      projectId: 'test-project',
+      authClient,
+    });
+    const sdk = (
+      conn as unknown as {
+        bigQuery: {authClient: {getClient: () => Promise<unknown>}};
+      }
+    ).bigQuery;
+    await expect(sdk.authClient.getClient()).resolves.toBe(authClient);
+  });
+
+  it('separates the digests of two identities on one project', () => {
+    // Same project, same SQL, different impersonated service accounts. If the
+    // digests matched, the BuildIDs would match, and one tenant would be
+    // served rows persisted for the other.
+    const forTenant = (tenant: string) =>
+      new BigQueryConnection({
+        name: 'bq',
+        projectId: 'shared-project',
+        authClient,
+        rawConfigData: {is: 'bigquery', authClient: {tenantAuth: tenant}},
+      }).getDigest();
+
+    expect(forTenant('acme')).not.toBe(forTenant('globex'));
+    expect(forTenant('acme')).toBe(forTenant('acme'));
+  });
+
+  it('leaves the digest alone when no auth client is named', () => {
+    // Connections that don't use one keep the digests they have today, so
+    // their persisted tables survive this change.
+    const conn = new BigQueryConnection({
+      name: 'bq',
+      projectId: 'shared-project',
+    });
+    expect(conn.getDigest()).toBe(
+      new BigQueryConnection({
+        name: 'bq',
+        projectId: 'shared-project',
+        rawConfigData: {is: 'bigquery'},
+      }).getDigest()
+    );
   });
 });
