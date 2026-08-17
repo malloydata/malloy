@@ -31,7 +31,7 @@ function modelOf(src: string): Model {
 function connectionsOf(src: string): ConnectionBuild[] {
   const model = modelOf(src);
   const log: LogMessage[] = [];
-  return mkBuildTargets(resolvePersistWalk(model, log), DIGESTS);
+  return mkBuildTargets(resolvePersistWalk(model, log), DIGESTS, {});
 }
 
 function connectionNamed(
@@ -295,7 +295,7 @@ describe('what a target carries', () => {
     const model = modelOf(`${ROLLUP}\nrun: rollup -> { select: * }`);
     const walk = resolvePersistWalk(model, []);
 
-    expect(() => mkBuildTargets(walk, {})).toThrow('_db_');
+    expect(() => mkBuildTargets(walk, {}, {})).toThrow('_db_');
   });
 
   test('a model with no persist sources has no targets', () => {

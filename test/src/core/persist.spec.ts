@@ -10,6 +10,7 @@ import type {
   BuildManifest,
   BuildPlan,
   BuildTarget,
+  VirtualMap,
 } from '@malloydata/malloy';
 import {
   ConnectionRuntime,
@@ -2305,6 +2306,31 @@ describe('source persistence', () => {
       ).rejects.toThrow('not found in manifest');
     });
 
+    it('the throw names the source when it still has an identity', async () => {
+      const manifest = createManifest();
+      manifest.strict = true;
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(strictModelCode).getSQL()
+      ).rejects.toThrow(/Persisted source 'by_carrier@/);
+    });
+
+    it('and does not guess a name when the reference has none', async () => {
+      // An inline extend has had its sourceID deleted; `as` and `extends`
+      // survive but name the base, so neither stands in for it.
+      const manifest = createManifest();
+      manifest.strict = true;
+      const inlineExtend = `${CARRIER_STATS_PERSIST_MODEL}
+        run: carrier_stats extend { dimension: loud is upper(carrier) } -> {
+          group_by: loud
+        }
+      `;
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(inlineExtend).getSQL()
+      ).rejects.toThrow(/Persisted source not found in manifest/);
+    });
+
     it('strict manifest with loadError surfaces the load error in the throw', async () => {
       // Simulates the runtime auto-read path producing an empty manifest
       // because the file was unparseable. The strict throw should mention
@@ -2472,12 +2498,14 @@ describe('source persistence', () => {
       """)
     `;
 
-    // A manifest holding a built table for every persist source in the model.
-    async function manifestForAll(): Promise<BuildManifest> {
+    // A manifest holding a built table for each named persist source, or for
+    // every one of them when no names are given.
+    async function manifestFor(names?: string[]): Promise<BuildManifest> {
       const model = await wrapTestModel(tstRuntime, TWO_KINDS).model.getModel();
       const digest = await getDigest();
       const manifest = createManifest();
       for (const source of Object.values(model.getBuildPlan().sources)) {
+        if (names && !names.includes(source.name)) continue;
         addManifestEntry(
           manifest,
           source.makeBuildId(digest, source.getSQL()),
@@ -2487,8 +2515,11 @@ describe('source persistence', () => {
       return manifest;
     }
 
-    async function sqlForQuery(query: string): Promise<string> {
-      const manifest = await manifestForAll();
+    async function sqlForQuery(
+      query: string,
+      built?: string[]
+    ): Promise<string> {
+      const manifest = await manifestFor(built);
       return runtimeWithManifest(manifest)
         .loadQuery(`${TWO_KINDS}\n${query}`)
         .getSQL();
@@ -2500,11 +2531,7 @@ describe('source persistence', () => {
       expect(sql).not.toContain('COUNT(');
     });
 
-    // Pending #3016 — a directly-referenced sql_select never reaches the
-    // manifest. The two passing tests around these are the controls: the
-    // other persistable kind substitutes, and the same source substitutes
-    // when interpolation reaches it, so the entry and its key are right.
-    it.skip('sql_select reads its built table', async () => {
+    it('sql_select reads its built table', async () => {
       const sql = await sqlForQuery('run: ss -> { select: * }');
       expect(sql).toContain('cached.ss_table');
       expect(sql).not.toContain('COUNT(');
@@ -2512,12 +2539,14 @@ describe('source persistence', () => {
 
     it('sql_select reached by interpolation reads its built table', async () => {
       // The manifest key and the entry are right — this path finds them.
-      const sql = await sqlForQuery('run: via_interp -> { select: * }');
+      // Only `ss` is built, so via_interp has to reach it rather than being
+      // substituted itself.
+      const sql = await sqlForQuery('run: via_interp -> { select: * }', ['ss']);
       expect(sql).toContain('cached.ss_table');
       expect(sql).not.toContain('COUNT(');
     });
 
-    it.skip('strict mode catches a missing sql_select entry', async () => {
+    it('strict mode catches a missing sql_select entry', async () => {
       // Strict mode's promise is that a persist source with no manifest entry
       // throws rather than silently compiling to inline SQL.
       const strict = createManifest();
@@ -2529,7 +2558,54 @@ describe('source persistence', () => {
       ).rejects.toThrow(/not found in manifest/);
     });
 
-    it.skip('a join of both kinds substitutes both', async () => {
+    it('reads the built table, not the SQL that built it', async () => {
+      // Substitution is only real if the rows come from the table. Build one
+      // whose contents disagree with the source's SQL: a query that reads the
+      // table says 'stale', one that recomputes says 'live'. Before #3016 the
+      // sql_select leg always said 'live' — it looked fresh because it was
+      // never reading what had been built.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+      try {
+        const modelCode = `${PERSIST_ANNOTATION}
+          #@ persist
+          source: ss is ${tstDB}.sql("""SELECT 'live' as tag""")
+
+          run: ss -> { select: * }
+        `;
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const model = await rwRuntime.loadModel(modelCode).getModel();
+        const source = Object.values(model.getBuildPlan().sources).find(
+          s => s.name === 'ss'
+        )!;
+        const buildId = source.makeBuildId(rwConn.getDigest(), source.getSQL());
+
+        await rwConn.runSQL(
+          "CREATE TABLE ss_freshness AS SELECT 'stale' as tag"
+        );
+        const manifest = createManifest();
+        addManifestEntry(manifest, buildId, 'ss_freshness');
+        rwRuntime.buildManifest = manifest;
+
+        const built = await rwRuntime.loadQuery(modelCode).run();
+        const recomputed = await rwRuntime
+          .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
+          .run();
+
+        expect(built.data.toObject()).toEqual([{tag: 'stale'}]);
+        expect(recomputed.data.toObject()).toEqual([{tag: 'live'}]);
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('a join of both kinds substitutes both', async () => {
       const sql = await sqlForQuery(`
         run: flights extend {
           join_one: q is qs on carrier = q.carrier
@@ -2541,6 +2617,98 @@ describe('source persistence', () => {
       `);
       expect(sql).toContain('cached.qs_table');
       expect(sql).toContain('cached.ss_table');
+    });
+  });
+
+  describe('BuildID SQL carries what changes the SQL', () => {
+    // The BuildID must ignore the manifest and nothing else. A virtualMap
+    // decides what table a virtual source reads, so a BuildID computed without
+    // it cannot be compiled at all — which is what both sides used to do.
+    const VIRTUAL_MODEL = `${PERSIST_ANNOTATION}
+      ##! experimental.virtual_source
+      type: ff is { carrier :: string }
+      source: vf is ${tstDB}.virtual('vflights')::ff
+
+      #@ persist
+      source: by_carrier is vf -> { group_by: carrier }
+
+      run: by_carrier -> { select: * }
+    `;
+
+    const virtualMap: VirtualMap = new Map([
+      [tstDB, new Map([['vflights', 'malloytest.flights']])],
+    ]);
+
+    function virtualRuntime() {
+      const rt = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+      rt.virtualMap = virtualMap;
+      return rt;
+    }
+
+    it('a persisted source over a virtual source can be planned', async () => {
+      const rt = virtualRuntime();
+      const model = await rt.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      expect(connections[0].targets[0].sql).toContain('malloytest.flights');
+    });
+
+    it('a given with an inline default keeps both sides on one key', async () => {
+      // The other half of the rule: `resolvedGivens` also changes the SQL, but
+      // only the compiler can produce one, so neither side resolves givens.
+      // Resolve on one side only and this throws — the builder emits
+      // `'admin'='admin'` where the compiler folds the same expression.
+      const model = `${PERSIST_ANNOTATION}
+        ##! experimental.givens
+        given:
+          ROLE :: string is "admin"
+          inline IS_ADMIN :: boolean is $ROLE = 'admin'
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: gated is flights -> {
+          where: $IS_ADMIN
+          group_by: carrier
+        }
+
+        run: gated -> { select: * }
+      `;
+      const rt = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+      const {connections} = await rt.getBuildTargets(
+        await rt.loadModel(model).getModel()
+      );
+      const target = connections[0].targets[0];
+
+      const manifest = createManifest();
+      addManifestEntry(manifest, target.buildId, 'cached.gated');
+      manifest.strict = true;
+      rt.buildManifest = manifest;
+
+      const sql = await rt.loadQuery(model).getSQL();
+      expect(sql).toContain('cached.gated');
+    });
+
+    it('and the query finds the table the plan named', async () => {
+      // The whole point of the pair: the key the builder writes is the key the
+      // compiler recomputes. Build from getBuildTargets, then query.
+      const rt = virtualRuntime();
+      const model = await rt.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      const target = connections[0].targets[0];
+
+      const manifest = createManifest();
+      addManifestEntry(manifest, target.buildId, 'cached.virtual_by_carrier');
+      manifest.strict = true;
+      rt.buildManifest = manifest;
+
+      const sql = await rt.loadQuery(VIRTUAL_MODEL).getSQL();
+      expect(sql).toContain('cached.virtual_by_carrier');
+      expect(sql).not.toContain('malloytest.flights');
     });
   });
 

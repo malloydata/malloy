@@ -9,6 +9,7 @@ import type {
   SQLPhraseSegment,
   PersistableSourceDef,
   Query,
+  VirtualMap,
 } from './malloy_types';
 import {isSegmentSQL, isSegmentSource, safeRecordGet} from './malloy_types';
 import {mkBuildID} from './source_def_utils';
@@ -75,7 +76,91 @@ function expandSegment(
 }
 
 /**
- * Expand a PersistableSourceDef, checking manifest for pre-built table.
+ * The options a BuildID's SQL is compiled under — everything the builder and
+ * the compiler must both know, and nothing else.
+ *
+ * Narrow on purpose. A BuildID must not depend on what has already been built
+ * or build order would change the key, so this type cannot express a manifest;
+ * `mkBuildTargets` takes it for the same reason.
+ */
+export interface BuildIdOptions {
+  virtualMap?: VirtualMap;
+}
+
+/**
+ * Project compile options down to what a BuildID is computed under.
+ *
+ * `virtualMap` decides which table a virtual source reads, so it changes the
+ * SQL and has to be in the key; the builder supplies its own.
+ *
+ * `resolvedGivens` is deliberately absent even though it also changes the SQL.
+ * The builder has no way to produce one — `Runtime.getBuildTargets` takes no
+ * givens and `PersistSource.getSQL` never resolves them — so including it makes
+ * the two sides disagree: the compiler folds `$IS_ADMIN` to a literal while the
+ * builder re-derives it from the declaration and emits `'admin'='admin'`. Both
+ * sides therefore compile givens the same way, by not resolving them. The
+ * consequence — a source whose SQL depends on a supplied given cannot be
+ * persisted, and says so badly — is #3041.
+ */
+export function buildIdOptions(opts: PrepareResultOptions): BuildIdOptions {
+  return {virtualMap: opts.virtualMap};
+}
+
+/**
+ * Ask the manifest what table backs a persistable source.
+ *
+ * Every place the compiler needs SQL for a persistable source goes through
+ * here, so the rule is stated once: a source marked persistent is looked up
+ * by BuildID, a hit yields the table, a miss under `strict` throws, and
+ * anything else falls through to the source's own SQL.
+ *
+ * @return The table name, canonical SQL as the manifest supplied it, or
+ *         undefined when the caller should emit the source's own SQL.
+ */
+export function persistedTableFor(
+  source: PersistableSourceDef,
+  opts: PrepareResultOptions,
+  compileQuery: CompileQueryCallback
+): string | undefined {
+  const {buildManifest, connectionDigests} = opts;
+  if (!buildManifest || !connectionDigests || !source.persistent) {
+    return undefined;
+  }
+  const connDigest = safeRecordGet(connectionDigests, source.connection);
+  if (connDigest === undefined) {
+    return undefined;
+  }
+
+  const buildId = mkBuildID(
+    connDigest,
+    getSourceSQL(source, compileQuery, buildIdOptions(opts))
+  );
+  const entry = buildManifest.entries[buildId];
+  if (entry) {
+    return entry.tableName;
+  }
+
+  if (buildManifest.strict) {
+    // `sourceID` is deleted, not inherited, when a source is modified, so it
+    // either names this source or is absent. `as` and `extends` survive a
+    // modification and would name the base, so neither stands in for it.
+    const named = source.sourceID
+      ? `Persisted source '${source.sourceID}'`
+      : 'Persisted source';
+    const base =
+      `${named} not found in manifest (buildId: ${buildId}); ` +
+      'strict manifest mode forbids fallback to live compilation.';
+    throw new MalloyCompileError(
+      buildManifest.loadError ? `${base}\n  ${buildManifest.loadError}` : base,
+      'runtime-manifest-strict-miss',
+      source.location
+    );
+  }
+  return undefined;
+}
+
+/**
+ * Expand a PersistableSourceDef as a `%{ }` segment.
  * Always returns a subquery form: (SELECT * FROM table) or (inline SQL)
  */
 function expandPersistableSource(
@@ -83,38 +168,10 @@ function expandPersistableSource(
   opts: PrepareResultOptions,
   compileQuery: CompileQueryCallback
 ): string {
-  const {buildManifest, connectionDigests} = opts;
-
-  // Try manifest lookup if we have the required info (only for persistent sources)
-  if (buildManifest && connectionDigests && source.persistent) {
-    const connDigest = safeRecordGet(connectionDigests, source.connection);
-    if (connDigest) {
-      // Get the SQL for this source to compute BuildID (no opts = full SQL)
-      const sql = getSourceSQL(source, compileQuery);
-      const buildId = mkBuildID(connDigest, sql);
-      const entry = buildManifest.entries[buildId];
-
-      if (entry) {
-        // Found in manifest - substitute with subquery from persisted table.
-        // entry.tableName is canonical SQL, supplied by the manifest builder.
-        return `(SELECT * FROM ${entry.tableName})`;
-      }
-
-      // Not in manifest
-      if (buildManifest.strict) {
-        const base =
-          `Persist source '${source.sourceID}' not found in manifest ` +
-          `(buildId: ${buildId}); strict manifest mode forbids fallback ` +
-          'to live compilation.';
-        throw new MalloyCompileError(
-          buildManifest.loadError
-            ? `${base}\n  ${buildManifest.loadError}`
-            : base,
-          'runtime-manifest-strict-miss',
-          source.location
-        );
-      }
-    }
+  // A segment has to be usable as a subquery, so a hit is wrapped.
+  const tableName = persistedTableFor(source, opts, compileQuery);
+  if (tableName !== undefined) {
+    return `(SELECT * FROM ${tableName})`;
   }
 
   // No manifest or not found - expand inline as subquery

@@ -1813,7 +1813,11 @@ export class PersistSource implements Taggable {
    * For sql_select sources, returns the SQL string (with segment expansion).
    * For query_source sources, compiles the inner query to SQL.
    *
-   * @param options - Compile options including buildManifest for persistence.
+   * @param options - Compile options. `buildManifest` and `connectionDigests`
+   *   substitute already-built dependencies, giving the SQL to execute.
+   *   Anything that changes the SQL without them — `virtualMap` — must match
+   *   what the compiler will use, or the table is built under a key nothing
+   *   looks up.
    * @return The SQL string for this source.
    */
   getSQL(options?: CompileQueryOptions): string {
@@ -1822,7 +1826,7 @@ export class PersistSource implements Taggable {
 
     // Compile with finalize=false so this SQL is the bare source SELECT.
     // The build-time key (makeBuildId over this SQL) must equal the serve-time
-    // manifest lookup key, which query_query.ts recomputes from the same
+    // manifest lookup key, which persistedTableFor recomputes from the same
     // unfinalized SELECT; finalizing would diverge the two on dialects with a
     // final stage (Postgres) and mis-materialize the table.
     if (sd.type === 'sql_select') {
