@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {SourceID} from '../../model';
+import type {BuildIdOptions, SourceID} from '../../model';
 import type {LogMessage} from '../../lang';
 import type {PersistNode} from '../../model/persist_utils';
 import type {Model, PersistSource} from './core';
-import type {BuildTarget, CompileQueryOptions, ConnectionBuild} from './types';
+import type {BuildTarget, ConnectionBuild} from './types';
 
 /**
  * Read a key this function's own construction guarantees is present.
@@ -111,15 +111,15 @@ function addUnique(into: string[], seen: Set<string>, keys: string[]): void {
  *
  * @param walk A resolved walk from {@link resolvePersistWalk}, in order
  * @param connectionDigests One digest per connection named by a persist source
- * @param compileOptions What the BuildID's SQL is compiled under. The compiler
- *   recomputes the same key at serve time from `buildIdOptions()`, so anything
- *   that changes the SQL — a `virtualMap` above all — has to be here too, or
- *   the table is built under a key nothing looks up.
+ * @param buildIdOpts What the BuildID's SQL is compiled under. The compiler
+ *   recomputes the same key at serve time through `buildIdOptions()`; supply a
+ *   different `virtualMap` here and the table is built under a key nothing
+ *   looks up.
  */
 export function mkBuildTargets(
   walk: ResolvedNode[],
   connectionDigests: Record<string, string>,
-  compileOptions: CompileQueryOptions
+  buildIdOpts: BuildIdOptions
 ): ConnectionBuild[] {
   const targets = new Map<string, PartialTarget>();
   // What each source hands to whoever referenced it: its own target if it is
@@ -150,7 +150,7 @@ export function mkBuildTargets(
       );
     }
 
-    const sql = source.getSQL(compileOptions);
+    const sql = source.getSQL(buildIdOpts);
     const buildId = source.makeBuildId(digest, sql);
     const key = targetKey(connectionName, buildId);
 

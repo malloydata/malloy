@@ -361,11 +361,13 @@ connection name.
 [`model/sql_compiled.ts`](../../model/sql_compiled.ts) is the lookup. It runs
 when the source is `persistent` and both `buildManifest` and
 `connectionDigests` are present. The key is `mkBuildID(connDigest, sql)`, where
-`sql` is compiled under `buildIdOptions()`: the manifest and its digests are
-dropped, so the BuildID does not depend on what is already materialized;
-`virtualMap` and `resolvedGivens` are kept, because they change the SQL and two
-different tables must not share a key. `mkBuildTargets` compiles the builder's
-side under the same options. A hit returns `entry.tableName` unquoted; manifest names are
+`sql` is compiled under `buildIdOptions()`, which returns a `BuildIdOptions` —
+a type narrow enough that it cannot carry a manifest, so the BuildID cannot
+depend on what is already materialized. It keeps `virtualMap`, which decides
+what table a virtual source reads. It drops `resolvedGivens`, which also
+changes the SQL but which only the compiler can produce; resolving on one side
+only makes the keys disagree, so neither side resolves givens (see #3041).
+`mkBuildTargets` takes the same type. A hit returns `entry.tableName` unquoted; manifest names are
 canonical. A miss under `strict` throws `runtime-manifest-strict-miss` at the
 source's location, appending `loadError` if present. It names the source's
 `sourceID` when there is one; a reference through an inline `extend` has had
@@ -386,11 +388,11 @@ Two callers:
 `QueryQueryRaw` does not look up. Its source is the `conn.sql(...)` at the run
 site, which is unnamed and so never persistent.
 
-The other half of that invariant is `PersistSource.getSQL()`, which compiles
-with `finalize=false`. On a dialect with a final stage (Postgres wraps in
+`PersistSource.getSQL()` compiles with `finalize=false` for the same reason the
+options are narrowed. On a dialect with a final stage (Postgres wraps in
 `row_to_json`) a finalized SQL would hash differently from what
-`query_query.ts` recomputes at serve time, and the table would be materialized
-under a key nothing ever looks up.
+`persistedTableFor` recomputes at serve time, and the table would be
+materialized under a key nothing ever looks up.
 
 ## Runtime manifest resolution
 

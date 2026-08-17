@@ -278,11 +278,10 @@ a builder needs both answers:
   execute: it reads from the tables you just built instead of recomputing them
   inline.
 
-Anything else that changes a source's SQL has to be passed to *both* — a
-`virtualMap` above all, which decides what table a virtual source reads.
-`getBuildTargets` takes the Runtime's for the BuildID SQL; add it to the
-`getSQL()` call in step 4 as well, or you will build the wrong table under the
-right key.
+`virtualMap` belongs in the build SQL too. `getBuildTargets` takes the
+Runtime's for the BuildID; omit it in step 4 and a virtual-backed source throws
+`runtime-virtual-map-missing`, and pass a *different* one and you build a table
+from the wrong data under a key that looks right.
 
 `getSQL()` compiles with `finalize=false`, so what comes back is the bare
 source `SELECT`. The build-time key must equal the key the compiler recomputes
@@ -327,9 +326,12 @@ referenced are pruned. A separate pass can then drop the orphaned tables.
    `connection.getDigest()` per connection name for step 4.
 4. **Build** each connection's targets in the order given. Per target: if the
    manifest already has `target.buildId`, `touch()` and move on; otherwise
-   `CREATE TABLE` from `source.getSQL({buildManifest, connectionDigests})` —
-   any of `target.sources` will do, they share the SQL — and `update()` the
-   manifest immediately, so whatever depends on it sees the table.
+   `CREATE TABLE` from
+   `source.getSQL({buildManifest, connectionDigests, virtualMap})` — any of
+   `target.sources` will do, they share the SQL — and `update()` the manifest
+   immediately, so whatever depends on it sees the table. Pass the same
+   `virtualMap` the queries will run under; omit it only if the model has no
+   virtual sources.
 5. **Write** `manifest.activeEntries`.
 
 Over several model files, keep one `Manifest` for the whole run. `touch()` and

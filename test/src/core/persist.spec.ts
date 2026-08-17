@@ -2306,6 +2306,31 @@ describe('source persistence', () => {
       ).rejects.toThrow('not found in manifest');
     });
 
+    it('the throw names the source when it still has an identity', async () => {
+      const manifest = createManifest();
+      manifest.strict = true;
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(strictModelCode).getSQL()
+      ).rejects.toThrow(/Persisted source 'by_carrier@/);
+    });
+
+    it('and does not guess a name when the reference has none', async () => {
+      // An inline extend has had its sourceID deleted; `as` and `extends`
+      // survive but name the base, so neither stands in for it.
+      const manifest = createManifest();
+      manifest.strict = true;
+      const inlineExtend = `${CARRIER_STATS_PERSIST_MODEL}
+        run: carrier_stats extend { dimension: loud is upper(carrier) } -> {
+          group_by: loud
+        }
+      `;
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(inlineExtend).getSQL()
+      ).rejects.toThrow(/Persisted source not found in manifest/);
+    });
+
     it('strict manifest with loadError surfaces the load error in the throw', async () => {
       // Simulates the runtime auto-read path producing an empty manifest
       // because the file was unparseable. The strict throw should mention
@@ -2506,10 +2531,6 @@ describe('source persistence', () => {
       expect(sql).not.toContain('COUNT(');
     });
 
-    // Pending #3016 — a directly-referenced sql_select never reaches the
-    // manifest. The two passing tests around these are the controls: the
-    // other persistable kind substitutes, and the same source substitutes
-    // when interpolation reaches it, so the entry and its key are right.
     it('sql_select reads its built table', async () => {
       const sql = await sqlForQuery('run: ss -> { select: * }');
       expect(sql).toContain('cached.ss_table');
@@ -2560,7 +2581,9 @@ describe('source persistence', () => {
           urlReader: testFileSpace,
         });
         const model = await rwRuntime.loadModel(modelCode).getModel();
-        const source = Object.values(model.getBuildPlan().sources)[0];
+        const source = Object.values(model.getBuildPlan().sources).find(
+          s => s.name === 'ss'
+        )!;
         const buildId = source.makeBuildId(rwConn.getDigest(), source.getSQL());
 
         await rwConn.runSQL(
@@ -2630,6 +2653,44 @@ describe('source persistence', () => {
       const model = await rt.loadModel(VIRTUAL_MODEL).getModel();
       const {connections} = await rt.getBuildTargets(model);
       expect(connections[0].targets[0].sql).toContain('malloytest.flights');
+    });
+
+    it('a given with an inline default keeps both sides on one key', async () => {
+      // The other half of the rule: `resolvedGivens` also changes the SQL, but
+      // only the compiler can produce one, so neither side resolves givens.
+      // Resolve on one side only and this throws — the builder emits
+      // `'admin'='admin'` where the compiler folds the same expression.
+      const model = `${PERSIST_ANNOTATION}
+        ##! experimental.givens
+        given:
+          ROLE :: string is "admin"
+          inline IS_ADMIN :: boolean is $ROLE = 'admin'
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: gated is flights -> {
+          where: $IS_ADMIN
+          group_by: carrier
+        }
+
+        run: gated -> { select: * }
+      `;
+      const rt = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+      const {connections} = await rt.getBuildTargets(
+        await rt.loadModel(model).getModel()
+      );
+      const target = connections[0].targets[0];
+
+      const manifest = createManifest();
+      addManifestEntry(manifest, target.buildId, 'cached.gated');
+      manifest.strict = true;
+      rt.buildManifest = manifest;
+
+      const sql = await rt.loadQuery(model).getSQL();
+      expect(sql).toContain('cached.gated');
     });
 
     it('and the query finds the table the plan named', async () => {

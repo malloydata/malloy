@@ -48,7 +48,8 @@ export {
 } from './utils';
 export {getModelAnnotations} from './annotation_utils';
 export {constantExprToSQL} from './constant_expression_compiler';
-export {getCompiledSQL} from './sql_compiled';
+export {getCompiledSQL, buildIdOptions} from './sql_compiled';
+export type {BuildIdOptions} from './sql_compiled';
 export {MalloyCompileError} from './malloy_compile_error';
 export {
   mkSourceID,

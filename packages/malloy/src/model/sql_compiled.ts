@@ -9,6 +9,7 @@ import type {
   SQLPhraseSegment,
   PersistableSourceDef,
   Query,
+  VirtualMap,
 } from './malloy_types';
 import {isSegmentSQL, isSegmentSource, safeRecordGet} from './malloy_types';
 import {mkBuildID} from './source_def_utils';
@@ -75,20 +76,34 @@ function expandSegment(
 }
 
 /**
- * The options a BuildID's SQL is compiled under.
+ * The options a BuildID's SQL is compiled under — everything the builder and
+ * the compiler must both know, and nothing else.
  *
- * Two rules pull in opposite directions and this is where they meet. The
- * BuildID must not depend on what has already been built, or build order would
- * change the key — so the manifest and its digests are dropped. But it must
- * depend on everything that changes the SQL, or two different tables would
- * share a key — so `virtualMap` and `resolvedGivens` are kept. Both sides of
- * the contract compile through here: the compiler when it looks a source up,
- * and `mkBuildTargets` when the builder is told what to build.
+ * Narrow on purpose. A BuildID must not depend on what has already been built
+ * or build order would change the key, so this type cannot express a manifest;
+ * `mkBuildTargets` takes it for the same reason.
  */
-export function buildIdOptions(
-  opts: PrepareResultOptions
-): PrepareResultOptions {
-  return {virtualMap: opts.virtualMap, resolvedGivens: opts.resolvedGivens};
+export interface BuildIdOptions {
+  virtualMap?: VirtualMap;
+}
+
+/**
+ * Project compile options down to what a BuildID is computed under.
+ *
+ * `virtualMap` decides which table a virtual source reads, so it changes the
+ * SQL and has to be in the key; the builder supplies its own.
+ *
+ * `resolvedGivens` is deliberately absent even though it also changes the SQL.
+ * The builder has no way to produce one — `Runtime.getBuildTargets` takes no
+ * givens and `PersistSource.getSQL` never resolves them — so including it makes
+ * the two sides disagree: the compiler folds `$IS_ADMIN` to a literal while the
+ * builder re-derives it from the declaration and emits `'admin'='admin'`. Both
+ * sides therefore compile givens the same way, by not resolving them. The
+ * consequence — a source whose SQL depends on a supplied given cannot be
+ * persisted, and says so badly — is #3041.
+ */
+export function buildIdOptions(opts: PrepareResultOptions): BuildIdOptions {
+  return {virtualMap: opts.virtualMap};
 }
 
 /**
@@ -145,7 +160,7 @@ export function persistedTableFor(
 }
 
 /**
- * Expand a PersistableSourceDef, checking manifest for pre-built table.
+ * Expand a PersistableSourceDef as a `%{ }` segment.
  * Always returns a subquery form: (SELECT * FROM table) or (inline SQL)
  */
 function expandPersistableSource(
