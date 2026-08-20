@@ -194,6 +194,19 @@ The `restrictedMode` flag flows: `ParseOptions.restrictedMode` → `MalloyTransl
 
 API-level details: [`../api/CONTEXT.md`](../api/CONTEXT.md) and the JSDoc on `ModelMaterializer.loadRestrictedQuery`.
 
+## Access modifiers
+
+`include { private: … internal: … }` (behind `##! experimental.access_modifiers`) records an `accessModifier` on the field defs of the source it produces — `ast/field-space/include-utils.ts` collects the include block, `refined-space.ts` writes the labels onto the fields as the source's `structDef` is built. The labels land when the source statement completes, which is why a `private` field is still usable in the `extend` block of the statement that declares it and not in a later one.
+
+Whether a field can be reached is a question about the *space doing the reading*, not about the field alone. Each space answers `accessProtectionLevel()`: `public` for a query segment, `internal` for a source extension. `accessAllowed(level, modifier)` in `ast/field-space/static-space.ts` decides, and `lessPermissiveAccessLevel()` narrows the level at each join hop, so reaching through a join can only lose visibility.
+
+Two code paths read fields, and both have to ask:
+
+- **By name** — `StaticSpace.lookup()`. A rejected field logs `field-not-accessible` and reports itself as not found.
+- **By `*`** — `QueryOperationSpace.wildcardExpansion()` in `ast/field-space/query-spaces.ts`. Star expansion enumerates `entries()` instead of resolving a name through `lookup()`, and **`entries()` is the raw namespace map — it has no access check in it**, so `wildcardExpansion()` is where the check goes: it narrows the level per join hop, errors on an inaccessible join named before the `*`, and drops the fields the level disallows. Dropping is silent, because an error naming the field would disclose the name the modifier exists to hide. Both `addWild()` implementations — `select:` here and `index:` in `index-field-space.ts` — get their entries from it and differ only in how they name and filter what comes back.
+
+Anything else that enumerates a namespace rather than resolving one name inherits the same obligation.
+
 ## File Organization
 
 ```

@@ -18,13 +18,11 @@ import {
   IndexFieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
-import type {FieldSpace} from '../types/field-space';
 import type {MalloyElement} from '../types/malloy-element';
 import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 import {QueryOperationSpace} from './query-spaces';
 import {ReferenceField} from './reference-field';
-import {StructSpaceField} from './static-space';
 
 export class IndexFieldSpace extends QueryOperationSpace {
   readonly segmentType = 'index';
@@ -105,43 +103,14 @@ export class IndexFieldSpace extends QueryOperationSpace {
   addRefineFromFields(_refineThis: never) {}
 
   protected addWild(wild: WildcardFieldReference): void {
-    let current: FieldSpace = this.exprSpace;
-    const joinPath: string[] = [];
-    if (wild.joinPath) {
-      // walk path to determine namespace for *
-      for (const pathPart of wild.joinPath.list) {
-        const part = pathPart.refString;
-        joinPath.push(part);
-
-        const ent = current.entry(part);
-        if (ent) {
-          if (ent instanceof StructSpaceField) {
-            current = ent.fieldSpace;
-          } else {
-            pathPart.logError(
-              'invalid-wildcard-source',
-              `Field '${part}' does not contain rows and cannot be expanded with '*'`
-            );
-            return;
-          }
-        } else {
-          pathPart.logError(
-            'wildcard-source-not-found',
-            `No such field as '${part}'`
-          );
-          return;
-        }
-      }
+    const expansion = this.wildcardExpansion(wild, 'wildcard-source-not-found');
+    if (expansion === undefined) {
+      return;
     }
+    const {joinPath, entries} = expansion;
     const dialect = this.dialectObj();
     const expandEntries: {name: string; entry: SpaceEntry}[] = [];
-    for (const [name, entry] of current.entries()) {
-      if (wild.except.has(name)) {
-        continue;
-      }
-      if (entry.refType === 'parameter') {
-        continue;
-      }
+    for (const [name, entry] of entries) {
       const indexName = IndexFieldReference.indexOutputName([
         ...joinPath,
         name,

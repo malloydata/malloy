@@ -11,6 +11,7 @@ import type {
   SourceDef,
   JoinFieldDef,
   AccessModifierLabel,
+  NonDefaultAccessModifierLabel,
 } from '../../../model/malloy_types';
 import {
   activeName,
@@ -291,7 +292,19 @@ export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
   }
 }
 
-function accessAllowed(
+/**
+ * The access modifier written on the field a namespace entry stands for.
+ * Undefined when the field is public, or the entry is not a field.
+ */
+export function accessModifierOf(
+  entry: SpaceEntry
+): NonDefaultAccessModifierLabel | undefined {
+  return entry instanceof SpaceField
+    ? entry.fieldDef()?.accessModifier
+    : undefined;
+}
+
+export function accessAllowed(
   accessLevel: AccessModifierLabel,
   accessModifier: AccessModifierLabel
 ): boolean {
@@ -301,7 +314,7 @@ function accessAllowed(
   return false;
 }
 
-function lessPermissiveAccessLevel(
+export function lessPermissiveAccessLevel(
   a: AccessModifierLabel,
   b: AccessModifierLabel
 ): AccessModifierLabel {
