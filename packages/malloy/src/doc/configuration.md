@@ -73,14 +73,15 @@ Overlays may be synchronous or asynchronous — an overlay's return type is `unk
 
 ### Failure Modes
 
-References fail in four distinguishable ways, each handled differently:
+References fail in five distinguishable ways, each handled differently:
 
 1. **Unknown overlay source** (`{zzz: "foo"}` when no `zzz` overlay is registered) — logged as a warning to `config.log`; the property is dropped. Almost always a typo or host/config mismatch.
 2. **Known overlay returns `undefined`** (`{env: "MISSING_VAR"}` — env var unset) — silently dropped. Legitimate "value not present" state. If the dropped property was required, the connection factory complains when the connection is built (lazy, at lookup time), not at config-build time.
 3. **Unresolved reference inside a default** — silently dropped. Defaults are hints, not requirements.
 4. **Async overlay used in a sync-only slot** (e.g. `manifestPath: {secret: "X"}` when `secret` returns a Promise) — logged as a loud warning to `config.log` and dropped. Top-level string settings are read at construction time and can't `await`; this is misuse, not a missing value. The same rule applies to `configURL` on the host-supplied `config` overlay.
+5. **A property that can't safely be absent produced nothing** — an error, and the connection is not built. A few properties fall back to something permissive when they're missing: DuckDB's `securityPolicy` becomes `none`, BigQuery's `authClient` becomes whatever ambient credential the machine has. Writing one of those is treated as a promise that it will come to something, so any of modes 1–3 hitting it stops the connection instead of quietly taking the fallback. Leaving the property out entirely is still fine.
 
-A consequence: a typo'd env var and an unset env var are indistinguishable. This matches established behavior.
+A consequence: for every other property, a typo'd env var and an unset env var are indistinguishable. This matches established behavior.
 
 Mode 1 fires at construction time for top-level references and at first lookup for connection-property references — a consequence of when each is resolved. Mode 4 only fires at construction time, since it's specific to the sync-only slots. Modes 2 and 3 are silent in both cases.
 
@@ -89,6 +90,19 @@ Mode 1 fires at construction time for top-level references and at first lookup f
 Some connection properties (Trino's `ssl`, `session`, `extraHeaders`, etc.) are declared as `type: 'json'` in the registry. These pass through literally — their contents are never interpreted as overlay references. `{env: "X"}` inside a `json` property is literal data.
 
 This is a security invariant: `json`-typed slots can't smuggle overlay lookups. Only properties declared with a scalar type can carry references.
+
+The exception is a property the registry declares as overlay-only. There a value written in the config file isn't legal at all, so a single-key object can only be a reference and there is nothing to confuse it with. BigQuery's `authClient` is the one that exists today — the config names an overlay, and the host supplies a live credential object that has no JSON form:
+
+```json
+"bigquery": {
+  "is": "bigquery",
+  "projectId": "acme-analytics",
+  "billingProjectId": "publisher-billing",
+  "authClient": {"tenantAuth": "acme"}
+}
+```
+
+Nothing secret is in the file. The host registers a `tenantAuth` overlay when it builds the `MalloyConfig`, and it is called at lookup time, so the credential can be minted per connection.
 
 ## Defaults
 

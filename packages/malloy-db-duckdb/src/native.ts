@@ -44,7 +44,10 @@ registerConnectionType('duckdb', {
       type: 'string',
       optional: true,
       advanced: true,
-      requireLiteralString: true,
+      // Absent means the "none" policy, so a policy that fails to arrive must
+      // stop the connection rather than quietly become no policy at all.
+      source: 'literal',
+      mustHaveValue: true,
     },
     {
       name: 'allowedDirectories',

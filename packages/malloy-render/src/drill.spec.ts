@@ -423,7 +423,10 @@ describe('drill query', () => {
     }
   });
 
-  test('can handle drills that are already there', async () => {
+  // Skipped: #3045. Two months tie on flight_count under these drill filters,
+  // and Malloy's default ordering does not break ties, so `limit: 1` returns
+  // either one. DuckDB answered consistently until 1.5.5.
+  test.skip('can handle drills that are already there', async () => {
     const query = `
       source: flights is flights_base extend {
         view: cool_carriers is {
