@@ -90,6 +90,34 @@ function authIdentityOf(
   return reference === undefined ? undefined : JSON.stringify(reference);
 }
 
+/**
+ * An `authClient` and a service account key are two answers to one question,
+ * and the SDK does not treat them as competing: `GoogleAuth` caches the
+ * `authClient` and never consults `credentials` or `keyFilename` again
+ * (`google-auth-library`, `googleauth.js`: `cachedCredential = opts.authClient`).
+ * A config carrying both therefore runs entirely on the auth client while the
+ * key sits there looking live, and whoever wrote it believes the wrong
+ * identity is executing their queries. Refuse it instead.
+ */
+function rejectCompetingCredentials(
+  name: string,
+  config: BigQueryConnectionConfiguration
+): void {
+  if (config.authClient === undefined) return;
+  const alsoSet = [
+    config.credentials !== undefined ? 'a service account key' : undefined,
+    config.serviceAccountKeyPath !== undefined
+      ? 'serviceAccountKeyPath'
+      : undefined,
+  ].filter(what => what !== undefined);
+  if (alsoSet.length === 0) return;
+  throw new Error(
+    `Connection "${name}" sets authClient and also ${alsoSet.join(' and ')}. ` +
+      'An authClient replaces the credential entirely — the key would be ' +
+      'ignored — so supply one or the other.'
+  );
+}
+
 interface BigQueryConnectionConfiguration {
   /** This ID is used for Bigquery Table Normalization */
   projectId?: string;
@@ -591,6 +619,7 @@ export class BigQueryConnection
         };
       }
     }
+    rejectCompetingCredentials(this.name, config);
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
