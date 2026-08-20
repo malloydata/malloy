@@ -423,10 +423,7 @@ describe('drill query', () => {
     }
   });
 
-  // Skipped: #3045. Two months tie on flight_count under these drill filters,
-  // and Malloy's default ordering does not break ties, so `limit: 1` returns
-  // either one. DuckDB answered consistently until 1.5.5.
-  test.skip('can handle drills that are already there', async () => {
+  test('can handle drills that are already there', async () => {
     const query = `
       source: flights is flights_base extend {
         view: cool_carriers is {
@@ -436,6 +433,10 @@ describe('drill query', () => {
         view: over_time is {
           group_by: dep_month is month(dep_time)
           aggregate: flight_count
+          // #3045: months 5 and 10 tie on flight_count under these drill
+          // filters, and Malloy's default ordering does not break ties, so
+          // \`limit: 1\` needs an explicit tiebreak to be deterministic.
+          order_by: flight_count desc, dep_month
           limit: 1
         }
       }
