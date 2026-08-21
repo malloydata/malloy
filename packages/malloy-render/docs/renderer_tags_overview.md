@@ -136,6 +136,58 @@ aggregate: daily_sales
 }
 ```
 
+### `# combo_chart`
+
+Renders two measures on two **independent** y-axes (a dual-axis chart), for the
+classic "bars + line" comparison of measures with different units or magnitudes
+(e.g. volume vs. rate, count vs. dollars). Requires an x dimension and **two**
+measures.
+
+**Properties:**
+
+- `.y`: Measure(s) on the primary (left) axis. A field ref or array `['m1','m2']`. Auto-filled with the first measure if omitted.
+  - Syntax: `# combo_chart { y=hh_reach }`
+- `.y2`: Measure(s) on the secondary (right) axis. Auto-filled with the second measure if omitted.
+  - Syntax: `# combo_chart { y2=conversion_rate }`
+- `.y.chart` / `.y2.chart`: Mark type for each axis — `bar` or `line`. Defaults: `y` is `bar`, `y2` is `line`. Assign the marks to get bar-over-line or line-over-bar. Setting **both** axes to `bar` is supported: the two groups are drawn side-by-side within each band (each keeps its own y-scale), never stacked on top of each other.
+  - Syntax: `# combo_chart { y.chart=line y2.chart=bar }`
+- `.y.line_width` / `.y2.line_width`: Stroke width in px for a line axis (default `2`). Ignored for bar axes.
+  - Syntax: `# combo_chart { y2.line_width=3 }`
+- `.y.points` / `.y2.points`: Show point markers on a line. Default is auto — dots are hidden once a series has more than one point (matching `# line_chart`), shown for a single-point series or on hover. Set `points=true` to always show dots, `points=false` to always hide them. Ignored for bar axes.
+  - Syntax: `# combo_chart { y2.points=false }`
+- `.x`, `.title`, `.subtitle`, `.size`: Similar to `# bar_chart`.
+- `.x.limit`: Cap the number of x-axis bands. A number pins it; omit for an auto limit that fits the plot width. When bands are dropped the chart notes "Showing N of M".
+  - Syntax: `# combo_chart { x.limit=20 }`
+- `.color_axes`: Whether each axis is tinted to its mark's color (default `true`). Set `false` for plain, neutral axes.
+  - Syntax: `# combo_chart { color_axes=false }`
+- `.y.independent` / `.y2.independent`: Controls each axis's domain sharing across nested charts.
+- `.y.min` / `.y.max` / `.y2.min` / `.y2.max`: Pin an axis's domain bounds. Either end can be pinned on its own; the other still comes from the data. Pinning both axes to comparable ranges is how you defuse the misleading-crossover pitfall below.
+  - Syntax: `# combo_chart { y.min=0 y2.min=0 y2.max=100 }`
+
+**Axis scaling:** each axis is scaled independently from its own measures (the
+left/bar axis includes zero). Because the two scales are independent, where the
+bars and line cross is an artifact of the chosen ranges, not the data. To keep
+this from misleading, each axis is **tinted to its mark's color** (left axis like
+the bars, right axis like the line) so the two scales read as two separate
+rulers rather than a shared one. Still: use the chart to compare *trends*, not
+absolute crossover points — or pin the axes with `y.min`/`y.max`/`y2.min`/`y2.max`
+to make the crossover meaningful.
+
+**Examples:**
+
+```
+// Smart defaults: first measure → bars (left), second → line (right)
+# combo_chart
+view: reach_and_rate is {
+  group_by: network
+  aggregate: hh_reach, conversion_rate
+}
+
+// Explicit, with swapped marks (line on left, bars on right)
+# combo_chart { x=network y=cpa y.chart=line y2=volume y2.chart=bar }
+view: cpa_and_volume is { ... }
+```
+
 ### `# scatter_chart`
 
 _Note: This currently uses the legacy renderer._

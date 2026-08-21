@@ -1,0 +1,106 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+  measure: total_sales is retail_price.sum()
+  measure: avg_margin is avg(retail_price - cost)
+  measure: order_count is count()
+  dimension: product is name
+
+  // Two measures at very different magnitudes — exactly the case a shared
+  // single y-axis renders uselessly and a dual axis fixes.
+  view: sales_and_margin_by_brand is {
+    group_by: brand
+    aggregate:
+      # label="Total Sales"
+      total_sales
+      # label="Avg Margin"
+      avg_margin
+    limit: 10
+  }
+
+  #(story)
+  // Smart defaults: first measure → bars (left), second → line (right).
+  # combo_chart
+  view: defaults is sales_and_margin_by_brand
+
+  #(story)
+  // Swap the roles: the first measure becomes the line, the second the bars.
+  # combo_chart { y.chart=line y2.chart=bar }
+  view: swapped_marks is sales_and_margin_by_brand
+
+  #(story)
+  // Bars on both axes: the two groups draw side-by-side within each band (each
+  // on its own y-scale), never stacked on top of each other.
+  # combo_chart { y2.chart=bar }
+  view: bars_both_axes is sales_and_margin_by_brand
+
+  #(story)
+  // Explicit channel assignment + titles. (Tag blocks are single-line: Malloy
+  // annotations are line-based.)
+  # combo_chart { x=brand y=total_sales y2=avg_margin title='Sales vs. Margin' subtitle='Bars: total sales (left) · Line: avg margin (right)' }
+  view: explicit_channels is sales_and_margin_by_brand
+
+  #(story)
+  # size=lg
+  # combo_chart
+  view: large is sales_and_margin_by_brand
+
+  #(story)
+  // Line styling: a thicker line (y2.line_width) and no dots (y2.points=false).
+  # combo_chart { y2.line_width=4 y2.points=false }
+  view: styled_line is sales_and_margin_by_brand
+
+  #(story)
+  // Force dots on (default auto-hides them once a series has >1 point).
+  # combo_chart { y2.points=true }
+  view: forced_points is sales_and_margin_by_brand
+
+  #(story)
+  // Independent axes: both scale domains are null and fall back to the folded
+  // per-axis datasets. Regression check for the spark/independent domain bug.
+  # combo_chart { y.independent y2.independent }
+  view: independent_axes is sales_and_margin_by_brand
+
+  #(story)
+  // Sparkline size: no right axis is computed, so the right scale takes its
+  // fallback domain. The line must still scale to its own measure, not collapse.
+  # size=spark
+  # combo_chart
+  view: spark is sales_and_margin_by_brand
+
+  #(story)
+  // Pinned axis bounds. `y.min`/`y.max` pin the LEFT axis too, not just the
+  // right: here the left (sales, ~0–32k of data) is pinned to 0–60k so the bars
+  // compress into the lower half, and the right (margin) is pinned to 0–200.
+  // Pinning both is how you make the crossover meaningful instead of an artifact.
+  # combo_chart { y.min=0 y.max=60000 y2.min=0 y2.max=200 }
+  view: pinned_axes is sales_and_margin_by_brand
+
+  #(story)
+  // Opt out of the axis-to-mark color tinting (on by default) for plain,
+  // neutral axes.
+  # combo_chart { color_axes=false }
+  view: neutral_axes is sales_and_margin_by_brand
+
+  #(story)
+  // Inside a dashboard tile, alongside a single-axis chart.
+  # dashboard
+  view: in_dashboard is {
+    nest:
+      # combo_chart
+      combo is sales_and_margin_by_brand
+      # bar_chart
+      just_sales is {
+        group_by: brand
+        aggregate: total_sales
+        limit: 10
+      }
+  }
+
+  #(story)
+  // A combo needs two measures; one measure is an error (red tile).
+  # combo_chart
+  view: needs_two_measures is {
+    group_by: brand
+    aggregate: total_sales
+    limit: 10
+  }
+}

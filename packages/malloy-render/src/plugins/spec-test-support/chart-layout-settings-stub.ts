@@ -16,6 +16,11 @@ export const getChartLayoutSettings = () => ({
   xAxis: {labelAngle: 0, hidden: false},
   yAxis: {hidden: false, tickCount: 5, width: 40, yTitleSize: 12},
   yScale: {domain: [0, 100]},
+  // Secondary axis metrics for dual-axis (combo) charts. Bar/line generators
+  // don't read these; providing them lets the combo spec tests render a right
+  // axis with the same fixed dimensions.
+  y2Axis: {hidden: false, tickCount: 5, width: 40, yTitleSize: 12},
+  y2Scale: {domain: [0, 50]},
 });
 
 export const getXAxisSettings = () => ({});
