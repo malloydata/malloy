@@ -29,9 +29,18 @@ jobs:
   pull_and_build:
     runs-on: ubuntu-latest
     steps:
+      # actions/checkout v5.1.0 refuses to check out fork PR code under
+      # pull_request_target unless allow-unsafe-pr-checkout is set. The refusal
+      # is actor-independent — check-permission passing does not satisfy it — so
+      # the flag is required for any external PR to build at all. The risk it
+      # guards is checkout persisting GITHUB_TOKEN into .git/config inside the
+      # workspace fork code then runs in; persist-credentials: false removes
+      # that, and permissions: {} above leaves the token powerless regardless.
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          allow-unsafe-pr-checkout: true
+          persist-credentials: false
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
@@ -54,10 +63,8 @@ jobs:
   # When modifying these, make sure that needs: check-permission
   # is part of any job that requires secrets.
   main:
-    needs: [check-permission, pull_and_build]
+    needs: pull_and_build
     uses: './.github/workflows/main.yaml'
-    secrets:
-      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
   db-trino:
     needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-trino.yaml'

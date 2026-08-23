@@ -43,7 +43,7 @@ The convenience package `@malloydata/malloy-connections` (`packages/malloy-conne
 
 Each registered backend provides:
 - **displayName**: human-readable label (e.g. `"PostgreSQL"`, `"DuckDB"`)
-- **factory**: `async (config: ConnectionConfig) => Promise<Connection>` — creates a connection from config
+- **factory**: `async (config: ConnectionConfig, rawConfigData?: ConnectionConfigEntry) => Promise<Connection>` — creates a connection from config. `rawConfigData` is the same entry *before* overlay resolution, so an overlay-supplied property still reads as `{tenantAuth: "acme"}` instead of the value it produced. Being unresolved it is the non-secret twin of `config` — `{env: "PGPASSWORD"}` where `config` holds the password. Undefined on the `createConnectionsFromConfig` path, which starts from already-resolved entries.
 - **properties**: `ConnectionPropertyDefinition[]` — machine-readable schema for config fields
 
 ### Lazy Connection Creation
@@ -67,9 +67,26 @@ Each registered backend provides:
 }
 ```
 
-The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against a **`ConfigOverlays` dict** at **`lookupConnection()` time** (not at construction), so the registry and connection factories still only ever see plain resolved values. Overlays may be sync or async (`(path) => unknown | Promise<unknown>`); deferring resolution to lookup gives async overlays a natural seam. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is silently dropped — the factory sees the field as absent. Unknown-overlay-source warnings land on `config.log` when the affected connection is looked up.
+The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against a **`ConfigOverlays` dict** at **`lookupConnection()` time** (not at construction), so the registry and connection factories still only ever see plain resolved values. Overlays may be sync or async (`(path) => unknown | Promise<unknown>`); deferring resolution to lookup gives async overlays a natural seam. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is dropped — the factory sees the field as absent — unless it carries `mustHaveValue`, below. Unknown-overlay-source warnings land on `config.log` when the affected connection is looked up.
 
 Properties declared as `type: 'json'` are never interpreted as references — the entire value passes through literally. This is the security invariant that keeps structured config (SSL options, headers, session objects) from ever invoking overlay lookups.
+
+### `source` and `mustHaveValue`
+
+Two independent per-property fields, enforced in `config_compile.ts` and `config_lookup.ts`. Factories never see either.
+
+`source` constrains where a value may come from; unset means either.
+
+- `'literal'` — a reference-shaped value is warned about and never compiled to a `ConfigReference`.
+- `'overlay'` — a literal is warned about. Checked *ahead of* the `json` short-circuit, so a single-key object in a `json` or `opaque` slot is read as a reference rather than as data. `opaque` properties are always `'overlay'`; a live object has no form a config file can hold.
+
+`mustHaveValue` — when the key is present and nothing survives resolution, `lookupConnection` throws rather than dropping the property. Runs before `applyPropertyDefaults`, so a declared default does not satisfy it. An absent key is unaffected.
+
+Carried by properties whose absence selects a permissive fallback: DuckDB's `securityPolicy` (absent → `none`), BigQuery's `authClient` (absent → ambient credentials).
+
+A value that fails its type check compiles to `{kind: 'invalid'}` instead of being dropped, which is how `mustHaveValue` tells an unusable value from an absent key.
+
+Editors should hide any property with `source: 'overlay'` — no form control can produce a legal value for one.
 
 See `packages/malloy/src/api/foundation/config_overlays.ts` for the `ConfigOverlays` type and the built-in `env` + `config` overlays.
 
@@ -127,6 +144,7 @@ Each `ConnectionPropertyDefinition` has a `type` field that determines UI render
 | `file` | File picker with optional `fileFilters` |
 | `json` | JSON object (structured config like SSL options, headers) |
 | `text` | Multi-line text input |
+| `opaque` | None — a live value with no shape, reachable only through an overlay |
 
 ## Cross-Repo: User-Facing Docs
 
@@ -147,7 +165,11 @@ so the docs site stays in sync. Add to the PR checklist:
 When `shareable: true` (and `databasePath` is a local file), the DuckDB connection binds its primary database to `:memory:` and brackets file access with `ATTACH 'path' AS malloy_db; USE malloy_db.main;` in `setupOnce()` and `DETACH malloy_db` in `idle()`. This releases the OS file lock between operations so other tools (`malloy-cli`, the `duckdb` CLI, another malloy host) can open the same file. The `:memory:` primary stays alive across `idle()`, so the `BaseConnection.schemaCache` and any `CREATE TEMPORARY TABLE` state survive a cycle. Shareable connections do not participate in `DuckDBConnection.activeDBs` sharing — each owns its own in-memory instance. `readOnly: true` is honored via `(READ_ONLY)` on the ATTACH so it scopes the real file, not the writable in-memory primary.
 
 **BigQuery** (`displayName: "BigQuery"`):
-`projectId` (string), `serviceAccountKeyPath` (file), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `setupSQL` (text, advanced)
+`projectId` (string), `serviceAccountKeyPath` (file), `serviceAccountKey` (json), `serviceAccountKeyJson` (secret), `authClient` (opaque, `source: 'overlay'`, `mustHaveValue`), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `setupSQL` (text, advanced)
+
+A service account key can arrive three ways, in this order of precedence: `serviceAccountKey` (the parsed object), `serviceAccountKeyJson` (the key file as a string), then the unregistered `client_email`/`private_key` pair the constructor still honors for programmatic use. `serviceAccountKeyJson` exists because `serviceAccountKey` is `json`-typed and so can never hold a reference — a deployment whose key lives in an environment variable has no way to reach it, and the literal `{env: "..."}` object that does reach the SDK fails as "the incoming JSON object does not contain a client_email field". The string slot takes either raw JSON or base64, detected by whether the trimmed value starts with `{`, and rejects anything that is not a service account key or an `external_account` config rather than passing it to the SDK.
+
+`authClient` is a different credential path, not a fourth way to supply a key: a google-auth `AuthClient` the host mints and supplies through an overlay — impersonation, workload identity federation, a proxied credential — forwarded into `new BigQuerySDK({...})`. Setting it alongside any of the three key routes is an error (`rejectCompetingCredentials`), because `GoogleAuth` caches the auth client and never consults `credentials` or `keyFilename` again: the key would be live-looking dead config and the queries would run as an identity nobody chose. The SDK also resolves the project id through the auth client rather than through ambient credentials, so a connection setting it should also set `billingProjectId`.
 
 **PostgreSQL** (`displayName: "PostgreSQL"`):
 `host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string, advanced), `setupSQL` (text, advanced), `ssl` (json, advanced)
@@ -171,6 +193,29 @@ The json-typed properties pass through to `trino-client`'s `ConnectionOptions` v
 
 All backends support `setupSQL` (text) — SQL statements run when the connection is first established.
 
+## Query metadata
+
+`RunSQLOptions.queryMetadata` is an optional per-query bag of string properties
+(`Record<string, string>`) for the backend's own bookkeeping — cost
+attribution, workload classification, tracing. It is supplied per call and
+never affects query results or data identity: it is **excluded from
+`getDigest()`**, so changing it never re-keys a connection or a BuildID.
+
+Each connector applies it through a mechanism that attaches per query: Snowflake
+uses a per-statement `QUERY_TAG`, BigQuery per-job labels; every other backend
+prepends it as a leading SQL comment. The machinery is `protected` on
+`BaseConnection` — `queryMetadataBag()` for a native key-value mechanism,
+`sqlWithQueryMetadata()` / `queryMetadataComment()` for the comment form — so a
+connector inherits it and none of it is public API. Each validates the bag and
+throws: names are `[A-Za-z0-9_]`, values are printable ASCII excluding `"`,
+capped at a small count — enough to keep the comment form safe and to map onto
+every backend. BigQuery additionally rewrites the bag into its own label grammar
+— lowercasing, substituting disallowed characters, and dropping a key it cannot
+make valid (one not starting with a letter). The publisher connector applies
+nothing itself: it forwards the whole `RunSQLOptions` to the remote publisher,
+whose own connector applies the bag there. There is no connection-level default;
+metadata is per call only.
+
 ## Key Types
 
 ```typescript
@@ -179,8 +224,16 @@ type JsonConfigValue = string | number | boolean | null | JsonConfigValue[] | {[
 interface ConnectionPropertyDefinition {
   name: string;
   displayName: string;
-  type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text';
+  type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text' | 'opaque';
   optional?: true;
+  // Where the value may come from. Unset means either. 'literal' refuses an
+  // overlay reference; 'overlay' refuses a literal, which is what makes a
+  // reference unambiguous in a slot that would otherwise hold a dictionary.
+  source?: 'literal' | 'overlay';
+  // Writing this property promises it will produce a value. Omitting it is
+  // fine; setting it and having nothing survive resolution throws. For
+  // properties whose absence triggers an unsafe fallback.
+  mustHaveValue?: true;
   // Advisory hint to editors: this property is not part of typical
   // configuration and may be hidden, folded under an "advanced" toggle, or
   // ignored entirely. Has no effect on the registry or factory.
@@ -355,3 +408,5 @@ DuckDB has a unique pattern: a static `activeDBs` map groups connections by data
 Every connection implements `getDigest(): string` returning a SHA-256 hash of its "data identity." Used to compute **BuildIDs**: `BuildID = hash(connectionDigest, sql)`. The digest includes only things that could cause the same SQL to produce different results (server identity, database/schema, username, setupSQL) and excludes operational settings (billing, timeouts, credentials).
 
 `makeDigest()` in `packages/malloy/src/model/utils.ts` length-prefixes each part to prevent collisions and represents `undefined` distinctly from empty string.
+
+**Identity counts.** Snowflake hashes `username` and `role`, Trino hashes `user`: two connections that reach the same tables as different principals can see different rows, so they must not share a BuildID. A connection whose identity arrives as an `opaque` value has nothing stable to hash — a live auth client is a different object every process — so it hashes the overlay reference from `rawConfigData` instead. BigQuery does this with `authClient` (`authIdentityOf`), which makes the digest exactly as distinguishing as the reference path: an overlay addressed the same way for every tenant leaves them indistinguishable here too.

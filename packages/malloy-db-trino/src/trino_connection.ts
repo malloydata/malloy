@@ -62,7 +62,10 @@ export type TrinoConnectionOptions = ConnectionConfig;
 export interface BaseRunner {
   runSQL(
     sql: string,
-    options: RunSQLOptions
+    options: RunSQLOptions,
+    // Rendered by the connection; the runner places it itself, because a runner
+    // may wrap the statement it is given.
+    queryMetadataComment?: string
   ): Promise<{
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
@@ -91,11 +94,17 @@ class PrestoRunner implements BaseRunner {
     }
     this.client = new PrestoClient(prestoClientConfig);
   }
-  async runSQL(sql: string, options: RunSQLOptions = {}) {
+  async runSQL(
+    sql: string,
+    options: RunSQLOptions = {},
+    queryMetadataComment = ''
+  ) {
     let ret: PrestoQuery | undefined = undefined;
-    const q = options.rowLimit
-      ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
-      : sql;
+    const q =
+      queryMetadataComment +
+      (options.rowLimit
+        ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
+        : sql);
     let error: string | undefined = undefined;
     try {
       ret = (await this.client.query(q)) || [];
@@ -140,8 +149,12 @@ class TrinoRunner implements BaseRunner {
       auth: new BasicAuth(config.user!, config.password || ''),
     });
   }
-  async runSQL(sql: string, options: RunSQLOptions = {}) {
-    const result = await this.client.query(sql);
+  async runSQL(
+    sql: string,
+    options: RunSQLOptions = {},
+    queryMetadataComment = ''
+  ) {
+    const result = await this.client.query(queryMetadataComment + sql);
     let queryResult = await result.next();
     if (queryResult.value.error) {
       return {
@@ -276,7 +289,11 @@ export abstract class TrinoPrestoConnection
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
     await this.ensureSetup();
-    const r = await this.client.runSQL(sqlCommand, options);
+    const r = await this.client.runSQL(
+      sqlCommand,
+      options,
+      this.queryMetadataComment(options.queryMetadata)
+    );
 
     if (r.error) {
       throw new Error(r.error);

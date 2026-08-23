@@ -241,6 +241,8 @@ Explicit `buildManifest` always wins over the auto-read.
 
 `MalloyConfig` is the standard entry point for both the CLI (`malloydata/malloy-cli`) and the VS Code extension.
 
+Persistence as a whole — the `#@ persist` annotation, the manifest format, running queries against built tables, and the builder contract behind `Runtime.getBuildTargets()` / `PersistSource` — is documented in [doc/persist/api.md](../doc/persist/api.md), with the implementation in [doc/persist/internal.md](../doc/persist/internal.md).
+
 ### Restricted-mode compilation
 
 `ModelMaterializer.loadRestrictedQuery(text: string): QueryMaterializer` compiles `text` against the materialized trusted model with the translator's `restrictedMode` flag set. Forbidden constructs in `text` (`import`, `given:`, `##!`, `connection.table`, `connection.sql`, `name!type`, and the `sql_*` raw-SQL function family) are rejected at translate time and surface as `MalloyError` problems tagged `errorTag: 'restricted-mode'`.

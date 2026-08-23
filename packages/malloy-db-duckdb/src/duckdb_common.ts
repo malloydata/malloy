@@ -111,7 +111,10 @@ export abstract class DuckDBCommon
       statements.shift();
     }
 
-    const retVal = await this.runRawSQL(statements[0]);
+    // DuckDB has no native tagging mechanism; fall back to a leading comment.
+    const retVal = await this.runRawSQL(
+      this.sqlWithQueryMetadata(statements[0], options.queryMetadata)
+    );
     let result = retVal.rows;
     if (result.length > rowLimit) {
       result = result.slice(0, rowLimit);

@@ -12,6 +12,8 @@ import type {
   TableSourceDef,
 } from '../model/malloy_types';
 import {sqlKey} from '../model/sql_block';
+import type {QueryMetadata} from '../query_metadata';
+import {validateQueryMetadata} from '../query_metadata';
 import type {RunSQLOptions} from '../run_sql_options';
 import {validateCanonicalTablePath} from './validate_table_path';
 import type {
@@ -155,6 +157,56 @@ export abstract class BaseConnection implements Connection {
       return {error: inCache.error};
     }
     return {error: 'Unknown schema fetch error'};
+  }
+
+  /*
+   * Applying `RunSQLOptions.queryMetadata`. A connector uses whichever of these
+   * fits its backend: a native key-value mechanism takes the bag, everything
+   * else prepends the comment. They validate, so a bag that violates the
+   * contract throws rather than reaching the database in some mangled form.
+   */
+
+  /**
+   * The validated bag, or undefined when there is nothing to apply. For
+   * connectors with a native key-value mechanism, e.g. BigQuery job labels.
+   */
+  protected queryMetadataBag(
+    meta: QueryMetadata | undefined
+  ): QueryMetadata | undefined {
+    if (meta === undefined) return undefined;
+    validateQueryMetadata(meta);
+    return Object.keys(meta).length > 0 ? meta : undefined;
+  }
+
+  /**
+   * The metadata as a single SQL comment line, empty when there is nothing to
+   * apply. For a connector which has to place the comment itself rather than
+   * simply prepending it — see {@link sqlWithQueryMetadata}.
+   *
+   * ```
+   * -- NAME1="val1" NAME2="val2"
+   * ```
+   */
+  protected queryMetadataComment(meta: QueryMetadata | undefined): string {
+    const bag = this.queryMetadataBag(meta);
+    if (bag === undefined) return '';
+    const rendered = Object.keys(bag)
+      .map(key => `${key}="${bag[key]}"`)
+      .join(' ');
+    return `-- ${rendered}\n`;
+  }
+
+  /**
+   * `sql` with the metadata prepended as a leading comment, or `sql` unchanged
+   * when there is nothing to apply. For connectors with no native per-query
+   * mechanism. The contract guarantees the rendered comment is safe: no
+   * embedded quote, no newline.
+   */
+  protected sqlWithQueryMetadata(
+    sql: string,
+    meta: QueryMetadata | undefined
+  ): string {
+    return this.queryMetadataComment(meta) + sql;
   }
 
   isPool(): this is PooledConnection {

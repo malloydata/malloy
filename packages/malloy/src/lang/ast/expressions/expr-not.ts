@@ -16,7 +16,7 @@ export class ExprNot extends Unary {
     super(expr);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const notThis = this.expr.getExpression(fs);
     if (fs.dialectObj()?.booleanType !== 'supported') {
       if (this.legalChildTypes.find(t => t.type === 'number') === undefined) {

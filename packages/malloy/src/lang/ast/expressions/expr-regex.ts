@@ -13,7 +13,7 @@ export class ExprRegEx extends ExpressionDef {
     super();
   }
 
-  getExpression(): ExprValue {
+  protected computeExpression(): ExprValue {
     return literalExprValue({
       dataType: {type: 'regular expression'},
       value: {node: 'regexpLiteral', literal: this.regex},

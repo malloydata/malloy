@@ -20,7 +20,7 @@ export class ExprCoalesce extends ExpressionDef {
     super({expr, altExpr});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const maybeNull = this.expr.getExpression(fs);
     const whenNull = this.altExpr.getExpression(fs);
     if (maybeNull.type === 'null') {

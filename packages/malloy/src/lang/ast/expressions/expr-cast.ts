@@ -22,7 +22,7 @@ export class ExprCast extends ExpressionDef {
 
   // TODO: Validate senseless casts (e.g. scalar to record) at translate time
   // for better error messages than what the dialect/database produces.
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
     let dataType: AtomicTypeDef = {type: 'error'};
     if ('type' in this.castType) {

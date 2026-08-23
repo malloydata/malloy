@@ -126,9 +126,11 @@ export class MySQLConnection
     await this.runRawSQL('SELECT 1');
   }
 
-  runSQL(sql: string, _options?: RunSQLOptions): Promise<MalloyQueryData> {
-    // TODO: what are options here?
-    return this.runRawSQL(sql);
+  runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData> {
+    // MySQL has no native tagging mechanism; fall back to a leading comment.
+    return this.runRawSQL(
+      this.sqlWithQueryMetadata(sql, options?.queryMetadata)
+    );
   }
 
   isPool(): this is PooledConnection {
@@ -152,8 +154,7 @@ export class MySQLConnection
   }
 
   canStream(): this is StreamingConnection {
-    // TODO: implement;
-    throw new Error('Method not implemented.2');
+    return false;
   }
 
   async close(): Promise<void> {

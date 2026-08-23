@@ -43,7 +43,7 @@ export class RecordLiteral extends ExpressionDef {
     this.has({pairs});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     return this.getRecord(fs, []);
   }
 

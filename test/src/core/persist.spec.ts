@@ -5,7 +5,13 @@
 
 import {runtimeFor, testFileSpace, DuckDBROTestConnection} from '../runtimes';
 import {wrapTestModel} from '@malloydata/malloy/test';
-import type {BuildNode, BuildManifest, BuildPlan} from '@malloydata/malloy';
+import type {
+  BuildNode,
+  BuildManifest,
+  BuildPlan,
+  BuildTarget,
+  VirtualMap,
+} from '@malloydata/malloy';
 import {
   ConnectionRuntime,
   SingleConnectionRuntime,
@@ -494,11 +500,18 @@ describe('source persistence', () => {
         const nodeD = graph.nodes[0][0];
         expect(nodeD.sourceID).toMatch(/source_d/);
 
-        const allDeps = getAllSourceIDs(nodeD.dependsOn);
-        expect(allDeps).toHaveLength(3);
-        expect(hasDependency(nodeD.dependsOn, 'source_a')).toBe(true);
-        expect(hasDependency(nodeD.dependsOn, 'source_b')).toBe(true);
-        expect(hasDependency(nodeD.dependsOn, 'source_c')).toBe(true);
+        // Both readers of source_a record the edge to it. A source reached a
+        // second time returns what it returned the first time, so the second
+        // reader is not left claiming it depends on nothing.
+        const [depB, depC] = nodeD.dependsOn;
+        expect(nodeD.dependsOn).toHaveLength(2);
+        expect(depB.sourceID).toMatch(/source_b/);
+        expect(depC.sourceID).toMatch(/source_c/);
+        expect(depB.dependsOn[0].sourceID).toMatch(/source_a/);
+        expect(depC.dependsOn[0].sourceID).toMatch(/source_a/);
+        // ...and it is the same node object both times, not a copy.
+        expect(depB.dependsOn[0]).toBe(depC.dependsOn[0]);
+        expect(getAllSourceIDs(nodeD.dependsOn)).toHaveLength(4);
       });
 
       it('diamond dependency pattern with query_source chains', async () => {
@@ -530,11 +543,18 @@ describe('source persistence', () => {
         const nodeD = graph.nodes[0][0];
         expect(nodeD.sourceID).toMatch(/source_d/);
 
-        const allDeps = getAllSourceIDs(nodeD.dependsOn);
-        expect(allDeps).toHaveLength(3);
-        expect(hasDependency(nodeD.dependsOn, 'source_a')).toBe(true);
-        expect(hasDependency(nodeD.dependsOn, 'source_b')).toBe(true);
-        expect(hasDependency(nodeD.dependsOn, 'source_c')).toBe(true);
+        // Both readers of source_a record the edge to it. A source reached a
+        // second time returns what it returned the first time, so the second
+        // reader is not left claiming it depends on nothing.
+        const [depB, depC] = nodeD.dependsOn;
+        expect(nodeD.dependsOn).toHaveLength(2);
+        expect(depB.sourceID).toMatch(/source_b/);
+        expect(depC.sourceID).toMatch(/source_c/);
+        expect(depB.dependsOn[0].sourceID).toMatch(/source_a/);
+        expect(depC.dependsOn[0].sourceID).toMatch(/source_a/);
+        // ...and it is the same node object both times, not a copy.
+        expect(depB.dependsOn[0]).toBe(depC.dependsOn[0]);
+        expect(getAllSourceIDs(nodeD.dependsOn)).toHaveLength(4);
       });
     });
 
@@ -606,8 +626,20 @@ describe('source persistence', () => {
         const nodeC = plan.graphs[0].nodes[0][0];
         expect(nodeC.sourceID).toMatch(/source_c/);
 
+        // source_c reaches source_a two ways: through source_b, and directly,
+        // because source_c's SQL inlines source_b's, which inlines source_a's.
+        // Both edges are true, and the direct one is redundant for ordering —
+        // source_b already sits between them.
+        const directDeps = nodeC.dependsOn.map(d => d.sourceID);
+        expect(directDeps.filter(id => id.includes('source_b'))).toHaveLength(
+          1
+        );
+        expect(directDeps.filter(id => id.includes('source_a'))).toHaveLength(
+          1
+        );
+
         const allDeps = getAllSourceIDs(nodeC.dependsOn);
-        expect(allDeps).toHaveLength(2);
+        expect(allDeps).toHaveLength(3);
         expect(hasDependency(nodeC.dependsOn, 'source_a')).toBe(true);
         expect(hasDependency(nodeC.dependsOn, 'source_b')).toBe(true);
       });
@@ -1415,6 +1447,240 @@ describe('source persistence', () => {
       expect(source_a.sourceID).toContain('source_a');
       expect(source_a.dependsOn).toHaveLength(0);
     });
+
+    it('an inline extend at the query site still routes to the table', async () => {
+      // `run: persisted extend { ... } -> { ... }` is the ordinary way to use a
+      // persisted source, and the inline extend is not a named source. It finds
+      // its dependency through `extends` rather than through an id of its own,
+      // and it substitutes because substitution keys on `persistent` plus the
+      // SQL hash — an extend changes neither.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: complex_thing is flights -> {
+            group_by: carrier
+            aggregate: n is count()
+          }
+
+          run: complex_thing extend {
+            dimension: loud is upper(carrier)
+          } -> {
+            group_by: loud
+            aggregate: total is n.sum()
+          }
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+
+      // The query's dependency on the persisted source is found.
+      const {connections} = await tstRuntime.getBuildTargets(model);
+      expect(connections).toHaveLength(1);
+      expect(connections[0].targets).toHaveLength(1);
+      const target = connections[0].targets[0];
+      expect(target.sources.map(s => s.name)).toEqual(['complex_thing']);
+
+      // And a query through the inline extend reads the built table.
+      const manifest: BuildManifest = {
+        entries: {[target.buildId]: {tableName: 'cached.complex_thing'}},
+      };
+      const sql = await runtimeWithManifest(manifest)
+        .loadQueryByIndex(new URL('test://model1.malloy'), 0)
+        .getSQL();
+      expect(sql).toContain('cached.complex_thing');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('a named extend is the same table, and routes to it', async () => {
+      // The named counterpart of the test above. `moreComplex` inherits the
+      // whole annotation — `name=` included — and does not change the
+      // materialization SQL, so it is a second name for one table rather than
+      // a second table.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist name=complex_thing
+          source: complex_base is flights -> {
+            group_by: carrier
+            aggregate: n is count()
+          }
+
+          source: more_complex is complex_base extend {
+            dimension: loud is upper(carrier)
+          }
+
+          run: more_complex -> { group_by: loud; aggregate: total is n.sum() }
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const {connections} = await tstRuntime.getBuildTargets(model);
+
+      expect(connections[0].targets).toHaveLength(1);
+      const target = connections[0].targets[0];
+      expect(target.sources.map(s => s.name).sort()).toEqual([
+        'complex_base',
+        'more_complex',
+      ]);
+      // Both inherited the same requested name, so there is nothing to resolve.
+      const asked = target.sources.map(s =>
+        s.annotations.parseAsTag('@').tag.text('name')
+      );
+      expect(new Set(asked)).toEqual(new Set(['complex_thing']));
+
+      const manifest: BuildManifest = {
+        entries: {[target.buildId]: {tableName: 'cached.complex_thing'}},
+      };
+      const sql = await runtimeWithManifest(manifest)
+        .loadQueryByIndex(new URL('test://model1.malloy'), 0)
+        .getSQL();
+      expect(sql).toContain('cached.complex_thing');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('a diamond orders both readers after the source they share', async () => {
+      // Two readers of one source, both read by a fourth. Every reader has to
+      // record the shared dependency: one that records no edge can be started
+      // before the table it reads exists.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: shared is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: lo_side is shared extend { dimension: side is 'lo' } -> { select: * }
+
+          #@ persist
+          source: hi_side is shared extend { dimension: side is 'hi' } -> { select: * }
+
+          #@ persist
+          source: both is ${tstDB}.sql("""
+            SELECT * FROM %{ lo_side } UNION ALL SELECT * FROM %{ hi_side }
+          """)
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const {connections} = await tstRuntime.getBuildTargets(model);
+
+      expect(connections).toHaveLength(1);
+      const targets = connections[0].targets;
+      const nameOf = (t: BuildTarget) =>
+        t.sources
+          .map(s => s.name)
+          .sort()
+          .join('+');
+
+      // Dependencies before dependents, whichever order the walk found them.
+      const at = (n: string) => targets.findIndex(t => nameOf(t) === n);
+      expect(at('shared')).toBeLessThan(at('lo_side'));
+      expect(at('shared')).toBeLessThan(at('hi_side'));
+      expect(at('lo_side')).toBeLessThan(at('both'));
+      expect(at('hi_side')).toBeLessThan(at('both'));
+
+      // Both readers record the shared dependency — not just the first one.
+      const shared = targets[at('shared')];
+      expect(targets[at('lo_side')].dependsOn).toEqual([shared]);
+      expect(targets[at('hi_side')].dependsOn).toEqual([shared]);
+      expect(targets[at('both')].dependsOn.map(nameOf).sort()).toEqual([
+        'hi_side',
+        'lo_side',
+      ]);
+    });
+
+    it('reaches dependencies through a non-persistent wrapper', async () => {
+      // The importing model has to be able to take the same route the walk
+      // took. `joined` is correctly not a table — it adds a join and nothing
+      // else, so it materializes identically to source_a — but it is the only
+      // way to reach either dependency. Copy only the persistent sources and
+      // the route is severed: the plan comes back holding `report` alone, and
+      // two sources the user marked `#@ persist` are never built.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is flights -> {
+            group_by: carrier
+            aggregate: dep_count is count()
+          }
+
+          #@ -persist
+          source: joined is source_a extend {
+            join_one: source_b on carrier = source_b.carrier
+          }
+
+          #@ persist
+          source: report is joined -> {
+            group_by: carrier
+            group_by: n is flight_count
+            group_by: d is source_b.dep_count
+          }
+        `
+      );
+      testFileSpace.setFile(
+        new URL('test://model2.malloy'),
+        `${PERSIST_ANNOTATION}
+          import "test://model1.malloy"
+          run: report -> { select: * }
+        `
+      );
+
+      const direct = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const imported = await tstRuntime
+        .loadModel(new URL('test://model2.malloy'))
+        .getModel();
+
+      const namesIn = (plan: BuildPlan) =>
+        Object.keys(plan.sources)
+          .map(id => id.split('@')[0])
+          .sort();
+
+      // Importing the report must not change what has to be built.
+      expect(namesIn(imported.getBuildPlan())).toEqual([
+        'report',
+        'source_a',
+        'source_b',
+      ]);
+      expect(namesIn(imported.getBuildPlan())).toEqual(
+        namesIn(direct.getBuildPlan())
+      );
+
+      // The wrapper is a route, not a table, so it is not in the plan at all —
+      // `report` depends on the two tables it reaches through it.
+      const node = imported.getBuildPlan().graphs[0].nodes[0][0];
+      expect(node.sourceID).toContain('report');
+      expect(node.dependsOn.map(d => d.sourceID.split('@')[0]).sort()).toEqual([
+        'source_a',
+        'source_b',
+      ]);
+    });
   });
 
   describe('cross-model manifest substitution', () => {
@@ -2040,6 +2306,31 @@ describe('source persistence', () => {
       ).rejects.toThrow('not found in manifest');
     });
 
+    it('the throw names the source when it still has an identity', async () => {
+      const manifest = createManifest();
+      manifest.strict = true;
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(strictModelCode).getSQL()
+      ).rejects.toThrow(/Persisted source 'by_carrier@/);
+    });
+
+    it('and does not guess a name when the reference has none', async () => {
+      // An inline extend has had its sourceID deleted; `as` and `extends`
+      // survive but name the base, so neither stands in for it.
+      const manifest = createManifest();
+      manifest.strict = true;
+      const inlineExtend = `${CARRIER_STATS_PERSIST_MODEL}
+        run: carrier_stats extend { dimension: loud is upper(carrier) } -> {
+          group_by: loud
+        }
+      `;
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(inlineExtend).getSQL()
+      ).rejects.toThrow(/Persisted source not found in manifest/);
+    });
+
     it('strict manifest with loadError surfaces the load error in the throw', async () => {
       // Simulates the runtime auto-read path producing an empty manifest
       // because the file was unparseable. The strict throw should mention
@@ -2177,6 +2468,338 @@ describe('source persistence', () => {
         .loadQuery(modelCode)
         .getSQL();
       expect(sql).toContain('cached.by_carrier');
+    });
+  });
+
+  // Reported on #3015. Both describes assert the behavior the documentation
+  // describes, so a failure here is the report reproducing.
+  describe('sql_select substitution', () => {
+    // One model, two persisted sources of the two persistable kinds, plus a
+    // third that reaches the sql_select through interpolation.
+    const TWO_KINDS = `${PERSIST_ANNOTATION}
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: qs is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      #@ persist
+      source: ss is ${tstDB}.sql("""
+        SELECT carrier, COUNT(*) as flight_count
+        FROM malloytest.flights
+        GROUP BY carrier
+      """)
+
+      #@ persist
+      source: via_interp is ${tstDB}.sql("""
+        SELECT * FROM %{ ss }
+      """)
+    `;
+
+    // A manifest holding a built table for each named persist source, or for
+    // every one of them when no names are given.
+    async function manifestFor(names?: string[]): Promise<BuildManifest> {
+      const model = await wrapTestModel(tstRuntime, TWO_KINDS).model.getModel();
+      const digest = await getDigest();
+      const manifest = createManifest();
+      for (const source of Object.values(model.getBuildPlan().sources)) {
+        if (names && !names.includes(source.name)) continue;
+        addManifestEntry(
+          manifest,
+          source.makeBuildId(digest, source.getSQL()),
+          `cached.${source.name}_table`
+        );
+      }
+      return manifest;
+    }
+
+    async function sqlForQuery(
+      query: string,
+      built?: string[]
+    ): Promise<string> {
+      const manifest = await manifestFor(built);
+      return runtimeWithManifest(manifest)
+        .loadQuery(`${TWO_KINDS}\n${query}`)
+        .getSQL();
+    }
+
+    it('query_source reads its built table', async () => {
+      const sql = await sqlForQuery('run: qs -> { select: * }');
+      expect(sql).toContain('cached.qs_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('sql_select reads its built table', async () => {
+      const sql = await sqlForQuery('run: ss -> { select: * }');
+      expect(sql).toContain('cached.ss_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('sql_select reached by interpolation reads its built table', async () => {
+      // The manifest key and the entry are right — this path finds them.
+      // Only `ss` is built, so via_interp has to reach it rather than being
+      // substituted itself.
+      const sql = await sqlForQuery('run: via_interp -> { select: * }', ['ss']);
+      expect(sql).toContain('cached.ss_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('strict mode catches a missing sql_select entry', async () => {
+      // Strict mode's promise is that a persist source with no manifest entry
+      // throws rather than silently compiling to inline SQL.
+      const strict = createManifest();
+      strict.strict = true;
+      await expect(
+        runtimeWithManifest(strict)
+          .loadQuery(`${TWO_KINDS}\nrun: ss -> { select: * }`)
+          .getSQL()
+      ).rejects.toThrow(/not found in manifest/);
+    });
+
+    it('reads the built table, not the SQL that built it', async () => {
+      // Substitution is only real if the rows come from the table. Build one
+      // whose contents disagree with the source's SQL: a query that reads the
+      // table says 'stale', one that recomputes says 'live'. Before #3016 the
+      // sql_select leg always said 'live' — it looked fresh because it was
+      // never reading what had been built.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+      try {
+        const modelCode = `${PERSIST_ANNOTATION}
+          #@ persist
+          source: ss is ${tstDB}.sql("""SELECT 'live' as tag""")
+
+          run: ss -> { select: * }
+        `;
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const model = await rwRuntime.loadModel(modelCode).getModel();
+        const source = Object.values(model.getBuildPlan().sources).find(
+          s => s.name === 'ss'
+        )!;
+        const buildId = source.makeBuildId(rwConn.getDigest(), source.getSQL());
+
+        await rwConn.runSQL(
+          "CREATE TABLE ss_freshness AS SELECT 'stale' as tag"
+        );
+        const manifest = createManifest();
+        addManifestEntry(manifest, buildId, 'ss_freshness');
+        rwRuntime.buildManifest = manifest;
+
+        const built = await rwRuntime.loadQuery(modelCode).run();
+        const recomputed = await rwRuntime
+          .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
+          .run();
+
+        expect(built.data.toObject()).toEqual([{tag: 'stale'}]);
+        expect(recomputed.data.toObject()).toEqual([{tag: 'live'}]);
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('a join of both kinds substitutes both', async () => {
+      const sql = await sqlForQuery(`
+        run: flights extend {
+          join_one: q is qs on carrier = q.carrier
+          join_one: s is ss on carrier = s.carrier
+        } -> {
+          group_by: carrier
+          aggregate: a is q.flight_count.sum(), b is s.flight_count.sum()
+        }
+      `);
+      expect(sql).toContain('cached.qs_table');
+      expect(sql).toContain('cached.ss_table');
+    });
+  });
+
+  describe('BuildID SQL carries what changes the SQL', () => {
+    // The BuildID must ignore the manifest and nothing else. A virtualMap
+    // decides what table a virtual source reads, so a BuildID computed without
+    // it cannot be compiled at all — which is what both sides used to do.
+    const VIRTUAL_MODEL = `${PERSIST_ANNOTATION}
+      ##! experimental.virtual_source
+      type: ff is { carrier :: string }
+      source: vf is ${tstDB}.virtual('vflights')::ff
+
+      #@ persist
+      source: by_carrier is vf -> { group_by: carrier }
+
+      run: by_carrier -> { select: * }
+    `;
+
+    const virtualMap: VirtualMap = new Map([
+      [tstDB, new Map([['vflights', 'malloytest.flights']])],
+    ]);
+
+    function virtualRuntime() {
+      const rt = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+      rt.virtualMap = virtualMap;
+      return rt;
+    }
+
+    it('a persisted source over a virtual source can be planned', async () => {
+      const rt = virtualRuntime();
+      const model = await rt.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      expect(connections[0].targets[0].sql).toContain('malloytest.flights');
+    });
+
+    it('a given with an inline default keeps both sides on one key', async () => {
+      // The other half of the rule: `resolvedGivens` also changes the SQL, but
+      // only the compiler can produce one, so neither side resolves givens.
+      // Resolve on one side only and this throws — the builder emits
+      // `'admin'='admin'` where the compiler folds the same expression.
+      const model = `${PERSIST_ANNOTATION}
+        ##! experimental.givens
+        given:
+          ROLE :: string is "admin"
+          inline IS_ADMIN :: boolean is $ROLE = 'admin'
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: gated is flights -> {
+          where: $IS_ADMIN
+          group_by: carrier
+        }
+
+        run: gated -> { select: * }
+      `;
+      const rt = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+      const {connections} = await rt.getBuildTargets(
+        await rt.loadModel(model).getModel()
+      );
+      const target = connections[0].targets[0];
+
+      const manifest = createManifest();
+      addManifestEntry(manifest, target.buildId, 'cached.gated');
+      manifest.strict = true;
+      rt.buildManifest = manifest;
+
+      const sql = await rt.loadQuery(model).getSQL();
+      expect(sql).toContain('cached.gated');
+    });
+
+    it('and the query finds the table the plan named', async () => {
+      // The whole point of the pair: the key the builder writes is the key the
+      // compiler recomputes. Build from getBuildTargets, then query.
+      const rt = virtualRuntime();
+      const model = await rt.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      const target = connections[0].targets[0];
+
+      const manifest = createManifest();
+      addManifestEntry(manifest, target.buildId, 'cached.virtual_by_carrier');
+      manifest.strict = true;
+      rt.buildManifest = manifest;
+
+      const sql = await rt.loadQuery(VIRTUAL_MODEL).getSQL();
+      expect(sql).toContain('cached.virtual_by_carrier');
+      expect(sql).not.toContain('malloytest.flights');
+    });
+  });
+
+  describe('per-call buildManifest on ModelMaterializer.loadQuery', () => {
+    const MODEL = `${PERSIST_ANNOTATION}
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: by_carrier is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+    `;
+    const QUERY = 'run: by_carrier -> { select: * }';
+
+    async function manifestForByCarrier(): Promise<BuildManifest> {
+      const model = await wrapTestModel(tstRuntime, MODEL).model.getModel();
+      const {manifest} = await buildManifestFor(
+        model.getBuildPlan(),
+        'by_carrier',
+        'cached.by_carrier'
+      );
+      return manifest;
+    }
+
+    function plainRuntime() {
+      return new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+    }
+
+    it('applies a manifest passed to the call', async () => {
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadModel(MODEL)
+        .loadQuery(QUERY, {buildManifest: manifest})
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('applies a manifest passed to loadModel', async () => {
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadModel(MODEL, {buildManifest: manifest})
+        .loadQuery(QUERY)
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('EMPTY_BUILD_MANIFEST suppresses the runtime manifest', async () => {
+      // The dangerous direction: asking for unsubstituted SQL and being
+      // handed the substituted form.
+      const manifest = await manifestForByCarrier();
+      const sql = await runtimeWithManifest(manifest)
+        .loadModel(MODEL)
+        .loadQuery(QUERY, {buildManifest: EMPTY_BUILD_MANIFEST})
+        .getSQL();
+      expect(sql).not.toContain('cached.by_carrier');
+      expect(sql).toContain('COUNT(');
+    });
+
+    it('loadQueryByName applies a manifest passed to the call', async () => {
+      // The sibling loaders merge their options; this is the control.
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadModel(`${MODEL}\nquery: named is by_carrier -> { select: * }`)
+        .loadQueryByName('named', {buildManifest: manifest})
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('Runtime.loadQuery applies a manifest passed to the call', async () => {
+      // The other control: the same options on the Runtime entry point.
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadQuery(`${MODEL}\n${QUERY}`, {buildManifest: manifest})
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('applies defaultRowLimit passed to the call', async () => {
+      // buildManifest is not special: nothing in CompileQueryOptions
+      // survives this call.
+      const sql = await plainRuntime()
+        .loadModel(MODEL)
+        .loadQuery('run: flights -> { select: carrier }', {
+          defaultRowLimit: 7,
+        })
+        .getSQL();
+      expect(sql).toContain('LIMIT 7');
     });
   });
 });

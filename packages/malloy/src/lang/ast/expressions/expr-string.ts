@@ -18,7 +18,7 @@ export class ExprString extends ExpressionDef {
     this.value = src;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  protected computeExpression(_fs: FieldSpace): ExprValue {
     return literalExprValue({
       dataType: {type: 'string'},
       value: {node: 'stringLiteral', literal: this.value},

@@ -28,7 +28,7 @@ export class ExprTime extends ExpressionDef {
     });
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  protected computeExpression(_fs: FieldSpace): ExprValue {
     return this.translationValue;
   }
 

@@ -27,7 +27,13 @@ import {rowDataToNumber} from '../../api/row_data_utils';
 import type {CacheManager} from './cache';
 import type {MalloyConfig} from './config';
 import {EmptyURLReader, FixedConnectionMap} from './readers';
-import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
+import type {
+  ParseOptions,
+  CompileOptions,
+  CompileQueryOptions,
+  BuildTargets,
+} from './types';
+import {mkBuildTargets, resolvePersistWalk} from './build_targets';
 import type {PreparedResult, Explore} from './core';
 import {Model, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
@@ -653,6 +659,45 @@ export class Runtime {
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name, options).getPreparedQuery();
   }
+
+  /**
+   * What a builder has to build for this model, and in what order.
+   *
+   * This is the builder entry point. A model can only enumerate persistable
+   * *sources*, which is not the same set as the tables they produce — several
+   * sources routinely map onto one table, and only a connection digest can
+   * tell you which. That is why this lives on Runtime: it holds the
+   * connections, so it can finish the answer a model can only start.
+   *
+   * Connections are independent of one another; within one, targets come back
+   * in dependency order and each carries its own `dependsOn`. See
+   * {@link BuildTargets}.
+   *
+   * @param model A compiled model with `##! experimental.persistence`
+   * @return The targets to build, with any annotation parse messages
+   */
+  public async getBuildTargets(model: Model): Promise<BuildTargets> {
+    const tagParseLog: LogMessage[] = [];
+    const walk = resolvePersistWalk(model, tagParseLog);
+
+    const connectionDigests: Record<string, string> = mkSafeRecord();
+    for (const {source} of walk) {
+      if (source === undefined) continue;
+      const connectionName = source.connectionName;
+      if (!(connectionName in connectionDigests)) {
+        const connection =
+          await this.connections.lookupConnection(connectionName);
+        connectionDigests[connectionName] = connection.getDigest();
+      }
+    }
+
+    return {
+      connections: mkBuildTargets(walk, connectionDigests, {
+        virtualMap: this.virtualMap,
+      }),
+      tagParseLog,
+    };
+  }
 }
 
 // =============================================================================
@@ -813,32 +858,45 @@ export class ModelMaterializer extends FluentState<Model> {
     query: QueryString | QueryURL,
     options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
-    const {refreshSchemaCache, noThrowOnError} = options || {};
+    // `options` spans three interfaces. The parse/compile half is spent here,
+    // compiling the query text; the `CompileQueryOptions` half belongs to the
+    // materializer, which applies it when the query is turned into SQL — so it
+    // has to reach `makeQueryMaterializer` as well, or a `buildManifest` (or
+    // `givens`, or `defaultRowLimit`) passed here is silently ignored.
+    //
+    // Split by naming the parse/compile keys rather than the query ones, so a
+    // query option added later is carried rather than quietly dropped.
+    // `restrictedMode` and `method` are named to hold them back: this entry
+    // point has never honored them, and `loadRestrictedQuery` is how a caller
+    // asks for restricted compilation.
+    const {
+      importBaseURL,
+      testEnvironment,
+      refreshSchemaCache,
+      noThrowOnError,
+      restrictedMode: _restrictedMode,
+      method: _method,
+      ...callQueryOptions
+    } = options ?? {};
+    const compileQueryOptions = {
+      ...this.compileQueryOptions,
+      ...callQueryOptions,
+    };
     return this.makeQueryMaterializer(async () => {
-      const urlReader = this.runtime.urlReader;
-      const connections = this.runtime.connections;
-      if (this.runtime.isTestRuntime) {
-        if (options === undefined) {
-          options = {testEnvironment: true};
-        } else {
-          options = {...options, testEnvironment: true};
-        }
-      }
       const compilable = query instanceof URL ? {url: query} : {source: query};
-      const model = await this.getModel();
       const queryModel = await Malloy.compile({
         ...compilable,
-        urlReader,
-        connections,
-        model,
+        urlReader: this.runtime.urlReader,
+        connections: this.runtime.connections,
+        model: await this.getModel(),
         refreshSchemaCache,
         noThrowOnError,
-        importBaseURL: options?.importBaseURL,
-        testEnvironment: options?.testEnvironment,
-        ...this.compileQueryOptions,
+        importBaseURL,
+        testEnvironment: testEnvironment || this.runtime.isTestRuntime,
+        ...compileQueryOptions,
       });
       return queryModel.preparedQuery;
-    });
+    }, compileQueryOptions);
   }
 
   /**
@@ -1541,9 +1599,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
     });
   }
 
-  async *runStream(options?: {
-    rowLimit?: number;
-  }): AsyncIterableIterator<DataRecord> {
+  async *runStream(options?: RunSQLOptions): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
     const stream = Malloy.runStream({

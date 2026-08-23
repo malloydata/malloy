@@ -158,7 +158,7 @@ export abstract class TimeLiteral extends ExpressionDef {
     });
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     return this.makeValue(fs, this.literalPart, this.timeType);
   }
 
@@ -326,7 +326,7 @@ abstract class DateBasedLiteral extends GranularLiteral {
     super(tm, units, 'date', nextLit);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const dateValue = this.makeValue(fs, this.literalPart, 'date');
     const timestamp = this.makeLiteral(
       fs,

@@ -50,7 +50,6 @@ import {
   isBaseTable,
   expressionIsAnalytic,
   isTemporalType,
-  safeRecordGet,
 } from './malloy_types';
 import {
   AndChain,
@@ -80,8 +79,8 @@ import {
   sqlFullChildReference,
 } from './field_instance';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {getCompiledSQL} from './sql_compiled';
-import {mkBuildID} from './source_def_utils';
+import type {CompileQueryCallback} from './sql_compiled';
+import {getCompiledSQL, persistedTableFor} from './sql_compiled';
 import {MalloyCompileError} from './malloy_compile_error';
 import {nestStrategy} from './nest-capability';
 
@@ -827,64 +826,33 @@ export class QueryQuery extends QueryField {
         return '{COMPOSITE SOURCE}';
       case 'finalize':
         return qs.structDef.name;
-      case 'sql_select':
+      case 'sql_select': {
+        // A hit is a table name, which is what a FROM clause wants; the
+        // inline form is a SELECT and has to be parenthesized to sit there.
+        const tableName = persistedTableFor(
+          qs.structDef,
+          qs.prepareResultOptions ?? {},
+          this.isolatedQueryCompiler()
+        );
+        if (tableName !== undefined) {
+          return tableName;
+        }
         return `(${getCompiledSQL(
           qs.structDef,
           qs.prepareResultOptions ?? {},
-          (query, opts) => {
-            // Compile query to isolated SQL (not into parent's stageWriter)
-            const ret = this.compileQueryToStages(
-              query,
-              opts ?? {},
-              undefined,
-              false
-            );
-            return ret.sql!;
-          }
+          this.isolatedQueryCompiler()
         )})`;
+      }
       case 'nest_source':
         return qs.structDef.pipeSQL;
       case 'query_source': {
-        const {buildManifest, connectionDigests} =
-          qs.prepareResultOptions ?? {};
-
-        // Check manifest for this source (only if it was marked persistent at definition time)
-        if (buildManifest && connectionDigests && qs.structDef.persistent) {
-          const connDigest = safeRecordGet(
-            connectionDigests,
-            qs.structDef.connection
-          );
-          if (connDigest) {
-            // Compile with empty opts to get manifest-ignorant SQL for BuildID
-            const fullRet = this.compileQueryToStages(
-              qs.structDef.query,
-              {},
-              undefined,
-              false
-            );
-            const buildId = mkBuildID(connDigest, fullRet.sql!);
-            const entry = buildManifest.entries[buildId];
-
-            if (entry) {
-              // Found in manifest - use persisted table.
-              // entry.tableName comes from the manifest, assumed canonical.
-              return entry.tableName;
-            }
-
-            if (buildManifest.strict) {
-              const base =
-                `Persist source '${qs.structDef.sourceID}' not found ` +
-                `in manifest (buildId: ${buildId}); strict manifest mode ` +
-                'forbids fallback to live compilation.';
-              throw new MalloyCompileError(
-                buildManifest.loadError
-                  ? `${base}\n  ${buildManifest.loadError}`
-                  : base,
-                'runtime-manifest-strict-miss',
-                qs.structDef.location
-              );
-            }
-          }
+        const tableName = persistedTableFor(
+          qs.structDef,
+          qs.prepareResultOptions ?? {},
+          this.isolatedQueryCompiler()
+        );
+        if (tableName !== undefined) {
+          return tableName;
         }
 
         // Not in manifest - compile normally
@@ -901,6 +869,16 @@ export class QueryQuery extends QueryField {
           `Cannot create SQL StageWriter from '${activeName(qs.structDef)}' type '${qs.structDef.type}`
         );
     }
+  }
+
+  /**
+   * A compile callback which writes to its own StageWriter rather than the
+   * one this query is building, so the SQL comes back as a string. Both the
+   * manifest lookup and inline expansion need a source's SQL in that form.
+   */
+  protected isolatedQueryCompiler(): CompileQueryCallback {
+    return (query, opts) =>
+      this.compileQueryToStages(query, opts ?? {}, undefined, false).sql!;
   }
 
   /**
@@ -2757,20 +2735,15 @@ class QueryQueryRaw extends QueryQuery {
         'Invalid struct for QueryQueryRaw, currently only supports SQL'
       );
     }
+    // No manifest lookup for the source itself: a raw pipeline's source is
+    // always the `conn.sql(...)` written at the run site, which is unnamed and
+    // so never persistent. Its `%{ }` dependencies do substitute, through
+    // getCompiledSQL.
     return stageWriter.addStage(
       getCompiledSQL(
         this.parent.structDef,
         this.parent.prepareResultOptions ?? {},
-        (query, opts) => {
-          // Compile query to isolated SQL (not into parent's stageWriter)
-          const ret = this.compileQueryToStages(
-            query,
-            opts ?? {},
-            undefined,
-            false
-          );
-          return ret.sql!;
-        }
+        this.isolatedQueryCompiler()
       )
     );
   }

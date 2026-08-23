@@ -3,8 +3,24 @@
 Expression-shaped AST nodes all extend `ExpressionDef` (`../types/expression-def.ts`).
 The two integration points are:
 
-- **`getExpression(fs: FieldSpace): ExprValue`** — evaluate this node and return an IR value + type.
+- **`computeExpression(fs: FieldSpace): ExprValue`** — evaluate this node and return an IR value + type. This is what a node implements. Callers never invoke it directly; they call `getExpression`, which is sealed on `ExpressionDef` and memoizes.
 - **`apply(fs, op, left): ExprValue`** — called when this node appears as the *right* operand of a binary operator; allows the node to override how the comparison is assembled (see below).
+
+## ExprValue is shared — treat it as immutable
+
+`getExpression` remembers the last value it computed, keyed on the field space and
+that space's `generation()`. Asking a node twice returns **the same object**, and that
+object is also what gets stored into the IR. So a value you receive is not yours to
+modify: retyping or appending to one reaches every other holder, including field
+definitions already handed out.
+
+Derive instead — `{...operand, type: 'boolean'}`, or `computedExprValue({…, from: [operand]})`.
+Two call sites used to retype an operand in place; it was invisible while every
+evaluation allocated a fresh object, and became a miscompile once they didn't.
+
+The memo is why `+`/`-` chains compile in linear rather than exponential time:
+`delta()` evaluates both operands and then hands the *nodes* to `numeric()`, which
+evaluates them again, so without it each `+` doubled the work beneath it.
 
 ## The apply / partial dance
 
@@ -16,9 +32,9 @@ this.right.apply(fs, this.op, this.left)
 ```
 
 The **right** operand controls how the expression is assembled. The default
-`ExpressionDef.apply` just calls `applyBinary(fs, left, op, this)`, which evaluates both
-sides and returns a normal binary node — so ordinary values work transparently without
-knowing anything about `apply`.
+`ExpressionDef.apply` dispatches on the operator, evaluates both sides and returns a
+normal binary node — so ordinary values work transparently without knowing anything
+about `apply`.
 
 Nodes that behave as **partials** override `apply` and substitute their own structure for
 the operator/operands that come in. The critical invariant: **a partial node has no bound
@@ -73,10 +89,9 @@ produce the right tree for `x ? in [1, 2, 3]`.
 ### 2. No partial-in AST node
 
 `ExprLegacyIn` and `ExprInGiven` both bake the LHS into the constructor as `this.expr`.
-Neither overrides `apply`. When `apply` falls through to the base implementation it calls
-`applyBinary(fs, left, op, this)`, which calls `this.getExpression(fs)` — which uses
-`this.expr`, the original bound LHS, completely ignoring the `left` that arrived through
-`apply`.
+Neither overrides `apply`. The base implementation calls `this.getExpression(fs)` — which
+uses `this.expr`, the original bound LHS, completely ignoring the `left` that arrived
+through `apply`.
 
 To support partial `in` you would need a node class (`ExprPartialIn` /
 `ExprPartialInGiven`) that:

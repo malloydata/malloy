@@ -4,46 +4,22 @@
  */
 
 import {
-  TEST_DIALECT,
   TestTranslator,
-  aTableDef,
+  answerSQLSchemaRequests,
+  error,
   errorMessage,
   model,
 } from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
-import type {SQLSourceDef} from '../../model';
-import {sqlKey} from '../../model/sql_block';
-import type {SQLSourceRequest} from '../translate-response';
 
 describe('connection sql()', () => {
   const selStmt = 'SELECT * FROM aTable';
-  function makeSchemaResponse(sql: SQLSourceRequest): {
-    [key: string]: SQLSourceDef;
-  } {
-    const cname = sql.connection || 'bigquery';
-    const key = sqlKey(cname, sql.selectStr);
-    return {
-      [key]: {
-        type: 'sql_select',
-        name: key,
-        dialect: TEST_DIALECT,
-        connection: cname,
-        selectStr: selStmt,
-        fields: aTableDef.fields,
-      },
-    };
-  }
 
+  // These tests read the stored `selectStr` back, so the schema answers with
+  // the original statement rather than whatever interpolation produced.
   function translateWithSchemas(m: TestTranslator): void {
-    for (;;) {
-      const response = m.translate();
-      if (response.compileSQL) {
-        m.update({compileSQL: makeSchemaResponse(response.compileSQL)});
-      } else {
-        break;
-      }
-    }
+    answerSQLSchemaRequests(m, selStmt);
   }
 
   test('source from sql', () => {
@@ -146,9 +122,9 @@ describe('connection sql()', () => {
 
   describe('interpolations in sql blocks', () => {
     test('non-persistable source in interpolation fails', () => {
-      expect(
-        'source: wrapper is aConnection.sql("""SELECT * FROM %{ a }""")'
-      ).toLog(errorMessage('Cannot expand into a query'));
+      expect('source: wrapper is _db_.sql("""SELECT * FROM %{ a }""")').toLog(
+        errorMessage('Source is not persistable, cannot be used in SQL')
+      );
     });
     test('sql block as source in interpolation', () => {
       const m = model`
@@ -166,10 +142,23 @@ describe('connection sql()', () => {
       translateWithSchemas(m.translator);
       expect(m).toTranslate();
     });
+    test('partial query in interpolation is not silently accepted', () => {
+      // The interpolated query is written into the SQL phrase, so its
+      // pipeline has to be one the compiler can read.
+      const m = model`
+        run: _db_.sql("""SELECT * FROM %{ a -> { where: astr = 'x' } }""")
+          -> { select: * }
+      `;
+      translateWithSchemas(m.translator);
+      // `toLogAtLeast` because `SQLSource` builds its phrases twice, once to
+      // request the schema and once to record the select segments, so the
+      // interpolated query reports this twice.
+      expect(m).toLogAtLeast(error('ambiguous-view-type'));
+    });
     test('persistable query in interpolation', () => {
       const m = model`
         source: safe_query is  a -> { select: * }
-        run: aConnection.sql("""SELECT * FROM %{ safe_query }""") -> { select: * }
+        run: _db_.sql("""SELECT * FROM %{ safe_query }""") -> { select: * }
       `;
       translateWithSchemas(m.translator);
       expect(m).toTranslate();

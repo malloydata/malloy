@@ -56,10 +56,10 @@ describe('DuckDB config lookup validation', () => {
     });
 
     await expect(config.connections.lookupConnection('duckdb')).rejects.toThrow(
-      'Connection "duckdb" property "securityPolicy" must be a literal string'
+      'Connection "duckdb" sets "securityPolicy", but no value arrived'
     );
     expect(config.log.map(entry => entry.message)).toContain(
-      'connections.duckdb.securityPolicy: must be a literal string and cannot use an overlay reference'
+      'connections.duckdb.securityPolicy: must be written here directly and cannot name an overlay'
     );
   });
 
@@ -74,10 +74,10 @@ describe('DuckDB config lookup validation', () => {
     });
 
     await expect(config.connections.lookupConnection('duckdb')).rejects.toThrow(
-      'Connection "duckdb" property "securityPolicy" must be a literal string'
+      'Connection "duckdb" sets "securityPolicy", but no value arrived'
     );
     expect(config.log.map(entry => entry.message)).toContain(
-      'connections.duckdb.securityPolicy: must be a literal string, got number'
+      'connections.duckdb.securityPolicy: should be a string, got number (expected string)'
     );
   });
 });
