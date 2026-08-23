@@ -337,10 +337,16 @@ export class RenderFieldMetadata {
       const vizTag = normalizedTag.tag('viz');
       if (vizTag) {
         const childByName = new Map(field.fields.map(f => [f.name, f]));
-        // 'y2' is the combo chart's secondary measure axis; like 'y' it must
-        // reference a numeric field or measure.
+        // 'y2' is the combo chart's secondary measure axis. Only the combo
+        // chart has one, so it is validated only there — on a bar/line chart a
+        // stray 'y2' is an unknown tag (reported by the ownedPaths check), not
+        // a mis-typed channel.
+        const isCombo = normalizedTag.text('viz') === 'combo';
         const measureChannels = ['y', 'y2'];
-        for (const channelName of ['x', 'y', 'y2', 'series'] as const) {
+        const channelNames = (
+          isCombo ? ['x', 'y', 'y2', 'series'] : ['x', 'y', 'series']
+        ) as readonly ('x' | 'y' | 'y2' | 'series')[];
+        for (const channelName of channelNames) {
           const refArray = vizTag.textArray(channelName);
           const refs = refArray ?? [];
           const singleRef = vizTag.text(channelName);
@@ -439,11 +445,16 @@ export class RenderFieldMetadata {
           }
         }
 
+        // Combo-chart-only properties. `y/y2.chart` and the `y/y2.min|max`
+        // axis pins exist only on the combo chart, so these run only when the
+        // viz type is 'combo'. Firing them for any `viz` tag would tell a bar
+        // chart to "Fix: # combo_chart { ... }" for a tag bar charts don't have.
+        const isComboChart = convertLegacyToVizTag(tag).text('viz') === 'combo';
         // Combo chart per-axis mark type. Invalid values fall back to the
         // channel default in getComboChartSettings, so this warns (like an
         // unknown `size`) rather than erroring — but it must still be reported
         // so a typo isn't silently ignored.
-        for (const channel of ['y', 'y2'] as const) {
+        for (const channel of isComboChart ? (['y', 'y2'] as const) : []) {
           const chartVal = vizTag.text(channel, 'chart');
           if (chartVal !== undefined) {
             if (!(COMBO_MARK_TYPES as readonly string[]).includes(chartVal)) {

@@ -340,6 +340,70 @@ describe('setup-time tag resolvers (tag-configs)', () => {
     expect(settings.y2Channel.chart).toBe('line');
   });
 
+  // The combo chart's per-axis properties (`y/y2.chart`, `y/y2.min|max`) and
+  // its `y2` channel are validated inside the shared `viz` block, which every
+  // chart type passes through. These pin that the checks stay scoped to combo:
+  // a bar chart must not be told to "Fix: # combo_chart { ... }".
+  describe('combo-only validation stays scoped to combo', () => {
+    const CHART_NEST = `
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }`;
+
+    async function logsFor(vizTag: string) {
+      const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        ${vizTag}${CHART_NEST}
+      }
+    `);
+      return metadata.logCollector.getLogs();
+    }
+
+    test.each([
+      ['# bar_chart { y.min=100 y.max=0 }'],
+      ['# line_chart { y.min=100 y.max=0 }'],
+      ['# viz=bar { y.min=100 y.max=0 }'],
+    ])('%s does not raise a combo axis-bounds error', async vizTag => {
+      const logs = await logsFor(vizTag);
+      expect(logs.filter(l => /axis bounds/.test(l.message))).toHaveLength(0);
+    });
+
+    test.each([
+      ['# bar_chart { y.chart=bogus }'],
+      ['# line_chart { y.chart=bogus }'],
+      ['# viz=table { y.chart=bogus }'],
+    ])('%s does not raise a combo mark-type warning', async vizTag => {
+      const logs = await logsFor(vizTag);
+      expect(logs.filter(l => /y\.chart/.test(l.message))).toHaveLength(0);
+    });
+
+    test('a stray y2 on a bar chart is not reported as a mistyped y2 channel', async () => {
+      const logs = await logsFor('# bar_chart { y2=str }');
+      expect(logs.filter(l => /y2-channel/.test(l.message))).toHaveLength(0);
+    });
+
+    test('combo still reports its own axis-bounds error, naming combo_chart', async () => {
+      const logs = await logsFor('# viz=combo { y=a y2=b y.min=100 y.max=0 }');
+      const errs = logs.filter(l => /axis bounds/.test(l.message));
+      expect(errs).toHaveLength(1);
+      expect(errs[0].message).toContain('min (100) must be less than max (0)');
+      expect(errs[0].message).toContain('# combo_chart {');
+    });
+
+    test('combo still warns on an invalid mark type', async () => {
+      const logs = await logsFor('# viz=combo { y=a y2=b y.chart=bogus }');
+      const warns = logs.filter(l =>
+        /Unknown y\.chart 'bogus'/.test(l.message)
+      );
+      expect(warns).toHaveLength(1);
+      expect(warns[0].message).toContain('Valid types: bar, line');
+    });
+  });
+
   test('# currency resolves to a currency cell-format config', async () => {
     const metadata = await metadataFor(`
       query: q is ${SQL_SOURCE} -> {
