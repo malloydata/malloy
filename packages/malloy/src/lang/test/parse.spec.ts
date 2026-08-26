@@ -826,7 +826,7 @@ describe('extend and refine', () => {
         expect(`
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on 1 = 1 } -> { select: b.* }
-        `).toLog(errorMessage("No such field as 'b'"));
+        `).toLog(errorMessage("'b' is not defined"));
         expect(`
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 } -> { select: * }

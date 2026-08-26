@@ -35,6 +35,13 @@ function getFirstSegmentFields(q: Query | undefined): QueryFieldDef[] {
   return qSeg?.queryFields ?? [];
 }
 
+function getIndexFieldPaths(q: Query | undefined): string[] {
+  const seg = q?.pipeline[0];
+  return seg?.type === 'index'
+    ? seg.indexFields.map(f => f.path.join('.'))
+    : [];
+}
+
 function getFirstSegmentFieldNames(q: Query | undefined): string[] {
   const qf = getFirstSegmentFields(q);
   return qf.map(f =>
@@ -949,14 +956,14 @@ describe('query:', () => {
     });
     test('star error checking', () => {
       expect(markSource`run: a->{select: ${'zzz'}.*}`).toLog(
-        errorMessage("No such field as 'zzz'")
+        errorMessage("'zzz' is not defined")
       );
       expect(markSource`run: ab->{select: b.${'zzz'}.*}`).toLog(
-        errorMessage("No such field as 'zzz'")
+        errorMessage("'zzz' is not defined")
       );
       expect(markSource`run: a->{select: ${'ai'}.*}`).toLog(
         errorMessage(
-          "Field 'ai' does not contain rows and cannot be expanded with '*'"
+          "'ai' does not contain fields and cannot be expanded with '*'"
         )
       );
       expect(markSource`run: a->{select:ai,${'*'}}`).toLog(
@@ -981,6 +988,161 @@ describe('query:', () => {
           "Cannot expand 'ai' in '*' because a field with that name already exists (conflicts with b.ai)"
         )
       );
+    });
+    describe('star expansion and access modifiers', () => {
+      const visibleFields = (...hidden: string[]) =>
+        afields.filter(f => !hidden.includes(f));
+
+      test('star does not expand a private field', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai }
+          run: c -> { select: * }
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+        expect(fields).toEqual(visibleFields('ai'));
+      });
+      test('star does not expand an internal field', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; internal: ai }
+          run: c -> { select: * }
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+        expect(fields).toEqual(visibleFields('ai'));
+      });
+      test('a name in the statement declaring the modifiers still reaches a private field', () => {
+        expect(`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai } extend {
+            dimension: doubled is ai + ai
+          }
+          run: c -> { group_by: doubled }
+        `).toTranslate();
+      });
+      test('star in the scope declaring the modifiers sees everything', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai } extend {
+            view: everything is { select: * }
+          }
+          run: c -> everything
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+        expect(fields).toEqual(afields);
+      });
+      test('star in a later extension is public only', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            *
+            private: ai
+            internal: af
+          }
+          source: d is c extend {
+            view: v is { select: * }
+          }
+          run: d -> v
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+        expect(fields).toEqual(visibleFields('ai', 'af'));
+      });
+      test('join dot star does not expand the joined private field', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai }
+          source: d is a extend { join_one: c on true }
+          run: d -> { select: c.* }
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFields(m.translator.getQuery(0)).map(f =>
+          f.type === 'fieldref' ? f.path : `wrong field type ${f.type}`
+        );
+        expect(fields).toEqual(visibleFields('ai').map(f => ['c', f]));
+      });
+      test('a star cannot walk a join it is legal to name', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a
+          source: d is a extend { join_one: c on true } include { internal: c }
+          source: e is d extend {
+            dimension: byName is c.ai
+            view: v is { select: ${'c'}.* }
+          }
+        `).toLog(errorMessage("'c' is internal"));
+      });
+      test('star through an inaccessible join is an error', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a
+          source: d is a extend {
+            join_one: c on true
+          } include {
+            internal: c
+          }
+          run: d -> { select: ${'c'}.* }
+        `).toLog(errorMessage("'c' is internal"));
+      });
+      test('index star does not index a private field', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai }
+          run: c -> { index: * }
+          run: a -> { index: * }
+        `;
+        expect(m).toTranslate();
+        const withPrivate = getIndexFieldPaths(m.translator.getQuery(0));
+        const everything = getIndexFieldPaths(m.translator.getQuery(1));
+        expect(withPrivate).toEqual(everything.filter(f => f !== 'ai'));
+        expect(everything).toContain('ai');
+      });
+      test('index star through an inaccessible join is an error', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a
+          source: d is a extend {
+            join_one: c on true
+          } include {
+            internal: c
+          }
+          run: d -> { index: ${'c'}.* }
+        `).toLog(errorMessage("'c' is internal"));
+      });
+      test('a star which names nothing is an error', () => {
+        expect(
+          `run: a -> { select: * { except: ${afields.join(', ')} } }`
+        ).toLog(error('wildcard-matched-no-fields'));
+      });
+      test('a star which names nothing because nothing is public is an error', () => {
+        expect(`
+          ##! experimental.access_modifiers
+          source: c is a include { private: * }
+          run: c -> { select: * }
+        `).toLog(error('wildcard-matched-no-fields'));
+      });
+      test('an index star which names nothing is an error', () => {
+        expect(`
+          ##! experimental.access_modifiers
+          source: c is a include { private: * }
+          run: c -> { index: * }
+        `).toLog(error('wildcard-matched-no-fields'));
+      });
+      test('a star which matches nothing is an error even beside a named field', () => {
+        expect(
+          `run: a -> { select: ai, * { except: ${afields.join(', ')} } }`
+        ).toLog(error('wildcard-matched-no-fields'));
+      });
+    });
+    test('a star can expand a dimension which turned out to be a join', () => {
+      const m = model`
+        source: x is a extend { dimension: copy is ais }
+        run: x -> { select: copy.* }
+      `;
+      expect(m).toTranslate();
     });
     test('regress check extend: and star', () => {
       const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;

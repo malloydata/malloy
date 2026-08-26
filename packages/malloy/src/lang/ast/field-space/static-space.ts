@@ -11,6 +11,7 @@ import type {
   SourceDef,
   JoinFieldDef,
   AccessModifierLabel,
+  NonDefaultAccessModifierLabel,
 } from '../../../model/malloy_types';
 import {
   activeName,
@@ -21,7 +22,7 @@ import {
 } from '../../../model/malloy_types';
 
 import type {SpaceEntry} from '../types/space-entry';
-import type {LookupResult} from '../types/lookup-result';
+import type {JoinPath, LookupError, LookupResult} from '../types/lookup-result';
 import type {
   FieldName,
   FieldSpace,
@@ -153,92 +154,25 @@ export class StaticSpace implements FieldSpace {
 
   lookup(path: FieldName[], accessLevel?: AccessModifierLabel): LookupResult {
     accessLevel ??= this.accessProtectionLevel();
-    const head = path[0];
-    const rest = path.slice(1);
-    let found = this.entry(head.refString);
-    if (!found) {
-      return {
-        error: {
-          message: `'${head}' is not defined`,
-          code: 'field-not-found',
-        },
-        found,
-      };
+    const last = path[path.length - 1];
+    const ns = resolveNamespace(
+      this,
+      path.slice(0, -1),
+      accessLevel,
+      last.refString
+    );
+    if (ns.error) {
+      return ns;
     }
-    if (found instanceof SpaceField) {
-      const definition = found.fieldDef();
-      if (definition) {
-        if (!(found instanceof StructSpaceFieldBase) && isJoined(definition)) {
-          // We have looked up a field which is a join, but not a StructSpaceField
-          // because it is someting like "dimension: joinedArray is arrayComputation"
-          // which wasn't known to be a join when the fieldspace was constructed.
-          // TODO don't make one of these every time you do a lookup
-          found = new StructSpaceField(
-            definition,
-            this.structDialect,
-            this.structConnection
-          );
-        }
-        // cswenson review todo I don't know how to count the reference properly now
-        // i tried only writing it as a join reference if there was more in the path
-        // but that failed because lookup([JOINNAME]) is called when translating JOINNAME.AGGREGATE(...)
-        // with a 1-length-path but that IS a join reference and there is a test
-        head.addReference({
-          type:
-            found instanceof StructSpaceFieldBase
-              ? 'joinReference'
-              : 'fieldReference',
-          definition: {
-            type: definition.type,
-            annotations: definition.annotations,
-            location: definition.location,
-          },
-          location: head.location,
-          text: head.refString,
-        });
-      }
-      if (definition?.accessModifier) {
-        if (!accessAllowed(accessLevel, definition.accessModifier)) {
-          return {
-            error: {
-              message: `'${head}' is ${definition?.accessModifier}`,
-              code: 'field-not-accessible',
-            },
-            found: undefined,
-          };
-        }
-      }
-    } // cswenson review todo { else this is SpaceEntry not a field which can only be a param and what is going on? }
+    const read = readEntry(ns.space, last, ns.accessLevel);
+    if (read.error) {
+      return read;
+    }
+    const found = read.found;
     const joinPath =
       found instanceof StructSpaceFieldBase
-        ? [{...found.joinPathElement, name: head.refString}]
-        : [];
-    if (rest.length) {
-      if (found instanceof StructSpaceFieldBase) {
-        const restResult = found.fieldSpace.lookup(
-          rest,
-          lessPermissiveAccessLevel(
-            accessLevel,
-            found.fieldSpace.accessProtectionLevel()
-          )
-        );
-        if (restResult.found) {
-          return {
-            ...restResult,
-            joinPath: [...joinPath, ...restResult.joinPath],
-          };
-        } else {
-          return restResult;
-        }
-      }
-      return {
-        error: {
-          message: `'${head}' cannot contain a '${rest[0]}'`,
-          code: 'invalid-property-access-in-field-reference',
-        },
-        found: undefined,
-      };
-    }
+        ? [...ns.joinPath, {...found.joinPathElement, name: last.refString}]
+        : ns.joinPath;
     return {found, error: undefined, joinPath, isOutputField: false};
   }
 
@@ -291,11 +225,154 @@ export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
   }
 }
 
+/**
+ * A namespace reached by walking a join path, and the access level a reader
+ * who started at `accessLevel` has once they arrive there.
+ */
+export interface NamespaceRead {
+  space: FieldSpace;
+  accessLevel: AccessModifierLabel;
+  joinPath: JoinPath;
+  error: undefined;
+}
+
+/**
+ * Walk `path` from `from`, one `readEntry` per hop, narrowing the access
+ * level at each join. `lookup()` walks the path before a name with it and
+ * `*` walks the path before a star. `member` is what is about to be read from the namespace at the end
+ * of the path, a field name or `'*'`, named in the error when a hop is not a
+ * namespace.
+ */
+export function resolveNamespace(
+  from: FieldSpace,
+  path: FieldName[],
+  accessLevel: AccessModifierLabel,
+  member: string
+): NamespaceRead | LookupError {
+  let space = from;
+  const joinPath: JoinPath = [];
+  for (let i = 0; i < path.length; i++) {
+    const hop = path[i];
+    const read = readEntry(space, hop, accessLevel);
+    if (read.error) {
+      return read;
+    }
+    if (!(read.found instanceof StructSpaceFieldBase)) {
+      const next = i + 1 < path.length ? path[i + 1].refString : member;
+      const message =
+        next === '*'
+          ? `'${hop}' does not contain fields and cannot be expanded with '*'`
+          : `'${hop}' cannot contain a '${next}'`;
+      return {
+        error: {
+          message,
+          code: 'invalid-property-access-in-field-reference',
+          at: hop,
+        },
+        found: undefined,
+      };
+    }
+    joinPath.push({...read.found.joinPathElement, name: hop.refString});
+    space = read.found.fieldSpace;
+    accessLevel = lessPermissiveAccessLevel(
+      accessLevel,
+      space.accessProtectionLevel()
+    );
+  }
+  return {space, accessLevel, joinPath, error: undefined};
+}
+
+interface EntryRead {
+  found: SpaceEntry;
+  error: undefined;
+}
+
+/**
+ * Read one name from a namespace on behalf of a reader at `accessLevel`.
+ * Records the reference, and refuses the entry if the reader may not see it.
+ */
+export function readEntry(
+  space: FieldSpace,
+  name: FieldName,
+  accessLevel: AccessModifierLabel
+): EntryRead | LookupError {
+  let found = space.entry(name.refString);
+  let restriction: NonDefaultAccessModifierLabel | undefined;
+  if (!found) {
+    return {
+      error: {
+        message: `'${name}' is not defined`,
+        code: 'field-not-found',
+        at: name,
+      },
+      found: undefined,
+    };
+  }
+  if (found instanceof SpaceField) {
+    const definition = found.fieldDef();
+    restriction = definition?.accessModifier;
+    if (definition) {
+      if (!(found instanceof StructSpaceFieldBase) && isJoined(definition)) {
+        // A field which turned out to be a join after the space was built,
+        // e.g. "dimension: joinedArray is arrayComputation", so the entry
+        // is not a StructSpaceField; promote it so the path can continue.
+        found = new StructSpaceField(
+          definition,
+          space.dialectName(),
+          space.connectionName()
+        );
+      }
+      // A one-element path to a join is still a join reference:
+      // JOIN.aggregate() looks the join up on its own.
+      name.addReference({
+        type:
+          found instanceof StructSpaceFieldBase
+            ? 'joinReference'
+            : 'fieldReference',
+        definition: {
+          type: definition.type,
+          annotations: definition.annotations,
+          location: definition.location,
+        },
+        location: name.location,
+        text: name.refString,
+      });
+    }
+  }
+  if (restriction && !accessAllowed(accessLevel, restriction)) {
+    return {
+      error: {
+        message: `'${name}' is ${restriction}`,
+        code: 'field-not-accessible',
+        at: name,
+      },
+      found: undefined,
+    };
+  }
+  return {found, error: undefined};
+}
+
+/**
+ * Every entry of `space` a reader at `accessLevel` may see, by the same
+ * rule `readEntry` applies to one name.
+ */
+export function accessibleEntries(
+  space: FieldSpace,
+  accessLevel: AccessModifierLabel
+): [string, SpaceEntry][] {
+  return space.entries().filter(([, entry]) => {
+    const restriction =
+      entry instanceof SpaceField
+        ? entry.fieldDef()?.accessModifier
+        : undefined;
+    return restriction === undefined || accessAllowed(accessLevel, restriction);
+  });
+}
+
 function accessAllowed(
   accessLevel: AccessModifierLabel,
-  accessModifier: AccessModifierLabel
+  accessModifier: NonDefaultAccessModifierLabel
 ): boolean {
-  if (accessModifier === 'public') return true;
   if (accessLevel === 'internal') return accessModifier === 'internal';
   if (accessLevel === 'private') return true;
   return false;

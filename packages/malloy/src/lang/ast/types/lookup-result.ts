@@ -6,6 +6,7 @@
 import type {JoinElementType, JoinType} from '../../../model';
 import type {MessageCode} from '../../parse-log';
 import type {SpaceEntry} from './space-entry';
+import type {FieldName} from './field-space';
 
 export interface JoinPathElement {
   name: string;
@@ -21,7 +22,7 @@ export interface LookupFound {
   isOutputField: boolean;
 }
 export interface LookupError {
-  error: {message: string; code: MessageCode};
+  error: {message: string; code: MessageCode; at?: FieldName | undefined};
   found: undefined;
 }
 

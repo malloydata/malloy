@@ -168,12 +168,10 @@ type MessageParameterTypes = {
   'top-by-non-aggregate': string;
   'definition-name-conflict': string;
   'invalid-field-in-index-query': string;
-  'invalid-wildcard-source': string;
-  'wildcard-source-not-found': string;
   'name-conflict-in-wildcard-expansion': string;
   'invalid-parameter-reference': string;
   'parameter-not-found': string;
-  'wildcard-source-not-defined': string;
+  'wildcard-matched-no-fields': string;
   'unexpected-index-segment': string;
   'accept-parameter': string;
   'except-parameter': string;

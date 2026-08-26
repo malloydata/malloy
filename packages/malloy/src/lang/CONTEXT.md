@@ -194,6 +194,65 @@ The `restrictedMode` flag flows: `ParseOptions.restrictedMode` → `MalloyTransl
 
 API-level details: [`../api/CONTEXT.md`](../api/CONTEXT.md) and the JSDoc on `ModelMaterializer.loadRestrictedQuery`.
 
+## Access modifiers
+
+`private`/`internal` (behind `##! experimental.access_modifiers`) are rules
+about which **names** a model may write: `internal` may not be named in a
+query but may be named in definitions in extensions of the source, `private`
+in neither. No modifier means public — `accessModifier` only ever holds
+`'private' | 'internal'`.
+
+The labels are written onto the field defs at the end of the scope which
+declares them — one `include {} extend {}` construct — so within that scope
+there is no modifier on a field yet to deny. That is why a `private` field can
+be named in the scope which declares it and not in a later one.
+
+Reading a namespace is factored into two primitives in
+`ast/field-space/static-space.ts`, and everything that reads one goes through
+them, so a name and a `*` cannot drift apart:
+
+- `resolveNamespace(from, path, level, member)` walks a join path. Each hop is
+  a `readEntry`, and the level narrows through each join with
+  `lessPermissiveAccessLevel()`. It answers "what namespace is at the end of
+  this path, and what level does a reader arrive there with?"
+- `readEntry(space, name, level)` reads one name: records the reference, and
+  refuses the entry if the level may not see it (`field-not-accessible`).
+  `accessibleEntries(space, level)` applies that same rule to every entry.
+
+They are functions over the `FieldSpace` interface, not members of it — the
+interface has many implementors and none of them should inherit a security
+obligation.
+
+**By name** — `StaticSpace.lookup()` is `resolveNamespace` over the path
+before the name, then `readEntry` of the name. It asks "what may I, standing
+here, refer to?", so the starting level is the reading space's
+`accessProtectionLevel()`.
+
+**By `*`** — `QueryOperationSpace.wildcardExpansion()` is `resolveNamespace`
+over the path before the star, then `accessibleEntries` of what it reached. It
+asks "what will a user of the finished source see?", so the starting level is
+`public`: a `*` expands **public fields only**, and the path before it may only
+walk fields which are public too. Neither half depends on what the surrounding
+code is allowed to name, so `select: c.*` fails in a place where `select: c.ai`
+compiles. A disallowed field is dropped silently, since naming it in an error
+would disclose the name the restriction exists to hide; a disallowed path is an
+error, since the user wrote that name themselves.
+
+Inside the scope which declares restrictions they are not on the fields yet
+(see above), so a `*` there sees them all.
+
+`entries()` is the raw namespace map and never filters.
+
+`::Shape` is a second producer of modifiers: applying a type marks every column
+the shape does not list `internal` (`ast/source-elements/typed-source.ts`), so
+what a `*` does with modifiers is also what shape hiding does.
+
+`select:` and `index:` share the expansion and differ after it: each applies
+its own type filter (`select:` atomic fields, `index:` basic ones), its own
+name-conflict check, and its own bookkeeping. A `*` which matches nothing is
+`wildcard-matched-no-fields`, reported at the `*` — it names only the path the
+user wrote.
+
 ## File Organization
 
 ```
