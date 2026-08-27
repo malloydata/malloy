@@ -247,6 +247,7 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
    * Walk an already-translated IR path. Translation gated every name in it
    * at a level no more permissive than a private reader starting here, so
    * this walk cannot refuse what already passed; any failure is internal.
+   * The names are unparented, so readEntry records no references for them.
    */
   const lookupWithPath = (
     fs: FieldSpace,
