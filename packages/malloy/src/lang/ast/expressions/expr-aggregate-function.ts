@@ -244,9 +244,9 @@ function joinPathEq(a1: JoinPath, a2: JoinPath): boolean {
 function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
   const result: JoinPath[] = [];
   /**
-   * Walk an already-translated IR path. Every name in it was checked when the
-   * expression was translated, so walk as a private reader (refuses nothing)
-   * and treat any failure as an internal error.
+   * Walk an already-translated IR path. Translation gated every name in it
+   * at a level no more permissive than a private reader starting here, so
+   * this walk cannot refuse what already passed; any failure is internal.
    */
   const lookupWithPath = (
     fs: FieldSpace,
