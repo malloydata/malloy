@@ -20,12 +20,17 @@ import {
 import {exprWalk} from '../../../model/utils';
 
 import {errorFor} from '../ast-utils';
-import {StructSpaceField} from '../field-space/static-space';
+import {
+  StructSpaceField,
+  readEntry,
+  resolveNamespace,
+} from '../field-space/static-space';
 import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import {FieldName} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import type {JoinPath, JoinPathElement} from '../types/lookup-result';
@@ -238,6 +243,11 @@ function joinPathEq(a1: JoinPath, a2: JoinPath): boolean {
 
 function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
   const result: JoinPath[] = [];
+  /**
+   * Walk a path from translated IR. Every name in it is known to resolve at
+   * private level, so a failure is an internal error. The names are
+   * unparented; readEntry records no references for them.
+   */
   const lookupWithPath = (
     fs: FieldSpace,
     path: string[]
@@ -246,34 +256,24 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
     def: FieldDef;
     joinPath: JoinPath;
   } => {
-    const head = path[0];
-    const rest = path.slice(1);
-    const def = fs.entry(head);
-    if (def === undefined) {
-      throw new Error(`Invalid field lookup ${head}`);
+    const names = path.map(n => new FieldName(n));
+    const last = names[names.length - 1];
+    const ns = resolveNamespace(fs, names.slice(0, -1), 'private', last.name);
+    if (ns.error) {
+      throw new Error(ns.error.message);
     }
-    if (def instanceof StructSpaceField && rest.length > 0) {
-      const restDef = lookupWithPath(def.fieldSpace, rest);
-      return {
-        ...restDef,
-        joinPath: [{...def.joinPathElement, name: head}, ...restDef.joinPath],
-      };
-    } else if (def instanceof SpaceField) {
-      if (rest.length !== 0) {
-        throw new Error(`${head} cannot contain a ${rest.join('.')}`);
-      }
-      const fieldDef = def.fieldDef();
-      if (fieldDef) {
-        return {
-          fs,
-          def: fieldDef,
-          joinPath: [],
-        };
-      }
-      throw new Error('No field def');
-    } else {
+    const read = readEntry(ns.space, last, 'private');
+    if (read.error) {
+      throw new Error(read.error.message);
+    }
+    if (!(read.found instanceof SpaceField)) {
       throw new Error('expected a field def or struct');
     }
+    const def = read.found.fieldDef();
+    if (def === undefined) {
+      throw new Error('No field def');
+    }
+    return {fs: ns.space, def, joinPath: ns.joinPath};
   };
   for (const frag of exprWalk(expr)) {
     if (frag.node === 'field') {
