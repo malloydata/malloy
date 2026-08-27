@@ -828,6 +828,14 @@ describe('expressions', () => {
     test('many.column.sum()', () => {
       expect(modelX`many.column.sum()`).toTranslate();
     });
+    test('aggregate through an array-valued dimension in the same extend', () => {
+      expect(`
+        source: s is a extend {
+          dimension: arr is [{a is 1}]
+          measure: m is arr.a.sum()
+        }
+      `).toTranslate();
+    });
     test('many.sum(many.column)', () => {
       expect(modelX`many.sum(many.column)`).toTranslate();
     });
