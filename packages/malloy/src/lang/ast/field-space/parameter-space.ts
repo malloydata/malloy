@@ -56,6 +56,7 @@ export class ParameterSpace implements FieldSpace {
         error: {
           message: `\`${name}\` is not defined`,
           code: 'parameter-not-found',
+          at: name,
         },
         found: undefined,
       };
@@ -67,6 +68,7 @@ export class ParameterSpace implements FieldSpace {
             .slice(1)
             .join('.')}\``,
           code: 'invalid-parameter-reference',
+          at: name,
         },
         found: undefined,
       };

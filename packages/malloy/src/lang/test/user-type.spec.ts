@@ -335,6 +335,41 @@ describe('user type shape errors', () => {
   });
 });
 
+describe('applying a shape to a source', () => {
+  test('a star names only the fields the shape declares', () => {
+    const m = userTypeModel(`
+      type: Shape is { astr :: string, ai :: number }
+      source: shaped is a :: Shape
+      run: shaped -> { select: * }
+    `);
+    expect(m).toTranslate();
+    const query = m.getQuery(0);
+    const segment = query?.pipeline[0];
+    const fields =
+      segment && segment.type === 'project'
+        ? segment.queryFields.map(f =>
+            f.type === 'fieldref' ? f.path[0] : '?'
+          )
+        : [];
+    expect(fields).toEqual(['ai', 'astr']);
+  });
+
+  test('an index star indexes only the fields the shape declares', () => {
+    const m = userTypeModel(`
+      type: Shape is { astr :: string, ai :: number }
+      source: shaped is a :: Shape
+      run: shaped -> { index: * }
+    `);
+    expect(m).toTranslate();
+    const segment = m.getQuery(0)?.pipeline[0];
+    const fields =
+      segment && segment.type === 'index'
+        ? segment.indexFields.map(f => f.path.join('.'))
+        : [];
+    expect(fields).toEqual(['ai', 'astr']);
+  });
+});
+
 describe('experimental gate', () => {
   test('user type without experimental flag', () => {
     expect(`
