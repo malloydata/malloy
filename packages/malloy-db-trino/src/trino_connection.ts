@@ -592,9 +592,16 @@ class TrinoPrestoSchemaParser extends TinyParser {
     });
   }
 
+  /**
+   * Presto 0.284+ writes "Output[PlanNodeId N][NAME_LIST] => ...",
+   * earlier versions write "Output[NAME_LIST] => ...".
+   */
   fieldNameList(): string[] {
-    this.skipTo(']'); // Skip to end of plan
-    this.expect('['); // Expect start of name list
+    this.skipTo('[');
+    if (this.match('id', 'id')) {
+      // [PlanNodeId N] is the only group with two adjacent ids
+      this.skipTo('[');
+    }
     const fieldNames: string[] = [];
     for (;;) {
       const nmToken = this.expect('id');
