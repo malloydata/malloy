@@ -4,6 +4,7 @@
  */
 
 import type {
+  BigQueryOptions,
   Job,
   PagedResponse,
   Query,
@@ -18,6 +19,7 @@ import {GaxiosError} from 'gaxios';
 import type {
   Connection,
   ConnectionConfig,
+  ConnectionConfigEntry,
   ConnectionParameterValue,
   MalloyQueryData,
   PersistSQLResults,
@@ -61,6 +63,61 @@ interface CredentialBody {
   private_key?: string;
 }
 
+/**
+ * A caller-supplied credential. Anything Malloy cannot build from config text
+ * — impersonation, workload identity federation, a proxied or test credential
+ * — arrives as one of these, from a host overlay.
+ */
+type AuthClient = BigQueryOptions['authClient'];
+
+/**
+ * What to hash for the auth client, given the connection's unresolved config.
+ *
+ * An `AuthClient` is a live object with nothing stable to hash, so the digest
+ * uses the reference the config named it by — `{tenantAuth: "acme"}`. Without
+ * it, two connections against the same project holding different impersonated
+ * identities produce the same digest, and so the same BuildIDs, and one
+ * tenant is served rows persisted for another.
+ *
+ * The digest is therefore only as distinguishing as the reference path: an
+ * overlay whose path doesn't vary by identity leaves them indistinguishable
+ * here too.
+ */
+function authIdentityOf(
+  rawConfigData: ConnectionConfigEntry | undefined
+): string | undefined {
+  const reference = rawConfigData?.['authClient'];
+  return reference === undefined ? undefined : JSON.stringify(reference);
+}
+
+/**
+ * An `authClient` and a service account key are two answers to one question,
+ * and the SDK does not treat them as competing: `GoogleAuth` caches the
+ * `authClient` and never consults `credentials` or `keyFilename` again
+ * (`google-auth-library`, `googleauth.js`: `cachedCredential = opts.authClient`).
+ * A config carrying both therefore runs entirely on the auth client while the
+ * key sits there looking live, and whoever wrote it believes the wrong
+ * identity is executing their queries. Refuse it instead.
+ */
+function rejectCompetingCredentials(
+  name: string,
+  config: BigQueryConnectionConfiguration
+): void {
+  if (config.authClient === undefined) return;
+  const alsoSet = [
+    config.credentials !== undefined ? 'a service account key' : undefined,
+    config.serviceAccountKeyPath !== undefined
+      ? 'serviceAccountKeyPath'
+      : undefined,
+  ].filter(what => what !== undefined);
+  if (alsoSet.length === 0) return;
+  throw new Error(
+    `Connection "${name}" sets authClient and also ${alsoSet.join(' and ')}. ` +
+      'An authClient replaces the credential entirely — the key would be ' +
+      'ignored — so supply one or the other.'
+  );
+}
+
 interface BigQueryConnectionConfiguration {
   /** This ID is used for Bigquery Table Normalization */
   projectId?: string;
@@ -70,6 +127,7 @@ interface BigQueryConnectionConfiguration {
   timeoutMs?: string;
   billingProjectId?: string;
   credentials?: CredentialBody | {[key: string]: ConnectionParameterValue};
+  authClient?: AuthClient;
   setupSQL?: string;
 }
 
@@ -80,6 +138,13 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   serviceAccountKey?: {[key: string]: ConnectionParameterValue};
   /** The key file's contents, as a JSON string or base64-encoded JSON. */
   serviceAccountKeyJson?: string;
+  authClient?: AuthClient;
+  /**
+   * The connection's entry as written, before overlay resolution. Set by the
+   * registered factory; needed only so `getDigest` can identify which auth
+   * client this connection got. See `authIdentityOf`.
+   */
+  rawConfigData?: ConnectionConfigEntry;
   location?: string;
   maximumBytesBilled?: string;
   timeoutMs?: string;
@@ -502,6 +567,8 @@ export class BigQueryConnection
 
   private setupSQL: string | undefined;
 
+  private authIdentity: string | undefined;
+
   constructor(
     option: BigQueryConnectionOptions,
     queryOptions?: QueryOptionsReader
@@ -522,16 +589,19 @@ export class BigQueryConnection
     } else {
       // Every key-bearing property is destructured out of `args`, so a key
       // never lands in `this.config` — only the credentials object the SDK
-      // needs does.
+      // needs does. `rawConfigData` comes out for the same reason: it is
+      // read once, for the digest, and is not connection config.
       const {
         name,
         client_email,
         private_key,
         serviceAccountKey,
         serviceAccountKeyJson,
+        rawConfigData,
         ...args
       } = arg;
       this.name = name;
+      this.authIdentity = authIdentityOf(rawConfigData);
       config = args;
       // Trimmed before it is looked at: a value that came through a here-doc,
       // a `$(cat key.json)`, or a secret-store copy tends to carry a trailing
@@ -549,10 +619,12 @@ export class BigQueryConnection
         };
       }
     }
+    rejectCompetingCredentials(this.name, config);
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
       credentials: config.credentials,
+      authClient: config.authClient,
       projectId: config.billingProjectId,
     });
 
@@ -601,7 +673,16 @@ export class BigQueryConnection
   }
 
   public getDigest(): string {
-    return makeDigest('bigquery', this.projectId, this.setupSQL);
+    // Appended only when an auth client is in play, so connections that don't
+    // use one keep the digests — and so the persisted tables — they have now.
+    return this.authIdentity === undefined
+      ? makeDigest('bigquery', this.projectId, this.setupSQL)
+      : makeDigest(
+          'bigquery',
+          this.projectId,
+          this.setupSQL,
+          this.authIdentity
+        );
   }
 
   public get supportsNesting(): boolean {

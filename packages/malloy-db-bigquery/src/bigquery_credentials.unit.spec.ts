@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type {BigQueryOptions} from '@google-cloud/bigquery';
 import {MalloyConfig, getConnectionProperties} from '@malloydata/malloy';
 import {BigQueryConnection} from './bigquery_connection';
 // Registers the 'bigquery' connection type, which the property tests read back.
@@ -284,5 +285,32 @@ describe('bigquery connection property registration', () => {
     // One property, two encodings, detected. A second property would be a
     // second thing to get wrong in config for no gain.
     expect(byName('serviceAccountKeyJsonBase64')).toBeUndefined();
+  });
+});
+
+describe('an auth client and a service account key together', () => {
+  // A stand-in for a google-auth AuthClient. Nothing in Malloy inspects one.
+  const authClient = {
+    getAccessToken: async () => ({token: 'from-the-host'}),
+  } as unknown as BigQueryOptions['authClient'];
+
+  it.each([
+    ['serviceAccountKeyJson', {serviceAccountKeyJson: KEY_JSON}],
+    ['serviceAccountKey', {serviceAccountKey: KEY}],
+    ['serviceAccountKeyPath', {serviceAccountKeyPath: '/keys/bq.json'}],
+    ['client_email/private_key', {client_email: 'a@b.com', private_key: 'k'}],
+  ])('is refused when the key came from %s', (_label, credential) => {
+    // The SDK caches the auth client and never looks at the key again, so
+    // without this the key is dead config that reads as live and the queries
+    // run as an identity nobody chose.
+    expect(
+      () => new BigQueryConnection({name: 'bq', authClient, ...credential})
+    ).toThrow(/sets authClient and also/);
+  });
+
+  it('is fine with an auth client alone', () => {
+    expect(
+      () => new BigQueryConnection({name: 'bq', projectId: 'p', authClient})
+    ).not.toThrow();
   });
 });

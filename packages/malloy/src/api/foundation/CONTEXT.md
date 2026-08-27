@@ -86,7 +86,7 @@ const TOP_LEVEL_SECTIONS: Record<string, SectionCompiler> = {
 };
 ```
 
-- `compileConnections` is the **only** dynamic section. For each entry, it looks up `is` in the connection registry, walks the declared properties, and at each *non-`json`* property (the reference slots) accepts either a literal or a single-key `{source: path}` reference. At each `json`-typed property it passes raw data through as `ConfigLiteral` — no reference interpretation.
+- `compileConnections` is the **only** dynamic section. For each entry, it looks up `is` in the connection registry, walks the declared properties, and at each *non-`json`* property (the reference slots) accepts either a literal or a single-key `{source: path}` reference. At each `json`-typed property it passes raw data through as `ConfigLiteral` — no reference interpretation. A property's `source` overrides that default reading in either direction: `'literal'` rejects a reference, `'overlay'` rejects a literal and so recognizes a reference even in a slot that would otherwise hold a dictionary.
 - `compileManifestPath` accepts either a literal string or a reference shape. Resolution happens synchronously in `prepareConfig` — see the sync-peek discussion under [Sync/async boundary](#the-pipeline) above.
 - `compileVirtualMap`, `compileIncludeDefaultConnections` are pass-through. `{env: "X"}` *inside* `virtualMap` is literal JSON, not a reference.
 
@@ -134,6 +134,7 @@ Cases and observed behavior: [configuration.md → Failure Modes](../../doc/conf
 | Known overlay returns `undefined` → silent drop | Legitimate "value not present" state, matching env-var semantics. A required-field violation surfaces at connection-build time (lazy, at lookup), not here — keeping the resolver out of policy decisions about what's required. |
 | Unresolved reference in a `default` → silent drop | A default is a hint, not a requirement. "No default applicable" is a normal terminal state, not a failure. |
 | Async overlay used in a sync-only slot → loud warning + drop | A construction-time peek can't `await`. This is misuse rather than absence, so silent drop would hide a wiring bug; throwing would brittly couple to a stack the host might still be assembling. The loud warning gets the host's attention while keeping construction infallible. Applies to `configURL` and to top-level string references like `manifestPath`. |
+| Property carries `mustHaveValue` and produced nothing → throw at lookup | Absence is a normal state for every other property. For one whose fallback is a permission — `securityPolicy` → `none`, `authClient` → ambient credentials — dropping silently selects the permissive branch. Fires only when the key was authored; an absent key still takes its default. |
 
 Consequence: cases 2 and 3 make "typo'd env var" and "legitimately unset env var" indistinguishable. Matches today's behavior. Typo detection would need the resolver to know which properties are required by which factory — not worth crossing that line.
 

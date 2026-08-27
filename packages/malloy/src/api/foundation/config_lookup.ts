@@ -8,7 +8,6 @@ import {
   getConnectionProperties,
   getConnectionTypeDef,
   isConnectionConfigEntry,
-  validateConnectionConfigProperties,
 } from '../../connection/registry';
 import type {
   ConnectionConfigEntry,
@@ -47,6 +46,7 @@ import type {ConfigOverlays} from './config_overlays';
  */
 export function buildManagedLookup(
   compiledConnections: Record<string, ConfigDict>,
+  rawConnections: Record<string, ConnectionConfigEntry>,
   overlays: ConfigOverlays,
   log: LogMessage[]
 ): ManagedConnectionLookup {
@@ -74,7 +74,12 @@ export function buildManagedLookup(
         );
       }
 
-      const resolved = await resolveCompiledEntry(compiledEntry, overlays, log);
+      const resolved = await resolveCompiledEntry(
+        connectionName,
+        compiledEntry,
+        overlays,
+        log
+      );
 
       // compileConnections guarantees `is` is present and a string-valued
       // literal node — resolveCompiledEntry preserves it. Defensive check
@@ -101,12 +106,10 @@ export function buildManagedLookup(
         }
       }
 
-      validateConnectionConfigProperties(
-        connectionName,
-        resolved.is,
-        connConfig
+      const connection = await typeDef.factory(
+        connConfig,
+        rawConnections[connectionName]
       );
-      const connection = await typeDef.factory(connConfig);
       cache.set(connectionName, connection);
       return connection;
     },
@@ -135,6 +138,7 @@ export function buildManagedLookup(
  * gets handed to the factory.
  */
 async function resolveCompiledEntry(
+  connectionName: string,
   entry: ConfigDict,
   overlays: ConfigOverlays,
   log: LogMessage[]
@@ -149,8 +153,37 @@ async function resolveCompiledEntry(
       'Connection entry did not resolve to a valid {is: string, ...} dict'
     );
   }
+  // Before defaults, so that a declared default can't quietly satisfy a
+  // promise the user's own value failed to keep.
+  requireAuthoredValues(connectionName, entry, resolved);
   await applyPropertyDefaults(resolved, overlays);
   return resolved;
+}
+
+/**
+ * Enforce `mustHaveValue`: a property the user wrote must survive resolution.
+ *
+ * The compiled entry is the record of what was authored — a reference that
+ * resolved to nothing, or a value that failed its type check, is gone from
+ * `resolved` but still present here. Absence from both is fine; that's the
+ * user declining to set the property, which is what `optional` already means.
+ */
+function requireAuthoredValues(
+  connectionName: string,
+  entry: ConfigDict,
+  resolved: ConnectionConfigEntry
+): void {
+  for (const prop of getConnectionProperties(resolved.is) ?? []) {
+    if (!prop.mustHaveValue) continue;
+    if (entry.entries[prop.name] === undefined) continue;
+    if (resolved[prop.name] !== undefined) continue;
+    throw new Error(
+      `Connection "${connectionName}" sets "${prop.name}", but no value ` +
+        'arrived — an overlay reference that did not resolve, or a value that ' +
+        'was rejected. Omitting the property is allowed; this one cannot fall ' +
+        'back silently.'
+    );
+  }
 }
 
 /**
@@ -167,6 +200,8 @@ async function resolveNode(
   switch (node.kind) {
     case 'value':
       return node.value;
+    case 'invalid':
+      return undefined;
     case 'reference':
       return resolveReference(node, overlays, log);
     case 'dict': {

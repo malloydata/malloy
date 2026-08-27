@@ -50,12 +50,14 @@ process isolation, query cancellation, and host-level quotas separately.
 
 - Native connection schema: `src/native.ts`
   - Registers native DuckDB properties.
-  - `securityPolicy` is `requireLiteralString` so invalid reference-shaped or
-    non-string values reach registry validation instead of being silently
-    dropped by generic config compilation.
-- Config compiler literal guard: `../malloy/src/api/foundation/config_compile.ts`
-  - Preserves invalid literal-required values as values after warning, allowing
-    registry lookup to fail closed before the DuckDB factory runs.
+  - `securityPolicy` carries `source: 'literal'` (no overlay reference) and
+    `mustHaveValue` (writing it must produce a value), so a reference-shaped or
+    non-string value fails the connection instead of being silently dropped by
+    generic config compilation.
+- Config compiler guard: `../malloy/src/api/foundation/config_compile.ts`
+  - Records an authored-but-unusable value as an `invalid` node after warning,
+    so `config_lookup.ts` can tell it apart from an omitted property and fail
+    closed before the DuckDB factory runs.
 - Normalization and policy derivation: `src/duckdb_config.ts`
   - Parses raw effective config.
   - Derives `NormalizedDuckDBSafetyPolicy`.

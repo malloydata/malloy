@@ -4,7 +4,11 @@
  */
 
 import type {Connection, LookupConnection} from '../../connection/types';
-import type {ManagedConnectionLookup} from '../../connection/registry';
+import type {
+  ConnectionConfigEntry,
+  ManagedConnectionLookup,
+} from '../../connection/registry';
+import {isConnectionConfigEntry} from '../../connection/registry';
 import type {LogMessage} from '../../lang/parse-log';
 import type {
   BuildID,
@@ -335,6 +339,7 @@ export class MalloyConfig {
 
     this._managedLookup = buildManagedLookup(
       prepared.compiledConnections,
+      rawConnectionEntries(pojo),
       mergedOverlays,
       log
     );
@@ -676,6 +681,28 @@ function toVirtualMap(raw: unknown, log: LogMessage[]): VirtualMap | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The connection entries exactly as authored, kept alongside the compiled tree
+ * and handed to each factory as `rawConfigData`. Compilation replaces an
+ * overlay reference with a `ConfigReference` node and resolution replaces that
+ * with the value, so this is the only place a connector can still see *which*
+ * overlay a value came from — which is what BigQuery's `getDigest` needs to
+ * tell two impersonated identities apart.
+ *
+ * No validation here beyond the shape: entries the compiler rejected are
+ * absent from `compiledConnections` and so are never looked up.
+ */
+function rawConnectionEntries(
+  pojo: unknown
+): Record<string, ConnectionConfigEntry> {
+  const entries: Record<string, ConnectionConfigEntry> = {};
+  if (!isRecord(pojo) || !isRecord(pojo['connections'])) return entries;
+  for (const [name, entry] of Object.entries(pojo['connections'])) {
+    if (isConnectionConfigEntry(entry)) entries[name] = entry;
+  }
+  return entries;
 }
 
 export function isBuildManifestEntry(
