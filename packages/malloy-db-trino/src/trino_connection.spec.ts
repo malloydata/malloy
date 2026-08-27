@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {AtomicTypeDef, FieldDef} from '@malloydata/malloy';
-import {TrinoConnection, TrinoExecutor} from '.';
+import type {AtomicTypeDef, FieldDef, SQLSourceDef} from '@malloydata/malloy';
+import {TrinoDialect} from '@malloydata/malloy';
+import {PrestoConnection, TrinoConnection, TrinoExecutor} from '.';
 
 // array(varchar) is array
 const ARRAY_SCHEMA = 'array(integer)';
@@ -150,5 +151,65 @@ describe('Trino connection', () => {
         });
       });
     });
+  });
+});
+
+describe('Presto EXPLAIN schema', () => {
+  function fieldsFromPlan(plan: string): FieldDef[] {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      name: 'explained',
+      connection: 'presto',
+      selectStr: 'SELECT 1 AS a',
+      dialect: 'presto',
+      fields: [],
+    };
+    PrestoConnection.schemaFromExplain(
+      {rows: [{'Query Plan': plan}], totalRows: 1},
+      structDef,
+      new TrinoDialect()
+    );
+    return structDef.fields;
+  }
+
+  it('reads a plan with a PlanNodeId group (presto >= 0.284)', () => {
+    expect(
+      fieldsFromPlan(
+        '- Output[PlanNodeId 5][a, b] => [expr:integer, expr_1:varchar]\n' +
+          '        Estimates: {rows: 1 (5B)}\n'
+      )
+    ).toEqual([
+      {name: 'a', ...intType},
+      {name: 'b', ...stringType},
+    ]);
+  });
+
+  it('reads a plan without a PlanNodeId group (presto < 0.284)', () => {
+    expect(
+      fieldsFromPlan('- Output[a, b] => [expr:integer, expr_1:varchar]\n')
+    ).toEqual([
+      {name: 'a', ...intType},
+      {name: 'b', ...stringType},
+    ]);
+  });
+
+  it('reads a field named PlanNodeId', () => {
+    expect(
+      fieldsFromPlan(
+        '- Output[PlanNodeId 5][PlanNodeId, b] => [expr:integer, expr_1:varchar]\n'
+      )
+    ).toEqual([
+      {name: 'PlanNodeId', ...intType},
+      {name: 'b', ...stringType},
+    ]);
+    expect(fieldsFromPlan('- Output[PlanNodeId] => [expr:integer]\n')).toEqual([
+      {name: 'PlanNodeId', ...intType},
+    ]);
+  });
+
+  it('reads the plan line as reported in issue #3042', () => {
+    expect(fieldsFromPlan('Output[a]=>[expr:integer]')).toEqual([
+      {name: 'a', ...intType},
+    ]);
   });
 });
