@@ -58,8 +58,7 @@ const reportedTypes: [string, BasicAtomicTypeDef][] = [
   ['double unsigned', float],
 
   // DECIMAL is exact, so its scale decides whether it is a float, and its
-  // precision decides whether it survives a JS double. decimal(23,0) is what
-  // SUM() of an integer column reports.
+  // precision decides whether it survives a JS double.
   ['decimal(10,2)', float],
   ['decimal(10,2) unsigned', float],
   ['decimal(10,2) unsigned zerofill', float],
@@ -71,6 +70,13 @@ const reportedTypes: [string, BasicAtomicTypeDef][] = [
   ['decimal(16,0)', bigint],
   ['decimal(23,0)', bigint],
   ['decimal(65,0)', bigint],
+
+  // Aggregates of an integer column are reported as DECIMAL, which is why the
+  // rows above are reachable without anyone declaring a DECIMAL column.
+  ['decimal(41,0)', bigint], // SUM(bigint)
+  ['decimal(42,0)', bigint], // SUM(CAST(x AS SIGNED))
+  ['decimal(43,0)', bigint], // SUM(CAST(x AS UNSIGNED))
+  ['decimal(23,4)', float], // AVG(bigint)
 
   // Text. longtext is what JSON_UNQUOTE(JSON_EXTRACT(...)) reports.
   ['char(1)', string],
