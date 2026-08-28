@@ -80,7 +80,6 @@ function castMySQLValue(
     }
     return digits;
   }
-  // Every other type keeps the driver's own decoding.
   return next();
 }
 
@@ -341,9 +340,8 @@ export class MySQLConnection
     typeMap: {[name: string]: string}
   ) {
     for (const fieldName in typeMap) {
-      // Hand the dialect the type exactly as MySQL reported it. Truncating
-      // here would hide DECIMAL's precision and scale, which decide its
-      // Malloy type.
+      // The dialect needs the full reported spelling: DECIMAL's parameters
+      // decide its Malloy type.
       const malloyType = this.dialect.sqlTypeToMalloyType(typeMap[fieldName]);
       // no arrays or records exist in mysql
       structDef.fields.push({...malloyType, name: fieldName});

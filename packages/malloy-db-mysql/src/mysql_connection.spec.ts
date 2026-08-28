@@ -154,6 +154,8 @@ describeMySQL('numeric value reading', () => {
     await connection.close();
   });
 
+  const half = BigInt('9007199254740993'); // 2^53 + 1
+
   describe('integer types', () => {
     // MySQL infers int for values <= 2^31-1, bigint for larger
     it('reads int correctly', async () => {
@@ -178,11 +180,8 @@ describeMySQL('numeric value reading', () => {
     });
 
     // MySQL returns SUM() of an integer column as a DECIMAL, so a sum is not
-    // covered by supportBigNumbers the way the column itself is. Reading the
-    // column has always worked; summing it silently rounded to the nearest
-    // even above 2^53 until DECIMAL stopped being converted on arrival.
+    // covered by supportBigNumbers the way the column itself is.
     it('preserves precision when summing above 2^53', async () => {
-      const half = BigInt('9007199254740993'); // 2^53 + 1
       await expect(`
         run: mysql.sql("""
           SELECT CAST(${half} AS SIGNED) as v
@@ -196,7 +195,6 @@ describeMySQL('numeric value reading', () => {
     // result therefore carries a ten-place fraction that BigInt() rejects
     // unless the driver strips it.
     it('preserves precision when summing above 2^53 across a join', async () => {
-      const half = BigInt('9007199254740993'); // 2^53 + 1
       await expect(`
         run: mysql.sql("""
           SELECT 1 as id, CAST(${half} AS SIGNED) as v

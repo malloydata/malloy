@@ -110,9 +110,9 @@ const reportedTypes: [string, BasicAtomicTypeDef][] = [
   // Deliberately opaque. `enum` orders by declaration index but aggregates
   // lexically, so calling it a string would make order_by silently mean
   // something else. `set` is a comma-joined multi-value. `bit` cannot be
-  // told from bit(8). `year` has a 0000 value with no Malloy spelling. `json`
-  // is opaque on seven of eight dialects, and unnestColumns reads its
-  // rawType to pick the JSON_TABLE column type.
+  // told from bit(8). `year` has a 0000 value with no Malloy spelling.
+  // `unnestColumns` reads `json`'s rawType to pick the JSON_TABLE column
+  // type, so typing it would have to change with that.
   ["enum('a','b')", native('enum')],
   ["set('x','y')", native('set')],
   ['bit(1)', native('bit')],
