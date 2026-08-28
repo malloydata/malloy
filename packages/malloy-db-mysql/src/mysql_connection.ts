@@ -52,6 +52,37 @@ export class MySQLExecutor {
   }
 }
 
+/**
+ * MySQL renders a DECIMAL at its declared scale, so trailing zeros after the
+ * point are formatting rather than data and stripping them is lossless.
+ *
+ * This matters because every aggregate of an integer column comes back as a
+ * DECIMAL: SUM() of a BIGINT arrives as `18014398509481986.0000000000`, and
+ * Malloy reads a bigint-typed cell with BigInt(), which rejects any fractional
+ * spelling. A value with a real fraction is left alone.
+ *
+ * mysql2 delivers DECIMAL as a string, which is what preserves digits above
+ * 2^53 -- its `decimalNumbers` option parses them into a double instead, and
+ * must stay off. This hook is the last point at which a cell's MySQL type is
+ * known; by the time a row reaches Malloy it is gone.
+ */
+function castMySQLValue(
+  field: MYSQL.TypeCastField,
+  next: MYSQL.TypeCastNext
+): unknown {
+  if (field.type === 'DECIMAL' || field.type === 'NEWDECIMAL') {
+    const digits = next();
+    if (typeof digits === 'string') {
+      const whole = digits.match(/^([+-]?\d+)\.0+$/);
+      if (whole) {
+        return whole[1];
+      }
+    }
+    return digits;
+  }
+  return next();
+}
+
 export class MySQLConnection
   extends BaseConnection
   implements Connection, PersistSQLResults
@@ -88,9 +119,10 @@ export class MySQLConnection
         password: this.config.password,
         database: this.config.database,
         multipleStatements: true,
-        decimalNumbers: true,
+        // A BIGINT too wide for a double arrives as an exact string.
         supportBigNumbers: true,
         timezone: '+00:00',
+        typeCast: castMySQLValue,
       });
       await this.connection.query(
         // LTNOTE: Need to make the group_concat_max_len configurable.
@@ -308,9 +340,9 @@ export class MySQLConnection
     typeMap: {[name: string]: string}
   ) {
     for (const fieldName in typeMap) {
-      let mySqlType = typeMap[fieldName].toLocaleLowerCase();
-      mySqlType = mySqlType.trim().split('(')[0];
-      const malloyType = this.dialect.sqlTypeToMalloyType(mySqlType);
+      // The dialect needs the full reported spelling: DECIMAL's parameters
+      // decide its Malloy type.
+      const malloyType = this.dialect.sqlTypeToMalloyType(typeMap[fieldName]);
       // no arrays or records exist in mysql
       structDef.fields.push({...malloyType, name: fieldName});
     }
