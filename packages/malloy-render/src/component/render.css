@@ -31,11 +31,8 @@
 
 @supports (font-variation-settings: normal) {
   .malloy-render {
-    font-family:
-      InterVariable,
-      Inter,
-      system-ui sans-serif;
-
+    /* No font-family here: it belongs to --malloy-theme--font-family above, which
+       an embedding host overrides. A family in this block would win on order. */
     font-feature-settings:
       'liga' 1,
       'calt' 1;
