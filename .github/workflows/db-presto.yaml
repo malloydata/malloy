@@ -29,7 +29,7 @@ jobs:
       # main; it also lets a branch exercise the load path before merging.
       - name: Restore presto image
         id: presto-image
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: /tmp/presto-slim.tar
           key: presto-slim-${{ hashFiles('test/presto/Dockerfile.slim', 'test/presto/presto_start.sh') }}
@@ -43,7 +43,7 @@ jobs:
       - name: Save presto image
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.presto-image.outputs.cache-hit != 'true'
         run: docker save presto-slim -o /tmp/presto-slim.tar
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.presto-image.outputs.cache-hit != 'true'
         with:
           path: /tmp/presto-slim.tar
