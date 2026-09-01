@@ -23,8 +23,10 @@ jobs:
           node-version-file: '.node-version'
       # Building the slim image pulls the 9 GB official image; loading it from
       # the Actions cache takes seconds. presto_start.sh skips the build when
-      # the image is present. Only push-to-main runs save, so an image built
-      # from PR code never reaches a run on main.
+      # the image is present. Only push and workflow_dispatch runs save. A
+      # dispatch on a branch writes a cache scoped to that branch, which main
+      # never reads, so an image built from PR code never reaches a run on
+      # main; it also lets a branch exercise the load path before merging.
       - name: Restore presto image
         id: presto-image
         uses: actions/cache/restore@v4
@@ -39,10 +41,10 @@ jobs:
         env:
           BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
       - name: Save presto image
-        if: github.event_name == 'push' && steps.presto-image.outputs.cache-hit != 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.presto-image.outputs.cache-hit != 'true'
         run: docker save presto-slim -o /tmp/presto-slim.tar
       - uses: actions/cache/save@v4
-        if: github.event_name == 'push' && steps.presto-image.outputs.cache-hit != 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.presto-image.outputs.cache-hit != 'true'
         with:
           path: /tmp/presto-slim.tar
           key: ${{ steps.presto-image.outputs.cache-primary-key }}

@@ -105,7 +105,7 @@ The artifact pattern saves compute (one build instead of ~11 parallel rebuilds, 
 The artifact lives and dies inside one run, so the runtime gate bounds what it can reach. An Actions cache is restored by *later* runs — including runs on `main` with every secret — so a cache written by PR code is a way for that code to outlive the gate. Two rules keep this closed, and any new cache must satisfy one of them:
 
 - **Content the consumer verifies.** `pull_and_build` uses `setup-node`'s `cache: npm`, which holds npm's tarball store; `npm ci` checks every tarball against the lockfile's integrity hash, so a poisoned entry cannot be installed.
-- **Written only by `push` to `main`.** `db-presto.yaml` caches the built slim presto image (`docker save`/`load`), because building it pulls the 9 GB official image. The save steps are conditioned on `github.event_name == 'push'`; PR runs only restore. `Dockerfile.slim` and `presto_start.sh` are in the key, so a PR that changes either builds from scratch.
+- **Never written by a PR run.** `db-presto.yaml` caches the built slim presto image (`docker save`/`load`), because building it pulls the 9 GB official image. The save steps run only on `push` and `workflow_dispatch`; PR runs only restore. A dispatch on a branch writes a cache scoped to that branch, which `main` never reads — that is how a branch exercises the load path before merging (dispatch twice: the first builds and saves, the second loads). `Dockerfile.slim` and `presto_start.sh` are in the key, so a PR that changes either builds from scratch.
 
 Contributor-facing side (DCO sign-off, licensing, review) is in [CONTRIBUTING.md](../../CONTRIBUTING.md). Adding a dialect: [adding-a-new-database.md](../../packages/malloy/src/doc/adding-a-new-database.md).
 
