@@ -18,6 +18,18 @@ export {
 } from './bar-chart/bar-chart-plugin';
 
 export {
+  type IComboChartSettingsSchema,
+  comboChartSettingsSchema,
+  defaultComboChartSettings,
+  type ComboChartSettings,
+} from './combo-chart/combo-chart-settings';
+
+export {
+  ComboChartPluginFactory,
+  type ComboChartPluginInstance,
+} from './combo-chart/combo-chart-plugin';
+
+export {
   BigValuePluginFactory,
   type BigValuePluginInstance,
   type BigValueSettings,

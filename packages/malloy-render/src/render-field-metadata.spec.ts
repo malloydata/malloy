@@ -17,6 +17,7 @@ import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {SingleConnectionRuntime} from '@malloydata/malloy';
 import {RenderFieldMetadata} from './render-field-metadata';
 import {getBarChartSettings} from './plugins/bar-chart/get-bar_chart-settings';
+import {getComboChartSettings} from './plugins/combo-chart/get-combo_chart-settings';
 import type {Field, NestField} from './data_tree';
 
 let connection: DuckDBConnection;
@@ -99,6 +100,74 @@ describe('dispatch (shouldRenderAs) on the compiled schema', () => {
     expect(childField(metadata, 'by_val').renderAs()).toBe('chart');
   });
 
+  test('# combo_chart on a nest renders as chart', async () => {
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # combo_chart
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }
+      }
+    `);
+    expect(childField(metadata, 'by_val').renderAs()).toBe('chart');
+  });
+
+  test('# viz=combo on a nest renders as chart', async () => {
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # viz=combo
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }
+      }
+    `);
+    expect(childField(metadata, 'by_val').renderAs()).toBe('chart');
+  });
+
+  test('# viz=combo is a recognized viz type (no "invalid viz type" log)', async () => {
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # viz=combo
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }
+      }
+    `);
+    const invalidVizErrors = metadata.logCollector
+      .getLogs()
+      .filter(l => /Invalid viz type/.test(l.message));
+    expect(invalidVizErrors).toEqual([]);
+  });
+
+  test('legacy # combo_chart on a scalar is flagged (needs a nested query)', async () => {
+    // combo_chart, like bar_chart/line_chart, is nest-only: on a scalar it must
+    // produce a source-located "requires a nested query" error, not a bare red
+    // tile. (# viz=combo already went through the 'viz' entry.)
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # combo_chart
+        aggregate: val_sum is sum(val)
+      }
+    `);
+    const errs = metadata.logCollector
+      .getLogs()
+      .filter(l => /'combo_chart'.*requires a nested query/.test(l.message));
+    expect(errs).toHaveLength(1);
+  });
+
   test('# link on a string field renders as link', async () => {
     const metadata = await metadataFor(`
       query: q is ${SQL_SOURCE} -> {
@@ -166,6 +235,173 @@ describe('setup-time tag resolvers (tag-configs)', () => {
     expect(() => getBarChartSettings(chart)).toThrow(
       'at most 1 dimension for the x axis'
     );
+  });
+
+  test('combo: two measures auto-assign to the left (y) and right (y2) axes', async () => {
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # combo_chart
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }
+      }
+    `);
+    const chart = childField(metadata, 'by_val') as NestField;
+    const settings = getComboChartSettings(chart);
+    expect(settings.yChannel.fields).toEqual([JSON.stringify(['a'])]);
+    expect(settings.y2Channel.fields).toEqual([JSON.stringify(['b'])]);
+    // Smart defaults: bars on the left axis, line on the right.
+    expect(settings.yChannel.chart).toBe('bar');
+    expect(settings.y2Channel.chart).toBe('line');
+  });
+
+  test('combo: explicit y2 and per-channel chart type land in settings', async () => {
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # viz=combo { x=d y=a y2=b y.chart=line y2.chart=bar }
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }
+      }
+    `);
+    const chart = childField(metadata, 'by_val') as NestField;
+    const settings = getComboChartSettings(chart);
+    expect(settings.xChannel.fields).toEqual([JSON.stringify(['d'])]);
+    expect(settings.yChannel.fields).toEqual([JSON.stringify(['a'])]);
+    expect(settings.y2Channel.fields).toEqual([JSON.stringify(['b'])]);
+    expect(settings.yChannel.chart).toBe('line');
+    expect(settings.y2Channel.chart).toBe('bar');
+  });
+
+  test('combo: a bad y2 field reference is flagged with a source-located error', async () => {
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # viz=combo { y=a y2=nonexistent }
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }
+      }
+    `);
+    const errs = metadata.logCollector
+      .getLogs()
+      .filter(l => /'nonexistent' for 'y2'/.test(l.message));
+    expect(errs).toHaveLength(1);
+  });
+
+  test('combo: a non-numeric y2 field is flagged as needing to be numeric', async () => {
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # viz=combo { y=a y2=d }
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }
+      }
+    `);
+    const errs = metadata.logCollector
+      .getLogs()
+      .filter(l =>
+        /y2-channel field 'd'.*must be numeric or a measure/.test(l.message)
+      );
+    expect(errs).toHaveLength(1);
+  });
+
+  test('combo: an invalid chart type falls back to the channel default', async () => {
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        # viz=combo { y=a y2=b y2.chart=pie }
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }
+      }
+    `);
+    const chart = childField(metadata, 'by_val') as NestField;
+    const settings = getComboChartSettings(chart);
+    // 'pie' is not a supported mark type, so y2 keeps its default ('line').
+    expect(settings.y2Channel.chart).toBe('line');
+  });
+
+  // The combo chart's per-axis properties (`y/y2.chart`, `y/y2.min|max`) and
+  // its `y2` channel are validated inside the shared `viz` block, which every
+  // chart type passes through. These pin that the checks stay scoped to combo:
+  // a bar chart must not be told to "Fix: # combo_chart { ... }".
+  describe('combo-only validation stays scoped to combo', () => {
+    const CHART_NEST = `
+        nest: by_val is {
+          group_by: d
+          aggregate:
+            a is count()
+            b is sum(val)
+        }`;
+
+    async function logsFor(vizTag: string) {
+      const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        group_by: str
+        ${vizTag}${CHART_NEST}
+      }
+    `);
+      return metadata.logCollector.getLogs();
+    }
+
+    test.each([
+      ['# bar_chart { y.min=100 y.max=0 }'],
+      ['# line_chart { y.min=100 y.max=0 }'],
+      ['# viz=bar { y.min=100 y.max=0 }'],
+    ])('%s does not raise a combo axis-bounds error', async vizTag => {
+      const logs = await logsFor(vizTag);
+      expect(logs.filter(l => /axis bounds/.test(l.message))).toHaveLength(0);
+    });
+
+    test.each([
+      ['# bar_chart { y.chart=bogus }'],
+      ['# line_chart { y.chart=bogus }'],
+      ['# viz=table { y.chart=bogus }'],
+    ])('%s does not raise a combo mark-type warning', async vizTag => {
+      const logs = await logsFor(vizTag);
+      expect(logs.filter(l => /y\.chart/.test(l.message))).toHaveLength(0);
+    });
+
+    test('a stray y2 on a bar chart is not reported as a mistyped y2 channel', async () => {
+      const logs = await logsFor('# bar_chart { y2=str }');
+      expect(logs.filter(l => /y2-channel/.test(l.message))).toHaveLength(0);
+    });
+
+    test('combo still reports its own axis-bounds error, naming combo_chart', async () => {
+      const logs = await logsFor('# viz=combo { y=a y2=b y.min=100 y.max=0 }');
+      const errs = logs.filter(l => /axis bounds/.test(l.message));
+      expect(errs).toHaveLength(1);
+      expect(errs[0].message).toContain('min (100) must be less than max (0)');
+      expect(errs[0].message).toContain('# combo_chart {');
+    });
+
+    test('combo still warns on an invalid mark type', async () => {
+      const logs = await logsFor('# viz=combo { y=a y2=b y.chart=bogus }');
+      const warns = logs.filter(l =>
+        /Unknown y\.chart 'bogus'/.test(l.message)
+      );
+      expect(warns).toHaveLength(1);
+      expect(warns[0].message).toContain('Valid types: bar, line');
+    });
   });
 
   test('# currency resolves to a currency cell-format config', async () => {
