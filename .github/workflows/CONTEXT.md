@@ -10,7 +10,7 @@ Dependabot (config, the alerts-vs-PRs distinction, and the deliberate-pin ledger
 
 `scripts/ci-test-sanity-check.sh` (run by the `lint` job) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
 
-Wall clock is `pull_and_build` plus the slowest dialect job, and the dialect jobs are bound by warehouse round-trip latency (≈1 query per test), not CPU — which is why `ci-bigquery` and `ci-snowflake` run more jest workers than the runner has cores (measured: about 2× faster at 8; databricks got *slower* at 8 because its warehouse queues, and the trino/presto containers are CPU-bound on the runner, so those stay at the default), and why `ci-core` runs in parallel (the duckdb test connection is read-only; the writers use `:memory:`).
+Wall clock is `pull_and_build` plus the slowest dialect job. The dialect jobs are bound by warehouse round-trip latency (about one query per test), not CPU, so `ci-bigquery` and `ci-snowflake` run more jest workers than the runner has cores. The others use jest's default: databricks queues under that concurrency, and the trino/presto containers share the runner's CPU. `ci-core` runs in parallel; the duckdb test connection is read-only and the writers use `:memory:`.
 
 ### The design: why external-PR CI is shaped this way — do not break this
 
@@ -105,7 +105,7 @@ The artifact pattern saves compute (one build instead of ~11 parallel rebuilds, 
 The artifact lives and dies inside one run, so the runtime gate bounds what it can reach. An Actions cache is restored by *later* runs — including runs on `main` with every secret — so a cache written by PR code is a way for that code to outlive the gate. Two rules keep this closed, and any new cache must satisfy one of them:
 
 - **Content the consumer verifies.** `pull_and_build` uses `setup-node`'s `cache: npm`, which holds npm's tarball store; `npm ci` checks every tarball against the lockfile's integrity hash, so a poisoned entry cannot be installed.
-- **Written only by `push` to `main`.** `db-presto.yaml` caches the built slim presto image (`docker save`/`load`), because building it pulls the 9 GB official image — measured anywhere from 40 s to 4 minutes, at Docker Hub's mercy. The save steps are conditioned on `github.event_name == 'push'`; PR runs only restore. A PR that changes `Dockerfile.slim` or `presto_start.sh` gets a cache miss (they're in the key) and rebuilds, as before.
+- **Written only by `push` to `main`.** `db-presto.yaml` caches the built slim presto image (`docker save`/`load`), because building it pulls the 9 GB official image. The save steps are conditioned on `github.event_name == 'push'`; PR runs only restore. `Dockerfile.slim` and `presto_start.sh` are in the key, so a PR that changes either builds from scratch.
 
 Contributor-facing side (DCO sign-off, licensing, review) is in [CONTRIBUTING.md](../../CONTRIBUTING.md). Adding a dialect: [adding-a-new-database.md](../../packages/malloy/src/doc/adding-a-new-database.md).
 
