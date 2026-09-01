@@ -21,13 +21,37 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
+      # Building the slim image from scratch (apt + pulling the official
+      # image's layers) is ~4 minutes; loading it from the Actions cache is
+      # seconds. presto_start.sh skips the build when the image is already
+      # present. Only push-to-main runs save the cache, so an image built
+      # from PR code is never what a later run on main loads.
+      - name: Restore presto image
+        id: presto-image
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/presto-slim.tar
+          key: presto-slim-${{ hashFiles('test/presto/Dockerfile.slim', 'test/presto/presto_start.sh') }}
+      - name: Load presto image
+        if: steps.presto-image.outputs.cache-hit == 'true'
+        run: docker load -i /tmp/presto-slim.tar
+      - name: Start presto
+        run: ./test/presto/presto_start.sh --slim
+        env:
+          BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
+      - name: Save presto image
+        if: github.event_name == 'push' && steps.presto-image.outputs.cache-hit != 'true'
+        run: docker save presto-slim -o /tmp/presto-slim.tar
+      - uses: actions/cache/save@v4
+        if: github.event_name == 'push' && steps.presto-image.outputs.cache-hit != 'true'
+        with:
+          path: /tmp/presto-slim.tar
+          key: ${{ steps.presto-image.outputs.cache-primary-key }}
       - name: Test
         run: |
-          ./test/presto/presto_start.sh --slim
           npm run ci-presto
           ./test/presto/presto_stop.sh
         env:
-          BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
           PRESTO_CATALOG: bigquery
           PRESTO_SCHEMA: malloytest
           PRESTO_HOST: http://localhost

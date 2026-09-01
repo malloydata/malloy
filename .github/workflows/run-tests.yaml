@@ -45,6 +45,10 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
+          # Caches ~/.npm (the tarball store), not node_modules. Safe to share
+          # across PR and main runs: npm ci verifies every tarball against the
+          # lockfile integrity hash, so a poisoned entry cannot be installed.
+          cache: 'npm'
       - name: Install and build
         run: |
           npm ci --loglevel error

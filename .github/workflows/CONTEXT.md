@@ -6,9 +6,11 @@ Dependabot (config, the alerts-vs-PRs distinction, and the deliberate-pin ledger
 
 ## CI
 
-`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job `needs: pull_and_build`, downloads the artifact, and runs only its dialect-specific setup + `npm run ci-<dialect>` — no per-job rebuild. Fan-out goes to reusable workflows — `main.yaml` (dialect-agnostic `ci-core`, plus `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. `db-motherduck.yaml` is commented out of CI.
+`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job `needs: pull_and_build`, downloads the artifact, and runs only its dialect-specific setup + `npm run ci-<dialect>` — no per-job rebuild. Fan-out goes to reusable workflows — `main.yaml` (two jobs: `main` runs the dialect-agnostic `ci-core`; `lint` runs `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. `db-motherduck.yaml` is commented out of CI. The `main` job keeps that name because branch protection requires the check `main / main`.
 
-`scripts/ci-test-sanity-check.sh` (run by `main.yaml`) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
+`scripts/ci-test-sanity-check.sh` (run by the `lint` job) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
+
+Wall clock is `pull_and_build` plus the slowest dialect job, and the dialect jobs are bound by warehouse round-trip latency (≈1 query per test), not CPU — which is why the `ci-<warehouse>` scripts run more jest workers than the runner has cores, and why `ci-core` runs in parallel (the duckdb test connection is read-only; the writers use `:memory:`).
 
 ### The design: why external-PR CI is shaped this way — do not break this
 
@@ -97,6 +99,13 @@ The dismissal stands because the threat model is no different from the per-job-r
 **When dismissing an alert on this:** reference this section and the prior dismissals. Edits that change the structural shape of `pull_and_build` (new upload, different checkout target, added trigger) will re-fire the alert — that is the *desired* behavior; it forces a re-read of this stance before the shared-artifact pattern changes shape.
 
 The artifact pattern saves compute (one build instead of ~11 parallel rebuilds, ~30 runner-minutes per PR run) rather than wall-clock time — the parallel rebuilds shared the critical path, so wall-clock is similar. It's a stewardship-of-free-resources choice, not a CI-speed choice.
+
+### Caches cross runs; the artifact does not
+
+The artifact lives and dies inside one run, so the runtime gate bounds what it can reach. An Actions cache is restored by *later* runs — including runs on `main` with every secret — so a cache written by PR code is a way for that code to outlive the gate. Two rules keep this closed, and any new cache must satisfy one of them:
+
+- **Content the consumer verifies.** `pull_and_build` uses `setup-node`'s `cache: npm`, which holds npm's tarball store; `npm ci` checks every tarball against the lockfile's integrity hash, so a poisoned entry cannot be installed.
+- **Written only by `push` to `main`.** `db-presto.yaml` caches the built slim presto image (`docker save`/`load`), because building it is ~4 minutes of the job. The save steps are conditioned on `github.event_name == 'push'`; PR runs only restore. A PR that changes `Dockerfile.slim` or `presto_start.sh` gets a cache miss (they're in the key) and rebuilds, as before.
 
 Contributor-facing side (DCO sign-off, licensing, review) is in [CONTRIBUTING.md](../../CONTRIBUTING.md). Adding a dialect: [adding-a-new-database.md](../../packages/malloy/src/doc/adding-a-new-database.md).
 
