@@ -10,7 +10,7 @@ Dependabot (config, the alerts-vs-PRs distinction, and the deliberate-pin ledger
 
 `scripts/ci-test-sanity-check.sh` (run by the `lint` job) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
 
-Wall clock is `pull_and_build` plus the slowest dialect job, and the dialect jobs are bound by warehouse round-trip latency (≈1 query per test), not CPU — which is why the `ci-<warehouse>` scripts run more jest workers than the runner has cores, and why `ci-core` runs in parallel (the duckdb test connection is read-only; the writers use `:memory:`).
+Wall clock is `pull_and_build` plus the slowest dialect job, and the dialect jobs are bound by warehouse round-trip latency (≈1 query per test), not CPU — which is why `ci-bigquery` and `ci-snowflake` run more jest workers than the runner has cores (measured: about 2× faster at 8; databricks got *slower* at 8 because its warehouse queues, and the trino/presto containers are CPU-bound on the runner, so those stay at the default), and why `ci-core` runs in parallel (the duckdb test connection is read-only; the writers use `:memory:`).
 
 ### The design: why external-PR CI is shaped this way — do not break this
 
