@@ -21,11 +21,12 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
-      # Building the slim image from scratch (apt + pulling the official
-      # image's layers) is ~4 minutes; loading it from the Actions cache is
-      # seconds. presto_start.sh skips the build when the image is already
-      # present. Only push-to-main runs save the cache, so an image built
-      # from PR code is never what a later run on main loads.
+      # Building the slim image from scratch means pulling the 9 GB official
+      # image; measured at 40 s to 4 minutes depending on Docker Hub. Loading
+      # it from the Actions cache is seconds. presto_start.sh skips the build
+      # when the image is already present. Only push-to-main runs save the
+      # cache, so an image built from PR code is never what a later run on
+      # main loads.
       - name: Restore presto image
         id: presto-image
         uses: actions/cache/restore@v4
