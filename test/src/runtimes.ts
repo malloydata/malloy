@@ -26,7 +26,6 @@ import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
-import {mssqlConnectionString} from '../mssql/connection_string';
 import {
   MySQLConnection,
   MySQLExecutor,
@@ -208,7 +207,8 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           name: dbName,
           additionalExtensions: ['mssql'],
           setupSQL: [
-            `ATTACH '${mssqlConnectionString('malloytest')}' AS msdb (TYPE mssql)`,
+            // Must match test/mssql/connection_string.ts
+            "ATTACH 'Server=localhost;Port=1433;Database=malloytest;User Id=sa;Password=Malloy_Test_123;TrustServerCertificate=true' AS msdb (TYPE mssql)",
             'USE msdb.malloytest',
           ].join(';\n'),
         });
