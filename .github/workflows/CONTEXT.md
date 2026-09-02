@@ -10,13 +10,12 @@ Dependabot (config, the alerts-vs-PRs distinction, and the deliberate-pin ledger
 
 `scripts/ci-test-sanity-check.sh` (run by the `lint` job) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
 
-Wall clock is `pull_and_build` plus the slowest dialect job. The dialect jobs are bound by warehouse round-trip latency (about one query per test), not CPU, so `ci-snowflake` runs more jest workers than the runner has cores. The others use jest's default: databricks queues under that concurrency; the trino/presto containers share the runner's CPU; and bigquery, trino and presto all draw on one BigQuery project, where overlapping CI runs stall single queries past the test timeout, so bigquery stays at the default too. `ci-core` runs in parallel; the duckdb test connection is read-only and the writers use `:memory:`.
+Wall clock is `pull_and_build` plus the slowest dialect job. The dialect jobs are bound by warehouse round-trip latency (about one query per test), not CPU, so `ci-snowflake` runs more jest workers than the runner has cores. The others use jest's default: databricks queues under that concurrency; the trino/presto containers serve the repo's parquet and share the runner's CPU; and bigquery stays at the default because overlapping CI runs stall single queries past the test timeout. `ci-core` runs in parallel; the duckdb test connection is read-only and the writers use `:memory:`.
 
 ### The design: why external-PR CI is shaped this way — do not break this
 
 The whole shape follows from one platform constraint. Malloy's dialect tests need live
-warehouse credentials (BigQuery, Snowflake, Databricks, and the BigQuery-backed
-Trino/Presto containers). **There is exactly one trigger under which a pull request from a
+warehouse credentials (BigQuery, Snowflake, Databricks). **There is exactly one trigger under which a pull request from a
 fork can reach a repository secret, and it is `pull_request_target`.**
 
 | trigger | PR from | workflow file taken from | secrets | `GITHUB_TOKEN` | GitHub's fork-approval gate |
@@ -60,7 +59,7 @@ which starts a run whose triggering actor is the maintainer. Consequences worth 
 
 **The invariant to preserve: a job may run before the gate if and only if no secrets are
 passed to it.** Stated the old way — every secret-bearing job MUST `needs: check-permission`
-(today: `db-trino`, `db-presto`, `db-bigquery`, `db-snowflake`, `db-databricks`) — but the
+(today: `db-bigquery`, `db-snowflake`, `db-databricks`) — but the
 inverted form is the one that generalizes, and it is checkable by reading one file. What an
 external PR can do before the gate is then describable without auditing a single test
 script: spend runner compute and network egress. Nothing else.

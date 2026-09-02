@@ -207,6 +207,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           name: dbName,
           additionalExtensions: ['mssql'],
           setupSQL: [
+            // Must match test/mssql/connection_string.ts
             "ATTACH 'Server=localhost;Port=1433;Database=malloytest;User Id=sa;Password=Malloy_Test_123;TrustServerCertificate=true' AS msdb (TYPE mssql)",
             'USE msdb.malloytest',
           ].join(';\n'),

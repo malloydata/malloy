@@ -33,8 +33,7 @@ jobs:
           node-version-file: '.node-version'
       - name: Test
         run: |
-          echo CREATE EXTENSION tsm_system_rows\; | psql
-          gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
+          sh test/postgres/load_test_data.sh
           npm run ci-postgres
         env:
           PGHOST: localhost

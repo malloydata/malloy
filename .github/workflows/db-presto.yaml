@@ -1,11 +1,7 @@
 name: 'DB:Presto'
 permissions: {}
 
-on:
-  workflow_call:
-    secrets:
-      BQ_PRESTO_TRINO_KEY:
-        required: true
+on: workflow_call
 
 jobs:
   test-presto:
@@ -38,8 +34,6 @@ jobs:
         run: docker load -i /tmp/presto-slim.tar
       - name: Start presto
         run: ./test/presto/presto_start.sh --slim
-        env:
-          BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
       - name: Save presto image
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.presto-image.outputs.cache-hit != 'true'
         run: docker save presto-slim -o /tmp/presto-slim.tar
@@ -53,11 +47,11 @@ jobs:
           npm run ci-presto
           ./test/presto/presto_stop.sh
         env:
-          PRESTO_CATALOG: bigquery
+          PRESTO_CATALOG: hive
           PRESTO_SCHEMA: malloytest
           PRESTO_HOST: http://localhost
           PRESTO_PORT: 8080
-          PRESTO_USER: malloy-ci-bot@malloydata.org
+          PRESTO_USER: malloy-ci
       # - name: Show docker logs
       #   if: always()
       #   run: |

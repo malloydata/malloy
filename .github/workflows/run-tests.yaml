@@ -70,15 +70,11 @@ jobs:
     needs: pull_and_build
     uses: './.github/workflows/main.yaml'
   db-trino:
-    needs: [check-permission, pull_and_build]
+    needs: pull_and_build
     uses: './.github/workflows/db-trino.yaml'
-    secrets:
-      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-presto:
-    needs: [check-permission, pull_and_build]
+    needs: pull_and_build
     uses: './.github/workflows/db-presto.yaml'
-    secrets:
-      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-duckdb:
     needs: pull_and_build
     uses: './.github/workflows/db-duckdb.yaml'
