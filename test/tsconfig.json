@@ -6,7 +6,18 @@
     "jsx": "react-jsx",
     "jsxImportSource": "solid-js"
   },
-  "include": ["src", "bin", "./jest.setup.ts", "./types/jest.d.ts"],
+  "include": [
+    "src",
+    "bin",
+    "data",
+    "duckdb",
+    "mssql",
+    "mysql",
+    "postgres",
+    "trino",
+    "./jest.setup.ts",
+    "./types/jest.d.ts"
+  ],
   "references": [
     {
       "path": "../packages/malloy-interfaces"

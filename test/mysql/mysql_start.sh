@@ -4,9 +4,7 @@ set -e
 rm -rf .tmp
 mkdir .tmp
 
-# run docker
 SCRIPTDIR=$(cd $(dirname $0); pwd)
-DATADIR=$(dirname $SCRIPTDIR)/data/mysql
 CONTAINER_NAME="mysql-malloy"
 
 # The image starts mysqld twice: a temporary server to initialize the data
@@ -48,7 +46,7 @@ if docker container inspect "$CONTAINER_NAME" > /dev/null 2>&1; then
   exit 0
 fi
 
-docker run -p 3306:3306 -d -v $DATADIR:/init_data --name "$CONTAINER_NAME" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes mysql:8.4.2
+docker run -p 3306:3306 -d --name "$CONTAINER_NAME" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes mysql:8.4.2
 
 if ! wait_for_mysql; then
   docker logs "$CONTAINER_NAME" >& ./.tmp/mysql-malloy.logs
@@ -57,10 +55,7 @@ if ! wait_for_mysql; then
   exit 1
 fi
 
-# load the test data.
 echo Loading Test Data
-docker exec "$CONTAINER_NAME" cp /init_data/malloytest.mysql.gz /tmp
-docker exec "$CONTAINER_NAME" gunzip /tmp/malloytest.mysql.gz
-docker exec "$CONTAINER_NAME" mysql -P3306 -h127.0.0.1 -uroot -e 'drop database if exists malloytest; create database malloytest; use malloytest; source /tmp/malloytest.mysql;'
+MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_USER=root sh "$SCRIPTDIR/load_test_data.sh"
 
 echo "MySQL running on port 3306"

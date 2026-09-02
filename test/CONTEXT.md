@@ -140,7 +140,7 @@ These commands are optimized for CI and may not work correctly in local developm
 
 ### The test corpus
 
-The shared cross-database parquet files live in `test/data/malloytest-parquet/` (~60 MB total, checked into git). These are the source of truth — every dialect loads from or mirrors this data. DuckDB-only files remain in `test/data/duckdb/`.
+The shared cross-database parquet files live in `test/data/malloytest-parquet/` (~15 MB, checked into git). They are the only description of the test data: every database is loaded from them by a script in the repo (BigQuery excepted, see below). When the parquet changes, the loaders run again; there is no dump to edit. DuckDB-only files remain in `test/data/duckdb/`.
 
 #### Shared parquets (`test/data/malloytest-parquet/`)
 
@@ -171,13 +171,22 @@ All cross-database tests (`test/src/databases/all/`) reference tables as `malloy
 
 | Dialect | Method | Files | Notes |
 |---|---|---|---|
-| DuckDB | TS script: `CREATE TABLE AS SELECT FROM parquet_scan()` | `test/duckdb/load_test_data.sh` (wraps `load_test_data.ts`) | Run via `sh test/duckdb/load_test_data.sh` (or `npm run build-duckdb-db`). Creates `test/data/duckdb/duckdb_test.db` |
-| PostgreSQL | Compressed SQL dump loaded via Docker `psql` | `test/data/postgres/malloytest-postgres.sql.gz` | Docker script: `test/postgres/postgres_start.sh` |
-| MySQL | Compressed SQL dump loaded via Docker | `test/data/mysql/malloytest.mysql.gz` | Docker script: `test/mysql/mysql_start.sh` |
+| DuckDB | DuckDB `CREATE TABLE AS SELECT FROM read_parquet()` | `test/duckdb/load_test_data.sh` (wraps `load_test_data.ts`) | Run via `sh test/duckdb/load_test_data.sh` (or `npm run build-duckdb-db`). Creates `test/data/duckdb/duckdb_test.db` |
+| PostgreSQL | DuckDB's `postgres` extension: `ATTACH` the server, `CREATE TABLE AS SELECT FROM read_parquet()` | `test/postgres/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/postgres/postgres_start.sh` and by CI against a running server; connects with the `PG*` variables. No `ga_sample` (no anonymous record type) |
+| MySQL | DuckDB's `mysql` extension, likewise | `test/mysql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mysql/mysql_start.sh`; connects with the `MYSQL_*` variables. No `ga_sample`, and `alltypes` without its array columns |
+| SQL Server | DuckDB's community `mssql` extension, likewise | `test/mssql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mssql/mssql_start.sh`; connects as the test runtime does (`sa`, localhost:1433). Waits for the server itself. Same table set as MySQL. Not in CI |
+| Trino/Presto | The hive connector reads the parquet in place: each file is mounted into the container and declared as an external table | `test/trino/hive_ddl.ts`, `test/trino/hive.properties`, `test/presto/hive.properties` | `trino_start.sh` / `presto_start.sh` derive the DDL from the parquet schemas at container start. The hive metastore lowercases names, so a table with nested columns (`ga_sample`) is a `_hive` table plus a view that casts the nested field names back; top-level column names stay lowercase, since Trino lowercases those in every connector |
 | BigQuery | Pre-loaded manually in `malloydata-org` project | (none) | No loader script in repo. Data assumed to exist. |
 | Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/load_test_data.sh` (wraps `load_test_data.sql`) | Run via `sh test/snowflake/load_test_data.sh` (needs the `snowsql` CLI) |
-| Trino/Presto | Docker containers with pre-loaded data | `test/trino/trino_start.sh` | Uses Docker volumes |
 | Databricks | TS script: upload to Volume via REST, `CREATE TABLE AS SELECT FROM read_files()` | `test/databricks/load_test_data.sh` (wraps `load_test_data.ts`) | Run manually with the `DATABRICKS_*` env vars set: `sh test/databricks/load_test_data.sh` |
+
+The DuckDB-driven loaders share `test/data/parquet_loader.ts`, which runs everything through Malloy's own `DuckDBConnection`, so a database is built by the same DuckDB the tests read it with. It reads the table list from the parquet directory and takes a `LoadPlan` naming what a target cannot hold.
+
+### The flights timestamps
+
+`flights.dep_time` and `arr_time` are UTC instants whose digits are the local clock at the departure and arrival airport. The source recorded each airport's wall clock and the zone was not kept, so a 6:45 pm departure from LAX is the instant 18:45 UTC. The parquet declares them so (`tz=UTC`), every dialect holds them as instants, and under Malloy's UTC session pin every dialect renders the airport clock. An instant is the one time type every dialect can hold; Malloy has no wall-clock type, and several dialects have none either. Elapsed time between the two columns is not computable from them on a route that crosses zones; `flight_time`, `taxi_out` and `taxi_in` carry it.
+
+A loader must carry the instant through unchanged. Malloy's `DuckDBConnection`, which the loaders run through, pins its session zone to UTC, so a target without a zoned type (MySQL `datetime`) receives the same digits, where a loader in the machine's zone would shift them. Trino and Presto read the parquet's UTC microseconds directly.
 
 ### Cloud warehouse considerations
 

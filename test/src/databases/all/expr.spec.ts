@@ -337,11 +337,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  // TODO not sure why this test needs to be skipped on postgres, feels like an oversight
-  test.when(!['postgres', 'mysql'].includes(databaseName))(
-    'model: dates named',
-    async () => {
-      await expect(`
+  test('model: dates named', async () => {
+    await expect(`
       run: ${databaseName}.table('malloytest.alltypes')->{
         group_by:
           t_date,
@@ -356,19 +353,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           t_timestamp_year is t_timestamp.year,
       }
     `).toMatchResult(testModel, {
-        t_date: new Date('2020-03-02'),
-        t_date_month: new Date('2020-03-01'),
-        t_date_year: new Date('2020-01-01'),
-        t_timestamp: new Date('2020-03-02T12:35:56.000Z'),
-        t_timestamp_second: new Date('2020-03-02T12:35:56.000Z'),
-        t_timestamp_minute: new Date('2020-03-02T12:35:00.000Z'),
-        t_timestamp_hour: new Date('2020-03-02T12:00:00.000Z'),
-        t_timestamp_date: new Date('2020-03-02'),
-        t_timestamp_month: new Date('2020-03-01'),
-        t_timestamp_year: new Date('2020-01-01'),
-      });
-    }
-  );
+      t_date: new Date('2020-03-02'),
+      t_date_month: new Date('2020-03-01'),
+      t_date_year: new Date('2020-01-01'),
+      t_timestamp: new Date('2020-03-02T12:35:56.000Z'),
+      t_timestamp_second: new Date('2020-03-02T12:35:56.000Z'),
+      t_timestamp_minute: new Date('2020-03-02T12:35:00.000Z'),
+      t_timestamp_hour: new Date('2020-03-02T12:00:00.000Z'),
+      t_timestamp_date: new Date('2020-03-02'),
+      t_timestamp_month: new Date('2020-03-01'),
+      t_timestamp_year: new Date('2020-01-01'),
+    });
+  });
 
   it('named query metadata undefined', async () => {
     const result = await expressionModel
