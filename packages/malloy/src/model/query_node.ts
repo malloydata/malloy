@@ -123,8 +123,28 @@ export abstract class QueryAtomicField<
     return this.fieldDef.name !== '__distinct_key';
   }
 
+  /**
+   * Filters carried by the field's own expression — `flight_count {where: ...}`.
+   * A filtered measure compiles to a `filteredExpr` at the TOP of its expression
+   * (see getFilteredExpression in expr-props.ts); repeated filters nest, so walk
+   * the chain. Only a filter wrapping the whole expression may be hoisted: in
+   * `x + count() {where: f}` the filteredExpr is not at the top and `f` does not
+   * constrain the field's value.
+   *
+   * getResultMetadata calls this for measures only, and the result becomes the
+   * field's `drill_filters` annotation — which is how drilling a filtered measure
+   * lands on the rows behind the number rather than a superset of them.
+   */
   getFilterList(): FilterCondition[] {
-    return [];
+    const fieldDef = this.fieldDef;
+    if (!hasExpression(fieldDef)) return [];
+    const filters: FilterCondition[] = [];
+    let e = fieldDef.e;
+    while (e.node === 'filteredExpr') {
+      filters.push(...e.kids.filterList);
+      e = e.kids.e;
+    }
+    return filters;
   }
 }
 
