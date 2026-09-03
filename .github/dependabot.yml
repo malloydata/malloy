@@ -107,7 +107,7 @@ updates:
           - "@google-cloud/*"
           - "@databricks/*"
           - "@prestodb/*"
-          - "trino-client"
+          - "@trinodb/*"
           - "snowflake-sdk"
           - "@motherduck/*"
           - "mysql2"
