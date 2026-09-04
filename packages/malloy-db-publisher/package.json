@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@malloydata/malloy": "0.0.434",
-    "axios": "^1.6.7"
+    "axios": "^1.19.0"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.39.1"

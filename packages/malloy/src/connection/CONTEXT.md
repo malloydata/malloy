@@ -180,7 +180,7 @@ Factory extracts `name`, `setupSQL`, `timeoutMs`, and the three pool fields; pas
 
 **Trino** (`displayName: "Trino"`):
 `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced), `source` (string, advanced), `ssl` (json, advanced), `session` (json, advanced), `extraCredential` (json, advanced), `extraHeaders` (json, advanced)
-The json-typed properties pass through to `trino-client`'s `ConnectionOptions` via `extraConfig`.
+The json-typed properties pass through to `@trinodb/trino-js-client`'s `ConnectionOptions` via `extraConfig`.
 
 **Presto** (`displayName: "Presto"`):
 `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
