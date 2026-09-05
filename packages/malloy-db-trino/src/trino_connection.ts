@@ -28,8 +28,8 @@ import {BaseConnection} from '@malloydata/malloy/connection';
 import type {PrestoClientConfig, PrestoQuery} from '@prestodb/presto-js-client';
 import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
-import type {ConnectionOptions} from 'trino-client';
-import {Trino, BasicAuth} from 'trino-client';
+import type {ConnectionOptions} from '@trinodb/trino-js-client';
+import {Trino, BasicAuth} from '@trinodb/trino-js-client';
 import {resultRowToQueryRecord} from './result-to-querydata';
 
 export interface TrinoManagerOptions {
@@ -128,7 +128,7 @@ class TrinoRunner implements BaseRunner {
   client: Trino;
   constructor(config: TrinoConnectionConfiguration) {
     let server = config.server;
-    // trino-client has no separate port field — merge into the server URL
+    // the client has no separate port field — merge into the server URL
     if (server && config.port) {
       try {
         const url = new URL(server);

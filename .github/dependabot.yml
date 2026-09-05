@@ -56,6 +56,13 @@ updates:
       # (pg/pg-cursor/pg-query-stream move together); the real fix is issue #2928.
       - dependency-name: "pg"
       - dependency-name: "pg-query-stream"
+      # axios exact-pinned (1.19.0) at the root to match the exact pin inside
+      # @trinodb/trino-js-client. Any other version resolves a second, nested copy
+      # under the connector instead of one hoisted axios. The pin is not ours to
+      # keep: trinodb/trino-js-client#956 drops axios for native fetch in their
+      # 1.0.0, and this clears when we take that. See
+      # docs/dependency-management/CONTEXT.md.
+      - dependency-name: "axios"
       # @google-cloud/bigquery + common + paginator held at v7/v5 (a coupled set).
       # bigquery 8 -> common 6 -> google-auth-library 10 -> gaxios 7, and gaxios 7
       # does an ESM-only dynamic import() that fails under jest without
@@ -107,7 +114,7 @@ updates:
           - "@google-cloud/*"
           - "@databricks/*"
           - "@prestodb/*"
-          - "trino-client"
+          - "@trinodb/*"
           - "snowflake-sdk"
           - "@motherduck/*"
           - "mysql2"

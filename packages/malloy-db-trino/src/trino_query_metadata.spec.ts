@@ -10,7 +10,7 @@ jest.mock('@prestodb/presto-js-client', () => ({
 }));
 
 import {PrestoClient} from '@prestodb/presto-js-client';
-import {Trino} from 'trino-client';
+import {Trino} from '@trinodb/trino-js-client';
 import {PrestoConnection, TrinoConnection} from './trino_connection';
 
 const PrestoClientMock = PrestoClient as unknown as jest.Mock;
