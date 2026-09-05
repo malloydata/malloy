@@ -30,6 +30,6 @@
     "mysql2": "^3.22.5"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.2"
+    "@types/luxon": "^3.7.5"
   }
 }

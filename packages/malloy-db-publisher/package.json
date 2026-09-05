@@ -28,6 +28,6 @@
     "axios": "^1.19.0"
   },
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "^2.39.1"
+    "@openapitools/openapi-generator-cli": "^2.41.0"
   }
 }
