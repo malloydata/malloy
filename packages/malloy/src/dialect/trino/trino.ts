@@ -119,7 +119,7 @@ export class TrinoDialect extends PostgresBase {
   orderByClause: OrderByClauseType = 'output_name';
   nullMatchesFunctionSignature = false;
   supportsSelectReplace = false;
-  supportsComplexFilteredSources = false;
+  supportsComplexFilteredSources = true;
   supportsTempTables = false;
   supportsCountApprox = true;
   supportsHyperLogLog = true;
@@ -322,10 +322,12 @@ ${indent(sql)}
     return `SELECT ARRAY_AGG(CAST(ROW(${fields}) as ROW(${definitions}))) FROM ${lastStageName}\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string, fieldList): string {
-    const fields = fieldList.map(f => f.sqlExpression).join(', ');
+  sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList): string {
+    const fields = fieldList
+      .map(f => `${alias}.${this.sqlQuoteIdentifier(f.sqlOutputName)}`)
+      .join(', ');
     const definitions = this.buildTypeExpression(fieldList);
-    return `CAST(ROW(${fields}) as ROW(${definitions})`;
+    return `CAST(ROW(${fields}) as ROW(${definitions}))`;
   }
 
   // TODO(figutierrez): update.

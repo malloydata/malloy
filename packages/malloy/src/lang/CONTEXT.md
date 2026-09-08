@@ -155,6 +155,17 @@ The translator produces **Intermediate Representation (IR)** - a serializable, d
 
 For detailed information about IR structure and types, see [../model/CONTEXT.md](../model/CONTEXT.md).
 
+## Field usage
+
+Expressions record the fields they reference (`refSummary`), and the translator
+collates that into a per-segment summary the compiler reads instead of walking
+expressions itself. The translator side is `composite-source-utils.ts`
+(`getExpandedSegment` / `expandRefUsage`), driven per pipeline stage by
+`QueryBase.expandRefUsage` in `ast/query-elements/query-base.ts`. The whole
+chain — entry shape, how the expansion closes over joins and computed fields,
+what each path is rooted at, and what the compiler does with the result — is
+documented in [../model/CONTEXT.md](../model/CONTEXT.md#field-usage).
+
 ## Givens — translator side
 
 Given resolution itself is split in two — distinct from the translator/compiler split this document opens with. *Phase 1* (this document's scope) turns `$NAME` references into `GivenID`-bearing IR nodes; *Phase 2* binds the id to a value at SQL emission and lives with the compiler.

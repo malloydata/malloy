@@ -161,6 +161,7 @@ export class QueryQuery extends QueryField {
   maxDepth = 0;
   maxGroupSet = 0;
   rootResult: FieldInstanceResultRoot;
+  private packedColumns: Map<string, Set<string>> | undefined;
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
   isJoinedSubquery: boolean; // this query is a joined subquery.
@@ -1040,12 +1041,30 @@ export class QueryQuery extends QueryField {
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
+        // Every join below this one lives inside the subquery, so every one of
+        // them has to be projected out of it, not just the direct children.
+        // A child which became a subquery of its own has already flattened its
+        // whole subtree into columns, so everything under it is read from that
+        // child rather than packed a second time.
+        const projectJoin = (j: JoinInstance, from: string | undefined) => {
+          const fieldList = this.joinProjectionFieldList(j);
+          if (fieldList.length > 0) {
+            select +=
+              from === undefined
+                ? `, ${this.parent.dialect.sqlSelectAliasAsStruct(
+                    j.alias,
+                    fieldList
+                  )} AS ${j.alias}`
+                : `, ${from}.${j.alias} AS ${j.alias}`;
+          }
+          const below = from ?? (this.joinIsSubquery(j) ? j.alias : undefined);
+          for (const grandChild of j.children) {
+            projectJoin(grandChild, below);
+          }
+        };
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
-          select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
-            childJoin.alias,
-            getDialectFieldList(childJoin.queryStruct.structDef)
-          )} AS ${childJoin.alias}`;
+          projectJoin(childJoin, undefined);
         }
         select += `\nFROM ${structSQL} AS ${
           ji.alias
@@ -1102,6 +1121,87 @@ export class QueryQuery extends QueryField {
       s += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
     }
     return s;
+  }
+
+  // A filtered join whose own joins are inside its subquery, so that the
+  // subquery has to project them back out for the outer query to name.
+  private joinIsSubquery(ji: JoinInstance): boolean {
+    return (
+      ji.children.length > 0 &&
+      ji.joinFilterConditions !== undefined &&
+      isJoinedSource(ji.queryStruct.structDef) &&
+      this.parent.dialect.supportsComplexFilteredSources
+    );
+  }
+
+  /**
+   * Which columns of each join have to survive being packed into a struct.
+   * For every path in the segment's field usage, the member of the innermost
+   * join along that path -- a record is kept whole, since a reference into one
+   * is a reference to the column holding it.  A path naming a computed field
+   * contributes that name, which matches no column of the source and so packs
+   * nothing; the fields the computation reads are entries of their own.
+   */
+  private packedColumnsByJoin(): Map<string, Set<string>> {
+    if (this.packedColumns === undefined) {
+      this.packedColumns = new Map();
+      const usage = isRawSegment(this.firstSegment)
+        ? []
+        : (this.firstSegment.expandedFieldUsage ?? []);
+      for (const {path} of usage) {
+        let struct = this.parent;
+        let alias = struct.getIdentifier();
+        let column: string | undefined = undefined;
+        for (const name of path) {
+          const child = struct.getChildByName(name);
+          if (child === undefined) break;
+          if (!(child instanceof QueryFieldStruct)) {
+            column ??= name;
+            break;
+          }
+          struct = child.queryStruct;
+          if (struct.getJoinableParent() === struct) {
+            // A join: what the path named above it says nothing about what
+            // this one has to pack.
+            alias = struct.getIdentifier();
+            column = undefined;
+          } else {
+            column ??= name;
+          }
+        }
+        if (column !== undefined) {
+          const columns = this.packedColumns.get(alias);
+          if (columns) {
+            columns.add(column);
+          } else {
+            this.packedColumns.set(alias, new Set([column]));
+          }
+        }
+      }
+    }
+    return this.packedColumns;
+  }
+
+  // What a join contributes to the SELECT of a filtered join's subquery: every
+  // column named outside the subquery, the primary key, which the compiler can
+  // reach for as a distinct key without any expression naming it, and the
+  // generated __distinct_key when the join needed one.
+  private joinProjectionFieldList(ji: JoinInstance): DialectFieldList {
+    const packed = this.packedColumnsByJoin().get(ji.alias);
+    const primaryKey = ji.queryStruct.primaryKey();
+    const primaryKeyName = primaryKey && activeName(primaryKey.fieldDef);
+    const fieldList = getDialectFieldList(ji.queryStruct.structDef).filter(
+      d => packed?.has(d.rawName) || d.rawName === primaryKeyName
+    );
+    if (ji.makeUniqueKey) {
+      fieldList.push({
+        typeDef: {type: 'string'},
+        sqlExpression: '__distinct_key',
+        rawName: '__distinct_key',
+        sqlOutputName: '__distinct_key',
+      });
+    }
+    return fieldList;
   }
 
   // BigQuery has wildcard psudo columns that are treated differently

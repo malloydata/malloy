@@ -732,6 +732,74 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
+  // A filtered join is emitted as a subquery, so every join below it lives
+  // inside that subquery and has to be projected back out for the outer query
+  // to name it -- at every depth, not just the direct children.
+  describe('joins below a filtered join', () => {
+    const chain = (filterTwo: string) => `
+      source: sf is ${databaseName}.table('malloytest.state_facts')
+
+      source: three is sf
+      source: two is sf extend {
+        ${filterTwo}
+        join_one: three on three.state = state
+      }
+      source: one is sf extend {
+        where: state ~ 'A%'
+        join_one: two on two.state = state
+      }
+      source: zero is sf extend { join_one: one on one.state = state }
+    `;
+
+    test.when(runtime.dialect.supportsComplexFilteredSources)(
+      'two levels below',
+      async () => {
+        await expect(`
+          ${chain('')}
+          run: zero -> {
+            aggregate:
+              child is one.two.count()
+              grandchild is one.two.three.count()
+          }
+        `).toMatchResult(testModel, {child: 4, grandchild: 4});
+
+        await expect(`
+          ${chain('')}
+          run: zero -> {
+            group_by: grandchild_state is one.two.three.state
+            order_by: grandchild_state
+            limit: 1
+          }
+        `).toMatchResult(testModel, {grandchild_state: 'AK'});
+      }
+    );
+
+    // `two` is filtered as well, so it becomes a subquery of its own inside
+    // the one for `one`, and `three` reaches the outer query through it.
+    test.when(runtime.dialect.supportsComplexFilteredSources)(
+      'two levels below, both filtered',
+      async () => {
+        await expect(`
+          ${chain("where: state != 'AK'")}
+          run: zero -> {
+            aggregate:
+              child is one.two.count()
+              grandchild is one.two.three.count()
+          }
+        `).toMatchResult(testModel, {child: 3, grandchild: 3});
+
+        await expect(`
+          ${chain("where: state != 'AK'")}
+          run: zero -> {
+            group_by: grandchild_state is one.two.three.state
+            order_by: grandchild_state
+            limit: 1
+          }
+        `).toMatchResult(testModel, {grandchild_state: 'AL'});
+      }
+    );
+  });
+
   test('joined filtered explores with NO dependencies', async () => {
     await expect(`
       source: sf is ${databaseName}.table('malloytest.state_facts') extend {
