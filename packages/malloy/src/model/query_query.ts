@@ -50,6 +50,7 @@ import {
   isBaseTable,
   expressionIsAnalytic,
   isTemporalType,
+  fieldUsageFrom,
 } from './malloy_types';
 import {
   AndChain,
@@ -142,14 +143,13 @@ type StageOutputContext = {
 interface DialectFieldArg {
   fieldDef: FieldDef;
   sqlExpression: string;
-  sqlOutputName: string;
   rawName: string;
 }
 
 function pushDialectField(dl: DialectFieldList, f: DialectFieldArg) {
-  const {sqlExpression, sqlOutputName, rawName} = f;
+  const {sqlExpression, rawName} = f;
   if (isAtomic(f.fieldDef)) {
-    dl.push({typeDef: f.fieldDef, sqlExpression, sqlOutputName, rawName});
+    dl.push({typeDef: f.fieldDef, sqlExpression, rawName});
   }
 }
 
@@ -1015,11 +1015,7 @@ export class QueryQuery extends QueryField {
         });
       }
 
-      if (
-        ji.children.length === 0 ||
-        conditions === undefined ||
-        !this.parent.dialect.supportsComplexFilteredSources
-      ) {
+      if (!ji.isSubquery()) {
         // LTNOTE: need a check here to see the children's where: conditions are local
         //  to the source and not to any of it's joined children.
         //  In Presto, we're going to get a SQL error if in this case
@@ -1057,9 +1053,9 @@ export class QueryQuery extends QueryField {
                   )} AS ${j.alias}`
                 : `, ${from}.${j.alias} AS ${j.alias}`;
           }
-          const below = from ?? (this.joinIsSubquery(j) ? j.alias : undefined);
-          for (const grandChild of j.children) {
-            projectJoin(grandChild, below);
+          const readFrom = from ?? (j.isSubquery() ? j.alias : undefined);
+          for (const below of j.children) {
+            projectJoin(below, readFrom);
           }
         };
         for (const childJoin of ji.children) {
@@ -1123,25 +1119,53 @@ export class QueryQuery extends QueryField {
     return s;
   }
 
-  // A filtered join whose own joins are inside its subquery, so that the
-  // subquery has to project them back out for the outer query to name.
-  private joinIsSubquery(ji: JoinInstance): boolean {
-    return (
-      ji.children.length > 0 &&
-      ji.joinFilterConditions !== undefined &&
-      isJoinedSource(ji.queryStruct.structDef) &&
-      this.parent.dialect.supportsComplexFilteredSources
-    );
+  /**
+   * Record the column a reference needs from the join it lands in.  Walking
+   * `path` from `from`, the answer is the member of the innermost join along
+   * it -- a record is kept whole, since a reference into one is a reference to
+   * the column holding it.  A path ending at a computed field contributes that
+   * field's name, which matches no column of the source and so packs nothing;
+   * the columns the computation reads arrive as references of their own.
+   */
+  private packColumnFor(from: QueryStruct, path: string[]) {
+    let struct = from;
+    let alias = struct.getIdentifier();
+    let column: string | undefined = undefined;
+    for (const name of path) {
+      const child = struct.getChildByName(name);
+      if (child === undefined) {
+        // Every reference reaching here resolved during translation.
+        throw new MalloyCompileError(
+          `Internal error, likely a compiler bug: '${name}' in path ` +
+            `'${path.join('.')}' is not a field of the query source.`,
+          'compiler-field-not-found',
+          this.fieldDef.location
+        );
+      }
+      if (!(child instanceof QueryFieldStruct)) {
+        column ??= name;
+        break;
+      }
+      struct = child.queryStruct;
+      if (struct.getJoinableParent() === struct) {
+        // A join: what the path named above it says nothing about what this
+        // one has to pack.
+        alias = struct.getIdentifier();
+        column = undefined;
+      } else {
+        column ??= name;
+      }
+    }
+    if (column === undefined) return;
+    const columns = this.packedColumns?.get(alias);
+    if (columns) {
+      columns.add(column);
+    } else {
+      this.packedColumns?.set(alias, new Set([column]));
+    }
   }
 
-  /**
-   * Which columns of each join have to survive being packed into a struct.
-   * For every path in the segment's field usage, the member of the innermost
-   * join along that path -- a record is kept whole, since a reference into one
-   * is a reference to the column holding it.  A path naming a computed field
-   * contributes that name, which matches no column of the source and so packs
-   * nothing; the fields the computation reads are entries of their own.
-   */
+  /** Which columns of each join have to survive being packed into a struct. */
   private packedColumnsByJoin(): Map<string, Set<string>> {
     if (this.packedColumns === undefined) {
       this.packedColumns = new Map();
@@ -1149,33 +1173,22 @@ export class QueryQuery extends QueryField {
         ? []
         : (this.firstSegment.expandedFieldUsage ?? []);
       for (const {path} of usage) {
-        let struct = this.parent;
-        let alias = struct.getIdentifier();
-        let column: string | undefined = undefined;
-        for (const name of path) {
-          const child = struct.getChildByName(name);
-          if (child === undefined) break;
-          if (!(child instanceof QueryFieldStruct)) {
-            column ??= name;
-            break;
+        this.packColumnFor(this.parent, path);
+      }
+      // A join's primary key is the distinct key for a symmetric aggregate
+      // over it, and no expression in the query names it.  What the key needs
+      // is what it reads: a computed key's name is not a column, and the
+      // columns its expression reads are named nowhere else.
+      for (const [, ji] of this.rootResult.joins) {
+        const primaryKey = ji.queryStruct.primaryKey();
+        if (primaryKey === undefined) continue;
+        const keyDef = primaryKey.fieldDef;
+        if (hasExpression(keyDef)) {
+          for (const {path} of fieldUsageFrom(keyDef.refSummary)) {
+            this.packColumnFor(ji.queryStruct, path);
           }
-          struct = child.queryStruct;
-          if (struct.getJoinableParent() === struct) {
-            // A join: what the path named above it says nothing about what
-            // this one has to pack.
-            alias = struct.getIdentifier();
-            column = undefined;
-          } else {
-            column ??= name;
-          }
-        }
-        if (column !== undefined) {
-          const columns = this.packedColumns.get(alias);
-          if (columns) {
-            columns.add(column);
-          } else {
-            this.packedColumns.set(alias, new Set([column]));
-          }
+        } else {
+          this.packColumnFor(ji.queryStruct, [activeName(keyDef)]);
         }
       }
     }
@@ -1183,22 +1196,20 @@ export class QueryQuery extends QueryField {
   }
 
   // What a join contributes to the SELECT of a filtered join's subquery: every
-  // column named outside the subquery, the primary key, which the compiler can
-  // reach for as a distinct key without any expression naming it, and the
-  // generated __distinct_key when the join needed one.
+  // column named outside the subquery, and the generated __distinct_key when
+  // the join needed one.
   private joinProjectionFieldList(ji: JoinInstance): DialectFieldList {
     const packed = this.packedColumnsByJoin().get(ji.alias);
-    const primaryKey = ji.queryStruct.primaryKey();
-    const primaryKeyName = primaryKey && activeName(primaryKey.fieldDef);
-    const fieldList = getDialectFieldList(ji.queryStruct.structDef).filter(
-      d => packed?.has(d.rawName) || d.rawName === primaryKeyName
-    );
+    const dialect = ji.queryStruct.dialect;
+    const fieldList = getDialectFieldList(
+      ji.queryStruct.structDef,
+      dialect
+    ).filter(d => packed?.has(d.rawName));
     if (ji.makeUniqueKey) {
       fieldList.push({
         typeDef: {type: 'string'},
-        sqlExpression: '__distinct_key',
+        sqlExpression: dialect.sqlQuoteIdentifier('__distinct_key'),
         rawName: '__distinct_key',
-        sqlOutputName: '__distinct_key',
       });
     }
     return fieldList;
@@ -2193,8 +2204,6 @@ export class QueryQuery extends QueryField {
     const dialectFieldList: DialectFieldList = [];
 
     for (const [name, field] of resultStruct.allFields) {
-      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
-      //
       if (
         resultStruct.firstSegment.type === 'reduce' &&
         field instanceof FieldInstanceResult
@@ -2218,7 +2227,6 @@ export class QueryQuery extends QueryField {
               `${name}__${resultStruct.groupSet}`
             ),
             rawName: name,
-            sqlOutputName: sqlName,
           });
         } else {
           const oneLineNest: RecordDef = {
@@ -2233,7 +2241,6 @@ export class QueryQuery extends QueryField {
               `${name}__${resultStruct.groupSet}`
             ),
             rawName: name,
-            sqlOutputName: sqlName,
           });
         }
       } else if (
@@ -2247,7 +2254,6 @@ export class QueryQuery extends QueryField {
             `${name}__${resultStruct.groupSet}`
           ),
           rawName: name,
-          sqlOutputName: sqlName,
         });
       } else if (
         resultStruct.firstSegment.type === 'project' &&
@@ -2258,7 +2264,6 @@ export class QueryQuery extends QueryField {
           fieldDef: field.f.fieldDef,
           sqlExpression: field.generateExpression(),
           rawName: name,
-          sqlOutputName: sqlName,
         });
       }
     }
@@ -2430,7 +2435,7 @@ export class QueryQuery extends QueryField {
         pipeSQL: this.parent.dialect.sqlUnnestPipelineHead(
           repeatedResultType === 'inline_all_numbers',
           sourceSQLExpression,
-          getDialectFieldList(structDef)
+          getDialectFieldList(structDef, this.parent.dialect)
         ),
         fields: structDef.fields,
         connection: structDef.connection,

@@ -169,7 +169,9 @@ export class TrinoDialect extends PostgresBase {
   buildTypeExpression(fieldList: DialectFieldList): string {
     return fieldList
       .map(
-        dlf => `${dlf.sqlOutputName} ${this.malloyTypeToSQLType(dlf.typeDef)}`
+        dlf =>
+          `${this.sqlQuoteIdentifier(dlf.rawName)} ` +
+          this.malloyTypeToSQLType(dlf.typeDef)
       )
       .join(', \n');
   }
@@ -324,7 +326,7 @@ ${indent(sql)}
 
   sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${alias}.${this.sqlQuoteIdentifier(f.sqlOutputName)}`)
+      .map(f => `${alias}.${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     const definitions = this.buildTypeExpression(fieldList);
     return `CAST(ROW(${fields}) as ROW(${definitions}))`;

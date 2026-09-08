@@ -321,7 +321,7 @@ export class MySQLDialect extends Dialect {
       // string literal.
       const jsonPathLit = this.sqlLiteralString('$.' + f.rawName);
       fields.push(
-        `${this.sqlQuoteIdentifier(f.sqlOutputName)} ${fType}  PATH ${jsonPathLit}`
+        `${this.sqlQuoteIdentifier(f.rawName)} ${fType}  PATH ${jsonPathLit}`
       );
     }
     return fields.join(',\n');
@@ -655,7 +655,7 @@ export class MySQLDialect extends Dialect {
     return fieldList
       .map(
         f =>
-          `${f.sqlOutputName.replace(/`/g, "'")}, ${
+          `${this.sqlLiteralString(f.rawName)}, ${
             nullValues ? 'NULL' : f.sqlExpression
           }\n`
       )

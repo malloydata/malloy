@@ -26,11 +26,17 @@ import type {DialectFunctionOverloadDef} from './functions';
 import type {ValidateTablePathResult} from './table-path';
 import {validateDottedTablePath} from './table-path';
 
+/**
+ * One field of a struct, as the dialect code needs it.  `rawName` is the
+ * field's name with no quoting; a consumer which needs it as an identifier
+ * quotes it itself, because only the consumer knows whether it wants an
+ * identifier or, say, a string literal holding the name.  `sqlExpression`
+ * is SQL producing the value, valid in the scope the consumer emits into.
+ */
 interface DialectField {
   typeDef: AtomicTypeDef;
   sqlExpression: string;
   rawName: string;
-  sqlOutputName: string;
 }
 export type DialectFieldList = DialectField[];
 

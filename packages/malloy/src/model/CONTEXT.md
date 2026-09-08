@@ -309,42 +309,45 @@ Three kinds of entry share one list:
 
 ### What the compiler does with it
 
-`QueryQuery.dependenciesFromFieldUsage` (`query_query.ts`), called from
-`prepare()`, is the only reader. It:
+Two readers. `QueryQuery.dependenciesFromFieldUsage` (`query_query.ts`), called
+from `prepare()`, builds the join tree and decides what each join needs:
 
-1. walks `activeJoins` in order, calling `addDependantPath` → `addStructToJoin`,
-   which builds the join tree;
-2. walks `expandedFieldUsage` for `uniqueKeyRequirement` (→ `addStructToJoin`
-   with the requirement, which `calculateSymmetricAggregates` later turns into
-   `JoinInstance.makeUniqueKey`) and for `analyticFunctionUse` (→
-   `queryUsesPartitioning`, and on BigQuery `isComplexQuery`);
-3. walks `expandedUngroupings` to mark the result sets that need ungrouped
+1. it walks `activeJoins` in order, calling `addDependantPath` →
+   `addStructToJoin`;
+2. it walks `expandedFieldUsage` for `uniqueKeyRequirement` (→
+   `addStructToJoin` with the requirement, which `calculateSymmetricAggregates`
+   later turns into `JoinInstance.makeUniqueKey`) and for `analyticFunctionUse`
+   (→ `queryUsesPartitioning`, and on BigQuery `isComplexQuery`);
+3. it walks `expandedUngroupings` to mark the result sets that need ungrouped
    partitions.
 
-Beyond that it consumes the field name in one place: `joinProjectionFieldList`
-prunes the struct a filtered join's subquery packs for each join below it down
-to the columns something outside the subquery names.
+It reads no field names — each entry collapses to which join it is and whether
+that join needs a key. `QueryQuery.packedColumnsByJoin` is the reader that does
+use the names: it resolves each path to the column the innermost join on it has
+to supply, which is how a filtered join's subquery knows what to pack for each
+join below it.
 
-**One thing the compiler reaches for that no entry names** is a join's declared
-`primary_key`. It is the distinct key for a symmetric aggregate over that join
+**Two things the compiler reaches for that no entry names.** A join's declared
+`primary_key` is the distinct key for a symmetric aggregate over that join
 (`generateDistinctKeyExpression`, `generateDistinctKeySQL`), so the SQL can read
-`two_0."ai"` with no expression in the query having named `ai`. Anything
-deciding what a join needs has to add the primary key on its own account.
+`two_0."ai"` with no expression in the query having named `ai` — and when that
+key is a computed dimension, what the SQL reads is not the key's name but the
+columns its expression reads. Anything deciding what a join must supply has to
+add the primary key's own field usage on its own account.
 
-### Getting from a path to a join, and back
+### Paths and join aliases
 
 `FieldInstanceResultRoot.joins` is a `Map<string, JoinInstance>` keyed by **SQL
-alias** (`two_0`), not by Malloy path. The two correspondences are both one call:
-
-- **JoinInstance → path**: `ji.queryStruct.getFullOutputName()` returns the
-  dotted Malloy path with a trailing dot — `"one.two.three."` for alias
-  `three_0`, `""` for the root.
-- **path → QueryStruct**: `this.parent.getFieldByName(path)`, which is what
-  `addDependantPath` already uses.
+alias** (`two_0`), not by Malloy path, so a consumer holding usage paths has to
+cross between the two. `addDependantPath` crosses one way with
+`getFieldByName(path)`; `packColumnFor` crosses the other by walking the
+`QueryStruct` tree a name at a time, because it needs the join *and* the member
+of it, and because a record on the path is a column of the join above it rather
+than a join of its own.
 
 `this.firstSegment` is set in the `QueryQuery` constructor, so
 `this.firstSegment.expandedFieldUsage` is in hand in any method of the class,
-including SQL generation. Nothing has to be threaded through to reach it.
+including SQL generation.
 
 ## Compilation Pipeline
 

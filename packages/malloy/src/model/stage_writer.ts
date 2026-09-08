@@ -64,7 +64,7 @@ export class StageWriter {
     }
     sql += dialect.sqlCreateFunctionCombineLastStage(
       lastStageName,
-      getDialectFieldList(structDef),
+      getDialectFieldList(structDef, dialect),
       (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
     );
 
@@ -125,7 +125,7 @@ export class StageWriter {
     if (!this.useCTE) {
       return dialect.sqlCreateFunctionCombineLastStage(
         `(${this.withs[0]})`,
-        getDialectFieldList(structDef),
+        getDialectFieldList(structDef, dialect),
         (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
       );
     } else {
@@ -133,7 +133,7 @@ export class StageWriter {
         this.combineStages(true).sql +
         dialect.sqlCreateFunctionCombineLastStage(
           this.getName(this.withs.length - 1),
-          getDialectFieldList(structDef),
+          getDialectFieldList(structDef, dialect),
           (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
         )
       );

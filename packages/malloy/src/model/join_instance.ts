@@ -44,6 +44,18 @@ export class JoinInstance {
     }
   }
 
+  // A filtered join whose own joins go inside its subquery, so that the
+  // subquery has to project them back out for anything outside to name them.
+  isSubquery(): boolean {
+    return (
+      this.children.length > 0 &&
+      this.joinFilterConditions !== undefined &&
+      isSourceDef(this.queryStruct.structDef) &&
+      isJoined(this.queryStruct.structDef) &&
+      this.queryStruct.dialect.supportsComplexFilteredSources
+    );
+  }
+
   parentRelationship(): 'root' | JoinRelationship {
     if (this.queryStruct.parent === undefined) {
       return 'root';
@@ -84,6 +96,9 @@ export class JoinInstance {
 
   // postgres unnest needs to know the names of the physical fields.
   getDialectFieldList(): DialectFieldList {
-    return getDialectFieldList(this.queryStruct.structDef);
+    return getDialectFieldList(
+      this.queryStruct.structDef,
+      this.queryStruct.dialect
+    );
   }
 }
