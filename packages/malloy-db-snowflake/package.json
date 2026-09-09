@@ -26,6 +26,6 @@
     "@malloydata/malloy": "0.0.434",
     "generic-pool": "^3.9.0",
     "snowflake-sdk": "2.3.1",
-    "toml": "^3.0.0"
+    "toml": "^5.0.0"
   }
 }
