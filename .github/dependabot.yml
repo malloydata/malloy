@@ -43,13 +43,12 @@ updates:
       # 1.0.0, and this clears when we take that. See
       # docs/dependency-management/CONTEXT.md.
       - dependency-name: "axios"
-      # @google-cloud/bigquery + common + paginator held at v7/v5 (a coupled set).
-      # bigquery 8 -> common 6 -> google-auth-library 10 -> gaxios 7, and gaxios 7
-      # does an ESM-only dynamic import() that fails under jest without
-      # --experimental-vm-modules; that flag can't be made invisible for
-      # `npx jest FILE` and is experimental, so we hold v7. Pinned to best-v7 in
-      # malloy-db-bigquery/package.json. Unpin per issue #2932 (jest->vitest, or
-      # the ESM-only import going away).
+      # @google-cloud/bigquery + common + paginator held at v7/v5 (a coupled set),
+      # exact-pinned to best-v7 in malloy-db-bigquery/package.json. BigQueryConnection
+      # reads this.bigQuery.projectId synchronously in its constructor; the v8/v9 SDK
+      # resolves it asynchronously, so every query fails "ProjectId must be non-empty".
+      # (The gaxios ESM story this comment used to give is not the blocker — babel can
+      # transform it. See docs/dependency-management/CONTEXT.md.) Unpin per issue #2932.
       - dependency-name: "@google-cloud/bigquery"
       - dependency-name: "@google-cloud/common"
       - dependency-name: "@google-cloud/paginator"
