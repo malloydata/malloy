@@ -28,7 +28,7 @@
   "devDependencies": {
     "@types/luxon": "^3.7.5",
     "jest-diff": "^30.5.1",
-    "peggy": "^4.2.0",
+    "peggy": "^5.1.0",
     "rimraf": "^6.1.3"
   }
 }
