@@ -60,9 +60,9 @@
     "@types/luxon": "^3.7.5",
     "esbuild": "0.28.2",
     "storybook": "^8.6.15",
-    "vite": "^6.4.2",
+    "vite": "^8.2.2",
     "vite-plugin-dts": "^5.1.0",
     "vite-plugin-solid": "^2.11.14",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^6.1.1"
   }
 }
