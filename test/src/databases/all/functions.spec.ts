@@ -77,7 +77,7 @@ expressionModels.forEach((x, databaseName) => {
       const result = await run();
       expect(result.data.path(0, 'f').value).toBe(expectedSuccess);
     } else {
-      expect(run).rejects.toThrowError(expected.error);
+      expect(run).rejects.toThrow(expected.error);
     }
   };
 

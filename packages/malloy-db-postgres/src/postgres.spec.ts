@@ -84,35 +84,35 @@ describe('postgres schema caching', () => {
 
   it('caches table schema', async () => {
     await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-    expect(getTableSchema).toBeCalledTimes(1);
+    expect(getTableSchema).toHaveBeenCalledTimes(1);
     await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-    expect(getTableSchema).toBeCalledTimes(1);
+    expect(getTableSchema).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes table schema', async () => {
     await connection.fetchSchemaForTables({'test2': 'table2'}, {});
-    expect(getTableSchema).toBeCalledTimes(1);
+    expect(getTableSchema).toHaveBeenCalledTimes(1);
     await connection.fetchSchemaForTables(
       {'test2': 'table2'},
       {refreshTimestamp: Date.now() + 10}
     );
-    expect(getTableSchema).toBeCalledTimes(2);
+    expect(getTableSchema).toHaveBeenCalledTimes(2);
   });
 
   it('caches sql schema', async () => {
     await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
-    expect(getSQLBlockSchema).toBeCalledTimes(1);
+    expect(getSQLBlockSchema).toHaveBeenCalledTimes(1);
     await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
-    expect(getSQLBlockSchema).toBeCalledTimes(1);
+    expect(getSQLBlockSchema).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes sql schema', async () => {
     await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
-    expect(getSQLBlockSchema).toBeCalledTimes(1);
+    expect(getSQLBlockSchema).toHaveBeenCalledTimes(1);
     await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
       refreshTimestamp: Date.now() + 10,
     });
-    expect(getSQLBlockSchema).toBeCalledTimes(2);
+    expect(getSQLBlockSchema).toHaveBeenCalledTimes(2);
   });
 });
 

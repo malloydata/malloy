@@ -348,30 +348,41 @@ its runtime deps (making consumer module-format moot, and retiring this whole cl
 leak). Until then, the core stays CJS-consumable.
 
 ### Node runtime — pinned at `24.16.0` via `.node-version`
-Not a dependency, but a deliberate hold that belongs here. Node **24.17.0** carries
-a `http.Agent` keep-alive socket-reuse regression that makes `node-fetch` (under
-`google-auth-library`/`gaxios`) throw a false `ERR_STREAM_PREMATURE_CLOSE` —
-surfaced as `Invalid response body while trying to fetch
-https://www.googleapis.com/oauth2/v4/token: Premature close` — whenever Google's
-OAuth endpoint closes a pooled idle connection. It hits the ci-core bigquery
-`streaming.spec` (which authenticates to BigQuery and runs live queries), and
-because socket reuse is timing-dependent it presents as an **intermittent** failure,
-not every run.
+Not a dependency, but a deliberate hold that belongs here. `.node-version` pins
+`24.16.0`; the CI workflows read it via `actions/setup-node`
+`node-version-file: '.node-version'` (they previously floated `node-version: 24.x`
+and so silently picked up 24.17.0 while ignoring the committed pin).
+`scripts/ci-env-sanity-check.sh` asserts `.node-version` exists, so the pin has one
+authoritative source.
 
-`.node-version` pins `24.16.0`; the CI workflows read it via
-`actions/setup-node` `node-version-file: '.node-version'` (they previously floated
-`node-version: 24.x` and so silently picked up 24.17.0 while ignoring the committed
-pin). `scripts/ci-env-sanity-check.sh` already asserts `.node-version` exists, so the
-pin has one authoritative source.
+**The original reason is gone; a worse one replaced it.** The hold began with a
+`http.Agent` keep-alive socket-reuse regression in **24.17.0** — the side effect of
+its CVE-2026-48931 fix — which made `node-fetch` under
+`google-auth-library`/`gaxios` throw a false `ERR_STREAM_PREMATURE_CLOSE` against
+Google's OAuth endpoint. Node fixed that in **24.18.0** (nodejs/node#63989,
+PR #64004). But the BigQuery suite on any post-24.16 Node now takes an
+**intermittent jest-worker `SIGSEGV`** — a different spec each time, so it is the
+worker dying, not a test:
 
-Cost: held one Node patch behind until the regression is fixed upstream.
+| `.node-version` | full `db-all` + `db-bigquery` runs | SIGSEGV |
+| --- | --- | --- |
+| 24.16.0 | 16 | 0 |
+| 24.18.0 | 8 | 2 |
+| 24.21.0 | 16 | 2 |
 
-Two horizons. **Patch:** the `24.16.0`-vs-`.17` hold clears when Node ships the
-keep-alive fix (or `google-auth-library`/`gaxios` stops reusing the socket) — then
-bump `.node-version` within the 24 line and confirm the bigquery `streaming.spec` is
-stable across repeated runs. **Major:** the long-term plan is to **stay on the Node 24
-major until it leaves active LTS** — we don't chase Node majors; 24 holds until LTS
-itself moves on, at which point we move with it.
+Same tree, same lockfile, only `.node-version` differing. `npm run precheck` (duckdb,
+4176 tests) is clean 3/3 on 24.21, so whatever it is lives in the BigQuery HTTP path
+— the same subsystem 24.17.0 rewrote. Cause not established; the measurement is.
+
+Cost: held below the 24.17.0 **security** release. That is the real price now, and it
+grows, so this hold wants an owner rather than a monthly glance.
+
+Two horizons. **Patch:** clears when the SIGSEGV is understood — reproduce it, or
+watch it disappear on a later 24.x — then bump `.node-version` and re-run the table
+above before trusting it. Do not bump on "the upstream regression is fixed"; that is
+now true and still not sufficient. **Major:** the long-term plan is to **stay on the
+Node 24 major until it leaves active LTS** — we don't chase Node majors; 24 holds
+until LTS itself moves on, at which point we move with it.
 
 ## Tracking ignores — `@types/*` slaved to another major
 
