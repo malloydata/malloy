@@ -26,8 +26,8 @@
     "luxon": "^3.7.2"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.2",
-    "jest-diff": "^30.4.1",
+    "@types/luxon": "^3.7.5",
+    "jest-diff": "^30.5.1",
     "peggy": "^4.2.0",
     "rimraf": "^6.1.3"
   }
