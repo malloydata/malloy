@@ -10,11 +10,6 @@ updates:
       # rather than chasing the current/odd Node line.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # @types/jasmine tracks the jasmine-core major, which malloy-syntax-highlight
-      # holds at 5. Ignore the major (currently 6) so it stops re-proposing until a
-      # deliberate jasmine-core 5->6 bump moves both together.
-      - dependency-name: "@types/jasmine"
-        update-types: ["version-update:semver-major"]
       # @motherduck/wasm-client held at ^0.6.6: the duckdb-wasm connector
       # (packages/malloy-db-duckdb) is written against the old 0.6 API. The 0.8
       # "minor" reshaped the type exports / SpecialDuckDBValue — a 0.x minor that

@@ -375,15 +375,15 @@ itself moves on, at which point we move with it.
 
 ## Tracking ignores — `@types/*` slaved to another major
 
-Not holds we're waiting to *clear* — standing constraints that keep a `@types/*`
-package locked to the major of the thing it types. Both are `ignore`d for the
-**major only** in `dependabot.yml` (minors/patches still flow); both are documented
-here only because the rule is "everything ignored is written down."
+Not a hold we're waiting to *clear* — a standing constraint that keeps a `@types/*`
+package locked to the major of the thing it types. `ignore`d for the **major only**
+in `dependabot.yml` (minors/patches still flow), and documented here only because the
+rule is "everything ignored is written down."
 
 - **`@types/node`** — held to the Node **runtime** major (24). Moves when the runtime
   major moves (see the Node runtime hold above), not on @types/node's own schedule.
-- **`@types/jasmine`** — held to **jasmine-core**'s major (5). Clears with a
-  deliberate jasmine-core 5→6 bump, which moves both together.
+  The declarations currently say 22 while the runtime says 24 — PR #3002 syncs them
+  and adds `npm run check-tracking-types` so the two can't drift again.
 
 ## Not pins — context, so this list stays short
 
