@@ -228,6 +228,8 @@ dependent-target: {
 ```
 Then add to `package.json`: `"codegen": "node ../../scripts/femto-build.js targetName"`
 
+`node ../../scripts/femto-build.js --help` is the reference for the config format; the example above omits `outputs`, the field that forces a rebuild when a generated file has gone missing. The hash covers input files, config text, and dep digests — but not the versions of the tools the commands run, so bumping antlr4ts or peggy needs a `npm run clean` to take effect.
+
 
 ### Testing
 

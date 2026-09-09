@@ -1,44 +1,35 @@
 /*
- * femto-build: A tiny content-hash-based build caching tool.
+ * femto-build: content-hash caching for codegen steps.
  *
- * Solves the problem of expensive codegen steps (ANTLR, peggy,
- * vite, flow types) running on every build even when inputs haven't
- * changed. Unlike Make/ninja (timestamp-based, breaks on git ops) or
- * Turborepo (global hash invalidation in monorepos), this uses SHA-256
- * content hashing with no external build tools.
+ * Expensive codegen (ANTLR, peggy, vite, flow types) should not re-run when
+ * its inputs haven't changed. Make and ninja decide that from timestamps,
+ * which git operations scramble; Turborepo invalidates at package
+ * granularity. This hashes file content with SHA-256 and needs no external
+ * build tool.
  *
- * Each package that needs caching has a femto-config.motly with named
- * targets. Each target has input globs, a list of commands, optional
- * dependencies on other targets, and optional output globs:
+ * Run it from the package directory holding the femto-config.motly — the
+ * config, every glob, and the digest files all resolve against the current
+ * directory:
  *
- *   lexer: {
- *     inputs = ["src/grammar/Lexer.g4"]
- *     commands = ["antlr4ts -o out Lexer.g4"]
- *   }
+ *   node ../../scripts/femto-build.js <target>
  *
- *   parser: {
- *     deps = [lexer]
- *     inputs = ["src/grammar/Parser.g4"]
- *     commands = ["antlr4ts -o out -visitor Parser.g4"]
- *   }
+ * Run with --help for the config format.
  *
- * Usage: node femto-build.js <target>
- *
- * Digest is stored as .<target>.femto.digest in the package directory.
- * If inputs (and deps) haven't changed, commands are skipped entirely.
+ * The hash covers input files, the config text, and dep digests — not the
+ * versions of the tools the commands invoke. Bumping antlr4ts or peggy
+ * leaves generated files "up to date" until a --clean.
  */
 
-/* eslint-disable no-empty */
 const {createHash} = require('crypto');
-const {readFileSync, writeFileSync, existsSync, unlinkSync} = require('fs');
+const {readFileSync, writeFileSync, existsSync, rmSync} = require('fs');
 const {execSync} = require('child_process');
 const glob = require('glob');
 const path = require('path');
 const {MOTLYSession} = require('@malloydata/motly-ts-parser');
 
 const CONFIG_FILE = 'femto-config.motly';
+const FIELDS = ['commands', 'inputs', 'deps', 'outputs'];
 
-// Derive a short package-relative label like "packages/malloy:codegen"
 const repoRoot = path.resolve(__dirname, '..');
 const pkgLabel = path.relative(repoRoot, process.cwd());
 
@@ -53,6 +44,9 @@ if (requestedTarget === '--help' || requestedTarget === '-h') {
 
 Usage: node femto-build.js <target | --clean | --help>
 
+Run from the package directory containing ${CONFIG_FILE}; all paths,
+globs, and digest files resolve against the current directory.
+
 Arguments:
   <target>    Build the named target from ${CONFIG_FILE}
   --clean     Remove all .*.femto.digest files in the current directory
@@ -60,10 +54,10 @@ Arguments:
 
 Config format (${CONFIG_FILE}):
   targetName: {
-    inputs = ["src/grammar/*.g4"]        # globs for input files (required unless deps)
-    commands = ["tool -o out File.g4"]    # shell commands to run
-    deps = [otherTarget]                  # targets that must build first
-    outputs = ["out/*.ts"]               # globs to check existence (rebuild if missing)
+    inputs = ["src/grammar/*.g4"]       # globs for input files (required unless deps)
+    commands = ["tool -o out File.g4"]  # shell commands to run
+    deps = [otherTarget]                # targets that must build first
+    outputs = ["out/Parser.ts"]         # file paths that must exist (rebuild if missing)
   }
 
 Behavior:
@@ -75,7 +69,7 @@ Behavior:
 
 if (requestedTarget === '--clean') {
   for (const f of glob.sync('.*.femto.digest')) {
-    unlinkSync(f);
+    rmSync(f);
     console.log(`${pkgLabel} removed ${f}`);
   }
   process.exit(0);
@@ -97,8 +91,10 @@ if (errors.length > 0) {
   }
   process.exit(1);
 }
-const result = session.finish();
-const allConfig = result.getMot({env: process.env});
+// No environment is passed to the config: the hash covers the config text,
+// so a value interpolated from outside it would change without changing the
+// hash.
+const allConfig = session.finish().getMot();
 
 function validateTarget(name) {
   const config = allConfig.get(name);
@@ -109,41 +105,27 @@ function validateTarget(name) {
     );
     process.exit(1);
   }
-  const commands = config.texts('commands');
-  const inputs = config.texts('inputs');
-  const deps = config.texts('deps');
-  const outputs = config.texts('outputs');
-  if (config.has('commands') && !commands) {
-    console.error(
-      `femto-build: target "${name}" "commands" must be an array of strings`
-    );
-    process.exit(1);
+  const target = {};
+  for (const field of FIELDS) {
+    target[field] = config.texts(field);
+    if (config.has(field) && !target[field]) {
+      console.error(
+        `femto-build: target "${name}" "${field}" must be an array of strings`
+      );
+      process.exit(1);
+    }
+    if (config.has(field) && target[field].length === 0) {
+      console.error(`femto-build: target "${name}" "${field}" is empty`);
+      process.exit(1);
+    }
   }
-  if (config.has('inputs') && !inputs) {
-    console.error(
-      `femto-build: target "${name}" "inputs" must be an array of strings`
-    );
-    process.exit(1);
-  }
-  if (config.has('deps') && !deps) {
-    console.error(
-      `femto-build: target "${name}" "deps" must be an array of strings`
-    );
-    process.exit(1);
-  }
-  if (config.has('outputs') && !outputs) {
-    console.error(
-      `femto-build: target "${name}" "outputs" must be an array of strings`
-    );
-    process.exit(1);
-  }
-  if (!inputs && !deps) {
+  if (!target.inputs && !target.deps) {
     console.error(
       `femto-build: target "${name}" must have "inputs" and/or "deps"`
     );
     process.exit(1);
   }
-  return {commands, inputs, deps, outputs};
+  return target;
 }
 
 function hashFiles(patterns) {
@@ -168,11 +150,10 @@ function hashFiles(patterns) {
   return hash.digest('hex');
 }
 
-// Hash input files, the config itself, and all dep digests.
-// Must be called after deps are built so their digest files exist.
+// Must be called after deps are built, so their digest files exist.
 function computeHash(config) {
   const combined = createHash('sha256');
-  if (config.inputs && config.inputs.length > 0) {
+  if (config.inputs) {
     combined.update(hashFiles(config.inputs));
   }
   combined.update(configText);
@@ -182,7 +163,6 @@ function computeHash(config) {
   return combined.digest('hex');
 }
 
-// Track which targets have been built this invocation
 const built = new Set();
 const building = new Set();
 
@@ -196,34 +176,20 @@ function buildTarget(name, depth = 0) {
 
   const config = validateTarget(name);
 
-  // Build deps first
   for (const dep of config.deps || []) {
     buildTarget(dep, depth + 1);
   }
 
   const digestFile = `.${name}.femto.digest`;
   const currentHash = computeHash(config);
-
-  let storedHash = null;
-  try {
-    if (existsSync(digestFile)) {
-      storedHash = readFileSync(digestFile, 'utf-8').trim();
-    }
-  } catch (_) {}
+  const storedHash = existsSync(digestFile)
+    ? readFileSync(digestFile, 'utf-8').trim()
+    : null;
 
   const label = `${pkgLabel}:${name}`;
   const mark = '>'.repeat(depth + 2);
 
-  // If outputs are declared, check they exist even if hash matches
-  let outputsMissing = false;
-  if (config.outputs) {
-    for (const pattern of config.outputs) {
-      if (glob.sync(pattern, {nodir: true}).length === 0) {
-        outputsMissing = true;
-        break;
-      }
-    }
-  }
+  const outputsMissing = (config.outputs || []).some(out => !existsSync(out));
 
   if (!outputsMissing && currentHash === storedHash) {
     console.log(`${label} up to date`);
@@ -232,15 +198,16 @@ function buildTarget(name, depth = 0) {
   }
 
   console.log(`${mark} ${label}`);
+  // Drop the digest before the first command, not after a failed one: a
+  // process killed mid-build would otherwise leave a digest describing
+  // outputs that were never finished.
+  rmSync(digestFile, {force: true});
   for (const cmd of config.commands || []) {
     console.log(`  ${cmd}`);
     try {
-      execSync(cmd, {stdio: 'inherit', shell: true});
+      execSync(cmd, {stdio: 'inherit'});
     } catch (e) {
       console.error(`${mark} ${label} failed`);
-      try {
-        unlinkSync(digestFile);
-      } catch (_) {}
       process.exit(e.status || 1);
     }
   }
