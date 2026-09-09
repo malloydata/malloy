@@ -53,6 +53,19 @@ updates:
       - dependency-name: "@google-cloud/bigquery"
       - dependency-name: "@google-cloud/common"
       - dependency-name: "@google-cloud/paginator"
+      # gaxios is declared directly by malloy-db-bigquery for its GaxiosError
+      # check and moves with the trio above, so hold it alongside them.
+      - dependency-name: "gaxios"
+      # Storybook majors: 9 folded @storybook/blocks, /manager-api, /theming,
+      # /types, /test, /addon-essentials and /addon-interactions into the
+      # `storybook` package, so this is a migration across 12 files, and nothing
+      # in CI renders a story to catch a mistake. Four PRs a month otherwise —
+      # a shared open-PR limit means those four crowd out everything else. See
+      # docs/dependency-management/CONTEXT.md.
+      - dependency-name: "storybook"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@storybook/*"
+        update-types: ["version-update:semver-major"]
       # uuid + @noble/hashes held below their ESM-only majors. uuid 12+ and
       # @noble/hashes 2+ dropped CommonJS (pure ESM), which breaks every downstream
       # consumer's esbuild bundle and ts-jest runtime — an ESM-only runtime dep leaks

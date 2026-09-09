@@ -38,6 +38,16 @@ vulnerable transitive copies. Security is instead monitored deliberately with
 `npm audit --omit=dev`, reconciled against the holds below; the Dependabot alert tab is
 used only to dismiss advisories with a reason.
 
+**Turning security auto-updates off gave `open-pull-requests-limit` teeth.** The limit
+(10) normally exempts security PRs — GitHub does not count them and does not cap them.
+With auto-updates off there are no security PRs, so the cap applies to *everything
+Dependabot produces here*, and when the ten slots are full it opens nothing new and
+says nothing. Slots are taken by whatever is oldest, which means an un-`ignore`d major
+nobody intends to take squats one forever: storybook alone held four. So **the limit is
+not the thing to raise — the squatters are the thing to `ignore`.** That is the load
+carried by "everything ignored is written down": every row below buys back a slot, and
+a major with no row is a slot lost permanently.
+
 We may decide to respond to a Dependabot report in one of three ways
 
 1. Bump our internal dependency.
@@ -63,6 +73,23 @@ letting CJS-line minors/patches and their security fixes flow (uuid, @noble/hash
 when you hit a wall: the breaker is *in-range*, so a caret would still resolve it on a
 fresh install (databricks `1.15.0`, snowflake-sdk `2.3.1`). Exact is the
 escalation, not the default.
+
+**Look inside the tarball before you trust a boundary.** Several holds below exist
+because a release crossed a native boundary *inside* a major line, and the entries
+say npm metadata cannot show you that. It can't — but the package can:
+
+```
+npm pack <pkg>@<version> --pack-destination /tmp
+tar tzf /tmp/<pkg>-<version>.tgz | grep -E '\\.node$'
+npm view <pkg>@<version> optionalDependencies    # per-platform kernel packages
+```
+
+Two shapes, and a version needs both checked. `snowflake-sdk@3.3.0` bundles **nine**
+`.node` binaries under `dist/lib/minicore/binaries/` with an empty
+`optionalDependencies` — invisible to every metadata field. `@databricks/sql@2.1.0`
+ships none itself and declares **eight** per-platform kernel packages instead.
+Either shape breaks the embedding apps' esbuild bundles. Run both checks; a clean
+one is not an answer.
 
 ### ESM-only majors — and the downstream-leak trap
 
@@ -197,6 +224,24 @@ Revisit when: issue #2932 — teach the connector to resolve `projectId`
 asynchronously, then bump the trio together with the transform entries above, and
 confirm `db-bigquery` **and** the ci-core bigquery `streaming.spec` pass **without**
 the flag.
+
+### Storybook — held at 8, majors ignored
+Owned by `packages/malloy-render` (dev tooling only; stories never ship). Storybook
+**9** consolidated seven of our eight `@storybook/*` packages into `storybook`
+itself — `blocks`, `manager-api`, `theming`, `types`, `test`, `addon-essentials`,
+`addon-interactions` all stopped publishing (npm still reports their "latest" as
+8.6.x). Taking 10 means rewriting the imports in 12 files and the `.storybook`
+config.
+
+What makes it a hold rather than an afternoon: **no workflow renders a story**, so
+there is nothing to tell you the migration went wrong except opening storybook and
+looking. A dependency bump with no automated verification is a hand-run job that
+wants its own PR.
+
+Cost: storybook two majors behind; dev-only, nothing ships, no advisory rides on it.
+Before the ignore it opened **four PRs a month** against a shared ten-PR limit.
+
+Revisit when: someone is doing renderer work anyway and can eyeball the stories.
 
 ## Held for reasons outside this repo's build
 
