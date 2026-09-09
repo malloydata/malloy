@@ -1,11 +1,5 @@
 /*
- * femto-build: content-hash caching for codegen steps.
- *
- * Expensive codegen (ANTLR, peggy, vite, flow types) should not re-run when
- * its inputs haven't changed. Make and ninja decide that from timestamps,
- * which git operations scramble; Turborepo invalidates at package
- * granularity. This hashes file content with SHA-256 and needs no external
- * build tool.
+ * femto-build: a content-hash based "make" like build tool
  *
  * Run it from the package directory holding the femto-config.motly — the
  * config, every glob, and the digest files all resolve against the current
@@ -15,9 +9,8 @@
  *
  * Run with --help for the config format.
  *
- * The hash covers input files, the config text, and dep digests — not the
- * versions of the tools the commands invoke. Bumping antlr4ts or peggy
- * leaves generated files "up to date" until a --clean.
+ * The hash for a target covers input files, the config text, and dep digests — not the
+ * versions of the tools the commands invoke.
  */
 
 const {createHash} = require('crypto');
