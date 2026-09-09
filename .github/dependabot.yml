@@ -56,6 +56,23 @@ updates:
       # gaxios is declared directly by malloy-db-bigquery for its GaxiosError
       # check and moves with the trio above, so hold it alongside them.
       - dependency-name: "gaxios"
+      # jsdom majors: 30 reaches our render specs through ten ESM-only transitive
+      # packages (parse5, entities, the @csstools family, @exodus/bytes, ...), each
+      # of which would need naming in transformIgnoreModules under jest's CJS
+      # runtime — a list that goes stale on jsdom's schedule, not ours. Nothing
+      # needs jsdom 30. Clears with vitest, which needs no transform at all. See
+      # docs/dependency-management/CONTEXT.md.
+      - dependency-name: "jsdom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/jsdom"
+        update-types: ["version-update:semver-major"]
+      # lerna majors: the only thing CI uses lerna for is `lerna version` in
+      # release.yaml, and that command cannot be rehearsed outside a release — so
+      # a major would be verified by the release that breaks. Take it deliberately
+      # at the start of a release cycle, not from a bump PR. See
+      # docs/dependency-management/CONTEXT.md.
+      - dependency-name: "lerna"
+        update-types: ["version-update:semver-major"]
       # Storybook majors: 9 folded @storybook/blocks, /manager-api, /theming,
       # /types, /test, /addon-essentials and /addon-interactions into the
       # `storybook` package, so this is a migration across 12 files, and nothing

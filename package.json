@@ -87,7 +87,7 @@
     "axios": "1.19.0",
     "babel-jest": "^30.5.1",
     "csv-stringify": "^5.6.5",
-    "flow-api-translator": "^0.37.0",
+    "flow-api-translator": "^0.331.0",
     "gts": "^7.0.0",
     "jest": "^30.5.1",
     "jest-diff": "^30.5.1",

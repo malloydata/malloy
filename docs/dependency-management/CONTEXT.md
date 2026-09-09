@@ -225,6 +225,34 @@ asynchronously, then bump the trio together with the transform entries above, an
 confirm `db-bigquery` **and** the ci-core bigquery `streaming.spec` pass **without**
 the flag.
 
+### Test DOM — `jsdom` held at `^22`
+Owned by `test/`. jsdom **30** arrives through ten ESM-only transitive packages —
+`parse5`, `entities`, `lru-cache`, `@exodus/bytes` and the `@csstools` /
+`@asamuzakjp` colour family — every one of which would have to be named in
+`transformIgnoreModules` to load under jest's CJS runtime. That list is a bet on
+jsdom's transitive tree: it goes stale when jsdom moves, and stale looks like the
+render specs failing to parse.
+
+Nothing wants jsdom 30. No advisory rides on 22, and jest brings its own jsdom 26
+for the environment regardless. Majors `ignore`d.
+
+Revisit when: the test runner stops needing the transform — vitest loads ESM
+natively, which retires this row rather than shortening it.
+
+### Release tooling — `lerna` held at `^9`
+Owned by the root. CI uses lerna for exactly one thing: `lerna version` in
+`release.yaml` (and `prerelease.yaml`). That command rewrites every package version
+and cannot be rehearsed — there is no dry run — so a major bump is verified by the
+first release after it lands, which is the worst place to find out.
+
+lerna 10 was checked as far as it can be checked without releasing: it loads the
+workspace (20 packages), reads `lerna.json`, parses `--exact --yes --no-push
+--no-git-tag-version`, and enforces `allowBranch`. The version rewrite itself is
+unverified. Majors `ignore`d.
+
+Revisit when: someone is starting a release cycle and can take the bump first and
+watch that release. Not from a bump PR.
+
 ### Storybook — held at 8, majors ignored
 Owned by `packages/malloy-render` (dev tooling only; stories never ship). Storybook
 **9** consolidated seven of our eight `@storybook/*` packages into `storybook`
