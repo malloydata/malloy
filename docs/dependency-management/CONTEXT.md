@@ -61,7 +61,7 @@ and are listed under each entry as the cost.)
 letting CJS-line minors/patches and their security fixes flow (uuid, @noble/hashes,
 vega-lite, `@types/*` all work this way). Drop to a hard **exact pin** (no caret) only
 when you hit a wall: the breaker is *in-range*, so a caret would still resolve it on a
-fresh install (databricks `1.15.0`, pg `8.7.3`, vscode-textmate `9.0.0`). Exact is the
+fresh install (databricks `1.15.0`, vscode-textmate `9.0.0`). Exact is the
 escalation, not the default.
 
 ### ESM-only majors — and the downstream-leak trap
@@ -96,6 +96,20 @@ learned the hard way.
 
 (`@motherduck/wasm-client` stays in `transformIgnoreModules` defensively, but it's held
 at CJS 0.6, so it doesn't actually exercise the transform.)
+
+### `Cannot find module 'x/lib/y.js'` is a jest-resolver symptom, not a version skew
+
+When a dep adds an `exports` map, jest resolves its subpaths through the
+`resolve.exports` copy that **jest itself** depends on — not through node's resolver.
+`resolve.exports` **1.x cannot match subpath patterns** (`"./lib/*.js": "./lib/*.js"`),
+so every deep import into that dep fails under jest while `node -e "require(…)"`
+succeeds. 2.x matches them. Jest's own lockfile position therefore decides whether a
+dependency bump is takeable.
+
+The tell is that split: node resolves the path, jest doesn't. When you see it, check
+`node_modules/resolve.exports/package.json` before concluding anything about the two
+packages named in the error. Anything that deep-imports a sibling's internals —
+`pg-cursor` into `pg`, and the pattern generally — sits behind this.
 
 ## Held because the upgrade breaks this repo
 
@@ -148,21 +162,6 @@ Cost: held one minor behind; no security advisory rides on it.
 
 Revisit when: issue #2918 — stop deep-importing vscode-textmate internals, then
 unpin. (Relates to the textmate-grammar-rebuild work.)
-
-### Postgres — `pg` + `pg-query-stream` held as a coupled set
-Owned by `packages/malloy-db-postgres`. `pg-query-stream` pulls `pg-cursor`, which
-**deep-imports `pg`'s internal `lib/result.js`**. The connectors-group PR #2923
-bumped `pg` 8.7→8.22, skewing those versions, and `pg-cursor` could no longer
-resolve the internal path — which broke module resolution in **every** dialect's
-test suite (the shared harness loads the postgres path), not just postgres. `pg`,
-`pg-cursor`, and `pg-query-stream` are a **coupled set** that must move together
-(like the gts/eslint cluster). `pg` is exact-pinned to `8.7.3` in `package.json`
-(the `^8.7.1` range admitted the breaker on a fresh install); both are `ignore`d.
-
-Cost: postgres connector held a few minors behind; no security advisory rides on it.
-
-Revisit when: issue #2928 — bump `pg` + `pg-cursor` + `pg-query-stream` together to
-compatible versions, verify `db-postgres` + the shared harness, then unpin.
 
 ### BigQuery — `@google-cloud/bigquery` + `common` + `paginator` held at v7/v5
 Owned by `packages/malloy-db-bigquery`, exact-pinned to **best-v7** (`7.9.4` /

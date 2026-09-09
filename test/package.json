@@ -35,7 +35,7 @@
     "madge": "^8.0.0"
   },
   "devDependencies": {
-    "@jest/globals": "^29.4.3",
+    "@jest/globals": "^29.7.0",
     "@types/jsdom": "^21.1.1",
     "@types/luxon": "^3.7.5"
   },

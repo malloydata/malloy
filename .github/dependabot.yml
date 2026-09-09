@@ -47,15 +47,6 @@ updates:
       # it stops squatting the limit. v5 minors still flow. See docs/dependency-management/CONTEXT.md.
       - dependency-name: "vega-lite"
         update-types: ["version-update:semver-major"]
-      # pg + pg-query-stream held: pg-query-stream pulls pg-cursor, which
-      # deep-imports pg's internal lib/result.js. Bumping pg (8.7->8.22 in the
-      # connectors group, #2923) skewed those versions and broke module resolution
-      # in EVERY dialect's test suite (the shared harness loads the postgres path).
-      # pg is also exact-pinned (8.7.3) in malloy-db-postgres/package.json since
-      # ^8.7.1 would resolve the breaker on a fresh install. They're a coupled set
-      # (pg/pg-cursor/pg-query-stream move together); the real fix is issue #2928.
-      - dependency-name: "pg"
-      - dependency-name: "pg-query-stream"
       # axios exact-pinned (1.19.0) at the root to match the exact pin inside
       # @trinodb/trino-js-client. Any other version resolves a second, nested copy
       # under the connector instead of one hoisted axios. The pin is not ours to
