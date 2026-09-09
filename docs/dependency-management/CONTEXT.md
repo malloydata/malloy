@@ -152,6 +152,40 @@ The tell is that split: node resolves the path, jest doesn't. When you see it, c
 packages named in the error. Anything that deep-imports a sibling's internals —
 `pg-cursor` into `pg`, and the pattern generally — sits behind this.
 
+## Every `ignore`, and the row that explains it
+
+The names below are the exact `dependency-name` strings in
+[`.github/dependabot.yml`](../../.github/dependabot.yml), not display names, so this
+table can be diffed against that file mechanically. "Scope" is what the `ignore`
+covers: **major** leaves minors and patches flowing, **all** stops everything.
+
+An ignore with no row here is a decision nobody wrote down, and it will be re-made
+from scratch — badly — by whoever meets it next. Adding an `ignore` means adding a
+row, in the same commit.
+
+| `dependency-name` | Scope | Why — see |
+| --- | --- | --- |
+| `@types/node` | major | Tracking ignores |
+| `@motherduck/wasm-client` | all | duckdb-wasm — `@motherduck/wasm-client` |
+| `apache-arrow` | all | duckdb-wasm — `apache-arrow` |
+| `@google-cloud/bigquery` | all | BigQuery |
+| `@google-cloud/common` | all | BigQuery |
+| `@google-cloud/paginator` | all | BigQuery |
+| `gaxios` | all | BigQuery |
+| `jsdom` | major | Test DOM |
+| `@types/jsdom` | major | Test DOM |
+| `lerna` | major | Release tooling |
+| `storybook` | major | Storybook |
+| `@storybook/*` | major | Storybook |
+| `snowflake-sdk` | all | Snowflake |
+| `@databricks/*` | all | Databricks |
+| `axios` | all | Trino |
+| `uuid` | major | uuid + @noble/hashes |
+| `@noble/hashes` | major | uuid + @noble/hashes |
+
+`.node-version` is a hold too, and has a row, but no `ignore` — nothing proposes Node
+upgrades, so nothing needs silencing.
+
 ## Held because the upgrade breaks this repo
 
 Each of these is `ignore`d only until the linked fix lands — the new version breaks
@@ -234,7 +268,9 @@ jsdom's transitive tree: it goes stale when jsdom moves, and stale looks like th
 render specs failing to parse.
 
 Nothing wants jsdom 30. No advisory rides on 22, and jest brings its own jsdom 26
-for the environment regardless. Majors `ignore`d.
+for the environment regardless. Majors of `jsdom` and `@types/jsdom` are both
+`ignore`d — the types have to track the runtime major or `tsc` disagrees with what
+the tests actually load.
 
 Revisit when: the test runner stops needing the transform — vitest loads ESM
 natively, which retires this row rather than shortening it.
