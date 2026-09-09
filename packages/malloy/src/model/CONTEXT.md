@@ -280,7 +280,7 @@ together) and `analyticFunctionUse`.
 
 Most paths are **source-rooted for the stage that owns the summary**:
 `['one','two','three','ai']` names `ai` inside join `one.two.three` of that
-stage's input source. Four consequences:
+stage's input source. Three consequences, and one exception:
 
 - **Stage N > 0 is rooted in stage N-1's output**, so its paths are output
   column names, not base joins. Only `pipeline[0]`'s summary describes the base
@@ -296,9 +296,9 @@ stage's input source. Four consequences:
 - **`having:` and `calculate:` are output-rooted**, in the same list. They name
   fields of the query's *output*, so `having: t > 0` contributes `['t']`
   whether or not the source has a `t`. Nothing in the entry says which rooting
-  it has, and an output name that is also a source column is indistinguishable
-  from one — so a consumer resolving paths against the source must treat a name
-  that does not resolve as ordinary, not as a compiler bug.
+  it has, and an output name which happens to match a source column resolves
+  as though it were one — so a consumer resolving paths against the source must
+  treat a name that does not resolve as ordinary, not as a compiler bug.
 
 ### A path tail is not always a column
 
@@ -346,7 +346,7 @@ field usage, not the key's name.
 `FieldInstanceResultRoot.joins` is a `Map<string, JoinInstance>` keyed by **SQL
 alias** (`two_0`), not by Malloy path, so a consumer holding usage paths has to
 cross between the two. `addDependantPath` crosses one way with
-`getFieldByName(path)`; `packColumnFor` crosses the other by walking the
+`getFieldByName(path)`; `packedColumnFor` crosses the other by walking the
 `QueryStruct` tree a name at a time, because it needs the join *and* the member
 of it, and because a record on the path is a column of the join above it rather
 than a join of its own.

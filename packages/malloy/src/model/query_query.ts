@@ -1130,9 +1130,9 @@ export class QueryQuery extends QueryField {
    * columns the computation reads arrive as references of their own.  And a
    * `having:` or `calculate:` names an *output* field, so its path is rooted
    * in the query's output rather than its source and need not resolve here at
-   * all.  An output name which is also a source column is indistinguishable
-   * from one, and costs nothing: a query's own source is never packed, only
-   * the joins beneath a filtered one.
+   * all.  An output name which happens to match a source column resolves as
+   * though it were one, which costs nothing: a query's own source is never
+   * packed, only the joins beneath a filtered one.
    */
   private packedColumnFor(
     from: QueryStruct,
@@ -1170,7 +1170,7 @@ export class QueryQuery extends QueryField {
   private packedColumnsByJoin(): Map<string, Set<string>> {
     if (this.packedColumns === undefined) {
       const packed = new Map<string, Set<string>>();
-      const record = (found: [string, string] | undefined) => {
+      const needed = (found: [string, string] | undefined) => {
         if (found === undefined) return;
         const [alias, column] = found;
         const columns = packed.get(alias);
@@ -1184,7 +1184,7 @@ export class QueryQuery extends QueryField {
         ? []
         : (this.firstSegment.expandedFieldUsage ?? []);
       for (const {path} of usage) {
-        record(this.packedColumnFor(this.parent, path));
+        needed(this.packedColumnFor(this.parent, path));
       }
       // What a primary key needs is what it reads: a computed key's name is
       // not a column, and the columns its expression reads are named nowhere
@@ -1195,10 +1195,10 @@ export class QueryQuery extends QueryField {
         const keyDef = primaryKey.fieldDef;
         if (hasExpression(keyDef)) {
           for (const {path} of fieldUsageFrom(keyDef.refSummary)) {
-            record(this.packedColumnFor(ji.queryStruct, path));
+            needed(this.packedColumnFor(ji.queryStruct, path));
           }
         } else {
-          record(this.packedColumnFor(ji.queryStruct, [activeName(keyDef)]));
+          needed(this.packedColumnFor(ji.queryStruct, [activeName(keyDef)]));
         }
       }
       this.packedColumns = packed;
