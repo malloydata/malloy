@@ -97,10 +97,14 @@ learned the hard way.
 **What kind of break — static ESM vs runtime dynamic `import()`.**
 - **Static ESM** (plain `import`/`export`): babel-jest can transform it (devDep case),
   or you pin (runtime-dep case).
-- **Runtime dynamic `import()` of an ESM-only target** (e.g. gaxios 7 under
-  `@google-cloud/bigquery` 8): not syntax jest can transform — a `require`-an-ESM call
-  at runtime needing `--experimental-vm-modules`, which we reject. A genuine hold
-  regardless (see the BigQuery hold).
+- **Runtime dynamic `import()` of an ESM-only target** (e.g. `gaxios` 7's
+  `await import('node-fetch')`): also transformable, but you must name **both** the
+  importer and the target in the list — babel rewrites the `import()` to a `require`,
+  which then needs the target to be CJS too. And when the pair lives under another
+  package's `node_modules`, `transformIgnorePatterns` has to reach nested copies:
+  `node_modules/(?!.*(${transformIgnoreModules})/)`. Neither this nor the static case
+  needs `--experimental-vm-modules`, which we still reject: it cannot be made invisible
+  for a bare `npx jest FILE -t NAME`, so it breaks the single-test workflow.
 
 (`@motherduck/wasm-client` stays in `transformIgnoreModules` defensively, but it's held
 at CJS 0.6, so it doesn't actually exercise the transform. `vega-lite`, `vega-util`,
@@ -144,27 +148,55 @@ Revisit when: issue #2950 — migrate `duckdb_wasm_connection_browser.ts` to the
 `@motherduck/wasm-client` 1.x API, then unpin (drop the `^0.6.6` range and the
 `ignore`).
 
+### duckdb-wasm — `apache-arrow` held at `^17.0.0`
+Owned by `packages/malloy-db-duckdb`. Not our choice: **both** wasm deps require
+`apache-arrow ^17.0.0` — `@duckdb/duckdb-wasm` as a dependency and
+`@motherduck/wasm-client` as one too (a peer dep from its 1.x on). Raising our
+declaration to 21 leaves `npm ls` reporting `invalid` and puts our arrow typings a
+major ahead of the `Table` / `StructRow` values duckdb-wasm actually hands back — a
+skew `tsc` cannot see, because the values arrive as `any` across the wasm boundary.
+The build stays green throughout, so nothing here catches it; this row is the catch.
+`ignore`d in `dependabot.yml` (it opens a PR every month otherwise — #3074 is the
+current one).
+
+Cost: arrow held at 17 while latest is 21; no advisory rides on it.
+
+Revisit when: `@duckdb/duckdb-wasm` and `@motherduck/wasm-client` both accept a newer
+arrow. Read *their* dependency ranges — our own version is not the constraint.
+
 ### BigQuery — `@google-cloud/bigquery` + `common` + `paginator` held at v7/v5
 Owned by `packages/malloy-db-bigquery`, exact-pinned to **best-v7** (`7.9.4` /
-`5.0.2` / `5.0.2`) as a coupled set. bigquery **8** pulls `@google-cloud/common@6`
-→ `google-auth-library@10` → `gaxios@7`, and gaxios 7 does an **ESM-only dynamic
-`import()`** in its token/request path. Under jest's CommonJS VM that throws
-`ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG`, surfaced as "Unexpected Gaxios
-Error" → every bigquery test fails. The only thing that fixes jest is
-`NODE_OPTIONS=--experimental-vm-modules`; babel-transforming gaxios can't help (the
-import target is ESM-only, can't be `require`d). We don't take the flag: it can't
-be made invisible for a bare `npx jest FILE -t NAME` (no project-local
-`NODE_OPTIONS`), so it breaks the single-test workflow, and it's an experimental
-Node API applied suite-wide. **bigquery 8 itself is fine in plain node** — the
-break is jest-only.
+`5.0.2` / `5.0.2`) as a coupled set.
+
+**The blocker is `projectId`, not ESM.** `BigQueryConnection`'s constructor reads
+`this.bigQuery.projectId` synchronously (`bigquery_connection.ts`, and again on the
+tables-API round-trip below it). v7's SDK has a project id by then; v8/v9's resolves
+it asynchronously, so the constructor stores nothing and every query fails
+`Invalid SQL, ProjectId must be non-empty`. Making the connector await
+`getProjectId()` from a synchronous constructor is the work the bump needs.
+
+The ESM story that used to occupy this entry is settled and was wrong. `gaxios@7`
+does `await import('node-fetch')` when no `fetchImplementation` is configured, which
+throws `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG` under jest's CJS VM and surfaces
+as "Unexpected Gaxios Error". The entry said babel could not help because the import
+target is ESM-only. **It can**: transform the importer *and* the target — `gaxios`,
+`node-fetch`, `teeny-request` and node-fetch's own ESM deps — and the whole auth path
+runs, live queries included, no `--experimental-vm-modules`. Verified against live
+BigQuery on bigquery 9.0.3 / common 8.0.2. Two mechanics matter if you redo it: the
+transform list must name the *target* as well as the importer, and
+`transformIgnorePatterns` must be written to reach **nested** copies
+(`node_modules/(?!.*(mods)/)`) since these live under
+`node_modules/@google-cloud/common/node_modules/`.
+
+So this hold no longer waits on jest→vitest. It waits on us.
 
 Cost: bigquery connector held on the v7 SDK line; whatever transitive security the
 v8 stack would clear stays open.
 
-Revisit when: issue #2932 — when the test runner handles the ESM-only import
-without the experimental flag (jest → vitest, or jest gains stable ESM), or gaxios
-drops the ESM-only `import()`. Then bump the trio together, confirm `db-bigquery`
-**and** the ci-core bigquery `streaming.spec` pass **without** the flag, and unpin.
+Revisit when: issue #2932 — teach the connector to resolve `projectId`
+asynchronously, then bump the trio together with the transform entries above, and
+confirm `db-bigquery` **and** the ci-core bigquery `streaming.spec` pass **without**
+the flag.
 
 ## Held for reasons outside this repo's build
 

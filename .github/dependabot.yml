@@ -22,6 +22,12 @@ updates:
       # it is a deliberate connector migration. No update-types = hold all
       # versions (matches the @dependabot ignore comment). See docs/dependency-management/CONTEXT.md.
       - dependency-name: "@motherduck/wasm-client"
+      # apache-arrow held at ^17: @duckdb/duckdb-wasm and @motherduck/wasm-client
+      # both require ^17.0.0, so a newer arrow leaves the tree `invalid` and our
+      # typings a major ahead of the values duckdb-wasm returns. The build stays
+      # green either way, which is why this is written down. See
+      # docs/dependency-management/CONTEXT.md.
+      - dependency-name: "apache-arrow"
       # snowflake-sdk is exact-pinned (2.3.1) in malloy-db-snowflake; ignore here
       # so Dependabot stops proposing bumps that would otherwise ride the
       # connectors group. Deliberate bumps happen by hand against live Snowflake
