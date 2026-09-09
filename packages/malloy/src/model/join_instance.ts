@@ -8,7 +8,7 @@ import {QueryFieldBoolean} from './query_node';
 import {getDialectFieldList} from './utils';
 import type {JoinRelationship, UniqueKeyRequirement} from './malloy_types';
 
-import {isSourceDef, isJoined} from './malloy_types';
+import {isSourceDef, isJoined, isJoinedSource} from './malloy_types';
 import type {DialectFieldList} from '../dialect';
 
 export class JoinInstance {
@@ -50,8 +50,7 @@ export class JoinInstance {
     return (
       this.children.length > 0 &&
       this.joinFilterConditions !== undefined &&
-      isSourceDef(this.queryStruct.structDef) &&
-      isJoined(this.queryStruct.structDef) &&
+      isJoinedSource(this.queryStruct.structDef) &&
       this.queryStruct.dialect.supportsComplexFilteredSources
     );
   }

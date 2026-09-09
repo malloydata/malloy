@@ -774,6 +774,24 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     );
 
+    // `having:` and `calculate:` name output fields, so their field usage is
+    // rooted in the query's output and does not resolve against its source.
+    test.when(runtime.dialect.supportsComplexFilteredSources)(
+      'having on an output field, with a filtered join',
+      async () => {
+        await expect(`
+          ${chain('')}
+          run: zero -> {
+            group_by: grandchild_state is one.two.three.state
+            aggregate: rows_here is count()
+            having: rows_here > 0
+            order_by: grandchild_state
+            limit: 1
+          }
+        `).toMatchResult(testModel, {grandchild_state: 'AK', rows_here: 1});
+      }
+    );
+
     // The packed columns are the source's own column names, so the struct has
     // to quote them on the value side and in any type it declares.
     test.when(runtime.dialect.supportsComplexFilteredSources)(

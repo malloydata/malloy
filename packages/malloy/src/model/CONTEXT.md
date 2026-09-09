@@ -278,9 +278,9 @@ together) and `analyticFunctionUse`.
 
 ### Rooting — what a path is relative to
 
-Paths are **source-rooted for the stage that owns the summary**: `['one','two',
-'three','ai']` names `ai` inside join `one.two.three` of that stage's input
-source. Three consequences:
+Most paths are **source-rooted for the stage that owns the summary**:
+`['one','two','three','ai']` names `ai` inside join `one.two.three` of that
+stage's input source. Four consequences:
 
 - **Stage N > 0 is rooted in stage N-1's output**, so its paths are output
   column names, not base joins. Only `pipeline[0]`'s summary describes the base
@@ -293,6 +293,12 @@ source. Three consequences:
   when it concatenates the source's `filterList` onto the segment, so the
   expanded fields survive; the filters it adds were already seeded into the
   walk as the input source's `where:`.
+- **`having:` and `calculate:` are output-rooted**, in the same list. They name
+  fields of the query's *output*, so `having: t > 0` contributes `['t']`
+  whether or not the source has a `t`. Nothing in the entry says which rooting
+  it has, and an output name that is also a source column is indistinguishable
+  from one — so a consumer resolving paths against the source must treat a name
+  that does not resolve as ordinary, not as a compiler bug.
 
 ### A path tail is not always a column
 
@@ -327,13 +333,13 @@ use the names: it resolves each path to the column the innermost join on it has
 to supply, which is how a filtered join's subquery knows what to pack for each
 join below it.
 
-**Two things the compiler reaches for that no entry names.** A join's declared
-`primary_key` is the distinct key for a symmetric aggregate over that join
+**What the compiler reaches for that no entry names** is a join's declared
+`primary_key`. It is the distinct key for a symmetric aggregate over that join
 (`generateDistinctKeyExpression`, `generateDistinctKeySQL`), so the SQL can read
-`two_0."ai"` with no expression in the query having named `ai` — and when that
-key is a computed dimension, what the SQL reads is not the key's name but the
-columns its expression reads. Anything deciding what a join must supply has to
-add the primary key's own field usage on its own account.
+`two_0."ai"` with no expression in the query having named `ai`. When the key is
+a computed dimension the SQL reads not its name but the columns its expression
+reads, so anything deciding what a join must supply adds the primary key's own
+field usage, not the key's name.
 
 ### Paths and join aliases
 

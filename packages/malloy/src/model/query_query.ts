@@ -1120,28 +1120,30 @@ export class QueryQuery extends QueryField {
   }
 
   /**
-   * Record the column a reference needs from the join it lands in.  Walking
-   * `path` from `from`, the answer is the member of the innermost join along
-   * it -- a record is kept whole, since a reference into one is a reference to
-   * the column holding it.  A path ending at a computed field contributes that
-   * field's name, which matches no column of the source and so packs nothing;
-   * the columns the computation reads arrive as references of their own.
+   * Which column of which join a reference needs, or undefined when it needs
+   * none.  Walking `path` from `from`, the answer is the member of the
+   * innermost join along it -- a record is kept whole, since a reference into
+   * one is a reference to the column holding it.
+   *
+   * Two kinds of path need no column.  One ending at a computed field
+   * contributes that field's name, which is no column of the source; the
+   * columns the computation reads arrive as references of their own.  And a
+   * `having:` or `calculate:` names an *output* field, so its path is rooted
+   * in the query's output rather than its source and need not resolve here at
+   * all.  An output name which is also a source column is indistinguishable
+   * from one, and costs nothing: a query's own source is never packed, only
+   * the joins beneath a filtered one.
    */
-  private packColumnFor(from: QueryStruct, path: string[]) {
+  private packedColumnFor(
+    from: QueryStruct,
+    path: string[]
+  ): [string, string] | undefined {
     let struct = from;
     let alias = struct.getIdentifier();
     let column: string | undefined = undefined;
     for (const name of path) {
       const child = struct.getChildByName(name);
-      if (child === undefined) {
-        // Every reference reaching here resolved during translation.
-        throw new MalloyCompileError(
-          `Internal error, likely a compiler bug: '${name}' in path ` +
-            `'${path.join('.')}' is not a field of the query source.`,
-          'compiler-field-not-found',
-          this.fieldDef.location
-        );
-      }
+      if (child === undefined) return undefined;
       if (!(child instanceof QueryFieldStruct)) {
         column ??= name;
         break;
@@ -1156,41 +1158,50 @@ export class QueryQuery extends QueryField {
         column ??= name;
       }
     }
-    if (column === undefined) return;
-    const columns = this.packedColumns?.get(alias);
-    if (columns) {
-      columns.add(column);
-    } else {
-      this.packedColumns?.set(alias, new Set([column]));
-    }
+    return column === undefined ? undefined : [alias, column];
   }
 
-  /** Which columns of each join have to survive being packed into a struct. */
+  /**
+   * Which columns of each join have to survive being packed into a struct:
+   * every column the segment's field usage names, plus each join's primary
+   * key, which the compiler reaches for as a distinct key without any
+   * expression in the query naming it.
+   */
   private packedColumnsByJoin(): Map<string, Set<string>> {
     if (this.packedColumns === undefined) {
-      this.packedColumns = new Map();
+      const packed = new Map<string, Set<string>>();
+      const record = (found: [string, string] | undefined) => {
+        if (found === undefined) return;
+        const [alias, column] = found;
+        const columns = packed.get(alias);
+        if (columns) {
+          columns.add(column);
+        } else {
+          packed.set(alias, new Set([column]));
+        }
+      };
       const usage = isRawSegment(this.firstSegment)
         ? []
         : (this.firstSegment.expandedFieldUsage ?? []);
       for (const {path} of usage) {
-        this.packColumnFor(this.parent, path);
+        record(this.packedColumnFor(this.parent, path));
       }
-      // A join's primary key is the distinct key for a symmetric aggregate
-      // over it, and no expression in the query names it.  What the key needs
-      // is what it reads: a computed key's name is not a column, and the
-      // columns its expression reads are named nowhere else.
-      for (const [, ji] of this.rootResult.joins) {
+      // What a primary key needs is what it reads: a computed key's name is
+      // not a column, and the columns its expression reads are named nowhere
+      // else in the query.
+      for (const ji of this.rootResult.joins.values()) {
         const primaryKey = ji.queryStruct.primaryKey();
         if (primaryKey === undefined) continue;
         const keyDef = primaryKey.fieldDef;
         if (hasExpression(keyDef)) {
           for (const {path} of fieldUsageFrom(keyDef.refSummary)) {
-            this.packColumnFor(ji.queryStruct, path);
+            record(this.packedColumnFor(ji.queryStruct, path));
           }
         } else {
-          this.packColumnFor(ji.queryStruct, [activeName(keyDef)]);
+          record(this.packedColumnFor(ji.queryStruct, [activeName(keyDef)]));
         }
       }
+      this.packedColumns = packed;
     }
     return this.packedColumns;
   }
