@@ -340,6 +340,28 @@ describe('tags in results', () => {
   });
 });
 
+describe('property names inherited from Object.prototype', () => {
+  // A tag property name comes from source text, so `__proto__`, `constructor`
+  // and `toString` are ordinary names with no special meaning.
+  test('an annotation carries an inherited name through to the result', async () => {
+    const loaded = runtime.loadQuery(
+      `run: duckdb.sql("select 1 as num") -> {
+        select:
+          # __proto__=1 toString.nested=2 constructor
+          one is num
+      }`
+    );
+    const result = await loaded.run();
+    const one = result.resultExplore.getFieldByName('one');
+    const {tag, log} = one.tagParse();
+    expect(log).toEqual([]);
+    expect(tag.numeric('__proto__')).toEqual(1);
+    expect(tag.numeric('toString', 'nested')).toEqual(2);
+    expect(tag.has('constructor')).toBe(true);
+    expect(tag.has('valueOf')).toBe(false);
+  });
+});
+
 afterAll(async () => {
   await runtime.connection.close();
 });
