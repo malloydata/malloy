@@ -1,3 +1,5 @@
+# Config format: node ../../scripts/femto-build.js --help
+
 lexer: {
   inputs = ["src/lang/grammar/MalloyLexer.g4"]
   outputs = ["src/lang/lib/Malloy/MalloyLexer.ts"]
