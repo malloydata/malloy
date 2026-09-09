@@ -12,7 +12,16 @@ process.env['TZ'] = 'America/Los_Angeles';
 // ignored) so jest's CJS runtime can load them. See docs/dependency-management/CONTEXT.md.
 // (uuid and @noble/hashes were pinned to CJS-consumable majors, so they no longer
 // need transforming — an ESM-only runtime dep leaks downstream like a native one.)
-const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
+const transformIgnoreModules = [
+  '@motherduck/wasm-client',
+  // The vega 6 line is ESM-only. @malloydata/render bundles it (vite
+  // externalizes nothing), so consumers get CJS either way and only jest
+  // needs the transform.
+  'vega-lite',
+  'vega-util',
+  'vega-expression',
+  'vega-event-selector',
+].join('|');
 
 const config: Config = {
   preset: 'ts-jest',

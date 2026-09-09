@@ -59,7 +59,7 @@ and are listed under each entry as the cost.)
 **Caret by default; exact only when the caret can't hold.** Prefer a **caret major-cap**
 (`^11.1.1`) plus a **major-only** `ignore` — it bars the bad *major* while still
 letting CJS-line minors/patches and their security fixes flow (uuid, @noble/hashes,
-vega-lite, `@types/*` all work this way). Drop to a hard **exact pin** (no caret) only
+`@types/*` all work this way). Drop to a hard **exact pin** (no caret) only
 when you hit a wall: the breaker is *in-range*, so a caret would still resolve it on a
 fresh install (databricks `1.15.0`, snowflake-sdk `2.3.1`). Exact is the
 escalation, not the default.
@@ -85,6 +85,14 @@ learned the hard way.
   the last CJS-consumable major. This bit us in 0.0.419: `uuid` v14 and `@noble/hashes`
   v2 were taken as "takeable", green in malloy's own CI, and broke the vscode extension
   and malloy-cli the moment they consumed it (see the hold below).
+- A **runtime dependency of a package that bundles** is takeable again. What leaks is
+  raw ESM in the *published artifact*, so a package whose build inlines its deps ends
+  the question: `@malloydata/render` externalizes nothing (`external: []` in
+  `vite.config.base.mts`), publishes CJS+ESM entries, and therefore runs the ESM-only
+  vega 6 / vega-lite 6 line with no consumer able to tell. Read the build config, not
+  the dependency block — `dependencies` vs `devDependencies` does not answer this.
+  (It is also the standing exit for the uuid / @noble holds: bundle `@malloydata/malloy`
+  and the whole class retires.)
 
 **What kind of break — static ESM vs runtime dynamic `import()`.**
 - **Static ESM** (plain `import`/`export`): babel-jest can transform it (devDep case),
@@ -95,7 +103,9 @@ learned the hard way.
   regardless (see the BigQuery hold).
 
 (`@motherduck/wasm-client` stays in `transformIgnoreModules` defensively, but it's held
-at CJS 0.6, so it doesn't actually exercise the transform.)
+at CJS 0.6, so it doesn't actually exercise the transform. `vega-lite`, `vega-util`,
+`vega-expression` and `vega-event-selector` are there for real — the vega 6 line is
+ESM-only and a render spec loads them at runtime.)
 
 ### `Cannot find module 'x/lib/y.js'` is a jest-resolver symptom, not a version skew
 
@@ -115,21 +125,6 @@ packages named in the error. Anything that deep-imports a sibling's internals �
 
 Each of these is `ignore`d only until the linked fix lands — the new version breaks
 *our* build, tests, or codegen, so the hold clears when we do the work.
-
-### Renderer — Vega held at v5 (via `vega-lite ^5`)
-Owned by `packages/malloy-render` (see its CONTEXT.md). The fix is Vega 6, a major
-across the whole render stack. `vega-lite` is a *direct* dep, so its major opens a
-recurring monthly PR — its **major** is `ignore`d in `dependabot.yml` so it stops
-squatting the limit; the v5 minors still flow.
-
-Holds open: `vega`, `vega-functions`, `vega-expression` — 3×high (transitive,
-alert-only). Render-owned only (nothing else pulls them), so the renderer is the
-sole place that clears them.
-
-Revisit when: the planned renderer **rewrite**, which replaces this stack wholesale.
-There is deliberately no standalone Vega 5→6 issue — we don't intend to bump Vega in
-place; v6 comes for free with the rewrite, or not at all. (The exception to "majors
-get a tracking issue": the upgrade is subsumed by larger planned work.)
 
 ### duckdb-wasm — `@motherduck/wasm-client` held at `^0.6.6`
 Owned by `packages/malloy-db-duckdb` (the duckdb-wasm browser connector,

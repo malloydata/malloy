@@ -35,11 +35,6 @@ updates:
       # and it shipped in 0.0.418. Silent pin: only a security alert resurfaces it. See
       # docs/dependency-management/CONTEXT.md.
       - dependency-name: "@databricks/*"
-      # vega-lite held at v5 (the renderer's Vega 5->6 upgrade is deferred). It's a
-      # direct dep, so its major opens a recurring monthly PR; ignore the major so
-      # it stops squatting the limit. v5 minors still flow. See docs/dependency-management/CONTEXT.md.
-      - dependency-name: "vega-lite"
-        update-types: ["version-update:semver-major"]
       # axios exact-pinned (1.19.0) at the root to match the exact pin inside
       # @trinodb/trino-js-client. Any other version resolves a second, nested copy
       # under the connector instead of one hoisted axios. The pin is not ours to

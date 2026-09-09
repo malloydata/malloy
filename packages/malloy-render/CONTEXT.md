@@ -15,19 +15,15 @@ Two non-obvious consequences:
 - **`@malloydata/malloy-tag` is a runtime dependency for type resolution only.** The UMD inlines malloy-tag (vite `external: []`); nothing escapes to `require()` at runtime. But the published `.d.ts` files (`api/plugin-types.d.ts`, `data_tree/fields/base.d.ts`, `util.d.ts`, etc.) re-export `Tag`, so consumer TypeScript needs the package installed.
 - **The bundle cannot be loaded in Node without a DOM stub** (either condition). Solid.js calls `delegateEvents()` at module-eval time and reads `window.document`. The headless validator (`@malloydata/render-validator`) installs and removes global `window`/`document`/`navigator` stubs around its `require()` of this package; any other Node consumer must do the same.
 
-## Vega is pinned at v5 — a deliberate hold
+## Vega 6, ESM-only, bundled
 
-The renderer is built on **Vega 5** (via `vega-lite ^5`). Moving to the current
-Vega (6) is a major across the whole render stack — the `vega-lite` peer, the
-chart runtime, our typings — i.e. a deliberate renderer upgrade, not a dependency
-bump.
+The renderer runs **Vega 6** with `vega-lite ^6`; one vega copy serves both.
 
-**What the pin costs** — visible on Security → Dependabot alerts: `vega`,
-`vega-functions`, and `vega-expression` carry open advisories (high) whose only
-fix is Vega 6. These are render-owned — nothing else in the monorepo pulls them —
-so the renderer is the sole place that clears them. Recorded in the cross-cutting
-pin ledger [`docs/dependency-management/CONTEXT.md`](../../docs/dependency-management/CONTEXT.md);
-revisit when we take the Vega 5→6 upgrade.
+The vega 6 line is ESM-only, and this package's vite build externalizes nothing
+(`external: []` in `vite.config.base.mts`), so the published bundle is CJS+ESM
+with vega inlined — consumers never see the raw ESM. Only jest needs help: the
+vega packages a spec loads at runtime are listed in `transformIgnoreModules` in
+`jest.config.ts` and `jest.config.simple.ts` so babel rewrites them.
 
 ### Public API
 
