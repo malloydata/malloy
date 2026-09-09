@@ -53,6 +53,33 @@ export interface TagParse {
 export type PathSegment = string | number;
 export type Path = PathSegment[];
 
+/**
+ * Create an empty property bag.
+ *
+ * A tag property name comes from source text, so a bag must have no prototype:
+ * `__proto__`, `constructor` and `toString` are ordinary property names, and on
+ * a plain `{}` they would instead read from or write to `Object.prototype`.
+ * Every property bag a Tag owns is built here.
+ */
+function emptyProperties<V>(): Record<string, V> {
+  return Object.create(null) as Record<string, V>;
+}
+
+/**
+ * Look up a name in a property bag, ignoring anything inherited. A bag assigned
+ * by a caller may be a plain object, where `toString` answers a lookup without
+ * being a property of the tag.
+ */
+function ownProperty<V>(
+  props: Record<string, V> | undefined,
+  name: string
+): V | undefined {
+  if (props === undefined) return undefined;
+  return Object.prototype.hasOwnProperty.call(props, name)
+    ? props[name]
+    : undefined;
+}
+
 export type TagSetValue =
   string | number | boolean | Date | string[] | number[] | Tag | null;
 
@@ -140,8 +167,8 @@ export class Tag {
     }
 
     if (this.properties) {
-      for (const k in this.properties) {
-        str += `\n${spaces}  ${k}: ${this.properties[k].peek(indent + 2)}`;
+      for (const [k, prop] of Object.entries(this.properties)) {
+        str += `\n${spaces}  ${k}: ${prop.peek(indent + 2)}`;
       }
     }
     str += `\n${spaces}}`;
@@ -164,10 +191,11 @@ export class Tag {
     }
     if (from.properties) {
       // Convert property values to Tags
-      this.properties = {};
+      const props = emptyProperties<Tag>();
       for (const [key, val] of Object.entries(from.properties)) {
-        this.properties[key] = val instanceof Tag ? val : new Tag(val, this);
+        props[key] = val instanceof Tag ? val : new Tag(val, this);
       }
+      this.properties = props;
     }
     if (from.deleted) {
       this.deleted = from.deleted;
@@ -256,7 +284,7 @@ export class Tag {
   }
 
   getProperty(name: string): Tag | undefined {
-    return this.properties?.[name];
+    return ownProperty(this.properties, name);
   }
 
   getArrayElement(index: number): Tag | undefined {
@@ -267,14 +295,14 @@ export class Tag {
   }
 
   get dict(): Record<string, Tag> {
-    return this.properties ?? {};
+    return this.properties ?? emptyProperties();
   }
 
   /** Iterate over [name, Tag] pairs for each property */
   *entries(): Generator<[string, Tag]> {
     if (this.properties) {
-      for (const key in this.properties) {
-        yield [key, this.properties[key]];
+      for (const entry of Object.entries(this.properties)) {
+        yield entry;
       }
     }
   }
@@ -282,7 +310,7 @@ export class Tag {
   /** Iterate over property names */
   *keys(): Generator<string> {
     if (this.properties) {
-      for (const key in this.properties) {
+      for (const key of Object.keys(this.properties)) {
         yield key;
       }
     }
@@ -357,7 +385,7 @@ export class Tag {
   // Has the sometimes desirable side effect of initializing properties
   getProperties(): Record<string, Tag> {
     if (this.properties === undefined) {
-      this.properties = {};
+      this.properties = emptyProperties();
     }
     return this.properties;
   }
@@ -381,10 +409,11 @@ export class Tag {
     }
 
     if (this.properties) {
-      cloned.properties = {};
+      const props = emptyProperties<Tag>();
       for (const [key, val] of Object.entries(this.properties)) {
-        cloned.properties[key] = val.clone(cloned);
+        props[key] = val.clone(cloned);
       }
+      cloned.properties = props;
     }
 
     return cloned;
@@ -404,10 +433,11 @@ export class Tag {
       }
     }
     if (this.properties !== undefined) {
-      result.properties = {};
+      const props = emptyProperties<TagJSON>();
       for (const [key, val] of Object.entries(this.properties)) {
-        result.properties[key] = val.toJSON();
+        props[key] = val.toJSON();
       }
+      result.properties = props;
     }
     if (this.deleted) {
       result.deleted = true;
@@ -483,9 +513,10 @@ export class Tag {
   toString(): string {
     let annotation = this.prefix ?? '# ';
     function addChildren(tag: TagInterface) {
-      const props = Object.keys(tag.properties ?? {});
+      const props = Object.entries(tag.properties ?? {});
       for (let i = 0; i < props.length; i++) {
-        addChild(props[i], tag.properties![props[i]]);
+        const [name, child] = props[i];
+        addChild(name, child);
         if (i < props.length - 1) {
           annotation += ' ';
         }
@@ -506,11 +537,11 @@ export class Tag {
         }
       }
       if (child.properties) {
-        const props = Object.keys(child.properties);
+        const props = Object.values(child.properties);
         if (
           !isArrayEl &&
           props.length === 1 &&
-          !props.some(c => (child.properties ?? {})[c].deleted) &&
+          !props.some(c => c.deleted) &&
           child.eq === undefined
         ) {
           annotation += '.';
@@ -655,18 +686,17 @@ export class Tag {
         }
         currentTag = currentTag.eq[segment];
       } else {
-        const properties = currentTag.properties;
-        if (properties === undefined) {
-          currentTag.properties = {[segment]: new Tag({}, currentTag)};
-          currentTag = currentTag.properties[segment];
-        } else if (segment in properties) {
-          currentTag = properties[segment];
+        const properties = currentTag.getProperties();
+        const existing = ownProperty(properties, segment);
+        if (existing !== undefined) {
+          currentTag = existing;
           if (currentTag.deleted) {
             currentTag.deleted = false;
           }
         } else {
-          properties[segment] = new Tag({}, currentTag);
-          currentTag = properties[segment];
+          const added = new Tag({}, currentTag);
+          properties[segment] = added;
+          currentTag = added;
         }
       }
     }
@@ -726,27 +756,27 @@ export class Tag {
         }
         currentTag = currentTag.eq[segment];
       } else {
-        const properties = currentTag.properties;
-        if (properties === undefined) {
-          if (!hard) return this;
-          currentTag.properties = {[segment]: new Tag({}, currentTag)};
-          currentTag = currentTag.properties[segment];
-        } else if (segment in properties) {
-          currentTag = properties[segment];
+        const existing = ownProperty(currentTag.properties, segment);
+        if (existing !== undefined) {
+          currentTag = existing;
         } else {
           if (!hard) return this;
-          properties[segment] = new Tag({}, currentTag);
-          currentTag = properties[segment];
+          const added = new Tag({}, currentTag);
+          currentTag.getProperties()[segment] = added;
+          currentTag = added;
         }
       }
     }
     const segment = path[path.length - 1];
     if (typeof segment === 'string') {
-      if (currentTag.properties && segment in currentTag.properties) {
-        delete currentTag.properties[segment];
+      const properties = currentTag.properties;
+      if (properties && ownProperty(properties, segment) !== undefined) {
+        delete properties[segment];
       } else if (hard) {
-        currentTag.properties ??= {};
-        currentTag.properties[segment] = new Tag({deleted: true}, currentTag);
+        currentTag.getProperties()[segment] = new Tag(
+          {deleted: true},
+          currentTag
+        );
       }
     } else {
       if (Array.isArray(currentTag.eq)) {
@@ -787,7 +817,7 @@ export function interfaceFromTag(tag: TagInterface): TagInterface {
  * Convert a TagDict to a plain TagDict without internal fields.
  */
 export function interfaceFromDict(dict: TagDict): TagDict {
-  const result: TagDict = {};
+  const result = emptyProperties<TagInterface>();
   for (const [key, val] of Object.entries(dict)) {
     result[key] = interfaceFromTag(val);
   }

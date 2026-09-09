@@ -117,9 +117,9 @@ function hydrate(
   }
 
   if (pv.properties !== undefined) {
-    tag.properties = {};
+    const properties = tag.getProperties();
     for (const [key, val] of Object.entries(pv.properties)) {
-      tag.properties[key] = hydrate(val, tag, origins);
+      properties[key] = hydrate(val, tag, origins);
     }
   }
 
