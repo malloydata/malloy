@@ -33,14 +33,14 @@
   "dependencies": {
     "@malloydata/malloy-interfaces": "0.0.434",
     "@malloydata/malloy-tag": "0.0.434",
-    "@tanstack/solid-virtual": "^3.13.33",
+    "@tanstack/solid-virtual": "^3.13.37",
     "lodash": "^4.18.1",
     "luxon": "^3.7.2",
-    "solid-js": "^1.9.14",
+    "solid-js": "^1.9.15",
     "ssf": "^0.11.2",
     "us-atlas": "^3.0.1",
-    "vega": "^6.2.0",
-    "vega-interpreter": "^2.0.0",
+    "vega": "^6.4.0",
+    "vega-interpreter": "^2.3.2",
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
@@ -57,12 +57,12 @@
     "@storybook/test": "^8.6.15",
     "@storybook/theming": "^8.6.18",
     "@storybook/types": "^8.6.18",
-    "@types/luxon": "^3.7.2",
-    "esbuild": "0.28.1",
+    "@types/luxon": "^3.7.5",
+    "esbuild": "0.28.2",
     "storybook": "^8.6.15",
     "vite": "^6.4.2",
-    "vite-plugin-dts": "^5.0.3",
-    "vite-plugin-solid": "^2.11.12",
+    "vite-plugin-dts": "^5.1.0",
+    "vite-plugin-solid": "^2.11.14",
     "vite-tsconfig-paths": "^5.1.4"
   }
 }

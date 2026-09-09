@@ -36,9 +36,9 @@
     "karma-chrome-launcher": "^3.2.0",
     "karma-cli": "^2.0.0",
     "karma-jasmine": "^5.1.0",
-    "karma-jasmine-html-reporter": "^2.2.0",
+    "karma-jasmine-html-reporter": "^2.3.0",
     "karma-spec-reporter": "^0.0.36",
-    "monaco-editor": "^0.55.1",
+    "monaco-editor": "^0.56.0",
     "vscode-oniguruma": "^1.7.0",
     "vscode-textmate": "9.0.0"
   }
