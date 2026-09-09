@@ -39,7 +39,7 @@
     "karma-jasmine-html-reporter": "^2.3.0",
     "karma-spec-reporter": "^0.0.37",
     "monaco-editor": "^0.56.0",
-    "vscode-oniguruma": "^1.7.0",
+    "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2"
   }
 }
