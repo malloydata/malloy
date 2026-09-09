@@ -22,13 +22,6 @@ updates:
       # it is a deliberate connector migration. No update-types = hold all
       # versions (matches the @dependabot ignore comment). See docs/dependency-management/CONTEXT.md.
       - dependency-name: "@motherduck/wasm-client"
-      # vscode-textmate held at 9.0.0: our generateMonarchGrammar.ts deep-imports
-      # internal paths (vscode-textmate/release/theme, /rawGrammar) and rule types
-      # that 9.3.2 — an in-range MINOR — stopped exporting, breaking the
-      # syntax-highlight codegen in #2911. Also exact-pinned in
-      # malloy-syntax-highlight/package.json (^9.0.0 would resolve the breaker on a
-      # fresh install). The real fix is issue #2918; see docs/dependency-management/CONTEXT.md.
-      - dependency-name: "vscode-textmate"
       # snowflake-sdk is exact-pinned (2.3.1) in malloy-db-snowflake; ignore here
       # so Dependabot stops proposing bumps that would otherwise ride the
       # connectors group. Deliberate bumps happen by hand against live Snowflake

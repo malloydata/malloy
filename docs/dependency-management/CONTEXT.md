@@ -61,7 +61,7 @@ and are listed under each entry as the cost.)
 letting CJS-line minors/patches and their security fixes flow (uuid, @noble/hashes,
 vega-lite, `@types/*` all work this way). Drop to a hard **exact pin** (no caret) only
 when you hit a wall: the breaker is *in-range*, so a caret would still resolve it on a
-fresh install (databricks `1.15.0`, vscode-textmate `9.0.0`). Exact is the
+fresh install (databricks `1.15.0`, snowflake-sdk `2.3.1`). Exact is the
 escalation, not the default.
 
 ### ESM-only majors — and the downstream-leak trap
@@ -148,20 +148,6 @@ latest is `1.5.3-r.2` — so it's far behind, and the gap grows.
 Revisit when: issue #2950 — migrate `duckdb_wasm_connection_browser.ts` to the
 `@motherduck/wasm-client` 1.x API, then unpin (drop the `^0.6.6` range and the
 `ignore`).
-
-### syntax-highlight — `vscode-textmate` held at `9.0.0`
-Owned by `packages/malloy-syntax-highlight`. Unlike the others, the dep isn't the
-problem — *our code is*. `scripts/generateMonarchGrammar.ts` deep-imports internal
-paths (`vscode-textmate/release/theme`, `/rawGrammar`) and relies on
-`TextMateBeginEndRule`'s private shape. `9.3.2` — an **in-range minor** — stopped
-exporting those internals, breaking the syntax-highlight codegen in the #2911
-group. Exact-pinned to `9.0.0` (the `^9.0.0` range would otherwise resolve the
-breaker) and `ignore`d in `dependabot.yml`.
-
-Cost: held one minor behind; no security advisory rides on it.
-
-Revisit when: issue #2918 — stop deep-importing vscode-textmate internals, then
-unpin. (Relates to the textmate-grammar-rebuild work.)
 
 ### BigQuery — `@google-cloud/bigquery` + `common` + `paginator` held at v7/v5
 Owned by `packages/malloy-db-bigquery`, exact-pinned to **best-v7** (`7.9.4` /
