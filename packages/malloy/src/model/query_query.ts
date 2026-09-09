@@ -50,6 +50,7 @@ import {
   isBaseTable,
   expressionIsAnalytic,
   isTemporalType,
+  fieldUsageFrom,
 } from './malloy_types';
 import {
   AndChain,
@@ -142,14 +143,13 @@ type StageOutputContext = {
 interface DialectFieldArg {
   fieldDef: FieldDef;
   sqlExpression: string;
-  sqlOutputName: string;
   rawName: string;
 }
 
 function pushDialectField(dl: DialectFieldList, f: DialectFieldArg) {
-  const {sqlExpression, sqlOutputName, rawName} = f;
+  const {sqlExpression, rawName} = f;
   if (isAtomic(f.fieldDef)) {
-    dl.push({typeDef: f.fieldDef, sqlExpression, sqlOutputName, rawName});
+    dl.push({typeDef: f.fieldDef, sqlExpression, rawName});
   }
 }
 
@@ -161,6 +161,7 @@ export class QueryQuery extends QueryField {
   maxDepth = 0;
   maxGroupSet = 0;
   rootResult: FieldInstanceResultRoot;
+  private packedColumns: Map<string, Set<string>> | undefined;
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
   isJoinedSubquery: boolean; // this query is a joined subquery.
@@ -1014,11 +1015,7 @@ export class QueryQuery extends QueryField {
         });
       }
 
-      if (
-        ji.children.length === 0 ||
-        conditions === undefined ||
-        !this.parent.dialect.supportsComplexFilteredSources
-      ) {
+      if (!ji.isSubquery()) {
         // LTNOTE: need a check here to see the children's where: conditions are local
         //  to the source and not to any of it's joined children.
         //  In Presto, we're going to get a SQL error if in this case
@@ -1040,12 +1037,30 @@ export class QueryQuery extends QueryField {
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
+        // Every join below this one lives inside the subquery, so every one of
+        // them has to be projected out of it, not just the direct children.
+        // A child which became a subquery of its own has already flattened its
+        // whole subtree into columns, so everything under it is read from that
+        // child rather than packed a second time.
+        const projectJoin = (j: JoinInstance, from: string | undefined) => {
+          const fieldList = this.joinProjectionFieldList(j);
+          if (fieldList.length > 0) {
+            select +=
+              from === undefined
+                ? `, ${this.parent.dialect.sqlSelectAliasAsStruct(
+                    j.alias,
+                    fieldList
+                  )} AS ${j.alias}`
+                : `, ${from}.${j.alias} AS ${j.alias}`;
+          }
+          const readFrom = from ?? (j.isSubquery() ? j.alias : undefined);
+          for (const below of j.children) {
+            projectJoin(below, readFrom);
+          }
+        };
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
-          select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
-            childJoin.alias,
-            getDialectFieldList(childJoin.queryStruct.structDef)
-          )} AS ${childJoin.alias}`;
+          projectJoin(childJoin, undefined);
         }
         select += `\nFROM ${structSQL} AS ${
           ji.alias
@@ -1102,6 +1117,113 @@ export class QueryQuery extends QueryField {
       s += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
     }
     return s;
+  }
+
+  /**
+   * Which column of which join a reference needs, or undefined when it needs
+   * none.  Walking `path` from `from`, the answer is the member of the
+   * innermost join along it -- a record is kept whole, since a reference into
+   * one is a reference to the column holding it.
+   *
+   * Two kinds of path need no column.  One ending at a computed field
+   * contributes that field's name, which is no column of the source; the
+   * columns the computation reads arrive as references of their own.  And a
+   * `having:` or `calculate:` names an *output* field, so its path is rooted
+   * in the query's output rather than its source and need not resolve here at
+   * all.  An output name which happens to match a source column resolves as
+   * though it were one, which costs nothing: a query's own source is never
+   * packed, only the joins beneath a filtered one.
+   */
+  private packedColumnFor(
+    from: QueryStruct,
+    path: string[]
+  ): [string, string] | undefined {
+    let struct = from;
+    let alias = struct.getIdentifier();
+    let column: string | undefined = undefined;
+    for (const name of path) {
+      const child = struct.getChildByName(name);
+      if (child === undefined) return undefined;
+      if (!(child instanceof QueryFieldStruct)) {
+        column ??= name;
+        break;
+      }
+      struct = child.queryStruct;
+      if (struct.getJoinableParent() === struct) {
+        // A join: what the path named above it says nothing about what this
+        // one has to pack.
+        alias = struct.getIdentifier();
+        column = undefined;
+      } else {
+        column ??= name;
+      }
+    }
+    return column === undefined ? undefined : [alias, column];
+  }
+
+  /**
+   * Which columns of each join have to survive being packed into a struct:
+   * every column the segment's field usage names, plus each join's primary
+   * key, which the compiler reaches for as a distinct key without any
+   * expression in the query naming it.
+   */
+  private packedColumnsByJoin(): Map<string, Set<string>> {
+    if (this.packedColumns === undefined) {
+      const packed = new Map<string, Set<string>>();
+      const needed = (found: [string, string] | undefined) => {
+        if (found === undefined) return;
+        const [alias, column] = found;
+        const columns = packed.get(alias);
+        if (columns) {
+          columns.add(column);
+        } else {
+          packed.set(alias, new Set([column]));
+        }
+      };
+      const usage = isRawSegment(this.firstSegment)
+        ? []
+        : (this.firstSegment.expandedFieldUsage ?? []);
+      for (const {path} of usage) {
+        needed(this.packedColumnFor(this.parent, path));
+      }
+      // What a primary key needs is what it reads: a computed key's name is
+      // not a column, and the columns its expression reads are named nowhere
+      // else in the query.
+      for (const ji of this.rootResult.joins.values()) {
+        const primaryKey = ji.queryStruct.primaryKey();
+        if (primaryKey === undefined) continue;
+        const keyDef = primaryKey.fieldDef;
+        if (hasExpression(keyDef)) {
+          for (const {path} of fieldUsageFrom(keyDef.refSummary)) {
+            needed(this.packedColumnFor(ji.queryStruct, path));
+          }
+        } else {
+          needed(this.packedColumnFor(ji.queryStruct, [activeName(keyDef)]));
+        }
+      }
+      this.packedColumns = packed;
+    }
+    return this.packedColumns;
+  }
+
+  // What a join contributes to the SELECT of a filtered join's subquery: every
+  // column named outside the subquery, and the generated __distinct_key when
+  // the join needed one.
+  private joinProjectionFieldList(ji: JoinInstance): DialectFieldList {
+    const packed = this.packedColumnsByJoin().get(ji.alias);
+    const dialect = ji.queryStruct.dialect;
+    const fieldList = getDialectFieldList(
+      ji.queryStruct.structDef,
+      dialect
+    ).filter(d => packed?.has(d.rawName));
+    if (ji.makeUniqueKey) {
+      fieldList.push({
+        typeDef: {type: 'string'},
+        sqlExpression: dialect.sqlQuoteIdentifier('__distinct_key'),
+        rawName: '__distinct_key',
+      });
+    }
+    return fieldList;
   }
 
   // BigQuery has wildcard psudo columns that are treated differently
@@ -2093,8 +2215,6 @@ export class QueryQuery extends QueryField {
     const dialectFieldList: DialectFieldList = [];
 
     for (const [name, field] of resultStruct.allFields) {
-      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
-      //
       if (
         resultStruct.firstSegment.type === 'reduce' &&
         field instanceof FieldInstanceResult
@@ -2118,7 +2238,6 @@ export class QueryQuery extends QueryField {
               `${name}__${resultStruct.groupSet}`
             ),
             rawName: name,
-            sqlOutputName: sqlName,
           });
         } else {
           const oneLineNest: RecordDef = {
@@ -2133,7 +2252,6 @@ export class QueryQuery extends QueryField {
               `${name}__${resultStruct.groupSet}`
             ),
             rawName: name,
-            sqlOutputName: sqlName,
           });
         }
       } else if (
@@ -2147,7 +2265,6 @@ export class QueryQuery extends QueryField {
             `${name}__${resultStruct.groupSet}`
           ),
           rawName: name,
-          sqlOutputName: sqlName,
         });
       } else if (
         resultStruct.firstSegment.type === 'project' &&
@@ -2158,7 +2275,6 @@ export class QueryQuery extends QueryField {
           fieldDef: field.f.fieldDef,
           sqlExpression: field.generateExpression(),
           rawName: name,
-          sqlOutputName: sqlName,
         });
       }
     }
@@ -2330,7 +2446,7 @@ export class QueryQuery extends QueryField {
         pipeSQL: this.parent.dialect.sqlUnnestPipelineHead(
           repeatedResultType === 'inline_all_numbers',
           sourceSQLExpression,
-          getDialectFieldList(structDef)
+          getDialectFieldList(structDef, this.parent.dialect)
         ),
         fields: structDef.fields,
         connection: structDef.connection,

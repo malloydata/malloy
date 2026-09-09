@@ -126,7 +126,7 @@ export class PostgresDialect extends PostgresBase {
         f =>
           `\n  ${f.sqlExpression}${
             f.typeDef.type === 'number' ? `::${this.defaultNumberType}` : ''
-          } as ${f.sqlOutputName}`
+          } as ${this.sqlQuoteIdentifier(f.rawName)}`
       )
       .join(', ');
   }
@@ -151,7 +151,7 @@ export class PostgresDialect extends PostgresBase {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
   }

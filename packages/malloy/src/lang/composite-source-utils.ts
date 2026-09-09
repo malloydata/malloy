@@ -564,9 +564,10 @@ function expandRefUsage(
   // given usage into the accumulator. Used both in-loop (joins reached
   // via reference paths) and upfront (always-on segment-level joins).
   function activateJoin(joinDef: FieldDef, joinPath: string[]): void {
+    if (!isJoined(joinDef)) return;
     const joinKey = pathToKey('join', joinPath);
     const thisDep = getJoin(activeJoinGraph, joinKey, joinPath);
-    if (!isJoined(joinDef) || thisDep.checked) return;
+    if (thisDep.checked) return;
     thisDep.checked = true;
     const joinFieldUsage = getJoinFieldUsage(joinDef, joinPath);
     addGivens(getJoinGivenUsage(joinDef));
@@ -624,8 +625,13 @@ function expandRefUsage(
       }
     }
 
-    // For paths through joins, additionaly track join relationships
-    for (let joinLen = 1; joinLen < reference.path.length; joinLen++) {
+    // Track the joins along the path.  A path which ends at a join and carries
+    // a unique key requirement is an aggregate computed over that join's rows,
+    // which should then include the join's on-clause fields in the field usage.
+    // A path which merely names a join-typed value does not.
+    const endsInTraversedJoin = reference.uniqueKeyRequirement !== undefined;
+    const joinDepth = reference.path.length - (endsInTraversedJoin ? 0 : 1);
+    for (let joinLen = 1; joinLen <= joinDepth; joinLen++) {
       const joinPath = reference.path.slice(0, joinLen);
       const joinDef = inNamespace(joinPath, fieldNameSpace);
       if (!joinDef) break;

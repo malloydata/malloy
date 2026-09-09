@@ -148,7 +148,9 @@ export class SnowflakeDialect extends Dialect {
 
   mapFields(fieldList: DialectFieldList): string {
     return fieldList
-      .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(
+        f => `\n  ${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`
+      )
       .join(', ');
   }
 
@@ -200,7 +202,7 @@ export class SnowflakeDialect extends Dialect {
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const nullValues = fieldList
-      .map(f => `'${f.sqlOutputName}', NULL`)
+      .map(f => `${this.sqlLiteralString(f.rawName)}, NULL`)
       .join(', ');
     return `COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)[0], OBJECT_CONSTRUCT_KEEP_NULL(${nullValues}))`;
   }

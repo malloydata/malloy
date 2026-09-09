@@ -221,7 +221,9 @@ export class StandardSQLDialect extends Dialect {
     filterSQL?: string
   ): string {
     const fields = fieldList
-      .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(
+        f => `\n  ${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`
+      )
       .join(', ');
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
     // BigQuery ARRAY_AGG takes LIMIT as its final sub-clause, after ORDER BY.
@@ -234,7 +236,7 @@ export class StandardSQLDialect extends Dialect {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END)`;
   }
@@ -252,10 +254,10 @@ export class StandardSQLDialect extends Dialect {
     fieldList: DialectFieldList
   ): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     const nullValues = fieldList
-      .map(f => `NULL as ${f.sqlOutputName}`)
+      .map(f => `NULL as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
 
     return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END), STRUCT(${nullValues}))`;
@@ -345,8 +347,14 @@ ${indent(sql)}
     return `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string): string {
-    return `(SELECT AS STRUCT ${alias}.*)`;
+  sqlSelectAliasAsStruct(
+    alias: string,
+    dialectFieldList: DialectFieldList
+  ): string {
+    const fields = dialectFieldList
+      .map(d => `${alias}.${this.sqlQuoteIdentifier(d.rawName)}`)
+      .join(', ');
+    return `(SELECT AS STRUCT ${fields})`;
   }
 
   sqlNowExpr(): string {

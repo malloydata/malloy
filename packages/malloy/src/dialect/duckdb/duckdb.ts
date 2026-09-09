@@ -141,7 +141,7 @@ export class DuckDBDialect extends PostgresBase {
     filterSQL?: string
   ): string {
     const fields = fieldList
-      .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
+      .map(f => `\n  ${this.sqlQuoteIdentifier(f.rawName)}: ${f.sqlExpression}`)
       .join(', ');
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
     const cond = turtleGroupSetCondition(groupSet, filterSQL);
@@ -156,7 +156,7 @@ export class DuckDBDialect extends PostgresBase {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlOutputName}:=${f.sqlExpression}`)
+      .map(f => `${this.sqlQuoteIdentifier(f.rawName)}:=${f.sqlExpression}`)
       .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT_PACK(${fields}) END)`;
   }
@@ -174,10 +174,10 @@ export class DuckDBDialect extends PostgresBase {
     fieldList: DialectFieldList
   ): string {
     const fields = fieldList
-      .map(f => `${f.sqlOutputName}: ${f.sqlExpression} `)
+      .map(f => `${this.sqlQuoteIdentifier(f.rawName)}: ${f.sqlExpression} `)
       .join(', ');
     const nullValues = fieldList
-      .map(f => `${f.sqlOutputName}: NULL`)
+      .map(f => `${this.sqlQuoteIdentifier(f.rawName)}: NULL`)
       .join(', ');
 
     return `COALESCE(FIRST({${fields}}) FILTER(WHERE group_set=${groupSet}), {${nullValues}})`;
@@ -276,7 +276,9 @@ export class DuckDBDialect extends PostgresBase {
           clauses.push(`${c.field} ${c.dir || 'asc'}`);
         } else {
           clauses.push(
-            `${dialectFieldList[c.field].sqlOutputName} ${c.dir || 'asc'}`
+            `${this.sqlQuoteIdentifier(dialectFieldList[c.field].rawName)} ${
+              c.dir || 'asc'
+            }`
           );
         }
       }
@@ -285,7 +287,7 @@ export class DuckDBDialect extends PostgresBase {
       }
     }
     return `SELECT LIST(STRUCT_PACK(${dialectFieldList
-      .map(d => this.sqlQuoteIdentifier(d.sqlOutputName))
+      .map(d => this.sqlQuoteIdentifier(d.rawName))
       .join(',')})${o}) FROM ${lastStageName}\n`;
   }
 
@@ -294,7 +296,7 @@ export class DuckDBDialect extends PostgresBase {
     dialectFieldList: DialectFieldList
   ): string {
     return `STRUCT_PACK(${dialectFieldList
-      .map(d => `${alias}.${d.sqlOutputName}`)
+      .map(d => `${alias}.${this.sqlQuoteIdentifier(d.rawName)}`)
       .join(', ')})`;
   }
 

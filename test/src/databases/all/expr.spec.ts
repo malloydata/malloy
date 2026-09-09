@@ -732,6 +732,142 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
+  // A filtered join is emitted as a subquery, so every join below it lives
+  // inside that subquery and has to be projected back out for the outer query
+  // to name it -- at every depth, not just the direct children.
+  describe('joins below a filtered join', () => {
+    const chain = (filterTwo: string) => `
+      source: sf is ${databaseName}.table('malloytest.state_facts')
+
+      source: three is sf
+      source: two is sf extend {
+        ${filterTwo}
+        join_one: three on three.state = state
+      }
+      source: one is sf extend {
+        where: state ~ 'A%'
+        join_one: two on two.state = state
+      }
+      source: zero is sf extend { join_one: one on one.state = state }
+    `;
+
+    test.when(runtime.dialect.supportsComplexFilteredSources)(
+      'two levels below',
+      async () => {
+        await expect(`
+          ${chain('')}
+          run: zero -> {
+            aggregate:
+              child is one.two.count()
+              grandchild is one.two.three.count()
+          }
+        `).toMatchResult(testModel, {child: 4, grandchild: 4});
+
+        await expect(`
+          ${chain('')}
+          run: zero -> {
+            group_by: grandchild_state is one.two.three.state
+            order_by: grandchild_state
+            limit: 1
+          }
+        `).toMatchResult(testModel, {grandchild_state: 'AK'});
+      }
+    );
+
+    // `having:` and `calculate:` name output fields, so their field usage is
+    // rooted in the query's output and does not resolve against its source.
+    test.when(runtime.dialect.supportsComplexFilteredSources)(
+      'having on an output field, with a filtered join',
+      async () => {
+        await expect(`
+          ${chain('')}
+          run: zero -> {
+            group_by: grandchild_state is one.two.three.state
+            aggregate: rows_here is count()
+            having: rows_here > 0
+            order_by: grandchild_state
+            limit: 1
+          }
+        `).toMatchResult(testModel, {grandchild_state: 'AK', rows_here: 1});
+      }
+    );
+
+    // The packed columns are the source's own column names, so the struct has
+    // to quote them on the value side and in any type it declares.
+    test.when(runtime.dialect.supportsComplexFilteredSources)(
+      'a packed column name which needs quoting',
+      async () => {
+        const oddName = runtime.dialect.sqlQuoteIdentifier('order');
+        await expect(`
+          source: two is ${databaseName}.sql("""SELECT 1 as ${oddName}, 1 as k""")
+          source: one is ${databaseName}.sql("""SELECT 1 as k, 2 as j""") extend {
+            where: j > 0
+            join_one: two on two.k = k
+          }
+          source: zero is ${databaseName}.sql("""SELECT 1 as k""") extend {
+            join_one: one on one.k = k
+          }
+
+          run: zero -> { group_by: g is one.two.\`order\` }
+        `).toMatchResult(testModel, {g: 1});
+      }
+    );
+
+    // A distinct key is the one thing the packed struct must carry which no
+    // expression in the query names, and when the key is computed what the
+    // query reads is the columns its expression reads, not the key's name.
+    test.when(runtime.dialect.supportsComplexFilteredSources)(
+      'two levels below, reached by a computed primary key',
+      async () => {
+        await expect(`
+          source: sf is ${databaseName}.table('malloytest.state_facts')
+
+          source: three is sf extend {
+            dimension: pk is births
+            primary_key: pk
+          }
+          source: two is sf extend { join_one: three on three.state = state }
+          source: one is sf extend {
+            where: state ~ 'A%'
+            join_one: two on two.state = state
+          }
+          source: zero is sf extend { join_one: one on one.state = state }
+
+          run: zero -> {
+            aggregate:
+              child is one.two.count()
+              grandchild is one.two.three.count()
+          }
+        `).toMatchResult(testModel, {child: 4, grandchild: 4});
+      }
+    );
+
+    // `two` is filtered as well, so it becomes a subquery of its own inside
+    // the one for `one`, and `three` reaches the outer query through it.
+    test.when(runtime.dialect.supportsComplexFilteredSources)(
+      'two levels below, both filtered',
+      async () => {
+        await expect(`
+          ${chain("where: state != 'AK'")}
+          run: zero -> {
+            aggregate:
+              child is one.two.count()
+              grandchild is one.two.three.count()
+          }
+        `).toMatchResult(testModel, {child: 3, grandchild: 3});
+
+        await expect(`
+          ${chain("where: state != 'AK'")}
+          run: zero -> {
+            group_by: grandchild_state is one.two.three.state
+            order_by: grandchild_state
+            limit: 1
+          }
+        `).toMatchResult(testModel, {grandchild_state: 'AL'});
+      }
+    );
+  });
+
   test('joined filtered explores with NO dependencies', async () => {
     await expect(`
       source: sf is ${databaseName}.table('malloytest.state_facts') extend {

@@ -158,7 +158,7 @@ describe('mysql JSON_TABLE column types', () => {
     [float, 'DOUBLE'],
   ])('%p unnests as %s', (typeDef, expected) => {
     const unnest = dialect.unnestColumns([
-      {typeDef, sqlExpression: 'x', rawName: 'x', sqlOutputName: 'x'},
+      {typeDef, sqlExpression: 'x', rawName: 'x'},
     ]);
     expect(unnest).toContain(expected);
   });

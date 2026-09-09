@@ -26,11 +26,20 @@ import type {DialectFunctionOverloadDef} from './functions';
 import type {ValidateTablePathResult} from './table-path';
 import {validateDottedTablePath} from './table-path';
 
+/**
+ * One field of a struct, for the dialect methods which emit SQL over it.
+ *
+ * `typeDef` is the Malloy type, for the dialects which have to declare a SQL
+ * type for the field -- the ROW and STRUCT types they build.  `sqlExpression`
+ * is SQL producing the value, valid in the scope the consumer emits into.
+ * `rawName` is the field's name with no quoting: a consumer needing it as an
+ * identifier quotes it itself, because only the consumer knows whether it
+ * wants an identifier or a string literal holding the name.
+ */
 interface DialectField {
   typeDef: AtomicTypeDef;
   sqlExpression: string;
   rawName: string;
-  sqlOutputName: string;
 }
 export type DialectFieldList = DialectField[];
 
