@@ -91,6 +91,64 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
+  // A nest whose pipeline has more than one stage is packed into an array by
+  // an aggregate, and the ordering of that aggregate is written from the model
+  // rather than from the SQL the last stage already generated.
+  const multiStageNest =
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews;
+
+  test.when(multiStageNest)(
+    `multi-stage nest orders by a name which needs quoting - ${databaseName}`,
+    async () => {
+      await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        where: popular_name = 'Isabella' and state ~ 'N%'
+        group_by: popular_name
+        nest: n is {
+          group_by: \`k"1\` is state
+          aggregate: c is count()
+        } -> {
+          group_by: \`k"1\`, c
+          order_by: \`k"1\` desc
+        }
+      }`).toMatchResult(orderByModel, {
+        popular_name: 'Isabella',
+        n: [
+          {'k"1': 'NY', 'c': 1},
+          {'k"1': 'NV', 'c': 1},
+          {'k"1': 'NM', 'c': 1},
+          {'k"1': 'NJ', 'c': 1},
+        ],
+      });
+    }
+  );
+
+  test.when(multiStageNest)(
+    `multi-stage nest orders by an output field number - ${databaseName}`,
+    async () => {
+      await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        where: popular_name = 'Isabella' and state ~ 'N%'
+        group_by: popular_name
+        nest: n is {
+          group_by: st is state
+          aggregate: b is births.sum()
+        } -> {
+          select: st, b
+          order_by: 2 desc
+        }
+      }`).toMatchResult(orderByModel, {
+        popular_name: 'Isabella',
+        n: [
+          {st: 'NY', b: 23694136},
+          {st: 'NJ', b: 8318769},
+          {st: 'NM', b: 1640394},
+          {st: 'NV', b: 842854},
+        ],
+      });
+    }
+  );
+
   it.skip('reserved words in structure definitions', async () => {
     await expect(`
       run: models->{

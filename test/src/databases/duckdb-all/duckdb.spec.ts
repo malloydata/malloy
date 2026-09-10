@@ -182,56 +182,6 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     ).toMatchResult(testModel, {two: 2});
   });
 
-  // A nest whose pipeline has more than one stage packs its last stage into a
-  // LIST(), and the ordering of that LIST() is written from the model rather
-  // than from the SQL the stage already generated.
-  describe('multi-stage nest ordering', () => {
-    it('orders by a name which needs quoting', async () => {
-      await expect(`
-        run: duckdb.table('malloytest.state_facts') -> {
-          where: popular_name = 'Isabella' and state ~ 'N%'
-          group_by: popular_name
-          nest: n is {
-            group_by: \`k"1\` is state
-            aggregate: c is count()
-          } -> {
-            group_by: \`k"1\`, c
-            order_by: \`k"1\` desc
-          }
-        }`).toMatchResult(testModel, {
-        popular_name: 'Isabella',
-        n: [
-          {'k"1': 'NY', 'c': 1},
-          {'k"1': 'NV', 'c': 1},
-          {'k"1': 'NM', 'c': 1},
-          {'k"1': 'NJ', 'c': 1},
-        ],
-      });
-    });
-
-    it('orders by an output field number', async () => {
-      await expect(`
-        run: duckdb.table('malloytest.state_facts') -> {
-          where: popular_name = 'Isabella' and state ~ r'^[NCW]'
-          group_by: popular_name
-          nest: n is {
-            group_by: fl is substr(state, 1, 1)
-            aggregate: c is count()
-          } -> {
-            select: fl, c
-            order_by: 1 desc
-          }
-        }`).toMatchResult(testModel, {
-        popular_name: 'Isabella',
-        n: [
-          {fl: 'W', c: 2},
-          {fl: 'N', c: 4},
-          {fl: 'C', c: 3},
-        ],
-      });
-    });
-  });
-
   describe('time oddities', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
     const zone_2020 = DateTime.fromObject(
