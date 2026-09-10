@@ -272,15 +272,15 @@ export class DuckDBDialect extends PostgresBase {
     if (orderBy) {
       const clauses: string[] = [];
       for (const c of orderBy) {
-        if (typeof c.field === 'string') {
-          clauses.push(`${c.field} ${c.dir || 'asc'}`);
-        } else {
-          clauses.push(
-            `${this.sqlQuoteIdentifier(dialectFieldList[c.field].rawName)} ${
-              c.dir || 'asc'
-            }`
-          );
-        }
+        // An ordinal here is a 1-based output field number, the field list is
+        // a 0-based array.
+        const orderField =
+          typeof c.field === 'string'
+            ? c.field
+            : dialectFieldList[c.field - 1].rawName;
+        clauses.push(
+          `${this.sqlQuoteIdentifier(orderField)} ${c.dir || 'asc'}`
+        );
       }
       if (clauses.length > 0) {
         o = ` ORDER BY ${clauses.join(', ')}`;
