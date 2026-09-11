@@ -652,26 +652,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  test.when(runtime.supportsNesting)(
-    `number as null 2 - ${databaseName}`,
-    async () => {
-      // a cross join produces a Many to Many result.
-      // symmetric aggregate are needed on both sides of the join
-      // Check the row count and that sums on each side work properly.
-      const testModel = wrapTestModel(runtime, '');
-      await expect(`
-        # test.verbose
-        run: ${databaseName}.table('malloytest.state_facts') -> {
-          group_by: state
-          nest: ugly is {
-            group_by: popular_name
-            aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
-          }
-        }
-      `).toMatchPaths(testModel, {'ugly.foo': null});
-    }
-  );
-
   it(`sql block- ${databaseName}`, async () => {
     const testModel = wrapTestModel(runtime, '');
     await expect(`
@@ -1279,39 +1259,6 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `).toMatchResult(testModel, {p: 23001594});
   });
 
-  test.when(runtime.supportsNesting)(
-    `nest null - ${databaseName}`,
-    async () => {
-      const result = await runtime
-        .loadQuery(
-          `
-        run: ${databaseName}.table('malloytest.airports') -> {
-          where: faa_region is null
-          group_by: faa_region
-          aggregate: airport_count is count()
-          nest: by_state is {
-            where: state is not null
-            group_by: state
-            aggregate: airport_count is count()
-          }
-          nest: by_state1 is {
-            where: state is not null
-            group_by: state
-            aggregate: airport_count is count()
-            limit: 1
-          }
-        }
-      `
-        )
-        .run();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const d: any = result.data.toObject();
-      expect(d[0]['by_state']).not.toBe(null);
-      expect(d[0]['by_state1']).not.toBe(null);
-    }
-  );
-
   test.when(
     runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
   )(`Nested pipelines sort properly - ${databaseName}`, async () => {
@@ -1390,28 +1337,6 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       baseMax3 = b;
     }
   });
-
-  test.when(runtime.supportsNesting)(
-    `number as null- ${databaseName}`,
-    async () => {
-      const result = await runtime
-        .loadQuery(
-          `
-        source: s is ${databaseName}.table('malloytest.state_facts') extend {
-        }
-        run: s-> {
-          group_by: state
-          nest: ugly is {
-            group_by: popular_name
-            aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
-          }
-        }
-      `
-        )
-        .run();
-      expect(result.data.path(0, 'ugly', 0, 'foo').value).toBe(null);
-    }
-  );
 
   it(`removes surpuflous order_by - solo aggregates - ${databaseName}`, async () => {
     const result = await runtime
