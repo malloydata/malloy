@@ -91,12 +91,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
-  // Trino packs a pipelined nest's array without the ordering of the stage which
-  // produced it, so the array arrives in the first stage's order instead.
-  const pipelinedNestIsOrdered =
-    runtime.dialect.supportsPipelinesInViews && databaseName !== 'trino';
-
-  test.when(pipelinedNestIsOrdered)(
+  test.when(runtime.dialect.supportsPipelinesInViews)(
     `pipelined nest is in the order its last stage asked for - ${databaseName}`,
     async () => {
       await expect(`
@@ -113,7 +108,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
-  test.when(pipelinedNestIsOrdered)(
+  test.when(runtime.dialect.supportsPipelinesInViews)(
     `pipelined nest orders by a name which needs quoting - ${databaseName}`,
     async () => {
       await expect(`
@@ -145,7 +140,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
-  test.when(pipelinedNestIsOrdered)(
+  test.when(runtime.dialect.supportsPipelinesInViews)(
     `pipelined nest orders by an output field number - ${databaseName}`,
     async () => {
       await expect(`
@@ -162,7 +157,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
-  test.when(pipelinedNestIsOrdered)(
+  test.when(runtime.dialect.supportsPipelinesInViews)(
     `pipelined nest ending in select orders by an output field number - ${databaseName}`,
     async () => {
       await expect(`
