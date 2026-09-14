@@ -487,6 +487,25 @@ export abstract class Dialect {
     return ' ' + this.sqlOrderBy(terms, 'turtle');
   }
 
+  // Format the ordering of the last stage of a nest's pipeline into an ORDER BY
+  // clause for the aggregate which packs that stage's rows into an array. An
+  // ordinal names an output field by number, counting from one; the field list
+  // is a zero-based array.
+  sqlCombineLastStageOrderBy(
+    orderBy: OrderBy[] | undefined,
+    fieldList: DialectFieldList
+  ): string {
+    if (orderBy === undefined || orderBy.length === 0) {
+      return '';
+    }
+    const terms = orderBy.map(o => {
+      const name =
+        typeof o.field === 'string' ? o.field : fieldList[o.field - 1].rawName;
+      return `${this.sqlQuoteIdentifier(name)} ${o.dir || 'asc'}`;
+    });
+    return ` ORDER BY ${terms.join(', ')}`;
+  }
+
   abstract sqlAnyValueTurtle(
     groupSet: number,
     fieldList: DialectFieldList

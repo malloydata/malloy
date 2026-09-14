@@ -268,24 +268,7 @@ export class DuckDBDialect extends PostgresBase {
     dialectFieldList: DialectFieldList,
     orderBy: OrderBy[] | undefined
   ): string {
-    let o = '';
-    if (orderBy) {
-      const clauses: string[] = [];
-      for (const c of orderBy) {
-        if (typeof c.field === 'string') {
-          clauses.push(`${c.field} ${c.dir || 'asc'}`);
-        } else {
-          clauses.push(
-            `${this.sqlQuoteIdentifier(dialectFieldList[c.field].rawName)} ${
-              c.dir || 'asc'
-            }`
-          );
-        }
-      }
-      if (clauses.length > 0) {
-        o = ` ORDER BY ${clauses.join(', ')}`;
-      }
-    }
+    const o = this.sqlCombineLastStageOrderBy(orderBy, dialectFieldList);
     return `SELECT LIST(STRUCT_PACK(${dialectFieldList
       .map(d => this.sqlQuoteIdentifier(d.rawName))
       .join(',')})${o}) FROM ${lastStageName}\n`;

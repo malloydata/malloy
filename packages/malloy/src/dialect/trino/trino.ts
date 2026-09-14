@@ -15,6 +15,7 @@ import type {
   TimeExtractExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
+  OrderBy,
 } from '../../model/malloy_types';
 import {
   activeName,
@@ -317,11 +318,13 @@ ${indent(sql)}
 
   sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    fieldList: DialectFieldList
+    fieldList: DialectFieldList,
+    orderBy: OrderBy[] | undefined
   ): string {
     const fields = fieldList.map(f => f.sqlExpression).join(', ');
     const definitions = this.buildTypeExpression(fieldList);
-    return `SELECT ARRAY_AGG(CAST(ROW(${fields}) as ROW(${definitions}))) FROM ${lastStageName}\n`;
+    const o = this.sqlCombineLastStageOrderBy(orderBy, fieldList);
+    return `SELECT ARRAY_AGG(CAST(ROW(${fields}) as ROW(${definitions}))${o}) FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList): string {
