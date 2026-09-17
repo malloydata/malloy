@@ -61,6 +61,7 @@ export type CompileMethod = 'loadModel' | 'extendModel' | 'query';
 export interface CompileOptions {
   refreshSchemaCache?: boolean | number;
   noThrowOnError?: boolean;
+  virtualMap?: VirtualMap;
 }
 
 /** Options given to the Malloy compiler (QueryModel) */

@@ -418,13 +418,8 @@ export class Runtime {
   }
 
   /**
-   * The virtual map for virtual source resolution.
-   * When set, compiled queries automatically resolve virtual sources
-   * against this map. Can be overridden per-query via
-   * CompileQueryOptions.virtualMap.
-   *
-   * When constructed with a MalloyConfig, falls through to
-   * config.virtualMap.
+   * Default virtual-source bindings for translation and query SQL generation.
+   * Falls back to config.virtualMap when no runtime map is assigned.
    */
   public get virtualMap(): VirtualMap | undefined {
     return this._virtualMap ?? this._config?.virtualMap;
@@ -499,6 +494,7 @@ export class Runtime {
           importBaseURL: options?.importBaseURL,
           testEnvironment: options?.testEnvironment,
           cacheManager: this.cacheManager,
+          virtualMap: options?.virtualMap ?? this.virtualMap,
         });
         return this._withRuntimeContext(m);
       },
@@ -894,6 +890,7 @@ export class ModelMaterializer extends FluentState<Model> {
         importBaseURL,
         testEnvironment: testEnvironment || this.runtime.isTestRuntime,
         ...compileQueryOptions,
+        virtualMap: compileQueryOptions.virtualMap ?? this.runtime.virtualMap,
       });
       return queryModel.preparedQuery;
     }, compileQueryOptions);
@@ -973,6 +970,8 @@ export class ModelMaterializer extends FluentState<Model> {
     query: QueryString | QueryURL,
     options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
+    const virtualMap =
+      options?.virtualMap ?? this.compileQueryOptions?.virtualMap;
     if (this.runtime.isTestRuntime) {
       if (options === undefined) {
         options = {testEnvironment: true};
@@ -999,10 +998,11 @@ export class ModelMaterializer extends FluentState<Model> {
           importBaseURL: options?.importBaseURL,
           testEnvironment: options?.testEnvironment,
           ...this.compileQueryOptions,
+          virtualMap: virtualMap ?? this.runtime.virtualMap,
         });
         return this.runtime._withRuntimeContext(queryModel);
       },
-      options
+      {...options, virtualMap}
     );
   }
 
@@ -1420,18 +1420,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         }
       }
 
-      // Use virtualMap from options if provided, otherwise fall back to Runtime's.
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
-      if (virtualMap) {
-        for (const [connName, inner] of virtualMap) {
-          for (const [virtualName, tablePath] of inner) {
-            requireCanonicalTablePathAnyDialect(
-              tablePath,
-              `virtualMap entry '${connName}.${virtualName}'`
-            );
-          }
-        }
-      }
 
       // Per-query supply for a finalized given is rejected at API entry
       // — the finalized-givens set is the runtime's "this can't be

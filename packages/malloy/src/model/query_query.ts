@@ -808,17 +808,31 @@ export class QueryQuery extends QueryField {
         const tablePath = virtualMap
           ?.get(qs.structDef.connection)
           ?.get(qs.structDef.name);
-        if (!tablePath) {
+        if (tablePath === undefined) {
           throw new MalloyCompileError(
             `No virtual-map entry for virtual source '${qs.structDef.name}' ` +
               `on connection '${qs.structDef.connection}'. ` +
-              'Add a virtual-map entry via the `virtualMap` runtime option.',
+              'Supply the entry in `virtualMap` when compiling or running the model.',
             'runtime-virtual-map-missing',
             qs.structDef.location
           );
         }
-        // virtualMap entries are application-supplied — assumed already
-        // canonical SQL.
+        // Check the binding immediately before SQL substitution, using the
+        // executing query's dialect. Other entries in the map may be unused.
+        const dialect = this.parent.dialect;
+        const checked = dialect.sqlValidateTableName(tablePath);
+        if (!checked.ok || checked.canonical !== tablePath) {
+          const reason = checked.ok
+            ? `use the canonical path ${checked.canonical}`
+            : checked.error;
+          throw new MalloyCompileError(
+            `virtualMap entry '${qs.structDef.connection}.${qs.structDef.name}' ` +
+              `has table path ${JSON.stringify(tablePath)}, which is not a ` +
+              `canonical table path for ${dialect.name}: ${reason}`,
+            'runtime-virtual-map-invalid',
+            qs.structDef.location
+          );
+        }
         return tablePath;
       }
       case 'composite':

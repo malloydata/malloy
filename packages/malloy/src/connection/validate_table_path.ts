@@ -28,8 +28,7 @@ export function validateCanonicalTablePath(
 
 /**
  * Validate against any registered dialect. Used at boundaries where the
- * destination dialect isn't synchronously known (virtualMap, manifest
- * entries).
+ * destination dialect isn't synchronously known (manifest entries).
  */
 export function validateCanonicalTablePathAnyDialect(
   tablePath: string

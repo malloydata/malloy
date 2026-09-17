@@ -14,14 +14,12 @@ The connection subsystem provides database backend abstractions, a centralized r
 
 Any `tablePath` reaching a connection — through `fetchSchemaForTables`, a `virtualMap` entry, or a `BuildManifestEntry.tableName` — is supposed to already be the canonical SQL form produced by `Dialect.sqlValidateTableName`. The translator validates user-supplied paths at translation time (see `dialect/CONTEXT.md` → *Table-path validation contract*) and stores the canonical form on `StructDef.tablePath`; the compiler splices it into `FROM` clauses verbatim with no further quoting.
 
-Application-supplied paths (`virtualMap`, manifest entries) bypass the translator, so the foundation re-validates at every ingress: `Manifest.update`/`loadText`, the runtime's manifest read and query path, `toVirtualMap`, and the legacy `fetchSchemaForTable` adapter. `BaseConnection.fetchSchemaForTables` is the last line of defense: it rejects any entry whose `tablePath` is not canonical for its dialect rather than letting it reach the backend.
+Manifest paths are checked at `Manifest.update`/`loadText` and the runtime's manifest read and query path. The legacy `fetchSchemaForTable` adapter and `BaseConnection.fetchSchemaForTables` reject noncanonical paths for their connection's dialect. Virtual-map paths are checked at substitution in `QueryQuery.getStructSourceSQL`.
 
 The validators live in `validate_table_path.ts`:
 
 - `validateCanonicalTablePath(dialectName, tablePath)` — destination dialect is known.
-- `validateCanonicalTablePathAnyDialect(tablePath)` / `requireCanonicalTablePathAnyDialect(...)` — destination dialect isn't synchronously known (manifest entries, `virtualMap`). Accept iff the value is canonical for *some* registered dialect — loose enough for legitimate cross-dialect manifests, still strict enough to reject malformed strings.
-
-A failure at one of these boundaries means a caller skipped the translator — that's a bug in the caller, not a user-visible error. Error messages name the boundary so the responsible call site is obvious.
+- `validateCanonicalTablePathAnyDialect(tablePath)` / `requireCanonicalTablePathAnyDialect(...)` — destination dialect isn't synchronously known (manifest entries). Accept iff the value is canonical for *some* registered dialect — loose enough for legitimate cross-dialect manifests, still strict enough to reject malformed strings.
 
 ## Architecture
 

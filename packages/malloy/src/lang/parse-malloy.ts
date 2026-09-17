@@ -13,6 +13,7 @@ import type {
   SQLSourceDef,
   DependencyTree,
   DocumentRange,
+  VirtualMap,
 } from '../model/malloy_types';
 import {mkModelDef, mkModelID} from '../model/utils';
 import {getModelAnnotations} from '../model/annotation_utils';
@@ -1014,7 +1015,8 @@ export class MalloyTranslator extends MalloyTranslation {
     importURL: string | null = null,
     preload: ParseUpdate | null = null,
     private readonly eventStream: EventStream | null = null,
-    readonly restrictedMode: boolean = false
+    readonly restrictedMode: boolean = false,
+    public virtualMap?: VirtualMap
   ) {
     super(rootURL, importURL);
     this.root = this;
