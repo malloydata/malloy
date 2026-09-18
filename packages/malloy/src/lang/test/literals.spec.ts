@@ -7,7 +7,9 @@ import {
   expr,
   TestTranslator,
   BetaExpression,
+  error,
   errorMessage,
+  markSource,
 } from './test-translator';
 import './parse-expects';
 import {isGranularResult} from '../ast/types/granular-result';
@@ -182,6 +184,38 @@ describe('literals', () => {
       );
       expect(m).toParse();
     });
+    test.each(["UTC'", 'UTC"', 'UTC`', 'UTC\\', 'UTC\n', 'UTC\r'])(
+      'rejects unsafe timezone %j at the string literal',
+      timezone => {
+        expect(markSource`run: a -> {
+          timezone: ${JSON.stringify(timezone)}
+          select: *
+        }`).toLog(error('invalid-timezone', {timezone}));
+      }
+    );
+    test.each([
+      [String.raw`"UTC\u0027"`, "UTC'"],
+      [String.raw`"UTC\u005c"`, 'UTC\\'],
+    ])('validates decoded timezone %s', (literal, timezone) => {
+      expect(markSource`run: a -> {
+        timezone: ${literal}
+        select: *
+      }`).toLog(error('invalid-timezone', {timezone}));
+    });
+    test('rejects an unsafe timezone on a source', () => {
+      expect(markSource`source: local is a extend {
+        timezone: ${'"UTC\'"'}
+      }`).toLog(error('invalid-timezone', {timezone: "UTC'"}));
+    });
+    test.each(['Etc/GMT+5', '+05:30', 'EST5EDT,M3.2.0/2,M11.1.0/2'])(
+      'accepts timezone format %s for the database to interpret',
+      timezone => {
+        expect(`run: a -> {
+          timezone: ${JSON.stringify(timezone)}
+          select: *
+        }`).toTranslate();
+      }
+    );
     test('timezone with illegal query', () => {
       expect(`run: a->{timezone: """${tz}%{ab->aturtle}"""; select: *}`).toLog(
         errorMessage('%{ query } illegal in this string')

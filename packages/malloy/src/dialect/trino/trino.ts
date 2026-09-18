@@ -443,13 +443,13 @@ ${indent(sql)}
     if (typeDef.type === 'timestamp') {
       // TIMESTAMP (UTC wall clock) → TIMESTAMPTZ in query timezone
       return {
-        sql: `at_timezone(with_timezone(${expr}, 'UTC'), '${timezone}')`,
+        sql: `at_timezone(with_timezone(${expr}, 'UTC'), ${this.sqlTimezoneLiteral(timezone)})`,
         typeDef: {type: 'timestamptz'},
       };
     }
     // TIMESTAMPTZ → TIMESTAMPTZ in query timezone (same instant, different stored tz)
     return {
-      sql: `at_timezone(${expr}, '${timezone}')`,
+      sql: `at_timezone(${expr}, ${this.sqlTimezoneLiteral(timezone)})`,
       typeDef: {type: 'timestamptz'},
     };
   }
@@ -517,32 +517,32 @@ ${indent(sql)}
     if (tz && srcTypeDef && dstTypeDef) {
       // TIMESTAMP → DATE: interpret as UTC, convert to query timezone
       if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST(at_timezone(with_timezone(${expr}, 'UTC'), '${tz}') AS DATE)`;
+        return `CAST(at_timezone(with_timezone(${expr}, 'UTC'), ${this.sqlTimezoneLiteral(tz)}) AS DATE)`;
       }
 
       // TIMESTAMPTZ → DATE: convert to query timezone
       if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST(at_timezone(${expr}, '${tz}') AS DATE)`;
+        return `CAST(at_timezone(${expr}, ${this.sqlTimezoneLiteral(tz)}) AS DATE)`;
       }
 
       // DATE → TIMESTAMP: interpret date in query timezone, return UTC wall clock
       if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `CAST(at_timezone(with_timezone(CAST(${expr} AS TIMESTAMP), '${tz}'), 'UTC') AS TIMESTAMP)`;
+        return `CAST(at_timezone(with_timezone(CAST(${expr} AS TIMESTAMP), ${this.sqlTimezoneLiteral(tz)}), 'UTC') AS TIMESTAMP)`;
       }
 
       // DATE → TIMESTAMPTZ: interpret date in query timezone
       if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return `with_timezone(CAST(${expr} AS TIMESTAMP), '${tz}')`;
+        return `with_timezone(CAST(${expr} AS TIMESTAMP), ${this.sqlTimezoneLiteral(tz)})`;
       }
 
       // TIMESTAMPTZ → TIMESTAMP: convert to query timezone wall clock
       if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `CAST(at_timezone(${expr}, '${tz}') AS TIMESTAMP)`;
+        return `CAST(at_timezone(${expr}, ${this.sqlTimezoneLiteral(tz)}) AS TIMESTAMP)`;
       }
 
       // TIMESTAMP → TIMESTAMPTZ: interpret TIMESTAMP as being in query timezone
       if (TD.isTimestamp(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return `with_timezone(${expr}, '${tz}')`;
+        return `with_timezone(${expr}, ${this.sqlTimezoneLiteral(tz)})`;
       }
     }
 
@@ -732,7 +732,7 @@ ${indent(sql)}
     const tz = timezone || qtz(qi);
     if (tz) {
       // Interpret wall clock time in timezone, convert to UTC wall clock, cast to TIMESTAMP
-      return `CAST(at_timezone(with_timezone(TIMESTAMP '${literal}', '${tz}'), 'UTC') AS TIMESTAMP)`;
+      return `CAST(at_timezone(with_timezone(TIMESTAMP '${literal}', ${this.sqlTimezoneLiteral(tz)}), 'UTC') AS TIMESTAMP)`;
     }
     return `TIMESTAMP '${literal}'`;
   }
@@ -743,7 +743,7 @@ ${indent(sql)}
     timezone: string
   ): string {
     // Use with_timezone to create a TIMESTAMP WITH TIME ZONE
-    return `with_timezone(TIMESTAMP '${literal}', '${timezone}')`;
+    return `with_timezone(TIMESTAMP '${literal}', ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
@@ -756,10 +756,10 @@ ${indent(sql)}
         // Convert both TIMESTAMP and TIMESTAMPTZ to query timezone for extraction
         if (from.e.typeDef.type === 'timestamp') {
           // TIMESTAMP: interpret as UTC, convert to query timezone
-          extractFrom = `at_timezone(with_timezone(${extractFrom}, 'UTC'), '${tz}')`;
+          extractFrom = `at_timezone(with_timezone(${extractFrom}, 'UTC'), ${this.sqlTimezoneLiteral(tz)})`;
         } else {
           // TIMESTAMPTZ: convert to query timezone
-          extractFrom = `at_timezone(${extractFrom}, '${tz}')`;
+          extractFrom = `at_timezone(${extractFrom}, ${this.sqlTimezoneLiteral(tz)})`;
         }
       }
     }
@@ -805,7 +805,7 @@ export class PrestoDialect extends TrinoDialect {
   ): string {
     const tz = timezone || qtz(qi);
     if (tz) {
-      return `CAST(TIMESTAMP '${literal} ${tz}' AT TIME ZONE 'UTC' AS TIMESTAMP)`;
+      return `CAST(TIMESTAMP '${literal} ${this.checkedTimezoneName(tz)}' AT TIME ZONE 'UTC' AS TIMESTAMP)`;
     }
     return `TIMESTAMP '${literal}'`;
   }
@@ -815,7 +815,7 @@ export class PrestoDialect extends TrinoDialect {
     literal: string,
     timezone: string
   ): string {
-    return `TIMESTAMP '${literal} ${timezone}'`;
+    return `TIMESTAMP '${literal} ${this.checkedTimezoneName(timezone)}'`;
   }
 
   sqlConvertToCivilTime(
@@ -826,7 +826,7 @@ export class PrestoDialect extends TrinoDialect {
     // Presto's AT TIME ZONE operator (not function) produces TIMESTAMPTZ
     // Reinterprets the instant in the target timezone
     return {
-      sql: `${expr} AT TIME ZONE '${timezone}'`,
+      sql: `${expr} AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)}`,
       typeDef: {type: 'timestamptz'},
     };
   }
@@ -852,30 +852,30 @@ export class PrestoDialect extends TrinoDialect {
     if (tz && srcTypeDef && dstTypeDef) {
       // TIMESTAMP → DATE: interpret as UTC, convert to query timezone
       if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST((${expr} AT TIME ZONE 'UTC') AT TIME ZONE '${tz}' AS DATE)`;
+        return `CAST((${expr} AT TIME ZONE 'UTC') AT TIME ZONE ${this.sqlTimezoneLiteral(tz)} AS DATE)`;
       }
 
       // TIMESTAMPTZ → DATE: convert to query timezone
       if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST(${expr} AT TIME ZONE '${tz}' AS DATE)`;
+        return `CAST(${expr} AT TIME ZONE ${this.sqlTimezoneLiteral(tz)} AS DATE)`;
       }
 
       // DATE → TIMESTAMP: interpret date in query timezone, return UTC wall clock
       // Presto doesn't have a way to interpret TIMESTAMP in a non-UTC timezone,
       // so we build a TIMESTAMPTZ literal string and cast it
       if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        const tstzLiteral = `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${tz}' AS TIMESTAMP WITH TIME ZONE)`;
+        const tstzLiteral = `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${this.checkedTimezoneName(tz)}' AS TIMESTAMP WITH TIME ZONE)`;
         return `CAST(${tstzLiteral} AS TIMESTAMP)`;
       }
 
       // DATE → TIMESTAMPTZ: interpret date in query timezone
       if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${tz}' AS TIMESTAMP WITH TIME ZONE)`;
+        return `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${this.checkedTimezoneName(tz)}' AS TIMESTAMP WITH TIME ZONE)`;
       }
 
       // TIMESTAMPTZ → TIMESTAMP: convert to query timezone wall clock
       if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `CAST(${expr} AT TIME ZONE '${tz}' AS TIMESTAMP)`;
+        return `CAST(${expr} AT TIME ZONE ${this.sqlTimezoneLiteral(tz)} AS TIMESTAMP)`;
       }
 
       // TIMESTAMP → TIMESTAMPTZ: interpret TIMESTAMP as UTC
@@ -903,10 +903,10 @@ export class PrestoDialect extends TrinoDialect {
         if (from.e.typeDef.type === 'timestamp') {
           // TIMESTAMP: interpret as UTC, convert to query timezone
           // Presto uses AT TIME ZONE operator
-          extractFrom = `(${extractFrom} AT TIME ZONE 'UTC') AT TIME ZONE '${tz}'`;
+          extractFrom = `(${extractFrom} AT TIME ZONE 'UTC') AT TIME ZONE ${this.sqlTimezoneLiteral(tz)}`;
         } else {
           // TIMESTAMPTZ: convert to query timezone
-          extractFrom = `${extractFrom} AT TIME ZONE '${tz}'`;
+          extractFrom = `${extractFrom} AT TIME ZONE ${this.sqlTimezoneLiteral(tz)}`;
         }
       }
     }

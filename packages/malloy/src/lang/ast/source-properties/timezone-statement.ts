@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
+import {Dialect} from '../../../dialect/dialect';
+import type {ExprString} from '../expressions/expr-string';
 import type {QueryBuilder} from '../types/query-builder';
 import {MalloyElement} from '../types/malloy-element';
 import type {QueryPropertyInterface} from '../types/query-property-interface';
-import {DateTime} from 'luxon';
 
 export class TimezoneStatement
   extends MalloyElement
@@ -15,20 +16,27 @@ export class TimezoneStatement
   elementType = 'timezone';
   forceQueryClass = undefined;
   queryRefinementStage = undefined;
-  constructor(readonly tz: string) {
-    super();
+  constructor(private readonly timezone: ExprString) {
+    super({timezone});
   }
 
-  get isValid(): boolean {
-    try {
-      DateTime.fromISO('2020-02-19T00:00:00', {zone: this.tz});
-      return true;
-    } catch {
-      return false;
+  timezoneName(): string | undefined {
+    const name = this.timezone.value;
+    if (!Dialect.isSafeTimezoneName(name)) {
+      this.logError(
+        'invalid-timezone',
+        {timezone: name},
+        {at: this.timezone.location}
+      );
+      return undefined;
     }
+    return name;
   }
 
   queryExecute(executeFor: QueryBuilder) {
-    executeFor.resultFS.setTimezone(this.tz);
+    const timezone = this.timezoneName();
+    if (timezone !== undefined) {
+      executeFor.resultFS.setTimezone(timezone);
+    }
   }
 }

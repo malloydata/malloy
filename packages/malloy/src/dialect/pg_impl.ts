@@ -57,7 +57,7 @@ export abstract class PostgresBase extends Dialect {
     if (TD.isAnyTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
-        extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE ${this.sqlTimezoneLiteral(tz)})`;
       }
     }
     const extracted = `EXTRACT(${units} FROM ${extractFrom})`;
@@ -73,27 +73,27 @@ export abstract class PostgresBase extends Dialect {
     if (tz && srcTypeDef && dstTypeDef) {
       // TIMESTAMP → DATE: convert via TIMESTAMPTZ to query timezone
       if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST((${expr}::TIMESTAMPTZ) AT TIME ZONE '${tz}' AS DATE)`;
+        return `CAST((${expr}::TIMESTAMPTZ) AT TIME ZONE ${this.sqlTimezoneLiteral(tz)} AS DATE)`;
       }
 
       // TIMESTAMPTZ → DATE: convert to query timezone
       if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST((${expr}) AT TIME ZONE '${tz}' AS DATE)`;
+        return `CAST((${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(tz)} AS DATE)`;
       }
 
       // DATE → TIMESTAMP: interpret date in query timezone, return UTC timestamp
       if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `CAST((${expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
+        return `CAST((${expr})::TIMESTAMP AT TIME ZONE ${this.sqlTimezoneLiteral(tz)} AS TIMESTAMP)`;
       }
 
       // DATE → TIMESTAMPTZ: interpret date in query timezone
       if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return `(${expr})::TIMESTAMP AT TIME ZONE '${tz}'`;
+        return `(${expr})::TIMESTAMP AT TIME ZONE ${this.sqlTimezoneLiteral(tz)}`;
       }
 
       // TIMESTAMPTZ → TIMESTAMP: convert to query timezone (returns TIMESTAMP)
       if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `(${expr}) AT TIME ZONE '${tz}'`;
+        return `(${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(tz)}`;
       }
     }
 
@@ -120,7 +120,7 @@ export abstract class PostgresBase extends Dialect {
   ): string {
     const tz = timezone || qtz(qi);
     if (tz) {
-      return `TIMESTAMPTZ '${literal} ${tz}'::TIMESTAMP`;
+      return `TIMESTAMPTZ '${literal} ${this.checkedTimezoneName(tz)}'::TIMESTAMP`;
     }
     return `TIMESTAMP '${literal}'`;
   }
@@ -130,7 +130,7 @@ export abstract class PostgresBase extends Dialect {
     literal: string,
     timezone: string
   ): string {
-    return `TIMESTAMPTZ '${literal} ${timezone}'`;
+    return `TIMESTAMPTZ '${literal} ${this.checkedTimezoneName(timezone)}'`;
   }
 
   sqlLiteralRecord(_lit: RecordLiteralNode): string {
@@ -151,14 +151,14 @@ export abstract class PostgresBase extends Dialect {
     // For timestamptz (TIMESTAMPTZ): AT TIME ZONE converts to plain TIMESTAMP (civil in timezone)
     if (typeDef.type === 'timestamptz') {
       return {
-        sql: `(${expr}) AT TIME ZONE '${timezone}'`,
+        sql: `(${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)}`,
         typeDef: {type: 'timestamp'},
       };
     }
     // For plain timestamps: cast to TIMESTAMPTZ (interprets as UTC)
     // Then AT TIME ZONE converts to plain TIMESTAMP (civil in timezone)
     return {
-      sql: `(${expr})::TIMESTAMPTZ AT TIME ZONE '${timezone}'`,
+      sql: `(${expr})::TIMESTAMPTZ AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)}`,
       typeDef: {type: 'timestamp'},
     };
   }
@@ -169,9 +169,9 @@ export abstract class PostgresBase extends Dialect {
     destTypeDef: ATimestampTypeDef
   ): string {
     if (destTypeDef.type === 'timestamptz') {
-      return `(${expr}) AT TIME ZONE '${timezone}'`;
+      return `(${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)}`;
     }
-    return `((${expr}) AT TIME ZONE '${timezone}')::TIMESTAMP`;
+    return `((${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)})::TIMESTAMP`;
   }
 
   sqlTruncate(

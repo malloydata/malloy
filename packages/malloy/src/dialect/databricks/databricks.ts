@@ -408,7 +408,7 @@ export class DatabricksDialect extends Dialect {
     // Databricks has no timestamptz type; timestamps are stored as UTC
     // Convert from UTC to local timezone for civil time operations
     return {
-      sql: `FROM_UTC_TIMESTAMP(${expr}, '${timezone}')`,
+      sql: `FROM_UTC_TIMESTAMP(${expr}, ${this.sqlTimezoneLiteral(timezone)})`,
       typeDef: {type: 'timestamp'},
     };
   }
@@ -419,7 +419,7 @@ export class DatabricksDialect extends Dialect {
     _destTypeDef: AtomicTypeDef
   ): string {
     // Convert from local timezone back to UTC
-    return `TO_UTC_TIMESTAMP(${expr}, '${timezone}')`;
+    return `TO_UTC_TIMESTAMP(${expr}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
   sqlTruncate(
@@ -467,7 +467,7 @@ export class DatabricksDialect extends Dialect {
     if (TD.isTimestamp(te.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
-        extractFrom = `FROM_UTC_TIMESTAMP(${extractFrom}, '${tz}')`;
+        extractFrom = `FROM_UTC_TIMESTAMP(${extractFrom}, ${this.sqlTimezoneLiteral(tz)})`;
       }
     }
     if (extractionMap[te.units]) {
@@ -483,9 +483,9 @@ export class DatabricksDialect extends Dialect {
     const tz = qtz(qi);
 
     if (op === 'timestamp::date' && tz) {
-      return `CAST(FROM_UTC_TIMESTAMP(${srcSQL}, '${tz}') AS DATE)`;
+      return `CAST(FROM_UTC_TIMESTAMP(${srcSQL}, ${this.sqlTimezoneLiteral(tz)}) AS DATE)`;
     } else if (op === 'date::timestamp' && tz) {
-      return `TO_UTC_TIMESTAMP(CAST(${srcSQL} AS TIMESTAMP_NTZ), '${tz}')`;
+      return `TO_UTC_TIMESTAMP(CAST(${srcSQL} AS TIMESTAMP_NTZ), ${this.sqlTimezoneLiteral(tz)})`;
     }
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       if (cast.safe) {
@@ -514,7 +514,7 @@ export class DatabricksDialect extends Dialect {
   ): string {
     const tz = timezone || qtz(qi);
     if (tz) {
-      return `TO_UTC_TIMESTAMP(TIMESTAMP_NTZ '${literal}', '${tz}')`;
+      return `TO_UTC_TIMESTAMP(TIMESTAMP_NTZ '${literal}', ${this.sqlTimezoneLiteral(tz)})`;
     }
     return `TIMESTAMP '${literal}'`;
   }

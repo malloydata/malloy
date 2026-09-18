@@ -457,7 +457,7 @@ export class MySQLDialect extends Dialect {
   ): {sql: string; typeDef: AtomicTypeDef} {
     // MySQL has no timestamptz type, so typeDef.timestamptz will never be true
     return {
-      sql: `CONVERT_TZ(${expr}, 'UTC', '${timezone}')`,
+      sql: `CONVERT_TZ(${expr}, 'UTC', ${this.sqlTimezoneLiteral(timezone)})`,
       typeDef: {type: 'timestamp'},
     };
   }
@@ -467,7 +467,7 @@ export class MySQLDialect extends Dialect {
     timezone: string,
     _destTypeDef: TimestampTypeDef
   ): string {
-    return `CONVERT_TZ(${expr}, '${timezone}', 'UTC')`;
+    return `CONVERT_TZ(${expr}, ${this.sqlTimezoneLiteral(timezone)}, 'UTC')`;
   }
 
   sqlTruncate(
@@ -541,7 +541,7 @@ export class MySQLDialect extends Dialect {
     if (TD.isTimestamp(te.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
-        extractFrom = `CONVERT_TZ(${extractFrom}, 'UTC', '${tz}')`;
+        extractFrom = `CONVERT_TZ(${extractFrom}, 'UTC', ${this.sqlTimezoneLiteral(tz)})`;
       }
     }
     return `${msUnits}(${extractFrom})`;
@@ -552,9 +552,9 @@ export class MySQLDialect extends Dialect {
     const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     const tz = qtz(qi);
     if (op === 'timestamp::date' && tz) {
-      return `CAST(CONVERT_TZ(${srcSQL}, 'UTC', '${tz}') AS DATE) `;
+      return `CAST(CONVERT_TZ(${srcSQL}, 'UTC', ${this.sqlTimezoneLiteral(tz)}) AS DATE) `;
     } else if (op === 'date::timestamp' && tz) {
-      return ` CONVERT_TZ(${srcSQL}, '${tz}', 'UTC')`;
+      return ` CONVERT_TZ(${srcSQL}, ${this.sqlTimezoneLiteral(tz)}, 'UTC')`;
     }
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       if (cast.safe) {
@@ -583,7 +583,7 @@ export class MySQLDialect extends Dialect {
   ): string {
     const tz = timezone || qtz(qi);
     if (tz) {
-      return `CONVERT_TZ('${literal}', '${tz}', 'UTC')`;
+      return `CONVERT_TZ('${literal}', ${this.sqlTimezoneLiteral(tz)}, 'UTC')`;
     }
     return `TIMESTAMP '${literal}'`;
   }
