@@ -364,7 +364,7 @@ ${indent(sql)}
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
     const extractTo = extractMap[te.units] || te.units;
     const tz = TD.isAnyTimestamp(te.e.typeDef) && qtz(qi);
-    const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
+    const tzAdd = tz ? ` AT TIME ZONE ${this.sqlTimezoneLiteral(tz)}` : '';
     return `EXTRACT(${extractTo} FROM ${te.e.sql}${tzAdd})`;
   }
 
@@ -375,7 +375,7 @@ ${indent(sql)}
   ): {sql: string; typeDef: AtomicTypeDef} {
     // BigQuery has no timestamptz type, so typeDef.timestamptz will never be true
     return {
-      sql: `DATETIME(${expr}, '${timezone}')`,
+      sql: `DATETIME(${expr}, ${this.sqlTimezoneLiteral(timezone)})`,
       typeDef: {type: 'timestamp'},
     };
   }
@@ -385,7 +385,7 @@ ${indent(sql)}
     timezone: string,
     _destTypeDef: TimestampTypeDef
   ): string {
-    return `TIMESTAMP(${expr}, '${timezone}')`;
+    return `TIMESTAMP(${expr}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
   sqlTruncate(
@@ -406,7 +406,7 @@ ${indent(sql)}
     }
 
     // TIMESTAMP truncation with optional timezone
-    const tzParam = timezone ? `, '${timezone}'` : '';
+    const tzParam = timezone ? `, ${this.sqlTimezoneLiteral(timezone)}` : '';
     return `TIMESTAMP_TRUNC(${expr}, ${unit}${tzParam})`;
   }
 
@@ -446,10 +446,10 @@ ${indent(sql)}
     const tz = qtz(qi);
     const src = cast.e.sql || '';
     if (op === 'timestamp::date' && tz) {
-      return `DATE(${src},'${tz}')`;
+      return `DATE(${src},${this.sqlTimezoneLiteral(tz)})`;
     }
     if (op === 'date::timestamp' && tz) {
-      return `TIMESTAMP(${src}, '${tz}')`;
+      return `TIMESTAMP(${src}, ${this.sqlTimezoneLiteral(tz)})`;
     }
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
@@ -474,7 +474,7 @@ ${indent(sql)}
     let timestampArgs = `'${literal}'`;
     const tz = timezone || qtz(qi);
     if (tz && tz !== 'UTC') {
-      timestampArgs += `,'${tz}'`;
+      timestampArgs += `,${this.sqlTimezoneLiteral(tz)}`;
     }
     return `TIMESTAMP(${timestampArgs})`;
   }

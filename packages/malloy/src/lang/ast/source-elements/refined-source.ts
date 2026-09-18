@@ -106,7 +106,7 @@ export class RefinedSource extends Source {
       } else if (el instanceof Filter) {
         filters.push(el);
       } else if (el instanceof TimezoneStatement) {
-        newTimezone = el.tz;
+        newTimezone = el.timezoneName();
       } else {
         errTo.logError(
           'unexpected-source-property',

@@ -1007,6 +1007,31 @@ export abstract class Dialect {
     literal: string,
     timezone: string
   ): string;
+
+  /**
+   * Reject characters that can break SQL literals or
+   * be changed by SQL formatting. Timezone-name validity belongs to the
+   * database, whose formats may include offsets and POSIX TZ strings.
+   * Static so the translator can apply the same rule before dialect resolution.
+   */
+  static isSafeTimezoneName(timezone: string): boolean {
+    return !/['"`\\\r\n]/.test(timezone);
+  }
+
+  /** Return an unquoted timezone for inclusion in a larger SQL literal. */
+  protected checkedTimezoneName(timezone: string): string {
+    if (!Dialect.isSafeTimezoneName(timezone)) {
+      throw new Error(
+        `Invalid timezone ${JSON.stringify(timezone)}: quotes, backslashes, and line breaks are not allowed`
+      );
+    }
+    return timezone;
+  }
+
+  sqlTimezoneLiteral(timezone: string): string {
+    return `'${this.checkedTimezoneName(timezone)}'`;
+  }
+
   /**
    * Render a Malloy string as a SQL string literal. The escape style is
    * driven by `stringLiteralStyle`; dialects normally do not override
@@ -1141,10 +1166,6 @@ export abstract class Dialect {
    */
   sqlOrderBy(orderTerms: string[], _orderFor?: OrderByRequest): string {
     return `ORDER BY ${orderTerms.join(',')}`;
-  }
-
-  sqlTzStr(qi: QueryInfo): string {
-    return `"${qi.queryTimezone}"`;
   }
 
   sqlMakeUnnestKey(key: string, rowKey: string) {

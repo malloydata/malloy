@@ -35,6 +35,33 @@ describe('loadRestrictedQuery — end-to-end through the public API', () => {
     expect(result.data.path(0, 'ct').value).toBeGreaterThan(0);
   });
 
+  test('timezone injection is rejected before SQL generation or execution', async () => {
+    const model = runtime.loadModel(`
+      source: states is duckdb.table('malloytest.state_facts')
+    `);
+    const queryText = `run: states -> {
+      timezone: "UTC' || (SELECT 'UTC') || '"
+      select: d is now.day
+      limit: 1
+    }`;
+    const expectedError = {
+      problems: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'invalid-timezone',
+          severity: 'error',
+        }),
+      ]),
+    };
+    // Separate query instances exercise each entry point without reusing
+    // the other entry point's cached compilation failure.
+    await expect(
+      model.loadRestrictedQuery(queryText).getSQL()
+    ).rejects.toMatchObject(expectedError);
+    await expect(
+      model.loadRestrictedQuery(queryText).run()
+    ).rejects.toMatchObject(expectedError);
+  });
+
   test('restricted query with `import` throws MalloyError tagged restricted-mode', async () => {
     const model = runtime.loadModel(`
       source: states is duckdb.table('malloytest.state_facts')

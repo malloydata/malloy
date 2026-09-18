@@ -494,7 +494,7 @@ export class PostgresDialect extends PostgresBase {
     if (TD.isAnyTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
-        extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE ${this.sqlTimezoneLiteral(tz)})`;
       }
     }
 
