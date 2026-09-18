@@ -6,8 +6,7 @@
 import type {SQLSourceRequest} from '../lang/translate-response';
 import {makeQueryModel, type QueryModel} from './query_model';
 import type {SQLPhraseSegment, ModelDef, VirtualMap} from './malloy_types';
-import {isSegmentSQL, isSegmentSource} from './malloy_types';
-import {getSourceSQL, type CompileQueryCallback} from './sql_compiled';
+import {expandSQLSegments, type CompileQueryCallback} from './sql_compiled';
 import {generateHash} from './utils';
 
 /**
@@ -36,25 +35,9 @@ export function getSourceRequest(
       false
     ).sql;
   };
-  let selectStr = '';
-  let parenAlready = false;
-  for (const segment of select) {
-    if (isSegmentSQL(segment)) {
-      selectStr += segment.sql;
-      parenAlready = segment.sql.match(/\(\s*$/) !== null;
-    } else {
-      // Re-expand retained SQL-source segments with the current bindings,
-      // using the same source expansion as execution.
-      const compiledSql = isSegmentSource(segment)
-        ? getSourceSQL(segment, compileQuery, {virtualMap})
-        : compileQuery(segment, {virtualMap});
-      selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
-      parenAlready = false;
-    }
-  }
   return {
     connection,
-    selectStr,
+    selectStr: expandSQLSegments(select, {virtualMap}, compileQuery),
   };
 }
 

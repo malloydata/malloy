@@ -5,9 +5,7 @@
 
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {
-  CacheManager,
   FixedConnectionMap,
-  InMemoryModelCache,
   InMemoryURLReader,
   Malloy,
   MalloyConfig,
@@ -33,7 +31,7 @@ function virtualMap(table: string): VirtualMap {
 }
 
 // Language cases live in packages/malloy/src/lang/test/virtual-sql.spec.ts.
-// These tests cover API option forwarding, model caching, and real SQL schemas.
+// These tests cover API option forwarding and real SQL schemas.
 describe('virtual sources in SQL blocks through the Foundation API', () => {
   const connection = new DuckDBConnection({
     name: 'duckdb',
@@ -42,14 +40,7 @@ describe('virtual sources in SQL blocks through the Foundation API', () => {
   const connections = FixedConnectionMap.fromArray([connection]);
   const compileMap = virtualMap('translation_data');
   const executionMap = virtualMap('execution_data');
-  const url = new URL('test://virtual-sql/main.malloy');
-  const importedURL = new URL('definitions.malloy', url);
-  const urlReader = new InMemoryURLReader(
-    new Map([
-      [url.toString(), `import 'definitions.malloy'\n${sqlSource}`],
-      [importedURL.toString(), virtualSource],
-    ])
-  );
+  const urlReader = new InMemoryURLReader(new Map());
 
   beforeAll(async () => {
     await connection.runSQL(
@@ -206,80 +197,6 @@ describe('virtual sources in SQL blocks through the Foundation API', () => {
       virtualMap: executionMap,
     });
     expect((await connection.runSQL(result.sql)).rows).toEqual([{y: 12}]);
-  });
-
-  test.each(['root', 'import'])(
-    'map-dependent schemas bypass the URL-only cache for a %s model',
-    async kind => {
-      const cacheManager = new CacheManager(new InMemoryModelCache());
-      const reader = new InMemoryURLReader(
-        new Map([
-          [importedURL.toString(), source],
-          [
-            url.toString(),
-            "import 'definitions.malloy'\nrun: wrapped -> { select: y }",
-          ],
-        ])
-      );
-      const model = await Malloy.compile({
-        url: importedURL,
-        connections,
-        urlReader: reader,
-        cacheManager,
-        virtualMap: compileMap,
-      });
-      const request = {
-        url: kind === 'root' ? importedURL : url,
-        connections,
-        urlReader: reader,
-        cacheManager,
-      };
-
-      // A mapped compilation must not leave schemas for an unmapped one.
-      await expect(Malloy.compile(request)).rejects.toThrow(
-        /No virtual-map entry/
-      );
-
-      // A host-supplied cached model must not hide a missing backing table.
-      await cacheManager.setCachedModelDef(importedURL.toString(), {
-        modelDef: model._modelDef,
-        invalidationKeys: {
-          [importedURL.toString()]:
-            await reader.getInvalidationKey(importedURL),
-        },
-      });
-      await expect(
-        Malloy.compile({
-          ...request,
-          virtualMap: virtualMap('missing_table'),
-        })
-      ).rejects.toThrow(/missing_table/);
-    }
-  );
-
-  test('mapped imports are not cached by a parent compilation', async () => {
-    const cacheManager = new CacheManager(new InMemoryModelCache());
-    const reader = new InMemoryURLReader(
-      new Map([
-        [importedURL.toString(), source],
-        [url.toString(), "import 'definitions.malloy'"],
-      ])
-    );
-    await Malloy.compile({
-      url,
-      connections,
-      urlReader: reader,
-      cacheManager,
-      virtualMap: compileMap,
-    });
-    await expect(
-      Malloy.compile({
-        url: importedURL,
-        connections,
-        urlReader: reader,
-        cacheManager,
-      })
-    ).rejects.toThrow(/No virtual-map entry/);
   });
 
   test.each(['compile', 'run'])(

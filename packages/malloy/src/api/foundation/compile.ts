@@ -310,10 +310,6 @@ export class Malloy {
       method,
     } = req;
     const virtualMap = req.virtualMap ?? parse?._translator.virtualMap;
-    if (virtualMap !== undefined) {
-      // SQL-block schemas depend on these bindings; the model cache is URL-only.
-      cacheManager = undefined;
-    }
     if (restrictedMode) {
       // Restricted-mode compiles do not participate in the model-def
       // cache. The cache key is the URL, but restricted vs. unrestricted

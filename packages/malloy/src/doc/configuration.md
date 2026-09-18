@@ -75,7 +75,8 @@ its configured virtual map for this, unless the application supplies a map to
 also accepts `virtualMap`.
 
 An application can supply different maps for translation and execution. Both
-backing tables must match the virtual source's declared schema exactly:
+backing tables must provide the virtual source's declared fields with matching
+types. Additional table columns are allowed:
 
 ```typescript
 const translationMap = new Map([
@@ -94,10 +95,6 @@ the materializer's default execution map; pass an execution override as above
 when the maps differ. A map supplied only to `run()` arrives too late for
 SQL-block schema discovery. Virtual sources used outside SQL blocks can still
 be translated without a map.
-
-Compilations with a virtual map bypass the URL-only model cache, including
-cached imports, because SQL-block schemas depend on the bindings. Connection
-schema caching still applies to the generated SQL.
 
 ## Overlay References
 
