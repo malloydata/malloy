@@ -45,12 +45,18 @@ export function getCompiledSQL(
     return src.selectStr;
   }
 
-  // Expand each segment
-  const parts: string[] = [];
-  for (const segment of src.selectSegments) {
-    parts.push(expandSegment(segment, opts, compileQuery));
-  }
-  return parts.join('');
+  return expandSQLSegments(src.selectSegments, opts, compileQuery);
+}
+
+/** Expand SQL text and interpolations for schema discovery or execution. */
+export function expandSQLSegments(
+  segments: SQLPhraseSegment[],
+  opts: PrepareResultOptions,
+  compileQuery: CompileQueryCallback
+): string {
+  return segments
+    .map(segment => expandSegment(segment, opts, compileQuery))
+    .join('');
 }
 
 /**

@@ -21,6 +21,7 @@ import type {
   SQLSourceDef,
   NumberTypeDef,
   UserTypeDef,
+  VirtualMap,
 } from '../../model/malloy_types';
 import {
   activeName,
@@ -381,6 +382,7 @@ export interface TestTranslatorOptions {
   eventStream?: EventStream | null;
   internalModel?: ModelDef;
   restrictedMode?: boolean;
+  virtualMap?: VirtualMap;
   /**
    * Each entry is a compiler-flag tag fragment — the content that
    * would follow `##! ` in a Malloy source annotation. Rendered to
@@ -488,7 +490,8 @@ export class TestTranslator extends MalloyTranslator {
       options.importBaseURL ?? null,
       null,
       options.eventStream ?? null,
-      options.restrictedMode ?? false
+      options.restrictedMode ?? false,
+      options.virtualMap
     );
     this.grammarRule = options.rootRule ?? 'malloyDocument';
     this.importZone.define(testURI, testSrc);

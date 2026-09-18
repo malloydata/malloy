@@ -55,7 +55,7 @@ The contract is verified at two levels. `packages/malloy/src/dialect/escape.spec
 
 ### Table-path validation contract
 
-User-supplied table-path strings (from `connection.table('…')` and the virtual table map) are validated against each dialect's table-path grammar at translation time, not at SQL emission time. The mechanism is one method:
+Table paths from `connection.table('…')` are checked during translation; virtual-map paths are checked at SQL substitution. Both use the destination dialect's method:
 
 ```ts
 sqlValidateTableName(input: string):

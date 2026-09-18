@@ -43,10 +43,58 @@ Top-level keys:
 | `manifestPath` | Directory where the build manifest lives, relative to the config file. Defaults to `MANIFESTS`. May be a string literal or a sync-resolving overlay reference (e.g. `{"env": "MALLOY_MANIFEST_PATH"}`). |
 | `givensPath` | File where per-runtime [given](givens.md) values live, relative to the config file. JSON object of `name → value` pairs. May be a string literal or a sync-resolving overlay reference. |
 | `finalizeGivens` | Array of [given](givens.md) names that are locked at the runtime layer — per-query supply for these names is rejected, and they are filtered out of `Model.givens` / `PreparedQuery.givens` introspection so UIs don't render editors for them. Security primitive for multi-tenant deployments where the tenant identifier must not be caller-overridable. |
-| `virtualMap` | URL rewrite rules for sources that reference virtual locations. Literal — no overlay expansion. |
+| `virtualMap` | Maps connection names and virtual source names to backing table paths. Literal — no overlay expansion. |
 | `includeDefaultConnections` | If `true`, fabricate one entry per registered backend type not already listed. See below. |
 
 Any non-`json`-typed property value — both inside `connections` and at the top level (`manifestPath`, `givensPath`) — may be a reference instead of a literal. See [Overlay References](#overlay-references). Top-level references carry one extra constraint: the overlay must resolve synchronously, because these values are read at construction time.
+
+## Virtual Sources in SQL Blocks
+
+A virtual map supplies the physical table for each virtual source:
+
+```json
+{
+  "virtualMap": {
+    "duckdb": {
+      "users": "'data/users.parquet'"
+    }
+  }
+}
+```
+
+Each binding is checked against the executing dialect immediately before it is
+substituted into SQL. A used binding must contain a canonical table path for that
+dialect; otherwise SQL generation fails. Invalid paths in unused entries do not
+prevent Runtime construction, model translation, or unrelated queries.
+
+When a SQL block interpolates a query using a virtual source, directly or
+indirectly, Malloy needs an existing backing table **during model translation**
+so the connection can discover the SQL block's output schema. A Runtime uses
+its configured virtual map for this, unless the application supplies a map to
+`loadModel`, `loadQuery`, or `extendModel`. The lower-level `Malloy.compile`
+also accepts `virtualMap`.
+
+An application can supply different maps for translation and execution. Both
+backing tables must provide the virtual source's declared fields with matching
+types. Additional table columns are allowed:
+
+```typescript
+const translationMap = new Map([
+  ['duckdb', new Map([['users', 'translation_users']])],
+]);
+const executionMap = new Map([
+  ['duckdb', new Map([['users', 'production_users']])],
+]);
+
+const model = runtime.loadModel(modelURL, {virtualMap: translationMap});
+const result = await model.loadFinalQuery().run({virtualMap: executionMap});
+```
+
+Virtual references remain in the compiled model. The translation map is also
+the materializer's default execution map; pass an execution override as above
+when the maps differ. A map supplied only to `run()` arrives too late for
+SQL-block schema discovery. Virtual sources used outside SQL blocks can still
+be translated without a map.
 
 ## Overlay References
 

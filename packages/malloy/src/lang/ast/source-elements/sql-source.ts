@@ -40,7 +40,8 @@ export class SQLSource extends Source {
       return getSourceRequest(
         phrases,
         this.connectionName.refString,
-        partialModel
+        partialModel,
+        this.translator()?.root.virtualMap
       );
     }
     return undefined;
