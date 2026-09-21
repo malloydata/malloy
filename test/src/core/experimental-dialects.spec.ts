@@ -9,7 +9,7 @@ import type {
   SQLSourceDef,
 } from '@malloydata/malloy';
 import {DuckDBDialect, registerDialect} from '@malloydata/malloy';
-import {testRuntimeFor} from '../runtimes';
+import {testFileSpace, testRuntimeFor} from '../runtimes';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 
 const envDatabases = (
@@ -90,6 +90,28 @@ describe('experimental dialects', () => {
       ##! experimental.dialect.${duckdbX}
       source: s is ${duckdbX}.sql('SELECT 1 as one')
     `);
+  });
+
+  test('an imported document gets the test runtime allowance too', async () => {
+    const imported = new URL('test://experimental_import.malloy');
+    const main = new URL('test://experimental_main.malloy');
+    testFileSpace.setFile(
+      imported,
+      `source: s is ${duckdbX}.sql('SELECT 1 as one')`
+    );
+    testFileSpace.setFile(main, 'import "test://experimental_import.malloy"');
+    const testRuntime = testRuntimeFor(connection);
+    testRuntime.isTestRuntime = true;
+    try {
+      const sql = await testRuntime
+        .loadModel(main)
+        .loadQuery('run: s -> { select: one }')
+        .getSQL();
+      expect(sql).toContain('one');
+    } finally {
+      testFileSpace.deleteFile(imported);
+      testFileSpace.deleteFile(main);
+    }
   });
 
   test('a test runtime needs no flag, through loadModel as well as parse', async () => {
