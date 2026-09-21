@@ -31,6 +31,10 @@ import {
   MySQLExecutor,
 } from '@malloydata/db-mysql/src/mysql_connection';
 import {DatabricksConnection} from '@malloydata/db-databricks/src/databricks_connection';
+import {
+  SQLServerConnection,
+  SQLServerExecutor,
+} from '@malloydata/db-sqlserver/src/sqlserver_connection';
 import {EventEmitter} from 'events';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
@@ -144,6 +148,21 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
+export class SQLServerTestConnection extends SQLServerConnection {
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
 export class TestCacheManager extends CacheManager {
   constructor(readonly _modelCache: ModelCache) {
     super(_modelCache);
@@ -203,15 +222,17 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         );
         break;
       case 'mssql_via_duckdb':
-        connection = new DuckDBTestConnection({
-          name: dbName,
-          additionalExtensions: ['mssql'],
-          setupSQL: [
-            // Must match test/mssql/connection_string.ts
-            "ATTACH 'Server=localhost;Port=1433;Database=malloytest;User Id=sa;Password=Malloy_Test_123;TrustServerCertificate=true' AS msdb (TYPE mssql)",
-            'USE msdb.malloytest',
-          ].join(';\n'),
-        });
+        {
+          const s = SQLServerExecutor.getConnectionOptionsFromEnv();
+          connection = new DuckDBTestConnection({
+            name: dbName,
+            additionalExtensions: ['mssql'],
+            setupSQL: [
+              `ATTACH 'Server=${s.server};Port=${s.port ?? 1433};Database=${s.database};User Id=${s.user};Password=${s.password};TrustServerCertificate=true' AS msdb (TYPE mssql)`,
+              `USE msdb.${s.database}`,
+            ].join(';\n'),
+          });
+        }
         break;
       case 'motherduck':
         connection = new DuckDBTestConnection({
@@ -245,6 +266,12 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           dbName,
           {},
           TrinoExecutor.getConnectionOptionsFromEnv(dbName) // they share configs.
+        );
+        break;
+      case 'sqlserver':
+        connection = new SQLServerTestConnection(
+          dbName,
+          SQLServerExecutor.getConnectionOptionsFromEnv()
         );
         break;
       case 'databricks':

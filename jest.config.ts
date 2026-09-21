@@ -193,6 +193,15 @@ const config: Config = {
     },
     {
       ...defaultConfig,
+      displayName: 'db-sqlserver',
+      testPathIgnorePatterns: connectorUnitIgnored,
+      roots: [
+        '<rootDir>/packages/malloy-db-sqlserver/',
+        '<rootDir>/test/src/databases/sqlserver/',
+      ],
+    },
+    {
+      ...defaultConfig,
       displayName: 'db-databricks',
       testPathIgnorePatterns: connectorUnitIgnored,
       roots: ['<rootDir>/packages/malloy-db-databricks/'],

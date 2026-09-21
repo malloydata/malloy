@@ -304,6 +304,11 @@ export abstract class Dialect {
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
 
+  // Characters the dialect's LIKE treats as wildcards beyond `%` and `_`
+  // (SQL Server: `[` opens a character class). Malloy gives them no meaning,
+  // so sqlLike escapes every occurrence.
+  likeExtraWildcards: string[] = [];
+
   /**
    * Mappings from integer value ranges to Malloy number types.
    *
@@ -1240,6 +1245,10 @@ export abstract class Dialect {
         escapeActive = true;
       } else if (this.likeEscape && c === '^') {
         escaped += '^^';
+        escapeActive = false;
+        escapeClause = true;
+      } else if (this.likeEscape && this.likeExtraWildcards.includes(c)) {
+        escaped += '^' + c;
         escapeActive = false;
         escapeClause = true;
       } else {
