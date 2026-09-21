@@ -204,14 +204,17 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('regexp_extract', () => {
-    it(`works - ${databaseName}`, async () => {
-      await funcTestMultiple(
-        ["regexp_extract('I have a dog', r'd[aeiou]g')", 'dog'],
-        ["regexp_extract(null, r'd[aeiou]g')", null],
-        ["regexp_extract('foo', null)", null],
-        ["regexp_extract('I have a d0g', r'd.g')", 'd0g']
-      );
-    });
+    it.when(runtime.dialect.supportsRegexpMatch)(
+      `works - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          ["regexp_extract('I have a dog', r'd[aeiou]g')", 'dog'],
+          ["regexp_extract(null, r'd[aeiou]g')", null],
+          ["regexp_extract('foo', null)", null],
+          ["regexp_extract('I have a d0g', r'd.g')", 'd0g']
+        );
+      }
+    );
   });
 
   describe('replace', () => {
@@ -226,7 +229,6 @@ expressionModels.forEach((x, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["replace('aaaa', 'a', 'c')", 'cccc'],
-        ["replace('aaaa', r'.', 'c')", 'cccc'],
         [
           "replace('aaaa', '', 'c')",
           databaseName === 'trino' || databaseName === 'presto'
@@ -238,7 +240,13 @@ expressionModels.forEach((x, databaseName) => {
         ["replace('aaaa', 'a', null)", null]
       );
     });
-    it.when(usesVirguleBackreferences)(
+    it.when(runtime.dialect.supportsRegexpMatch)(
+      `regex works - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(["replace('aaaa', r'.', 'c')", 'cccc']);
+      }
+    );
+    it.when(usesVirguleBackreferences && runtime.dialect.supportsRegexpMatch)(
       `regex backreferences - ${databaseName}`,
       async () => {
         await funcTestMultiple([
@@ -1434,7 +1442,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*RUTHERFORD.*'
+        where: name ~ '%RUTHERFORD%'
         aggregate: f is string_agg(name, ',') {
           order_by: name
         }
@@ -1449,7 +1457,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*RUTHERFORD.*'
+        where: name ~ '%RUTHERFORD%'
         aggregate: f is string_agg(name, ',') {
           order_by: asc
         }
@@ -1464,7 +1472,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*RUTHERFORD.*'
+        where: name ~ '%RUTHERFORD%'
         aggregate: f is string_agg(name, ',') {
           order_by: city, name
         }
@@ -1479,7 +1487,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*FLY.*'
+        where: name ~ '%FLY%'
         group_by: name
         order_by: name desc
         limit: 3
@@ -1498,7 +1506,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*ADVENTURE.*'
+        where: name ~ '%ADVENTURE%'
         aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
       }`).toMatchResult(testModel, {
           f: 'ADVENTURE INC,SEA PLANE ADVENTURE INC,A BALLOON ADVENTURES ALOFT,A AERONAUTICAL ADVENTURE INC',
@@ -1509,7 +1517,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it.when(canOrderBy)(`works with order asc - ${databaseName}`, async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*FLY.*'
+        where: name ~ '%FLY%'
         group_by: name
         order_by: name desc
         limit: 3
@@ -1523,7 +1531,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it.when(canOrderBy)(`works with order desc - ${databaseName}`, async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*FLY.*'
+        where: name ~ '%FLY%'
         group_by: name
         order_by: name desc
         limit: 3
@@ -1587,7 +1595,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it.when(canOrderBy)(`works with limit - ${databaseName}`, async () => {
       const query = `##! experimental { aggregate_order_by aggregate_limit }
       run: aircraft -> {
-          where: name ~ r'.*FLY.*'
+          where: name ~ '%FLY%'
           group_by: name
           order_by: name desc
           limit: 3
@@ -1662,7 +1670,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*RUTHERFORD.*'
+        where: name ~ '%RUTHERFORD%'
         aggregate: f is string_agg_distinct(name, ',') {
           order_by: asc
         }
@@ -1677,7 +1685,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*FLY.*'
+        where: name ~ '%FLY%'
         group_by: name
         order_by: name desc
         limit: 3
@@ -1694,7 +1702,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
-        where: name ~ r'.*FLY.*'
+        where: name ~ '%FLY%'
         group_by: name
         order_by: name desc
         limit: 3
@@ -1711,7 +1719,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         const query = `##! experimental { aggregate_order_by aggregate_limit }
         run: aircraft -> {
-          where: name ~ r'.*FLY.*'
+          where: name ~ '%FLY%'
           group_by: name
           order_by: name desc
           limit: 3

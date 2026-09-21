@@ -96,6 +96,8 @@ type MessageParameterTypes = {
   'nesting-unsupported': {dialect: string};
   'nested-multi-stage-unsupported': {dialect: string};
   'nested-projection-limit-unsupported': {dialect: string};
+  'dialect-regexp-unsupported': {dialect: string};
+  'dialect-function-unsupported': {dialect: string; function: string};
   'sql-native-not-allowed-in-expression': {
     rawType: string | undefined;
   };
@@ -470,6 +472,10 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `'${e.dialect}' does not support a multi-stage pipeline ('->') in a nested query`,
   'nested-projection-limit-unsupported': e =>
     `'${e.dialect}' does not support 'limit:' on a nested 'select:'`,
+  'dialect-regexp-unsupported': e =>
+    `'${e.dialect}' does not support regular expression matching`,
+  'dialect-function-unsupported': e =>
+    `'${e.dialect}' does not support the function '${e.function}'`,
   'pick-missing-else': "pick incomplete, missing 'else'",
   'pick-missing-value': 'pick with no value can only be used with apply',
   'pick-illegal-partial': 'pick with partial when can only be used with apply',

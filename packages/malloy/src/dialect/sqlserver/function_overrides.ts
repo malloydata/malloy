@@ -3,7 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type {Expr} from '../../model/malloy_types';
 import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
+
+// SQL Server 2022 has no regular expression functions; the translator refuses
+// a call whose template is this node.
+const noRegex: Expr = {node: 'error', message: 'regular expressions'};
 
 export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   byte_length: {function: 'DATALENGTH'},
@@ -22,6 +27,8 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   ln: {sql: 'LOG(${value})'},
   log: {sql: 'LOG(${value}, ${base})'},
   pow: {function: 'POWER'},
+  regexp_extract: {expr: noRegex},
+  replace: {regular_expression: {expr: noRegex}},
   starts_with: {
     sql: 'CASE WHEN LEFT(${value}, LEN(${prefix})) = ${prefix} THEN 1 ELSE 0 END',
   },

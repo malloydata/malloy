@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {AggregateOrderByNode} from '../../model';
+import type {AggregateOrderByNode, Expr} from '../../model';
 import type {
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
@@ -39,7 +39,24 @@ const string_agg: OverloadedDefinitionBlueprint = {
   },
 };
 
+// STRING_AGG takes no DISTINCT, and a window function cannot sit inside an
+// aggregate; the translator refuses the call.
+const noDistinctAgg: Expr = {node: 'error', message: 'string_agg_distinct'};
+const string_agg_distinct: OverloadedDefinitionBlueprint = {
+  default_separator: {
+    ...string_agg['default_separator'],
+    isSymmetric: true,
+    impl: {expr: noDistinctAgg},
+  },
+  with_separator: {
+    ...string_agg['with_separator'],
+    isSymmetric: true,
+    impl: {expr: noDistinctAgg},
+  },
+};
+
 export const SQLSERVER_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
+  string_agg_distinct,
   ...def('reverse', {'str': 'string'}, 'string'),
 };

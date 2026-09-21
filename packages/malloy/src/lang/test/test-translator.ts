@@ -227,11 +227,24 @@ export const pgTableDef: SourceDef = {
  * some mocked schema definitions.
  */
 
+// SQL Server table definition -- the dialect with the fewest capabilities
+// (no regular expressions, no boolean values), for tests of what the
+// translator refuses.
+export const msTableDef: SourceDef = {
+  type: 'table',
+  name: 'aTable',
+  dialect: 'sqlserver',
+  tablePath: 'aTable',
+  connection: '_ms_',
+  fields: baseFields.filter(f => f.type !== 'timestamptz'),
+};
+
 export const mockSchema: TableSourceDef[] = [
   aTableDef,
   db2TableDef,
   bqTableDef,
   pgTableDef,
+  msTableDef,
   {
     type: 'table',
     name: 'carriers',
@@ -406,6 +419,8 @@ export class TestTranslator extends MalloyTranslator {
    *      aTable
    *   _pg_  - postgres dialect, with one table
    *      aTable
+   *   _ms_  - sqlserver dialect, with one table
+   *      aTable (no timestamptz column)
    *
    * The "aTable" table is a mocked table with one column of each type.
    * The _bq_ version does not have the timestamptz column, and when
@@ -435,6 +450,7 @@ export class TestTranslator extends MalloyTranslator {
       _db2_: {type: 'connection', name: '_db2_'},
       _bq_: {type: 'connection', name: '_bq_'},
       _pg_: {type: 'connection', name: '_pg_'},
+      _ms_: {type: 'connection', name: '_ms_'},
       a: {...aTableDef, primaryKey: 'astr', name: 'a'},
       b: {...aTableDef, primaryKey: 'astr', name: 'b'},
       bq_a: {...bqTableDef, primaryKey: 'astr', name: 'bq_a'},
@@ -508,6 +524,7 @@ export class TestTranslator extends MalloyTranslator {
     this.connectionDialectZone.define('_db2_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
     this.connectionDialectZone.define('_pg_', 'postgres');
+    this.connectionDialectZone.define('_ms_', 'sqlserver');
     for (const flag of options.compilerFlags ?? []) {
       this.compilerFlagSrc.push(`##! ${flag}\n`);
     }

@@ -237,6 +237,12 @@ export class ExprFunc extends ExpressionDef {
       nullabilityErrors,
       returnType,
     } = result;
+    if (dialect && overload.dialect[dialect]?.e.node === 'error') {
+      return this.loggedErrorExpr('dialect-function-unsupported', {
+        dialect,
+        function: this.name,
+      });
+    }
     // Report errors for expression type mismatch
     for (const error of expressionTypeErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);

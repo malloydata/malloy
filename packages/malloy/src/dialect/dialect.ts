@@ -252,6 +252,11 @@ export abstract class Dialect {
   // ordinals in GROUP BY)
   groupByClause: GroupByClauseType = 'ordinal';
 
+  // Can the dialect evaluate `x ~ r'...'`? False makes the operator, and any
+  // function whose template for this dialect is an error node, a translation
+  // error at the expression.
+  supportsRegexpMatch = true;
+
   // null will match in a function signature
   nullMatchesFunctionSignature = true;
 

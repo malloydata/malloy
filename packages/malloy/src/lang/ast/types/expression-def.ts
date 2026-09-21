@@ -492,7 +492,13 @@ function equality(
       if (lhs.type !== 'string' || rhs.type !== 'string') {
         let regexCmp = regexEqual(lhs, rhs);
         if (regexCmp) {
-          if (op[0] === '!') {
+          const dialect = fs.dialectObj();
+          if (dialect && !dialect.supportsRegexpMatch) {
+            left.logError('dialect-regexp-unsupported', {
+              dialect: dialect.name,
+            });
+            regexCmp = {node: 'false'};
+          } else if (op[0] === '!') {
             regexCmp = {node: 'not', e: {...regexCmp}};
           }
         } else {

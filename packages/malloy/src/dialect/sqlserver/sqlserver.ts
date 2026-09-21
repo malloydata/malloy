@@ -146,6 +146,8 @@ export class SQLServerDialect extends Dialect {
   likeEscape = true;
   likeExtraWildcards = ['['];
   groupByClause: GroupByClauseType = 'expression';
+  // REGEXP_LIKE and its family arrived in SQL Server 2025
+  supportsRegexpMatch = false;
 
   // A leading `#` or `@` names a temp table or a variable, not a table.
   override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$#@]*/;
@@ -486,9 +488,7 @@ export class SQLServerDialect extends Dialect {
   }
 
   sqlRegexpMatch(_df: RegexMatchExpr): string {
-    throw new Error(
-      'SQL Server 2022 has no regular expressions (REGEXP_LIKE is SQL Server 2025)'
-    );
+    throw new Error('Internal error: supportsRegexpMatch is false');
   }
 
   sqlDateLiteral(_qi: QueryInfo, literal: string): string {

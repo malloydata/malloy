@@ -1043,11 +1043,14 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
         ).toMatchResult(testModel, {val_ne_null: true});
       });
-      it('regex !~ non-null to null', async () => {
-        await expect(
-          `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
-        ).toMatchResult(testModel, {val_ne_null: true});
-      });
+      it.when(runtime.dialect.supportsRegexpMatch)(
+        'regex !~ non-null to null',
+        async () => {
+          await expect(
+            `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
+          ).toMatchResult(testModel, {val_ne_null: true});
+        }
+      );
       it('numeric != null-to-null', async () => {
         await expect(
           `run: ${nulls} -> { select: null_ne_null is x != y }`
