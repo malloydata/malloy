@@ -92,6 +92,16 @@ describe('experimental dialects', () => {
     `);
   });
 
+  test('a test runtime needs no flag, through loadModel as well as parse', async () => {
+    const testRuntime = testRuntimeFor(connection);
+    testRuntime.isTestRuntime = true;
+    const sql = await testRuntime
+      .loadModel(`source: s is ${duckdbX}.sql('SELECT 1 as one')`)
+      .loadQuery('run: s -> { select: one }')
+      .getSQL();
+    expect(sql).toContain('one');
+  });
+
   afterAll(async () => {
     await runtime.connection.close();
     registerDialect(new DuckDBDialect());
