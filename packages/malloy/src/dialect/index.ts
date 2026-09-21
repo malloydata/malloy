@@ -30,6 +30,8 @@ export type {
   LateralJoinExpression,
   QueryInfo,
   FieldReferenceType,
+  GroupByClauseType,
+  OrderByClauseType,
 } from './dialect';
 export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';

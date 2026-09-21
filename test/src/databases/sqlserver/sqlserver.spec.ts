@@ -111,7 +111,6 @@ describe('SQL Server', () => {
           group_by: popular_name
           aggregate: state_count is count()
           order_by: state_count desc
-          limit: 1
         }
       `).toMatchResult(tm, {popular_name: 'Isabella'});
     });
@@ -122,7 +121,6 @@ describe('SQL Server', () => {
           group_by: first is substr(state, 1, 1)
           aggregate: state_count is count()
           order_by: state_count desc, first
-          limit: 1
         }
       `).toMatchResult(tm, {first: 'M', state_count: 8});
     });
@@ -187,7 +185,6 @@ describe('SQL Server', () => {
           group_by: carriers.nickname
           aggregate: flight_count is count(), carrier_count is carriers.count()
           order_by: flight_count desc
-          limit: 1
         }
       `).toMatchResult(tm, {nickname: 'Southwest', carrier_count: 1});
     });

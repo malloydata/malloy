@@ -30,6 +30,7 @@ import type {
   CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
+  GroupByClauseType,
   QueryInfo,
 } from '../dialect';
 import {Dialect, EscapeStyle, qtz} from '../dialect';
@@ -144,6 +145,7 @@ export class SQLServerDialect extends Dialect {
   maxIdentifierLength = 128;
   likeEscape = true;
   likeExtraWildcards = ['['];
+  groupByClause: GroupByClauseType = 'expression';
 
   // A leading `#` or `@` names a temp table or a variable, not a table.
   override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$#@]*/;
