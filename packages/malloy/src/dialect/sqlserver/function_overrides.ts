@@ -29,6 +29,15 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   pow: {function: 'POWER'},
   regexp_extract: {expr: noRegex},
   replace: {regular_expression: {expr: noRegex}},
+  round: {
+    to_integer: {sql: 'ROUND(${value}, 0)'},
+    to_precision: {sql: 'ROUND(${value}, ${precision})'},
+  },
+  atan2: {function: 'ATN2'},
+  trim: {characters: {sql: 'TRIM(${trim_characters} FROM ${value})'}},
+  // The two-argument forms need compatibility level 160 (SQL Server 2022)
+  ltrim: {characters: {sql: 'LTRIM(${value}, ${trim_characters})'}},
+  rtrim: {characters: {sql: 'RTRIM(${value}, ${trim_characters})'}},
   starts_with: {
     sql: 'CASE WHEN LEFT(${value}, LEN(${prefix})) = ${prefix} THEN 1 ELSE 0 END',
   },

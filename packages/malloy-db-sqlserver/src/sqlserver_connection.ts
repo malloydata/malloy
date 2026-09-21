@@ -486,12 +486,40 @@ export class SQLServerConnection
     return structDef;
   }
 
-  // A global temp table is visible to every connection in the pool
+  /**
+   * A table in tempdb, which lives until the server restarts: a temp table
+   * would go with the pooled connection that created it. The query usually
+   * begins with a CTE, which cannot sit inside `SELECT INTO ... FROM (...)`,
+   * so the server describes the query, creates the table from that
+   * description, and fills it through INSERT ... EXEC.
+   */
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
     const hash = makeDigest(sqlCommand).slice(0, 32);
-    const tableName = `##tt${hash}`;
-    const cmd = `IF OBJECT_ID('tempdb..${tableName}') IS NULL
-      SELECT * INTO ${tableName} FROM (\n${sqlCommand}\n) AS __malloy_tt`;
+    const tableName = `tempdb.dbo.malloy_tt${hash}`;
+    const sqlLiteral = this.dialect.sqlLiteralString(sqlCommand);
+    const cmd = `IF OBJECT_ID('${tableName}') IS NULL
+BEGIN
+  DECLARE @sql NVARCHAR(MAX) = N${sqlLiteral};
+  DECLARE @error NVARCHAR(MAX) = (
+    SELECT TOP 1 error_message
+    FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
+    WHERE error_message IS NOT NULL
+  );
+  IF @error IS NOT NULL THROW 50000, @error, 1;
+  DECLARE @columns NVARCHAR(MAX) = (
+    SELECT STRING_AGG(QUOTENAME(name) + N' ' + system_type_name, N', ')
+      WITHIN GROUP (ORDER BY column_ordinal)
+    FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
+  );
+  BEGIN TRY
+    EXEC(N'CREATE TABLE ${tableName} (' + @columns + N')');
+    INSERT INTO ${tableName} EXEC sp_executesql @sql;
+  END TRY
+  BEGIN CATCH
+    -- 2714: another connection created it first
+    IF ERROR_NUMBER() <> 2714 THROW;
+  END CATCH
+END`;
     await this.runRawSQL(cmd);
     return tableName;
   }

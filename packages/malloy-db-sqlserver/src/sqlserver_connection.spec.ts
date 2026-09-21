@@ -174,7 +174,7 @@ describe('db:SQLServer', () => {
 
   it('manifests a temporary table any pooled connection can read', async () => {
     const name = await connection.manifestTemporaryTable('SELECT 42 AS answer');
-    expect(name).toMatch(/^##tt/);
+    expect(name).toMatch(/^tempdb\.dbo\.malloy_tt/);
     const res = await connection.runSQL(`SELECT answer FROM ${name}`);
     expect(res.rows[0]['answer']).toBe(42);
   });
