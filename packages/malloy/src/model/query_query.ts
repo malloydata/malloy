@@ -1044,7 +1044,7 @@ export class QueryQuery extends QueryField {
       }
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlQuoteIdentifier(
+        structSQL = `(SELECT ${qs.dialect.sqlDistinctKey()} as ${qs.dialect.sqlQuoteIdentifier(
           '__distinct_key'
         )}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
@@ -1339,7 +1339,7 @@ export class QueryQuery extends QueryField {
     if (isBaseTable(qs.structDef)) {
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlQuoteIdentifier(
+        structSQL = `(SELECT ${qs.dialect.sqlDistinctKey()} as ${qs.dialect.sqlQuoteIdentifier(
           '__distinct_key'
         )}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }

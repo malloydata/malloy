@@ -399,6 +399,31 @@ export class SQLServerDialect extends Dialect {
     return 'NEWID()';
   }
 
+  // NEWID() in a derived table is evaluated again for every row a join
+  // produces from it, so it cannot key a row; a row number can.
+  sqlDistinctKey(): string {
+    return 'ROW_NUMBER() OVER (ORDER BY (SELECT NULL))';
+  }
+
+  // A stage's SQL is indented when it becomes a CTE, which would indent the
+  // text of a literal spanning lines.
+  sqlLiteralString(literal: string): string {
+    if (!/[\r\n]/.test(literal)) {
+      return super.sqlLiteralString(literal);
+    }
+    const parts = literal
+      .split(/(\r|\n)/)
+      .filter(p => p !== '')
+      .map(p =>
+        p === '\r'
+          ? 'CHAR(13)'
+          : p === '\n'
+            ? 'CHAR(10)'
+            : super.sqlLiteralString(p)
+      );
+    return `(${parts.join(' + ')})`;
+  }
+
   sqlFieldReference(
     parentAlias: string,
     parentType: FieldReferenceType,
@@ -442,8 +467,9 @@ export class SQLServerDialect extends Dialect {
       if (isSamplingEnable(sample) && sample.enable) {
         sample = this.defaultSampling;
       }
+      // TABLESAMPLE ROWS returns whole pages, not the number of rows asked for
       if (isSamplingRows(sample)) {
-        return `(SELECT * FROM ${tableSQL} TABLESAMPLE (${sample.rows} ROWS))`;
+        return `(SELECT TOP ${sample.rows} * FROM ${tableSQL})`;
       } else if (isSamplingPercent(sample)) {
         return `(SELECT * FROM ${tableSQL} TABLESAMPLE (${sample.percent} PERCENT))`;
       }

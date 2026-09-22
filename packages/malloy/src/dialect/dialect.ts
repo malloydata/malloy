@@ -582,6 +582,11 @@ export abstract class Dialect {
 
   abstract sqlGenerateUUID(): string;
 
+  // A value unique to each row of a table, which symmetric aggregates key on
+  sqlDistinctKey(): string {
+    return this.sqlGenerateUUID();
+  }
+
   abstract sqlFieldReference(
     parentAlias: string,
     parentType: FieldReferenceType,

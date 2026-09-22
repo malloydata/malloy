@@ -49,6 +49,12 @@ describe('SQL Server', () => {
       });
     });
 
+    test('carries a newline in a string literal', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT 1 AS n") -> { select: s is 'a\\nb' }
+      `).toMatchResult(tm, {s: 'a\nb'});
+    });
+
     test('quotes a field named like a keyword', async () => {
       await expect(`
         run: sqlserver.sql('SELECT 1 AS "select"') -> {
@@ -245,6 +251,18 @@ describe('SQL Server', () => {
   });
 
   describe('joins', () => {
+    test('sums each side of a fan-out once', async () => {
+      await expect(`
+        source: facts is sqlserver.table('malloytest.state_facts')
+        run: facts extend { join_cross: other is facts on other.state = 'CA' | 'NY' } -> {
+          aggregate:
+            row_count is count(concat(state, other.state))
+            left_sum is airport_count.sum()
+            right_sum is other.airport_count.sum()
+        }
+      `).toMatchResult(tm, {row_count: 102, left_sum: 19701, right_sum: 1560});
+    });
+
     test('joins and aggregates symmetrically', async () => {
       await expect(`
         source: carriers is sqlserver.table('malloytest.carriers') extend {

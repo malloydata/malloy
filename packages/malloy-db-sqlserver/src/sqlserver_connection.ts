@@ -372,8 +372,20 @@ export class SQLServerConnection
   }
 
   public async runRawSQL(sql: string): Promise<MalloyQueryData> {
+    return this.runBatch(sql);
+  }
+
+  // Each parameter is an NVARCHAR(MAX) the batch reads as @name
+  private async runBatch(
+    sql: string,
+    parameters: Record<string, string> = {}
+  ): Promise<MalloyQueryData> {
     const pool = await this.getPool();
-    const result = await pool.request().query(this.batchPrefix() + sql);
+    const request = pool.request();
+    for (const [name, value] of Object.entries(parameters)) {
+      request.input(name, mssql.NVarChar(mssql.MAX), value);
+    }
+    const result = await request.query(this.batchPrefix() + sql);
     const rows = (result.recordset ?? []) as QueryData;
     return {rows, totalRows: rows.length};
   }
@@ -477,10 +489,10 @@ export class SQLServerConnection
         name AS column_name,
         system_type_name AS data_type,
         error_message
-      FROM sys.dm_exec_describe_first_result_set(N${this.dialect.sqlLiteralString(sqlRef.selectStr)}, NULL, 0)
+      FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
       ORDER BY column_ordinal`;
     try {
-      const result = await this.runRawSQL(infoQuery);
+      const result = await this.runBatch(infoQuery, {sql: sqlRef.selectStr});
       const failed = result.rows.find(r => r['error_message'] !== null);
       if (failed) {
         return `Error fetching schema for SQL block: ${failed['error_message']}`;
@@ -502,10 +514,8 @@ export class SQLServerConnection
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
     const hash = makeDigest(sqlCommand).slice(0, 32);
     const tableName = `tempdb.dbo.malloy_tt${hash}`;
-    const sqlLiteral = this.dialect.sqlLiteralString(sqlCommand);
     const cmd = `IF OBJECT_ID('${tableName}') IS NULL
 BEGIN
-  DECLARE @sql NVARCHAR(MAX) = N${sqlLiteral};
   DECLARE @error NVARCHAR(MAX) = (
     SELECT TOP 1 error_message
     FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
@@ -526,7 +536,7 @@ BEGIN
     IF ERROR_NUMBER() <> 2714 THROW;
   END CATCH
 END`;
-    await this.runRawSQL(cmd);
+    await this.runBatch(cmd, {sql: sqlCommand});
     return tableName;
   }
 
