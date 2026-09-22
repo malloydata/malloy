@@ -250,6 +250,87 @@ describe('SQL Server', () => {
     });
   });
 
+  describe('nesting', () => {
+    const isabella = `
+      run: sqlserver.table('malloytest.state_facts') -> {
+        where: popular_name = 'Isabella'
+        group_by: popular_name
+        aggregate: state_count is count()`;
+
+    test('nests a grouped aggregate, ordered and limited', async () => {
+      await expect(`${isabella}
+        nest: by_first is {
+          group_by: first is substr(state, 1, 1)
+          aggregate: n is count()
+          order_by: n desc, first
+          limit: 2
+        }
+      }`).toEqualResult(tm, [
+        {
+          popular_name: 'Isabella',
+          state_count: 24,
+          by_first: [
+            {first: 'N', n: 4},
+            {first: 'C', n: 3},
+          ],
+        },
+      ]);
+    });
+
+    test('nests two levels deep', async () => {
+      await expect(`${isabella}
+        nest: by_first is {
+          group_by: first is substr(state, 1, 1)
+          nest: states is { group_by: state; order_by: state }
+          order_by: first
+          limit: 1
+        }
+      }`).toMatchResult(tm, {
+        by_first: [{first: 'A', states: [{state: 'AZ'}]}],
+      });
+    });
+
+    test('a nest of only measures is one record', async () => {
+      await expect(`${isabella}
+        nest: totals is { aggregate: n is count(), airports is airport_count.sum() }
+      }`).toMatchResult(tm, {totals: {n: 24, airports: 11146}});
+    });
+
+    test('an empty nest is an empty list', async () => {
+      await expect(`${isabella}
+        nest: none is { where: state = 'ZZ'; group_by: state; aggregate: n is count() }
+      }`).toMatchResult(tm, {none: []});
+    });
+
+    test('a projection nest lists rows', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          where: popular_name = 'Emma'
+          group_by: popular_name
+          nest: states is { select: state; order_by: state }
+        }
+      `).toMatchResult(tm, {
+        states: [
+          {state: 'AL'},
+          {state: 'AR'},
+          {state: 'IN'},
+          {state: 'ME'},
+          {state: 'MT'},
+          {state: 'NC'},
+        ],
+      });
+    });
+
+    test('an ungrouped aggregate sees the whole table', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') extend {
+          measure: total_births is births.sum()
+          measure: births_per_100k is floor(total_births / all(total_births) * 100000)
+        } -> { group_by: state; aggregate: births_per_100k }
+      `).toMatchResult(tm, {state: 'CA', births_per_100k: 9742});
+    });
+  });
+
   describe('joins', () => {
     test('sums each side of a fan-out once', async () => {
       await expect(`

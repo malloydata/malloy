@@ -36,7 +36,7 @@ import type {
   OrderByStage,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz} from '../dialect';
+import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
 import type {ValidateTablePathResult} from '../table-path';
 import {SQLSERVER_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SQLSERVER_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -130,7 +130,7 @@ export class SQLServerDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsSafeCast = true;
-  supportsNesting = false;
+  supportsNesting = true;
   supportsPipelinesInViews = false;
   supportsFullJoin = true;
   readsNestedData = false;
@@ -279,48 +279,89 @@ export class SQLServerDialect extends Dialect {
     return `MAX(${fieldName})`;
   }
 
-  private nestingUnsupported(what: string): never {
-    throw new Error(`SQL Server dialect does not support nesting (${what})`);
+  private unsupported(what: string): never {
+    throw new Error(`SQL Server dialect does not support ${what}`);
+  }
+
+  // A nest is JSON text. MAX, CASE and COALESCE return plain text, which
+  // FOR JSON and JSON_OBJECT would quote, so each is wrapped in JSON_QUERY
+  // at its outermost; a column reference keeps the JSON type on its own.
+  private jsonObject(fieldList: DialectFieldList, nulls = false): string {
+    const props = fieldList.map(
+      f =>
+        `${this.sqlLiteralString(f.rawName)}: ${
+          nulls ? 'NULL' : this.jsonValue(f.sqlExpression, f.typeDef)
+        }`
+    );
+    return `JSON_OBJECT(${props.join(', ')})`;
   }
 
   sqlAggregateTurtle(
-    _groupSet: number | undefined,
-    _fieldList: DialectFieldList,
-    _orderBy: CompiledOrderBy[] | undefined,
+    groupSet: number | undefined,
+    fieldList: DialectFieldList,
+    orderBy: CompiledOrderBy[] | undefined,
     _limit?: number,
-    _filterSQL?: string
+    filterSQL?: string
   ): string {
-    return this.nestingUnsupported('sqlAggregateTurtle');
+    const object = `CAST(${this.jsonObject(fieldList)} AS NVARCHAR(MAX))`;
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const element = cond ? `CASE WHEN ${cond} THEN ${object} END` : object;
+    const ordered = orderBy
+      ? ` WITHIN GROUP (${this.sqlTurtleOrderByClause(orderBy).trim()})`
+      : '';
+    return `JSON_QUERY(COALESCE('[' + STRING_AGG(${element}, ',')${ordered} + ']', '[]'))`;
   }
 
-  sqlAnyValueTurtle(_groupSet: number, _fieldList: DialectFieldList): string {
-    return this.nestingUnsupported('sqlAnyValueTurtle');
+  sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
+    return `JSON_QUERY(MAX(CASE WHEN group_set=${groupSet} THEN ${this.jsonObject(fieldList)} END))`;
   }
 
   sqlAnyValueLastTurtle(
-    _name: string,
-    _groupSet: number,
-    _sqlName: string
+    name: string,
+    groupSet: number,
+    sqlName: string
   ): string {
-    return this.nestingUnsupported('sqlAnyValueLastTurtle');
+    return `MAX(CASE WHEN group_set=${groupSet} AND ${name} IS NOT NULL THEN ${name} END) as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(
-    _groupSet: number,
-    _fieldList: DialectFieldList
+    groupSet: number,
+    fieldList: DialectFieldList
   ): string {
-    return this.nestingUnsupported('sqlCoaleseMeasuresInline');
+    return `JSON_QUERY(COALESCE(MAX(CASE WHEN group_set=${groupSet} THEN ${this.jsonObject(fieldList)} END), ${this.jsonObject(fieldList, true)}))`;
+  }
+
+  // The columns OPENJSON reads out of one array element
+  private openJsonColumns(fieldList: DialectFieldList): string {
+    return fieldList
+      .map(f => {
+        const nested =
+          f.typeDef.type === 'record' || f.typeDef.type === 'array';
+        const sqlType = nested
+          ? 'NVARCHAR(MAX)'
+          : this.malloyTypeToSQLType(f.typeDef);
+        const path = this.sqlLiteralString(this.jsonPath(f.rawName));
+        return `${this.sqlQuoteIdentifier(f.rawName)} ${sqlType} ${path}${nested ? ' AS JSON' : ''}`;
+      })
+      .join(', ');
+  }
+
+  private jsonPath(name: string): string {
+    return `$."${name.replace(/"/g, '\\"')}"`;
   }
 
   sqlUnnestAlias(
-    _source: string,
-    _alias: string,
-    _fieldList: DialectFieldList,
+    source: string,
+    alias: string,
+    fieldList: DialectFieldList,
     _needDistinctKey: boolean,
-    _isArray: boolean,
+    isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
-    return this.nestingUnsupported('sqlUnnestAlias');
+    const rows = isArray
+      ? `SELECT CAST([key] AS BIGINT) AS __row_id, value FROM OPENJSON(${source})`
+      : `SELECT CAST(o.[key] AS BIGINT) AS __row_id, u.* FROM OPENJSON(${source}) AS o CROSS APPLY OPENJSON(o.value) WITH (${this.openJsonColumns(fieldList)}) AS u`;
+    return `OUTER APPLY (${rows}) AS ${alias}`;
   }
 
   sqlUnnestPipelineHead(
@@ -328,11 +369,11 @@ export class SQLServerDialect extends Dialect {
     _sourceSQLExpression: string,
     _fieldList?: DialectFieldList
   ): string {
-    return this.nestingUnsupported('sqlUnnestPipelineHead');
+    return this.unsupported('a nested pipeline');
   }
 
   sqlCreateFunction(_id: string, _funcText: string): string {
-    return this.nestingUnsupported('sqlCreateFunction');
+    return this.unsupported('a nested pipeline');
   }
 
   sqlCreateFunctionCombineLastStage(
@@ -340,11 +381,11 @@ export class SQLServerDialect extends Dialect {
     _fieldList: DialectFieldList,
     _orderBy: OrderBy[] | undefined
   ): string {
-    return this.nestingUnsupported('sqlCreateFunctionCombineLastStage');
+    return this.unsupported('a nested pipeline');
   }
 
-  sqlSelectAliasAsStruct(_alias: string, _fieldList: DialectFieldList): string {
-    return this.nestingUnsupported('sqlSelectAliasAsStruct');
+  sqlSelectAliasAsStruct(_alias: string, fieldList: DialectFieldList): string {
+    return this.jsonObject(fieldList);
   }
 
   // The final stage is the outermost SELECT, the one place a CTE query may
@@ -434,12 +475,41 @@ export class SQLServerDialect extends Dialect {
     parentAlias: string,
     parentType: FieldReferenceType,
     childName: string,
-    _childType: string
+    childType: string
   ): string {
-    if (parentType !== 'table') {
-      return this.nestingUnsupported(`field reference into ${parentType}`);
+    if (childName === '__row_id') {
+      return `${parentAlias}.__row_id`;
+    }
+    if (parentType === 'array[scalar]') {
+      return this.jsonScalar(`${parentAlias}.value`, childType);
+    }
+    if (parentType === 'record') {
+      const path = this.sqlLiteralString(this.jsonPath(childName));
+      return childType === 'string' ||
+        childType === 'number' ||
+        childType === 'boolean' ||
+        childType === 'date' ||
+        childType === 'timestamp'
+        ? this.jsonScalar(`JSON_VALUE(${parentAlias}, ${path})`, childType)
+        : `JSON_QUERY(${parentAlias}, ${path})`;
     }
     return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
+  }
+
+  // JSON_VALUE and OPENJSON's value are NVARCHAR
+  private jsonScalar(sql: string, childType: string): string {
+    switch (childType) {
+      case 'number':
+        return `CAST(${sql} AS ${this.defaultNumberType})`;
+      case 'boolean':
+        return `CAST(${sql} AS BIT)`;
+      case 'date':
+        return `CAST(${sql} AS DATE)`;
+      case 'timestamp':
+        return `CAST(${sql} AS DATETIME2)`;
+      default:
+        return sql;
+    }
   }
 
   // The MD5 of the key as a 64-bit integer, widened so that hash + value is
