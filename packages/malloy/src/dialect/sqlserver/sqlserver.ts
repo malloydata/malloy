@@ -656,7 +656,9 @@ export class SQLServerDialect extends Dialect {
       // Days since a Sunday, so the answer does not follow DATEFIRST
       return `((DATEDIFF(day, '19000107', ${extractFrom}) % 7 + 7) % 7 + 1)`;
     }
-    const part = datePartMap[from.units];
+    // Malloy's week of the year is the ISO week; DATEPART(week) counts from
+    // January 1st and follows DATEFIRST
+    const part = from.units === 'week' ? 'iso_week' : datePartMap[from.units];
     if (part === undefined) {
       throw new Error(`Unknown SQL Server date part '${from.units}'`);
     }
@@ -816,8 +818,9 @@ export class SQLServerDialect extends Dialect {
       TD.isDate(to.typeDef) &&
       ['week', 'month', 'quarter', 'year'].includes(df.units)
     ) {
+      // Integer division truncates toward zero, as Malloy measures
       if (df.units === 'week') {
-        return `FLOOR(DATEDIFF(day, ${lVal}, ${rVal}) / 7.0)`;
+        return `(DATEDIFF(day, ${lVal}, ${rVal}) / 7)`;
       }
       const earlier = `(CASE WHEN ${rVal} >= ${lVal} THEN ${lVal} ELSE ${rVal} END)`;
       const later = `(CASE WHEN ${rVal} >= ${lVal} THEN ${rVal} ELSE ${lVal} END)`;
@@ -826,8 +829,8 @@ export class SQLServerDialect extends Dialect {
         df.units === 'month'
           ? months
           : df.units === 'quarter'
-            ? `FLOOR(${months} / 3.0)`
-            : `FLOOR(${months} / 12.0)`;
+            ? `(${months} / 3)`
+            : `(${months} / 12)`;
       return `CASE
         WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
         WHEN ${rVal} >= ${lVal} THEN ${measured}

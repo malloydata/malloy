@@ -988,29 +988,45 @@ expressionModels.forEach((x, databaseName) => {
       );
     });
   });
+  // SQL Server's LTRIM and RTRIM take a character set only from 2022
+  const canTrimCharacters = databaseName !== 'sqlserver';
   describe('ltrim', () => {
     it(`ltrim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["ltrim('  keep this ->  ')", 'keep this ->  '],
-        ["ltrim('__keep_this -> __', '_')", 'keep_this -> __'],
-        ["ltrim(' keep everything ', '')", ' keep everything '],
-        ["ltrim('null example', null)", null],
-        ["ltrim(null, 'a')", null],
         ['ltrim(null)', null]
       );
     });
+    it.when(canTrimCharacters)(
+      `ltrim characters - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          ["ltrim('__keep_this -> __', '_')", 'keep_this -> __'],
+          ["ltrim(' keep everything ', '')", ' keep everything '],
+          ["ltrim('null example', null)", null],
+          ["ltrim(null, 'a')", null]
+        );
+      }
+    );
   });
   describe('rtrim', () => {
     it(`rtrim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["rtrim('  <- keep this  ')", '  <- keep this'],
-        ["rtrim('__ <- keep_this__', '_')", '__ <- keep_this'],
-        ["rtrim(' keep everything ', '')", ' keep everything '],
-        ["rtrim('null example', null)", null],
-        ["rtrim(null, 'a')", null],
         ['rtrim(null)', null]
       );
     });
+    it.when(canTrimCharacters)(
+      `rtrim characters - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          ["rtrim('__ <- keep_this__', '_')", '__ <- keep_this'],
+          ["rtrim(' keep everything ', '')", ' keep everything '],
+          ["rtrim('null example', null)", null],
+          ["rtrim(null, 'a')", null]
+        );
+      }
+    );
   });
   describe('rand', () => {
     it(`is usually not the same value - ${databaseName}`, async () => {
