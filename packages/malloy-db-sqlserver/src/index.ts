@@ -6,6 +6,7 @@
 export {
   SQLServerConnection,
   SQLServerExecutor,
+  connectionStringIdentity,
   driverConfig,
 } from './sqlserver_connection';
 export type {

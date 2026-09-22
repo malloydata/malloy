@@ -16,7 +16,7 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   chr: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE NCHAR(${value}) END"},
   div: {sql: 'FLOOR(${dividend} / ${divisor})'},
   ends_with: {
-    sql: 'CASE WHEN RIGHT(${value}, LEN(${suffix})) = ${suffix} THEN 1 ELSE 0 END',
+    sql: 'CASE WHEN RIGHT(${value}, LEN(${suffix})) = ${suffix} THEN 1 WHEN RIGHT(${value}, LEN(${suffix})) <> ${suffix} THEN 0 END',
   },
   ifnull: {function: 'ISNULL'},
   // A FLOAT holds neither infinity nor NaN
@@ -38,7 +38,7 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   ltrim: {characters: {sql: 'LTRIM(${value}, ${trim_characters})'}},
   rtrim: {characters: {sql: 'RTRIM(${value}, ${trim_characters})'}},
   starts_with: {
-    sql: 'CASE WHEN LEFT(${value}, LEN(${prefix})) = ${prefix} THEN 1 ELSE 0 END',
+    sql: 'CASE WHEN LEFT(${value}, LEN(${prefix})) = ${prefix} THEN 1 WHEN LEFT(${value}, LEN(${prefix})) <> ${prefix} THEN 0 END',
   },
   stddev: {function: 'STDEV'},
   string_repeat: {function: 'REPLICATE'},

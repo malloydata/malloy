@@ -100,13 +100,15 @@ export class SQLServerExecutor {
       return {};
     }
     const port = process.env['MSSQL_PORT'];
+    const trust = process.env['MSSQL_TRUST_SERVER_CERTIFICATE'];
     return {
       server,
       port: port ? Number(port) : undefined,
       user: process.env['MSSQL_USER'],
       password: process.env['MSSQL_PASSWORD'],
       database: process.env['MSSQL_DATABASE'],
-      trustServerCertificate: true,
+      trustServerCertificate:
+        trust === undefined ? undefined : trust === 'true',
     };
   }
 }
@@ -172,8 +174,9 @@ function authenticationFor(
 function principalOf(config: SQLServerConfiguration): string | undefined {
   switch (config.authentication ?? 'sql') {
     case 'sql':
-    case 'ntlm':
       return config.user;
+    case 'ntlm':
+      return config.domain ? `${config.domain}\\${config.user}` : config.user;
     case 'azure-service-principal':
     case 'azure-msi':
     case 'azure-default':
@@ -181,6 +184,17 @@ function principalOf(config: SQLServerConfiguration): string | undefined {
     case 'azure-access-token':
       return undefined;
   }
+}
+
+// A connection string without its secrets: the keys ADO.NET spells a password
+// or a client secret with, in any case and spacing, dropped whole. A value in
+// braces may hold a semicolon.
+export function connectionStringIdentity(connectionString: string): string {
+  const secret = /^(password|pwd|client ?secret|access ?token)$/i;
+  return connectionString
+    .split(/;(?=(?:[^{}]|\{[^}]*\})*$)/)
+    .filter(part => !secret.test(part.split('=')[0].trim()))
+    .join(';');
 }
 
 /** The driver's config; a connection string and structured fields are not merged */
@@ -328,7 +342,9 @@ export class SQLServerConnection
     const c = this.config;
     return makeDigest(
       'sqlserver',
-      c.connectionString,
+      c.connectionString === undefined
+        ? undefined
+        : connectionStringIdentity(c.connectionString),
       c.server,
       c.port !== undefined ? String(c.port) : undefined,
       c.instanceName,
@@ -388,7 +404,13 @@ export class SQLServerConnection
 
   // The dialect's final stage returns each row as one JSON document
   private parseRow(row: QueryRecord): QueryRecord {
-    return JSON.parse(row['row'] as string);
+    const document = row['row'];
+    if (typeof document !== 'string') {
+      throw new Error(
+        'SQL Server runSQL expects a row per JSON document, as the dialect writes; runRawSQL runs other SQL'
+      );
+    }
+    return JSON.parse(document);
   }
 
   public async runRawSQL(sql: string): Promise<MalloyQueryData> {

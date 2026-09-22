@@ -235,8 +235,6 @@ export class SQLServerDialect extends Dialect {
         return 'DATE';
       case 'timestamp':
         return 'DATETIME2';
-      case 'timestamptz':
-        return 'DATETIMEOFFSET';
       case 'record':
       case 'array':
         return 'NVARCHAR(MAX)';
@@ -284,7 +282,9 @@ export class SQLServerDialect extends Dialect {
   }
 
   private unsupported(what: string): never {
-    throw new Error(`SQL Server dialect does not support ${what}`);
+    throw new Error(
+      `Internal error: SQL Server dialect does not support ${what}`
+    );
   }
 
   // A nest is JSON text. MAX, CASE and COALESCE return plain text, which
@@ -301,7 +301,8 @@ export class SQLServerDialect extends Dialect {
   }
 
   // One SELECT allows one WITHIN GROUP ordering, so an ordered nest sorts its
-  // own array in a subquery, by the value each element carries.
+  // own array in a subquery, by the value each element carries, NULL last as
+  // the final stage sorts.
   sqlAggregateTurtle(
     groupSet: number | undefined,
     fieldList: DialectFieldList,
@@ -323,7 +324,7 @@ export class SQLServerDialect extends Dialect {
           `JSON_VALUE(o.value, ${path})`,
           field?.typeDef.type ?? 'string'
         );
-        return `${value} ${o.dir.toUpperCase()}`;
+        return `CASE WHEN ${value} IS NULL THEN 1 ELSE 0 END, ${value} ${o.dir.toUpperCase()}`;
       });
       elements = `(SELECT '[' + STRING_AGG(o.value, ',') WITHIN GROUP (ORDER BY ${terms.join(', ')}) + ']' FROM OPENJSON(${elements}) AS o)`;
     }
@@ -377,8 +378,8 @@ export class SQLServerDialect extends Dialect {
     _isInNestedPipeline: boolean
   ): string {
     const rows = isArray
-      ? `SELECT CAST([key] AS BIGINT) AS __row_id, value FROM OPENJSON(${source})`
-      : `SELECT CAST(o.[key] AS BIGINT) AS __row_id, u.* FROM OPENJSON(${source}) AS o CROSS APPLY OPENJSON(o.value) WITH (${this.openJsonColumns(fieldList)}) AS u`;
+      ? `SELECT CAST("key" AS BIGINT) AS __row_id, value FROM OPENJSON(${source})`
+      : `SELECT CAST(o."key" AS BIGINT) AS __row_id, u.* FROM OPENJSON(${source}) AS o CROSS APPLY OPENJSON(o.value) WITH (${this.openJsonColumns(fieldList)}) AS u`;
     return `OUTER APPLY (${rows}) AS ${alias}`;
   }
 
@@ -479,8 +480,9 @@ export class SQLServerDialect extends Dialect {
   // A stage's SQL is indented when it becomes a CTE, which would indent the
   // text of a literal spanning lines.
   sqlLiteralString(literal: string): string {
+    // N'...' is Unicode; a bare '...' is read in the database's code page
     if (!/[\r\n]/.test(literal)) {
-      return super.sqlLiteralString(literal);
+      return `N${super.sqlLiteralString(literal)}`;
     }
     const parts = literal
       .split(/(\r|\n)/)
@@ -490,7 +492,7 @@ export class SQLServerDialect extends Dialect {
           ? 'CHAR(13)'
           : p === '\n'
             ? 'CHAR(10)'
-            : super.sqlLiteralString(p)
+            : `N${super.sqlLiteralString(p)}`
       );
     return `(${parts.join(' + ')})`;
   }
@@ -567,7 +569,8 @@ export class SQLServerDialect extends Dialect {
       if (isSamplingEnable(sample) && sample.enable) {
         sample = this.defaultSampling;
       }
-      // TABLESAMPLE ROWS returns whole pages, not the number of rows asked for
+      // The first n rows, not a random sample: TABLESAMPLE ROWS returns whole
+      // pages, not the number of rows asked for
       if (isSamplingRows(sample)) {
         return `(SELECT TOP ${sample.rows} * FROM ${tableSQL})`;
       } else if (isSamplingPercent(sample)) {
@@ -583,6 +586,11 @@ export class SQLServerDialect extends Dialect {
 
   concat(...values: string[]): string {
     return `CONCAT(${values.join(', ')})`;
+  }
+
+  // CONCAT reads a NULL as '', which would key a row that has no element
+  sqlMakeUnnestKey(key: string, rowKey: string): string {
+    return `CAST(${key} AS NVARCHAR(MAX)) + 'x' + CAST(${rowKey} AS NVARCHAR(MAX))`;
   }
 
   sqlDateToString(sqlDateExp: string): string {

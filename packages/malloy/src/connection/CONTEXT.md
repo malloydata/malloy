@@ -35,7 +35,7 @@ registerConnectionType('duckdb', { displayName: 'DuckDB', factory: async ..., pr
 
 Registered backends: `duckdb`, `bigquery`, `postgres`, `snowflake`, `trino`, `presto`, `mysql`, `databricks`, `sqlserver`, `publisher`
 
-The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports all 6 database db-\* packages for side-effect registration (not publisher).
+The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports every database db-\* package for side-effect registration (not publisher).
 
 ### ConnectionTypeDef
 

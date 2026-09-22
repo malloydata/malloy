@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {driverConfig, SQLServerConnection} from '.';
+import {connectionStringIdentity, driverConfig, SQLServerConnection} from '.';
 
 // The configuration a user writes, mapped to what tedious is handed. No
 // server is involved.
@@ -121,5 +121,31 @@ describe('SQL Server driver configuration', () => {
     expect(
       new SQLServerConnection('g', {...base, readOnlyIntent: true}).getDigest()
     ).toBe(a);
+    expect(
+      new SQLServerConnection('h', {
+        ...base,
+        authentication: 'ntlm',
+        domain: 'CORP',
+      }).getDigest()
+    ).not.toBe(
+      new SQLServerConnection('i', {
+        ...base,
+        authentication: 'ntlm',
+        domain: 'OTHER',
+      }).getDigest()
+    );
+  });
+
+  it('drops the secrets from a connection string before digesting it', () => {
+    expect(
+      connectionStringIdentity(
+        'Server=h,1434;Database=d;User Id=u;Password={p;w};Encrypt=true;PWD=x;Client Secret=s'
+      )
+    ).toBe('Server=h,1434;Database=d;User Id=u;Encrypt=true');
+    const cs = (password: string) =>
+      new SQLServerConnection('j', {
+        connectionString: `Server=h;Database=d;User Id=u;Password=${password}`,
+      }).getDigest();
+    expect(cs('p')).toBe(cs('q'));
   });
 });
