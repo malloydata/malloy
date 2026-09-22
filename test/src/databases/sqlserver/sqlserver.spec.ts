@@ -447,6 +447,27 @@ describe('SQL Server', () => {
     });
   });
 
+  describe('functions', () => {
+    test('pow computes in floating point', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT 1 AS n") -> {
+          select: root is round(pow(2, 0.5), 6), hundredth is pow(10, -2)
+        }
+      `).toEqualResult(tm, [{root: 1.414214, hundredth: 0.01}]);
+    });
+
+    test('length counts trailing spaces', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT 1 AS n") -> {
+          select:
+            padded is length('abc  ')
+            tail is ends_with('abc ', 'c ')
+            back is substr('abc ', -2)
+        }
+      `).toEqualResult(tm, [{padded: 5, tail: true, back: 'c '}]);
+    });
+  });
+
   describe('time zones', () => {
     test('converts a query time zone through its Windows name', async () => {
       await expect(`

@@ -17,6 +17,9 @@ const unsupported = (what: string): Expr => ({node: 'error', message: what});
 // SQL Server before 2025 has no regular expression functions
 const noRegex = unsupported('regular expressions');
 
+// The length of a string, trailing spaces included
+const len = (arg: string) => `(LEN(${arg} + N'x') - 1)`;
+
 export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   // A UTF-8 byte count needs a UTF-8 collation, which arrives in SQL Server 2019
   byte_length: {expr: unsupported('byte_length')},
@@ -24,7 +27,7 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   chr: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE NCHAR(${value}) END"},
   div: {sql: 'FLOOR(${dividend} / ${divisor})'},
   ends_with: {
-    sql: 'CASE WHEN RIGHT(${value}, LEN(${suffix})) = ${suffix} THEN 1 WHEN RIGHT(${value}, LEN(${suffix})) <> ${suffix} THEN 0 END',
+    sql: `CASE WHEN RIGHT(\${value}, ${len('${suffix}')}) = \${suffix} THEN 1 WHEN RIGHT(\${value}, ${len('${suffix}')}) <> \${suffix} THEN 0 END`,
   },
   greatest: {expr: extreme('DESC')},
   ifnull: {function: 'ISNULL'},
@@ -32,10 +35,12 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   is_inf: {sql: '0'},
   is_nan: {sql: '0'},
   least: {expr: extreme('ASC')},
-  length: {function: 'LEN'},
+  // LEN drops trailing spaces; a marker character restores them
+  length: {sql: len('${value}')},
   ln: {sql: 'LOG(${value})'},
   log: {sql: 'LOG(${value}, ${base})'},
-  pow: {function: 'POWER'},
+  // POWER answers in the type of its base, so an integer base truncates
+  pow: {sql: 'POWER(CAST(${base} AS FLOAT(53)), ${exponent})'},
   regexp_extract: {expr: noRegex},
   replace: {regular_expression: {expr: noRegex}},
   round: {
@@ -48,17 +53,17 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   ltrim: {characters: {expr: unsupported('ltrim with characters')}},
   rtrim: {characters: {expr: unsupported('rtrim with characters')}},
   starts_with: {
-    sql: 'CASE WHEN LEFT(${value}, LEN(${prefix})) = ${prefix} THEN 1 WHEN LEFT(${value}, LEN(${prefix})) <> ${prefix} THEN 0 END',
+    sql: `CASE WHEN LEFT(\${value}, ${len('${prefix}')}) = \${prefix} THEN 1 WHEN LEFT(\${value}, ${len('${prefix}')}) <> \${prefix} THEN 0 END`,
   },
   stddev: {function: 'STDEV'},
   string_repeat: {function: 'REPLICATE'},
   strpos: {sql: 'CHARINDEX(${search_string}, ${test_string})'},
   substr: {
     position_only: {
-      sql: 'SUBSTRING(${value}, CASE WHEN ${position} < 0 THEN LEN(${value}) + ${position} + 1 ELSE ${position} END, LEN(${value}))',
+      sql: `SUBSTRING(\${value}, CASE WHEN \${position} < 0 THEN ${len('${value}')} + \${position} + 1 ELSE \${position} END, ${len('${value}')})`,
     },
     with_length: {
-      sql: 'SUBSTRING(${value}, CASE WHEN ${position} < 0 THEN LEN(${value}) + ${position} + 1 ELSE ${position} END, ${length})',
+      sql: `SUBSTRING(\${value}, CASE WHEN \${position} < 0 THEN ${len('${value}')} + \${position} + 1 ELSE \${position} END, \${length})`,
     },
   },
   trunc: {
