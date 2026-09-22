@@ -36,6 +36,7 @@ import {
   SQLServerExecutor,
 } from '@malloydata/db-sqlserver/src/sqlserver_connection';
 import {EventEmitter} from 'events';
+import {mssqlConnectionString} from '../mssql/connection_string';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
   public async runSQL(
@@ -228,7 +229,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
             name: dbName,
             additionalExtensions: ['mssql'],
             setupSQL: [
-              `ATTACH 'Server=${s.server};Port=${s.port ?? 1433};Database=${s.database};User Id=${s.user};Password=${s.password};TrustServerCertificate=true' AS msdb (TYPE mssql)`,
+              `ATTACH '${mssqlConnectionString(s.database ?? 'malloytest')}' AS msdb (TYPE mssql)`,
               `USE msdb.${s.database}`,
             ].join(';\n'),
           });
