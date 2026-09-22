@@ -1431,6 +1431,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       'presto',
       'mysql',
       'databricks',
+      'sqlserver',
     ].includes(databaseName);
 
     it(`works no order by - ${databaseName}`, async () => {

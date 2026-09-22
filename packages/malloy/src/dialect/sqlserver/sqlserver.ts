@@ -415,12 +415,13 @@ export class SQLServerDialect extends Dialect {
     fields: DialectFieldList,
     ordering?: FinalStageOrdering
   ): string {
-    // A string column holding JSON text is still a string
+    // A string column holding JSON text is still a string; FOR JSON keeps a
+    // value's JSON type through CAST, and drops it on concatenation.
     const columns = fields.map(f => {
       const column = `t.${f.sqlExpression}`;
       const value =
         f.typeDef.type === 'string'
-          ? `CAST(${column} AS NVARCHAR(MAX))`
+          ? `CAST(${column} AS NVARCHAR(MAX)) + ''`
           : this.jsonValue(column, f.typeDef);
       return `${value} AS ${f.sqlExpression}`;
     });
