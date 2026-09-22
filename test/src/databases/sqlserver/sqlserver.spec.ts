@@ -497,6 +497,21 @@ describe('SQL Server', () => {
       });
     });
 
+    test('a zone is known by its current IANA name as well as its old one', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT CAST('2021-02-24 03:05:06' AS DATETIME2) AS t") -> {
+          timezone: 'Asia/Kolkata'
+          select: h is hour(t)
+        }
+      `).toEqualResult(tm, [{h: 8}]);
+      await expect(`
+        run: sqlserver.sql("SELECT CAST('2021-02-24 03:05:06' AS DATETIME2) AS t") -> {
+          timezone: 'Europe/Kyiv'
+          select: h is hour(t)
+        }
+      `).toEqualResult(tm, [{h: 5}]);
+    });
+
     test('a literal written in a zone is that instant', async () => {
       await expect(`
         run: sqlserver.sql("SELECT 1 AS n") -> {
