@@ -191,6 +191,20 @@ describe('db:SQLServer', () => {
     expect(res.rows[0]['answer']).toBe(42);
   });
 
+  it('connects through a connection string', async () => {
+    const e = process.env;
+    const trust = e['MSSQL_TRUST_SERVER_CERTIFICATE'] === 'true';
+    const viaString = new SQLServerConnection('cs', {
+      connectionString: `Server=${e['MSSQL_HOST']},${e['MSSQL_PORT']};Database=${e['MSSQL_DATABASE']};User Id=${e['MSSQL_USER']};Password=${e['MSSQL_PASSWORD']};TrustServerCertificate=${trust}`,
+    });
+    try {
+      const res = await viaString.runRawSQL('SELECT 1 AS one');
+      expect(res.rows[0]['one']).toBe(1);
+    } finally {
+      await viaString.close();
+    }
+  });
+
   it('has a digest that ignores credentials but not identity', () => {
     const base = SQLServerExecutor.getConnectionOptionsFromEnv();
     const a = new SQLServerConnection('a', base).getDigest();

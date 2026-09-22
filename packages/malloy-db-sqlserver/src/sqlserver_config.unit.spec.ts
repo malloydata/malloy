@@ -95,9 +95,22 @@ describe('SQL Server driver configuration', () => {
     expect(() =>
       driverConfig({connectionString: 'Server=x;', server: 'x'})
     ).toThrow(/connectionString and also server/);
-    expect(
-      driverConfig({connectionString: 'Server=x;'}).options?.connectionString
-    ).toBe('Server=x;');
+  });
+
+  it('hands the driver a parsed connection string', () => {
+    const c = driverConfig({
+      connectionString:
+        'Server=h,1434;Database=d;User Id=u;Password=p;TrustServerCertificate=true',
+      requestTimeoutMs: 5000,
+    });
+    expect(c.server).toBe('h');
+    expect(c.port).toBe(1434);
+    expect(c.database).toBe('d');
+    expect(c.user).toBe('u');
+    expect(c.password).toBe('p');
+    expect(c.options?.trustServerCertificate).toBe(true);
+    expect(c.requestTimeout).toBe(5000);
+    expect(c.pool?.max).toBe(4);
   });
 
   it('digests identity, never a secret', () => {
@@ -139,7 +152,7 @@ describe('SQL Server driver configuration', () => {
   it('drops the secrets from a connection string before digesting it', () => {
     expect(
       connectionStringIdentity(
-        'Server=h,1434;Database=d;User Id=u;Password={p;w};Encrypt=true;PWD=x;Client Secret=s'
+        'Server=h,1434;Database=d;User Id=u;Password={p;w};Encrypt=true;PWD=x;Client Secret=s;MSI Secret=m;Token=t'
       )
     ).toBe('Server=h,1434;Database=d;User Id=u;Encrypt=true');
     const cs = (password: string) =>

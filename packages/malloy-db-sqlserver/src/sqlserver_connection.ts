@@ -186,11 +186,11 @@ function principalOf(config: SQLServerConfiguration): string | undefined {
   }
 }
 
-// A connection string without its secrets: the keys ADO.NET spells a password
-// or a client secret with, in any case and spacing, dropped whole. A value in
-// braces may hold a semicolon.
+// A connection string without its secrets: the keys the driver reads a
+// password, a client or MSI secret or a token from, in any case and spacing,
+// dropped whole. A value in braces may hold a semicolon.
 export function connectionStringIdentity(connectionString: string): string {
-  const secret = /^(password|pwd|client ?secret|access ?token)$/i;
+  const secret = /^(password|pwd|client ?secret|msi ?secret|token)$/i;
   return connectionString
     .split(/;(?=(?:[^{}]|\{[^}]*\})*$)/)
     .filter(part => !secret.test(part.split('=')[0].trim()))
@@ -223,11 +223,14 @@ export function driverConfig(config: SQLServerConfiguration): mssql.config {
   };
   const requestTimeout = config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
   if (config.connectionString !== undefined) {
+    // The driver parses a string only when handed one in place of a config
+    const parsed = mssql.ConnectionPool.parseConnectionString(
+      config.connectionString
+    );
     return {
-      server: '',
-      options: {connectionString: config.connectionString},
-      pool,
-      requestTimeout,
+      ...parsed,
+      pool: {...pool, ...parsed.pool},
+      requestTimeout: parsed.requestTimeout ?? requestTimeout,
     };
   }
   // `host,port` is how SSMS and Looker write a non-default port
