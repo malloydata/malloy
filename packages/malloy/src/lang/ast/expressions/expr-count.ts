@@ -4,11 +4,13 @@
  */
 
 import type {AggregateExpr} from '../../../model/malloy_types';
+import {errorFor} from '../ast-utils';
+import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 import type {FieldReference} from '../query-items/field-references';
 import type {ExprValue} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
 import {ExprAggregateFunction} from './expr-aggregate-function';
-import {errorFor} from '../ast-utils';
+import {resolveAggregateSource} from './aggregate-source';
 
 export class ExprCount extends ExprAggregateFunction {
   elementType = 'count';
@@ -44,11 +46,16 @@ export class ExprCount extends ExprAggregateFunction {
     };
     if (this.source) {
       const inputFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
-      const lookup = this.source.getField(inputFS);
-      if (lookup.error) {
-        const at = lookup.error.at ?? this.source;
-        at.logError(lookup.error.code, lookup.error.message);
+      const lookup = resolveAggregateSource(this.source, inputFS);
+      if (!lookup) {
         return errorFor('count source lookup');
+      }
+      if (!(lookup.found instanceof StructSpaceFieldBase)) {
+        this.source.logError(
+          'invalid-aggregate-source',
+          `Aggregate source cannot be a ${lookup.found.typeDesc().type}`
+        );
+        return errorFor('count source type');
       }
       ret.structPath = this.source.path;
     }

@@ -1264,13 +1264,13 @@ describe('field usage with compiler extensions', () => {
   });
   it('nested query unique key requirements propagate to parent', () => {
     const nestedModel = model`
-      run: a -> {
+      run: ab -> {
         group_by: ai
         nest: by_ASTR is {
           group_by: astr_upper is upper(astr)
           nest: by_astr is {
             group_by: astr
-            aggregate: str_count is astr.count()
+            aggregate: b_count is b.count()
           }
         }
       }
@@ -1279,7 +1279,7 @@ describe('field usage with compiler extensions', () => {
     const mq = nestedModel.translator.getQuery(0);
     expect(mq).toBeDefined();
     const [found, message] = checkForFieldUsage(mq, {
-      path: ['astr'],
+      path: ['b'],
       uniqueKeyRequirement: {isCount: true},
     });
     expect(found, message).toBeTruthy();

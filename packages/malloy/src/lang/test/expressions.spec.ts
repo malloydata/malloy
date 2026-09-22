@@ -778,7 +778,9 @@ describe('expressions', () => {
       expect(modelX`source.max(many.column)`).toTranslate();
     });
     test('many.column.count()', () => {
-      expect(modelX`many.column.count()`).toTranslate();
+      expect(modelX`many.column.count()`).toLog(
+        errorMessage('Aggregate source cannot be a number')
+      );
     });
     test('count reports an undefined source at the reference', () => {
       expect(markSource`run: a -> {
@@ -790,6 +792,50 @@ describe('expressions', () => {
         aggregate: c is b.${'missing'}.count()
       }`).toLog(errorMessage("'missing' is not defined"));
     });
+    test.each([
+      ['astr', 'string'],
+      ['acount', 'number'],
+      ['aturtle', 'turtle'],
+      ['b.astr', 'string'],
+    ])('count rejects %s as a source', (source, type) => {
+      expect(markSource`run: ab -> {
+        aggregate: c is ${source}.count()
+      }`).toLog(errorMessage(`Aggregate source cannot be a ${type}`));
+    });
+    test.each([
+      [
+        'sum',
+        markSource`run: ab -> {
+          aggregate: c is b.${'missing'}.sum()
+        }`,
+      ],
+      [
+        'avg',
+        markSource`run: ab -> {
+          aggregate: c is b.${'missing'}.avg()
+        }`,
+      ],
+      [
+        'string_agg',
+        markSource`run: ab -> {
+          aggregate: c is b.${'missing'}.string_agg()
+        }`,
+      ],
+    ])('%s reports an undefined source at the name', (_name, source) => {
+      expect(source).toLog(errorMessage("'missing' is not defined"));
+    });
+    test.each(['b', 'astruct', 'ais', 'aninline'])(
+      'count accepts source %s',
+      source => {
+        const count = expr`${source}.count()`;
+        expect(count).toTranslate();
+        expect(count.translator.generated().value).toMatchObject({
+          node: 'aggregate',
+          function: 'count',
+          structPath: [source],
+        });
+      }
+    );
     test('count()', () => {
       expect(modelX`count()`).toTranslate();
     });

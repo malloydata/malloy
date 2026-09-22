@@ -35,6 +35,7 @@ import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import type {JoinPath, JoinPathElement} from '../types/lookup-result';
 import type {MessageCode} from '../../parse-log';
+import {resolveAggregateSource} from './aggregate-source';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -66,8 +67,8 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     let structPath = this.source?.path;
     let sourceRelationship: JoinPathElement[] = [];
     if (this.source) {
-      const result = this.source.getField(inputFS);
-      if (result.found) {
+      const result = resolveAggregateSource(this.source, inputFS);
+      if (result) {
         sourceRelationship = result.joinPath;
         const sourceFoot = result.found;
         const footType = sourceFoot.typeDesc();
@@ -113,10 +114,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           }
         }
       } else {
-        return this.loggedErrorExpr(
-          'aggregate-source-not-found',
-          `Reference to undefined value ${this.source.refString}`
-        );
+        return errorFor('aggregate source lookup');
       }
     }
     if (exprVal === undefined) {
