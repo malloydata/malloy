@@ -60,7 +60,6 @@ import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
 import {mergeRefSummaries} from '../../composite-source-utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
-import {resolveAggregateSource} from './aggregate-source';
 
 // Built-in functions that take a string literal of user-supplied SQL
 // and emit it directly. Gated by experimental.sql_functions in plain
@@ -183,7 +182,7 @@ export class ExprFunc extends ExpressionDef {
     let implicitExpr: ExprValue | undefined = undefined;
     let structPath = this.source?.path;
     if (this.source) {
-      const lookup = resolveAggregateSource(this.source, fs);
+      const lookup = this.source.getFieldOrLog(fs);
       if (lookup) {
         const sourceFoot = lookup.found;
         const footType = sourceFoot.typeDesc();

@@ -35,7 +35,6 @@ import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import type {JoinPath, JoinPathElement} from '../types/lookup-result';
 import type {MessageCode} from '../../parse-log';
-import {resolveAggregateSource} from './aggregate-source';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -67,7 +66,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     let structPath = this.source?.path;
     let sourceRelationship: JoinPathElement[] = [];
     if (this.source) {
-      const result = resolveAggregateSource(this.source, inputFS);
+      const result = this.source.getFieldOrLog(inputFS);
       if (result) {
         sourceRelationship = result.joinPath;
         const sourceFoot = result.found;

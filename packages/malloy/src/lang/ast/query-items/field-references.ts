@@ -15,7 +15,7 @@ import {DefinitionList} from '../types/definition-list';
 
 import type {FieldSpace} from '../types/field-space';
 import {FieldName} from '../types/field-space';
-import type {LookupResult} from '../types/lookup-result';
+import type {LookupFound, LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
 import type {MakeEntry} from '../types/space-entry';
@@ -184,6 +184,16 @@ export abstract class FieldReference
     }
 
     return result;
+  }
+
+  getFieldOrLog(fs: FieldSpace): LookupFound | undefined {
+    const lookup = this.getField(fs);
+    if (lookup.error) {
+      const at = lookup.error.at ?? this;
+      at.logError(lookup.error.code, lookup.error.message);
+      return undefined;
+    }
+    return lookup;
   }
 }
 

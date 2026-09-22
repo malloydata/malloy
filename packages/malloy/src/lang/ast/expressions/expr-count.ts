@@ -10,7 +10,6 @@ import type {FieldReference} from '../query-items/field-references';
 import type {ExprValue} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
 import {ExprAggregateFunction} from './expr-aggregate-function';
-import {resolveAggregateSource} from './aggregate-source';
 
 export class ExprCount extends ExprAggregateFunction {
   elementType = 'count';
@@ -46,7 +45,7 @@ export class ExprCount extends ExprAggregateFunction {
     };
     if (this.source) {
       const inputFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
-      const lookup = resolveAggregateSource(this.source, inputFS);
+      const lookup = this.source.getFieldOrLog(inputFS);
       if (!lookup) {
         return errorFor('count source lookup');
       }
