@@ -127,7 +127,7 @@ describe.each(runtimes.runtimeList)(
 
     describe('regex literal', () => {
       for (const {name, pattern, haystack} of REGEX_CORPUS) {
-        test(name, async () => {
+        test.when(runtime.dialect.supportsRegexpMatch)(name, async () => {
           await expect(`
             run: ${dbName}.sql("SELECT 1 as one") -> {
               select: m is ${toMalloyString(haystack)} ~ ${toMalloyRegex(pattern)}

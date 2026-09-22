@@ -1421,7 +1421,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   describe('string_agg', () => {
     // Capability matrix: what each dialect supports for string_agg
     const canOrderBy = !['databricks'].includes(databaseName);
-    const canFanout = !['snowflake', 'mysql'].includes(databaseName);
+    const canFanout = !['snowflake', 'mysql', 'sqlserver'].includes(
+      databaseName
+    );
     const canFanoutOrderBy = ![
       'bigquery',
       'snowflake',
@@ -1628,8 +1630,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   describe('string_agg_distinct', () => {
     // Capability matrix: what each dialect supports for string_agg_distinct
     const canOrderByDistinct = !['databricks'].includes(databaseName);
+    // SQL Server refuses string_agg_distinct
+    const canDistinct = databaseName !== 'sqlserver';
 
-    it.when(canOrderByDistinct)(
+    it.when(canOrderByDistinct && canDistinct)(
       `actually distincts - ${databaseName}`,
       async () => {
         const tm = wrapTestModel(runtime, '');
@@ -1655,7 +1659,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     );
 
-    it(`works no order by - ${databaseName}`, async () => {
+    it.when(canDistinct)(`works no order by - ${databaseName}`, async () => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is string_agg_distinct(name)
@@ -1664,16 +1668,19 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with dotted shortcut - ${databaseName}`, async () => {
-      await expect(`run: aircraft -> {
+    it.when(canDistinct)(
+      `works with dotted shortcut - ${databaseName}`,
+      async () => {
+        await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is name.string_agg_distinct()
       }`).toMatchResult(testModel, {
-        f: 'RUTHERFORD PAT R JR',
-      });
-    });
+          f: 'RUTHERFORD PAT R JR',
+        });
+      }
+    );
 
-    it.when(canOrderByDistinct)(
+    it.when(canOrderByDistinct && canDistinct)(
       `works with order by direction - ${databaseName}`,
       async () => {
         await expect(`##! experimental { aggregate_order_by }
@@ -1688,7 +1695,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     );
 
-    it.when(canOrderByDistinct)(
+    it.when(canOrderByDistinct && canDistinct)(
       `works with order asc - ${databaseName}`,
       async () => {
         await expect(`##! experimental { aggregate_order_by }
@@ -1705,7 +1712,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     );
 
-    it.when(canOrderByDistinct)(
+    it.when(canOrderByDistinct && canDistinct)(
       `works with order desc - ${databaseName}`,
       async () => {
         await expect(`##! experimental { aggregate_order_by }
@@ -1722,7 +1729,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     );
 
-    it.when(canOrderByDistinct)(
+    it.when(canOrderByDistinct && canDistinct)(
       `works with limit - ${databaseName}`,
       async () => {
         const query = `##! experimental { aggregate_order_by aggregate_limit }

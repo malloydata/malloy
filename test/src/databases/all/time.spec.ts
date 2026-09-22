@@ -92,7 +92,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       'timeDiff passed to a function preserves rhs',
       async () => {
         await expect(`
-        run: ${dbName}.sql("SELECT 1")
+        run: ${dbName}.sql("SELECT 1 as one")
         -> { select: yd is floor(days(@2001 to @2002)) }
       `).toMatchResult(testModel, {yd: 365});
       }

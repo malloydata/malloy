@@ -320,6 +320,26 @@ describe('SQL Server', () => {
       });
     });
 
+    test('two nests order independently', async () => {
+      await expect(`${isabella}
+        nest: by_first is {
+          group_by: first is substr(state, 1, 1)
+          aggregate: n is count()
+          order_by: n desc, first
+          limit: 1
+        }
+        nest: by_last is {
+          group_by: last is substr(state, 2, 1)
+          aggregate: n is count()
+          order_by: last desc
+          limit: 1
+        }
+      }`).toMatchResult(tm, {
+        by_first: [{first: 'N', n: 4}],
+        by_last: [{last: 'Z', n: 1}],
+      });
+    });
+
     test('a nest of only measures is one record', async () => {
       await expect(`${isabella}
         nest: totals is { aggregate: n is count(), airports is airport_count.sum() }

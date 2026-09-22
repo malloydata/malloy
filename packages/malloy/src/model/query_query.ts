@@ -156,7 +156,6 @@ function readsColumn(fieldDef: FieldDef): boolean {
       case 'field':
       case 'outputField':
       case 'source-reference':
-      case 'genericSQLExpr':
         return true;
     }
   }

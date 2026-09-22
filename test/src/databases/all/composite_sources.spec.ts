@@ -494,6 +494,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         },
       },
     });
+    // An experimental dialect is allowed where the test runtime allows it
+    wrappedRuntime.isTestRuntime = runtime.isTestRuntime;
     const wrappedTestModel = {
       model: wrappedRuntime.loadModel(''),
       dialect: runtime.dialect,
@@ -520,6 +522,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         },
       },
     });
+    // An experimental dialect is allowed where the test runtime allows it
+    wrappedRuntime.isTestRuntime = runtime.isTestRuntime;
     const wrappedTestModel = {
       model: wrappedRuntime.loadModel(''),
       dialect: runtime.dialect,

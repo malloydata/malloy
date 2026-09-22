@@ -300,6 +300,8 @@ export class SQLServerDialect extends Dialect {
     return `JSON_OBJECT(${props.join(', ')})`;
   }
 
+  // One SELECT allows one WITHIN GROUP ordering, so an ordered nest sorts its
+  // own array in a subquery, by the value each element carries.
   sqlAggregateTurtle(
     groupSet: number | undefined,
     fieldList: DialectFieldList,
@@ -310,10 +312,22 @@ export class SQLServerDialect extends Dialect {
     const object = `CAST(${this.jsonObject(fieldList)} AS NVARCHAR(MAX))`;
     const cond = turtleGroupSetCondition(groupSet, filterSQL);
     const element = cond ? `CASE WHEN ${cond} THEN ${object} END` : object;
-    const ordered = orderBy
-      ? ` WITHIN GROUP (${this.sqlTurtleOrderByClause(orderBy).trim()})`
-      : '';
-    return `JSON_QUERY(COALESCE('[' + STRING_AGG(${element}, ',')${ordered} + ']', '[]'))`;
+    let elements = `'[' + STRING_AGG(${element}, ',') + ']'`;
+    if (orderBy) {
+      const terms = orderBy.map(o => {
+        const field = fieldList.find(
+          f => this.sqlQuoteIdentifier(f.rawName) === o.structField
+        );
+        const path = this.sqlLiteralString(this.jsonPath(field?.rawName ?? ''));
+        const value = this.jsonScalar(
+          `JSON_VALUE(o.value, ${path})`,
+          field?.typeDef.type ?? 'string'
+        );
+        return `${value} ${o.dir.toUpperCase()}`;
+      });
+      elements = `(SELECT '[' + STRING_AGG(o.value, ',') WITHIN GROUP (ORDER BY ${terms.join(', ')}) + ']' FROM OPENJSON(${elements}) AS o)`;
+    }
+    return `JSON_QUERY(COALESCE(${elements}, '[]'))`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -401,10 +415,15 @@ export class SQLServerDialect extends Dialect {
     fields: DialectFieldList,
     ordering?: FinalStageOrdering
   ): string {
-    const columns = fields.map(
-      f =>
-        `${this.jsonValue(`t.${f.sqlExpression}`, f.typeDef)} AS ${f.sqlExpression}`
-    );
+    // A string column holding JSON text is still a string
+    const columns = fields.map(f => {
+      const column = `t.${f.sqlExpression}`;
+      const value =
+        f.typeDef.type === 'string'
+          ? `CAST(${column} AS NVARCHAR(MAX))`
+          : this.jsonValue(column, f.typeDef);
+      return `${value} AS ${f.sqlExpression}`;
+    });
     let sql =
       `SELECT ${this.sqlSelectLimit(ordering?.limit)}` +
       `(SELECT ${columns.join(', ')} FOR JSON PATH, WITHOUT_ARRAY_WRAPPER, INCLUDE_NULL_VALUES) AS "row"` +
