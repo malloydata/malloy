@@ -135,9 +135,10 @@ function booleanForm(expr: Expr): BooleanForm | undefined {
     case 'is-not-null':
     case 'filterMatch':
       return 'condition';
+    case 'genericSQLExpr':
+      return expr.condition ? 'condition' : undefined;
     case '()':
     case 'filterCondition':
-    case 'genericSQLExpr':
     case 'true':
     case 'false':
       return undefined;
