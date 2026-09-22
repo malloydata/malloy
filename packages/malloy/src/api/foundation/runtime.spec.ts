@@ -10,6 +10,8 @@ import {registerConnectionType} from '../../connection/registry';
 import type {ConnectionConfig} from '../../connection/types';
 import type {URLReader} from '../../runtime_types';
 import type {BuildManifest} from '../../model/malloy_types';
+import {TestTranslator} from '../../lang/test/test-translator';
+import {Model} from './core';
 
 class MockConnection extends BaseConnection {
   constructor(public readonly name: string) {
@@ -65,6 +67,46 @@ function countingReader(files: Record<string, unknown>): {
 const sampleManifest: BuildManifest = {
   entries: {abc123: {tableName: 'persisted_abc'}},
 };
+
+describe('persistence annotation diagnostics', () => {
+  it.each([true, false])(
+    'retains parse errors across build requests (persistent: %s)',
+    async persistent => {
+      const translated = new TestTranslator(`
+        ##! experimental.persistence
+        #@ broken="
+        ${persistent ? '#@ persist' : ''}
+        source: rollup is a -> { group_by: astr }
+        query: q is rollup -> { select: * }
+        run: q
+      `).translate();
+      if (!translated.modelDef) {
+        throw new Error('Persistence diagnostic fixture did not translate');
+      }
+      const model = new Model(translated.modelDef, [], []);
+      const runtime = new Runtime({connection: mockConnection('_db_')});
+
+      const first = await runtime.getBuildTargets(model);
+      expect(first.tagParseLog).toEqual([
+        expect.objectContaining({
+          message: 'Unterminated string',
+          severity: 'error',
+          at: {
+            url: 'internal://test/langtests/root.malloy',
+            range: {
+              start: {line: 2, character: 18},
+              end: {line: 2, character: 18},
+            },
+          },
+        }),
+      ]);
+      expect(model.getBuildPlan().tagParseLog).toEqual(first.tagParseLog);
+      expect((await runtime.getBuildTargets(model)).tagParseLog).toEqual(
+        first.tagParseLog
+      );
+    }
+  );
+});
 
 function configWithManifestURL(): MalloyConfig {
   return new MalloyConfig(

@@ -170,6 +170,11 @@ lazily by `isPersistent()` during dependency walking, which is what a hidden
 dependency needs — it arrived through an import and never went through
 `DefineSource` here.
 
+The registry caches the complete annotation parse result in `persistAnnotation`,
+including diagnostics. Every dependency walk reports those diagnostics, even
+when a previous walk has already parsed the annotation. Build requests use one
+walk across all roots, so each source contributes diagnostics once per request.
+
 ## Dependency walking
 
 `walkPersistentDependencies(roots, modelDef, tagParseLog)` in

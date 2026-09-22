@@ -5,6 +5,7 @@
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {EventStream} from '../runtime_types';
+import type {LogMessage} from '../lang/parse-log';
 
 // clang-format off
 
@@ -1588,13 +1589,15 @@ export interface SourceRegistryReference {
 export type SourceRegistryEntry =
   SourceRegistryReference | PersistableSourceDef;
 
-/**
- * Value in the sourceRegistry, wrapping the entry with persistence info.
- * persist is lazily computed: undefined = not checked, true/false = checked
- */
+export interface PersistAnnotation {
+  persist: boolean;
+  log: LogMessage[];
+}
+
+/** Value in the sourceRegistry, with the lazily parsed persistence annotation. */
 export interface SourceRegistryValue {
   entry: SourceRegistryEntry;
-  persist?: boolean;
+  persistAnnotation?: PersistAnnotation;
 }
 
 export function isSourceRegistryReference(
