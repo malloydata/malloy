@@ -68,6 +68,12 @@ export interface FinalStageOrdering {
 }
 
 /**
+ * Which stage writes a query's ORDER BY and row limit: the last stage of the
+ * pipeline, or the final stage a dialect with hasFinalStage adds after it.
+ */
+export type OrderByStage = 'last' | 'final';
+
+/**
  * A named expression for the lateral join bag. The expression will be
  * available as `__lateral_join_bag.name` in the query.
  */
@@ -267,6 +273,7 @@ export abstract class Dialect {
   // A trailing LIMIT n, or TOP n after SELECT (SQL Server). The compiler
   // emits both positions through sqlSelectLimit and sqlLimit; one is empty.
   limitClause: LimitClauseType = 'limit';
+  orderByStage: OrderByStage = 'last';
   // ORDER BY is only legal in a subquery or CTE which also has a row limit
   subqueryOrderByRequiresLimit = false;
 

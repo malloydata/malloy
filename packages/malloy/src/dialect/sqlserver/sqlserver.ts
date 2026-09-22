@@ -33,6 +33,7 @@ import type {
   FinalStageOrdering,
   GroupByClauseType,
   LimitClauseType,
+  OrderByStage,
   QueryInfo,
 } from '../dialect';
 import {Dialect, EscapeStyle, qtz} from '../dialect';
@@ -149,6 +150,7 @@ export class SQLServerDialect extends Dialect {
   likeExtraWildcards = ['['];
   groupByClause: GroupByClauseType = 'expression';
   limitClause: LimitClauseType = 'top';
+  orderByStage: OrderByStage = 'final';
   subqueryOrderByRequiresLimit = true;
   // REGEXP_LIKE and its family arrived in SQL Server 2025
   supportsRegexpMatch = false;

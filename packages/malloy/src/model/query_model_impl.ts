@@ -148,8 +148,12 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       (name: string) => this.structs.get(name)
     );
 
-    const finalStage = emitFinalStage && q.parent.dialect.hasFinalStage;
-    const ret = q.generateSQLFromPipeline(stageWriter, finalStage);
+    const dialect = q.parent.dialect;
+    const finalStage = emitFinalStage && dialect.hasFinalStage;
+    const ret = q.generateSQLFromPipeline(
+      stageWriter,
+      finalStage && dialect.orderByStage === 'final'
+    );
     if (finalStage) {
       // const fieldNames: string[] = [];
       // for (const f of ret.outputStruct.fields) {
@@ -315,15 +319,17 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     const matchFirst = `CASE WHEN lower(${fieldValueColumn}) LIKE lower(${d.sqlLiteralString(
       searchValue + '%'
     )}) THEN 1 ELSE 0 END`;
-    const ordering: FinalStageOrdering = {
-      orderBy: [
-        {name: 'match_first', dir: 'desc'},
-        {name: 'weight', dir: 'desc'},
-      ],
-      limit,
-    };
-    // A dialect with a final stage orders and limits there
-    const stageLimit = d.hasFinalStage ? undefined : limit;
+    const orderInFinalStage = d.hasFinalStage && d.orderByStage === 'final';
+    const ordering: FinalStageOrdering | undefined = orderInFinalStage
+      ? {
+          orderBy: [
+            {name: 'match_first', dir: 'desc'},
+            {name: 'weight', dir: 'desc'},
+          ],
+          limit,
+        }
+      : undefined;
+    const stageLimit = orderInFinalStage ? undefined : limit;
     let query = `SELECT ${d.sqlSelectLimit(stageLimit)}
               ${fieldNameColumn},
               ${fieldPathColumn},
@@ -340,7 +346,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
                 : ''
             }
             ${
-              d.hasFinalStage
+              orderInFinalStage
                 ? ''
                 : `ORDER BY ${matchFirst} DESC, ${weightColumn} DESC`
             }

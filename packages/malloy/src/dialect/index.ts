@@ -34,6 +34,7 @@ export type {
   GroupByClauseType,
   LimitClauseType,
   OrderByClauseType,
+  OrderByStage,
 } from './dialect';
 export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
