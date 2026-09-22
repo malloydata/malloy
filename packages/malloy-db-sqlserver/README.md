@@ -29,7 +29,7 @@ The five fields most connections need:
 
 `server` also accepts the `host,port` form SQL Server Management Studio and Looker use. `authentication` chooses the credential kind: `sql` (default), `azure-default`, `azure-service-principal`, `azure-msi`, `azure-access-token` or `ntlm`; the `azure-*` kinds are Microsoft Entra ID through the driver. A `connectionString` may replace the structured fields, never accompany them. Named instances (`instanceName`), availability groups (`readOnlyIntent`, `multiSubnetFailover`) and a certificate issued to another name (`hostNameInCertificate`) are advanced fields.
 
-The connection is encrypted by default. `trustServerCertificate` accepts a certificate the client cannot verify, such as a local container's; leave it off for a server you do not control.
+The connection is encrypted by default. `trustServerCertificate` accepts a certificate the client cannot verify, such as a local container's; leave it off for a server you do not control. A query may run for `requestTimeoutMs` (ten minutes unless set) on one of `poolMax` pooled connections (four); cancelling it goes through the driver. Kerberos and an interactive or device-code Azure sign-in are not supported. The driver is `mssql` over tedious, pure JavaScript: no ODBC driver or platform binary to install.
 
 ### The database user
 
@@ -62,10 +62,18 @@ with `"scratchSchema": "sales.malloy_scratch"` on the connection. A table there 
 
 The dialect writes its own JSON, truncates with `DATEADD`, lists group sets with `VALUES` and takes `greatest` and `least` as the first ordered row of a `VALUES` list, so it needs none of `JSON_OBJECT`, `DATETRUNC`, `GENERATE_SERIES`, `GREATEST` or `LEAST` from SQL Server 2022. That `VALUES` list is a subquery, which SQL Server accepts in a `select:`, a `where:` or a dimension but not in a `group_by:` or inside an aggregate. `ltrim` and `rtrim` with a character set, which only 2022's `LTRIM`/`RTRIM` provide, get a translation error; `trim` with a character set works everywhere. `byte_length` gets one too: a UTF-8 byte count needs the UTF-8 collations of SQL Server 2019. Also refused at translation, whatever the version: `string_agg_distinct`, a nested query of more than one stage, and `limit:` on a nested `select:`.
 
+## What the server sees
+
+Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `QUOTED_IDENTIFIER ON`, `ANSI_NULLS ON` and `ANSI_WARNINGS ON`, then any `setupSQL`, then a chain of CTEs ending in a `SELECT` that writes each result row as one `FOR JSON PATH` document. Row limits are `TOP`, grouping is by expression rather than ordinal, and nests are JSON arrays built with `STRING_AGG`. A SQL block becomes a CTE, so one that ends in `ORDER BY` without `TOP` is refused by the server; drop the ordering or add `TOP`.
+
 ## How the dialect reads the server
 
 - A `datetime`, `datetime2` or `smalldatetime` is a Malloy timestamp read as UTC. A `datetimeoffset` is the instant it names, and its clock functions read it at the offset it was written in. A query's `timezone:` is converted with `AT TIME ZONE` through the Windows name of the zone.
+- NULL sorts last in both directions, at the top level and inside a nest, as it does on DuckDB; SQL Server's own default is first.
+- Every string literal is written `N'...'`, so text outside the database's code page compares as itself.
 - The default collation compares case-insensitively; Malloy does not change that.
+- `uniqueidentifier` is a string. `time`, `binary`, `varbinary`, `xml`, `geography` and the other types the map does not name are `sql native`, to be passed through or cast in a `sql()` dimension.
+- `sample: n` and the search index take the first `n` rows, not a random sample; `TABLESAMPLE` returns whole pages.
 - A `text` or `ntext` column is `sql native`: the engine cannot group, compare or take `MAX` over one. Cast it to `NVARCHAR(MAX)` in a `sql()` dimension to use it.
 - `bit` is Malloy's boolean; a comparison used as a value becomes `1`, `0` or `NULL`.
 - Every result row travels as one `FOR JSON PATH` document, so a `bigint` beyond 2^53 loses precision on the way to JavaScript, and a `float` arrives with 16 significant digits, one short of a round trip.
