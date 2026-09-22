@@ -62,6 +62,37 @@ with `"scratchSchema": "sales.malloy_scratch"` on the connection. A table there 
 
 The dialect writes its own JSON, truncates with `DATEADD`, lists group sets with `VALUES` and takes `greatest` and `least` as the first ordered row of a `VALUES` list, so it needs none of `JSON_OBJECT`, `DATETRUNC`, `GENERATE_SERIES`, `GREATEST` or `LEAST` from SQL Server 2022. That `VALUES` list is a subquery, which SQL Server accepts in a `select:`, a `where:` or a dimension but not in a `group_by:` or inside an aggregate. `ltrim` and `rtrim` with a character set, which only 2022's `LTRIM`/`RTRIM` provide, get a translation error; `trim` with a character set works everywhere. `byte_length` gets one too: a UTF-8 byte count needs the UTF-8 collations of SQL Server 2019. Also refused at translation, whatever the version: `string_agg_distinct`, a nested query of more than one stage, and `limit:` on a nested `select:`.
 
+## What does not work
+
+Everything else in Malloy's cross-database suite passes on SQL Server 2017 and 2022. Two kinds of gap remain: features the dialect refuses with an error where they are written, and cases it accepts and gets wrong.
+
+### Refused at translation
+
+| Feature | Why |
+|---|---|
+| `x ~ r'...'`, `x !~ r'...'`, `regexp_extract`, `replace` with a regular expression | No regular expressions before SQL Server 2025 |
+| `string_agg_distinct` | `STRING_AGG` has no `DISTINCT` |
+| `ltrim(x, chars)`, `rtrim(x, chars)` | Those forms arrive in SQL Server 2022; `trim(x, chars)` and the one-argument forms work |
+| `byte_length` | A UTF-8 byte count needs the UTF-8 collations of SQL Server 2019 |
+| A multi-stage pipeline inside a nest (`nest: n is { ... } -> { ... }`) | The nest is one `STRING_AGG`; a second stage would need a table-valued function per nest |
+| `limit:` on a nested `select:` | A `STRING_AGG` array cannot be sliced; `limit:` on a nested `group_by:` works |
+
+Arrays and records read from table data are declared unsupported (`supportsArraysInData`, `compoundObjectInSchema`), so the suite skips them rather than running them: a JSON column is a string to Malloy, since the server has no JSON type in its schema before 2025.
+
+### Known failures
+
+These compile, reach the server, and fail or answer wrongly. Each is an open item.
+
+| Case | What happens |
+|---|---|
+| An array or record built in a SQL block or written as a literal (`[1, 2, 3]`, `mk_array`, `mk_record`) | Comes back as a string, not an array or record |
+| A nest whose every field is a constant, under a query with no `group_by:` | Server error: aggregates on the right side of an APPLY cannot reference columns from the left side |
+| `coalesce(null, null)`, `nullif(null, x)` | Server error: at least one argument must not be the NULL constant |
+| `group_by:` of a dimension that resolves to a constant through another dimension | Server error: each GROUP BY expression must contain a column |
+| A window function ordered by a constant dimension (`group_by: r is 1.0` then `rank()`) | Server error: windowed functions do not support constants in ORDER BY |
+| `greatest`, `least` in a `group_by:` or inside an aggregate | Server error: a subquery is not allowed there |
+| A `timezone:` name absent from the CLDR table | Error when SQL is generated, not at the statement |
+
 ## What the server sees
 
 Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `QUOTED_IDENTIFIER ON`, `ANSI_NULLS ON` and `ANSI_WARNINGS ON`, then any `setupSQL`, then a chain of CTEs ending in a `SELECT` that writes each result row as one `FOR JSON PATH` document. Row limits are `TOP`, grouping is by expression rather than ordinal, and nests are JSON arrays built with `STRING_AGG`. A SQL block becomes a CTE, so one that ends in `ORDER BY` without `TOP` is refused by the server; drop the ordering or add `TOP`.
