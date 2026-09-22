@@ -18,7 +18,8 @@ const unsupported = (what: string): Expr => ({node: 'error', message: what});
 const noRegex = unsupported('regular expressions');
 
 export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
-  byte_length: {function: 'DATALENGTH'},
+  // A UTF-8 byte count needs a UTF-8 collation, which arrives in SQL Server 2019
+  byte_length: {expr: unsupported('byte_length')},
   ceil: {function: 'CEILING'},
   chr: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE NCHAR(${value}) END"},
   div: {sql: 'FLOOR(${dividend} / ${divisor})'},

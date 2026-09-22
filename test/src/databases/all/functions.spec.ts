@@ -128,7 +128,7 @@ expressionModels.forEach((x, databaseName) => {
           "concat('cons', true)",
           databaseName === 'postgres'
             ? 'const'
-            : databaseName === 'mysql'
+            : ['mysql', 'sqlserver'].includes(databaseName)
               ? 'cons1'
               : 'construe',
         ],
@@ -1046,13 +1046,17 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('byte_length', () => {
-    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
-      await funcTestMultiple(
-        ["byte_length('hello')", 5],
-        ["byte_length('©')", 2],
-        ['byte_length(null)', null]
-      );
-    });
+    // SQL Server refuses it: a UTF-8 byte count needs 2019's UTF-8 collations
+    it.when(!['mysql', 'sqlserver'].includes(databaseName))(
+      `works - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          ["byte_length('hello')", 5],
+          ["byte_length('©')", 2],
+          ['byte_length(null)', null]
+        );
+      }
+    );
   });
   describe('ifnull', () => {
     it(`works - ${databaseName}`, async () => {

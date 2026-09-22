@@ -52,7 +52,7 @@ A search index or a query over a materialized result creates a table in `tempdb`
 | `STRING_AGG`, `TRIM` | SQL Server 2017 |
 | Regular expressions (`REGEXP_LIKE` and friends) | SQL Server 2025; a model that uses `~ r'...'` or `regexp_extract` on this dialect gets a translation error |
 
-The dialect writes its own JSON, truncates with `DATEADD`, lists group sets with `VALUES` and takes an extreme with `MAX`/`MIN` over `VALUES`, so it needs none of `JSON_OBJECT`, `DATETRUNC`, `GENERATE_SERIES`, `GREATEST` or `LEAST` from SQL Server 2022. `ltrim` and `rtrim` with a character set, which only 2022's `LTRIM`/`RTRIM` provide, get a translation error; `trim` with a character set works everywhere.
+The dialect writes its own JSON, truncates with `DATEADD`, lists group sets with `VALUES` and takes an extreme with `MAX`/`MIN` over `VALUES`, so it needs none of `JSON_OBJECT`, `DATETRUNC`, `GENERATE_SERIES`, `GREATEST` or `LEAST` from SQL Server 2022. `ltrim` and `rtrim` with a character set, which only 2022's `LTRIM`/`RTRIM` provide, get a translation error; `trim` with a character set works everywhere. `byte_length` gets one too: a UTF-8 byte count needs the UTF-8 collations of SQL Server 2019.
 
 ## How the dialect reads the server
 
