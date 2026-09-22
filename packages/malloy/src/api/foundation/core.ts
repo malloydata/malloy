@@ -1570,24 +1570,10 @@ export class Model implements Taggable {
   public getBuildPlan(): BuildPlan {
     this.requirePersistence('getBuildPlan()');
 
-    const allDeps: BuildNode[] = [];
     const tagParseLog: LogMessage[] = [];
-
-    // Walk all objects in the model to find persistent dependencies
-    for (const obj of Object.values(this.modelDef.contents)) {
-      if (obj.type === 'query' || isSourceDef(obj)) {
-        allDeps.push(
-          ...findPersistentDependencies(obj, this.modelDef, tagParseLog)
-        );
-      }
-    }
-
-    // Also walk queryList (unnamed queries)
-    for (const query of this.modelDef.queryList) {
-      allDeps.push(
-        ...findPersistentDependencies(query, this.modelDef, tagParseLog)
-      );
-    }
+    const allDeps = findPersistentDependencies(
+      this._walkPersistSources(tagParseLog)
+    );
 
     if (allDeps.length === 0) {
       return {graphs: [], sources: {}, tagParseLog};

@@ -11,6 +11,7 @@ import type {
   QuerySegment,
   SourceID,
   StructRef,
+  PersistAnnotation,
 } from './malloy_types';
 import {
   isSourceDef,
@@ -40,10 +41,7 @@ function resolveSource(
  * Check if a source has the #@ persist annotation.
  * Returns both the persist flag and any tag parse errors.
  */
-export function checkPersistAnnotation(source: SourceDef): {
-  persist: boolean;
-  log: LogMessage[];
-} {
+export function checkPersistAnnotation(source: SourceDef): PersistAnnotation {
   if (!source.annotations) return {persist: false, log: []};
   const {tag, log} = new Annotations(source.annotations).parseAsTag('@');
   return {persist: tag.has('persist'), log};
@@ -51,8 +49,8 @@ export function checkPersistAnnotation(source: SourceDef): {
 
 /**
  * Check if a sourceID is persistent, using lazy evaluation and caching.
- * Sets the persist flag on the registry entry as a side effect.
- * Appends any tag parse errors to the provided log array.
+ * Caches the parse result, including diagnostics, on the registry entry.
+ * Appends those diagnostics on every walk.
  */
 function isPersistent(
   sourceID: string,
@@ -62,17 +60,14 @@ function isPersistent(
   const value = modelDef.sourceRegistry[sourceID];
   if (!value) return false;
 
-  if (value.persist === undefined) {
+  if (value.persistAnnotation === undefined) {
     const sourceDef = resolveSourceID(modelDef, sourceID);
-    if (sourceDef) {
-      const result = checkPersistAnnotation(sourceDef);
-      value.persist = result.persist;
-      tagParseLog.push(...result.log);
-    } else {
-      value.persist = false;
-    }
+    value.persistAnnotation = sourceDef
+      ? checkPersistAnnotation(sourceDef)
+      : {persist: false, log: []};
   }
-  return value.persist;
+  tagParseLog.push(...value.persistAnnotation.log);
+  return value.persistAnnotation.persist;
 }
 
 /**
@@ -318,7 +313,7 @@ export function* walkPersistentDependencies(
 }
 
 /**
- * The persistent sources a source or query depends on, as a nested DAG.
+ * Fold a persistence walk into a nested DAG of persistent sources.
  *
  * A source that is not itself persistent never appears; its persistent
  * dependencies become direct dependencies of whoever referenced it. So
@@ -327,16 +322,11 @@ export function* walkPersistentDependencies(
  * @deprecated The nested shape exists for `Model.getBuildPlan()`, which is on
  * its way out. Consume {@link walkPersistentDependencies} directly.
  */
-export function findPersistentDependencies(
-  root: SourceDef | Query,
-  modelDef: ModelDef,
-  tagParseLog: LogMessage[] = []
-): BuildNode[] {
+export function findPersistentDependencies(walk: PersistWalk): BuildNode[] {
   // What each source contributes to whoever referenced it: itself if it is a
   // table, otherwise whatever it was a route to. Post-order means every
   // dependency is already in the map by the time its dependent arrives.
   const contributes = new Map<SourceID, BuildNode[]>();
-  const walk = walkPersistentDependencies([root], modelDef, tagParseLog);
 
   let step = walk.next();
   while (!step.done) {

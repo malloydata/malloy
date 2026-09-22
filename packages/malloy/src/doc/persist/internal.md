@@ -127,9 +127,14 @@ imported source's persistent dependencies may not have been imported at all.
 ```typescript
 type SourceRegistryEntry = SourceRegistryReference | PersistableSourceDef;
 
+interface PersistAnnotation {
+  persist: boolean;
+  log: LogMessage[];
+}
+
 interface SourceRegistryValue {
   entry: SourceRegistryEntry;
-  persist?: boolean;   // lazily computed
+  persistAnnotation?: PersistAnnotation;   // lazily parsed
 }
 ```
 
@@ -169,6 +174,11 @@ IR at `DefineSource` time, which is what compiler substitution reads; and
 lazily by `isPersistent()` during dependency walking, which is what a hidden
 dependency needs — it arrived through an import and never went through
 `DefineSource` here.
+
+The registry caches the complete annotation parse result in `persistAnnotation`,
+including diagnostics. Every dependency walk reports those diagnostics, even
+when a previous walk has already parsed the annotation. Build requests use one
+walk across all roots, so each source contributes diagnostics once per request.
 
 ## Dependency walking
 
@@ -281,11 +291,11 @@ edges (step 2 above) is what removes those.
 `Model.getBuildPlan()` in
 [`api/foundation/core.ts`](../../api/foundation/core.ts) requires
 `##! experimental.persistence`, read off `modelAnnotations` (the import/extend
-fold) so the flag carries across extend. It walks every entry in
-`modelDef.contents` plus `modelDef.queryList` through
-`findPersistentDependencies()`, unions the forests, takes `minimalBuildGraph()`,
-builds a `PersistSource` for every sourceID it saw, and groups the roots by
-connection name.
+fold) so the flag carries across extend. It uses `_walkPersistSources()` to
+walk all roots in `modelDef.contents` and `modelDef.queryList` once, sharing
+the same walk as `getBuildTargets()`. `findPersistentDependencies()` folds that
+walk into a forest. It then takes `minimalBuildGraph()`, builds a `PersistSource`
+for every sourceID it saw, and groups the roots by connection name.
 
 `getBuildTargets` does not use it, and it is slated for removal once the
 builders have moved. Two things it gets wrong are why:
@@ -441,7 +451,7 @@ what replaced them.
 | `ResolvedNode` | `api/foundation/build_targets.ts` | A `PersistNode` with its `PersistSource` |
 | `PersistableSourceDef` | `model/malloy_types.ts` | `SQLSourceDef \| QuerySourceDef` |
 | `SourceID` | `model/malloy_types.ts` | Identity of a named source |
-| `SourceRegistryValue` | `model/malloy_types.ts` | Registry entry, with the lazy `persist` flag |
+| `SourceRegistryValue` | `model/malloy_types.ts` | Registry entry, with the lazily parsed persistence annotation and its diagnostics |
 | `BuildNode`, `BuildGraph`, `BuildPlan` | `api/foundation/types.ts`, `core.ts` | *deprecated* — the plan shapes |
 
 ### Classes
