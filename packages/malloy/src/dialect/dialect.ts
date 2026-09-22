@@ -57,6 +57,17 @@ export interface CompiledOrderBy {
 }
 
 /**
+ * How a query's result is ordered and limited, for a dialect with a final
+ * stage. The stages are CTEs, and a CTE's ORDER BY does not reach the SELECT
+ * which reads it, so the final stage orders and limits in place of the last
+ * stage.
+ */
+export interface FinalStageOrdering {
+  orderBy: {name: string; dir: 'asc' | 'desc'}[];
+  limit?: number;
+}
+
+/**
  * A named expression for the lateral join bag. The expression will be
  * available as `__lateral_join_bag.name` in the query.
  */
@@ -256,6 +267,8 @@ export abstract class Dialect {
   // A trailing LIMIT n, or TOP n after SELECT (SQL Server). The compiler
   // emits both positions through sqlSelectLimit and sqlLimit; one is empty.
   limitClause: LimitClauseType = 'limit';
+  // ORDER BY is only legal in a subquery or CTE which also has a row limit
+  subqueryOrderByRequiresLimit = false;
 
   /** The row limit in SELECT-list position: `TOP n ` or nothing */
   sqlSelectLimit(limit: number | undefined): string {
@@ -596,7 +609,11 @@ export abstract class Dialect {
     fieldList: DialectFieldList
   ): string;
 
-  sqlFinalStage(_lastStageName: string, _fields: string[]): string {
+  sqlFinalStage(
+    _lastStageName: string,
+    _fields: string[],
+    _ordering?: FinalStageOrdering
+  ): string {
     throw new Error('Dialect has no final Stage but called Anyway');
   }
 

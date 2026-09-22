@@ -30,6 +30,7 @@ export type {
   LateralJoinExpression,
   QueryInfo,
   FieldReferenceType,
+  FinalStageOrdering,
   GroupByClauseType,
   LimitClauseType,
   OrderByClauseType,

@@ -359,10 +359,16 @@ export class SQLServerConnection
     const result = await this.runRawSQL(
       this.sqlWithQueryMetadata(sql, options.queryMetadata)
     );
-    if (rowLimit !== undefined && result.rows.length > rowLimit) {
-      return {rows: result.rows.slice(0, rowLimit), totalRows: rowLimit};
+    const rows = result.rows.map(row => this.parseRow(row));
+    if (rowLimit !== undefined && rows.length > rowLimit) {
+      return {rows: rows.slice(0, rowLimit), totalRows: rowLimit};
     }
-    return result;
+    return {rows, totalRows: rows.length};
+  }
+
+  // The dialect's final stage returns each row as one JSON document
+  private parseRow(row: QueryRecord): QueryRecord {
+    return JSON.parse(row['row'] as string);
   }
 
   public async runRawSQL(sql: string): Promise<MalloyQueryData> {
@@ -390,7 +396,7 @@ export class SQLServerConnection
       );
       let index = 0;
       for await (const row of stream) {
-        yield row as QueryRecord;
+        yield this.parseRow(row as QueryRecord);
         index += 1;
         if (rowLimit !== undefined && index >= rowLimit) {
           request.cancel();

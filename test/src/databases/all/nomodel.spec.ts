@@ -908,12 +908,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(`run: conn.sql('select 1 as ${q`one`}')`)
       .run();
-    if (databaseName === 'postgres') {
-      expect(result.sql).toBe(`WITH __stage0 AS (
-  select 1 as ${q`one`})
-SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
+    const sql = `select 1 as ${q`one`}`;
+    if (runtime.dialect.hasFinalStage) {
+      const finalStage = runtime.dialect.sqlFinalStage('__stage0', [q`one`], {
+        orderBy: [],
+      });
+      expect(result.sql).toBe(`WITH __stage0 AS (\n  ${sql})\n${finalStage}`);
     } else {
-      expect(result.sql).toBe(`select 1 as ${q`one`}`);
+      expect(result.sql).toBe(sql);
     }
     expect(result.resultExplore).not.toBeUndefined();
   });

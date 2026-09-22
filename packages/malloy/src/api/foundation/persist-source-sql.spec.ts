@@ -58,7 +58,7 @@ describe('PersistSource build key matches serve-time manifest lookup', () => {
     }).sql;
   }
 
-  // Postgres is the only dialect with `hasFinalStage = true`. If getSQL()
+  // Postgres has `hasFinalStage = true`. If getSQL()
   // finalized the query, its BuildID would be hashed over the `row_to_json`
   // wrapper while the serve path keys off the bare SELECT — the keys would
   // diverge, the lookup would miss, and the query would inline the source

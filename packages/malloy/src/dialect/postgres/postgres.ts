@@ -30,6 +30,7 @@ import {
   type CompiledOrderBy,
   type DialectFieldList,
   type FieldReferenceType,
+  type FinalStageOrdering,
   type QueryInfo,
 } from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
@@ -258,8 +259,23 @@ export class PostgresDialect extends PostgresBase {
     return `SELECT JSONB_AGG(${lastStageName}) FROM ${lastStageName}\n`;
   }
 
-  sqlFinalStage(lastStageName: string, _fields: string[]): string {
-    return `SELECT row_to_json(finalStage) as row FROM ${lastStageName} AS finalStage`;
+  sqlFinalStage(
+    lastStageName: string,
+    _fields: string[],
+    ordering?: FinalStageOrdering
+  ): string {
+    let sql = `SELECT row_to_json(finalStage) as row FROM ${lastStageName} AS finalStage`;
+    if (ordering && ordering.orderBy.length > 0) {
+      const terms = ordering.orderBy.map(
+        o =>
+          `finalStage.${this.sqlQuoteIdentifier(o.name)} ${o.dir.toUpperCase()}`
+      );
+      sql += `\n${this.sqlOrderBy(terms)}`;
+    }
+    if (ordering?.limit !== undefined) {
+      sql += `\n${this.sqlLimit(ordering.limit)}`;
+    }
+    return sql;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {

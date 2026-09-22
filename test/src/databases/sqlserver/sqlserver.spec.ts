@@ -100,6 +100,17 @@ describe('SQL Server', () => {
       `).toEqualResult(tm, [{state: 'WI'}, {state: 'WV'}, {state: 'WY'}]);
     });
 
+    test('sorts NULLs last in either direction', async () => {
+      const nulls =
+        'sqlserver.sql("SELECT n FROM (VALUES (1), (NULL), (3)) v(n)")';
+      await expect(
+        `run: ${nulls} -> { select: n; order_by: n asc }`
+      ).toEqualResult(tm, [{n: 1}, {n: 3}, {n: null}]);
+      await expect(
+        `run: ${nulls} -> { select: n; order_by: n desc }`
+      ).toEqualResult(tm, [{n: 3}, {n: 1}, {n: null}]);
+    });
+
     test('escapes a bracket in a LIKE pattern', async () => {
       await expect(`
         run: sqlserver.sql("""
@@ -136,6 +147,54 @@ describe('SQL Server', () => {
           order_by: state_count desc, first
         }
       `).toMatchResult(tm, {first: 'M', state_count: 8});
+    });
+
+    test('orders and limits a grouped result', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          group_by: popular_name
+          aggregate: state_count is count()
+          order_by: state_count desc, popular_name
+          limit: 2
+        }
+      `).toEqualResult(tm, [
+        {popular_name: 'Isabella', state_count: 24},
+        {popular_name: 'Sophia', state_count: 11},
+      ]);
+    });
+
+    test('orders a query used as a source', async () => {
+      await expect(`
+        source: by_name is sqlserver.table('malloytest.state_facts') -> {
+          group_by: popular_name
+          aggregate: state_count is count()
+          order_by: state_count desc
+        }
+        run: by_name -> {
+          select: popular_name
+          where: state_count > 10
+          order_by: popular_name
+        }
+      `).toEqualResult(tm, [
+        {popular_name: 'Isabella'},
+        {popular_name: 'Sophia'},
+      ]);
+    });
+
+    test('orders the last stage of a pipeline', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          group_by: popular_name
+          aggregate: state_count is count()
+        } -> {
+          select: popular_name, state_count
+          order_by: state_count asc, popular_name desc
+          limit: 2
+        }
+      `).toEqualResult(tm, [
+        {popular_name: 'Madison', state_count: 3},
+        {popular_name: 'Ava', state_count: 3},
+      ]);
     });
 
     test('divides as a float', async () => {

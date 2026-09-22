@@ -30,6 +30,7 @@ import type {
   CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
+  FinalStageOrdering,
   GroupByClauseType,
   LimitClauseType,
   QueryInfo,
@@ -116,7 +117,7 @@ export class SQLServerDialect extends Dialect {
   defaultNumberType = 'FLOAT(53)';
   defaultDecimalType = 'DECIMAL(38, 9)';
   udfPrefix = '__udf';
-  hasFinalStage = false;
+  hasFinalStage = true;
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
@@ -141,13 +142,14 @@ export class SQLServerDialect extends Dialect {
   // where a value is.
   booleanType: BooleanTypeSupport = 'none';
   hasTimestamptz = false;
-  // tedious delivers bigint as a decimal string.
-  supportsBigIntPrecision = true;
+  // A result row is a JSON document, and JSON.parse reads a bigint as a double.
+  supportsBigIntPrecision = false;
   maxIdentifierLength = 128;
   likeEscape = true;
   likeExtraWildcards = ['['];
   groupByClause: GroupByClauseType = 'expression';
   limitClause: LimitClauseType = 'top';
+  subqueryOrderByRequiresLimit = true;
   // REGEXP_LIKE and its family arrived in SQL Server 2025
   supportsRegexpMatch = false;
 
@@ -341,6 +343,29 @@ export class SQLServerDialect extends Dialect {
 
   sqlSelectAliasAsStruct(_alias: string, _fieldList: DialectFieldList): string {
     return this.nestingUnsupported('sqlSelectAliasAsStruct');
+  }
+
+  // The final stage is the outermost SELECT, the one place a CTE query may
+  // order its rows. T-SQL sorts NULL first; a null flag ahead of each term
+  // sorts it last. Each row comes back as one JSON document (FOR JSON PATH
+  // reads a dot in a column name as a nested path).
+  sqlFinalStage(
+    lastStageName: string,
+    _fields: string[],
+    ordering?: FinalStageOrdering
+  ): string {
+    let sql =
+      `SELECT ${this.sqlSelectLimit(ordering?.limit)}` +
+      '(SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER, INCLUDE_NULL_VALUES) AS "row"' +
+      `\nFROM ${lastStageName} AS t`;
+    if (ordering && ordering.orderBy.length > 0) {
+      const terms = ordering.orderBy.map(o => {
+        const column = `t.${this.sqlQuoteIdentifier(o.name)}`;
+        return `CASE WHEN ${column} IS NULL THEN 1 ELSE 0 END, ${column} ${o.dir.toUpperCase()}`;
+      });
+      sql += `\nORDER BY ${terms.join(', ')}`;
+    }
+    return sql;
   }
 
   // A nested JSON value goes through JSON_QUERY, or the constructor stores it

@@ -20,7 +20,11 @@ import type {
 } from './malloy_types';
 import {activeName, isSourceDef, isAtomic} from './malloy_types';
 import {StageWriter} from './stage_writer';
-import {StandardSQLDialect, type Dialect} from '../dialect';
+import {
+  StandardSQLDialect,
+  type Dialect,
+  type FinalStageOrdering,
+} from '../dialect';
 import type {Connection} from '../connection/types';
 import type {ModelRootInterface} from './query_node';
 import {QueryStruct, isScalarField} from './query_node';
@@ -144,8 +148,9 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       (name: string) => this.structs.get(name)
     );
 
-    const ret = q.generateSQLFromPipeline(stageWriter);
-    if (emitFinalStage && q.parent.dialect.hasFinalStage) {
+    const finalStage = emitFinalStage && q.parent.dialect.hasFinalStage;
+    const ret = q.generateSQLFromPipeline(stageWriter, finalStage);
+    if (finalStage) {
       // const fieldNames: string[] = [];
       // for (const f of ret.outputStruct.fields) {
       //   fieldNames.push(activeName(f));
@@ -161,7 +166,11 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       //   q.parent.dialect.sqlQuoteIdentifier(fieldDef.name)
       // );
       ret.lastStageName = stageWriter.addStage(
-        q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
+        q.parent.dialect.sqlFinalStage(
+          ret.lastStageName,
+          fieldNames,
+          ret.finalOrdering
+        )
       );
     }
     // console.log('---', stageWriter.combineStages(true).sql, '---');
@@ -303,15 +312,25 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
 
-    let query = `SELECT ${d.sqlSelectLimit(limit)}
+    const matchFirst = `CASE WHEN lower(${fieldValueColumn}) LIKE lower(${d.sqlLiteralString(
+      searchValue + '%'
+    )}) THEN 1 ELSE 0 END`;
+    const ordering: FinalStageOrdering = {
+      orderBy: [
+        {name: 'match_first', dir: 'desc'},
+        {name: 'weight', dir: 'desc'},
+      ],
+      limit,
+    };
+    // A dialect with a final stage orders and limits there
+    const stageLimit = d.hasFinalStage ? undefined : limit;
+    let query = `SELECT ${d.sqlSelectLimit(stageLimit)}
               ${fieldNameColumn},
               ${fieldPathColumn},
               ${fieldValueColumn},
               ${fieldTypeColumn},
               ${weightColumn},
-              CASE WHEN lower(${fieldValueColumn}) LIKE lower(${d.sqlLiteralString(
-                searchValue + '%'
-              )}) THEN 1 ELSE 0 END as match_first
+              ${matchFirst} as match_first
             FROM  ${await connection.manifestTemporaryTable(sqlPDT)}
             WHERE lower(${fieldValueColumn}) LIKE lower(${d.sqlLiteralString(
               '%' + searchValue + '%'
@@ -320,20 +339,26 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
                 ? ` AND ${fieldNameColumn} = '` + searchField + "' \n"
                 : ''
             }
-            ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${d.sqlLiteralString(
-              searchValue + '%'
-            )}) THEN 1 ELSE 0 END DESC, ${weightColumn} DESC
-            ${d.sqlLimit(limit)}
+            ${
+              d.hasFinalStage
+                ? ''
+                : `ORDER BY ${matchFirst} DESC, ${weightColumn} DESC`
+            }
+            ${d.sqlLimit(stageLimit)}
           `;
     if (d.hasFinalStage) {
-      query = `WITH __stage0 AS(\n${query}\n)\n${d.sqlFinalStage('__stage0', [
-        fieldNameColumn,
-        fieldPathColumn,
-        fieldValueColumn,
-        fieldTypeColumn,
-        weightColumn,
-        'match_first',
-      ])}`;
+      query = `WITH __stage0 AS(\n${query}\n)\n${d.sqlFinalStage(
+        '__stage0',
+        [
+          fieldNameColumn,
+          fieldPathColumn,
+          fieldValueColumn,
+          fieldTypeColumn,
+          weightColumn,
+          'match_first',
+        ],
+        ordering
+      )}`;
     }
     const result = await connection.runSQL(query, {
       rowLimit: 1000,

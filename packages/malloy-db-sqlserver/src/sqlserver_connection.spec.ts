@@ -18,13 +18,22 @@ describe('db:SQLServer', () => {
     await connection.close();
   });
 
+  // The shape the dialect's final stage gives a result row
+  const jsonRows = (select: string, from = '') =>
+    `SELECT (SELECT ${select} FOR JSON PATH, WITHOUT_ARRAY_WRAPPER, INCLUDE_NULL_VALUES) AS "row" ${from}`;
+
   it('runs a SQL query', async () => {
-    const res = await connection.runSQL('SELECT 1 AS t');
+    const res = await connection.runRawSQL('SELECT 1 AS t');
     expect(res.rows[0]['t']).toBe(1);
   });
 
+  it('reads each result row from its JSON document', async () => {
+    const res = await connection.runSQL(jsonRows('1 AS t, NULL AS n'));
+    expect(res.rows).toEqual([{t: 1, n: null}]);
+  });
+
   it('applies the session setup ahead of a query', async () => {
-    const res = await connection.runSQL('SELECT @@DATEFIRST AS df');
+    const res = await connection.runRawSQL('SELECT @@DATEFIRST AS df');
     expect(res.rows[0]['df']).toBe(7);
   });
 
@@ -138,14 +147,14 @@ describe('db:SQLServer', () => {
   });
 
   it('keeps bigint precision as a string', async () => {
-    const res = await connection.runSQL(
+    const res = await connection.runRawSQL(
       'SELECT CAST(9007199254740993 AS BIGINT) AS big'
     );
     expect(String(res.rows[0]['big'])).toBe('9007199254740993');
   });
 
   it('reads datetime2 as a UTC instant', async () => {
-    const res = await connection.runSQL(
+    const res = await connection.runRawSQL(
       "SELECT CAST('2021-02-24 03:05:06' AS DATETIME2) AS dt"
     );
     expect((res.rows[0]['dt'] as Date).toISOString()).toBe(
@@ -155,7 +164,7 @@ describe('db:SQLServer', () => {
 
   it('honors rowLimit', async () => {
     const res = await connection.runSQL(
-      'SELECT value FROM GENERATE_SERIES(1, 100)',
+      jsonRows('g.value AS value', 'FROM GENERATE_SERIES(1, 100) AS g'),
       {rowLimit: 5}
     );
     expect(res.rows.length).toBe(5);
@@ -164,7 +173,7 @@ describe('db:SQLServer', () => {
   it('streams rows and stops at rowLimit', async () => {
     const rows: unknown[] = [];
     for await (const row of connection.runSQLStream(
-      'SELECT value FROM GENERATE_SERIES(1, 100)',
+      jsonRows('g.value AS value', 'FROM GENERATE_SERIES(1, 100) AS g'),
       {rowLimit: 3}
     )) {
       rows.push(row);
@@ -175,7 +184,7 @@ describe('db:SQLServer', () => {
   it('manifests a temporary table any pooled connection can read', async () => {
     const name = await connection.manifestTemporaryTable('SELECT 42 AS answer');
     expect(name).toMatch(/^tempdb\.dbo\.malloy_tt/);
-    const res = await connection.runSQL(`SELECT answer FROM ${name}`);
+    const res = await connection.runRawSQL(`SELECT answer FROM ${name}`);
     expect(res.rows[0]['answer']).toBe(42);
   });
 
