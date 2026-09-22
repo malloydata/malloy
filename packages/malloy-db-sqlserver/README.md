@@ -81,15 +81,13 @@ Arrays and records read from table data are declared unsupported (`supportsArray
 
 ### Known failures
 
-These compile, reach the server, and fail or answer wrongly. Each is an open item.
+These compile, reach the server, and fail or answer wrongly. Each is an open item; the cross-database suite skips the second and third with the reason stated at the gate.
 
 | Case | What happens |
 |---|---|
 | An array or record built in a SQL block or written as a literal (`[1, 2, 3]`, `mk_array`, `mk_record`) | Comes back as a string, not an array or record |
 | A nest whose every field is a constant, under a query with no `group_by:` | Server error: aggregates on the right side of an APPLY cannot reference columns from the left side |
 | `coalesce(null, null)`, `nullif(null, x)` | Server error: at least one argument must not be the NULL constant |
-| `group_by:` of a dimension that resolves to a constant through another dimension | Server error: each GROUP BY expression must contain a column |
-| A window function ordered by a constant dimension (`group_by: r is 1.0` then `rank()`) | Server error: windowed functions do not support constants in ORDER BY |
 | `greatest`, `least` in a `group_by:` or inside an aggregate | Server error: a subquery is not allowed there |
 | A `timezone:` name absent from the CLDR table | Error when SQL is generated, not at the statement |
 
