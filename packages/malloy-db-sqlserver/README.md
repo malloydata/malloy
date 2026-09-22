@@ -81,7 +81,7 @@ Arrays and records read from table data are declared unsupported (`supportsArray
 
 ### Known failures
 
-These compile, reach the server, and fail or answer wrongly. Each is an open item; the cross-database suite skips the second and third with the reason stated at the gate.
+These compile, reach the server, and fail or answer wrongly. Each is an open item. The cross-database suite still runs the array and record cases and fails them; it skips the constants-only nest and the untyped NULL cases, with the reason stated at the gate.
 
 | Case | What happens |
 |---|---|
