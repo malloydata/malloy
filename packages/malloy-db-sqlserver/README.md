@@ -68,4 +68,4 @@ The dialect writes its own JSON, truncates with `DATEADD`, lists group sets with
 - The default collation compares case-insensitively; Malloy does not change that.
 - A `text` or `ntext` column is `sql native`: the engine cannot group, compare or take `MAX` over one. Cast it to `NVARCHAR(MAX)` in a `sql()` dimension to use it.
 - `bit` is Malloy's boolean; a comparison used as a value becomes `1`, `0` or `NULL`.
-- Every result row travels as one `FOR JSON PATH` document, so a `bigint` beyond 2^53 loses precision on the way to JavaScript.
+- Every result row travels as one `FOR JSON PATH` document, so a `bigint` beyond 2^53 loses precision on the way to JavaScript, and a `float` arrives with 16 significant digits, one short of a round trip.
