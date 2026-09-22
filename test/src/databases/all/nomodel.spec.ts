@@ -397,7 +397,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       ##! experimental.join_types
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
         select: *
-        where: state ~ r'^(A|M)'
+        where: state ~ 'A%' | 'M%'
       } extend {
         measure:
           am_count is count()
@@ -406,7 +406,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       query: ac_states_base is ${databaseName}.table('malloytest.state_facts') -> {
         select: *
-        where: state ~ r'^(A|C)'
+        where: state ~ 'A%' | 'C%'
       }
 
       // mulitply the number of rows in ac_states so we have a many to one join
@@ -424,14 +424,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
   `;
 
-  it.when(runtime.dialect.supportsRegexpMatch)(
-    `join inner- ${databaseName}`,
-    async () => {
-      // a cross join produces a Many to Many result.
-      // symmetric aggregate are needed on both sides of the join
-      // Check the row count and that sums on each side work properly.
-      const testModel = wrapTestModel(runtime, '');
-      await expect(`
+  it(`join inner- ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    const testModel = wrapTestModel(runtime, '');
+    await expect(`
       ${matrixModel}
       run: ac_states -> {
         extend: {
@@ -445,23 +443,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       }
       `).toMatchResult(testModel, {
-        ac_count: 28,
-        ac_sum: 10402,
-        am_count: 4,
-        am_sum: 1486,
-        //show_sql_fail: 1,
-      });
-    }
-  );
+      ac_count: 28,
+      ac_sum: 10402,
+      am_count: 4,
+      am_sum: 1486,
+      //show_sql_fail: 1,
+    });
+  });
 
-  it.when(runtime.dialect.supportsRegexpMatch)(
-    `join left - ${databaseName}`,
-    async () => {
-      // a cross join produces a Many to Many result.
-      // symmetric aggregate are needed on both sides of the join
-      // Check the row count and that sums on each side work properly.
-      const testModel = wrapTestModel(runtime, '');
-      await expect(`
+  it(`join left - ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    const testModel = wrapTestModel(runtime, '');
+    await expect(`
       ${matrixModel}
       run: ac_states -> {
         extend: {
@@ -475,23 +470,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       }
       `).toMatchResult(testModel, {
-        ac_count: 49,
-        ac_sum: 21336,
-        am_count: 4,
-        am_sum: 1486,
-        //show_sql_fail: 1,
-      });
-    }
-  );
+      ac_count: 49,
+      ac_sum: 21336,
+      am_count: 4,
+      am_sum: 1486,
+      //show_sql_fail: 1,
+    });
+  });
 
-  it.when(runtime.dialect.supportsRegexpMatch)(
-    `join right - ${databaseName}`,
-    async () => {
-      // a cross join produces a Many to Many result.
-      // symmetric aggregate are needed on both sides of the join
-      // Check the row count and that sums on each side work properly.
-      const testModel = wrapTestModel(runtime, '');
-      await expect(`
+  it(`join right - ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    const testModel = wrapTestModel(runtime, '');
+    await expect(`
       ${matrixModel}
       run: ac_states -> {
         extend: {
@@ -505,23 +497,22 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       }
       `).toMatchResult(testModel, {
-        ac_count: 28,
-        ac_sum: 10402,
-        am_count: 12,
-        am_sum: 4139,
-        //show_sql_fail: 1,
-      });
-    }
-  );
+      ac_count: 28,
+      ac_sum: 10402,
+      am_count: 12,
+      am_sum: 4139,
+      //show_sql_fail: 1,
+    });
+  });
 
-  it.when(
-    runtime.dialect.supportsFullJoin && runtime.dialect.supportsRegexpMatch
-  )(`join full - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const testModel = wrapTestModel(runtime, '');
-    await expect(`
+  it.when(runtime.dialect.supportsFullJoin)(
+    `join full - ${databaseName}`,
+    async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      const testModel = wrapTestModel(runtime, '');
+      await expect(`
       ${matrixModel}
       run: ac_states -> {
         extend: {
@@ -535,24 +526,23 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       }
       `).toMatchResult(testModel, {
-      ac_count: 49,
-      ac_sum: 21336,
-      am_count: 12,
-      am_sum: 4139,
-    });
-  });
+        ac_count: 49,
+        ac_sum: 21336,
+        am_count: 12,
+        am_sum: 4139,
+      });
+    }
+  );
 
-  it.when(runtime.dialect.supportsRegexpMatch)(
-    `leafy count - ${databaseName}`,
-    async () => {
-      // in a joined table when the joined is leafiest
-      //  we need to make sure we don't count rows that
-      //  don't match the join.
-      const testModel = wrapTestModel(runtime, '');
-      await expect(`
+  it(`leafy count - ${databaseName}`, async () => {
+    // in a joined table when the joined is leafiest
+    //  we need to make sure we don't count rows that
+    //  don't match the join.
+    const testModel = wrapTestModel(runtime, '');
+    await expect(`
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
         select: *
-        where: state ~ r'^(A|M)'
+        where: state ~ 'A%' | 'M%'
       }
 
       source: states is ${databaseName}.table('malloytest.state_facts') extend {
@@ -566,11 +556,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           root_count is count()
       }
       `).toMatchResult(testModel, {
-        leafy_count: 0,
-        root_count: 1,
-      });
-    }
-  );
+      leafy_count: 0,
+      root_count: 1,
+    });
+  });
 
   it(`nest/unnest -basic - ${databaseName}`, async () => {
     // in a joined table when the joined is leafiest
@@ -609,18 +598,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(q.sql.toLowerCase()).not.toContain('distinct');
   });
 
-  it.when(
-    runtime.dialect.supportsLeftJoinUnnest &&
-      runtime.dialect.supportsRegexpMatch
-  )(`leafy nested count - ${databaseName}`, async () => {
-    // in a joined table when the joined is leafiest
-    //  we need to make sure we don't count rows that
-    //  don't match the join.
-    const testModel = wrapTestModel(runtime, '');
-    await expect(`
+  it.when(runtime.dialect.supportsLeftJoinUnnest && runtime.supportsNesting)(
+    `leafy nested count - ${databaseName}`,
+    async () => {
+      // in a joined table when the joined is leafiest
+      //  we need to make sure we don't count rows that
+      //  don't match the join.
+      const testModel = wrapTestModel(runtime, '');
+      await expect(`
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
         group_by: state,popular_name
-        where: state ~ r'^(A|M)'
+        where: state ~ 'A%' | 'M%'
         nest: nested_state is {
           group_by: state,popular_name
         }
@@ -639,12 +627,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           root_count is count()
       }
       `).toMatchResult(testModel, {
-      leafy_count: 0,
-      root_count: 1,
-      state: 'CA',
-      am_state: null,
-    });
-  });
+        leafy_count: 0,
+        root_count: 1,
+        state: 'CA',
+        am_state: null,
+      });
+    }
+  );
 
   it(`basic index - ${databaseName}`, async () => {
     // Make sure basic indexing works.

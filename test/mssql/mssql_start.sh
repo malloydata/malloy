@@ -11,6 +11,7 @@ CONTAINER_NAME="mssql-malloy"
 # default is written. Export the same values to run the tests by hand.
 export MSSQL_HOST="${MSSQL_HOST:-localhost}"
 export MSSQL_PORT="${MSSQL_PORT:-1433}"
+export MSSQL_TRUST_SERVER_CERTIFICATE="${MSSQL_TRUST_SERVER_CERTIFICATE:-true}"
 export MSSQL_USER="${MSSQL_USER:-sa}"
 export MSSQL_PASSWORD="${MSSQL_PASSWORD:-Malloy_Test_123}"
 export MSSQL_DATABASE="${MSSQL_DATABASE:-malloytest}"

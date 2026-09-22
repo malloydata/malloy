@@ -1,9 +1,9 @@
 name: 'DB:SQLServer'
 permissions: {}
 
-# Manual while the dialect is experimental; run-tests.yaml does not call it.
+# Manual while the dialect is experimental; run-tests.yaml does not call it,
+# so this builds its own workspace.
 on:
-  workflow_call:
   workflow_dispatch:
 
 jobs:
@@ -11,15 +11,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/checkout@v5
         with:
-          name: workspace
-      - name: Extract workspace
-        run: tar --use-compress-program='zstd -d -T0' -xf workspace.tzst && rm workspace.tzst
+          persist-credentials: false
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
+          cache: 'npm'
+      - name: Install and build
+        run: |
+          npm ci --loglevel error
+          npm run build
       - name: Test
         run: |
           bash test/mssql/mssql_start.sh
@@ -31,3 +34,4 @@ jobs:
           MSSQL_USER: sa
           MSSQL_PASSWORD: Malloy_Test_123
           MSSQL_DATABASE: malloytest
+          MSSQL_TRUST_SERVER_CERTIFICATE: 'true'
