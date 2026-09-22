@@ -227,6 +227,15 @@ describe('SQL Server', () => {
       `).toEqualResult(tm, [{x: 1, y: 'a'}]);
     });
 
+    test('a dimension defined through a constant is not grouped', async () => {
+      await expect(`
+        source: facts is sqlserver.table('malloytest.state_facts') extend {
+          dimension: one is 1, copy is one
+        }
+        run: facts -> { group_by: copy; aggregate: n is count() }
+      `).toEqualResult(tm, [{copy: 1, n: 51}]);
+    });
+
     test('a group of only constants counts the whole table', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {

@@ -60,7 +60,6 @@ import {
   getDialectFieldList,
   groupingKey,
   caseGroup,
-  exprWalk,
 } from './utils';
 import type {JoinInstance} from './join_instance';
 import {
@@ -144,22 +143,6 @@ function aliasedColumn(
   constant = false
 ): StageOutputColumn {
   return {sql: `${expr} as ${name}`, expr, name, isDimension, constant};
-}
-
-// Does a field's expression read any column of its source?
-function readsColumn(fieldDef: FieldDef): boolean {
-  if (!hasExpression(fieldDef)) {
-    return true;
-  }
-  for (const node of exprWalk(fieldDef.e)) {
-    switch (node.node) {
-      case 'field':
-      case 'outputField':
-      case 'source-reference':
-        return true;
-    }
-  }
-  return false;
 }
 
 // The dimension columns as GROUP BY terms: 1-based SELECT positions, or the
@@ -1551,7 +1534,7 @@ export class QueryQuery extends QueryField {
               fi.generateExpression(),
               sqlName,
               grouped && isScalarField(fi.f),
-              !readsColumn(fi.f.fieldDef)
+              !fi.f.readsColumn()
             )
           );
         }
@@ -1733,12 +1716,7 @@ export class QueryQuery extends QueryField {
             } else {
               // just treat it like a regular field.
               output.columns.push(
-                aliasedColumn(
-                  exp,
-                  outputName,
-                  true,
-                  !readsColumn(fi.f.fieldDef)
-                )
+                aliasedColumn(exp, outputName, true, !fi.f.readsColumn())
               );
             }
           } else if (isBasicCalculation(fi.f)) {

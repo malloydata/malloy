@@ -42,7 +42,7 @@ import {
 import type {EventStream} from '../runtime_types';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
-import {exprMap} from './utils';
+import {exprMap, exprWalk} from './utils';
 
 abstract class QueryNode {
   readonly referenceId: string;
@@ -68,6 +68,37 @@ export class QueryField extends QueryNode {
 
   getIdentifier() {
     return activeName(this.fieldDef);
+  }
+
+  /**
+   * Does the field's expression read a column of its source? A reference to
+   * another field reads a column only if that field does, so a dimension
+   * defined through constants is itself constant.
+   */
+  readsColumn(seen: Set<QueryField> = new Set()): boolean {
+    if (!hasExpression(this.fieldDef) || seen.has(this)) {
+      return true;
+    }
+    seen.add(this);
+    for (const node of exprWalk(this.fieldDef.e)) {
+      switch (node.node) {
+        case 'outputField':
+        case 'source-reference':
+          return true;
+        case 'field': {
+          let referenced: QueryField;
+          try {
+            referenced = this.parent.getFieldByName(node.path);
+          } catch {
+            return true;
+          }
+          if (referenced.readsColumn(seen)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   getJoinableParent(): QueryStruct {
