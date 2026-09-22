@@ -215,6 +215,17 @@ describe('db:SQLServer', () => {
     }
   });
 
+  it('leaves no table behind a query that fails while filling it', async () => {
+    const bad = 'SELECT 1 AS a UNION ALL SELECT 1/0';
+    await expect(connection.manifestTemporaryTable(bad)).rejects.toThrow(
+      /zero/i
+    );
+    // The second call would return the empty table, had the first kept it
+    await expect(connection.manifestTemporaryTable(bad)).rejects.toThrow(
+      /zero/i
+    );
+  });
+
   it('has a digest that ignores credentials but not identity', () => {
     const base = SQLServerExecutor.getConnectionOptionsFromEnv();
     const a = new SQLServerConnection('a', base).getDigest();

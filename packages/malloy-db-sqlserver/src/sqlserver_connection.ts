@@ -75,6 +75,12 @@ export interface SQLServerConfiguration {
    */
   connectionString?: string;
   setupSQL?: string;
+  /**
+   * `database.schema` a materialized table is created in; the login needs
+   * CREATE TABLE in that database and ALTER on the schema. tempdb.dbo when
+   * unset.
+   */
+  scratchSchema?: string;
   /** tedious defaults to 15 s, which a scan can exceed */
   requestTimeoutMs?: number;
   poolMin?: number;
@@ -168,6 +174,18 @@ function authenticationFor(
         options: {token: config.accessToken},
       };
   }
+}
+
+/**
+ * Where a materialized result lives: named for its query and the principal,
+ * since two principals can see different rows of the same query.
+ */
+export function scratchTableName(
+  config: SQLServerConfiguration,
+  sqlCommand: string
+): string {
+  const hash = makeDigest(principalOf(config) ?? '', sqlCommand).slice(0, 32);
+  return `${config.scratchSchema ?? 'tempdb.dbo'}.malloy_tt${hash}`;
 }
 
 /** The principal the connection runs as; two principals can see different rows */
@@ -557,37 +575,47 @@ export class SQLServerConnection
   }
 
   /**
-   * A table in tempdb, which lives until the server restarts: a temp table
-   * would go with the pooled connection that created it. The query usually
-   * begins with a CTE, which cannot sit inside `SELECT INTO ... FROM (...)`,
-   * so the server describes the query, creates the table from that
-   * description, and fills it through INSERT ... EXEC.
+   * A table in the scratch schema, which lives until the server restarts or
+   * someone drops it: a temp table would go with the pooled connection that
+   * created it. The query usually begins with a CTE, which cannot sit inside
+   * `SELECT INTO ... FROM (...)`, so the server describes the query, creates
+   * the table from that description, and fills it through INSERT ... EXEC.
+   * An application lock serializes creators of one table; a fill that fails
+   * drops what it created, so a table that exists is a whole result.
    */
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = makeDigest(sqlCommand).slice(0, 32);
-    const tableName = `tempdb.dbo.malloy_tt${hash}`;
-    const cmd = `IF OBJECT_ID('${tableName}') IS NULL
-BEGIN
-  DECLARE @error NVARCHAR(MAX) = (
-    SELECT TOP 1 error_message
-    FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
-    WHERE error_message IS NOT NULL
-  );
-  IF @error IS NOT NULL THROW 50000, @error, 1;
-  DECLARE @columns NVARCHAR(MAX) = (
-    SELECT STRING_AGG(QUOTENAME(name) + N' ' + system_type_name, N', ')
-      WITHIN GROUP (ORDER BY column_ordinal)
-    FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
-  );
-  BEGIN TRY
+    const tableName = scratchTableName(this.config, sqlCommand);
+    const lock = `@Resource = N'${tableName}', @LockOwner = N'Session'`;
+    const cmd = `EXEC sp_getapplock ${lock}, @LockMode = N'Exclusive';
+BEGIN TRY
+  IF OBJECT_ID('${tableName}') IS NULL
+  BEGIN
+    DECLARE @error NVARCHAR(MAX) = (
+      SELECT TOP 1 error_message
+      FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
+      WHERE error_message IS NOT NULL
+    );
+    IF @error IS NOT NULL THROW 50000, @error, 1;
+    DECLARE @columns NVARCHAR(MAX) = (
+      SELECT STRING_AGG(QUOTENAME(name) + N' ' + system_type_name, N', ')
+        WITHIN GROUP (ORDER BY column_ordinal)
+      FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
+    );
     EXEC(N'CREATE TABLE ${tableName} (' + @columns + N')');
-    INSERT INTO ${tableName} EXEC sp_executesql @sql;
-  END TRY
-  BEGIN CATCH
-    -- 2714: another connection created it first
-    IF ERROR_NUMBER() <> 2714 THROW;
-  END CATCH
-END`;
+    BEGIN TRY
+      INSERT INTO ${tableName} EXEC sp_executesql @sql;
+    END TRY
+    BEGIN CATCH
+      EXEC(N'DROP TABLE ${tableName}');
+      THROW;
+    END CATCH
+  END
+  EXEC sp_releaseapplock ${lock};
+END TRY
+BEGIN CATCH
+  EXEC sp_releaseapplock ${lock};
+  THROW;
+END CATCH`;
     await this.runBatch(cmd, {sql: sqlCommand});
     return tableName;
   }

@@ -3,7 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {connectionStringIdentity, driverConfig, SQLServerConnection} from '.';
+import {
+  connectionStringIdentity,
+  driverConfig,
+  scratchTableName,
+  SQLServerConnection,
+} from '.';
 
 // The configuration a user writes, mapped to what tedious is handed. No
 // server is involved.
@@ -147,6 +152,21 @@ describe('SQL Server driver configuration', () => {
         domain: 'OTHER',
       }).getDigest()
     );
+  });
+
+  it('names a materialized table for its query, its principal and the scratch schema', () => {
+    const base = {server: 's', user: 'u'};
+    const a = scratchTableName(base, 'SELECT 1');
+    expect(a).toMatch(/^tempdb\.dbo\.malloy_tt[0-9a-f]{32}$/);
+    expect(scratchTableName(base, 'SELECT 2')).not.toBe(a);
+    expect(scratchTableName({...base, user: 'v'}, 'SELECT 1')).not.toBe(a);
+    expect(scratchTableName({...base, password: 'x'}, 'SELECT 1')).toBe(a);
+    expect(
+      scratchTableName(
+        {...base, scratchSchema: 'sales.malloy_scratch'},
+        'SELECT 1'
+      )
+    ).toMatch(/^sales\.malloy_scratch\.malloy_tt/);
   });
 
   it('drops the secrets from a connection string before digesting it', () => {

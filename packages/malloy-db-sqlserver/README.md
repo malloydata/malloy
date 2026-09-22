@@ -33,7 +33,7 @@ The connection is encrypted by default. `trustServerCertificate` accepts a certi
 
 ### The database user
 
-Malloy reads. A login with `db_datareader` in the database is enough:
+Malloy reads. A login with `db_datareader` in the database runs every query:
 
 ```sql
 CREATE LOGIN malloy WITH PASSWORD = '...';
@@ -42,7 +42,15 @@ CREATE USER malloy FOR LOGIN malloy;
 ALTER ROLE db_datareader ADD MEMBER malloy;
 ```
 
-A search index or a query over a materialized result creates a table in `tempdb`, which every login may do. Cancelling a query uses the driver, so no `VIEW SERVER STATE` or `ALTER ANY CONNECTION` grant is needed.
+A search index, and a query over a materialized result, create a table in a scratch schema: `tempdb.dbo` unless `scratchSchema` names another `database.schema`. The login needs `CREATE TABLE` in that database and `ALTER` on the schema, which `sysadmin` members have everywhere. `tempdb` is rebuilt at every server restart, so a grant made there is gone after one; a login that is not `sysadmin` is better given a schema of its own:
+
+```sql
+USE sales;
+CREATE SCHEMA malloy_scratch AUTHORIZATION malloy;
+GRANT CREATE TABLE TO malloy;
+```
+
+with `"scratchSchema": "sales.malloy_scratch"` on the connection. A table there is named for its query and its login, and stays until someone drops it. Cancelling a query uses the driver, so no `VIEW SERVER STATE` or `ALTER ANY CONNECTION` grant is needed.
 
 ## Which server features the dialect uses
 

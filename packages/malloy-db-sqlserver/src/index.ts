@@ -7,6 +7,7 @@ export {
   SQLServerConnection,
   SQLServerExecutor,
   connectionStringIdentity,
+  scratchTableName,
   driverConfig,
 } from './sqlserver_connection';
 export type {
@@ -158,6 +159,16 @@ registerConnectionType('sqlserver', {
       advanced: true,
       description:
         'An ADO.NET-style connection string, instead of the server/port/database/credential fields',
+    },
+    {
+      name: 'scratchSchema',
+      displayName: 'Scratch Schema',
+      type: 'string',
+      optional: true,
+      advanced: true,
+      default: 'tempdb.dbo',
+      description:
+        'database.schema a materialized table is created in; the login needs CREATE TABLE in that database and ALTER on the schema',
     },
     {
       name: 'setupSQL',
