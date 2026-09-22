@@ -27,6 +27,32 @@ describe('SQL Server driver configuration', () => {
     });
   });
 
+  it('reads a port written after a comma in the server', () => {
+    const c = driverConfig({server: 'db.example.com,1434', user: 'u'});
+    expect(c.server).toBe('db.example.com');
+    expect(c.port).toBe(1434);
+    expect(driverConfig({server: 'db,1434', port: 1435}).port).toBe(1435);
+  });
+
+  it('maps the instance, application and availability group options', () => {
+    const c = driverConfig({
+      server: 'db.example.com',
+      instanceName: 'SQLEXPRESS',
+      applicationName: 'malloy',
+      readOnlyIntent: true,
+      multiSubnetFailover: true,
+      hostNameInCertificate: 'listener.example.com',
+    });
+    expect(c.port).toBeUndefined();
+    expect(c.options).toMatchObject({
+      instanceName: 'SQLEXPRESS',
+      appName: 'malloy',
+      readOnlyIntent: true,
+      multiSubnetFailover: true,
+      serverName: 'listener.example.com',
+    });
+  });
+
   it('maps Entra authentication kinds onto tedious', () => {
     expect(
       driverConfig({server: 's', authentication: 'azure-default'})
@@ -89,5 +115,11 @@ describe('SQL Server driver configuration', () => {
     expect(
       new SQLServerConnection('e', {...base, setupSQL: 'SET X'}).getDigest()
     ).not.toBe(a);
+    expect(
+      new SQLServerConnection('f', {...base, instanceName: 'I'}).getDigest()
+    ).not.toBe(a);
+    expect(
+      new SQLServerConnection('g', {...base, readOnlyIntent: true}).getDigest()
+    ).toBe(a);
   });
 });

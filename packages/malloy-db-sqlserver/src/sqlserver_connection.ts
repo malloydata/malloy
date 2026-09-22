@@ -59,6 +59,16 @@ export interface SQLServerConfiguration {
   encrypt?: boolean;
   /** Accept a certificate the client cannot verify, e.g. a local container's */
   trustServerCertificate?: boolean;
+  /** The name the server's certificate is issued to, when it is not `server` */
+  hostNameInCertificate?: string;
+  /** A named instance, located through SQL Browser; `port` is then not used */
+  instanceName?: string;
+  /** What the server records as program_name for this connection */
+  applicationName?: string;
+  /** Ask an availability group for a readable secondary */
+  readOnlyIntent?: boolean;
+  /** Try every IP an availability group listener resolves to at once */
+  multiSubnetFailover?: boolean;
   /**
    * An ADO.NET-style connection string, instead of the fields above. Only one
    * of the two may be given.
@@ -178,6 +188,7 @@ export function driverConfig(config: SQLServerConfiguration): mssql.config {
   const structured = [
     'server',
     'port',
+    'instanceName',
     'database',
     'authentication',
     'user',
@@ -205,15 +216,23 @@ export function driverConfig(config: SQLServerConfiguration): mssql.config {
       requestTimeout,
     };
   }
+  // `host,port` is how SSMS and Looker write a non-default port
+  const [host, hostPort] = (config.server ?? 'localhost').split(',', 2);
+  const port = config.port ?? (hostPort ? Number(hostPort) : 1433);
   return {
-    server: config.server ?? 'localhost',
-    port: config.port ?? 1433,
+    server: host,
+    port: config.instanceName === undefined ? port : undefined,
     database: config.database,
     authentication: authenticationFor(config),
     options: {
       encrypt: config.encrypt ?? true,
       trustServerCertificate: config.trustServerCertificate ?? false,
       useUTC: true,
+      instanceName: config.instanceName,
+      appName: config.applicationName,
+      readOnlyIntent: config.readOnlyIntent ?? false,
+      multiSubnetFailover: config.multiSubnetFailover ?? false,
+      serverName: config.hostNameInCertificate,
     },
     pool,
     requestTimeout,
@@ -312,6 +331,7 @@ export class SQLServerConnection
       c.connectionString,
       c.server,
       c.port !== undefined ? String(c.port) : undefined,
+      c.instanceName,
       c.database,
       c.authentication ?? 'sql',
       principalOf(c),

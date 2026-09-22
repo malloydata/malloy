@@ -83,6 +83,14 @@ describe('SQL Server', () => {
       `).toEqualResult(tm, [{state: 'CA'}]);
     });
 
+    test('reads a database-qualified path', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.malloytest.state_facts') -> {
+          aggregate: n is count()
+        }
+      `).toMatchResult(tm, {n: 51});
+    });
+
     test('orders and limits', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {

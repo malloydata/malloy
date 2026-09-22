@@ -107,6 +107,49 @@ registerConnectionType('sqlserver', {
         "Accept a certificate the client cannot verify, such as a local container's. Leave off for any server you do not control.",
     },
     {
+      name: 'hostNameInCertificate',
+      displayName: 'Host Name in Certificate',
+      type: 'string',
+      optional: true,
+      advanced: true,
+      description:
+        'The name the server certificate is issued to, when it is not the server name',
+    },
+    {
+      name: 'instanceName',
+      displayName: 'Instance Name',
+      type: 'string',
+      optional: true,
+      advanced: true,
+      description:
+        'A named instance, found through SQL Browser (UDP 1434); the port is then not used',
+    },
+    {
+      name: 'applicationName',
+      displayName: 'Application Name',
+      type: 'string',
+      optional: true,
+      advanced: true,
+      description: 'What the server records as the program name',
+    },
+    {
+      name: 'readOnlyIntent',
+      displayName: 'Read-Only Intent',
+      type: 'boolean',
+      optional: true,
+      advanced: true,
+      description: 'Ask an availability group for a readable secondary',
+    },
+    {
+      name: 'multiSubnetFailover',
+      displayName: 'Multi-Subnet Failover',
+      type: 'boolean',
+      optional: true,
+      advanced: true,
+      description:
+        'Try every address an availability group listener resolves to at once',
+    },
+    {
       name: 'connectionString',
       displayName: 'Connection String',
       type: 'string',

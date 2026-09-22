@@ -21,6 +21,15 @@ describe('sqlserver table paths', () => {
     expect(canonical('[db].[schema].[table]')).toBe('"db"."schema"."table"');
   });
 
+  test('a dot inside brackets is part of the name', () => {
+    expect(canonical('[Customers.PaymentInfo]')).toBe(
+      '"Customers.PaymentInfo"'
+    );
+    expect(canonical('dbo.[Customers.PaymentInfo]')).toBe(
+      'dbo."Customers.PaymentInfo"'
+    );
+  });
+
   test('mixed bare, bracketed and quoted segments', () => {
     expect(canonical('malloytest.[state facts]')).toBe(
       'malloytest."state facts"'
