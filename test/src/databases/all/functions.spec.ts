@@ -861,22 +861,30 @@ expressionModels.forEach((x, databaseName) => {
     const inf = ['trino', 'presto'].includes(databaseName)
       ? 'infinity!()'
       : "'+inf'::number";
-    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
-      await funcTestMultiple(
-        [`is_inf(${inf})`, dbTrue],
-        ['is_inf(100)', dbFalse],
-        ['is_inf(null)', dbFalse]
-      );
-    });
+    // MySQL and SQL Server have no infinity
+    it.when(!['mysql', 'sqlserver'].includes(databaseName))(
+      `works - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          [`is_inf(${inf})`, dbTrue],
+          ['is_inf(100)', dbFalse],
+          ['is_inf(null)', dbFalse]
+        );
+      }
+    );
   });
   describe('is_nan', () => {
-    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
-      await funcTestMultiple(
-        ["is_nan('NaN'::number)", dbTrue],
-        ['is_nan(100)', dbFalse],
-        ['is_nan(null)', dbFalse]
-      );
-    });
+    // MySQL and SQL Server have no NaN
+    it.when(!['mysql', 'sqlserver'].includes(databaseName))(
+      `works - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          ["is_nan('NaN'::number)", dbTrue],
+          ['is_nan(100)', dbFalse],
+          ['is_nan(null)', dbFalse]
+        );
+      }
+    );
   });
   describe('greatest', () => {
     it(`works - ${databaseName}`, async () => {

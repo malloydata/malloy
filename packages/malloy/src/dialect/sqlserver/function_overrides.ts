@@ -19,10 +19,9 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
     sql: 'CASE WHEN RIGHT(${value}, LEN(${suffix})) = ${suffix} THEN 1 ELSE 0 END',
   },
   ifnull: {function: 'ISNULL'},
-  is_inf: {
-    sql: "CASE WHEN ${value} IN (CAST('Infinity' AS FLOAT), CAST('-Infinity' AS FLOAT)) THEN 1 ELSE 0 END",
-  },
-  is_nan: {sql: 'CASE WHEN ${value} <> ${value} THEN 1 ELSE 0 END'},
+  // A FLOAT holds neither infinity nor NaN
+  is_inf: {sql: '0'},
+  is_nan: {sql: '0'},
   length: {function: 'LEN'},
   ln: {sql: 'LOG(${value})'},
   log: {sql: 'LOG(${value}, ${base})'},

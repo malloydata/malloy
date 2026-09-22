@@ -999,7 +999,9 @@ export function generateFilterFragment(
 ): string {
   const allWhere = new AndChain(state.whereSQL);
   for (const cond of expr.kids.filterList) {
-    allWhere.add(exprToSQL(resultSet, context, cond.e, state.withWhere()));
+    allWhere.add(
+      exprToSQL(resultSet, context, cond.e, state.withWhere(), 'condition')
+    );
   }
   return exprToSQL(
     resultSet,
