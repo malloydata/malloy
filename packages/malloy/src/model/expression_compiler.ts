@@ -60,7 +60,7 @@ import {
 } from './utils';
 import {isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
-import type {Dialect, QueryInfo} from '../dialect';
+import type {BooleanForm, Dialect, QueryInfo} from '../dialect';
 import {MalloyCompileError} from './malloy_compile_error';
 import {lookupGivenValue} from './given_binding';
 
@@ -112,6 +112,62 @@ function deepCopyExpr<T extends Expr>(expr: T): T {
   return {...expr};
 }
 
+// The form a node's SQL takes, when it is a boolean expression the compiler
+// can tell apart. Transparent nodes ('()', 'filterCondition') and nodes whose
+// type the compiler does not know (a raw SQL fragment) are undefined.
+function booleanForm(expr: Expr): BooleanForm | undefined {
+  switch (expr.node) {
+    case '>':
+    case '<':
+    case '>=':
+    case '<=':
+    case '=':
+    case '!=':
+    case 'and':
+    case 'or':
+    case 'not':
+    case 'in':
+    case 'inGiven':
+    case 'like':
+    case '!like':
+    case 'is-null':
+    case 'is-not-null':
+    case 'filterMatch':
+      return 'condition';
+    case '()':
+    case 'filterCondition':
+    case 'genericSQLExpr':
+    case 'true':
+    case 'false':
+      return undefined;
+    default:
+      return 'value';
+  }
+}
+
+// The form a node expects of its child
+function wantedForm(
+  parent: Expr,
+  kid: string,
+  wanted: BooleanForm
+): BooleanForm {
+  switch (parent.node) {
+    case 'and':
+    case 'or':
+    case 'not':
+    case 'filterCondition':
+      return 'condition';
+    case '()':
+      return wanted;
+    case 'case':
+      return kid === 'caseWhen' && parent.kids.caseValue === undefined
+        ? 'condition'
+        : 'value';
+    default:
+      return 'value';
+  }
+}
+
 /**
  * Compiles an expression tree by mutating it in-place to set all .sql fields.
  * Assumes the expression tree is already a copy that can be mutated.
@@ -121,7 +177,8 @@ function compileExpr<T extends Expr>(
   context: QueryStruct,
   expr: T,
   state: GenerateState = new GenerateState(),
-  wrap = true
+  wrap = true,
+  wanted: BooleanForm = 'value'
 ): T {
   /*
    * Translate the children first, and stash the translation
@@ -129,16 +186,24 @@ function compileExpr<T extends Expr>(
    * it will have access to the translated children.
    */
   if (exprHasE(expr)) {
-    compileExpr(resultSet, context, expr.e, state);
+    compileExpr(
+      resultSet,
+      context,
+      expr.e,
+      state,
+      true,
+      wantedForm(expr, 'e', wanted)
+    );
   } else if (exprHasKids(expr)) {
-    for (const kidExpr of Object.values(expr.kids)) {
+    for (const [kidName, kidExpr] of Object.entries(expr.kids)) {
       if (kidExpr === null) continue;
+      const kidWanted = wantedForm(expr, kidName, wanted);
       if (Array.isArray(kidExpr)) {
         for (const e of kidExpr) {
-          compileExpr(resultSet, context, e, state);
+          compileExpr(resultSet, context, e, state, true, kidWanted);
         }
       } else {
-        compileExpr(resultSet, context, kidExpr, state);
+        compileExpr(resultSet, context, kidExpr, state, true, kidWanted);
       }
     }
   }
@@ -153,7 +218,7 @@ function compileExpr<T extends Expr>(
     return expr;
   }
 
-  const sql = (() => {
+  let sql = (() => {
     switch (expr.node) {
       case 'field':
         return generateFieldFragment(resultSet, context, expr, state);
@@ -226,7 +291,7 @@ function compileExpr<T extends Expr>(
       // Malloy inequality comparisons always return a boolean
       case '!=': {
         const notEqual = `${expr.kids.left.sql}!=${expr.kids.right.sql}`;
-        return `COALESCE(${notEqual},true)`;
+        return context.dialect.sqlNullIsTrue(notEqual);
       }
       case 'and':
       case 'or':
@@ -242,7 +307,7 @@ function compileExpr<T extends Expr>(
         // null binding collapses to empty-set semantics — not the SQL
         // `IN (NULL)` shape, which has confusing NULL-membership rules.
         if (bound.node === 'null') {
-          return expr.not ? 'TRUE' : 'FALSE';
+          return context.dialect.sqlBoolean(expr.not);
         }
         if (bound.node !== 'arrayLiteral') {
           throw new Error(
@@ -250,7 +315,7 @@ function compileExpr<T extends Expr>(
           );
         }
         if (bound.kids.values.length === 0) {
-          return expr.not ? 'TRUE' : 'FALSE';
+          return context.dialect.sqlBoolean(expr.not);
         }
         const elemSqls = bound.kids.values.map(v =>
           exprToSQL(resultSet, context, v, state)
@@ -269,13 +334,14 @@ function compileExpr<T extends Expr>(
                 expr.kids.right.literal
               )
             : `${expr.kids.left.sql} ${likeIt} ${expr.kids.right.sql}`;
-        return expr.node === 'like' ? compare : `COALESCE(${compare},true)`;
+        return expr.node === 'like'
+          ? compare
+          : context.dialect.sqlNullIsTrue(compare);
       }
       case '()':
         return `(${expr.e.sql})`;
       case 'not':
-        // Malloy not operator always returns a boolean
-        return `COALESCE(NOT ${expr.e.sql},TRUE)`;
+        return context.dialect.sqlNot(expr.e.sql ?? '');
       case 'unary-':
         return `-${expr.e.sql}`;
       case 'is-null':
@@ -284,7 +350,9 @@ function compileExpr<T extends Expr>(
         return `${expr.e.sql} IS NOT NULL`;
       case 'true':
       case 'false':
-        return expr.node;
+        return wanted === 'condition'
+          ? context.dialect.sqlBoolean(expr.node === 'true')
+          : context.dialect.sqlBooleanValue(expr.node === 'true');
       case 'null':
         return 'NULL';
       case 'case':
@@ -318,6 +386,13 @@ function compileExpr<T extends Expr>(
     }
   })();
 
+  const form = booleanForm(expr);
+  if (form === 'condition' && wanted === 'value') {
+    sql = context.dialect.sqlConditionAsValue(sql);
+  } else if (form === 'value' && wanted === 'condition') {
+    sql = context.dialect.sqlValueAsCondition(sql);
+  }
+
   expr.sql = wrap && exprHasKids(expr) ? `(${sql})` : sql;
   return expr;
 }
@@ -330,13 +405,21 @@ export function exprToSQL(
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   exprToTranslate: Expr,
-  state: GenerateState = new GenerateState()
+  state: GenerateState = new GenerateState(),
+  wanted: BooleanForm = 'value'
 ): string {
   // Make a deep copy that we can mutate during compilation
   const exprCopy = deepCopyExpr(exprToTranslate);
 
   // Compile the copy, setting .sql on all nodes
-  const compiled = compileExpr(resultSet, context, exprCopy, state, false);
+  const compiled = compileExpr(
+    resultSet,
+    context,
+    exprCopy,
+    state,
+    false,
+    wanted
+  );
 
   return compiled.sql!;
 }

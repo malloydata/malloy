@@ -586,7 +586,13 @@ export class QueryQuery extends QueryField {
         (which === 'having' && expressionIsCalculation(cond.expressionType)) ||
         (which === 'where' && expressionIsScalar(cond.expressionType))
       ) {
-        const sqlClause = exprToSQL(resultStruct, context, cond.e, undefined);
+        const sqlClause = exprToSQL(
+          resultStruct,
+          context,
+          cond.e,
+          undefined,
+          'condition'
+        );
         resultFilters.add(sqlClause);
       }
     }

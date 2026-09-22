@@ -219,7 +219,7 @@ describe('SQL Server', () => {
           aggregate: n is count()
           where: airport_count > 500
         }
-      `).toMatchResult(tm, {n: 4});
+      `).toMatchResult(tm, {n: 12});
     });
 
     test('selects a comparison as a value', async () => {
@@ -238,7 +238,37 @@ describe('SQL Server', () => {
           aggregate: n is count()
           where: big
         }
-      `).toMatchResult(tm, {n: 4});
+      `).toMatchResult(tm, {n: 12});
+    });
+
+    test('a boolean literal is a condition', async () => {
+      await expect(`
+        source: x is sqlserver.sql('SELECT 1 AS n') extend {
+          join_one: y is sqlserver.sql('SELECT 2 AS n') on true
+        }
+        run: x -> { select: y.n; where: true }
+      `).toMatchResult(tm, {n: 2});
+    });
+
+    test('not of a boolean dimension', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') extend {
+          dimension: big is airport_count > 500
+        } -> {
+          aggregate: n is count()
+          where: not big
+        }
+      `).toMatchResult(tm, {n: 39});
+    });
+
+    test('a comparison as a value keeps null', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT CAST(NULL AS INT) AS x, 3 AS y") -> {
+          select:
+            unknown is (x > 1) ?? true
+            known is (y > 1) ?? false
+        }
+      `).toMatchResult(tm, {unknown: true, known: true});
     });
 
     test('not of null is true', async () => {

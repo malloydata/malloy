@@ -185,6 +185,12 @@ export type GroupByClauseType = 'ordinal' | 'expression';
 export type LimitClauseType = 'limit' | 'top';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
+/**
+ * Where SQL expects a boolean expression to be: a condition (WHERE, ON,
+ * CASE WHEN, the operands of AND, OR and NOT) or a value (everywhere else).
+ * A dialect with booleanType 'none' converts between the two.
+ */
+export type BooleanForm = 'condition' | 'value';
 
 /**
  * Maps a range of integer values to a Malloy number type.
@@ -1331,13 +1337,59 @@ export abstract class Dialect {
   }
 
   /**
-   * SQL to generate to get a boolean value for a boolean expression
+   * A boolean literal where a condition is expected
    */
   sqlBoolean(bv: boolean): string {
     if (this.booleanType === 'none') {
       return bv ? '(1=1)' : '(1=0)';
     }
     return bv ? 'true' : 'false';
+  }
+
+  /**
+   * A boolean literal where a value is expected
+   */
+  sqlBooleanValue(bv: boolean): string {
+    if (this.booleanType === 'none') {
+      return bv ? '1' : '0';
+    }
+    return bv ? 'true' : 'false';
+  }
+
+  /*
+   * A dialect with booleanType 'none' has conditions (a comparison, AND, IS
+   * NULL) which are legal only where SQL expects a condition, and values
+   * (a bit) legal only where it expects a value. The compiler crosses that
+   * boundary through the next two; a NULL condition is not a value.
+   */
+  sqlConditionAsValue(condition: string): string {
+    if (this.booleanType === 'none') {
+      return `CASE WHEN ${condition} THEN 1 WHEN NOT (${condition}) THEN 0 END`;
+    }
+    return condition;
+  }
+
+  sqlValueAsCondition(value: string): string {
+    if (this.booleanType === 'none') {
+      return `(${value} = 1)`;
+    }
+    return value;
+  }
+
+  // Malloy's `not` of NULL is true
+  sqlNot(condition: string): string {
+    if (this.booleanType === 'none') {
+      return `(CASE WHEN ${condition} THEN 1 ELSE 0 END = 0)`;
+    }
+    return `COALESCE(NOT ${condition},TRUE)`;
+  }
+
+  // A condition Malloy defines as true when SQL says NULL: `!=` and `!~`
+  sqlNullIsTrue(condition: string): string {
+    if (this.booleanType === 'none') {
+      return `(CASE WHEN NOT (${condition}) THEN 1 ELSE 0 END = 0)`;
+    }
+    return `COALESCE(${condition},true)`;
   }
 
   /**

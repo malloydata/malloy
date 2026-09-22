@@ -29,6 +29,7 @@ export type {
   CompiledOrderBy,
   LateralJoinExpression,
   QueryInfo,
+  BooleanForm,
   FieldReferenceType,
   FinalStageOrdering,
   GroupByClauseType,
