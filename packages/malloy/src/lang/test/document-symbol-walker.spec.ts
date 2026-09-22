@@ -63,6 +63,91 @@ test('source symbols are included', () => {
   );
 });
 
+describe('symbol ranges exclude leading annotations', () => {
+  test('source', () => {
+    testSymbol(
+      markSource`source:
+        # tag
+        ${"flights is DB.table('flights')"}`,
+      'flights',
+      'explore',
+      [0]
+    );
+  });
+
+  test('top-level query with a block annotation', () => {
+    testSymbol(
+      markSource`query:
+        #|
+          tag
+        |#
+        ${'q is flights -> { group_by: carrier }'}`,
+      'q',
+      'query',
+      [0]
+    );
+  });
+
+  test('unnamed query', () => {
+    testSymbol(
+      markSource`run:
+        # tag
+        ${'flights -> { group_by: carrier }'}`,
+      'unnamed_query',
+      'unnamed_query',
+      [0]
+    );
+  });
+
+  test.each([
+    ['dimension', 'one is 1', 'one', 'field'],
+    ['rename', 'renamed is original', 'renamed', 'field'],
+    ['view', 'v is { group_by: carrier }', 'v', 'query'],
+    ['join_one', 'j is other on j.id = id', 'j', 'join'],
+    ['join_one', 'j is other with id', 'j', 'join'],
+  ])('%s definition', (keyword, definition, name, type) => {
+    const source = markSource`source: s is DB.table('flights') extend {
+      ${keyword}:
+      # tag
+      ${definition}
+    }`;
+    testSymbol(
+      {...source, locations: [source.locations[1]]},
+      name,
+      type,
+      [0, 0]
+    );
+  });
+
+  test('query field reference', () => {
+    testSymbol(
+      markSource`source: s is DB.table('flights') extend {
+        view: v is { group_by:
+          # tag
+          ${'carrier'}
+        }
+      }`,
+      'carrier',
+      'field',
+      [0, 0, 0]
+    );
+  });
+
+  test('nest', () => {
+    testSymbol(
+      markSource`source: s is DB.table('flights') extend {
+        view: v is { nest:
+          # tag
+          ${'n is { group_by: carrier }'}
+        }
+      }`,
+      'n',
+      'query',
+      [0, 0, 0]
+    );
+  });
+});
+
 test('query symbols are included', () => {
   testSymbol(
     markSource`query: ${'flights_by_carrier is flights -> by_carrier'}`,

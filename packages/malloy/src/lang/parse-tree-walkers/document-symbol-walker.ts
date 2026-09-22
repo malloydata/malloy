@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {CommonTokenStream} from 'antlr4ts';
+import type {CommonTokenStream, ParserRuleContext} from 'antlr4ts';
 import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
 import type {ParseTree} from 'antlr4ts/tree';
 import type {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
@@ -37,6 +37,16 @@ class DocumentSymbolWalker implements MalloyParserListener {
     return this.scopes[this.scopes.length - 1];
   }
 
+  private symbolRange(
+    definition: ParserRuleContext,
+    name: ParserRuleContext
+  ): DocumentRange {
+    return {
+      start: this.translator.rangeFromContext(name).start,
+      end: this.translator.rangeFromContext(definition).end,
+    };
+  }
+
   enterTopLevelQueryDefs(pcx: parser.TopLevelQueryDefsContext) {
     const blockRange = this.translator.rangeFromContext(pcx);
     const defs = pcx.topLevelQueryDef();
@@ -47,18 +57,20 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   enterTopLevelQueryDef(pcx: parser.TopLevelQueryDefContext) {
     this.symbols.push({
-      range: this.translator.rangeFromContext(pcx),
+      range: this.symbolRange(pcx, pcx.queryName()),
       name: pcx.queryName().text,
       type: 'query',
       children: [],
-      lensRange: this.blockRange,
+      lensRange: this.blockRange ?? this.translator.rangeFromContext(pcx),
     });
     this.blockRange = undefined;
   }
 
   enterRunStatement(pcx: parser.RunStatementContext) {
     this.symbols.push({
-      range: this.translator.rangeFromContext(pcx.topLevelAnonQueryDef()),
+      range: this.translator.rangeFromContext(
+        pcx.topLevelAnonQueryDef().sqExpr()
+      ),
       name: 'unnamed_query',
       type: 'unnamed_query',
       children: [],
@@ -76,13 +88,13 @@ class DocumentSymbolWalker implements MalloyParserListener {
   }
 
   enterSourceDefinition(pcx: parser.SourceDefinitionContext) {
-    const range = this.translator.rangeFromContext(pcx);
+    const range = this.symbolRange(pcx, pcx.sourceNameDef());
     this.scopes.push({
       range,
       name: pcx.sourceNameDef().id().text,
       type: 'explore',
       children: [],
-      lensRange: this.blockRange,
+      lensRange: this.blockRange ?? this.translator.rangeFromContext(pcx),
     });
     this.blockRange = undefined;
   }
@@ -104,11 +116,11 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   enterExploreQueryDef(pcx: parser.ExploreQueryDefContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
+      range: this.symbolRange(pcx, pcx.exploreQueryNameDef()),
       name: pcx.exploreQueryNameDef().id().text,
       type: 'query',
       children: [],
-      lensRange: this.blockRange,
+      lensRange: this.blockRange ?? this.translator.rangeFromContext(pcx),
     };
     const parent = this.peekScope();
     if (parent) {
@@ -161,10 +173,11 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const name = this.getNestDefName(pcx);
     if (name === undefined) return;
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
+      range: this.symbolRange(pcx, pcx.queryName() ?? pcx.vExpr()),
       name,
       type: 'query',
       children: [],
+      lensRange: this.translator.rangeFromContext(pcx),
     };
     const parent = this.peekScope();
     if (parent) {
@@ -186,7 +199,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   enterFieldDef(pcx: parser.FieldDefContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
+      range: this.symbolRange(pcx, pcx.fieldNameDef()),
       name: pcx.fieldNameDef().id().text,
       type: 'field',
       children: [],
@@ -201,7 +214,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const fieldRef = pcx.taggedRef()?.fieldPath();
     if (fieldRef === undefined) return;
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
+      range: this.symbolRange(pcx, fieldRef),
       name: fieldRef.text,
       type: 'field',
       children: [],
@@ -214,7 +227,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   enterRenameEntry(pcx: parser.RenameEntryContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
+      range: this.symbolRange(pcx, pcx.fieldName()[0]),
       name: pcx.fieldName()[0].text,
       type: 'field',
       children: [],
@@ -235,7 +248,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   handleJoinDef(pcx: parser.JoinWithContext | parser.JoinOnContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
+      range: this.symbolRange(pcx, pcx.joinFrom().joinNameDef()),
       name: pcx.joinFrom().joinNameDef().id().text,
       type: 'join',
       children: [],
