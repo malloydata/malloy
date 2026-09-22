@@ -1069,27 +1069,38 @@ expressionModels.forEach((x, databaseName) => {
       );
     });
   });
+  // SQL Server refuses COALESCE whose every argument is the untyped NULL
+  // constant, and NULLIF whose first is; Malloy's bare null has no type to give it
+  const typesBareNull = databaseName !== 'sqlserver';
   describe('coalesce', () => {
     it(`works - ${databaseName}`, async () => {
+      const allNull: [string, null][] = typesBareNull
+        ? [['coalesce(null, null)', null]]
+        : [];
       await funcTestMultiple(
         // ["coalesce('a')", 'a'],
         ["coalesce('a', 'b')", 'a'],
         ["coalesce(null, 'a', 'b')", 'a'],
         ["coalesce(null, 'b')", 'b'],
         ["coalesce('a', null)", 'a'],
-        ['coalesce(null, null)', null]
+        ...allNull
         // ['coalesce(null)', null]
       );
     });
   });
   describe('nullif', () => {
     it(`works - ${databaseName}`, async () => {
+      const nullFirst: [string, null][] = typesBareNull
+        ? [
+            ['nullif(null, null)', null],
+            ['nullif(null, 2)', null],
+          ]
+        : [];
       await funcTestMultiple(
         ["nullif('a', 'a')", null],
         ["nullif('a', 'b')", 'a'],
         ["nullif('a', null)", 'a'],
-        ['nullif(null, null)', null],
-        ['nullif(null, 2)', null]
+        ...nullFirst
       );
     });
   });
