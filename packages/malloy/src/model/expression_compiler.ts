@@ -546,10 +546,17 @@ function expandFunctionCall(
   orderBy: string | undefined,
   limit: string | undefined
 ) {
-  function withCommas(es: Expr[]): SQLExprElement[] {
+  // Each element wrapped in the spread's prefix and suffix, comma separated
+  function withCommas(
+    es: Expr[],
+    prefix?: string,
+    suffix?: string
+  ): SQLExprElement[] {
     const ret: SQLExprElement[] = [];
     for (let i = 0; i < es.length;) {
+      if (prefix) ret.push(prefix);
       ret.push(es[i]);
+      if (suffix) ret.push(suffix);
       i += 1;
       if (i < es.length) {
         ret.push(',');
@@ -574,7 +581,9 @@ function expandFunctionCall(
         return fragment;
       }
       const spread = entry.argIndexes.map(argIndex => args[argIndex]);
-      return composeSQLExpr(withCommas(spread));
+      return composeSQLExpr(
+        withCommas(spread, fragment.prefix, fragment.suffix)
+      );
     } else if (fragment.node === 'function_parameter') {
       const entry = paramMap.get(fragment.name);
       if (entry === undefined) {
