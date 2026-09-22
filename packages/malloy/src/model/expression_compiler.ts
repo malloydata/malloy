@@ -145,6 +145,14 @@ function booleanForm(expr: Expr): BooleanForm | undefined {
   }
 }
 
+// `in` over an empty or null set is a constant, spelled as it always has been
+function emptySetConstant(dialect: Dialect, not: boolean): string {
+  if (dialect.booleanType === 'none') {
+    return dialect.sqlBoolean(not);
+  }
+  return not ? 'TRUE' : 'FALSE';
+}
+
 // The form a node expects of its child
 function wantedForm(
   parent: Expr,
@@ -307,7 +315,7 @@ function compileExpr<T extends Expr>(
         // null binding collapses to empty-set semantics — not the SQL
         // `IN (NULL)` shape, which has confusing NULL-membership rules.
         if (bound.node === 'null') {
-          return context.dialect.sqlBoolean(expr.not);
+          return emptySetConstant(context.dialect, expr.not);
         }
         if (bound.node !== 'arrayLiteral') {
           throw new Error(
@@ -315,7 +323,7 @@ function compileExpr<T extends Expr>(
           );
         }
         if (bound.kids.values.length === 0) {
-          return context.dialect.sqlBoolean(expr.not);
+          return emptySetConstant(context.dialect, expr.not);
         }
         const elemSqls = bound.kids.values.map(v =>
           exprToSQL(resultSet, context, v, state)

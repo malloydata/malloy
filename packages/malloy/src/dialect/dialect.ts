@@ -279,14 +279,16 @@ export abstract class Dialect {
   // A trailing LIMIT n, or TOP n after SELECT (SQL Server). The compiler
   // emits both positions through sqlSelectLimit and sqlLimit; one is empty.
   limitClause: LimitClauseType = 'limit';
+  // Which stage writes a query's ORDER BY and row limit: the pipeline's last
+  // stage, or the final stage of a dialect which has one
   orderByStage: OrderByStage = 'last';
   // ORDER BY is only legal in a subquery or CTE which also has a row limit
   subqueryOrderByRequiresLimit = false;
 
-  /** The row limit in SELECT-list position: `TOP n ` or nothing */
+  /** The row limit in SELECT-list position: ` TOP n` or nothing */
   sqlSelectLimit(limit: number | undefined): string {
     return limit !== undefined && this.limitClause === 'top'
-      ? `TOP ${limit} `
+      ? ` TOP ${limit}`
       : '';
   }
 
@@ -1356,11 +1358,12 @@ export abstract class Dialect {
     return bv ? 'true' : 'false';
   }
 
-  /*
+  /**
    * A dialect with booleanType 'none' has conditions (a comparison, AND, IS
-   * NULL) which are legal only where SQL expects a condition, and values
-   * (a bit) legal only where it expects a value. The compiler crosses that
-   * boundary through the next two; a NULL condition is not a value.
+   * NULL) which are legal only where SQL expects a condition, and values (a
+   * bit) legal only where it expects a value. The compiler crosses that
+   * boundary through sqlConditionAsValue and sqlValueAsCondition; a NULL
+   * condition is not a value.
    */
   sqlConditionAsValue(condition: string): string {
     if (this.booleanType === 'none') {
@@ -1376,7 +1379,7 @@ export abstract class Dialect {
     return value;
   }
 
-  // Malloy's `not` of NULL is true
+  /** Malloy's `not` of NULL is true */
   sqlNot(condition: string): string {
     if (this.booleanType === 'none') {
       return `(CASE WHEN ${condition} THEN 1 ELSE 0 END = 0)`;
@@ -1384,7 +1387,7 @@ export abstract class Dialect {
     return `COALESCE(NOT ${condition},TRUE)`;
   }
 
-  // A condition Malloy defines as true when SQL says NULL: `!=` and `!~`
+  /** A condition Malloy defines as true when SQL says NULL: `!=` and `!~` */
   sqlNullIsTrue(condition: string): string {
     if (this.booleanType === 'none') {
       return `(CASE WHEN NOT (${condition}) THEN 1 ELSE 0 END = 0)`;

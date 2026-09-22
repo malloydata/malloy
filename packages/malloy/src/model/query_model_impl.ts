@@ -323,7 +323,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         }
       : undefined;
     const stageLimit = orderInFinalStage ? undefined : limit;
-    let query = `SELECT ${d.sqlSelectLimit(stageLimit)}
+    let query = `SELECT${d.sqlSelectLimit(stageLimit)}
               ${fieldNameColumn},
               ${fieldPathColumn},
               ${fieldValueColumn},
