@@ -140,6 +140,16 @@ describe('db:SQLServer', () => {
     expect(res.schemas['sf']?.fields.length).toBeGreaterThan(0);
   });
 
+  it('fetches a table schema from another database', async () => {
+    const res = await connection.fetchSchemaForTables(
+      {sv: 'master.dbo.spt_values'},
+      {}
+    );
+    expect(res.errors).toEqual({});
+    const names = (res.schemas['sv']?.fields ?? []).map(f => f.name);
+    expect(names).toEqual(expect.arrayContaining(['name', 'number', 'type']));
+  });
+
   it('reports a missing table as an error', async () => {
     const res = await connection.fetchSchemaForTables(
       {nope: 'malloytest.no_such_table'},

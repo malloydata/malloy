@@ -256,8 +256,8 @@ export function driverConfig(config: SQLServerConfiguration): mssql.config {
   };
 }
 
-/** A canonical table path as OBJECT_ID() reads it: bracket-quoted segments */
-function objectIdLiteral(dialect: SQLServerDialect, tablePath: string): string {
+/** A canonical table path in T-SQL's own quoting: bracketed segments */
+function bracketedPath(dialect: SQLServerDialect, tablePath: string): string {
   if (
     dialect.identifierEscapeStyle !== 'doubled' &&
     dialect.identifierEscapeStyle !== 'backslash'
@@ -273,10 +273,9 @@ function objectIdLiteral(dialect: SQLServerDialect, tablePath: string): string {
   if (!decoded.ok) {
     throw new Error(decoded.error);
   }
-  const bracketed = decoded.segments
+  return decoded.segments
     .map(seg => `[${seg.value.replace(/]/g, ']]')}]`)
     .join('.');
-  return `'${bracketed.replace(/'/g, "''")}'`;
 }
 
 export interface SQLServerConnectionOptions extends SQLServerConfiguration {
@@ -496,33 +495,47 @@ export class SQLServerConnection
       connection: this.name,
       fields: [],
     };
-    let objectId: string;
+    let path: string;
     try {
-      objectId = objectIdLiteral(this.dialect, tablePath);
+      path = bracketedPath(this.dialect, tablePath);
     } catch (e) {
       return `Invalid table path ${tablePath}: ${e.message}`;
     }
+    // Described as a query, so a path into another database resolves there
+    const described = await this.describeColumns(`SELECT * FROM ${path}`);
+    if (typeof described === 'string') {
+      return described.startsWith('208:')
+        ? `Table ${tablePath} not found`
+        : `Error fetching schema for table ${tablePath}: ${described}`;
+    }
+    await this.schemaFromRows(described, structDef);
+    return structDef;
+  }
+
+  /**
+   * The columns a statement returns, without running it; an error is
+   * `number: message`, the number being SQL Server's (208 is an unknown
+   * object).
+   */
+  private async describeColumns(sql: string): Promise<QueryData | string> {
     const infoQuery = `
       SELECT
-        c.name AS column_name,
-        CASE
-          WHEN t.name IN ('decimal', 'numeric') THEN CONCAT(t.name, '(', c.precision, ',', c.scale, ')')
-          ELSE t.name
-        END AS data_type
-      FROM sys.columns c
-      JOIN sys.types t ON t.user_type_id = c.user_type_id
-      WHERE c.object_id = OBJECT_ID(${objectId})
-      ORDER BY c.column_id`;
+        name AS column_name,
+        system_type_name AS data_type,
+        error_number,
+        error_message
+      FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
+      ORDER BY column_ordinal`;
     try {
-      const result = await this.runRawSQL(infoQuery);
-      if (result.rows.length === 0) {
-        return `Table ${tablePath} not found`;
+      const result = await this.runBatch(infoQuery, {sql});
+      const failed = result.rows.find(r => r['error_message'] !== null);
+      if (failed) {
+        return `${failed['error_number']}: ${failed['error_message']}`;
       }
-      await this.schemaFromRows(result.rows, structDef);
+      return result.rows;
     } catch (error) {
-      return `Error fetching schema for ${tablePath}: ${error.message}`;
+      return `0: ${error.message}`;
     }
-    return structDef;
   }
 
   async fetchSelectSchema(
@@ -535,24 +548,11 @@ export class SQLServerConnection
       fields: [],
       name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
-    // Describes the statement without running it
-    const infoQuery = `
-      SELECT
-        name AS column_name,
-        system_type_name AS data_type,
-        error_message
-      FROM sys.dm_exec_describe_first_result_set(@sql, NULL, 0)
-      ORDER BY column_ordinal`;
-    try {
-      const result = await this.runBatch(infoQuery, {sql: sqlRef.selectStr});
-      const failed = result.rows.find(r => r['error_message'] !== null);
-      if (failed) {
-        return `Error fetching schema for SQL block: ${failed['error_message']}`;
-      }
-      await this.schemaFromRows(result.rows, structDef);
-    } catch (error) {
-      return `Error fetching schema for SQL block: ${error.message}`;
+    const described = await this.describeColumns(sqlRef.selectStr);
+    if (typeof described === 'string') {
+      return `Error fetching schema for SQL block: ${described.replace(/^\d+: /, '')}`;
     }
+    await this.schemaFromRows(described, structDef);
     return structDef;
   }
 
