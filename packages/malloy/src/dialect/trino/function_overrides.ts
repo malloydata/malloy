@@ -13,8 +13,8 @@ export const TRINO_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   unicode: {sql: "CODEPOINT(NULLIF(CAST(${value} as VARCHAR(1)),''))"},
   concat: {
     variadic: {
-      // Using `expr` definition because each spread argument needs to be cast
-      expr: sql`CONCAT(${spread(arg('values'), 'CAST(', 'AS VARCHAR)')})`,
+      // The arguments as written; Trino's CONCAT accepts them
+      expr: sql`CONCAT(${spread(arg('values'))})`,
     },
   },
   div: {sql: 'FLOOR(${dividend} / ${divisor})'},
