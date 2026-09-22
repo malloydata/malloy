@@ -110,7 +110,7 @@ describe('db:SQLServer', () => {
       d: 'date',
       dt2: 'timestamp',
       dt: 'timestamp',
-      dto: 'sql native',
+      dto: 'timestamp',
       t: 'sql native',
       uid: 'string',
     });

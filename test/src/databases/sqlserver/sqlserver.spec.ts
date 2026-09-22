@@ -361,6 +361,39 @@ describe('SQL Server', () => {
     });
   });
 
+  describe('time zones', () => {
+    test('converts a query time zone through its Windows name', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT CAST('2020-02-20 00:00:00' AS DATETIME2) AS t") -> {
+          timezone: 'America/Mexico_City'
+          select: mex_day is t.day, mex_hour is hour(t)
+        }
+      `).toMatchResult(tm, {
+        mex_day: new Date('2020-02-19T06:00:00Z'),
+        mex_hour: 18,
+      });
+    });
+
+    test('a literal written in a zone is that instant', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT 1 AS n") -> {
+          select: t is @2020-02-20 00:00:00[America/Mexico_City]
+        }
+      `).toMatchResult(tm, {t: new Date('2020-02-20T06:00:00Z')});
+    });
+
+    test('reads a datetimeoffset column as a timestamp', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.alltypes') -> {
+          select: t_timestamp, h is hour(t_timestamp)
+        }
+      `).toMatchResult(tm, {
+        t_timestamp: new Date('2020-03-02T12:35:56Z'),
+        h: 12,
+      });
+    });
+  });
+
   describe('joins', () => {
     test('sums each side of a fan-out once', async () => {
       await expect(`

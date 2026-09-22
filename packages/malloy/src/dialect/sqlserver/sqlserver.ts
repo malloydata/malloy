@@ -40,6 +40,7 @@ import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
 import type {ValidateTablePathResult} from '../table-path';
 import {SQLSERVER_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SQLSERVER_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+import {WINDOWS_TIME_ZONES} from './windows_zones';
 
 /** DATEPART / DATEADD / DATEDIFF spellings of Malloy's units */
 const datePartMap: Record<string, string> = {
@@ -88,6 +89,9 @@ const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'datetime': {type: 'timestamp'},
   'datetime2': {type: 'timestamp'},
   'smalldatetime': {type: 'timestamp'},
+  // An instant with the offset it was written in; DATEPART and DATETRUNC read
+  // its clock at that offset, and AT TIME ZONE converts from it.
+  'datetimeoffset': {type: 'timestamp'},
 };
 
 function parseSQLServerType(sqlType: string): {base: string; params: number[]} {
@@ -645,15 +649,15 @@ export class SQLServerDialect extends Dialect {
     throw new Error('SQL Server dialect does not support timestamptz');
   }
 
-  // AT TIME ZONE takes Windows time zone names, never IANA ones; UTC is
-  // spelled the same in both.
+  // AT TIME ZONE takes a Windows time zone name
   sqlTimezoneLiteral(timezone: string): string {
-    if (timezone === 'UTC') {
-      return "'UTC'";
+    const windowsName = WINDOWS_TIME_ZONES[timezone];
+    if (windowsName === undefined) {
+      throw new Error(
+        `SQL Server dialect has no Windows time zone for '${timezone}'`
+      );
     }
-    throw new Error(
-      `SQL Server dialect cannot express time zone '${timezone}' (AT TIME ZONE takes a Windows time zone name)`
-    );
+    return this.sqlLiteralString(windowsName);
   }
 
   sqlConvertToCivilTime(
