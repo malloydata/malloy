@@ -84,7 +84,17 @@ describe('db:SQLServer', () => {
             CAST('2021-02-24 03:05:06' AS DATETIME) AS dt,
             CAST('2021-02-24 03:05:06 -06:00' AS DATETIMEOFFSET) AS dto,
             CAST('03:05:06' AS TIME) AS t,
-            NEWID() AS uid
+            NEWID() AS uid,
+            CAST(1 AS MONEY) AS m,
+            CAST(1 AS SMALLMONEY) AS sm,
+            CAST(1 AS NUMERIC(12, 3)) AS n12_3,
+            CAST('a' AS CHAR(2)) AS c,
+            CAST('a' AS NCHAR(2)) AS nc,
+            CAST('2021-02-24 03:05:00' AS SMALLDATETIME) AS sdt,
+            CAST('a' AS TEXT) AS tx,
+            CAST('a' AS NTEXT) AS ntx,
+            CAST(1 AS VARBINARY(8)) AS vb,
+            CAST('<a/>' AS XML) AS x
         `,
         connection: 'sqlserver',
       },
@@ -116,6 +126,16 @@ describe('db:SQLServer', () => {
       dto: 'timestamp',
       t: 'sql native',
       uid: 'string',
+      m: 'number:float',
+      sm: 'number:float',
+      n12_3: 'number:float',
+      c: 'string',
+      nc: 'string',
+      sdt: 'timestamp',
+      tx: 'sql native',
+      ntx: 'sql native',
+      vb: 'sql native',
+      x: 'sql native',
     });
   });
 

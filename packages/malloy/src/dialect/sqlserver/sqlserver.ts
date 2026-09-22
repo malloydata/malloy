@@ -80,10 +80,9 @@ const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'smallmoney': {type: 'number', numberType: 'float'},
   'char': {type: 'string'},
   'varchar': {type: 'string'},
-  'text': {type: 'string'},
   'nchar': {type: 'string'},
   'nvarchar': {type: 'string'},
-  'ntext': {type: 'string'},
+  // text and ntext take no GROUP BY, MAX or comparison, so they stay native
   'uniqueidentifier': {type: 'string'},
   'date': {type: 'date'},
   'datetime': {type: 'timestamp'},
