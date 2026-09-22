@@ -378,10 +378,17 @@ export class SQLServerConnection
     }
     if (!this.connecting) {
       const pool = new mssql.ConnectionPool(driverConfig(this.config));
-      this.connecting = pool.connect().then(p => {
-        this.pool = p;
-        return p;
-      });
+      this.connecting = pool.connect().then(
+        p => {
+          this.pool = p;
+          return p;
+        },
+        e => {
+          // A refused connect is tried again on the next call
+          this.connecting = undefined;
+          throw e;
+        }
+      );
     }
     return this.connecting;
   }
