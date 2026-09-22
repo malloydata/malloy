@@ -11,7 +11,49 @@ import {
   parseNumberShorthand,
   parseCurrencyShorthand,
   normalizeScale,
+  formatDuration,
 } from './util';
+import {getText as legacyDurationText} from './html/duration';
+import {NumberField} from './data_tree';
+import {renderNumericField} from './component/render-numeric-field';
+
+describe.each(['current', 'legacy'])('%s duration formatting', renderer => {
+  const field = new NumberField(
+    {name: 'elapsed', type: {kind: 'number_type'}},
+    undefined
+  );
+
+  test.each([
+    [-1, 'days', '-1 day'],
+    [-2, 'days', '-2 days'],
+    [-26, 'hours', '-1 day 2 hours'],
+    [-61, 'seconds', '-1 minute 1 second'],
+    [-1002, 'milliseconds', '-1 second 2 milliseconds'],
+    [-1002, 'microseconds', '-1 millisecond 2 microseconds'],
+    [-1002, 'nanoseconds', '-1 microsecond 2 nanoseconds'],
+    [-0.5, 'seconds', '-0.5 seconds'],
+    [0, 'days', '0 days'],
+    [-0, 'days', '0 days'],
+    [61, 'seconds', '1 minute 1 second'],
+    [-90061, 'seconds', '-1 day 1 hour'],
+  ])('formats %s %s as %s', (value, durationUnit, expected) => {
+    const text =
+      renderer === 'current'
+        ? renderNumericField(field, value, {
+            mode: 'duration',
+            duration: {unit: durationUnit, terse: false},
+          })
+        : legacyDurationText(field, value, {durationUnit});
+    expect(text).toBe(expected);
+  });
+});
+
+test('duration formatting preserves terse and numeric formats', () => {
+  expect(formatDuration(-61, {terse: true})).toBe('-1m 1s');
+  expect(formatDuration(-1, {durationUnit: 'days', numFormat: '0.00'})).toBe(
+    '-1.00 day'
+  );
+});
 
 describe('tagFromAnnotations route selection', () => {
   test('selects annotations by app-claimed route', () => {

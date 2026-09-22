@@ -120,22 +120,22 @@ const multiplierMap = new Map<DurationUnit, number>([
   [DurationUnit.Days, Number.MAX_VALUE],
 ]);
 
-export function getText(
-  field: Field,
+export function formatDuration(
   value: number,
   options: {
     durationUnit?: string;
     terse?: boolean;
+    numFormat?: string;
   }
-): string | null {
+): string {
   const targetUnit =
     options.durationUnit && isDurationUnit(options.durationUnit)
       ? options.durationUnit
       : DurationUnit.Seconds;
-  const numFormat = undefined; // Format now resolved at setup time
+  const numFormat = options.numFormat;
   const terse = options.terse ?? false;
 
-  let currentDuration = value;
+  let currentDuration = Math.abs(value);
   let currentUnitValue = 0;
   let durationParts: string[] = [];
   let foundUnit = false;
@@ -165,7 +165,7 @@ export function getText(
   }
 
   if (durationParts.length > 0) {
-    return durationParts.slice(0, 2).join(' ');
+    return (value < 0 ? '-' : '') + durationParts.slice(0, 2).join(' ');
   }
 
   return formatTimeUnit(0, targetUnit, {numFormat, terse});

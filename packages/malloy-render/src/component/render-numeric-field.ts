@@ -5,7 +5,7 @@
 
 import {format} from 'ssf';
 import {
-  getText,
+  formatDuration,
   NULL_SYMBOL,
   renderTimeString,
   formatBigNumber,
@@ -59,12 +59,10 @@ export function renderNumericField(
     case 'percent':
       return format('#,##0.00%', value);
     case 'duration': {
-      return (
-        getText(f, value, {
-          durationUnit: config.duration.unit,
-          terse: config.duration.terse,
-        }) ?? value.toLocaleString()
-      );
+      return formatDuration(value, {
+        durationUnit: config.duration.unit,
+        terse: config.duration.terse,
+      });
     }
     case 'number':
       return renderNumberValue(config.number, value);
