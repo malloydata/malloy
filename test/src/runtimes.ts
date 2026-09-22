@@ -36,7 +36,6 @@ import {
   SQLServerExecutor,
 } from '@malloydata/db-sqlserver/src/sqlserver_connection';
 import {EventEmitter} from 'events';
-import {mssqlConnectionString} from '../mssql/connection_string';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
   public async runSQL(
@@ -229,7 +228,11 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
             name: dbName,
             additionalExtensions: ['mssql'],
             setupSQL: [
-              `ATTACH '${mssqlConnectionString(s.database ?? 'malloytest')}' AS msdb (TYPE mssql)`,
+              // The same string test/mssql/connection_string.ts builds for the
+              // loader, written here because packages/malloy-render type-checks
+              // this file alone and admits no import beside it. `Server=host,port`:
+              // the extension reads no separate Port key.
+              `ATTACH 'Server=${s.server},${s.port ?? 1433};Database=${s.database};User Id=${s.user};Password=${s.password};TrustServerCertificate=${s.trustServerCertificate ?? false}' AS msdb (TYPE mssql)`,
               `USE msdb.${s.database}`,
             ].join(';\n'),
           });
