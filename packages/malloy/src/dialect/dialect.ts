@@ -623,7 +623,7 @@ export abstract class Dialect {
 
   sqlFinalStage(
     _lastStageName: string,
-    _fields: string[],
+    _fields: DialectFieldList,
     _ordering?: FinalStageOrdering
   ): string {
     throw new Error('Dialect has no final Stage but called Anyway');

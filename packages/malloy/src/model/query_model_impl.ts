@@ -5,6 +5,7 @@
 
 import {QueryQuery} from './query_query';
 import type {
+  QueryResultDef,
   ModelDef,
   StructRef,
   Argument,
@@ -18,11 +19,12 @@ import type {
   TurtleDefPlusFilters,
   TurtleDef,
 } from './malloy_types';
-import {activeName, isSourceDef, isAtomic} from './malloy_types';
+import {activeName, isSourceDef} from './malloy_types';
 import {StageWriter} from './stage_writer';
 import {
   StandardSQLDialect,
   type Dialect,
+  type DialectFieldList,
   type FinalStageOrdering,
 } from '../dialect';
 import type {Connection} from '../connection/types';
@@ -30,6 +32,7 @@ import type {ModelRootInterface} from './query_node';
 import {QueryStruct, isScalarField} from './query_node';
 import type {QueryModel, QueryResults} from './query_model_contract';
 import {rowDataToNumber} from '../api/row_data_utils';
+import {getDialectFieldList} from './utils';
 import {MalloyCompileError} from './malloy_compile_error';
 
 export function makeQueryModel(modelDef: ModelDef | undefined): QueryModel {
@@ -155,24 +158,10 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       finalStage && dialect.orderByStage === 'final'
     );
     if (finalStage) {
-      // const fieldNames: string[] = [];
-      // for (const f of ret.outputStruct.fields) {
-      //   fieldNames.push(activeName(f));
-      // }
-      const fieldNames: string[] = [];
-      for (const f of ret.outputStruct.fields) {
-        if (isAtomic(f)) {
-          const quoted = q.parent.dialect.sqlQuoteIdentifier(f.name);
-          fieldNames.push(quoted);
-        }
-      }
-      // const fieldNames = getAtomicFields(ret.outputStruct).map(fieldDef =>
-      //   q.parent.dialect.sqlQuoteIdentifier(fieldDef.name)
-      // );
       ret.lastStageName = stageWriter.addStage(
-        q.parent.dialect.sqlFinalStage(
+        dialect.sqlFinalStage(
           ret.lastStageName,
-          fieldNames,
+          getDialectFieldList(ret.outputStruct, dialect),
           ret.finalOrdering
         )
       );
@@ -239,7 +228,10 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     if (finalize && this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(
         // note this will be broken on duckDB waiting on a real fix.
-        this.dialect.sqlFinalStage(ret.lastStageName, [])
+        this.dialect.sqlFinalStage(
+          ret.lastStageName,
+          getDialectFieldList(ret.structs[0], this.dialect)
+        )
       );
     }
     return {
@@ -280,6 +272,19 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       }
     }
     indexStar = indexStar.sort((a, b) => a.path[0].localeCompare(b.path[0]));
+    const indexStruct: QueryResultDef = {
+      type: 'query_result',
+      name: 'index',
+      connection: struct.connectionName,
+      dialect: struct.dialect.name,
+      fields: [
+        {name: 'fieldName', type: 'string'},
+        {name: 'fieldPath', type: 'string'},
+        {name: 'fieldType', type: 'string'},
+        {name: 'weight', type: 'number'},
+        {name: 'fieldValue', type: 'string'},
+      ],
+    };
     const indexQuery: Query = {
       structRef: explore,
       pipeline: [
@@ -287,19 +292,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
           type: 'index',
           indexFields: indexStar,
           sample: d.defaultSampling,
-          outputStruct: {
-            type: 'query_result',
-            name: 'index',
-            connection: struct.connectionName,
-            dialect: struct.dialect.name,
-            fields: [
-              {name: 'fieldName', type: 'string'},
-              {name: 'fieldPath', type: 'string'},
-              {name: 'fieldType', type: 'string'},
-              {name: 'weight', type: 'number'},
-              {name: 'fieldValue', type: 'string'},
-            ],
-          },
+          outputStruct: indexStruct,
         },
       ],
     };
@@ -353,16 +346,17 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
             ${d.sqlLimit(stageLimit)}
           `;
     if (d.hasFinalStage) {
+      const fields: DialectFieldList = [
+        ...getDialectFieldList(indexStruct, d),
+        {
+          typeDef: {type: 'number'},
+          sqlExpression: 'match_first',
+          rawName: 'match_first',
+        },
+      ];
       query = `WITH __stage0 AS(\n${query}\n)\n${d.sqlFinalStage(
         '__stage0',
-        [
-          fieldNameColumn,
-          fieldPathColumn,
-          fieldValueColumn,
-          fieldTypeColumn,
-          weightColumn,
-          'match_first',
-        ],
+        fields,
         ordering
       )}`;
     }

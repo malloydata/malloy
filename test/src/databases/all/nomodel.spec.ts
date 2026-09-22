@@ -910,7 +910,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     const sql = `select 1 as ${q`one`}`;
     if (runtime.dialect.hasFinalStage) {
-      const finalStage = runtime.dialect.sqlFinalStage('__stage0', [q`one`]);
+      const finalStage = runtime.dialect.sqlFinalStage('__stage0', [
+        {typeDef: {type: 'number'}, sqlExpression: q`one`, rawName: 'one'},
+      ]);
       expect(result.sql).toBe(`WITH __stage0 AS (\n  ${sql})\n${finalStage}`);
     } else {
       expect(result.sql).toBe(sql);

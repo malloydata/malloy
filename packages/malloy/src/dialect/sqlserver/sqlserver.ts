@@ -353,12 +353,16 @@ export class SQLServerDialect extends Dialect {
   // reads a dot in a column name as a nested path).
   sqlFinalStage(
     lastStageName: string,
-    _fields: string[],
+    fields: DialectFieldList,
     ordering?: FinalStageOrdering
   ): string {
+    const columns = fields.map(
+      f =>
+        `${this.jsonValue(`t.${f.sqlExpression}`, f.typeDef)} AS ${f.sqlExpression}`
+    );
     let sql =
       `SELECT ${this.sqlSelectLimit(ordering?.limit)}` +
-      '(SELECT t.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER, INCLUDE_NULL_VALUES) AS "row"' +
+      `(SELECT ${columns.join(', ')} FOR JSON PATH, WITHOUT_ARRAY_WRAPPER, INCLUDE_NULL_VALUES) AS "row"` +
       `\nFROM ${lastStageName} AS t`;
     if (ordering && ordering.orderBy.length > 0) {
       const terms = ordering.orderBy.map(o => {
