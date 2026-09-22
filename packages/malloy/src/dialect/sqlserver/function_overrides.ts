@@ -26,8 +26,9 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   ceil: {function: 'CEILING'},
   chr: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE NCHAR(${value}) END"},
   div: {sql: 'FLOOR(${dividend} / ${divisor})'},
+  // Of NULL, false: the standard is COALESCE(ENDS_WITH(...), false)
   ends_with: {
-    sql: `CASE WHEN RIGHT(\${value}, ${len('${suffix}')}) = \${suffix} THEN 1 WHEN RIGHT(\${value}, ${len('${suffix}')}) <> \${suffix} THEN 0 END`,
+    sql: `CASE WHEN RIGHT(\${value}, ${len('${suffix}')}) = \${suffix} THEN 1 ELSE 0 END`,
   },
   greatest: {expr: extreme('DESC')},
   ifnull: {function: 'ISNULL'},
@@ -53,7 +54,7 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   ltrim: {characters: {expr: unsupported('ltrim with characters')}},
   rtrim: {characters: {expr: unsupported('rtrim with characters')}},
   starts_with: {
-    sql: `CASE WHEN LEFT(\${value}, ${len('${prefix}')}) = \${prefix} THEN 1 WHEN LEFT(\${value}, ${len('${prefix}')}) <> \${prefix} THEN 0 END`,
+    sql: `CASE WHEN LEFT(\${value}, ${len('${prefix}')}) = \${prefix} THEN 1 ELSE 0 END`,
   },
   stddev: {function: 'STDEV'},
   string_repeat: {function: 'REPLICATE'},
