@@ -119,6 +119,7 @@ expressionModels.forEach((x, databaseName) => {
       const expected = {
         'bigquery': 'foo2003-01-01 12:00:00+00',
         'snowflake': 'foo2003-01-01T12:00:00.000Z',
+        'sqlserver': 'foo2003-01-01 12:00:00.0000000',
       };
 
       await funcTestMultiple(
