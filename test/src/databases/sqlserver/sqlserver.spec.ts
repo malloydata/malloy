@@ -238,6 +238,24 @@ describe('SQL Server', () => {
   });
 
   describe('booleans', () => {
+    test('a named comparison of NULL is NULL', async () => {
+      await expect(`
+        source: t is sqlserver.sql("""
+          SELECT CAST(NULL AS INT) AS x UNION ALL SELECT 1
+        """) extend { dimension: positive is x > 0 }
+        run: t -> { group_by: positive; order_by: positive asc }
+      `).toEqualResult(tm, [{positive: true}, {positive: null}]);
+    });
+
+    test('a named comparison filters as itself', async () => {
+      await expect(`
+        source: t is sqlserver.sql("""
+          SELECT CAST(NULL AS INT) AS x UNION ALL SELECT 1 UNION ALL SELECT -1
+        """) extend { dimension: positive is x > 0 }
+        run: t -> { where: positive; aggregate: n is count() }
+      `).toEqualResult(tm, [{n: 1}]);
+    });
+
     test('filters on a comparison', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {
