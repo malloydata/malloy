@@ -220,6 +220,23 @@ describe('SQL Server', () => {
     });
   });
 
+  describe('constants', () => {
+    test('a group of only constants is one row', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> { group_by: x is 1, y is 'a' }
+      `).toEqualResult(tm, [{x: 1, y: 'a'}]);
+    });
+
+    test('a group of only constants counts the whole table', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          group_by: x is 1
+          aggregate: n is count()
+        } -> { group_by: x; aggregate: rows is count() }
+      `).toMatchResult(tm, {x: 1, rows: 1});
+    });
+  });
+
   describe('booleans', () => {
     test('filters on a comparison', async () => {
       await expect(`

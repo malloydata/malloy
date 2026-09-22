@@ -176,7 +176,17 @@ function groupByTerms(
 
 function groupByClause(dialect: Dialect, columns: StageOutputColumn[]): string {
   const terms = groupByTerms(dialect, columns);
-  return terms.length > 0 ? `GROUP BY ${terms.join(',')}\n` : '';
+  if (terms.length > 0) {
+    return `GROUP BY ${terms.join(',')}\n`;
+  }
+  // Dimensions which are all constants still make one group of the input
+  if (
+    dialect.groupByClause === 'expression' &&
+    columns.some(c => c.isDimension)
+  ) {
+    return 'GROUP BY ()\n';
+  }
+  return '';
 }
 
 type StageOutputContext = {
