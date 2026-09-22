@@ -778,7 +778,17 @@ describe('expressions', () => {
       expect(modelX`source.max(many.column)`).toTranslate();
     });
     test('many.column.count()', () => {
-      expect(expr`many.column.count()`).toTranslate();
+      expect(modelX`many.column.count()`).toTranslate();
+    });
+    test('count reports an undefined source at the reference', () => {
+      expect(markSource`run: a -> {
+        aggregate: c is ${'missing'}.count()
+      }`).toLog(errorMessage("'missing' is not defined"));
+    });
+    test('count reports an undefined member of a join', () => {
+      expect(markSource`run: ab -> {
+        aggregate: c is b.${'missing'}.count()
+      }`).toLog(errorMessage("'missing' is not defined"));
     });
     test('count()', () => {
       expect(modelX`count()`).toTranslate();

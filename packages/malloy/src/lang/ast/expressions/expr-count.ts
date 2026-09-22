@@ -8,6 +8,7 @@ import type {FieldReference} from '../query-items/field-references';
 import type {ExprValue} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
 import {ExprAggregateFunction} from './expr-aggregate-function';
+import {errorFor} from '../ast-utils';
 
 export class ExprCount extends ExprAggregateFunction {
   elementType = 'count';
@@ -34,7 +35,7 @@ export class ExprCount extends ExprAggregateFunction {
     };
   }
 
-  protected computeExpression(_fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const ret: AggregateExpr = {
       node: 'aggregate',
       function: 'count',
@@ -42,6 +43,13 @@ export class ExprCount extends ExprAggregateFunction {
       at: this.location,
     };
     if (this.source) {
+      const inputFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
+      const lookup = this.source.getField(inputFS);
+      if (lookup.error) {
+        const at = lookup.error.at ?? this.source;
+        at.logError(lookup.error.code, lookup.error.message);
+        return errorFor('count source lookup');
+      }
       ret.structPath = this.source.path;
     }
     return {
