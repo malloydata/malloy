@@ -41,10 +41,12 @@ class DocumentSymbolWalker implements MalloyParserListener {
     definition: ParserRuleContext,
     name: ParserRuleContext
   ): DocumentRange {
-    return {
-      start: this.translator.rangeFromContext(name).start,
-      end: this.translator.rangeFromContext(definition).end,
-    };
+    const range = this.translator.rangeFromContext(definition);
+    // An incomplete definition can have an empty, recovered name context.
+    if (name.stop && name.start.tokenIndex <= name.stop.tokenIndex) {
+      return {...range, start: this.translator.rangeFromContext(name).start};
+    }
+    return range;
   }
 
   enterTopLevelQueryDefs(pcx: parser.TopLevelQueryDefsContext) {
@@ -67,10 +69,9 @@ class DocumentSymbolWalker implements MalloyParserListener {
   }
 
   enterRunStatement(pcx: parser.RunStatementContext) {
+    const definition = pcx.topLevelAnonQueryDef();
     this.symbols.push({
-      range: this.translator.rangeFromContext(
-        pcx.topLevelAnonQueryDef().sqExpr()
-      ),
+      range: this.symbolRange(definition, definition.sqExpr()),
       name: 'unnamed_query',
       type: 'unnamed_query',
       children: [],

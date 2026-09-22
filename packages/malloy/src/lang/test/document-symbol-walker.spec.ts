@@ -148,6 +148,32 @@ describe('symbol ranges exclude leading annotations', () => {
   });
 });
 
+describe('symbol ranges for incomplete annotated definitions', () => {
+  test.each([
+    {source: 'run:\n  # tag\n', path: [0], line: 1, character: 2},
+    {source: 'query: # tag\n', path: [0], line: 0, character: 7},
+    {source: 'source:\n # tag\n', path: [0], line: 1, character: 1},
+    {
+      source: "source: s is DB.table('t') extend { dimension: # tag\n }",
+      path: [0, 0],
+      line: 0,
+      character: 47,
+    },
+  ])('$source', ({source, path, line, character}) => {
+    const doc = new MalloyExplore(source);
+    let current = {children: doc.symbols};
+    path.forEach(segment => {
+      current = current.children[segment];
+    });
+    expect(current).toMatchObject({
+      range: {
+        start: {line, character},
+        end: {line, character: character + '# tag\n'.length},
+      },
+    });
+  });
+});
+
 test('query symbols are included', () => {
   testSymbol(
     markSource`query: ${'flights_by_carrier is flights -> by_carrier'}`,
