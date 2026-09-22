@@ -236,6 +236,15 @@ describe('SQL Server', () => {
       `).toEqualResult(tm, [{copy: 1, n: 51}]);
     });
 
+    test('a window ordered by a constant ranks every row first', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          group_by: r is 1
+          calculate: zero is 1 - rank()
+        }
+      `).toEqualResult(tm, [{r: 1, zero: 0}]);
+    });
+
     test('a group of only constants counts the whole table', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {

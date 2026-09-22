@@ -147,6 +147,7 @@ export class SQLServerDialect extends Dialect {
   hasTimestamptz = false;
   // A result row is a JSON document, and JSON.parse reads a bigint as a double.
   supportsBigIntPrecision = false;
+  supportsConstantWindowOrder = false;
   maxIdentifierLength = 128;
   likeEscape = true;
   likeExtraWildcards = ['['];

@@ -33,6 +33,7 @@ import {
   activeName,
   isSourceDef,
   isBaseTable,
+  expressionIsScalar,
   hasExpression,
   isAtomic,
   isJoinedSource,
@@ -71,12 +72,17 @@ export class QueryField extends QueryNode {
   }
 
   /**
-   * Does the field's expression read a column of its source? A reference to
-   * another field reads a column only if that field does, so a dimension
-   * defined through constants is itself constant.
+   * Does the field's expression read its source's rows? An aggregate or
+   * analytic does whatever it names; a scalar does when it names a column,
+   * and a reference to another field counts only if that field does, so a
+   * dimension defined through constants is itself constant.
    */
   readsColumn(seen: Set<QueryField> = new Set()): boolean {
-    if (!hasExpression(this.fieldDef) || seen.has(this)) {
+    if (
+      !hasExpression(this.fieldDef) ||
+      !expressionIsScalar(this.fieldDef.expressionType) ||
+      seen.has(this)
+    ) {
       return true;
     }
     seen.add(this);

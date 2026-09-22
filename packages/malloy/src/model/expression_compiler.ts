@@ -672,6 +672,7 @@ function generateAnalyticFragment(
   if (!funcOrdering && dialectOverload.needsWindowOrderBy) {
     // calculate the ordering.
     const obSQL: string[] = [];
+    let constantTerms = 0;
     let orderingField: {name: string; fif: FieldInstanceField} | undefined;
     const orderByDef =
       (resultStruct.firstSegment as QuerySegment).orderBy ||
@@ -694,6 +695,14 @@ function generateAnalyticFragment(
           continue;
         }
       }
+      // A constant orders nothing; a dialect which refuses one leaves it out
+      if (
+        !context.dialect.supportsConstantWindowOrder &&
+        !orderingField.fif.f.readsColumn()
+      ) {
+        constantTerms++;
+        continue;
+      }
       if (resultStruct.firstSegment.type === 'reduce') {
         const orderSQL = orderingField.fif.getAnalyticalSQL(false);
         // const orderSQL = this.generateDimFragment(resultSet, context, arg, state)
@@ -711,6 +720,9 @@ function generateAnalyticFragment(
       }
     }
 
+    if (obSQL.length === 0 && constantTerms > 0) {
+      obSQL.push(` ${context.dialect.sqlWindowOrderByNothing()}`);
+    }
     if (obSQL.length > 0) {
       orderBy = ' ' + context.dialect.sqlOrderBy(obSQL, 'analytical');
     }

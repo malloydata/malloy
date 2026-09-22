@@ -303,6 +303,10 @@ export abstract class Dialect {
   // translation error at the expression.
   supportsRegexpMatch = true;
 
+  // Can a window function's ORDER BY name a constant? False leaves constant
+  // terms out, and orders by sqlWindowOrderByNothing() when none remain.
+  supportsConstantWindowOrder = true;
+
   // null will match in a function signature
   nullMatchesFunctionSignature = true;
 
@@ -1335,6 +1339,11 @@ export abstract class Dialect {
     }
     const compare = `${left} ${likeOp} ${this.sqlLiteralString(escaped)}`;
     return escapeClause ? `${compare} ESCAPE '^'` : compare;
+  }
+
+  /** A window ORDER BY term which orders nothing */
+  sqlWindowOrderByNothing(): string {
+    return '(SELECT NULL)';
   }
 
   /**
