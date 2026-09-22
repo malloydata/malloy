@@ -345,7 +345,9 @@ export class SQLServerDialect extends Dialect {
     const object = this.jsonObject(fieldList);
     const cond = turtleGroupSetCondition(groupSet, filterSQL);
     const element = cond ? `CASE WHEN ${cond} THEN ${object} END` : object;
-    let elements = `'[' + STRING_AGG(${element}, ',') + ']'`;
+    // STRING_AGG answers in its operand's type, which an object of only
+    // literals makes NVARCHAR(4000); the MAX type holds a list of any length
+    let elements = `'[' + STRING_AGG(CAST(${element} AS NVARCHAR(MAX)), ',') + ']'`;
     if (orderBy) {
       const terms = orderBy.map(o => {
         const field = fieldList.find(

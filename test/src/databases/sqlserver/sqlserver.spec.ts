@@ -437,6 +437,22 @@ describe('SQL Server', () => {
       });
     });
 
+    test('a nest of literals grows past 8000 bytes', async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+          run: sqlserver.table('malloytest.airports') -> {
+            where: state = 'CA'
+            aggregate: n is count()
+            nest: high is { select: up is elevation > 1000 }
+          }`
+        )
+        .run();
+      const row = result.data.toObject()[0] as {n: number; high: unknown[]};
+      expect(row.high.length).toBe(row.n);
+      expect(row.n).toBeGreaterThan(800);
+    });
+
     test('an ungrouped aggregate sees the whole table', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') extend {
