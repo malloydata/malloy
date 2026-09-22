@@ -90,7 +90,8 @@ export interface SQLServerConfiguration {
 const DEFAULT_REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
 
 // Sent ahead of every batch, since the pool hands out whichever connection is
-// free. DATEFIRST 7 (Sunday) is only the default for US English logins.
+// free. Nothing the dialect writes reads DATEFIRST; it is set so a raw
+// DATEPART(weekday) in a model answers alike for every login's language.
 const SESSION_SETUP = [
   'SET DATEFIRST 7',
   'SET QUOTED_IDENTIFIER ON',

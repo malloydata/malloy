@@ -54,7 +54,6 @@ const datePartMap: Record<string, string> = {
   month: 'month',
   quarter: 'quarter',
   year: 'year',
-  day_of_week: 'weekday',
   day_of_year: 'dayofyear',
 };
 

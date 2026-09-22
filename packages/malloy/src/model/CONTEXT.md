@@ -406,10 +406,12 @@ person would write by hand — no CTE, no fan-out.
 a literal `group_set` column; only the final combine stage renames them to user names
 (`"f1__0" as "f1"`). So a follow-on stage must reference the names the prior stage
 **actually emitted** (suffixed), not the final names — getting this wrong was #2899. To
-keep it straight, a stage's SELECT is built as one `StageOutputColumn[]` (`{sql, name,
-isDimension}`); the SELECT list, the `GROUP BY` positions, the pipelined carry-forward
-list, and the group_set remap list are **all derived from that one array**, so a
-column's downstream name can't drift from what the stage emitted.
+keep it straight, a stage's SELECT is built as one `StageOutputColumn[]` (`{sql, expr,
+name, isDimension, constant}`); the SELECT list, the `GROUP BY` terms (positions, or for a
+dialect whose `groupByClause` is `'expression'` the expressions, a constant dimension left
+out and `GROUP BY ()` written when none remain), the pipelined carry-forward list, and the
+group_set remap list are **all derived from that one array**, so a column's downstream
+name can't drift from what the stage emitted.
 
 **Multi-stage nests — "compile the first stage, then stop."** For a nest pipeline of
 length > 1, `generateTurtlePipelineSQL` compiles `pipeline[0]` to its array-agg, then

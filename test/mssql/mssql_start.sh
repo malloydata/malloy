@@ -32,9 +32,9 @@ if docker container inspect "$CONTAINER_NAME" > /dev/null 2>&1; then
   exit 0
 fi
 
-# SQL Server 2022 by default; MSSQL_IMAGE picks another version. Azure SQL Edge has an ARM64 build but a
-# 2019-era engine (no JSON_OBJECT, GENERATE_SERIES, DATETRUNC), which the
-# sqlserver dialect needs; the x64 image runs under emulation on ARM64 Macs.
+# SQL Server 2022 by default; MSSQL_IMAGE picks another version, 2017 being
+# the oldest the sqlserver dialect runs on. The x64 image runs under emulation
+# on ARM64 Macs.
 IMAGE="${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2022-latest}"
 
 echo "Starting $CONTAINER_NAME ($IMAGE)..."

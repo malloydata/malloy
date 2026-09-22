@@ -113,8 +113,9 @@ function deepCopyExpr<T extends Expr>(expr: T): T {
 }
 
 // The form a node's SQL takes, when it is a boolean expression the compiler
-// can tell apart. Transparent nodes ('()', 'filterCondition') and nodes whose
-// type the compiler does not know (a raw SQL fragment) are undefined.
+// can tell apart. Undefined for a transparent node ('()', 'filterCondition'),
+// a raw SQL fragment, and the literals true and false, which are spelled in
+// whichever form is wanted.
 function booleanForm(expr: Expr): BooleanForm | undefined {
   switch (expr.node) {
     case '>':
@@ -145,7 +146,8 @@ function booleanForm(expr: Expr): BooleanForm | undefined {
   }
 }
 
-// `in` over an empty or null set is a constant, spelled as it always has been
+// `in` over an empty or null set is a constant; a dialect with booleans writes
+// the SQL keyword
 function emptySetConstant(dialect: Dialect, not: boolean): string {
   if (dialect.booleanType === 'none') {
     return dialect.sqlBoolean(not);

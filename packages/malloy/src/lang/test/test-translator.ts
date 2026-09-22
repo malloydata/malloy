@@ -227,9 +227,8 @@ export const pgTableDef: SourceDef = {
  * some mocked schema definitions.
  */
 
-// SQL Server table definition -- the dialect with the fewest capabilities
-// (no regular expressions, no boolean values), for tests of what the
-// translator refuses.
+// SQL Server table definition -- a dialect without regular expressions or
+// boolean values, for tests of what the translator refuses.
 export const msTableDef: SourceDef = {
   type: 'table',
   name: 'aTable',
