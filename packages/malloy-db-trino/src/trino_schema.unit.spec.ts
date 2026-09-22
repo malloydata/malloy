@@ -36,7 +36,7 @@ describe.each(['trino', 'presto'])('%s schema discovery', dialect => {
 
     const recovered = await connection.fetchSchemaForTables(tables, {});
     expect(recovered.errors).toEqual({});
-    expect(recovered.schemas.states.fields).toEqual([
+    expect(recovered.schemas['states'].fields).toEqual([
       {name: 'state', type: 'string'},
     ]);
     expect(await connection.fetchSchemaForTables(tables, {})).toEqual(
