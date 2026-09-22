@@ -105,7 +105,7 @@ function parseSQLServerType(sqlType: string): {base: string; params: number[]} {
 }
 
 /**
- * SQL Server 2022 and later, and Azure SQL Database. A Malloy timestamp is a
+ * SQL Server 2017 and later, and Azure SQL Database. A Malloy timestamp is a
  * UTC wall clock, so a `datetime2` is read as UTC and `now` is
  * `SYSUTCDATETIME()`.
  */
@@ -274,7 +274,8 @@ export class SQLServerDialect extends Dialect {
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
-    return `CROSS JOIN (SELECT value AS group_set FROM GENERATE_SERIES(0, ${groupSetCount})) AS group_set`;
+    const rows = Array.from({length: groupSetCount + 1}, (_, i) => `(${i})`);
+    return `CROSS JOIN (VALUES ${rows.join(',')}) AS group_set(group_set)`;
   }
 
   sqlAnyValue(_groupSet: number, fieldName: string): string {
@@ -287,17 +288,48 @@ export class SQLServerDialect extends Dialect {
     );
   }
 
-  // A nest is JSON text. MAX, CASE and COALESCE return plain text, which
-  // FOR JSON and JSON_OBJECT would quote, so each is wrapped in JSON_QUERY
-  // at its outermost; a column reference keeps the JSON type on its own.
+  // A nest is JSON text the dialect writes itself, so that SQL Server 2017,
+  // which has no JSON_OBJECT, runs it. MAX, CASE and COALESCE return plain
+  // text, which FOR JSON would quote, so a nest is wrapped in JSON_QUERY at
+  // its outermost; a column reference keeps the JSON type on its own.
   private jsonObject(fieldList: DialectFieldList, nulls = false): string {
+    if (fieldList.length === 0) {
+      return "N'{}'";
+    }
     const props = fieldList.map(
-      f =>
-        `${this.sqlLiteralString(f.rawName)}: ${
-          nulls ? 'NULL' : this.jsonValue(f.sqlExpression, f.typeDef)
+      (f, i) =>
+        `${this.sqlLiteralString((i === 0 ? '{' : ',') + JSON.stringify(f.rawName) + ':')} + ${
+          nulls ? "N'null'" : this.jsonText(f.sqlExpression, f.typeDef)
         }`
     );
-    return `JSON_OBJECT(${props.join(', ')})`;
+    return `${props.join(' + ')} + N'}'`;
+  }
+
+  // The JSON text of one value, `null` for NULL. A float is written with the
+  // 17 digits which read back exactly; a datetime as ISO 8601.
+  private jsonText(sql: string, typeDef: AtomicTypeDef | undefined): string {
+    const asText = (text: string) => `ISNULL(${text}, N'null')`;
+    switch (typeDef?.type) {
+      case 'number':
+        return typeDef.numberType === 'integer' ||
+          typeDef.numberType === 'bigint'
+          ? asText(`CONVERT(NVARCHAR(MAX), ${sql})`)
+          : asText(`CONVERT(NVARCHAR(MAX), CAST(${sql} AS FLOAT(53)), 3)`);
+      case 'boolean':
+        return `CASE WHEN ${sql} = 1 THEN N'true' WHEN ${sql} = 0 THEN N'false' ELSE N'null' END`;
+      case 'date':
+        return asText(`N'"' + CONVERT(NVARCHAR(MAX), ${sql}, 23) + N'"'`);
+      case 'timestamp':
+      case 'timestamptz':
+        return asText(`N'"' + CONVERT(NVARCHAR(MAX), ${sql}, 126) + N'"'`);
+      case 'record':
+      case 'array':
+        return asText(sql);
+      default:
+        return asText(
+          `N'"' + STRING_ESCAPE(CAST(${sql} AS NVARCHAR(MAX)), 'json') + N'"'`
+        );
+    }
   }
 
   // One SELECT allows one WITHIN GROUP ordering, so an ordered nest sorts its
@@ -310,7 +342,7 @@ export class SQLServerDialect extends Dialect {
     _limit?: number,
     filterSQL?: string
   ): string {
-    const object = `CAST(${this.jsonObject(fieldList)} AS NVARCHAR(MAX))`;
+    const object = this.jsonObject(fieldList);
     const cond = turtleGroupSetCondition(groupSet, filterSQL);
     const element = cond ? `CASE WHEN ${cond} THEN ${object} END` : object;
     let elements = `'[' + STRING_AGG(${element}, ',') + ']'`;
@@ -449,18 +481,25 @@ export class SQLServerDialect extends Dialect {
   }
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
-    const props = Object.entries(lit.kids).map(
-      ([name, val]) =>
-        `${this.sqlLiteralString(name)}:${this.jsonValue(val.sql ?? 'NULL', val.typeDef)}`
+    const fields: DialectFieldList = Object.entries(lit.kids).map(
+      ([name, val]) => ({
+        rawName: name,
+        sqlExpression: val.sql ?? 'NULL',
+        typeDef: val.typeDef ?? {type: 'string'},
+      })
     );
-    return `JSON_OBJECT(${props.join(', ')})`;
+    return `JSON_QUERY(${this.jsonObject(fields)})`;
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const values = lit.kids.values.map(val =>
-      this.jsonValue(val.sql ?? 'NULL', val.typeDef)
+      this.jsonText(val.sql ?? 'NULL', val.typeDef)
     );
-    return `JSON_ARRAY(${values.join(', ')})`;
+    const list =
+      values.length === 0
+        ? "N'[]'"
+        : `N'[' + ${values.join(" + N',' + ")} + N']'`;
+    return `JSON_QUERY(${list})`;
   }
 
   sqlCreateTableAsSelect(tableName: string, sql: string): string {
@@ -722,17 +761,30 @@ export class SQLServerDialect extends Dialect {
     _inCivilTime: boolean,
     _timezone?: string
   ): string {
+    // Truncation is DATEADD of the whole units since an anchor: 1900-01-01
+    // for a calendar unit, the value's own midnight for a clock unit, so the
+    // count fits an int. SQL Server 2017 has no DATETRUNC.
+    const midnight = `CAST(CAST(${expr} AS DATE) AS DATETIME2)`;
     if (unit === 'week') {
-      // DATETRUNC(week) follows DATEFIRST; Malloy weeks start on Sunday, so
-      // count days from a known Sunday instead.
-      const day = TD.isDate(typeDef) ? expr : `DATETRUNC(day, ${expr})`;
+      // Malloy weeks start on Sunday whatever DATEFIRST says, so count days
+      // from a known Sunday.
+      const day = TD.isDate(typeDef) ? expr : midnight;
       return `DATEADD(day, -((DATEDIFF(day, '19000107', ${expr}) % 7 + 7) % 7), ${day})`;
     }
     const part = datePartMap[unit];
     if (part === undefined) {
       throw new Error(`Unknown SQL Server date part '${unit}'`);
     }
-    return `DATETRUNC(${part}, ${expr})`;
+    if (unit === 'day' && !TD.isDate(typeDef)) {
+      return midnight;
+    }
+    if (unit === 'hour' || unit === 'minute' || unit === 'second') {
+      return `DATEADD(${part}, DATEDIFF(${part}, ${midnight}, ${expr}), ${midnight})`;
+    }
+    const truncated = `DATEADD(${part}, DATEDIFF(${part}, '19000101', ${expr}), '19000101')`;
+    return TD.isDate(typeDef)
+      ? `CAST(${truncated} AS DATE)`
+      : `CAST(${truncated} AS DATETIME2)`;
   }
 
   sqlOffsetTime(

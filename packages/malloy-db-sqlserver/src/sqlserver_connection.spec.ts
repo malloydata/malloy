@@ -18,6 +18,9 @@ describe('db:SQLServer', () => {
     await connection.close();
   });
 
+  // A hundred numbered rows, on any server version
+  const hundredRows =
+    'SELECT TOP 100 ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS value FROM sys.all_objects';
   // The shape the dialect's final stage gives a result row
   const jsonRows = (select: string, from = '') =>
     `SELECT (SELECT ${select} FOR JSON PATH, WITHOUT_ARRAY_WRAPPER, INCLUDE_NULL_VALUES) AS "row" ${from}`;
@@ -164,7 +167,7 @@ describe('db:SQLServer', () => {
 
   it('honors rowLimit', async () => {
     const res = await connection.runSQL(
-      jsonRows('g.value AS value', 'FROM GENERATE_SERIES(1, 100) AS g'),
+      jsonRows('g.value AS value', `FROM (${hundredRows}) AS g`),
       {rowLimit: 5}
     );
     expect(res.rows.length).toBe(5);
@@ -173,7 +176,7 @@ describe('db:SQLServer', () => {
   it('streams rows and stops at rowLimit', async () => {
     const rows: unknown[] = [];
     for await (const row of connection.runSQLStream(
-      jsonRows('g.value AS value', 'FROM GENERATE_SERIES(1, 100) AS g'),
+      jsonRows('g.value AS value', `FROM (${hundredRows}) AS g`),
       {rowLimit: 3}
     )) {
       rows.push(row);

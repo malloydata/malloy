@@ -9,7 +9,7 @@ Malloy is a modern open source language for describing data relationships and tr
 
 ## This package
 
-This package connects the `malloydata/malloy` library to Microsoft SQL Server 2022 and later, and to Azure SQL Database. The dialect is experimental: a model that uses it needs `##! experimental.dialect.sqlserver`.
+This package connects the `malloydata/malloy` library to Microsoft SQL Server 2017 and later, and to Azure SQL Database. The dialect is experimental: a model that uses it needs `##! experimental.dialect.sqlserver`.
 
 ## Connecting
 
@@ -48,10 +48,11 @@ A search index or a query over a materialized result creates a table in `tempdb`
 
 | Feature | First in |
 |---|---|
-| `AT TIME ZONE`, `FOR JSON`, `OPENJSON` | SQL Server 2016 |
+| `AT TIME ZONE`, `FOR JSON`, `OPENJSON`, `STRING_ESCAPE` | SQL Server 2016 |
 | `STRING_AGG`, `TRIM` | SQL Server 2017 |
-| `JSON_OBJECT`, `JSON_ARRAY`, `DATETRUNC`, `GENERATE_SERIES`, two-argument `LTRIM`/`RTRIM` | SQL Server 2022 |
 | Regular expressions (`REGEXP_LIKE` and friends) | SQL Server 2025; a model that uses `~ r'...'` or `regexp_extract` on this dialect gets a translation error |
+
+The dialect writes its own JSON, truncates with `DATEADD`, lists group sets with `VALUES` and takes an extreme with `MAX`/`MIN` over `VALUES`, so it needs none of `JSON_OBJECT`, `DATETRUNC`, `GENERATE_SERIES`, `GREATEST` or `LEAST` from SQL Server 2022. `ltrim` and `rtrim` with a character set, which only 2022's `LTRIM`/`RTRIM` provide, get a translation error; `trim` with a character set works everywhere.
 
 ## How the dialect reads the server
 

@@ -5,10 +5,17 @@
 
 import type {Expr} from '../../model/malloy_types';
 import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
+import {arg, spread, sql} from '../functions/util';
 
-// SQL Server 2022 has no regular expression functions; the translator refuses
-// a call whose template is this node.
-const noRegex: Expr = {node: 'error', message: 'regular expressions'};
+// GREATEST and LEAST arrive in SQL Server 2022; the first row of the arguments
+// in order does the same, and NULL when any argument is
+const extreme = (dir: 'DESC' | 'ASC'): Expr =>
+  sql`(SELECT TOP 1 v FROM (VALUES ${spread(arg('values'), '(', ')')}) AS t(v) WHERE NOT EXISTS (SELECT 1 FROM (VALUES ${spread(arg('values'), '(', ')')}) AS n(v) WHERE n.v IS NULL) ORDER BY v ${dir})`;
+
+// The translator refuses a call whose template is an error node
+const unsupported = (what: string): Expr => ({node: 'error', message: what});
+// SQL Server before 2025 has no regular expression functions
+const noRegex = unsupported('regular expressions');
 
 export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   byte_length: {function: 'DATALENGTH'},
@@ -18,10 +25,12 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   ends_with: {
     sql: 'CASE WHEN RIGHT(${value}, LEN(${suffix})) = ${suffix} THEN 1 WHEN RIGHT(${value}, LEN(${suffix})) <> ${suffix} THEN 0 END',
   },
+  greatest: {expr: extreme('DESC')},
   ifnull: {function: 'ISNULL'},
   // A FLOAT holds neither infinity nor NaN
   is_inf: {sql: '0'},
   is_nan: {sql: '0'},
+  least: {expr: extreme('ASC')},
   length: {function: 'LEN'},
   ln: {sql: 'LOG(${value})'},
   log: {sql: 'LOG(${value}, ${base})'},
@@ -34,9 +43,9 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   },
   atan2: {function: 'ATN2'},
   trim: {characters: {sql: 'TRIM(${trim_characters} FROM ${value})'}},
-  // The two-argument forms need compatibility level 160 (SQL Server 2022)
-  ltrim: {characters: {sql: 'LTRIM(${value}, ${trim_characters})'}},
-  rtrim: {characters: {sql: 'RTRIM(${value}, ${trim_characters})'}},
+  // LTRIM and RTRIM take a character set only from SQL Server 2022
+  ltrim: {characters: {expr: unsupported('ltrim with characters')}},
+  rtrim: {characters: {expr: unsupported('rtrim with characters')}},
   starts_with: {
     sql: 'CASE WHEN LEFT(${value}, LEN(${prefix})) = ${prefix} THEN 1 WHEN LEFT(${value}, LEN(${prefix})) <> ${prefix} THEN 0 END',
   },

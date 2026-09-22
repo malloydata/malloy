@@ -6,7 +6,8 @@
 set -e
 
 SCRIPTDIR=$(cd $(dirname $0); pwd)
-CONTAINER_NAME="mssql-malloy"
+# MSSQL_IMAGE and MSSQL_CONTAINER select a server version to run beside the default
+CONTAINER_NAME="${MSSQL_CONTAINER:-mssql-malloy}"
 # The loader and the tests read MSSQL_*; this script is the only place a
 # default is written. Export the same values to run the tests by hand.
 export MSSQL_HOST="${MSSQL_HOST:-localhost}"
@@ -31,10 +32,10 @@ if docker container inspect "$CONTAINER_NAME" > /dev/null 2>&1; then
   exit 0
 fi
 
-# SQL Server 2022 everywhere. Azure SQL Edge has an ARM64 build but a
+# SQL Server 2022 by default; MSSQL_IMAGE picks another version. Azure SQL Edge has an ARM64 build but a
 # 2019-era engine (no JSON_OBJECT, GENERATE_SERIES, DATETRUNC), which the
 # sqlserver dialect needs; the x64 image runs under emulation on ARM64 Macs.
-IMAGE="mcr.microsoft.com/mssql/server:2022-latest"
+IMAGE="${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2022-latest}"
 
 echo "Starting $CONTAINER_NAME ($IMAGE)..."
 docker run -d \

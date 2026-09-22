@@ -22,5 +22,6 @@ export function mssqlConnectionString(database: string): string {
   const port = required('MSSQL_PORT');
   const user = required('MSSQL_USER');
   const password = required('MSSQL_PASSWORD');
-  return `Server=${host};Port=${port};Database=${database};User Id=${user};Password=${password};TrustServerCertificate=true`;
+  // `Server=host,port`: the extension reads no separate Port key
+  return `Server=${host},${port};Database=${database};User Id=${user};Password=${password};TrustServerCertificate=true`;
 }

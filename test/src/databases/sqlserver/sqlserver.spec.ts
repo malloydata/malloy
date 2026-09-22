@@ -348,6 +348,29 @@ describe('SQL Server', () => {
       });
     });
 
+    test('a nest carries every type as JSON', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.alltypes') -> {
+          nest: row is {
+            select: t_date, t_datetime, t_timestamp, \`string\`, t_int64, t_float64, t_bool_true, t_bool_null
+          }
+        }
+      `).toMatchResult(tm, {
+        row: [
+          {
+            t_date: new Date('2020-03-02T00:00:00Z'),
+            t_datetime: new Date('2020-03-02T12:35:56Z'),
+            t_timestamp: new Date('2020-03-02T12:35:56Z'),
+            string: 'smelly cheese',
+            t_int64: 11,
+            t_float64: 11,
+            t_bool_true: true,
+            t_bool_null: null,
+          },
+        ],
+      });
+    });
+
     test('a nest of only measures is one record', async () => {
       await expect(`${isabella}
         nest: totals is { aggregate: n is count(), airports is airport_count.sum() }
