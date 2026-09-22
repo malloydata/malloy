@@ -31,6 +31,7 @@ import type {
   DialectFieldList,
   FieldReferenceType,
   GroupByClauseType,
+  LimitClauseType,
   QueryInfo,
 } from '../dialect';
 import {Dialect, EscapeStyle, qtz} from '../dialect';
@@ -146,6 +147,7 @@ export class SQLServerDialect extends Dialect {
   likeEscape = true;
   likeExtraWildcards = ['['];
   groupByClause: GroupByClauseType = 'expression';
+  limitClause: LimitClauseType = 'top';
   // REGEXP_LIKE and its family arrived in SQL Server 2025
   supportsRegexpMatch = false;
 

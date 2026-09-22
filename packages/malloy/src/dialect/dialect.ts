@@ -165,6 +165,7 @@ export function turtleGroupSetCondition(
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 export type GroupByClauseType = 'ordinal' | 'expression';
+export type LimitClauseType = 'limit' | 'top';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
@@ -251,6 +252,24 @@ export abstract class Dialect {
   // GROUP BY 1, or GROUP BY the dimension expressions (SQL Server has no
   // ordinals in GROUP BY)
   groupByClause: GroupByClauseType = 'ordinal';
+
+  // A trailing LIMIT n, or TOP n after SELECT (SQL Server). The compiler
+  // emits both positions through sqlSelectLimit and sqlLimit; one is empty.
+  limitClause: LimitClauseType = 'limit';
+
+  /** The row limit in SELECT-list position: `TOP n ` or nothing */
+  sqlSelectLimit(limit: number | undefined): string {
+    return limit !== undefined && this.limitClause === 'top'
+      ? `TOP ${limit} `
+      : '';
+  }
+
+  /** The row limit after ORDER BY, as its own line: `LIMIT n` or nothing */
+  sqlLimit(limit: number | undefined): string {
+    return limit !== undefined && this.limitClause === 'limit'
+      ? `LIMIT ${limit}\n`
+      : '';
+  }
 
   // Can the dialect evaluate `x ~ r'...'`? False makes the operator, and any
   // function whose template for this dialect is an error node, a translation

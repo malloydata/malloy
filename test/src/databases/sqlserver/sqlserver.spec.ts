@@ -87,6 +87,19 @@ describe('SQL Server', () => {
       `).toEqualResult(tm, [{state: 'WY'}, {state: 'WV'}]);
     });
 
+    test('limits a stage that feeds another', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          select: state
+          order_by: state desc
+          limit: 3
+        } -> {
+          select: state
+          order_by: state asc
+        }
+      `).toEqualResult(tm, [{state: 'WI'}, {state: 'WV'}, {state: 'WY'}]);
+    });
+
     test('escapes a bracket in a LIKE pattern', async () => {
       await expect(`
         run: sqlserver.sql("""

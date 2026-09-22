@@ -1319,8 +1319,9 @@ export class QueryQuery extends QueryField {
         this.firstSegment.sample
       );
       if (this.firstSegment.sample) {
+        const d = this.parent.dialect;
         structSQL = stageWriter.addStage(
-          `SELECT * from ${structSQL} as x limit 100000 `
+          `SELECT ${d.sqlSelectLimit(100000)}* from ${structSQL} as x ${d.sqlLimit(100000)}`
         );
       }
     }
@@ -1478,8 +1479,10 @@ export class QueryQuery extends QueryField {
    */
   generateSimpleSQL(stageWriter: StageWriter): string {
     this.rootResult.emitsGroupSet = false;
-    let s = '';
-    s += 'SELECT \n';
+    const limit = isRawSegment(this.firstSegment)
+      ? undefined
+      : this.firstSegment.limit;
+    let s = `SELECT ${this.parent.dialect.sqlSelectLimit(limit)}\n`;
     // A projection groups nothing; a reduce groups its scalar result fields.
     const grouped = this.firstSegment.type === 'reduce';
     const columns: StageOutputColumn[] = [];
@@ -1522,11 +1525,7 @@ export class QueryQuery extends QueryField {
       this.firstSegment as QuerySegment,
       this.rootResult
     );
-
-    // limit
-    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += `LIMIT ${this.firstSegment.limit}\n`;
-    }
+    s += this.parent.dialect.sqlLimit(limit);
     this.resultStage = stageWriter.addStage(s);
     // Consumes any pipelined turtle output. The nests that reach here are
     // single-stage (canUseSingleGroupSetSQL), so outputPipelinedSQL is empty and
@@ -2167,7 +2166,10 @@ export class QueryQuery extends QueryField {
     stageWriter: StageWriter,
     stage0Name: string
   ): string {
-    let s = 'SELECT\n';
+    const limit = isRawSegment(this.firstSegment)
+      ? undefined
+      : this.firstSegment.limit;
+    let s = `SELECT ${this.parent.dialect.sqlSelectLimit(limit)}\n`;
     // Columns this combine stage emits. Unlike the grouped stages above, these
     // are the final output names (unsuffixed), not the group-set-suffixed form.
     // A following pipelined stage carries them forward by name.
@@ -2249,11 +2251,7 @@ export class QueryQuery extends QueryField {
       this.rootResult
     );
     s += orderBySQL;
-
-    // limit
-    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += `LIMIT ${this.firstSegment.limit}\n`;
-    }
+    s += this.parent.dialect.sqlLimit(limit);
 
     this.resultStage = stageWriter.addStage(s);
     this.resultStage = this.generatePipelinedStages(
@@ -2747,7 +2745,10 @@ class QueryQueryIndexStage extends QueryQuery {
       ),
     ];
 
-    let s = 'SELECT\n';
+    const limit = isRawSegment(this.firstSegment)
+      ? undefined
+      : this.firstSegment.limit;
+    let s = `SELECT ${dialect.sqlSelectLimit(limit)}\n`;
     s += grouped.map(c => `  ${c.sql},\n`).join('');
     s += ` ${measureSQL} as ${weightColumn},\n`;
 
@@ -2786,11 +2787,7 @@ class QueryQueryIndexStage extends QueryQuery {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     s += groupByClause(dialect, grouped);
-
-    // limit
-    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += `LIMIT ${this.firstSegment.limit}\n`;
-    }
+    s += dialect.sqlLimit(limit);
     // console.log(s);
     const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(

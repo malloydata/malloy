@@ -303,10 +303,12 @@ function generateSQL(dialect: Dialect, rows: TestDataRow[]): string {
   } else {
     orderByClause = `ORDER BY ${rowIdColumn}`;
   }
-  // Presto/Trino ignores ORDER BY on a subquery without LIMIT
-  orderByClause += ` LIMIT ${rows.length}`;
+  // Presto/Trino ignores ORDER BY on a subquery without LIMIT, and SQL Server
+  // allows it only with TOP
+  orderByClause += ` ${dialect.sqlLimit(rows.length)}`;
+  const top = dialect.sqlSelectLimit(rows.length);
 
-  const sql = `SELECT ${quotedColumns}\nFROM (\n  SELECT *\n  FROM (\n${innerQuery}\n  ) AS t_sorted\n  ${orderByClause}\n) AS t_result\n`;
+  const sql = `SELECT ${quotedColumns}\nFROM (\n  SELECT ${top}*\n  FROM (\n${innerQuery}\n  ) AS t_sorted\n  ${orderByClause}\n) AS t_result\n`;
 
   return sql;
 }

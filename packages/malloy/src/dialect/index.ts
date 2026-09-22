@@ -31,6 +31,7 @@ export type {
   QueryInfo,
   FieldReferenceType,
   GroupByClauseType,
+  LimitClauseType,
   OrderByClauseType,
 } from './dialect';
 export {StandardSQLDialect} from './standardsql';
