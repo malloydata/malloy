@@ -176,7 +176,17 @@ function groupByTerms(
 
 function groupByClause(dialect: Dialect, columns: StageOutputColumn[]): string {
   const terms = groupByTerms(dialect, columns);
-  return terms.length > 0 ? `GROUP BY ${terms.join(',')}\n` : '';
+  if (terms.length > 0) {
+    return `GROUP BY ${terms.join(',')}\n`;
+  }
+  // Dimensions which are all constants still make one group of the input
+  if (
+    dialect.groupByClause === 'expression' &&
+    columns.some(c => c.isDimension)
+  ) {
+    return 'GROUP BY ()\n';
+  }
+  return '';
 }
 
 type StageOutputContext = {
@@ -2769,8 +2779,7 @@ class QueryQueryIndexStage extends QueryQuery {
       ? undefined
       : this.firstSegment.limit;
     let s = `SELECT${dialect.sqlSelectLimit(limit)}\n`;
-    // fieldType and fieldValue share a line, as this stage has always written
-    // them
+    // fieldType and fieldValue share one line
     s += grouped.map((c, i) => `  ${c.sql},${i === 3 ? '' : '\n'}`).join('');
     s += ` ${measureSQL} as ${weightColumn},\n`;
 

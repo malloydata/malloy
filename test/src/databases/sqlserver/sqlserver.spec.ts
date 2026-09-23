@@ -142,6 +142,25 @@ describe('SQL Server', () => {
   });
 
   describe('aggregation', () => {
+    test('a group of only constants is one row', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> { group_by: x is 1, y is 'a' }
+      `).toEqualResult(tm, [{x: 1, y: 'a'}]);
+    });
+
+    test('a constant dimension groups with the others', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          group_by: tag is 'facts', big is airport_count > 500
+          aggregate: n is count()
+          order_by: big desc
+        }
+      `).toEqualResult(tm, [
+        {tag: 'facts', big: true, n: 12},
+        {tag: 'facts', big: false, n: 39},
+      ]);
+    });
+
     test('counts without a group', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {

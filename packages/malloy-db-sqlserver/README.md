@@ -63,14 +63,13 @@ Each of these is a later change, not a promise.
 | A `timezone:` name absent from the CLDR table | Compile error rather than a located one |
 | `greatest`, `least`, `ltrim`/`rtrim` with a character set | Server error before SQL Server 2022, which has `GREATEST`, `LEAST` and the two-argument `LTRIM`/`RTRIM` |
 | `string_agg_distinct`, `byte_length` | Server error: `STRING_AGG` has no `DISTINCT`; a UTF-8 byte count needs the UTF-8 collations of SQL Server 2019 |
-| A dimension that is a constant (`group_by: x is 1`) | Server error: T-SQL refuses a constant in GROUP BY |
 | `datetimeoffset` columns | `sql native`; reading one as a timestamp with its offset is a later change |
 | Materialized tables, `#@ persist`, the search index | Not available: the connection is read-only |
 | NULL ordering | SQL Server's default, NULL first in ascending order; other dialects sort NULL last |
 
 ## What the server sees
 
-Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `QUOTED_IDENTIFIER ON`, `ANSI_NULLS ON` and `ANSI_WARNINGS ON`, then any `setupSQL`, then a chain of CTEs ending in the query's `SELECT`. Row limits are `TOP`, grouping is by expression rather than ordinal, and a CTE stage carries no `ORDER BY` unless it also has a limit. A SQL block becomes a derived table, so one that ends in `ORDER BY` without `TOP` is refused by the server; drop the ordering or add `TOP`.
+Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `QUOTED_IDENTIFIER ON`, `ANSI_NULLS ON` and `ANSI_WARNINGS ON`, then any `setupSQL`, then a chain of CTEs ending in the query's `SELECT`. Row limits are `TOP`; grouping is by expression rather than ordinal, a dimension that reads no column is left out (T-SQL refuses a constant there) and a query of only constant dimensions groups by `()`, one group; a CTE stage carries no `ORDER BY` unless it also has a limit. A SQL block becomes a derived table, so one that ends in `ORDER BY` without `TOP` is refused by the server; drop the ordering or add `TOP`.
 
 ## How the dialect reads the server
 
