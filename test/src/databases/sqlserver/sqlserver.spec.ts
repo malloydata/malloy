@@ -65,6 +65,15 @@ describe('SQL Server', () => {
   });
 
   describe('a table', () => {
+    test('a boolean literal is a condition', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          where: true
+          aggregate: n is count(), none is count() { where: false }
+        }
+      `).toEqualResult(tm, [{n: 51, none: 0}]);
+    });
+
     test('reads a column', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {
