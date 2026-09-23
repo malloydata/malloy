@@ -164,6 +164,7 @@ export function turtleGroupSetCondition(
 }
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
+export type GroupByClauseType = 'ordinal' | 'expression';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
@@ -246,6 +247,10 @@ export abstract class Dialect {
 
   // ORDER BY 1 DESC
   orderByClause: OrderByClauseType = 'ordinal';
+
+  // GROUP BY 1, or GROUP BY the dimension expressions (SQL Server has no
+  // ordinals in GROUP BY)
+  groupByClause: GroupByClauseType = 'ordinal';
 
   // null will match in a function signature
   nullMatchesFunctionSignature = true;
