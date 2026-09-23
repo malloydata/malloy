@@ -144,7 +144,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       (name: string) => this.structs.get(name)
     );
 
-    const ret = q.generateSQLFromPipeline(stageWriter);
+    const ret = q.generateSQLFromPipeline(stageWriter, emitFinalStage);
     if (emitFinalStage && q.parent.dialect.hasFinalStage) {
       // const fieldNames: string[] = [];
       // for (const f of ret.outputStruct.fields) {

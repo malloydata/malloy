@@ -211,6 +211,8 @@ export class QueryQuery extends QueryField {
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
   isJoinedSubquery: boolean; // this query is a joined subquery.
+  // The last stage of the top-level query: the outer SELECT, not a CTE
+  topLevelLastStage = false;
   // circularity breaker, we pass a lambda in to look up struct names, so
   // query_query doesn't have to include query_model because query_model
   // needs to include query_query. don't love this solution
@@ -1415,6 +1417,16 @@ export class QueryQuery extends QueryField {
       return '';
     }
 
+    // A stage which is not the top-level query's last is a CTE or a derived
+    // table, where some dialects allow ORDER BY only with a row limit
+    if (
+      this.parent.dialect.subqueryOrderByRequiresLimit &&
+      !this.topLevelLastStage &&
+      queryDef.limit === undefined
+    ) {
+      return '';
+    }
+
     const orderBy = queryDef.orderBy || resultStruct.calculateDefaultOrderBy();
     const o: string[] = [];
     for (const f of orderBy) {
@@ -2567,12 +2579,16 @@ export class QueryQuery extends QueryField {
     return this.generateSimpleSQL(stageWriter);
   }
 
-  generateSQLFromPipeline(stageWriter: StageWriter): {
+  generateSQLFromPipeline(
+    stageWriter: StageWriter,
+    topLevel = false
+  ): {
     lastStageName: string;
     outputStruct: QueryResultDef;
   } {
     this.parent.maybeEmitParameterizedSourceUsage();
     this.prepare(stageWriter);
+    this.topLevelLastStage = topLevel && this.fieldDef.pipeline.length === 1;
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
     const pipeline = [...this.fieldDef.pipeline];
@@ -2601,6 +2617,8 @@ export class QueryQuery extends QueryField {
           this.isJoinedSubquery,
           this.structRefToQueryStruct
         );
+        q.topLevelLastStage =
+          topLevel && transform === pipeline[pipeline.length - 1];
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
         outputStruct = q.getResultStructDef();
