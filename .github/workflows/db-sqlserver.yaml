@@ -1,0 +1,37 @@
+name: 'DB:SQLServer'
+permissions: {}
+
+# Manual while the dialect is experimental; run-tests.yaml does not call it,
+# so this builds its own workspace.
+on:
+  workflow_dispatch:
+
+jobs:
+  test-sqlserver:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Use Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+          cache: 'npm'
+      - name: Install and build
+        run: |
+          npm ci --loglevel error
+          npm run build
+      - name: Test
+        run: |
+          bash test/mssql/mssql_start.sh
+          npm run ci-sqlserver
+          bash test/mssql/mssql_stop.sh
+        env:
+          MSSQL_HOST: localhost
+          MSSQL_PORT: 1433
+          MSSQL_USER: sa
+          MSSQL_PASSWORD: Malloy_Test_123
+          MSSQL_DATABASE: malloytest
+          MSSQL_TRUST_SERVER_CERTIFICATE: 'true'
