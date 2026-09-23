@@ -20,6 +20,14 @@ export class ExprCountDistinct extends ExprAggregateFunction {
     super('distinct', expr);
   }
 
+  /**
+   * COUNT(DISTINCT x) only needs x to be comparable to itself, which a
+   * database's own native types (e.g. UUID) are, so any sql native is allowed.
+   */
+  typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
+    return eVal.type === 'sql native' || super.typeCheck(eNode, eVal);
+  }
+
   returns(ev: ExprValue): ExprValue {
     return {
       type: 'number',
