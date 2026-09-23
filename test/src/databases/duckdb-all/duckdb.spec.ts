@@ -154,13 +154,14 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     ).toMatchResult(testModel, {abc: 'a', abc3: 'a3'});
   });
 
-  it('distinct-counts native UUID columns', async () => {
+  it('filters and distinct-counts native UUID columns', async () => {
     await expect(`
       run: duckdb.sql("""
         SELECT '11111111-1111-1111-1111-111111111111'::UUID AS id
         UNION ALL SELECT '11111111-1111-1111-1111-111111111111'::UUID
         UNION ALL SELECT '22222222-2222-2222-2222-222222222222'::UUID
       """) -> {
+        where: id != '33333333-3333-3333-3333-333333333333'::"UUID"
         aggregate: n is count(id)
       }
     `).toMatchResult(testModel, {n: 2});
