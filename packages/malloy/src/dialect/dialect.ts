@@ -329,6 +329,8 @@ export abstract class Dialect {
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
+  // Characters LIKE reads as wildcards beyond % and _, escaped like them
+  likeExtraWildcards: string[] = [];
 
   /**
    * Mappings from integer value ranges to Malloy number types.
@@ -1266,6 +1268,10 @@ export abstract class Dialect {
         escapeActive = true;
       } else if (this.likeEscape && c === '^') {
         escaped += '^^';
+        escapeActive = false;
+        escapeClause = true;
+      } else if (this.likeEscape && this.likeExtraWildcards.includes(c)) {
+        escaped += '^' + c;
         escapeActive = false;
         escapeClause = true;
       } else {
