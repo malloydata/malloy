@@ -39,8 +39,6 @@ import {WINDOWS_TIME_ZONES} from './windows_zones';
 
 /** DATEPART / DATEADD / DATEDIFF spellings of Malloy's units */
 const datePartMap: Record<string, string> = {
-  microsecond: 'microsecond',
-  millisecond: 'millisecond',
   second: 'second',
   minute: 'minute',
   hour: 'hour',
@@ -77,7 +75,7 @@ const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'nchar': {type: 'string'},
   'nvarchar': {type: 'string'},
   // text and ntext take no GROUP BY, MAX or comparison, so they stay native
-  'uniqueidentifier': {type: 'string'},
+  // uniqueidentifier stays native: a GUID is neither text nor a number to Malloy
   'date': {type: 'date'},
   'datetime': {type: 'timestamp'},
   'datetime2': {type: 'timestamp'},
@@ -137,7 +135,7 @@ export class SQLServerDialect extends Dialect {
   // where a value is.
   booleanType: BooleanTypeSupport = 'none';
   hasTimestamptz = false;
-  // A result row is a JSON document, and JSON.parse reads a bigint as a double.
+  // A bigint arrives from the driver as text and is read as a JavaScript number
   supportsBigIntPrecision = false;
   maxIdentifierLength = 128;
   likeEscape = true;
@@ -270,8 +268,9 @@ export class SQLServerDialect extends Dialect {
   }
 
   // Nests, arrays and records are not supported: supportsNesting,
-  // supportsArraysInData and compoundObjectInSchema are false, so a call
-  // here comes from a literal or a source the translator let through.
+  // supportsArraysInData and compoundObjectInSchema are false. A call here
+  // comes from a literal, a source the translator let through, or an
+  // ungrouped aggregate (all(), exclude()), which shares the nest machinery.
   sqlAggregateTurtle(): string {
     return this.unsupported('nesting');
   }
@@ -390,7 +389,7 @@ export class SQLServerDialect extends Dialect {
     _values: string[],
     _func: (valNames: string[]) => string
   ): string {
-    throw new Error('SQL Server dialect does not support sqlAggDistinct');
+    return this.unsupported('distinct aggregates');
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
@@ -475,7 +474,7 @@ export class SQLServerDialect extends Dialect {
   }
 
   sqlRegexpMatch(_df: RegexMatchExpr): string {
-    throw new Error('Internal error: supportsRegexpMatch is false');
+    return this.unsupported('regular expressions before SQL Server 2025');
   }
 
   sqlDateLiteral(_qi: QueryInfo, literal: string): string {

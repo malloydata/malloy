@@ -5,10 +5,6 @@
 
 import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
-// GREATEST and LEAST arrive in SQL Server 2022; the first row of the arguments
-// in order does the same, and NULL when any argument is
-// The translator refuses a call whose template is an error node
-// SQL Server before 2025 has no regular expression functions
 // The length of a string, trailing spaces included
 const len = (arg: string) => `(LEN(${arg} + N'x') - 1)`;
 

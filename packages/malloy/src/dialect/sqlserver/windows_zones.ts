@@ -9,7 +9,6 @@
 // beside Europe/Kiev); a Windows zone maps from several IANA names.
 
 export const WINDOWS_TIME_ZONES: Record<string, string> = {
-  '': 'Central Standard Time (Mexico)',
   'Africa/Abidjan': 'Greenwich Standard Time',
   'Africa/Accra': 'Greenwich Standard Time',
   'Africa/Addis_Ababa': 'E. Africa Standard Time',
