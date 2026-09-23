@@ -211,6 +211,13 @@ export function driverConfig(config: SQLServerConfiguration): mssql.config {
     'tenantId',
     'clientSecret',
     'accessToken',
+    'domain',
+    'encrypt',
+    'trustServerCertificate',
+    'hostNameInCertificate',
+    'applicationName',
+    'readOnlyIntent',
+    'multiSubnetFailover',
   ].filter(k => config[k as keyof SQLServerConfiguration] !== undefined);
   if (config.connectionString !== undefined && structured.length > 0) {
     throw new Error(
@@ -278,25 +285,28 @@ function bracketedPath(dialect: SQLServerDialect, tablePath: string): string {
     .join('.');
 }
 
-/** The declared SQL type of each result column, as the driver reports it */
-type ColumnTypes = Record<string, string>;
+/** The result columns the driver types as bigint, whose values arrive as text */
+type BigintColumns = Set<string>;
 
-function columnTypes(columns: mssql.IColumnMetadata | undefined): ColumnTypes {
-  const types: ColumnTypes = {};
+function bigintColumns(
+  columns: mssql.IColumnMetadata | undefined
+): BigintColumns {
+  const names = new Set<string>();
   for (const [name, c] of Object.entries(columns ?? {})) {
-    const t = c.type as unknown as {declaration?: string} | undefined;
-    types[name] = t?.declaration ?? '';
+    if (c.type === mssql.TYPES.BigInt) {
+      names.add(name);
+    }
   }
-  return types;
+  return names;
 }
 
 // The driver returns a bigint as text so no digit is lost; Malloy reads a
 // number (supportsBigIntPrecision is false)
-function decodeRow(row: QueryRecord, columns: ColumnTypes): QueryRecord {
+function decodeRow(row: QueryRecord, bigints: BigintColumns): QueryRecord {
   const out: QueryRecord = {...row};
-  for (const [name, type] of Object.entries(columns)) {
+  for (const name of bigints) {
     const v = out[name];
-    if (type === 'bigint' && typeof v === 'string') {
+    if (typeof v === 'string') {
       out[name] = Number(v);
     }
   }
@@ -421,7 +431,7 @@ export class SQLServerConnection
     const result = await this.runBatch(
       this.sqlWithQueryMetadata(sql, options.queryMetadata)
     );
-    const rows = result.rows.map(row => decodeRow(row, result.columns));
+    const rows = result.rows.map(row => decodeRow(row, result.bigints));
     if (rowLimit !== undefined && rows.length > rowLimit) {
       return {rows: rows.slice(0, rowLimit), totalRows: rowLimit};
     }
@@ -436,7 +446,7 @@ export class SQLServerConnection
   private async runBatch(
     sql: string,
     parameters: Record<string, string> = {}
-  ): Promise<MalloyQueryData & {columns: ColumnTypes}> {
+  ): Promise<MalloyQueryData & {bigints: BigintColumns}> {
     const pool = await this.getPool();
     const request = pool.request();
     for (const [name, value] of Object.entries(parameters)) {
@@ -447,7 +457,7 @@ export class SQLServerConnection
     return {
       rows,
       totalRows: rows.length,
-      columns: columnTypes(result.recordset?.columns),
+      bigints: bigintColumns(result.recordset?.columns),
     };
   }
 
@@ -459,9 +469,9 @@ export class SQLServerConnection
     const pool = await this.getPool();
     const request = pool.request();
     request.stream = true;
-    let columns: ColumnTypes = {};
+    let bigints: BigintColumns = new Set();
     request.on('recordset', cols => {
-      columns = columnTypes(cols);
+      bigints = bigintColumns(cols);
     });
     const stream = request.toReadableStream();
     const cancel = () => request.cancel();
@@ -473,7 +483,7 @@ export class SQLServerConnection
       );
       let index = 0;
       for await (const row of stream) {
-        yield decodeRow(row as QueryRecord, columns);
+        yield decodeRow(row as QueryRecord, bigints);
         index += 1;
         if (rowLimit !== undefined && index >= rowLimit) {
           request.cancel();
