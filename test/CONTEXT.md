@@ -108,6 +108,7 @@ Each database has a startup script in the test directory:
 - `test/mysql/mysql_start.sh`
 - `test/trino/trino_start.sh`
 - `test/presto/presto_start.sh`
+- `test/mssql/mssql_start.sh`
 
 These scripts start Docker containers with appropriate test configurations and data.
 
@@ -174,7 +175,7 @@ All cross-database tests (`test/src/databases/all/`) reference tables as `malloy
 | DuckDB | DuckDB `CREATE TABLE AS SELECT FROM read_parquet()` | `test/duckdb/load_test_data.sh` (wraps `load_test_data.ts`) | Run via `sh test/duckdb/load_test_data.sh` (or `npm run build-duckdb-db`). Creates `test/data/duckdb/duckdb_test.db` |
 | PostgreSQL | DuckDB's `postgres` extension: `ATTACH` the server, `CREATE TABLE AS SELECT FROM read_parquet()` | `test/postgres/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/postgres/postgres_start.sh` and by CI against a running server; connects with the `PG*` variables. No `ga_sample` (no anonymous record type) |
 | MySQL | DuckDB's `mysql` extension, likewise | `test/mysql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mysql/mysql_start.sh`; connects with the `MYSQL_*` variables. No `ga_sample`, and `alltypes` without its array columns |
-| SQL Server | DuckDB's community `mssql` extension, likewise | `test/mssql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mssql/mssql_start.sh`, which exports the `MSSQL_*` variables the loader and both SQL Server test runtimes (`sqlserver`, `mssql_via_duckdb`) read. Waits for the server itself. Same table set as MySQL. `db-sqlserver.yaml` runs on dispatch only while the dialect is experimental |
+| SQL Server | DuckDB's community `mssql` extension, likewise | `test/mssql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mssql/mssql_start.sh`, which sets the `MSSQL_*` variables for the loader; the tests and both SQL Server test runtimes (`sqlserver`, `mssql_via_duckdb`) read the same variables from their own environment. Waits for the server itself. Same table set as MySQL. `db-sqlserver.yaml` runs on dispatch only while the dialect is experimental |
 | Trino/Presto | The hive connector reads the parquet in place: each file is mounted into the container and declared as an external table | `test/trino/hive_ddl.ts`, `test/trino/hive.properties`, `test/presto/hive.properties` | `trino_start.sh` / `presto_start.sh` derive the DDL from the parquet schemas at container start. The hive metastore lowercases names, so a table with nested columns (`ga_sample`) is a `_hive` table plus a view that casts the nested field names back; top-level column names stay lowercase, since Trino lowercases those in every connector |
 | BigQuery | Pre-loaded manually in `malloydata-org` project | (none) | No loader script in repo. Data assumed to exist. |
 | Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/load_test_data.sh` (wraps `load_test_data.sql`) | Run via `sh test/snowflake/load_test_data.sh` (needs the `snowsql` CLI) |
