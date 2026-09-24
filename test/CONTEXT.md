@@ -179,6 +179,7 @@ All cross-database tests (`test/src/databases/all/`) reference tables as `malloy
 | BigQuery | Pre-loaded manually in `malloydata-org` project | (none) | No loader script in repo. Data assumed to exist. |
 | Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/load_test_data.sh` (wraps `load_test_data.sql`) | Run via `sh test/snowflake/load_test_data.sh` (needs the `snowsql` CLI) |
 | Databricks | TS script: upload to Volume via REST, `CREATE TABLE AS SELECT FROM read_files()` | `test/databricks/load_test_data.sh` (wraps `load_test_data.ts`) | Run manually with the `DATABRICKS_*` env vars set: `sh test/databricks/load_test_data.sh` |
+| Athena | TS script: upload each parquet to S3, `CREATE EXTERNAL TABLE … STORED AS PARQUET LOCATION` over it, types from DuckDB's `DESCRIBE` | `test/athena/load_test_data.sh` (wraps `load_test_data.ts`) | Run manually with the `ATHENA_*` env vars and `ATHENA_TEST_DATA_LOCATION` set; the Glue database is `malloytest`. Same table set as MySQL (no `ga_sample`, `alltypes` without its array columns) |
 
 The DuckDB-driven loaders share `test/data/parquet_loader.ts`, which runs everything through Malloy's own `DuckDBConnection`, so a database is built by the same DuckDB the tests read it with. It reads the table list from the parquet directory and takes a `LoadPlan` naming what a target cannot hold.
 
