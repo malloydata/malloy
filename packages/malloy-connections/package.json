@@ -33,6 +33,7 @@
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo"
   },
   "dependencies": {
+    "@malloydata/db-athena": "0.0.435",
     "@malloydata/db-bigquery": "0.0.435",
     "@malloydata/db-databricks": "0.0.435",
     "@malloydata/db-duckdb": "0.0.435",

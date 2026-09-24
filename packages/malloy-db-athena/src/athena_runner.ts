@@ -276,9 +276,19 @@ export class AthenaRunner implements BaseRunner {
       nextToken !== undefined &&
       (rowLimit === undefined || rows.length < rowLimit)
     );
-    return {
-      rows,
-      columns: columnInfo.map(c => ({name: c.Name ?? '', type: c.Type ?? ''})),
-    };
+    return {rows, columns: columnInfo.map(columnType)};
   }
+}
+
+// ColumnInfo spells a decimal as bare `decimal` with its precision and scale
+// in their own fields; the shared type parser reads `decimal(p,s)`.
+function columnType(column: ColumnInfo): {name: string; type: string} {
+  const type = column.Type ?? '';
+  return {
+    name: column.Name ?? '',
+    type:
+      type === 'decimal' && column.Precision !== undefined
+        ? `decimal(${column.Precision},${column.Scale ?? 0})`
+        : type,
+  };
 }
