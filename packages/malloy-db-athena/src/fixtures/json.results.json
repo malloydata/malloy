@@ -1,0 +1,73 @@
+{
+ "UpdateCount": 0,
+ "ResultSet": {
+  "Rows": [
+   {
+    "Data": [
+     {
+      "VarCharValue": "j"
+     },
+     {
+      "VarCharValue": "one"
+     },
+     {
+      "VarCharValue": "arr"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "[{\"n\":1,\"s\":\"a\"},{\"n\":2,\"s\":\"b\"}]"
+     },
+     {
+      "VarCharValue": "{\"n\":1,\"Mixed\":null}"
+     },
+     {
+      "VarCharValue": "[1,null]"
+     }
+    ]
+   }
+  ],
+  "ResultSetMetadata": {
+   "ColumnInfo": [
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "j",
+     "Label": "j",
+     "Type": "json",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "one",
+     "Label": "one",
+     "Type": "json",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "arr",
+     "Label": "arr",
+     "Type": "json",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    }
+   ]
+  }
+ }
+}

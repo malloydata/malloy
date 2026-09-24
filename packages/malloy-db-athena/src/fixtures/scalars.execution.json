@@ -1,0 +1,31 @@
+{
+ "QueryExecution": {
+  "QueryExecutionId": "1d5e7a08-1fad-4df8-8ecc-9a2f458f4045",
+  "Query": "SELECT 1 AS n, 'x' AS s, true AS b, CAST(NULL AS integer) AS z, '' AS empty, DATE '2024-01-02' AS d, TIMESTAMP '2024-01-02 03:04:05.678' AS t",
+  "StatementType": "DML",
+  "ResultConfiguration": {
+   "OutputLocation": "s3://malloytest-results/results/1d5e7a08-1fad-4df8-8ecc-9a2f458f4045.csv"
+  },
+  "Status": {
+   "State": "SUCCEEDED",
+   "SubmissionDateTime": "2026-09-24T09:38:27.934000-06:00",
+   "CompletionDateTime": "2026-09-24T09:38:28.279000-06:00"
+  },
+  "Statistics": {
+   "EngineExecutionTimeInMillis": 1,
+   "DataScannedInBytes": 0,
+   "TotalExecutionTimeInMillis": 1,
+   "QueryQueueTimeInMillis": 1,
+   "ServicePreProcessingTimeInMillis": 67,
+   "QueryPlanningTimeInMillis": 15,
+   "ServiceProcessingTimeInMillis": 1,
+   "ResultReuseInformation": {
+    "ReusedPreviousResult": false
+   }
+  },
+  "EngineVersion": {
+   "SelectedEngineVersion": "Athena engine version 3",
+   "EffectiveEngineVersion": "Athena engine version 3"
+  }
+ }
+}
