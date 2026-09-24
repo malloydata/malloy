@@ -12,6 +12,7 @@
       "packages/malloy",
       "packages/malloy-db-bigquery",
       "packages/malloy-db-trino",
+      "packages/malloy-db-athena",
       "packages/malloy-db-duckdb",
       "packages/malloy-db-mysql",
       "packages/malloy-db-databricks",
