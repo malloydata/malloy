@@ -8,7 +8,12 @@ import type {
   MalloyError,
   SQLSourceDef,
 } from '@malloydata/malloy';
-import {DuckDBDialect, registerDialect} from '@malloydata/malloy';
+import {
+  DuckDBDialect,
+  registerDialect,
+  SingleConnectionRuntime,
+  InMemoryURLReader,
+} from '@malloydata/malloy';
 import {testRuntimeFor} from '../runtimes';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 
@@ -90,6 +95,22 @@ describe('experimental dialects', () => {
       ##! experimental.dialect.${duckdbX}
       source: s is ${duckdbX}.sql('SELECT 1 as one')
     `);
+  });
+
+  test('a test runtime compiles an imported source on the dialect with no flag', async () => {
+    const files = new Map([
+      ['file:///a.malloy', `source: s is ${duckdbX}.sql('SELECT 1 as one')`],
+    ]);
+    const importing = new SingleConnectionRuntime({
+      connection,
+      urlReader: new InMemoryURLReader(files),
+    });
+    importing.isTestRuntime = true;
+    const sql = await importing
+      .loadModel('import "file:///a.malloy"')
+      .loadQuery('run: s -> { select: one }')
+      .getSQL();
+    expect(sql).toContain('SELECT');
   });
 
   test('a test runtime compiles a query on the dialect with no flag', async () => {
