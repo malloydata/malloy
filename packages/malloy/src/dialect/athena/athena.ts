@@ -13,7 +13,11 @@ import type {
 import {activeName, isAtomic, safeRecordGet} from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
-import type {CompiledOrderBy, DialectFieldList} from '../dialect';
+import type {
+  CompiledOrderBy,
+  DialectFieldList,
+  FieldReferenceType,
+} from '../dialect';
 import {turtleGroupSetCondition} from '../dialect';
 import {TrinoDialect} from '../trino/trino';
 import {ATHENA_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -46,6 +50,9 @@ export class AthenaDialect extends TrinoDialect {
   supportsArraysInData = false;
   // bigint arrives as exact digits and is read into a JS number.
   supportsBigIntPrecision = false;
+  // A table's or SQL block's row and array columns are opaque (see
+  // readsNestedData), so a schema read does not reveal their contents.
+  compoundObjectInSchema = false;
 
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
@@ -214,6 +221,45 @@ export class AthenaDialect extends TrinoDialect {
       c => `${q(c.f.rawName)} ${this.malloyTypeToSQLType(c.f.typeDef)}`
     );
     return `transform(${array}, __r -> CAST(ROW(${values.join(', ')}) AS ROW(${defs.join(', ')})))`;
+  }
+
+  // A record is JSON on Athena (see the class comment), so a field of one is
+  // read with json_extract and given back its type. A row from UNNEST is a
+  // native ROW (see sqlUnnestAlias) and reads as alias.field.
+  sqlFieldReference(
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
+  ): string {
+    if (parentType !== 'record' || childName === '__row_id') {
+      return super.sqlFieldReference(
+        parentAlias,
+        parentType,
+        childName,
+        childType
+      );
+    }
+    const path = this.sqlLiteralString(
+      `$["${childName.replace(/["\\]/g, ch => '\\' + ch)}"]`
+    );
+    const scalar = `json_extract_scalar(${parentAlias}, ${path})`;
+    switch (childType) {
+      case 'string':
+        return scalar;
+      case 'number':
+        return `CAST(${scalar} AS DOUBLE)`;
+      case 'boolean':
+        return `CAST(${scalar} AS BOOLEAN)`;
+      case 'date':
+        return `CAST(${scalar} AS DATE)`;
+      case 'timestamp':
+        return `CAST(${scalar} AS TIMESTAMP)`;
+      case 'timestamptz':
+        return `from_iso8601_timestamp(${scalar})`;
+      default:
+        return `json_extract(${parentAlias}, ${path})`;
+    }
   }
 
   // UNNEST of an array of rows yields the row as one column (Presto's legacy

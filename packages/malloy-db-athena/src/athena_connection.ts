@@ -84,11 +84,13 @@ export class AthenaConnection extends TrinoPrestoConnection {
 
   public override malloyTypeFromTrinoType(trinoType: string): AtomicTypeDef {
     const bare = trinoType.toLowerCase();
-    // GetQueryResults types a compound column as `row`, `array` or `map` with
-    // no element types, so such a column is opaque; `float` is that API's
-    // spelling of `real`.
-    if (bare === 'row' || bare === 'array' || bare === 'map') {
-      return {type: 'sql native', rawType: bare};
+    // A compound column arrives as Presto's text (`{a=1, b=x}`), which
+    // nothing reads back, so it is opaque whether the schema spells its
+    // contents (`row(a integer)`) or GetQueryResults leaves them off
+    // (`row`). Nests the dialect builds travel as JSON and never come
+    // through here typed. `float` is the results API's spelling of `real`.
+    if (/^(row|array|map)\b/.test(bare)) {
+      return {type: 'sql native', rawType: trinoType};
     }
     if (bare === 'float') {
       return {type: 'number', numberType: 'float'};

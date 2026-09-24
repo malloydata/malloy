@@ -96,29 +96,16 @@ describeLive('AthenaConnection', () => {
           1 AS "MixedCase"`);
     });
 
-    it('reads a row as a record with its fields', () => {
-      expect(typeOf(fields, 'rec')).toMatchObject({
-        type: 'record',
-        fields: [
-          {name: 'n', type: 'number', numberType: 'integer'},
-          {name: 's', type: 'string'},
-        ],
+    it('reads a row and an array as sql native, with the type text', () => {
+      expect(typeOf(fields, 'rec')).toEqual({
+        type: 'sql native',
+        rawType: 'row(n integer, s varchar)',
       });
-    });
-
-    it('reads an array of scalars and an array of rows', () => {
-      expect(typeOf(fields, 'arr')).toMatchObject({
-        type: 'array',
-        elementTypeDef: {type: 'number', numberType: 'integer'},
+      expect(typeOf(fields, 'arr')).toEqual({
+        type: 'sql native',
+        rawType: 'array(integer)',
       });
-      expect(typeOf(fields, 'recs')).toMatchObject({
-        type: 'array',
-        elementTypeDef: {type: 'record_element'},
-        fields: [
-          {name: 'n', type: 'number', numberType: 'integer'},
-          {name: 's', type: 'string'},
-        ],
-      });
+      expect(typeOf(fields, 'recs').type).toBe('sql native');
     });
 
     it('maps a map to sql native', () => {
