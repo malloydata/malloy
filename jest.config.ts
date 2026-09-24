@@ -180,7 +180,10 @@ const config: Config = {
       ...defaultConfig,
       displayName: 'db-athena',
       testPathIgnorePatterns: connectorUnitIgnored,
-      roots: ['<rootDir>/packages/malloy-db-athena/'],
+      roots: [
+        '<rootDir>/packages/malloy-db-athena/',
+        '<rootDir>/test/src/databases/athena/',
+      ],
     },
     {
       ...defaultConfig,

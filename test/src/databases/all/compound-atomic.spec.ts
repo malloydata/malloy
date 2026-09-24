@@ -73,6 +73,9 @@ describe.each(runtimes.runtimeList)(
       return runtime.dialect.sqlLiteralRecord(recordLiteral(fromObj));
     }
     const canReadCompoundSchema = runtime.dialect.compoundObjectInSchema;
+    // Athena carries a record as JSON, and its json type is not orderable,
+    // so a group_by on a repeated record has no ORDER BY there.
+    const ordersRecords = conName !== 'athena';
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const ab = recordSelectVal({a: 0, b: 1});
@@ -125,6 +128,7 @@ describe.each(runtimes.runtimeList)(
           'postgres': 'JSONB_ARRAY_LENGTH',
           'presto': 'CARDINALITY',
           'trino': 'CARDINALITY',
+          'athena': 'JSON_ARRAY_LENGTH',
           'mysql': 'JSON_LENGTH',
           'snowflake': 'ARRAY_SIZE',
           'databricks': 'SIZE',
@@ -580,13 +584,13 @@ describe.each(runtimes.runtimeList)(
           {val: 1, name: 'uno'},
         ]);
       });
-      test('group_by repeated record', async () => {
+      test.when(ordersRecords)('group_by repeated record', async () => {
         await expect(`
           run: ${conName}.sql(""" ${selectAB('ab')} """) -> { group_by: ab }
         `).toMatchResult(testModel, {ab: ab_eq});
       });
       // test for https://github.com/malloydata/malloy/issues/2065
-      test('nest a group_by repeated record', async () => {
+      test.when(ordersRecords)('nest a group_by repeated record', async () => {
         await expect(`
           run: ${conName}.sql(""" ${selectAB('ab')} """)
           -> { nest: gab is {group_by: ab } }
