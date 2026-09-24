@@ -40,9 +40,10 @@ export class AthenaDialect extends TrinoDialect {
   // the first stage's array, which Athena rejects ("Given correlated
   // subquery is not supported").
   supportsPipelinesInViews = false;
-  // A table's own row and array columns arrive as Presto text, so ga_sample
-  // style data is not readable; only a nest the dialect built is JSON.
+  // A table's own row and array columns arrive as Presto text, which nothing
+  // reads back; only a record or array the dialect built is JSON.
   readsNestedData = false;
+  supportsArraysInData = false;
   // bigint arrives as exact digits and is read into a JS number.
   supportsBigIntPrecision = false;
 

@@ -8,6 +8,7 @@
   },
   "include": [
     "src",
+    "athena",
     "bin",
     "data",
     "duckdb",
@@ -36,6 +37,9 @@
     },
     {
       "path": "../packages/malloy-db-trino"
+    },
+    {
+      "path": "../packages/malloy-db-athena"
     },
     {
       "path": "../packages/malloy-db-mysql"
