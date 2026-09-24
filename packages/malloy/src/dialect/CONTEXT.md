@@ -18,6 +18,7 @@ dialect/
 ├── postgres/
 ├── snowflake/
 ├── trino/
+├── athena/                           # Athena engine v3, a Trino subclass; nests travel as JSON
 ├── mysql/
 ├── databricks/
 ├── dialect.ts                        # Abstract Dialect base class
@@ -67,7 +68,7 @@ On success, `canonical` is the SQL fragment that gets pasted directly into `FROM
 
 **Scope.** `sqlValidateTableName` accepts *names of tables* and the file-path shapes that DuckDB's replacement scans treat as tables. It deliberately rejects table-valued function calls (`read_parquet(...)`, `range(10)`), `LATERAL`, aliases, subqueries, and other things that are valid in a `FROM` clause but compose tables rather than name them. Users who want those use a SQL block (`connection.sql("""SELECT * FROM …""")`).
 
-**Default implementation handles every well-behaved dialect.** Six of the seven dialects we ship (Postgres, MySQL, Snowflake, Trino, Databricks, BigQuery) all use the same dotted-segment grammar:
+**Default implementation handles every well-behaved dialect.** Every dialect we ship but DuckDB (Postgres, MySQL, Snowflake, Trino, Presto, Athena, Databricks, BigQuery) uses the same dotted-segment grammar:
 
 ```
 TablePath = Segment ( '.' Segment )* EOF

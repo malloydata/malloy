@@ -191,7 +191,7 @@ A loader must carry the instant through unchanged. Malloy's `DuckDBConnection`, 
 
 ### Cloud warehouse considerations
 
-Cloud SQL warehouses (BigQuery, Snowflake, Databricks) can't read local files via SQL. Each needs a mechanism to get parquet data into the warehouse:
+Cloud SQL warehouses (BigQuery, Snowflake, Databricks, Athena) can't read local files via SQL. Each needs a mechanism to get parquet data into the warehouse:
 - **Snowflake**: `PUT` uploads local files to a stage, then `COPY INTO` reads from the stage
 - **BigQuery**: Data pre-loaded (could use `bq load` from local parquets)
 - **Databricks**: Uploads parquets to a Unity Catalog Volume via REST API, then `CREATE TABLE AS SELECT FROM read_files()` to create tables
