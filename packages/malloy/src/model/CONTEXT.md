@@ -467,6 +467,7 @@ The compiler supports multiple SQL dialects through a plugin architecture.
 - MySQL
 - Snowflake
 - Trino/Presto
+- SQL Server (experimental)
 
 Each dialect has its own implementation in `packages/malloy/src/dialect/`.
 

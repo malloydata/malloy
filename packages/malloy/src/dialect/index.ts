@@ -30,6 +30,9 @@ export type {
   LateralJoinExpression,
   QueryInfo,
   FieldReferenceType,
+  GroupByClauseType,
+  LimitClauseType,
+  OrderByClauseType,
 } from './dialect';
 export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
@@ -38,6 +41,7 @@ export {SnowflakeDialect} from './snowflake';
 export {TrinoDialect} from './trino';
 export {MySQLDialect} from './mysql';
 export {DatabricksDialect} from './databricks';
+export {SQLServerDialect} from './sqlserver';
 export {getDialect, registerDialect} from './dialect_map';
 export {getMalloyStandardFunctions} from './functions';
 export type {MalloyStandardFunctionImplementations} from './functions';

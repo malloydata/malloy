@@ -200,19 +200,43 @@ export class Malloy {
     if (options?.importBaseURL) {
       importBaseURL = options?.importBaseURL;
     }
-    const translator = new MalloyTranslator(
+    const translator = Malloy.newTranslator(
       url.toString(),
       importBaseURL.toString(),
-      {
-        urls: {[url.toString()]: source},
-      },
+      source,
       eventStream,
-      options?.restrictedMode ?? false
+      options?.restrictedMode ?? false,
+      undefined,
+      options?.testEnvironment
     );
-    if (options?.testEnvironment) {
+    return new Parse(translator, invalidationKey);
+  }
+
+  /**
+   * A translator for one document. A test environment may use an
+   * experimental dialect without its compiler flag.
+   */
+  private static newTranslator(
+    url: string,
+    importBaseURL: string,
+    source: string,
+    eventStream: EventStream | undefined,
+    restrictedMode: boolean,
+    virtualMap: VirtualMap | undefined,
+    testEnvironment: boolean | undefined
+  ): MalloyTranslator {
+    const translator = new MalloyTranslator(
+      url,
+      importBaseURL,
+      {urls: {[url]: source}},
+      eventStream,
+      restrictedMode,
+      virtualMap
+    );
+    if (testEnvironment) {
       translator.allDialectsEnabled = true;
     }
-    return new Parse(translator, invalidationKey);
+    return translator;
   }
 
   /**
@@ -382,15 +406,14 @@ export class Malloy {
         const invalidationKey = await getInvalidationKey(urlReader, url);
         invalidationKeys[_url] = invalidationKey;
       }
-      translator = new MalloyTranslator(
+      translator = Malloy.newTranslator(
         _url,
         importBaseURL.toString(),
-        {
-          urls: {[_url]: source},
-        },
+        source,
         eventStream,
         restrictedMode ?? false,
-        virtualMap
+        virtualMap,
+        req.testEnvironment
       );
     }
     for (;;) {

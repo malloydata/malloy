@@ -7,6 +7,7 @@ import type {
   DialectFieldList,
   CompiledOrderBy,
   LateralJoinExpression,
+  Dialect,
 } from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
@@ -58,6 +59,7 @@ import {
   getDialectFieldList,
   groupingKey,
   caseGroup,
+  exprWalk,
 } from './utils';
 import type {JoinInstance} from './join_instance';
 import {
@@ -119,18 +121,72 @@ type StageGroupMaping = {fromGroup: number; toGroup: number};
 
 // One item in a stage's SELECT list, paired with the identifier it produces and
 // whether it participates in the GROUP BY. Keeping these together is deliberate:
-// the SELECT list, the GROUP BY positions, the pipelined-stage carry-forward
+// the SELECT list, the GROUP BY terms, the pipelined-stage carry-forward
 // list, and the group_set remap list are all derived from this one array, so
 // none of them can drift from the columns the stage actually emitted.
 interface StageOutputColumn {
   sql: string; // full SELECT-list item, e.g. `<expr> as "f1__0"` or `group_set`
+  expr: string; // the value expression alone, for a GROUP BY that repeats it
   name: string; // quoted identifier this item produces in the stage output
   isDimension: boolean; // is this column part of the GROUP BY?
+  // A dimension whose expression reads no column. SQL Server refuses such an
+  // expression in GROUP BY (error 164), and grouping by one changes nothing
+  // but the result for an empty input, so an expression GROUP BY leaves it out.
+  constant?: boolean;
 }
 
-// 1-based SELECT positions of the dimension columns, for `GROUP BY 1,2,...`.
-function groupByPositions(columns: StageOutputColumn[]): number[] {
-  return columns.flatMap((c, i) => (c.isDimension ? [i + 1] : []));
+// `<expr> as <name>`
+function aliasedColumn(
+  expr: string,
+  name: string,
+  isDimension: boolean,
+  constant = false
+): StageOutputColumn {
+  return {sql: `${expr} as ${name}`, expr, name, isDimension, constant};
+}
+
+// Does a field's expression read any column of its source?
+function readsColumn(fieldDef: FieldDef): boolean {
+  if (!hasExpression(fieldDef)) {
+    return true;
+  }
+  for (const node of exprWalk(fieldDef.e)) {
+    switch (node.node) {
+      case 'field':
+      case 'outputField':
+      case 'source-reference':
+      case 'genericSQLExpr':
+        return true;
+    }
+  }
+  return false;
+}
+
+// The dimension columns as GROUP BY terms: 1-based SELECT positions, or the
+// expressions for a dialect without ordinals in GROUP BY.
+function groupByTerms(
+  dialect: Dialect,
+  columns: StageOutputColumn[]
+): string[] {
+  if (dialect.groupByClause === 'ordinal') {
+    return columns.flatMap((c, i) => (c.isDimension ? [`${i + 1}`] : []));
+  }
+  return columns.flatMap(c => (c.isDimension && !c.constant ? [c.expr] : []));
+}
+
+function groupByClause(dialect: Dialect, columns: StageOutputColumn[]): string {
+  const terms = groupByTerms(dialect, columns);
+  if (terms.length > 0) {
+    return `GROUP BY ${terms.join(',')}\n`;
+  }
+  // Dimensions which are all constants still make one group of the input
+  if (
+    dialect.groupByClause === 'expression' &&
+    columns.some(c => c.isDimension)
+  ) {
+    return 'GROUP BY ()\n';
+  }
+  return '';
 }
 
 type StageOutputContext = {
@@ -165,6 +221,8 @@ export class QueryQuery extends QueryField {
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
   isJoinedSubquery: boolean; // this query is a joined subquery.
+  // The last stage of the top-level query: the outer SELECT, not a CTE
+  topLevelLastStage = false;
   // circularity breaker, we pass a lambda in to look up struct names, so
   // query_query doesn't have to include query_model because query_model
   // needs to include query_query. don't love this solution
@@ -1273,8 +1331,11 @@ export class QueryQuery extends QueryField {
         this.firstSegment.sample
       );
       if (this.firstSegment.sample) {
+        const d = this.parent.dialect;
         structSQL = stageWriter.addStage(
-          `SELECT * from ${structSQL} as x limit 100000 `
+          `SELECT${d.sqlSelectLimit(100000)} * from ${structSQL} as x ${
+            d.limitClause === 'limit' ? 'limit 100000 ' : ''
+          }`
         );
       }
     }
@@ -1366,6 +1427,16 @@ export class QueryQuery extends QueryField {
       return '';
     }
 
+    // A stage which is not the top-level query's last is a CTE or a derived
+    // table, where some dialects allow ORDER BY only with a row limit
+    if (
+      this.parent.dialect.subqueryOrderByRequiresLimit &&
+      !this.topLevelLastStage &&
+      queryDef.limit === undefined
+    ) {
+      return '';
+    }
+
     const orderBy = queryDef.orderBy || resultStruct.calculateDefaultOrderBy();
     const o: string[] = [];
     for (const f of orderBy) {
@@ -1432,16 +1503,27 @@ export class QueryQuery extends QueryField {
    */
   generateSimpleSQL(stageWriter: StageWriter): string {
     this.rootResult.emitsGroupSet = false;
-    let s = '';
-    s += 'SELECT \n';
-    const fields: string[] = [];
+    const limit = isRawSegment(this.firstSegment)
+      ? undefined
+      : this.firstSegment.limit;
+    let s = `SELECT${this.parent.dialect.sqlSelectLimit(limit)} \n`;
+    // A projection groups nothing; a reduce groups its scalar result fields.
+    const grouped = this.firstSegment.type === 'reduce';
+    const columns: StageOutputColumn[] = [];
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
 
     for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
-          fields.push(` ${fi.generateExpression()} as ${sqlName}`);
+          columns.push(
+            aliasedColumn(
+              fi.generateExpression(),
+              sqlName,
+              grouped && isScalarField(fi.f),
+              !readsColumn(fi.f.fieldDef)
+            )
+          );
         }
       } else if (fi instanceof FieldInstanceResult) {
         const turtle = this.generateTurtleSQL(
@@ -1451,27 +1533,14 @@ export class QueryQuery extends QueryField {
           outputPipelinedSQL,
           true
         );
-        fields.push(` ${turtle} as ${sqlName}`);
+        columns.push(aliasedColumn(turtle, sqlName, false));
       }
     }
-    s += indent(fields.join(',\n')) + '\n';
+    s += indent(columns.map(c => ` ${c.sql}`).join(',\n')) + '\n';
 
     s += this.generateSQLJoins(stageWriter);
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
-
-    // group by
-    if (this.firstSegment.type === 'reduce') {
-      const n: string[] = [];
-      for (const field of this.rootResult.fields()) {
-        const fi = field as FieldInstanceField;
-        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-          n.push(fi.fieldUsage.resultIndex.toString());
-        }
-      }
-      if (n.length > 0) {
-        s += `GROUP BY ${n.join(',')}\n`;
-      }
-    }
+    s += groupByClause(this.parent.dialect, columns);
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
@@ -1480,11 +1549,7 @@ export class QueryQuery extends QueryField {
       this.firstSegment as QuerySegment,
       this.rootResult
     );
-
-    // limit
-    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += `LIMIT ${this.firstSegment.limit}\n`;
-    }
+    s += this.parent.dialect.sqlLimit(limit);
     this.resultStage = stageWriter.addStage(s);
     // Consumes any pipelined turtle output. The nests that reach here are
     // single-stage (canUseSingleGroupSetSQL), so outputPipelinedSQL is empty and
@@ -1614,6 +1679,7 @@ export class QueryQuery extends QueryField {
               });
               output.columns.push({
                 sql: outputFieldName,
+                expr: outputFieldName,
                 name: outputName,
                 isDimension: true,
               });
@@ -1624,6 +1690,7 @@ export class QueryQuery extends QueryField {
                 const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.columns.push({
                   sql: outputFieldNameString,
+                  expr: outputFieldNameString,
                   name: outputNameString,
                   isDimension: true,
                 });
@@ -1635,18 +1702,17 @@ export class QueryQuery extends QueryField {
               }
             } else {
               // just treat it like a regular field.
-              output.columns.push({
-                sql: `${exp} as ${outputName}`,
-                name: outputName,
-                isDimension: true,
-              });
+              output.columns.push(
+                aliasedColumn(
+                  exp,
+                  outputName,
+                  true,
+                  !readsColumn(fi.f.fieldDef)
+                )
+              );
             }
           } else if (isBasicCalculation(fi.f)) {
-            output.columns.push({
-              sql: `${exp} as ${outputName}`,
-              name: outputName,
-              isDimension: false,
-            });
+            output.columns.push(aliasedColumn(exp, outputName, false));
           }
         }
       } else if (fi instanceof FieldInstanceResult) {
@@ -1659,11 +1725,7 @@ export class QueryQuery extends QueryField {
             outputName,
             output.outputPipelinedSQL
           );
-          output.columns.push({
-            sql: `${s} as ${outputName}`,
-            name: outputName,
-            isDimension: false,
-          });
+          output.columns.push(aliasedColumn(s, outputName, false));
         }
       }
     }
@@ -1684,15 +1746,15 @@ export class QueryQuery extends QueryField {
           );
       } else {
         resultSet.hasHaving = true;
-        output.columns.push({
-          sql: `CASE WHEN group_set=${
-            resultSet.groupSet
-          } THEN CASE WHEN ${having.sql()} THEN 0 ELSE 1 END END as __delete__${
-            resultSet.groupSet
-          }`,
-          name: `__delete__${resultSet.groupSet}`,
-          isDimension: false,
-        });
+        output.columns.push(
+          aliasedColumn(
+            `CASE WHEN group_set=${
+              resultSet.groupSet
+            } THEN CASE WHEN ${having.sql()} THEN 0 ELSE 1 END END`,
+            `__delete__${resultSet.groupSet}`,
+            false
+          )
+        );
       }
     }
   }
@@ -1933,7 +1995,14 @@ export class QueryQuery extends QueryField {
     const wheres = this.generateSQLWhereTurtled();
 
     const f: StageOutputContext = {
-      columns: [{sql: 'group_set', name: 'group_set', isDimension: true}],
+      columns: [
+        {
+          sql: 'group_set',
+          expr: 'group_set',
+          name: 'group_set',
+          isDimension: true,
+        },
+      ],
       lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
@@ -1949,7 +2018,7 @@ export class QueryQuery extends QueryField {
       );
     }
 
-    const groupBy = 'GROUP BY ' + groupByPositions(f.columns).join(',') + '\n';
+    const groupBy = groupByClause(this.parent.dialect, f.columns);
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
@@ -1996,21 +2065,13 @@ export class QueryQuery extends QueryField {
               resultSet.groupSet > 0 ? resultSet.childGroups : [],
               sqlFieldName
             );
-            output.columns.push({
-              sql: `${exp} as ${sqlFieldName}`,
-              name: sqlFieldName,
-              isDimension: true,
-            });
+            output.columns.push(aliasedColumn(exp, sqlFieldName, true));
           } else if (isBasicCalculation(fi.f)) {
             const exp = this.parent.dialect.sqlAnyValue(
               resultSet.groupSet,
               sqlFieldName
             );
-            output.columns.push({
-              sql: `${exp} as ${sqlFieldName}`,
-              name: sqlFieldName,
-              isDimension: false,
-            });
+            output.columns.push(aliasedColumn(exp, sqlFieldName, false));
           }
         }
       } else if (fi instanceof FieldInstanceResult) {
@@ -2028,11 +2089,7 @@ export class QueryQuery extends QueryField {
             toGroup: resultSet.groupSet,
           });
           groupsToMap.push(fi.groupSet);
-          output.columns.push({
-            sql: `${s} as ${sqlFieldName}`,
-            name: sqlFieldName,
-            isDimension: false,
-          });
+          output.columns.push(aliasedColumn(s, sqlFieldName, false));
         } else {
           this.generateDepthNFields(depth, fi, output, stageWriter);
         }
@@ -2048,12 +2105,8 @@ export class QueryQuery extends QueryField {
         for (const m of output.groupsAggregated) {
           groupSetSQL += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
         }
-        groupSetSQL += 'ELSE group_set END as group_set';
-        output.columns[0] = {
-          sql: groupSetSQL,
-          name: 'group_set',
-          isDimension: true,
-        };
+        groupSetSQL += 'ELSE group_set END';
+        output.columns[0] = aliasedColumn(groupSetSQL, 'group_set', true);
       }
       // For hasLateralColumnAliasInSelect, the remap is handled in
       // generateSQLDepthN to avoid adding it multiple times from recursion.
@@ -2067,7 +2120,14 @@ export class QueryQuery extends QueryField {
   ): string {
     let s = 'SELECT \n';
     const f: StageOutputContext = {
-      columns: [{sql: 'group_set', name: 'group_set', isDimension: true}],
+      columns: [
+        {
+          sql: 'group_set',
+          expr: 'group_set',
+          name: 'group_set',
+          isDimension: true,
+        },
+      ],
       lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
@@ -2089,8 +2149,13 @@ export class QueryQuery extends QueryField {
       for (const m of f.groupsAggregated) {
         groupSetSQL += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
       }
-      groupSetSQL += 'ELSE group_set END as __remapped_group_set';
-      f.columns[0] = {sql: groupSetSQL, name: 'group_set', isDimension: true};
+      groupSetSQL += 'ELSE group_set END';
+      f.columns[0] = {
+        sql: `${groupSetSQL} as __remapped_group_set`,
+        expr: groupSetSQL,
+        name: 'group_set',
+        isDimension: true,
+      };
     }
 
     s += indent(f.columns.map(c => c.sql).join(',\n')) + '\n';
@@ -2099,10 +2164,7 @@ export class QueryQuery extends QueryField {
     if (where.length > 0) {
       s += `WHERE ${where}\n`;
     }
-    const dimensionPositions = groupByPositions(f.columns);
-    if (dimensionPositions.length > 0) {
-      s += `GROUP BY ${dimensionPositions.join(',')}\n`;
-    }
+    s += groupByClause(this.parent.dialect, f.columns);
 
     this.resultStage = stageWriter.addStage(s);
 
@@ -2128,7 +2190,10 @@ export class QueryQuery extends QueryField {
     stageWriter: StageWriter,
     stage0Name: string
   ): string {
-    let s = 'SELECT\n';
+    const limit = isRawSegment(this.firstSegment)
+      ? undefined
+      : this.firstSegment.limit;
+    let s = `SELECT${this.parent.dialect.sqlSelectLimit(limit)}\n`;
     // Columns this combine stage emits. Unlike the grouped stages above, these
     // are the final output names (unsuffixed), not the group-set-suffixed form.
     // A following pipelined stage carries them forward by name.
@@ -2139,23 +2204,26 @@ export class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
           if (isScalarField(fi.f)) {
-            columns.push({
-              sql:
-                this.parent.dialect.sqlQuoteIdentifier(
-                  `${name}__${this.rootResult.groupSet}`
-                ) + ` as ${sqlName}`,
-              name: sqlName,
-              isDimension: true,
-            });
-          } else if (isBasicCalculation(fi.f)) {
-            columns.push({
-              sql: this.parent.dialect.sqlAnyValueLastTurtle(
+            columns.push(
+              aliasedColumn(
                 this.parent.dialect.sqlQuoteIdentifier(
                   `${name}__${this.rootResult.groupSet}`
                 ),
-                this.rootResult.groupSet,
-                sqlName
+                sqlName,
+                true
+              )
+            );
+          } else if (isBasicCalculation(fi.f)) {
+            const lastTurtle = this.parent.dialect.sqlAnyValueLastTurtle(
+              this.parent.dialect.sqlQuoteIdentifier(
+                `${name}__${this.rootResult.groupSet}`
               ),
+              this.rootResult.groupSet,
+              sqlName
+            );
+            columns.push({
+              sql: lastTurtle,
+              expr: lastTurtle,
               name: sqlName,
               isDimension: false,
             });
@@ -2163,25 +2231,29 @@ export class QueryQuery extends QueryField {
         }
       } else if (fi instanceof FieldInstanceResult) {
         if (fi.firstSegment.type === 'reduce') {
-          columns.push({
-            sql: `${this.generateTurtleSQL(
-              fi,
-              stageWriter,
-              sqlName,
-              outputPipelinedSQL
-            )} as ${sqlName}`,
-            name: sqlName,
-            isDimension: false,
-          });
-        } else if (fi.firstSegment.type === 'project') {
-          columns.push({
-            sql: this.parent.dialect.sqlAnyValueLastTurtle(
-              this.parent.dialect.sqlQuoteIdentifier(
-                `${name}__${this.rootResult.groupSet}`
+          columns.push(
+            aliasedColumn(
+              this.generateTurtleSQL(
+                fi,
+                stageWriter,
+                sqlName,
+                outputPipelinedSQL
               ),
-              this.rootResult.groupSet,
-              sqlName
+              sqlName,
+              false
+            )
+          );
+        } else if (fi.firstSegment.type === 'project') {
+          const lastTurtle = this.parent.dialect.sqlAnyValueLastTurtle(
+            this.parent.dialect.sqlQuoteIdentifier(
+              `${name}__${this.rootResult.groupSet}`
             ),
+            this.rootResult.groupSet,
+            sqlName
+          );
+          columns.push({
+            sql: lastTurtle,
+            expr: lastTurtle,
             name: sqlName,
             isDimension: false,
           });
@@ -2195,10 +2267,7 @@ export class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
-    const dimensionPositions = groupByPositions(columns);
-    if (dimensionPositions.length > 0) {
-      s += `GROUP BY ${dimensionPositions.join(',')}\n`;
-    }
+    s += groupByClause(this.parent.dialect, columns);
 
     // order by
     const orderBySQL = this.genereateSQLOrderBy(
@@ -2206,11 +2275,7 @@ export class QueryQuery extends QueryField {
       this.rootResult
     );
     s += orderBySQL;
-
-    // limit
-    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += `LIMIT ${this.firstSegment.limit}\n`;
-    }
+    s += this.parent.dialect.sqlLimit(limit);
 
     this.resultStage = stageWriter.addStage(s);
     this.resultStage = this.generatePipelinedStages(
@@ -2524,12 +2589,16 @@ export class QueryQuery extends QueryField {
     return this.generateSimpleSQL(stageWriter);
   }
 
-  generateSQLFromPipeline(stageWriter: StageWriter): {
+  generateSQLFromPipeline(
+    stageWriter: StageWriter,
+    topLevel = false
+  ): {
     lastStageName: string;
     outputStruct: QueryResultDef;
   } {
     this.parent.maybeEmitParameterizedSourceUsage();
     this.prepare(stageWriter);
+    this.topLevelLastStage = topLevel && this.fieldDef.pipeline.length === 1;
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
     const pipeline = [...this.fieldDef.pipeline];
@@ -2558,6 +2627,8 @@ export class QueryQuery extends QueryField {
           this.isJoinedSubquery,
           this.structRefToQueryStruct
         );
+        q.topLevelLastStage =
+          topLevel && transform === pipeline[pipeline.length - 1];
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
         outputStruct = q.getResultStructDef();
@@ -2658,35 +2729,58 @@ class QueryQueryIndexStage extends QueryQuery {
       }
     }
 
-    let s = 'SELECT\n  group_set,\n';
-
-    s += '  CASE group_set\n';
-    for (let i = 0; i < fields.length; i++) {
-      s += `    WHEN ${i} THEN '${fields[i].name}'\n`;
-    }
-    s += `  END as ${fieldNameColumn},\n`;
-
-    s += '  CASE group_set\n';
-    for (let i = 0; i < fields.length; i++) {
-      const path = pathToCol(fields[i].path);
-      s += `    WHEN ${i} THEN '${path}'\n`;
-    }
-    s += `  END as ${fieldPathColumn},\n`;
-
-    s += '  CASE group_set\n';
-    for (let i = 0; i < fields.length; i++) {
-      s += `    WHEN ${i} THEN '${fields[i].type}'\n`;
-    }
-    s += `  END as ${fieldTypeColumn},`;
-
-    s += `  CASE group_set WHEN 99999 THEN ${dialect.castToString('NULL')}\n`;
-    for (let i = 0; i < fields.length; i++) {
-      if (fields[i].type === 'string') {
-        s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
+    // The grouped columns: group_set and one CASE per index column.
+    const caseOnGroupSet = (
+      when: (i: number) => string | undefined,
+      first = '\n'
+    ): string => {
+      let c = `CASE group_set${first}`;
+      for (let i = 0; i < fields.length; i++) {
+        const value = when(i);
+        if (value !== undefined) {
+          c += `    WHEN ${i} THEN ${value}\n`;
+        }
       }
-    }
-    s += `  END as ${fieldValueColumn},\n`;
+      return c + '  END';
+    };
+    const grouped: StageOutputColumn[] = [
+      {
+        sql: 'group_set',
+        expr: 'group_set',
+        name: 'group_set',
+        isDimension: true,
+      },
+      aliasedColumn(
+        caseOnGroupSet(i => `'${fields[i].name}'`),
+        fieldNameColumn,
+        true
+      ),
+      aliasedColumn(
+        caseOnGroupSet(i => `'${pathToCol(fields[i].path)}'`),
+        fieldPathColumn,
+        true
+      ),
+      aliasedColumn(
+        caseOnGroupSet(i => `'${fields[i].type}'`),
+        fieldTypeColumn,
+        true
+      ),
+      aliasedColumn(
+        caseOnGroupSet(
+          i => (fields[i].type === 'string' ? fields[i].expression : undefined),
+          ` WHEN 99999 THEN ${dialect.castToString('NULL')}\n`
+        ),
+        fieldValueColumn,
+        true
+      ),
+    ];
 
+    const limit = isRawSegment(this.firstSegment)
+      ? undefined
+      : this.firstSegment.limit;
+    let s = `SELECT${dialect.sqlSelectLimit(limit)}\n`;
+    // fieldType and fieldValue share one line
+    s += grouped.map((c, i) => `  ${c.sql},${i === 3 ? '' : '\n'}`).join('');
     s += ` ${measureSQL} as ${weightColumn},\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
@@ -2723,12 +2817,8 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    s += 'GROUP BY 1,2,3,4,5\n';
-
-    // limit
-    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += `LIMIT ${this.firstSegment.limit}\n`;
-    }
+    s += groupByClause(dialect, grouped);
+    s += dialect.sqlLimit(limit);
     // console.log(s);
     const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(

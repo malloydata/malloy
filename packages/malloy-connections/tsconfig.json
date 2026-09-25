@@ -13,6 +13,7 @@
     {"path": "../malloy-db-databricks"},
     {"path": "../malloy-db-postgres"},
     {"path": "../malloy-db-snowflake"},
+    {"path": "../malloy-db-sqlserver"},
     {"path": "../malloy-db-trino"}
   ]
 }

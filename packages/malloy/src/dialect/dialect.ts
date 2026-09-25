@@ -164,6 +164,8 @@ export function turtleGroupSetCondition(
 }
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
+export type GroupByClauseType = 'ordinal' | 'expression';
+export type LimitClauseType = 'limit' | 'top';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
@@ -247,6 +249,30 @@ export abstract class Dialect {
   // ORDER BY 1 DESC
   orderByClause: OrderByClauseType = 'ordinal';
 
+  // GROUP BY 1, or GROUP BY the dimension expressions (SQL Server has no
+  // ordinals in GROUP BY)
+  groupByClause: GroupByClauseType = 'ordinal';
+
+  // A trailing LIMIT n, or TOP n after SELECT (SQL Server). The compiler
+  // emits both positions through sqlSelectLimit and sqlLimit; one is empty.
+  limitClause: LimitClauseType = 'limit';
+  // ORDER BY is only legal in a subquery or CTE which also has a row limit
+  subqueryOrderByRequiresLimit = false;
+
+  /** The row limit in SELECT-list position: ` TOP n` or nothing */
+  sqlSelectLimit(limit: number | undefined): string {
+    return limit !== undefined && this.limitClause === 'top'
+      ? ` TOP ${limit}`
+      : '';
+  }
+
+  /** The row limit after ORDER BY, as its own line: `LIMIT n` or nothing */
+  sqlLimit(limit: number | undefined): string {
+    return limit !== undefined && this.limitClause === 'limit'
+      ? `LIMIT ${limit}\n`
+      : '';
+  }
+
   // null will match in a function signature
   nullMatchesFunctionSignature = true;
 
@@ -303,6 +329,8 @@ export abstract class Dialect {
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
+  // Characters LIKE reads as wildcards beyond % and _, escaped like them
+  likeExtraWildcards: string[] = [];
 
   /**
    * Mappings from integer value ranges to Malloy number types.
@@ -1242,6 +1270,10 @@ export abstract class Dialect {
         escaped += '^^';
         escapeActive = false;
         escapeClause = true;
+      } else if (this.likeEscape && this.likeExtraWildcards.includes(c)) {
+        escaped += '^' + c;
+        escapeActive = false;
+        escapeClause = true;
       } else {
         if (escapeActive) {
           if (this.likeEscape) {
@@ -1268,7 +1300,7 @@ export abstract class Dialect {
    */
   sqlBoolean(bv: boolean): string {
     if (this.booleanType === 'none') {
-      return bv ? '(1=1)' : '(1-0)';
+      return bv ? '(1=1)' : '(1=0)';
     }
     return bv ? 'true' : 'false';
   }
