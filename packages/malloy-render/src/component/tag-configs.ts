@@ -113,6 +113,7 @@ export interface NumberConfig {
 export interface DurationConfig {
   unit: string;
   terse: boolean;
+  signed: boolean;
 }
 
 export type CellFormatConfig =
@@ -217,11 +218,13 @@ export function resolveCellFormatTags(field: Field): CellFormatConfig {
   if (tag.has('duration')) {
     const durationUnit = tag.text('duration');
     const terse = tag.has('duration', 'terse');
+    const signed = tag.has('duration', 'signed');
     return {
       mode: 'duration',
       duration: {
         unit: durationUnit ?? DurationUnit.Seconds,
         terse,
+        signed,
       },
     };
   }

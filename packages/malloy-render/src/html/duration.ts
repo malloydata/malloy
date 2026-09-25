@@ -5,26 +5,12 @@
 
 import {HTMLTextRenderer} from './text';
 import type {DurationRenderOptions, StyleDefaults} from './data_styles';
-import {DurationUnit} from './data_styles';
+import {DurationUnit, isDurationUnit} from './data_styles';
 import type {RendererOptions} from './renderer_types';
 import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
 import {formatDuration} from '../util';
 import type {Cell, Field} from '../data_tree';
-
-export function getText(
-  field: Field,
-  value: number,
-  options: {
-    durationUnit?: string;
-  }
-): string | null {
-  return formatDuration(value, {
-    durationUnit: options.durationUnit,
-    numFormat: field.tag.text('number'),
-    terse: field.tag.has('duration', 'terse'),
-  });
-}
 
 export class HTMLDurationRenderer extends HTMLTextRenderer {
   constructor(
@@ -44,8 +30,10 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
         `Cannot format field ${data.field.name} as a duration unit since its not a number`
       );
     }
-    return getText(data.field, data.value, {
+    return formatDuration(data.value, {
       durationUnit: this.options.duration_unit,
+      terse: this.options.terse,
+      signed: this.options.signed,
     });
   }
 }
@@ -56,8 +44,11 @@ export class DurationRendererFactory extends RendererFactory<DurationRenderOptio
   constructor() {
     super();
     this.addExtractor((options, value) => {
+      const unit = value?.text();
       options.duration_unit =
-        (value?.text() as DurationUnit) ?? DurationUnit.Seconds;
+        unit && isDurationUnit(unit) ? unit : DurationUnit.Seconds;
+      options.terse = value?.has('terse') ?? false;
+      options.signed = value?.has('signed') ?? false;
     }, this.rendererName);
   }
 

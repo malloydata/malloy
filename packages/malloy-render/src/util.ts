@@ -14,7 +14,7 @@ function isTimestampUnit(s: string): s is TimestampUnit {
 }
 import {DurationUnit, isDurationUnit} from './html/data_styles';
 import {timeToString as htmlTimeToString} from './html/utils';
-import {format} from 'ssf';
+import {Duration} from 'luxon';
 import type {Cell, NestField} from './data_tree';
 import {Field} from './data_tree';
 
@@ -82,93 +82,22 @@ export function getRangeSize(range: [number, number]) {
   return range[1] - range[0] + 1;
 }
 
-export function formatTimeUnit(
-  value: number,
-  unit: DurationUnit,
-  options: {numFormat?: string; terse?: boolean} = {}
-) {
-  let unitString = unit.toString();
-  if (options.terse) {
-    unitString = terseDurationUnitsMap.get(unit) ?? unitString;
-  } else if (value === 1) {
-    unitString = unitString.substring(0, unitString.length - 1);
-  }
-
-  const formattedValue = options.numFormat
-    ? format(options.numFormat, value)
-    : value.toLocaleString();
-  return `${formattedValue}${options.terse ? '' : ' '}${unitString}`;
-}
-
-const terseDurationUnitsMap = new Map<DurationUnit, string>([
-  [DurationUnit.Nanoseconds, 'ns'],
-  [DurationUnit.Microseconds, 'µs'],
-  [DurationUnit.Milliseconds, 'ms'],
-  [DurationUnit.Seconds, 's'],
-  [DurationUnit.Minutes, 'm'],
-  [DurationUnit.Hours, 'h'],
-  [DurationUnit.Days, 'd'],
-]);
-
-const multiplierMap = new Map<DurationUnit, number>([
-  [DurationUnit.Nanoseconds, 1000],
-  [DurationUnit.Microseconds, 1000],
-  [DurationUnit.Milliseconds, 1000],
-  [DurationUnit.Seconds, 60],
-  [DurationUnit.Minutes, 60],
-  [DurationUnit.Hours, 24],
-  [DurationUnit.Days, Number.MAX_VALUE],
-]);
-
 export function formatDuration(
   value: number,
   options: {
     durationUnit?: string;
     terse?: boolean;
-    numFormat?: string;
+    signed?: boolean;
   }
 ): string {
   const targetUnit =
     options.durationUnit && isDurationUnit(options.durationUnit)
       ? options.durationUnit
       : DurationUnit.Seconds;
-  const numFormat = options.numFormat;
-  const terse = options.terse ?? false;
-
-  let currentDuration = Math.abs(value);
-  let currentUnitValue = 0;
-  let durationParts: string[] = [];
-  let foundUnit = false;
-
-  for (const [unit, multiplier] of multiplierMap) {
-    if (unit === targetUnit) {
-      foundUnit = true;
-    }
-
-    if (!foundUnit) {
-      continue;
-    }
-
-    currentUnitValue = currentDuration % multiplier;
-    currentDuration = Math.floor((currentDuration /= multiplier));
-
-    if (currentUnitValue > 0) {
-      durationParts = [
-        formatTimeUnit(currentUnitValue, unit, {numFormat, terse}),
-        ...durationParts,
-      ];
-    }
-
-    if (currentDuration === 0) {
-      break;
-    }
-  }
-
-  if (durationParts.length > 0) {
-    return (value < 0 ? '-' : '') + durationParts.slice(0, 2).join(' ');
-  }
-
-  return formatTimeUnit(0, targetUnit, {numFormat, terse});
+  return Duration.fromObject({[targetUnit]: value}).toHuman({
+    signDisplay: options.signed ? 'auto' : 'never',
+    unitDisplay: options.terse ? 'narrow' : 'long',
+  });
 }
 
 function padZeros(num: number, length = 2) {

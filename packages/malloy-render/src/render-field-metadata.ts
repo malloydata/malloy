@@ -15,6 +15,7 @@ import {resolveBuiltInTags} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '@/component/tag-utils';
 import {COMBO_MARK_TYPES} from '@/plugins/combo-chart/combo-chart-settings';
+import {DurationUnit, isDurationUnit} from '@/html/data_styles';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -310,18 +311,9 @@ export class RenderFieldMetadata {
     if (tag.has('duration')) {
       const durationVal = tag.text('duration');
       if (durationVal !== undefined) {
-        const validUnits = [
-          'nanoseconds',
-          'microseconds',
-          'milliseconds',
-          'seconds',
-          'minutes',
-          'hours',
-          'days',
-        ];
-        if (!validUnits.includes(durationVal)) {
+        if (!isDurationUnit(durationVal)) {
           log.error(
-            `Unknown duration unit '${durationVal}' on field '${field.name}'. Valid units: ${validUnits.join(', ')}`,
+            `Unknown duration unit '${durationVal}' on field '${field.name}'. Valid units: ${Object.values(DurationUnit).join(', ')}`,
             tag.tag('duration')
           );
         }

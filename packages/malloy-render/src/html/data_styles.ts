@@ -118,8 +118,6 @@ export interface DataVolumeRenderOptions extends TextRenderOptions {
 }
 
 export enum DurationUnit {
-  Nanoseconds = 'nanoseconds',
-  Microseconds = 'microseconds',
   Milliseconds = 'milliseconds',
   Seconds = 'seconds',
   Minutes = 'minutes',
@@ -133,6 +131,8 @@ export function isDurationUnit(unit: string): unit is DurationUnit {
 
 export interface DurationRenderOptions extends TextRenderOptions {
   duration_unit?: DurationUnit;
+  terse?: boolean;
+  signed?: boolean;
 }
 
 export interface ImageRenderOptions extends TextRenderOptions {

@@ -776,22 +776,28 @@ source: metrics extend {
 
 ### `# duration`
 
-Formats a numeric field representing a duration into a human-readable string (e.g., "1h 2m", "30s").
+Formats a numeric field as a duration using Luxon. The specified unit is preserved: `61` with `# duration=minutes` displays as "61 minutes". Negative values display their absolute magnitude by default.
 
 **Properties:**
 
-- `. [unit]`: Specifies the unit of the input number if not seconds (e.g., `nanoseconds`, `milliseconds`, `minutes`, `hours`, `days`). Default is `seconds`.
+- `=unit`: Specifies the unit of the input number: `milliseconds`, `seconds`, `minutes`, `hours`, or `days`. Default is `seconds`.
   - Syntax: `# duration=milliseconds`
-- `.terse`\*\*: Uses abbreviated units (ns, µs, ms, s, m, h, d).
+- `.terse`: Uses Luxon's abbreviated units (e.g., "61m").
   - Syntax: `# duration.terse` or `# duration { terse }`
-- `.number`: Apply an `ssf` format string to the numeric parts of the duration.
-  - Syntax: `# duration { number="0.0" }`
+- `.signed`: Preserves the minus sign on negative values. Positive values have no leading sign.
+  - Syntax: `# duration=minutes { signed }`
+
+Microseconds, nanoseconds, and custom SSF number formats are not supported for durations.
 
 **Example:**
 
 ```
-measure: avg_session_time is session_length.avg() # duration=seconds
-measure: total_compute_time is compute_nanos.sum() # duration=nanoseconds terse
+# duration=seconds
+measure: avg_session_time is session_length.avg()
+# duration=minutes { signed }
+dimension: time_difference is -61  // "-61 minutes"
+# duration=minutes
+dimension: elapsed is -61         // "61 minutes"
 ```
 
 ### `# image`

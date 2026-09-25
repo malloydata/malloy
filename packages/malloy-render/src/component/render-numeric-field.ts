@@ -62,6 +62,7 @@ export function renderNumericField(
       return formatDuration(value, {
         durationUnit: config.duration.unit,
         terse: config.duration.terse,
+        signed: config.duration.signed,
       });
     }
     case 'number':

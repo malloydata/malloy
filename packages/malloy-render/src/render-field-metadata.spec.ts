@@ -19,6 +19,9 @@ import {RenderFieldMetadata} from './render-field-metadata';
 import {getBarChartSettings} from './plugins/bar-chart/get-bar_chart-settings';
 import {getComboChartSettings} from './plugins/combo-chart/get-combo_chart-settings';
 import type {Field, NestField} from './data_tree';
+import type {CellFormatConfig} from './component/tag-configs';
+import {renderNumericField} from './component/render-numeric-field';
+import {DurationRendererFactory} from './html/duration';
 
 let connection: DuckDBConnection;
 let runtime: SingleConnectionRuntime;
@@ -181,6 +184,76 @@ describe('dispatch (shouldRenderAs) on the compiled schema', () => {
 });
 
 describe('setup-time tag resolvers (tag-configs)', () => {
+  test.each([
+    {
+      tag: '# duration=minutes',
+      signed: false,
+      terse: false,
+      text: '61 minutes',
+    },
+    {
+      tag: '# duration=minutes { signed }',
+      signed: true,
+      terse: false,
+      text: '-61 minutes',
+    },
+    {
+      tag: '# duration=minutes { terse }',
+      signed: false,
+      terse: true,
+      text: '61m',
+    },
+    {
+      tag: '# duration=minutes { signed terse }',
+      signed: true,
+      terse: true,
+      text: '-61m',
+    },
+  ])('$tag', async ({tag, signed, terse, text}) => {
+    const metadata = await metadataFor(`
+      query: q is ${SQL_SOURCE} -> {
+        select:
+          ${tag}
+          elapsed is -61
+      }
+    `);
+    const field = childField(metadata, 'elapsed');
+    expect(field.getTagConfig<CellFormatConfig>()).toEqual({
+      mode: 'duration',
+      duration: {unit: 'minutes', signed, terse},
+    });
+    metadata.logCollector.collectUnreadTags(field.tag, field.name);
+    expect(metadata.logCollector.getLogs()).toEqual([]);
+    expect(renderNumericField(field, -61)).toBe(text);
+    expect(
+      DurationRendererFactory.instance.parseTagParameters(field.tag)
+    ).toEqual({
+      duration_unit: 'minutes',
+      signed,
+      terse,
+    });
+  });
+
+  test.each(['microseconds', 'nanoseconds'])(
+    'reports unsupported duration unit %s',
+    async unit => {
+      const metadata = await metadataFor(`
+        query: q is ${SQL_SOURCE} -> {
+          select:
+            # duration=${unit}
+            elapsed is 1
+        }
+      `);
+      expect(metadata.logCollector.getLogs()).toEqual([
+        expect.objectContaining({
+          severity: 'error',
+          message: expect.stringContaining(`Unknown duration unit '${unit}'`),
+          range: expect.anything(),
+        }),
+      ]);
+    }
+  );
+
   test('# transpose.limit lands in the table nest config', async () => {
     const metadata = await metadataFor(`
       query: q is ${SQL_SOURCE} -> {

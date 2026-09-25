@@ -127,6 +127,28 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   #(story)
+  view: duration_formats is {
+    select:
+      # duration=minutes
+      duration_unsigned is -61
+      # duration=minutes { signed }
+      duration_signed is -61
+      # duration=minutes { signed terse }
+      duration_signed_terse is -61
+    limit: 1
+  }
+
+  #(story) story="Unsupported duration units"
+  view: unsupported_duration_units is {
+    select:
+      # duration=microseconds
+      microseconds is 1
+      # duration=nanoseconds
+      nanoseconds is 1
+    limit: 1
+  }
+
+  #(story)
   # transpose
   view: date_and_time is {
     group_by:
