@@ -396,10 +396,13 @@ export abstract class TrinoPrestoConnection
       }
 
       const rows: string[][] = (queryResult.rows as string[][]) ?? [];
+      if (rows.length === 0) {
+        throw new Error('DESCRIBE returned no columns');
+      }
       this.structDefFromSchema(rows, structDef);
     } catch (e) {
       throw new Error(
-        `Could not fetch schema for ${element} ${
+        `Could not fetch schema for ${element}: ${
           e instanceof Error ? e.message : e
         }`
       );
