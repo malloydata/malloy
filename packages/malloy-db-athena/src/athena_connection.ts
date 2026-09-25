@@ -10,7 +10,7 @@ import type {
   StructDef,
   TableSourceDef,
 } from '@malloydata/malloy';
-import {makeDigest, mkFieldDef} from '@malloydata/malloy';
+import {AthenaDialect, makeDigest, mkFieldDef} from '@malloydata/malloy';
 import {TrinoPrestoConnection} from '@malloydata/db-trino';
 import type {
   AthenaCommandSender,
@@ -31,6 +31,7 @@ import {
  * SELECT's from its EXPLAIN plan.
  */
 export class AthenaConnection extends TrinoPrestoConnection {
+  protected override readonly dialect = new AthenaDialect();
   private readonly runner: AthenaRunner;
   private readonly config: AthenaConnectionConfiguration;
 
@@ -90,7 +91,7 @@ export class AthenaConnection extends TrinoPrestoConnection {
     if (/^(row|array|map)\b/.test(bare)) {
       return {type: 'sql native', rawType: trinoType};
     }
-    if (bare === 'float' || bare === 'real') {
+    if (bare === 'float') {
       return {type: 'number', numberType: 'float'};
     }
     return super.malloyTypeFromTrinoType(trinoType);
