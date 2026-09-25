@@ -37,6 +37,8 @@ function getSplitFunction(db: string) {
       `split(${column}, '${splitChar}')`,
     'presto': (column: string, splitChar: string) =>
       `split(${column}, '${splitChar}')`,
+    'athena': (column: string, splitChar: string) =>
+      `split(${column}, '${splitChar}')`,
   }[db];
 }
 
