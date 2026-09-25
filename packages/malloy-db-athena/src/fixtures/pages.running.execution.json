@@ -1,0 +1,18 @@
+{
+ "QueryExecution": {
+  "QueryExecutionId": "6543de95-4735-4c9b-b90f-e72b6cfbf812",
+  "Query": "SELECT x FROM UNNEST(sequence(1,2500)) AS t(x)",
+  "StatementType": "DML",
+  "ResultConfiguration": {
+   "OutputLocation": "s3://malloytest-results/results/6543de95-4735-4c9b-b90f-e72b6cfbf812.csv"
+  },
+  "Status": {
+   "State": "RUNNING",
+   "SubmissionDateTime": "2026-09-24T09:39:07.640000-06:00"
+  },
+  "EngineVersion": {
+   "SelectedEngineVersion": "Athena engine version 3",
+   "EffectiveEngineVersion": "Athena engine version 3"
+  }
+ }
+}

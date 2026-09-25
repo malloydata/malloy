@@ -99,7 +99,7 @@ Create `.github/workflows/db-{name}.yaml` following existing workflows:
 - `workflow_dispatch` for manual runs
 - Steps: checkout, setup Node, `npm ci`, `npm run build`, `npm run ci-{name}`
 
-In `run-tests.yaml`, add a job that calls your workflow. If it uses secrets, add `needs: check-permission`. Add it to the `malloy-tests` needs list so the gate job waits for it.
+In `run-tests.yaml`, add a job that calls your workflow. If it uses secrets, add `needs: check-permission`. Add it to the `malloy-tests` needs list, unless the job can be skipped for want of a credential — a skipped `needs:` skips the rollup, so such a job stays out of it (see `db-athena` in `.github/workflows/CONTEXT.md`) so the gate job waits for it.
 
 Add a `ci-{name}` npm script in the root `package.json`.
 

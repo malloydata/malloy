@@ -235,6 +235,17 @@ const PER_DIALECT: Record<string, PerDialectCorpus> = {
       {name: 'unterminated_quote', value: '"foo'},
     ],
   },
+  athena: {
+    accept: [
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+    ],
+    reject: [
+      {name: 'dollar_in_bare', value: 'foo$bar'},
+      {name: 'digit_start', value: '1foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+    ],
+  },
   databricks: {
     accept: [
       {name: 'digit_start_non_numeric', value: '1foo'},

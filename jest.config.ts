@@ -170,9 +170,19 @@ const config: Config = {
     {
       ...defaultConfig,
       displayName: 'db-presto-trino',
+      testPathIgnorePatterns: connectorUnitIgnored,
       roots: [
         '<rootDir>/packages/malloy-db-trino/src/',
         '<rootDir>/test/src/databases/presto-trino/',
+      ],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-athena',
+      testPathIgnorePatterns: connectorUnitIgnored,
+      roots: [
+        '<rootDir>/packages/malloy-db-athena/',
+        '<rootDir>/test/src/databases/athena/',
       ],
     },
     {

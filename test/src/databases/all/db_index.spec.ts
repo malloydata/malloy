@@ -83,7 +83,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   test.when(
     databaseName !== 'bigquery' &&
       databaseName !== 'trino' &&
-      databaseName !== 'presto'
+      databaseName !== 'presto' &&
+      databaseName !== 'athena'
   )(`index rows count - ${databaseName}`, async () => {
     await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
@@ -93,18 +94,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `).toMatchResult(testModel, {fieldName: 'one', weight: 10});
   });
 
-  it.when(databaseName !== 'trino' && databaseName !== 'presto')(
-    `index rows count - ${databaseName}`,
-    async () => {
-      await expect(`
+  it.when(
+    databaseName !== 'trino' &&
+      databaseName !== 'presto' &&
+      databaseName !== 'athena'
+  )(`index rows count - ${databaseName}`, async () => {
+    await expect(`
       run: ${databaseName}.table('malloytest.flights') extend {
         dimension: one is 'one'
       } -> {index:one, tail_num; sample: 50% }
         -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
     `).toMatchResult(testModel, {fieldName: 'one'});
-      // Hard to get consistent results here so just check that we get a value back.
-    }
-  );
+    // Hard to get consistent results here so just check that we get a value back.
+  });
 
   // it(`fanned data index  - ${databaseName}`, async () => {
   //   const result = await runtime
