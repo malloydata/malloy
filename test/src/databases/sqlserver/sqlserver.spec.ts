@@ -113,6 +113,17 @@ describe('SQL Server', () => {
       ).rejects.toThrow(/boolean/);
     });
 
+    test('starts_with and ends_with are conditions', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          aggregate:
+            c_states is count() { where: starts_with(state, 'C') }
+            a_states is count() { where: ends_with(state, 'A') }
+            nan_counts is count() { where: is_nan(airport_count) }
+        }
+      `).toEqualResult(tm, [{c_states: 3, a_states: 8, nan_counts: 0}]);
+    });
+
     test('reads a column', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {

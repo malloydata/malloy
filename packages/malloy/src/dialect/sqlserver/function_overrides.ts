@@ -12,14 +12,16 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   ceil: {function: 'CEILING'},
   chr: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE NCHAR(${value}) END"},
   div: {sql: 'FLOOR(${dividend} / ${divisor})'},
-  // Of NULL, false: the standard is COALESCE(ENDS_WITH(...), false)
+  // A comparison: legal where a condition is expected, and a server error
+  // as a value (there are no boolean values). Of NULL, no row, where the
+  // standard's COALESCE(ENDS_WITH(...), false) is false.
   ends_with: {
-    sql: `CASE WHEN RIGHT(\${value}, ${len('${suffix}')}) = \${suffix} THEN 1 ELSE 0 END`,
+    sql: `RIGHT(\${value}, ${len('${suffix}')}) = \${suffix}`,
   },
   ifnull: {function: 'ISNULL'},
-  // A FLOAT holds neither infinity nor NaN
-  is_inf: {sql: '0'},
-  is_nan: {sql: '0'},
+  // A FLOAT holds neither infinity nor NaN, so neither condition is ever true
+  is_inf: {sql: '(1=0)'},
+  is_nan: {sql: '(1=0)'},
   // LEN drops trailing spaces; a marker character restores them
   length: {sql: len('${value}')},
   ln: {sql: 'LOG(${value})'},
@@ -33,7 +35,7 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   atan2: {function: 'ATN2'},
   trim: {characters: {sql: 'TRIM(${trim_characters} FROM ${value})'}},
   starts_with: {
-    sql: `CASE WHEN LEFT(\${value}, ${len('${prefix}')}) = \${prefix} THEN 1 ELSE 0 END`,
+    sql: `LEFT(\${value}, ${len('${prefix}')}) = \${prefix}`,
   },
   stddev: {function: 'STDEV'},
   string_repeat: {function: 'REPLICATE'},
