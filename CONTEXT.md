@@ -249,8 +249,7 @@ npx jest <path> -t <pattern> > /tmp/jest.log 2>&1
 
 **Do not use** the variants below. They are common AI defaults and they all fail here:
 
-- `npm run test` — requires every database connection; never finishes.
-- `npm run test -- <file>` — same problem; arg passthrough does not narrow the run the way you'd expect.
+- `npm run test`, at the root or inside any package — it runs no tests. Tests are selected by path or by jest project from the repo root; a package directory is not a unit of test selection, and `npm test` there prints a pointer back to this section and exits 1.
 - `jest …` directly without `npx` — wrong binary resolution.
 - `--testPathPattern`, `--testNamePattern`, or other jest-flag variants — `<path> -t <pattern>` is the supported surface.
 

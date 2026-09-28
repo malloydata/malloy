@@ -17,7 +17,7 @@
     "dev": "npm run codegen && tsc --build",
     "build": "npm run codegen && tsc --build && npm run generate-flow",
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean && rimraf src/lib/* dist @flowtyped",
-    "test": "jest",
+    "test": "echo 'Read the Testing section of the repo-root CONTEXT.md for information on testing in this monorepo'; exit 1",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "keywords": [],
