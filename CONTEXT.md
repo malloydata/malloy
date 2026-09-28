@@ -247,7 +247,7 @@ Run it from the repo root, through `npx`, selecting tests with a path and `-t` â
 npx jest <path> -t <pattern> > /tmp/jest.log 2>&1
 ```
 
-Broader runs go through the root scripts below: `precheck` and `ci-<dialect>`. A package directory is not a unit of test selection, so `npm test` inside one points back here.
+Broader runs go through the root scripts below: `precheck` and `ci-<dialect>`. In a package whose tests are self-contained and need no database server, `npm test` runs them; elsewhere it points back to this section.
 
 On exit 0, move on â€” don't read `/tmp/jest.log`. On non-zero exit, `tail` or `grep` the log; if one pass doesn't surface the failing test, grep differently rather than re-running with new jest flags.
 
