@@ -56,7 +56,9 @@ Each of these is a later change, not a promise.
 |---|---|
 | `nest:` | Refused at translation (`supportsNesting` is false) |
 | Arrays and records, in table data or as literals | Declared unsupported; a JSON column is a string |
-| A boolean held as a value where SQL expects a condition: a boolean dimension in `where:` or `pick … when`, a `bit` column in `where:`, `where: starts_with(...)` | Fails at the server (error 4145): SQL Server has no boolean value, so a named boolean is a `1`/`0` value. A comparison written in `where:` or `having:` works, and a boolean dimension in `group_by:` or `select:` comes back as `1` or `0` |
+| A boolean where SQL expects a condition: a boolean dimension in `where:`, `having:` or `pick … when`; a `bit` column in `where:` | Server error (4145). A comparison, `starts_with`, `ends_with`, `is_nan` or `is_inf` written there directly works, and a boolean **declared** as a dimension or measure is a `1`/`0` value (the translator's CASE for `booleanType: 'none'`) that groups and selects but is not a condition |
+| `x::boolean` | Compile error: there is no boolean to cast to |
+| `not x` on any boolean, `x !~ 'pattern'` | Server error (4145): the compiler writes `COALESCE(NOT x, TRUE)` and `COALESCE(x LIKE p, true)`, and a condition is not a value `COALESCE` can take. `x != y` works; `not (x = y)` does not |
 | `all()`, `exclude()` | Compile error: ungrouped aggregates share the nest machinery |
 | `x ~ r'...'` | Error when SQL is generated: no regular expressions before SQL Server 2025 |
 | `regexp_extract`, `replace` with a regular expression | Server error: the functions arrive in SQL Server 2025 |
@@ -76,7 +78,7 @@ Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `
 - A `datetime`, `datetime2` or `smalldatetime` is a Malloy timestamp read as UTC. A query's `timezone:` is converted with `AT TIME ZONE` through the Windows name of the zone, whose daylight-saving history differs from IANA's for older dates.
 - Every string literal is written `N'...'`, so text outside the database's code page compares as itself.
 - The default collation compares case-insensitively; Malloy does not change that.
-- `bit` is Malloy's boolean. `uniqueidentifier`, `text`, `ntext`, `time`, `binary`, `varbinary`, `xml`, `geography` and the other types the map does not name are `sql native`, to be passed through or cast in a `sql()` dimension.
+- `bit` is an integer, read as 0 or 1. `uniqueidentifier`, `text`, `ntext`, `time`, `binary`, `varbinary`, `xml`, `geography` and the other types the map does not name are `sql native`, to be passed through or cast in a `sql()` dimension.
 - A `bigint` arrives as the driver's text and is read as a number, so a value above 2^53 loses precision.
 - `sample: n` takes the first `n` rows, not a random sample; `TABLESAMPLE` returns whole pages.
 

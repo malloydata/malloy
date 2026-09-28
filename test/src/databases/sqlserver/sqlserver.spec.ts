@@ -74,6 +74,45 @@ describe('SQL Server', () => {
       `).toEqualResult(tm, [{n: 51, none: 0}]);
     });
 
+    test('a bit column is an integer', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.alltypes') -> {
+          select: t_bool_true, t_bool_false, t_bool_null
+        }
+      `).toEqualResult(tm, [
+        {t_bool_true: 1, t_bool_false: 0, t_bool_null: null},
+      ]);
+    });
+
+    test('a declared boolean is a 0/1 value', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          group_by:
+            big is airport_count > 500
+            c_state is starts_with(state, 'C')
+          aggregate: n is count()
+          order_by: big desc, c_state desc
+        }
+      `).toEqualResult(tm, [
+        {big: true, c_state: true, n: 1},
+        {big: true, c_state: false, n: 11},
+        {big: false, c_state: true, n: 2},
+        {big: false, c_state: false, n: 37},
+      ]);
+    });
+
+    test('a cast to boolean is refused', async () => {
+      await expect(
+        runtime
+          .loadQuery(
+            `run: sqlserver.table('malloytest.state_facts') -> {
+              select: b is airport_count::boolean
+            }`
+          )
+          .run()
+      ).rejects.toThrow(/boolean/);
+    });
+
     test('reads a column', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {

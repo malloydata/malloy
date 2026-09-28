@@ -61,7 +61,8 @@ const inSeconds: Record<string, number> = {
 // Type names as sys.types and sys.dm_exec_describe_first_result_set report
 // them. DECIMAL and NUMERIC are decided by their parameters.
 const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
-  'bit': {type: 'boolean'},
+  // A bit is an integer: SQL Server has no boolean values
+  'bit': {type: 'number', numberType: 'integer'},
   'tinyint': {type: 'number', numberType: 'integer'},
   'smallint': {type: 'number', numberType: 'integer'},
   'int': {type: 'number', numberType: 'integer'},
@@ -131,8 +132,9 @@ export class SQLServerDialect extends Dialect {
   compoundObjectInSchema = false;
   supportsSelectReplace = false;
   supportsTempTables = false;
-  // A comparison is legal only where a condition is expected; a `bit` only
-  // where a value is.
+  // SQL Server has no boolean values: a comparison is legal only where a
+  // condition is expected, `true` and `false` are (1=1) and (1=0), a `bit`
+  // column is an integer, and a cast to boolean is refused.
   booleanType: BooleanTypeSupport = 'none';
   hasTimestamptz = false;
   // A bigint arrives from the driver as text and is read as a JavaScript number
@@ -452,6 +454,9 @@ export class SQLServerDialect extends Dialect {
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     const expr = cast.e.sql || '';
     const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    if (dstTypeDef?.type === 'boolean') {
+      return this.unsupported('a cast to boolean: there are no boolean values');
+    }
     const tz = qtz(qi);
     if (tz && srcTypeDef && dstTypeDef) {
       if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {

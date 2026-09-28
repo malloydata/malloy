@@ -100,7 +100,7 @@ describe('db:SQLServer', () => {
       ])
     );
     expect(types).toEqual({
-      b: 'boolean',
+      b: 'number:integer',
       i8: 'number:integer',
       i16: 'number:integer',
       i32: 'number:integer',
