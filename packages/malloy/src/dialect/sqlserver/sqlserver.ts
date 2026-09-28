@@ -394,18 +394,24 @@ export class SQLServerDialect extends Dialect {
     return this.unsupported('distinct aggregates');
   }
 
-  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
-    if (sample !== undefined) {
-      if (isSamplingEnable(sample) && sample.enable) {
-        sample = this.defaultSampling;
-      }
-      // The first n rows, not a random sample: TABLESAMPLE ROWS returns whole
-      // pages, not the number of rows asked for
-      if (isSamplingRows(sample)) {
-        return `(SELECT TOP ${sample.rows} * FROM ${tableSQL})`;
-      } else if (isSamplingPercent(sample)) {
-        return `(SELECT * FROM ${tableSQL} TABLESAMPLE (${sample.percent} PERCENT))`;
-      }
+  // TABLESAMPLE reads whole pages of a base table and nothing else, so a
+  // sample on a derived table is ignored rather than taken as its first rows.
+  sqlSampleTable(
+    tableSQL: string,
+    sample: Sampling | undefined,
+    onBaseTable = true
+  ): string {
+    if (sample === undefined || !onBaseTable) {
+      return tableSQL;
+    }
+    if (isSamplingEnable(sample) && sample.enable) {
+      sample = this.defaultSampling;
+    }
+    if (isSamplingRows(sample)) {
+      return `(SELECT * FROM ${tableSQL} TABLESAMPLE (${sample.rows} ROWS))`;
+    }
+    if (isSamplingPercent(sample)) {
+      return `(SELECT * FROM ${tableSQL} TABLESAMPLE (${sample.percent} PERCENT))`;
     }
     return tableSQL;
   }

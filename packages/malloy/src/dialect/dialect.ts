@@ -1180,7 +1180,13 @@ export abstract class Dialect {
     return 'sqlAggDistinct called but not implemented';
   }
 
-  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+  // onBaseTable: the source is a table the engine can sample in place; a
+  // dialect whose sampling reads the table itself ignores a sample elsewhere
+  sqlSampleTable(
+    tableSQL: string,
+    sample: Sampling | undefined,
+    _onBaseTable = true
+  ): string {
     if (sample !== undefined) {
       throw new Error(`Sampling is not supported on dialect ${this.name}.`);
     }

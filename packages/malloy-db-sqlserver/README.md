@@ -80,12 +80,13 @@ Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `
 - The default collation compares case-insensitively; Malloy does not change that.
 - `bit` is an integer, read as 0 or 1. `uniqueidentifier`, `text`, `ntext`, `time`, `binary`, `varbinary`, `xml`, `geography` and the other types the map does not name are `sql native`, to be passed through or cast in a `sql()` dimension.
 - A `bigint` arrives as the driver's text and is read as a number, so a value above 2^53 loses precision.
-- `sample: n` takes the first `n` rows, not a random sample; `TABLESAMPLE` returns whole pages.
+- `sample: n` and `sample: n%` read a base table through `TABLESAMPLE`, which returns whole pages, so a row count is approximate. A sample on any other source (a SQL block, a query) is ignored: `TABLESAMPLE` reads nothing but a table.
 
 ## Which server features the dialect uses
 
 | Feature | First in |
 |---|---|
+| `TABLESAMPLE` | SQL Server 2005 |
 | `AT TIME ZONE`, `DATEDIFF_BIG` | SQL Server 2016 |
 | `STRING_AGG`, `TRIM` | SQL Server 2017 |
 

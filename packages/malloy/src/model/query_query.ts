@@ -1328,7 +1328,8 @@ export class QueryQuery extends QueryField {
     if (isIndexSegment(this.firstSegment)) {
       structSQL = this.parent.dialect.sqlSampleTable(
         structSQL,
-        this.firstSegment.sample
+        this.firstSegment.sample,
+        qs.structDef.type === 'table'
       );
       if (this.firstSegment.sample) {
         const d = this.parent.dialect;
