@@ -303,7 +303,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
 
-    let query = `SELECT${d.sqlSelectLimit(limit)}
+    let query = `SELECT
               ${fieldNameColumn},
               ${fieldPathColumn},
               ${fieldValueColumn},
@@ -323,7 +323,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
             ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${d.sqlLiteralString(
               searchValue + '%'
             )}) THEN 1 ELSE 0 END DESC, ${weightColumn} DESC
-            ${d.sqlLimit(limit)}
+            LIMIT ${limit}
           `;
     if (d.hasFinalStage) {
       query = `WITH __stage0 AS(\n${query}\n)\n${d.sqlFinalStage('__stage0', [
