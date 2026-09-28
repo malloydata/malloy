@@ -1524,6 +1524,9 @@ describe('sql native fields in schema', () => {
       error('sql-native-not-allowed-in-expression', {rawType: undefined})
     );
   });
+  test('allow distinct count of unsupported', () => {
+    expect('run: a->{ aggregate: n is count(aun) }').toTranslate();
+  });
   test('allow unsupported to be cast', () => {
     const uModel = new TestTranslator(
       'source: x is a extend { dimension: notUn is aun::string }'
