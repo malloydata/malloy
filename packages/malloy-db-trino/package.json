@@ -15,7 +15,7 @@
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "echo 'Read the Testing section of the repo-root CONTEXT.md for information on testing in this monorepo'; exit 1",
+    "test": "cd ../.. && ts-node scripts/check_dialect_connection.ts trino presto && jest packages/malloy-db-trino",
     "build": "tsc --build",
     "dev": "tsc --build",
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
