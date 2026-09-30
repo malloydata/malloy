@@ -45,6 +45,24 @@ describe('db:SQLServer', () => {
     });
   });
 
+  it('leaves an unnamed result column out of a SQL block schema', async () => {
+    const res = await connection.fetchSchemaForSQLStruct(
+      {selectStr: 'SELECT 1 AS one, COUNT(*)', connection: 'sqlserver'},
+      {}
+    );
+    expect(res.error).toBeUndefined();
+    expect(res.structDef?.fields.map(f => f.name)).toEqual(['one']);
+  });
+
+  it('reports a SQL block with no named column as an error', async () => {
+    const res = await connection.fetchSchemaForSQLStruct(
+      {selectStr: 'SELECT COUNT(*)', connection: 'sqlserver'},
+      {}
+    );
+    expect(res.structDef).toBeUndefined();
+    expect(res.error).toMatch(/no column has a name/);
+  });
+
   it('reports a bad SQL block as an error, not a throw', async () => {
     const res = await connection.fetchSchemaForSQLStruct(
       {selectStr: 'SELECT FROM nowhere WHERE', connection: 'sqlserver'},

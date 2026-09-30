@@ -516,13 +516,18 @@ export class SQLServerConnection
     }
   }
 
-  // Each row is one column of sys.dm_exec_describe_first_result_set's output
+  // Each row is one column of sys.dm_exec_describe_first_result_set's output.
+  // An expression without an alias (COUNT(*)) is described with a NULL name;
+  // Malloy has no field for it, so it is left out.
   private async fieldsFromDescribedColumns(
     rows: QueryData,
     structDef: StructDef
   ): Promise<void> {
     for (const row of rows) {
-      const name = row['column_name'] as string;
+      const name = row['column_name'] as string | null;
+      if (name === null) {
+        continue;
+      }
       const sqlType = row['data_type'] as string;
       const malloyType = this.dialect.sqlTypeToMalloyType(sqlType);
       structDef.fields.push({...malloyType, name});
@@ -601,6 +606,9 @@ export class SQLServerConnection
       return `Error fetching schema for SQL block: ${described.replace(/^\d+: /, '')}`;
     }
     await this.fieldsFromDescribedColumns(described, structDef);
+    if (structDef.fields.length === 0) {
+      return 'Error fetching schema for SQL block: no column has a name; alias each expression (COUNT(*) AS n)';
+    }
     return structDef;
   }
 
