@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {connectionStringIdentity, driverConfig, SQLServerConnection} from '.';
+import {
+  connectionStringIdentity,
+  driverConfig,
+  SQLServerConnection,
+} from './sqlserver_connection';
 
 // The configuration a user writes, mapped to what tedious is handed. No
 // server is involved.

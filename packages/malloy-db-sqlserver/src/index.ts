@@ -3,12 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-export {
-  SQLServerConnection,
-  SQLServerExecutor,
-  connectionStringIdentity,
-  driverConfig,
-} from './sqlserver_connection';
+export {SQLServerConnection, SQLServerExecutor} from './sqlserver_connection';
 export type {
   SQLServerConfiguration,
   SQLServerConnectionOptions,
