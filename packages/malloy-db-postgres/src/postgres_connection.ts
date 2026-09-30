@@ -138,6 +138,14 @@ function addTlsHint(err: unknown): unknown {
   return err;
 }
 
+// Closes an unpooled client without making the caller wait for it. In pg 8.7.3,
+// end() resolves on the connection's next 'end' event and never checks whether
+// one already fired, so after the socket has closed on its own (the server or
+// the network dropped it) an awaited end() never returns.
+function closeClient(client: Client): void {
+  client.end().catch(() => {});
+}
+
 /**
  * Decode a canonical Postgres dotted-table path into its underlying
  * identifier strings as they appear in `information_schema`. The schema
@@ -286,7 +294,13 @@ export class PostgresConnection
   }
 
   protected async getClient(): Promise<Client> {
-    return new Client(this.buildClientConfig(await this.readConfig()));
+    const client = new Client(this.buildClientConfig(await this.readConfig()));
+    // When the socket drops, pg fails every pending query on the client and
+    // also emits 'error' on it. The operation using the client already sees the
+    // failure through its own query; without a listener the duplicate event
+    // would be an uncaught exception.
+    client.on('error', () => {});
+    return client;
   }
 
   protected async runPostgresQuery(
@@ -315,11 +329,7 @@ export class PostgresConnection
         totalRows: result.rows.length,
       };
     } finally {
-      // Runs on the success path too (the old placement after `client.query`
-      // only ran there). A throw anywhere above - connect, setup, or the
-      // query itself - otherwise left this session open until the server or
-      // an operator killed it.
-      await client.end();
+      closeClient(client);
     }
   }
 
@@ -434,10 +444,7 @@ export class PostgresConnection
         }
       }
     } finally {
-      // See runPostgresQuery: without this, a throw anywhere in the OID
-      // resolution above (a bad .sql() source, a type this driver can't
-      // map) leaves the session open indefinitely.
-      await client.end();
+      closeClient(client);
     }
     return structDef;
   }
@@ -567,12 +574,7 @@ export class PostgresConnection
         }
       }
     } finally {
-      // A generator's `finally` also runs when the CALLER stops iterating
-      // early (a `for await` `break`/`return` on the consumer side, or a
-      // throw while a `yield` is suspended) - not only on the loop's own
-      // `break` above. Either way the session must close, or it leaks the
-      // same as a query error in runPostgresQuery.
-      await client.end();
+      closeClient(client);
     }
   }
 
@@ -701,11 +703,10 @@ export class PooledPostgresConnection
         }
       }
     } finally {
-      // Unlike runPostgresQuery above, pool.query() is not what checked this
-      // client out - pool.connect() was, directly - so nothing releases it
-      // back to the pool on a throw or an early consumer exit except this.
-      // A leaked client here does not open a new session; it holds one of
-      // the pool's existing slots forever, silently shrinking poolMax.
+      // release(), not end(): this client came from pool.connect(), so it goes
+      // back to the pool rather than closing its session. Nothing else returns
+      // it on a throw or an early consumer exit, and a client that is never
+      // released holds one of the pool's `max` slots for good.
       client.release();
     }
   }
