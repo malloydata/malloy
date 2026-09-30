@@ -13,17 +13,20 @@ This package connects the `malloydata/malloy` library to Microsoft SQL Server 20
 
 ## Connecting
 
-The five fields most connections need:
+The five fields most connections need, in `malloy-config.json`:
 
 ```json
 {
-  "name": "warehouse",
-  "type": "sqlserver",
-  "server": "db.example.com",
-  "port": 1433,
-  "database": "sales",
-  "user": "malloy",
-  "password": "..."
+  "connections": {
+    "warehouse": {
+      "is": "sqlserver",
+      "server": "db.example.com",
+      "port": 1433,
+      "database": "sales",
+      "user": "malloy",
+      "password": {"env": "MSSQL_PASSWORD"}
+    }
+  }
 }
 ```
 
