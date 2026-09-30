@@ -207,28 +207,25 @@ export function connectionStringIdentity(connectionString: string): string {
     .join(';');
 }
 
+// The keys a connectionString may be accompanied by; the pool and timeout
+// keys merge into what the string says. Every other key describes the same
+// connection a second way and is refused beside a string.
+const CONNECTION_STRING_COMPANIONS: ReadonlySet<keyof SQLServerConfiguration> =
+  new Set<keyof SQLServerConfiguration>([
+    'connectionString',
+    'setupSQL',
+    'poolMin',
+    'poolMax',
+    'requestTimeoutMs',
+  ]);
+
 /** The driver's config; a connection string and structured fields are not merged */
 export function driverConfig(config: SQLServerConfiguration): mssql.config {
-  const structured = [
-    'server',
-    'port',
-    'instanceName',
-    'database',
-    'authentication',
-    'user',
-    'password',
-    'clientId',
-    'tenantId',
-    'clientSecret',
-    'accessToken',
-    'domain',
-    'encrypt',
-    'trustServerCertificate',
-    'hostNameInCertificate',
-    'applicationName',
-    'readOnlyIntent',
-    'multiSubnetFailover',
-  ].filter(k => config[k as keyof SQLServerConfiguration] !== undefined);
+  const structured = (
+    Object.keys(config) as (keyof SQLServerConfiguration)[]
+  ).filter(
+    k => !CONNECTION_STRING_COMPANIONS.has(k) && config[k] !== undefined
+  );
   if (config.connectionString !== undefined && structured.length > 0) {
     throw new Error(
       `SQL Server connection sets connectionString and also ${structured.join(', ')}; use one or the other`
