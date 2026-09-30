@@ -1,0 +1,148 @@
+{
+ "ResultSet": {
+  "Rows": [
+   {
+    "Data": [
+     {
+      "VarCharValue": "Query Plan"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "Fragment 0 [SINGLE]"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    Output layout: [expr, expr_0, expr_1, expr_2]"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    Output partitioning: SINGLE []"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    Output[columnNames = [n, r, a, t]]"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    \u2502   Layout: [expr:integer, expr_0:row(n integer, s varchar), expr_1:array(integer), expr_2:timestamp(0)]"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    \u2502   Estimates: {rows: 1 (124B), cpu: 0, memory: 0B, network: 0B}"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    \u2502   n := expr"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    \u2502   r := expr_0"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    \u2502   a := expr_1"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    \u2502   t := expr_2"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "    \u2514\u2500 Values[]"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "           Layout: [expr_2:timestamp(0), expr:integer, expr_1:array(integer), expr_0:row(n integer, s varchar)]"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "           Estimates: {rows: 1 (124B), cpu: 0, memory: 0B, network: 0B}"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "           (TIMESTAMP '2024-01-02 03:04:05', 1, \"$literal$\"(from_base64('CQAAAElOVF9BUlJBWQEAAAAAAQAAAA==')), \"$literal$\"(from_base64('AwAAAFJPVwEAAAACAAAACQAAAElOVF9BUlJBWQEAAAAAAQAAAA4AAABWQVJJQUJMRV9XSURUSAEAAAAAAQAAAAEAAAB4AA==')))"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": ""
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": ""
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": ""
+     }
+    ]
+   }
+  ],
+  "ResultSetMetadata": {
+   "ColumnInfo": [
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "Query Plan",
+     "Label": "Query Plan",
+     "Type": "varchar",
+     "Precision": 837,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": true
+    }
+   ]
+  }
+ }
+}

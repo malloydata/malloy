@@ -33,9 +33,9 @@ import {registerConnectionType} from '@malloydata/malloy';
 registerConnectionType('duckdb', { displayName: 'DuckDB', factory: async ..., properties: [...] });
 ```
 
-Registered backends: `duckdb`, `bigquery`, `postgres`, `snowflake`, `trino`, `presto`, `mysql`, `publisher`
+Registered backends: `duckdb`, `bigquery`, `postgres`, `snowflake`, `trino`, `presto`, `athena`, `mysql`, `databricks`, `publisher`
 
-The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports all 6 database db-\* packages for side-effect registration (not publisher).
+The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports every database db-\* package for side-effect registration (not publisher).
 
 ### ConnectionTypeDef
 
@@ -183,13 +183,17 @@ The json-typed properties pass through to `@trinodb/trino-js-client`'s `Connecti
 **Presto** (`displayName: "Presto"`):
 `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
 
+**Athena** (`displayName: "Amazon Athena"`):
+`region` (string), `workGroup` (string), `catalog` (string), `database` (string), `outputLocation` (string), `resultReuseMaxAgeMinutes` (number, advanced), `accessKeyId` (string, advanced), `secretAccessKey` (password, advanced), `sessionToken` (password, advanced)
+`AthenaConnection` is `TrinoPrestoConnection` over a runner that drives the Athena API (StartQueryExecution, GetQueryExecution, GetQueryResults) instead of a wire protocol. Credentials come from the AWS SDK's default chain unless the static keys are set. It has no `setupSQL`: Athena keeps no session between statements. See `packages/malloy-db-athena/README.md` for the engine facts the connection is built on.
+
 **MySQL** (`displayName: "MySQL"`):
 `host` (string), `port` (number), `database` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
 
 **Publisher** (`displayName: "Malloy Publisher"`):
 `connectionUri` (string, required), `accessToken` (secret)
 
-All backends support `setupSQL` (text) — SQL statements run when the connection is first established.
+Every backend but Athena supports `setupSQL` (text) — SQL statements run when the connection is first established.
 
 ## Query metadata
 
@@ -352,7 +356,7 @@ Store the init promise in the constructor, await it in every public method. Guar
 
 ### setupSQL Lifecycle
 
-All backends support `setupSQL` but execute it differently:
+All backends but Athena support `setupSQL` but execute it differently:
 
 | Pattern | Used by | Behavior |
 |---------|---------|----------|
@@ -361,7 +365,7 @@ All backends support `setupSQL` but execute it differently:
 | **Run per client** | Postgres (non-pooled) | Runs before every query since each query gets a fresh client. |
 | **Run on pool acquire** | Postgres (pooled) | Runs via `pool.on('acquire')` event — each client from the pool gets setup when checked out. |
 
-All backends include setupSQL in `getDigest()` since it can change query behavior.
+All backends that have `setupSQL` include it in `getDigest()` since it can change query behavior.
 
 ### Schema Fetching
 

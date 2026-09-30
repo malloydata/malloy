@@ -1,0 +1,181 @@
+{
+ "UpdateCount": 0,
+ "ResultSet": {
+  "Rows": [
+   {
+    "Data": [
+     {
+      "VarCharValue": "nan"
+     },
+     {
+      "VarCharValue": "inf"
+     },
+     {
+      "VarCharValue": "ninf"
+     },
+     {
+      "VarCharValue": "big"
+     },
+     {
+      "VarCharValue": "dec"
+     },
+     {
+      "VarCharValue": "bigdec"
+     },
+     {
+      "VarCharValue": "intdiv"
+     },
+     {
+      "VarCharValue": "r"
+     },
+     {
+      "VarCharValue": "dbl"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "NaN"
+     },
+     {
+      "VarCharValue": "Infinity"
+     },
+     {
+      "VarCharValue": "-Infinity"
+     },
+     {
+      "VarCharValue": "9007199254740993"
+     },
+     {
+      "VarCharValue": "1.50"
+     },
+     {
+      "VarCharValue": "12345678901234567000.000"
+     },
+     {
+      "VarCharValue": "0"
+     },
+     {
+      "VarCharValue": "0.1"
+     },
+     {
+      "VarCharValue": "1.0E300"
+     }
+    ]
+   }
+  ],
+  "ResultSetMetadata": {
+   "ColumnInfo": [
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "nan",
+     "Label": "nan",
+     "Type": "double",
+     "Precision": 17,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "inf",
+     "Label": "inf",
+     "Type": "double",
+     "Precision": 17,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "ninf",
+     "Label": "ninf",
+     "Type": "double",
+     "Precision": 17,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "big",
+     "Label": "big",
+     "Type": "bigint",
+     "Precision": 19,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "dec",
+     "Label": "dec",
+     "Type": "decimal",
+     "Precision": 10,
+     "Scale": 2,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "bigdec",
+     "Label": "bigdec",
+     "Type": "decimal",
+     "Precision": 38,
+     "Scale": 3,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "intdiv",
+     "Label": "intdiv",
+     "Type": "integer",
+     "Precision": 10,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "r",
+     "Label": "r",
+     "Type": "float",
+     "Precision": 17,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "dbl",
+     "Label": "dbl",
+     "Type": "double",
+     "Precision": 17,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    }
+   ]
+  }
+ }
+}

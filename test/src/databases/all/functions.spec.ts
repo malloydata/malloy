@@ -114,7 +114,8 @@ expressionModels.forEach((x, databaseName) => {
   describe('concat', () => {
     it.when(
       !brokenIn('trino', databaseName) &&
-        !brokenIn('presto', databaseName) /* crswenson */
+        !brokenIn('presto', databaseName) /* crswenson */ &&
+        !brokenIn('athena', databaseName)
     )(`works - ${databaseName}`, async () => {
       const expected = {
         'bigquery': 'foo2003-01-01 12:00:00+00',
@@ -220,6 +221,7 @@ expressionModels.forEach((x, databaseName) => {
     const usesVirguleBackreferences = ![
       'trino',
       'presto',
+      'athena',
       'mysql',
       'databricks',
     ].includes(databaseName);
@@ -229,7 +231,7 @@ expressionModels.forEach((x, databaseName) => {
         ["replace('aaaa', r'.', 'c')", 'cccc'],
         [
           "replace('aaaa', '', 'c')",
-          databaseName === 'trino' || databaseName === 'presto'
+          ['trino', 'presto', 'athena'].includes(databaseName)
             ? 'cacacacac'
             : 'aaaa',
         ],
@@ -850,7 +852,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('is_inf', () => {
-    const inf = ['trino', 'presto'].includes(databaseName)
+    const inf = ['trino', 'presto', 'athena'].includes(databaseName)
       ? 'infinity!()'
       : "'+inf'::number";
     it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
@@ -1411,6 +1413,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       'snowflake',
       'trino',
       'presto',
+      'athena',
       'mysql',
       'databricks',
     ].includes(databaseName);

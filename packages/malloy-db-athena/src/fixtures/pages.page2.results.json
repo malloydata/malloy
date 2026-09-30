@@ -1,0 +1,44 @@
+{
+ "UpdateCount": 0,
+ "ResultSet": {
+  "Rows": [
+   {
+    "Data": [
+     {
+      "VarCharValue": "1000"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "1001"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "1002"
+     }
+    ]
+   }
+  ],
+  "ResultSetMetadata": {
+   "ColumnInfo": [
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "x",
+     "Label": "x",
+     "Type": "bigint",
+     "Precision": 19,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    }
+   ]
+  }
+ }
+}

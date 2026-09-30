@@ -1,0 +1,143 @@
+{
+ "UpdateCount": 0,
+ "ResultSet": {
+  "Rows": [
+   {
+    "Data": [
+     {
+      "VarCharValue": "n"
+     },
+     {
+      "VarCharValue": "s"
+     },
+     {
+      "VarCharValue": "b"
+     },
+     {
+      "VarCharValue": "z"
+     },
+     {
+      "VarCharValue": "empty"
+     },
+     {
+      "VarCharValue": "d"
+     },
+     {
+      "VarCharValue": "t"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "1"
+     },
+     {
+      "VarCharValue": "x"
+     },
+     {
+      "VarCharValue": "true"
+     },
+     {},
+     {
+      "VarCharValue": ""
+     },
+     {
+      "VarCharValue": "2024-01-02"
+     },
+     {
+      "VarCharValue": "2024-01-02 03:04:05.678"
+     }
+    ]
+   }
+  ],
+  "ResultSetMetadata": {
+   "ColumnInfo": [
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "n",
+     "Label": "n",
+     "Type": "integer",
+     "Precision": 10,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "s",
+     "Label": "s",
+     "Type": "varchar",
+     "Precision": 1,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": true
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "b",
+     "Label": "b",
+     "Type": "boolean",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "z",
+     "Label": "z",
+     "Type": "integer",
+     "Precision": 10,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "empty",
+     "Label": "empty",
+     "Type": "varchar",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": true
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "d",
+     "Label": "d",
+     "Type": "date",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "t",
+     "Label": "t",
+     "Type": "timestamp",
+     "Precision": 3,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    }
+   ]
+  }
+ }
+}

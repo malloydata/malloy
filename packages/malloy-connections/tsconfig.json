@@ -7,6 +7,7 @@
   },
   "references": [
     {"path": "../malloy"},
+    {"path": "../malloy-db-athena"},
     {"path": "../malloy-db-bigquery"},
     {"path": "../malloy-db-duckdb"},
     {"path": "../malloy-db-mysql"},

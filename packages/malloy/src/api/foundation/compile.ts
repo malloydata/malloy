@@ -392,6 +392,11 @@ export class Malloy {
         restrictedMode ?? false,
         virtualMap
       );
+      // A translator made by `parse` has this set already; one made here is
+      // the query-compile path a test runtime takes.
+      if (req.testEnvironment) {
+        translator.allDialectsEnabled = true;
+      }
     }
     for (;;) {
       const result = translator.translate(model?._modelDef);

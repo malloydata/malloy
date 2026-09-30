@@ -1,0 +1,37 @@
+{
+ "QueryExecution": {
+  "QueryExecutionId": "2b4730a3-2ef3-491e-b925-8f9da5e5373e",
+  "Query": "SELECT * FROM no_such_table_malloy",
+  "StatementType": "DML",
+  "ResultConfiguration": {
+   "OutputLocation": "s3://malloytest-results/results/2b4730a3-2ef3-491e-b925-8f9da5e5373e.csv"
+  },
+  "Status": {
+   "State": "FAILED",
+   "StateChangeReason": "TABLE_NOT_FOUND: line 1:15: Table 'awsdatacatalog.malloytest.no_such_table_malloy' does not exist",
+   "SubmissionDateTime": "2026-09-24T09:39:04.495000-06:00",
+   "CompletionDateTime": "2026-09-24T09:39:05.014000-06:00",
+   "AthenaError": {
+    "ErrorCategory": 2,
+    "ErrorType": 1301,
+    "Retryable": false,
+    "ErrorMessage": "TABLE_NOT_FOUND: line 1:15: Table 'awsdatacatalog.malloytest.no_such_table_malloy' does not exist"
+   }
+  },
+  "Statistics": {
+   "EngineExecutionTimeInMillis": 1,
+   "DataScannedInBytes": 0,
+   "TotalExecutionTimeInMillis": 1,
+   "QueryQueueTimeInMillis": 1,
+   "ServicePreProcessingTimeInMillis": 62,
+   "ServiceProcessingTimeInMillis": 1,
+   "ResultReuseInformation": {
+    "ReusedPreviousResult": false
+   }
+  },
+  "EngineVersion": {
+   "SelectedEngineVersion": "Athena engine version 3",
+   "EffectiveEngineVersion": "Athena engine version 3"
+  }
+ }
+}

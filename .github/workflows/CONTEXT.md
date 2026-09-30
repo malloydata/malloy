@@ -6,11 +6,11 @@ Dependabot (config, the alerts-vs-PRs distinction, and the deliberate-pin ledger
 
 ## CI
 
-`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job `needs: pull_and_build`, downloads the artifact, and runs only its dialect-specific setup + `npm run ci-<dialect>` — no per-job rebuild. Fan-out goes to reusable workflows — `main.yaml` (two jobs: `main` runs the dialect-agnostic `ci-core`; `lint` runs `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. `db-motherduck.yaml` is commented out of CI. The `main` job keeps that name because branch protection requires the check `main / main`.
+`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job `needs: pull_and_build`, downloads the artifact, and runs only its dialect-specific setup + `npm run ci-<dialect>` — no per-job rebuild. Fan-out goes to reusable workflows — `main.yaml` (two jobs: `main` runs the dialect-agnostic `ci-core`; `lint` runs `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` all of them but `db-athena` (below). `db-motherduck.yaml` is commented out of CI. The `main` job keeps that name because branch protection requires the check `main / main`.
 
 `scripts/ci-test-sanity-check.sh` (run by the `lint` job) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
 
-Wall clock is `pull_and_build` plus the slowest dialect job. The dialect jobs are bound by warehouse round-trip latency (about one query per test), not CPU, so `ci-snowflake` runs more jest workers than the runner has cores. The others use jest's default: databricks queues under that concurrency; the trino/presto containers serve the repo's parquet and share the runner's CPU; and bigquery stays at the default because overlapping CI runs stall single queries past the test timeout. `ci-core` runs in parallel; the duckdb test connection is read-only and the writers use `:memory:`.
+Wall clock is `pull_and_build` plus the slowest dialect job. The dialect jobs are bound by warehouse round-trip latency (about one query per test), not CPU, so `ci-snowflake` runs more jest workers than the runner has cores. `ci-athena` runs four, under the account's concurrent-statement quota. The others use jest's default: databricks queues under that concurrency; the trino/presto containers serve the repo's parquet and share the runner's CPU; and bigquery stays at the default because overlapping CI runs stall single queries past the test timeout. `ci-core` runs in parallel; the duckdb test connection is read-only and the writers use `:memory:`.
 
 ### The design: why external-PR CI is shaped this way — do not break this
 
@@ -63,6 +63,17 @@ passed to it.** Stated the old way — every secret-bearing job MUST `needs: che
 inverted form is the one that generalizes, and it is checkable by reading one file. What an
 external PR can do before the gate is then describable without auditing a single test
 script: spend runner compute and network egress. Nothing else.
+
+`db-athena` carries no secret and is gated anyway. It assumes an IAM role through the
+job's OIDC token (`permissions: id-token: write`, granted by the caller's job), and that
+token is a credential fork code could spend exactly as it could a secret; the role ARN,
+region and workgroup are repository *variables* (`ATHENA_TEST_ROLE_ARN`,
+`ATHENA_TEST_REGION`, `ATHENA_TEST_WORKGROUP`), which a job-level `if` can read where it
+cannot read a secret, so the job is skipped wherever no role is configured — every fork,
+and this repository until a maintainer holds an AWS account for it. A skipped job would
+skip a rollup that `needs:` it, so `db-athena` stays out of `malloy-tests` until it runs
+unconditionally. The role's trust policy must name this repository and the job should be
+re-run only after the diff is read, as for the secret-bearing jobs.
 
 **Every job holds two credentials, and you only chose one.** The secrets you pass, and the
 `GITHUB_TOKEN` GitHub injects whether you asked or not. Under `pull_request_target` that

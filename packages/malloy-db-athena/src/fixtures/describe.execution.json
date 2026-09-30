@@ -1,0 +1,30 @@
+{
+ "QueryExecution": {
+  "QueryExecutionId": "df92a54d-b908-4d7f-99ee-a4665d25279a",
+  "Query": "DESCRIBE probe_types",
+  "StatementType": "UTILITY",
+  "ResultConfiguration": {
+   "OutputLocation": "s3://malloytest-results/results/df92a54d-b908-4d7f-99ee-a4665d25279a.csv"
+  },
+  "Status": {
+   "State": "SUCCEEDED",
+   "SubmissionDateTime": "2026-09-24T09:44:05.140000-06:00",
+   "CompletionDateTime": "2026-09-24T09:44:07.363000-06:00"
+  },
+  "Statistics": {
+   "EngineExecutionTimeInMillis": 1,
+   "DataScannedInBytes": 0,
+   "TotalExecutionTimeInMillis": 1,
+   "QueryQueueTimeInMillis": 1,
+   "ServicePreProcessingTimeInMillis": 215,
+   "ServiceProcessingTimeInMillis": 1,
+   "ResultReuseInformation": {
+    "ReusedPreviousResult": false
+   }
+  },
+  "EngineVersion": {
+   "SelectedEngineVersion": "Athena engine version 3",
+   "EffectiveEngineVersion": "Athena engine version 3"
+  }
+ }
+}

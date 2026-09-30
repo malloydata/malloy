@@ -972,7 +972,9 @@ export abstract class MalloyTranslation {
 
   allDialectsEnabled = false;
   experimentalDialectEnabled(dialect: string): boolean {
-    if (this.allDialectsEnabled) {
+    // Set on the root by the owner; a child translator translating an
+    // imported file answers with the root's value.
+    if (this.root.allDialectsEnabled) {
       return true;
     }
     const experimental = this.getCompilerFlags().tag('experimental');

@@ -494,6 +494,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         },
       },
     });
+    // A runtime built here is a test runtime like the one it wraps, so an
+    // experimental dialect needs no flag in the imported file.
+    wrappedRuntime.isTestRuntime = runtime.isTestRuntime;
     const wrappedTestModel = {
       model: wrappedRuntime.loadModel(''),
       dialect: runtime.dialect,
@@ -520,6 +523,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         },
       },
     });
+    // A runtime built here is a test runtime like the one it wraps, so an
+    // experimental dialect needs no flag in the imported file.
+    wrappedRuntime.isTestRuntime = runtime.isTestRuntime;
     const wrappedTestModel = {
       model: wrappedRuntime.loadModel(''),
       dialect: runtime.dialect,

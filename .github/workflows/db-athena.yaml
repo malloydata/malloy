@@ -1,0 +1,53 @@
+name: 'DB:Athena'
+permissions: {}
+
+# Athena is reached with an IAM role assumed through GitHub's OIDC token, so
+# the job carries no repository secret; the role, region and workgroup are
+# repository variables, and the caller passes them in. The token is still a
+# credential that fork code could spend, so the caller gates this job the
+# way it gates the secret-bearing ones (see CONTEXT.md).
+on:
+  workflow_call:
+    inputs:
+      role_arn:
+        description: 'IAM role to assume; its trust policy names this repository'
+        required: true
+        type: string
+      region:
+        description: 'AWS region of the workgroup'
+        required: true
+        type: string
+      workgroup:
+        description: 'Engine version 3 workgroup that enforces its own output location'
+        required: true
+        type: string
+
+jobs:
+  test-athena:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: workspace
+      - name: Extract workspace
+        run: tar --use-compress-program='zstd -d -T0' -xf workspace.tzst && rm workspace.tzst
+      - name: Use Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+      - name: AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.role_arn }}
+          aws-region: ${{ inputs.region }}
+      - name: Test
+        run: npm run ci-athena
+        env:
+          CI: true
+          ATHENA_REGION: ${{ inputs.region }}
+          ATHENA_WORKGROUP: ${{ inputs.workgroup }}
+          ATHENA_DATABASE: malloytest
+          ATHENA_RESULT_REUSE_MINUTES: 60

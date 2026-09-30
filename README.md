@@ -23,7 +23,7 @@
 
 Malloy is an open source language for describing data relationships and transformations. It is both a semantic modeling language and a query language that uses an existing SQL engine to execute queries.
 
-**Supported SQL engines:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks
+**Supported SQL engines:** BigQuery · Snowflake · DuckDB · MotherDuck · PostgreSQL · MySQL · Trino · Presto · Databricks · Amazon Athena (experimental)
 
 ## Why Malloy?
 
@@ -114,7 +114,7 @@ malloy-cli run my_query.malloy
 ```
 
 It can `run` queries, `compile` to SQL, and `build` persistent tables from sources marked `#@ persist`.<br>
-Connections are configured in `~/.config/malloy/malloy-config.json` (BigQuery, Snowflake, DuckDB, PostgreSQL, MySQL, Trino, Presto, Databricks; MotherDuck via DuckDB).<br>
+Connections are configured in `~/.config/malloy/malloy-config.json` (BigQuery, Snowflake, DuckDB, PostgreSQL, MySQL, Trino, Presto, Athena, Databricks; MotherDuck via DuckDB).<br>
 
 See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/index) and [malloy-cli repo](https://github.com/malloydata/malloy-cli) for more details about using the CLI
 

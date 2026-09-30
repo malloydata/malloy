@@ -1,0 +1,109 @@
+{
+ "ResultSet": {
+  "Rows": [
+   {
+    "Data": [
+     {
+      "VarCharValue": "n                   \tint                 \t                    "
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "s                   \tvarchar(1)          \t                    "
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "t                   \ttimestamp           \t                    "
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "d                   \tdate                \t                    "
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "dec                 \tdecimal(10,2)       \t                    "
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "mixedcase           \tstruct<Inner:int,s:string>\t                    "
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "arr                 \tarray<int>          \t                    "
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "arr_rows            \tarray<struct<n:int,s:string>>\t                    "
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "m                   \tmap<varchar(1),int> \t                    "
+     }
+    ]
+   }
+  ],
+  "ResultSetMetadata": {
+   "ColumnInfo": [
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "col_name",
+     "Label": "col_name",
+     "Type": "string",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "data_type",
+     "Label": "data_type",
+     "Type": "string",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "comment",
+     "Label": "comment",
+     "Type": "string",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    }
+   ]
+  }
+ }
+}

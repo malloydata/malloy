@@ -1,0 +1,33 @@
+{
+  "name": "@malloydata/db-athena",
+  "version": "0.0.435",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/malloydata/malloy.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest --config=../../jest.config.js",
+    "build": "tsc --build",
+    "dev": "tsc --build",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@aws-sdk/client-athena": "^3.1139.0",
+    "@malloydata/db-trino": "0.0.435",
+    "@malloydata/malloy": "0.0.435"
+  },
+  "keywords": [
+    "malloy",
+    "athena"
+  ]
+}

@@ -7,6 +7,7 @@ export {
   DuckDBDialect,
   StandardSQLDialect,
   TrinoDialect,
+  AthenaDialect,
   PostgresDialect,
   SnowflakeDialect,
   MySQLDialect,

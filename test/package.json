@@ -20,6 +20,8 @@
     "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1139.0",
+    "@malloydata/db-athena": "0.0.435",
     "@malloydata/db-bigquery": "0.0.435",
     "@malloydata/db-duckdb": "0.0.435",
     "@malloydata/db-postgres": "0.0.435",

@@ -24,6 +24,7 @@ import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 import {SnowflakeConnection} from '@malloydata/db-snowflake';
 import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
+import {AthenaConnection, AthenaExecutor} from '@malloydata/db-athena';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
 import {
@@ -237,6 +238,13 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         connection = new MySQLConnection(
           dbName,
           MySQLExecutor.getConnectionOptionsFromEnv(),
+          {}
+        );
+        break;
+      case 'athena':
+        connection = new AthenaConnection(
+          dbName,
+          AthenaExecutor.getConnectionOptionsFromEnv(),
           {}
         );
         break;

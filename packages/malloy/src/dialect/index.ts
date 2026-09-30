@@ -36,6 +36,7 @@ export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';
 export {SnowflakeDialect} from './snowflake';
 export {TrinoDialect} from './trino';
+export {AthenaDialect} from './athena';
 export {MySQLDialect} from './mysql';
 export {DatabricksDialect} from './databricks';
 export {getDialect, registerDialect} from './dialect_map';

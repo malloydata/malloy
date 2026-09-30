@@ -9,6 +9,7 @@ import {PostgresDialect} from './postgres';
 import {SnowflakeDialect} from './snowflake';
 import {StandardSQLDialect} from './standardsql';
 import {PrestoDialect, TrinoDialect} from './trino';
+import {AthenaDialect} from './athena';
 import {MySQLDialect} from './mysql';
 import {DatabricksDialect} from './databricks';
 
@@ -36,5 +37,6 @@ registerDialect(new DuckDBDialect());
 registerDialect(new SnowflakeDialect());
 registerDialect(new TrinoDialect());
 registerDialect(new PrestoDialect());
+registerDialect(new AthenaDialect());
 registerDialect(new MySQLDialect());
 registerDialect(new DatabricksDialect());

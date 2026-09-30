@@ -1,0 +1,91 @@
+{
+ "UpdateCount": 0,
+ "ResultSet": {
+  "Rows": [
+   {
+    "Data": [
+     {
+      "VarCharValue": "a"
+     },
+     {
+      "VarCharValue": "r"
+     },
+     {
+      "VarCharValue": "m"
+     },
+     {
+      "VarCharValue": "ar"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "[1, 2]"
+     },
+     {
+      "VarCharValue": "{n=1, s=x}"
+     },
+     {
+      "VarCharValue": "{k=1}"
+     },
+     {
+      "VarCharValue": "[{n=1, s=x}]"
+     }
+    ]
+   }
+  ],
+  "ResultSetMetadata": {
+   "ColumnInfo": [
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "a",
+     "Label": "a",
+     "Type": "array",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "r",
+     "Label": "r",
+     "Type": "row",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "m",
+     "Label": "m",
+     "Type": "map",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    },
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "ar",
+     "Label": "ar",
+     "Type": "array",
+     "Precision": 0,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    }
+   ]
+  }
+ }
+}

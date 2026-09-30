@@ -112,6 +112,7 @@ updates:
       connectors:
         patterns:
           - "@google-cloud/*"
+          - "@aws-sdk/*"
           - "@databricks/*"
           - "@prestodb/*"
           - "@trinodb/*"

@@ -1,0 +1,59 @@
+{
+ "UpdateCount": 0,
+ "ResultSet": {
+  "Rows": [
+   {
+    "Data": [
+     {
+      "VarCharValue": "x"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "1"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "2"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "3"
+     }
+    ]
+   },
+   {
+    "Data": [
+     {
+      "VarCharValue": "4"
+     }
+    ]
+   }
+  ],
+  "ResultSetMetadata": {
+   "ColumnInfo": [
+    {
+     "CatalogName": "hive",
+     "SchemaName": "",
+     "TableName": "",
+     "Name": "x",
+     "Label": "x",
+     "Type": "bigint",
+     "Precision": 19,
+     "Scale": 0,
+     "Nullable": "UNKNOWN",
+     "CaseSensitive": false
+    }
+   ]
+  }
+ },
+ "NextToken": "ARu7LEfyadim7ql5ggySYfOGSGBnpakGTO6qaYQp5jAJD0zz0vOBUgyOOCnYyEBZH8c4sZKWukbqhyJLV3Hfh60lHExHzU4oig=="
+}

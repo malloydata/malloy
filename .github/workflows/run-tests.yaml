@@ -113,6 +113,19 @@ jobs:
   db-duckdb-wasm:
     needs: pull_and_build
     uses: './.github/workflows/db-duckdb-wasm.yaml'
+  # Assumes an IAM role through the OIDC token, so it needs no secret but the
+  # same gate; runs only where the role variable is set, and stays out of the
+  # malloy-tests rollup while it can be skipped. See CONTEXT.md.
+  db-athena:
+    needs: [check-permission, pull_and_build]
+    if: vars.ATHENA_TEST_ROLE_ARN != ''
+    permissions:
+      id-token: write
+    uses: './.github/workflows/db-athena.yaml'
+    with:
+      role_arn: ${{ vars.ATHENA_TEST_ROLE_ARN }}
+      region: ${{ vars.ATHENA_TEST_REGION }}
+      workgroup: ${{ vars.ATHENA_TEST_WORKGROUP }}
   # Consumes the built @malloydata packages as a downstream app would (esbuild
   # bundle + plain ts-jest), so native/ESM leaks are caught at PR time instead of
   # post-publish. No secrets — only needs the built workspace.
