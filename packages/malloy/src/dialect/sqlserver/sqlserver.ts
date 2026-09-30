@@ -94,6 +94,63 @@ function parseSQLServerType(sqlType: string): {base: string; params: number[]} {
   };
 }
 
+/**
+ * A table path with T-SQL's `[name]` segments rewritten as ANSI-quoted ones
+ * (`]]` inside a segment is one `]`); a `"name"` segment passes through
+ * untouched. `undefined` for a `[` that is never closed.
+ */
+function bracketsToAnsi(
+  input: string,
+  quote: (body: string) => string
+): string | undefined {
+  let ansi = '';
+  let i = 0;
+  while (i < input.length) {
+    const c = input[i];
+    if (c === '"') {
+      let j = i + 1;
+      while (j < input.length) {
+        if (input[j] === '"') {
+          if (input[j + 1] === '"') {
+            j += 2;
+            continue;
+          }
+          break;
+        }
+        j++;
+      }
+      ansi += input.slice(i, j + 1);
+      i = j + 1;
+    } else if (c === '[') {
+      let body = '';
+      let j = i + 1;
+      let closed = false;
+      while (j < input.length) {
+        if (input[j] === ']') {
+          if (input[j + 1] === ']') {
+            body += ']';
+            j += 2;
+            continue;
+          }
+          closed = true;
+          break;
+        }
+        body += input[j];
+        j++;
+      }
+      if (!closed) {
+        return undefined;
+      }
+      ansi += quote(body);
+      i = j + 1;
+    } else {
+      ansi += c;
+      i++;
+    }
+  }
+  return ansi;
+}
+
 /** T-SQL for SQL Server 2017 and later, and Azure SQL Database. */
 export class SQLServerDialect extends Dialect {
   name = 'sqlserver';
@@ -148,57 +205,16 @@ export class SQLServerDialect extends Dialect {
   override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$#@]*/;
 
   /**
-   * `[schema].[table]` is read as the ANSI-quoted path it stands for (`]]`
-   * escapes `]`), and the canonical form is the ANSI spelling.
+   * `[schema].[table]` is read as the ANSI-quoted path it stands for, and the
+   * canonical form is the ANSI spelling the base validates.
    */
   sqlValidateTableName(input: string): ValidateTablePathResult {
-    let ansi = '';
-    let i = 0;
-    while (i < input.length) {
-      const c = input[i];
-      if (c === '"') {
-        let j = i + 1;
-        while (j < input.length) {
-          if (input[j] === '"') {
-            if (input[j + 1] === '"') {
-              j += 2;
-              continue;
-            }
-            break;
-          }
-          j++;
-        }
-        ansi += input.slice(i, j + 1);
-        i = j + 1;
-      } else if (c === '[') {
-        let body = '';
-        let j = i + 1;
-        let closed = false;
-        while (j < input.length) {
-          if (input[j] === ']') {
-            if (input[j + 1] === ']') {
-              body += ']';
-              j += 2;
-              continue;
-            }
-            closed = true;
-            break;
-          }
-          body += input[j];
-          j++;
-        }
-        if (!closed) {
-          return {
-            ok: false,
-            error: `Invalid ${this.name} table path: ${JSON.stringify(input)} — unterminated bracketed segment`,
-          };
-        }
-        ansi += this.sqlQuoteIdentifier(body);
-        i = j + 1;
-      } else {
-        ansi += c;
-        i++;
-      }
+    const ansi = bracketsToAnsi(input, body => this.sqlQuoteIdentifier(body));
+    if (ansi === undefined) {
+      return {
+        ok: false,
+        error: `Invalid ${this.name} table path: ${JSON.stringify(input)} — unterminated bracketed segment`,
+      };
     }
     return super.sqlValidateTableName(ansi);
   }
