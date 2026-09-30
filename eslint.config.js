@@ -9,6 +9,7 @@ module.exports = defineConfig([
     ignores: [
       '**/*.d.ts',
       'packages/malloy/src/lang/lib/Malloy/**',
+      'packages/malloy/src/dialect/sqlserver/windows_zones.ts',
       'packages/**/dist/**',
       'profiler/dist/**',
       'packages/malloy-malloy-sql/src/grammar/**',

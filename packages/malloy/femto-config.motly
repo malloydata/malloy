@@ -28,6 +28,18 @@ tokenNames: {
   commands = ["node src/lang/grammar/build_token_names.js"]
 }
 
+# A pure function of the two CLDR files, so a cldr-core/cldr-bcp47 bump
+# regenerates it on the next build.
+windowsZones: {
+  inputs = [
+    "src/dialect/sqlserver/build_windows_zones.js",
+    "../../node_modules/cldr-core/supplemental/windowsZones.json",
+    "../../node_modules/cldr-bcp47/bcp47/timezone.json"
+  ]
+  outputs = ["src/dialect/sqlserver/windows_zones.ts"]
+  commands = ["node src/dialect/sqlserver/build_windows_zones.js"]
+}
+
 codegen: {
-  deps = [parser, tokenNames]
+  deps = [parser, tokenNames, windowsZones]
 }
