@@ -58,8 +58,9 @@ const inSeconds: Record<string, number> = {
   week: 7 * 24 * 3600,
 };
 
-// Type names as sys.types and sys.dm_exec_describe_first_result_set report
-// them. DECIMAL and NUMERIC are decided by their parameters.
+// Malloy types by SQL Server type name, spelled as sys.types and the
+// system_type_name of sys.dm_exec_describe_first_result_set spell them.
+// DECIMAL and NUMERIC are absent: their scale decides (sqlTypeToMalloyType).
 const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   // A bit is an integer: SQL Server has no boolean values
   'bit': {type: 'number', numberType: 'integer'},
@@ -93,17 +94,14 @@ function parseSQLServerType(sqlType: string): {base: string; params: number[]} {
   };
 }
 
-/**
- * SQL Server 2017 and later, and Azure SQL Database. A Malloy timestamp is a
- * UTC wall clock, so a `datetime2` is read as UTC and `now` is
- * `SYSUTCDATETIME()`.
- */
+/** T-SQL for SQL Server 2017 and later, and Azure SQL Database. */
 export class SQLServerDialect extends Dialect {
   name = 'sqlserver';
   experimental = true;
 
-  // QUOTED_IDENTIFIER is on for every driver connection, so "name" is an
-  // identifier and 'text' a literal, each escaped by doubling.
+  // The connection's batch prefix sets QUOTED_IDENTIFIER ON, so an identifier
+  // is double-quoted and a string literal single-quoted; a quote inside
+  // either is escaped by doubling it.
   stringLiteralStyle = EscapeStyle.Doubled;
   identifierEscapeStyle = EscapeStyle.Doubled;
   identifierQuoteChar = '"';
@@ -253,10 +251,8 @@ export class SQLServerDialect extends Dialect {
   }
 
   validateTypeName(sqlType: string): boolean {
-    // Letters:              BIGINT
-    // Numbers:              FLOAT(53)
-    // Spaces,
-    // Parentheses, Commas:  DECIMAL(5, 2)
+    // The spellings the type map reads: letters, digits, spaces, parentheses
+    // and commas, as in BIGINT, FLOAT(53) and DECIMAL(5, 2).
     return sqlType.match(/^[A-Za-z\s(),0-9]*$/) !== null;
   }
 
@@ -428,6 +424,8 @@ export class SQLServerDialect extends Dialect {
     return `CONVERT(NVARCHAR(10), ${sqlDateExp}, 23)`;
   }
 
+  // A Malloy timestamp is a UTC wall clock: a datetime2 is read as UTC, and
+  // now is the server's UTC clock
   sqlNowExpr(): string {
     return 'SYSUTCDATETIME()';
   }

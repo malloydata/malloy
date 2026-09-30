@@ -129,9 +129,9 @@ interface StageOutputColumn {
   expr: string; // the value expression alone, for a GROUP BY that repeats it
   name: string; // quoted identifier this item produces in the stage output
   isDimension: boolean; // is this column part of the GROUP BY?
-  // A dimension whose expression reads no column. SQL Server refuses such an
-  // expression in GROUP BY (error 164), and grouping by one changes nothing
-  // but the result for an empty input, so an expression GROUP BY leaves it out.
+  // A dimension whose expression reads no column. An engine may refuse a
+  // constant in GROUP BY, and grouping by one changes nothing but the result
+  // for an empty input, so an expression GROUP BY leaves it out.
   constant?: boolean;
 }
 

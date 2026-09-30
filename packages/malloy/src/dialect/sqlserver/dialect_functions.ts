@@ -39,8 +39,8 @@ const string_agg: OverloadedDefinitionBlueprint = {
   },
 };
 
-// STRING_AGG takes no DISTINCT, and a window function cannot sit inside an
-// aggregate; the translator refuses the call.
+// No string_agg_distinct: STRING_AGG accepts no DISTINCT, so the translator
+// reports the function as unknown for this dialect.
 export const SQLSERVER_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
   ...def('reverse', {'str': 'string'}, 'string'),

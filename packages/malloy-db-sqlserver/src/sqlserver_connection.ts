@@ -509,7 +509,8 @@ export class SQLServerConnection
     }
   }
 
-  private async schemaFromRows(
+  // Each row is one column of sys.dm_exec_describe_first_result_set's output
+  private async fieldsFromDescribedColumns(
     rows: QueryData,
     structDef: StructDef
   ): Promise<void> {
@@ -539,14 +540,16 @@ export class SQLServerConnection
     } catch (e) {
       return `Invalid table path ${tablePath}: ${e.message}`;
     }
-    // Described as a query, so a path into another database resolves there
+    // dm_exec_describe_first_result_set resolves a three-part name
+    // (database.schema.table) anywhere on the instance, so a table in another
+    // database is described without switching databases.
     const described = await this.describeColumns(`SELECT * FROM ${path}`);
     if (typeof described === 'string') {
       return described.startsWith('208:')
         ? `Table ${tablePath} not found`
         : `Error fetching schema for table ${tablePath}: ${described}`;
     }
-    await this.schemaFromRows(described, structDef);
+    await this.fieldsFromDescribedColumns(described, structDef);
     return structDef;
   }
 
@@ -590,7 +593,7 @@ export class SQLServerConnection
     if (typeof described === 'string') {
       return `Error fetching schema for SQL block: ${described.replace(/^\d+: /, '')}`;
     }
-    await this.schemaFromRows(described, structDef);
+    await this.fieldsFromDescribedColumns(described, structDef);
     return structDef;
   }
 

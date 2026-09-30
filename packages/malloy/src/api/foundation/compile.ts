@@ -213,8 +213,8 @@ export class Malloy {
   }
 
   /**
-   * A translator for one document. A test environment may use an
-   * experimental dialect without its compiler flag.
+   * A translator for one Malloy source, a URL and its text. A test environment
+   * may use an experimental dialect without its compiler flag.
    */
   private static newTranslator(
     url: string,

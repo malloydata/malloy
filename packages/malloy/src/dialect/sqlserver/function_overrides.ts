@@ -5,16 +5,17 @@
 
 import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
-// The length of a string, trailing spaces included
+// LEN ignores trailing spaces: append one character, count, subtract one
 const len = (arg: string) => `(LEN(${arg} + N'x') - 1)`;
 
 export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   ceil: {function: 'CEILING'},
   chr: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE NCHAR(${value}) END"},
   div: {sql: 'FLOOR(${dividend} / ${divisor})'},
-  // A comparison: legal where a condition is expected, and a server error
-  // as a value (there are no boolean values). Of NULL, no row, where the
-  // standard's COALESCE(ENDS_WITH(...), false) is false.
+  // starts_with and ends_with are written as comparisons because SQL Server
+  // has no boolean values: legal as a condition (where:, having:), a server
+  // error as a value. A NULL input matches nothing, where the standard's
+  // COALESCE(..., false) returns false.
   ends_with: {
     sql: `RIGHT(\${value}, ${len('${suffix}')}) = \${suffix}`,
   },
@@ -22,7 +23,6 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   // A FLOAT holds neither infinity nor NaN, so neither condition is ever true
   is_inf: {sql: '(1=0)'},
   is_nan: {sql: '(1=0)'},
-  // LEN drops trailing spaces; a marker character restores them
   length: {sql: len('${value}')},
   ln: {sql: 'LOG(${value})'},
   log: {sql: 'LOG(${value}, ${base})'},

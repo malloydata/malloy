@@ -249,11 +249,11 @@ export abstract class Dialect {
   // ORDER BY 1 DESC
   orderByClause: OrderByClauseType = 'ordinal';
 
-  // GROUP BY 1, or GROUP BY the dimension expressions (SQL Server has no
-  // ordinals in GROUP BY)
+  // GROUP BY 1, or GROUP BY the dimension expressions for an engine whose
+  // GROUP BY takes no ordinals
   groupByClause: GroupByClauseType = 'ordinal';
 
-  // A trailing LIMIT n, or TOP n after SELECT (SQL Server). The compiler
+  // A trailing LIMIT n, or TOP n after SELECT. The compiler
   // emits both positions through sqlSelectLimit and sqlLimit; one is empty.
   limitClause: LimitClauseType = 'limit';
   // ORDER BY is only legal in a subquery or CTE which also has a row limit
