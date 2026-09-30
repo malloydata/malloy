@@ -224,6 +224,11 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
       case 'mssql_via_duckdb':
         {
           const s = SQLServerExecutor.getConnectionOptionsFromEnv();
+          if (s.server === undefined) {
+            throw new Error(
+              'MSSQL_HOST is not set; see test/mssql/mssql_start.sh'
+            );
+          }
           connection = new DuckDBTestConnection({
             name: dbName,
             additionalExtensions: ['mssql'],
