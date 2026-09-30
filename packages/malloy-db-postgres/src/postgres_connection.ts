@@ -297,23 +297,30 @@ export class PostgresConnection
     values?: unknown[]
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
-    await this.withTlsHint(() => client.connect());
-    await this.connectionSetup(client);
+    try {
+      await this.withTlsHint(() => client.connect());
+      await this.connectionSetup(client);
 
-    let result = await client.query(sqlCommand, values);
-    if (Array.isArray(result)) {
-      result = result.pop();
-    }
-    if (deJSON) {
-      for (let i = 0; i < result.rows.length; i++) {
-        result.rows[i] = result.rows[i].row;
+      let result = await client.query(sqlCommand, values);
+      if (Array.isArray(result)) {
+        result = result.pop();
       }
+      if (deJSON) {
+        for (let i = 0; i < result.rows.length; i++) {
+          result.rows[i] = result.rows[i].row;
+        }
+      }
+      return {
+        rows: result.rows as QueryData,
+        totalRows: result.rows.length,
+      };
+    } finally {
+      // Runs on the success path too (the old placement after `client.query`
+      // only ran there). A throw anywhere above - connect, setup, or the
+      // query itself - otherwise left this session open until the server or
+      // an operator killed it.
+      await client.end();
     }
-    await client.end();
-    return {
-      rows: result.rows as QueryData,
-      totalRows: result.rows.length,
-    };
   }
 
   async fetchSelectSchema(
@@ -327,27 +334,28 @@ export class PostgresConnection
       name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
     const client = await this.getClient();
-    await this.withTlsHint(() => client.connect());
-    await this.connectionSetup(client);
-    // 1) Get row-descriptor without fetching data
-    const res = await client.query({
-      text: `SELECT * FROM (${sqlRef.selectStr}) _t LIMIT 0`,
-    });
+    try {
+      await this.withTlsHint(() => client.connect());
+      await this.connectionSetup(client);
+      // 1) Get row-descriptor without fetching data
+      const res = await client.query({
+        text: `SELECT * FROM (${sqlRef.selectStr}) _t LIMIT 0`,
+      });
 
-    // 2) Resolve every OID we might touch (field, array element, domain base)
-    const neededOids = new Set<number>();
+      // 2) Resolve every OID we might touch (field, array element, domain base)
+      const neededOids = new Set<number>();
 
-    res.fields.forEach(f => neededOids.add(f.dataTypeID));
-    // we'll add more OIDs later (typelem / typebasetype) lazily
+      res.fields.forEach(f => neededOids.add(f.dataTypeID));
+      // we'll add more OIDs later (typelem / typebasetype) lazily
 
-    // helper to fetch pg_type rows on demand, with cache
-    const pgTypeCache = new Map<number, PgTypeRow>();
+      // helper to fetch pg_type rows on demand, with cache
+      const pgTypeCache = new Map<number, PgTypeRow>();
 
-    const loadTypes = async (oids: number[]) => {
-      if (oids.length === 0) return;
-      const params = oids.map((_, i) => `$${i + 1}`).join(',');
-      const {rows} = await client.query<PgTypeRow>(
-        `
+      const loadTypes = async (oids: number[]) => {
+        if (oids.length === 0) return;
+        const params = oids.map((_, i) => `$${i + 1}`).join(',');
+        const {rows} = await client.query<PgTypeRow>(
+          `
       SELECT
         oid,
         typname,
@@ -359,72 +367,78 @@ export class PostgresConnection
       FROM pg_type
       WHERE oid IN (${params})
       `,
-        oids
-      );
-      rows.forEach(r => pgTypeCache.set(r.oid, r));
-    };
-
-    // Prime the cache
-    await loadTypes([...neededOids]);
-
-    // 3) recursive mapper → info-schema compliant strings
-    const mapDataType = async (oid: number): Promise<string> => {
-      let t = pgTypeCache.get(oid);
-      if (!t) {
-        await loadTypes([oid]);
-        t = pgTypeCache.get(oid)!;
-      }
-
-      // ARRAY?
-      if (t.typcategory === 'A') return 'ARRAY';
-
-      // DOMAIN?  recurse to its base type
-      if (t.typtype === 'd') return mapDataType(t.typbasetype);
-
-      // ENUM, COMPOSITE, RANGE, MULTIRANGE, PSEUDO  → USER-DEFINED
-      if (['e', 'c', 'r', 'm', 'p'].includes(t.typtype)) return 'USER-DEFINED';
-
-      // built-in scalar or base type of domain
-      return t.formatted;
-    };
-
-    // helper to resolve element_type (NULL for scalars)
-    const mapElementType = async (oid: number): Promise<string | null> => {
-      let t = pgTypeCache.get(oid);
-      if (!t) {
-        await loadTypes([oid]);
-        t = pgTypeCache.get(oid)!;
-      }
-      if (t.typcategory !== 'A') return null; // not an array
-
-      // Ensure element row cached
-      if (!pgTypeCache.has(t.typelem)) await loadTypes([t.typelem]);
-      return mapDataType(t.typelem);
-    };
-
-    // 4) Build final array in original column order
-    const result: InfoSchemaColumn[] = [];
-    for (const field of res.fields as FieldDef[]) {
-      result.push({
-        columnName: field.name,
-        dataType: await mapDataType(field.dataTypeID),
-        elementType: await mapElementType(field.dataTypeID),
-      });
-    }
-    for (const row of result) {
-      const postgresDataType = row.dataType;
-      const name = row.columnName;
-      if (postgresDataType === 'ARRAY') {
-        const elementType = this.dialect.sqlTypeToMalloyType(
-          row.elementType as string
+          oids
         );
-        structDef.fields.push(mkArrayDef(elementType, name));
-      } else {
-        const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
-        structDef.fields.push({...malloyType, name});
+        rows.forEach(r => pgTypeCache.set(r.oid, r));
+      };
+
+      // Prime the cache
+      await loadTypes([...neededOids]);
+
+      // 3) recursive mapper → info-schema compliant strings
+      const mapDataType = async (oid: number): Promise<string> => {
+        let t = pgTypeCache.get(oid);
+        if (!t) {
+          await loadTypes([oid]);
+          t = pgTypeCache.get(oid)!;
+        }
+
+        // ARRAY?
+        if (t.typcategory === 'A') return 'ARRAY';
+
+        // DOMAIN?  recurse to its base type
+        if (t.typtype === 'd') return mapDataType(t.typbasetype);
+
+        // ENUM, COMPOSITE, RANGE, MULTIRANGE, PSEUDO  → USER-DEFINED
+        if (['e', 'c', 'r', 'm', 'p'].includes(t.typtype))
+          return 'USER-DEFINED';
+
+        // built-in scalar or base type of domain
+        return t.formatted;
+      };
+
+      // helper to resolve element_type (NULL for scalars)
+      const mapElementType = async (oid: number): Promise<string | null> => {
+        let t = pgTypeCache.get(oid);
+        if (!t) {
+          await loadTypes([oid]);
+          t = pgTypeCache.get(oid)!;
+        }
+        if (t.typcategory !== 'A') return null; // not an array
+
+        // Ensure element row cached
+        if (!pgTypeCache.has(t.typelem)) await loadTypes([t.typelem]);
+        return mapDataType(t.typelem);
+      };
+
+      // 4) Build final array in original column order
+      const result: InfoSchemaColumn[] = [];
+      for (const field of res.fields as FieldDef[]) {
+        result.push({
+          columnName: field.name,
+          dataType: await mapDataType(field.dataTypeID),
+          elementType: await mapElementType(field.dataTypeID),
+        });
       }
+      for (const row of result) {
+        const postgresDataType = row.dataType;
+        const name = row.columnName;
+        if (postgresDataType === 'ARRAY') {
+          const elementType = this.dialect.sqlTypeToMalloyType(
+            row.elementType as string
+          );
+          structDef.fields.push(mkArrayDef(elementType, name));
+        } else {
+          const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
+          structDef.fields.push({...malloyType, name});
+        }
+      }
+    } finally {
+      // See runPostgresQuery: without this, a throw anywhere in the OID
+      // resolution above (a bad .sql() source, a type this driver can't
+      // map) leaves the session open indefinitely.
+      await client.end();
     }
-    await client.end();
     return structDef;
   }
 
@@ -536,22 +550,30 @@ export class PostgresConnection
       this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
     );
     const client = await this.getClient();
-    await this.withTlsHint(() => client.connect());
-    await this.connectionSetup(client);
-    const rowStream = client.query(query);
-    let index = 0;
-    for await (const row of rowStream) {
-      yield row.row as QueryRecord;
-      index += 1;
-      if (
-        (rowLimit !== undefined && index >= rowLimit) ||
-        abortSignal?.aborted
-      ) {
-        query.destroy();
-        break;
+    try {
+      await this.withTlsHint(() => client.connect());
+      await this.connectionSetup(client);
+      const rowStream = client.query(query);
+      let index = 0;
+      for await (const row of rowStream) {
+        yield row.row as QueryRecord;
+        index += 1;
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
+          query.destroy();
+          break;
+        }
       }
+    } finally {
+      // A generator's `finally` also runs when the CALLER stops iterating
+      // early (a `for await` `break`/`return` on the consumer side, or a
+      // throw while a `yield` is suspended) - not only on the loop's own
+      // `break` above. Either way the session must close, or it leaks the
+      // same as a query error in runPostgresQuery.
+      await client.end();
     }
-    await client.end();
   }
 
   public async estimateQueryCost(_: string): Promise<QueryRunStats> {
@@ -665,19 +687,27 @@ export class PooledPostgresConnection
     // `client.query(query)`, which does what it's supposed to.
     const pool = await this.getPool();
     const client = await this.withTlsHint(() => pool.connect());
-    const resultStream: QueryStream = client.query(query);
-    for await (const row of resultStream) {
-      yield row.row as QueryRecord;
-      index += 1;
-      if (
-        (rowLimit !== undefined && index >= rowLimit) ||
-        abortSignal?.aborted
-      ) {
-        query.destroy();
-        break;
+    try {
+      const resultStream: QueryStream = client.query(query);
+      for await (const row of resultStream) {
+        yield row.row as QueryRecord;
+        index += 1;
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
+          query.destroy();
+          break;
+        }
       }
+    } finally {
+      // Unlike runPostgresQuery above, pool.query() is not what checked this
+      // client out - pool.connect() was, directly - so nothing releases it
+      // back to the pool on a throw or an early consumer exit except this.
+      // A leaked client here does not open a new session; it holds one of
+      // the pool's existing slots forever, silently shrinking poolMax.
+      client.release();
     }
-    client.release();
   }
 
   async close(): Promise<void> {

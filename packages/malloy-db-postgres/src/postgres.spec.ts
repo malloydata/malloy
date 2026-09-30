@@ -3,7 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {PooledPostgresConnection} from './postgres_connection';
+import {
+  PooledPostgresConnection,
+  PostgresConnection,
+} from './postgres_connection';
 import crypto from 'crypto';
 import type {SQLSourceDef} from '@malloydata/malloy';
 import * as malloy from '@malloydata/malloy';
@@ -226,6 +229,77 @@ describe('numeric value reading', () => {
         ).toMatchResult(testModel, {f: 10.5});
       }
     );
+  });
+});
+
+describe('connection cleanup on query failure', () => {
+  // A `pg.Client` that connects and then hits a failing statement must still
+  // close the underlying session. Before the fix, `client.end()` ran only on
+  // the success path, so a session stayed open (visible in pg_stat_activity,
+  // and eventually counted against a role's CONNECTION LIMIT) until the
+  // server or an operator killed it. `application_name` tags each probed
+  // connection so the assertion is not fooled by unrelated sessions on a
+  // shared test database.
+  const countSessionsByAppName = async (appName: string): Promise<number> => {
+    const reader = new PooledPostgresConnection('leak_test_reader');
+    try {
+      // runSQL always de-JSONs each row as `row.row`, so a bare `count(*)`
+      // column comes back undefined unless the query wraps its own result in
+      // row_to_json first, matching what runSQL expects on the way back.
+      const {rows} = await reader.runSQL(
+        `SELECT row_to_json(t) AS row FROM (
+           SELECT count(*)::integer AS n FROM pg_stat_activity WHERE application_name = '${appName}'
+         ) t`
+      );
+      return (rows[0] as {n: number}).n;
+    } finally {
+      await reader.close();
+    }
+  };
+
+  it('closes the session when a query fails after connecting (unpooled)', async () => {
+    const appName = `leak_test_unpooled_${crypto.randomBytes(4).toString('hex')}`;
+    const connection = new PostgresConnection({
+      name: 'postgres',
+      connectionString: `postgresql://root:postgres@localhost:5432/postgres?application_name=${appName}`,
+    });
+    try {
+      // Malformed SQL: connect() and connectionSetup() succeed, then the
+      // query itself throws - the exact shape of a bad `.sql()` source or a
+      // role-permission error, not a connect-time failure.
+      await expect(
+        connection.runSQL('SELECT this is not valid sql')
+      ).rejects.toThrow();
+      // Give the server a moment to record the backend's disconnect.
+      await new Promise(resolve => setTimeout(resolve, 200));
+      expect(await countSessionsByAppName(appName)).toBe(0);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('closes the session when fetchSelectSchema fails after connecting', async () => {
+    const appName = `leak_test_schema_${crypto.randomBytes(4).toString('hex')}`;
+    const connection = new PostgresConnection({
+      name: 'postgres',
+      connectionString: `postgresql://root:postgres@localhost:5432/postgres?application_name=${appName}`,
+    });
+    try {
+      // Unlike fetchTableSchema, fetchSelectSchema has no internal
+      // try/catch around the query — a SQL error here throws straight out
+      // to the caller, so the test asserts on the rejection, not a
+      // returned error string.
+      await expect(
+        connection.fetchSelectSchema({
+          connection: 'postgres',
+          selectStr: 'not valid sql at all',
+        })
+      ).rejects.toThrow();
+      await new Promise(resolve => setTimeout(resolve, 200));
+      expect(await countSessionsByAppName(appName)).toBe(0);
+    } finally {
+      await connection.close();
+    }
   });
 });
 
