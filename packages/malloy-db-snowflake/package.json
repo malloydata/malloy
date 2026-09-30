@@ -15,7 +15,7 @@
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "jest --config=../../jest.config.js",
+    "test": "cd ../.. && ts-node scripts/check_dialect_connection.ts snowflake && jest packages/malloy-db-snowflake",
     "build": "tsc --build",
     "dev": "tsc --build",
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",

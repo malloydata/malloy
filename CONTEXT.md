@@ -241,18 +241,13 @@ Then add to `package.json`: `"codegen": "node ../../scripts/femto-build.js targe
 npx jest <FILE_OR_DIRECTORY> -t <TEST_PATTERN>
 ```
 
-Run from the repo root. This is the only form that works reliably — the jest config is wired up for it. Combine with the capture-output pattern above:
+Run it from the repo root, through `npx`, selecting tests with a path and `-t` — that pair is the whole supported surface. Combine with the capture-output pattern above:
 
 ```
 npx jest <path> -t <pattern> > /tmp/jest.log 2>&1
 ```
 
-**Do not use** the variants below. They are common AI defaults and they all fail here:
-
-- `npm run test` — requires every database connection; never finishes.
-- `npm run test -- <file>` — same problem; arg passthrough does not narrow the run the way you'd expect.
-- `jest …` directly without `npx` — wrong binary resolution.
-- `--testPathPattern`, `--testNamePattern`, or other jest-flag variants — `<path> -t <pattern>` is the supported surface.
+Broader runs go through the root scripts below: `precheck` and `ci-<dialect>`. In a package whose tests are self-contained and need no database server, `npm test` runs them; elsewhere it points back to this section.
 
 On exit 0, move on — don't read `/tmp/jest.log`. On non-zero exit, `tail` or `grep` the log; if one pass doesn't surface the failing test, grep differently rather than re-running with new jest flags.
 

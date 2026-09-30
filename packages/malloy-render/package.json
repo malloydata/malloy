@@ -21,7 +21,7 @@
     }
   },
   "scripts": {
-    "test": "jest --config=../../jest.config.js",
+    "test": "cd ../.. && jest packages/malloy-render",
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean",
     "prepublishOnly": "npm run build",
     "storybook": "rm -rf ./node_modules/.cache && storybook dev -p 6006",

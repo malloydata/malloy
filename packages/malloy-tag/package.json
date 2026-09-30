@@ -21,7 +21,7 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
-    "test": "jest --config=../../jest.config.js",
+    "test": "cd ../.. && jest packages/malloy-tag",
     "clean": "rm -rf dist && tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean && rimraf @flowtyped",
     "dev": "tsc --build",
     "build": "tsc --build && npm run generate-flow",

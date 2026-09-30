@@ -16,7 +16,7 @@
     "codegen": "node ../../scripts/femto-build.js codegen",
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "npm run codegen && jest --config=../../jest.config.js",
+    "test": "npm run codegen && cd ../.. && jest packages/malloy-malloy-sql",
     "dev": "npm run codegen && tsc --build",
     "build": "npm run codegen && tsc --build",
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean",
