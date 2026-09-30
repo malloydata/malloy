@@ -221,8 +221,6 @@ export class QueryQuery extends QueryField {
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
   isJoinedSubquery: boolean; // this query is a joined subquery.
-  // The last stage of the top-level query: the outer SELECT, not a CTE
-  topLevelLastStage = false;
   // circularity breaker, we pass a lambda in to look up struct names, so
   // query_query doesn't have to include query_model because query_model
   // needs to include query_query. don't love this solution
@@ -1334,9 +1332,7 @@ export class QueryQuery extends QueryField {
       if (this.firstSegment.sample) {
         const d = this.parent.dialect;
         structSQL = stageWriter.addStage(
-          `SELECT${d.sqlSelectLimit(100000)} * from ${structSQL} as x ${
-            d.limitClause === 'limit' ? 'limit 100000 ' : ''
-          }`
+          `SELECT * from ${structSQL} as x ${d.sqlOrderByLimit([], 100000)}`
         );
       }
     }
@@ -1386,9 +1382,7 @@ export class QueryQuery extends QueryField {
   genereateSQLOrderBy(
     queryDef: QuerySegment,
     resultStruct: FieldInstanceResult
-  ): string {
-    let s = '';
-
+  ): string[] {
     // Collect array joins for dialects that need explicit ordering.
     // Only for project queries - reduce queries aggregate rows so individual
     // row order doesn't matter, and we can't ORDER BY columns not in GROUP BY.
@@ -1405,17 +1399,17 @@ export class QueryQuery extends QueryField {
       // For project without explicit ordering, we still need array ordinality
       // ordering if the dialect requires it
       if (arrayJoins.length === 0) {
-        return ''; // No default ordering for project.
+        return []; // No default ordering for project.
       }
     }
     // Intermediate results (in a pipeline or join) that have no limit, don't need an orderby
     //  Some database don't have this optimization.
     if (this.fieldDef.pipeline.length > 1 && queryDef.limit === undefined) {
-      return '';
+      return [];
     }
     // ignore orderby if all aggregates.
     if (resultStruct.getRepeatedResultType() === 'inline_all_numbers') {
-      return '';
+      return [];
     }
 
     // if we are in the last stage of a query and the query is a subquery
@@ -1425,17 +1419,7 @@ export class QueryQuery extends QueryField {
       this.fieldDef.pipeline.length === 1 &&
       queryDef.limit === undefined
     ) {
-      return '';
-    }
-
-    // A stage which is not the top-level query's last is a CTE or a derived
-    // table, where some dialects allow ORDER BY only with a row limit
-    if (
-      this.parent.dialect.subqueryOrderByRequiresLimit &&
-      !this.topLevelLastStage &&
-      queryDef.limit === undefined
-    ) {
-      return '';
+      return [];
     }
 
     const orderBy = queryDef.orderBy || resultStruct.calculateDefaultOrderBy();
@@ -1487,10 +1471,7 @@ export class QueryQuery extends QueryField {
       o.push(`${aj.alias}_outer.__row_id ASC`);
     }
 
-    if (o.length > 0) {
-      s = this.parent.dialect.sqlOrderBy(o, 'query') + '\n';
-    }
-    return s;
+    return o;
   }
 
   /**
@@ -1504,10 +1485,11 @@ export class QueryQuery extends QueryField {
    */
   generateSimpleSQL(stageWriter: StageWriter): string {
     this.rootResult.emitsGroupSet = false;
-    const limit = isRawSegment(this.firstSegment)
-      ? undefined
-      : this.firstSegment.limit;
-    let s = `SELECT${this.parent.dialect.sqlSelectLimit(limit)} \n`;
+    const limit =
+      !isRawSegment(this.firstSegment) && this.firstSegment.limit
+        ? this.firstSegment.limit
+        : undefined;
+    let s = 'SELECT \n';
     // A projection groups nothing; a reduce groups its scalar result fields.
     const grouped = this.firstSegment.type === 'reduce';
     const columns: StageOutputColumn[] = [];
@@ -1545,12 +1527,14 @@ export class QueryQuery extends QueryField {
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
-    // order by
-    s += this.genereateSQLOrderBy(
-      this.firstSegment as QuerySegment,
-      this.rootResult
+    // order by, limit
+    s += this.parent.dialect.sqlOrderByLimit(
+      this.genereateSQLOrderBy(
+        this.firstSegment as QuerySegment,
+        this.rootResult
+      ),
+      limit
     );
-    s += this.parent.dialect.sqlLimit(limit);
     this.resultStage = stageWriter.addStage(s);
     // Consumes any pipelined turtle output. The nests that reach here are
     // single-stage (canUseSingleGroupSetSQL), so outputPipelinedSQL is empty and
@@ -2191,10 +2175,11 @@ export class QueryQuery extends QueryField {
     stageWriter: StageWriter,
     stage0Name: string
   ): string {
-    const limit = isRawSegment(this.firstSegment)
-      ? undefined
-      : this.firstSegment.limit;
-    let s = `SELECT${this.parent.dialect.sqlSelectLimit(limit)}\n`;
+    const limit =
+      !isRawSegment(this.firstSegment) && this.firstSegment.limit
+        ? this.firstSegment.limit
+        : undefined;
+    let s = 'SELECT\n';
     // Columns this combine stage emits. Unlike the grouped stages above, these
     // are the final output names (unsuffixed), not the group-set-suffixed form.
     // A following pipelined stage carries them forward by name.
@@ -2270,13 +2255,12 @@ export class QueryQuery extends QueryField {
 
     s += groupByClause(this.parent.dialect, columns);
 
-    // order by
-    const orderBySQL = this.genereateSQLOrderBy(
+    // order by, limit
+    const orderTerms = this.genereateSQLOrderBy(
       this.firstSegment as QuerySegment,
       this.rootResult
     );
-    s += orderBySQL;
-    s += this.parent.dialect.sqlLimit(limit);
+    s += this.parent.dialect.sqlOrderByLimit(orderTerms, limit);
 
     this.resultStage = stageWriter.addStage(s);
     this.resultStage = this.generatePipelinedStages(
@@ -2284,7 +2268,7 @@ export class QueryQuery extends QueryField {
       this.resultStage,
       stageWriter,
       columns,
-      orderBySQL
+      this.parent.dialect.sqlOrderByLimit(orderTerms, undefined)
     );
 
     return this.resultStage;
@@ -2590,16 +2574,12 @@ export class QueryQuery extends QueryField {
     return this.generateSimpleSQL(stageWriter);
   }
 
-  generateSQLFromPipeline(
-    stageWriter: StageWriter,
-    topLevel = false
-  ): {
+  generateSQLFromPipeline(stageWriter: StageWriter): {
     lastStageName: string;
     outputStruct: QueryResultDef;
   } {
     this.parent.maybeEmitParameterizedSourceUsage();
     this.prepare(stageWriter);
-    this.topLevelLastStage = topLevel && this.fieldDef.pipeline.length === 1;
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
     const pipeline = [...this.fieldDef.pipeline];
@@ -2628,8 +2608,6 @@ export class QueryQuery extends QueryField {
           this.isJoinedSubquery,
           this.structRefToQueryStruct
         );
-        q.topLevelLastStage =
-          topLevel && transform === pipeline[pipeline.length - 1];
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
         outputStruct = q.getResultStructDef();
@@ -2776,10 +2754,11 @@ class QueryQueryIndexStage extends QueryQuery {
       ),
     ];
 
-    const limit = isRawSegment(this.firstSegment)
-      ? undefined
-      : this.firstSegment.limit;
-    let s = `SELECT${dialect.sqlSelectLimit(limit)}\n`;
+    const limit =
+      !isRawSegment(this.firstSegment) && this.firstSegment.limit
+        ? this.firstSegment.limit
+        : undefined;
+    let s = 'SELECT\n';
     // fieldType and fieldValue share one line
     s += grouped.map((c, i) => `  ${c.sql},${i === 3 ? '' : '\n'}`).join('');
     s += ` ${measureSQL} as ${weightColumn},\n`;
@@ -2819,7 +2798,7 @@ class QueryQueryIndexStage extends QueryQuery {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     s += groupByClause(dialect, grouped);
-    s += dialect.sqlLimit(limit);
+    s += dialect.sqlOrderByLimit([], limit);
     // console.log(s);
     const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(

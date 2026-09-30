@@ -295,20 +295,14 @@ function generateSQL(dialect: Dialect, rows: TestDataRow[]): string {
   const innerQuery = selects.join('\nUNION ALL ');
 
   // Generate ORDER BY based on dialect preference
-  let orderByClause: string;
-  if (dialect.orderByClause === 'ordinal') {
-    orderByClause = `ORDER BY ${columnList.length + 1}`;
-  } else if (dialect.orderByClause === 'output_name') {
-    orderByClause = `ORDER BY ${rowIdColumn}`;
-  } else {
-    orderByClause = `ORDER BY ${rowIdColumn}`;
-  }
-  // Presto/Trino ignores ORDER BY on a subquery without LIMIT, and SQL Server
-  // allows it only with TOP
-  orderByClause += ` ${dialect.sqlLimit(rows.length)}`;
-  const top = dialect.sqlSelectLimit(rows.length);
+  const orderTerm =
+    dialect.orderByClause === 'ordinal'
+      ? `${columnList.length + 1}`
+      : rowIdColumn;
+  // Presto/Trino ignores ORDER BY on a subquery without a row limit
+  const orderByClause = dialect.sqlOrderByLimit([orderTerm], rows.length);
 
-  const sql = `SELECT ${quotedColumns}\nFROM (\n  SELECT${top} *\n  FROM (\n${innerQuery}\n  ) AS t_sorted\n  ${orderByClause}\n) AS t_result\n`;
+  const sql = `SELECT ${quotedColumns}\nFROM (\n  SELECT *\n  FROM (\n${innerQuery}\n  ) AS t_sorted\n  ${orderByClause}) AS t_result\n`;
 
   return sql;
 }

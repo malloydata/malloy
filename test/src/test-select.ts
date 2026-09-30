@@ -521,23 +521,17 @@ export class TestSelect {
     const innerQuery = selects.join('\nUNION ALL ');
 
     // Generate ORDER BY based on dialect preference
-    let orderByClause: string;
-    if (this.dialect.orderByClause === 'ordinal') {
-      // ORDER BY position (column count + 1 since row_id is last)
-      orderByClause = `ORDER BY ${columnList.length + 1}`;
-    } else if (this.dialect.orderByClause === 'output_name') {
-      // ORDER BY column name
-      orderByClause = `ORDER BY ${rowIdColumn}`;
-    } else {
-      // ORDER BY expression - just use column name (qualified would be t_sorted.__ts_row_id__)
-      orderByClause = `ORDER BY ${rowIdColumn}`;
-    }
-    // Presto/Trino ignores ORDER BY on a subquery without LIMIT, and SQL Server
-    // allows it only with TOP
-    orderByClause += ` ${this.dialect.sqlLimit(rows.length)}`;
-    const top = this.dialect.sqlSelectLimit(rows.length);
+    const orderTerm =
+      this.dialect.orderByClause === 'ordinal'
+        ? `${columnList.length + 1}`
+        : rowIdColumn;
+    // Presto/Trino ignores ORDER BY on a subquery without a row limit
+    const orderByClause = this.dialect.sqlOrderByLimit(
+      [orderTerm],
+      rows.length
+    );
 
-    const sql = `SELECT ${quotedColumns}\nFROM (\n  SELECT${top} *\n  FROM (\n${innerQuery}\n  ) AS t_sorted\n  ${orderByClause}\n) AS t_result\n`;
+    const sql = `SELECT ${quotedColumns}\nFROM (\n  SELECT *\n  FROM (\n${innerQuery}\n  ) AS t_sorted\n  ${orderByClause}) AS t_result\n`;
 
     return sql;
   }

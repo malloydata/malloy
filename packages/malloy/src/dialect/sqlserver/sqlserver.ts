@@ -28,7 +28,6 @@ import type {
   DialectFieldList,
   FieldReferenceType,
   GroupByClauseType,
-  LimitClauseType,
   QueryInfo,
 } from '../dialect';
 import {Dialect, EscapeStyle, qtz} from '../dialect';
@@ -198,8 +197,6 @@ export class SQLServerDialect extends Dialect {
   likeEscape = true;
   likeExtraWildcards = ['['];
   groupByClause: GroupByClauseType = 'expression';
-  limitClause: LimitClauseType = 'top';
-  subqueryOrderByRequiresLimit = true;
 
   // A leading `#` or `@` names a temp table or a variable, not a table.
   override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$#@]*/;
@@ -404,6 +401,22 @@ export class SQLServerDialect extends Dialect {
     _func: (valNames: string[]) => string
   ): string {
     return this.unsupported('distinct aggregates');
+  }
+
+  // OFFSET/FETCH is ORDER BY's row limit, and an ORDER BY carrying an OFFSET
+  // is legal inside a CTE or derived table where a bare one is not; the server
+  // still sorts it. A limit with no ordering orders by (SELECT NULL), the one
+  // constant ORDER BY accepts.
+  sqlOrderByLimit(orderTerms: string[], limit: number | undefined): string {
+    if (orderTerms.length === 0 && limit === undefined) {
+      return '';
+    }
+    const orderBy =
+      orderTerms.length > 0
+        ? this.sqlOrderBy(orderTerms, 'query')
+        : 'ORDER BY (SELECT NULL)';
+    const fetch = limit === undefined ? '' : ` FETCH NEXT ${limit} ROWS ONLY`;
+    return `${orderBy} OFFSET 0 ROWS${fetch}\n`;
   }
 
   // TABLESAMPLE reads whole pages of a base table and nothing else, so a

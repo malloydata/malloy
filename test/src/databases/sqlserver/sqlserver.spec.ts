@@ -84,6 +84,16 @@ describe('SQL Server', () => {
       ]);
     });
 
+    test('a limit of zero is no limit', async () => {
+      // FETCH NEXT 0 ROWS is a parse error; the compiler writes no limit at all
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          select: state
+          limit: 0
+        } -> { aggregate: n is count() }
+      `).toEqualResult(tm, [{n: 51}]);
+    });
+
     test('a declared boolean is a 0/1 value', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {

@@ -71,7 +71,7 @@ Each of these is a later change, not a promise.
 
 ## What the server sees
 
-Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `QUOTED_IDENTIFIER ON`, `ANSI_NULLS ON` and `ANSI_WARNINGS ON`, then any `setupSQL`, then a chain of CTEs ending in the query's `SELECT`. Row limits are `TOP`; grouping is by expression rather than ordinal, a dimension that reads no column is left out (T-SQL refuses a constant there) and a query of only constant dimensions groups by `()`, one group; a CTE stage carries no `ORDER BY` unless it also has a limit. A SQL block becomes a derived table, so one that ends in `ORDER BY` without `TOP` is refused by the server; drop the ordering or add `TOP`.
+Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `QUOTED_IDENTIFIER ON`, `ANSI_NULLS ON` and `ANSI_WARNINGS ON`, then any `setupSQL`, then a chain of CTEs ending in the query's `SELECT`. A row limit is `OFFSET 0 ROWS FETCH NEXT n ROWS ONLY` on the stage's `ORDER BY` (`ORDER BY (SELECT NULL)` when the stage has none); an ordered stage carries `OFFSET 0 ROWS` even without a limit, which is what makes its `ORDER BY` legal inside a CTE, and the server sorts it, so an ordered stage that feeds another stage costs a sort; leave `order_by` off a stage whose output is only read by another stage. grouping is by expression rather than ordinal, a dimension that reads no column is left out (T-SQL refuses a constant there) and a query of only constant dimensions groups by `()`, one group. A SQL block becomes a derived table, so one that ends in a bare `ORDER BY` is refused by the server; drop the ordering, or give it `OFFSET 0 ROWS` or `TOP`, either of which makes it legal.
 
 ## How the dialect reads the server
 
@@ -87,6 +87,7 @@ Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `
 | Feature | First in |
 |---|---|
 | `TABLESAMPLE` | SQL Server 2005 |
+| `OFFSET … FETCH` | SQL Server 2012 |
 | `AT TIME ZONE`, `DATEDIFF_BIG` | SQL Server 2016 |
 | `STRING_AGG`, `TRIM` | SQL Server 2017 |
 
