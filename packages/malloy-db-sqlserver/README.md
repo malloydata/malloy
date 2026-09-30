@@ -83,6 +83,7 @@ Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `
 - The default collation compares case-insensitively; Malloy does not change that.
 - `bit` is an integer, read as 0 or 1. `uniqueidentifier`, `text`, `ntext`, `time`, `binary`, `varbinary`, `xml`, `geography` and the other types the map does not name are `sql native`, to be passed through or cast in a `sql()` dimension.
 - A `bigint` arrives as the driver's text and is read as a number, so a value above 2^53 loses precision.
+- The connection's digest, which names the tables it may persist and the cache it may share, is built from the server, port, instance, database, authentication kind and the configured principal: the `user`, `domain\user`, or `clientId`. An ambient identity, `azure-default` or `azure-msi` with no `clientId`, is unknown until the first token request, so two such connections to one database share a digest. To tell them apart, set `clientId` (a user-assigned identity) or use `azure-service-principal`.
 - `sample: n` and `sample: n%` read a base table through `TABLESAMPLE`, which returns whole pages, so a row count is approximate. A sample on any other source (a SQL block, a query) is ignored: `TABLESAMPLE` reads nothing but a table.
 
 ## Which server features the dialect uses
