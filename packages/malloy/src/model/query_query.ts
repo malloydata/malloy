@@ -139,10 +139,15 @@ interface StageOutputColumn {
 function aliasedColumn(
   expr: string,
   name: string,
-  isDimension: boolean,
-  constant = false
+  role: {isDimension: boolean; constant?: boolean}
 ): StageOutputColumn {
-  return {sql: `${expr} as ${name}`, expr, name, isDimension, constant};
+  return {
+    sql: `${expr} as ${name}`,
+    expr,
+    name,
+    isDimension: role.isDimension,
+    constant: role.constant ?? false,
+  };
 }
 
 // Does a field's expression read any column of its source?
@@ -174,7 +179,7 @@ function groupByTerms(
   return columns.flatMap(c => (c.isDimension && !c.constant ? [c.expr] : []));
 }
 
-function groupByClause(dialect: Dialect, columns: StageOutputColumn[]): string {
+function sqlGroupBy(dialect: Dialect, columns: StageOutputColumn[]): string {
   const terms = groupByTerms(dialect, columns);
   if (terms.length > 0) {
     return `GROUP BY ${terms.join(',')}\n`;
@@ -1500,12 +1505,10 @@ export class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
           columns.push(
-            aliasedColumn(
-              fi.generateExpression(),
-              sqlName,
-              grouped && isScalarField(fi.f),
-              !readsColumn(fi.f.fieldDef)
-            )
+            aliasedColumn(fi.generateExpression(), sqlName, {
+              isDimension: grouped && isScalarField(fi.f),
+              constant: !readsColumn(fi.f.fieldDef),
+            })
           );
         }
       } else if (fi instanceof FieldInstanceResult) {
@@ -1516,14 +1519,14 @@ export class QueryQuery extends QueryField {
           outputPipelinedSQL,
           true
         );
-        columns.push(aliasedColumn(turtle, sqlName, false));
+        columns.push(aliasedColumn(turtle, sqlName, {isDimension: false}));
       }
     }
     s += indent(columns.map(c => ` ${c.sql}`).join(',\n')) + '\n';
 
     s += this.generateSQLJoins(stageWriter);
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
-    s += groupByClause(this.parent.dialect, columns);
+    s += sqlGroupBy(this.parent.dialect, columns);
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
@@ -1688,16 +1691,16 @@ export class QueryQuery extends QueryField {
             } else {
               // just treat it like a regular field.
               output.columns.push(
-                aliasedColumn(
-                  exp,
-                  outputName,
-                  true,
-                  !readsColumn(fi.f.fieldDef)
-                )
+                aliasedColumn(exp, outputName, {
+                  isDimension: true,
+                  constant: !readsColumn(fi.f.fieldDef),
+                })
               );
             }
           } else if (isBasicCalculation(fi.f)) {
-            output.columns.push(aliasedColumn(exp, outputName, false));
+            output.columns.push(
+              aliasedColumn(exp, outputName, {isDimension: false})
+            );
           }
         }
       } else if (fi instanceof FieldInstanceResult) {
@@ -1710,7 +1713,9 @@ export class QueryQuery extends QueryField {
             outputName,
             output.outputPipelinedSQL
           );
-          output.columns.push(aliasedColumn(s, outputName, false));
+          output.columns.push(
+            aliasedColumn(s, outputName, {isDimension: false})
+          );
         }
       }
     }
@@ -1737,7 +1742,7 @@ export class QueryQuery extends QueryField {
               resultSet.groupSet
             } THEN CASE WHEN ${having.sql()} THEN 0 ELSE 1 END END`,
             `__delete__${resultSet.groupSet}`,
-            false
+            {isDimension: false}
           )
         );
       }
@@ -2003,7 +2008,7 @@ export class QueryQuery extends QueryField {
       );
     }
 
-    const groupBy = groupByClause(this.parent.dialect, f.columns);
+    const groupBy = sqlGroupBy(this.parent.dialect, f.columns);
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
@@ -2050,13 +2055,17 @@ export class QueryQuery extends QueryField {
               resultSet.groupSet > 0 ? resultSet.childGroups : [],
               sqlFieldName
             );
-            output.columns.push(aliasedColumn(exp, sqlFieldName, true));
+            output.columns.push(
+              aliasedColumn(exp, sqlFieldName, {isDimension: true})
+            );
           } else if (isBasicCalculation(fi.f)) {
             const exp = this.parent.dialect.sqlAnyValue(
               resultSet.groupSet,
               sqlFieldName
             );
-            output.columns.push(aliasedColumn(exp, sqlFieldName, false));
+            output.columns.push(
+              aliasedColumn(exp, sqlFieldName, {isDimension: false})
+            );
           }
         }
       } else if (fi instanceof FieldInstanceResult) {
@@ -2074,7 +2083,9 @@ export class QueryQuery extends QueryField {
             toGroup: resultSet.groupSet,
           });
           groupsToMap.push(fi.groupSet);
-          output.columns.push(aliasedColumn(s, sqlFieldName, false));
+          output.columns.push(
+            aliasedColumn(s, sqlFieldName, {isDimension: false})
+          );
         } else {
           this.generateDepthNFields(depth, fi, output, stageWriter);
         }
@@ -2091,7 +2102,9 @@ export class QueryQuery extends QueryField {
           groupSetSQL += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
         }
         groupSetSQL += 'ELSE group_set END';
-        output.columns[0] = aliasedColumn(groupSetSQL, 'group_set', true);
+        output.columns[0] = aliasedColumn(groupSetSQL, 'group_set', {
+          isDimension: true,
+        });
       }
       // For hasLateralColumnAliasInSelect, the remap is handled in
       // generateSQLDepthN to avoid adding it multiple times from recursion.
@@ -2149,7 +2162,7 @@ export class QueryQuery extends QueryField {
     if (where.length > 0) {
       s += `WHERE ${where}\n`;
     }
-    s += groupByClause(this.parent.dialect, f.columns);
+    s += sqlGroupBy(this.parent.dialect, f.columns);
 
     this.resultStage = stageWriter.addStage(s);
 
@@ -2196,7 +2209,7 @@ export class QueryQuery extends QueryField {
                   `${name}__${this.rootResult.groupSet}`
                 ),
                 sqlName,
-                true
+                {isDimension: true}
               )
             );
           } else if (isBasicCalculation(fi.f)) {
@@ -2226,7 +2239,7 @@ export class QueryQuery extends QueryField {
                 outputPipelinedSQL
               ),
               sqlName,
-              false
+              {isDimension: false}
             )
           );
         } else if (fi.firstSegment.type === 'project') {
@@ -2253,7 +2266,7 @@ export class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
-    s += groupByClause(this.parent.dialect, columns);
+    s += sqlGroupBy(this.parent.dialect, columns);
 
     // order by, limit
     const orderTerms = this.genereateSQLOrderBy(
@@ -2732,17 +2745,17 @@ class QueryQueryIndexStage extends QueryQuery {
       aliasedColumn(
         caseOnGroupSet(i => `'${fields[i].name}'`),
         fieldNameColumn,
-        true
+        {isDimension: true}
       ),
       aliasedColumn(
         caseOnGroupSet(i => `'${pathToCol(fields[i].path)}'`),
         fieldPathColumn,
-        true
+        {isDimension: true}
       ),
       aliasedColumn(
         caseOnGroupSet(i => `'${fields[i].type}'`),
         fieldTypeColumn,
-        true
+        {isDimension: true}
       ),
       aliasedColumn(
         caseOnGroupSet(
@@ -2750,7 +2763,7 @@ class QueryQueryIndexStage extends QueryQuery {
           ` WHEN 99999 THEN ${dialect.castToString('NULL')}\n`
         ),
         fieldValueColumn,
-        true
+        {isDimension: true}
       ),
     ];
 
@@ -2797,7 +2810,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    s += groupByClause(dialect, grouped);
+    s += sqlGroupBy(dialect, grouped);
     s += dialect.sqlOrderByLimit([], limit);
     // console.log(s);
     const resultStage = stageWriter.addStage(s);
