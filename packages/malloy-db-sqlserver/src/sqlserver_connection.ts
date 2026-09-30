@@ -113,38 +113,52 @@ export class SQLServerExecutor {
   }
 }
 
-/** The driver's authentication object for a configuration */
-function authenticationFor(
-  config: SQLServerConfiguration
-): mssql.config['authentication'] {
-  const kind = config.authentication ?? 'sql';
-  switch (kind) {
-    case 'sql':
-      return {
-        type: 'default',
-        options: {userName: config.user, password: config.password},
-      };
-    case 'ntlm':
-      return {
-        type: 'ntlm',
-        options: {
-          userName: config.user ?? '',
-          password: config.password ?? '',
-          domain: config.domain ?? '',
-        },
-      };
-    case 'azure-default':
-      return {
-        type: 'azure-active-directory-default',
-        options: {clientId: config.clientId},
-      };
-    case 'azure-msi':
-      return {
-        type: 'azure-active-directory-msi-vm',
-        options: {clientId: config.clientId},
-      };
-    case 'azure-service-principal':
-      if (!config.clientId || !config.clientSecret || !config.tenantId) {
+/**
+ * What each authentication kind means to the driver, and who the connection
+ * runs as. Two principals can see different rows, so the principal is part of
+ * the digest; a secret never is.
+ */
+interface AuthenticationKind {
+  driver(config: SQLServerConfiguration): mssql.config['authentication'];
+  principal(config: SQLServerConfiguration): string | undefined;
+}
+
+const AUTHENTICATION: Record<SQLServerAuthentication, AuthenticationKind> = {
+  'sql': {
+    driver: c => ({
+      type: 'default',
+      options: {userName: c.user, password: c.password},
+    }),
+    principal: c => c.user,
+  },
+  'ntlm': {
+    driver: c => ({
+      type: 'ntlm',
+      options: {
+        userName: c.user ?? '',
+        password: c.password ?? '',
+        domain: c.domain ?? '',
+      },
+    }),
+    principal: c => (c.domain ? `${c.domain}\\${c.user}` : c.user),
+  },
+  'azure-default': {
+    driver: c => ({
+      type: 'azure-active-directory-default',
+      options: {clientId: c.clientId},
+    }),
+    principal: c => c.clientId,
+  },
+  'azure-msi': {
+    driver: c => ({
+      type: 'azure-active-directory-msi-vm',
+      options: {clientId: c.clientId},
+    }),
+    principal: c => c.clientId,
+  },
+  'azure-service-principal': {
+    driver: c => {
+      if (!c.clientId || !c.clientSecret || !c.tenantId) {
         throw new Error(
           'SQL Server azure-service-principal authentication needs clientId, clientSecret and tenantId'
         );
@@ -152,38 +166,34 @@ function authenticationFor(
       return {
         type: 'azure-active-directory-service-principal-secret',
         options: {
-          clientId: config.clientId,
-          clientSecret: config.clientSecret,
-          tenantId: config.tenantId,
+          clientId: c.clientId,
+          clientSecret: c.clientSecret,
+          tenantId: c.tenantId,
         },
       };
-    case 'azure-access-token':
-      if (!config.accessToken) {
+    },
+    principal: c => c.clientId,
+  },
+  'azure-access-token': {
+    driver: c => {
+      if (!c.accessToken) {
         throw new Error(
           'SQL Server azure-access-token authentication needs accessToken'
         );
       }
       return {
         type: 'azure-active-directory-access-token',
-        options: {token: config.accessToken},
+        options: {token: c.accessToken},
       };
-  }
-}
+    },
+    principal: () => undefined,
+  },
+};
 
-/** The principal the connection runs as; two principals can see different rows */
-function principalOf(config: SQLServerConfiguration): string | undefined {
-  switch (config.authentication ?? 'sql') {
-    case 'sql':
-      return config.user;
-    case 'ntlm':
-      return config.domain ? `${config.domain}\\${config.user}` : config.user;
-    case 'azure-service-principal':
-    case 'azure-msi':
-    case 'azure-default':
-      return config.clientId;
-    case 'azure-access-token':
-      return undefined;
-  }
+function authenticationKind(
+  config: SQLServerConfiguration
+): AuthenticationKind {
+  return AUTHENTICATION[config.authentication ?? 'sql'];
 }
 
 // A connection string without its secrets: the keys the driver reads a
@@ -247,7 +257,7 @@ export function driverConfig(config: SQLServerConfiguration): mssql.config {
     server: host,
     port: config.instanceName === undefined ? port : undefined,
     database: config.database,
-    authentication: authenticationFor(config),
+    authentication: authenticationKind(config).driver(config),
     options: {
       encrypt: config.encrypt ?? true,
       trustServerCertificate: config.trustServerCertificate ?? false,
@@ -393,7 +403,7 @@ export class SQLServerConnection
       c.instanceName,
       c.database,
       c.authentication ?? 'sql',
-      principalOf(c),
+      authenticationKind(c).principal(c),
       c.setupSQL
     );
   }
