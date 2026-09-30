@@ -2724,9 +2724,12 @@ class QueryQueryIndexStage extends QueryQuery {
     // The grouped columns: group_set and one CASE per index column.
     const caseOnGroupSet = (
       when: (i: number) => string | undefined,
-      first = '\n'
+      firstWhen?: string
     ): string => {
-      let c = `CASE group_set${first}`;
+      let c = 'CASE group_set\n';
+      if (firstWhen !== undefined) {
+        c += `    ${firstWhen}\n`;
+      }
       for (let i = 0; i < fields.length; i++) {
         const value = when(i);
         if (value !== undefined) {
@@ -2760,7 +2763,7 @@ class QueryQueryIndexStage extends QueryQuery {
       aliasedColumn(
         caseOnGroupSet(
           i => (fields[i].type === 'string' ? fields[i].expression : undefined),
-          ` WHEN 99999 THEN ${dialect.castToString('NULL')}\n`
+          `WHEN 99999 THEN ${dialect.castToString('NULL')}`
         ),
         fieldValueColumn,
         {isDimension: true}
@@ -2772,8 +2775,7 @@ class QueryQueryIndexStage extends QueryQuery {
         ? this.firstSegment.limit
         : undefined;
     let s = 'SELECT\n';
-    // fieldType and fieldValue share one line
-    s += grouped.map((c, i) => `  ${c.sql},${i === 3 ? '' : '\n'}`).join('');
+    s += grouped.map(c => `  ${c.sql},\n`).join('');
     s += ` ${measureSQL} as ${weightColumn},\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
