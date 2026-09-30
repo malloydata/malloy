@@ -171,11 +171,14 @@ describe('db:SQLServer', () => {
     expect(res.errors['nope']).toMatch(/not found/);
   });
 
-  it('keeps bigint precision as a string', async () => {
-    const res = await connection.runRawSQL(
-      'SELECT CAST(9007199254740993 AS BIGINT) AS big'
-    );
-    expect(String(res.rows[0]['big'])).toBe('9007199254740993');
+  it('hands a bigint over as text, and reads it as a number', async () => {
+    const sql = 'SELECT CAST(9007199254740993 AS BIGINT) AS big';
+    // The raw path is the driver's own row: every digit
+    const raw = await connection.runRawSQL(sql);
+    expect(raw.rows[0]['big']).toBe('9007199254740993');
+    // The decoded path is what a query reads: a double, so the last digit goes
+    const read = await connection.runSQL(sql);
+    expect(read.rows[0]['big']).toBe(9007199254740992);
   });
 
   it('reads datetime2 as a UTC instant', async () => {

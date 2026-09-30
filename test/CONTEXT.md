@@ -99,7 +99,7 @@ npm run build-duckdb-db  # Creates test/data/duckdb/duckdb_test.db
 
 This creates a local DuckDB database file populated with test data.
 
-### PostgreSQL, MySQL, Trino, Presto
+### PostgreSQL, MySQL, Trino, Presto, SQL Server
 These databases require Docker containers to be running.
 
 **Starting database containers:**
