@@ -497,6 +497,9 @@ export class SQLServerConnection
     const stream = request.toReadableStream();
     const cancel = () => request.cancel();
     abortSignal?.addEventListener('abort', cancel, {once: true});
+    // A request not read to its end holds its pooled connection until it is
+    // cancelled.
+    let readToEnd = false;
     try {
       request.query(
         this.batchPrefix() +
@@ -507,12 +510,15 @@ export class SQLServerConnection
         yield decodeRow(row as QueryRecord, decoded);
         index += 1;
         if (rowLimit !== undefined && index >= rowLimit) {
-          request.cancel();
           break;
         }
       }
+      readToEnd = rowLimit === undefined || index < rowLimit;
     } finally {
       abortSignal?.removeEventListener('abort', cancel);
+      if (!readToEnd) {
+        request.cancel();
+      }
     }
   }
 

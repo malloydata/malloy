@@ -216,6 +216,50 @@ describe('db:SQLServer', () => {
     expect(res.rows.length).toBe(5);
   });
 
+  it('releases the connection when a stream consumer stops early', async () => {
+    // One pooled connection: a request left paused would make the next
+    // query wait forever
+    const single = new SQLServerConnection('single', {
+      ...SQLServerExecutor.getConnectionOptionsFromEnv(),
+      poolMax: 1,
+    });
+    try {
+      for await (const _row of single.runSQLStream(hundredRows)) {
+        break;
+      }
+      const res = await Promise.race([
+        single.runSQL('SELECT 1 AS t'),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('pool never freed')), 10_000)
+        ),
+      ]);
+      expect(res.rows[0]['t']).toBe(1);
+    } finally {
+      await single.close();
+    }
+  });
+
+  it('releases the connection when a query fails after connecting', async () => {
+    const single = new SQLServerConnection('single-fail', {
+      ...SQLServerExecutor.getConnectionOptionsFromEnv(),
+      poolMax: 1,
+    });
+    try {
+      await expect(single.runSQL('SELECT this is not valid')).rejects.toThrow(
+        /syntax/i
+      );
+      const res = await Promise.race([
+        single.runSQL('SELECT 1 AS t'),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('pool never freed')), 10_000)
+        ),
+      ]);
+      expect(res.rows[0]['t']).toBe(1);
+    } finally {
+      await single.close();
+    }
+  });
+
   it('streams rows and stops at rowLimit', async () => {
     const rows: unknown[] = [];
     for await (const row of connection.runSQLStream(
