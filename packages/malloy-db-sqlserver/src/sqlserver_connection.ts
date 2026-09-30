@@ -451,17 +451,16 @@ export class SQLServerConnection
     await this.runRawSQL('SELECT 1 AS one');
   }
 
+  // The stream stops reading at the row limit and on the abort signal, so a
+  // query that returns more than it is asked for is not read whole.
   public async runSQL(
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
     const rowLimit = options.rowLimit ?? this.readQueryOptions().rowLimit;
-    const result = await this.runBatch(
-      this.sqlWithQueryMetadata(sql, options.queryMetadata)
-    );
-    const rows = result.rows.map(row => decodeRow(row, result.decoded));
-    if (rowLimit !== undefined && rows.length > rowLimit) {
-      return {rows: rows.slice(0, rowLimit), totalRows: rowLimit};
+    const rows: QueryRecord[] = [];
+    for await (const row of this.runSQLStream(sql, {...options, rowLimit})) {
+      rows.push(row);
     }
     return {rows, totalRows: rows.length};
   }
