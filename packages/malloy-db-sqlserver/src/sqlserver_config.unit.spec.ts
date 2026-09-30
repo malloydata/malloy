@@ -8,6 +8,7 @@ import {
   driverConfig,
   SQLServerConnection,
 } from './sqlserver_connection';
+import type {SQLServerAuthentication} from './sqlserver_connection';
 
 // The configuration a user writes, mapped to what tedious is handed. No
 // server is involved.
@@ -93,6 +94,15 @@ describe('SQL Server driver configuration', () => {
     expect(() =>
       driverConfig({server: 's', authentication: 'azure-service-principal'})
     ).toThrow(/clientId, clientSecret and tenantId/);
+  });
+
+  it('names an unknown authentication kind', () => {
+    expect(() =>
+      driverConfig({
+        server: 's',
+        authentication: 'kerberos' as SQLServerAuthentication,
+      })
+    ).toThrow(/'kerberos' is not one of sql, ntlm/);
   });
 
   it('refuses a connection string alongside structured fields', () => {

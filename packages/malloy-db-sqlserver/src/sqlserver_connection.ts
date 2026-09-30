@@ -193,7 +193,14 @@ const AUTHENTICATION: Record<SQLServerAuthentication, AuthenticationKind> = {
 function authenticationKind(
   config: SQLServerConfiguration
 ): AuthenticationKind {
-  return AUTHENTICATION[config.authentication ?? 'sql'];
+  const name = config.authentication ?? 'sql';
+  const kind = AUTHENTICATION[name];
+  if (kind === undefined) {
+    throw new Error(
+      `SQL Server authentication '${name}' is not one of ${Object.keys(AUTHENTICATION).join(', ')}`
+    );
+  }
+  return kind;
 }
 
 // A connection string without its secrets: the keys the driver reads a

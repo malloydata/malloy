@@ -13,12 +13,44 @@ export type {
 import {registerConnectionType} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {SQLServerConnection} from './sqlserver_connection';
-import type {SQLServerConnectionOptions} from './sqlserver_connection';
+import type {SQLServerAuthentication} from './sqlserver_connection';
 
 registerConnectionType('sqlserver', {
   displayName: 'SQL Server',
   factory: async (config: ConnectionConfig) => {
-    return new SQLServerConnection(config as SQLServerConnectionOptions);
+    const str = (key: string) =>
+      typeof config[key] === 'string' ? (config[key] as string) : undefined;
+    const num = (key: string) =>
+      typeof config[key] === 'number' ? (config[key] as number) : undefined;
+    const bool = (key: string) =>
+      typeof config[key] === 'boolean' ? (config[key] as boolean) : undefined;
+    return new SQLServerConnection(config.name, {
+      server: str('server'),
+      port: num('port'),
+      instanceName: str('instanceName'),
+      database: str('database'),
+      // Checked against the known kinds when the pool is built
+      authentication: str('authentication') as
+        SQLServerAuthentication | undefined,
+      user: str('user'),
+      password: str('password'),
+      domain: str('domain'),
+      clientId: str('clientId'),
+      tenantId: str('tenantId'),
+      clientSecret: str('clientSecret'),
+      accessToken: str('accessToken'),
+      encrypt: bool('encrypt'),
+      trustServerCertificate: bool('trustServerCertificate'),
+      hostNameInCertificate: str('hostNameInCertificate'),
+      applicationName: str('applicationName'),
+      readOnlyIntent: bool('readOnlyIntent'),
+      multiSubnetFailover: bool('multiSubnetFailover'),
+      connectionString: str('connectionString'),
+      setupSQL: str('setupSQL'),
+      poolMin: num('poolMin'),
+      poolMax: num('poolMax'),
+      requestTimeoutMs: num('requestTimeoutMs'),
+    });
   },
   properties: [
     {name: 'server', displayName: 'Server', type: 'string', optional: true},
