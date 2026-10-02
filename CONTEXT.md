@@ -116,6 +116,7 @@ Each database has its own package with connection handling and dialect-specific 
 - `malloy-db-duckdb/` - DuckDB adapter (includes WASM support)
 - `malloy-db-postgres/` - PostgreSQL adapter
 - `malloy-db-mysql/` - MySQL adapter
+- `malloy-db-sqlserver/` - SQL Server adapter
 - `malloy-db-snowflake/` - Snowflake adapter
 - `malloy-db-trino/` - Trino/Presto adapter
 - `malloy-db-publisher/` - Publishing/caching layer

@@ -164,6 +164,7 @@ export function turtleGroupSetCondition(
 }
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
+export type GroupByClauseType = 'ordinal' | 'expression';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
@@ -260,6 +261,20 @@ export abstract class Dialect {
   // ORDER BY 1 DESC
   orderByClause: OrderByClauseType = 'ordinal';
 
+  // GROUP BY 1, or GROUP BY the dimension expressions for an engine whose
+  // GROUP BY takes no ordinals
+  groupByClause: GroupByClauseType = 'ordinal';
+
+  /** The ordering and row limit which end a SELECT stage */
+  sqlOrderByLimit(orderTerms: string[], limit: number | undefined): string {
+    let s =
+      orderTerms.length > 0 ? this.sqlOrderBy(orderTerms, 'query') + '\n' : '';
+    if (limit !== undefined) {
+      s += `LIMIT ${limit}\n`;
+    }
+    return s;
+  }
+
   // null will match in a function signature
   nullMatchesFunctionSignature = true;
 
@@ -316,6 +331,8 @@ export abstract class Dialect {
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
+  // Characters LIKE reads as wildcards beyond % and _, escaped like them
+  likeExtraWildcards: string[] = [];
 
   /**
    * Mappings from integer value ranges to Malloy number types.
@@ -1165,7 +1182,13 @@ export abstract class Dialect {
     return 'sqlAggDistinct called but not implemented';
   }
 
-  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+  // onBaseTable: the source is a table the engine can sample in place; a
+  // dialect whose sampling reads the table itself ignores a sample elsewhere
+  sqlSampleTable(
+    tableSQL: string,
+    sample: Sampling | undefined,
+    _onBaseTable = true
+  ): string {
     if (sample !== undefined) {
       throw new Error(`Sampling is not supported on dialect ${this.name}.`);
     }
@@ -1255,6 +1278,10 @@ export abstract class Dialect {
         escaped += '^^';
         escapeActive = false;
         escapeClause = true;
+      } else if (this.likeEscape && this.likeExtraWildcards.includes(c)) {
+        escaped += '^' + c;
+        escapeActive = false;
+        escapeClause = true;
       } else {
         if (escapeActive) {
           if (this.likeEscape) {
@@ -1281,7 +1308,7 @@ export abstract class Dialect {
    */
   sqlBoolean(bv: boolean): string {
     if (this.booleanType === 'none') {
-      return bv ? '(1=1)' : '(1-0)';
+      return bv ? '(1=1)' : '(1=0)';
     }
     return bv ? 'true' : 'false';
   }

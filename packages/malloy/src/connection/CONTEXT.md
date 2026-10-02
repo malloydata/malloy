@@ -33,9 +33,9 @@ import {registerConnectionType} from '@malloydata/malloy';
 registerConnectionType('duckdb', { displayName: 'DuckDB', factory: async ..., properties: [...] });
 ```
 
-Registered backends: `duckdb`, `bigquery`, `postgres`, `snowflake`, `trino`, `presto`, `mysql`, `publisher`
+Registered backends: `duckdb`, `bigquery`, `postgres`, `snowflake`, `trino`, `presto`, `mysql`, `databricks`, `sqlserver`, `publisher`
 
-The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports all 6 database db-\* packages for side-effect registration (not publisher).
+The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports every database db-\* package for side-effect registration (not publisher).
 
 ### ConnectionTypeDef
 
@@ -182,6 +182,10 @@ The json-typed properties pass through to `@trinodb/trino-js-client`'s `Connecti
 
 **Presto** (`displayName: "Presto"`):
 `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
+
+**SQL Server** (`displayName: "SQL Server"`):
+`server` (string), `port` (number, 1433), `database` (string), `authentication` (string: `sql` | `azure-default` | `azure-service-principal` | `azure-msi` | `azure-access-token` | `ntlm`; default `sql`), `user` (string), `password` (password), `domain` (string, advanced), `clientId` (string, advanced), `tenantId` (string, advanced), `clientSecret` (secret, advanced), `accessToken` (secret, advanced), `encrypt` (boolean, default true, advanced), `trustServerCertificate` (boolean, advanced), `hostNameInCertificate` (string, advanced), `instanceName` (string, advanced; a named instance through SQL Browser, the port then unused), `applicationName` (string, advanced), `readOnlyIntent` (boolean, advanced), `multiSubnetFailover` (boolean, advanced), `connectionString` (string, advanced), `setupSQL` (text, advanced), `requestTimeoutMs` (number, advanced), `poolMin`/`poolMax` (number, advanced)
+The `azure-*` kinds are Microsoft Entra ID through tedious; `azure-default` is the DefaultAzureCredential chain (managed identity, workload identity, environment service principal, az CLI). A `connectionString` and the structured fields are not merged: setting both is an error. The digest hashes the principal (`user`, or `clientId` for Entra), never a secret. The connection is read-only: it does not persist results (`canPersist()` is false), so a search index is not built for it.
 
 **MySQL** (`displayName: "MySQL"`):
 `host` (string), `port` (number), `database` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)

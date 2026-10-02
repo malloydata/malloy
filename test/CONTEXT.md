@@ -40,7 +40,7 @@ Tests that run against **all** supported databases to ensure consistent behavior
 
 These tests are particularly important for verifying that Malloy's abstraction works correctly across all supported SQL dialects.
 
-An experimental dialect is not in `allDatabases` and has no CI workflow; run the suite on one with `MALLOY_DATABASE=<name>`. The files carry no `##! experimental.dialect.<name>` lines: `runtimeFor` in `runtimes.ts` calls `acceptExperimental()` on the dialect under test once per process, which is the only place that acknowledgment is waived.
+An experimental dialect is not in `allDatabases`. CI runs only its smoke job, `ci-<name>-smoketest`, which selects the dialect's own jest project and must stay green; the shared suite is run by hand with `MALLOY_DATABASE=<name>` (`ci-<name>`) and is allowed to be red until the dialect leaves experimental. A follow-up that implements a feature moves its shared-suite tests into the green set by flipping the capability flag they are gated on. The files carry no `##! experimental.dialect.<name>` lines: `runtimeFor` in `runtimes.ts` calls `acceptExperimental()` on the dialect under test once per process, which is the only place that acknowledgment is waived.
 
 ### Consumer-contract canary (`test/consumer-canary/`)
 Not a normal test — it consumes the *built* `@malloydata/*` packages the way a downstream app does (esbuild bundle + plain ts-jest, no babel) to catch native/ESM leaks that malloy's own CI is blind to. Run locally with `npm run test-consumer-canary` (it builds first). See [`test/consumer-canary/CONTEXT.md`](consumer-canary/CONTEXT.md).
@@ -101,7 +101,7 @@ npm run build-duckdb-db  # Creates test/data/duckdb/duckdb_test.db
 
 This creates a local DuckDB database file populated with test data.
 
-### PostgreSQL, MySQL, Trino, Presto
+### PostgreSQL, MySQL, Trino, Presto, SQL Server
 These databases require Docker containers to be running.
 
 **Starting database containers:**
@@ -110,6 +110,7 @@ Each database has a startup script in the test directory:
 - `test/mysql/mysql_start.sh`
 - `test/trino/trino_start.sh`
 - `test/presto/presto_start.sh`
+- `test/mssql/mssql_start.sh`
 
 These scripts start Docker containers with appropriate test configurations and data.
 
@@ -176,7 +177,7 @@ All cross-database tests (`test/src/databases/all/`) reference tables as `malloy
 | DuckDB | DuckDB `CREATE TABLE AS SELECT FROM read_parquet()` | `test/duckdb/load_test_data.sh` (wraps `load_test_data.ts`) | Run via `sh test/duckdb/load_test_data.sh` (or `npm run build-duckdb-db`). Creates `test/data/duckdb/duckdb_test.db` |
 | PostgreSQL | DuckDB's `postgres` extension: `ATTACH` the server, `CREATE TABLE AS SELECT FROM read_parquet()` | `test/postgres/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/postgres/postgres_start.sh` and by CI against a running server; connects with the `PG*` variables. No `ga_sample` (no anonymous record type) |
 | MySQL | DuckDB's `mysql` extension, likewise | `test/mysql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mysql/mysql_start.sh`; connects with the `MYSQL_*` variables. No `ga_sample`, and `alltypes` without its array columns |
-| SQL Server | DuckDB's community `mssql` extension, likewise | `test/mssql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mssql/mssql_start.sh`; connects as the test runtime does (`sa`, localhost:1433). Waits for the server itself. Same table set as MySQL. Not in CI |
+| SQL Server | DuckDB's community `mssql` extension, likewise | `test/mssql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mssql/mssql_start.sh`, which sets the `MSSQL_*` variables for the loader; the tests and both SQL Server test runtimes (`sqlserver`, `mssql_via_duckdb`) read the same variables from their own environment. Waits for the server itself. Same table set as MySQL. `db-sqlserver.yaml` runs on dispatch only while the dialect is experimental |
 | Trino/Presto | The hive connector reads the parquet in place: each file is mounted into the container and declared as an external table | `test/trino/hive_ddl.ts`, `test/trino/hive.properties`, `test/presto/hive.properties` | `trino_start.sh` / `presto_start.sh` derive the DDL from the parquet schemas at container start. The hive metastore lowercases names, so a table with nested columns (`ga_sample`) is a `_hive` table plus a view that casts the nested field names back; top-level column names stay lowercase, since Trino lowercases those in every connector |
 | BigQuery | Pre-loaded manually in `malloydata-org` project | (none) | No loader script in repo. Data assumed to exist. |
 | Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/load_test_data.sh` (wraps `load_test_data.sql`) | Run via `sh test/snowflake/load_test_data.sh` (needs the `snowsql` CLI) |

@@ -284,7 +284,7 @@ function compileExpr<T extends Expr>(
         return `${expr.e.sql} IS NOT NULL`;
       case 'true':
       case 'false':
-        return expr.node;
+        return context.dialect.sqlBoolean(expr.node === 'true');
       case 'null':
         return 'NULL';
       case 'case':

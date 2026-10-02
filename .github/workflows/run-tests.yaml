@@ -103,6 +103,9 @@ jobs:
   db-mysql:
     needs: pull_and_build
     uses: './.github/workflows/db-mysql.yaml'
+  db-sqlserver:
+    needs: pull_and_build
+    uses: './.github/workflows/db-sqlserver.yaml'
   db-databricks:
     needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-databricks.yaml'
@@ -136,6 +139,7 @@ jobs:
       - db-postgres
       # - db-motherduck
       - db-mysql
+      - db-sqlserver
       - db-databricks
       - consumer-canary
     runs-on: ubuntu-latest

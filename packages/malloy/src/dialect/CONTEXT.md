@@ -20,6 +20,7 @@ dialect/
 ├── trino/
 ├── mysql/
 ├── databricks/
+├── sqlserver/
 ├── dialect.ts                        # Abstract Dialect base class
 └── dialect_map.ts                    # Dialect registry
 ```
@@ -67,7 +68,7 @@ On success, `canonical` is the SQL fragment that gets pasted directly into `FROM
 
 **Scope.** `sqlValidateTableName` accepts *names of tables* and the file-path shapes that DuckDB's replacement scans treat as tables. It deliberately rejects table-valued function calls (`read_parquet(...)`, `range(10)`), `LATERAL`, aliases, subqueries, and other things that are valid in a `FROM` clause but compose tables rather than name them. Users who want those use a SQL block (`connection.sql("""SELECT * FROM …""")`).
 
-**Default implementation handles every well-behaved dialect.** Six of the seven dialects we ship (Postgres, MySQL, Snowflake, Trino, Databricks, BigQuery) all use the same dotted-segment grammar:
+**Default implementation handles every well-behaved dialect.** Seven of the eight dialects we ship (Postgres, MySQL, Snowflake, Trino, Databricks, BigQuery, SQL Server) all use the same dotted-segment grammar:
 
 ```
 TablePath = Segment ( '.' Segment )* EOF
@@ -89,7 +90,7 @@ override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
 
 The per-dialect regexes were derived empirically by probing the live engines.
 
-**One dialect overrides the method outright: DuckDB.** Its grammar isn't a pure dotted-segment shape — it accepts file-path-shaped inputs (`arrests-latest.parquet`, `s3://…`, globs) and explicit single-quoted literals (`'foo.csv'`) in addition to identifier paths. See `duckdb/table-path-parser.ts`. **Do not look at DuckDB as a reference for a normal SQL dialect** — its grammar is intentionally richer than what ANSI SQL allows.
+**SQL Server wraps the method** to read `[bracketed]` segments as the ANSI-quoted ones they stand for, then hands the ANSI spelling to the default; the canonical form is always ANSI. **One dialect overrides the method outright: DuckDB.** Its grammar isn't a pure dotted-segment shape — it accepts file-path-shaped inputs (`arrests-latest.parquet`, `s3://…`, globs) and explicit single-quoted literals (`'foo.csv'`) in addition to identifier paths. See `duckdb/table-path-parser.ts`. **Do not look at DuckDB as a reference for a normal SQL dialect** — its grammar is intentionally richer than what ANSI SQL allows.
 
 **Defense in depth: `;` and `--` are forbidden in any decoded segment.** Even when a segment is legally quoted, the parser rejects it if the decoded value contains `;` or `--`. Real table names don't contain those, and the rule shuts down a class of injection scenarios in callers that splice the canonical form into other string contexts.
 
