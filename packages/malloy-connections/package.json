@@ -39,6 +39,7 @@
     "@malloydata/db-mysql": "0.0.435",
     "@malloydata/db-postgres": "0.0.435",
     "@malloydata/db-snowflake": "0.0.435",
+    "@malloydata/db-sqlserver": "0.0.435",
     "@malloydata/db-trino": "0.0.435",
     "@malloydata/malloy": "0.0.435"
   }

@@ -6,9 +6,17 @@
 set -e
 
 SCRIPTDIR=$(cd $(dirname $0); pwd)
-CONTAINER_NAME="mssql-malloy"
-# Must match test/mssql/connection_string.ts
-SA_PASSWORD="Malloy_Test_123"
+# MSSQL_IMAGE and MSSQL_CONTAINER select a server version to run beside the default
+CONTAINER_NAME="${MSSQL_CONTAINER:-mssql-malloy}"
+# The loader and the tests read MSSQL_*; this script is the only place a
+# default is written. Export the same values to run the tests by hand.
+export MSSQL_HOST="${MSSQL_HOST:-localhost}"
+export MSSQL_PORT="${MSSQL_PORT:-1433}"
+export MSSQL_TRUST_SERVER_CERTIFICATE="${MSSQL_TRUST_SERVER_CERTIFICATE:-true}"
+export MSSQL_USER="${MSSQL_USER:-sa}"
+export MSSQL_PASSWORD="${MSSQL_PASSWORD:-Malloy_Test_123}"
+export MSSQL_DATABASE="${MSSQL_DATABASE:-malloytest}"
+SA_PASSWORD="$MSSQL_PASSWORD"
 
 # Check for existing container
 if docker container inspect "$CONTAINER_NAME" > /dev/null 2>&1; then
@@ -20,24 +28,21 @@ if docker container inspect "$CONTAINER_NAME" > /dev/null 2>&1; then
   docker start "$CONTAINER_NAME"
   # The loader waits for the server; reloading is cheap
   sh "$SCRIPTDIR/load_test_data.sh"
-  echo "MSSQL running on port 1433"
+  echo "MSSQL running on port $MSSQL_PORT"
   exit 0
 fi
 
-# Detect architecture — Azure SQL Edge for ARM64, SQL Server for x64
-ARCH=$(uname -m)
-if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
-  IMAGE="mcr.microsoft.com/azure-sql-edge:latest"
-else
-  IMAGE="mcr.microsoft.com/mssql/server:2022-latest"
-fi
+# SQL Server 2022 by default; MSSQL_IMAGE picks another version, 2017 being
+# the oldest the sqlserver dialect runs on. The x64 image runs under emulation
+# on ARM64 Macs.
+IMAGE="${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2022-latest}"
 
 echo "Starting $CONTAINER_NAME ($IMAGE)..."
 docker run -d \
   --name "$CONTAINER_NAME" \
   -e "ACCEPT_EULA=Y" \
   -e "MSSQL_SA_PASSWORD=$SA_PASSWORD" \
-  -p 1433:1433 \
+  -p "$MSSQL_PORT:1433" \
   "$IMAGE"
 
 # The loader waits for the server. A container without its tables must not
@@ -47,4 +52,5 @@ echo "Loading test data..."
 sh "$SCRIPTDIR/load_test_data.sh"
 trap - ERR
 
-echo "MSSQL running on port 1433, database: malloytest"
+echo "MSSQL running on port $MSSQL_PORT, database: $MSSQL_DATABASE"
+echo "Tests need the same MSSQL_HOST/MSSQL_PORT/MSSQL_USER/MSSQL_PASSWORD/MSSQL_DATABASE in their environment"

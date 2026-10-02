@@ -247,6 +247,21 @@ const PER_DIALECT: Record<string, PerDialectCorpus> = {
       {name: 'unterminated_backtick', value: '`foo'},
     ],
   },
+  sqlserver: {
+    accept: [
+      {name: 'dollar_hash_at_in_bare', value: 'foo$bar#baz@qux'},
+      {name: 'quoted', value: '"foo"'},
+      {name: 'quoted_doubled', value: '"foo""bar"'},
+      {name: 'dotted_three_part', value: 'db.schema.foo'},
+    ],
+    reject: [
+      {name: 'digit_start', value: '1foo'},
+      {name: 'temp_table', value: '#foo'},
+      {name: 'unterminated_quote', value: '"foo'},
+      {name: 'unterminated_bracket', value: '[foo'},
+      {name: 'bracketed_semicolon', value: '[x;drop]'},
+    ],
+  },
   // BigQuery's wildcard behavior is tested separately below.
   standardsql: {
     accept: [

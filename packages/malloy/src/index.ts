@@ -11,6 +11,7 @@ export {
   SnowflakeDialect,
   MySQLDialect,
   DatabricksDialect,
+  SQLServerDialect,
   registerDialect,
   getDialect,
   arg,
