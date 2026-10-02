@@ -652,6 +652,11 @@ export class PooledPostgresConnection
   async getPool(): Promise<Pool> {
     if (!this._pool) {
       this._pool = new Pool(this.buildClientConfig(await this.readConfig()));
+      // An idle client whose socket drops reaches the pool as an 'error' event.
+      // pg-pool has already removed the dead client by then, and there is no
+      // caller to report to, so there is nothing to act on; without a listener
+      // the event would be an uncaught exception.
+      this._pool.on('error', () => {});
       this._pool.on('acquire', client => {
         client.query("SET TIME ZONE 'UTC'");
         if (this.setupSQL) {
@@ -714,12 +719,15 @@ export class PooledPostgresConnection
     try {
       const resultStream: QueryStream = client.query(query);
       for await (const row of resultStream) {
+        // Checked before yielding rather than after, so a result no longer
+        // than rowLimit ends the loop and its client is reused.
+        if (rowLimit !== undefined && index >= rowLimit) {
+          query.destroy();
+          return;
+        }
         yield row.row as QueryRecord;
         index += 1;
-        if (
-          (rowLimit !== undefined && index >= rowLimit) ||
-          abortSignal?.aborted
-        ) {
+        if (abortSignal?.aborted) {
           query.destroy();
           return;
         }

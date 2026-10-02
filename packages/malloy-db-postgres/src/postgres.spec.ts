@@ -567,6 +567,56 @@ describe('connection cleanup on query failure', () => {
       }
     });
   }
+
+  it('reuses the client of a stream whose rowLimit is its whole result (pooled)', async () => {
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(
+        newAppName('leak_test_limit_is_result')
+      ),
+    });
+    try {
+      const pool = await connection.getPool();
+      let connects = 0;
+      pool.on('connect', () => {
+        connects += 1;
+      });
+      for (let i = 0; i < 3; i++) {
+        let read = 0;
+        for await (const _row of connection.runSQLStream(
+          'SELECT row_to_json(t) AS row FROM (SELECT generate_series(1, 10) AS n) t',
+          {rowLimit: 10}
+        )) {
+          read += 1;
+        }
+        expect(read).toBe(10);
+      }
+      expect(connects).toBe(1);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('survives an idle client whose session is dropped, and opens a fresh one (pooled)', async () => {
+    const appName = newAppName('leak_test_idle_dropped');
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(appName),
+    });
+    const one = 'SELECT row_to_json(t) AS row FROM (SELECT 1 AS v) t';
+    try {
+      const pool = await connection.getPool();
+      expect((await connection.runSQL(one)).rows).toEqual([{v: 1}]);
+      const removed = new Promise<void>(resolve =>
+        pool.once('remove', () => resolve())
+      );
+      expect(await terminateSessionsByAppName(appName)).toBe(1);
+      await removed;
+      expect((await connection.runSQL(one)).rows).toEqual([{v: 1}]);
+    } finally {
+      await connection.close();
+    }
+  });
 });
 
 describe('setupSQL', () => {
