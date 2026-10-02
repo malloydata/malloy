@@ -244,8 +244,6 @@ describe('connection cleanup on query failure', () => {
     const auth = `${encodeURIComponent(e['PGUSER'] ?? 'postgres')}:${encodeURIComponent(e['PGPASSWORD'] ?? '')}`;
     return `postgresql://${auth}@${e['PGHOST'] ?? 'localhost'}:${e['PGPORT'] ?? '5432'}/${e['PGDATABASE'] ?? 'postgres'}?application_name=${appName}`;
   };
-  // A session's disconnect is recorded by the server asynchronously.
-  const settle = () => new Promise(resolve => setTimeout(resolve, 200));
 
   // runSQL de-JSONs each row as `row.row`, so these queries wrap their result
   // in row_to_json to come back as plain objects.
@@ -255,7 +253,13 @@ describe('connection cleanup on query failure', () => {
       const {rows} = await admin.runSQL(
         `SELECT row_to_json(t) AS row FROM (${sql}) t`
       );
-      return (rows[0] as {n: number}).n;
+      const n = rows[0]?.['n'];
+      if (typeof n !== 'number') {
+        throw new Error(
+          `Expected a numeric n, got ${JSON.stringify(rows[0])} from: ${sql}`
+        );
+      }
+      return n;
     } finally {
       await admin.close();
     }
@@ -264,6 +268,17 @@ describe('connection cleanup on query failure', () => {
     adminSQL(
       `SELECT count(*)::integer AS n FROM pg_stat_activity WHERE application_name = '${appName}'`
     );
+  // The server removes a closed session from pg_stat_activity asynchronously,
+  // so poll until it is gone rather than counting once.
+  const expectNoSessions = async (appName: string) => {
+    const deadline = Date.now() + 5000;
+    let count = await countSessionsByAppName(appName);
+    while (count > 0 && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      count = await countSessionsByAppName(appName);
+    }
+    expect(count).toBe(0);
+  };
   const terminateSessionsByAppName = (appName: string) =>
     adminSQL(
       `SELECT count(pg_terminate_backend(pid))::integer AS n FROM pg_stat_activity WHERE application_name = '${appName}'`
@@ -285,8 +300,7 @@ describe('connection cleanup on query failure', () => {
       await expect(
         connection.runSQL('SELECT this is not valid sql')
       ).rejects.toThrow(/syntax error/);
-      await settle();
-      expect(await countSessionsByAppName(appName)).toBe(0);
+      await expectNoSessions(appName);
     } finally {
       await connection.close();
     }
@@ -307,8 +321,7 @@ describe('connection cleanup on query failure', () => {
           selectStr: 'not valid sql at all',
         })
       ).rejects.toThrow(/syntax error/);
-      await settle();
-      expect(await countSessionsByAppName(appName)).toBe(0);
+      await expectNoSessions(appName);
     } finally {
       await connection.close();
     }
@@ -331,8 +344,7 @@ describe('connection cleanup on query failure', () => {
         return rows;
       };
       await expect(drain()).rejects.toThrow(/syntax error/);
-      await settle();
-      expect(await countSessionsByAppName(appName)).toBe(0);
+      await expectNoSessions(appName);
     } finally {
       await connection.close();
     }
@@ -351,8 +363,7 @@ describe('connection cleanup on query failure', () => {
         break;
       }
       expect(read).toBe(1);
-      await settle();
-      expect(await countSessionsByAppName(appName)).toBe(0);
+      await expectNoSessions(appName);
     } finally {
       await connection.close();
     }
@@ -370,7 +381,7 @@ describe('connection cleanup on query failure', () => {
       // The session goes away while the caller is between reads, so the
       // socket is already closed when the caller's early stop closes it.
       expect(await terminateSessionsByAppName(appName)).toBe(1);
-      await settle();
+      await expectNoSessions(appName);
       let timer: ReturnType<typeof setTimeout> | undefined;
       const outcome = await Promise.race([
         rows.return!(undefined).then(
