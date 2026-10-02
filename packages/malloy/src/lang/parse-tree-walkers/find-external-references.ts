@@ -87,6 +87,15 @@ class FindExternalReferences implements MalloyParserListener {
     }
   }
 
+  enterSqlSource(pcx: parser.SqlSourceContext) {
+    const connId = getId(pcx.connectionId());
+    if (connId && !this.needConnectionDialects[connId]) {
+      this.needConnectionDialects[connId] = {
+        firstReference: this.trans.rangeFromContext(pcx),
+      };
+    }
+  }
+
   enterVirtualSource(pcx: parser.VirtualSourceContext) {
     const connId = getId(pcx.connectionId());
     if (connId && !this.needConnectionDialects[connId]) {

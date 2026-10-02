@@ -18,6 +18,7 @@ import type {
   FieldDef,
   GivenID,
   ModelDef,
+  NamedModelObject,
   PersistableSourceDef,
   Query,
   QuerySourceDef,
@@ -36,6 +37,29 @@ import {
   isSourceRegistryReference,
   safeRecordGet,
 } from './malloy_types';
+
+/**
+ * The dialect an entry commits whoever imports it to, if any. A query begins
+ * at a source, which is either inline in the query or named in the model the
+ * query came from.
+ */
+export function dialectOfEntry(
+  entry: NamedModelObject,
+  from: ModelDef
+): string | undefined {
+  if (isSourceDef(entry)) {
+    return entry.dialect;
+  }
+  if (entry.type === 'query') {
+    const head = entry.structRef;
+    if (typeof head === 'string') {
+      const named = safeRecordGet(from.contents, head);
+      return named && isSourceDef(named) ? named.dialect : undefined;
+    }
+    return head.dialect;
+  }
+  return undefined;
+}
 
 export function mkSourceID(name: string, url: string | undefined): SourceID {
   return `${name}@${url ?? 'unknown'}`;

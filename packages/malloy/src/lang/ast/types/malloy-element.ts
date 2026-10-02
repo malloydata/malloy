@@ -756,10 +756,6 @@ export class Document extends MalloyElement implements NameSpace {
         `Cannot redefine '${str}', which is in global namespace`
       );
     }
-    if (isSourceDef(ent.entry)) {
-      this.checkExperimentalDialect(this, ent.entry.dialect);
-    }
-
     // Track if the model was modified after initialization
     if (this.didInitModel) {
       this.modelWasModified = true;
@@ -776,24 +772,6 @@ export class Document extends MalloyElement implements NameSpace {
           name: str,
         },
       };
-    }
-  }
-
-  /**
-   * Return an error message if this dialect is the first reference to this particular
-   * dialect, and the dialect is marked as experimental, and we are not running tests.
-   * @param dialect The dialect name
-   * @returns The error message or undefined
-   */
-  checkExperimentalDialect(me: MalloyElement, dialect: string): void {
-    const t = this.translator();
-    if (
-      t &&
-      t.firstReferenceToDialect(dialect) &&
-      getDialect(dialect).experimental &&
-      !t.experimentalDialectEnabled(dialect)
-    ) {
-      me.logError('experimental-dialect-not-enabled', {dialect});
     }
   }
 

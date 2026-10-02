@@ -16,6 +16,7 @@ import {
   InMemoryURLReader,
   InMemoryModelCache,
   CacheManager,
+  getDialect,
 } from '@malloydata/malloy';
 import {createTestRuntime} from '@malloydata/malloy/test';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
@@ -265,6 +266,9 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
       default:
         throw new Error(`Unknown runtime "${dbName}`);
     }
+    // The shared suites carry no `##! experimental.dialect.NAME` lines. A
+    // dialect under test is accepted once, for the whole process, instead.
+    getDialect(connection.dialectName).acceptExperimental();
     return testRuntimeFor(connection);
   } catch (error) {
     throw new Error(
@@ -314,7 +318,6 @@ export class RuntimeList {
         database instanceof SingleConnectionRuntime
           ? database
           : runtimeFor(database);
-      rt.isTestRuntime = true;
       this.runtimeMap.set(rt.connection.name, rt);
       this.runtimeList.push([rt.connection.name, rt]);
     }

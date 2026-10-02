@@ -190,7 +190,7 @@ class ParseStep implements TranslationStep {
 }
 
 class ImportsAndTablesStep implements TranslationStep {
-  private parseReferences: FindReferencesData | undefined = undefined;
+  parseReferences: FindReferencesData | undefined = undefined;
   constructor(readonly parseStep: ParseStep) {}
 
   step(that: MalloyTranslation): DataRequestResponse | ParseResponse {
@@ -348,6 +348,31 @@ class ASTStep implements TranslationStep {
   private walked = false;
   constructor(readonly importStep: ImportsAndTablesStep) {}
 
+  /**
+   * A file acknowledges an experimental dialect with
+   * `##! experimental.dialect.NAME` wherever it names a connection on that
+   * dialect. Every connection name in this file is already resolved to a
+   * dialect by the time the AST exists, and the file's compiler flags are
+   * known only now, so this is the first moment the check can run. The
+   * other place a file takes on a dialect is `import`, checked by
+   * `ImportStatement`.
+   */
+  private checkExperimentalDialects(that: MalloyTranslation): void {
+    const connections = this.importStep.parseReferences?.connectionDialects;
+    if (!connections) {
+      return;
+    }
+    for (const connName in connections) {
+      const dialect = that.root.connectionDialectZone.get(connName);
+      if (dialect !== undefined) {
+        that.checkExperimentalDialect(dialect, {
+          url: that.sourceURL,
+          range: connections[connName].firstReference,
+        });
+      }
+    }
+  }
+
   step(that: MalloyTranslation): ASTResponse {
     const stepTimer = new Timer('ast_step');
     if (this.response) {
@@ -382,6 +407,7 @@ class ASTStep implements TranslationStep {
     const {ast: newAST, compilerFlagSrc, timingInfo} = secondPass.run();
     stepTimer.contribute([timingInfo]);
     that.compilerFlagSrc = compilerFlagSrc;
+    this.checkExperimentalDialects(that);
 
     if (newAST.elementType === 'unimplemented') {
       newAST.logError(
@@ -579,9 +605,9 @@ class TranslateStep implements TranslationStep {
     // seeding (e.g. TestTranslator's compilerFlags option) survive.
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
-      // Compiler flags from the extending base's `##` annotations. NOTE: `##!`
-      // flag semantics are still to be settled; this keeps the existing
-      // behavior (flags from the base model) green and is not the final design.
+      // `##!` is a pragma: it governs the file it sits in and does not cross
+      // `import`. An extension is a continuation of the base's text, so the
+      // base's flags are in force here.
       that.compilerFlagSrc.push(
         ...new Annotations(getModelAnnotations(extendingModel)).texts('!')
       );
@@ -970,16 +996,26 @@ export abstract class MalloyTranslation {
     return true;
   }
 
-  allDialectsEnabled = false;
   experimentalDialectEnabled(dialect: string): boolean {
-    if (this.allDialectsEnabled) {
-      return true;
-    }
     const experimental = this.getCompilerFlags().tag('experimental');
     return (
       experimental !== undefined &&
       (experimental.bare() || experimental.has('dialect', dialect))
     );
+  }
+
+  /**
+   * Log, once per dialect per file, that this file uses an experimental
+   * dialect without acknowledging it.
+   */
+  checkExperimentalDialect(dialect: string, at: DocumentLocation): void {
+    if (
+      this.firstReferenceToDialect(dialect) &&
+      getDialect(dialect).isExperimental() &&
+      !this.experimentalDialectEnabled(dialect)
+    ) {
+      this.root.logError('experimental-dialect-not-enabled', {dialect}, {at});
+    }
   }
 }
 
