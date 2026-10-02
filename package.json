@@ -61,6 +61,7 @@
     "ci-publisher": "MALLOY_DATABASE=publisher JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-publisher --reporters jest-silent-reporter summary",
     "ci-snowflake": "MALLOY_DATABASE=snowflake JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-snowflake --reporters jest-silent-reporter summary --maxWorkers=8",
     "ci-sqlserver": "MALLOY_DATABASE=sqlserver JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-sqlserver --reporters jest-silent-reporter summary",
+    "ci-sqlserver-smoketest": "MALLOY_DATABASE=sqlserver JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-sqlserver --reporters jest-silent-reporter summary",
     "ci-trino": "MALLOY_DATABASE=trino JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-presto-trino --reporters jest-silent-reporter summary",
     "test-deps": "npm run build && npx jest -t dependencies",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
