@@ -34,6 +34,7 @@ import {ExpressionDef, MalloyElement} from '../ast';
 import type {NameSpace} from '../ast/types/name-space';
 import type {ModelEntry} from '../ast/types/model-entry';
 import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
+import {Zone} from '../zone';
 import type {
   DataRequestResponse,
   SQLSourceRequest,
@@ -393,9 +394,23 @@ export interface TestTranslatorOptions {
   compilerFlags?: string[];
 }
 
+/**
+ * Every connection name a test mentions resolves to a dialect, as it would
+ * through a host's connection lookup: the four listed below to theirs, and
+ * any other name to `TEST_DIALECT`.
+ */
+class TestConnectionDialectZone extends Zone<string> {
+  reference(str: string, loc: DocumentLocation): void {
+    super.reference(str, loc);
+    if (this.getEntry(str).status === 'reference') {
+      this.define(str, TEST_DIALECT);
+    }
+  }
+}
+
 export class TestTranslator extends MalloyTranslator {
-  allDialectsEnabled = true;
   testRoot?: TestRoot;
+  connectionDialectZone = new TestConnectionDialectZone();
   /*
    * There are four connections:
    *   _db_  - duckdb dialect, with the following tables ...

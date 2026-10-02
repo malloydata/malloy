@@ -36,7 +36,6 @@ export interface Loggable {
 
 export interface ParseOptions {
   importBaseURL?: URL;
-  testEnvironment?: boolean;
   /** Reject language constructs that reach outside the trusted model. */
   restrictedMode?: boolean;
   /**

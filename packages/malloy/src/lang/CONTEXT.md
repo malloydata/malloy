@@ -205,6 +205,18 @@ The `restrictedMode` flag flows: `ParseOptions.restrictedMode` → `MalloyTransl
 
 API-level details: [`../api/CONTEXT.md`](../api/CONTEXT.md) and the JSDoc on `ModelMaterializer.loadRestrictedQuery`.
 
+## Compiler flags and experimental dialects
+
+A `##!` line is a pragma for the file it sits in: consumed by that file's
+translation, not crossing `import`, carried by `extend` (`model/CONTEXT.md`,
+"Compiler flags are pragmas").
+
+A file takes on an experimental dialect in two ways, and must acknowledge it
+with `##! experimental.dialect.NAME` in either: by naming a connection on it,
+or by importing a source or query that uses one. Each is checked at the
+statement that did it, once per dialect per file. Nothing else in the
+compiler looks at `experimental`; IR carries its dialect and needs no check.
+
 ## Access modifiers
 
 `private`/`internal` (behind `##! experimental.access_modifiers`) are rules

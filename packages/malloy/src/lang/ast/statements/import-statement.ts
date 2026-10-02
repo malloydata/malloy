@@ -13,7 +13,7 @@ import {
   isSourceRegistryReference,
   safeRecordGet,
 } from '../../../model/malloy_types';
-import {registerSource} from '../../../model/source_def_utils';
+import {dialectOfEntry, registerSource} from '../../../model/source_def_utils';
 import {walkPersistentDependencies} from '../../../model/persist_utils';
 import {typeDefToString} from '../../../model/utils';
 
@@ -182,6 +182,10 @@ export class ImportStatement
               }
               const importMe = {...sourceEntry!};
               importMe.as = dstName;
+              const dialect = dialectOfEntry(importMe, importedModel);
+              if (dialect !== undefined) {
+                trans.checkExperimentalDialect(dialect, this.location);
+              }
               doc.setEntry(dstName, {entry: importMe, exported: false});
 
               // Every source the walk touched, routes included — not just the

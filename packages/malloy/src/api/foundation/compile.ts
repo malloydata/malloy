@@ -94,7 +94,6 @@ export interface MalloyCompileOptions {
   noThrowOnError?: boolean;
   eventStream?: EventStream;
   importBaseURL?: URL;
-  testEnvironment?: boolean;
   virtualMap?: VirtualMap;
 }
 
@@ -209,9 +208,6 @@ export class Malloy {
       eventStream,
       options?.restrictedMode ?? false
     );
-    if (options?.testEnvironment) {
-      translator.allDialectsEnabled = true;
-    }
     return new Parse(translator, invalidationKey);
   }
 
