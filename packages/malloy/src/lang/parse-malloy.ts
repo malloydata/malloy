@@ -15,6 +15,7 @@ import type {
   DocumentRange,
   VirtualMap,
 } from '../model/malloy_types';
+import {mkSafeRecord} from '../model/malloy_types';
 import {mkModelDef, mkModelID} from '../model/utils';
 import {getModelAnnotations} from '../model/annotation_utils';
 import * as ast from './ast';
@@ -305,7 +306,9 @@ class ImportsAndTablesStep implements TranslationStep {
 
     const missingDialects = that.root.connectionDialectZone.getUndefined();
     if (missingDialects) {
-      const connectionDialects = {};
+      // Keyed by connection name, user text: a plain `{}` would turn a
+      // connection named `__proto__` into a prototype and drop the request.
+      const connectionDialects = mkSafeRecord<{connectionName: string}>();
       for (const connName of missingDialects) {
         connectionDialects[connName] = {connectionName: connName};
       }
