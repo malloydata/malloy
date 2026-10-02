@@ -94,7 +94,6 @@ export interface MalloyCompileOptions {
   noThrowOnError?: boolean;
   eventStream?: EventStream;
   importBaseURL?: URL;
-  testEnvironment?: boolean;
   virtualMap?: VirtualMap;
 }
 
@@ -200,43 +199,16 @@ export class Malloy {
     if (options?.importBaseURL) {
       importBaseURL = options?.importBaseURL;
     }
-    const translator = Malloy.newTranslator(
+    const translator = new MalloyTranslator(
       url.toString(),
       importBaseURL.toString(),
-      source,
+      {
+        urls: {[url.toString()]: source},
+      },
       eventStream,
-      options?.restrictedMode ?? false,
-      undefined,
-      options?.testEnvironment
+      options?.restrictedMode ?? false
     );
     return new Parse(translator, invalidationKey);
-  }
-
-  /**
-   * A translator for one Malloy source, a URL and its text. A test environment
-   * may use an experimental dialect without its compiler flag.
-   */
-  private static newTranslator(
-    url: string,
-    importBaseURL: string,
-    source: string,
-    eventStream: EventStream | undefined,
-    restrictedMode: boolean,
-    virtualMap: VirtualMap | undefined,
-    testEnvironment: boolean | undefined
-  ): MalloyTranslator {
-    const translator = new MalloyTranslator(
-      url,
-      importBaseURL,
-      {urls: {[url]: source}},
-      eventStream,
-      restrictedMode,
-      virtualMap
-    );
-    if (testEnvironment) {
-      translator.allDialectsEnabled = true;
-    }
-    return translator;
   }
 
   /**
@@ -406,14 +378,15 @@ export class Malloy {
         const invalidationKey = await getInvalidationKey(urlReader, url);
         invalidationKeys[_url] = invalidationKey;
       }
-      translator = Malloy.newTranslator(
+      translator = new MalloyTranslator(
         _url,
         importBaseURL.toString(),
-        source,
+        {
+          urls: {[_url]: source},
+        },
         eventStream,
         restrictedMode ?? false,
-        virtualMap,
-        req.testEnvironment
+        virtualMap
       );
     }
     for (;;) {

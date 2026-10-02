@@ -102,8 +102,6 @@ export class SQLSource extends Source {
       return {
         compileSQL: sql,
       };
-    } else if (lookup.status === 'present') {
-      doc.checkExperimentalDialect(this, lookup.value.dialect);
     }
   }
 

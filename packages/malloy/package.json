@@ -40,7 +40,7 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
-    "test": "jest --config=../../jest.config.js",
+    "test": "echo 'Read the Testing section of the repo-root CONTEXT.md for information on testing in this monorepo'; exit 1",
     "codegen": "node ../../scripts/femto-build.js codegen",
     "build-parser": "node src/lang/grammar/build_parser.js",
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean && rm -rf src/lang/lib dist",

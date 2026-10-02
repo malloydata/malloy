@@ -117,7 +117,6 @@ class FluentState<T> {
  * An environment for compiling and running Malloy queries.
  */
 export class Runtime {
-  isTestRuntime = false;
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
   private _eventStream: EventStream | undefined;
@@ -473,13 +472,6 @@ export class Runtime {
     options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
-    if (this.isTestRuntime) {
-      if (options === undefined) {
-        options = {testEnvironment: true};
-      } else {
-        options = {...options, testEnvironment: true};
-      }
-    }
     const compilable = source instanceof URL ? {url: source} : {source};
     return new ModelMaterializer(
       this,
@@ -492,7 +484,6 @@ export class Runtime {
           noThrowOnError,
           eventStream: this.eventStream,
           importBaseURL: options?.importBaseURL,
-          testEnvironment: options?.testEnvironment,
           cacheManager: this.cacheManager,
           virtualMap: options?.virtualMap ?? this.virtualMap,
         });
@@ -867,7 +858,6 @@ export class ModelMaterializer extends FluentState<Model> {
     // asks for restricted compilation.
     const {
       importBaseURL,
-      testEnvironment,
       refreshSchemaCache,
       noThrowOnError,
       restrictedMode: _restrictedMode,
@@ -888,7 +878,6 @@ export class ModelMaterializer extends FluentState<Model> {
         refreshSchemaCache,
         noThrowOnError,
         importBaseURL,
-        testEnvironment: testEnvironment || this.runtime.isTestRuntime,
         ...compileQueryOptions,
         virtualMap: compileQueryOptions.virtualMap ?? this.runtime.virtualMap,
       });
@@ -943,7 +932,6 @@ export class ModelMaterializer extends FluentState<Model> {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;
-      const testEnvironment = this.runtime.isTestRuntime ? true : undefined;
       const model = await this.getModel();
       const queryModel = await Malloy.compile({
         source: text,
@@ -952,7 +940,6 @@ export class ModelMaterializer extends FluentState<Model> {
         urlReader,
         connections,
         model,
-        testEnvironment,
         ...this.compileQueryOptions,
       });
       return queryModel.preparedQuery;
@@ -972,13 +959,6 @@ export class ModelMaterializer extends FluentState<Model> {
   ): ModelMaterializer {
     const virtualMap =
       options?.virtualMap ?? this.compileQueryOptions?.virtualMap;
-    if (this.runtime.isTestRuntime) {
-      if (options === undefined) {
-        options = {testEnvironment: true};
-      } else {
-        options = {...options, testEnvironment: true};
-      }
-    }
     return new ModelMaterializer(
       this.runtime,
       async () => {
@@ -996,7 +976,6 @@ export class ModelMaterializer extends FluentState<Model> {
           refreshSchemaCache: options?.refreshSchemaCache,
           noThrowOnError: options?.noThrowOnError,
           importBaseURL: options?.importBaseURL,
-          testEnvironment: options?.testEnvironment,
           ...this.compileQueryOptions,
           virtualMap: virtualMap ?? this.runtime.virtualMap,
         });

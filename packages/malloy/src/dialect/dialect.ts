@@ -200,6 +200,19 @@ export abstract class Dialect {
   abstract supportsNesting: boolean;
   abstract experimental: boolean; // requires ##! experimental.dialect.NAME
 
+  /**
+   * What the compiler consults, not `experimental` itself. The test harness
+   * calls `acceptExperimental()` on the dialect under test so the shared
+   * suites can run on an experimental dialect without every test enabling it.
+   */
+  private experimentalAccepted = false;
+  isExperimental(): boolean {
+    return this.experimental && !this.experimentalAccepted;
+  }
+  acceptExperimental(): void {
+    this.experimentalAccepted = true;
+  }
+
   // -- we should add flags with default values from now on so as to not break
   // dialects outside our repository
   //

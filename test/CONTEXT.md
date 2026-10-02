@@ -40,6 +40,8 @@ Tests that run against **all** supported databases to ensure consistent behavior
 
 These tests are particularly important for verifying that Malloy's abstraction works correctly across all supported SQL dialects.
 
+An experimental dialect is not in `allDatabases` and has no CI workflow; run the suite on one with `MALLOY_DATABASE=<name>`. The files carry no `##! experimental.dialect.<name>` lines: `runtimeFor` in `runtimes.ts` calls `acceptExperimental()` on the dialect under test once per process, which is the only place that acknowledgment is waived.
+
 ### Consumer-contract canary (`test/consumer-canary/`)
 Not a normal test — it consumes the *built* `@malloydata/*` packages the way a downstream app does (esbuild bundle + plain ts-jest, no babel) to catch native/ESM leaks that malloy's own CI is blind to. Run locally with `npm run test-consumer-canary` (it builds first). See [`test/consumer-canary/CONTEXT.md`](consumer-canary/CONTEXT.md).
 

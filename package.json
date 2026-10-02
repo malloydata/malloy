@@ -43,7 +43,7 @@
     "watch": "tsc --watch",
     "lint": "eslint .",
     "lint-fix": "eslint . --fix",
-    "test": "echo 'npm run test' not supported, see test/README.md for details ; exit 1",
+    "test": "echo 'Read the Testing section of the repo-root CONTEXT.md for information on testing in this monorepo'; exit 1",
     "test-publisher": "MALLOY_DATABASE=publisher jest",
     "test-duckdb": "MALLOY_DATABASE=duckdb JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects malloy-core malloy-render malloy-render-test db-all db-duckdb db-duckdb-core simple-builder --reporters jest-silent-reporter summary",
     "typecheck": "tsc --build test/tsconfig.json",

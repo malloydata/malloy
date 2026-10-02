@@ -13,6 +13,7 @@ export {
   DatabricksDialect,
   SQLServerDialect,
   registerDialect,
+  getDialect,
   arg,
   qtz,
   overload,
