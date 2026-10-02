@@ -36,7 +36,7 @@ import {
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {Client, Pool} from 'pg';
-import type {ClientConfig, FieldDef} from 'pg';
+import type {ClientBase, ClientConfig, FieldDef} from 'pg';
 import QueryStream from 'pg-query-stream';
 
 /**
@@ -144,6 +144,20 @@ function addTlsHint(err: unknown): unknown {
 // the network dropped it) an awaited end() never returns.
 function closeClient(client: Client): void {
   client.end().catch(() => {});
+}
+
+// Fails a row stream when the connection under it drops. pg-query-stream 4.2.3
+// tears a failed stream down by closing its cursor, which waits for a server
+// reply that a dead connection never sends, so without this the stream neither
+// ends nor errors. Returns a function that detaches the listener; call it before
+// the client is closed or released.
+function failStreamOnClientError(
+  client: ClientBase,
+  stream: QueryStream
+): () => void {
+  const onError = (err: Error) => stream.emit('error', err);
+  client.on('error', onError);
+  return () => client.removeListener('error', onError);
 }
 
 /**
@@ -557,10 +571,12 @@ export class PostgresConnection
       this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
     );
     const client = await this.getClient();
+    let detach = () => {};
     try {
       await this.withTlsHint(() => client.connect());
       await this.connectionSetup(client);
       const rowStream = client.query(query);
+      detach = failStreamOnClientError(client, rowStream);
       let index = 0;
       for await (const row of rowStream) {
         yield row.row as QueryRecord;
@@ -574,6 +590,7 @@ export class PostgresConnection
         }
       }
     } finally {
+      detach();
       closeClient(client);
     }
   }
@@ -689,6 +706,10 @@ export class PooledPostgresConnection
     // `client.query(query)`, which does what it's supposed to.
     const pool = await this.getPool();
     const client = await this.withTlsHint(() => pool.connect());
+    // pg-pool takes its own 'error' listener off a client while it is checked
+    // out, so this listener is also what keeps a dropped connection from
+    // surfacing as an uncaught exception.
+    const detach = failStreamOnClientError(client, query);
     try {
       const resultStream: QueryStream = client.query(query);
       for await (const row of resultStream) {
@@ -707,6 +728,7 @@ export class PooledPostgresConnection
       // back to the pool rather than closing its session. Nothing else returns
       // it on a throw or an early consumer exit, and a client that is never
       // released holds one of the pool's `max` slots for good.
+      detach();
       client.release();
     }
   }

@@ -399,6 +399,92 @@ describe('connection cleanup on query failure', () => {
     }
   });
 
+  // At 10 ms a row, each 100-row batch the stream fetches takes about a second,
+  // which leaves time to drop the session while a fetch is in flight.
+  const slowRows =
+    'SELECT row_to_json(t) AS row FROM (SELECT n, pg_sleep(0.01) AS s FROM generate_series(1, 1000) AS n) t';
+
+  // Reads until the stream ends, rejects, or goes five seconds without a row.
+  const readToOutcome = async (
+    rows: AsyncIterator<unknown>
+  ): Promise<'ended' | 'stalled' | Error> => {
+    for (;;) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const step = await Promise.race([
+        rows.next().then(
+          r => (r.done ? ('ended' as const) : ('row' as const)),
+          (e: Error) => e
+        ),
+        new Promise<'stalled'>(resolve => {
+          timer = setTimeout(() => resolve('stalled'), 5000);
+        }),
+      ]);
+      clearTimeout(timer);
+      if (step !== 'row') {
+        return step;
+      }
+    }
+  };
+
+  for (const pooled of [false, true]) {
+    const kind = pooled ? 'pooled' : 'unpooled';
+    const newConnection = (appName: string) => {
+      const config = {
+        name: 'postgres',
+        connectionString: taggedConnectionString(appName),
+      };
+      return pooled
+        ? new PooledPostgresConnection(config)
+        : new PostgresConnection(config);
+    };
+
+    it(`fails the next read of a stream whose session was dropped between reads (${kind})`, async () => {
+      const appName = newAppName(`leak_test_dropped_paused_${kind}`);
+      const connection = newConnection(appName);
+      let outcome: 'ended' | 'stalled' | Error = 'stalled';
+      try {
+        const rows = connection.runSQLStream(manyRows)[Symbol.asyncIterator]();
+        expect((await rows.next()).done).toBe(false);
+        expect(await terminateSessionsByAppName(appName)).toBe(1);
+        await expectNoSessions(appName);
+        outcome = await readToOutcome(rows);
+        expect(outcome).toBeInstanceOf(Error);
+        expect((outcome as Error).message).toMatch(/terminat/i);
+      } finally {
+        // A stalled stream never returns its pooled client, and pool.end()
+        // waits for it, so the close would hang instead of the assertion
+        // above reporting the stall.
+        if (outcome !== 'stalled') {
+          await connection.close();
+        }
+      }
+    });
+
+    it(`fails a stream read that is waiting when its session is dropped (${kind})`, async () => {
+      const appName = newAppName(`leak_test_dropped_reading_${kind}`);
+      const connection = newConnection(appName);
+      let outcome: 'ended' | 'stalled' | Error = 'stalled';
+      try {
+        const rows = connection.runSQLStream(slowRows)[Symbol.asyncIterator]();
+        expect((await rows.next()).done).toBe(false);
+        // The rest of the first batch is buffered, so reading drains it at
+        // once and then waits on the second batch while the session is
+        // terminated.
+        const reading = readToOutcome(rows);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        expect(await terminateSessionsByAppName(appName)).toBe(1);
+        outcome = await reading;
+        expect(outcome).toBeInstanceOf(Error);
+        expect((outcome as Error).message).toMatch(/terminat/i);
+        await expectNoSessions(appName);
+      } finally {
+        if (outcome !== 'stalled') {
+          await connection.close();
+        }
+      }
+    });
+  }
+
   it('returns every client to the pool after a failed and an abandoned stream (pooled)', async () => {
     const connection = new PooledPostgresConnection({
       name: 'postgres',
