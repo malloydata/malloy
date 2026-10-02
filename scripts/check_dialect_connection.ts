@@ -23,6 +23,7 @@ const remedy = new Map<string, string>([
   ['motherduck', 'Set TEST_MD_TOKEN to a MotherDuck service token.'],
   ['mssql_via_duckdb', 'Start the server: sh test/mssql/mssql_start.sh'],
   ['mysql', 'Start the server: sh test/mysql/mysql_start.sh'],
+  ['sqlserver', 'Start the server: sh test/mssql/mssql_start.sh'],
   ['postgres', 'Start the server: sh test/postgres/postgres_start.sh'],
   ['presto', 'Start the server: sh test/presto/presto_start.sh'],
   [
