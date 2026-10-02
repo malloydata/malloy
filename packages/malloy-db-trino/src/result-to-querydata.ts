@@ -121,6 +121,9 @@ function convertArray(
  *   for rowDataToDate to handle downstream
  * - BIGINT precision is limited by the Trino JS client which
  *   delivers values as JS number (no bigint support)
+ * - A value the driver has already decoded past the scalar kinds (a map,
+ *   a JSON document) belongs to a `sql native` field and is handed on as
+ *   it came
  */
 function convertScalar(typeDef: AtomicTypeDef, raw: unknown): QueryValue {
   if (raw === null || raw === undefined) return null;
@@ -153,12 +156,5 @@ function convertScalar(typeDef: AtomicTypeDef, raw: unknown): QueryValue {
     return new Date(raw + 'Z');
   }
 
-  if (
-    typeof raw === 'string' ||
-    typeof raw === 'number' ||
-    typeof raw === 'boolean'
-  ) {
-    return raw;
-  }
-  return null;
+  return raw as QueryValue;
 }

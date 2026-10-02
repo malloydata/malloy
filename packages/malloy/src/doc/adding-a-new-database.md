@@ -25,7 +25,7 @@ Start by copying a dialect close to your target — Databricks, for instance, be
 Create `packages/malloy/src/dialect/{name}/` with four files:
 
 1. **`{name}.ts`** — A class extending `Dialect`. This is the bulk of the work.
-   - Set boolean capability flags: `experimental`, `supportsSumDistinctFunction`, `supportUnnestArrayAgg`, `supportsAggDistinct`, `supportsCTEinCoorelatedSubQueries`, etc. Start with `experimental = true` — experimental dialects aren't required to pass the full test suite.
+   - Set boolean capability flags: `experimental`, `supportsSumDistinctFunction`, `supportUnnestArrayAgg`, `supportsAggDistinct`, `supportsCTEinCoorelatedSubQueries`, etc. Start with `experimental = true` — experimental dialects aren't required to pass the full test suite, and a model file must carry `##! experimental.dialect.{name}` to use one. The test harness accepts the dialect under test for the whole run, so the shared suites need no such line.
    - Implement `sqlTypeToMalloyType()` to map your database's types to Malloy types.
    - Implement the SQL-generation methods: `sqlGroupSetTable`, `sqlAnyValue`, `sqlAggregateTurtle`, `sqlSumDistinct`, `sqlGenerateUUID`, `sqlDateToString`, `sqlAlterTime`, `sqlCast`, `sqlRegexpMatch`, `sqlLiteralTime`, and others. The abstract base class makes it clear which are required.
    - Implement `getDialectFunctionOverrides()` and `getDialectFunctions()`.
@@ -127,7 +127,7 @@ Useful capability flags for gating tests:
 
 ## Moving from Experimental to Fully Supported
 
-When your dialect passes the full test suite, remove `experimental = true`:
-- Users won't need `## experimental.{name}` in their model files
+When your dialect passes the full test suite, remove `experimental = true` and add a `db-{name}.yaml` workflow:
+- Users won't need `##! experimental.dialect.{name}` in their model files
 - CI will run the complete test suite against your dialect
 - The Malloy team will maintain your dialect as part of ongoing refactors

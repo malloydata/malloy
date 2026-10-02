@@ -176,25 +176,25 @@ Both `import` and the extend-base init funnel through
 `Document.contributeModelAnnotations` (`malloy-element.ts`) — they differ only
 in namespace/export copying, never in the annotation fold.
 
-### Compiler-flag (`##!`) propagation
+### Compiler flags (`##!`)
 
-Unlike themes, **`##!` compiler flags do not cross `import`.** A flag governs how
-*its own file* is parsed/compiled; it is not data the model carries downstream.
-(Notebook extend is a *continuation*, not an import, so it's outside this rule —
-flags flow along the extend chain as the same authoring session continues.)
-Deferring the inverse — an importable flag preamble (`import "all_experiments"`) —
-is forward-safe: flags are additive, so a file written today keeps compiling if
-imports ever start carrying flags.
+As annotations, `##!` notes are stored like every other `##` route: they fold
+across import and extend, and the annotations API on a model with imports
+reports all of them on route `!`. The compiler does not read them through
+that API. A translator reads the `!` lines of its own file and nothing else,
+so as a compiler flag a `##!` line is a pragma: it governs the file it sits in,
+and an imported file's flags have no effect on the importer's text. Once IR
+exists no reader of route `!` remains in the compiler.
 
-Most `##!` flags are consumed **at translation time** (the `inExperiment` gates
-in `lang/`). The Foundation API also reads `##! experimental.persistence` at
-**runtime** — off the resolved model annotations (`Model.modelAnnotations`, the
-fold, so it carries across extend) — to gate `getBuildPlan()` / manifest
-substitution. There is deliberately no **SQL-gen-time** `##!` mechanism: the
-former per-object `modelAnnotations` carrier and `modelCompilerFlags()` were
-removed once their only consumer (`unsafe_complex_select_query`, a temporary BQ
-escape hatch) proved unnecessary; the guard it bypassed is now a plain compiler
-error.
+The seed for an extension is the exception that touches the fold: a query or
+notebook cell over a model starts from that model's folded `!` notes, so a
+flag in a file the model imports is in force in a query over the model, though
+not in the model's own text.
+
+The readers are the `inExperiment` gates in `lang/` and the experimental-dialect
+check (`lang/CONTEXT.md`, "Compiler flags and experimental dialects"). Two
+runtime readers of `##! experimental.persistence` in the Foundation API are
+tracked for removal in #3112.
 
 ## Field usage
 

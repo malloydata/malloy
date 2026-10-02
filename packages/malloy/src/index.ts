@@ -12,6 +12,7 @@ export {
   MySQLDialect,
   DatabricksDialect,
   registerDialect,
+  getDialect,
   arg,
   qtz,
   overload,
