@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-connections",
-  "version": "0.0.435",
+  "version": "0.0.436",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -33,14 +33,14 @@
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@malloydata/db-bigquery": "0.0.435",
-    "@malloydata/db-databricks": "0.0.435",
-    "@malloydata/db-duckdb": "0.0.435",
-    "@malloydata/db-mysql": "0.0.435",
-    "@malloydata/db-postgres": "0.0.435",
-    "@malloydata/db-snowflake": "0.0.435",
-    "@malloydata/db-sqlserver": "0.0.435",
-    "@malloydata/db-trino": "0.0.435",
-    "@malloydata/malloy": "0.0.435"
+    "@malloydata/db-bigquery": "0.0.436",
+    "@malloydata/db-databricks": "0.0.436",
+    "@malloydata/db-duckdb": "0.0.436",
+    "@malloydata/db-mysql": "0.0.436",
+    "@malloydata/db-postgres": "0.0.436",
+    "@malloydata/db-snowflake": "0.0.436",
+    "@malloydata/db-sqlserver": "0.0.436",
+    "@malloydata/db-trino": "0.0.436",
+    "@malloydata/malloy": "0.0.436"
   }
 }

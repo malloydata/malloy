@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-sqlserver",
-  "version": "0.0.435",
+  "version": "0.0.436",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,7 +23,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.435",
+    "@malloydata/malloy": "0.0.436",
     "@types/node": "^22.20.0",
     "mssql": "^12.7.2"
   },
