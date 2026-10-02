@@ -43,6 +43,7 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
+  schemaDescriptionAnnotations,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -129,6 +130,7 @@ interface BigQueryConnectionConfiguration {
   credentials?: CredentialBody | {[key: string]: ConnectionParameterValue};
   authClient?: AuthClient;
   setupSQL?: string;
+  includeDescriptions?: boolean;
 }
 
 interface BigQueryConnectionOptions extends ConnectionConfig {
@@ -152,6 +154,8 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   client_email?: string;
   private_key?: string;
   setupSQL?: string;
+  /** Attach table and column descriptions to the schema as doc strings. */
+  includeDescriptions?: boolean;
 }
 
 type JsonObject = {[key: string]: ConnectionParameterValue};
@@ -268,6 +272,7 @@ function toBigQueryLabels(
 
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
+  description?: string | null;
   needsTableSuffixPseudoColumn: boolean;
   needsPartitionTimePseudoColumn: boolean;
   needsPartitionDatePseudoColumn: boolean;
@@ -569,6 +574,8 @@ export class BigQueryConnection
 
   private authIdentity: string | undefined;
 
+  private includeDescriptions: boolean;
+
   constructor(
     option: BigQueryConnectionOptions,
     queryOptions?: QueryOptionsReader
@@ -637,6 +644,7 @@ export class BigQueryConnection
     this.config = config;
     this.location = config.location;
     this.setupSQL = config.setupSQL;
+    this.includeDescriptions = config.includeDescriptions === true;
   }
 
   get dialectName(): string {
@@ -848,6 +856,7 @@ export class BigQueryConnection
       const [metadata] = await metadataPromise;
       return {
         schema: metadata.schema,
+        description: metadata.description,
         needsTableSuffixPseudoColumn: needTableSuffixPseudoColumn,
         needsPartitionTimePseudoColumn:
           metadata.timePartitioning?.type !== undefined &&
@@ -984,12 +993,18 @@ export class BigQueryConnection
       const name = field.name as string;
 
       const isRecord = ['STRUCT', 'RECORD'].includes(type);
-      const structShared = {name, dialect: this.dialectName, fields: []};
+      const doc = this.descriptionAnnotations(field.description);
+      const structShared = {
+        name,
+        dialect: this.dialectName,
+        fields: [],
+        ...doc,
+      };
       if (field.mode === 'REPEATED' && !isRecord) {
         // Malloy treats repeated values as an array of scalars.
         const malloyType = this.dialect.sqlTypeToMalloyType(type);
         if (malloyType) {
-          structDef.fields.push(mkArrayDef(malloyType, name));
+          structDef.fields.push({...mkArrayDef(malloyType, name), ...doc});
         }
       } else if (isRecord) {
         const ifRepeatedRecord: StructDef = {
@@ -1012,9 +1027,17 @@ export class BigQueryConnection
           type: 'sql native',
           rawType: type.toLowerCase(),
         };
-        structDef.fields.push({name, ...malloyType});
+        structDef.fields.push({name, ...malloyType, ...doc});
       }
     }
+  }
+
+  private descriptionAnnotations(
+    description: string | null | undefined
+  ): Pick<TableSourceDef, 'annotations'> {
+    if (!this.includeDescriptions) return {};
+    const annotations = schemaDescriptionAnnotations(description);
+    return annotations ? {annotations} : {};
   }
 
   async fetchSelectSchema(
@@ -1079,6 +1102,10 @@ export class BigQueryConnection
         fields: [],
       };
       this.addFieldsToStructDef(tableDef, tableFieldSchema.schema);
+      Object.assign(
+        tableDef,
+        this.descriptionAnnotations(tableFieldSchema.description)
+      );
       if (tableFieldSchema.needsTableSuffixPseudoColumn) {
         tableDef.fields.push({
           type: 'string',

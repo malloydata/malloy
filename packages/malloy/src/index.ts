@@ -256,6 +256,11 @@ export type {
   JsonConfigValue,
   ManagedConnectionLookup,
 } from './connection/registry';
+export {
+  SCHEMA_DESCRIPTION_URL,
+  includeDescriptionsProperty,
+  schemaDescriptionAnnotations,
+} from './connection/schema_descriptions';
 export {toAsyncGenerator} from './connection_utils';
 export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
 export * as API from './api';
