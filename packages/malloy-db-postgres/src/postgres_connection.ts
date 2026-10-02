@@ -309,10 +309,10 @@ export class PostgresConnection
 
   protected async getClient(): Promise<Client> {
     const client = new Client(this.buildClientConfig(await this.readConfig()));
-    // When the socket drops, pg fails every pending query on the client and
-    // also emits 'error' on it. The operation using the client already sees the
-    // failure through its own query; without a listener the duplicate event
-    // would be an uncaught exception.
+    // When the socket drops, pg emits 'error' on the client whether or not a
+    // query is running. A running query fails on its own (a row stream through
+    // failStreamOnClientError); without this listener the event itself would
+    // be an uncaught exception.
     client.on('error', () => {});
     return client;
   }
@@ -710,6 +710,7 @@ export class PooledPostgresConnection
     // out, so this listener is also what keeps a dropped connection from
     // surfacing as an uncaught exception.
     const detach = failStreamOnClientError(client, query);
+    let drained = false;
     try {
       const resultStream: QueryStream = client.query(query);
       for await (const row of resultStream) {
@@ -720,16 +721,25 @@ export class PooledPostgresConnection
           abortSignal?.aborted
         ) {
           query.destroy();
-          break;
+          return;
         }
       }
+      drained = true;
     } finally {
       // release(), not end(): this client came from pool.connect(), so it goes
       // back to the pool rather than closing its session. Nothing else returns
       // it on a throw or an early consumer exit, and a client that is never
       // released holds one of the pool's `max` slots for good.
+      //
+      // A stream that stopped before its end can leave a fetch in flight on
+      // the client, so it is released with an error, which makes the pool
+      // discard it instead of handing the next caller a client mid-query.
       detach();
-      client.release();
+      client.release(
+        drained
+          ? undefined
+          : new Error('row stream stopped before reading all its rows')
+      );
     }
   }
 

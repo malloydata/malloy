@@ -448,8 +448,12 @@ describe('connection cleanup on query failure', () => {
         expect(await terminateSessionsByAppName(appName)).toBe(1);
         await expectNoSessions(appName);
         outcome = await readToOutcome(rows);
-        expect(outcome).toBeInstanceOf(Error);
-        expect((outcome as Error).message).toMatch(/terminat/i);
+        if (!(outcome instanceof Error)) {
+          throw new Error(
+            `Expected the read to fail, but the stream ${outcome}`
+          );
+        }
+        expect(outcome.message).toMatch(/terminat/i);
       } finally {
         // A stalled stream never returns its pooled client, and pool.end()
         // waits for it, so the close would hang instead of the assertion
@@ -467,15 +471,18 @@ describe('connection cleanup on query failure', () => {
       try {
         const rows = connection.runSQLStream(slowRows)[Symbol.asyncIterator]();
         expect((await rows.next()).done).toBe(false);
-        // The rest of the first batch is buffered, so reading drains it at
-        // once and then waits on the second batch while the session is
-        // terminated.
+        // The rest of the first batch is already buffered, so this read drains
+        // it without waiting on the server and is waiting on the second batch
+        // before the terminate below can reach the server.
         const reading = readToOutcome(rows);
-        await new Promise(resolve => setTimeout(resolve, 300));
         expect(await terminateSessionsByAppName(appName)).toBe(1);
         outcome = await reading;
-        expect(outcome).toBeInstanceOf(Error);
-        expect((outcome as Error).message).toMatch(/terminat/i);
+        if (!(outcome instanceof Error)) {
+          throw new Error(
+            `Expected the read to fail, but the stream ${outcome}`
+          );
+        }
+        expect(outcome.message).toMatch(/terminat/i);
         await expectNoSessions(appName);
       } finally {
         if (outcome !== 'stalled') {
@@ -519,6 +526,47 @@ describe('connection cleanup on query failure', () => {
       }
     }
   });
+
+  // Row 150 divides by zero. It is in the second 100-row batch, which the
+  // stream is already fetching when the caller stops after 5 rows.
+  const failsInSecondBatch =
+    'SELECT row_to_json(t) AS row FROM (SELECT n, 10 / (150 - n) AS x FROM generate_series(1, 1000) AS n) t';
+
+  for (const useRowLimit of [false, true]) {
+    const stop = useRowLimit ? 'rowLimit' : 'break';
+    it(`does not hand the next query a client still finishing a stopped stream (pooled, ${stop})`, async () => {
+      const connection = new PooledPostgresConnection({
+        name: 'postgres',
+        connectionString: taggedConnectionString(
+          newAppName('leak_test_stopped_mid_batch')
+        ),
+      });
+      try {
+        let read = 0;
+        for await (const _row of connection.runSQLStream(
+          failsInSecondBatch,
+          useRowLimit ? {rowLimit: 5} : {}
+        )) {
+          read += 1;
+          if (!useRowLimit && read === 5) {
+            break;
+          }
+        }
+        expect(read).toBe(5);
+        for (const v of [42, 43, 44]) {
+          const {rows} = await connection.runSQL(
+            `SELECT row_to_json(t) AS row FROM (SELECT ${v} AS v) t`
+          );
+          expect(rows).toEqual([{v}]);
+        }
+      } finally {
+        const pool = await connection.getPool();
+        if (pool.totalCount === pool.idleCount) {
+          await connection.close();
+        }
+      }
+    });
+  }
 });
 
 describe('setupSQL', () => {
