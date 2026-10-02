@@ -101,6 +101,19 @@ describe('experimental dialects', () => {
     expect(got.line).toBe(1);
   });
 
+  test('a connection named like an object property is still checked', async () => {
+    const named = new DuckdbXConnection(duckdbX, ':memory:');
+    named.name = 'constructor';
+    const error = await getError(
+      new SingleConnectionRuntime({connection: named}).getModel(
+        "source: s is constructor.sql('SELECT 1 as one')"
+      )
+    );
+    expect(error).toBeDefined();
+    expect((error as MalloyError).problems[0].message).toContain(flag);
+    await named.close();
+  });
+
   test('the flag admits a connection on the dialect', async () => {
     await runtime().getModel(
       [flag, `source: s is ${duckdbX}.sql('SELECT 1 as one')`].join('\n')

@@ -217,16 +217,14 @@ class ImportsAndTablesStep implements TranslationStep {
       // references are deferred until dialects are resolved, because
       // validating a table path requires knowing its dialect's grammar.
 
-      for (const connName in this.parseReferences.connectionDialects) {
+      for (const [connName, need] of this.parseReferences.connectionDialects) {
         that.root.connectionDialectZone.reference(connName, {
           url: that.sourceURL,
-          range:
-            this.parseReferences.connectionDialects[connName].firstReference,
+          range: need.firstReference,
         });
       }
 
-      for (const relativeRef in this.parseReferences.urls) {
-        const firstRef = this.parseReferences.urls[relativeRef];
+      for (const [relativeRef, firstRef] of this.parseReferences.urls) {
         try {
           const ref = decodeURI(
             new URL(
@@ -272,8 +270,7 @@ class ImportsAndTablesStep implements TranslationStep {
       string,
       {connectionName: string; tablePath: string}
     > = {};
-    for (const rawKey in this.parseReferences.tables) {
-      const info = this.parseReferences.tables[rawKey];
+    for (const info of this.parseReferences.tables.values()) {
       const dialectName = that.root.connectionDialectZone.get(
         info.connectionName
       );
@@ -362,12 +359,12 @@ class ASTStep implements TranslationStep {
     if (!connections) {
       return;
     }
-    for (const connName in connections) {
+    for (const [connName, need] of connections) {
       const dialect = that.root.connectionDialectZone.get(connName);
       if (dialect !== undefined) {
         that.checkExperimentalDialect(dialect, {
           url: that.sourceURL,
-          range: connections[connName].firstReference,
+          range: need.firstReference,
         });
       }
     }

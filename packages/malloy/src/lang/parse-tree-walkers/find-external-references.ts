@@ -13,8 +13,11 @@ import type {MalloyTranslation} from '../parse-malloy';
 import type {HasString} from '../parse-utils';
 import {getId, getStringIfShort, getStringParts} from '../parse-utils';
 
-type NeedImports = Record<string, DocumentRange>;
-type NeedTables = Record<
+// Keyed by user text (a URL, a `connection:table` key, a connection name), so
+// a `Map`: a plain object would read a prototype name such as `constructor`
+// as already present.
+type NeedImports = Map<string, DocumentRange>;
+type NeedTables = Map<
   string,
   {
     connectionName: string;
@@ -22,12 +25,7 @@ type NeedTables = Record<
     firstReference: DocumentRange;
   }
 >;
-type NeedConnectionDialects = Record<
-  string,
-  {
-    firstReference: DocumentRange;
-  }
->;
+type NeedConnectionDialects = Map<string, {firstReference: DocumentRange}>;
 
 // Copy of the version in the parser which also errors on each non-string in a
 // multi-line string collection. No need to error here, which is well, because
@@ -51,9 +49,9 @@ function getPlainString(cx: HasString): string {
 }
 
 class FindExternalReferences implements MalloyParserListener {
-  needTables: NeedTables = {};
-  needImports: NeedImports = {};
-  needConnectionDialects: NeedConnectionDialects = {};
+  needTables: NeedTables = new Map();
+  needImports: NeedImports = new Map();
+  needConnectionDialects: NeedConnectionDialects = new Map();
 
   constructor(
     readonly trans: MalloyTranslation,
@@ -66,12 +64,12 @@ class FindExternalReferences implements MalloyParserListener {
     reference: DocumentRange
   ) {
     const key = constructTableKey(connectionName, tablePath);
-    if (!this.needTables[key]) {
-      this.needTables[key] = {
+    if (!this.needTables.has(key)) {
+      this.needTables.set(key, {
         connectionName,
         tablePath,
         firstReference: reference,
-      };
+      });
     }
   }
 
@@ -82,33 +80,33 @@ class FindExternalReferences implements MalloyParserListener {
     this.registerTableReference(connId, tablePath, reference);
     // Register a need for the connection's dialect so the validator in
     // ImportsAndTablesStep can run against it.
-    if (!this.needConnectionDialects[connId]) {
-      this.needConnectionDialects[connId] = {firstReference: reference};
+    this.registerConnection(connId, reference);
+  }
+
+  registerConnection(connId: string, reference: DocumentRange) {
+    if (connId && !this.needConnectionDialects.has(connId)) {
+      this.needConnectionDialects.set(connId, {firstReference: reference});
     }
   }
 
   enterSqlSource(pcx: parser.SqlSourceContext) {
-    const connId = getId(pcx.connectionId());
-    if (connId && !this.needConnectionDialects[connId]) {
-      this.needConnectionDialects[connId] = {
-        firstReference: this.trans.rangeFromContext(pcx),
-      };
-    }
+    this.registerConnection(
+      getId(pcx.connectionId()),
+      this.trans.rangeFromContext(pcx)
+    );
   }
 
   enterVirtualSource(pcx: parser.VirtualSourceContext) {
-    const connId = getId(pcx.connectionId());
-    if (connId && !this.needConnectionDialects[connId]) {
-      this.needConnectionDialects[connId] = {
-        firstReference: this.trans.rangeFromContext(pcx),
-      };
-    }
+    this.registerConnection(
+      getId(pcx.connectionId()),
+      this.trans.rangeFromContext(pcx)
+    );
   }
 
   enterImportURL(pcx: parser.ImportURLContext) {
     const url = getPlainString(pcx);
-    if (!this.needImports[url]) {
-      this.needImports[url] = this.trans.rangeFromContext(pcx);
+    if (!this.needImports.has(url)) {
+      this.needImports.set(url, this.trans.rangeFromContext(pcx));
     }
   }
 }
