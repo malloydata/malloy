@@ -218,13 +218,19 @@ describe('BigQueryConnection includeDescriptions', () => {
     return schema;
   }
 
-  const docs = (entity: {annotations?: {notes?: {text: string}[]}}) =>
+  type Described = {
+    name: string;
+    fields?: Described[];
+    annotations?: {notes?: {text: string}[]};
+  };
+
+  const docs = (entity: Described) =>
     entity.annotations?.notes?.map(n => n.text);
 
-  const field = (fields: {name: string}[], name: string) => {
+  const field = (fields: Described[], name: string): Described => {
     const found = fields.find(f => f.name === name);
     if (!found) throw new Error(`no field ${name}`);
-    return found as {name: string; fields?: {name: string}[]};
+    return found;
   };
 
   it('attaches column, nested and table descriptions as doc strings', async () => {
