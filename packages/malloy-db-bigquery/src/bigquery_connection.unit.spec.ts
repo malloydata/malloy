@@ -166,3 +166,112 @@ describe('BigQueryConnection authClient', () => {
     );
   });
 });
+
+describe('BigQueryConnection includeDescriptions', () => {
+  const metadata = {
+    description: 'One row per customer.',
+    schema: {
+      fields: [
+        {name: 'id', type: 'STRING', description: 'Customer identifier.'},
+        {
+          name: 'tags',
+          type: 'STRING',
+          mode: 'REPEATED',
+          description: 'Free-form labels.',
+        },
+        {
+          name: 'flags',
+          type: 'RECORD',
+          description: 'What happened in the period.',
+          fields: [
+            {name: 'churned', type: 'BOOLEAN', description: 'Lost the plan.'},
+            {name: 'renewed', type: 'BOOLEAN'},
+          ],
+        },
+        {name: 'notes', type: 'STRING', description: 'First line.\nSecond.'},
+        {name: 'plain', type: 'INT64'},
+      ],
+    },
+  };
+
+  // A connection whose BigQuery SDK answers the table metadata call with
+  // `metadata`, so fetchTableSchema runs end to end without a warehouse.
+  function connectionWithMetadata(includeDescriptions?: boolean) {
+    const conn = new BigQueryConnection({
+      name: 'bq',
+      projectId: 'proj',
+      includeDescriptions,
+    });
+    const getMetadata = jest.fn(async () => [metadata]);
+    (conn as unknown as {bigQuery: unknown}).bigQuery = {
+      projectId: 'proj',
+      dataset: () => ({table: () => ({getMetadata})}),
+    };
+    return conn;
+  }
+
+  async function fetchSchema(includeDescriptions?: boolean) {
+    const schema = await connectionWithMetadata(
+      includeDescriptions
+    ).fetchTableSchema('customers', 'proj.dataset.customers');
+    if (typeof schema === 'string') throw new Error(schema);
+    return schema;
+  }
+
+  type Described = {
+    name: string;
+    fields?: Described[];
+    annotations?: {notes?: {text: string}[]};
+  };
+
+  const docs = (entity: Described) =>
+    entity.annotations?.notes?.map(n => n.text);
+
+  const field = (fields: Described[], name: string): Described => {
+    const found = fields.find(f => f.name === name);
+    if (!found) throw new Error(`no field ${name}`);
+    return found;
+  };
+
+  it('attaches column, nested and table descriptions as doc strings', async () => {
+    const schema = await fetchSchema(true);
+    expect(docs(schema)).toEqual(['#" One row per customer.\n']);
+    expect(docs(field(schema.fields, 'id'))).toEqual([
+      '#" Customer identifier.\n',
+    ]);
+    expect(docs(field(schema.fields, 'tags'))).toEqual([
+      '#" Free-form labels.\n',
+    ]);
+    const flags = field(schema.fields, 'flags');
+    expect(docs(flags)).toEqual(['#" What happened in the period.\n']);
+    expect(docs(field(flags.fields ?? [], 'churned'))).toEqual([
+      '#" Lost the plan.\n',
+    ]);
+    expect(docs(field(schema.fields, 'notes'))).toEqual([
+      '#|"\nFirst line.\nSecond.',
+    ]);
+  });
+
+  it('leaves fields without a description untouched', async () => {
+    const schema = await fetchSchema(true);
+    expect(field(schema.fields, 'plain')).not.toHaveProperty('annotations');
+    const flags = field(schema.fields, 'flags');
+    expect(field(flags.fields ?? [], 'renewed')).not.toHaveProperty(
+      'annotations'
+    );
+  });
+
+  it.each([undefined, false])(
+    'attaches nothing unless the option is on (%p)',
+    async includeDescriptions => {
+      const schema = await fetchSchema(includeDescriptions);
+      expect(JSON.stringify(schema)).not.toContain('annotations');
+    }
+  );
+
+  it('keeps the digest, so persisted tables are not rebuilt', () => {
+    expect(connectionWithMetadata(true).getDigest()).toBe(
+      connectionWithMetadata(false).getDigest()
+    );
+  });
+});
