@@ -719,15 +719,16 @@ export class PooledPostgresConnection
     try {
       const resultStream: QueryStream = client.query(query);
       for await (const row of resultStream) {
-        // Checked before yielding rather than after, so a result no longer
-        // than rowLimit ends the loop and its client is reused.
-        if (rowLimit !== undefined && index >= rowLimit) {
-          query.destroy();
-          return;
-        }
         yield row.row as QueryRecord;
         index += 1;
-        if (abortSignal?.aborted) {
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
+          // The rows of a result that fits in one batch arrive with its end.
+          // Once pg-cursor 2.7.3 has that end its state is 'done': no fetch is
+          // in flight and closing it sends nothing, so the client can be reused.
+          drained = query.cursor.state === 'done';
           query.destroy();
           return;
         }

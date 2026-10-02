@@ -568,6 +568,28 @@ describe('connection cleanup on query failure', () => {
     });
   }
 
+  it('ends a stream at rowLimit without reading rows past it (pooled)', async () => {
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(
+        newAppName('leak_test_limit_at_batch')
+      ),
+    });
+    try {
+      // rowLimit equals the 100-row batch size, so the next row is in the batch
+      // that fails at row 150. Stopping at the limit must not wait on it.
+      let read = 0;
+      for await (const _row of connection.runSQLStream(failsInSecondBatch, {
+        rowLimit: 100,
+      })) {
+        read += 1;
+      }
+      expect(read).toBe(100);
+    } finally {
+      await connection.close();
+    }
+  });
+
   it('reuses the client of a stream whose rowLimit is its whole result (pooled)', async () => {
     const connection = new PooledPostgresConnection({
       name: 'postgres',
