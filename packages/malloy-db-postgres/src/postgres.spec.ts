@@ -3,7 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {PooledPostgresConnection} from './postgres_connection';
+import {
+  PooledPostgresConnection,
+  PostgresConnection,
+} from './postgres_connection';
 import crypto from 'crypto';
 import type {SQLSourceDef} from '@malloydata/malloy';
 import * as malloy from '@malloydata/malloy';
@@ -226,6 +229,415 @@ describe('numeric value reading', () => {
         ).toMatchResult(testModel, {f: 10.5});
       }
     );
+  });
+});
+
+describe('connection cleanup on query failure', () => {
+  // Each probed connection is tagged with its own `application_name`, so the
+  // session counts below are not fooled by unrelated sessions on a shared test
+  // database. The connection string is built from the same PG* environment the
+  // rest of this file connects with.
+  const newAppName = (prefix: string) =>
+    `${prefix}_${crypto.randomBytes(4).toString('hex')}`;
+  const taggedConnectionString = (appName: string) => {
+    const e = process.env;
+    const auth = `${encodeURIComponent(e['PGUSER'] ?? 'postgres')}:${encodeURIComponent(e['PGPASSWORD'] ?? '')}`;
+    return `postgresql://${auth}@${e['PGHOST'] ?? 'localhost'}:${e['PGPORT'] ?? '5432'}/${e['PGDATABASE'] ?? 'postgres'}?application_name=${appName}`;
+  };
+
+  // runSQL de-JSONs each row as `row.row`, so these queries wrap their result
+  // in row_to_json to come back as plain objects.
+  const adminSQL = async (sql: string): Promise<number> => {
+    const admin = new PooledPostgresConnection('leak_test_admin');
+    try {
+      const {rows} = await admin.runSQL(
+        `SELECT row_to_json(t) AS row FROM (${sql}) t`
+      );
+      const n = rows[0]?.['n'];
+      if (typeof n !== 'number') {
+        throw new Error(
+          `Expected a numeric n, got ${JSON.stringify(rows[0])} from: ${sql}`
+        );
+      }
+      return n;
+    } finally {
+      await admin.close();
+    }
+  };
+  const countSessionsByAppName = (appName: string) =>
+    adminSQL(
+      `SELECT count(*)::integer AS n FROM pg_stat_activity WHERE application_name = '${appName}'`
+    );
+  // The server removes a closed session from pg_stat_activity asynchronously,
+  // so poll until it is gone rather than counting once.
+  const expectNoSessions = async (appName: string) => {
+    const deadline = Date.now() + 5000;
+    let count = await countSessionsByAppName(appName);
+    while (count > 0 && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      count = await countSessionsByAppName(appName);
+    }
+    expect(count).toBe(0);
+  };
+  const terminateSessionsByAppName = (appName: string) =>
+    adminSQL(
+      `SELECT count(pg_terminate_backend(pid))::integer AS n FROM pg_stat_activity WHERE application_name = '${appName}'`
+    );
+
+  const manyRows =
+    'SELECT row_to_json(t) AS row FROM (SELECT generate_series(1, 100000) AS n) t';
+
+  it('closes the session when a query fails after connecting (unpooled)', async () => {
+    const appName = newAppName('leak_test_unpooled');
+    const connection = new PostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(appName),
+    });
+    try {
+      // The syntax error proves connect() and connectionSetup() succeeded and
+      // the query itself failed - the shape of a bad `.sql()` source or a
+      // role-permission error, not a connect-time failure.
+      await expect(
+        connection.runSQL('SELECT this is not valid sql')
+      ).rejects.toThrow(/syntax error/);
+      await expectNoSessions(appName);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('closes the session when fetchSelectSchema fails after connecting', async () => {
+    const appName = newAppName('leak_test_schema');
+    const connection = new PostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(appName),
+    });
+    try {
+      // fetchSelectSchema has no try/catch of its own around the query, so a
+      // SQL error rejects rather than returning an error string.
+      await expect(
+        connection.fetchSelectSchema({
+          connection: 'postgres',
+          selectStr: 'not valid sql at all',
+        })
+      ).rejects.toThrow(/syntax error/);
+      await expectNoSessions(appName);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('closes the session when a stream fails after connecting (unpooled)', async () => {
+    const appName = newAppName('leak_test_stream_err');
+    const connection = new PostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(appName),
+    });
+    try {
+      const drain = async () => {
+        const rows: unknown[] = [];
+        for await (const row of connection.runSQLStream(
+          'SELECT this is not valid sql'
+        )) {
+          rows.push(row);
+        }
+        return rows;
+      };
+      await expect(drain()).rejects.toThrow(/syntax error/);
+      await expectNoSessions(appName);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('closes the session when the caller stops reading a stream early (unpooled)', async () => {
+    const appName = newAppName('leak_test_stream_stop');
+    const connection = new PostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(appName),
+    });
+    try {
+      let read = 0;
+      for await (const _row of connection.runSQLStream(manyRows)) {
+        read += 1;
+        break;
+      }
+      expect(read).toBe(1);
+      await expectNoSessions(appName);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('returns promptly from an early stop after the server has dropped the stream (unpooled)', async () => {
+    const appName = newAppName('leak_test_stream_dropped');
+    const connection = new PostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(appName),
+    });
+    try {
+      const rows = connection.runSQLStream(manyRows)[Symbol.asyncIterator]();
+      expect((await rows.next()).done).toBe(false);
+      // The session goes away while the caller is between reads, so the
+      // socket is already closed when the caller's early stop closes it.
+      expect(await terminateSessionsByAppName(appName)).toBe(1);
+      await expectNoSessions(appName);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const outcome = await Promise.race([
+        rows.return!(undefined).then(
+          () => 'returned',
+          () => 'returned'
+        ),
+        new Promise(resolve => {
+          timer = setTimeout(() => resolve('hung'), 5000);
+        }),
+      ]);
+      clearTimeout(timer);
+      expect(outcome).toBe('returned');
+    } finally {
+      await connection.close();
+    }
+  });
+
+  // At 10 ms a row, each 100-row batch the stream fetches takes about a second,
+  // which leaves time to drop the session while a fetch is in flight.
+  const slowRows =
+    'SELECT row_to_json(t) AS row FROM (SELECT n, pg_sleep(0.01) AS s FROM generate_series(1, 1000) AS n) t';
+
+  // Reads until the stream ends, rejects, or goes five seconds without a row.
+  const readToOutcome = async (
+    rows: AsyncIterator<unknown>
+  ): Promise<'ended' | 'stalled' | Error> => {
+    for (;;) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const step = await Promise.race([
+        rows.next().then(
+          r => (r.done ? ('ended' as const) : ('row' as const)),
+          (e: Error) => e
+        ),
+        new Promise<'stalled'>(resolve => {
+          timer = setTimeout(() => resolve('stalled'), 5000);
+        }),
+      ]);
+      clearTimeout(timer);
+      if (step !== 'row') {
+        return step;
+      }
+    }
+  };
+
+  for (const pooled of [false, true]) {
+    const kind = pooled ? 'pooled' : 'unpooled';
+    const newConnection = (appName: string) => {
+      const config = {
+        name: 'postgres',
+        connectionString: taggedConnectionString(appName),
+      };
+      return pooled
+        ? new PooledPostgresConnection(config)
+        : new PostgresConnection(config);
+    };
+
+    it(`fails the next read of a stream whose session was dropped between reads (${kind})`, async () => {
+      const appName = newAppName(`leak_test_dropped_paused_${kind}`);
+      const connection = newConnection(appName);
+      let outcome: 'ended' | 'stalled' | Error = 'stalled';
+      try {
+        const rows = connection.runSQLStream(manyRows)[Symbol.asyncIterator]();
+        expect((await rows.next()).done).toBe(false);
+        expect(await terminateSessionsByAppName(appName)).toBe(1);
+        await expectNoSessions(appName);
+        outcome = await readToOutcome(rows);
+        if (!(outcome instanceof Error)) {
+          throw new Error(
+            `Expected the read to fail, but the stream ${outcome}`
+          );
+        }
+        expect(outcome.message).toMatch(/terminat/i);
+      } finally {
+        // A stalled stream never returns its pooled client, and pool.end()
+        // waits for it, so the close would hang instead of the assertion
+        // above reporting the stall.
+        if (outcome !== 'stalled') {
+          await connection.close();
+        }
+      }
+    });
+
+    it(`fails a stream read that is waiting when its session is dropped (${kind})`, async () => {
+      const appName = newAppName(`leak_test_dropped_reading_${kind}`);
+      const connection = newConnection(appName);
+      let outcome: 'ended' | 'stalled' | Error = 'stalled';
+      try {
+        const rows = connection.runSQLStream(slowRows)[Symbol.asyncIterator]();
+        expect((await rows.next()).done).toBe(false);
+        // The rest of the first batch is already buffered, so this read drains
+        // it without waiting on the server and is waiting on the second batch
+        // before the terminate below can reach the server.
+        const reading = readToOutcome(rows);
+        expect(await terminateSessionsByAppName(appName)).toBe(1);
+        outcome = await reading;
+        if (!(outcome instanceof Error)) {
+          throw new Error(
+            `Expected the read to fail, but the stream ${outcome}`
+          );
+        }
+        expect(outcome.message).toMatch(/terminat/i);
+        await expectNoSessions(appName);
+      } finally {
+        if (outcome !== 'stalled') {
+          await connection.close();
+        }
+      }
+    });
+  }
+
+  it('returns every client to the pool after a failed and an abandoned stream (pooled)', async () => {
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(
+        newAppName('leak_test_pooled_stream')
+      ),
+    });
+    try {
+      const drain = async () => {
+        const rows: unknown[] = [];
+        for await (const row of connection.runSQLStream(
+          'SELECT this is not valid sql'
+        )) {
+          rows.push(row);
+        }
+        return rows;
+      };
+      await expect(drain()).rejects.toThrow(/syntax error/);
+      for await (const _row of connection.runSQLStream(manyRows)) {
+        break;
+      }
+      const pool = await connection.getPool();
+      // Checked-out clients: anything a stream failed to release.
+      expect(pool.totalCount - pool.idleCount).toBe(0);
+    } finally {
+      // pool.end() waits for every checked-out client, so a leaked one would
+      // turn the failed assertion above into a hang. Skip the close in that
+      // case and let the assertion be what reports it.
+      const pool = await connection.getPool();
+      if (pool.totalCount === pool.idleCount) {
+        await connection.close();
+      }
+    }
+  });
+
+  // Row 150 divides by zero. It is in the second 100-row batch, which the
+  // stream is already fetching when the caller stops after 5 rows.
+  const failsInSecondBatch =
+    'SELECT row_to_json(t) AS row FROM (SELECT n, 10 / (150 - n) AS x FROM generate_series(1, 1000) AS n) t';
+
+  for (const useRowLimit of [false, true]) {
+    const stop = useRowLimit ? 'rowLimit' : 'break';
+    it(`does not hand the next query a client still finishing a stopped stream (pooled, ${stop})`, async () => {
+      const connection = new PooledPostgresConnection({
+        name: 'postgres',
+        connectionString: taggedConnectionString(
+          newAppName('leak_test_stopped_mid_batch')
+        ),
+      });
+      try {
+        let read = 0;
+        for await (const _row of connection.runSQLStream(
+          failsInSecondBatch,
+          useRowLimit ? {rowLimit: 5} : {}
+        )) {
+          read += 1;
+          if (!useRowLimit && read === 5) {
+            break;
+          }
+        }
+        expect(read).toBe(5);
+        for (const v of [42, 43, 44]) {
+          const {rows} = await connection.runSQL(
+            `SELECT row_to_json(t) AS row FROM (SELECT ${v} AS v) t`
+          );
+          expect(rows).toEqual([{v}]);
+        }
+      } finally {
+        const pool = await connection.getPool();
+        if (pool.totalCount === pool.idleCount) {
+          await connection.close();
+        }
+      }
+    });
+  }
+
+  it('ends a stream at rowLimit without reading rows past it (pooled)', async () => {
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(
+        newAppName('leak_test_limit_at_batch')
+      ),
+    });
+    try {
+      // rowLimit equals the 100-row batch size, so the next row is in the batch
+      // that fails at row 150. Stopping at the limit must not wait on it.
+      let read = 0;
+      for await (const _row of connection.runSQLStream(failsInSecondBatch, {
+        rowLimit: 100,
+      })) {
+        read += 1;
+      }
+      expect(read).toBe(100);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('reuses the client of a stream whose rowLimit is its whole result (pooled)', async () => {
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(
+        newAppName('leak_test_limit_is_result')
+      ),
+    });
+    try {
+      const pool = await connection.getPool();
+      let connects = 0;
+      pool.on('connect', () => {
+        connects += 1;
+      });
+      for (let i = 0; i < 3; i++) {
+        let read = 0;
+        for await (const _row of connection.runSQLStream(
+          'SELECT row_to_json(t) AS row FROM (SELECT generate_series(1, 10) AS n) t',
+          {rowLimit: 10}
+        )) {
+          read += 1;
+        }
+        expect(read).toBe(10);
+      }
+      expect(connects).toBe(1);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('survives an idle client whose session is dropped, and opens a fresh one (pooled)', async () => {
+    const appName = newAppName('leak_test_idle_dropped');
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      connectionString: taggedConnectionString(appName),
+    });
+    const one = 'SELECT row_to_json(t) AS row FROM (SELECT 1 AS v) t';
+    try {
+      const pool = await connection.getPool();
+      expect((await connection.runSQL(one)).rows).toEqual([{v: 1}]);
+      const removed = new Promise<void>(resolve =>
+        pool.once('remove', () => resolve())
+      );
+      expect(await terminateSessionsByAppName(appName)).toBe(1);
+      await removed;
+      expect((await connection.runSQL(one)).rows).toEqual([{v: 1}]);
+    } finally {
+      await connection.close();
+    }
   });
 });
 

@@ -36,7 +36,7 @@ import {
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {Client, Pool} from 'pg';
-import type {ClientConfig, FieldDef} from 'pg';
+import type {ClientBase, ClientConfig, FieldDef} from 'pg';
 import QueryStream from 'pg-query-stream';
 
 /**
@@ -136,6 +136,28 @@ function addTlsHint(err: unknown): unknown {
       "\n[malloy-db-postgres] The server certificate does not match the host pg connected to. pg verifies against the connection host, not ssl.servername, unless the host is an IP. For a tunnel, connect via the DB's IP (e.g. host '127.0.0.1') and set ssl.servername to the real hostname; or omit ssl.servername to verify against the host directly.";
   }
   return err;
+}
+
+// Closes an unpooled client without making the caller wait for it. In pg 8.7.3,
+// end() resolves on the connection's next 'end' event and never checks whether
+// one already fired, so after the socket has closed on its own (the server or
+// the network dropped it) an awaited end() never returns.
+function closeClient(client: Client): void {
+  client.end().catch(() => {});
+}
+
+// Fails a row stream when the connection under it drops. pg-query-stream 4.2.3
+// tears a failed stream down by closing its cursor, which waits for a server
+// reply that a dead connection never sends, so without this the stream neither
+// ends nor errors. Returns a function that detaches the listener; call it before
+// the client is closed or released.
+function failStreamOnClientError(
+  client: ClientBase,
+  stream: QueryStream
+): () => void {
+  const onError = (err: Error) => stream.emit('error', err);
+  client.on('error', onError);
+  return () => client.removeListener('error', onError);
 }
 
 /**
@@ -286,7 +308,13 @@ export class PostgresConnection
   }
 
   protected async getClient(): Promise<Client> {
-    return new Client(this.buildClientConfig(await this.readConfig()));
+    const client = new Client(this.buildClientConfig(await this.readConfig()));
+    // When the socket drops, pg emits 'error' on the client whether or not a
+    // query is running. A running query fails on its own (a row stream through
+    // failStreamOnClientError); without this listener the event itself would
+    // be an uncaught exception.
+    client.on('error', () => {});
+    return client;
   }
 
   protected async runPostgresQuery(
@@ -297,23 +325,26 @@ export class PostgresConnection
     values?: unknown[]
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
-    await this.withTlsHint(() => client.connect());
-    await this.connectionSetup(client);
+    try {
+      await this.withTlsHint(() => client.connect());
+      await this.connectionSetup(client);
 
-    let result = await client.query(sqlCommand, values);
-    if (Array.isArray(result)) {
-      result = result.pop();
-    }
-    if (deJSON) {
-      for (let i = 0; i < result.rows.length; i++) {
-        result.rows[i] = result.rows[i].row;
+      let result = await client.query(sqlCommand, values);
+      if (Array.isArray(result)) {
+        result = result.pop();
       }
+      if (deJSON) {
+        for (let i = 0; i < result.rows.length; i++) {
+          result.rows[i] = result.rows[i].row;
+        }
+      }
+      return {
+        rows: result.rows as QueryData,
+        totalRows: result.rows.length,
+      };
+    } finally {
+      closeClient(client);
     }
-    await client.end();
-    return {
-      rows: result.rows as QueryData,
-      totalRows: result.rows.length,
-    };
   }
 
   async fetchSelectSchema(
@@ -327,27 +358,28 @@ export class PostgresConnection
       name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
     const client = await this.getClient();
-    await this.withTlsHint(() => client.connect());
-    await this.connectionSetup(client);
-    // 1) Get row-descriptor without fetching data
-    const res = await client.query({
-      text: `SELECT * FROM (${sqlRef.selectStr}) _t LIMIT 0`,
-    });
+    try {
+      await this.withTlsHint(() => client.connect());
+      await this.connectionSetup(client);
+      // 1) Get row-descriptor without fetching data
+      const res = await client.query({
+        text: `SELECT * FROM (${sqlRef.selectStr}) _t LIMIT 0`,
+      });
 
-    // 2) Resolve every OID we might touch (field, array element, domain base)
-    const neededOids = new Set<number>();
+      // 2) Resolve every OID we might touch (field, array element, domain base)
+      const neededOids = new Set<number>();
 
-    res.fields.forEach(f => neededOids.add(f.dataTypeID));
-    // we'll add more OIDs later (typelem / typebasetype) lazily
+      res.fields.forEach(f => neededOids.add(f.dataTypeID));
+      // we'll add more OIDs later (typelem / typebasetype) lazily
 
-    // helper to fetch pg_type rows on demand, with cache
-    const pgTypeCache = new Map<number, PgTypeRow>();
+      // helper to fetch pg_type rows on demand, with cache
+      const pgTypeCache = new Map<number, PgTypeRow>();
 
-    const loadTypes = async (oids: number[]) => {
-      if (oids.length === 0) return;
-      const params = oids.map((_, i) => `$${i + 1}`).join(',');
-      const {rows} = await client.query<PgTypeRow>(
-        `
+      const loadTypes = async (oids: number[]) => {
+        if (oids.length === 0) return;
+        const params = oids.map((_, i) => `$${i + 1}`).join(',');
+        const {rows} = await client.query<PgTypeRow>(
+          `
       SELECT
         oid,
         typname,
@@ -359,72 +391,75 @@ export class PostgresConnection
       FROM pg_type
       WHERE oid IN (${params})
       `,
-        oids
-      );
-      rows.forEach(r => pgTypeCache.set(r.oid, r));
-    };
-
-    // Prime the cache
-    await loadTypes([...neededOids]);
-
-    // 3) recursive mapper → info-schema compliant strings
-    const mapDataType = async (oid: number): Promise<string> => {
-      let t = pgTypeCache.get(oid);
-      if (!t) {
-        await loadTypes([oid]);
-        t = pgTypeCache.get(oid)!;
-      }
-
-      // ARRAY?
-      if (t.typcategory === 'A') return 'ARRAY';
-
-      // DOMAIN?  recurse to its base type
-      if (t.typtype === 'd') return mapDataType(t.typbasetype);
-
-      // ENUM, COMPOSITE, RANGE, MULTIRANGE, PSEUDO  → USER-DEFINED
-      if (['e', 'c', 'r', 'm', 'p'].includes(t.typtype)) return 'USER-DEFINED';
-
-      // built-in scalar or base type of domain
-      return t.formatted;
-    };
-
-    // helper to resolve element_type (NULL for scalars)
-    const mapElementType = async (oid: number): Promise<string | null> => {
-      let t = pgTypeCache.get(oid);
-      if (!t) {
-        await loadTypes([oid]);
-        t = pgTypeCache.get(oid)!;
-      }
-      if (t.typcategory !== 'A') return null; // not an array
-
-      // Ensure element row cached
-      if (!pgTypeCache.has(t.typelem)) await loadTypes([t.typelem]);
-      return mapDataType(t.typelem);
-    };
-
-    // 4) Build final array in original column order
-    const result: InfoSchemaColumn[] = [];
-    for (const field of res.fields as FieldDef[]) {
-      result.push({
-        columnName: field.name,
-        dataType: await mapDataType(field.dataTypeID),
-        elementType: await mapElementType(field.dataTypeID),
-      });
-    }
-    for (const row of result) {
-      const postgresDataType = row.dataType;
-      const name = row.columnName;
-      if (postgresDataType === 'ARRAY') {
-        const elementType = this.dialect.sqlTypeToMalloyType(
-          row.elementType as string
+          oids
         );
-        structDef.fields.push(mkArrayDef(elementType, name));
-      } else {
-        const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
-        structDef.fields.push({...malloyType, name});
+        rows.forEach(r => pgTypeCache.set(r.oid, r));
+      };
+
+      // Prime the cache
+      await loadTypes([...neededOids]);
+
+      // 3) recursive mapper → info-schema compliant strings
+      const mapDataType = async (oid: number): Promise<string> => {
+        let t = pgTypeCache.get(oid);
+        if (!t) {
+          await loadTypes([oid]);
+          t = pgTypeCache.get(oid)!;
+        }
+
+        // ARRAY?
+        if (t.typcategory === 'A') return 'ARRAY';
+
+        // DOMAIN?  recurse to its base type
+        if (t.typtype === 'd') return mapDataType(t.typbasetype);
+
+        // ENUM, COMPOSITE, RANGE, MULTIRANGE, PSEUDO  → USER-DEFINED
+        if (['e', 'c', 'r', 'm', 'p'].includes(t.typtype))
+          return 'USER-DEFINED';
+
+        // built-in scalar or base type of domain
+        return t.formatted;
+      };
+
+      // helper to resolve element_type (NULL for scalars)
+      const mapElementType = async (oid: number): Promise<string | null> => {
+        let t = pgTypeCache.get(oid);
+        if (!t) {
+          await loadTypes([oid]);
+          t = pgTypeCache.get(oid)!;
+        }
+        if (t.typcategory !== 'A') return null; // not an array
+
+        // Ensure element row cached
+        if (!pgTypeCache.has(t.typelem)) await loadTypes([t.typelem]);
+        return mapDataType(t.typelem);
+      };
+
+      // 4) Build final array in original column order
+      const result: InfoSchemaColumn[] = [];
+      for (const field of res.fields as FieldDef[]) {
+        result.push({
+          columnName: field.name,
+          dataType: await mapDataType(field.dataTypeID),
+          elementType: await mapElementType(field.dataTypeID),
+        });
       }
+      for (const row of result) {
+        const postgresDataType = row.dataType;
+        const name = row.columnName;
+        if (postgresDataType === 'ARRAY') {
+          const elementType = this.dialect.sqlTypeToMalloyType(
+            row.elementType as string
+          );
+          structDef.fields.push(mkArrayDef(elementType, name));
+        } else {
+          const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
+          structDef.fields.push({...malloyType, name});
+        }
+      }
+    } finally {
+      closeClient(client);
     }
-    await client.end();
     return structDef;
   }
 
@@ -536,22 +571,28 @@ export class PostgresConnection
       this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
     );
     const client = await this.getClient();
-    await this.withTlsHint(() => client.connect());
-    await this.connectionSetup(client);
-    const rowStream = client.query(query);
-    let index = 0;
-    for await (const row of rowStream) {
-      yield row.row as QueryRecord;
-      index += 1;
-      if (
-        (rowLimit !== undefined && index >= rowLimit) ||
-        abortSignal?.aborted
-      ) {
-        query.destroy();
-        break;
+    let detach = () => {};
+    try {
+      await this.withTlsHint(() => client.connect());
+      await this.connectionSetup(client);
+      const rowStream = client.query(query);
+      detach = failStreamOnClientError(client, rowStream);
+      let index = 0;
+      for await (const row of rowStream) {
+        yield row.row as QueryRecord;
+        index += 1;
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
+          query.destroy();
+          break;
+        }
       }
+    } finally {
+      detach();
+      closeClient(client);
     }
-    await client.end();
   }
 
   public async estimateQueryCost(_: string): Promise<QueryRunStats> {
@@ -611,6 +652,11 @@ export class PooledPostgresConnection
   async getPool(): Promise<Pool> {
     if (!this._pool) {
       this._pool = new Pool(this.buildClientConfig(await this.readConfig()));
+      // An idle client whose socket drops reaches the pool as an 'error' event.
+      // pg-pool has already removed the dead client by then, and there is no
+      // caller to report to, so there is nothing to act on; without a listener
+      // the event would be an uncaught exception.
+      this._pool.on('error', () => {});
       this._pool.on('acquire', client => {
         client.query("SET TIME ZONE 'UTC'");
         if (this.setupSQL) {
@@ -665,19 +711,45 @@ export class PooledPostgresConnection
     // `client.query(query)`, which does what it's supposed to.
     const pool = await this.getPool();
     const client = await this.withTlsHint(() => pool.connect());
-    const resultStream: QueryStream = client.query(query);
-    for await (const row of resultStream) {
-      yield row.row as QueryRecord;
-      index += 1;
-      if (
-        (rowLimit !== undefined && index >= rowLimit) ||
-        abortSignal?.aborted
-      ) {
-        query.destroy();
-        break;
+    // pg-pool takes its own 'error' listener off a client while it is checked
+    // out, so this listener is also what keeps a dropped connection from
+    // surfacing as an uncaught exception.
+    const detach = failStreamOnClientError(client, query);
+    let drained = false;
+    try {
+      const resultStream: QueryStream = client.query(query);
+      for await (const row of resultStream) {
+        yield row.row as QueryRecord;
+        index += 1;
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
+          // The rows of a result that fits in one batch arrive with its end.
+          // Once pg-cursor 2.7.3 has that end its state is 'done': no fetch is
+          // in flight and closing it sends nothing, so the client can be reused.
+          drained = query.cursor.state === 'done';
+          query.destroy();
+          return;
+        }
       }
+      drained = true;
+    } finally {
+      // release(), not end(): this client came from pool.connect(), so it goes
+      // back to the pool rather than closing its session. Nothing else returns
+      // it on a throw or an early consumer exit, and a client that is never
+      // released holds one of the pool's `max` slots for good.
+      //
+      // A stream that stopped before its end can leave a fetch in flight on
+      // the client, so it is released with an error, which makes the pool
+      // discard it instead of handing the next caller a client mid-query.
+      detach();
+      client.release(
+        drained
+          ? undefined
+          : new Error('row stream stopped before reading all its rows')
+      );
     }
-    client.release();
   }
 
   async close(): Promise<void> {
