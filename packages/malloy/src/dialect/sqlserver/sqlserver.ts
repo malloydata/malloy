@@ -81,6 +81,8 @@ const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'datetime': {type: 'timestamp'},
   'datetime2': {type: 'timestamp'},
   'smalldatetime': {type: 'timestamp'},
+  // An instant, carrying the offset it was written in
+  'datetimeoffset': {type: 'timestamptz'},
 };
 
 function parseSQLServerType(sqlType: string): {base: string; params: number[]} {
@@ -190,7 +192,9 @@ export class SQLServerDialect extends Dialect {
   // condition is expected, `true` and `false` are (1=1) and (1=0), a `bit`
   // column is an integer, and a cast to boolean is refused.
   booleanType: BooleanTypeSupport = 'none';
-  hasTimestamptz = false;
+  // A datetimeoffset is an instant. Its clock is read at UTC, or in the
+  // query's time zone, never at the offset it was written in.
+  hasTimestamptz = true;
   // A bigint arrives from the driver as text and is read as a JavaScript number
   supportsBigIntPrecision = false;
   maxIdentifierLength = 128;
@@ -233,6 +237,8 @@ export class SQLServerDialect extends Dialect {
         return 'DATE';
       case 'timestamp':
         return 'DATETIME2';
+      case 'timestamptz':
+        return 'DATETIMEOFFSET';
       case 'record':
       case 'array':
         return 'NVARCHAR(MAX)';
@@ -469,6 +475,8 @@ export class SQLServerDialect extends Dialect {
           tz,
           from.e.typeDef
         ).sql;
+      } else if (TD.isTimestamptz(from.e.typeDef)) {
+        extractFrom = this.utcClock(extractFrom ?? '');
       }
     }
     if (from.units === 'day_of_week') {
@@ -491,12 +499,18 @@ export class SQLServerDialect extends Dialect {
       return this.unsupported('a cast to boolean: there are no boolean values');
     }
     const tz = qtz(qi);
-    if (tz && srcTypeDef && dstTypeDef) {
-      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        const civil = this.sqlConvertToCivilTime(expr, tz, srcTypeDef).sql;
-        return `CAST(${civil} AS DATE)`;
+    if (srcTypeDef && dstTypeDef) {
+      // CAST reads a datetimeoffset's clock at its own offset, so a date or a
+      // plain timestamp is taken from its clock at UTC or in the query's zone
+      const readClock = tz !== undefined || TD.isTimestamptz(srcTypeDef);
+      if (readClock && TD.isAnyTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        const civil = this.sqlConvertToCivilTime(expr, tz ?? 'UTC', srcTypeDef);
+        return `CAST(${civil.sql} AS DATE)`;
       }
-      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        return this.sqlConvertToCivilTime(expr, tz ?? 'UTC', srcTypeDef).sql;
+      }
+      if (tz && TD.isDate(srcTypeDef) && TD.isAnyTimestamp(dstTypeDef)) {
         return this.sqlConvertFromCivilTime(
           `CAST(${expr} AS DATETIME2)`,
           tz,
@@ -534,10 +548,14 @@ export class SQLServerDialect extends Dialect {
 
   sqlTimestamptzLiteral(
     _qi: QueryInfo,
-    _literal: string,
-    _timezone: string
+    literal: string,
+    timezone: string
   ): string {
-    throw new Error('SQL Server dialect does not support timestamptz');
+    return this.sqlConvertFromCivilTime(
+      `CAST('${literal}' AS DATETIME2)`,
+      timezone,
+      {type: 'timestamptz'}
+    );
   }
 
   // AT TIME ZONE takes a Windows time zone name
@@ -551,26 +569,53 @@ export class SQLServerDialect extends Dialect {
     return this.sqlLiteralString(windowsName);
   }
 
+  // The UTC clock of an instant, as a datetime2
+  private utcClock(instant: string): string {
+    return `CAST(SWITCHOFFSET(${instant}, 0) AS DATETIME2)`;
+  }
+
+  // The instant a UTC clock names, as a datetimeoffset at +00:00
+  private asInstant(utcClock: string): string {
+    return `CAST(${utcClock} AS DATETIMEOFFSET)`;
+  }
+
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    _typeDef: AtomicTypeDef
+    typeDef: AtomicTypeDef
   ): {sql: string; typeDef: AtomicTypeDef} {
+    const civil: AtomicTypeDef = {type: 'timestamp'};
+    if (TD.isTimestamptz(typeDef)) {
+      if (timezone === 'UTC') {
+        return {sql: this.utcClock(expr), typeDef: civil};
+      }
+      const tz = this.sqlTimezoneLiteral(timezone);
+      return {
+        sql: `CAST((${expr} AT TIME ZONE ${tz}) AS DATETIME2)`,
+        typeDef: civil,
+      };
+    }
     if (timezone === 'UTC') {
-      return {sql: expr, typeDef: {type: 'timestamp'}};
+      return {sql: expr, typeDef: civil};
     }
     const tz = this.sqlTimezoneLiteral(timezone);
     return {
       sql: `CAST((${expr} AT TIME ZONE 'UTC') AT TIME ZONE ${tz} AS DATETIME2)`,
-      typeDef: {type: 'timestamp'},
+      typeDef: civil,
     };
   }
 
   sqlConvertFromCivilTime(
     expr: string,
     timezone: string,
-    _destTypeDef: ATimestampTypeDef
+    destTypeDef: ATimestampTypeDef
   ): string {
+    if (TD.isTimestamptz(destTypeDef)) {
+      if (timezone === 'UTC') {
+        return this.asInstant(expr);
+      }
+      return `(${expr} AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)})`;
+    }
     if (timezone === 'UTC') {
       return expr;
     }
@@ -582,9 +627,20 @@ export class SQLServerDialect extends Dialect {
     expr: string,
     unit: TimestampUnit,
     typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    inCivilTime: boolean,
+    timezone?: string
   ): string {
+    if (TD.isTimestamptz(typeDef)) {
+      const clock = this.utcClock(expr);
+      const utc = this.sqlTruncate(
+        clock,
+        unit,
+        {type: 'timestamp'},
+        inCivilTime,
+        timezone
+      );
+      return this.asInstant(utc);
+    }
     // Truncation is DATEADD of the whole units since an anchor: 1900-01-01
     // for a calendar unit, the value's own midnight for a clock unit, so the
     // count fits an int. SQL Server 2017 has no DATETRUNC.
@@ -616,7 +672,7 @@ export class SQLServerDialect extends Dialect {
     op: '+' | '-',
     magnitude: string,
     unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
+    typeDef: AtomicTypeDef,
     _inCivilTime: boolean,
     _timezone?: string
   ): string {
@@ -625,6 +681,9 @@ export class SQLServerDialect extends Dialect {
       throw new Error(`Unknown SQL Server date part '${unit}'`);
     }
     const n = op === '-' ? `-(${magnitude})` : `(${magnitude})`;
+    if (TD.isTimestamptz(typeDef)) {
+      return this.asInstant(`DATEADD(${part}, ${n}, ${this.utcClock(expr)})`);
+    }
     return `DATEADD(${part}, ${n}, ${expr})`;
   }
 

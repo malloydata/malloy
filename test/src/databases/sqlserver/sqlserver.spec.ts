@@ -363,6 +363,82 @@ describe('SQL Server', () => {
     });
   });
 
+  describe('a datetimeoffset', () => {
+    // 12:34:56 at -05:00 is 17:34:56 UTC; 22:34:56 at -05:00 is 03:34:56 UTC the next day
+    const noon = "CAST('2024-03-20 12:34:56 -05:00' AS DATETIMEOFFSET)";
+    const night = "CAST('2024-03-20 22:34:56 -05:00' AS DATETIMEOFFSET)";
+
+    test('is an instant', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT ${noon} AS t") -> {
+          select: t, utc is t::timestamp
+        }
+      `).toMatchResult(tm, {
+        t: new Date('2024-03-20T17:34:56Z'),
+        utc: new Date('2024-03-20T17:34:56Z'),
+      });
+    });
+
+    test('reads its clock at UTC without a query time zone', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT ${night} AS t") -> {
+          select: h is hour(t), d is t.day, dt is t::date
+        }
+      `).toMatchResult(tm, {
+        h: 3,
+        d: new Date('2024-03-21T00:00:00Z'),
+        dt: '2024-03-21',
+      });
+    });
+
+    test('reads its clock in the query time zone', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT ${noon} AS t") -> {
+          timezone: 'America/Mexico_City'
+          select: h is hour(t), d is t.day, dt is t::date
+        }
+      `).toMatchResult(tm, {
+        h: 11,
+        d: new Date('2024-03-20T06:00:00Z'),
+        dt: '2024-03-20',
+      });
+    });
+
+    test('compares as an instant', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT ${noon} AS t") -> {
+          where: t > @2024-03-20 15:00:00
+          aggregate: n is count()
+        }
+      `).toMatchResult(tm, {n: 1});
+    });
+
+    test('offsets by a calendar unit at UTC', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT CAST('2024-01-30 22:34:56 -05:00' AS DATETIMEOFFSET) AS t") -> {
+          select: next is t + 1 month
+        }
+      `).toMatchResult(tm, {next: new Date('2024-02-29T03:34:56Z')});
+    });
+
+    test('measures between two offsets as instants', async () => {
+      await expect(`
+        run: sqlserver.sql("""
+          SELECT CAST('2024-03-20 12:00:00 +00:00' AS DATETIMEOFFSET) AS a,
+                 CAST('2024-03-20 12:00:00 -05:00' AS DATETIMEOFFSET) AS b
+        """) -> { select: h is hours(a to b) }
+      `).toMatchResult(tm, {h: 5});
+    });
+
+    test('a timestamptz literal is that instant', async () => {
+      await expect(`
+        run: sqlserver.sql("SELECT 1 AS n") -> {
+          select: t is @2024-03-20 12:34:56[America/Chicago]::timestamptz
+        }
+      `).toMatchResult(tm, {t: new Date('2024-03-20T17:34:56Z')});
+    });
+  });
+
   describe('joins', () => {
     test('sums each side of a fan-out once', async () => {
       await expect(`
