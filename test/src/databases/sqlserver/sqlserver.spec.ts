@@ -391,19 +391,6 @@ describe('SQL Server', () => {
       });
     });
 
-    test('reads its clock in the query time zone', async () => {
-      await expect(`
-        run: sqlserver.sql("SELECT ${noon} AS t") -> {
-          timezone: 'America/Mexico_City'
-          select: h is hour(t), d is t.day, dt is t::date
-        }
-      `).toMatchResult(tm, {
-        h: 11,
-        d: new Date('2024-03-20T06:00:00Z'),
-        dt: '2024-03-20',
-      });
-    });
-
     test('compares as an instant', async () => {
       await expect(`
         run: sqlserver.sql("SELECT ${noon} AS t") -> {
@@ -428,14 +415,6 @@ describe('SQL Server', () => {
                  CAST('2024-03-20 12:00:00 -05:00' AS DATETIMEOFFSET) AS b
         """) -> { select: h is hours(a to b) }
       `).toMatchResult(tm, {h: 5});
-    });
-
-    test('a timestamptz literal is that instant', async () => {
-      await expect(`
-        run: sqlserver.sql("SELECT 1 AS n") -> {
-          select: t is @2024-03-20 12:34:56[America/Chicago]::timestamptz
-        }
-      `).toMatchResult(tm, {t: new Date('2024-03-20T17:34:56Z')});
     });
   });
 

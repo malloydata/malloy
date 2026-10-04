@@ -81,7 +81,6 @@ const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'datetime': {type: 'timestamp'},
   'datetime2': {type: 'timestamp'},
   'smalldatetime': {type: 'timestamp'},
-  // An instant, carrying the offset it was written in
   'datetimeoffset': {type: 'timestamptz'},
 };
 
@@ -499,18 +498,21 @@ export class SQLServerDialect extends Dialect {
       return this.unsupported('a cast to boolean: there are no boolean values');
     }
     const tz = qtz(qi);
-    if (srcTypeDef && dstTypeDef) {
-      // CAST reads a datetimeoffset's clock at its own offset, so a date or a
-      // plain timestamp is taken from its clock at UTC or in the query's zone
-      const readClock = tz !== undefined || TD.isTimestamptz(srcTypeDef);
-      if (readClock && TD.isAnyTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        const civil = this.sqlConvertToCivilTime(expr, tz ?? 'UTC', srcTypeDef);
-        return `CAST(${civil.sql} AS DATE)`;
+    if (
+      TD.isTimestamptz(srcTypeDef) &&
+      (TD.isDate(dstTypeDef) || TD.isTimestamp(dstTypeDef))
+    ) {
+      // CAST reads a datetimeoffset's clock at its own offset; Malloy reads
+      // it at UTC or in the query's time zone
+      const civil = this.sqlConvertToCivilTime(expr, tz ?? 'UTC', srcTypeDef);
+      return TD.isDate(dstTypeDef) ? `CAST(${civil.sql} AS DATE)` : civil.sql;
+    }
+    if (tz && srcTypeDef && dstTypeDef) {
+      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        const civil = this.sqlConvertToCivilTime(expr, tz, srcTypeDef).sql;
+        return `CAST(${civil} AS DATE)`;
       }
-      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return this.sqlConvertToCivilTime(expr, tz ?? 'UTC', srcTypeDef).sql;
-      }
-      if (tz && TD.isDate(srcTypeDef) && TD.isAnyTimestamp(dstTypeDef)) {
+      if (TD.isDate(srcTypeDef) && TD.isAnyTimestamp(dstTypeDef)) {
         return this.sqlConvertFromCivilTime(
           `CAST(${expr} AS DATETIME2)`,
           tz,
@@ -569,9 +571,10 @@ export class SQLServerDialect extends Dialect {
     return this.sqlLiteralString(windowsName);
   }
 
-  // The UTC clock of an instant, as a datetime2
-  private utcClock(instant: string): string {
-    return `CAST(SWITCHOFFSET(${instant}, 0) AS DATETIME2)`;
+  // AT TIME ZONE 'UTC' labels a datetime2 as UTC and moves a datetimeoffset
+  // to UTC, so one expression reads the UTC clock of either.
+  private utcClock(expr: string): string {
+    return `CAST((${expr} AT TIME ZONE 'UTC') AS DATETIME2)`;
   }
 
   // The instant a UTC clock names, as a datetimeoffset at +00:00
@@ -585,18 +588,9 @@ export class SQLServerDialect extends Dialect {
     typeDef: AtomicTypeDef
   ): {sql: string; typeDef: AtomicTypeDef} {
     const civil: AtomicTypeDef = {type: 'timestamp'};
-    if (TD.isTimestamptz(typeDef)) {
-      if (timezone === 'UTC') {
-        return {sql: this.utcClock(expr), typeDef: civil};
-      }
-      const tz = this.sqlTimezoneLiteral(timezone);
-      return {
-        sql: `CAST((${expr} AT TIME ZONE ${tz}) AS DATETIME2)`,
-        typeDef: civil,
-      };
-    }
     if (timezone === 'UTC') {
-      return {sql: expr, typeDef: civil};
+      const sql = TD.isTimestamptz(typeDef) ? this.utcClock(expr) : expr;
+      return {sql, typeDef: civil};
     }
     const tz = this.sqlTimezoneLiteral(timezone);
     return {
