@@ -166,3 +166,115 @@ describe('BigQueryConnection authClient', () => {
     );
   });
 });
+
+describe('BigQueryConnection dbmeta', () => {
+  const metadata = {
+    description: 'One row per customer.',
+    schema: {
+      fields: [
+        {name: 'id', type: 'STRING', description: 'Customer identifier.'},
+        {
+          name: 'tags',
+          type: 'STRING',
+          mode: 'REPEATED',
+          description: 'Free-form labels.',
+        },
+        {
+          name: 'flags',
+          type: 'RECORD',
+          description: 'What happened in the period.',
+          fields: [
+            {name: 'churned', type: 'BOOLEAN', description: 'Lost the plan.'},
+            {name: 'renewed', type: 'BOOLEAN'},
+          ],
+        },
+        {name: 'notes', type: 'STRING', description: 'First line.\nSecond.'},
+        {name: 'plain', type: 'INT64'},
+      ],
+    },
+  };
+
+  // A connection whose BigQuery SDK answers the table metadata call with
+  // `metadata`, so fetchTableSchema runs end to end without a warehouse.
+  function connectionWithMetadata(dbmeta?: boolean) {
+    const conn = new BigQueryConnection({
+      name: 'bq',
+      projectId: 'proj',
+      dbmeta,
+    });
+    const getMetadata = jest.fn(async () => [metadata]);
+    (conn as unknown as {bigQuery: unknown}).bigQuery = {
+      projectId: 'proj',
+      dataset: () => ({table: () => ({getMetadata})}),
+    };
+    return conn;
+  }
+
+  async function fetchSchema(dbmeta?: boolean) {
+    const schema = await connectionWithMetadata(dbmeta).fetchTableSchema(
+      'customers',
+      'proj.dataset.customers'
+    );
+    if (typeof schema === 'string') throw new Error(schema);
+    return schema;
+  }
+
+  type Described = {
+    name: string;
+    fields?: Described[];
+    annotations?: {notes?: {text: string}[]};
+  };
+
+  const dbmetaNotes = (entity: Described) =>
+    entity.annotations?.notes?.map(n => n.text);
+  const note = (description: string) =>
+    `#(dbmeta) description = "${description}"\n`;
+
+  const field = (fields: Described[], name: string): Described => {
+    const found = fields.find(f => f.name === name);
+    if (!found) throw new Error(`no field ${name}`);
+    return found;
+  };
+
+  it('attaches column, nested and table descriptions as #(dbmeta)', async () => {
+    const schema = await fetchSchema(true);
+    expect(dbmetaNotes(schema)).toEqual([note('One row per customer.')]);
+    expect(dbmetaNotes(field(schema.fields, 'id'))).toEqual([
+      note('Customer identifier.'),
+    ]);
+    expect(dbmetaNotes(field(schema.fields, 'tags'))).toEqual([
+      note('Free-form labels.'),
+    ]);
+    const flags = field(schema.fields, 'flags');
+    expect(dbmetaNotes(flags)).toEqual([note('What happened in the period.')]);
+    expect(dbmetaNotes(field(flags.fields ?? [], 'churned'))).toEqual([
+      note('Lost the plan.'),
+    ]);
+    expect(dbmetaNotes(field(schema.fields, 'notes'))).toEqual([
+      note('First line.\\nSecond.'),
+    ]);
+  });
+
+  it('leaves fields without a description untouched', async () => {
+    const schema = await fetchSchema(true);
+    expect(field(schema.fields, 'plain')).not.toHaveProperty('annotations');
+    const flags = field(schema.fields, 'flags');
+    expect(field(flags.fields ?? [], 'renewed')).not.toHaveProperty(
+      'annotations'
+    );
+  });
+
+  it.each([undefined, false])(
+    'attaches nothing unless the option is on (%p)',
+    async dbmeta => {
+      const schema = await fetchSchema(dbmeta);
+      expect(JSON.stringify(schema)).not.toContain('annotations');
+    }
+  );
+
+  it('keeps the digest, so persisted tables are not rebuilt', () => {
+    expect(connectionWithMetadata(true).getDigest()).toBe(
+      connectionWithMetadata(false).getDigest()
+    );
+  });
+});

@@ -72,3 +72,42 @@ describe('Annotations API class', () => {
     });
   });
 });
+
+describe('Annotations.documentation', () => {
+  const dbmeta = '#(dbmeta) description = "From the database."\n';
+
+  it('returns doc strings written in the model', () => {
+    const a = new Annotations({notes: [note('#" Written in the model.\n')]});
+    expect(a.documentation()).toBe('Written in the model.');
+  });
+
+  it('prefers written doc strings over the database description', () => {
+    const a = new Annotations({
+      inherits: {notes: [note(dbmeta)]},
+      notes: [note('#" Written in the model.\n')],
+    });
+    expect(a.documentation()).toBe('Written in the model.');
+  });
+
+  it('falls back to the database description', () => {
+    const a = new Annotations({notes: [note(dbmeta)]});
+    expect(a.documentation()).toBe('From the database.');
+  });
+
+  it('joins several doc strings in order', () => {
+    const a = new Annotations({
+      inherits: {notes: [note('#" From the base.\n')]},
+      notes: [note('#" From the extension.\n')],
+    });
+    expect(a.documentation()).toBe('From the base.\nFrom the extension.');
+  });
+
+  it('ignores other routes, and is undefined with nothing to show', () => {
+    expect(
+      new Annotations({
+        notes: [note('# bar_chart\n'), note('#(doc) x\n')],
+      }).documentation()
+    ).toBeUndefined();
+    expect(new Annotations(undefined).documentation()).toBeUndefined();
+  });
+});

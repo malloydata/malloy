@@ -5,7 +5,7 @@
 
 export {BigQueryConnection} from './bigquery_connection';
 
-import {registerConnectionType} from '@malloydata/malloy';
+import {dbmetaProperty, registerConnectionType} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {BigQueryConnection} from './bigquery_connection';
 
@@ -98,6 +98,7 @@ registerConnectionType('bigquery', {
       optional: true,
       advanced: true,
     },
+    dbmetaProperty,
     {
       name: 'setupSQL',
       displayName: 'Setup SQL',

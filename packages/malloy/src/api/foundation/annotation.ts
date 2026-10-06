@@ -9,6 +9,7 @@ import type {AnnotationsDef, Note, DocumentLocation} from '../../model';
 import {notesInOrder} from '../../model/annotation_utils';
 import type {LogMessage} from '../../lang';
 import {parsePrefix} from '../../lang/annotation-prefix';
+import {DBMETA_ROUTE} from '../../connection/dbmeta';
 
 /**
  * @deprecated Argument shape for the deprecated RegExp form of
@@ -223,6 +224,24 @@ export class Annotations {
   /** Parse a route's annotations as a MOTLY tag. Default `''` is the tag route. */
   parseAsTag(route = ''): MalloyTagParse {
     return annotationToTag(this.annote, route);
+  }
+
+  /**
+   * The documentation for the entity: its doc strings (`#"`), or, when it has
+   * none, the description its connection read from the database
+   * (`#(dbmeta) description`). One rule for every tool that shows
+   * documentation, so text written in a model always wins. `undefined` when
+   * there is neither.
+   */
+  documentation(): string | undefined {
+    const written = this.forRoute('"')
+      .map(note => note.content.trim())
+      .filter(text => text !== '');
+    if (written.length > 0) return written.join('\n');
+    const fromDatabase = this.parseAsTag(DBMETA_ROUTE)
+      .tag.text('description')
+      ?.trim();
+    return fromDatabase || undefined;
   }
 }
 
