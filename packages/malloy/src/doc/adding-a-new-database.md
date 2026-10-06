@@ -11,7 +11,7 @@ packages/malloy/src/dialect/{name}/     ← Dialect (SQL generation)
 packages/malloy-db-{name}/             ← Connection (database communication)
 .github/workflows/db-{name}.yaml       ← CI workflow
 test/src/runtimes.ts                    ← Test runtime registration
-test/{name}/                            ← Data loader, diagnostics
+test/{name}/                            ← Data loader, container start/stop scripts
 ```
 
 ## Step 1: Implement the Dialect
@@ -57,7 +57,7 @@ Create `packages/malloy-db-{name}/`. See [connection CONTEXT.md](../connection/C
 
 ### Files to create
 
-1. **`package.json`** — Depend on `@malloydata/malloy` and your database's client SDK.
+1. **`package.json`** — Depend on `@malloydata/malloy` and your database's client SDK. Copy the `repository` field and the `test` script from another `malloy-db-*` package: publishing requires the first, and the second checks that the database is reachable before it runs the package's tests.
 2. **`tsconfig.json`** — Reference `../malloy` as a project dependency.
 3. **`src/index.ts`** — Self-register via `registerConnectionType()` with a `displayName`, `factory`, and `properties` array describing config fields (host, token, etc.).
 4. **`src/{name}_connection.ts`** — Extend `BaseConnection`. Implement `runSQL()`, `fetchTableSchema()`, `fetchSelectSchema()`, and `close()`.
@@ -67,6 +67,9 @@ Create `packages/malloy-db-{name}/`. See [connection CONTEXT.md](../connection/C
 
 - Add to `packages/malloy-connections/` (`package.json`, `src/index.ts`, `tsconfig.json`)
 - Add to root `package.json` workspaces, root `tsconfig.json` references, and `jest.config.ts`
+- Add a line for your database to the remedy map in `scripts/check_dialect_connection.ts`, which the package's `test` script calls
+
+The root `workspaces` entry is what publishes the package: the next release sends every workspace package to npm. A package name npm has never seen must be created there, and given a trusted publisher, by a maintainer before that release. Say in your PR that it adds a published package. See [workflows CONTEXT.md](../../../../.github/workflows/CONTEXT.md).
 
 ### Implementation notes
 
@@ -88,20 +91,35 @@ Cloud warehouses can't read local files via SQL, so you'll need an upload mechan
 
 `aircraft`, `aircraft_models`, `airports`, `alltypes`, `carriers`, `flights`, `state_facts`, `ga_sample` — all in a `malloytest` schema.
 
+A database that runs in a container gets `test/{name}/{name}_start.sh` and `{name}_stop.sh`. Start creates the container and loads the tables, so one command gives anyone a working test database, and CI runs the same script.
+
 ### Runtime configuration
 
 Add a case for your database in `test/src/runtimes.ts` that creates a connection from environment variables.
 
 ## Step 4: Set Up CI
 
-Create `.github/workflows/db-{name}.yaml` following existing workflows:
-- `workflow_call` trigger (invoked from `run-tests.yaml`) with secrets
-- `workflow_dispatch` for manual runs
-- Steps: checkout, setup Node, `npm ci`, `npm run build`, `npm run ci-{name}`
+A dialect that ships as a published package has CI coverage of the parts it claims work. How much, and which tests, is decided per dialect.
 
-In `run-tests.yaml`, add a job that calls your workflow. If it uses secrets, add `needs: check-permission`. Add it to the `malloy-tests` needs list so the gate job waits for it.
+Depending on the state of the experimental dialect, it may be necessary for the dialect to be published
+before it is complete. Here's how we handled this for SQL Server, so that we could catch any breakages
+of known working pieces of the dialect, while making progress towards full support. This maybe isn't the
+only way to solve this problem, and if this doesn't work for the next experimental dialect, we will
+have to figure something else out.
 
-Add a `ci-{name}` npm script in the root `package.json`.
+Add two npm scripts to the root `package.json`:
+- `ci-{name}` runs the shared suite and your connection's tests: the `db-all` and `db-{name}` jest projects with `MALLOY_DATABASE={name}`
+- `ci-{name}-smoketest` runs a subset of the full tests, maybe the `db-{name}` project alone
+
+While the dialect is experimental, CI runs the smoke test, and it must stay green. `ci-{name}` is the inventory of what the dialect can't do yet: run it by hand and expect failures, which shrink as features land (Step 5).
+
+Create `.github/workflows/db-{name}.yaml` by copying an existing one: `db-postgres.yaml` for a database that runs in a container, `db-snowflake.yaml` for one reached with a credential.
+- `workflow_call` trigger, declaring any secrets it needs, and `permissions: {}`
+- Steps: download and unpack the `workspace` artifact, set up Node, start or load the database, `npm run ci-{name}-smoketest`
+
+In `run-tests.yaml`, add a job that calls your workflow with `needs: pull_and_build`, and add it to the `malloy-tests` needs list so the gate job waits for it. A job that receives secrets also needs `check-permission`. [workflows CONTEXT.md](../../../../.github/workflows/CONTEXT.md) is the authority on what a CI job may do and why.
+
+A pull request from a fork runs the workflow files on `main`, not its own, so the new job does not appear in that PR's checks. A maintainer runs it before merging.
 
 ## Step 5: Iterate on Test Failures
 
@@ -127,7 +145,7 @@ Useful capability flags for gating tests:
 
 ## Moving from Experimental to Fully Supported
 
-When your dialect passes the full test suite, remove `experimental = true` and add a `db-{name}.yaml` workflow:
+When `ci-{name}` passes, remove `experimental = true` and switch the workflow from `ci-{name}-smoketest` to `ci-{name}`:
 - Users won't need `##! experimental.dialect.{name}` in their model files
 - CI will run the complete test suite against your dialect
 - The Malloy team will maintain your dialect as part of ongoing refactors
