@@ -233,11 +233,10 @@ export class MySQLConnection
 
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
 
-    const client = await this.getClient();
-    await client.query(
+    await this.query(
       `CREATE TEMPORARY TABLE ${tempTableName} AS (${sqlRef.selectStr});`
     );
-    const [results, _fields] = await client.query(`DESCRIBE ${tempTableName};`);
+    const [results, _fields] = await this.query(`DESCRIBE ${tempTableName};`);
 
     // console.log(results); // results contains rows returned by server
     // console.log(fields); // fields contains extra meta data about results, if available
@@ -265,10 +264,8 @@ export class MySQLConnection
     _options?: RunSQLOptions
   ): Promise<MalloyQueryData> {
     // TODO: what are options here?
-    const client = await this.getClient();
-
     try {
-      const [results, _fields] = await client.query(sql);
+      const [results, _fields] = await this.query(sql);
 
       // console.log(results); // results contains rows returned by server
       // console.log(fields); // fields contains extra meta data about results, if available
@@ -277,7 +274,33 @@ export class MySQLConnection
 
       return {rows, totalRows: rows.length};
     } catch (e) {
-      throw new Error(e);
+      // Same message as before, with the driver's error kept as `cause` so a
+      // caller can read its `code`, `errno`, `sqlState` and `fatal`.
+      throw Object.assign(new Error(e), {cause: e});
+    }
+  }
+
+  /**
+   * Run one statement on the cached client.
+   *
+   * A fatal error means the server closed this connection, and mysql2 never
+   * reopens one: every later statement on it fails with "Can't add new command
+   * when connection is in closed state". Drop it, so the next statement
+   * connects again. The failing statement is not retried, because it may
+   * already have run.
+   */
+  private async query(sql: string) {
+    const client = await this.getClient();
+    try {
+      return await client.query(sql);
+    } catch (e) {
+      if (
+        (e as {fatal?: unknown})?.fatal === true &&
+        this.connection === client
+      ) {
+        this.connection = undefined;
+      }
+      throw e;
     }
   }
 

@@ -24,6 +24,30 @@ describeMySQL('db:MySQL', () => {
     expect(res.rows[0]['t']).toBe(1);
   });
 
+  it('connects again after the server closes the connection', async () => {
+    const victim = new MySQLConnection('victim', config, {});
+    try {
+      const before = await victim.runSQL('SELECT CONNECTION_ID() AS id');
+      await connection.runSQL(`KILL ${before.rows[0]['id']}`);
+
+      // The statement that finds the connection closed still fails, and its
+      // error keeps the driver's own as `cause`.
+      const failure = await victim.runSQL('SELECT 1 AS t').then(
+        () => undefined,
+        (e: unknown) => e
+      );
+      expect(failure).toBeInstanceOf(Error);
+      expect((failure as {cause?: {fatal?: boolean}}).cause?.fatal).toBe(true);
+
+      // The next one gets a new connection instead of "Can't add new command
+      // when connection is in closed state".
+      const after = await victim.runSQL('SELECT 1 AS t');
+      expect(after.rows[0]['t']).toBe(1);
+    } finally {
+      await victim.close();
+    }
+  });
+
   it('fetches schema for SQL block', async () => {
     const res = await connection.fetchSchemaForSQLStruct(
       {
