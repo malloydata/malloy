@@ -90,7 +90,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
     if (from && from.type !== 'index' && from.type !== 'raw') {
-      if (!this.limit && from.orderBy && !from.defaultOrderBy) {
+      if (!this.order && from.orderBy && !from.defaultOrderBy) {
         to.orderBy = from.orderBy;
       }
       if (!this.limit && from.limit) {
