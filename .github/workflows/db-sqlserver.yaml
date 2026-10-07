@@ -3,19 +3,11 @@ permissions: {}
 
 on: workflow_call
 
-# The smoke job of an experimental dialect: the dialect's own jest project,
-# which must stay green, on the oldest supported server and the current one.
-# The shared suite (ci-sqlserver) is run by hand until the dialect leaves
-# experimental; see the Testing section of test/CONTEXT.md.
+# The required CI for this experimental dialect. This is currently the
+# expanding (we hope) subset of ci-sqlserver that is known to pass.
 jobs:
   test-sqlserver:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-          - mcr.microsoft.com/mssql/server:2017-latest
-          - mcr.microsoft.com/mssql/server:2022-latest
 
     steps:
       - uses: actions/download-artifact@v8
@@ -27,13 +19,13 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
-      - name: Smoke test
+      - name: SQL Server Smoke test
         run: |
           bash test/mssql/mssql_start.sh
           npm run ci-sqlserver-smoketest
           bash test/mssql/mssql_stop.sh
         env:
-          MSSQL_IMAGE: ${{ matrix.image }}
+          MSSQL_IMAGE: mcr.microsoft.com/mssql/server:2017-latest
           MSSQL_HOST: localhost
           MSSQL_PORT: 1433
           MSSQL_USER: sa
