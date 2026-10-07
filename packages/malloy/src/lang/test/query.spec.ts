@@ -1316,6 +1316,81 @@ describe('query:', () => {
           expect(reduce.orderBy).toEqual([{field: 'astr', dir: 'asc'}]);
         }
       });
+      // `x + y` is computed one of two ways, chosen by how y is written.
+      // Inline y (`x + { ... }`) runs through a query builder: y's statements
+      // run as if written inside x, and on a conflicting limit or order_by,
+      // y wins. Named y (`x + w`) merges two finished segments in refine():
+      // a conflicting limit or order_by is an error, so combining named
+      // views does not depend on their order. A named view must have fields,
+      // so a bare limit or order_by can only be written inline.
+      //
+      // A segment's orderBy is either written by the author or computed by
+      // the translator, marked defaultOrderBy. Both paths must carry a
+      // written ordering through, and recompute a computed one for the merged
+      // fields.
+      test.skip('named refinement recomputes the default ordering', () => {
+        const m = model`
+          source: aa is a extend {
+            view: g is { group_by: astr }
+            view: c is { aggregate: c is count() }
+          }
+          run: aa -> g + c`;
+        expect(m).toTranslate();
+        const seg = m.translator.getQuery(0)!.pipeline[0];
+        expect(seg).toMatchObject({
+          orderBy: [{field: 'c', dir: 'desc'}],
+          defaultOrderBy: true,
+        });
+      });
+      describe('refinement keeps a written ordering', () => {
+        const src = `
+          source: aa is a extend {
+            view: by_t2 is {
+              group_by: astr
+              aggregate: t1 is ai.sum(), t2 is af.sum()
+              order_by: t2 desc
+            }
+            view: sel is { select: astr, ai; order_by: ai desc }
+            view: unordered is { group_by: astr; aggregate: t1 is ai.sum() }
+            view: t2_asc is { aggregate: t2 is af.sum(); order_by: t2 asc }
+            view: combo is unordered + t2_asc
+          }
+        `;
+        function firstSegment(query: string) {
+          const m = model`${src} ${query}`;
+          expect(m).toTranslate();
+          return m.translator.getQuery(0)!.pipeline[0];
+        }
+        const t2Desc = [{field: 't2', dir: 'desc'}];
+        const t2Asc = [{field: 't2', dir: 'asc'}];
+
+        test('inline limit', () => {
+          const seg = firstSegment('run: aa -> by_t2 + { limit: 5 }');
+          expect(seg).toMatchObject({orderBy: t2Desc, limit: 5});
+          expect(seg).not.toHaveProperty('defaultOrderBy');
+        });
+        // select: never computes a default, so losing the ordering here
+        // means no ORDER BY at all.
+        test('inline limit on a select view', () => {
+          const seg = firstSegment('run: aa -> sel + { limit: 5 }');
+          expect(seg).toMatchObject({
+            orderBy: [{field: 'ai', dir: 'desc'}],
+            limit: 5,
+          });
+        });
+        test('named view ordering replacing a default is explicit', () => {
+          const seg = firstSegment('run: aa -> combo');
+          expect(seg).toMatchObject({orderBy: t2Asc});
+          expect(seg).not.toHaveProperty('defaultOrderBy');
+        });
+        // If combo's written ordering were still marked as computed, this
+        // refinement would replace it with a recomputed default.
+        test('inline refinement of a named-view refinement', () => {
+          const seg = firstSegment('run: aa -> combo + { where: astr = "x" }');
+          expect(seg).toMatchObject({orderBy: t2Asc});
+          expect(seg).not.toHaveProperty('defaultOrderBy');
+        });
+      });
     });
     test('order by multiple', () => {
       expect(`
