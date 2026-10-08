@@ -303,33 +303,43 @@ function getResultMetadataAnnotation(
 }
 
 function addDrillFiltersTag(tag: Tag, drillFilters: FilterCondition[]) {
-  for (let i = 0; i < drillFilters.length; i++) {
-    const filter = drillFilters[i];
+  // `out` is a running OUTPUT index, deliberately not the source index. Source
+  // and aggregate conditions are skipped, and one condition can fan out into
+  // several stable filters (`a and b`), so indexing by source position would
+  // leave holes — and a hole reads back as a filter with no expression, which
+  // makes the whole drill unstable.
+  let out = 0;
+  for (const filter of drillFilters) {
     if (filter.expressionType !== 'scalar' || filter.isSourceFilter) continue;
-    tag.set(['drill_filters', i, 'code'], filter.code);
     if (filter.filterView) {
-      tag.set(['drill_filters', i, 'filter_view'], filter.filterView);
+      tag.set(['drill_filters', out, 'code'], filter.code);
+      tag.set(['drill_filters', out, 'filter_view'], filter.filterView);
+      out++;
+      continue;
     }
-    if (filter.filterView === undefined && filter.stableFilter !== undefined) {
+    const stableFilters = filter.stableFilters ?? [];
+    if (stableFilters.length === 0) {
+      // No stable form. Emit the raw code so the lenient reader still has
+      // something; the strict reader treats this as undrillable.
+      tag.set(['drill_filters', out, 'code'], filter.code);
+      out++;
+      continue;
+    }
+    for (const stable of stableFilters) {
+      tag.set(['drill_filters', out, 'code'], filter.code);
       writeExpressionToTag(
         tag,
-        ['drill_filters', i, 'expression'],
-        filter.stableFilter.expression
+        ['drill_filters', out, 'expression'],
+        stable.expression
       );
-      if (filter.stableFilter.kind === 'filter_string') {
-        tag.set(['drill_filters', i, 'kind'], 'filter_expression');
-        tag.set(
-          ['drill_filters', i, 'filter_expression'],
-          filter.stableFilter.filter
-        );
+      if (stable.kind === 'filter_string') {
+        tag.set(['drill_filters', out, 'kind'], 'filter_expression');
+        tag.set(['drill_filters', out, 'filter_expression'], stable.filter);
       } else {
-        tag.set(['drill_filters', i, 'kind'], 'literal_equality');
-        writeLiteralToTag(
-          tag,
-          ['drill_filters', i, 'value'],
-          filter.stableFilter.value
-        );
+        tag.set(['drill_filters', out, 'kind'], 'literal_equality');
+        writeLiteralToTag(tag, ['drill_filters', out, 'value'], stable.value);
       }
+      out++;
     }
   }
 }
