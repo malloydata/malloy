@@ -257,6 +257,12 @@ export type {
   JsonConfigValue,
   ManagedConnectionLookup,
 } from './connection/registry';
+export {
+  DBMETA_ROUTE,
+  dbmetaProperty,
+  dbmetaAnnotations,
+} from './connection/dbmeta';
+export type {DbMeta} from './connection/dbmeta';
 export {toAsyncGenerator} from './connection_utils';
 export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
 export * as API from './api';

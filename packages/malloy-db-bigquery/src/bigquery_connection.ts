@@ -43,6 +43,7 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
+  dbmetaAnnotations,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -129,6 +130,7 @@ interface BigQueryConnectionConfiguration {
   credentials?: CredentialBody | {[key: string]: ConnectionParameterValue};
   authClient?: AuthClient;
   setupSQL?: string;
+  dbmeta?: boolean;
 }
 
 interface BigQueryConnectionOptions extends ConnectionConfig {
@@ -152,6 +154,8 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   client_email?: string;
   private_key?: string;
   setupSQL?: string;
+  /** Copy table and column descriptions onto the schema as #(dbmeta) annotations. */
+  dbmeta?: boolean;
 }
 
 type JsonObject = {[key: string]: ConnectionParameterValue};
@@ -268,6 +272,7 @@ function toBigQueryLabels(
 
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
+  description?: string | null;
   needsTableSuffixPseudoColumn: boolean;
   needsPartitionTimePseudoColumn: boolean;
   needsPartitionDatePseudoColumn: boolean;
@@ -569,6 +574,8 @@ export class BigQueryConnection
 
   private authIdentity: string | undefined;
 
+  private dbmeta: boolean;
+
   constructor(
     option: BigQueryConnectionOptions,
     queryOptions?: QueryOptionsReader
@@ -637,6 +644,7 @@ export class BigQueryConnection
     this.config = config;
     this.location = config.location;
     this.setupSQL = config.setupSQL;
+    this.dbmeta = config.dbmeta === true;
   }
 
   get dialectName(): string {
@@ -848,6 +856,7 @@ export class BigQueryConnection
       const [metadata] = await metadataPromise;
       return {
         schema: metadata.schema,
+        description: metadata.description,
         needsTableSuffixPseudoColumn: needTableSuffixPseudoColumn,
         needsPartitionTimePseudoColumn:
           metadata.timePartitioning?.type !== undefined &&
@@ -984,12 +993,18 @@ export class BigQueryConnection
       const name = field.name as string;
 
       const isRecord = ['STRUCT', 'RECORD'].includes(type);
-      const structShared = {name, dialect: this.dialectName, fields: []};
+      const meta = this.dbmetaFor(field.description);
+      const structShared = {
+        name,
+        dialect: this.dialectName,
+        fields: [],
+        ...meta,
+      };
       if (field.mode === 'REPEATED' && !isRecord) {
         // Malloy treats repeated values as an array of scalars.
         const malloyType = this.dialect.sqlTypeToMalloyType(type);
         if (malloyType) {
-          structDef.fields.push(mkArrayDef(malloyType, name));
+          structDef.fields.push({...mkArrayDef(malloyType, name), ...meta});
         }
       } else if (isRecord) {
         const ifRepeatedRecord: StructDef = {
@@ -1012,9 +1027,13 @@ export class BigQueryConnection
           type: 'sql native',
           rawType: type.toLowerCase(),
         };
-        structDef.fields.push({name, ...malloyType});
+        structDef.fields.push({name, ...malloyType, ...meta});
       }
     }
+  }
+
+  private dbmetaFor(description: string | null | undefined) {
+    return this.dbmeta ? dbmetaAnnotations({description}) : {};
   }
 
   async fetchSelectSchema(
@@ -1077,6 +1096,7 @@ export class BigQueryConnection
         tablePath: this.qualifyTablePath(tablePath),
         connection: this.name,
         fields: [],
+        ...this.dbmetaFor(tableFieldSchema.description),
       };
       this.addFieldsToStructDef(tableDef, tableFieldSchema.schema);
       if (tableFieldSchema.needsTableSuffixPseudoColumn) {
