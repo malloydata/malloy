@@ -200,7 +200,7 @@ All backends support `setupSQL` (text) — SQL statements run when the connectio
 
 A backend that can read table and column descriptions (comments) from the
 database may copy them onto the schema it returns, as a `#(dbmeta)`
-annotation: `#(dbmeta) description = "..."`. The backend writes it when it
+annotation: `#(dbmeta) description="..."`. The backend writes it when it
 reads the schema; it never appears in a model file. The pieces are shared so
 the option means the same thing everywhere:
 
@@ -209,13 +209,13 @@ the option means the same thing everywhere:
   covers tables and columns.
 - When it is on, spread `dbmetaAnnotations({description})` into each field
   def (records and arrays included) and into the table's `TableSourceDef`.
-  It returns `undefined` when there is nothing to say, and serializes with
-  `Tag`, so quotes and line breaks survive.
+  It returns `{annotations}`, or `{}` when there is nothing to say, and quotes
+  the text with `quoteString` from `@malloydata/malloy-tag`, so it reads back
+  exactly.
 - Keys are normalized: whatever the database calls it (a description, a
   `COMMENT`), it is `description` here.
-- Doc strings written in the model stay alongside. `Annotations.documentation()`
-  is the one precedence rule for tools that show documentation: written
-  `#"` doc strings, else the `#(dbmeta)` description.
+- Doc strings written in the model (`#"`) stay alongside; how to combine
+  them with `#(dbmeta)` is up to the application reading the annotations.
 - Metadata never changes query results: keep the option out of `getDigest()`.
 
 Only BigQuery implements it today (the table metadata it already fetches

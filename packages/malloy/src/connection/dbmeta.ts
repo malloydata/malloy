@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {Tag} from '@malloydata/malloy-tag';
+import {quoteString} from '@malloydata/malloy-tag';
 import type {AnnotationsDef, DocumentLocation} from '../model/malloy_types';
 import type {ConnectionPropertyDefinition} from './registry';
 
@@ -45,18 +45,15 @@ export interface DbMeta {
 }
 
 /**
- * The `#(dbmeta)` annotation for a table or column, or `undefined` when there
- * is nothing to say, so callers can spread the result unconditionally.
+ * The `#(dbmeta)` annotation for a table or column, as a fragment to spread
+ * into its field or table def: `{annotations}`, or `{}` when there is nothing
+ * to say.
  */
-export function dbmetaAnnotations(meta: DbMeta): AnnotationsDef | undefined {
-  const description = meta.description?.replace(/\r\n/g, '\n').trim();
-  if (!description) return undefined;
-  const text = Tag.withPrefix(`#(${DBMETA_ROUTE}) `)
-    .set(['description'], description)
-    .toString();
-  return {
-    notes: [
-      {text: text.endsWith('\n') ? text : `${text}\n`, at: DBMETA_LOCATION},
-    ],
-  };
+export function dbmetaAnnotations(meta: DbMeta): {
+  annotations?: AnnotationsDef;
+} {
+  const description = meta.description?.trim();
+  if (!description) return {};
+  const text = `#(${DBMETA_ROUTE}) description=${quoteString(description)}\n`;
+  return {annotations: {notes: [{text, at: DBMETA_LOCATION}]}};
 }

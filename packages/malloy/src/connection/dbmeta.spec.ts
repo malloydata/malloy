@@ -7,38 +7,43 @@ import {Annotations} from '../api/foundation/annotation';
 import {DBMETA_ROUTE, dbmetaAnnotations, dbmetaProperty} from './dbmeta';
 
 const descriptionOf = (description: string) =>
-  new Annotations(dbmetaAnnotations({description}))
+  new Annotations(dbmetaAnnotations({description}).annotations)
     .parseAsTag(DBMETA_ROUTE)
     .tag.text('description');
 
 describe('dbmetaAnnotations', () => {
-  it('writes the description on the dbmeta route', () => {
-    expect(
-      dbmetaAnnotations({description: 'Customer identifier.'})?.notes?.map(
-        n => n.text
-      )
-    ).toEqual(['#(dbmeta) description = "Customer identifier."\n']);
+  it('returns a fragment to spread, with the description on the dbmeta route', () => {
+    expect(dbmetaAnnotations({description: 'Customer identifier.'})).toEqual({
+      annotations: {
+        notes: [
+          {
+            text: '#(dbmeta) description="Customer identifier."\n',
+            at: expect.anything(),
+          },
+        ],
+      },
+    });
   });
 
   it.each([
     'Customer identifier.',
     'Uses "active" status.',
     'First line.\nSecond line.',
+    'Windows line.\r\nEnding.',
+    'Lone\rreturn.',
     'A backslash \\ and a `backtick`.',
   ])('reads %p back exactly', description => {
     expect(descriptionOf(description)).toBe(description);
   });
 
-  it('normalizes CRLF and trims surrounding whitespace', () => {
-    expect(descriptionOf('  First line.\r\nSecond line.\n')).toBe(
-      'First line.\nSecond line.'
-    );
+  it('trims surrounding whitespace', () => {
+    expect(descriptionOf('  Padded.\n')).toBe('Padded.');
   });
 
   it.each([undefined, null, '', '   \n '])(
-    'returns nothing for a missing or blank description (%p)',
+    'returns an empty fragment for a missing or blank description (%p)',
     description => {
-      expect(dbmetaAnnotations({description})).toBeUndefined();
+      expect(dbmetaAnnotations({description})).toEqual({});
     }
   );
 });

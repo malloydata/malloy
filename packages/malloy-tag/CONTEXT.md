@@ -164,3 +164,5 @@ tag.has('name');            // true
 tag.text('server', 'host');
 tag.tag('server');          // returns a nested Tag
 ```
+
+`quoteString(str)` returns `str` as a MOTLY double-quoted string literal, always quoted, with backslash, double quote, newline and carriage return escaped. Use it to write annotation text without building a `Tag`; `Tag.toString()` uses it for every string value it quotes.

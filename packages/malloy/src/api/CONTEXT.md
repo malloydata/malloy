@@ -139,7 +139,6 @@ model.annotations.parseAsTag()           // empty route — renderer tags
 field.annotations.parseAsTag('docs')     // route `docs`, parsed as MOTLY
 field.annotations.texts('!')             // raw strings on the `!` route
 field.annotations.forRoute('vite')       // text + source offsets, BYO parser
-field.annotations.documentation()        // `#"` doc strings, else the `#(dbmeta)` description
 ```
 
 `.annotations` sees both single-line and multi-line annotations and routes

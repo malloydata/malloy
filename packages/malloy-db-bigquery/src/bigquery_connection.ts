@@ -1032,12 +1032,8 @@ export class BigQueryConnection
     }
   }
 
-  private dbmetaFor(
-    description: string | null | undefined
-  ): Pick<TableSourceDef, 'annotations'> {
-    if (!this.dbmeta) return {};
-    const annotations = dbmetaAnnotations({description});
-    return annotations ? {annotations} : {};
+  private dbmetaFor(description: string | null | undefined) {
+    return this.dbmeta ? dbmetaAnnotations({description}) : {};
   }
 
   async fetchSelectSchema(
@@ -1100,9 +1096,9 @@ export class BigQueryConnection
         tablePath: this.qualifyTablePath(tablePath),
         connection: this.name,
         fields: [],
+        ...this.dbmetaFor(tableFieldSchema.description),
       };
       this.addFieldsToStructDef(tableDef, tableFieldSchema.schema);
-      Object.assign(tableDef, this.dbmetaFor(tableFieldSchema.description));
       if (tableFieldSchema.needsTableSuffixPseudoColumn) {
         tableDef.fields.push({
           type: 'string',

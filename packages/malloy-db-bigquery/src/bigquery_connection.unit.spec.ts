@@ -228,7 +228,7 @@ describe('BigQueryConnection dbmeta', () => {
   const dbmetaNotes = (entity: Described) =>
     entity.annotations?.notes?.map(n => n.text);
   const note = (description: string) =>
-    `#(dbmeta) description = "${description}"\n`;
+    `#(dbmeta) description="${description}"\n`;
 
   const field = (fields: Described[], name: string): Described => {
     const found = fields.find(f => f.name === name);
