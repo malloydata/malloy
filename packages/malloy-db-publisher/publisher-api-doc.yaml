@@ -8,7 +8,7 @@ info:
 
     ## Key Features
 
-    - **Project Management**: Create and manage projects with their associated packages and connections
+    - **Environment Management**: Create and manage environments with their associated packages and connections
     - **Package Lifecycle**: Full CRUD operations for Malloy packages and their versions
     - **Model & Notebook Access**: Retrieve and execute Malloy models and notebooks
     - **Connection Management**: Secure database connection configuration and testing
@@ -19,7 +19,7 @@ info:
 
     The API follows a hierarchical resource structure:
     ```
-    Projects
+    Environments
     ├── Connections
     └── Packages
         ├── Models
@@ -37,9 +37,9 @@ servers:
 tags:
   - name: publisher
     description: Publisher status and health check operations
-  - name: projects
-    description: Project lifecycle management including creation, configuration, and
-      deletion of data modeling projects
+  - name: environments
+    description: Environment lifecycle management including creation, configuration,
+      and deletion of data modeling environments
   - name: connections
     description: Database connection management for secure data source configuration
       and access
@@ -68,7 +68,7 @@ paths:
       summary: Get server status and health information
       description: |
         Returns the current status of the Malloy Publisher server, including initialization state,
-        available projects, and server timestamp. This endpoint is useful for health checks and
+        available environments, and server timestamp. This endpoint is useful for health checks and
         monitoring server availability.
       responses:
         "200":
@@ -79,26 +79,25 @@ paths:
                 $ref: "#/components/schemas/ServerStatus"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
-
-  /projects:
+  /environments:
     get:
       tags:
-        - projects
-      operationId: list-projects
-      summary: List all available projects
+        - environments
+      operationId: list-environments
+      summary: List all available environments
       description: |
-        Retrieves a list of all projects currently hosted on this Malloy Publisher server.
-        Each project contains metadata about its packages, connections, and configuration.
-        This endpoint is typically used to discover available projects and their basic information.
+        Retrieves a list of all environments currently hosted on this Malloy Publisher server.
+        Each environment contains metadata about its packages, connections, and configuration.
+        This endpoint is typically used to discover available environments and their basic information.
       responses:
         "200":
-          description: A list of all available projects
+          description: A list of all available environments
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Project"
+                  $ref: "#/components/schemas/Environment"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -107,26 +106,26 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
     post:
       tags:
-        - projects
-      operationId: create-project
-      summary: Create a new project
+        - environments
+      operationId: create-environment
+      summary: Create a new environment
       description: |
-        Creates a new Malloy project with the specified configuration. A project serves as a
-        container for packages, connections, and other resources. The project will be initialized
+        Creates a new Malloy environment with the specified configuration. An environment serves as a
+        container for packages, connections, and other resources. The environment will be initialized
         with the provided metadata and can immediately accept packages and connections.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Project"
+              $ref: "#/components/schemas/Environment"
       responses:
         "200":
-          description: Returns the project created
+          description: Returns the environment created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Project"
+                $ref: "#/components/schemas/Environment"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -134,36 +133,36 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}:
+  /environments/{environmentName}:
     get:
       tags:
-        - projects
-      operationId: get-project
-      summary: Get project details and metadata
+        - environments
+      operationId: get-environment
+      summary: Get environment details and metadata
       description: |
-        Retrieves detailed information about a specific project, including its packages,
+        Retrieves detailed information about a specific environment, including its packages,
         connections, configuration, and metadata. The reload parameter can be used to
-        refresh the project state from disk before returning the information.
+        refresh the environment state from disk before returning the information.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
         - name: reload
           in: query
-          description: Load / reload the project before returning result
+          description: Load / reload the environment before returning result
           required: false
           schema:
             type: boolean
       responses:
         "200":
-          description: Project details and metadata
+          description: Environment details and metadata
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Project"
+                $ref: "#/components/schemas/Environment"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -174,17 +173,17 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
     patch:
       tags:
-        - projects
-      operationId: update-project
-      summary: Update project configuration
+        - environments
+      operationId: update-environment
+      summary: Update environment configuration
       description: |
-        Updates the configuration and metadata of an existing project. This allows you to
-        modify project settings, update the README, change the location, or update other
-        project-level properties. The project must exist and be accessible.
+        Updates the configuration and metadata of an existing environment. This allows you to
+        modify environment settings, update the README, change the location, or update other
+        environment-level properties. The environment must exist and be accessible.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -193,14 +192,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Project"
+              $ref: "#/components/schemas/Environment"
       responses:
         "200":
-          description: Returns the project updated
+          description: Returns the environment updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Project"
+                $ref: "#/components/schemas/Environment"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -209,27 +208,27 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
     delete:
       tags:
-        - projects
-      operationId: delete-project
-      summary: Delete a project
+        - environments
+      operationId: delete-environment
+      summary: Delete an environment
       description: |
-        Permanently deletes a project and all its associated resources including packages,
+        Permanently deletes an environment and all its associated resources including packages,
         connections, and metadata. This operation cannot be undone, so use with caution.
-        The project must exist and be accessible for deletion.
+        The environment must exist and be accessible for deletion.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
       responses:
         "200":
-          description: Returns the project deleted
+          description: Returns the environment deleted
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Project"
+                $ref: "#/components/schemas/Environment"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -239,26 +238,26 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/connections:
+  /environments/{environmentName}/connections:
     get:
       tags:
         - connections
       operationId: list-connections
-      summary: List project database connections
+      summary: List environment database connections
       description: |
-        Retrieves a list of all database connections configured for the specified project.
+        Retrieves a list of all database connections configured for the specified environment.
         Each connection includes its configuration, type, and status information. This endpoint
-        is useful for discovering available data sources within a project.
+        is useful for discovering available data sources within an environment.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
       responses:
         "200":
-          description: A list of database connections in the project
+          description: A list of database connections in the environment
           content:
             application/json:
               schema:
@@ -272,20 +271,20 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/connections/{connectionName}:
+  /environments/{environmentName}/connections/{connectionName}:
     get:
       tags:
         - connections
       operationId: get-connection
       summary: Get connection details
       description: |
-        Retrieves detailed information about a specific database connection within a project.
+        Retrieves detailed information about a specific database connection within an environment.
         This includes connection configuration, credentials (if accessible), and metadata.
         Useful for inspecting connection settings and troubleshooting connectivity issues.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -316,11 +315,11 @@ paths:
       operationId: create-connection
       summary: Create a new database connection
       description: |
-        Creates a new database connection in the specified project.
+        Creates a new database connection in the specified environment.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -373,9 +372,9 @@ paths:
       description: |
         Updates the configuration of an existing database connection.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -406,6 +405,8 @@ paths:
                   $ref: "#/components/schemas/MotherDuckConnection"
                 trinoConnection:
                   $ref: "#/components/schemas/TrinoConnection"
+                databricksConnection:
+                  $ref: "#/components/schemas/DatabricksConnection"
                 ducklakeConnection:
                   $ref: "#/components/schemas/DucklakeConnection"
       responses:
@@ -434,11 +435,11 @@ paths:
       operationId: delete-connection
       summary: Delete a database connection
       description: |
-        Permanently deletes a database connection from the project.
+        Permanently deletes a database connection from the environment.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -467,7 +468,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/connections/{connectionName}/schemas:
+  /environments/{environmentName}/connections/{connectionName}/schemas:
     get:
       tags:
         - connections
@@ -478,9 +479,9 @@ paths:
         Each schema includes metadata such as name, description, and whether it's the default schema.
         This endpoint is useful for exploring the database structure and discovering available data sources.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -508,7 +509,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/connections/{connectionName}/schemas/{schemaName}/tables:
+  /environments/{environmentName}/connections/{connectionName}/schemas/{schemaName}/tables:
     get:
       tags:
         - connections
@@ -519,9 +520,9 @@ paths:
         This endpoint is useful for discovering available data sources and exploring the database
         structure. The schema must exist in the connection for this operation to succeed.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -565,7 +566,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/connections/{connectionName}/schemas/{schemaName}/tables/{tablePath}:
+  /environments/{environmentName}/connections/{connectionName}/schemas/{schemaName}/tables/{tablePath}:
     get:
       tags:
         - connections
@@ -577,9 +578,9 @@ paths:
         structure. The schema must exist in the connection for this operation to succeed.
         The tablePath is the full path to the table, including the schema name.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -618,7 +619,7 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
 
   # TODO: Remove this endpoint.
-  /projects/{projectName}/connections/{connectionName}/sqlSource:
+  /environments/{environmentName}/connections/{connectionName}/sqlSource:
     get:
       tags:
         - connections
@@ -632,9 +633,9 @@ paths:
         Creates a Malloy source from a SQL statement using the specified connection.
         The SQL statement is executed to generate a source definition that can be used in Malloy models.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -675,9 +676,9 @@ paths:
         Creates a Malloy source from a SQL statement using the specified database connection.
         The SQL statement is executed to generate a source definition that can be used in Malloy models.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -713,7 +714,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/connections/{connectionName}/sqlQuery:
+  /environments/{environmentName}/connections/{connectionName}/sqlQuery:
     post:
       tags:
         - connections
@@ -722,10 +723,17 @@ paths:
       description: |
         Executes a SQL statement against the specified database connection and returns the results.
         The results include data, metadata, and execution information.
+
+        Rows returned are capped at PUBLISHER_MAX_QUERY_ROWS (default 100,000).
+        The cap is forwarded to the connector as a rowLimit on RunSQLOptions;
+        queries that return more rows than the cap fail with HTTP 413 rather
+        than serializing the response. Set PUBLISHER_MAX_QUERY_ROWS=0 to
+        disable the cap. A caller-supplied rowLimit smaller than the cap is
+        preserved; larger values are clamped down to cap+1.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -735,6 +743,13 @@ paths:
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
+        - name: options
+          in: query
+          description: Options (deprecated; pass in body instead)
+          deprecated: true
+          required: false
+          schema:
+            type: string
       requestBody:
         description: SQL statement to execute
         required: true
@@ -759,12 +774,16 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalServerError"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
 
-  /projects/{projectName}/connections/{connectionName}/sqlTemporaryTable:
+  /environments/{environmentName}/connections/{connectionName}/sqlTemporaryTable:
     post:
       tags:
         - connections
@@ -774,9 +793,9 @@ paths:
         Creates a temporary table from a SQL statement using the specified database connection.
         Temporary tables are useful for storing intermediate results during complex queries and data processing workflows.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -813,7 +832,7 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
 
   # TODO: Remove this endpoint.
-  /projects/{projectName}/connections/{connectionName}/temporaryTable:
+  /environments/{environmentName}/connections/{connectionName}/temporaryTable:
     get:
       tags:
         - connections
@@ -827,9 +846,9 @@ paths:
         Creates a temporary table from a SQL statement using the specified connection.
         Temporary tables are useful for storing intermediate results during complex queries.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -861,24 +880,213 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  # TODO: Remove this endpoint.
-  /projects/{projectName}/connections/{connectionName}/queryData:
+  # NOTE: The GET …/connections/{connectionName}/queryData endpoint
+  # was removed alongside the operational-guards changes. Use the
+  # POST …/sqlQuery endpoint above instead — it accepts the SQL in
+  # the request body and obeys the row, byte, and timeout caps from
+  # the OOM-mitigation work.
+
+  # ──────────────────────────────────────────────────────────────────
+  # Per-package connection data routes.
+  #
+  # `duckdb` is a per-package connection (each package has its own
+  # `:memory:` DuckDB rooted at the package's path), so any data-plane
+  # call against `connectionName="duckdb"` needs a package context.
+  # Non-`duckdb` names resolve through the package's MalloyConfig
+  # wrapper, which delegates to the environment's connection registry, so
+  # the same routes also work for environment-level connections looked up
+  # in a package context.
+  # ──────────────────────────────────────────────────────────────────
+
+  /environments/{environmentName}/packages/{packageName}/connections/{connectionName}/schemas:
     get:
       tags:
         - connections
-      operationId: get-querydata
-      deprecated: true
-      summary: Execute SQL query (deprecated)
+      operationId: list-schemas-in-package
+      summary: List database schemas (per-package)
       description: |
-        **DEPRECATED**: This endpoint is deprecated and may be removed in future versions.
-        Use the POST version instead for better security and functionality.
-
-        Executes a SQL statement against the specified database connection and returns the results.
-        The query results include data, metadata, and execution information.
+        Retrieves a list of all schemas (databases) available in the specified
+        connection, resolved in the context of the named package. Required for
+        `connectionName="duckdb"`, which is per-package; works for any other
+        connection name as well (resolution falls through to the environment).
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: packageName
+          in: path
+          description: Name of the package whose connection context to use
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: connectionName
+          in: path
+          description: Name of the connection
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+      responses:
+        "200":
+          description: A list of schemas available in the connection with metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Schema"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /environments/{environmentName}/packages/{packageName}/connections/{connectionName}/schemas/{schemaName}/tables:
+    get:
+      tags:
+        - connections
+      operationId: list-tables-in-package
+      summary: List tables in database (per-package)
+      description: |
+        Retrieves a list of all tables and views available in the specified
+        database schema, resolved in the context of the named package.
+      parameters:
+        - name: environmentName
+          in: path
+          description: Name of the environment
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: packageName
+          in: path
+          description: Name of the package whose connection context to use
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: connectionName
+          in: path
+          description: Name of the connection
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: schemaName
+          in: path
+          description: Name of the schema
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: tableNames
+          in: query
+          description: |
+            List of table names to filter results. When provided, only returns metadata
+            for the specified tables. When omitted, returns all tables in the schema.
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        "200":
+          description: A list of table names available in the specified schema
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Table"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /environments/{environmentName}/packages/{packageName}/connections/{connectionName}/schemas/{schemaName}/tables/{tablePath}:
+    get:
+      tags:
+        - connections
+      operationId: get-table-in-package
+      summary: Get table details from database (per-package)
+      description: |
+        Retrieves a table from the specified database schema, resolved in
+        the context of the named package.
+      parameters:
+        - name: environmentName
+          in: path
+          description: Name of the environment
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: packageName
+          in: path
+          description: Name of the package whose connection context to use
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: connectionName
+          in: path
+          description: Name of the connection
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: schemaName
+          in: path
+          description: Name of the schema
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: tablePath
+          in: path
+          description: Full path to the table
+          required: true
+          schema:
+            $ref: "#/components/schemas/PathPattern"
+      responses:
+        "200":
+          description: Table information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Table"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  # TODO: Remove the GET (deprecated) form once clients migrate.
+  /environments/{environmentName}/packages/{packageName}/connections/{connectionName}/sqlSource:
+    get:
+      tags:
+        - connections
+      operationId: get-sqlsource-in-package
+      deprecated: true
+      summary: Get SQL source (per-package, deprecated)
+      description: |
+        **DEPRECATED**: Use the POST version instead.
+
+        Creates a Malloy source from a SQL statement using the specified
+        connection, resolved in the context of the named package.
+      parameters:
+        - name: environmentName
+          in: path
+          description: Name of the environment
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: packageName
+          in: path
+          description: Name of the package whose connection context to use
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -894,12 +1102,126 @@ paths:
           required: false
           schema:
             type: string
+      responses:
+        "200":
+          description: SQL source information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SqlSource"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+    post:
+      tags:
+        - connections
+      operationId: post-sqlsource-in-package
+      summary: Create SQL source from statement (per-package)
+      description: |
+        Creates a Malloy source from a SQL statement using the specified
+        connection, resolved in the context of the named package.
+      parameters:
+        - name: environmentName
+          in: path
+          description: Name of the environment
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: packageName
+          in: path
+          description: Name of the package whose connection context to use
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: connectionName
+          in: path
+          description: Name of the connection
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+      requestBody:
+        description: SQL statement to fetch the SQL source
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sqlStatement:
+                  type: string
+      responses:
+        "200":
+          description: SQL source information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SqlSource"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /environments/{environmentName}/packages/{packageName}/connections/{connectionName}/sqlQuery:
+    post:
+      tags:
+        - connections
+      operationId: post-querydata-in-package
+      summary: Execute SQL query (per-package)
+      description: |
+        Executes a SQL statement against the specified database connection,
+        resolved in the context of the named package, and returns the results.
+
+        Subject to the same PUBLISHER_MAX_QUERY_ROWS row cap as the
+        environment-level sqlQuery endpoint.
+      parameters:
+        - name: environmentName
+          in: path
+          description: Name of the environment
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: packageName
+          in: path
+          description: Name of the package whose connection context to use
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: connectionName
+          in: path
+          description: Name of the connection
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
         - name: options
           in: query
-          description: Options
+          description: Options (deprecated; pass in body instead)
+          deprecated: true
           required: false
           schema:
             type: string
+      requestBody:
+        description: SQL statement to execute
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sqlStatement:
+                  type: string
+                options:
+                  type: string
+                  description: Options
       responses:
         "200":
           description: Query execution results
@@ -911,29 +1233,147 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
 
-  /projects/{projectName}/packages:
+  /environments/{environmentName}/packages/{packageName}/connections/{connectionName}/sqlTemporaryTable:
+    post:
+      tags:
+        - connections
+      operationId: post-temporarytable-in-package
+      summary: Create temporary table (per-package)
+      description: |
+        Creates a temporary table from a SQL statement using the specified
+        database connection, resolved in the context of the named package.
+      parameters:
+        - name: environmentName
+          in: path
+          description: Name of the environment
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: packageName
+          in: path
+          description: Name of the package whose connection context to use
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: connectionName
+          in: path
+          description: Name of the connection
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+      requestBody:
+        description: SQL statement to create the temporary table
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sqlStatement:
+                  type: string
+      responses:
+        "200":
+          description: Temporary table information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemporaryTable"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  # TODO: Remove this endpoint.
+  /environments/{environmentName}/packages/{packageName}/connections/{connectionName}/temporaryTable:
+    get:
+      tags:
+        - connections
+      operationId: get-temporarytable-in-package
+      deprecated: true
+      summary: Create temporary table (per-package, deprecated)
+      description: |
+        **DEPRECATED**: Use the POST version instead.
+
+        Creates a temporary table from a SQL statement using the specified
+        connection, resolved in the context of the named package.
+      parameters:
+        - name: environmentName
+          in: path
+          description: Name of the environment
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: packageName
+          in: path
+          description: Name of the package whose connection context to use
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: connectionName
+          in: path
+          description: Name of the connection
+          required: true
+          schema:
+            $ref: "#/components/schemas/IdentifierPattern"
+        - name: sqlStatement
+          in: query
+          description: SQL statement
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Temporary table information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemporaryTable"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  # NOTE: The GET …/packages/{packageName}/connections/{connectionName}/queryData
+  # endpoint was removed alongside the operational-guards changes.
+  # Use the matching POST …/sqlQuery endpoint instead.
+
+  /environments/{environmentName}/packages:
     get:
       tags:
         - packages
       operationId: list-packages
-      summary: List project packages
+      summary: List environment packages
       description: |
-        Retrieves a list of all Malloy packages within the specified project. Each package
+        Retrieves a list of all Malloy packages within the specified environment. Each package
         contains models, notebooks, databases, and other resources. This endpoint is useful
         for discovering available packages and their basic metadata.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
       responses:
         "200":
-          description: A list of all packages in the project
+          description: A list of all packages in the environment
           content:
             application/json:
               schema:
@@ -954,13 +1394,13 @@ paths:
       operationId: create-package
       summary: Create a new package
       description: |
-        Creates a new Malloy package within the specified project. A package serves as a
+        Creates a new Malloy package within the specified environment. A package serves as a
         container for models, notebooks, embedded databases, and other resources. The package
         will be initialized with the provided metadata and can immediately accept content.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -996,7 +1436,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/packages/{packageName}:
+  /environments/{environmentName}/packages/{packageName}:
     get:
       tags:
         - packages
@@ -1008,9 +1448,9 @@ paths:
         from disk before returning the information. The versionId parameter allows access to
         specific package versions.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1059,9 +1499,9 @@ paths:
         modify package settings, update the description, change the location, or update other
         package-level properties. The package must exist and be accessible.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1104,9 +1544,9 @@ paths:
         notebooks, databases, and metadata. This operation cannot be undone, so use with caution.
         The package must exist and be accessible for deletion.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1134,7 +1574,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/packages/{packageName}/models:
+  /environments/{environmentName}/packages/{packageName}/models:
     get:
       tags:
         - models
@@ -1145,9 +1585,9 @@ paths:
         includes the relative path, package name, and any compilation errors. This endpoint
         is useful for discovering available models and checking their status.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1183,7 +1623,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/packages/{packageName}/models/{path}:
+  /environments/{environmentName}/packages/{packageName}/models/{path}:
     get:
       tags:
         - models
@@ -1194,9 +1634,9 @@ paths:
         The model is compiled using the specified version of the Malloy compiler. This endpoint
         provides access to the model's structure, sources, and named queries for use in applications.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1236,7 +1676,7 @@ paths:
         "501":
           $ref: "#/components/responses/NotImplemented"
 
-  /projects/{projectName}/packages/{packageName}/models/{path}/query:
+  /environments/{environmentName}/packages/{packageName}/models/{path}/query:
     post:
       tags:
         - models
@@ -1248,9 +1688,9 @@ paths:
         supports both ad-hoc queries and predefined model queries, making it flexible for various
         use cases including data exploration, reporting, and application integration.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1285,14 +1725,18 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalServerError"
         "501":
           $ref: "#/components/responses/NotImplemented"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
 
-  /projects/{projectName}/packages/{packageName}/models/{path}/compile:
+  /environments/{environmentName}/packages/{packageName}/models/{path}/compile:
     post:
       tags:
         - models
@@ -1305,9 +1749,9 @@ paths:
         Relative imports resolve correctly against sibling model files.
         Returns compilation status and any problems (errors or warnings) found.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1346,7 +1790,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/packages/{packageName}/notebooks:
+  /environments/{environmentName}/packages/{packageName}/notebooks:
     get:
       tags:
         - notebooks
@@ -1357,9 +1801,9 @@ paths:
         includes the relative path, package name, and any compilation errors. This endpoint
         is useful for discovering available notebooks and checking their status.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1395,7 +1839,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/packages/{packageName}/notebooks/{path}:
+  /environments/{environmentName}/packages/{packageName}/notebooks/{path}:
     get:
       tags:
         - notebooks
@@ -1405,9 +1849,9 @@ paths:
         Retrieves a Malloy notebook with its raw cell contents (markdown and code).
         Cell execution should be done separately via the execute-notebook-cell endpoint.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1445,7 +1889,7 @@ paths:
         "501":
           $ref: "#/components/responses/NotImplemented"
 
-  /projects/{projectName}/packages/{packageName}/notebooks/{path}/cells/{cellIndex}:
+  /environments/{environmentName}/packages/{packageName}/notebooks/{path}/cells/{cellIndex}:
     get:
       tags:
         - notebooks
@@ -1456,9 +1900,9 @@ paths:
         and runs the Malloy code, returning query results and any new sources defined.
         For markdown cells, this simply returns the cell content.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1488,19 +1932,36 @@ paths:
             $ref: "#/components/schemas/VersionIdPattern"
         - name: filter_params
           in: query
-          description: JSON-encoded filter parameter values keyed by filter name
+          deprecated: true
+          description: |
+            **DEPRECATED**: Use `givens` (native Malloy runtime parameters) instead.
+            Targets the deprecated `#(filter)` annotation path. See docs/givens.md
+            for migration recipes.
+
+            JSON-encoded filter parameter values keyed by filter name.
           required: false
           schema:
             type: string
         - name: bypass_filters
           in: query
-          description: When true, skip filter injection entirely
+          deprecated: true
+          description: |
+            **DEPRECATED**: Use `givens` (native Malloy runtime parameters) instead.
+            See docs/givens.md for migration recipes.
+
+            When true, skip filter injection entirely.
           required: false
           schema:
             type: string
             enum:
               - "true"
               - "false"
+        - name: givens
+          in: query
+          description: JSON-encoded given values keyed by given name
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: Cell execution result
@@ -1514,14 +1975,18 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalServerError"
         "501":
           $ref: "#/components/responses/NotImplemented"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
 
-  /projects/{projectName}/packages/{packageName}/databases:
+  /environments/{environmentName}/packages/{packageName}/databases:
     get:
       tags:
         - databases
@@ -1532,9 +1997,9 @@ paths:
         DuckDB databases stored as .parquet files that provide local data storage for the package.
         Each database entry includes metadata about the database structure and content.
       parameters:
-        - name: projectName
+        - name: environmentName
           in: path
-          description: Name of the project
+          description: Name of the environment
           required: true
           schema:
             $ref: "#/components/schemas/IdentifierPattern"
@@ -1577,9 +2042,9 @@ paths:
       operationId: test-connection-configuration
       summary: Test database connection configuration
       description: |
-        Validates a database connection configuration without adding it to any project.
+        Validates a database connection configuration without adding it to any environment.
         This endpoint allows you to test connection parameters, credentials, and network
-        connectivity before committing the connection to a project. Useful for troubleshooting
+        connectivity before committing the connection to an environment. Useful for troubleshooting
         connection issues and validating configurations during setup.
       requestBody:
         required: true
@@ -1613,7 +2078,7 @@ paths:
       summary: Get watch mode status
       description: |
         Retrieves the current status of the file watching system. This includes whether watch mode
-        is enabled, which project is being watched, and the path being monitored. Useful for
+        is enabled, which environment is being watched, and the path being monitored. Useful for
         monitoring the development workflow and ensuring file changes are being detected.
       responses:
         "200":
@@ -1636,9 +2101,9 @@ paths:
       operationId: start-watching
       summary: Start file watching
       description: |
-        Initiates file watching for the specified project. This enables real-time monitoring of
-        file changes within the project directory, allowing for automatic reloading and updates
-        during development. Only one project can be watched at a time.
+        Initiates file watching for the specified environment. This enables real-time monitoring of
+        file changes within the environment directory, allowing for automatic reloading and updates
+        during development. Only one environment can be watched at a time.
       requestBody:
         required: true
         content:
@@ -1664,7 +2129,7 @@ paths:
       description: |
         Stops the current file watching session. This disables real-time monitoring of file changes
         and releases system resources. Use this when development is complete or when switching
-        to a different project.
+        to a different environment.
       responses:
         "200":
           description: Watch mode stopped successfully.
@@ -1675,7 +2140,7 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /projects/{projectName}/packages/{packageName}/materializations:
+  /environments/{environmentName}/packages/{packageName}/materializations:
     post:
       tags:
         - materializations
@@ -1685,7 +2150,7 @@ paths:
         Creates a new materialization in PENDING state for all persist sources across all
         models in the package. Use POST .../materializations/{materializationId}?action=start to begin execution.
       parameters:
-        - $ref: "#/components/parameters/projectName"
+        - $ref: "#/components/parameters/environmentName"
         - $ref: "#/components/parameters/packageName"
       requestBody:
         content:
@@ -1715,7 +2180,7 @@ paths:
       description: Returns the materialization history for the package, ordered by
         most recent first.
       parameters:
-        - $ref: "#/components/parameters/projectName"
+        - $ref: "#/components/parameters/environmentName"
         - $ref: "#/components/parameters/packageName"
         - name: limit
           in: query
@@ -1743,14 +2208,14 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /projects/{projectName}/packages/{packageName}/materializations/{materializationId}:
+  /environments/{environmentName}/packages/{packageName}/materializations/{materializationId}:
     get:
       tags:
         - materializations
       operationId: get-materialization
       summary: Get a specific materialization
       parameters:
-        - $ref: "#/components/parameters/projectName"
+        - $ref: "#/components/parameters/environmentName"
         - $ref: "#/components/parameters/packageName"
         - $ref: "#/components/parameters/materializationId"
       responses:
@@ -1773,7 +2238,7 @@ paths:
           * `start` - Transitions a PENDING materialization to RUNNING and begins execution in the background. Returns 202.
           * `stop` - Cancels a PENDING or RUNNING materialization. Returns 200.
       parameters:
-        - $ref: "#/components/parameters/projectName"
+        - $ref: "#/components/parameters/environmentName"
         - $ref: "#/components/parameters/packageName"
         - $ref: "#/components/parameters/materializationId"
         - name: action
@@ -1816,7 +2281,7 @@ paths:
       description: Deletes a terminal (SUCCESS, FAILED, or CANCELLED) materialization
         record.
       parameters:
-        - $ref: "#/components/parameters/projectName"
+        - $ref: "#/components/parameters/environmentName"
         - $ref: "#/components/parameters/packageName"
         - $ref: "#/components/parameters/materializationId"
       responses:
@@ -1831,7 +2296,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /projects/{projectName}/packages/{packageName}/manifest:
+  /environments/{environmentName}/packages/{packageName}/manifest:
     get:
       tags:
         - manifests
@@ -1841,7 +2306,7 @@ paths:
         Returns the current build manifest containing buildId-to-tableName mappings
         for all materialized sources in the package.
       parameters:
-        - $ref: "#/components/parameters/projectName"
+        - $ref: "#/components/parameters/environmentName"
         - $ref: "#/components/parameters/packageName"
       responses:
         "200":
@@ -1867,7 +2332,7 @@ paths:
             workers that did not themselves run the build; the endpoint does
             not write anything *into* storage.
       parameters:
-        - $ref: "#/components/parameters/projectName"
+        - $ref: "#/components/parameters/environmentName"
         - $ref: "#/components/parameters/packageName"
         - name: action
           in: query
@@ -1935,8 +2400,48 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
     ServiceUnavailable:
-      description: The service is temporarily unavailable, typically due to
-        initialization, or draining state (Rolling updates, etc.)
+      description: |
+        The service is temporarily unable to accept the request. Possible
+        causes:
+          * Initialization or draining state (rolling updates, graceful
+            shutdown).
+          * Memory back-pressure — the publisher's RSS crossed the
+            high-water mark derived from PUBLISHER_MAX_MEMORY_BYTES and
+            PUBLISHER_MEMORY_HIGH_WATER_FRACTION, so new queries are
+            rejected until RSS drops below the low-water mark
+            (PUBLISHER_MEMORY_LOW_WATER_FRACTION).
+          * Per-pod query concurrency cap reached — PUBLISHER_MAX_CONCURRENT_QUERIES
+            in-flight queries are already running on this pod.
+        Clients should retry with backoff; under sustained pressure, scale
+        out, raise PUBLISHER_MAX_MEMORY_BYTES / PUBLISHER_MAX_CONCURRENT_QUERIES,
+        or refine the offending queries.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    PayloadTooLarge:
+      description: |
+        The request was well-formed but the response exceeds a server-side
+        size cap. Two caps can fire:
+          * PUBLISHER_MAX_QUERY_ROWS (default 100000) — too many rows.
+          * PUBLISHER_MAX_RESPONSE_BYTES (default 50 MB) — JSON-serialized
+            response too large.
+        The error message identifies which cap fired. Refine the query (add
+        a LIMIT, more selective WHERE, project fewer columns) or raise the
+        relevant cap; retrying without changes will not succeed. The
+        per-cap rejection counter is exported as
+        publisher_query_cap_exceeded_total{cap_type, source}.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    GatewayTimeout:
+      description: |
+        The query exceeded the per-request wall-clock budget
+        (PUBLISHER_QUERY_TIMEOUT_MS) and was aborted server-side.
+        Refine the query (add a more selective WHERE, lower LIMIT,
+        simplify joins) or raise the timeout. Retrying without
+        changes is unlikely to succeed.
       content:
         application/json:
           schema:
@@ -1965,11 +2470,11 @@ components:
         timestamp:
           type: number
           description: Unix timestamp of the status check
-        projects:
+        environments:
           type: array
-          description: List of available projects
+          description: List of available environments
           items:
-            $ref: "#/components/schemas/Project"
+            $ref: "#/components/schemas/Environment"
         initialized:
           type: boolean
           description: Whether the server is fully initialized and ready to serve requests
@@ -1977,7 +2482,7 @@ components:
           type: string
           enum: [ "initializing", "serving", "draining" ]
           description: Status of the server; initializing when the server is loading
-            projects, packages and connections, serving when the server is
+            environments, packages and connections, serving when the server is
             initialized and ready to serve requests, and draining when the
             server is going to shut down
         frozenConfig:
@@ -1985,32 +2490,32 @@ components:
           description: Whether the server configuration is frozen (read-only mode). When
             true, all mutation operations are disabled.
 
-    Project:
+    Environment:
       type: object
-      description: Represents a Malloy project containing packages, connections, and
-        other resources
+      description: Represents a Malloy environment containing packages, connections,
+        and other resources
       properties:
         resource:
           type: string
-          description: Resource path to the project
+          description: Resource path to the environment
         name:
           type: string
-          description: Project name
+          description: Environment name
         readme:
           type: string
-          description: Project README content
+          description: Environment README content
         location:
           type: string
-          description: Project location, can be an absolute path or URI (e.g. github, s3,
-            gcs, etc.)
+          description: Environment location, can be an absolute path or URI (e.g. github,
+            s3, gcs, etc.)
         connections:
           type: array
-          description: List of database connections configured for this project
+          description: List of database connections configured for this environment
           items:
             $ref: "#/components/schemas/Connection"
         packages:
           type: array
-          description: List of Malloy packages in this project
+          description: List of Malloy packages in this environment
           items:
             $ref: "#/components/schemas/Package"
         materializationStorage:
@@ -2147,6 +2652,12 @@ components:
           description: Sources defined in this model
           items:
             $ref: "#/components/schemas/Source"
+        givens:
+          type: array
+          description: Givens (runtime parameters) declared on this model via the
+            `given:` keyword
+          items:
+            $ref: "#/components/schemas/Given"
 
     View:
       type: object
@@ -2179,7 +2690,12 @@ components:
 
     Filter:
       type: object
-      description: A filter declared via #(filter) annotation on a Malloy source
+      deprecated: true
+      description: |
+        **DEPRECATED**: Use the `Given` schema (native Malloy runtime parameters)
+        instead. See docs/givens.md for migration recipes.
+
+        A filter declared via #(filter) annotation on a Malloy source.
       properties:
         name:
           type: string
@@ -2207,6 +2723,33 @@ components:
           description: Malloy data type of the dimension (e.g. string, number, boolean,
             date, timestamp)
 
+    Given:
+      type: object
+      description: A given (runtime parameter) declared on a Malloy model via the
+        `given:` keyword. Surfaced on `CompiledModel.givens` and `Source.givens`
+        so callers can introspect what runtime values a model accepts.
+      properties:
+        name:
+          type: string
+          description: Name as declared in the model
+        type:
+          type: string
+          description: Rendered Malloy type for the given (e.g. string, number,
+            boolean, date, timestamp, filter<string>)
+        annotations:
+          type: array
+          description: Annotations attached to the given declaration
+          items:
+            type: string
+
+    Givens:
+      type: object
+      description: Per-query given values that override model defaults. Keys are
+        given names declared in the model's `given:` block. Values must match
+        the declared type (string, number, boolean, date, etc.). See Malloy
+        givens documentation for accepted value shapes.
+      additionalProperties: true
+
     Source:
       type: object
       description: A Malloy source defined in a model
@@ -2229,6 +2772,14 @@ components:
           description: Filters declared on this source via #(filter) annotations
           items:
             $ref: "#/components/schemas/Filter"
+        givens:
+          type: array
+          description: Model-level givens (runtime parameters) available to queries
+            on this source. Identical to `CompiledModel.givens`; repeated here
+            for SDK ergonomics so consumers iterating sources can render inputs
+            without a second lookup.
+          items:
+            $ref: "#/components/schemas/Given"
 
     QueryRequest:
       type: object
@@ -2258,18 +2809,27 @@ components:
           description: Version ID
         filterParams:
           type: object
-          description: Filter parameter values keyed by filter name. Used with sources
-            that declare #(filter) annotations.
-          additionalProperties:
-            oneOf:
-              - type: string
-              - type: array
-                items:
-                  type: string
+          deprecated: true
+          description: |
+            **DEPRECATED**: Use `givens` (native Malloy runtime parameters) instead.
+            Targets the deprecated `#(filter)` annotation path. See docs/givens.md
+            for migration recipes.
+
+            Filter parameter values keyed by filter name. Used with sources that
+            declare `#(filter)` annotations. Each value is either a string or an
+            array of strings.
+          additionalProperties: true
         bypassFilters:
           type: boolean
           default: false
-          description: When true, skip server-side #(filter) injection entirely.
+          deprecated: true
+          description: |
+            **DEPRECATED**: Use `givens` (native Malloy runtime parameters) instead.
+            See docs/givens.md for migration recipes.
+
+            When true, skip server-side `#(filter)` injection entirely.
+        givens:
+          $ref: "#/components/schemas/Givens"
 
     NotebookCell:
       type: object
@@ -2418,6 +2978,7 @@ components:
               bigquery,
               snowflake,
               trino,
+              databricks,
               mysql,
               duckdb,
               motherduck,
@@ -2433,6 +2994,8 @@ components:
           $ref: "#/components/schemas/SnowflakeConnection"
         trinoConnection:
           $ref: "#/components/schemas/TrinoConnection"
+        databricksConnection:
+          $ref: "#/components/schemas/DatabricksConnection"
         mysqlConnection:
           $ref: "#/components/schemas/MysqlConnection"
         duckdbConnection:
@@ -2697,6 +3260,36 @@ components:
           type: string
           description: Peaka API key for authentication with Peaka-hosted Trino clusters
 
+    DatabricksConnection:
+      type: object
+      description: Databricks SQL warehouse connection configuration
+      properties:
+        host:
+          type: string
+          description: Databricks workspace host (e.g.
+            dbc-xxxxxxxx-xxxx.cloud.databricks.com)
+        path:
+          type: string
+          description: SQL warehouse HTTP path (e.g. /sql/1.0/warehouses/<warehouse-id>)
+        token:
+          type: string
+          description: Personal access token for authentication
+        oauthClientId:
+          type: string
+          description: OAuth M2M client ID (service principal)
+        oauthClientSecret:
+          type: string
+          description: OAuth M2M client secret (service principal)
+        defaultCatalog:
+          type: string
+          description: Default Unity Catalog to use for queries
+        defaultSchema:
+          type: string
+          description: Default schema to use for queries
+        setupSQL:
+          type: string
+          description: SQL statements to run when the connection is established
+
     MotherDuckConnection:
       type: object
       description: MotherDuck database connection configuration
@@ -2710,7 +3303,13 @@ components:
 
     DuckdbConnection:
       type: object
-      description: DuckDB database connection configuration
+      description: >
+        DuckDB database connection configuration. Publisher intentionally
+        exposes only data-source intent here. Database files, working
+        directories, filesystem/network policy, extension loading, setup SQL,
+        temp directories, and resource knobs are owned by Publisher so
+        environment configs cannot widen deployment policy through low-level
+        DuckDB settings.
       properties:
         attachedDatabases:
           type: array
@@ -2854,27 +3453,27 @@ components:
         enabled:
           type: boolean
           description: Whether file watching is currently active
-        projectName:
+        environmentName:
           type: string
-          description: Name of the project being watched for file changes
+          description: Name of the environment being watched for file changes
         watchingPath:
           type: string
           description: The file system path being monitored for changes, null if not
             watching
       required:
         - enabled
-        - projectName
+        - environmentName
         - watchingPath
 
     StartWatchRequest:
       type: object
-      description: Request to start file watching for a project
+      description: Request to start file watching for an environment
       properties:
-        projectName:
+        environmentName:
           type: string
-          description: Name of the project to start watching for file changes
+          description: Name of the environment to start watching for file changes
       required:
-        - projectName
+        - environmentName
 
     ConnectionStatus:
       type: object
@@ -2901,6 +3500,8 @@ components:
           description: If true, returns the generated SQL alongside compilation results
             (only available when compilation succeeds and the source contains a
             runnable query).
+        givens:
+          $ref: "#/components/schemas/Givens"
       required:
         - source
 
@@ -2969,7 +3570,7 @@ components:
       properties:
         id:
           type: string
-        projectId:
+        environmentId:
           type: string
         packageName:
           type: string
@@ -3018,11 +3619,11 @@ components:
           description: Name of the materialized table
 
   parameters:
-    projectName:
-      name: projectName
+    environmentName:
+      name: environmentName
       in: path
       required: true
-      description: Name of the project
+      description: Name of the environment
       schema:
         type: string
     packageName:
