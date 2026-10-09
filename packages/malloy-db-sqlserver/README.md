@@ -68,7 +68,6 @@ Each of these is a later change, not a promise.
 | A `timezone:` name absent from the CLDR table | Compile error rather than a located one |
 | `greatest`, `least`, `ltrim`/`rtrim` with a character set | Server error before SQL Server 2022, which has `GREATEST`, `LEAST` and the two-argument `LTRIM`/`RTRIM` |
 | `string_agg_distinct`, `byte_length` | Server error: `STRING_AGG` has no `DISTINCT`; a UTF-8 byte count needs the UTF-8 collations of SQL Server 2019 |
-| `datetimeoffset` columns | `sql native`; reading one as a timestamp with its offset is a later change |
 | Materialized tables, `#@ persist`, the search index | Not available: the connection is read-only |
 | NULL ordering | SQL Server's default, NULL first in ascending order; other dialects sort NULL last |
 
@@ -79,6 +78,7 @@ Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `
 ## How the dialect reads the server
 
 - A `datetime`, `datetime2` or `smalldatetime` is a Malloy timestamp read as UTC. A query's `timezone:` is converted with `AT TIME ZONE` through the Windows name of the zone, whose daylight-saving history differs from IANA's for older dates.
+- A `datetimeoffset` is a Malloy `timestamptz`, an instant. Its clock is read at UTC, or in the query's `timezone:`, not at the offset the value was written in, so `t.day` is the same for `12:34:56 -05:00` as for `17:34:56 +00:00`.
 - Every string literal is written `N'...'`, so text outside the database's code page compares as itself.
 - The default collation compares case-insensitively; Malloy does not change that.
 - `bit` is an integer, read as 0 or 1. `uniqueidentifier`, `text`, `ntext`, `time`, `binary`, `varbinary`, `xml`, `geography` and the other types the map does not name are `sql native`, to be passed through or cast in a `sql()` dimension.
@@ -91,6 +91,7 @@ Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `
 | Feature | First in |
 |---|---|
 | `TABLESAMPLE` | SQL Server 2005 |
+| `datetimeoffset` | SQL Server 2008 |
 | `OFFSET … FETCH` | SQL Server 2012 |
 | `AT TIME ZONE`, `DATEDIFF_BIG` | SQL Server 2016 |
 | `STRING_AGG`, `TRIM` | SQL Server 2017 |
