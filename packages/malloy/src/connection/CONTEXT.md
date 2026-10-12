@@ -8,6 +8,7 @@ The connection subsystem provides database backend abstractions, a centralized r
 - `base_connection.ts` — Abstract base class with schema caching; all backends extend this
 - `registry.ts` — Module-level `Map<string, ConnectionTypeDef>` with register/lookup functions
 - `registry.spec.ts` — Registry tests
+- `dbmeta.ts` — Shared pieces for [database metadata](#database-metadata-dbmeta)
 - `validate_table_path.ts` — Helpers that re-validate a `tablePath` against the destination dialect (or any registered dialect) before it crosses an API boundary into SQL. See [Canonical tablePath invariant](#canonical-tablepath-invariant) below.
 
 ## Canonical tablePath invariant
@@ -163,7 +164,7 @@ so the docs site stays in sync. Add to the PR checklist:
 When `shareable: true` (and `databasePath` is a local file), the DuckDB connection binds its primary database to `:memory:` and brackets file access with `ATTACH 'path' AS malloy_db; USE malloy_db.main;` in `setupOnce()` and `DETACH malloy_db` in `idle()`. This releases the OS file lock between operations so other tools (`malloy-cli`, the `duckdb` CLI, another malloy host) can open the same file. The `:memory:` primary stays alive across `idle()`, so the `BaseConnection.schemaCache` and any `CREATE TEMPORARY TABLE` state survive a cycle. Shareable connections do not participate in `DuckDBConnection.activeDBs` sharing — each owns its own in-memory instance. `readOnly: true` is honored via `(READ_ONLY)` on the ATTACH so it scopes the real file, not the writable in-memory primary.
 
 **BigQuery** (`displayName: "BigQuery"`):
-`projectId` (string), `serviceAccountKeyPath` (file), `serviceAccountKey` (json), `serviceAccountKeyJson` (secret), `authClient` (opaque, `source: 'overlay'`, `mustHaveValue`), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `setupSQL` (text, advanced)
+`projectId` (string), `serviceAccountKeyPath` (file), `serviceAccountKey` (json), `serviceAccountKeyJson` (secret), `authClient` (opaque, `source: 'overlay'`, `mustHaveValue`), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `dbmeta` (boolean, advanced), `setupSQL` (text, advanced)
 
 A service account key can arrive three ways, in this order of precedence: `serviceAccountKey` (the parsed object), `serviceAccountKeyJson` (the key file as a string), then the unregistered `client_email`/`private_key` pair the constructor still honors for programmatic use. `serviceAccountKeyJson` exists because `serviceAccountKey` is `json`-typed and so can never hold a reference — a deployment whose key lives in an environment variable has no way to reach it, and the literal `{env: "..."}` object that does reach the SDK fails as "the incoming JSON object does not contain a client_email field". The string slot takes either raw JSON or base64, detected by whether the trimmed value starts with `{`, and rejects anything that is not a service account key or an `external_account` config rather than passing it to the SDK.
 
@@ -194,6 +195,15 @@ The `azure-*` kinds are Microsoft Entra ID through tedious; `azure-default` is t
 `connectionUri` (string, required), `accessToken` (secret)
 
 All backends support `setupSQL` (text) — SQL statements run when the connection is first established.
+
+## Database metadata (`dbmeta`)
+
+A connection can copy table and column descriptions from the database onto
+the schema it returns, as `#(dbmeta) description="..."` annotations. It is
+off unless the connection's `dbmeta` property is set, and it never changes
+query results, so it stays out of `getDigest()`. Only BigQuery implements it.
+To add it to a backend, see
+[adding-a-new-database.md](../doc/adding-a-new-database.md).
 
 ## Query metadata
 

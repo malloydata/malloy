@@ -4,7 +4,7 @@
  */
 
 import type {TagDict} from './tags';
-import {Tag, interfaceFromDict} from './tags';
+import {Tag, interfaceFromDict, quoteString} from './tags';
 import {parseTag, parseAnnotation, TagParser} from './parser';
 import type {SourceOrigin} from './parser';
 
@@ -337,6 +337,13 @@ describe('Tag access', () => {
       expect(ext.text('value')).toBe('\n');
       idempotent(ext);
     });
+    test('value has a carriage return', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['value'], 'a\rb');
+      expect(ext.toString()).toBe('#(malloy) value = "a\\rb"\n');
+      expect(ext.text('value')).toBe('a\rb');
+      idempotent(ext);
+    });
     test('value has a double quote', () => {
       const base = Tag.withPrefix('#(malloy) ');
       const ext = base.set(['value'], '"');
@@ -360,6 +367,27 @@ describe('Tag access', () => {
       const ext = base.set(['a`b`c'], 1);
       expect(ext.toString()).toBe('#(malloy) `a\\`b\\`c` = 1\n');
       idempotent(ext);
+    });
+  });
+  describe('quoteString', () => {
+    test('quotes even a bare word', () => {
+      expect(quoteString('word')).toBe('"word"');
+    });
+    test('escapes backslash, double quote, newline and carriage return', () => {
+      expect(quoteString('a\\b"c\nd\re')).toBe('"a\\\\b\\"c\\nd\\re"');
+    });
+    test.each([
+      '',
+      'word',
+      'two words',
+      'say "hi"',
+      'back\\slash',
+      'line\nbreak',
+      'lone\rreturn',
+      'crlf\r\nending',
+      'tab\there',
+    ])('round-trips %p through the parser', str => {
+      expect(parseTag(`x=${quoteString(str)}`).tag.text('x')).toBe(str);
     });
   });
   describe('parsing escape sequences in strings', () => {

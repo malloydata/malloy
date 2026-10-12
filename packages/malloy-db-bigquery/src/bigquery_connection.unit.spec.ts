@@ -166,3 +166,15 @@ describe('BigQueryConnection authClient', () => {
     );
   });
 });
+
+describe('BigQueryConnection dbmeta', () => {
+  it('keeps the digest, so persisted tables are not rebuilt', () => {
+    const digest = (dbmeta: boolean) =>
+      new BigQueryConnection({
+        name: 'bq',
+        projectId: 'proj',
+        dbmeta,
+      }).getDigest();
+    expect(digest(true)).toBe(digest(false));
+  });
+});

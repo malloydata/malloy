@@ -84,6 +84,19 @@ export type TagSetValue =
   string | number | boolean | Date | string[] | number[] | Tag | null;
 
 /**
+ * `str` as a MOTLY double-quoted string literal: always quoted, with
+ * backslash, double quote, newline and carriage return escaped.
+ */
+export function quoteString(str: string): string {
+  const escaped = str
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+  return `"${escaped}"`;
+}
+
+/**
  * Class for interacting with the parsed output of an annotation
  * containing the Malloy tag language. Used by the parser to
  * generate parsed data, and as an API to that data.
@@ -479,13 +492,6 @@ export class Tag {
     }
   }
 
-  private static escapeString(str: string) {
-    return str
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n');
-  }
-
   private static escapeProp(str: string) {
     return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
   }
@@ -494,7 +500,7 @@ export class Tag {
     if (str.match(/^[0-9A-Za-z_]+$/)) return str;
     if (isProp) return `\`${Tag.escapeProp(str)}\``;
     // TODO consider choosing the quote character based on which quotes appear in the string
-    return `"${Tag.escapeString(str)}"`;
+    return quoteString(str);
   }
 
   private static serializeScalar(val: TagScalar): string {

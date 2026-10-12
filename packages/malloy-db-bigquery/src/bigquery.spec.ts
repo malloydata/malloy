@@ -366,6 +366,58 @@ describe('db:BigQuery', () => {
   });
 });
 
+describe('db:BigQuery dbmeta', () => {
+  // A public table with a description on itself and on every column,
+  // including each kind of column a description can sit on.
+  const model =
+    "source: pv is bigquery.table('bigquery-public-data.deps_dev_v1.PackageVersions')";
+
+  async function packageVersions(dbmeta: boolean): Promise<malloy.Explore> {
+    const conn = new BigQueryConnection({name: 'bigquery', dbmeta});
+    const loaded = await createTestRuntime(conn).loadModel(model).getModel();
+    await conn.close();
+    return loaded.getExploreByName('pv');
+  }
+
+  function fieldAt(explore: malloy.Explore, path: string): malloy.Field {
+    const [head, ...rest] = path.split('.');
+    const field = explore.getFieldByName(head);
+    if (rest.length === 0) return field;
+    if (!field.isExploreField()) throw new Error(`${head} is not a record`);
+    return fieldAt(field, rest.join('.'));
+  }
+
+  const description = (entity: malloy.Explore | malloy.Field) =>
+    entity.annotations.parseAsTag('dbmeta').tag.text('description');
+
+  let withDbmeta: malloy.Explore;
+  let withoutDbmeta: malloy.Explore;
+  beforeAll(async () => {
+    withDbmeta = await packageVersions(true);
+    withoutDbmeta = await packageVersions(false);
+  });
+
+  it('reads the table description', () => {
+    expect(description(withDbmeta)).toMatch(/\S/);
+  });
+
+  it.each([
+    ['column', 'Name'],
+    ['repeated column', 'Licenses'],
+    ['record', 'VersionInfo'],
+    ['record field', 'VersionInfo.IsRelease'],
+    ['repeated record', 'Links'],
+    ['repeated record field', 'Links.URL'],
+  ])('reads the description of a %s (%s)', (_kind, path) => {
+    expect(description(fieldAt(withDbmeta, path))).toMatch(/\S/);
+  });
+
+  it('reads nothing when dbmeta is off', () => {
+    expect(description(withoutDbmeta)).toBeUndefined();
+    expect(description(fieldAt(withoutDbmeta, 'Name'))).toBeUndefined();
+  });
+});
+
 const SQL_BLOCK_1: malloy.SQLSourceRequest = {
   connection: 'bigquery',
   selectStr: `
