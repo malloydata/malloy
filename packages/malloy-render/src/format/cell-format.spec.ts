@@ -93,21 +93,42 @@ describe('formatNumber', () => {
 });
 
 describe('formatDateTime', () => {
-  // Mid-month: `ssf` formats a Date in the host's local zone, so the 1st at
-  // UTC midnight would print as the previous month west of UTC.
-  const sep = new Date(Date.UTC(2026, 8, 15));
+  // Midnight UTC on the 1st: the case that printed as the previous month on
+  // any host west of UTC when ssf read the Date's local fields. This suite is
+  // also run under TZ=America/Los_Angeles and TZ=Asia/Tokyo.
+  const sep1 = new Date(Date.UTC(2026, 8, 1));
+  const monthYear = fmt('# number="mmm yyyy"', {isTime: true});
 
-  test('a # number date pattern', () => {
+  test('a date pattern reads the UTC calendar, whatever the host zone', () => {
+    expect(formatDateTime(sep1, monthYear)).toBe('Sep 2026');
+    expect(formatDateTime(sep1, monthYear, {isDate: true})).toBe('Sep 2026');
+  });
+
+  test("a timestamp's date pattern reads in the query's timezone", () => {
     expect(
-      formatDateTime(sep, fmt('# number="mmm yyyy"', {isTime: true}))
+      formatDateTime(sep1, monthYear, {timezone: 'America/Los_Angeles'})
+    ).toBe('Aug 2026');
+    const hm = fmt('# number="yyyy-mm-dd hh:mm"', {isTime: true});
+    expect(formatDateTime(sep1, hm, {timezone: 'Asia/Tokyo'})).toBe(
+      '2026-09-01 09:00'
+    );
+    expect(formatDateTime(sep1, hm)).toBe('2026-09-01 00:00');
+  });
+
+  test('a date ignores the timezone', () => {
+    expect(
+      formatDateTime(sep1, monthYear, {
+        isDate: true,
+        timezone: 'America/Los_Angeles',
+      })
     ).toBe('Sep 2026');
   });
 
   test('no pattern: the timeframe sets the grain', () => {
-    expect(formatDateTime(sep, undefined, {timeframe: 'month'})).toBe(
+    expect(formatDateTime(sep1, undefined, {timeframe: 'month'})).toBe(
       '2026-09'
     );
-    expect(formatDateTime(sep, undefined, {isDate: true})).toBe('2026-09-15');
+    expect(formatDateTime(sep1, undefined, {isDate: true})).toBe('2026-09-01');
   });
 
   test('null', () => {

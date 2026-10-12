@@ -61,19 +61,22 @@ const multiplierMap = new Map<DurationUnit, number>([
 /**
  * A duration in `options.durationUnit` (seconds by default) as its two largest
  * nonzero parts, e.g. 3725 → "1 hour 2 minutes"; `terse` → "1h 2m".
+ * `numFormat` is an ssf pattern for each part's number (the legacy renderer
+ * passes `# number` here).
  */
 export function formatDuration(
   value: number,
   options: {
     durationUnit?: string;
     terse?: boolean;
+    numFormat?: string;
   }
 ): string {
   const targetUnit =
     options.durationUnit && isDurationUnit(options.durationUnit)
       ? options.durationUnit
       : DurationUnit.Seconds;
-  const numFormat = undefined; // Format now resolved at setup time
+  const numFormat = options.numFormat;
   const terse = options.terse ?? false;
 
   let currentDuration = value;

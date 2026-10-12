@@ -19,6 +19,7 @@ export {
   type CellFormatConfig,
   type CurrencyConfig,
   type DurationConfig,
+  type FormatDateTimeOptions,
   type NumberConfig,
 } from './cell-format';
 export {

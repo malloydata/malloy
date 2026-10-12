@@ -10,6 +10,7 @@
 // call, so a value formatted outside the renderer reads the same as inside it.
 
 import {format} from 'ssf';
+import {DateTime} from 'luxon';
 import type {Tag} from '@malloydata/malloy-tag';
 import {DurationUnit} from '../html/data_styles';
 import type {SuffixFormat} from '../html/data_styles';
@@ -59,8 +60,6 @@ export type CellFormatConfig =
   | {mode: 'number'; number: NumberConfig}
   | {mode: 'dateFormat'; formatString: string}
   | {mode: 'default'};
-
-const DEFAULT_FORMAT: CellFormatConfig = {mode: 'default'};
 
 function resolveCurrencyConfig(tag: Tag): CurrencyConfig {
   const currencyValue = tag.text('currency');
@@ -185,7 +184,7 @@ export function resolveCellFormat(
     return {mode: 'number', number: resolveNumberConfig(tag)};
   }
 
-  return DEFAULT_FORMAT;
+  return {mode: 'default'};
 }
 
 /**
@@ -197,7 +196,7 @@ export function resolveCellFormat(
  */
 export function formatNumber(
   value: number | string | null | undefined,
-  config: CellFormatConfig = DEFAULT_FORMAT
+  config: CellFormatConfig = {mode: 'default'}
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
@@ -223,15 +222,24 @@ export function formatNumber(
   }
 }
 
+export interface FormatDateTimeOptions extends RenderTimeStringOptions {
+  /** Named in the warning when the field's date pattern is invalid. */
+  fieldName?: string;
+}
+
 /**
  * Format one date or timestamp for display. A `# number="…"` date pattern
- * wins; otherwise the value prints at its `timeframe`'s grain, in `timezone`
- * when one is given.
+ * wins; otherwise the value prints at its `timeframe`'s grain.
+ *
+ * Either way a timestamp reads in `timezone` (the query's, from
+ * `query_timezone` in the result) and otherwise in UTC; a date (`isDate`) is
+ * always its UTC calendar day. Never the host's zone, so a server and a
+ * browser print the same value the same way.
  */
 export function formatDateTime(
   value: Date | null | undefined,
-  config: CellFormatConfig = DEFAULT_FORMAT,
-  options: RenderTimeStringOptions = {}
+  config: CellFormatConfig = {mode: 'default'},
+  options: FormatDateTimeOptions = {}
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
@@ -239,17 +247,40 @@ export function formatDateTime(
 
   if (config.mode === 'dateFormat') {
     try {
-      return format(config.formatString, value);
+      return format(config.formatString, wallClockSerial(value, options));
     } catch (error) {
       // If the format fails, fall back to default formatting
+      const field = options.fieldName ? ` for field ${options.fieldName}` : '';
       // eslint-disable-next-line no-console
       console.warn(
-        `Invalid date format "${config.formatString}", falling back to default formatting`
+        `Invalid date format "${config.formatString}"${field}, falling back to default formatting`
       );
     }
   }
 
   return renderTimeString(value, options);
+}
+
+/** 1970-01-01 as a spreadsheet serial date. */
+const EPOCH_SERIAL = 25569;
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * The value's wall-clock time as a spreadsheet serial date, which is what ssf
+ * formats a date pattern from. Handing ssf the Date itself makes it read the
+ * Date's LOCAL fields — the host's zone — so "Sep 1 00:00 UTC" printed as
+ * "Aug 2026" anywhere west of UTC. A serial carries no zone at all.
+ */
+function wallClockSerial(value: Date, options: FormatDateTimeOptions): number {
+  let wallMs = value.getTime();
+  if (options.timezone && !options.isDate) {
+    const zoned = DateTime.fromJSDate(value, {zone: options.timezone});
+    if (zoned.isValid) {
+      // The zone's wall clock, re-read as if it were UTC.
+      wallMs += zoned.offset * 60_000;
+    }
+  }
+  return wallMs / MS_PER_DAY + EPOCH_SERIAL;
 }
 
 /**

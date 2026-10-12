@@ -5,7 +5,7 @@
 
 import type {Cell, NestField} from './data_tree';
 import {Field} from './data_tree';
-import {formatDuration, renderTimeString} from './format/time-format';
+import {renderTimeString} from './format/time-format';
 
 // The single-value formatters live in ./format (the headless
 // `@malloydata/render/format` entry); re-exported here for existing imports.
@@ -16,15 +16,6 @@ export {
   renderTimeString,
   type RenderTimeStringOptions,
 } from './format/time-format';
-
-/** @deprecated `field` is unused; call `formatDuration` from ./format. */
-export function getText(
-  _field: Field,
-  value: number,
-  options: {durationUnit?: string; terse?: boolean}
-): string | null {
-  return formatDuration(value, options);
-}
 
 type UnionToIntersection<U> = (
   U extends unknown ? (k: U) => void : never

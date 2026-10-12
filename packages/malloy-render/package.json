@@ -26,6 +26,13 @@
       "default": "./dist/format/index.cjs"
     }
   },
+  "typesVersions": {
+    "*": {
+      "format": [
+        "./dist/module/format/index.d.ts"
+      ]
+    }
+  },
   "scripts": {
     "test": "cd ../.. && jest packages/malloy-render",
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean",
