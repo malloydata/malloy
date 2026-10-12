@@ -75,10 +75,7 @@ export function lineChartSettingsToTag(settings: LineChartSettings): Tag {
     settings.seriesChannel?.limit !==
     defaultLineChartSettings.seriesChannel.limit
   ) {
-    tag = tag.set(
-      ['viz', 'series', 'limit'],
-      settings.seriesChannel.limit.toString()
-    );
+    tag = tag.set(['viz', 'series', 'limit'], settings.seriesChannel.limit);
   }
 
   return tag;

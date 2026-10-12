@@ -43,7 +43,7 @@ export function comboChartSettingsToTag(settings: ComboChartSettings): Tag {
   const setLineStyle = (channel: 'y' | 'y2', ch?: ComboYChannel) => {
     if (!ch) return;
     if (ch.lineWidth !== undefined) {
-      tag = tag.set(['viz', channel, 'line_width'], ch.lineWidth.toString());
+      tag = tag.set(['viz', channel, 'line_width'], ch.lineWidth);
     }
     if (ch.showPoints !== undefined) {
       tag = tag.set(
@@ -59,10 +59,10 @@ export function comboChartSettingsToTag(settings: ComboChartSettings): Tag {
   const setAxisBounds = (channel: 'y' | 'y2', ch?: ComboYChannel) => {
     if (!ch) return;
     if (ch.min !== undefined) {
-      tag = tag.set(['viz', channel, 'min'], ch.min.toString());
+      tag = tag.set(['viz', channel, 'min'], ch.min);
     }
     if (ch.max !== undefined) {
-      tag = tag.set(['viz', channel, 'max'], ch.max.toString());
+      tag = tag.set(['viz', channel, 'max'], ch.max);
     }
   };
   setAxisBounds('y', settings.yChannel);
@@ -99,7 +99,7 @@ export function comboChartSettingsToTag(settings: ComboChartSettings): Tag {
 
   // X-axis limit if non-default
   if (settings.xChannel?.limit !== defaultComboChartSettings.xChannel.limit) {
-    tag = tag.set(['viz', 'x', 'limit'], settings.xChannel.limit.toString());
+    tag = tag.set(['viz', 'x', 'limit'], settings.xChannel.limit);
   }
 
   return tag;
