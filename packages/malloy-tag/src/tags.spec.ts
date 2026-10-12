@@ -316,7 +316,7 @@ describe('Tag access', () => {
     test('in property name', () => {
       const base = Tag.withPrefix('#(malloy) ');
       const ext = base.set(['foo bar'], '4');
-      expect(ext.toString()).toBe('#(malloy) `foo bar` = 4\n');
+      expect(ext.toString()).toBe('#(malloy) `foo bar` = "4"\n');
       idempotent(ext);
     });
     test('deleted property name', () => {
@@ -344,6 +344,15 @@ describe('Tag access', () => {
       expect(ext.text('value')).toBe('a\rb');
       idempotent(ext);
     });
+    test.each(['123', '007', '1e5'])(
+      'value %p that looks like a number stays a string',
+      str => {
+        const ext = Tag.withPrefix('#(malloy) ').set(['value'], str);
+        expect(ext.toString()).toBe(`#(malloy) value = "${str}"\n`);
+        const reparsed = parseAnnotation(ext.toString()).tag;
+        expect(reparsed.tag('value')?.getEq()).toBe(str);
+      }
+    );
     test('value has a double quote', () => {
       const base = Tag.withPrefix('#(malloy) ');
       const ext = base.set(['value'], '"');

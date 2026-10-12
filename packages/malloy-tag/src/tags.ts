@@ -496,9 +496,14 @@ export class Tag {
     return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
   }
 
-  private static quoteAndEscape(str: string, isProp = false) {
+  private static serializeProp(str: string) {
     if (str.match(/^[0-9A-Za-z_]+$/)) return str;
-    if (isProp) return `\`${Tag.escapeProp(str)}\``;
+    return `\`${Tag.escapeProp(str)}\``;
+  }
+
+  private static serializeString(str: string) {
+    // A bare word that starts with a digit can read back as a number
+    if (str.match(/^[A-Za-z_][0-9A-Za-z_]*$/)) return str;
     // TODO consider choosing the quote character based on which quotes appear in the string
     return quoteString(str);
   }
@@ -513,7 +518,7 @@ export class Tag {
     if (typeof val === 'number') {
       return String(val);
     }
-    return Tag.quoteAndEscape(val);
+    return Tag.serializeString(val);
   }
 
   toString(): string {
@@ -562,10 +567,10 @@ export class Tag {
     }
     function addChild(prop: string, child: TagInterface) {
       if (child.deleted) {
-        annotation += `-${Tag.quoteAndEscape(prop, true)}`;
+        annotation += `-${Tag.serializeProp(prop)}`;
         return;
       }
-      annotation += Tag.quoteAndEscape(prop, true);
+      annotation += Tag.serializeProp(prop);
       addTag(child);
     }
     addChildren(this);
