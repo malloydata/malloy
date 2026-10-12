@@ -94,8 +94,8 @@ describe('formatNumber', () => {
 
 describe('formatDateTime', () => {
   // Midnight UTC on the 1st: the case that printed as the previous month on
-  // any host west of UTC when ssf read the Date's local fields. This suite is
-  // also run under TZ=America/Los_Angeles and TZ=Asia/Tokyo.
+  // any host west of UTC when ssf read the Date's local fields. jest.config.ts
+  // pins TZ=America/Los_Angeles, which is exactly that host.
   const sep1 = new Date(Date.UTC(2026, 8, 1));
   const monthYear = fmt('# number="mmm yyyy"', {isTime: true});
 
