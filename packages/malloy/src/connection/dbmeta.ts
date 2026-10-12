@@ -9,8 +9,7 @@ import type {ConnectionPropertyDefinition} from './registry';
 
 /**
  * The annotation route a connection writes database metadata to:
- * `#(dbmeta) description="..."`. Connections write it when they read a
- * schema; it never appears in a model file.
+ * `#(dbmeta) description="..."`.
  */
 export const DBMETA_ROUTE = 'dbmeta';
 

@@ -78,6 +78,8 @@ Create `packages/malloy-db-{name}/`. See [connection CONTEXT.md](../connection/C
 
 **setupSQL**: Support the `setupSQL` config property (SQL run at connection init). Include it in `getDigest()` since it can affect query results.
 
+**Descriptions**: If the database stores table and column descriptions (comments), register `dbmetaProperty` and, when it is on, spread `dbmetaAnnotations({description})` (both from `@malloydata/malloy/connection`) into each field def, nested ones included, and into the table's `TableSourceDef`. Leave it out of `getDigest()`.
+
 ## Step 3: Set Up Test Data
 
 All cross-database tests share parquet files in `test/data/malloytest-parquet/`. You need to load these into your database as tables in a `malloytest` schema. See [test CONTEXT.md](../../../../test/CONTEXT.md) for the full data inventory and how each existing dialect loads its data.

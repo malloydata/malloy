@@ -8,7 +8,7 @@ The connection subsystem provides database backend abstractions, a centralized r
 - `base_connection.ts` — Abstract base class with schema caching; all backends extend this
 - `registry.ts` — Module-level `Map<string, ConnectionTypeDef>` with register/lookup functions
 - `registry.spec.ts` — Registry tests
-- `dbmeta.ts` — `dbmetaProperty`, `dbmetaAnnotations` and `DBMETA_ROUTE`, the shared pieces a backend uses to copy database metadata onto the schema. See [Database metadata (`dbmeta`)](#database-metadata-dbmeta) below.
+- `dbmeta.ts` — Shared pieces for [database metadata](#database-metadata-dbmeta)
 - `validate_table_path.ts` — Helpers that re-validate a `tablePath` against the destination dialect (or any registered dialect) before it crosses an API boundary into SQL. See [Canonical tablePath invariant](#canonical-tablepath-invariant) below.
 
 ## Canonical tablePath invariant
@@ -198,28 +198,12 @@ All backends support `setupSQL` (text) — SQL statements run when the connectio
 
 ## Database metadata (`dbmeta`)
 
-A backend that can read table and column descriptions (comments) from the
-database may copy them onto the schema it returns, as a `#(dbmeta)`
-annotation: `#(dbmeta) description="..."`. The backend writes it when it
-reads the schema; it never appears in a model file. The pieces are shared so
-the option means the same thing everywhere:
-
-- Register `dbmetaProperty` in the backend's `properties`: `"dbmeta": true`
-  turns it on. It is an optional boolean, off unless set, and one switch
-  covers tables and columns.
-- When it is on, spread `dbmetaAnnotations({description})` into each field
-  def (records and arrays included) and into the table's `TableSourceDef`.
-  It returns `{annotations}`, or `{}` when there is nothing to say, and quotes
-  the text with `quoteString` from `@malloydata/malloy-tag`, so it reads back
-  exactly.
-- Keys are normalized: whatever the database calls it (a description, a
-  `COMMENT`), it is `description` here.
-- Doc strings written in the model (`#"`) stay alongside; how to combine
-  them with `#(dbmeta)` is up to the application reading the annotations.
-- Metadata never changes query results: keep the option out of `getDigest()`.
-
-Only BigQuery implements it today (the table metadata it already fetches
-carries the descriptions). Schemas of SQL sources have none.
+A connection can copy table and column descriptions from the database onto
+the schema it returns, as `#(dbmeta) description="..."` annotations. It is
+off unless the connection's `dbmeta` property is set, and it never changes
+query results, so it stays out of `getDigest()`. Only BigQuery implements it.
+To add it to a backend, see
+[adding-a-new-database.md](../doc/adding-a-new-database.md).
 
 ## Query metadata
 

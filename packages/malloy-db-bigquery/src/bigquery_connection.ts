@@ -43,10 +43,9 @@ import {
   sqlKey,
   makeDigest,
   decodeDottedTablePath,
-  dbmetaAnnotations,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
-import {BaseConnection} from '@malloydata/malloy/connection';
+import {BaseConnection, dbmetaAnnotations} from '@malloydata/malloy/connection';
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -644,7 +643,7 @@ export class BigQueryConnection
     this.config = config;
     this.location = config.location;
     this.setupSQL = config.setupSQL;
-    this.dbmeta = config.dbmeta === true;
+    this.dbmeta = config.dbmeta ?? false;
   }
 
   get dialectName(): string {

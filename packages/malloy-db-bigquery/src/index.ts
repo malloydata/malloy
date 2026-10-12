@@ -5,7 +5,8 @@
 
 export {BigQueryConnection} from './bigquery_connection';
 
-import {dbmetaProperty, registerConnectionType} from '@malloydata/malloy';
+import {registerConnectionType} from '@malloydata/malloy';
+import {dbmetaProperty} from '@malloydata/malloy/connection';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {BigQueryConnection} from './bigquery_connection';
 
