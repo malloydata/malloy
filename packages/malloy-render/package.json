@@ -18,6 +18,19 @@
       "import": "./dist/module/index.mjs",
       "require": "./dist/module/index.umd.js",
       "default": "./dist/module/index.umd.js"
+    },
+    "./format": {
+      "types": "./dist/module/format/index.d.ts",
+      "import": "./dist/format/index.mjs",
+      "require": "./dist/format/index.cjs",
+      "default": "./dist/format/index.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "format": [
+        "./dist/module/format/index.d.ts"
+      ]
     }
   },
   "scripts": {
