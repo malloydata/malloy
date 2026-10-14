@@ -26,6 +26,7 @@ import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  CivilTime,
   CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
@@ -445,9 +446,7 @@ export class DuckDBDialect extends PostgresBase {
     op: '+' | '-',
     magnitude: string,
     unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    _civilType: CivilTime
   ): string {
     // DuckDB doesn't support INTERVAL '1' WEEK, convert to days
     let offsetUnit = unit;

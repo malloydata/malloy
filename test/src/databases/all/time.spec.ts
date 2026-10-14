@@ -278,7 +278,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     'extract from timestamptz without query timezone',
     async () => {
       // TIMESTAMPTZ representing midnight UTC
-      // Without query timezone, extract should happen in UTC (or stored tz for Trino)
+      // Without query timezone, extract should happen in UTC
       // Expected: hour = 0, day = 20
       await expect(
         `run: ${dbName}.sql("SELECT 1 as x") -> {
@@ -865,6 +865,16 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         select: mex_day is utc_midnight_ts.day
       }`
     ).toMatchResult(testModel, {mex_day: mex_19.toJSDate()});
+  });
+
+  test('truncate hour in a zone a half hour off UTC', async () => {
+    // 02:10 in Kolkata is 20:40 UTC, and the Kolkata hour starts at 20:30
+    await expect(
+      `run: ${dbName}.sql("SELECT 1 as x") -> {
+        timezone: 'Asia/Kolkata'
+        select: kol_hour is @2020-01-31 02:10:00.hour
+      }`
+    ).toMatchResult(testModel, {kol_hour: '2020-01-30T20:30:00.000Z'});
   });
 
   test('truncate week', async () => {
