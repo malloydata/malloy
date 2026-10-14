@@ -14,13 +14,14 @@ import type {
   Sampling,
   MeasureTimeExpr,
   RegexMatchExpr,
-  TimeExtractExpr,
   TypecastExpr,
   BasicAtomicTypeDef,
   AtomicTypeDef,
-  TimestampTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
+  ATimestampTypeDef,
+  TimestampUnit,
+  ExtractUnit,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -30,6 +31,7 @@ import {
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import type {
+  CivilTime,
   BooleanTypeSupport,
   CompiledOrderBy,
   DialectFieldList,
@@ -37,7 +39,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
+import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -450,32 +452,31 @@ export class MySQLDialect extends Dialect {
     return 'LOCALTIMESTAMP';
   }
 
+  // Civil time is a DATETIME, which has no zone
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    _typeDef: AtomicTypeDef
-  ): {sql: string; typeDef: AtomicTypeDef} {
-    // MySQL has no timestamptz type, so typeDef.timestamptz will never be true
-    return {
-      sql: `CONVERT_TZ(${expr}, 'UTC', ${this.sqlTimezoneLiteral(timezone)})`,
-      typeDef: {type: 'timestamp'},
-    };
+    _typeDef: ATimestampTypeDef
+  ): string {
+    return timezone === 'UTC'
+      ? expr
+      : `CONVERT_TZ(${expr}, 'UTC', ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
   sqlConvertFromCivilTime(
     expr: string,
     timezone: string,
-    _destTypeDef: TimestampTypeDef
+    _destTypeDef: ATimestampTypeDef
   ): string {
-    return `CONVERT_TZ(${expr}, ${this.sqlTimezoneLiteral(timezone)}, 'UTC')`;
+    return timezone === 'UTC'
+      ? expr
+      : `CONVERT_TZ(${expr}, ${this.sqlTimezoneLiteral(timezone)}, 'UTC')`;
   }
 
   sqlTruncate(
     expr: string,
-    unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
     // For week truncation, adjust to Sunday first
     // DAYOFWEEK returns 1=Sunday, 2=Monday, etc., so subtract (DAYOFWEEK-1) days
@@ -515,13 +516,11 @@ export class MySQLDialect extends Dialect {
     expr: string,
     op: '+' | '-',
     magnitude: string,
-    unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
     // Convert quarter/week to supported units
-    let offsetUnit = unit;
+    let offsetUnit: string = unit;
     let offsetMag = magnitude;
     if (unit === 'quarter') {
       offsetUnit = 'month';
@@ -535,27 +534,25 @@ export class MySQLDialect extends Dialect {
     return `(${expr} ${op} ${interval})`;
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
-    const msUnits = msExtractionMap[te.units] || te.units;
-    let extractFrom = te.e.sql;
-    if (TD.isTimestamp(te.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = `CONVERT_TZ(${extractFrom}, 'UTC', ${this.sqlTimezoneLiteral(tz)})`;
-      }
-    }
-    return `${msUnits}(${extractFrom})`;
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    return `${msExtractionMap[units] || units}(${expr})`;
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+  sqlCivilToDate(expr: string): string {
+    return `CAST(${expr} AS DATE)`;
+  }
+
+  sqlDateToCivil(expr: string): string {
+    return `CAST(${expr} AS DATETIME)`;
+  }
+
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
     const srcSQL = cast.e.sql || 'internal-error-in-sql-generation';
-    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
-    const tz = qtz(qi);
-    if (op === 'timestamp::date' && tz) {
-      return `CAST(CONVERT_TZ(${srcSQL}, 'UTC', ${this.sqlTimezoneLiteral(tz)}) AS DATE) `;
-    } else if (op === 'date::timestamp' && tz) {
-      return ` CONVERT_TZ(${srcSQL}, ${this.sqlTimezoneLiteral(tz)}, 'UTC')`;
-    }
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       if (cast.safe) {
         throw new Error("Mysql dialect doesn't support Safe Cast");
@@ -576,15 +573,7 @@ export class MySQLDialect extends Dialect {
     return `DATE '${literal}'`;
   }
 
-  sqlTimestampLiteral(
-    qi: QueryInfo,
-    literal: string,
-    timezone: string | undefined
-  ): string {
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `CONVERT_TZ('${literal}', ${this.sqlTimezoneLiteral(tz)}, 'UTC')`;
-    }
+  sqlCivilLiteral(literal: string): string {
     return `TIMESTAMP '${literal}'`;
   }
 

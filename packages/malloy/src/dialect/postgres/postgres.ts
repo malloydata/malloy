@@ -12,8 +12,8 @@ import type {
   BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
-  TimeExtractExpr,
   TimestampUnit,
+  ExtractUnit,
 } from '../../model/malloy_types';
 import {
   isRepeatedRecord,
@@ -25,12 +25,12 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import {
-  qtz,
   turtleGroupSetCondition,
   type CompiledOrderBy,
   type DialectFieldList,
   type FieldReferenceType,
   type QueryInfo,
+  type CivilTime,
 } from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -278,9 +278,7 @@ export class PostgresDialect extends PostgresBase {
     op: '+' | '-',
     magnitude: string,
     unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    _civilType: CivilTime
   ): string {
     // Convert quarter/week to supported units
     let offsetUnit = unit;
@@ -488,20 +486,14 @@ export class PostgresDialect extends PostgresBase {
     return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    const units = timeExtractMap[from.units] || from.units;
-    let extractFrom = from.e.sql;
-    if (TD.isAnyTimestamp(from.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE ${this.sqlTimezoneLiteral(tz)})`;
-      }
-    }
-
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
     // PostgreSQL before 14 returns a double precision for EXTRACT, cast to integer
     // since it is common to pass an extraction to mod ( like in fitler expressions )
-    const extracted = `EXTRACT(${units} FROM ${extractFrom})::integer`;
-
-    return from.units === 'day_of_week' ? `(${extracted}+1)` : `(${extracted})`;
+    const extracted = `EXTRACT(${timeExtractMap[units] || units} FROM ${expr})::integer`;
+    return units === 'day_of_week' ? `(${extracted}+1)` : `(${extracted})`;
   }
 }

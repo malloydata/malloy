@@ -5,17 +5,16 @@
 
 import type {
   ArrayLiteralNode,
-  AtomicTypeDef,
   ATimestampTypeDef,
   RecordLiteralNode,
+  ExtractUnit,
   RegexMatchExpr,
-  TimeExtractExpr,
   TimestampUnit,
   TypecastExpr,
 } from '../model/malloy_types';
 import {TD} from '../model/malloy_types';
-import type {QueryInfo} from './dialect';
-import {Dialect, EscapeStyle, qtz} from './dialect';
+import type {CivilTime, QueryInfo} from './dialect';
+import {Dialect, EscapeStyle} from './dialect';
 
 export const timeExtractMap: Record<string, string> = {
   'day_of_week': 'dow',
@@ -51,53 +50,18 @@ export abstract class PostgresBase extends Dialect {
     return 'LOCALTIMESTAMP';
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    const units = timeExtractMap[from.units] || from.units;
-    let extractFrom = from.e.sql;
-    if (TD.isAnyTimestamp(from.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE ${this.sqlTimezoneLiteral(tz)})`;
-      }
-    }
-    const extracted = `EXTRACT(${units} FROM ${extractFrom})`;
-    return from.units === 'day_of_week' ? `(${extracted}+1)` : extracted;
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    const extracted = `EXTRACT(${timeExtractMap[units] || units} FROM ${expr})`;
+    return units === 'day_of_week' ? `(${extracted}+1)` : extracted;
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
     const expr = cast.e.sql || '';
     const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
-    const tz = qtz(qi);
-
-    // Timezone-aware casts when query timezone is set
-    if (tz && srcTypeDef && dstTypeDef) {
-      // TIMESTAMP → DATE: convert via TIMESTAMPTZ to query timezone
-      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST((${expr}::TIMESTAMPTZ) AT TIME ZONE ${this.sqlTimezoneLiteral(tz)} AS DATE)`;
-      }
-
-      // TIMESTAMPTZ → DATE: convert to query timezone
-      if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST((${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(tz)} AS DATE)`;
-      }
-
-      // DATE → TIMESTAMP: interpret date in query timezone, return UTC timestamp
-      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `CAST((${expr})::TIMESTAMP AT TIME ZONE ${this.sqlTimezoneLiteral(tz)} AS TIMESTAMP)`;
-      }
-
-      // DATE → TIMESTAMPTZ: interpret date in query timezone
-      if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return `(${expr})::TIMESTAMP AT TIME ZONE ${this.sqlTimezoneLiteral(tz)}`;
-      }
-
-      // TIMESTAMPTZ → TIMESTAMP: convert to query timezone (returns TIMESTAMP)
-      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `(${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(tz)}`;
-      }
-    }
-
-    // No special handling needed, or no query timezone
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
       return `${castFunc}(${expr} AS ${dstSQLType})`;
@@ -113,15 +77,7 @@ export abstract class PostgresBase extends Dialect {
     return `DATE '${literal}'`;
   }
 
-  sqlTimestampLiteral(
-    qi: QueryInfo,
-    literal: string,
-    timezone: string | undefined
-  ): string {
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `TIMESTAMPTZ '${literal} ${this.checkedTimezoneName(tz)}'::TIMESTAMP`;
-    }
+  sqlCivilLiteral(literal: string): string {
     return `TIMESTAMP '${literal}'`;
   }
 
@@ -145,22 +101,15 @@ export abstract class PostgresBase extends Dialect {
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    typeDef: AtomicTypeDef
-  ): {sql: string; typeDef: AtomicTypeDef} {
-    // PostgreSQL/DuckDB: AT TIME ZONE is polymorphic
-    // For timestamptz (TIMESTAMPTZ): AT TIME ZONE converts to plain TIMESTAMP (civil in timezone)
-    if (typeDef.type === 'timestamptz') {
-      return {
-        sql: `(${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)}`,
-        typeDef: {type: 'timestamp'},
-      };
+    typeDef: ATimestampTypeDef
+  ): string {
+    const tz = this.sqlTimezoneLiteral(timezone);
+    if (TD.isTimestamptz(typeDef)) {
+      return `(${expr}) AT TIME ZONE ${tz}`;
     }
-    // For plain timestamps: cast to TIMESTAMPTZ (interprets as UTC)
-    // Then AT TIME ZONE converts to plain TIMESTAMP (civil in timezone)
-    return {
-      sql: `(${expr})::TIMESTAMPTZ AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)}`,
-      typeDef: {type: 'timestamp'},
-    };
+    return timezone === 'UTC'
+      ? expr
+      : `(${expr})::TIMESTAMPTZ AT TIME ZONE ${tz}`;
   }
 
   sqlConvertFromCivilTime(
@@ -168,35 +117,32 @@ export abstract class PostgresBase extends Dialect {
     timezone: string,
     destTypeDef: ATimestampTypeDef
   ): string {
-    if (destTypeDef.type === 'timestamptz') {
-      return `(${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)}`;
+    const tz = this.sqlTimezoneLiteral(timezone);
+    if (TD.isTimestamptz(destTypeDef)) {
+      return `(${expr}) AT TIME ZONE ${tz}`;
     }
-    return `((${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)})::TIMESTAMP`;
+    return timezone === 'UTC'
+      ? expr
+      : `((${expr}) AT TIME ZONE ${tz})::TIMESTAMP`;
   }
 
   sqlTruncate(
     expr: string,
     unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
-    inCivilTime: boolean,
-    _timezone?: string
+    _civilType: CivilTime
   ): string {
-    // PostgreSQL/DuckDB starts weeks on Monday, Malloy wants Sunday
-    // Add 1 day before truncating, subtract 1 day after
-    let truncated: string;
+    // Weeks start on Monday here, so truncate the following day
     if (unit === 'week') {
-      truncated = `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
-    } else {
-      truncated = `DATE_TRUNC('${unit}', ${expr})`;
+      return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
     }
+    return `DATE_TRUNC('${unit}', ${expr})`;
+  }
 
-    // DATE_TRUNC returns DATE for calendar units (day/week/month/quarter/year)
-    // When in civil time (plain TIMESTAMP), cast DATE back to TIMESTAMP to continue operations
-    const calendarUnits = ['day', 'week', 'month', 'quarter', 'year'];
-    if (inCivilTime && calendarUnits.includes(unit)) {
-      return `(${truncated})::TIMESTAMP`;
-    }
+  sqlCivilToDate(expr: string): string {
+    return `CAST(${expr} AS DATE)`;
+  }
 
-    return truncated;
+  sqlDateToCivil(expr: string): string {
+    return `CAST(${expr} AS TIMESTAMP)`;
   }
 }

@@ -11,9 +11,9 @@ import type {
   MeasureTimeExpr,
   BasicAtomicTypeDef,
   RegexMatchExpr,
-  TimeExtractExpr,
   TimestampUnit,
   OrderBy,
+  ExtractUnit,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -30,7 +30,7 @@ import type {
   GroupByClauseType,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz} from '../dialect';
+import {CivilTime, Dialect, EscapeStyle} from '../dialect';
 import type {ValidateTablePathResult} from '../table-path';
 import {SQLSERVER_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SQLSERVER_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -459,50 +459,37 @@ export class SQLServerDialect extends Dialect {
     return 'SYSUTCDATETIME()';
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    let extractFrom = from.e.sql;
-    if (TD.isAnyTimestamp(from.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = this.sqlConvertToCivilTime(
-          extractFrom ?? '',
-          tz,
-          from.e.typeDef
-        ).sql;
-      }
-    }
-    if (from.units === 'day_of_week') {
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    if (units === 'day_of_week') {
       // Days since a Sunday, so the answer does not follow DATEFIRST
-      return `((DATEDIFF(day, '19000107', ${extractFrom}) % 7 + 7) % 7 + 1)`;
+      return `((DATEDIFF(day, '19000107', ${expr}) % 7 + 7) % 7 + 1)`;
     }
     // Malloy's week of the year is the ISO week; DATEPART(week) counts from
     // January 1st and follows DATEFIRST
-    const part = from.units === 'week' ? 'iso_week' : datePartMap[from.units];
+    const part = units === 'week' ? 'iso_week' : datePartMap[units];
     if (part === undefined) {
-      throw new Error(`Unknown SQL Server date part '${from.units}'`);
+      throw new Error(`Unknown SQL Server date part '${units}'`);
     }
-    return `DATEPART(${part}, ${extractFrom})`;
+    return `DATEPART(${part}, ${expr})`;
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+  sqlCivilToDate(expr: string): string {
+    return `CAST(${expr} AS DATE)`;
+  }
+
+  sqlDateToCivil(expr: string): string {
+    return `CAST(${expr} AS DATETIME2)`;
+  }
+
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
     const expr = cast.e.sql || '';
     const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     if (dstTypeDef?.type === 'boolean') {
       return this.unsupported('a cast to boolean: there are no boolean values');
-    }
-    const tz = qtz(qi);
-    if (tz && srcTypeDef && dstTypeDef) {
-      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        const civil = this.sqlConvertToCivilTime(expr, tz, srcTypeDef).sql;
-        return `CAST(${civil} AS DATE)`;
-      }
-      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return this.sqlConvertFromCivilTime(
-          `CAST(${expr} AS DATETIME2)`,
-          tz,
-          dstTypeDef
-        );
-      }
     }
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
@@ -519,17 +506,8 @@ export class SQLServerDialect extends Dialect {
     return `CAST('${literal}' AS DATE)`;
   }
 
-  sqlTimestampLiteral(
-    qi: QueryInfo,
-    literal: string,
-    timezone: string | undefined
-  ): string {
-    const tz = timezone || qtz(qi);
-    const ts = `CAST('${literal}' AS DATETIME2)`;
-    if (tz) {
-      return this.sqlConvertFromCivilTime(ts, tz, {type: 'timestamp'});
-    }
-    return ts;
+  sqlCivilLiteral(literal: string): string {
+    return `CAST('${literal}' AS DATETIME2)`;
   }
 
   sqlTimestamptzLiteral(
@@ -551,19 +529,17 @@ export class SQLServerDialect extends Dialect {
     return this.sqlLiteralString(windowsName);
   }
 
+  // Civil time is a datetime2, which has no zone
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    _typeDef: AtomicTypeDef
-  ): {sql: string; typeDef: AtomicTypeDef} {
+    _typeDef: ATimestampTypeDef
+  ): string {
     if (timezone === 'UTC') {
-      return {sql: expr, typeDef: {type: 'timestamp'}};
+      return expr;
     }
     const tz = this.sqlTimezoneLiteral(timezone);
-    return {
-      sql: `CAST((${expr} AT TIME ZONE 'UTC') AT TIME ZONE ${tz} AS DATETIME2)`,
-      typeDef: {type: 'timestamp'},
-    };
+    return `CAST((${expr} AT TIME ZONE 'UTC') AT TIME ZONE ${tz} AS DATETIME2)`;
   }
 
   sqlConvertFromCivilTime(
@@ -578,13 +554,8 @@ export class SQLServerDialect extends Dialect {
     return `CAST((${expr} AT TIME ZONE ${tz}) AT TIME ZONE 'UTC' AS DATETIME2)`;
   }
 
-  sqlTruncate(
-    expr: string,
-    unit: TimestampUnit,
-    typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
-  ): string {
+  sqlTruncate(expr: string, unit: TimestampUnit, civilType: CivilTime): string {
+    const isDate = civilType === CivilTime.Date;
     // Truncation is DATEADD of the whole units since an anchor: 1900-01-01
     // for a calendar unit, the value's own midnight for a clock unit, so the
     // count fits an int. SQL Server 2017 has no DATETRUNC.
@@ -592,21 +563,21 @@ export class SQLServerDialect extends Dialect {
     if (unit === 'week') {
       // Malloy weeks start on Sunday whatever DATEFIRST says, so count days
       // from a known Sunday.
-      const day = TD.isDate(typeDef) ? expr : midnight;
+      const day = isDate ? expr : midnight;
       return `DATEADD(day, -((DATEDIFF(day, '19000107', ${expr}) % 7 + 7) % 7), ${day})`;
     }
     const part = datePartMap[unit];
     if (part === undefined) {
       throw new Error(`Unknown SQL Server date part '${unit}'`);
     }
-    if (unit === 'day' && !TD.isDate(typeDef)) {
+    if (unit === 'day' && !isDate) {
       return midnight;
     }
     if (unit === 'hour' || unit === 'minute' || unit === 'second') {
       return `DATEADD(${part}, DATEDIFF(${part}, ${midnight}, ${expr}), ${midnight})`;
     }
     const truncated = `DATEADD(${part}, DATEDIFF(${part}, '19000101', ${expr}), '19000101')`;
-    return TD.isDate(typeDef)
+    return isDate
       ? `CAST(${truncated} AS DATE)`
       : `CAST(${truncated} AS DATETIME2)`;
   }
@@ -616,9 +587,7 @@ export class SQLServerDialect extends Dialect {
     op: '+' | '-',
     magnitude: string,
     unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    _civilType: CivilTime
   ): string {
     const part = datePartMap[unit];
     if (part === undefined) {
