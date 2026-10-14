@@ -133,7 +133,7 @@ describe('db:SQLServer', () => {
       d: 'date',
       dt2: 'timestamp',
       dt: 'timestamp',
-      dto: 'sql native',
+      dto: 'timestamptz',
       t: 'sql native',
       uid: 'sql native',
       m: 'number:float',

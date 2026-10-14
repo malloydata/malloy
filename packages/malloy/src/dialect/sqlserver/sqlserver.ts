@@ -81,6 +81,7 @@ const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'datetime': {type: 'timestamp'},
   'datetime2': {type: 'timestamp'},
   'smalldatetime': {type: 'timestamp'},
+  'datetimeoffset': {type: 'timestamptz'},
 };
 
 function parseSQLServerType(sqlType: string): {base: string; params: number[]} {
@@ -190,7 +191,9 @@ export class SQLServerDialect extends Dialect {
   // condition is expected, `true` and `false` are (1=1) and (1=0), a `bit`
   // column is an integer, and a cast to boolean is refused.
   booleanType: BooleanTypeSupport = 'none';
-  hasTimestamptz = false;
+  // A datetimeoffset is an instant. Its clock is read at UTC, or in the
+  // query's time zone, never at the offset it was written in.
+  hasTimestamptz = true;
   // A bigint arrives from the driver as text and is read as a JavaScript number
   supportsBigIntPrecision = false;
   maxIdentifierLength = 128;
@@ -233,6 +236,8 @@ export class SQLServerDialect extends Dialect {
         return 'DATE';
       case 'timestamp':
         return 'DATETIME2';
+      case 'timestamptz':
+        return 'DATETIMEOFFSET';
       case 'record':
       case 'array':
         return 'NVARCHAR(MAX)';
@@ -512,10 +517,14 @@ export class SQLServerDialect extends Dialect {
 
   sqlTimestamptzLiteral(
     _qi: QueryInfo,
-    _literal: string,
-    _timezone: string
+    literal: string,
+    timezone: string
   ): string {
-    throw new Error('SQL Server dialect does not support timestamptz');
+    return this.sqlConvertFromCivilTime(
+      this.sqlCivilLiteral(literal),
+      timezone,
+      {type: 'timestamptz'}
+    );
   }
 
   // AT TIME ZONE takes a Windows time zone name
@@ -529,14 +538,19 @@ export class SQLServerDialect extends Dialect {
     return this.sqlLiteralString(windowsName);
   }
 
-  // Civil time is a datetime2, which has no zone
+  // Civil time is a datetime2, which has no zone. AT TIME ZONE 'UTC' labels
+  // a datetime2 as UTC and moves a datetimeoffset to UTC, so one expression
+  // reads the clock of either; a CAST alone would read a datetimeoffset's
+  // clock at the offset it was written in.
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    _typeDef: ATimestampTypeDef
+    typeDef: ATimestampTypeDef
   ): string {
     if (timezone === 'UTC') {
-      return expr;
+      return TD.isTimestamptz(typeDef)
+        ? `CAST((${expr} AT TIME ZONE 'UTC') AS DATETIME2)`
+        : expr;
     }
     const tz = this.sqlTimezoneLiteral(timezone);
     return `CAST((${expr} AT TIME ZONE 'UTC') AT TIME ZONE ${tz} AS DATETIME2)`;
@@ -545,8 +559,14 @@ export class SQLServerDialect extends Dialect {
   sqlConvertFromCivilTime(
     expr: string,
     timezone: string,
-    _destTypeDef: ATimestampTypeDef
+    destTypeDef: ATimestampTypeDef
   ): string {
+    if (TD.isTimestamptz(destTypeDef)) {
+      // A datetime2 cast to datetimeoffset is at +00:00
+      return timezone === 'UTC'
+        ? `CAST(${expr} AS DATETIMEOFFSET)`
+        : `(${expr} AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)})`;
+    }
     if (timezone === 'UTC') {
       return expr;
     }
