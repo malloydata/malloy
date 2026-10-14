@@ -8,12 +8,15 @@ Built on **Solid.js** (reactive UI) and **Vega** (declarative charts).
 
 ## Distribution & Public Surface
 
-`package.json` `exports` declares a single `.` entry with conditions: `import` → `dist/module/index.mjs` (ESM, added in #2945 so ESM consumers like malloy-explorer resolve the ES build), `require`/`default` → the **UMD bundle** (`dist/module/index.umd.js`). There are no subpath imports and no headless entry. All integration goes through `MalloyRenderer` (or the legacy `HTMLView`, still exported for the VS Code notebook schema view).
+`package.json` `exports` declares two entries:
+
+- **`.`** with conditions: `import` → `dist/module/index.mjs` (ESM, added in #2945 so ESM consumers like malloy-explorer resolve the ES build), `require`/`default` → the **UMD bundle** (`dist/module/index.umd.js`). All rendering goes through `MalloyRenderer` (or the legacy `HTMLView`, still exported for the VS Code notebook schema view).
+- **`./format`** — the one headless entry: `src/format/`, built separately by `vite.config.format.mts` to `dist/format/index.{mjs,cjs}` with its dependencies external (types from the main build's `dist/module/format/`). It holds the single-value formatters — `resolveCellFormat(tag, {isTime})` turns a field's `# currency` / `# percent` / `# duration` / `# number` tag into a plain `CellFormatConfig`, and `formatNumber` / `formatDateTime` apply one to a value. The renderer's own cells call these same functions (`component/render-numeric-field.ts` and `resolveCellFormatTags` are thin `Field` wrappers), so a value formatted through this entry reads exactly as it does in a rendered table. Keep `src/format/` free of `data_tree`, Solid, Vega and DOM imports: that is what makes it loadable in Node and in a sandboxed frame.
 
 Two non-obvious consequences:
 
 - **`@malloydata/malloy-tag` is a runtime dependency for type resolution only.** The UMD inlines malloy-tag (vite `external: []`); nothing escapes to `require()` at runtime. But the published `.d.ts` files (`api/plugin-types.d.ts`, `data_tree/fields/base.d.ts`, `util.d.ts`, etc.) re-export `Tag`, so consumer TypeScript needs the package installed.
-- **The bundle cannot be loaded in Node without a DOM stub** (either condition). Solid.js calls `delegateEvents()` at module-eval time and reads `window.document`. The headless validator (`@malloydata/render-validator`) installs and removes global `window`/`document`/`navigator` stubs around its `require()` of this package; any other Node consumer must do the same.
+- **The main bundle cannot be loaded in Node without a DOM stub** (either condition; `./format` can). Solid.js calls `delegateEvents()` at module-eval time and reads `window.document`. The headless validator (`@malloydata/render-validator`) installs and removes global `window`/`document`/`navigator` stubs around its `require()` of this package; any other Node consumer must do the same.
 
 ## Vega is pinned at v5 — a deliberate hold
 

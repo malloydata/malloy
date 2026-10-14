@@ -16,16 +16,7 @@
  */
 
 import type {Field} from '@/data_tree';
-import type {Tag} from '@malloydata/malloy-tag';
-import {
-  parseCurrencyShorthand,
-  parseNumberShorthand,
-  normalizeScale,
-  type ScaleKey,
-  type SuffixFormatKey,
-} from '@/util';
-import {DurationUnit} from '@/html/data_styles';
-import type {SuffixFormat} from '@/html/data_styles';
+import {resolveCellFormat, type CellFormatConfig} from '@/format/cell-format';
 
 // ---- Image ----
 
@@ -93,150 +84,19 @@ export function resolveListTags(field: Field): ListTagConfig {
 }
 
 // ---- Cell format (numeric, date, duration) ----
+//
+// The config and its resolver live in ../format, the headless entry, so a
+// value can be formatted outside the renderer exactly as a cell is.
 
-export interface CurrencyConfig {
-  symbol: string;
-  scale?: ScaleKey | 'auto';
-  decimals?: number;
-  suffixFormat: SuffixFormatKey;
-}
-
-export interface NumberConfig {
-  formatString?: string;
-  scale?: ScaleKey | 'auto';
-  decimals?: number;
-  suffixFormat?: SuffixFormatKey;
-  isId?: boolean;
-  isBig?: boolean;
-}
-
-export interface DurationConfig {
-  unit: string;
-  terse: boolean;
-}
-
-export type CellFormatConfig =
-  | {mode: 'currency'; currency: CurrencyConfig}
-  | {mode: 'percent'}
-  | {mode: 'duration'; duration: DurationConfig}
-  | {mode: 'number'; number: NumberConfig}
-  | {mode: 'dateFormat'; formatString: string}
-  | {mode: 'default'};
-
-function resolveCurrencyConfig(tag: Tag): CurrencyConfig {
-  const currencyValue = tag.text('currency');
-
-  // Try shorthand (e.g., "usd2m", "eur0k")
-  const shorthand = currencyValue
-    ? parseCurrencyShorthand(currencyValue)
-    : null;
-
-  if (shorthand) {
-    return {
-      symbol: shorthand.symbol,
-      scale: shorthand.scale,
-      decimals: shorthand.decimals,
-      suffixFormat: 'lower',
-    };
-  }
-
-  // Legacy/verbose
-  let symbol = '$';
-  switch (currencyValue) {
-    case 'euro':
-      symbol = '€';
-      break;
-    case 'pound':
-      symbol = '£';
-      break;
-    case 'usd':
-    default:
-      symbol = '$';
-      break;
-  }
-
-  const scaleTag = tag.text('currency', 'scale');
-  const scale = normalizeScale(scaleTag);
-  const decimals = tag.numeric('currency', 'decimals') ?? undefined;
-  const suffixTag = tag.text('currency', 'suffix') as SuffixFormat | undefined;
-  let suffixFormat: SuffixFormatKey = 'lower';
-  if (suffixTag) {
-    suffixFormat = suffixTag as SuffixFormatKey;
-  } else if (scale) {
-    suffixFormat = 'letter';
-  }
-
-  return {symbol, scale, decimals, suffixFormat};
-}
-
-function resolveNumberConfig(tag: Tag): NumberConfig {
-  const numberValue = tag.text('number');
-
-  // Try shorthand (e.g., "1k", "0m", "auto", "big", "id")
-  const shorthand = numberValue ? parseNumberShorthand(numberValue) : null;
-
-  if (shorthand) {
-    return {
-      scale: shorthand.scale,
-      decimals: shorthand.decimals,
-      isId: shorthand.isId,
-      isBig: false,
-      suffixFormat: 'lower',
-    };
-  }
-
-  // Check verbose syntax
-  const scaleTag = tag.text('number', 'scale');
-  const scale = normalizeScale(scaleTag);
-  if (scale) {
-    const decimals = tag.numeric('number', 'decimals') ?? 2;
-    const suffixTag = tag.text('number', 'suffix') as SuffixFormat | undefined;
-    const suffixFormat: SuffixFormatKey =
-      (suffixTag as SuffixFormatKey) ?? 'letter';
-    return {scale, decimals, suffixFormat};
-  }
-
-  // Legacy or SSF format string
-  if (numberValue === 'big') {
-    return {isBig: true};
-  }
-
-  return {formatString: numberValue ?? undefined};
-}
+export type {
+  CellFormatConfig,
+  CurrencyConfig,
+  DurationConfig,
+  NumberConfig,
+} from '@/format/cell-format';
 
 export function resolveCellFormatTags(field: Field): CellFormatConfig {
-  const tag = field.tag;
-
-  // Numeric fields
-  if (tag.has('currency')) {
-    return {mode: 'currency', currency: resolveCurrencyConfig(tag)};
-  }
-  if (tag.has('percent')) {
-    return {mode: 'percent'};
-  }
-  if (tag.has('duration')) {
-    const durationUnit = tag.text('duration');
-    const terse = tag.has('duration', 'terse');
-    return {
-      mode: 'duration',
-      duration: {
-        unit: durationUnit ?? DurationUnit.Seconds,
-        terse,
-      },
-    };
-  }
-  if (tag.has('number')) {
-    // For date/timestamp fields, # number is a date format
-    if (field.isTime()) {
-      const numberFormat = tag.text('number');
-      if (numberFormat) {
-        return {mode: 'dateFormat', formatString: numberFormat};
-      }
-    }
-    return {mode: 'number', number: resolveNumberConfig(tag)};
-  }
-
-  return {mode: 'default'};
+  return resolveCellFormat(field.tag, {isTime: field.isTime()});
 }
 
 // ---- Column ----

@@ -15,7 +15,7 @@ export {
   registerDialect,
   getDialect,
   arg,
-  qtz,
+  queryZone,
   overload,
   minScalar,
   anyExprType,

@@ -31,6 +31,7 @@ import type {
   TimestampUnit,
   TimeExtractExpr,
   TimestampLiteralNode,
+  TypecastExpr,
 } from './malloy_types';
 import {isTemporalType, mkTemporal} from './malloy_types';
 import {DateTime as LuxonDateTime} from 'luxon';
@@ -419,21 +420,19 @@ export class TemporalFilterCompiler {
     if (this.timetype !== 'date') {
       return timeSQL;
     }
-    return this.d.sqlCast(
-      {},
-      {
-        node: 'cast',
-        e: {
-          node: 'genericSQLExpr',
-          src: ['', timeSQL],
-          kids: {args: []},
-          sql: timeSQL,
-        },
-        srcType: {type: 'timestamp'},
-        dstType: {type: 'date'},
-        safe: false,
-      }
-    );
+    const toDate: TypecastExpr = {
+      node: 'cast',
+      e: {
+        node: 'genericSQLExpr',
+        src: ['', timeSQL],
+        kids: {args: []},
+        sql: timeSQL,
+      },
+      srcType: {type: 'timestamp'},
+      dstType: {type: 'date'},
+      safe: false,
+    };
+    return this.d.sqlTimeCast(this.qi, toDate)!;
   }
 
   compile(tc: TemporalFilter): string {

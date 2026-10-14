@@ -23,7 +23,7 @@ export {
   literal,
   sql,
 } from './functions/util';
-export {Dialect, qtz} from './dialect';
+export {Dialect, queryZone} from './dialect';
 export type {
   DialectFieldList,
   CompiledOrderBy,
