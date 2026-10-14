@@ -365,10 +365,11 @@ export class PostgresDialect extends PostgresBase {
 
     // PostgreSQL requires CAST to NUMERIC before ROUND, which is different
     // than the generic implementation of sqlSumDistinct, but is OK in
-    // PostgreSQL because NUMERIC has arbitrary precision.
+    // PostgreSQL because NUMERIC has arbitrary precision. The result stays
+    // NUMERIC: DOUBLE PRECISION would keep only about 15 significant digits.
     const roundedValue = `ROUND(CAST(COALESCE(${value}, 0) AS NUMERIC), 9)`;
     const sumSQL = `SUM(DISTINCT ${roundedValue} + ${hashKey}) - SUM(DISTINCT ${hashKey})`;
-    const ret = `CAST(${sumSQL} AS DOUBLE PRECISION)`;
+    const ret = `CAST(${sumSQL} AS NUMERIC)`;
 
     if (funcName === 'SUM') {
       return ret;
