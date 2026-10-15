@@ -64,8 +64,8 @@ function unlike(disLiked: string[], x: string) {
 // The `none` filter ("always false") compiles to a constant, independent of
 // column type or value; `not none` is "always true". Shared by the top-level
 // guard and every per-type compiler so the constant lives in one place.
-function noneToSQL(not: boolean | undefined): string {
-  return not ? 'true' : 'false';
+function noneToSQL(not: boolean | undefined, d: Dialect): string {
+  return d.sqlBoolean(not === true);
 }
 
 export const FilterCompilers = {
@@ -77,7 +77,7 @@ export const FilterCompilers = {
     qi: QueryInfo = {}
   ) {
     if (c === null) {
-      return 'true';
+      return d.sqlBoolean(true);
     }
     // `none` is the always-false filter (companion to the empty/`null` filter,
     // which is always-true above). It compiles to a constant independent of
@@ -85,7 +85,7 @@ export const FilterCompilers = {
     // also the primary path for boolean, whose compiler has no switch and
     // would otherwise route `none` through the null/false truth-table.
     if (c.operator === 'none') {
-      return noneToSQL(c.not);
+      return noneToSQL(c.not, d);
     }
     if (t === 'string' && isStringFilter(c)) {
       return FilterCompilers.stringCompile(c, x, d);
@@ -135,7 +135,7 @@ export const FilterCompilers = {
       case 'null':
         return nc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
       case 'none':
-        return noneToSQL(nc.not);
+        return noneToSQL(nc.not, d);
       case '()': {
         const wrapped =
           '(' + FilterCompilers.numberCompile(nc.expr, x, d) + ')';
@@ -170,11 +170,15 @@ export const FilterCompilers = {
       // Normally intercepted by compile()'s top-level guard; handled here too so
       // booleanCompile is self-safe (this if-chain has no default, and `none`
       // must not fall through to the null/false truth-table below).
-      return noneToSQL(bc.not);
+      return noneToSQL(bc.not, d);
     } else if (bc.operator === '=true') {
-      return bc.not ? `NOT ${px}` : x;
+      return bc.not
+        ? `NOT ${d.sqlValueAsCondition(px)}`
+        : d.sqlValueAsCondition(x);
     } else if (bc.operator === '=false') {
-      return bc.not ? x : `NOT ${px}`;
+      return bc.not
+        ? d.sqlValueAsCondition(x)
+        : `NOT ${d.sqlValueAsCondition(px)}`;
     } else if (bc.operator === 'null') {
       return bc.not ? `${px} IS NOT NULL` : `${px} IS NULL`;
     }
@@ -185,28 +189,32 @@ export const FilterCompilers = {
     const quoteChar = d.sqlQuoteIdentifier('select')[0];
     const isColumn = x.match(`^[()${quoteChar}\\w.]+$`);
 
+    const isFalse = `${px} = ${d.sqlBooleanValue(false)}`;
     if (isColumn) {
       if (bc.operator === 'true') {
         return bc.not
-          ? `${px} IS NULL OR ${px} = false`
-          : `${px} IS NOT NULL AND ${px}`;
+          ? `${px} IS NULL OR ${isFalse}`
+          : `${px} IS NOT NULL AND ${d.sqlValueAsCondition(px)}`;
       }
       return bc.not
-        ? `${px} IS NOT NULL AND ${px}` // not false: exclude null
-        : `${px} IS NULL OR ${px} = false`; // false: include null
+        ? `${px} IS NOT NULL AND ${d.sqlValueAsCondition(px)}` // not false: exclude null
+        : `${px} IS NULL OR ${isFalse}`; // false: include null
     }
+    const notNull = d.sqlValueAsCondition(
+      `COALESCE(${x}, ${d.sqlBooleanValue(false)})`
+    );
     if (bc.operator === 'true') {
-      return bc.not ? `NOT COALESCE(${x}, false)` : `COALESCE(${x}, false)`;
+      return bc.not ? `NOT ${notNull}` : notNull;
     }
     // else bc.operator === 'false'
-    return bc.not ? `COALESCE(${x}, false)` : `NOT COALESCE(${x}, false)`;
+    return bc.not ? notNull : `NOT ${notNull}`;
   },
   stringCompile(sc: StringFilter, x: string, d: Dialect): string {
     switch (sc.operator) {
       case 'null':
         return sc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
       case 'none':
-        return noneToSQL(sc.not);
+        return noneToSQL(sc.not, d);
       case 'empty':
         return sc.not ? `COALESCE(${x},'') != ''` : `COALESCE(${x},'') = ''`;
       case '=': {
@@ -317,7 +325,7 @@ export const FilterCompilers = {
           }
         }
         if ((includeEmpty && excludeEmpty) || (includeNull && excludeNull)) {
-          return 'false';
+          return d.sqlBoolean(false);
         }
         let includeSQL = '';
         if (includes.length > 0 || includeNull || includeEmpty) {
@@ -352,7 +360,7 @@ export const FilterCompilers = {
             ? `(${includeSQL}) AND (${excludeSQL})`
             : includeSQL;
         }
-        return excludeSQL !== '' ? excludeSQL : 'true';
+        return excludeSQL !== '' ? excludeSQL : d.sqlBoolean(true);
       }
     }
   },
@@ -522,7 +530,7 @@ export class TemporalFilterCompiler {
       case 'null':
         return tc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
       case 'none':
-        return noneToSQL(tc.not);
+        return noneToSQL(tc.not, this.d);
       case '()': {
         const wrapped = '(' + this.compile(tc.expr) + ')';
         return tc.not ? `NOT ${wrapped}` : wrapped;

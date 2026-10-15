@@ -447,6 +447,20 @@ Compiles IR expression trees into SQL expressions.
 - Function calls
 - Field references and path expressions
 
+**Conditions and values.** SQL has two places for a boolean: a *condition* (`WHERE`, `ON`,
+`CASE WHEN`, the operands of `AND`/`OR`/`NOT`) and a *value* (everywhere else). On a dialect
+with a boolean type the two are interchangeable; on one with `booleanType: 'none'` (SQL Server)
+a comparison is legal only as a condition and a `bit` only as a value. `compileExpr` carries the
+`wanted` form down the tree (`wantedForm`: the operands of `and`/`or`/`not`, a filter and a
+subject-less `CASE WHEN` want a condition, everything else a value), knows each node's natural
+form (`booleanForm`: comparisons, `in`, `like`, `is null`, a filter match and `sql_boolean` are
+conditions), and crosses the boundary through `Dialect.sqlConditionAsValue` /
+`sqlValueAsCondition`, which return their argument on every dialect with booleans. The literals
+`true`/`false` are spelled in the wanted form (`sqlBoolean` / `sqlBooleanValue`), and Malloy's
+NULL rules for `not`, `!=` and `!~` go through `Dialect.sqlNot` / `sqlNullIsTrue`. A
+`where:`/`having:` list and a join `on:` are compiled wanting a condition; a field is compiled
+wanting a value.
+
 ### 3. Dialect System
 
 The compiler supports multiple SQL dialects through a plugin architecture.
