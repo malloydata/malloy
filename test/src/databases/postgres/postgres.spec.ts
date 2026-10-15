@@ -136,6 +136,20 @@ describe('Postgres tests', () => {
         select: cents is (total - 1234567890123456) * 100, dup_rows
       }
     `).toMatchResult(testModel, {cents: 78, dup_rows: 3});
+    // The ROUND(..., 9) scale must not reach string output as trailing zeros.
+    await expect(`
+      source: small is postgres.sql("""
+        SELECT 1 AS id, 4::NUMERIC(18,2) AS amt UNION ALL SELECT 2, 6
+      """) extend {
+        primary_key: id
+        join_many: dup is postgres.sql("""
+          SELECT 1 AS id UNION ALL SELECT 1 UNION ALL SELECT 2
+        """) on id = dup.id
+      }
+      run: small -> {
+        aggregate: ten_s is concat(amt.sum(), ''), dup_rows is dup.count()
+      }
+    `).toMatchResult(testModel, {ten_s: '10', dup_rows: 3});
   });
 
   describe('all-aggregates query with joins and nested views', () => {
