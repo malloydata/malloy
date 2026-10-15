@@ -242,7 +242,7 @@ function compileExpr<T extends Expr>(
         // null binding collapses to empty-set semantics — not the SQL
         // `IN (NULL)` shape, which has confusing NULL-membership rules.
         if (bound.node === 'null') {
-          return expr.not ? 'TRUE' : 'FALSE';
+          return context.dialect.sqlBoolean(expr.not);
         }
         if (bound.node !== 'arrayLiteral') {
           throw new Error(
@@ -250,7 +250,7 @@ function compileExpr<T extends Expr>(
           );
         }
         if (bound.kids.values.length === 0) {
-          return expr.not ? 'TRUE' : 'FALSE';
+          return context.dialect.sqlBoolean(expr.not);
         }
         const elemSqls = bound.kids.values.map(v =>
           exprToSQL(resultSet, context, v, state)
