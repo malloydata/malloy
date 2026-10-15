@@ -450,7 +450,11 @@ export class ExprFunc extends ExpressionDef {
           }
         }
 
-        funcCall = composeSQLExpr(expr);
+        const raw = composeSQLExpr(expr);
+        if (func.name === 'sql_boolean') {
+          raw.condition = true;
+        }
+        funcCall = raw;
       }
     }
     const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));

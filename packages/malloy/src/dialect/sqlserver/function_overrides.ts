@@ -12,17 +12,15 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   ceil: {function: 'CEILING'},
   chr: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE NCHAR(${value}) END"},
   div: {sql: 'FLOOR(${dividend} / ${divisor})'},
-  // starts_with and ends_with are written as comparisons because SQL Server
-  // has no boolean values: legal as a condition (where:, having:), a server
-  // error as a value. A NULL input matches nothing, where the standard's
-  // COALESCE(..., false) returns false.
+  // A boolean function is a 1/0 value; the compiler makes a condition of it
+  // where one is wanted. Of NULL, 0: the standard is COALESCE(..., false).
   ends_with: {
-    sql: `RIGHT(\${value}, ${len('${suffix}')}) = \${suffix}`,
+    sql: `CASE WHEN RIGHT(\${value}, ${len('${suffix}')}) = \${suffix} THEN 1 ELSE 0 END`,
   },
   ifnull: {function: 'ISNULL'},
-  // A FLOAT holds neither infinity nor NaN, so neither condition is ever true
-  is_inf: {sql: '(1=0)'},
-  is_nan: {sql: '(1=0)'},
+  // A FLOAT holds neither infinity nor NaN
+  is_inf: {sql: '0'},
+  is_nan: {sql: '0'},
   length: {sql: len('${value}')},
   ln: {sql: 'LOG(${value})'},
   log: {sql: 'LOG(${value}, ${base})'},
@@ -35,7 +33,7 @@ export const SQLSERVER_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   atan2: {function: 'ATN2'},
   trim: {characters: {sql: 'TRIM(${trim_characters} FROM ${value})'}},
   starts_with: {
-    sql: `LEFT(\${value}, ${len('${prefix}')}) = \${prefix}`,
+    sql: `CASE WHEN LEFT(\${value}, ${len('${prefix}')}) = \${prefix} THEN 1 ELSE 0 END`,
   },
   stddev: {function: 'STDEV'},
   string_repeat: {function: 'REPLICATE'},

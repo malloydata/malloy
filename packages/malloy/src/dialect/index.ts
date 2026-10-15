@@ -25,6 +25,7 @@ export {
 } from './functions/util';
 export {Dialect, queryZone} from './dialect';
 export type {
+  BooleanForm,
   DialectFieldList,
   CompiledOrderBy,
   LateralJoinExpression,

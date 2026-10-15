@@ -111,6 +111,84 @@ describe('SQL Server', () => {
       ]);
     });
 
+    test('a declared boolean is a condition in where: and having:', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') extend {
+          dimension: big is airport_count > 500
+          measure: n is count()
+        } -> {
+          where: big
+          group_by: big
+          aggregate: n
+          having: n > 1
+        }
+      `).toEqualResult(tm, [{big: true, n: 12}]);
+    });
+
+    test('not, and a comparison true on NULL, follow Malloy rather than SQL', async () => {
+      await expect(`
+        run: sqlserver.sql('SELECT CAST(NULL AS INT) AS n, 1 AS one') -> {
+          select:
+            not_null is not (n = 1)
+            ne_null is n != 1
+            not_one is not (one = 1)
+            ne_one is one != 1
+        }
+      `).toEqualResult(tm, [
+        {not_null: true, ne_null: true, not_one: false, ne_one: false},
+      ]);
+    });
+
+    test('a boolean picks, and is picked', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          group_by:
+            size is pick 'big' when airport_count > 500 else 'small'
+            flagged is pick true when airport_count > 500 else false
+          aggregate: n is count()
+          order_by: size
+        }
+      `).toEqualResult(tm, [
+        {size: 'big', flagged: true, n: 12},
+        {size: 'small', flagged: false, n: 39},
+      ]);
+    });
+
+    test('a boolean function is a value, and a condition where one is wanted', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          where: starts_with(state, 'C')
+          select: state, c is starts_with(state, 'C'), a is ends_with(state, 'A')
+          order_by: state
+        }
+      `).toEqualResult(tm, [
+        {state: 'CA', c: true, a: true},
+        {state: 'CO', c: true, a: false},
+        {state: 'CT', c: true, a: false},
+      ]);
+    });
+
+    test('a boolean literal is a value in select:', async () => {
+      await expect(`
+        run: sqlserver.table('malloytest.state_facts') -> {
+          select: t is true, f is false
+          limit: 1
+        }
+      `).toEqualResult(tm, [{t: true, f: false}]);
+    });
+
+    test('sql_boolean is a condition', async () => {
+      await expect(`
+        ##! experimental { sql_functions }
+        run: sqlserver.table('malloytest.state_facts') extend {
+          dimension: big is sql_boolean("\${airport_count} > 500")
+        } -> {
+          where: big
+          aggregate: n is count()
+        }
+      `).toEqualResult(tm, [{n: 12}]);
+    });
+
     test('a cast to boolean is refused', async () => {
       await expect(
         runtime
@@ -123,7 +201,7 @@ describe('SQL Server', () => {
       ).rejects.toThrow(/boolean/);
     });
 
-    test('starts_with and ends_with are conditions', async () => {
+    test('starts_with, ends_with and is_nan filter an aggregate', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {
           aggregate:

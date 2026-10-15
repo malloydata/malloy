@@ -429,6 +429,9 @@ export interface GenericSQLExpr extends ExprWithKids {
   node: 'genericSQLExpr';
   kids: {args: Expr[]};
   src: string[];
+  // The SQL is a condition (sql_boolean), which a dialect without boolean
+  // values converts where a value is wanted
+  condition?: true;
 }
 
 export interface NullNode extends ExprLeaf {

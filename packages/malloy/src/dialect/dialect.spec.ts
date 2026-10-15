@@ -5,12 +5,51 @@
 
 import {MySQLDialect} from './mysql';
 import {SQLServerDialect} from './sqlserver';
+import {StandardSQLDialect} from './standardsql';
 
 describe('Dialect booleans', () => {
+  const noBooleans = new SQLServerDialect();
+  const booleans = new StandardSQLDialect();
+
   test('a dialect with no boolean type spells both literals as conditions', () => {
-    const noBooleans = new SQLServerDialect();
     expect(noBooleans.sqlBoolean(true)).toBe('(1=1)');
     expect(noBooleans.sqlBoolean(false)).toBe('(1=0)');
+  });
+
+  test('a dialect with no boolean type spells a literal value as 1 or 0', () => {
+    expect(noBooleans.sqlBooleanValue(true)).toBe('1');
+    expect(noBooleans.sqlBooleanValue(false)).toBe('0');
+  });
+
+  test('a dialect with booleans spells a literal the same in either form', () => {
+    expect(booleans.sqlBoolean(true)).toBe('true');
+    expect(booleans.sqlBooleanValue(true)).toBe('true');
+    expect(booleans.sqlBoolean(false)).toBe('false');
+    expect(booleans.sqlBooleanValue(false)).toBe('false');
+  });
+
+  test('a condition becomes a value which is NULL when the condition is', () => {
+    expect(noBooleans.sqlConditionAsValue('a > b')).toBe(
+      'CASE WHEN a > b THEN 1 WHEN NOT (a > b) THEN 0 END'
+    );
+    expect(booleans.sqlConditionAsValue('a > b')).toBe('a > b');
+  });
+
+  test('a value becomes a condition by comparing it with 1', () => {
+    expect(noBooleans.sqlValueAsCondition('x')).toBe('(x = 1)');
+    expect(booleans.sqlValueAsCondition('x')).toBe('x');
+  });
+
+  test('not, and a comparison true on NULL, keep COALESCE where there are booleans', () => {
+    expect(booleans.sqlNot('c')).toBe('COALESCE(NOT c,TRUE)');
+    expect(booleans.sqlNullIsTrue('c')).toBe('COALESCE(c,true)');
+  });
+
+  test('not, and a comparison true on NULL, are written without a boolean value', () => {
+    expect(noBooleans.sqlNot('c')).toBe('(CASE WHEN c THEN 1 ELSE 0 END = 0)');
+    expect(noBooleans.sqlNullIsTrue('c')).toBe(
+      '(CASE WHEN NOT (c) THEN 1 ELSE 0 END = 0)'
+    );
   });
 });
 
