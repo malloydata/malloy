@@ -13,7 +13,11 @@ import {RenderLogCollector} from '@/component/render-log-collector';
 import type {Tag} from '@malloydata/malloy-tag';
 import {resolveBuiltInTags} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
-import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '@/component/tag-utils';
+import {
+  normalizedVizTag,
+  VIZ_CHART_TYPES,
+  VIZ_PLUGIN_TYPES,
+} from '@/component/tag-utils';
 import {COMBO_MARK_TYPES} from '@/plugins/combo-chart/combo-chart-settings';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -268,10 +272,15 @@ export class RenderFieldMetadata {
 
     const vizType = tag.text('viz');
     if (vizType !== undefined) {
-      // Chart viz types come from the shared VIZ_CHART_TYPES list (so a new
-      // chart like 'combo' is valid here automatically); 'table'/'dashboard'
-      // are the non-chart viz targets.
-      const validVizTypes = [...VIZ_CHART_TYPES, 'table', 'dashboard'];
+      // Chart viz types come from the shared VIZ_CHART_TYPES and
+      // VIZ_PLUGIN_TYPES lists (so a new chart like 'combo' is valid here
+      // automatically); 'table'/'dashboard' are the non-chart viz targets.
+      const validVizTypes = [
+        ...VIZ_CHART_TYPES,
+        ...Object.keys(VIZ_PLUGIN_TYPES),
+        'table',
+        'dashboard',
+      ];
       if (!validVizTypes.includes(vizType)) {
         log.error(
           `Invalid viz type '${vizType}' on field '${field.name}'. Valid types: ${validVizTypes.join(', ')}`,
@@ -333,7 +342,7 @@ export class RenderFieldMetadata {
     // viz namespace so this check catches both old and new tag forms —
     // matching what the chart settings builders do.
     if (field.isNest()) {
-      const normalizedTag = convertLegacyToVizTag(tag);
+      const normalizedTag = normalizedVizTag(field);
       const vizTag = normalizedTag.tag('viz');
       if (vizTag) {
         const childByName = new Map(field.fields.map(f => [f.name, f]));
@@ -432,7 +441,7 @@ export class RenderFieldMetadata {
     // Normalize legacy # bar_chart / # line_chart so mode validation
     // catches both old and new tag forms.
     if (field.isNest()) {
-      const vizTag = convertLegacyToVizTag(tag).tag('viz');
+      const vizTag = normalizedVizTag(field).tag('viz');
       if (vizTag) {
         const modeVal = vizTag.text('mode');
         if (modeVal !== undefined) {
@@ -449,7 +458,7 @@ export class RenderFieldMetadata {
         // axis pins exist only on the combo chart, so these run only when the
         // viz type is 'combo'. Firing them for any `viz` tag would tell a bar
         // chart to "Fix: # combo_chart { ... }" for a tag bar charts don't have.
-        const isComboChart = convertLegacyToVizTag(tag).text('viz') === 'combo';
+        const isComboChart = normalizedVizTag(field).text('viz') === 'combo';
         // Combo chart per-axis mark type. Invalid values fall back to the
         // channel default in getComboChartSettings, so this warns (like an
         // unknown `size`) rather than erroring — but it must still be reported
