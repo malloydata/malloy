@@ -57,7 +57,10 @@ export type MalloyClickEventPayload = {
   fieldPath: string[];
   isHeader: boolean;
   event: MouseEvent;
-  type: 'dashboard-item' | 'table-cell';
+  // For 'chart-mark': the chart's row the clicked mark was drawn from. `field`
+  // is then the chart's nest field and `value` is this same row.
+  row?: RecordCell;
+  type: 'dashboard-item' | 'table-cell' | 'chart-mark';
 };
 
 export type VegaConfigHandler = (
@@ -107,6 +110,8 @@ export type TableConfig = {
   disableVirtualization: boolean;
   rowLimit: number;
   shouldFillWidth: boolean;
+  // Drill mode: a click on a table cell or on a chart mark (a bar, a line
+  // point) drills on its row, calling onDrill or else copying the drill query.
   enableDrill: boolean;
 };
 export type DashboardConfig = {

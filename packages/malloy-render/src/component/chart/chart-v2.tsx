@@ -14,8 +14,10 @@ import type {VegaBrushOutput} from '../result-store/result-store';
 
 import {DebugIcon} from './debug_icon';
 // import ChartDevTool from './chart-dev-tool';
-import type {RepeatedRecordCell} from '../../data_tree';
+import type {RecordCell, RepeatedRecordCell} from '../../data_tree';
 import {useResultContext} from '../result-context';
+import {useConfig} from '../render';
+import {copyExplorePathQueryToClipboard} from '../result-store/result-store';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {createRAFSignal, resize} from '../util';
 import {MalloyViz} from '@/api/malloy-viz';
@@ -85,6 +87,35 @@ export function ChartV2Inner(props: ChartV2Props) {
       const data = props.getTooltipData(item, view()!);
       setTooltipData(data);
     } else setTooltipData(null);
+  };
+
+  // A click on a mark whose datum is one row of the chart's data (a bar, a
+  // line point, ...) reports that row, and drills on it in drill mode, as a
+  // click on a table cell does.
+  const config = useConfig();
+  const clickHandler: EventListenerHandler = (event, item) => {
+    const row = (item?.datum as {__row?: RecordCell} | undefined)?.__row;
+    if (!row) return;
+    // The mark is the most specific target: a chart nested in a table cell
+    // must not also report a click on that cell.
+    event.stopPropagation();
+    config.onClick?.({
+      field: props.data.field,
+      displayValue: null,
+      value: row,
+      row,
+      fieldPath: props.data.field.path,
+      isHeader: false,
+      event: event as MouseEvent,
+      type: 'chart-mark',
+    });
+    if (config.tableConfig().enableDrill) {
+      copyExplorePathQueryToClipboard({
+        metadata,
+        data: row,
+        onDrill: config.onDrill,
+      });
+    }
   };
 
   // TODO: move brushing logic to its own module
@@ -248,6 +279,7 @@ export function ChartV2Inner(props: ChartV2Props) {
             width={chartSpace().width}
             height={chartSpace().height}
             onMouseOver={mouseOverHandler}
+            onClick={clickHandler}
             onViewInterface={setViewInterface}
             runtime={props.runtime}
             useVegaInterpreter={props.useVegaInterpreter}

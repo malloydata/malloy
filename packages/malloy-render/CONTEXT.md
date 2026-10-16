@@ -39,7 +39,7 @@ revisit when we take the Vega 5→6 upgrade.
 - `viz.setResult(result)` → `viz.render(element)` → optional `viz.remove()`. Tag validation runs in `setResult`; rendering can be skipped for headless use.
 - `viz.getLogs()` — accumulated warnings/errors (consumed by VS Code diagnostics and `@malloydata/render-validator`).
 - `viz.getHTML()` — off-screen render to HTML string for export/clipboard.
-- Consumer callbacks via `createViz` options: `onDrill(DrillData)`, `onReady()`, `onClick`, plus `tableConfig`.
+- Consumer callbacks via `createViz` options: `onDrill(DrillData)`, `onReady()`, `onClick`, plus `tableConfig`. `onClick` fires for table cells, dashboard items and chart marks (`type: 'chart-mark'`, with the clicked `row`); `tableConfig.enableDrill` turns on drilling for both table cells and chart marks.
 - Theming is bridged via `--malloy-*` CSS custom properties on the host element.
 
 ## Architecture

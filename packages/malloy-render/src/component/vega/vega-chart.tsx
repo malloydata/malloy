@@ -16,6 +16,7 @@ type VegaChartProps = {
   width?: number;
   height?: number;
   onMouseOver?: EventListenerHandler;
+  onClick?: EventListenerHandler;
   onView?: (view: View) => void;
   onViewInterface?: (viewInterface: ViewInterface) => void;
   runtime: Runtime;
@@ -77,6 +78,7 @@ export function VegaChart(props: VegaChartProps) {
     setSignalIfExists(nextView, 'malloyExplore', props.explore);
     if (props.onMouseOver)
       nextView.addEventListener('mousemove', props.onMouseOver);
+    if (props.onClick) nextView.addEventListener('click', props.onClick);
     nextView.run();
     setView(nextView);
     props.onView?.(nextView);
