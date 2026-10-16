@@ -25,8 +25,10 @@ import type {
   SymbolMark,
   Config,
   Item,
+  RangeScheme,
   View,
 } from 'vega';
+import {baseVegaConfig} from '@/component/vega/base-vega-config';
 import {
   renderNumericField,
   renderDateTimeField,
@@ -60,6 +62,25 @@ type ComboDataRecord = {
   x: string | number;
   __row: RecordCell;
 } & MalloyVegaDataRecord;
+
+/**
+ * The color scale range for the measures at `paths` (in domain order). With no
+ * # color on any measure it is the theme's category palette. Otherwise each
+ * measure with a # color gets it, and every other measure keeps the palette
+ * color of its own slot, so naming one color does not shift the rest.
+ */
+function seriesColorRange(
+  paths: string[],
+  seriesColors: Record<string, string>,
+  vegaConfig?: Config
+): RangeScheme | string[] {
+  if (!paths.some(p => seriesColors[p])) return 'category';
+  const configured = vegaConfig?.range?.category;
+  const palette = Array.isArray(configured)
+    ? (configured as string[])
+    : (baseVegaConfig().range!.category as string[]);
+  return paths.map((p, i) => seriesColors[p] ?? palette[i % palette.length]);
+}
 
 export function generateComboChartVegaSpec(
   metadata: RenderMetadata,
@@ -216,7 +237,11 @@ export function generateComboChartVegaSpec(
     {
       name: 'color',
       type: 'ordinal',
-      range: 'category',
+      range: seriesColorRange(
+        [...nameToPath.values()],
+        pluginMetadata.seriesColors ?? {},
+        vegaConfig
+      ),
       // Domain is the full set of measure names, in y-then-y2 order, so colors
       // are stable regardless of which axis a measure sits on.
       domain: [...nameToPath.keys()],

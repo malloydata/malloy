@@ -30,6 +30,25 @@ function parseMarkType(
     : fallback;
 }
 
+/**
+ * Each plotted measure's own `# color`, by field path. Measures without one
+ * are absent and keep their palette color.
+ */
+export function getComboSeriesColors(
+  explore: NestField,
+  settings: ComboChartSettings
+): Record<string, string> {
+  const colors: Record<string, string> = {};
+  for (const path of [
+    ...settings.yChannel.fields,
+    ...settings.y2Channel.fields,
+  ]) {
+    const color = explore.fieldAt(path).tag.text('color');
+    if (color) colors[path] = color;
+  }
+  return colors;
+}
+
 export function getComboChartSettings(
   explore: NestField,
   tagOverride?: Tag

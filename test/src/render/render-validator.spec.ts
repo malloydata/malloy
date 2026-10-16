@@ -1173,4 +1173,53 @@ describe('render tag validation', () => {
       expect(warnings.some(w => w.message.includes('tooltip'))).toBe(true);
     });
   });
+
+  describe('# color on a combo chart measure', () => {
+    const COMBO = (colorTag: string, chart = 'combo_chart') => `
+      source: s is duckdb.sql("SELECT 'A' as category, 1 as a") extend {
+        # ${chart}
+        view: q is {
+          group_by: category
+          aggregate:
+            a_total is a.sum()
+            ${colorTag}
+            a_avg is a.avg()
+        }
+      }
+      query: q is s -> q
+    `;
+
+    it('is accepted on a combo chart measure', async () => {
+      const logs = await getValidationLogs(COMBO("# color='#E45756'"));
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('warns when it has no color string', async () => {
+      const logs = await getValidationLogs(COMBO('# color'));
+      expect(logs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            severity: 'warn',
+            message:
+              "Ignored # color on 'a_avg': expected a CSS color string. Fix: # color='#1877F2'.",
+          }),
+        ])
+      );
+    });
+
+    it('is reported as unknown outside a combo chart', async () => {
+      const logs = await getValidationLogs(
+        COMBO("# color='#E45756'", 'bar_chart')
+      );
+      expect(logs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            severity: 'warn',
+            message: "Unknown render tag 'color' on field 'a_avg'",
+          }),
+        ])
+      );
+    });
+  });
 });

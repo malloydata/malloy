@@ -26,8 +26,11 @@ import {
   SOURCE,
 } from '@/plugins/spec-test-support/harness';
 import type {VegaChartProps} from '@/component/types';
-import type {GroupMark, Mark} from 'vega';
-import {getComboChartSettings} from '@/plugins/combo-chart/get-combo_chart-settings';
+import type {GroupMark, Mark, OrdinalScale} from 'vega';
+import {
+  getComboChartSettings,
+  getComboSeriesColors,
+} from '@/plugins/combo-chart/get-combo_chart-settings';
 import {
   generateComboChartVegaSpec,
   type ComboChartSpecInputs,
@@ -35,14 +38,16 @@ import {
 import {comboChartSettingsToTag} from '@/plugins/combo-chart/settings-to-tag';
 import {defaultComboChartSettings} from '@/plugins/combo-chart/combo-chart-settings';
 import {NULL_SYMBOL} from '@/util';
+import {baseVegaConfig} from '@/component/vega/base-vega-config';
 
 async function buildCombo(source: string, query: string) {
   const {root, rootCell, metadata} = await runChartQuery(source, query);
   const settings = getComboChartSettings(root);
+  const seriesColors = getComboSeriesColors(root, settings);
   const plugin: ComboChartSpecInputs = {
     field: root,
     chartDisplay: {size: {}},
-    getMetadata: () => ({type: 'combo', field: root, settings}),
+    getMetadata: () => ({type: 'combo', field: root, settings, seriesColors}),
   };
   return {
     props: generateComboChartVegaSpec(metadata, plugin),
@@ -561,5 +566,48 @@ describe('combo_chart measure dedupe', () => {
     );
     expect(settings.yChannel.fields).toHaveLength(1);
     expect(settings.y2Channel.fields).toHaveLength(1);
+  }, 60000);
+});
+
+describe('combo_chart series colors', () => {
+  const PALETTE = baseVegaConfig().range!.category as string[];
+  const colored = (reachTag: string, avgTag: string) => `
+    run: data -> {
+      group_by: audience_name
+      aggregate:
+        ${reachTag}
+        total_reach is reach.sum()
+        ${avgTag}
+        avg_reach is reach.avg()
+    }
+  `;
+  const colorRange = async (query: string) => {
+    const {spec} = await buildComboProps(SOURCE, `# combo_chart ${query}`);
+    const scale = spec.scales?.find(s => s.name === 'color');
+    return (scale as OrdinalScale | undefined)?.range;
+  };
+
+  test('without # color the measures take the palette in order', async () => {
+    expect(await colorRange(colored('', ''))).toBe('category');
+  }, 60000);
+
+  test('a # color on the line measure leaves the bar its palette color', async () => {
+    expect(await colorRange(colored('', "# color='#E45756'"))).toEqual([
+      PALETTE[0],
+      '#E45756',
+    ]);
+  }, 60000);
+
+  test('a # color on the bar measure leaves the line its palette color', async () => {
+    expect(await colorRange(colored("# color='#E45756'", ''))).toEqual([
+      '#E45756',
+      PALETTE[1],
+    ]);
+  }, 60000);
+
+  test('both measures can be colored', async () => {
+    expect(
+      await colorRange(colored("# color='#111111'", "# color='#222222'"))
+    ).toEqual(['#111111', '#222222']);
   }, 60000);
 });

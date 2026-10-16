@@ -15,6 +15,7 @@ import type {JSXElement} from 'solid-js';
 import {ChartV2} from '@/component/chart/chart-v2';
 import {
   getComboChartSettings,
+  getComboSeriesColors,
   type ComboChartSettings,
 } from '@/plugins/combo-chart/get-combo_chart-settings';
 import {generateComboChartVegaSpec} from '@/plugins/combo-chart/generate-combo_chart-vega-spec';
@@ -47,6 +48,8 @@ interface ComboChartPluginMetadata {
   type: 'combo';
   field: NestField;
   settings: ComboChartSettings;
+  // A plotted measure's own # color, by field path.
+  seriesColors?: Record<string, string>;
 }
 
 export const ComboChartPluginFactory: RenderPluginFactory<ComboChartPluginInstance> =
@@ -56,7 +59,7 @@ export const ComboChartPluginFactory: RenderPluginFactory<ComboChartPluginInstan
     getValidationSpec: (): RendererValidationSpec => ({
       renderer: 'combo',
       ownedPaths: COMBO_CHART_TAG_PATHS,
-      childOwnedPaths: [['tooltip']],
+      childOwnedPaths: [['tooltip'], ['color']],
     }),
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
@@ -85,6 +88,7 @@ export const ComboChartPluginFactory: RenderPluginFactory<ComboChartPluginInstan
       let vegaConfig: Config | undefined;
 
       const settings = getComboChartSettings(field);
+      const seriesColors = getComboSeriesColors(field, settings);
 
       const normalizedTag = convertLegacyToVizTag(field.tag);
       const vizTag = normalizedTag.tag('viz')!;
@@ -158,6 +162,7 @@ export const ComboChartPluginFactory: RenderPluginFactory<ComboChartPluginInstan
           type: 'combo',
           field,
           settings,
+          seriesColors,
         }),
 
         getSchema: () => comboChartSettingsSchema,

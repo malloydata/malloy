@@ -479,6 +479,16 @@ export class RenderFieldMetadata {
             );
           }
         }
+        // A measure's # color must be a color string; otherwise the measure
+        // keeps its palette color.
+        for (const child of isComboChart ? field.fields : []) {
+          if (child.tag.has('color') && !child.tag.text('color')) {
+            log.warn(
+              `Ignored # color on '${child.name}': expected a CSS color string. Fix: # color='#1877F2'.`,
+              child.tag.tag('color')
+            );
+          }
+        }
       }
     }
 

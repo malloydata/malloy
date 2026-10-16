@@ -163,6 +163,8 @@ measures.
 - `.y.independent` / `.y2.independent`: Controls each axis's domain sharing across nested charts.
 - `.y.min` / `.y.max` / `.y2.min` / `.y2.max`: Pin an axis's domain bounds. Either end can be pinned on its own; the other still comes from the data. Pinning both axes to comparable ranges is how you defuse the misleading-crossover pitfall below.
   - Syntax: `# combo_chart { y.min=0 y2.min=0 y2.max=100 }`
+- `# color` on a measure: the color of that measure's bars or line (any CSS color). Measures without one keep their palette color, so coloring one measure does not shift the others. Put it on the measure, not on the chart. Combo charts only for now.
+  - Syntax: `# color='#E45756'` on the line above the measure
 
 **Axis scaling:** each axis is scaled independently from its own measures (the
 left/bar axis includes zero). Because the two scales are independent, where the
