@@ -713,3 +713,142 @@ export function getChartLayoutSettings(
     isSpark,
   };
 }
+
+// The category label band of a horizontal bar chart may take at most this
+// fraction of the chart width before labels are truncated.
+const MAX_HORIZONTAL_LABEL_WIDTH_FRACTION = 0.4;
+
+export type HorizontalBarLayout = {
+  padding: ChartLayoutSettings['padding'];
+  // The category axis down the left side.
+  categoryAxis: {
+    labelLimit: number;
+    // Width of the label band. Passed to Vega as min/maxExtent so the axis
+    // title sits outside the labels (Vega caps the extent at 200px by default).
+    labelBand: number;
+    labelPadding: number;
+    titlePadding: number;
+  };
+  // The measure axis along the bottom.
+  measureAxis: {
+    height: number;
+    tickCount: number;
+    labelPadding: number;
+    titlePadding: number;
+  };
+};
+
+/**
+ * Layout for a bar chart drawn horizontally: categories down the left, the
+ * measure along the bottom. `chartSettings` is the chart's ordinary
+ * (vertical) layout, which supplies the chart size.
+ */
+export function getHorizontalBarLayout({
+  chartSettings,
+  maxCategoryLabel,
+  measureField,
+  measureDomain,
+  vegaConfig,
+}: {
+  chartSettings: ChartLayoutSettings;
+  maxCategoryLabel: string;
+  measureField: Field;
+  measureDomain: [number, number];
+  vegaConfig?: Config;
+}): HorizontalBarLayout {
+  const chartWidth = chartSettings.totalWidth;
+  const fonts = getAxisFontSettings(vegaConfig);
+  const styles = (font: FontSettings) => ({
+    fontFamily: font.fontFamily,
+    fontSize: font.fontSize,
+    ...(font.fontWeight && {fontWeight: font.fontWeight}),
+    width: 'fit-content',
+    opacity: '0',
+    fontVariantNumeric: 'tabular-nums',
+    position: 'absolute',
+  });
+  const LINE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZgy';
+  const configNumber = (
+    ...values: (number | {signal: string} | undefined)[]
+  ): number | undefined => {
+    const value = values.find(v => typeof v === 'number');
+    return value as number | undefined;
+  };
+
+  // Category axis (left). Labels are horizontal, so the band is as wide as
+  // the longest label, capped so the plot keeps most of the width.
+  const categoryLabelStyles = styles(fonts.yLabel);
+  const labelWidth = getTextWidthDOM(maxCategoryLabel, categoryLabelStyles);
+  const ellipsisWidth = getTextWidthDOM('...', categoryLabelStyles);
+  const labelCap = MAX_HORIZONTAL_LABEL_WIDTH_FRACTION * chartWidth;
+  const truncate = labelWidth > labelCap;
+  // Vega treats labelLimit=0 as "no limit".
+  const labelLimit = truncate ? Math.max(1, labelCap) : 0;
+  const labelBand = truncate ? labelCap + ellipsisWidth : labelWidth;
+  const categoryLabelPadding =
+    configNumber(
+      vegaConfig?.axisY?.labelPadding,
+      vegaConfig?.axis?.labelPadding
+    ) ?? 6;
+  const categoryTitlePadding =
+    configNumber(
+      vegaConfig?.axisY?.titlePadding,
+      vegaConfig?.axis?.titlePadding
+    ) ?? 10;
+  const categoryTitleSize = getTextHeightDOM(LINE, styles(fonts.yTitle));
+  const left =
+    labelBand + categoryLabelPadding + categoryTitlePadding + categoryTitleSize;
+
+  // Measure axis (bottom). Tick labels are short numbers, laid flat.
+  const measureLabelStyles = styles(fonts.xLabel);
+  const measureLabelHeight = getTextHeightDOM(LINE, measureLabelStyles);
+  const measureTitleSize = getTextHeightDOM(LINE, styles(fonts.xTitle));
+  const measureLabelPadding =
+    configNumber(
+      vegaConfig?.axisX?.labelPadding,
+      vegaConfig?.axis?.labelPadding
+    ) ?? 6;
+  const measureTitlePadding =
+    configNumber(
+      vegaConfig?.axisX?.titlePadding,
+      vegaConfig?.axis?.titlePadding
+    ) ?? 16;
+  const bottom =
+    measureLabelHeight +
+    measureLabelPadding +
+    measureTitlePadding +
+    measureTitleSize;
+
+  // The last tick label is centered on the plot's right edge; leave room for
+  // half of it.
+  const format = (v: number) =>
+    measureField.isBasic()
+      ? renderNumericField(measureField, v)
+      : locale().format(',')(v);
+  const widestTick = Math.max(
+    getTextWidthDOM(format(measureDomain[0]), measureLabelStyles),
+    getTextWidthDOM(format(measureDomain[1]), measureLabelStyles)
+  );
+  const right = Math.max(8, widestTick / 2);
+
+  const plotAreaWidth = Math.max(0, chartWidth - left - right);
+  // Tick labels are laid flat, so each needs its own width plus a gap.
+  const tickCount = Math.max(2, Math.floor(plotAreaWidth / (widestTick + 24)));
+
+  return {
+    // Top room for the hover reference line's value label.
+    padding: {top: 16, left, right, bottom},
+    categoryAxis: {
+      labelLimit,
+      labelBand,
+      labelPadding: categoryLabelPadding,
+      titlePadding: categoryTitlePadding,
+    },
+    measureAxis: {
+      height: bottom,
+      tickCount,
+      labelPadding: measureLabelPadding,
+      titlePadding: measureTitlePadding,
+    },
+  };
+}

@@ -14,9 +14,11 @@ import type {
 import type {ChartLayoutSettings} from '@/component/chart/chart-layout-settings';
 import {
   getChartLayoutSettings,
+  getHorizontalBarLayout,
   getXAxisSettings,
 } from '@/component/chart/chart-layout-settings';
 import type {
+  Axis,
   Data,
   EncodeEntry,
   GroupMark,
@@ -33,7 +35,10 @@ import {
   renderNumericField,
   renderDateTimeField,
 } from '@/component/render-numeric-field';
-import {createMeasureAxis} from '@/component/vega/measure-axis';
+import {
+  createHorizontalMeasureAxis,
+  createMeasureAxis,
+} from '@/component/vega/measure-axis';
 import {
   MEASURE_SERIES_LABEL_SCALE,
   getMeasureSeriesLabelScale,
@@ -77,6 +82,7 @@ function getLimitedData({
   chartSettings,
   seriesLimitSetting,
   xLimitSetting,
+  isHorizontal = false,
 }: {
   xField: Field;
   seriesField?: Field | SyntheticSeriesField | null;
@@ -86,6 +92,7 @@ function getLimitedData({
   chartSettings: ChartLayoutSettings;
   seriesLimitSetting: number | 'auto';
   xLimitSetting: number | 'auto';
+  isHorizontal?: boolean;
 }) {
   // Limit series values shown
   const seriesLimit =
@@ -96,8 +103,12 @@ function getLimitedData({
     ? [...seriesField.valueSet.values()].slice(0, seriesLimit)
     : [];
 
-  const refinedMaxSizePerBar =
-    (maxSizePerBar ?? (seriesField && isGrouping)) ? 8 : 8;
+  // A horizontal bar needs room for its label's line height.
+  const refinedMaxSizePerBar = isHorizontal
+    ? 14
+    : (maxSizePerBar ?? (seriesField && isGrouping))
+      ? 8
+      : 8;
 
   // Limit x axis values shown
   const subGroupBars = seriesField && isGrouping ? seriesLimit : 1;
@@ -107,7 +118,10 @@ function getLimitedData({
   const barLimit =
     typeof xLimitSetting === 'number'
       ? xLimitSetting
-      : Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
+      : Math.floor(
+          (isHorizontal ? chartSettings.plotHeight : chartSettings.plotWidth) /
+            maxSizePerXGroup
+        );
   const barValuesToPlot = [...xField.valueSet.values()].slice(0, barLimit);
 
   return {
@@ -236,6 +250,12 @@ export function generateBarChartVegaSpecV2(
     vegaConfig,
   });
 
+  // Horizontal: categories down the left (still the 'xscale' band scale), the
+  // measure along the bottom (still 'yscale'). Only positions and axes swap.
+  // A spark chart has no labels to make room for, so it stays vertical.
+  const isHorizontal =
+    settings.orient === 'horizontal' && !chartSettings.isSpark;
+
   // Data limits
   const dataLimits = getLimitedData({
     xField,
@@ -244,6 +264,7 @@ export function generateBarChartVegaSpecV2(
     chartSettings,
     seriesLimitSetting: settings.seriesChannel.limit,
     xLimitSetting: settings.xChannel.limit,
+    isHorizontal,
   });
 
   let maxString = '';
@@ -264,6 +285,16 @@ export function generateBarChartVegaSpecV2(
     vegaConfig,
     isSpark: chartSettings.isSpark,
   });
+
+  const horizontalLayout = isHorizontal
+    ? getHorizontalBarLayout({
+        chartSettings,
+        maxCategoryLabel: maxString,
+        measureField: yField,
+        measureDomain: [yDomainMin, yDomainMax],
+        vegaConfig,
+      })
+    : null;
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
   const autoSharedX = dataLimits.barValuesToPlot.length <= 20;
@@ -290,22 +321,32 @@ export function generateBarChartVegaSpecV2(
    *
    *************************************/
 
-  const yAxis = !chartSettings.yAxis.hidden
-    ? createMeasureAxis({
-        type: 'y',
-        title: settings.yChannel.fields
-          .map(f => explore.fieldAt(f).getLabel())
-          .join(', '),
-        tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
-        labelLimit: chartSettings.yAxis.width + 10,
-        // Use first y number style for axis labels
-        fieldPath: yFieldPath,
-        fieldRef: yRef,
-        brushMeasureRangeSourceId,
-        axisSettings: chartSettings.yAxis,
-        vegaConfig,
-      })
-    : null;
+  const measureAxisTitle = settings.yChannel.fields
+    .map(f => explore.fieldAt(f).getLabel())
+    .join(', ');
+  const yAxis = chartSettings.yAxis.hidden
+    ? null
+    : horizontalLayout
+      ? createHorizontalMeasureAxis({
+          title: measureAxisTitle,
+          tickCount: horizontalLayout.measureAxis.tickCount,
+          fieldPath: yFieldPath,
+          labelPadding: horizontalLayout.measureAxis.labelPadding,
+          titlePadding: horizontalLayout.measureAxis.titlePadding,
+          vegaConfig,
+        })
+      : createMeasureAxis({
+          type: 'y',
+          title: measureAxisTitle,
+          tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
+          labelLimit: chartSettings.yAxis.width + 10,
+          // Use first y number style for axis labels
+          fieldPath: yFieldPath,
+          fieldRef: yRef,
+          brushMeasureRangeSourceId,
+          axisSettings: chartSettings.yAxis,
+          vegaConfig,
+        });
 
   // This separate each group set of bars, whether series or single bars
   const barGroupPadding = 0.25;
@@ -360,12 +401,9 @@ export function generateBarChartVegaSpecV2(
     type: 'group',
     interactive: false,
     encode: {
-      enter: {
-        x: {
-          scale: 'xscale',
-          field: 'x',
-        },
-      },
+      enter: isHorizontal
+        ? {y: {scale: 'xscale', field: 'x'}}
+        : {x: {scale: 'xscale', field: 'x'}},
     },
     marks: [],
   };
@@ -380,19 +418,28 @@ export function generateBarChartVegaSpecV2(
     },
     zindex: 2,
     encode: {
-      enter: {
-        x: {
-          offset: xOffset,
-        },
-        width: xWidth,
-        y: {
-          scale: 'yscale',
-          field: isStacking ? 'y0' : 'y',
-        },
-        y2: isStacking
-          ? {'scale': 'yscale', 'field': 'y1'}
-          : {'scale': 'yscale', 'value': 0},
-      },
+      enter: isHorizontal
+        ? {
+            y: {offset: xOffset},
+            height: xWidth,
+            x: {scale: 'yscale', field: isStacking ? 'y0' : 'y'},
+            x2: isStacking
+              ? {scale: 'yscale', field: 'y1'}
+              : {scale: 'yscale', value: 0},
+          }
+        : {
+            x: {
+              offset: xOffset,
+            },
+            width: xWidth,
+            y: {
+              scale: 'yscale',
+              field: isStacking ? 'y0' : 'y',
+            },
+            y2: isStacking
+              ? {'scale': 'yscale', 'field': 'y1'}
+              : {'scale': 'yscale', 'value': 0},
+          },
       update: {
         fill: {
           scale: 'color',
@@ -431,16 +478,23 @@ export function generateBarChartVegaSpecV2(
     },
     zindex: 1,
     encode: {
-      enter: {
-        x: {
-          value: 0,
-        },
-        width: {scale: 'xscale', band: 1},
-        y: {
-          value: 0,
-        },
-        y2: {signal: 'height'},
-      },
+      enter: isHorizontal
+        ? {
+            y: {value: 0},
+            height: {scale: 'xscale', band: 1},
+            x: {value: 0},
+            x2: {signal: 'width'},
+          }
+        : {
+            x: {
+              value: 0,
+            },
+            width: {scale: 'xscale', band: 1},
+            y: {
+              value: 0,
+            },
+            y2: {signal: 'height'},
+          },
       update: {
         fill: {
           value: '#4c72ba',
@@ -675,6 +729,65 @@ export function generateBarChartVegaSpecV2(
    * Chart spec
    *
    *************************************/
+  // Category axis labels: time values are formatted, and labels fade with
+  // the x brush.
+  const categoryAxisEncode: Axis['encode'] = {
+    labels: {
+      enter: {
+        ...(xIsDateorTime
+          ? {
+              text: {
+                signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+              },
+            }
+          : {}),
+      },
+      update: {
+        ...(xIsDateorTime
+          ? {
+              text: {
+                signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+              },
+            }
+          : {}),
+        fillOpacity: [
+          {
+            test: 'brushXIn ? indexof(brushXIn,datum.value) === -1 : false',
+            value: 0.35,
+          },
+          {
+            value: 1,
+          },
+        ],
+      },
+    },
+  };
+
+  const categoryAxis: Axis = horizontalLayout
+    ? {
+        orient: 'left',
+        scale: 'xscale',
+        title: xField.getLabel(),
+        grid: false,
+        labelOverlap: true,
+        labelSeparation: 4,
+        labelLimit: horizontalLayout.categoryAxis.labelLimit,
+        minExtent: horizontalLayout.categoryAxis.labelBand,
+        maxExtent: horizontalLayout.categoryAxis.labelBand,
+        labelPadding: horizontalLayout.categoryAxis.labelPadding,
+        titlePadding: horizontalLayout.categoryAxis.titlePadding,
+        encode: categoryAxisEncode,
+      }
+    : {
+        orient: 'bottom',
+        scale: 'xscale',
+        title: xField.getLabel(),
+        labelOverlap: 'greedy',
+        labelSeparation: 4,
+        ...chartSettings.xAxis,
+        encode: categoryAxisEncode,
+      };
+
   const spec: Spec = {
     $schema: 'https://vega.github.io/schema/vega/v5.json',
     width: chartSettings.plotWidth,
@@ -685,10 +798,12 @@ export function generateBarChartVegaSpecV2(
       contains: 'padding',
     },
     data: [valuesData],
-    padding: {
-      ...chartSettings.padding,
-      bottom: xAxisSettings.hidden ? 0 : xAxisSettings.height,
-    },
+    padding: horizontalLayout
+      ? {...horizontalLayout.padding}
+      : {
+          ...chartSettings.padding,
+          bottom: xAxisSettings.hidden ? 0 : xAxisSettings.height,
+        },
     scales: [
       {
         name: 'xscale',
@@ -696,14 +811,15 @@ export function generateBarChartVegaSpecV2(
         domain: shouldShareXDomain
           ? [...dataLimits.barValuesToPlot]
           : {data: 'values', field: 'x'},
-        range: 'width',
+        // Horizontal: first category at the top.
+        range: isHorizontal ? [0, {signal: 'height'}] : 'width',
         paddingOuter: 0.05,
         round: true,
       },
       {
         name: 'yscale',
         nice: true,
-        range: 'height',
+        range: isHorizontal ? 'width' : 'height',
         domain: isStacking
           ? {data: 'values', field: 'y1'}
           : (chartSettings.yScale.domain ?? {data: 'values', field: 'y'}),
@@ -733,48 +849,7 @@ export function generateBarChartVegaSpecV2(
       },
     ],
 
-    axes: [
-      {
-        orient: 'bottom',
-        scale: 'xscale',
-        title: xField.getLabel(),
-        labelOverlap: 'greedy',
-        labelSeparation: 4,
-        ...chartSettings.xAxis,
-        encode: {
-          labels: {
-            enter: {
-              ...(xIsDateorTime
-                ? {
-                    text: {
-                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
-                    },
-                  }
-                : {}),
-            },
-            update: {
-              ...(xIsDateorTime
-                ? {
-                    text: {
-                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
-                    },
-                  }
-                : {}),
-              fillOpacity: [
-                {
-                  test: 'brushXIn ? indexof(brushXIn,datum.value) === -1 : false',
-                  value: 0.35,
-                },
-                {
-                  value: 1,
-                },
-              ],
-            },
-          },
-        },
-      },
-      ...(yAxis ? [yAxis.axis] : []),
-    ],
+    axes: [categoryAxis, ...(yAxis ? [yAxis.axis] : [])],
     legends: [],
     marks,
     signals,

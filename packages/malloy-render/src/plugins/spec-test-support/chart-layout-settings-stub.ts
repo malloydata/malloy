@@ -24,3 +24,14 @@ export const getChartLayoutSettings = () => ({
 });
 
 export const getXAxisSettings = () => ({});
+
+export const getHorizontalBarLayout = () => ({
+  padding: {top: 8, left: 120, right: 12, bottom: 40},
+  categoryAxis: {
+    labelLimit: 0,
+    labelBand: 100,
+    labelPadding: 6,
+    titlePadding: 10,
+  },
+  measureAxis: {height: 40, tickCount: 4, labelPadding: 6, titlePadding: 16},
+});
