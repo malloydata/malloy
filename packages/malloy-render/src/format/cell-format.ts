@@ -222,6 +222,26 @@ export function formatNumber(
   }
 }
 
+/**
+ * The format for a chart axis tick label. A currency with no scale of its own
+ * is shortened there (`$1.4M`, `$250K`), because an axis needs to show size,
+ * not every digit. A currency the author scaled, and every other format, is
+ * unchanged. Tables and tooltips keep the field's own format.
+ */
+export function axisCellFormat(config: CellFormatConfig): CellFormatConfig {
+  if (config.mode === 'currency' && config.currency.scale === undefined) {
+    return {
+      mode: 'currency',
+      currency: {
+        symbol: config.currency.symbol,
+        scale: 'auto',
+        suffixFormat: 'letter',
+      },
+    };
+  }
+  return config;
+}
+
 export interface FormatDateTimeOptions extends RenderTimeStringOptions {
   /** Named in the warning when the field's date pattern is invalid. */
   fieldName?: string;
@@ -286,6 +306,13 @@ function wallClockSerial(value: Date, options: FormatDateTimeOptions): number {
 /**
  * Renders a currency value using pre-resolved config.
  */
+/** Put the currency symbol after a leading minus: -$3.2M, not $-3.2M. */
+function withCurrencySymbol(symbol: string, formatted: string): string {
+  return formatted.startsWith('-')
+    ? `-${symbol}${formatted.slice(1)}`
+    : `${symbol}${formatted}`;
+}
+
 function renderCurrencyValue(config: CurrencyConfig, value: number): string {
   if (config.scale) {
     const scaledStr = formatScaledNumber(value, {
@@ -293,7 +320,7 @@ function renderCurrencyValue(config: CurrencyConfig, value: number): string {
       decimals: config.decimals ?? 2,
       suffix: config.suffixFormat,
     });
-    return `${config.symbol}${scaledStr}`;
+    return withCurrencySymbol(config.symbol, scaledStr);
   } else {
     const effectiveDecimals = config.decimals ?? 2;
     const formatStr =
@@ -360,14 +387,18 @@ function formatBigIntCurrency(config: CurrencyConfig, value: string): string {
       decimals: config.decimals ?? 2,
       suffix: config.suffixFormat,
     });
-    return `${config.symbol}${scaledStr}`;
+    return withCurrencySymbol(config.symbol, scaledStr);
   }
 
   const effectiveDecimals = config.decimals ?? 2;
+  const withCommas = formatStringWithCommas(value);
   if (effectiveDecimals === 0) {
-    return `${config.symbol}${formatStringWithCommas(value)}`;
+    return withCurrencySymbol(config.symbol, withCommas);
   }
-  return `${config.symbol}${formatStringWithCommas(value)}.${'0'.repeat(effectiveDecimals)}`;
+  return withCurrencySymbol(
+    config.symbol,
+    `${withCommas}.${'0'.repeat(effectiveDecimals)}`
+  );
 }
 
 /**
