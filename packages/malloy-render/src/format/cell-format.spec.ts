@@ -9,6 +9,7 @@
 import {parseAnnotation} from '@malloydata/malloy-tag';
 import {
   NULL_SYMBOL,
+  columnCellFormat,
   formatDateTime,
   formatNumber,
   resolveCellFormat,
@@ -133,5 +134,45 @@ describe('formatDateTime', () => {
 
   test('null', () => {
     expect(formatDateTime(null)).toBe(NULL_SYMBOL);
+  });
+});
+
+describe('columnCellFormat: cents by column', () => {
+  const inColumn = (annotation: string, column: {min?: number; max?: number}) =>
+    columnCellFormat(fmt(annotation), column);
+  const show = (annotation: string, min: number, max: number, v: number) =>
+    formatNumber(v, inColumn(annotation, {min, max}));
+
+  test('a column of values under 100 keeps cents', () => {
+    expect(show('# currency', 0.35, 42.5, 9.99)).toBe('$9.99');
+    expect(show('# currency', 0.35, 42.5, 0.35)).toBe('$0.35');
+  });
+
+  test('a column with any value of 100 or more drops cents', () => {
+    expect(show('# currency', 3, 1250000, 1250000)).toBe('$1,250,000');
+    expect(show('# currency', 3, 1250000, 42.5)).toBe('$43');
+    expect(show('# currency', 3, 100, 99.5)).toBe('$100');
+  });
+
+  test('size, not sign, decides: a large loss drops cents', () => {
+    expect(show('# currency', -150, 20, -150)).toBe('-$150');
+  });
+
+  test('other currencies follow the same rule', () => {
+    expect(show('# currency=eur', 1, 2000, 2000)).toBe('€2,000');
+    expect(show('# currency=usd', 1, 50, 12.5)).toBe('$12.50');
+  });
+
+  test("an author's own decimals or scale are kept", () => {
+    expect(show('# currency=usd2', 3, 1250000, 1250000)).toBe('$1,250,000.00');
+    expect(show('# currency { decimals=0 }', 0.1, 5, 4.75)).toBe('$5');
+    expect(show('# currency=usd0k', 3, 1250000, 1250000)).toBe('$1,250k');
+  });
+
+  test('an unknown range, or a non-currency format, is unchanged', () => {
+    const currency = fmt('# currency');
+    expect(columnCellFormat(currency, {})).toBe(currency);
+    const percent = fmt('# percent');
+    expect(columnCellFormat(percent, {min: 0, max: 500})).toBe(percent);
   });
 });

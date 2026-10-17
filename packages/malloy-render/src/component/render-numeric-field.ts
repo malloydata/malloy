@@ -4,6 +4,7 @@
  */
 
 import {
+  columnCellFormat,
   formatDateTime,
   formatNumber,
   type CellFormatConfig,
@@ -24,8 +25,11 @@ function getConfig(
   f: Field,
   configOverride?: CellFormatConfig
 ): CellFormatConfig {
-  return (
-    configOverride ?? f.getTagConfig<CellFormatConfig>() ?? {mode: 'default'}
+  // The field's min/max are the range of its whole column: every row, and
+  // every nested row, of this field.
+  return columnCellFormat(
+    configOverride ?? f.getTagConfig<CellFormatConfig>() ?? {mode: 'default'},
+    {min: f.minNumber, max: f.maxNumber}
   );
 }
 

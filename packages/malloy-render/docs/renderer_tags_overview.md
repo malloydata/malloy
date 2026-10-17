@@ -343,7 +343,7 @@ view: with_bar_sparkline is {
 #### Formatting
 
 Big Value cards respect field formatting tags:
-- `# currency` - Format as currency (e.g., $1,234.56)
+- `# currency` - Format as currency (e.g., $1,234; cents only when the value is under 100)
 - `# currency=euro` - Format as euros (€)
 - `# currency=pound` - Format as pounds (£)
 - `# percent` - Format as percentage
@@ -637,6 +637,8 @@ These tags are typically applied directly to individual fields within a query.
 
 Formats a numeric field as currency. Supports both **shorthand** and **verbose** syntax for scaling and formatting options.
 
+**Default decimals:** with no decimals or scale given, a column shows cents only when every value in it is under 100 in size. A column of prices reads `$9.99`, `$42.50`. A column with any value of 100 or more reads whole amounts throughout: `$1,250,000`, `$148`, `$3`. The whole column is judged together (including every nested row), so one column never mixes `$148` with `$42.50`. To always show cents, write `# currency=usd2` or `# currency { decimals=2 }`.
+
 #### Shorthand Syntax (Recommended)
 
 Pattern: `# currency={code}{decimals}{scale}`
@@ -647,7 +649,7 @@ Pattern: `# currency={code}{decimals}{scale}`
 
 | Tag | Output | Description |
 |-----|--------|-------------|
-| `# currency=usd` | $412 | USD, default decimals |
+| `# currency=usd` | $412 | USD, default decimals (see above) |
 | `# currency=usd0` | $412 | 0 decimals |
 | `# currency=usd2` | $412.12 | 2 decimals |
 | `# currency=usd0k` | $412k | thousands, 0 decimals |

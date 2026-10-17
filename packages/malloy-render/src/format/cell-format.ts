@@ -222,6 +222,40 @@ export function formatNumber(
   }
 }
 
+/** The range of the values in one column, as far as it is known. */
+export interface ColumnRange {
+  min?: number;
+  max?: number;
+}
+
+/**
+ * The format for one value of a column whose values span `column`. A currency
+ * with neither a scale nor decimals of its own shows cents only when every
+ * value in the column is under 100 in size: a column of prices reads $9.99,
+ * a column of revenue reads $1,250,000. Deciding per column keeps one column
+ * from mixing $148 and $42.50. Every other format, and a column whose range is
+ * unknown, is unchanged (a lone currency value keeps its cents).
+ */
+export function columnCellFormat(
+  config: CellFormatConfig,
+  column: ColumnRange
+): CellFormatConfig {
+  if (
+    config.mode !== 'currency' ||
+    config.currency.scale !== undefined ||
+    config.currency.decimals !== undefined ||
+    column.min === undefined ||
+    column.max === undefined
+  ) {
+    return config;
+  }
+  const largest = Math.max(Math.abs(column.min), Math.abs(column.max));
+  return {
+    mode: 'currency',
+    currency: {...config.currency, decimals: largest < 100 ? 2 : 0},
+  };
+}
+
 export interface FormatDateTimeOptions extends RenderTimeStringOptions {
   /** Named in the warning when the field's date pattern is invalid. */
   fieldName?: string;
