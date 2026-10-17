@@ -136,4 +136,4 @@ For these, a Storybook case is the regression net. If you are adding a validatio
 | `src/component/tag-configs.ts` | Setup-time resolvers for built-in renderers (image, link, list, cell format, table nest, dashboard) |
 | `src/component/renderer-validation-specs.ts` | Built-in renderer ownership specs |
 | `src/api/plugin-types.ts` | `RenderPluginFactory`, `RendererValidationSpec` interfaces |
-| `packages/malloy-render-validator/src/index.ts` | Headless wrapper — `validateRenderTags(result)` |
+| `packages/malloy-render-validator/src/index.ts` | Headless wrapper — `validateRenderTags(result, {dashboardTile?})`. `dashboardTile` validates a view the caller lays out as a dashboard tile: its top-level `colspan`/`subtitle`/`break`/`borderless` are tile settings, not unknown tags |

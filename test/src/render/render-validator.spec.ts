@@ -12,12 +12,15 @@ interface LogMessage {
   message: string;
 }
 
-async function getValidationLogs(malloySource: string): Promise<LogMessage[]> {
+async function getValidationLogs(
+  malloySource: string,
+  options: {dashboardTile?: boolean} = {}
+): Promise<LogMessage[]> {
   const pr = await runtime
     .loadModel(malloySource)
     .loadQueryByName('q')
     .getPreparedResult();
-  return validateRenderTags(pr.toStableResult());
+  return validateRenderTags(pr.toStableResult(), options);
 }
 
 function expectError(logs: LogMessage[], substring: string) {
@@ -1171,6 +1174,48 @@ describe('render tag validation', () => {
       const warnings = logs.filter(l => l.severity === 'warn');
       expect(warnings.length).toBeGreaterThan(0);
       expect(warnings.some(w => w.message.includes('tooltip'))).toBe(true);
+    });
+  });
+
+  describe('a view validated as one tile of a dashboard layout', () => {
+    // The view a host lays out as a tile carries its own layout tags.
+    const TILE = (tags: string) => `
+      source: s is duckdb.sql("SELECT 'A' as category, 1 as a") extend {
+        ${tags}
+        view: q is { group_by: category; aggregate: a_total is a.sum() }
+      }
+      query: q is s -> q
+    `;
+    const LAYOUT_TAGS = "# colspan=2 subtitle='Last 30 days' break borderless";
+
+    it('reports top-level layout tags as unknown without dashboardTile', async () => {
+      const logs = await getValidationLogs(TILE(LAYOUT_TAGS));
+      expect(logs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            severity: 'warn',
+            message: "Unknown render tag 'colspan' on field 'root'",
+          }),
+        ])
+      );
+    });
+
+    it('accepts top-level layout tags with dashboardTile', async () => {
+      const logs = await getValidationLogs(TILE(LAYOUT_TAGS), {
+        dashboardTile: true,
+      });
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('still checks a tile colspan with dashboardTile', async () => {
+      const logs = await getValidationLogs(TILE('# colspan=0'), {
+        dashboardTile: true,
+      });
+      expectError(
+        logs,
+        "Invalid # colspan on 'root': expected a positive integer, got 0."
+      );
     });
   });
 });
