@@ -6,13 +6,19 @@
 import type {
   RenderPluginFactory,
   RenderProps,
-  DOMRenderPluginInstance,
+  SolidJSRenderPluginInstance,
   RendererValidationSpec,
 } from '@/api/plugin-types';
 import {type Field, type Cell, type RecordCell, FieldType} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
-import * as lite from 'vega-lite';
-import * as vega from 'vega';
+import type * as lite from 'vega-lite';
+import type {JSXElement} from 'solid-js';
+import {
+  compileVegaLiteChart,
+  VegaLiteChart,
+  type CompiledVegaLiteChart,
+} from '@/component/vega/vega-lite-chart';
+import {VEGA_LITE_VALUES} from '@/component/vega/vega-lite-spec';
 import usAtlas from 'us-atlas/states-10m.json';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
 import {STATE_CODES} from '@/html/state_codes';
@@ -21,8 +27,6 @@ import type {
   GetResultMetadataOptions,
   RenderMetadata,
 } from '@/component/render-result-metadata';
-import type {RenderLogCollector} from '@/component/render-log-collector';
-import type {MalloyExplicitTheme} from '@/api/types';
 
 function getDataType(
   field: Field,
@@ -54,17 +58,17 @@ function getDataValue(
   throw new Error('Invalid field type for shape map.');
 }
 
-function mapData(
-  rows: RecordCell[],
+// One row's record for the map; undefined when its region is not a known
+// state, since such a row has nowhere to be drawn.
+function mapRow(
+  row: RecordCell,
   regionField: Field
-): Record<string, unknown>[] {
-  return rows.map(row => {
-    const mapped: Record<string, unknown> = {};
-    for (const f of row.field.fields) {
-      mapped[f.name] = getDataValue(row.column(f.name), regionField);
-    }
-    return mapped;
-  });
+): Record<string, unknown> | undefined {
+  const mapped: Record<string, unknown> = {};
+  for (const f of row.field.fields) {
+    mapped[f.name] = getDataValue(row.column(f.name), regionField);
+  }
+  return mapped[regionField.name] === undefined ? undefined : mapped;
 }
 
 function getSize(field: Field): {height: number; width: number} {
@@ -101,7 +105,7 @@ const SHAPE_MAP_VEGA_CONFIG: lite.Config = {
   },
 };
 
-export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance> =
+export const ShapeMapPluginFactory: RenderPluginFactory<SolidJSRenderPluginInstance> =
   {
     name: 'shape_map',
 
@@ -123,37 +127,29 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
       return hasTag && isRepeatedRecord;
     },
 
-    create: (field: Field): DOMRenderPluginInstance => {
-      let vegaConfigOverride: Record<string, unknown> = {};
-      let logCollector: RenderLogCollector | undefined;
-      let explicitTheme: MalloyExplicitTheme | undefined;
+    create: (field: Field): SolidJSRenderPluginInstance => {
+      if (!field.isNest()) {
+        throw new Error('Malloy Shape Map: field must be a nested query');
+      }
+      let chart: CompiledVegaLiteChart | undefined;
+      let useVegaInterpreter: boolean | undefined;
+      const regionField = field.fields[0];
 
       return {
         name: 'shape_map',
         field,
-        renderMode: 'dom',
+        renderMode: 'solidjs',
         sizingStrategy: 'fixed',
 
         beforeRender: (
           _metadata: RenderMetadata,
           options: GetResultMetadataOptions
         ): void => {
-          vegaConfigOverride =
+          useVegaInterpreter = options.useVegaInterpreter;
+          const vegaConfigOverride =
             options.getVegaConfigOverride?.('shape_map') ?? {};
-          logCollector = options.renderFieldMetadata.logCollector;
-          explicitTheme = options.explicitTheme;
-        },
-
-        renderToDOM: (container: HTMLElement, props: RenderProps): void => {
-          if (!props.dataColumn.isRepeatedRecord()) {
-            throw new Error(
-              'Malloy Shape Map: data column is not a repeated record'
-            );
-          }
-
-          const data = props.dataColumn;
-          const regionField = data.field.fields[0];
-          const colorField = data.field.fields[1];
+          const explicitTheme = options.explicitTheme;
+          const colorField = field.fields[1];
 
           const colorType = colorField
             ? getDataType(colorField, regionField)
@@ -169,13 +165,8 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
                 }
               : undefined;
 
-          const mapped = mapData(data.rows, regionField).filter(
-            row => row[regionField.name] !== undefined
-          );
-
           const spec: lite.TopLevelSpec = {
-            ...getSize(field),
-            data: {values: mapped},
+            data: {name: VEGA_LITE_VALUES},
             projection: {type: 'albersUsa'},
             layer: [
               {
@@ -217,19 +208,30 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
 
           spec.config = mergeVegaConfigs(spec.config ?? {}, vegaConfigOverride);
 
-          const vegaSpec = lite.compile(spec).spec;
-          const view = new vega.View(vega.parse(vegaSpec), {
-            renderer: 'none',
-          });
-          view.logger().level(-1);
-          view
-            .toSVG()
-            .then(svg => {
-              container.innerHTML = svg;
-            })
-            .catch(e => {
-              logCollector?.error(`Shape map render error: ${e}`);
-            });
+          chart = compileVegaLiteChart(
+            spec,
+            getSize(field),
+            useVegaInterpreter
+          );
+        },
+
+        renderComponent: (props: RenderProps): JSXElement => {
+          if (!props.dataColumn.isRepeatedRecord()) {
+            throw new Error(
+              'Malloy Shape Map: data column is not a repeated record'
+            );
+          }
+          if (!chart) {
+            throw new Error('Malloy Shape Map: missing Vega runtime');
+          }
+          return (
+            <VegaLiteChart
+              data={props.dataColumn}
+              chart={chart}
+              mapRow={row => mapRow(row, regionField)}
+              useVegaInterpreter={useVegaInterpreter}
+            />
+          );
         },
 
         getMetadata: () => ({type: 'shape_map', field}),

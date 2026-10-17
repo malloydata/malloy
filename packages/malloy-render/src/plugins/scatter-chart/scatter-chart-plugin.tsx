@@ -6,21 +6,28 @@
 import type {
   RenderPluginFactory,
   RenderProps,
-  DOMRenderPluginInstance,
+  SolidJSRenderPluginInstance,
   RendererValidationSpec,
 } from '@/api/plugin-types';
 import {type Field, FieldType} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
-import * as lite from 'vega-lite';
-import * as vega from 'vega';
-import {generateScatterChartSpec} from './generate-scatter_chart-spec';
+import type {JSXElement} from 'solid-js';
+import {
+  generateScatterChartSpec,
+  getScatterSize,
+  mapScatterRow,
+} from './generate-scatter_chart-spec';
+import {
+  compileVegaLiteChart,
+  VegaLiteChart,
+  type CompiledVegaLiteChart,
+} from '@/component/vega/vega-lite-chart';
 import type {
   GetResultMetadataOptions,
   RenderMetadata,
 } from '@/component/render-result-metadata';
-import type {RenderLogCollector} from '@/component/render-log-collector';
 
-export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInstance> =
+export const ScatterChartPluginFactory: RenderPluginFactory<SolidJSRenderPluginInstance> =
   {
     name: 'scatter_chart',
 
@@ -42,51 +49,52 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
       return hasTag && isRepeatedRecord;
     },
 
-    create: (field: Field): DOMRenderPluginInstance => {
-      let vegaConfigOverride: Record<string, unknown> = {};
-      let logCollector: RenderLogCollector | undefined;
+    create: (field: Field): SolidJSRenderPluginInstance => {
+      if (!field.isNest()) {
+        throw new Error('Malloy Scatter Chart: field must be a nested query');
+      }
+      let chart: CompiledVegaLiteChart | undefined;
+      let useVegaInterpreter: boolean | undefined;
+      const timezone = field.root().queryTimezone;
 
       return {
         name: 'scatter_chart',
         field,
-        renderMode: 'dom',
+        renderMode: 'solidjs',
         sizingStrategy: 'fixed',
 
         beforeRender: (
           _metadata: RenderMetadata,
           options: GetResultMetadataOptions
         ): void => {
-          vegaConfigOverride =
-            options.getVegaConfigOverride?.('scatter_chart') ?? {};
-          logCollector = options.renderFieldMetadata.logCollector;
+          useVegaInterpreter = options.useVegaInterpreter;
+          chart = compileVegaLiteChart(
+            generateScatterChartSpec(
+              field,
+              options.getVegaConfigOverride?.('scatter_chart') ?? {}
+            ),
+            getScatterSize(field),
+            useVegaInterpreter
+          );
         },
 
-        renderToDOM: (container: HTMLElement, props: RenderProps): void => {
+        renderComponent: (props: RenderProps): JSXElement => {
           if (!props.dataColumn.isRepeatedRecord()) {
             throw new Error(
               'Malloy Scatter Chart: data column is not a repeated record'
             );
           }
-
-          const spec = generateScatterChartSpec(
-            props.dataColumn,
-            field,
-            vegaConfigOverride
+          if (!chart) {
+            throw new Error('Malloy Scatter Chart: missing Vega runtime');
+          }
+          return (
+            <VegaLiteChart
+              data={props.dataColumn}
+              chart={chart}
+              mapRow={row => mapScatterRow(row, timezone)}
+              useVegaInterpreter={useVegaInterpreter}
+            />
           );
-
-          const vegaSpec = lite.compile(spec).spec;
-          const view = new vega.View(vega.parse(vegaSpec), {
-            renderer: 'none',
-          });
-          view.logger().level(-1);
-          view
-            .toSVG()
-            .then(svg => {
-              container.innerHTML = svg;
-            })
-            .catch(e => {
-              logCollector?.error(`Scatter chart render error: ${e}`);
-            });
         },
 
         getMetadata: () => ({type: 'scatter_chart', field}),

@@ -6,13 +6,19 @@
 import type {
   RenderPluginFactory,
   RenderProps,
-  DOMRenderPluginInstance,
+  SolidJSRenderPluginInstance,
   RendererValidationSpec,
 } from '@/api/plugin-types';
 import {type Field, type Cell, type RecordCell, FieldType} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
-import * as lite from 'vega-lite';
-import * as vega from 'vega';
+import type * as lite from 'vega-lite';
+import type {JSXElement} from 'solid-js';
+import {
+  compileVegaLiteChart,
+  VegaLiteChart,
+  type CompiledVegaLiteChart,
+} from '@/component/vega/vega-lite-chart';
+import {VEGA_LITE_VALUES} from '@/component/vega/vega-lite-spec';
 import usAtlas from 'us-atlas/states-10m.json';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
 import {getColorScale, mapCanvasBackground} from '@/html/utils';
@@ -20,8 +26,6 @@ import type {
   GetResultMetadataOptions,
   RenderMetadata,
 } from '@/component/render-result-metadata';
-import type {RenderLogCollector} from '@/component/render-log-collector';
-import type {MalloyExplicitTheme} from '@/api/types';
 
 function getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
   if (field.isString()) return 'nominal';
@@ -36,14 +40,12 @@ function getDataValue(data: Cell): string | number | null {
   throw new Error('Invalid field type for segment map.');
 }
 
-function mapData(rows: RecordCell[]): Record<string, unknown>[] {
-  return rows.map(row => {
-    const mapped: Record<string, unknown> = {};
-    for (const f of row.field.fields) {
-      mapped[f.name] = getDataValue(row.column(f.name));
-    }
-    return mapped;
-  });
+function mapRow(row: RecordCell): Record<string, unknown> {
+  const mapped: Record<string, unknown> = {};
+  for (const f of row.field.fields) {
+    mapped[f.name] = getDataValue(row.column(f.name));
+  }
+  return mapped;
 }
 
 function getSize(field: Field): {height: number; width: number} {
@@ -80,7 +82,7 @@ const SEGMENT_MAP_VEGA_CONFIG: lite.Config = {
   },
 };
 
-export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance> =
+export const SegmentMapPluginFactory: RenderPluginFactory<SolidJSRenderPluginInstance> =
   {
     name: 'segment_map',
 
@@ -102,36 +104,28 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
       return hasTag && isRepeatedRecord;
     },
 
-    create: (field: Field): DOMRenderPluginInstance => {
-      let vegaConfigOverride: Record<string, unknown> = {};
-      let logCollector: RenderLogCollector | undefined;
-      let explicitTheme: MalloyExplicitTheme | undefined;
+    create: (field: Field): SolidJSRenderPluginInstance => {
+      if (!field.isNest()) {
+        throw new Error('Malloy Segment Map: field must be a nested query');
+      }
+      let chart: CompiledVegaLiteChart | undefined;
+      let useVegaInterpreter: boolean | undefined;
 
       return {
         name: 'segment_map',
         field,
-        renderMode: 'dom',
+        renderMode: 'solidjs',
         sizingStrategy: 'fixed',
 
         beforeRender: (
           _metadata: RenderMetadata,
           options: GetResultMetadataOptions
         ): void => {
-          vegaConfigOverride =
+          useVegaInterpreter = options.useVegaInterpreter;
+          const vegaConfigOverride =
             options.getVegaConfigOverride?.('segment_map') ?? {};
-          logCollector = options.renderFieldMetadata.logCollector;
-          explicitTheme = options.explicitTheme;
-        },
-
-        renderToDOM: (container: HTMLElement, props: RenderProps): void => {
-          if (!props.dataColumn.isRepeatedRecord()) {
-            throw new Error(
-              'Malloy Segment Map: data column is not a repeated record'
-            );
-          }
-
-          const data = props.dataColumn;
-          const fields = data.field.fields;
+          const explicitTheme = options.explicitTheme;
+          const fields = field.fields;
           const lat1Field = fields[0];
           const lon1Field = fields[1];
           const lat2Field = fields[2];
@@ -151,8 +145,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
               : undefined;
 
           const spec: lite.TopLevelSpec = {
-            ...getSize(field),
-            data: {values: mapData(data.rows)},
+            data: {name: VEGA_LITE_VALUES},
             projection: {type: 'albersUsa'},
             layer: [
               {
@@ -190,19 +183,30 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
 
           spec.config = mergeVegaConfigs(spec.config ?? {}, vegaConfigOverride);
 
-          const vegaSpec = lite.compile(spec).spec;
-          const view = new vega.View(vega.parse(vegaSpec), {
-            renderer: 'none',
-          });
-          view.logger().level(-1);
-          view
-            .toSVG()
-            .then(svg => {
-              container.innerHTML = svg;
-            })
-            .catch(e => {
-              logCollector?.error(`Segment map render error: ${e}`);
-            });
+          chart = compileVegaLiteChart(
+            spec,
+            getSize(field),
+            useVegaInterpreter
+          );
+        },
+
+        renderComponent: (props: RenderProps): JSXElement => {
+          if (!props.dataColumn.isRepeatedRecord()) {
+            throw new Error(
+              'Malloy Segment Map: data column is not a repeated record'
+            );
+          }
+          if (!chart) {
+            throw new Error('Malloy Segment Map: missing Vega runtime');
+          }
+          return (
+            <VegaLiteChart
+              data={props.dataColumn}
+              chart={chart}
+              mapRow={mapRow}
+              useVegaInterpreter={useVegaInterpreter}
+            />
+          );
         },
 
         getMetadata: () => ({type: 'segment_map', field}),
