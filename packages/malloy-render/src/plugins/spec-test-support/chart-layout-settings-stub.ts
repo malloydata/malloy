@@ -30,6 +30,7 @@ export const getHorizontalBarLayout = () => ({
   categoryAxis: {
     labelLimit: 0,
     labelBand: 100,
+    labelMaxBand: 120,
     labelPadding: 6,
     titlePadding: 10,
   },

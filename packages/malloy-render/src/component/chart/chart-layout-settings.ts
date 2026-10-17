@@ -716,16 +716,25 @@ export function getChartLayoutSettings(
 
 // The category label band of a horizontal bar chart may take at most this
 // fraction of the chart width before labels are truncated.
-const MAX_HORIZONTAL_LABEL_WIDTH_FRACTION = 0.4;
+const MAX_HORIZONTAL_LABEL_WIDTH_FRACTION = 0.3;
+// Space between the category labels and the axis title.
+const HORIZONTAL_LABEL_TITLE_GAP = 4;
+// Room for a label drawn a little wider than it measured (text measured
+// before the chart's font loads comes out a few percent narrow).
+const HORIZONTAL_LABEL_SLACK = 8;
 
 export type HorizontalBarLayout = {
   padding: ChartLayoutSettings['padding'];
   // The category axis down the left side.
   categoryAxis: {
     labelLimit: number;
-    // Width of the label band. Passed to Vega as min/maxExtent so the axis
-    // title sits outside the labels (Vega caps the extent at 200px by default).
+    // Measured width of the label band. Passed to Vega as minExtent (Vega
+    // otherwise caps the extent at 200px, putting the title over long labels).
     labelBand: number;
+    // The widest the drawn labels can be (the cap, past which they are cut
+    // off). Passed to Vega as maxExtent, so the title is placed beyond the
+    // labels as actually drawn even when they measured narrower.
+    labelMaxBand: number;
     labelPadding: number;
     titlePadding: number;
   };
@@ -796,8 +805,14 @@ export function getHorizontalBarLayout({
       vegaConfig?.axis?.titlePadding
     ) ?? 10;
   const categoryTitleSize = getTextHeightDOM(LINE, styles(fonts.yTitle));
+  const labelMaxBand = labelCap + ellipsisWidth;
   const left =
-    labelBand + categoryLabelPadding + categoryTitlePadding + categoryTitleSize;
+    labelBand +
+    categoryLabelPadding +
+    categoryTitlePadding +
+    categoryTitleSize +
+    HORIZONTAL_LABEL_TITLE_GAP +
+    HORIZONTAL_LABEL_SLACK;
 
   // Measure axis (bottom). Tick labels are short numbers, laid flat.
   const measureLabelStyles = styles(fonts.xLabel);
@@ -841,8 +856,9 @@ export function getHorizontalBarLayout({
     categoryAxis: {
       labelLimit,
       labelBand,
+      labelMaxBand,
       labelPadding: categoryLabelPadding,
-      titlePadding: categoryTitlePadding,
+      titlePadding: categoryTitlePadding + HORIZONTAL_LABEL_TITLE_GAP,
     },
     measureAxis: {
       height: bottom,

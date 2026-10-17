@@ -23,7 +23,7 @@ Renders the data as a bar chart. If `x`, `y`, and `series` fields aren't explici
 
 - `.stack`: Stacks bars when a series is present.
   - Syntax: `# bar_chart.stack` or `# bar_chart { stack }`
-- `.orient`: `vertical` (default) or `horizontal`. Horizontal bars run left to right, with the categories (the `x` field) listed down the left side, so long category labels can be read in full. A label is cut off only when it would take more than 40% of the chart width. The measure (the `y` field) runs along the bottom. Stacking, series, tooltips and hover work the same way in both orientations. Spark-size charts ignore it and stay vertical.
+- `.orient`: `vertical` (default) or `horizontal`. Horizontal bars run left to right, with the categories (the `x` field) listed down the left side, so long category labels can be read in full. A label is cut off only when it would take more than 30% of the chart width. The measure (the `y` field) runs along the bottom. Stacking, series, tooltips and hover work the same way in both orientations. Spark-size charts ignore it and stay vertical.
   - Syntax: `# bar_chart { orient=horizontal }`
 - `.size`: Controls chart size presets.
   - Values: `spark`, `xs`, `sm`, `md`, `lg`, `xl`, `2xl`.

@@ -773,7 +773,7 @@ export function generateBarChartVegaSpecV2(
         labelSeparation: 4,
         labelLimit: horizontalLayout.categoryAxis.labelLimit,
         minExtent: horizontalLayout.categoryAxis.labelBand,
-        maxExtent: horizontalLayout.categoryAxis.labelBand,
+        maxExtent: horizontalLayout.categoryAxis.labelMaxBand,
         labelPadding: horizontalLayout.categoryAxis.labelPadding,
         titlePadding: horizontalLayout.categoryAxis.titlePadding,
         encode: categoryAxisEncode,
