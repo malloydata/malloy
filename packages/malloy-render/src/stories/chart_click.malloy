@@ -1,0 +1,21 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+  # bar_chart
+  view: bars is {
+    group_by: department
+    aggregate: product_count is count()
+  }
+
+  # bar_chart
+  view: series_bars is {
+    group_by: category, department
+    aggregate: product_count is count()
+    limit: 12
+  }
+
+  # line_chart
+  view: line is {
+    group_by: category
+    aggregate: product_count is count()
+    limit: 10
+  }
+}
