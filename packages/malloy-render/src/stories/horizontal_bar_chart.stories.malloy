@@ -1,0 +1,69 @@
+// # bar_chart { orient=horizontal }: categories down the left, so long
+// category labels can be read in full.
+
+source: products is duckdb.table("static/data/products.parquet") extend {
+  measure:
+    product_count is count()
+    avg_retail is retail_price.avg()
+    total_retail is retail_price.sum()
+    avg_cost is cost.avg()
+
+  #(story) story="Vertical with long labels"
+  # bar_chart
+  view: vertical_long_labels is {
+    group_by: category
+    aggregate: product_count
+    limit: 12
+  }
+
+  #(story) story="Horizontal"
+  # bar_chart { orient=horizontal }
+  view: horizontal_long_labels is {
+    group_by: category
+    aggregate: product_count
+    limit: 12
+  }
+
+  #(story) story="Horizontal stacked"
+  # bar_chart { orient=horizontal stack }
+  view: horizontal_stacked is {
+    group_by: category, department
+    aggregate: product_count
+    limit: 24
+  }
+
+  #(story) story="Horizontal grouped series"
+  # bar_chart { orient=horizontal }
+  view: horizontal_grouped is {
+    group_by: category, department
+    aggregate: product_count
+    limit: 16
+  }
+
+  #(story) story="Horizontal two measures"
+  # bar_chart { orient=horizontal y=[avg_retail, avg_cost] }
+  view: horizontal_measures is {
+    group_by: category
+    aggregate: avg_retail, avg_cost
+    limit: 10
+  }
+
+  #(story) story="Horizontal negative values"
+  # bar_chart { orient=horizontal }
+  view: horizontal_negative is {
+    group_by: category
+    aggregate: margin_vs_target is sum(retail_price - cost * 2.2)
+    limit: 10
+  }
+
+  #(story) story="Horizontal nested in a table"
+  view: horizontal_nested is {
+    group_by: department
+    # bar_chart { orient=horizontal }
+    nest: by_category is {
+      group_by: category
+      aggregate: product_count
+      limit: 6
+    }
+  }
+}
