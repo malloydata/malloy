@@ -57,7 +57,7 @@ const BIG_VALUE_OWNED_PATHS: string[][] = [
   ['big_value', 'neutral_threshold'],
 ];
 
-const BIG_VALUE_PARENT_TAG_PROPS = ['size', 'neutral_threshold'];
+const BIG_VALUE_PARENT_TAG_PROPS = ['size', 'neutral_threshold', 'columns'];
 
 const BIG_VALUE_VALIDATION_SPEC: RendererValidationSpec = {
   renderer: 'big_value',
@@ -78,6 +78,10 @@ function snakeToTitleCase(str: string): string {
 /**
  * Extract Big Value settings from field tags
  */
+function isPositiveInteger(n: number | undefined): n is number {
+  return n !== undefined && Number.isInteger(n) && n >= 1;
+}
+
 function getBigValueSettings(field: Field): BigValueSettings {
   const tag = field.tag;
   const bigValueTag = tag.tag('big_value');
@@ -96,11 +100,16 @@ function getBigValueSettings(field: Field): BigValueSettings {
       ? parseFloat(neutralThresholdText)
       : defaultBigValueSettings.neutralThreshold;
 
+  // An invalid column count is dropped (the validator reports it), leaving
+  // the default fill-the-width grid.
+  const columns = bigValueTag?.numeric('columns');
+
   return {
     size,
     neutralThreshold: isNaN(neutralThreshold)
       ? defaultBigValueSettings.neutralThreshold
       : neutralThreshold,
+    ...(isPositiveInteger(columns) && {columns}),
   };
 }
 

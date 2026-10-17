@@ -1,0 +1,48 @@
+// Standalone big_value cards in an even grid; # big_value { columns=N }.
+
+source: products is duckdb.table("static/data/products.parquet") extend {
+  measure:
+    product_count is count()
+    avg_retail is retail_price.avg()
+    total_retail is retail_price.sum()
+    avg_cost is cost.avg()
+
+  #(story) story="Six measures"
+  # big_value
+  view: big_value_six is {
+    aggregate:
+      product_count
+      # currency
+      total_retail
+      # currency
+      avg_retail
+      # currency
+      avg_cost
+      brand_count is count(brand)
+      category_count is count(category)
+  }
+
+  #(story) story="Six measures, columns=3"
+  # big_value { columns=3 }
+  view: big_value_three_columns is {
+    aggregate:
+      product_count
+      # currency
+      total_retail
+      # currency
+      avg_retail
+      # currency
+      avg_cost
+      brand_count is count(brand)
+      category_count is count(category)
+  }
+
+  #(story) story="Two measures"
+  # big_value
+  view: big_value_two is {
+    aggregate:
+      product_count
+      # currency
+      total_retail
+  }
+}

@@ -1173,4 +1173,35 @@ describe('render tag validation', () => {
       expect(warnings.some(w => w.message.includes('tooltip'))).toBe(true);
     });
   });
+
+  describe('big_value columns', () => {
+    const BV = (tag: string) => `
+      source: s is duckdb.sql("SELECT 1 as a") extend {
+        ${tag}
+        view: q is { aggregate: a_total is a.sum(), a_max is a.max() }
+      }
+      query: q is s -> q
+    `;
+
+    it('accepts a positive integer', async () => {
+      const logs = await getValidationLogs(BV('# big_value { columns=3 }'));
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it.each(['0', '2.5', '"three"'])('warns on columns=%s', async value => {
+      const logs = await getValidationLogs(
+        BV(`# big_value { columns=${value} }`)
+      );
+      expect(logs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            severity: 'warn',
+            message:
+              "Ignored big_value columns on 'root': expected a positive integer. Fix: # big_value { columns=3 }.",
+          }),
+        ])
+      );
+    });
+  });
 });

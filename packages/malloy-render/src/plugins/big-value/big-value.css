@@ -15,6 +15,38 @@
   }
 }
 
+/* Standalone (not embedded in a dashboard tile): an even grid, so many
+   measures form full rows of equal cards instead of ragged wrapped rows.
+   `# big_value { columns=N }` replaces the column template inline. */
+.malloy-big-value:not(.malloy-big-value--embedded) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.malloy-big-value:not(.malloy-big-value--embedded) .malloy-big-value-card {
+  width: auto;
+  max-width: none;
+  /* A grid card's width no longer follows its value, so a long value shrinks
+     to fit the card instead of overflowing it (as dashboard tiles do). */
+  container-type: inline-size;
+}
+
+.malloy-big-value:not(.malloy-big-value--embedded) .malloy-big-value-value {
+  font-size: clamp(16px, 13cqi, 32px);
+}
+
+.malloy-big-value:not(.malloy-big-value--embedded)
+  .malloy-big-value-card--sm
+  .malloy-big-value-value {
+  font-size: clamp(14px, 13cqi, 24px);
+}
+
+.malloy-big-value:not(.malloy-big-value--embedded)
+  .malloy-big-value-card--lg
+  .malloy-big-value-value {
+  font-size: clamp(18px, 13cqi, 40px);
+}
+
 
 .malloy-big-value-card {
   display: flex;

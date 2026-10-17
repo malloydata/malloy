@@ -445,6 +445,13 @@ export function BigValueComponent(props: BigValueComponentProps) {
     <div
       class="malloy-big-value"
       classList={{'malloy-big-value--embedded': !!props.embedded}}
+      style={
+        props.settings.columns && !props.embedded
+          ? {
+              'grid-template-columns': `repeat(${props.settings.columns}, minmax(0, 1fr))`,
+            }
+          : undefined
+      }
     >
       <Show when={!firstRow()}>
         <BigValueError message="No data to display" />
