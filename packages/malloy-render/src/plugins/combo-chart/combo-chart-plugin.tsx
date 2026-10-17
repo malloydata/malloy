@@ -23,7 +23,7 @@ import {
   resolveChartDisplayConfig,
   type ChartDisplayConfig,
 } from '@/component/chart/resolve-chart-display';
-import {convertLegacyToVizTag} from '@/component/tag-utils';
+import {normalizedVizTag} from '@/component/tag-utils';
 import {type Config, parse, type Runtime} from 'vega';
 import 'vega-interpreter';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
@@ -60,9 +60,7 @@ export const ComboChartPluginFactory: RenderPluginFactory<ComboChartPluginInstan
     }),
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
-      const hasComboChartTag = fieldTag.has('viz')
-        ? fieldTag.text('viz') === 'combo'
-        : fieldTag.has('combo_chart');
+      const hasComboChartTag = field.vizType() === 'combo';
       const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
       if (hasComboChartTag && !isRepeatedRecord) {
@@ -86,7 +84,7 @@ export const ComboChartPluginFactory: RenderPluginFactory<ComboChartPluginInstan
 
       const settings = getComboChartSettings(field);
 
-      const normalizedTag = convertLegacyToVizTag(field.tag);
+      const normalizedTag = normalizedVizTag(field);
       const vizTag = normalizedTag.tag('viz')!;
       const chartDisplay = resolveChartDisplayConfig(field, vizTag);
 

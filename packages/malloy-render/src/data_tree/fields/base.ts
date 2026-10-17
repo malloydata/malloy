@@ -8,6 +8,7 @@ import * as Malloy from '@malloydata/malloy-interfaces';
 import type {Tag} from '@malloydata/malloy-tag';
 import {tagFromAnnotations} from '@malloydata/malloy';
 import {NULL_SYMBOL, notUndefined} from '../../util';
+import {resolveVizType} from '@/component/tag-utils';
 import type {
   Field,
   NestField,
@@ -43,6 +44,7 @@ export abstract class FieldBase {
   private _dashboardChildConfig: unknown = undefined;
   private _columnConfig: unknown = undefined;
   private _validationErrors: string[] = [];
+  private readonly _vizType: string | undefined;
 
   // Get the plugins registered for this field
   getPlugins(): RenderPluginInstance[] {
@@ -139,6 +141,22 @@ export abstract class FieldBase {
     this.tag = tagFromAnnotations(this.field.annotations, '');
     this.metadataTag = skipTagParsing ? this.tag : tagFor(this.field, 'malloy');
     this.path = parent ? [...parent.path, field.name] : [];
+    const annotations = this.field.annotations ?? [];
+    this._vizType = resolveVizType(
+      this.tag,
+      annotations.length > 1
+        ? annotations.map(a => tagFromAnnotations([a], ''))
+        : [this.tag]
+    );
+  }
+
+  /**
+   * The visualization this field's tags ask for, as a `viz` value: an
+   * explicit `viz`, else the last-declared chart tag (see resolveVizType).
+   * Resolved at setup from the annotation lines in declaration order.
+   */
+  vizType(): string | undefined {
+    return this._vizType;
   }
 
   isRoot(): boolean {
