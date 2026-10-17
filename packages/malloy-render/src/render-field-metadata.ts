@@ -496,6 +496,20 @@ export class RenderFieldMetadata {
         }
       }
 
+      if (bigValueTag.has('columns')) {
+        const bvColumns = bigValueTag.numeric('columns');
+        if (
+          bvColumns === undefined ||
+          !Number.isInteger(bvColumns) ||
+          bvColumns < 1
+        ) {
+          log.warn(
+            `Ignored big_value columns on '${field.name}': expected a positive integer. Fix: # big_value { columns=3 }.`,
+            bigValueTag.tag('columns')
+          );
+        }
+      }
+
       const compFormat = bigValueTag.text('comparison_format');
       if (compFormat !== undefined) {
         const validFormats = ['pct', 'ppt'];

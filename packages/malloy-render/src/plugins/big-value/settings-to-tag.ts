@@ -26,5 +26,9 @@ export function bigValueSettingsToTag(settings: BigValueSettings): Tag {
     );
   }
 
+  if (settings.columns !== undefined) {
+    tag.set(['big_value', 'columns'], settings.columns);
+  }
+
   return tag;
 }

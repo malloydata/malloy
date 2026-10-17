@@ -25,6 +25,8 @@ export interface BigValueSettings extends Record<string, unknown> {
   size: BigValueSize;
   /** Threshold below which delta values are considered neutral (default: 0.05) */
   neutralThreshold: number;
+  /** Number of equal columns; unset fills the width with 200px+ columns */
+  columns?: number;
 }
 
 /**
@@ -67,6 +69,12 @@ export const bigValueSettingsSchema: JSONSchemaObject = {
       default: 0.05,
       description:
         'Threshold below which delta values are considered neutral (e.g., 0.05 for 0.05% or 0.05 ppt)',
+    },
+    columns: {
+      type: 'number',
+      minimum: 1,
+      description:
+        'Number of equal columns of cards. Unset fills the width with columns at least 200px wide.',
     },
   },
 };
