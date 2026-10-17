@@ -437,13 +437,12 @@ function measureAxisMetrics(
   const minAxisVal = domain.at(0);
   const l = locale();
   // Measure the labels as the axis draws them (see renderMalloyAxisNumber).
-  const axisFormat = axisCellFormat(fieldFormat(yField));
-  const formattedMin = yField.isBasic()
-    ? renderNumericField(yField, minAxisVal, axisFormat)
-    : l.format(',')(minAxisVal);
-  const formattedMax = yField.isBasic()
-    ? renderNumericField(yField, maxAxisVal, axisFormat)
-    : l.format(',')(maxAxisVal);
+  const axisLabel = (v: number) =>
+    yField.isBasic()
+      ? renderNumericField(yField, v, axisCellFormat(fieldFormat(yField)))
+      : l.format(',')(v);
+  const formattedMin = axisLabel(minAxisVal);
+  const formattedMax = axisLabel(maxAxisVal);
 
   const yLabelFontStyles = {
     fontFamily: fontSettings.yLabel.fontFamily,
