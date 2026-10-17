@@ -11,7 +11,11 @@ import type {
 } from 'vega';
 import {scale, locale} from 'vega';
 import {getTextWidthDOM, getTextHeightDOM} from '@/component/util';
-import {renderNumericField} from '@/component/render-numeric-field';
+import {
+  fieldFormat,
+  renderNumericField,
+} from '@/component/render-numeric-field';
+import {axisCellFormat} from '@/format/cell-format';
 import type {Field, NestField} from '@/data_tree';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {ChartSizeConfig} from '@/component/chart/resolve-chart-display';
@@ -432,11 +436,13 @@ function measureAxisMetrics(
   const maxAxisVal = domain.at(1);
   const minAxisVal = domain.at(0);
   const l = locale();
+  // Measure the labels as the axis draws them (see renderMalloyAxisNumber).
+  const axisFormat = axisCellFormat(fieldFormat(yField));
   const formattedMin = yField.isBasic()
-    ? renderNumericField(yField, minAxisVal)
+    ? renderNumericField(yField, minAxisVal, axisFormat)
     : l.format(',')(minAxisVal);
   const formattedMax = yField.isBasic()
-    ? renderNumericField(yField, maxAxisVal)
+    ? renderNumericField(yField, maxAxisVal, axisFormat)
     : l.format(',')(maxAxisVal);
 
   const yLabelFontStyles = {
