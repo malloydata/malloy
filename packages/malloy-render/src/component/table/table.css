@@ -31,6 +31,8 @@
   position: relative;
   overflow: auto;
   overflow-anchor: none;
+  /* Where pinned headers stick, measured from the top of the scroll box. */
+  --malloy-render--table-sticky-top: 0px;
   grid-template-columns: repeat(
     var(--total-header-size),
     minmax(auto, max-content)
@@ -40,6 +42,9 @@
 .malloy-table.root.external-scroll {
   overflow: visible;
   max-height: none;
+  /* The host page scrolls the table, so the host says how far down its own
+     fixed or sticky header reaches. */
+  --malloy-render--table-sticky-top: var(--malloy-render--sticky-top, 0px);
 }
 
 .malloy-table.root::-webkit-scrollbar {
@@ -71,8 +76,8 @@
   display: grid;
   grid: auto / subgrid;
   position: sticky;
-  top: 0px;
-  z-index: 100;
+  top: var(--malloy-render--table-sticky-top, 0px);
+  z-index: var(--malloy-render--table-header-z-index, 100);
   pointer-events: none;
   height: fit-content;
   grid-column: 1 / span var(--total-header-size);
