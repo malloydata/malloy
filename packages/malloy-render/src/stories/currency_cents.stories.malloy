@@ -1,0 +1,45 @@
+// A # currency column with no decimals of its own shows cents only when
+// every value in it is under 100.
+
+source: products is duckdb.table("static/data/products.parquet") extend {
+  measure:
+    product_count is count()
+    avg_retail is retail_price.avg()
+    total_retail is retail_price.sum()
+    avg_cost is cost.avg()
+
+  #(story) story="Small and large currency columns"
+  view: currency_columns is {
+    group_by: category
+    aggregate:
+      # currency
+      avg_cost
+      # currency
+      total_retail
+      # currency=usd2
+      total_retail_with_cents is retail_price.sum()
+    limit: 12
+  }
+
+  #(story) story="Nested currency column"
+  view: currency_nested is {
+    group_by: department
+    nest: by_category is {
+      group_by: category
+      aggregate:
+        # currency
+        total_retail
+      limit: 4
+    }
+  }
+
+  #(story) story="Currency big_value"
+  # big_value
+  view: currency_big_value is {
+    aggregate:
+      # currency
+      total_retail
+      # currency
+      avg_cost
+  }
+}
