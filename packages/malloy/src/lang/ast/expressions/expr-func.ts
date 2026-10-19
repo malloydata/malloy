@@ -60,6 +60,7 @@ import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
 import {mergeRefSummaries} from '../../composite-source-utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
+import {refuseBooleanValue} from './boolean-value';
 
 // Built-in functions that take a string literal of user-supplied SQL
 // and emit it directly. Gated by experimental.sql_functions in plain
@@ -237,6 +238,15 @@ export class ExprFunc extends ExpressionDef {
       nullabilityErrors,
       returnType,
     } = result;
+    argExprs.forEach((argExpr, i) => {
+      refuseBooleanValue(
+        fs,
+        argExpr,
+        `as an argument of ${this.name}`,
+        this.args[i - (implicitExpr ? 1 : 0)] ?? this,
+        'write the value, pick 1 when … else 0'
+      );
+    });
     // Report errors for expression type mismatch
     for (const error of expressionTypeErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
@@ -450,11 +460,7 @@ export class ExprFunc extends ExpressionDef {
           }
         }
 
-        const raw = composeSQLExpr(expr);
-        if (func.name === 'sql_boolean') {
-          raw.condition = true;
-        }
-        funcCall = raw;
+        funcCall = composeSQLExpr(expr);
       }
     }
     const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));

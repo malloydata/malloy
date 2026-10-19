@@ -123,8 +123,13 @@ export class IndexFieldSpace extends QueryOperationSpace {
         );
       } else {
         const eTypeDesc = entry.typeDesc();
-        // Don't index arrays and records
-        if (
+        if (eTypeDesc.type === 'boolean' && dialect?.booleanType === 'none') {
+          wild.logWarning(
+            'wildcard-omits-boolean',
+            `'${name}' is left out of '${wild.refString}': '${dialect.name}' does not support a boolean as a result column`
+          );
+        } else if (
+          // Don't index arrays and records
           TD.isBasicAtomic(eTypeDesc) &&
           expressionIsScalar(eTypeDesc.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))

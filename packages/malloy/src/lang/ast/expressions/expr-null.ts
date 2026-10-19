@@ -7,12 +7,20 @@ import type {BinaryMalloyOperator, FieldSpace} from '..';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue, literalExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
+import {refuseBooleanValue} from './boolean-value';
 
 function doIsNull(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
   // Build a new value rather than retyping the operand's in place: what
   // getExpression hands back is shared, and the operand is usually asked for
   // its value again after this.
   const nullCmp = expr.getExpression(fs);
+  refuseBooleanValue(
+    fs,
+    nullCmp,
+    'in a null test',
+    expr,
+    'a boolean here is a condition, which is false when unknown'
+  );
   return computedExprValue({
     dataType: {type: 'boolean'},
     value: {

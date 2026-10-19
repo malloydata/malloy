@@ -44,6 +44,7 @@ import {
   TemporalFilterExpression,
   isFilterable,
 } from '@malloydata/malloy-filter';
+import {refuseBooleanValue} from '../expressions/boolean-value';
 
 class TypeMismatch extends Error {}
 
@@ -432,6 +433,16 @@ function equality(
   const err = errorCascade('boolean', lhs, rhs);
   if (err) return err;
 
+  if (lhs.type === 'boolean' && rhs.type === 'boolean') {
+    refuseBooleanValue(
+      fs,
+      lhs,
+      `compared with ${op}`,
+      left,
+      'test the condition itself, or its not'
+    );
+  }
+
   // Unsupported types can be compare with null
   const lhRaw = TD.isSQL(lhs) ? lhs.rawType || 'typeless-left' : undefined;
   const rhRaw = TD.isSQL(rhs) ? rhs.rawType || 'typeless-right' : undefined;
@@ -454,6 +465,13 @@ function equality(
         `Cannot use the '${op}' operator with a filter expression`
       );
     }
+    refuseBooleanValue(
+      fs,
+      lhs,
+      'matched with a filter expression',
+      left,
+      'test the condition itself'
+    );
     if (isFilterable(lhs.type)) {
       let actualFilter = rhs.value;
       while (actualFilter.node === '()') {

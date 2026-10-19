@@ -11,6 +11,7 @@ import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import {refuseBooleanValue} from './boolean-value';
 
 interface Choice {
   pick: ExprValue;
@@ -110,6 +111,13 @@ export class Pick extends ExpressionDef {
         'Pick statments cannot have filter expression values'
       );
     }
+    refuseBooleanValue(
+      fs,
+      definedReturnType,
+      'as the result of a pick',
+      this,
+      "write values, pick 'yes' when … else 'no', or the condition itself with and, or and not"
+    );
     caseValue.kids.caseElse = defaultVal.value;
     return computedExprValue({
       dataType: definedReturnType,
@@ -186,6 +194,13 @@ export class Pick extends ExpressionDef {
         'Pick statments cannot have filter expression values'
       );
     }
+    refuseBooleanValue(
+      fs,
+      definedReturnType,
+      'as the result of a pick',
+      this,
+      "write values, pick 'yes' when … else 'no', or the condition itself with and, or and not"
+    );
     pick.kids.caseElse = defVal.value;
     return computedExprValue({
       dataType: definedReturnType,
