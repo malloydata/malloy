@@ -443,10 +443,10 @@ function matchCell(
       return matchFail(path, expected, actual);
     }
     let actual: unknown = cell.number_value;
-    // A dialect without a boolean type returns 1/0 for a boolean
+    // Handle simulated booleans (MySQL returns 1/0 for booleans)
     if (
       typeof expected === 'boolean' &&
-      dialect.booleanType !== 'supported' &&
+      dialect.booleanType === 'simulated' &&
       typeof actual === 'number'
     ) {
       actual = actual !== 0;

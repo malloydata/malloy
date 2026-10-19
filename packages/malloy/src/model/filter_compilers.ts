@@ -172,13 +172,9 @@ export const FilterCompilers = {
       // must not fall through to the null/false truth-table below).
       return noneToSQL(bc.not, d);
     } else if (bc.operator === '=true') {
-      return bc.not
-        ? `NOT ${d.sqlValueAsCondition(px)}`
-        : d.sqlValueAsCondition(x);
+      return bc.not ? `NOT ${px}` : x;
     } else if (bc.operator === '=false') {
-      return bc.not
-        ? d.sqlValueAsCondition(x)
-        : `NOT ${d.sqlValueAsCondition(px)}`;
+      return bc.not ? x : `NOT ${px}`;
     } else if (bc.operator === 'null') {
       return bc.not ? `${px} IS NOT NULL` : `${px} IS NULL`;
     }
@@ -189,25 +185,21 @@ export const FilterCompilers = {
     const quoteChar = d.sqlQuoteIdentifier('select')[0];
     const isColumn = x.match(`^[()${quoteChar}\\w.]+$`);
 
-    const isFalse = `${px} = ${d.sqlBooleanValue(false)}`;
     if (isColumn) {
       if (bc.operator === 'true') {
         return bc.not
-          ? `${px} IS NULL OR ${isFalse}`
-          : `${px} IS NOT NULL AND ${d.sqlValueAsCondition(px)}`;
+          ? `${px} IS NULL OR ${px} = false`
+          : `${px} IS NOT NULL AND ${px}`;
       }
       return bc.not
-        ? `${px} IS NOT NULL AND ${d.sqlValueAsCondition(px)}` // not false: exclude null
-        : `${px} IS NULL OR ${isFalse}`; // false: include null
+        ? `${px} IS NOT NULL AND ${px}` // not false: exclude null
+        : `${px} IS NULL OR ${px} = false`; // false: include null
     }
-    const notNull = d.sqlValueAsCondition(
-      `COALESCE(${x}, ${d.sqlBooleanValue(false)})`
-    );
     if (bc.operator === 'true') {
-      return bc.not ? `NOT ${notNull}` : notNull;
+      return bc.not ? `NOT COALESCE(${x}, false)` : `COALESCE(${x}, false)`;
     }
     // else bc.operator === 'false'
-    return bc.not ? notNull : `NOT ${notNull}`;
+    return bc.not ? `COALESCE(${x}, false)` : `NOT COALESCE(${x}, false)`;
   },
   stringCompile(sc: StringFilter, x: string, d: Dialect): string {
     switch (sc.operator) {
