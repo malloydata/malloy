@@ -337,13 +337,13 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         run: tzdata -> {
           select:
             ts is tstz::timestamp
-            same is tstz::timestamp = tstz
-            back is same_instant::timestamptz = tstz
+            same is pick 'yes' when tstz::timestamp = tstz else 'no'
+            back is pick 'yes' when same_instant::timestamptz = tstz else 'no'
         }
       `).toMatchResult(tzModel(), {
         ts: '2020-01-31T02:00:00.000Z',
-        same: true,
-        back: true,
+        same: 'yes',
+        back: 'yes',
       });
     });
 
@@ -351,16 +351,16 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       await expect(`
         run: tzdata -> {
           select:
-            eq_instant is tstz = same_instant
-            eq_digits is tstz = same_digits
-            gt_digits is tstz > same_digits
-            lt_digits is same_digits < tstz
+            eq_instant is pick 'yes' when tstz = same_instant else 'no'
+            eq_digits is pick 'yes' when tstz = same_digits else 'no'
+            gt_digits is pick 'yes' when tstz > same_digits else 'no'
+            lt_digits is pick 'yes' when same_digits < tstz else 'no'
         }
       `).toMatchResult(tzModel(), {
-        eq_instant: true,
-        eq_digits: false,
-        gt_digits: true,
-        lt_digits: true,
+        eq_instant: 'yes',
+        eq_digits: 'no',
+        gt_digits: 'yes',
+        lt_digits: 'yes',
       });
     });
   });
@@ -600,16 +600,16 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       });
       await expect(`
         run: fourTimes -> { select:
-          isBefore is tbefore ? @2026-01-01
-          isFirst is tfirst ? @2026-01-01
-          isLast is tlast ? @2026-01-01
-          isAfter is tafter ? @2026-01-01
+          isBefore is pick 'in' when tbefore ? @2026-01-01 else 'out'
+          isFirst is pick 'in' when tfirst ? @2026-01-01 else 'out'
+          isLast is pick 'in' when tlast ? @2026-01-01 else 'out'
+          isAfter is pick 'in' when tafter ? @2026-01-01 else 'out'
         }
       `).toMatchResult(tm, {
-        isBefore: false,
-        isFirst: true,
-        isLast: true,
-        isAfter: false,
+        isBefore: 'out',
+        isFirst: 'in',
+        isLast: 'in',
+        isAfter: 'out',
       });
     });
   });
@@ -940,8 +940,8 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       ],
     });
     await expect(
-      'run: tzdata -> { select: cmp is updated ? @2020-01 }'
-    ).toMatchResult(tzModel, {cmp: true});
+      "run: tzdata -> { select: cmp is pick 'in' when updated ? @2020-01 else 'out' }"
+    ).toMatchResult(tzModel, {cmp: 'in'});
   });
 
   // 11:00 on the 31st in Tokyo is 20:00 on the 30th in Mexico City. With a
@@ -1003,13 +1003,13 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
           timezone: '${zone}'
           select:
             ts is tstz::timestamp
-            same is tstz::timestamp = tstz
-            back is same_instant::timestamptz = tstz
+            same is pick 'yes' when tstz::timestamp = tstz else 'no'
+            back is pick 'yes' when same_instant::timestamptz = tstz else 'no'
         }
       `).toMatchResult(tzModel(), {
         ts: '2020-01-31T02:00:00.000Z',
-        same: true,
-        back: true,
+        same: 'yes',
+        back: 'yes',
       });
     });
   });
@@ -1092,16 +1092,16 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         timezone: 'Europe/Dublin'
         select:
           june1_correct,
-          month_ok is by_month = june1_correct, by_month
-          day_ok is by_day = june1_correct, by_day
-          hour_ok is by_hour = june1_correct, by_hour
-          quarter_ok is by_quarter = august1_correct, by_quarter
+          month_ok is pick 'yes' when by_month = june1_correct else 'no', by_month
+          day_ok is pick 'yes' when by_day = june1_correct else 'no', by_day
+          hour_ok is pick 'yes' when by_hour = june1_correct else 'no', by_hour
+          quarter_ok is pick 'yes' when by_quarter = august1_correct else 'no', by_quarter
       }`
     ).toMatchResult(testModel, {
-      month_ok: true,
-      day_ok: true,
-      hour_ok: true,
-      quarter_ok: true,
+      month_ok: 'yes',
+      day_ok: 'yes',
+      hour_ok: 'yes',
+      quarter_ok: 'yes',
     });
   });
 });

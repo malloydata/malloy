@@ -94,21 +94,18 @@ describe('SQL Server', () => {
       `).toEqualResult(tm, [{n: 51}]);
     });
 
-    test('a declared boolean is a 0/1 value', async () => {
-      await expect(`
-        run: sqlserver.table('malloytest.state_facts') -> {
-          group_by:
-            big is airport_count > 500
-            c_state is starts_with(state, 'C')
-          aggregate: n is count()
-          order_by: big desc, c_state desc
-        }
-      `).toEqualResult(tm, [
-        {big: true, c_state: true, n: 1},
-        {big: true, c_state: false, n: 11},
-        {big: false, c_state: true, n: 2},
-        {big: false, c_state: false, n: 37},
-      ]);
+    test('a declared boolean in a result column is refused, naming the value to write', async () => {
+      await expect(
+        runtime
+          .loadQuery(
+            `run: sqlserver.table('malloytest.state_facts') extend {
+              dimension: big is airport_count > 500
+            } -> { group_by: big; aggregate: n is count() }`
+          )
+          .run()
+      ).rejects.toThrow(
+        "'sqlserver' does not support a boolean as a result column; write the value, pick 'yes' when big else 'no'"
+      );
     });
 
     test('a declared boolean is a condition in where: and having:', async () => {
@@ -118,63 +115,47 @@ describe('SQL Server', () => {
           measure: n is count()
         } -> {
           where: big
-          group_by: big
           aggregate: n
           having: n > 1
         }
-      `).toEqualResult(tm, [{big: true, n: 12}]);
+      `).toEqualResult(tm, [{n: 12}]);
     });
 
     test('not, and a comparison true on NULL, follow Malloy rather than SQL', async () => {
       await expect(`
         run: sqlserver.sql('SELECT CAST(NULL AS INT) AS n, 1 AS one') -> {
           select:
-            not_null is not (n = 1)
-            ne_null is n != 1
-            not_one is not (one = 1)
-            ne_one is one != 1
+            not_null is pick 'yes' when not (n = 1) else 'no'
+            ne_null is pick 'yes' when n != 1 else 'no'
+            not_one is pick 'yes' when not (one = 1) else 'no'
+            ne_one is pick 'yes' when one != 1 else 'no'
         }
       `).toEqualResult(tm, [
-        {not_null: true, ne_null: true, not_one: false, ne_one: false},
+        {not_null: 'yes', ne_null: 'yes', not_one: 'no', ne_one: 'no'},
       ]);
     });
 
-    test('a boolean picks, and is picked', async () => {
+    test('a comparison picks', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {
-          group_by:
-            size is pick 'big' when airport_count > 500 else 'small'
-            flagged is pick true when airport_count > 500 else false
+          group_by: size is pick 'big' when airport_count > 500 else 'small'
           aggregate: n is count()
           order_by: size
         }
       `).toEqualResult(tm, [
-        {size: 'big', flagged: true, n: 12},
-        {size: 'small', flagged: false, n: 39},
+        {size: 'big', n: 12},
+        {size: 'small', n: 39},
       ]);
     });
 
-    test('a boolean function is a value, and a condition where one is wanted', async () => {
+    test('a boolean function is a condition', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {
-          where: starts_with(state, 'C')
-          select: state, c is starts_with(state, 'C'), a is ends_with(state, 'A')
+          where: starts_with(state, 'C') and not ends_with(state, 'A')
+          select: state
           order_by: state
         }
-      `).toEqualResult(tm, [
-        {state: 'CA', c: true, a: true},
-        {state: 'CO', c: true, a: false},
-        {state: 'CT', c: true, a: false},
-      ]);
-    });
-
-    test('a boolean literal is a value in select:', async () => {
-      await expect(`
-        run: sqlserver.table('malloytest.state_facts') -> {
-          select: t is true, f is false
-          limit: 1
-        }
-      `).toEqualResult(tm, [{t: true, f: false}]);
+      `).toEqualResult(tm, [{state: 'CO'}, {state: 'CT'}]);
     });
 
     test('sql_boolean is a condition', async () => {
@@ -289,13 +270,13 @@ describe('SQL Server', () => {
     test('a constant dimension groups with the others', async () => {
       await expect(`
         run: sqlserver.table('malloytest.state_facts') -> {
-          group_by: tag is 'facts', big is airport_count > 500
+          group_by: tag is 'facts', size is pick 'big' when airport_count > 500 else 'small'
           aggregate: n is count()
-          order_by: big desc
+          order_by: size
         }
       `).toEqualResult(tm, [
-        {tag: 'facts', big: true, n: 12},
-        {tag: 'facts', big: false, n: 39},
+        {tag: 'facts', size: 'big', n: 12},
+        {tag: 'facts', size: 'small', n: 39},
       ]);
     });
 
