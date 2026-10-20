@@ -122,19 +122,6 @@ expressionModels.forEach((x, databaseName) => {
       await funcTestMultiple(
         ["concat('foo', 'bar')", 'foobar'],
         ["concat(1, 'bar')", '1bar'],
-        // A dialect without boolean values has no boolean to pass
-        ...(runtime.dialect.booleanType === 'none'
-          ? []
-          : [
-              [
-                "concat('cons', true)",
-                databaseName === 'postgres'
-                  ? 'const'
-                  : databaseName === 'mysql'
-                    ? 'cons1'
-                    : 'construe',
-              ] as [string, string],
-            ]),
         ["concat('foo', @2003)", 'foo2003-01-01'],
         [
           "concat('foo', @2003-01-01 12:00:00)",
@@ -145,6 +132,19 @@ expressionModels.forEach((x, databaseName) => {
         ['concat()', '']
       );
     });
+    it.when(runtime.dialect.booleanType !== 'none')(
+      `works with a boolean - ${databaseName}`,
+      async () => {
+        await funcTest(
+          "concat('cons', true)",
+          databaseName === 'postgres'
+            ? 'const'
+            : databaseName === 'mysql'
+              ? 'cons1'
+              : 'construe'
+        );
+      }
+    );
   });
 
   describe('round', () => {
@@ -860,6 +860,13 @@ expressionModels.forEach((x, databaseName) => {
         ["pick 'yes' when is_inf(null) else 'no'", 'no']
       );
     });
+    // A null input is false, not null
+    it.when(databaseName !== 'mysql' && runtime.dialect.booleanType !== 'none')(
+      `is false for null - ${databaseName}`,
+      async () => {
+        await funcTest('is_inf(null)', false);
+      }
+    );
   });
   describe('is_nan', () => {
     it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
@@ -869,6 +876,12 @@ expressionModels.forEach((x, databaseName) => {
         ["pick 'yes' when is_nan(null) else 'no'", 'no']
       );
     });
+    it.when(databaseName !== 'mysql' && runtime.dialect.booleanType !== 'none')(
+      `is false for null - ${databaseName}`,
+      async () => {
+        await funcTest('is_nan(null)', false);
+      }
+    );
   });
   describe('greatest', () => {
     it(`works - ${databaseName}`, async () => {
@@ -934,6 +947,15 @@ expressionModels.forEach((x, databaseName) => {
         ["pick 'yes' when starts_with('hello world', null) else 'no'", 'no']
       );
     });
+    it.when(runtime.dialect.booleanType !== 'none')(
+      `is false for null - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          ["starts_with(null, 'world')", false],
+          ["starts_with('hello world', null)", false]
+        );
+      }
+    );
   });
   describe('ends_with', () => {
     it(`works - ${databaseName}`, async () => {
@@ -944,6 +966,15 @@ expressionModels.forEach((x, databaseName) => {
         ["pick 'yes' when ends_with('hello world', null) else 'no'", 'no']
       );
     });
+    it.when(runtime.dialect.booleanType !== 'none')(
+      `is false for null - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          ["ends_with(null, 'world')", false],
+          ["ends_with('hello world', null)", false]
+        );
+      }
+    );
   });
   describe('trim', () => {
     it(`trim works - ${databaseName}`, async () => {
