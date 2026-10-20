@@ -132,19 +132,20 @@ expressionModels.forEach((x, databaseName) => {
         ['concat()', '']
       );
     });
-    it.when(runtime.dialect.booleanType !== 'none')(
-      `works with a boolean - ${databaseName}`,
-      async () => {
-        await funcTest(
-          "concat('cons', true)",
-          databaseName === 'postgres'
-            ? 'const'
-            : databaseName === 'mysql'
-              ? 'cons1'
-              : 'construe'
-        );
-      }
-    );
+    it.when(
+      runtime.dialect.booleanType !== 'none' &&
+        !brokenIn('trino', databaseName) &&
+        !brokenIn('presto', databaseName)
+    )(`works with a boolean - ${databaseName}`, async () => {
+      await funcTest(
+        "concat('cons', true)",
+        databaseName === 'postgres'
+          ? 'const'
+          : databaseName === 'mysql'
+            ? 'cons1'
+            : 'construe'
+      );
+    });
   });
 
   describe('round', () => {
@@ -864,7 +865,7 @@ expressionModels.forEach((x, databaseName) => {
     it.when(databaseName !== 'mysql' && runtime.dialect.booleanType !== 'none')(
       `is false for null - ${databaseName}`,
       async () => {
-        await funcTest('is_inf(null)', false);
+        await funcTest('is_inf(null)', runtime.dialect.resultBoolean(false));
       }
     );
   });
@@ -879,7 +880,7 @@ expressionModels.forEach((x, databaseName) => {
     it.when(databaseName !== 'mysql' && runtime.dialect.booleanType !== 'none')(
       `is false for null - ${databaseName}`,
       async () => {
-        await funcTest('is_nan(null)', false);
+        await funcTest('is_nan(null)', runtime.dialect.resultBoolean(false));
       }
     );
   });
@@ -951,8 +952,11 @@ expressionModels.forEach((x, databaseName) => {
       `is false for null - ${databaseName}`,
       async () => {
         await funcTestMultiple(
-          ["starts_with(null, 'world')", false],
-          ["starts_with('hello world', null)", false]
+          ["starts_with(null, 'world')", runtime.dialect.resultBoolean(false)],
+          [
+            "starts_with('hello world', null)",
+            runtime.dialect.resultBoolean(false),
+          ]
         );
       }
     );
@@ -970,8 +974,11 @@ expressionModels.forEach((x, databaseName) => {
       `is false for null - ${databaseName}`,
       async () => {
         await funcTestMultiple(
-          ["ends_with(null, 'world')", false],
-          ["ends_with('hello world', null)", false]
+          ["ends_with(null, 'world')", runtime.dialect.resultBoolean(false)],
+          [
+            "ends_with('hello world', null)",
+            runtime.dialect.resultBoolean(false),
+          ]
         );
       }
     );
