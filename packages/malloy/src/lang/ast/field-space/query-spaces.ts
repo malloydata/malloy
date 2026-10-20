@@ -26,6 +26,7 @@ import type {
 } from '../../parse-log';
 import {mergeRefSummaries} from '../../composite-source-utils';
 import {ErrorFactory} from '../error-factory';
+import {resultColumnHint} from '../expressions/boolean-value';
 import {ReferenceField} from './reference-field';
 import {RefineFromSpaceField} from './refine-from-space-field';
 
@@ -213,10 +214,12 @@ export abstract class QueryOperationSpace
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
           if (eType.type === 'boolean' && dialect?.booleanType === 'none') {
+            const path = joinPath.concat(name).join('.');
             wild.logWarning('wildcard-omits-boolean', {
               dialect: dialect.name,
               wildcard: wild.refString,
-              name: joinPath.concat(name).join('.'),
+              name: path,
+              hint: resultColumnHint(path),
             });
             continue;
           }

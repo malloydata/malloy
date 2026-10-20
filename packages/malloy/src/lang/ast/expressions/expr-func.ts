@@ -60,7 +60,7 @@ import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
 import {mergeRefSummaries} from '../../composite-source-utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
-import {booleanValueError} from './boolean-value';
+import {booleanValueError, NUMBER_HINT} from './boolean-value';
 
 // Built-in functions that take a string literal of user-supplied SQL
 // and emit it directly. Gated by experimental.sql_functions in plain
@@ -155,6 +155,16 @@ export class ExprFunc extends ExpressionDef {
   ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     if (this.isRaw) {
+      for (const [i, argExpr] of argExprsWithoutImplicit.entries()) {
+        const noArg = booleanValueError(
+          fs,
+          argExpr,
+          `as an argument of ${this.name}`,
+          this.args[i],
+          NUMBER_HINT
+        );
+        if (noArg) return noArg;
+      }
       const funcCall: SQLExprElement[] = [`${this.name}(`];
       argExprsWithoutImplicit.forEach((expr, i) => {
         if (i !== 0) {
@@ -244,7 +254,7 @@ export class ExprFunc extends ExpressionDef {
         argExpr,
         `as an argument of ${this.name}`,
         this.args[i - (implicitExpr ? 1 : 0)] ?? this,
-        'write the value, pick 1 when … else 0'
+        NUMBER_HINT
       );
       if (noArg) return noArg;
     }

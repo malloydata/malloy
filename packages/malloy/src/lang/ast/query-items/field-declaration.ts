@@ -36,7 +36,10 @@ import type {Noteable} from '../types/noteable';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {SpaceField} from '../types/space-field';
 import {DefSpace} from '../field-space/def-space';
-import {booleanValueError} from '../expressions/boolean-value';
+import {
+  booleanValueError,
+  resultColumnHint,
+} from '../expressions/boolean-value';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -134,7 +137,7 @@ export abstract class AtomicFieldDeclaration
           exprValue,
           'as a result column',
           this.expr,
-          `write the value, pick 'yes' when ${this.exprSrc ?? '…'} else 'no'`
+          resultColumnHint(this.exprSrc ?? '…')
         )
       ) {
         return {name: exprName, type: 'error'};

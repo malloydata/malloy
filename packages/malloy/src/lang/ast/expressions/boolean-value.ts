@@ -37,6 +37,17 @@ export function booleanValueError(
 export const CONDITION_HINT =
   'test the condition itself; unknown already tests as false';
 
+/** The hint for a boolean compared with anything */
+export const COMPARE_HINT = 'test the condition itself, or its not';
+
+/** The hint where a number would do: a function argument, a cast */
+export const NUMBER_HINT = 'write the value, pick 1 when … else 0';
+
+/** The hint for a boolean as a result column, from the source text it came from */
+export function resultColumnHint(src: string): string {
+  return `write the value, pick 'yes' when ${src} else 'no'`;
+}
+
 /** The hint for a `pick` or `case` whose result is a boolean */
 export const CHOICE_HINT =
   "write values, pick 'yes' when … else 'no', or the condition itself with and, or and not";

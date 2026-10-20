@@ -20,7 +20,10 @@ import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
 import type {MakeEntry} from '../types/space-entry';
 import {ExprIdReference} from '../expressions/expr-id-reference';
-import {booleanValueError} from '../expressions/boolean-value';
+import {
+  booleanValueError,
+  resultColumnHint,
+} from '../expressions/boolean-value';
 import type {FieldDeclarationConstructor} from './field-declaration';
 import {
   AggregateFieldDeclaration,
@@ -193,7 +196,7 @@ export abstract class FieldReference
           actualType,
           'as a result column',
           this,
-          `write the value, pick 'yes' when ${this.refString} else 'no'`
+          resultColumnHint(this.refString)
         );
       }
     }

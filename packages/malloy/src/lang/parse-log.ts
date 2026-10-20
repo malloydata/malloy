@@ -95,7 +95,12 @@ type MessageParameterTypes = {
   'experimental-dialect-not-enabled': {dialect: string};
   'nesting-unsupported': {dialect: string};
   'boolean-value-unsupported': {dialect: string; where: string; hint: string};
-  'wildcard-omits-boolean': {dialect: string; wildcard: string; name: string};
+  'wildcard-omits-boolean': {
+    dialect: string;
+    wildcard: string;
+    name: string;
+    hint: string;
+  };
   'nested-multi-stage-unsupported': {dialect: string};
   'nested-projection-limit-unsupported': {dialect: string};
   'sql-native-not-allowed-in-expression': {
@@ -471,7 +476,7 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'boolean-value-unsupported': e =>
     `'${e.dialect}' does not support a boolean ${e.where}; ${e.hint}`,
   'wildcard-omits-boolean': e =>
-    `'${e.name}' is left out of '${e.wildcard}': '${e.dialect}' does not support a boolean as a result column; write the value, pick 'yes' when ${e.name} else 'no'`,
+    `'${e.name}' is left out of '${e.wildcard}': '${e.dialect}' does not support a boolean as a result column; ${e.hint}`,
   'nested-multi-stage-unsupported': e =>
     `'${e.dialect}' does not support a multi-stage pipeline ('->') in a nested query`,
   'nested-projection-limit-unsupported': e =>

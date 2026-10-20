@@ -5,6 +5,7 @@
 
 import './parse-expects';
 import {
+  error,
   errorMessage,
   makeModelFunc,
   model,
@@ -27,8 +28,9 @@ source: m is _mssql_.table('aTable') extend {
 `,
 });
 
-const refused = (where: string) =>
-  errorMessage(new RegExp(`^'sqlserver' does not support a boolean ${where};`));
+// A refusal is checked by its code, and by the `${…}` mark saying where it
+// landed; the hint's wording is checked only where the hint is the point.
+const refused = error('boolean-value-unsupported');
 
 describe('a boolean on a dialect without boolean values', () => {
   describe('is a condition', () => {
@@ -80,93 +82,104 @@ describe('a boolean on a dialect without boolean values', () => {
       );
     });
     test('a boolean aggregate', () => {
-      expect(m`run: m -> { aggregate: any_big is ${'n > 1'} }`).toLog(
-        refused('as a result column')
-      );
+      expect(m`run: m -> { aggregate: any_big is ${'n > 1'} }`).toLog(refused);
     });
     test('in index:', () => {
-      expect(m`run: m -> { index: ${'big'} }`).toLog(
-        refused('as a result column')
-      );
+      expect(m`run: m -> { index: ${'big'} }`).toLog(refused);
     });
     test('a boolean field named as the whole view', () => {
-      expect(m`run: m -> ${'big'}`).toLog(refused('as a result column'));
-      expect(m`run: m -> ${'anyn'}`).toLog(refused('as a result column'));
-      expect(m`run: m -> v + ${'big'}`).toLog(refused('as a result column'));
+      expect(m`run: m -> ${'big'}`).toLog(refused);
+      expect(m`run: m -> ${'anyn'}`).toLog(refused);
+      expect(m`run: m -> v + ${'big'}`).toLog(refused);
     });
     test('in a null test', () => {
       expect(m`run: m -> { where: ${'big'} is null; aggregate: n }`).toLog(
-        errorMessage(
-          "'sqlserver' does not support a boolean in a null test; test the condition itself; unknown already tests as false"
-        )
+        refused
       );
     });
     test('compared with = or !=', () => {
       expect(m`run: m -> { where: ${'big'} = true; aggregate: n }`).toLog(
-        refused('compared with =')
+        refused
       );
       expect(m`run: m -> { where: ${'big'} != (ai > 6); aggregate: n }`).toLog(
-        refused('compared with !=')
+        refused
+      );
+    });
+    test('compared with something which is not a boolean', () => {
+      expect(m`run: m -> { where: ${'big'} = 1; aggregate: n }`).toLog(refused);
+      expect(m`run: m -> { where: ai = ${'big'}; aggregate: n }`).toLog(
+        refused
+      );
+      expect(m`run: m -> { where: null = ${'big'}; aggregate: n }`).toLog(
+        refused
+      );
+      expect(m`run: m -> { where: ${'big'} ? > 1; aggregate: n }`).toLog(
+        refused
+      );
+      expect(m`run: m -> { where: astr != ${'big'}; aggregate: n }`).toLog(
+        refused
       );
     });
     test('compared with an ordering operator', () => {
       expect(m`run: m -> { where: ${'big'} > false; aggregate: n }`).toLog(
-        refused('compared with >')
+        refused
       );
       expect(m`run: m -> { where: ${'big'} ? > false; aggregate: n }`).toLog(
-        refused('compared with >')
+        refused
       );
       expect(
         m`run: m -> { where: ${'big'} ? > false | < true; aggregate: n }`
-      ).toLog(refused('compared with >'), refused('compared with <'));
+      ).toLog(refused, refused);
     });
     test('in an alternation', () => {
       expect(
         m`run: m -> { where: ${'big'} ? true | false; aggregate: n }`
-      ).toLog(refused('compared with ='));
+      ).toLog(refused);
+      expect(m`run: m -> { where: ai ? 1 | ${'big'}; aggregate: n }`).toLog(
+        refused
+      );
     });
     test('in ??', () => {
       expect(m`run: m -> { where: ${'big ?? false'}; aggregate: n }`).toLog(
-        errorMessage(
-          "'sqlserver' does not support a boolean in ??; test the condition itself; unknown already tests as false"
-        )
+        refused
       );
     });
     test('as the result of a pick', () => {
       expect(
         m`run: m -> { where: ${'pick true when ai > 1 else false'}; aggregate: n }`
-      ).toLog(refused('as the result of a pick'));
+      ).toLog(refused);
     });
     test('as the result of a case', () => {
       expect(
         m`run: m -> { where: case when ai > 1 then true else false end; aggregate: n }`
       ).toLog(
         warningMessage('Use a `pick` statement instead of `case`'),
-        refused('as the result of a case')
+        refused
       );
     });
     test('matched with a filter expression', () => {
       expect(m`run: m -> { where: ${'big'} ~ f'true'; aggregate: n }`).toLog(
-        refused('matched with a filter expression')
+        refused
       );
     });
     test('as a function argument', () => {
       expect(m`run: m -> { group_by: s is concat('x', ${'big'}) }`).toLog(
-        refused('as an argument of concat')
+        refused
+      );
+      expect(m`run: m -> { group_by: s is foo!number(${'big'}) }`).toLog(
+        refused
       );
     });
     test('in a cast, either way', () => {
-      expect(m`run: m -> { group_by: s is ${'big::string'} }`).toLog(
-        refused('in a cast')
-      );
+      expect(m`run: m -> { group_by: s is ${'big::string'} }`).toLog(refused);
       expect(m`run: m -> { where: ${'ai::boolean'}; aggregate: n }`).toLog(
-        refused('as the type of a cast')
+        refused
       );
     });
     test('once, at the expression which used it', () => {
       expect(
         m`run: m -> { group_by: x is ${'pick big when ai > 1 else big'} }`
-      ).toLog(refused('as the result of a pick'));
+      ).toLog(refused);
     });
   });
 

@@ -44,7 +44,7 @@ import {
   TemporalFilterExpression,
   isFilterable,
 } from '@malloydata/malloy-filter';
-import {booleanValueError} from '../expressions/boolean-value';
+import {booleanValueError, COMPARE_HINT} from '../expressions/boolean-value';
 
 class TypeMismatch extends Error {}
 
@@ -421,27 +421,20 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
 }
 
 /**
- * Two booleans can only be compared on a dialect with boolean values. Every
- * comparison operator, applied plainly, as a partial, or through an
- * alternation, arrives here through equality() or compare().
+ * A boolean can only be compared, with anything, on a dialect with boolean
+ * values. Every comparison operator, applied plainly, as a partial, or
+ * through an alternation, arrives here through equality() or compare().
  */
 function booleanCompare(
   fs: FieldSpace,
   left: ExpressionDef,
   lhs: ExprValue,
   op: CompareMalloyOperator,
+  right: ExpressionDef,
   rhs: ExprValue
 ): ExprValue | undefined {
-  if (lhs.type !== 'boolean' || rhs.type !== 'boolean') {
-    return undefined;
-  }
-  return booleanValueError(
-    fs,
-    lhs,
-    `compared with ${op}`,
-    left,
-    'test the condition itself, or its not'
-  );
+  const [side, val] = lhs.type === 'boolean' ? [left, lhs] : [right, rhs];
+  return booleanValueError(fs, val, `compared with ${op}`, side, COMPARE_HINT);
 }
 
 function equality(
@@ -455,7 +448,8 @@ function equality(
   const node = getExprNode(op);
 
   const err =
-    errorCascade('boolean', lhs, rhs) || booleanCompare(fs, left, lhs, op, rhs);
+    errorCascade('boolean', lhs, rhs) ||
+    booleanCompare(fs, left, lhs, op, right, rhs);
   if (err) return err;
 
   // Unsupported types can be compare with null
@@ -554,7 +548,8 @@ function compare(
   const rhs = right.getExpression(fs);
 
   const err =
-    errorCascade('boolean', lhs, rhs) || booleanCompare(fs, left, lhs, op, rhs);
+    errorCascade('boolean', lhs, rhs) ||
+    booleanCompare(fs, left, lhs, op, right, rhs);
   if (err) return err;
 
   const noCompare = unsupportError(left, lhs, right, rhs);

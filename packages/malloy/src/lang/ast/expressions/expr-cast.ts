@@ -9,7 +9,7 @@ import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
-import {booleanValueError} from './boolean-value';
+import {booleanValueError, NUMBER_HINT} from './boolean-value';
 
 export class ExprCast extends ExpressionDef {
   elementType = 'cast';
@@ -48,13 +48,7 @@ export class ExprCast extends ExpressionDef {
       }
     }
     const noCast =
-      booleanValueError(
-        fs,
-        expr,
-        'in a cast',
-        this,
-        'write the value, pick 1 when … else 0'
-      ) ||
+      booleanValueError(fs, expr, 'in a cast', this, NUMBER_HINT) ||
       booleanValueError(
         fs,
         dataType,

@@ -126,6 +126,11 @@ describe('expressions', () => {
     test('unary negation', () => {
       expect('- ai').compilesTo('{unary- ai}');
     });
+    test('unary negation of a non-number is an error', () => {
+      expect(expr`- ${'astr'}`).toLog(
+        errorMessage("'unary minus' Can't use type string")
+      );
+    });
     test('equal', () => {
       expect('42 = 7').compilesTo('{42 = 7}');
     });

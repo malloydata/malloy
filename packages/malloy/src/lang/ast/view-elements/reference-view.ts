@@ -15,7 +15,10 @@ import {
   sourceBase,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
-import {booleanValueError} from '../expressions/boolean-value';
+import {
+  booleanValueError,
+  resultColumnHint,
+} from '../expressions/boolean-value';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {attachDrillPaths} from '../query-properties/drill';
@@ -81,7 +84,7 @@ export class ReferenceView extends View {
           fieldDef,
           'as a result column',
           this.reference,
-          `write the value, pick 'yes' when ${this.reference.refString} else 'no'`
+          resultColumnHint(this.reference.refString)
         )
       ) {
         return oops();

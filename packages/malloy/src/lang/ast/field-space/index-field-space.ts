@@ -13,6 +13,7 @@ import type {
 } from '../../../model/malloy_types';
 import {expressionIsScalar, TD} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
+import {resultColumnHint} from '../expressions/boolean-value';
 import {
   FieldReference,
   IndexFieldReference,
@@ -130,10 +131,12 @@ export class IndexFieldSpace extends QueryOperationSpace {
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
           if (eTypeDesc.type === 'boolean' && dialect?.booleanType === 'none') {
+            const path = [...joinPath, name].join('.');
             wild.logWarning('wildcard-omits-boolean', {
               dialect: dialect.name,
               wildcard: wild.refString,
-              name: [...joinPath, name].join('.'),
+              name: path,
+              hint: resultColumnHint(path),
             });
             continue;
           }
