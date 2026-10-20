@@ -231,7 +231,7 @@ export function persistedSourceSQL(
         'its SQL cannot depend on a value each caller supplies. Filter on the ' +
         'given in an extend-block `where:`, which applies per caller when the ' +
         'table is read, or give the given a default.',
-      'persist-given-no-value',
+      'runtime-persist-given-no-value',
       e.at ?? source.location
     );
   }

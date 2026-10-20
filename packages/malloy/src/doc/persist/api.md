@@ -236,7 +236,7 @@ an error is the builder's call.
 
 A source that reads a `given:` with no default is the case to know. Its table
 would have to be one table for every caller, so it cannot be persisted: its
-problem is `persist-given-no-value`, and a query over it fails with the same
+problem is `runtime-persist-given-no-value`, and a query over it fails with the same
 error once a manifest is in play, whatever givens the query supplies. Filter on
 the given in an extend-block `where:` instead. That is not part of the persisted
 relation, so the table holds every row and each query reads its own slice.

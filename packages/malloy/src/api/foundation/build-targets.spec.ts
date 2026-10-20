@@ -339,7 +339,7 @@ describe('a source whose SQL does not compile', () => {
   `;
   const GIVENS = ['experimental.givens'];
 
-  test('is reported, and the rest of the model still builds', () => {
+  test('is reported, and the rest of the model is planned', () => {
     const {connections, unbuildable} = planOf(
       `
       ${ROLLUP}
@@ -355,7 +355,7 @@ describe('a source whose SQL does not compile', () => {
     ]);
     expect(unbuildable.map(u => u.source.name)).toEqual(['scoped']);
     expect(unbuildable[0].problem.severity).toBe('error');
-    expect(unbuildable[0].problem.code).toBe('persist-given-no-value');
+    expect(unbuildable[0].problem.code).toBe('runtime-persist-given-no-value');
     expect(unbuildable[0].problem.message).toContain('extend-block `where:`');
   });
 
@@ -375,7 +375,7 @@ describe('a source whose SQL does not compile', () => {
     expect(unbuildable.map(u => u.source.name)).toEqual(['scoped', 'top']);
   });
 
-  test('a compiler bug is still thrown', () => {
+  test('a compiler bug is thrown', () => {
     // Only a MalloyCompileError is a fact about the source. Anything else is
     // the compiler's own failure, and hiding it as an unbuildable source would
     // hide the bug.
