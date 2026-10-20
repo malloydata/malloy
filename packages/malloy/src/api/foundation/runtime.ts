@@ -32,6 +32,7 @@ import type {
   CompileOptions,
   CompileQueryOptions,
   BuildTargets,
+  UnbuildableSource,
 } from './types';
 import {mkBuildTargets, resolvePersistWalk} from './build_targets';
 import type {PreparedResult, Explore} from './core';
@@ -678,12 +679,14 @@ export class Runtime {
       }
     }
 
-    return {
-      connections: mkBuildTargets(walk, connectionDigests, {
-        virtualMap: this.virtualMap,
-      }),
-      tagParseLog,
-    };
+    const unbuildable: UnbuildableSource[] = [];
+    const connections = mkBuildTargets(
+      walk,
+      connectionDigests,
+      {virtualMap: this.virtualMap},
+      unbuildable
+    );
+    return {connections, tagParseLog, unbuildable};
   }
 }
 

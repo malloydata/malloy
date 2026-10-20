@@ -69,7 +69,8 @@
  *     order, so it never includes substituted table names.
  *     `getBuildTargets` has already computed both. A model with virtual
  *     sources needs a `virtualMap` on the Runtime for this to compile, and
- *     the same map in the build SQL below.
+ *     the same map in the build SQL below; without it, those sources come
+ *     back in `unbuildable` instead of as targets.
  *
  *   - **Build SQL** — `source.getSQL({buildManifest, connectionDigests})`.
  *     Dependencies that are already in the manifest are replaced with
@@ -298,11 +299,20 @@ async function runBuild(
   // This lives on the Runtime rather than the Model because a BuildID is a
   // hash of the SQL *and the connection's digest* — the answer can't be
   // finished without a connection.
-  const {connections, tagParseLog} = await runtime.getBuildTargets(model);
+  const {connections, tagParseLog, unbuildable} =
+    await runtime.getBuildTargets(model);
 
   for (const msg of tagParseLog) {
     const loc = msg.at ? ` (${msg.at.url}:${msg.at.range.start.line + 1})` : '';
     console.warn(`WARNING: ${msg.message}${loc}`);
+  }
+
+  // Whether an unbuildable source fails the run is the builder's call. This
+  // one reports it and builds the rest.
+  for (const {source, problem} of unbuildable) {
+    const at = problem.at ?? source.location;
+    const loc = at ? ` (${at.url}:${at.range.start.line + 1})` : '';
+    console.warn(`SKIPPED ${source.name}: ${problem.message}${loc}`);
   }
 
   const targetCount = connections.flatMap(c => c.targets).length;

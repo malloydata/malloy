@@ -197,7 +197,8 @@ this section.
 
 ```typescript
 const model = await runtime.loadModel(modelURL).getModel();
-const {connections, tagParseLog} = await runtime.getBuildTargets(model);
+const {connections, tagParseLog, unbuildable} =
+  await runtime.getBuildTargets(model);
 // throws without ##! experimental.persistence
 ```
 
@@ -226,9 +227,16 @@ batching by depth would. `ConnectionBuild` in `types.ts` carries both loops.
 malformed annotation is a build problem.
 
 It compiles every persist source in the model, because a BuildID is a hash of
-SQL. One whose dialect cannot express it throws — from the dialect, with its
-own message — and takes the whole call rather than reporting one unbuildable
-target among many.
+SQL. A source whose SQL does not compile on its own — for example it reads a
+`given:` with no default, or a virtual source the runtime has no `virtualMap`
+entry for — is not a target. It comes back in `unbuildable`, with the compiler's `problem`, and
+so does every source that reads it, since that source's SQL inlines it. The rest
+of the model is planned as usual. Report them; whether an unbuildable source is
+an error is the builder's call.
+
+One whose dialect cannot express it throws — from the dialect, with its own
+message — and takes the whole call, as does any other internal compiler error.
+Only a `MalloyCompileError` is a fact about one source.
 
 **One table, several sources** is the normal case, not an edge case —
 `#@ persist` is inherited and `extend` does not change the SQL a source

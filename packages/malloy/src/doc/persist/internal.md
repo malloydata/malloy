@@ -238,8 +238,8 @@ the first one to arrive.
 `Runtime.getBuildTargets(model)` in
 [`api/foundation/runtime.ts`](../../api/foundation/runtime.ts) is what a builder
 consumes. `Model._walkPersistSources()` supplies the stream — every named source
-and query plus the unnamed queries, as one walk — and `mkBuildTargets(nodes,
-model, connectionDigests)` in
+and query plus the unnamed queries, as one walk — and `mkBuildTargets(walk,
+connectionDigests, buildIdOpts, unbuildable)` in
 [`api/foundation/build_targets.ts`](../../api/foundation/build_targets.ts) folds
 it. That split is where the async/sync boundary falls: fetching a digest per
 connection is async, the fold is not, so the Runtime materializes the walk,
@@ -255,7 +255,11 @@ them, because the walk is in dependency order:
    immediately — minus any that landed on its own key (an extension depending
    on its base is one table, not a dependency), and intersected with what the
    other sources on this target recorded (see the cycle note below);
-3. a route contributes its children's keys upward instead of a key of its own;
+3. a route contributes its children's keys upward instead of a key of its own,
+   and so does a persistent source whose `getSQL()` throws a
+   `MalloyCompileError`, which goes to `unbuildable` instead of a target. Its
+   dependents inline its SQL, so they throw and land there too. Any other error
+   is the compiler's own and propagates;
 4. finally `place()` emits each target after everything it depends on — a
    depth-first post-order walk of the target graph — filing it under its
    connection.

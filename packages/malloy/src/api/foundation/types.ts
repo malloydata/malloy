@@ -181,6 +181,22 @@ export interface ConnectionBuild {
 }
 
 /**
+ * A persist source no table can be built for, because its SQL does not compile
+ * on its own — for example it reads a `given:` with no default, or a virtual
+ * source the runtime has no `virtualMap` entry for.
+ *
+ * Reported rather than thrown, so one such source does not cost the rest of
+ * the model its build. A source that reads one inlines it, so cannot compile
+ * either, and is reported here too.
+ */
+export interface UnbuildableSource {
+  /** The source, as a `BuildTarget` would have carried it */
+  source: PersistSource;
+  /** Why its SQL did not compile, as a query would report it */
+  problem: LogMessage;
+}
+
+/**
  * The build schedule for a model.
  *
  * Connections come first because they are the largest cut of parallelism: a
@@ -193,4 +209,6 @@ export interface BuildTargets {
   connections: ConnectionBuild[];
   /** Errors and warnings from parsing `#@` annotations on persistable sources */
   tagParseLog: LogMessage[];
+  /** Persist sources with no table to build, each with the reason */
+  unbuildable: UnbuildableSource[];
 }
