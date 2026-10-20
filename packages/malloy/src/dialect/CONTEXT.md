@@ -36,6 +36,8 @@ Each dialect provides functions through three collections: the cross-database **
 
 See [adding-a-new-database.md](../doc/adding-a-new-database.md) for a complete step-by-step guide covering both the Dialect and Connection sides, test data setup, and CI configuration.
 
+A dialect whose database has no boolean value declares `booleanType: 'none'`; what Malloy then accepts and refuses is in [boolean-none.md](../doc/boolean-none.md).
+
 ### Escape-function contract
 
 Every dialect must declare three fields that drive identifier and string-literal escaping:

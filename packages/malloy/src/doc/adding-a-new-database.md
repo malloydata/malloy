@@ -51,6 +51,8 @@ Create `packages/malloy/src/dialect/{name}/` with four files:
 
 **NULL ordering**: Malloy expects NULLS LAST for ascending order. If your database defaults otherwise, override `sqlOrderBy()`.
 
+**Booleans** (`booleanType`): If your database has conditions but no boolean value, set `booleanType = 'none'`; [boolean-none.md](boolean-none.md) says what Malloy then accepts and refuses. `sqlTypeToMalloyType` maps no type to boolean. A standard library function with a boolean result is written as a condition in `function_overrides.ts`: `starts_with(carrier, 'A')` is `LEFT(carrier, LEN('A')) = 'A'`. The base `Dialect` writes `true` and `false` as `(1=1)` and `(1=0)`.
+
 ## Step 2: Implement the Connection
 
 Create `packages/malloy-db-{name}/`. See [connection CONTEXT.md](../connection/CONTEXT.md) for the interface hierarchy and implementation patterns.
