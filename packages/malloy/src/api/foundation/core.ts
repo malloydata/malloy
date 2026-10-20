@@ -54,8 +54,8 @@ import {
   isJoined,
   isRecordOrRepeatedRecord,
   isPersistableSourceDef,
-  getCompiledSQL,
   getModelAnnotations,
+  persistedSourceSQL,
   safeRecordGet,
 } from '../../model';
 import {mkModelDef} from '../../model/utils';
@@ -1821,7 +1821,6 @@ export class PersistSource implements Taggable {
    * @return The SQL string for this source.
    */
   getSQL(options?: CompileQueryOptions): string {
-    const sd = this.persistableDef;
     const queryModel = this.model.queryModel;
 
     // Compile with finalize=false so this SQL is the bare source SELECT.
@@ -1829,16 +1828,11 @@ export class PersistSource implements Taggable {
     // manifest lookup key, which persistedTableFor recomputes from the same
     // unfinalized SELECT; finalizing would diverge the two on dialects with a
     // final stage (Postgres) and mis-materialize the table.
-    if (sd.type === 'sql_select') {
-      return getCompiledSQL(
-        sd,
-        options ?? {},
-        (query, opts) => queryModel.compileQuery(query, opts, false).sql
-      );
-    } else {
-      const compiled = queryModel.compileQuery(sd.query, options, false);
-      return compiled.sql;
-    }
+    return persistedSourceSQL(
+      this.persistableDef,
+      (query, opts) => queryModel.compileQuery(query, opts, false).sql,
+      options ?? {}
+    );
   }
 
   /**

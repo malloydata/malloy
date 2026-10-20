@@ -355,7 +355,8 @@ describe('a source whose SQL does not compile', () => {
     ]);
     expect(unbuildable.map(u => u.source.name)).toEqual(['scoped']);
     expect(unbuildable[0].problem.severity).toBe('error');
-    expect(unbuildable[0].problem.message).toContain('TENANT');
+    expect(unbuildable[0].problem.code).toBe('persist-given-no-value');
+    expect(unbuildable[0].problem.message).toContain('extend-block `where:`');
   });
 
   test('makes what reads it unbuildable too', () => {

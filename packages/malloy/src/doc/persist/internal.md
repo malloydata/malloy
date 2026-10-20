@@ -370,7 +370,10 @@ a type narrow enough that it cannot carry a manifest, so the BuildID cannot
 depend on what is already materialized. It keeps `virtualMap`, which decides
 what table a virtual source reads. It drops `resolvedGivens`, which also
 changes the SQL but which only the compiler can produce; resolving on one side
-only makes the keys disagree, so neither side resolves givens (see #3041).
+only makes the keys disagree, so neither side resolves givens.
+`persistedSourceSQL()` compiles a persisted source's SQL for both sides, and
+turns the resulting `compiler-given-no-value` into `persist-given-no-value`,
+which names the source and the way out (#3041).
 `mkBuildTargets` takes the same type. A hit returns `entry.tableName` unquoted; manifest names are
 canonical. A miss under `strict` throws `runtime-manifest-strict-miss` at the
 source's location, appending `loadError` if present. It names the source's
