@@ -43,7 +43,8 @@ is compiled for a `'none'` dialect.
 - A boolean field in a query's output: `select:`, `group_by:`, `aggregate:`,
   and any other place a field becomes a result column.
 - `is null` and `is not null` with a boolean operand.
-- `=` and `!=` with two boolean operands.
+- Any comparison (`=`, `!=`, `<`, `<=`, `>`, `>=`) between two booleans,
+  written plainly, as a partial (`is_small ? > false`) or in an alternation.
 - `??` with a boolean operand.
 - A `pick` or `case` whose result is a boolean.
 - A boolean filter expression (`x ~ f'true'`).
