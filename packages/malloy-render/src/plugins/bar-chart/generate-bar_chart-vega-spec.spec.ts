@@ -34,6 +34,7 @@ import {
   type BarChartSpecInputs,
 } from '@/plugins/bar-chart/generate-bar_chart-vega-spec';
 import {BarChartPluginFactory} from '@/plugins/bar-chart/bar-chart-plugin';
+import {barChartSettingsToTag} from '@/plugins/bar-chart/settings-to-tag';
 
 async function buildBar(source: string, query: string) {
   const {root, rootCell, metadata} = await runChartQuery(source, query);
@@ -221,4 +222,114 @@ describe('bar_chart synthetic multi-series field', () => {
     const {spec} = generateBarChartVegaSpecV2(metadata, plugin);
     expect(spec.legends?.[0]?.title).toBe('Quarter - Region');
   }, 60000);
+});
+
+describe('bar_chart orient=horizontal', () => {
+  const QUERY = (tag: string) => `
+    ${tag}
+    run: data4 -> { group_by: audience_name, region; aggregate: r is reach.sum() }
+  `;
+  const build = (tag: string) => buildBarProps(SOURCE4, QUERY(tag));
+  const barsOf = (spec: VegaChartProps['spec']) => {
+    const group = spec.marks!.find(m => m.name === 'x_group') as GroupMark;
+    return {
+      group,
+      bars: group.marks!.find(m => m.name === 'bars')!,
+      highlight: group.marks!.find(m => m.name === 'x_highlight')!,
+    };
+  };
+
+  test('categories run down the left and the measure along the bottom', async () => {
+    const {spec} = await build('# bar_chart { orient=horizontal }');
+    const xscale = spec.scales!.find(s => s.name === 'xscale');
+    const yscale = spec.scales!.find(s => s.name === 'yscale');
+    // First category at the top.
+    expect(xscale).toMatchObject({
+      type: 'band',
+      range: [0, {signal: 'height'}],
+    });
+    expect(yscale).toMatchObject({range: 'width'});
+    expect(spec.axes!.map(a => [a.orient, a.scale])).toEqual([
+      ['left', 'xscale'],
+      ['bottom', 'yscale'],
+    ]);
+    expect(spec.axes![1]).toMatchObject({grid: true});
+    expect(spec.axes![0]).toMatchObject({grid: false});
+  });
+
+  test('bars and the row highlight are positioned across, not up', async () => {
+    const {spec} = await build('# bar_chart { orient=horizontal }');
+    const {group, bars, highlight} = barsOf(spec);
+    expect(group.encode!.enter).toEqual({y: {scale: 'xscale', field: 'x'}});
+    expect(Object.keys(bars.encode!.enter!).sort()).toEqual([
+      'height',
+      'x',
+      'x2',
+      'y',
+    ]);
+    expect(bars.encode!.enter).toMatchObject({
+      x: {scale: 'yscale', field: 'y'},
+      x2: {scale: 'yscale', value: 0},
+    });
+    expect(highlight.encode!.enter).toMatchObject({
+      height: {scale: 'xscale', band: 1},
+      x2: {signal: 'width'},
+    });
+  });
+
+  test('stacked horizontal bars span y0..y1 across', async () => {
+    const {spec} = await build('# bar_chart { orient=horizontal stack }');
+    expect(barsOf(spec).bars.encode!.enter).toMatchObject({
+      x: {scale: 'yscale', field: 'y0'},
+      x2: {scale: 'yscale', field: 'y1'},
+    });
+  });
+
+  test('hovering the bottom axis brushes the measure', async () => {
+    const {spec} = await build('# bar_chart { orient=horizontal }');
+    const names = spec.marks!.map(m => m.name);
+    expect(names).toContain('x_measure_axis_overlay');
+    expect(names).toContain('x_reference_line_group');
+    const brushMeasure = spec.signals!.find(s => s.name === 'brushMeasure');
+    expect(JSON.stringify(brushMeasure)).toContain(
+      '@x_measure_axis_overlay:mousemove'
+    );
+  });
+
+  test('without orient the chart is vertical', async () => {
+    const {spec} = await build('# bar_chart');
+    expect(spec.axes!.map(a => [a.orient, a.scale])).toEqual([
+      ['bottom', 'xscale'],
+      ['left', 'yscale'],
+    ]);
+    expect(spec.scales!.find(s => s.name === 'xscale')).toMatchObject({
+      range: 'width',
+    });
+  });
+
+  test('orient round-trips through the settings tag', async () => {
+    const {root} = await runChartQuery(
+      SOURCE4,
+      QUERY('# bar_chart { orient=horizontal }')
+    );
+    const settings = getBarChartSettings(root);
+    expect(settings.orient).toBe('horizontal');
+    expect(barChartSettingsToTag(settings).text('viz', 'orient')).toBe(
+      'horizontal'
+    );
+    expect(
+      barChartSettingsToTag({...settings, orient: 'vertical'}).has(
+        'viz',
+        'orient'
+      )
+    ).toBe(false);
+  });
+
+  test('an unknown orient falls back to vertical', async () => {
+    const {root} = await runChartQuery(
+      SOURCE4,
+      QUERY('# bar_chart { orient=sideways }')
+    );
+    expect(getBarChartSettings(root).orient).toBe('vertical');
+  });
 });
