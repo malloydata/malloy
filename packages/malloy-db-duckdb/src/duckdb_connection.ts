@@ -352,11 +352,24 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   private async applyFinalBaseline(): Promise<void> {
+    const remotePrefixes = this.normalized.allowedRemotePrefixes ?? [];
+    if (remotePrefixes.length > 0) {
+      // FIRST, while external access is still on: httpfs can't be installed
+      // (a download) or loaded once enable_external_access=false, and without
+      // it the remote prefixes below would allow nothing. Required: a
+      // sandboxed connection that asked for remote reads and can't have them
+      // fails closed rather than silently running without. allow_unsigned
+      // stays false, so only DuckDB's signed build loads.
+      await this.loadExtension('httpfs', {allowInstall: true, required: true});
+    }
+
     if (this.normalized.allowedDirectories !== undefined) {
+      // DuckDB checks remote URLs against the same list, as string prefixes.
       await this.runDuckDBQuery(
-        `SET allowed_directories=${sqlStringListLiteral(
-          this.normalized.allowedDirectories
-        )}`
+        `SET allowed_directories=${sqlStringListLiteral([
+          ...this.normalized.allowedDirectories,
+          ...remotePrefixes,
+        ])}`
       );
     }
 

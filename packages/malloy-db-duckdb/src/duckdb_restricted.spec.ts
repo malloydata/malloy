@@ -224,6 +224,68 @@ describe('DuckDB restricted configuration', () => {
     }
   });
 
+  it('reads only the allowed remote prefixes, with httpfs loaded before the lock', async () => {
+    // `.invalid` never resolves, so a URL the allowlist admits fails as a
+    // network error and one it refuses fails as a Permission Error — which is
+    // the distinction under test, with no dependence on real remote data.
+    const allowed = 'https://malloy-sandbox-test.invalid/data/';
+    const connection = new DuckDBConnection({
+      name: 'duckdb-remote-prefixes',
+      securityPolicy: 'sandboxed',
+      workingDirectory,
+      allowedRemotePrefixes: [allowed],
+    });
+
+    try {
+      const settings = await connection.runSQL(`
+        SELECT
+          current_setting('lock_configuration') AS lock_configuration,
+          current_setting('enable_external_access') AS enable_external_access,
+          current_setting('allowed_directories') AS allowed_directories
+      `);
+      expect(settings.rows[0]['lock_configuration']).toBe(true);
+      expect(settings.rows[0]['enable_external_access']).toBe(false);
+      expect(settings.rows[0]['allowed_directories']).toEqual(
+        expect.arrayContaining([`${canonical(workingDirectory)}/`, allowed])
+      );
+
+      const read = (url: string) =>
+        connection.runRawSQL(`SELECT * FROM read_csv('${url}')`);
+      // Outside the prefix: a different host, a sibling path and a look-alike
+      // name are refused by the allowlist. (Dot-segments are not tested here:
+      // DuckDB 1.5 checks remote paths without resolving them, so
+      // `/data/../other/` passes its prefix check — a DuckDB bug, reported.
+      // Until it's fixed the enforced boundary for a remote prefix is its host.)
+      for (const url of [
+        'https://elsewhere.invalid/data/x.csv',
+        'https://malloy-sandbox-test.invalid/other/x.csv',
+        'https://malloy-sandbox-test.invalid/data-evil/x.csv',
+      ]) {
+        await expect(read(url)).rejects.toThrow('Permission Error');
+      }
+      // Inside it: admitted, and httpfs is there to try — so it gets as far as
+      // the network (a resolver/HTTP error), not a Permission Error, and not
+      // the missing-extension error it would be if httpfs hadn't loaded
+      // before the lock. (duckdb_extensions() can't say so directly: it scans
+      // the extension directory, which the sandbox rightly refuses.)
+      const inside = await read(`${allowed}x.csv`).then(
+        () => 'read',
+        (e: Error) => e.message
+      );
+      expect(inside).not.toMatch(/Permission Error|[Ee]xtension/);
+      // Local files outside the working directory stay refused.
+      await expect(
+        connection.runRawSQL("SELECT * FROM read_text('/etc/hosts')")
+      ).rejects.toThrow('Permission Error');
+      // And the boundary can't be widened from SQL.
+      await expect(
+        connection.runRawSQL("SET allowed_directories=['https://']")
+      ).rejects.toThrow('configuration has been locked');
+    } finally {
+      await connection.close();
+    }
+  });
+
   it('locks down the session for local policy without filesystem sandbox', async () => {
     const connection = new DuckDBConnection({
       name: 'duckdb-local',

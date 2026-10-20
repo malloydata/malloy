@@ -382,4 +382,101 @@ describe('normalizeDuckDBConfig', () => {
     ]);
     expect(keys.size).toBe(3);
   });
+
+  describe('allowedRemotePrefixes', () => {
+    const sandboxed = (allowedRemotePrefixes: unknown) =>
+      baseConfig({
+        securityPolicy: 'sandboxed',
+        workingDirectory,
+        allowedRemotePrefixes: allowedRemotePrefixes as string[],
+      });
+
+    it('canonicalizes, deduplicates and sorts the prefixes', () => {
+      const normalized = normalizeDuckDBConfig(
+        sandboxed([
+          'https://Storage.GoogleAPIs.com/malloyyo/',
+          's3://bucket/data/',
+          'https://storage.googleapis.com/malloyyo/',
+          'gs://bucket/',
+          'r2://bucket/',
+        ])
+      );
+      expect(normalized.allowedRemotePrefixes).toEqual([
+        'gs://bucket/',
+        'https://storage.googleapis.com/malloyyo/',
+        'r2://bucket/',
+        's3://bucket/data/',
+      ]);
+      // The filesystem boundary is unchanged by them.
+      expect(normalized.allowedDirectories).toEqual([
+        canonical(workingDirectory),
+      ]);
+      expect(normalized.enableExternalAccess).toBe(false);
+      expect(normalized.lockConfiguration).toBe(true);
+    });
+
+    it('is absent when omitted or empty', () => {
+      expect(
+        normalizeDuckDBConfig(sandboxed(undefined)).allowedRemotePrefixes
+      ).toBeUndefined();
+      expect(
+        normalizeDuckDBConfig(sandboxed([])).allowedRemotePrefixes
+      ).toBeUndefined();
+    });
+
+    it('requires securityPolicy "sandboxed"', () => {
+      for (const securityPolicy of ['none', 'local']) {
+        expect(() =>
+          normalizeDuckDBConfig(
+            baseConfig({
+              securityPolicy,
+              workingDirectory,
+              allowedRemotePrefixes: ['https://example.com/data/'],
+            })
+          )
+        ).toThrow('allowedRemotePrefixes requires securityPolicy "sandboxed"');
+      }
+      expect(() =>
+        normalizeDuckDBConfig(
+          baseConfig({allowedRemotePrefixes: ['https://example.com/data/']})
+        )
+      ).toThrow('requires securityPolicy "sandboxed"');
+    });
+
+    it.each([
+      ['http://example.com/data/', 'must use one of'],
+      ['file:///etc/', 'must use one of'],
+      ['ftp://example.com/', 'must use one of'],
+      ['not a url/', 'whitespace'],
+      ['example.com/data/', 'is not a URL'],
+      ['https://example.com/data', 'must end with "/"'],
+      ['https://example.com', 'must end with "/"'],
+      ['https://user:pw@example.com/data/', 'must not carry credentials'],
+      ['https://example.com/data/?x=1', 'query or fragment'],
+      ['https://example.com/data/#x', 'query or fragment'],
+      ['https://example.com/data/../secret/', 'path segments'],
+      ['s3://bucket/data/../other/', 'path segments'],
+      ['https://example.com/data/%2e%2e/', 'path segments'],
+      [' https://example.com/data/', 'whitespace'],
+    ])('rejects %s', (entry, message) => {
+      expect(() => normalizeDuckDBConfig(sandboxed([entry]))).toThrow(message);
+    });
+
+    it('rejects a non-array or non-string entries', () => {
+      expect(() =>
+        normalizeDuckDBConfig(sandboxed('https://example.com/data/'))
+      ).toThrow('allowedRemotePrefixes must be a JSON array of strings');
+      expect(() =>
+        normalizeDuckDBConfig(sandboxed(['https://example.com/data/', 7]))
+      ).toThrow('allowedRemotePrefixes must be a JSON array of strings');
+    });
+
+    it('takes part in the share key, and order does not', () => {
+      const key = (prefixes?: string[]) =>
+        buildDuckDBShareKey(normalizeDuckDBConfig(sandboxed(prefixes)));
+      expect(key(['s3://b/x/', 'gs://a/'])).toBe(key(['gs://a/', 's3://b/x/']));
+      expect(key(['gs://a/'])).not.toBe(key(undefined));
+      expect(key(['gs://a/'])).not.toBe(key(['gs://b/']));
+    });
+  });
 });

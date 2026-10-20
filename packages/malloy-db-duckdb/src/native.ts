@@ -57,6 +57,13 @@ registerConnectionType('duckdb', {
       advanced: true,
     },
     {
+      name: 'allowedRemotePrefixes',
+      displayName: 'Allowed Remote Prefixes',
+      type: 'json',
+      optional: true,
+      advanced: true,
+    },
+    {
       name: 'enableExternalAccess',
       displayName: 'Enable External Access',
       type: 'boolean',

@@ -31,6 +31,11 @@ export interface NormalizedDuckDBConfig {
   securityPolicy: DuckDBSecurityPolicy;
   safetyPolicy?: NormalizedDuckDBSafetyPolicy;
   allowedDirectories?: string[];
+  // Remote read prefixes a "sandboxed" connection may reach (https://, s3://,
+  // gs://, r2://). Present only when non-empty; their presence is what lets a
+  // sandboxed connection load httpfs. Canonical: lowercased scheme and host,
+  // deduplicated and sorted.
+  allowedRemotePrefixes?: string[];
   enableExternalAccess?: boolean;
   lockConfiguration?: boolean;
   autoloadKnownExtensions?: boolean;
@@ -128,6 +133,10 @@ export function normalizeDuckDBConfig(
   const rawAllowedDirectories = readOptionalStringArray(
     config['allowedDirectories'],
     'allowedDirectories'
+  );
+  const rawAllowedRemotePrefixes = readOptionalStringArray(
+    config['allowedRemotePrefixes'],
+    'allowedRemotePrefixes'
   );
 
   const restricted = securityPolicy !== 'none';
@@ -299,6 +308,24 @@ export function normalizeDuckDBConfig(
     }
   }
 
+  let allowedRemotePrefixes: string[] | undefined;
+  if (
+    rawAllowedRemotePrefixes !== undefined &&
+    rawAllowedRemotePrefixes.length > 0
+  ) {
+    // Only a sandboxed connection has the filesystem boundary these prefixes
+    // extend. Under "none" they would be a no-op that reads like a control;
+    // under "local" they contradict the policy's one promise (no network).
+    if (securityPolicy !== 'sandboxed') {
+      throw new DuckDBConfigValidationError(
+        `allowedRemotePrefixes requires securityPolicy "sandboxed" (got "${securityPolicy}")`
+      );
+    }
+    allowedRemotePrefixes = Array.from(
+      new Set(rawAllowedRemotePrefixes.map(canonicalizeRemotePrefix))
+    ).sort();
+  }
+
   const extensionDirectory =
     rawExtensionDirectory === undefined
       ? undefined
@@ -319,6 +346,7 @@ export function normalizeDuckDBConfig(
     securityPolicy,
     safetyPolicy,
     allowedDirectories,
+    allowedRemotePrefixes,
     enableExternalAccess: restricted ? false : enableExternalAccess,
     lockConfiguration: safetyPolicy?.requiresLockedConfiguration
       ? true
@@ -356,6 +384,10 @@ export function buildDuckDBShareKey(config: NormalizedDuckDBConfig): string {
     config.securityPolicy,
     config.setupSQL ?? '',
     ...(config.allowedDirectories ?? []),
+    // A marker between the two lists, so a value can't migrate from one to
+    // the other and keep the same key.
+    'allowedRemotePrefixes',
+    ...(config.allowedRemotePrefixes ?? []),
     config.enableExternalAccess === undefined
       ? ''
       : String(config.enableExternalAccess),
@@ -619,6 +651,60 @@ function canonicalizeConfigPathList(
   return Array.from(
     new Set(paths.map(p => canonicalizeConfigPath(p, fieldName)).sort())
   );
+}
+
+const REMOTE_PREFIX_SCHEMES: readonly string[] = [
+  'https:',
+  's3:',
+  'gs:',
+  'r2:',
+];
+
+/**
+ * One `allowedRemotePrefixes` entry, checked and canonicalized. DuckDB
+ * compares `allowed_directories` entries as STRING prefixes of the requested
+ * URL, so the entry has to end at a path boundary (a trailing `/`), or
+ * `https://host/data` would also allow `https://host/database-dump/`. It
+ * carries no credentials, query or fragment, and no dot-segments, which a
+ * prefix check can't reason about. Plain `http:` is refused: an allowlisted
+ * cleartext host is one an on-path attacker can answer for.
+ */
+function canonicalizeRemotePrefix(raw: string): string {
+  const fail = (why: string) =>
+    new DuckDBConfigValidationError(
+      `allowedRemotePrefixes entry "${raw}" ${why}`
+    );
+  const value = raw.trim();
+  if (value !== raw || /\s/.test(value)) {
+    throw fail('must not contain whitespace');
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw fail('is not a URL');
+  }
+  if (!REMOTE_PREFIX_SCHEMES.includes(url.protocol)) {
+    throw fail(
+      `must use one of ${REMOTE_PREFIX_SCHEMES.map(s => `${s}//`).join(', ')}`
+    );
+  }
+  if (!url.hostname) throw fail('must name a host or bucket');
+  if (url.username || url.password) throw fail('must not carry credentials');
+  if (url.search || url.hash || value.includes('?') || value.includes('#')) {
+    throw fail('must not have a query or fragment');
+  }
+  // Check the RAW path: URL parsing resolves dot-segments for https but not
+  // for s3/gs/r2, and either way the author should see their mistake.
+  const rawPath = value.slice(value.indexOf('//') + 2).replace(/^[^/]*/, '');
+  if (/(^|\/)\.{1,2}(\/|$)|%2e/i.test(rawPath)) {
+    throw fail('must not contain "." or ".." path segments');
+  }
+  if (!value.endsWith('/')) {
+    throw fail('must end with "/" so it matches whole path segments');
+  }
+  const pathPart = rawPath === '' ? '/' : rawPath;
+  return `${url.protocol}//${url.host.toLowerCase()}${pathPart}`;
 }
 
 function isAllowedClosedNetworkDatabasePath(databasePath: string): boolean {

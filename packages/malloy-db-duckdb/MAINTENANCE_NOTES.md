@@ -123,6 +123,34 @@ derives and enforces a native DuckDB filesystem boundary:
 - Non-POSIX hosts are rejected. Do not approximate Windows path behavior for
   the current policy.
 
+`securityPolicy: "sandboxed"` may also name `allowedRemotePrefixes`: remote
+locations (`https://`, `s3://`, `gs://`, `r2://`) the connection may read,
+and nothing else on the network. This is the one exception to "restricted
+means no network", and it is opt-in per prefix:
+
+- Only under `"sandboxed"`. Under `"none"` it would be a no-op that reads like
+  a control; under `"local"` it contradicts that policy's single promise. Both
+  are rejected.
+- Each entry must end in `/` (DuckDB compares `allowed_directories` as string
+  prefixes, so `https://host/data` would also admit `https://host/database/`),
+  and carry no credentials, query, fragment, or `.`/`..` segments (raw or
+  `%2e`-encoded). Plain `http://` is rejected. Scheme and host are lowercased;
+  the list is deduplicated and sorted.
+- When present, `httpfs` is installed if needed and loaded FIRST, while
+  external access is still on, then the prefixes are appended to
+  `allowed_directories`, then external access is disabled and configuration
+  locked as usual. Loading is required: a connection that asked for remote
+  reads and cannot have them fails closed.
+- KNOWN DUCKDB ISSUE (1.5.x, reported upstream): remote paths reach
+  `CanAccessFile` without dot-segment resolution (the base
+  `FileSystem::CanonicalizePath` skips remote paths and httpfs does not
+  override it), while the request layer resolves them. So `/data/../other/`
+  passes a `/data/` prefix check and fetches `/other/`. Until fixed, the
+  enforced boundary of a remote prefix is its HOST; for `gs://`/`r2://`,
+  where the bucket is in the request path, that is the whole service. DuckDB
+  1.4 resolved dot-segments for every path. Do not describe path-level
+  prefixes as a hard boundary until the upstream fix lands.
+
 ## Registered Config Surface
 
 Native DuckDB supports the existing Malloy-facing properties:
@@ -141,6 +169,7 @@ The config extension adds the policy property:
 It also adds curated DuckDB-level properties:
 
 - `allowedDirectories`
+- `allowedRemotePrefixes`
 - `enableExternalAccess`
 - `lockConfiguration`
 - `autoloadKnownExtensions`
@@ -285,6 +314,8 @@ effective setting that can affect runtime behavior, safety, or semantics:
 - `securityPolicy`
 - `setupSQL`
 - canonicalized `allowedDirectories`
+- canonicalized `allowedRemotePrefixes` (after a marker, so an entry can't
+  move between the two lists and keep the key)
 - `enableExternalAccess`
 - `lockConfiguration`
 - `autoloadKnownExtensions`
@@ -325,6 +356,10 @@ The final baseline must happen before Malloy-derived SQL. When locking is
 required, `lock_configuration=true` is the final baseline step.
 
 Current baseline mapping:
+
+- `httpfs` (only with `allowedRemotePrefixes`)
+  - installed if needed and loaded first, before anything restricts access:
+    neither is possible once `enable_external_access=false`
 
 - `FILE_SEARCH_PATH`
   - set before user SQL when `workingDirectory` exists
@@ -368,7 +403,8 @@ behavior and is controlled by `securityPolicy`.
 
 Under any restricted policy (`"local"` or `"sandboxed"`):
 
-- do not load `httpfs`
+- do not load `httpfs`, except under `"sandboxed"` with non-empty
+  `allowedRemotePrefixes` (see above), where it is required
 - do not `INSTALL` extensions
 - do not allow `additionalExtensions`
 - load only fixed baseline extensions `icu` and `json`
