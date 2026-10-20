@@ -3,30 +3,40 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type {ExprValue} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
 import type {MalloyElement} from '../types/malloy-element';
 
 /**
  * On a dialect with booleanType 'none' a boolean is a condition and never a
- * value. Logs an error at `logTo` when `type` is a boolean about to be used
- * as a value; `where` says how, `hint` what to write instead. Returns true
- * when it logged.
+ * value. When `type` is a boolean about to be used as a value, logs an error
+ * at `logTo` and returns an error-typed value for the caller to return in
+ * place of what it was building, so the enclosing expressions see an error
+ * and stay quiet. Otherwise returns undefined. `where` says how the boolean
+ * was used, `hint` what to write instead.
  */
-export function refuseBooleanValue(
+export function booleanValueError(
   fs: FieldSpace,
   type: {type: string} | undefined,
   where: string,
   logTo: MalloyElement,
   hint: string
-): boolean {
+): ExprValue | undefined {
   const dialect = fs.dialectObj();
   if (type?.type !== 'boolean' || dialect?.booleanType !== 'none') {
-    return false;
+    return undefined;
   }
-  logTo.logError('boolean-value-unsupported', {
+  return logTo.loggedErrorExpr('boolean-value-unsupported', {
     dialect: dialect.name,
     where,
     hint,
   });
-  return true;
 }
+
+/** The hint where a boolean's unknown state is examined: `is null`, `??` */
+export const CONDITION_HINT =
+  'test the condition itself; unknown already tests as false';
+
+/** The hint for a `pick` or `case` whose result is a boolean */
+export const CHOICE_HINT =
+  "write values, pick 'yes' when … else 'no', or the condition itself with and, or and not";

@@ -44,7 +44,7 @@ import {
   TemporalFilterExpression,
   isFilterable,
 } from '@malloydata/malloy-filter';
-import {refuseBooleanValue} from '../expressions/boolean-value';
+import {booleanValueError} from '../expressions/boolean-value';
 
 class TypeMismatch extends Error {}
 
@@ -420,6 +420,30 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
   return undefined;
 }
 
+/**
+ * Two booleans can only be compared on a dialect with boolean values. Every
+ * comparison operator, applied plainly, as a partial, or through an
+ * alternation, arrives here through equality() or compare().
+ */
+function booleanCompare(
+  fs: FieldSpace,
+  left: ExpressionDef,
+  lhs: ExprValue,
+  op: CompareMalloyOperator,
+  rhs: ExprValue
+): ExprValue | undefined {
+  if (lhs.type !== 'boolean' || rhs.type !== 'boolean') {
+    return undefined;
+  }
+  return booleanValueError(
+    fs,
+    lhs,
+    `compared with ${op}`,
+    left,
+    'test the condition itself, or its not'
+  );
+}
+
 function equality(
   fs: FieldSpace,
   left: ExpressionDef,
@@ -430,18 +454,9 @@ function equality(
   const rhs = right.getExpression(fs);
   const node = getExprNode(op);
 
-  const err = errorCascade('boolean', lhs, rhs);
+  const err =
+    errorCascade('boolean', lhs, rhs) || booleanCompare(fs, left, lhs, op, rhs);
   if (err) return err;
-
-  if (lhs.type === 'boolean' && rhs.type === 'boolean') {
-    refuseBooleanValue(
-      fs,
-      lhs,
-      `compared with ${op}`,
-      left,
-      'test the condition itself, or its not'
-    );
-  }
 
   // Unsupported types can be compare with null
   const lhRaw = TD.isSQL(lhs) ? lhs.rawType || 'typeless-left' : undefined;
@@ -465,13 +480,14 @@ function equality(
         `Cannot use the '${op}' operator with a filter expression`
       );
     }
-    refuseBooleanValue(
+    const noMatch = booleanValueError(
       fs,
       lhs,
       'matched with a filter expression',
       left,
       'test the condition itself'
     );
+    if (noMatch) return noMatch;
     if (isFilterable(lhs.type)) {
       let actualFilter = rhs.value;
       while (actualFilter.node === '()') {
@@ -537,7 +553,8 @@ function compare(
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
 
-  const err = errorCascade('boolean', lhs, rhs);
+  const err =
+    errorCascade('boolean', lhs, rhs) || booleanCompare(fs, left, lhs, op, rhs);
   if (err) return err;
 
   const noCompare = unsupportError(left, lhs, right, rhs);

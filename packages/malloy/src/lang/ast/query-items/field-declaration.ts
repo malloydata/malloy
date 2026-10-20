@@ -36,7 +36,7 @@ import type {Noteable} from '../types/noteable';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {SpaceField} from '../types/space-field';
 import {DefSpace} from '../field-space/def-space';
-import {refuseBooleanValue} from '../expressions/boolean-value';
+import {booleanValueError} from '../expressions/boolean-value';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -127,14 +127,17 @@ export abstract class AtomicFieldDeclaration
     }
     if (isAtomicFieldType(exprValue.type) && exprValue.type !== 'error') {
       this.typecheckExprValue(exprValue);
-      if (this.outputsValue()) {
-        refuseBooleanValue(
+      if (
+        this.outputsValue() &&
+        booleanValueError(
           exprFS,
           exprValue,
           'as a result column',
-          this,
+          this.expr,
           `write the value, pick 'yes' when ${this.exprSrc ?? '…'} else 'no'`
-        );
+        )
+      ) {
+        return {name: exprName, type: 'error'};
       }
       const ret = mkFieldDef(TDU.atomicDef(exprValue), exprName);
       if (TD.isTemporal(ret) && isGranularResult(exprValue)) {

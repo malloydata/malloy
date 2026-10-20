@@ -207,16 +207,19 @@ export abstract class QueryOperationSpace
         );
       } else {
         const eType = entry.typeDesc();
-        if (eType.type === 'boolean' && dialect?.booleanType === 'none') {
-          wild.logWarning(
-            'wildcard-omits-boolean',
-            `'${name}' is left out of '${wild.refString}': '${dialect.name}' does not support a boolean as a result column; write the value, pick 'yes' when ${name} else 'no'`
-          );
-        } else if (
+        if (
           model.TD.isAtomic(eType) &&
           model.expressionIsScalar(eType.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
+          if (eType.type === 'boolean' && dialect?.booleanType === 'none') {
+            wild.logWarning('wildcard-omits-boolean', {
+              dialect: dialect.name,
+              wildcard: wild.refString,
+              name: joinPath.concat(name).join('.'),
+            });
+            continue;
+          }
           expandEntries.push({name, entry});
           this.expandedWild.set(name, {
             path: joinPath.concat(name),

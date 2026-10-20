@@ -796,11 +796,30 @@ export function makeModelFunc(
     const {prefix, wrap, ...ttOptions} = options;
     return {
       ...ms,
+      // A marked location is where the mark sits in the whole source, after
+      // the prefix. A wrap could put the code anywhere, so marks stay as
+      // they are.
+      locations: wrap ? ms.locations : ms.locations.map(l => after(prefix, l)),
       translator: new TestTranslator(
         (prefix ?? '') + (wrap ? wrap(ms.code) : ms.code),
         ttOptions
       ),
     };
+  };
+}
+
+function after(prefix: string | undefined, l: DocumentLocation) {
+  if (!prefix) return l;
+  const lines = prefix.split('\n');
+  const dLine = lines.length - 1;
+  const dChar = lines[dLine].length;
+  const shift = (p: {line: number; character: number}) => ({
+    line: p.line + dLine,
+    character: p.line === 0 ? p.character + dChar : p.character,
+  });
+  return {
+    ...l,
+    range: {start: shift(l.range.start), end: shift(l.range.end)},
   };
 }
 

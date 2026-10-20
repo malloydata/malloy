@@ -20,7 +20,7 @@ import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
 import type {MakeEntry} from '../types/space-entry';
 import {ExprIdReference} from '../expressions/expr-id-reference';
-import {refuseBooleanValue} from '../expressions/boolean-value';
+import {booleanValueError} from '../expressions/boolean-value';
 import type {FieldDeclarationConstructor} from './field-declaration';
 import {
   AggregateFieldDeclaration,
@@ -188,7 +188,7 @@ export abstract class FieldReference
       const actualType = result.found.typeDesc();
       this.typecheck(actualType);
       if (this.outputsValue()) {
-        refuseBooleanValue(
+        booleanValueError(
           fs,
           actualType,
           'as a result column',

@@ -10,7 +10,7 @@ import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import * as TDU from '../typedesc-utils';
 import type {CaseExpr} from '../../../model';
-import {refuseBooleanValue} from './boolean-value';
+import {booleanValueError, CHOICE_HINT} from './boolean-value';
 
 interface Choice {
   then: ExprValue;
@@ -46,6 +46,14 @@ export class Case extends ExpressionDef {
     let value: ExprValue | undefined = undefined;
     if (this.value) {
       const v = this.value.getExpression(fs);
+      const noSubject = booleanValueError(
+        fs,
+        v,
+        'as the subject of a case',
+        this.value,
+        'write the conditions, case when … then …'
+      );
+      if (noSubject) return noSubject;
       dependents.push(v);
       resultExpr.kids.caseValue = v.value;
       value = v;
@@ -95,13 +103,14 @@ export class Case extends ExpressionDef {
       dependents.push(elseValue);
       resultExpr.kids.caseElse = elseValue.value;
     }
-    refuseBooleanValue(
+    const noCase = booleanValueError(
       fs,
       returnType,
       'as the result of a case',
       this,
-      "write values, pick 'yes' when … else 'no', or the condition itself with and, or and not"
+      CHOICE_HINT
     );
+    if (noCase) return noCase;
     return computedExprValue({
       value: resultExpr,
       dataType: returnType ? TDU.atomicDef(returnType) : {type: 'null'},

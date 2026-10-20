@@ -15,6 +15,7 @@ import {
   sourceBase,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
+import {booleanValueError} from '../expressions/boolean-value';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {attachDrillPaths} from '../query-properties/drill';
@@ -74,6 +75,17 @@ export class ReferenceView extends View {
       throw new Error('Expected field to have definition');
     }
     if (isAtomic(fieldDef)) {
+      if (
+        booleanValueError(
+          fs,
+          fieldDef,
+          'as a result column',
+          this.reference,
+          `write the value, pick 'yes' when ${this.reference.refString} else 'no'`
+        )
+      ) {
+        return oops();
+      }
       const name = this.reference.nameString;
       const outputStruct: SourceDef = {
         ...sourceBase(fs.structDef()),

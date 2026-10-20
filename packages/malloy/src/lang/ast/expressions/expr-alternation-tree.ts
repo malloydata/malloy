@@ -9,7 +9,7 @@ import type {FieldSpace} from '../types/field-space';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import {isEquality} from '../types/binary_operators';
-import {refuseBooleanValue} from './boolean-value';
+import {booleanValueError} from './boolean-value';
 
 /**
  * Return a flattened version of an alternation tree, if the tree is
@@ -71,13 +71,14 @@ export class ExprAlternationTree extends ExpressionDef {
       if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
         const isIn = expr.getExpression(fs);
         const values = inList.map(v => v.getExpression(fs));
-        refuseBooleanValue(
+        const noIn = booleanValueError(
           fs,
           isIn,
           `compared with ${applyOp}`,
           expr,
           'test the condition itself, or its not'
         );
+        if (noIn) return noIn;
         return computedExprValue({
           dataType: {type: 'boolean'},
           value: {
