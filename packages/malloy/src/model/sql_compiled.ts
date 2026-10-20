@@ -205,11 +205,10 @@ function persistedSourceLabel(source: PersistableSourceDef): string {
 }
 
 /**
- * The SQL a persisted source's table is built from, compiled as both the
- * builder and the manifest lookup compile it: with givens unresolved (see
- * {@link buildIdOptions}). A given with no default therefore has no value here,
- * and the source has no one table to build. The error says that, rather than
- * asking for a value that no builder can supply and that a query already did.
+ * The SQL a persisted source's table is built from, for the builder and the
+ * manifest lookup alike. Both compile it with givens unresolved (see
+ * {@link buildIdOptions}), so a given with no default has no value here: the
+ * source cannot be persisted, and the error names that cause.
  */
 export function persistedSourceSQL(
   source: PersistableSourceDef,

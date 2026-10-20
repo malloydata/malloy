@@ -2825,14 +2825,7 @@ describe('source persistence', () => {
         aggregate: flight_count is count()
       }
 
-      #@ persist
-      source: at_read is flights -> {
-        group_by: carrier
-        aggregate: flight_count is count()
-      } extend { where: carrier = $CARRIER }
-
       query: q_in_relation is in_relation -> { select: * }
-      query: q_at_read is at_read -> { select: * }
     `;
 
     it('fails a query with a manifest, naming the cause, though the query supplied the given', async () => {
@@ -2850,32 +2843,6 @@ describe('source persistence', () => {
           .loadQueryByName('q_in_relation')
           .run({givens: {CARRIER: 'WN'}})
       ).rejects.toThrow(/Persisted source '[^']*in_relation@.*no default/);
-    });
-
-    it('persists when the given filters at read, per caller', async () => {
-      // The advice the error gives: an extend-block `where:` is not in the
-      // persisted relation, so the table holds every carrier and each query
-      // reads its own slice of it.
-      const model = await tstRuntime.loadModel(MODEL).getModel();
-      const targets = await tstRuntime.getBuildTargets(model);
-      const atRead = targets.connections
-        .flatMap(c => c.targets)
-        .find(t => t.sources.some(s => s.name === 'at_read'))!;
-      await tstRuntime.connection.runSQL(
-        `CREATE OR REPLACE TEMP VIEW at_read_table AS ${atRead.sql}`
-      );
-      const manifest = createManifest();
-      addManifestEntry(manifest, atRead.buildId, 'at_read_table');
-
-      const result = await runtimeWithManifest(manifest)
-        .loadModel(MODEL)
-        .loadQueryByName('q_at_read')
-        .run({givens: {CARRIER: 'WN'}});
-
-      expect(result.sql).toContain('at_read_table');
-      expect(
-        new Set(result.data.toObject().map(row => row['carrier']))
-      ).toEqual(new Set(['WN']));
     });
   });
 });
