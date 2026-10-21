@@ -18,6 +18,10 @@ export class ExprMinus extends ExpressionDef {
 
   protected computeExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
+    // An error is already logged; it stays an error so nothing else logs it
+    if (expr.type === 'error') {
+      return expr;
+    }
     if (TDU.typeIn(expr, this.legalChildTypes)) {
       return {
         ...expr,

@@ -131,6 +131,11 @@ describe('expressions', () => {
         errorMessage("'unary minus' Can't use type string")
       );
     });
+    test('unary negation of an error is that error, logged once', () => {
+      expect(
+        `run: a -> { where: -(-${'astr'}); aggregate: c is count() }`
+      ).toLog(errorMessage("'unary minus' Can't use type string"));
+    });
     test('equal', () => {
       expect('42 = 7').compilesTo('{42 = 7}');
     });

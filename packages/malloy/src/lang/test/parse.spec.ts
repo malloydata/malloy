@@ -331,7 +331,7 @@ describe('error cascading', () => {
     'err.month': 'date',
     'day_of_week(err)': 'number',
     'err::string': 'string',
-    '-err': 'number',
+    '-err': 'error',
     'err * 1': 'number',
     '1 * err': 'number',
     'err / 1': 'number',

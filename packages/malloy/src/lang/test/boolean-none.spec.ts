@@ -181,6 +181,11 @@ describe('a boolean on a dialect without boolean values', () => {
         m`run: m -> { group_by: x is ${'pick big when ai > 1 else big'} }`
       ).toLog(refused);
     });
+    test('once, through a unary minus', () => {
+      expect(m`run: m -> { where: -(${'big ?? false'}); aggregate: n }`).toLog(
+        refused
+      );
+    });
   });
 
   describe('select: * leaves a boolean out, with a warning', () => {
