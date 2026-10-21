@@ -447,6 +447,15 @@ Compiles IR expression trees into SQL expressions.
 - Function calls
 - Field references and path expressions
 
+**A boolean on a dialect without boolean values.** On a dialect with `booleanType: 'none'`
+(SQL Server) a boolean is a condition and never a value: a declared boolean compiles to its
+comparison, and nothing converts a condition into a `1`/`0`. Malloy's NULL rules for `not`,
+`!=` and `!~` (true where SQL says NULL) go through `Dialect.sqlNot` / `sqlNullIsTrue`, which
+keep the `COALESCE` spelling on every dialect with booleans and write the test as a condition
+on one without. The translator refuses a boolean anywhere SQL would want a value, so the
+compiler does not look for one; the design and the list of refused uses are in
+[`doc/boolean-none.md`](../doc/boolean-none.md).
+
 ### 3. Dialect System
 
 The compiler supports multiple SQL dialects through a plugin architecture.

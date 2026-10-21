@@ -13,6 +13,7 @@ import type {
 } from '../../../model/malloy_types';
 import {expressionIsScalar, TD} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
+import {resultColumnHint} from '../expressions/boolean-value';
 import {
   FieldReference,
   IndexFieldReference,
@@ -123,12 +124,22 @@ export class IndexFieldSpace extends QueryOperationSpace {
         );
       } else {
         const eTypeDesc = entry.typeDesc();
-        // Don't index arrays and records
         if (
+          // Don't index arrays and records
           TD.isBasicAtomic(eTypeDesc) &&
           expressionIsScalar(eTypeDesc.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
+          if (eTypeDesc.type === 'boolean' && dialect?.booleanType === 'none') {
+            const path = [...joinPath, name].join('.');
+            wild.logWarning('wildcard-omits-boolean', {
+              dialect: dialect.name,
+              wildcard: wild.refString,
+              name: path,
+              hint: resultColumnHint(path),
+            });
+            continue;
+          }
           expandEntries.push({name: indexName, entry});
           this.expandedWild.set(indexName, {
             path: joinPath.concat(name),

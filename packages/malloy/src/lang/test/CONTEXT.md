@@ -14,18 +14,20 @@ The tests use a mock schema system that provides pre-defined tables and sources,
 
 `TestTranslator` extends `MalloyTranslator` with a mock schema and pre-defined model. It provides:
 
-- **Four connections:**
+- **Five connections:**
   - `_db_` - DuckDB dialect, supports `timestamptz`
   - `_db2_` - DuckDB dialect, a second connection on the same dialect as
     `_db_`, so a test can write a cross-connection reference which is not
     also a cross-dialect one
   - `_bq_` - BigQuery/StandardSQL dialect
   - `_pg_` - Postgres dialect, the only dialect with `hasFinalStage`
+  - `_mssql_` - SQL Server dialect, the only dialect with `booleanType: 'none'`
 - **Mock tables** (accessible via `connection.table('path')`):
   - `_db_.table('aTable')` - base table with all field types
   - `_db2_.table('aTable')` - same table, on the second connection
   - `_bq_.table('aTable')` - BigQuery version
   - `_pg_.table('aTable')` - Postgres version
+  - `_mssql_.table('aTable')` - SQL Server version, without the boolean column
   - `_db_.table('malloytest.carriers')`
   - `_db_.table('malloytest.flights')`
   - `_db_.table('malloytest.airports')`

@@ -43,16 +43,16 @@ is compiled for a `'none'` dialect.
 - A boolean field in a query's output: `select:`, `group_by:`, `aggregate:`,
   and any other place a field becomes a result column.
 - `is null` and `is not null` with a boolean operand.
-- `=` and `!=` with two boolean operands.
+- Any comparison (`=`, `!=`, `<`, `<=`, `>`, `>=`) with a boolean operand
+  (`is_small = 1`, `size > is_small`, `is_small ? > false`), written plainly,
+  as a partial or in an alternation.
 - `??` with a boolean operand.
 - A `pick` or `case` whose result is a boolean.
 - A boolean filter expression (`x ~ f'true'`).
 - A boolean as a function argument.
 - A cast to or from boolean (`x::boolean`, `is_small::string`).
-- An alternation with a boolean on the left (`is_small ? true | false`).
 
-The error suggests making the value explicit with a `pick`, as in the example
-above.
+Each error says what to write instead.
 
 ## `select: *`
 

@@ -5,12 +5,27 @@
 
 import {MySQLDialect} from './mysql';
 import {SQLServerDialect} from './sqlserver';
+import {StandardSQLDialect} from './standardsql';
 
 describe('Dialect booleans', () => {
+  const noBooleans = new SQLServerDialect();
+  const booleans = new StandardSQLDialect();
+
   test('a dialect with no boolean type spells both literals as conditions', () => {
-    const noBooleans = new SQLServerDialect();
     expect(noBooleans.sqlBoolean(true)).toBe('(1=1)');
     expect(noBooleans.sqlBoolean(false)).toBe('(1=0)');
+  });
+
+  test('not, and a comparison true on NULL, keep COALESCE where there are booleans', () => {
+    expect(booleans.sqlNot('c')).toBe('COALESCE(NOT c,TRUE)');
+    expect(booleans.sqlNullIsTrue('c')).toBe('COALESCE(c,true)');
+  });
+
+  test('not, and a comparison true on NULL, are written without a boolean value', () => {
+    expect(noBooleans.sqlNot('c')).toBe('(CASE WHEN c THEN 1 ELSE 0 END = 0)');
+    expect(noBooleans.sqlNullIsTrue('c')).toBe(
+      '(CASE WHEN NOT (c) THEN 1 ELSE 0 END = 0)'
+    );
   });
 });
 

@@ -51,8 +51,6 @@ expressionModels.forEach((x, databaseName) => {
   const expressionModel = x.expressionModel;
   const runtime = x.runtime;
   const testModel = wrapTestModel(runtime, modelText(databaseName));
-  const dbTrue = runtime.dialect.resultBoolean(true);
-  const dbFalse = runtime.dialect.resultBoolean(false);
   const funcTestGeneral = async (
     expr: string,
     type: 'group_by' | 'aggregate',
@@ -124,14 +122,6 @@ expressionModels.forEach((x, databaseName) => {
       await funcTestMultiple(
         ["concat('foo', 'bar')", 'foobar'],
         ["concat(1, 'bar')", '1bar'],
-        [
-          "concat('cons', true)",
-          databaseName === 'postgres'
-            ? 'const'
-            : databaseName === 'mysql'
-              ? 'cons1'
-              : 'construe',
-        ],
         ["concat('foo', @2003)", 'foo2003-01-01'],
         [
           "concat('foo', @2003-01-01 12:00:00)",
@@ -140,6 +130,20 @@ expressionModels.forEach((x, databaseName) => {
         // TODO Maybe implement consistent null behavior
         // ["concat('foo', null)", null],
         ['concat()', '']
+      );
+    });
+    it.when(
+      runtime.dialect.booleanType !== 'none' &&
+        !brokenIn('trino', databaseName) &&
+        !brokenIn('presto', databaseName)
+    )(`works with a boolean - ${databaseName}`, async () => {
+      await funcTest(
+        "concat('cons', true)",
+        databaseName === 'postgres'
+          ? 'const'
+          : databaseName === 'mysql'
+            ? 'cons1'
+            : 'construe'
       );
     });
   });
@@ -624,16 +628,13 @@ expressionModels.forEach((x, databaseName) => {
           # test.debug
           run: state_facts -> {
             group_by: state
-            calculate: lag_val is lag(@2011-11-11 11:11:11, 1, now).year = now.year
+            calculate: lag_val is
+              pick 'now' when lag(@2011-11-11 11:11:11, 1, now).year = now.year else 'then'
           }`
         )
         .run();
-      expect(result.data.path(0, 'lag_val').value).toBe(
-        runtime.dialect.resultBoolean(true)
-      );
-      expect(result.data.path(1, 'lag_val').value).toBe(
-        runtime.dialect.resultBoolean(false)
-      );
+      expect(result.data.path(0, 'lag_val').value).toBe('now');
+      expect(result.data.path(1, 'lag_val').value).toBe('then');
     });
   });
 
@@ -855,32 +856,45 @@ expressionModels.forEach((x, databaseName) => {
       : "'+inf'::number";
     it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        [`is_inf(${inf})`, dbTrue],
-        ['is_inf(100)', dbFalse],
-        ['is_inf(null)', dbFalse]
+        [`pick 'yes' when is_inf(${inf}) else 'no'`, 'yes'],
+        ["pick 'yes' when is_inf(100) else 'no'", 'no'],
+        ["pick 'yes' when is_inf(null) else 'no'", 'no']
       );
     });
+    // A null input is false, not null
+    it.when(databaseName !== 'mysql' && runtime.dialect.booleanType !== 'none')(
+      `is false for null - ${databaseName}`,
+      async () => {
+        await funcTest('is_inf(null)', runtime.dialect.resultBoolean(false));
+      }
+    );
   });
   describe('is_nan', () => {
     it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["is_nan('NaN'::number)", dbTrue],
-        ['is_nan(100)', dbFalse],
-        ['is_nan(null)', dbFalse]
+        ["pick 'yes' when is_nan('NaN'::number) else 'no'", 'yes'],
+        ["pick 'yes' when is_nan(100) else 'no'", 'no'],
+        ["pick 'yes' when is_nan(null) else 'no'", 'no']
       );
     });
+    it.when(databaseName !== 'mysql' && runtime.dialect.booleanType !== 'none')(
+      `is false for null - ${databaseName}`,
+      async () => {
+        await funcTest('is_nan(null)', runtime.dialect.resultBoolean(false));
+      }
+    );
   });
   describe('greatest', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ['greatest(1, 10, -100)', 10],
         [
-          'greatest(@2003, @2004, @1994) = @2004',
-          runtime.dialect.resultBoolean(true),
+          "pick 'yes' when greatest(@2003, @2004, @1994) = @2004 else 'no'",
+          'yes',
         ],
         [
-          'greatest(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:59:00',
-          runtime.dialect.resultBoolean(true),
+          "pick 'yes' when greatest(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:59:00 else 'no'",
+          'yes',
         ],
         ["greatest('a', 'b')", 'b'],
         ['greatest(1, null, 0)', null],
@@ -892,13 +906,10 @@ expressionModels.forEach((x, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ['least(1, 10, -100)', -100],
+        ["pick 'yes' when least(@2003, @2004, @1994) = @1994 else 'no'", 'yes'],
         [
-          'least(@2003, @2004, @1994) = @1994',
-          runtime.dialect.resultBoolean(true),
-        ],
-        [
-          'least(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:58:00',
-          runtime.dialect.resultBoolean(true),
+          "pick 'yes' when least(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:58:00 else 'no'",
+          'yes',
         ],
         ["least('a', 'b')", 'a'],
         ['least(1, null, 0)', null],
@@ -929,36 +940,48 @@ expressionModels.forEach((x, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         [
-          "starts_with('hello world', 'hello')",
-          runtime.dialect.resultBoolean(true),
+          "pick 'yes' when starts_with('hello world', 'hello') else 'no'",
+          'yes',
         ],
-        [
-          "starts_with('hello world', 'world')",
-          runtime.dialect.resultBoolean(false),
-        ],
-        ["starts_with(null, 'world')", runtime.dialect.resultBoolean(false)],
-        [
-          "starts_with('hello world', null)",
-          runtime.dialect.resultBoolean(false),
-        ]
+        ["pick 'yes' when starts_with('hello world', 'world') else 'no'", 'no'],
+        ["pick 'yes' when starts_with(null, 'world') else 'no'", 'no'],
+        ["pick 'yes' when starts_with('hello world', null) else 'no'", 'no']
       );
     });
+    it.when(runtime.dialect.booleanType !== 'none')(
+      `is false for null - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          ["starts_with(null, 'world')", runtime.dialect.resultBoolean(false)],
+          [
+            "starts_with('hello world', null)",
+            runtime.dialect.resultBoolean(false),
+          ]
+        );
+      }
+    );
   });
   describe('ends_with', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        [
-          "ends_with('hello world', 'world')",
-          runtime.dialect.resultBoolean(true),
-        ],
-        [
-          "ends_with('hello world', 'hello')",
-          runtime.dialect.resultBoolean(false),
-        ],
-        ["ends_with(null, 'world')", runtime.dialect.resultBoolean(false)],
-        ["ends_with('hello world', null)", runtime.dialect.resultBoolean(false)]
+        ["pick 'yes' when ends_with('hello world', 'world') else 'no'", 'yes'],
+        ["pick 'yes' when ends_with('hello world', 'hello') else 'no'", 'no'],
+        ["pick 'yes' when ends_with(null, 'world') else 'no'", 'no'],
+        ["pick 'yes' when ends_with('hello world', null) else 'no'", 'no']
       );
     });
+    it.when(runtime.dialect.booleanType !== 'none')(
+      `is false for null - ${databaseName}`,
+      async () => {
+        await funcTestMultiple(
+          ["ends_with(null, 'world')", runtime.dialect.resultBoolean(false)],
+          [
+            "ends_with('hello world', null)",
+            runtime.dialect.resultBoolean(false),
+          ]
+        );
+      }
+    );
   });
   describe('trim', () => {
     it(`trim works - ${databaseName}`, async () => {
@@ -1001,14 +1024,17 @@ expressionModels.forEach((x, databaseName) => {
       // There are around a billion values that rand() can be, so if this
       // test fails, most likely something is broken. Otherwise, you're the lucky
       // one in a billion!
-      await funcTest('rand() = rand()', runtime.dialect.resultBoolean(false));
+      await funcTest(
+        "pick 'same' when rand() = rand() else 'differ'",
+        'differ'
+      );
     });
   });
   describe('pi', () => {
     it(`is pi - ${databaseName}`, async () => {
       await funcTest(
-        'abs(pi() - 3.141592653589793) < 0.0000000000001',
-        runtime.dialect.resultBoolean(true)
+        "pick 'yes' when abs(pi() - 3.141592653589793) < 0.0000000000001 else 'no'",
+        'yes'
       );
     });
   });

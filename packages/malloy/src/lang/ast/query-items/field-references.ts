@@ -20,6 +20,10 @@ import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
 import type {MakeEntry} from '../types/space-entry';
 import {ExprIdReference} from '../expressions/expr-id-reference';
+import {
+  booleanValueError,
+  resultColumnHint,
+} from '../expressions/boolean-value';
 import type {FieldDeclarationConstructor} from './field-declaration';
 import {
   AggregateFieldDeclaration,
@@ -175,12 +179,26 @@ export abstract class FieldReference
 
   abstract typecheck(type: TypeDesc): void;
 
+  // The reference is a result column of a query
+  outputsValue(): boolean {
+    return false;
+  }
+
   getField(fs: FieldSpace): LookupResult {
     const result = fs.lookup(this.list);
 
     if (result.found) {
       const actualType = result.found.typeDesc();
       this.typecheck(actualType);
+      if (this.outputsValue()) {
+        booleanValueError(
+          fs,
+          actualType,
+          'as a result column',
+          this,
+          resultColumnHint(this.refString)
+        );
+      }
     }
 
     return result;
@@ -252,6 +270,9 @@ export class DrillFieldReference extends FieldReference {
 
 export class CalculateFieldReference extends FieldReference {
   elementType = 'calculateFieldReference';
+  outputsValue(): boolean {
+    return true;
+  }
   protected autoRenameDeclarationCtor() {
     return CalculateFieldDeclaration;
   }
@@ -262,6 +283,9 @@ export class CalculateFieldReference extends FieldReference {
 
 export class IndexFieldReference extends FieldReference {
   elementType = 'indexFieldReference';
+  outputsValue(): boolean {
+    return true;
+  }
   typecheck(type: TypeDesc) {
     typecheckIndex(type, this);
   }
@@ -278,6 +302,9 @@ export class IndexFieldReference extends FieldReference {
 
 export class AggregateFieldReference extends FieldReference {
   elementType = 'aggregateFieldReference';
+  outputsValue(): boolean {
+    return true;
+  }
   protected autoRenameDeclarationCtor() {
     return AggregateFieldDeclaration;
   }
@@ -288,6 +315,9 @@ export class AggregateFieldReference extends FieldReference {
 
 export class GroupByFieldReference extends FieldReference {
   elementType = 'groupByFieldReference';
+  outputsValue(): boolean {
+    return true;
+  }
   protected autoRenameDeclarationCtor() {
     return GroupByFieldDeclaration;
   }
@@ -298,6 +328,9 @@ export class GroupByFieldReference extends FieldReference {
 
 export class ProjectFieldReference extends FieldReference {
   elementType = 'projectFieldReference';
+  outputsValue(): boolean {
+    return true;
+  }
   protected autoRenameDeclarationCtor() {
     return ProjectFieldDeclaration;
   }

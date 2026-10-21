@@ -24,20 +24,26 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }`
   );
 
-  it(`boolean type - ${databaseName}`, async () => {
-    await expect(`
+  // A dialect without boolean values cannot group by one
+  it.when(runtime.dialect.booleanType !== 'none')(
+    `boolean type - ${databaseName}`,
+    async () => {
+      await expect(`
       run: models-> {
         group_by: big is seats >=20
         aggregate: model_count is count()
       }
     `).toMatchResult(orderByModel, {
-      big: false,
-      model_count: 58451,
-    });
-  });
+        big: false,
+        model_count: 58451,
+      });
+    }
+  );
 
-  it(`boolean in pipeline - ${databaseName}`, async () => {
-    await expect(`
+  it.when(runtime.dialect.booleanType !== 'none')(
+    `boolean in pipeline - ${databaseName}`,
+    async () => {
+      await expect(`
       run: models->{
         group_by:
           manufacturer,
@@ -48,10 +54,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: model_count is model_count.sum()
       }
     `).toMatchResult(orderByModel, {
-      big: false,
-      model_count: 58500,
-    });
-  });
+        big: false,
+        model_count: 58500,
+      });
+    }
+  );
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
     await expect(`

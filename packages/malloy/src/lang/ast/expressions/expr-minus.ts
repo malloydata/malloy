@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -19,6 +18,10 @@ export class ExprMinus extends ExpressionDef {
 
   protected computeExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
+    // An error is already logged; it stays an error so nothing else logs it
+    if (expr.type === 'error') {
+      return expr;
+    }
     if (TDU.typeIn(expr, this.legalChildTypes)) {
       return {
         ...expr,
@@ -26,6 +29,9 @@ export class ExprMinus extends ExpressionDef {
         value: {node: 'unary-', e: expr.value},
       };
     }
-    return errorFor('negate requires number');
+    return this.expr.loggedErrorExpr(
+      'expression-type-error',
+      `'${this.elementType}' Can't use type ${TDU.inspect(expr)}`
+    );
   }
 }

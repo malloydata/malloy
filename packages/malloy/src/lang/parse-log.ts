@@ -94,6 +94,13 @@ type MessageParameterTypes = {
   'experiment-not-enabled': {experimentId: string};
   'experimental-dialect-not-enabled': {dialect: string};
   'nesting-unsupported': {dialect: string};
+  'boolean-value-unsupported': {dialect: string; where: string; hint: string};
+  'wildcard-omits-boolean': {
+    dialect: string;
+    wildcard: string;
+    name: string;
+    hint: string;
+  };
   'nested-multi-stage-unsupported': {dialect: string};
   'nested-projection-limit-unsupported': {dialect: string};
   'sql-native-not-allowed-in-expression': {
@@ -466,6 +473,10 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'experimental-dialect-not-enabled': e =>
     `Requires compiler flag '##! experimental.dialect.${e.dialect}'`,
   'nesting-unsupported': e => `'${e.dialect}' does not support nested queries`,
+  'boolean-value-unsupported': e =>
+    `'${e.dialect}' does not support a boolean ${e.where}; ${e.hint}`,
+  'wildcard-omits-boolean': e =>
+    `'${e.name}' is left out of '${e.wildcard}': '${e.dialect}' does not support a boolean as a result column; ${e.hint}`,
   'nested-multi-stage-unsupported': e =>
     `'${e.dialect}' does not support a multi-stage pipeline ('->') in a nested query`,
   'nested-projection-limit-unsupported': e =>

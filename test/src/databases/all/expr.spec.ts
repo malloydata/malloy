@@ -527,12 +527,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
 
       run: a -> {
-          group_by: boolean_1 is sql_boolean("\${seats} > 20")
-          group_by: boolean_2 is sql_boolean("\${engines} = 2")
+          group_by:
+            boolean_1 is pick 'yes' when sql_boolean("\${seats} > 20") else 'no'
+            boolean_2 is pick 'yes' when sql_boolean("\${engines} = 2") else 'no'
         }
   `).toMatchResult(testModel, {
-        boolean_1: true,
-        boolean_2: false,
+        boolean_1: 'yes',
+        boolean_2: 'no',
       });
     });
 
@@ -1067,12 +1068,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         dimension: fot is (false) or (true)
       } -> {
         select:
-          no_paren is false and fot
-          paren is    false and (fot)
+          no_paren is pick 'yes' when false and fot else 'no'
+          paren is    pick 'yes' when false and (fot) else 'no'
       }`
     ).toMatchResult(testModel, {
-      paren: false,
-      no_paren: false,
+      paren: 'no',
+      no_paren: 'no',
     });
   });
 });

@@ -11,8 +11,11 @@ import '@malloydata/malloy/test/matchers';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
+  // A dialect without boolean values has no boolean column
+  const booleans = runtime.dialect.booleanType !== 'none';
+
   describe('mkTestModel and TV', () => {
-    test('basic types with type inference', async () => {
+    test.when(booleans)('basic types with type inference', async () => {
       const tm = mkTestModel(runtime, {
         data: [
           {t_int: 1, t_string: 'a', t_bool: true},
@@ -155,16 +158,19 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
       });
     });
 
-    test('plain booleans work with dialect boolean handling', async () => {
-      const tm = mkTestModel(runtime, {
-        data: [{a: true, b: false}],
-      });
-      // Booleans are handled by dialect.resultBoolean() in the matcher
-      await expect('run: data -> { select: * }').toMatchResult(tm, {
-        a: true,
-        b: false,
-      });
-    });
+    test.when(booleans)(
+      'plain booleans work with dialect boolean handling',
+      async () => {
+        const tm = mkTestModel(runtime, {
+          data: [{a: true, b: false}],
+        });
+        // Booleans are handled by dialect.resultBoolean() in the matcher
+        await expect('run: data -> { select: * }').toMatchResult(tm, {
+          a: true,
+          b: false,
+        });
+      }
+    );
   });
 
   describe('test.debug tag', () => {

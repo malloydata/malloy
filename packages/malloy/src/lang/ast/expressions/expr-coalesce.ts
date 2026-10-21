@@ -9,6 +9,7 @@ import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import {booleanValueError, CONDITION_HINT} from './boolean-value';
 
 export class ExprCoalesce extends ExpressionDef {
   elementType = 'coalesce expression';
@@ -23,6 +24,14 @@ export class ExprCoalesce extends ExpressionDef {
   protected computeExpression(fs: FieldSpace): ExprValue {
     const maybeNull = this.expr.getExpression(fs);
     const whenNull = this.altExpr.getExpression(fs);
+    const noCoalesce = booleanValueError(
+      fs,
+      maybeNull,
+      'in ??',
+      this,
+      CONDITION_HINT
+    );
+    if (noCoalesce) return noCoalesce;
     if (maybeNull.type === 'null') {
       return whenNull;
     }

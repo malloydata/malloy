@@ -11,6 +11,7 @@ import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import {booleanValueError, CHOICE_HINT} from './boolean-value';
 
 interface Choice {
   pick: ExprValue;
@@ -110,6 +111,14 @@ export class Pick extends ExpressionDef {
         'Pick statments cannot have filter expression values'
       );
     }
+    const noPick = booleanValueError(
+      fs,
+      definedReturnType,
+      'as the result of a pick',
+      this,
+      CHOICE_HINT
+    );
+    if (noPick) return noPick;
     caseValue.kids.caseElse = defaultVal.value;
     return computedExprValue({
       dataType: definedReturnType,
@@ -186,6 +195,14 @@ export class Pick extends ExpressionDef {
         'Pick statments cannot have filter expression values'
       );
     }
+    const noPick = booleanValueError(
+      fs,
+      definedReturnType,
+      'as the result of a pick',
+      this,
+      CHOICE_HINT
+    );
+    if (noPick) return noPick;
     pick.kids.caseElse = defVal.value;
     return computedExprValue({
       dataType: definedReturnType,

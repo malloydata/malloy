@@ -49,7 +49,7 @@ Cancelling a query uses the driver, so no `VIEW SERVER STATE` or `ALTER ANY CONN
 
 ## What works
 
-Sources from tables (`table('schema.table')`, `[bracketed]` names, three-part `db.schema.table`) and SQL blocks; `select`, `group_by`, `aggregate`, `where`, `having`, `order_by`, `limit`; expressions as dimensions; joins with symmetric aggregates across a fan-out; multi-stage pipelines and a query used as a source; dates, timestamps, truncation, extraction, intervals, and `timezone:` with IANA names through `AT TIME ZONE`; the standard function library in its T-SQL spellings.
+Sources from tables (`table('schema.table')`, `[bracketed]` names, three-part `db.schema.table`) and SQL blocks; `select`, `group_by`, `aggregate`, `where`, `having`, `order_by`, `limit`; expressions as dimensions; joins with symmetric aggregates across a fan-out; multi-stage pipelines and a query used as a source; dates, timestamps, truncation, extraction, intervals, and `timezone:` with IANA names through `AT TIME ZONE`; the standard function library in its T-SQL spellings; a boolean as a condition: a comparison, a declared boolean, `not`, `!=`, `!~` or a boolean function in `where:`, `having:`, a join `on:`, a filtered aggregate and `pick … when`.
 
 ## What does not work yet
 
@@ -59,9 +59,7 @@ Each of these is a later change, not a promise.
 |---|---|
 | `nest:` | Refused at translation (`supportsNesting` is false) |
 | Arrays and records, in table data or as literals | Declared unsupported; a JSON column is a string |
-| A boolean where SQL expects a condition: a boolean dimension in `where:`, `having:` or `pick … when`; a `bit` column in `where:` | Server error (4145). A comparison, `starts_with`, `ends_with`, `is_nan` or `is_inf` written there directly works, and a boolean **declared** as a dimension or measure is a `1`/`0` value (the translator's CASE for `booleanType: 'none'`) that groups and selects but is not a condition |
-| `x::boolean` | Compile error: there is no boolean to cast to |
-| `not x` on any boolean, `x !~ 'pattern'` | Server error (4145): the compiler writes `COALESCE(NOT x, TRUE)` and `COALESCE(x LIKE p, true)`, and a condition is not a value `COALESCE` can take. `x != y` works; `not (x = y)` does not |
+| A boolean where SQL expects a value: a declared boolean or a comparison in `select:`, `group_by:`, `aggregate:` or `index:`, as a function argument, in `??`, `is null`, `=` or a cast, or as the result of a `pick` | Compile error at the expression, naming the value to write instead, `pick 'yes' when is_late else 'no'`. A boolean is a condition on this dialect and never a value; `select: *` leaves a boolean out with a warning |
 | `all()`, `exclude()` | Compile error: ungrouped aggregates share the nest machinery |
 | `x ~ r'...'` | Error when SQL is generated: no regular expressions before SQL Server 2025 |
 | `regexp_extract`, `replace` with a regular expression | Server error: the functions arrive in SQL Server 2025 |
@@ -81,6 +79,7 @@ Every Malloy query is one T-SQL batch: the session settings `SET DATEFIRST 7`, `
 - A `datetimeoffset` is a Malloy `timestamptz`, an instant. Its clock is read at UTC, or in the query's `timezone:`, not at the offset the value was written in, so `t.day` is the same for `12:34:56 -05:00` as for `17:34:56 +00:00`.
 - Every string literal is written `N'...'`, so text outside the database's code page compares as itself.
 - The default collation compares case-insensitively; Malloy does not change that.
+- A boolean is a condition, never a value: `where: is_late` writes the comparison `is_late` was declared as. Malloy's `not` is true of NULL and `x != y` is true when either side is NULL, as on every dialect, written as `CASE … END = 0` tests rather than `COALESCE`, which has no boolean to return here.
 - `bit` is an integer, read as 0 or 1. `uniqueidentifier`, `text`, `ntext`, `time`, `binary`, `varbinary`, `xml`, `geography` and the other types the map does not name are `sql native`, to be passed through or cast in a `sql()` dimension.
 - A `bigint` arrives as the driver's text and is read as a number, so a value above 2^53 loses precision.
 - The connection's digest, which names the tables it may persist and the cache it may share, is built from the server, port, instance, database, authentication kind and the configured principal: the `user`, `domain\user`, or `clientId`. An ambient identity, `azure-default` or `azure-msi` with no `clientId`, is unknown until the first token request, so two such connections to one database share a digest. To tell them apart, set `clientId` (a user-assigned identity) or use `azure-service-principal`.

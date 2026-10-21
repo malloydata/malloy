@@ -223,6 +223,17 @@ export const pgTableDef: SourceDef = {
   fields: baseFields,
 };
 
+// SQL Server has no boolean values (booleanType 'none'), so no column of
+// its table is a boolean
+export const mssqlTableDef: SourceDef = {
+  type: 'table',
+  name: 'aTable',
+  dialect: 'sqlserver',
+  tablePath: 'aTable',
+  connection: '_mssql_',
+  fields: baseFields.filter(f => f.name !== 'abool'),
+};
+
 /**
  * A TestTranlator never actually talks to connection, instead uses
  * some mocked schema definitions.
@@ -233,6 +244,7 @@ export const mockSchema: TableSourceDef[] = [
   db2TableDef,
   bqTableDef,
   pgTableDef,
+  mssqlTableDef,
   {
     type: 'table',
     name: 'carriers',
@@ -396,7 +408,7 @@ export interface TestTranslatorOptions {
 
 /**
  * Every connection name a test mentions resolves to a dialect, as it would
- * through a host's connection lookup: the four listed below to theirs, and
+ * through a host's connection lookup: the five listed below to theirs, and
  * any other name to `TEST_DIALECT`.
  */
 class TestConnectionDialectZone extends Zone<string> {
@@ -412,7 +424,7 @@ export class TestTranslator extends MalloyTranslator {
   testRoot?: TestRoot;
   connectionDialectZone = new TestConnectionDialectZone();
   /*
-   * There are four connections:
+   * There are five connections:
    *   _db_  - duckdb dialect, with the following tables ...
    *      aTable, malloytest.carriers, malloytest.flights, malloytest.airports
    *   _db2_ - duckdb dialect, with one table, aTable. A second connection
@@ -421,6 +433,8 @@ export class TestTranslator extends MalloyTranslator {
    *      aTable
    *   _pg_  - postgres dialect, with one table
    *      aTable
+   *   _mssql_ - sqlserver dialect, which has no boolean values, with one
+   *      table, aTable
    *
    * The "aTable" table is a mocked table with one column of each type.
    * The _bq_ version does not have the timestamptz column, and when
@@ -450,6 +464,7 @@ export class TestTranslator extends MalloyTranslator {
       _db2_: {type: 'connection', name: '_db2_'},
       _bq_: {type: 'connection', name: '_bq_'},
       _pg_: {type: 'connection', name: '_pg_'},
+      _mssql_: {type: 'connection', name: '_mssql_'},
       a: {...aTableDef, primaryKey: 'astr', name: 'a'},
       b: {...aTableDef, primaryKey: 'astr', name: 'b'},
       bq_a: {...bqTableDef, primaryKey: 'astr', name: 'bq_a'},
@@ -523,6 +538,7 @@ export class TestTranslator extends MalloyTranslator {
     this.connectionDialectZone.define('_db2_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
     this.connectionDialectZone.define('_pg_', 'postgres');
+    this.connectionDialectZone.define('_mssql_', 'sqlserver');
     for (const flag of options.compilerFlags ?? []) {
       this.compilerFlagSrc.push(`##! ${flag}\n`);
     }
@@ -780,11 +796,30 @@ export function makeModelFunc(
     const {prefix, wrap, ...ttOptions} = options;
     return {
       ...ms,
+      // A marked location is where the mark sits in the whole source, after
+      // the prefix. A wrap could put the code anywhere, so marks stay as
+      // they are.
+      locations: wrap ? ms.locations : ms.locations.map(l => after(prefix, l)),
       translator: new TestTranslator(
         (prefix ?? '') + (wrap ? wrap(ms.code) : ms.code),
         ttOptions
       ),
     };
+  };
+}
+
+function after(prefix: string | undefined, l: DocumentLocation) {
+  if (!prefix) return l;
+  const lines = prefix.split('\n');
+  const dLine = lines.length - 1;
+  const dChar = lines[dLine].length;
+  const shift = (p: {line: number; character: number}) => ({
+    line: p.line + dLine,
+    character: p.line === 0 ? p.character + dChar : p.character,
+  });
+  return {
+    ...l,
+    range: {start: shift(l.range.start), end: shift(l.range.end)},
   };
 }
 
