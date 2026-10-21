@@ -132,6 +132,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
     let previousName = viewName;
     let fieldDef: AtomicFieldDef | undefined = undefined;
     let compareField: Expr | undefined = undefined;
+    let compareUsage: FieldUsage | undefined = undefined;
     const requiredDimensions: string[][] = [];
     const pathSoFar: string[] = [viewName.name];
     for (const name of path) {
@@ -255,6 +256,9 @@ export class Drill extends Filter implements QueryPropertyInterface {
           if (theFieldDef === undefined || isAtomic(theFieldDef)) {
             fieldDef = theFieldDef;
             compareField = {node: 'field', path: field.path};
+            // theFieldDef's refSummary is relative to the struct it lives in;
+            // use the full path, as `where:` does, so joins along it activate.
+            compareUsage = [{path: field.path, at: reference.location}];
           } else {
             name.logError(
               'drill-field-reference-not-field',
@@ -354,7 +358,9 @@ export class Drill extends Filter implements QueryPropertyInterface {
       ...fieldDef,
       evalSpace: 'output',
       expressionType: fieldDef.expressionType ?? 'scalar',
-      refSummary: fieldDef.refSummary,
+      refSummary: compareUsage
+        ? mkRefSummary({fieldUsage: compareUsage})
+        : fieldDef.refSummary,
     });
     filter.has({drillField});
     const fExpression = new ExprCompare(drillField, '=', value);
