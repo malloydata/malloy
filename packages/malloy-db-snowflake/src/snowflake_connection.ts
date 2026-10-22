@@ -123,8 +123,9 @@ export async function sampleVariantBlocks(
 /**
  * snowflake-sdk uses a private key only when `authenticator` is
  * `SNOWFLAKE_JWT`; with no authenticator it falls back to password auth and
- * fails asking for a password. A key supplied with no authenticator can only
- * mean key-pair auth, so say so. An explicit authenticator is left alone.
+ * fails asking for a password. A key supplied with no authenticator means
+ * key-pair auth, even when a password is also present; the password is then
+ * unused. An explicit authenticator is left alone.
  */
 export function withKeyPairAuthenticator(
   opts: ConnectionOptions

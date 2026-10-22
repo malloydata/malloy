@@ -111,7 +111,7 @@ registerConnectionType('snowflake', {
       optional: true,
       advanced: true,
       description:
-        'snowflake-sdk authenticator, e.g. SNOWFLAKE_JWT, EXTERNALBROWSER, OAUTH. Defaults to SNOWFLAKE_JWT when a private key is set, otherwise password authentication.',
+        'snowflake-sdk authenticator, e.g. SNOWFLAKE_JWT, EXTERNALBROWSER, OAUTH. Defaults to SNOWFLAKE_JWT when a private key is set, even if a password is also set; otherwise password authentication.',
     },
     {
       name: 'timeoutMs',

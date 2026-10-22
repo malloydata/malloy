@@ -5,6 +5,7 @@
 
 import {MalloyConfig} from '@malloydata/malloy';
 import snowflake from 'snowflake-sdk';
+import type {ConnectionOptions} from 'snowflake-sdk';
 import {
   SnowflakeConnection,
   withKeyPairAuthenticator,
@@ -49,7 +50,7 @@ describe('withKeyPairAuthenticator', () => {
 describe('Snowflake key-pair auth from a Malloy config', () => {
   const KEY_ENV = 'TEST_SNOWFLAKE_PRIVATE_KEY';
   const PASS_ENV = 'TEST_SNOWFLAKE_KEY_PASSPHRASE';
-  let createPool: jest.SpyInstance;
+  let createPool: jest.SpiedFunction<typeof snowflake.createPool>;
   let conn: SnowflakeConnection | undefined;
 
   beforeEach(() => {
@@ -68,7 +69,7 @@ describe('Snowflake key-pair auth from a Malloy config', () => {
 
   async function connect(
     entry: Record<string, unknown>
-  ): Promise<Record<string, unknown>> {
+  ): Promise<ConnectionOptions> {
     const config = new MalloyConfig({
       connections: {
         // poolMin 0 so the pool opens no connection to the fake account.
@@ -101,6 +102,6 @@ describe('Snowflake key-pair auth from a Malloy config', () => {
       username: 'malloy',
       authenticator: 'EXTERNALBROWSER',
     });
-    expect(opts['authenticator']).toBe('EXTERNALBROWSER');
+    expect(opts.authenticator).toBe('EXTERNALBROWSER');
   });
 });
