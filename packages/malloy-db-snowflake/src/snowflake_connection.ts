@@ -120,6 +120,23 @@ export async function sampleVariantBlocks(
   return undefined;
 }
 
+/**
+ * snowflake-sdk uses a private key only when `authenticator` is
+ * `SNOWFLAKE_JWT`; with no authenticator it falls back to password auth and
+ * fails asking for a password. A key supplied with no authenticator means
+ * key-pair auth, even when a password is also present; the password is then
+ * unused. An empty string is not a key: the driver ignores an empty
+ * `privateKeyPath`, so it must not switch a password login to key-pair. An
+ * explicit authenticator is left alone.
+ */
+export function withKeyPairAuthenticator(
+  opts: ConnectionOptions
+): ConnectionOptions {
+  if (opts.authenticator !== undefined) return opts;
+  if (!opts.privateKey && !opts.privateKeyPath) return opts;
+  return {...opts, authenticator: 'SNOWFLAKE_JWT'};
+}
+
 export interface SnowflakeConnectionOptions {
   // snowflake sdk connection options
   connOptions?: ConnectionOptions;
@@ -190,7 +207,8 @@ export class SnowflakeConnection
       // try to get connection options from ~/.snowflake/connections.toml
       connOptions = SnowflakeExecutor.getConnectionOptionsFromToml();
     }
-    this.connOptions = connOptions ?? {};
+    connOptions = withKeyPairAuthenticator(connOptions);
+    this.connOptions = connOptions;
     this.setupSQL = options?.setupSQL;
     this.executor = new SnowflakeExecutor(
       connOptions,
