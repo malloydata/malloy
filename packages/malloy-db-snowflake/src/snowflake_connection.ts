@@ -125,15 +125,15 @@ export async function sampleVariantBlocks(
  * `SNOWFLAKE_JWT`; with no authenticator it falls back to password auth and
  * fails asking for a password. A key supplied with no authenticator means
  * key-pair auth, even when a password is also present; the password is then
- * unused. An explicit authenticator is left alone.
+ * unused. An empty string is not a key: the driver ignores an empty
+ * `privateKeyPath`, so it must not switch a password login to key-pair. An
+ * explicit authenticator is left alone.
  */
 export function withKeyPairAuthenticator(
   opts: ConnectionOptions
 ): ConnectionOptions {
   if (opts.authenticator !== undefined) return opts;
-  if (opts.privateKey === undefined && opts.privateKeyPath === undefined) {
-    return opts;
-  }
+  if (!opts.privateKey && !opts.privateKeyPath) return opts;
   return {...opts, authenticator: 'SNOWFLAKE_JWT'};
 }
 

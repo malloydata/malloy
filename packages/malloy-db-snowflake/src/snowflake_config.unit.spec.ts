@@ -45,6 +45,15 @@ describe('withKeyPairAuthenticator', () => {
       withKeyPairAuthenticator({account: 'a', password: 'p'}).authenticator
     ).toBeUndefined();
   });
+
+  it('does not take an empty key or key path as a key', () => {
+    for (const key of [{privateKey: ''}, {privateKeyPath: ''}]) {
+      expect(
+        withKeyPairAuthenticator({account: 'a', password: 'p', ...key})
+          .authenticator
+      ).toBeUndefined();
+    }
+  });
 });
 
 describe('Snowflake key-pair auth from a Malloy config', () => {
