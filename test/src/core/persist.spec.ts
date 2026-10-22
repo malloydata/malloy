@@ -2802,4 +2802,47 @@ describe('source persistence', () => {
       expect(sql).toContain('LIMIT 7');
     });
   });
+
+  describe('a persisted source reading a given with no default', () => {
+    // Its table would have to be one table for every caller, so it cannot be
+    // persisted. The builder and the manifest lookup compile it without
+    // resolving givens, and both say so.
+    const MODEL = `
+      ##! experimental { persistence givens }
+      given: CARRIER :: string
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: carrier_stats is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      #@ persist
+      source: in_relation is flights -> {
+        where: carrier = $CARRIER
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      query: q_in_relation is in_relation -> { select: * }
+    `;
+
+    it('fails a query with a manifest, naming the cause, though the query supplied the given', async () => {
+      const model = await tstRuntime.loadModel(MODEL).getModel();
+      const targets = await tstRuntime.getBuildTargets(model);
+      const stats = targets.connections
+        .flatMap(c => c.targets)
+        .find(t => t.sources.some(s => s.name === 'carrier_stats'))!;
+      const manifest = createManifest();
+      addManifestEntry(manifest, stats.buildId, 'carrier_stats_table');
+
+      await expect(
+        runtimeWithManifest(manifest)
+          .loadModel(MODEL)
+          .loadQueryByName('q_in_relation')
+          .run({givens: {CARRIER: 'WN'}})
+      ).rejects.toThrow(/Persisted source '[^']*in_relation@.*no default/);
+    });
+  });
 });

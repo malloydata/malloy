@@ -4,10 +4,11 @@
  */
 
 import type {BuildIdOptions, SourceID} from '../../model';
+import {MalloyCompileError} from '../../model';
 import type {LogMessage} from '../../lang';
 import type {PersistNode} from '../../model/persist_utils';
 import type {Model, PersistSource} from './core';
-import type {BuildTarget, ConnectionBuild} from './types';
+import type {BuildTarget, ConnectionBuild, UnbuildableSource} from './types';
 
 /**
  * Read a key this function's own construction guarantees is present.
@@ -58,6 +59,30 @@ export function resolvePersistWalk(
     });
   }
   return resolved;
+}
+
+/**
+ * The SQL that keys `source`'s table, or undefined when it does not compile on
+ * its own — the source is then reported in `unbuildable` instead.
+ *
+ * Only a `MalloyCompileError` is about the source; anything else is the
+ * compiler's own failure and must not pass for one.
+ */
+function buildIdSQL(
+  source: PersistSource,
+  buildIdOpts: BuildIdOptions,
+  unbuildable: UnbuildableSource[]
+): string | undefined {
+  try {
+    return source.getSQL(buildIdOpts);
+  } catch (e) {
+    if (!(e instanceof MalloyCompileError)) throw e;
+    unbuildable.push({
+      source,
+      problem: {message: e.message, severity: 'error', code: e.code, at: e.at},
+    });
+    return undefined;
+  }
 }
 
 /**
@@ -115,11 +140,14 @@ function addUnique(into: string[], seen: Set<string>, keys: string[]): void {
  *   recomputes the same key at serve time through `buildIdOptions()`; supply a
  *   different `virtualMap` here and the table is built under a key nothing
  *   looks up.
+ * @param unbuildable Receives each source whose SQL does not compile, which
+ *   becomes no target. See `UnbuildableSource`.
  */
 export function mkBuildTargets(
   walk: ResolvedNode[],
   connectionDigests: Record<string, string>,
-  buildIdOpts: BuildIdOptions
+  buildIdOpts: BuildIdOptions,
+  unbuildable: UnbuildableSource[]
 ): ConnectionBuild[] {
   const targets = new Map<string, PartialTarget>();
   // What each source hands to whoever referenced it: its own target if it is
@@ -150,7 +178,12 @@ export function mkBuildTargets(
       );
     }
 
-    const sql = source.getSQL(buildIdOpts);
+    const sql = buildIdSQL(source, buildIdOpts, unbuildable);
+    if (sql === undefined) {
+      // Not a table either. Whatever reads it inlines it, so is unbuildable too.
+      contributes.set(node.sourceID, childKeys);
+      continue;
+    }
     const buildId = source.makeBuildId(digest, sql);
     const key = targetKey(connectionName, buildId);
 

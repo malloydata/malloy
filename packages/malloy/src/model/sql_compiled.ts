@@ -104,9 +104,9 @@ export interface BuildIdOptions {
  * givens and `PersistSource.getSQL` never resolves them — so including it makes
  * the two sides disagree: the compiler folds `$IS_ADMIN` to a literal while the
  * builder re-derives it from the declaration and emits `'admin'='admin'`. Both
- * sides therefore compile givens the same way, by not resolving them. The
- * consequence — a source whose SQL depends on a supplied given cannot be
- * persisted, and says so badly — is #3041.
+ * sides therefore compile givens the same way, by not resolving them, so a
+ * source whose SQL depends on a supplied given cannot be persisted; see
+ * {@link persistedSourceSQL}.
  */
 export function buildIdOptions(opts: PrepareResultOptions): BuildIdOptions {
   return {virtualMap: opts.virtualMap};
@@ -139,7 +139,7 @@ export function persistedTableFor(
 
   const buildId = mkBuildID(
     connDigest,
-    getSourceSQL(source, compileQuery, buildIdOptions(opts))
+    persistedSourceSQL(source, compileQuery, buildIdOptions(opts))
   );
   const entry = buildManifest.entries[buildId];
   if (entry) {
@@ -147,14 +147,8 @@ export function persistedTableFor(
   }
 
   if (buildManifest.strict) {
-    // `sourceID` is deleted, not inherited, when a source is modified, so it
-    // either names this source or is absent. `as` and `extends` survive a
-    // modification and would name the base, so neither stands in for it.
-    const named = source.sourceID
-      ? `Persisted source '${source.sourceID}'`
-      : 'Persisted source';
     const base =
-      `${named} not found in manifest (buildId: ${buildId}); ` +
+      `${persistedSourceLabel(source)} not found in manifest (buildId: ${buildId}); ` +
       'strict manifest mode forbids fallback to live compilation.';
     throw new MalloyCompileError(
       buildManifest.loadError ? `${base}\n  ${buildManifest.loadError}` : base,
@@ -196,6 +190,50 @@ function expandQuery(
   // Set isPartialQuery so CTEs aren't used (they can't be nested in subqueries)
   const sql = compileQuery(query, {...opts, isPartialQuery: true});
   return `(${sql})`;
+}
+
+/**
+ * How an error names a persisted source. `sourceID` is deleted, not inherited,
+ * when a source is modified, so it either names this source or is absent. `as`
+ * and `extends` survive a modification and would name the base, so neither
+ * stands in for it.
+ */
+function persistedSourceLabel(source: PersistableSourceDef): string {
+  return source.sourceID
+    ? `Persisted source '${source.sourceID}'`
+    : 'Persisted source';
+}
+
+/**
+ * The SQL a persisted source's table is built from, for the builder and the
+ * manifest lookup alike. Both compile it with givens unresolved (see
+ * {@link buildIdOptions}), so a given with no default has no value here: the
+ * source cannot be persisted, and the error names that cause.
+ */
+export function persistedSourceSQL(
+  source: PersistableSourceDef,
+  compileQuery: CompileQueryCallback,
+  opts: PrepareResultOptions
+): string {
+  try {
+    return getSourceSQL(source, compileQuery, opts);
+  } catch (e) {
+    if (
+      !(e instanceof MalloyCompileError) ||
+      e.code !== 'compiler-given-no-value'
+    ) {
+      throw e;
+    }
+    throw new MalloyCompileError(
+      `${persistedSourceLabel(source)} reads a given with no default. A ` +
+        'persisted source is built once, as one table for every caller, so ' +
+        'its SQL cannot depend on a value each caller supplies. Filter on the ' +
+        'given in an extend-block `where:`, which applies per caller when the ' +
+        'table is read, or give the given a default.',
+      'runtime-persist-given-no-value',
+      e.at ?? source.location
+    );
+  }
 }
 
 /**

@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type {PersistSource} from './core';
 import {Model} from './core';
 import {mkBuildTargets, resolvePersistWalk} from './build_targets';
-import type {BuildTarget, ConnectionBuild} from './types';
+import type {BuildTarget, ConnectionBuild, UnbuildableSource} from './types';
 import type {LogMessage} from '../../lang';
 import {TestTranslator} from '../../lang/test/test-translator';
 
@@ -18,8 +19,10 @@ const DIGESTS = {
 // up once the SQL has been hashed. These tests take the long way — a real
 // translate, a real getSQL() — because hand-built input could not tell the
 // difference between two sources that share a table and two that don't.
-function modelOf(src: string): Model {
-  const tt = new TestTranslator(`##! experimental.persistence\n${src}`);
+function modelOf(src: string, compilerFlags: string[] = []): Model {
+  const tt = new TestTranslator(`##! experimental.persistence\n${src}`, {
+    compilerFlags,
+  });
   const compiled = tt.translate();
   if (!compiled.modelDef) {
     const problems = (compiled.problems ?? []).map(p => p.message).join('\n');
@@ -29,9 +32,23 @@ function modelOf(src: string): Model {
 }
 
 function connectionsOf(src: string): ConnectionBuild[] {
-  const model = modelOf(src);
+  return planOf(src).connections;
+}
+
+function planOf(
+  src: string,
+  compilerFlags: string[] = []
+): {connections: ConnectionBuild[]; unbuildable: UnbuildableSource[]} {
+  const model = modelOf(src, compilerFlags);
   const log: LogMessage[] = [];
-  return mkBuildTargets(resolvePersistWalk(model, log), DIGESTS, {});
+  const unbuildable: UnbuildableSource[] = [];
+  const connections = mkBuildTargets(
+    resolvePersistWalk(model, log),
+    DIGESTS,
+    {},
+    unbuildable
+  );
+  return {connections, unbuildable};
 }
 
 function connectionNamed(
@@ -295,7 +312,7 @@ describe('what a target carries', () => {
     const model = modelOf(`${ROLLUP}\nrun: rollup -> { select: * }`);
     const walk = resolvePersistWalk(model, []);
 
-    expect(() => mkBuildTargets(walk, {}, {})).toThrow('_db_');
+    expect(() => mkBuildTargets(walk, {}, {}, [])).toThrow('_db_');
   });
 
   test('a model with no persist sources has no targets', () => {
@@ -305,5 +322,80 @@ describe('what a target carries', () => {
     `);
 
     expect(targets).toEqual([]);
+  });
+});
+
+describe('a source whose SQL does not compile', () => {
+  // A given with no default has no value at plan time, so the SQL that keys
+  // the table cannot be written. That is a fact about one source, not about
+  // the model.
+  const SCOPED = `
+    given: TENANT :: string
+    #@ persist name=scoped
+    source: scoped is _db_.table('aTable') -> {
+      where: astr = $TENANT
+      group_by: astr
+    }
+  `;
+  const GIVENS = ['experimental.givens'];
+
+  test('is reported, and the rest of the model is planned', () => {
+    const {connections, unbuildable} = planOf(
+      `
+      ${ROLLUP}
+      ${SCOPED}
+      run: rollup -> { select: * }
+      run: scoped -> { select: * }
+    `,
+      GIVENS
+    );
+
+    expect(connections.flatMap(c => c.targets).map(names)).toEqual([
+      ['rollup'],
+    ]);
+    expect(unbuildable.map(u => u.source.name)).toEqual(['scoped']);
+    expect(unbuildable[0].problem.severity).toBe('error');
+    expect(unbuildable[0].problem.code).toBe('runtime-persist-given-no-value');
+    expect(unbuildable[0].problem.message).toContain('extend-block `where:`');
+  });
+
+  test('makes what reads it unbuildable too', () => {
+    // A dependent's SQL inlines it, so cannot be written either.
+    const {connections, unbuildable} = planOf(
+      `
+      ${SCOPED}
+      #@ persist name=top
+      source: top is scoped -> { group_by: astr }
+      run: top -> { select: * }
+    `,
+      GIVENS
+    );
+
+    expect(connections).toEqual([]);
+    expect(unbuildable.map(u => u.source.name)).toEqual(['scoped', 'top']);
+  });
+
+  test('a compiler bug is thrown', () => {
+    // Only a MalloyCompileError is a fact about the source. Anything else is
+    // the compiler's own failure, and hiding it as an unbuildable source would
+    // hide the bug.
+    const broken = {
+      sourceID: 'broken@test',
+      name: 'broken',
+      connectionName: '_db_',
+      getSQL: () => {
+        throw new Error('invariant violated');
+      },
+    } as unknown as PersistSource;
+    const walk = [
+      {
+        node: {sourceID: 'broken@test', persistent: true, dependsOn: []},
+        source: broken,
+      },
+    ];
+
+    expect(() => mkBuildTargets(walk, DIGESTS, {}, [])).toThrow(
+      'invariant violated'
+    );
   });
 });
