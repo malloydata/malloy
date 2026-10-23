@@ -133,11 +133,24 @@ export interface BuildTarget {
    * The SQL the BuildID is computed from: fully inlined, no manifest
    * substitution, so it is the same string whatever else has been built.
    *
-   * It is not the SQL to execute. That one substitutes the tables built so far
-   * — `source.getSQL({buildManifest, connectionDigests})` — so it can only be
-   * computed as the build walks, and only by the builder holding the manifest.
+   * It is not the SQL to execute; that is {@link buildSQL}.
    */
   sql: string;
+  /**
+   * The SQL to execute, for a `CREATE TABLE`. Dependencies already in
+   * `manifest` are read from their tables rather than recomputed, which is
+   * why it is a call made as the build proceeds and not a string computed up
+   * front. Compiled under the same givens and `virtualMap` as `sql`, so the
+   * table that is built is the one the key describes.
+   */
+  buildSQL(manifest: BuildManifest): string;
+  /**
+   * Whether this table holds the rows for particular given values. Its SQL
+   * reads a given, supplied or defaulted, so a query asking for another value
+   * computes another key and does not find this table. A builder that names
+   * tables by `name=` alone would build every variant under one name.
+   */
+  readsGivens: boolean;
   /** Targets that must exist before this one can be built */
   dependsOn: BuildTarget[];
   /** Every persist source in the model that maps onto this artifact */
@@ -181,6 +194,38 @@ export interface ConnectionBuild {
 }
 
 /**
+ * A persist source no table can be built for, because its SQL cannot be
+ * written and so no BuildID can be computed: it reads a given that has no
+ * value in this build, a virtual source the build's `virtualMap` has no entry
+ * for, or anything else the compiler reports as a problem with the source
+ * rather than with itself. A source that reads it inlines its SQL, so is
+ * reported here too.
+ *
+ * Reported rather than thrown, so one such source does not cost the rest of
+ * the model its build. Whether it fails the build is the builder's call.
+ */
+export interface UnbuildableSource {
+  source: PersistSource;
+  /** Why no BuildID could be computed, as a query would report it */
+  problem: LogMessage;
+}
+
+/**
+ * What a build compiles under, over the Runtime's own values.
+ *
+ * `givens` layers over the Runtime's file and constructor givens the way a
+ * query's do, and a finalized given is refused here the same way. Running
+ * `getBuildTargets` once per set of values is how a model whose persisted
+ * sources read a given gets one table per value.
+ */
+export interface BuildTargetOptions {
+  /** Given values for this build, by surface name, over the Runtime's */
+  givens?: Record<string, GivenValue>;
+  /** Which table each virtual source reads; the Runtime's when omitted */
+  virtualMap?: VirtualMap;
+}
+
+/**
  * The build schedule for a model.
  *
  * Connections come first because they are the largest cut of parallelism: a
@@ -193,4 +238,6 @@ export interface BuildTargets {
   connections: ConnectionBuild[];
   /** Errors and warnings from parsing `#@` annotations on persistable sources */
   tagParseLog: LogMessage[];
+  /** Persist sources with no table to build, each with the reason */
+  unbuildable: UnbuildableSource[];
 }

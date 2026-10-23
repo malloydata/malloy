@@ -4,6 +4,9 @@
  */
 
 import type {
+  Expr,
+  GivenID,
+  GivenUsage,
   PrepareResultOptions,
   SQLSourceDef,
   SQLPhraseSegment,
@@ -82,34 +85,27 @@ function expandSegment(
 }
 
 /**
- * The options a BuildID's SQL is compiled under — everything the builder and
- * the compiler must both know, and nothing else.
+ * What a BuildID's SQL is compiled under: everything that changes what the
+ * SQL computes and that the builder and the compiler can both know.
  *
- * Narrow on purpose. A BuildID must not depend on what has already been built
- * or build order would change the key, so this type cannot express a manifest;
- * `mkBuildTargets` takes it for the same reason.
+ * The manifest is excluded on purpose. A BuildID must not depend on what has
+ * already been built or build order would change the key, so this type cannot
+ * express one; `mkBuildTargets` takes it for the same reason.
+ *
+ * `virtualMap` decides which table a virtual source reads. `resolvedGivens`
+ * is the value of every given the SQL reads, supplied or defaulted; both sides
+ * produce it through `bindGivens`, so equal values give identical SQL and a
+ * different value gives a different key. A table built for one value is never
+ * found by a query asking for another.
  */
 export interface BuildIdOptions {
   virtualMap?: VirtualMap;
+  resolvedGivens?: Map<GivenID, Expr>;
 }
 
-/**
- * Project compile options down to what a BuildID is computed under.
- *
- * `virtualMap` decides which table a virtual source reads, so it changes the
- * SQL and has to be in the key; the builder supplies its own.
- *
- * `resolvedGivens` is deliberately absent even though it also changes the SQL.
- * The builder has no way to produce one — `Runtime.getBuildTargets` takes no
- * givens and `PersistSource.getSQL` never resolves them — so including it makes
- * the two sides disagree: the compiler folds `$IS_ADMIN` to a literal while the
- * builder re-derives it from the declaration and emits `'admin'='admin'`. Both
- * sides therefore compile givens the same way, by not resolving them. The
- * consequence — a source whose SQL depends on a supplied given cannot be
- * persisted, and says so badly — is #3041.
- */
+/** Project compile options down to what a BuildID is computed under. */
 export function buildIdOptions(opts: PrepareResultOptions): BuildIdOptions {
-  return {virtualMap: opts.virtualMap};
+  return {virtualMap: opts.virtualMap, resolvedGivens: opts.resolvedGivens};
 }
 
 /**
@@ -153,9 +149,15 @@ export function persistedTableFor(
     const named = source.sourceID
       ? `Persisted source '${source.sourceID}'`
       : 'Persisted source';
+    const perValue =
+      givenUsageOfRelation(source).length > 0
+        ? ' This source reads givens, so its table is found only under the ' +
+          'given values it was built with.'
+        : '';
     const base =
       `${named} not found in manifest (buildId: ${buildId}); ` +
-      'strict manifest mode forbids fallback to live compilation.';
+      'strict manifest mode forbids fallback to live compilation.' +
+      perValue;
     throw new MalloyCompileError(
       buildManifest.loadError ? `${base}\n  ${buildManifest.loadError}` : base,
       'runtime-manifest-strict-miss',
@@ -163,6 +165,23 @@ export function persistedTableFor(
     );
   }
   return undefined;
+}
+
+/**
+ * The givens a persisted source's SQL reads — the relation, not the source.
+ * A `where:` added by `extend` is applied by the query that reads the table,
+ * so it is not here, and a given used only there does not split the table by
+ * value. Mirrors `getSourceSQL`: what that compiles, this reports on.
+ */
+export function givenUsageOfRelation(source: PersistableSourceDef): GivenUsage {
+  if (source.type === 'query_source') {
+    return source.query.givenUsage ?? [];
+  }
+  return (source.selectSegments ?? []).flatMap(segment => {
+    if (isSegmentSQL(segment)) return [];
+    if (isSegmentSource(segment)) return givenUsageOfRelation(segment);
+    return segment.givenUsage ?? [];
+  });
 }
 
 /**

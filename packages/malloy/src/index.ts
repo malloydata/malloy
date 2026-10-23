@@ -280,8 +280,10 @@ export type {
   BuildNode,
   BuildPlan,
   BuildTarget,
+  BuildTargetOptions,
   BuildTargets,
   ConnectionBuild,
+  UnbuildableSource,
 } from './api/foundation';
 export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';
 export {Reference} from './api/foundation';

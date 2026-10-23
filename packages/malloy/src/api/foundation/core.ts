@@ -14,7 +14,6 @@ import type {
   NumberFieldDef,
   StringFieldDef,
   FilterCondition,
-  Expr,
   Given as InternalGiven,
   GivenID,
   GivenTypeDef,
@@ -73,10 +72,7 @@ import {
   sourceNamespaceReference,
   mkBuildID,
 } from '../../model/source_def_utils';
-import {
-  evaluateInlineGivens,
-  resolveSuppliedGivens,
-} from '../../model/given_binding';
+import {bindGivens} from '../../model/given_binding';
 import {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from './annotation';
 import {annotationToTag, annotationToTaglines, Annotations} from './annotation';
@@ -1802,6 +1798,8 @@ export class PersistSource implements Taggable {
    * @param connectionDigest - Digest from connection.getDigest()
    * @param sql - The SQL for this source (from getSQL())
    * @return The BuildID for manifest lookup
+   * @deprecated `BuildTarget.buildId` is already computed, under the build's
+   *   own givens and `virtualMap`. Used only with `Model.getBuildPlan`.
    */
   makeBuildId(connectionDigest: string, sql: string): BuildID {
     return mkBuildID(connectionDigest, sql);
@@ -1815,30 +1813,43 @@ export class PersistSource implements Taggable {
    *
    * @param options - Compile options. `buildManifest` and `connectionDigests`
    *   substitute already-built dependencies, giving the SQL to execute.
-   *   Anything that changes the SQL without them — `virtualMap` — must match
-   *   what the compiler will use, or the table is built under a key nothing
-   *   looks up.
    * @return The SQL string for this source.
+   * @deprecated Read `BuildTarget.sql` and call `BuildTarget.buildSQL()`. This
+   *   compiles under whatever `options` say, so it can disagree with the key
+   *   the build computed; the target's methods cannot. Used only with
+   *   `Model.getBuildPlan`.
    */
   getSQL(options?: CompileQueryOptions): string {
+    return this._compileSQL({
+      ...options,
+      resolvedGivens: bindGivens(options?.givens, this.model._modelDef),
+    });
+  }
+
+  /**
+   * This source's SQL under `opts`, the bare source `SELECT`.
+   *
+   * Compiled with finalize=false. The build-time key (a hash over this SQL)
+   * must equal the serve-time manifest lookup key, which persistedTableFor
+   * recomputes from the same unfinalized SELECT; finalizing would diverge the
+   * two on dialects with a final stage (Postgres) and mis-materialize the
+   * table.
+   *
+   * @internal A builder reads `BuildTarget.sql` and calls
+   *   `BuildTarget.buildSQL()`, which compile under the build's own givens and
+   *   `virtualMap`; `opts` here is whatever the caller says it is.
+   */
+  _compileSQL(opts: PrepareResultOptions): string {
     const sd = this.persistableDef;
     const queryModel = this.model.queryModel;
-
-    // Compile with finalize=false so this SQL is the bare source SELECT.
-    // The build-time key (makeBuildId over this SQL) must equal the serve-time
-    // manifest lookup key, which persistedTableFor recomputes from the same
-    // unfinalized SELECT; finalizing would diverge the two on dialects with a
-    // final stage (Postgres) and mis-materialize the table.
     if (sd.type === 'sql_select') {
       return getCompiledSQL(
         sd,
-        options ?? {},
-        (query, opts) => queryModel.compileQuery(query, opts, false).sql
+        opts,
+        (query, o) => queryModel.compileQuery(query, o, false).sql
       );
-    } else {
-      const compiled = queryModel.compileQuery(sd.query, options, false);
-      return compiled.sql;
     }
+    return queryModel.compileQuery(sd.query, opts, false).sql;
   }
 
   /**
@@ -1987,18 +1998,9 @@ export class PreparedQuery extends PipelineBase {
    */
   public getPreparedResult(options?: CompileQueryOptions): PreparedResult {
     const queryModel = this._model.queryModel;
-    // Build the resolved-givens map in two phases:
-    //   1. caller-supplied values (resolveSuppliedGivens)
-    //   2. inline-given defaults eager-evaluated against the map
-    // Result is undefined when no values land — preserves the previous
-    // "no givens path" downstream.
-    const resolved = options?.givens
-      ? resolveSuppliedGivens(options.givens, this._modelDef)
-      : new Map<GivenID, Expr>();
-    evaluateInlineGivens(resolved, this._modelDef);
     const prepareResultOptions: PrepareResultOptions = {
       ...options,
-      resolvedGivens: resolved.size > 0 ? resolved : undefined,
+      resolvedGivens: bindGivens(options?.givens, this._modelDef),
     };
     const translatedQuery = queryModel.compileQuery(
       this._query,

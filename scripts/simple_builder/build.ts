@@ -19,21 +19,23 @@
  *
  *   2. COMPILE — Compile the model to obtain its IR. The manifest is not
  *      passed to the compiler. Manifest substitution happens in step 4,
- *      when calling `source.getSQL({buildManifest, connectionDigests})`.
+ *      when calling `target.buildSQL(manifest.buildManifest)`.
  *
  *   3. PLAN — Call `runtime.getBuildTargets(model)` for the targets to build.
  *      A target is one table: its BuildID, the connection it lives on, and
  *      every source in the model that maps onto it. They arrive grouped by
  *      connection — no dependency ever crosses one, so those groups are
  *      wholly independent builds — and in dependency order within each.
+ *      A source no table can be built for comes back in `unbuildable`
+ *      instead, with the reason; what to do about it is the builder's call.
  *
  *   4. BUILD — Each connection's targets, in the order given. For each:
  *      a. If its BuildID is already in the manifest, `touch()` it (marks it
  *         active for GC, but does not rebuild).
- *      b. Otherwise, get the *build SQL* from `source.getSQL({buildManifest,
- *         connectionDigests})` — this version substitutes already-built
- *         dependencies with their table names — then CREATE TABLE and
- *         `update()` the manifest.
+ *      b. Otherwise, get the *build SQL* from
+ *         `target.buildSQL(manifest.buildManifest)` — this version
+ *         substitutes already-built dependencies with their table names —
+ *         then CREATE TABLE and `update()` the manifest.
  *
  *   5. WRITE — Write `manifest.activeEntries` to disk. Only entries that
  *      were touched or updated in this run are included. Entries from prior
@@ -50,11 +52,11 @@
  *
  *   `manifest.buildManifest` returns a *stable reference*. When you call
  *   `manifest.update(buildId, {tableName})`, the change is immediately
- *   visible to subsequent `source.getSQL({buildManifest, ...})` calls in
- *   the same build run. This is how dependency chains work:
+ *   visible to subsequent `target.buildSQL(manifest.buildManifest)` calls
+ *   in the same build run. This is how dependency chains work:
  *
  *     target A → builds first, manifest.update(A)
- *     target B (depends on A) → getSQL() sees A's table name
+ *     target B (depends on A) → buildSQL() sees A's table name
  *
  *   Without this, B's SQL would contain A's full inline SQL instead of a
  *   table reference, producing a different (and much more expensive) query.
@@ -63,15 +65,13 @@
  *
  *   These are two different SQL strings for the same table:
  *
- *   - **BuildID SQL** — `target.sql`, compiled under `buildIdOptions()`:
- *     fully inlined, no manifest substitution. Its hash (with the connection
- *     digest) is the BuildID. The BuildID must be stable regardless of build
- *     order, so it never includes substituted table names.
- *     `getBuildTargets` has already computed both. A model with virtual
- *     sources needs a `virtualMap` on the Runtime for this to compile, and
- *     the same map in the build SQL below.
+ *   - **BuildID SQL** — `target.sql`: fully inlined, no manifest
+ *     substitution. Its hash (with the connection digest) is the BuildID.
+ *     The BuildID must be stable regardless of build order, so it never
+ *     includes substituted table names. `getBuildTargets` has already
+ *     computed both.
  *
- *   - **Build SQL** — `source.getSQL({buildManifest, connectionDigests})`.
+ *   - **Build SQL** — `target.buildSQL(manifest.buildManifest)`.
  *     Dependencies that are already in the manifest are replaced with
  *     their table names. This is the SQL you actually execute in
  *     CREATE TABLE. It's more efficient because it reads from pre-built
@@ -79,13 +79,29 @@
  *     can compute it, because only the builder knows what it has built so
  *     far.
  *
+ *   Both are compiled under the same given values and `virtualMap` — the
+ *   Runtime's, with whatever `getBuildTargets(model, options)` layers over
+ *   them — so the table that gets built is the one its key describes, and a
+ *   query running under the same values finds it.
+ *
+ * ## Givens
+ *
+ *   A persisted source whose SQL reads a given holds the rows for one value
+ *   of it, and its BuildID says which: a query asking for another value
+ *   computes another key and misses. `target.readsGivens` tells a builder
+ *   that is so. This sample builds under the Runtime's givens and the
+ *   declaration defaults; a builder with several values to build for calls
+ *   `getBuildTargets(model, {givens})` once per set, against one Manifest.
+ *
  * ## Divergences from malloy-cli
  *
  *   This sample differs from the production CLI builder in a few ways:
  *
  *   - **Table naming:** The CLI requires `#@ persist name=...` and errors
  *     if missing. This sample falls back to `persist_<buildId prefix>` for
- *     sources without an explicit name. Use explicit names in production.
+ *     sources without an explicit name, and suffixes the BuildID prefix onto
+ *     the name of a table that `readsGivens`, since one `name=` cannot name
+ *     every variant. Use explicit names in production.
  *
  *   - **Strict mode:** The CLI sets `manifest.strict = true` on new
  *     manifests so that missing entries throw at query time. This sample
@@ -287,9 +303,9 @@ async function runBuild(
   // Compile the model to get its IR. The runtime has no manifest set, so
   // nothing is substituted here — the compiler doesn't need it yet. Manifest
   // substitution happens later, when we call
-  // source.getSQL({buildManifest, connectionDigests}) during the build loop
-  // (step 4). That's where already-built dependencies resolve to table
-  // references instead of inline SQL.
+  // target.buildSQL(manifest.buildManifest) during the build loop (step 4).
+  // That's where already-built dependencies resolve to table references
+  // instead of inline SQL.
   const model = await runtime.getModel(pathToFileURL(modelFile));
 
   // =========================================================
@@ -298,30 +314,35 @@ async function runBuild(
   // This lives on the Runtime rather than the Model because a BuildID is a
   // hash of the SQL *and the connection's digest* — the answer can't be
   // finished without a connection.
-  const {connections, tagParseLog} = await runtime.getBuildTargets(model);
+  const {connections, tagParseLog, unbuildable} =
+    await runtime.getBuildTargets(model);
 
   for (const msg of tagParseLog) {
     const loc = msg.at ? ` (${msg.at.url}:${msg.at.range.start.line + 1})` : '';
     console.warn(`WARNING: ${msg.message}${loc}`);
   }
 
+  // Whether a source with no table fails the run is the builder's call. This
+  // one reports it and builds the rest.
+  for (const {source, problem} of unbuildable) {
+    const at = problem.at;
+    const loc = at ? ` (${at.url}:${at.range.start.line + 1})` : '';
+    console.warn(`SKIPPED ${source.name}: ${problem.message}${loc}`);
+  }
+
   const targetCount = connections.flatMap(c => c.targets).length;
   if (targetCount === 0) {
-    console.log('No #@ persist sources found in model');
+    console.log(
+      unbuildable.length > 0
+        ? 'No tables to build'
+        : 'No #@ persist sources found in model'
+    );
     return;
   }
 
   console.log(
     `Found ${targetCount} table(s) on ${connections.length} connection(s)`
   );
-
-  // The connection digest includes connection-specific settings (database
-  // path, search path, etc.), which is why two users with different connection
-  // configs get different BuildIDs for the same Malloy source. Step 4 hands it
-  // back to the compiler so manifest lookups agree with what was built.
-  const connectionDigests: Record<string, string> = {
-    duckdb: connection.getDigest(),
-  };
 
   const sqlStatements: string[] = [];
   const logEntries: BuildLogEntry[] = [];
@@ -371,15 +392,21 @@ async function runBuild(
       // this run become table references. Because manifest.buildManifest is a
       // stable reference, any manifest.update() from an earlier target is
       // already visible here.
-      const buildSQL = source.getSQL({
-        buildManifest: manifest.buildManifest,
-        connectionDigests,
-      });
+      const buildSQL = target.buildSQL(manifest.buildManifest);
 
+      // A table that holds the rows for one set of given values is one of
+      // possibly many under the same `name=`, so the name alone would have
+      // every variant overwrite the last. The BuildID is what tells them
+      // apart, so it goes in the name.
       const nameProvided = !!explicitName;
+      const idSuffix = target.buildId.substring(0, 12);
       const tableName = canonicalTableName(
         source,
-        explicitName || `persist_${target.buildId.substring(0, 12)}`
+        explicitName === undefined
+          ? `persist_${idSuffix}`
+          : target.readsGivens
+            ? `${explicitName}_${idSuffix}`
+            : explicitName
       );
 
       // NOTE: This sample only generates SQL, it does not execute it. A live
@@ -394,7 +421,7 @@ async function runBuild(
 
       // Update the manifest IMMEDIATELY after building. This is critical:
       // later targets that depend on this one will call
-      // getSQL({buildManifest, ...}) and see this table name instead of
+      // buildSQL(manifest.buildManifest) and see this table name instead of
       // the full inline SQL.
       manifest.update(target.buildId, {tableName});
 

@@ -5,8 +5,10 @@
 
 import {Model} from './core';
 import {mkBuildTargets, resolvePersistWalk} from './build_targets';
-import type {BuildTarget, ConnectionBuild} from './types';
+import type {BuildTarget, BuildTargets, ConnectionBuild} from './types';
 import type {LogMessage} from '../../lang';
+import type {GivenValue} from '../../model';
+import {bindGivens} from '../../model/given_binding';
 import {TestTranslator} from '../../lang/test/test-translator';
 
 const DIGESTS = {
@@ -14,12 +16,16 @@ const DIGESTS = {
   _db2_: 'digest-of-db2',
 };
 
+const GIVENS = ['experimental.givens'];
+
 // A build target is an artifact, not a source, and the difference only shows
 // up once the SQL has been hashed. These tests take the long way — a real
-// translate, a real getSQL() — because hand-built input could not tell the
+// translate, a real compile — because hand-built input could not tell the
 // difference between two sources that share a table and two that don't.
-function modelOf(src: string): Model {
-  const tt = new TestTranslator(`##! experimental.persistence\n${src}`);
+function modelOf(src: string, compilerFlags: string[] = []): Model {
+  const tt = new TestTranslator(`##! experimental.persistence\n${src}`, {
+    compilerFlags,
+  });
   const compiled = tt.translate();
   if (!compiled.modelDef) {
     const problems = (compiled.problems ?? []).map(p => p.message).join('\n');
@@ -28,10 +34,20 @@ function modelOf(src: string): Model {
   return new Model(compiled.modelDef, [], []);
 }
 
-function connectionsOf(src: string): ConnectionBuild[] {
-  const model = modelOf(src);
+/** What a build of `src` would plan, under `givens` if any. */
+function planOf(
+  src: string,
+  opts: {flags?: string[]; givens?: Record<string, GivenValue>} = {}
+): Pick<BuildTargets, 'connections' | 'unbuildable'> {
+  const model = modelOf(src, opts.flags);
   const log: LogMessage[] = [];
-  return mkBuildTargets(resolvePersistWalk(model, log), DIGESTS, {});
+  return mkBuildTargets(resolvePersistWalk(model, log), DIGESTS, {
+    resolvedGivens: bindGivens(opts.givens, model._modelDef),
+  });
+}
+
+function connectionsOf(src: string): ConnectionBuild[] {
+  return planOf(src).connections;
 }
 
 function connectionNamed(
@@ -305,5 +321,207 @@ describe('what a target carries', () => {
     `);
 
     expect(targets).toEqual([]);
+  });
+});
+
+describe('a source whose SQL reads a given', () => {
+  // The table holds the rows for one value of the given, so the value has to
+  // be in the SQL that is hashed. A build that has no value for it cannot say
+  // which table it would be building.
+  const SCOPED = `
+    given: TENANT :: string
+    #@ persist name=scoped
+    source: scoped is _db_.table('aTable') -> {
+      where: astr = $TENANT
+      group_by: astr
+    }
+  `;
+
+  test('with no value in the build it is unbuildable, and the rest is planned', () => {
+    const {connections, unbuildable} = planOf(
+      `
+      ${ROLLUP}
+      ${SCOPED}
+      run: rollup -> { select: * }
+      run: scoped -> { select: * }
+    `,
+      {flags: GIVENS}
+    );
+
+    expect(connections.flatMap(c => c.targets).map(names)).toEqual([
+      ['rollup'],
+    ]);
+    expect(unbuildable.map(u => u.source.name)).toEqual(['scoped']);
+    const [{problem}] = unbuildable;
+    expect(problem.severity).toBe('error');
+    expect(problem.code).toBe('runtime-persist-given-no-value');
+    expect(problem.message).toContain("reads given 'TENANT'");
+    expect(problem.at).toBeDefined();
+  });
+
+  test('what reads it is unbuildable too', () => {
+    // A dependent's SQL inlines it, so has no value for the given either.
+    const {connections, unbuildable} = planOf(
+      `
+      ${SCOPED}
+      #@ persist name=top
+      source: top is scoped -> { group_by: astr }
+      run: top -> { select: * }
+    `,
+      {flags: GIVENS}
+    );
+
+    expect(connections).toEqual([]);
+    expect(unbuildable.map(u => u.source.name)).toEqual(['scoped', 'top']);
+  });
+
+  test('with a value it is a table, and the value is in the SQL', () => {
+    const {connections, unbuildable} = planOf(SCOPED, {
+      flags: GIVENS,
+      givens: {TENANT: 'acme'},
+    });
+
+    expect(unbuildable).toEqual([]);
+    const [target] = connections[0].targets;
+    expect(target.sql).toContain("'acme'");
+    expect(target.readsGivens).toBe(true);
+  });
+
+  test('two values are two tables', () => {
+    const acme = findTarget(
+      planOf(SCOPED, {flags: GIVENS, givens: {TENANT: 'acme'}}).connections,
+      'scoped'
+    );
+    const globex = findTarget(
+      planOf(SCOPED, {flags: GIVENS, givens: {TENANT: 'globex'}}).connections,
+      'scoped'
+    );
+    expect(acme.buildId).not.toBe(globex.buildId);
+  });
+
+  test('a default is a value, and the table still reads the given', () => {
+    const {connections, unbuildable} = planOf(
+      `
+      given: TENANT :: string is "acme"
+      ${SCOPED.replace('given: TENANT :: string', '')}
+    `,
+      {flags: GIVENS}
+    );
+
+    expect(unbuildable).toEqual([]);
+    const [target] = connections[0].targets;
+    expect(target.sql).toContain("'acme'");
+    expect(target.readsGivens).toBe(true);
+  });
+
+  test('a given used only in an extend-block where: is not in the table', () => {
+    // The `where:` is applied by whatever reads the table, so the table holds
+    // every tenant's rows and needs no value to be built.
+    const {connections, unbuildable} = planOf(
+      `
+      given: TENANT :: string
+      ${ROLLUP}
+      source: mine is rollup extend { where: astr = $TENANT }
+      run: mine -> { select: * }
+    `,
+      {flags: GIVENS}
+    );
+
+    expect(unbuildable).toEqual([]);
+    const [target] = connections[0].targets;
+    expect(names(target)).toEqual(['mine', 'rollup']);
+    expect(target.readsGivens).toBe(false);
+  });
+
+  test('a source that reads no given says so', () => {
+    const [target] = targetsOf(ROLLUP);
+    expect(target.readsGivens).toBe(false);
+  });
+});
+
+describe('build SQL', () => {
+  const CHAIN = `
+    ${ROLLUP}
+    #@ persist name=top
+    source: top is rollup -> { group_by: astr }
+    run: top -> { select: * }
+  `;
+
+  test('reads a built dependency from its table', () => {
+    const connections = connectionsOf(CHAIN);
+    const rollup = findTarget(connections, 'rollup');
+    const top = findTarget(connections, 'top');
+
+    const built = top.buildSQL({
+      entries: {[rollup.buildId]: {tableName: 'rollup_table'}},
+    });
+    expect(built).toContain('rollup_table');
+    expect(built).not.toContain('aTable');
+  });
+
+  test('with nothing built yet it is the BuildID SQL', () => {
+    const top = findTarget(connectionsOf(CHAIN), 'top');
+    expect(top.buildSQL({entries: {}})).toBe(top.sql);
+  });
+
+  test("compiles under the build's givens", () => {
+    const {connections} = planOf(
+      `
+      given: TENANT :: string
+      #@ persist name=scoped
+      source: scoped is _db_.table('aTable') -> {
+        where: astr = $TENANT
+        group_by: astr
+      }
+    `,
+      {flags: GIVENS, givens: {TENANT: 'acme'}}
+    );
+    const [target] = connections[0].targets;
+    expect(target.buildSQL({entries: {}})).toContain("'acme'");
+  });
+});
+
+describe('a persisted source imported with its given under another name', () => {
+  test('the report uses the name this model supplies it by', () => {
+    const tt = new TestTranslator(
+      `##! experimental.persistence
+       import { scoped, T is TENANT } from "child"`,
+      {compilerFlags: GIVENS}
+    );
+    tt.unresolved();
+    tt.update({
+      urls: {
+        'internal://test/langtests/child': `
+          ##! experimental { givens persistence }
+          given: TENANT :: string
+          #@ persist name=scoped
+          source: scoped is _db_.table('aTable') -> {
+            where: astr = $TENANT
+            group_by: astr
+          }
+        `,
+      },
+    });
+    const compiled = tt.translate();
+    if (!compiled.modelDef) {
+      const problems = (compiled.problems ?? []).map(p => p.message);
+      throw new Error(`did not translate:\n${problems.join('\n')}`);
+    }
+    const model = new Model(compiled.modelDef, [], []);
+    const {unbuildable} = mkBuildTargets(
+      resolvePersistWalk(model, []),
+      DIGESTS,
+      {}
+    );
+    expect(unbuildable.map(u => u.problem.message)).toEqual([
+      expect.stringContaining("reads given 'T'"),
+    ]);
+
+    const {connections} = mkBuildTargets(
+      resolvePersistWalk(model, []),
+      DIGESTS,
+      {resolvedGivens: bindGivens({T: 'acme'}, compiled.modelDef)}
+    );
+    expect(connections[0].targets[0].sql).toContain("'acme'");
   });
 });

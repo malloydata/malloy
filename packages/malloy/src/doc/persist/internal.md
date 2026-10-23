@@ -235,30 +235,44 @@ the first one to arrive.
 
 ## Build targets
 
-`Runtime.getBuildTargets(model)` in
+`Runtime.getBuildTargets(model, options?)` in
 [`api/foundation/runtime.ts`](../../api/foundation/runtime.ts) is what a builder
 consumes. `Model._walkPersistSources()` supplies the stream — every named source
-and query plus the unnamed queries, as one walk — and `mkBuildTargets(nodes,
-model, connectionDigests)` in
+and query plus the unnamed queries, as one walk — and `mkBuildTargets(walk,
+connectionDigests, buildIdOpts)` in
 [`api/foundation/build_targets.ts`](../../api/foundation/build_targets.ts) folds
 it. That split is where the async/sync boundary falls: fetching a digest per
-connection is async, the fold is not, so the Runtime materializes the walk,
-collects the digests it names, and hands both to the fold.
+connection is async, and so is resolving the Runtime's givens; the fold is not.
+So the Runtime materializes the walk, collects the digests it names, binds the
+build's givens (`_givensFor` for the three-layer merge, `bindGivens` for the
+`Map<GivenID, Expr>`), and hands all of it to the fold as the `BuildIdOptions`
+every source is compiled under.
 
 The walk emits *sources*, and several can share one table. One pass merges
 them, because the walk is in dependency order:
 
-1. a persistent source gets `getSQL()` and a BuildID, and joins the target keyed
-   `(connectionName, buildId)` — creating it if new, appending to
-   `target.sources` if not;
+1. a persistent source is compiled under `buildIdOpts` to its BuildID SQL and a
+   BuildID, and joins the target keyed `(connectionName, buildId)` — creating
+   it if new, appending to `target.sources` if not;
 2. its children's target keys are already known, so its edges are written
    immediately — minus any that landed on its own key (an extension depending
    on its base is one table, not a dependency), and intersected with what the
    other sources on this target recorded (see the cycle note below);
-3. a route contributes its children's keys upward instead of a key of its own;
+3. a route contributes its children's keys upward instead of a key of its own,
+   and so does a persistent source no BuildID can be computed for: one whose
+   SQL reads a given with no value in the build (checked before compiling, from
+   `givenUsageOfRelation`, so the report can name the given) or whose compile
+   throws a `MalloyCompileError` (a virtual source with no `virtualMap` entry).
+   It goes to `unbuildable` instead of a target; its dependents inline its SQL,
+   so they land there too. Any other error is the compiler's own and propagates;
 4. finally `place()` emits each target after everything it depends on — a
    depth-first post-order walk of the target graph — filing it under its
    connection.
+
+Each target closes over `buildIdOpts` and the digests, so `target.buildSQL(
+manifest)` compiles under exactly what keyed it, plus the manifest; the builder
+cannot hand the build SQL a different `virtualMap` or different givens from the
+key's. `target.readsGivens` is `givenUsageOfRelation(source)` being non-empty.
 
 The merge key is connection *and* BuildID. The digest inside a BuildID already
 makes those equivalent; the pair does not rely on that staying true.
@@ -364,14 +378,18 @@ when the source is `persistent` and both `buildManifest` and
 `sql` is compiled under `buildIdOptions()`, which returns a `BuildIdOptions` —
 a type narrow enough that it cannot carry a manifest, so the BuildID cannot
 depend on what is already materialized. It keeps `virtualMap`, which decides
-what table a virtual source reads. It drops `resolvedGivens`, which also
-changes the SQL but which only the compiler can produce; resolving on one side
-only makes the keys disagree, so neither side resolves givens (see #3041).
-`mkBuildTargets` takes the same type. A hit returns `entry.tableName` unquoted; manifest names are
+what table a virtual source reads, and `resolvedGivens`, the value of every
+given the SQL reads. Both change the SQL, and both sides produce them the same
+way — the givens through `bindGivens`, from the query's merged supply or the
+build's — so equal values give one key and a different value gives another: a
+query under values a table was not built for misses it. `mkBuildTargets` takes
+the same type. A hit returns `entry.tableName` unquoted; manifest names are
 canonical. A miss under `strict` throws `runtime-manifest-strict-miss` at the
-source's location, appending `loadError` if present. It names the source's
-`sourceID` when there is one; a reference through an inline `extend` has had
-that deleted, so there the error carries only a BuildID and a location.
+source's location, appending `loadError` if present, and saying so when the
+source reads givens, since the likeliest cause is then a value no table was
+built for. It names the source's `sourceID` when there is one; a reference
+through an inline `extend` has had that deleted, so there the error carries
+only a BuildID and a location.
 
 Two callers:
 
@@ -388,8 +406,8 @@ Two callers:
 `QueryQueryRaw` does not look up. Its source is the `conn.sql(...)` at the run
 site, which is unnamed and so never persistent.
 
-`PersistSource.getSQL()` compiles with `finalize=false` for the same reason the
-options are narrowed. On a dialect with a final stage (Postgres wraps in
+`PersistSource._compileSQL()`, behind both `target.sql` and `target.buildSQL()`,
+compiles with `finalize=false` for the same reason the options are narrowed. On a dialect with a final stage (Postgres wraps in
 `row_to_json`) a finalized SQL would hash differently from what
 `persistedTableFor` recomputes at serve time, and the table would be
 materialized under a key nothing ever looks up.
@@ -433,9 +451,12 @@ what replaced them.
 |---|---|---|
 | `BuildID` | `model/malloy_types.ts` | Manifest key: hash of connection digest and SQL |
 | `BuildManifest` | `model/malloy_types.ts` | `BuildID` → table name, plus `strict` |
-| `BuildTarget` | `api/foundation/types.ts` | One table, and every source that maps onto it |
+| `BuildTarget` | `api/foundation/types.ts` | One table, and every source that maps onto it; `buildSQL()`, `readsGivens` |
+| `BuildTargetOptions` | `api/foundation/types.ts` | A build's givens and `virtualMap`, over the Runtime's |
+| `UnbuildableSource` | `api/foundation/types.ts` | A persist source with no BuildID, and why |
 | `ConnectionBuild` | `api/foundation/types.ts` | One connection's targets, in dependency order |
 | `BuildTargets` | `api/foundation/types.ts` | What `getBuildTargets` returns |
+| `BuildIdOptions` | `model/sql_compiled.ts` | What a BuildID's SQL is compiled under: `virtualMap`, `resolvedGivens` |
 | `PersistNode` | `model/persist_utils.ts` | One source the walk yields |
 | `PersistWalk` | `model/persist_utils.ts` | The generator's type |
 | `ResolvedNode` | `api/foundation/build_targets.ts` | A `PersistNode` with its `PersistSource` |
@@ -449,14 +470,17 @@ what replaced them.
 | Name | File | What |
 |---|---|---|
 | `Manifest` | `api/foundation/config.ts` | Load, touch, update, `activeEntries` |
-| `PersistSource` | `api/foundation/core.ts` | A persist source: `getSQL`, `makeBuildId`, `location`, annotations |
+| `PersistSource` | `api/foundation/core.ts` | A persist source: identity, `location`, annotations; `getSQL`/`makeBuildId` *deprecated* for the target's |
 
 ### Functions
 
 | Name | File | What |
 |---|---|---|
 | `Runtime.getBuildTargets` | `api/foundation/runtime.ts` | The builder entry point |
-| `mkBuildTargets` | `api/foundation/build_targets.ts` | Folds the walk into targets |
+| `Runtime._givensFor` | `api/foundation/runtime.ts` | File → constructor → per-call merge, refusing a finalized name; queries and builds both |
+| `bindGivens` | `model/given_binding.ts` | Supplied values plus inline folds, as `resolvedGivens`; queries and builds both |
+| `givenUsageOfRelation` | `model/sql_compiled.ts` | The givens a persisted source's SQL reads |
+| `mkBuildTargets` | `api/foundation/build_targets.ts` | Folds the walk into targets and `unbuildable` |
 | `resolvePersistWalk` | `api/foundation/build_targets.ts` | Walks and resolves each node's source |
 | `walkPersistentDependencies` | `model/persist_utils.ts` | The generator; the six paths live here |
 | `Model._walkPersistSources` | `api/foundation/core.ts` | The walk over a whole model |

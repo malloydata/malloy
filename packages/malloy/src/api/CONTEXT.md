@@ -261,7 +261,7 @@ API-level documentation lives in the JSDoc on `ModelMaterializer.loadRestrictedQ
 
 `getPreparedResult()` / `getSQL()` / `run()` still throw `MalloyError` on failure; the thrown `.problems` is the same array. A `validate()` followed by a no-options consumer reuses one cached compile via `QueryMaterializer._compileAttempt`.
 
-SQL-compile errors that are user-actionable throw `MalloyCompileError` (`packages/malloy/src/model/malloy_compile_error.ts`) at the throw site, carrying `{message, code, at?}`. The materializer's `_compileAndCollect` helper translates it to a `LogMessage`. Invariant violations stay as bare `Error` and surface with `code: 'compiler-bug'`.
+SQL-compile errors that are user-actionable throw `MalloyCompileError` (`packages/malloy/src/model/malloy_compile_error.ts`) at the throw site, carrying `{message, code, at?}`. The materializer's `_compileAndCollect` helper translates it to a `LogMessage`, and `mkBuildTargets` does the same per persist source, reporting the source in `BuildTargets.unbuildable`. Invariant violations stay as bare `Error` and surface with `code: 'compiler-bug'`.
 
 API-level documentation lives in the JSDoc on the two `validate` methods.
 

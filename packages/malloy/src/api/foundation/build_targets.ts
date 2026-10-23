@@ -3,11 +3,23 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {BuildIdOptions, SourceID} from '../../model';
+import type {
+  BuildIdOptions,
+  BuildManifest,
+  GivenUsageEntry,
+  SourceID,
+} from '../../model';
+import {givenUsageOfRelation, MalloyCompileError} from '../../model';
+import {lookupGivenValue} from '../../model/given_binding';
 import type {LogMessage} from '../../lang';
 import type {PersistNode} from '../../model/persist_utils';
 import type {Model, PersistSource} from './core';
-import type {BuildTarget, ConnectionBuild} from './types';
+import type {
+  BuildTarget,
+  BuildTargets,
+  ConnectionBuild,
+  UnbuildableSource,
+} from './types';
 
 /**
  * Read a key this function's own construction guarantees is present.
@@ -61,6 +73,71 @@ export function resolvePersistWalk(
 }
 
 /**
+ * The report for a given the source's SQL reads and this build has no value
+ * for. Found before compiling, from the IR's record of what the SQL reads, so
+ * it can name the given and say what a build does about it; the compiler's
+ * own error for the same fact tells the reader to supply the value to a query.
+ *
+ * The advice is always followable: the translator refuses a model that holds
+ * a persisted source reading a given the model cannot surface, so the given is
+ * in this model's namespace, under the name used here.
+ */
+function unvaluedGivenProblem(
+  source: PersistSource,
+  use: GivenUsageEntry
+): LogMessage {
+  const modelDef = source._model._modelDef;
+  const surfaced = Object.entries(modelDef.contents).find(
+    ([, entry]) => entry.type === 'given' && entry.id === use.id
+  );
+  const name = surfaced?.[0] ?? modelDef.givens?.[use.id]?.name ?? use.id;
+  return {
+    severity: 'error',
+    code: 'runtime-persist-given-no-value',
+    at: use.at ?? source.location,
+    message:
+      `Persisted source '${source.sourceID}' reads given '${name}', which ` +
+      'has no value in this build and no default. A persisted table holds ' +
+      `the rows for one set of given values: supply '${name}' to the build, ` +
+      'or give it a default at its declaration.',
+  };
+}
+
+/**
+ * The SQL that keys `source`'s table, with whether it reads a given, or the
+ * problem that stops a BuildID from being computed.
+ *
+ * Only a `MalloyCompileError` is a fact about the source. Anything else is
+ * the compiler's own failure and must not pass for one.
+ */
+function buildIdSQL(
+  source: PersistSource,
+  opts: BuildIdOptions
+): {sql: string; readsGivens: boolean} | {problem: LogMessage} {
+  const reads = givenUsageOfRelation(source._sourceDef);
+  const givens = source._model._modelDef.givens;
+  const unvalued = reads.find(
+    use => lookupGivenValue(opts.resolvedGivens, givens, use.id) === undefined
+  );
+  if (unvalued !== undefined) {
+    return {problem: unvaluedGivenProblem(source, unvalued)};
+  }
+  try {
+    return {sql: source._compileSQL(opts), readsGivens: reads.length > 0};
+  } catch (e) {
+    if (!(e instanceof MalloyCompileError)) throw e;
+    return {
+      problem: {
+        message: e.message,
+        severity: 'error',
+        code: e.code,
+        at: e.at ?? source.location,
+      },
+    };
+  }
+}
+
+/**
  * A target under construction. `dependsOn` is held as keys until every target
  * exists, then rewritten as references.
  */
@@ -68,6 +145,7 @@ interface PartialTarget {
   buildId: string;
   connectionName: string;
   sql: string;
+  readsGivens: boolean;
   sources: PersistSource[];
   dependsOn: Set<string>;
 }
@@ -112,16 +190,17 @@ function addUnique(into: string[], seen: Set<string>, keys: string[]): void {
  * @param walk A resolved walk from {@link resolvePersistWalk}, in order
  * @param connectionDigests One digest per connection named by a persist source
  * @param buildIdOpts What the BuildID's SQL is compiled under. The compiler
- *   recomputes the same key at serve time through `buildIdOptions()`; supply a
- *   different `virtualMap` here and the table is built under a key nothing
- *   looks up.
+ *   recomputes the same key at serve time through `buildIdOptions()`, and
+ *   `BuildTarget.buildSQL` compiles under the same options, so a table is
+ *   always built under the key that describes it.
  */
 export function mkBuildTargets(
   walk: ResolvedNode[],
   connectionDigests: Record<string, string>,
   buildIdOpts: BuildIdOptions
-): ConnectionBuild[] {
+): Pick<BuildTargets, 'connections' | 'unbuildable'> {
   const targets = new Map<string, PartialTarget>();
+  const unbuildable: UnbuildableSource[] = [];
   // What each source hands to whoever referenced it: its own target if it is
   // one, otherwise whatever it was a route to.
   const contributes = new Map<SourceID, string[]>();
@@ -150,7 +229,15 @@ export function mkBuildTargets(
       );
     }
 
-    const sql = source.getSQL(buildIdOpts);
+    const keyed = buildIdSQL(source, buildIdOpts);
+    if ('problem' in keyed) {
+      // Not a table either. Whatever reads it inlines its SQL, so cannot
+      // compute a key of its own and will land here too.
+      unbuildable.push({source, problem: keyed.problem});
+      contributes.set(node.sourceID, childKeys);
+      continue;
+    }
+    const {sql, readsGivens} = keyed;
     const buildId = source.makeBuildId(digest, sql);
     const key = targetKey(connectionName, buildId);
 
@@ -160,6 +247,7 @@ export function mkBuildTargets(
         buildId,
         connectionName,
         sql,
+        readsGivens,
         sources: [],
         dependsOn: new Set<string>(),
       };
@@ -209,10 +297,20 @@ export function mkBuildTargets(
   // point both ways round a diamond.
   const built = new Map<string, BuildTarget>();
   for (const [key, partial] of targets) {
+    // Every source on a target compiles to the same SQL, so any of them can
+    // produce the build SQL; the manifest is the only thing the builder adds.
+    const [source] = partial.sources;
     built.set(key, {
       buildId: partial.buildId,
       connectionName: partial.connectionName,
       sql: partial.sql,
+      buildSQL: (manifest: BuildManifest) =>
+        source._compileSQL({
+          ...buildIdOpts,
+          buildManifest: manifest,
+          connectionDigests,
+        }),
+      readsGivens: partial.readsGivens,
       sources: partial.sources,
       dependsOn: [],
     });
@@ -266,5 +364,5 @@ export function mkBuildTargets(
   for (const [connectionName, connectionTargets] of byConnection) {
     connections.push({connectionName, targets: connectionTargets});
   }
-  return connections;
+  return {connections, unbuildable};
 }

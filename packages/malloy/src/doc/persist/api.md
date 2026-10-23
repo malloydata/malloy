@@ -161,6 +161,10 @@ the new value rather than a stale soft miss.
   explicitly-passed non-empty manifest throws
   (`runtime-manifest-needs-persistence-flag`), because the caller clearly meant
   it. A manifest that merely came from config is silently ignored.
+- **A query under given values the table was not built for** — a miss, like
+  any other. A persisted source whose SQL reads a `given:` has a table per
+  value (see [Givens](#givens)); a query supplying a different value computes
+  a different BuildID, and so runs inline, or throws under `strict`.
 
 ### Strict mode
 
@@ -197,7 +201,8 @@ this section.
 
 ```typescript
 const model = await runtime.loadModel(modelURL).getModel();
-const {connections, tagParseLog} = await runtime.getBuildTargets(model);
+const {connections, tagParseLog, unbuildable} =
+  await runtime.getBuildTargets(model);
 // throws without ##! experimental.persistence
 ```
 
@@ -208,6 +213,8 @@ A **target** is one table:
 | `buildId` | The manifest key: a hash of `sql` and the connection's digest |
 | `connectionName` | Where it gets built |
 | `sql` | The BuildID SQL — fully inlined, already hashed. Not the SQL you execute |
+| `buildSQL(manifest)` | The SQL you execute: dependencies in `manifest` are read from their tables |
+| `readsGivens` | Whether the table holds the rows for particular given values |
 | `dependsOn` | The targets that must exist first |
 | `sources` | Every persist source in the model that maps onto this table |
 
@@ -226,9 +233,51 @@ batching by depth would. `ConnectionBuild` in `types.ts` carries both loops.
 malformed annotation is a build problem.
 
 It compiles every persist source in the model, because a BuildID is a hash of
-SQL. One whose dialect cannot express it throws — from the dialect, with its
-own message — and takes the whole call rather than reporting one unbuildable
-target among many.
+SQL. A source whose SQL cannot be written — it reads a `given:` the build has
+no value for, a virtual source the build's `virtualMap` has no entry for, or
+anything else the compiler reports as a problem with the source — is not a
+target. It comes back in `unbuildable` with the problem, and so does every
+source that reads it, since that source's SQL inlines it. The rest of the model
+is planned as usual. Report them; whether an unbuildable source fails the build
+is the builder's call. A failure inside the compiler itself still throws.
+
+### Givens
+
+A persisted source whose SQL reads a `given:` holds the rows for one value of
+it, and its BuildID says which. Both the build and a query compile the key's
+SQL under the given values in effect — the query's, or the build's — so a query
+running under the values a table was built with finds it, and one running under
+other values misses and runs inline, or throws under `strict`.
+
+A build runs under the Runtime's givens (the config givens file and the
+constructor's `givens`), with the declaration defaults beneath them, and
+whatever `getBuildTargets(model, {givens})` layers on top, the way a query's
+`.run({givens})` does. A finalized given is refused there the same way. One
+table per value means one call per value:
+
+```typescript
+for (const tenant of tenants) {
+  const {connections} = await runtime.getBuildTargets(model, {
+    givens: {TENANT: tenant},
+  });
+  // build each connection's targets against the one Manifest
+}
+```
+
+A source that reads a given with no default and no value in the build is
+`unbuildable`, with `runtime-persist-given-no-value`, which names the given.
+That given is always one this model can supply: importing a persisted source
+whose SQL reads a given the importer does not surface, and that has no
+default, is a translate error (`unsatisfied-given-in-persist-source`), since no
+build or query from the importer could ever use it. Import the given by name
+alongside the source.
+
+`target.readsGivens` says the table is one such variant. It is what a builder
+needs to name tables correctly: `name=` is one name for what may be several
+tables, so a builder either refuses it on a target that reads givens or works
+the BuildID into the name. A given used only in a `where:` added by `extend`
+is outside the persisted relation — the table holds every row and each query
+reads its own slice — so it neither splits the table nor sets `readsGivens`.
 
 **One table, several sources** is the normal case, not an edge case —
 `#@ persist` is inherited and `extend` does not change the SQL a source
@@ -257,35 +306,34 @@ From `target.sources[]`, or `plan.sources[sourceID]`:
 |---|---|
 | `name`, `sourceID` | The source's name, and its stable `"name@modelURL"` identity |
 | `connectionName`, `dialectName`, `dialect` | Where and how it will be built |
+| `location` | Where it was declared, to report a build problem against |
 | `annotations`, `modelAnnotations` | `annotations.parseAsTag('@')` reads the builder's own `#@` properties |
-| `getSQL(options?)` | The SQL for this source |
-| `makeBuildId(connectionDigest, sql)` | The cache key |
 
 `tagParse()`, `getTaglines()`, and `annotation` are deprecated in favor of
-`annotations`.
+`annotations`. `getSQL()` and `makeBuildId()` are deprecated in favor of the
+target's `sql`, `buildId`, and `buildSQL()`: they compile under whatever the
+caller passes, so they can disagree with the key the build computed, and the
+target's cannot.
 
 ### Two SQLs, and why
 
-`getSQL()` answers differently depending on whether it is given a manifest, and
-a builder needs both answers:
+A target carries two SQL strings for one table, and a builder needs both:
 
-- **BuildID SQL** — `target.sql`, already computed for you. Fully inlined, no
-  substitution. This is what gets hashed. Because it never mentions a
-  materialized table, the BuildID is the same no matter what has been built
-  already, so build order cannot change a cache key.
-- **Build SQL** — `getSQL({buildManifest, connectionDigests})`. Dependencies
-  already in the manifest are replaced by their table names. This is what you
-  execute: it reads from the tables you just built instead of recomputing them
-  inline.
+- **BuildID SQL** — `target.sql`. Fully inlined, no substitution. This is what
+  gets hashed. Because it never mentions a materialized table, the BuildID is
+  the same no matter what has been built already, so build order cannot change
+  a cache key.
+- **Build SQL** — `target.buildSQL(manifest)`. Dependencies already in the
+  manifest are replaced by their table names. This is what you execute: it
+  reads from the tables you just built instead of recomputing them inline.
 
-`virtualMap` belongs in the build SQL too. `getBuildTargets` takes the
-Runtime's for the BuildID; omit it in step 4 and a virtual-backed source throws
-`runtime-virtual-map-missing`, and pass a *different* one and you build a table
-from the wrong data under a key that looks right.
+Both are compiled under the same given values and `virtualMap`, the build's,
+so the table that gets built is the one its key describes. The manifest is the
+only thing the builder adds.
 
-`getSQL()` compiles with `finalize=false`, so what comes back is the bare
-source `SELECT`. The build-time key must equal the key the compiler recomputes
-at serve time; on a dialect with a final stage (Postgres) a finalized SQL would
+Both compile with `finalize=false`, so what comes back is the bare source
+`SELECT`. The build-time key must equal the key the compiler recomputes at
+serve time; on a dialect with a final stage (Postgres) a finalized SQL would
 diverge from it and the table would be materialized under a key nothing ever
 looks up.
 
@@ -309,8 +357,8 @@ Two properties carry the weight:
 
 `buildManifest` is a **stable reference** — `loadText()` and `update()` mutate
 the same object. That is what makes a dependency chain work inside one build
-run: `update()` a source and the very next `getSQL({buildManifest, …})` sees its
-table name instead of its inline SQL. It also means a Runtime handed this
+run: `update()` a target and the very next `buildSQL(manifest.buildManifest)`
+sees its table name instead of its inline SQL. It also means a Runtime handed this
 reference always sees current data without reassignment.
 
 `activeEntries` is **how garbage collection works**. Write it, not
@@ -322,16 +370,14 @@ referenced are pruned. A separate pass can then drop the orphaned tables.
 1. **Load** the existing manifest, if any, with `Manifest.loadText()`.
 2. **Compile** the model. Do not pass the manifest here; substitution happens
    in step 4.
-3. **Plan** with `runtime.getBuildTargets(model)`, and cache one
-   `connection.getDigest()` per connection name for step 4.
+3. **Plan** with `runtime.getBuildTargets(model)`, or
+   `getBuildTargets(model, {givens, virtualMap})` to build under values other
+   than the Runtime's. Report `unbuildable` as you see fit.
 4. **Build** each connection's targets in the order given. Per target: if the
    manifest already has `target.buildId`, `touch()` and move on; otherwise
-   `CREATE TABLE` from
-   `source.getSQL({buildManifest, connectionDigests, virtualMap})` — any of
-   `target.sources` will do, they share the SQL — and `update()` the manifest
-   immediately, so whatever depends on it sees the table. Pass the same
-   `virtualMap` the queries will run under; omit it only if the model has no
-   virtual sources.
+   `CREATE TABLE` from `target.buildSQL(manifest.buildManifest)` and
+   `update()` the manifest immediately, so whatever depends on it sees the
+   table.
 5. **Write** `manifest.activeEntries`.
 
 Over several model files, keep one `Manifest` for the whole run. `touch()` and
@@ -357,6 +403,9 @@ BuildID hashes SQL, editing `name=` alone leaves the BuildID unchanged: the
 existing entry still matches, gets touched, and keeps its old table name. A
 rename takes effect the next time the source's SQL changes, or when you force a
 rebuild.
+
+A target that `readsGivens` is one of possibly several tables under one
+`name=`; see [Givens](#givens).
 
 ### Freshness is yours
 

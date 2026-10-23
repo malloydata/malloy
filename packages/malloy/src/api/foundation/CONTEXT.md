@@ -190,7 +190,7 @@ A subtlety: `configURL` doesn't have to be where the config text actually came f
 - *Phase 1 (translator)*: `$NAME` → `GivenID`, scoped to the current file's visible givens. Bakes the id into the `givenRef` node. Sites: `lang/ast/expressions/expr-given.ts`, `lang/ast/statements/define-given.ts`.
 - *Phase 2 (compiler)*: `GivenID` → bound value. Lookup by id in `prepareResultOptions.resolvedGivens`; fall back to the declaration's default; throw if neither. Sites: `model/expression_compiler.ts:case 'given'`, `generateGivenFragment`.
 
-The `resolvedGivens` map is built **at the foundation boundary** (`PreparedQuery.getPreparedResult`), not inside the compiler. The compiler trusts it.
+The `resolvedGivens` map is built **at the foundation boundary**, not inside the compiler, and by one function: `bindGivens` in `model/given_binding.ts` resolves the supplied values and folds every `inline` given's default against them. `PreparedQuery.getPreparedResult` calls it for a query and `Runtime.getBuildTargets` for a persistence build, so a persisted table's BuildID — a hash of SQL compiled under those values — is the key a query recomputes under the same values. The compiler trusts the map.
 
 **Foundation-layer pieces a reader needs to find:**
 
@@ -199,8 +199,9 @@ The `resolvedGivens` map is built **at the foundation boundary** (`PreparedQuery
 - **`Runtime.getGivens()`** — async, returns the merged file+constructor view; constructor wins per-key. The honest "what does this runtime supply?" surface.
 - **`Runtime._resolveGivens()`** — lazy + cached file read of `config.givensURL`. Stricter error policy than `_resolveBuildManifest`: missing file or malformed JSON throws on the first compile, with the URL in the message. `Runtime._invalidateGivensCache()` clears the cached promise (file-watching hosts; tests).
 - **`Runtime._withRuntimeContext(model)`** — re-wraps a Model returned from `Malloy.compile()` with this runtime's `RuntimeContext` (currently `{finalizedGivens?}`). The wart-as-bridge between `Malloy.compile` (runtime-unaware) and the runtime-aware `Model.givens` filtering. New runtime-aware concerns add fields to `RuntimeContext` rather than parallel `_with*` methods.
-- **`QueryMaterializer.loadPreparedResult`** — does the three-layer per-key merge (file → constructor → per-query, higher wins), then per-query rejection for finalized names + query-scoped sanity validation. Explicit `undefined` values are rejected at the boundary (in `Runtime` constructor and `resolveSuppliedGivens`).
-- **`PreparedQuery.getPreparedResult`** — calls `resolveSuppliedGivens(options.givens, this._modelDef)` to convert JS values into `Map<GivenID, Expr>` before handing to `compileQuery`. The compiler trusts the resolved map.
+- **`Runtime._givensFor(perCall)`** — the three-layer per-key merge (file → constructor → per-call, higher wins), after refusing a per-call value for a finalized name. `QueryMaterializer.loadPreparedResult` calls it with the query's `givens` and then runs the query-scoped sanity validation; `Runtime.getBuildTargets` calls it with the build's. Explicit `undefined` values are rejected at the boundary (in `Runtime` constructor and `resolveSuppliedGivens`).
+- **`PreparedQuery.getPreparedResult`** — calls `bindGivens(options.givens, this._modelDef)` to convert JS values into `Map<GivenID, Expr>` before handing to `compileQuery`. The compiler trusts the resolved map.
+- **`Runtime.getBuildTargets(model, {givens?, virtualMap?})`** — a persistence build's supply path, layered over the Runtime's the same way. A persist source whose SQL reads a given with no value in the build is reported in `BuildTargets.unbuildable` rather than thrown; `BuildTarget.readsGivens` tells a builder the table is one value's variant.
 
 `Model` carries an optional `runtimeContext?: RuntimeContext` constructor parameter. The "Model wears two hats" abstraction violation (compiler artifact + host-facing inspection) is acknowledged as a future structural cleanup; today the `_withRuntimeContext` re-wrap pattern is the tactical bridge.
 

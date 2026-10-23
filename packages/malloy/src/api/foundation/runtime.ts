@@ -17,6 +17,7 @@ import type {
   VirtualMap,
 } from '../../model';
 import {isSourceDef, mkSafeRecord, MalloyCompileError} from '../../model';
+import {bindGivens} from '../../model/given_binding';
 import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
 import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
@@ -32,6 +33,7 @@ import type {
   CompileOptions,
   CompileQueryOptions,
   BuildTargets,
+  BuildTargetOptions,
 } from './types';
 import {mkBuildTargets, resolvePersistWalk} from './build_targets';
 import type {PreparedResult, Explore} from './core';
@@ -249,6 +251,40 @@ export class Runtime {
     }
     for (const [k, v] of this._constructorGivensMap) merged.set(k, v);
     return merged;
+  }
+
+  /**
+   * The given values one compile runs under: the config file's, then the
+   * constructor's, then `perCall`, each winning per key over the one before.
+   * Undefined when no layer supplies anything.
+   *
+   * A per-call value for a finalized given is refused before anything else
+   * happens: finalizing means the Runtime decides, and that holds for a build
+   * as it does for a query.
+   *
+   * @internal Accessed from QueryMaterializer and getBuildTargets.
+   */
+  public async _givensFor(
+    perCall: Record<string, GivenValue> | undefined
+  ): Promise<Record<string, GivenValue> | undefined> {
+    if (this._finalizedGivensSet.size > 0 && perCall) {
+      for (const name of Object.keys(perCall)) {
+        if (this._finalizedGivensSet.has(name)) {
+          throw new MalloyCompileError(
+            `Cannot supply given '${name}' per call: it is finalized at ` +
+              'the runtime layer via `config.finalizeGivens`.',
+            'runtime-given-finalized',
+            undefined
+          );
+        }
+      }
+    }
+    const fileGivens = await this._resolveGivens();
+    const constructorGivens = mapToRecord(this._constructorGivensMap);
+    const haveAny = fileGivens || constructorGivens || perCall;
+    return haveAny
+      ? {...fileGivens, ...constructorGivens, ...perCall}
+      : undefined;
   }
 
   /**
@@ -660,10 +696,20 @@ export class Runtime {
    * in dependency order and each carries its own `dependsOn`. See
    * {@link BuildTargets}.
    *
+   * The build compiles under this Runtime's givens and `virtualMap`, with
+   * `options` layered over them, exactly as a query would; a persisted table
+   * is therefore found by the queries that run under the same values. A
+   * source whose SQL needs a value this build does not have is reported in
+   * `unbuildable`, not thrown.
+   *
    * @param model A compiled model with `##! experimental.persistence`
+   * @param options Given values and a `virtualMap` for this build
    * @return The targets to build, with any annotation parse messages
    */
-  public async getBuildTargets(model: Model): Promise<BuildTargets> {
+  public async getBuildTargets(
+    model: Model,
+    options?: BuildTargetOptions
+  ): Promise<BuildTargets> {
     const tagParseLog: LogMessage[] = [];
     const walk = resolvePersistWalk(model, tagParseLog);
 
@@ -678,12 +724,12 @@ export class Runtime {
       }
     }
 
-    return {
-      connections: mkBuildTargets(walk, connectionDigests, {
-        virtualMap: this.virtualMap,
-      }),
-      tagParseLog,
-    };
+    const givens = await this._givensFor(options?.givens);
+    const {connections, unbuildable} = mkBuildTargets(walk, connectionDigests, {
+      virtualMap: options?.virtualMap ?? this.virtualMap,
+      resolvedGivens: bindGivens(givens, model._modelDef),
+    });
+    return {connections, tagParseLog, unbuildable};
   }
 }
 
@@ -1401,36 +1447,8 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
 
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
 
-      // Per-query supply for a finalized given is rejected at API entry
-      // — the finalized-givens set is the runtime's "this can't be
-      // overridden by the caller" guarantee. Fail before any IO so misuse
-      // is loud.
+      const mergedGivens = await this.runtime._givensFor(mergedOptions.givens);
       const finalizedSet = this.runtime._finalizedGivens;
-      if (finalizedSet.size > 0 && mergedOptions.givens) {
-        for (const name of Object.keys(mergedOptions.givens)) {
-          if (finalizedSet.has(name)) {
-            throw new MalloyCompileError(
-              `Cannot supply given '${name}' per-query: it is finalized at ` +
-                'the runtime layer via `config.finalizeGivens`.',
-              'runtime-given-finalized',
-              undefined
-            );
-          }
-        }
-      }
-
-      // Three layers of givens, merged per-key in precedence order:
-      //   1. config.givensURL file (lazy + cached)
-      //   2. Runtime constructor `givens:` option
-      //   3. Per-query supply via `.run({givens: ...})`
-      // Higher-numbered layers win on collision. Each layer is optional;
-      // the merge collapses to undefined when all three are absent.
-      const fileGivens = await this.runtime._resolveGivens();
-      const constructorGivens = mapToRecord(this.runtime._constructorGivens);
-      const haveAny = fileGivens || constructorGivens || mergedOptions.givens;
-      const mergedGivens = haveAny
-        ? {...fileGivens, ...constructorGivens, ...mergedOptions.givens}
-        : undefined;
 
       // Query-scoped validation: of the givens THIS query references,
       // any that are finalized must have a value somewhere (file or

@@ -318,6 +318,7 @@ type MessageParameterTypes = {
   'export-name-not-exportable': string;
   'duplicate-export-name': string;
   'unsatisfied-given-in-query': string;
+  'unsatisfied-given-in-persist-source': string;
   'given-alias-collision': string;
   'failed-to-compute-output-schema': string;
   'invalid-timeframe-for-time-offset': string;
