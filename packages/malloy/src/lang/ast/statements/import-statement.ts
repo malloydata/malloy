@@ -13,7 +13,11 @@ import {
   isSourceRegistryReference,
   safeRecordGet,
 } from '../../../model/malloy_types';
-import {dialectOfEntry, registerSource} from '../../../model/source_def_utils';
+import {
+  dialectOfEntry,
+  registerSource,
+  resolveSourceID,
+} from '../../../model/source_def_utils';
 import {walkPersistentDependencies} from '../../../model/persist_utils';
 import {typeDefToString} from '../../../model/utils';
 
@@ -192,12 +196,24 @@ export class ImportStatement
               // persistent ones. A `#@ -persist` wrapper that adds a join is
               // not a table, but it can be the only way to reach the tables
               // under it, and this model has to be able to take the same route.
+              //
+              // The persistent ones are also what a builder will build from
+              // this model, so the document checks at the end of compile that
+              // this model can supply every given their SQL reads.
               if (isSourceDef(importMe) && isPersistableSourceDef(importMe)) {
                 for (const found of walkPersistentDependencies(
                   [importMe],
                   importedModel
                 )) {
                   neededSourceIDs.add(found.sourceID);
+                  if (!found.persistent) continue;
+                  const def = resolveSourceID(importedModel, found.sourceID);
+                  if (def && !doc.importedPersistSources.has(found.sourceID)) {
+                    doc.importedPersistSources.set(found.sourceID, {
+                      source: def,
+                      at: this.location,
+                    });
+                  }
                 }
               }
             }

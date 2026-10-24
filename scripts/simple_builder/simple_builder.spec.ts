@@ -151,6 +151,33 @@ source: by_origin is flights -> {
 }
 `;
 
+/**
+ * One source reads a given with a default, one reads a given with no value.
+ * The first is one table of possibly several, so its `name=` is not the whole
+ * name; the second has no table at all.
+ */
+const MODEL_V8 = `##! experimental { persistence givens }
+given: CARRIER :: string is "WN"
+given: ORIGIN :: string
+source: flights is duckdb.table('${FLIGHTS_PARQUET}') extend {
+  measure: flight_count is count()
+}
+
+#@ persist name=by_carrier
+source: by_carrier is flights -> {
+  where: carrier = $CARRIER
+  group_by: carrier
+  aggregate: flight_count
+}
+
+#@ persist name=from_origin
+source: from_origin is flights -> {
+  where: origin = $ORIGIN
+  group_by: destination
+  aggregate: flight_count
+}
+`;
+
 async function readJSON<T>(filePath: string): Promise<T> {
   return JSON.parse(await readFile(filePath, 'utf-8'));
 }
@@ -518,6 +545,33 @@ test('runtime queries with and without manifest', async () => {
     );
   } finally {
     await connection.close();
+    await rm(ROOT, {recursive: true, force: true});
+  }
+});
+
+/**
+ * Pins what the header says about givens: a table that reads one is named
+ * with its BuildID so variants do not collide, and a source the build has no
+ * value for is skipped rather than failing the run.
+ */
+test('a table that reads a given is named by its BuildID; one with no value is skipped', async () => {
+  await freshRoot();
+
+  try {
+    await writeFile(MODEL_FILE, MODEL_V8);
+    await build(BUILD_OPTS);
+
+    const manifest = await readJSON<BuildManifest>(MANIFEST_FILE);
+    const names = tableNames(manifest);
+    check(names.length === 1, 'exactly one table was built');
+    check(
+      /^by_carrier_[0-9a-f]{12}$/.test(names[0]),
+      `the given-reading table carries its BuildID: ${names[0]}`
+    );
+    const sql = await readFile(SQL_FILE, 'utf-8');
+    check(sql.includes("'WN'"), 'the table is built for the default value');
+    check(!sql.includes('from_origin'), 'the source with no value was skipped');
+  } finally {
     await rm(ROOT, {recursive: true, force: true});
   }
 });

@@ -2,326 +2,233 @@
 
 **Status:** experimental, gated by `##! experimental.persistence`
 
-There are three "sources of truth"
-
-* [WN-0022](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0022-persistence/wn-0022.md) The design document for this feature.
-* The Code
-* The Markdown files in this directory
-
-Where these disagree, if you are an AI, you should have a conversation
-with the maintainer. Some disagreements might be failure to update
-documentation, some might be failures in design. From experience however,
-it has proven to be a mistake to pick ANY of these three sources
-as fully authoritative.
+This is the maintainer's document: what has to stay true for persistence to be
+correct, the decisions behind the shape of the code, and where each piece
+lives. The builder's and query runner's contract is [api.md](api.md). This
+directory and the code are the design of record; where they disagree, fix the
+one that is wrong here. The feature began as
+[WN-0022](https://github.com/malloydata/whatsnext/blob/main/wns/WN-0022-persistence/wn-0022.md),
+which is history, not authority.
 
 ## Terminology
 
-In Malloy a "source" is something which you can query. A **persistable source**
-is a source made from a query (which can be a Malloy query or a `conn.sql("SELECT  ...")`
-statement)
-
-A **persistent source** is a named persistable source marked with an
-annotation `#@ persist`.
-
-## The IR
-
-In [`model/malloy_types.ts`](../../model/malloy_types.ts):
-
-```typescript
-interface SourceDefBase … {
-  sourceID?: SourceID;
-  referenceID?: SourceID;   // set only when created as an unmodified reference
-}
-
-interface PersistableSourceProperties {
-  extends?: SourceID;       // set when this source extends a named source
-  persistent?: boolean;     // This source "persistable" and "persistent"
-}
-```
-
-A `SourceID` is best understood as a globally unique identifier for every named source.
-(since names can change across imports). In actual implementation (`mkSourceID`) it is
-constructed out of the URL containing the source definition and the name of the source,
-but in future it could be a UUID, or a hash.
-
-There is also a BuildID, and that is a digest made from three things.
-
-* The SourceID of a persistent source (available at translatiopn)
-* The SQL of the backing computation which generates the persistent artifact (available after translation)
-* A digest from the connection representing the connection parameters
-  which might affect how the SQL is interpreted. (available only after async calls)
-
-These are two identities and they are **not one-to-one**: a
-SourceID names a source, a `BuildID` names the output of a persistence
-computation (which will eventually be stored in a table), and one
-output table may have several SourceIDs pointing at it.
-
-The persistent flag is set on named sources with the `#@ persist` annotation. Having
-a `SourceID` means that a source was once named. `persistent: true` means that
-this is source is persistable and is should be persisted.
-
-Because the compiler and the translator are synchronous, they don't have access
-to all the data which goes into a BuildID. The two times when source ID's are
-mapped to a BuildID are, when a query is run, and a map keyed by BuildID
-is consulted for a persistent source's materialized source, and in the "builder" application
-which walk walks a model and materializes tables for each unique
-BuildID.
-
-
-
-The manifest types:
-
-```typescript
-interface BuildManifestEntry { tableName: string; }
-
-interface BuildManifest {
-  entries: Record<BuildID, BuildManifestEntry>;
-  strict?: boolean;
-  loadError?: string;
-}
-```
-
-`loadError` exists so a strict-mode throw can say *why* the manifest looks
-empty. The Runtime sets it when the file was present but unreadable as a
-manifest; `entries` stays `{}` so non-strict compiles still fall through.
-
-**The factories do not spread.** `mkQuerySourceDef` and `mkSQLSourceDef` in
-[`model/source_def_utils.ts`](../../model/source_def_utils.ts) explicitly list
-the fields they copy, dropping `sourceID` / `referenceID` / `extends` /
-`persistent`, so a freshly derived source never inherits another source's
-identity. The translator does the opposite deliberately: it spreads to *carry*
-`sourceID`/`referenceID` through an unmodified reference, `DefineSource` then
-sets them, and `DynamicSpace` clears `referenceID` on the modification path.
-
-## Where `persistent` is decided
-
-`DefineSource` is where a source-type  model entry with a name is created
-[`lang/ast/statements/define-source.ts`](../../lang/ast/statements/define-source.ts),
-after merging annotations onto the entry:
-
-```typescript
-entry.sourceID = mkSourceID(this.name, this.location?.url);
-if (isPersistableSourceDef(entry)) {
-  entry.persistent = checkPersistAnnotation(entry).persist;
-}
-```
-
-`checkPersistAnnotation()` (in
-[`model/persist_utils.ts`](../../model/persist_utils.ts)) parses the source's
-annotations on the `@` route and asks `tag.has('persist')`. Because the entry's
-annotations already carry `inherits` from the base at this point, extending a
-persist source yields `persist` again, and `#@ -persist` removes the property
-and stops the chain. The flag is resolved once, at translation time, and baked
-into the IR.
-
-## The source registry
-
-Persistence needs to turn a `SourceID` into a `SourceDef` — for dependency
-walking, for annotation checks, for the build plan. Within one model, names in
-`modelDef.contents` would do. Across an import they will not: the imported model
-is gone, only what was imported into the local namespace survives, and an
-imported source's persistent dependencies may not have been imported at all.
-
-`ModelDef.sourceRegistry` maps `SourceID → SourceRegistryValue`:
-
-```typescript
-type SourceRegistryEntry = SourceRegistryReference | PersistableSourceDef;
-
-interface SourceRegistryValue {
-  entry: SourceRegistryEntry;
-  persist?: boolean;   // lazily computed
-}
-```
-
-- A **`SourceRegistryReference`** means the source is in this model's namespace;
-  it stores the name and resolution goes through `modelDef.contents`.
-- A **`PersistableSourceDef`** means it is not; the definition is stored
-  directly. This is the hidden-dependency case.
-
-`resolveSourceRef()` resolves either form to a `SourceDef`;
-`resolveSourceID()` narrows to a `PersistableSourceDef`. The registry also
-backs `referenceID` resolution (`sourceNamespaceReference()`), so it is not
-purely a persistence structure.
-
-**Local population** happens in `Document.setEntry`
-([`lang/ast/types/malloy-element.ts`](../../lang/ast/types/malloy-element.ts)):
-every named source with a `sourceID` gets a `SourceRegistryReference`.
-
-**Import population** happens in
-[`lang/ast/statements/import-statement.ts`](../../lang/ast/statements/import-statement.ts).
-For each persistable source being imported, it runs
-`walkPersistentDependencies(source, importedModel)` — the walk happens *in the
-imported model*, where the definitions still exist — and collects **every**
-sourceID in the resulting graph into `neededSourceIDs`, routes included. Each
-one not already registered locally is looked up in the imported model's
-registry and, if it is a reference there, resolved to the actual `SourceDef`
-before being registered here (the importer cannot resolve it by name; it is not
-in the importer's namespace).
-
-The result: a model's registry contains everything needed to build its full
-dependency graph. A grandchild defines persistent `source_a`, a child extends it
-as non-persistent `source_b`, a parent imports `source_b` — the parent's
-registry holds `source_a` as a stored definition, though the parent never
-imported it and it is in no namespace of the parent's.
-
-The `persist` flag has two resolution paths for the same reason. Eagerly on the
-IR at `DefineSource` time, which is what compiler substitution reads; and
-lazily by `isPersistent()` during dependency walking, which is what a hidden
-dependency needs — it arrived through an import and never went through
-`DefineSource` here.
-
-## Dependency walking
-
-`walkPersistentDependencies(roots, modelDef, tagParseLog)` in
-[`model/persist_utils.ts`](../../model/persist_utils.ts) is a **generator**. It
-does a depth first, post order walks of the IR from a list of sources and queries
-and yields a `PersistNode` per source that matters to persistence.
-
-```typescript
-interface PersistNode {
-  sourceID: SourceID;
-  persistent: boolean;      // copy of the persistent flag of the SourceDef
-  dependsOn: SourceID[];
-}
-```
-
-Return value (which `for...of` discards, so take it with an
-explicit `.next()` loop) is what the roots themselves reached.
-
-It takes a *list* of roots so one memo covers the whole model: a subtree two
-model objects both reach is walked once and yielded once.
-
-The six ways a `SourceDef` can be referenced — this list is the walk:
-
-1. `Query.structRef` — the FROM clause
-2. `Query.pipeline[].extendSource[]` — joins in extend blocks
-3. `SourceDef.fields[]` — joins defined on a source
-4. `PersistableSourceDef.extends` — the extend chain
-5. `SQLSourceDef.selectSegments[]` — `%{ }` interpolation
-6. `QuerySourceDef.query` — the inner query of a query source
-
-`CompositeSourceDef.sources[]` is deliberately not walked — persistence was
-designed without composites rather than around them. It is the one hole in "the
-walk follows every route by which SQL inlines SQL", which `mkBuildTargets`
-relies on; harmless while a composite cannot be a target, and to revisit if
-that changes.
-
-**What survives the walk** is decided by one rule, stated at
-`walkPersistentDependencies`: keep a source if it is persistent, or if any
-child survived. `PersistNode.persistent` says which reason applied — `true` is
-a table to build, `false` is a route, a source that materializes nothing itself
-but is how the walk reached one that does.
-
-**Three consumers, three folds.** None of them builds a graph.
-
-`import-statement.ts` keeps every sourceID, routes included, because those are
-what the importing model must be able to re-traverse. A `#@ -persist` wrapper
-that adds a join is not a table, but it can be the only way to reach the tables
-beneath it; copy just the persistent ones and an imported source silently
-arrives with no dependencies at all.
-
-`mkBuildTargets()` keeps a `sourceID → target keys` map. A persistent source
-becomes (or joins) a target and contributes its own key; a route contributes
-whatever its children contributed. That is how an edge survives a route, and
-it costs one line rather than a pass.
-
-`findPersistentDependencies()` folds the stream back into the nested
-`BuildNode[]` that `Model.getBuildPlan()` returns. It exists only for that
-deprecated call.
-
-**Memoized, not merely visited**: a source reached a second time reports what
-it reported the first time, so every dependent records the edge rather than only
-the first one to arrive.
-
-## Build targets
-
-`Runtime.getBuildTargets(model)` in
-[`api/foundation/runtime.ts`](../../api/foundation/runtime.ts) is what a builder
-consumes. `Model._walkPersistSources()` supplies the stream — every named source
-and query plus the unnamed queries, as one walk — and `mkBuildTargets(nodes,
-model, connectionDigests)` in
-[`api/foundation/build_targets.ts`](../../api/foundation/build_targets.ts) folds
-it. That split is where the async/sync boundary falls: fetching a digest per
-connection is async, the fold is not, so the Runtime materializes the walk,
-collects the digests it names, and hands both to the fold.
-
-The walk emits *sources*, and several can share one table. One pass merges
-them, because the walk is in dependency order:
-
-1. a persistent source gets `getSQL()` and a BuildID, and joins the target keyed
-   `(connectionName, buildId)` — creating it if new, appending to
-   `target.sources` if not;
-2. its children's target keys are already known, so its edges are written
-   immediately — minus any that landed on its own key (an extension depending
-   on its base is one table, not a dependency), and intersected with what the
-   other sources on this target recorded (see the cycle note below);
-3. a route contributes its children's keys upward instead of a key of its own;
-4. finally `place()` emits each target after everything it depends on — a
-   depth-first post-order walk of the target graph — filing it under its
-   connection.
-
-The merge key is connection *and* BuildID. The digest inside a BuildID already
-makes those equivalent; the pair does not rely on that staying true.
-
-Connections are reported as independent builds, which is sound because a query
-cannot span two connections ([#3032]) and so a dependency cannot either.
-
-[#3032]: https://github.com/malloydata/malloy/pull/3032
-
-The cycle check in `place()` is not decoration. A *real* edge cannot cycle — a
-target's SQL contains its dependencies' SQL inline, so two targets cannot each
-contain the other — but an edge here is not always real. A source merging onto a
-target brings its own edges, and a join is recorded whether the SQL uses it or
-not, so `alias is base extend { join_one: mid }` where `mid` reads `base` would
-put the merged target and `mid` in a cycle. Intersecting the merged sources'
-edges (step 2 above) is what removes those.
-
-## The build plan (deprecated)
-
-`Model.getBuildPlan()` in
-[`api/foundation/core.ts`](../../api/foundation/core.ts) requires
-`##! experimental.persistence`, read off `modelAnnotations` (the import/extend
-fold) so the flag carries across extend. It walks every entry in
-`modelDef.contents` plus `modelDef.queryList` through
-`findPersistentDependencies()`, unions the forests, takes `minimalBuildGraph()`,
-builds a `PersistSource` for every sourceID it saw, and groups the roots by
-connection name.
-
-`getBuildTargets` does not use it, and it is slated for removal once the
-builders have moved. Two things it gets wrong are why:
-
-**Its roots are computed by sourceID**, and a sourceID cannot answer an artifact
-question. Roots are the sources nothing depends on — so for a persisted source
-with an extension, the root is the extension and the declaring source is never
-named at the top level, though they are one table.
-
-**`BuildGraph.nodes` is `BuildNode[][]` but always holds exactly one entry.**
-The extra dimension anticipated a batched schedule that was never built; what
-is emitted is `{connectionName, nodes: [rootNodes]}`, with the ordering in each
-root's `dependsOn`. The specs pin it — every `plan.graphs[0].nodes` assertion is
-`toHaveLength(1)`, including the case named "dependent sources in different
-levels".
-
-## BuildID and connection digests
-
-```typescript
-function mkBuildID(connectionDigest: string, sql: string): BuildID {
-  return makeDigest(connectionDigest, sql);
-}
-```
-
-`makeDigest` (in [`model/utils.ts`](../../model/utils.ts)) length-prefixes each
-part before hashing — `("ab","c")` and `("a","bc")` must not collide — treats
-`undefined` as distinct from `""`, and returns a SHA-256 hex string.
-
-A BuildID is therefore content-addressed: the same SQL on the same connection is
-the same entry, whatever the source is called and whatever model it came from.
-Any change to the SQL, or to the connection's digest, is a different entry and
-so a rebuild.
-
-**What a connection digest contains today.** Each backend implements
-`getDigest()` itself, and today they all hash the dialect name plus the
-connection's identifying configuration:
+A **persistable source** is a source backed by a computation: a `query_source`
+(`source: x is y -> {...}`) or a `sql_select` (`source: x is conn.sql("...")`).
+A **persistent source** is a named persistable source whose annotations carry
+`#@ persist`, directly or by inheritance through `extend`.
+
+A persistable source's **relation** is the SQL its table would be built from:
+the inner query of a `query_source`, or the `SELECT` of a `sql_select` with its
+`%{ }` segments expanded. A `where:` added by `extend` is not part of the
+relation; the query that reads the table applies it.
+
+A **route** is a source the dependency walk passes through on the way to a
+persistent one: a `#@ -persist` wrapper, a join, an unmarked source over a
+persisted one. It builds no table of its own.
+
+A **SourceID** names a source: `name@modelURL`, stable across imports and
+renames. A **BuildID** names a table: a hash of the connection's digest and the
+relation's SQL. The two are not one-to-one — a persisted source and every
+`extend` of it have the same SQL and so the same BuildID, and one table
+routinely has several names.
+
+A relation's SQL is generated under a **context**: the `virtualMap` (which
+table each virtual source reads) and the bound given values. The context is
+part of what the SQL says, so it is part of the key.
+
+The **manifest** maps BuildID to table name, plus `strict`. The **BuildID SQL**
+is the relation generated with every dependency inlined; the **build SQL** is
+the same relation with dependencies already in the manifest read from their
+tables. [api.md](api.md#two-sqls-and-why) has the builder's view of the pair.
+
+## Invariants
+
+Each of these, broken, produces a wrong table or a wrong answer rather than an
+error. Check a change in this area against the list.
+
+**One key, computed the same way on both sides.** The builder computes a
+BuildID from the relation's SQL when it plans; the compiler recomputes it from
+the same relation when a query runs and looks it up. The two must be the same
+string: generated under the same context, through the same code path, never
+finalized, and never with a manifest in hand. Enforced by routing both through
+`PersistSource._compileSQL` under a `BuildIdOptions` — a type that cannot carry
+a manifest — with the given values bound by `bindGivens` on both sides
+(`mkBuildTargets` for the build, `persistedTableFor` for the query). Pinned by
+`persist.spec.ts` ("and the query finds the table the plan named", and the
+per-value tests under "a persisted source that reads a given").
+
+**The key SQL and the executed SQL differ only in ways that do not change
+rows.** The one permitted difference is manifest substitution: a built table
+standing in for its own SQL. Anything else that changes the SQL a query would
+run — a given's value, a virtual source's table — has to be in the context, and
+so in the key. A value that changes the SQL but not the key is a table served
+to callers it was not built for.
+
+**The walk follows every route by which SQL inlines SQL.** The six paths at
+`walkPersistentDependencies` are the whole list; `CompositeSourceDef.sources[]`
+is the one deliberate hole, and composites are documented as incompatible with
+persistence because of it. `mkBuildTargets` intersects the dependency sets of
+sources that share a table on the strength of this list (see
+[The fold](#the-fold)); a path missing from the walk makes a table build from
+inlined SQL instead of reading the one below it, with no error.
+
+**Identity does not leak through derivation.** `sourceID`, `referenceID`,
+`extends`, and `persistent` belong to the source that was declared, never to
+one derived from it. The factories in `model/source_def_utils.ts` list the
+fields they copy and leave these out; `DynamicSpace.structDef` clears the ids
+on the modification path. A derived source that kept its base's identity would
+substitute its base's table for a different computation.
+
+**Table names are canonical everywhere they enter.** A manifest `tableName` is
+a canonical table path for its dialect, checked at `Manifest.update()`,
+`Manifest.loadText()`, the Runtime's file read, and again at compile time. The
+builder creates the table under the canonical form and records that same form
+([api.md](api.md#turning-a-name-into-a-table)).
+
+**Digests are computed, never stored.** A connection digest is taken fresh
+from `connection.getDigest()` every time; a stored one would keep matching
+after the connection it described had changed.
+
+## Design decisions
+
+- **Sources, not queries.** Sources are the unit of reference in Malloy;
+  queries just run them.
+- **Content-addressed.** BuildID = hash(connection digest, SQL). Identity comes
+  from what would be computed, not from what it is called.
+- **The context is in the SQL, not beside the key.** A given's value or a
+  virtual source's table changes the SQL, and the SQL is hashed, so nothing is
+  added to the BuildID for them. A persisted source that reads a given has one
+  table per value, built by running the plan once per value.
+- **The builder's context is the Runtime's, plus a per-call layer.** A build
+  binds givens from the config file, the constructor, and
+  `getBuildTargets(model, {givens})`, in that order, exactly as a query binds
+  from the same three layers plus `.run({givens})`. A finalized given is
+  refused per call either way.
+- **A source with no key is reported, not thrown.** `getBuildTargets` plans
+  the rest of the model and returns the source in `unbuildable` with the
+  problem. Whether that fails the build is the builder's call.
+- **A persisted source an importer cannot supply is a translate error.** A
+  builder builds what a model reaches, so a model that imports a persisted
+  source must be able to bind every given its relation reads; one that cannot
+  has imported something nothing in it can build or query.
+- **The manifest is flat.** One `entries` map keyed by BuildID, no per-model
+  nesting, because the BuildID is already globally unique.
+- **`strict` rides on the manifest** rather than being a separate compiler
+  option, so it travels through every piece of plumbing the manifest already
+  travels through.
+- **`persistent` is an IR flag**, resolved once at `DefineSource` time.
+  Substitution gates on it rather than on `sourceID`, so ordinary named sources
+  never touch the manifest.
+- **Builder metadata stays with the builder.** Timestamps, scheduling, history,
+  freshness policy: the core knows only whether a BuildID is present in the
+  manifest.
+- **JSON, not MOTLY, for config and manifest** — applications need to read,
+  modify, and write these programmatically.
+- **No SQLite.** VS Code has browser contexts where native bindings fail, and
+  manifests are small.
+
+## How the pieces fit
+
+Each section says what a piece is responsible for and names where it lives.
+The reasoning for any one decision inside a piece is at the code.
+
+### Translator
+
+`DefineSource` (`lang/ast/statements/define-source.ts`) stamps `sourceID` on
+every named source and, for a persistable one, resolves `persistent` from the
+`@` route of its annotations (`checkPersistAnnotation`). The annotations
+already carry what the base contributed, so an `extend` of a persisted source
+is persistent and `#@ -persist` stops the chain.
+
+`Document.setEntry` registers every named source in the **source registry**,
+`ModelDef.sourceRegistry`, which turns a `SourceID` into a definition. The
+registry exists for imports: an imported source's persistent dependencies may
+not have been imported into the importer's namespace, so `ImportStatement`
+walks each imported persistable source *in the imported model*, where the
+definitions still exist, and registers every source the walk touched — routes
+included, because a `#@ -persist` wrapper can be the only way to reach the
+tables beneath it. An entry is a name when the source is in this model's
+namespace and a stored definition when it is not. `isPersistent` resolves the
+flag lazily for a stored definition, which never went through this model's
+`DefineSource`.
+
+`ImportStatement` also records each persistent source it reaches in
+`Document.importedPersistSources`, and `Document.compile()` checks them
+(`checkPersistSourceGivenSatisfiability`) against the final namespace: a given
+the relation reads that this model neither surfaces nor can default is
+`unsatisfied-given-in-persist-source`, at the import.
+
+### The walk
+
+`walkPersistentDependencies(roots, modelDef)` (`model/persist_utils.ts`) is a
+generator over the IR, depth first and post order, yielding a `PersistNode`
+(`sourceID`, `persistent`, `dependsOn`) for every source that is persistent or
+leads to one. It is memoized across all its roots, so a source reached twice
+reports the same dependencies to every dependent, and a consumer can fold the
+stream in one pass because a node arrives after everything it depends on.
+Joins are followed whether or not a query activates them, which
+over-approximates dependencies and never under-approximates them.
+
+Its three consumers fold it differently: `ImportStatement` keeps every node
+for the registry; `mkBuildTargets` keeps a map from source to the tables it
+contributes; `findPersistentDependencies` nests it for the deprecated
+`getBuildPlan`.
+
+### The fold
+
+`Runtime.getBuildTargets(model, options?)` (`api/foundation/runtime.ts`) does
+the async part — a digest per connection, the Runtime's givens — and hands the
+materialized walk, the digests, and a `BuildIdOptions` to `mkBuildTargets`
+(`api/foundation/build_targets.ts`), which is synchronous and testable without
+a connection.
+
+The fold merges sources onto tables. A persistent source's relation is
+generated under the options and hashed; the source joins the target with that
+key on its connection, or creates it. A route, or a source with no key, passes
+its children's targets up to whoever referenced it, which is how an edge
+survives a route. When a second source lands on an existing target, the
+target's dependencies become the *intersection* of what the two recorded: the
+sources have identical SQL and so identical real dependencies, and what
+differs is the walk's join over-approximation, which a union would turn into a
+cycle (`alias is base extend { join_one: mid }` where `mid` reads `base`). The
+intersection is safe only because the walk's path list is complete. Targets
+are then emitted in dependency order under their connection, and a cycle that
+survives anyway is an error rather than a hang.
+
+Each target closes over the options and the digests it was keyed with, so
+`buildSQL(manifest)` cannot generate SQL under a different context from `sql`.
+`readsGivens` is whether `givenUsageOfRelation` finds anything.
+
+### Substitution
+
+`persistedTableFor` (`model/sql_compiled.ts`) is the only lookup. It runs for a
+`persistent` source when the compile has both a manifest and connection
+digests, recomputes the key under `buildIdOptions(opts)` — the query's context
+minus the manifest — and returns the table name on a hit, throws
+`runtime-manifest-strict-miss` on a strict miss, and returns nothing otherwise
+so the caller emits the source's own SQL. Its two callers are
+`getStructSourceSQL` (`model/query_query.ts`), for the FROM clause and joins,
+and `expandPersistableSource` (`model/sql_compiled.ts`), for `%{ }` segments.
+`QueryQueryRaw` does not look up: a `conn.sql(...)` at the run site is unnamed
+and so never persistent.
+
+### Runtime
+
+`Runtime._resolveBuildManifest` picks the manifest: an explicit one from the
+constructor or setter, else a lazy, cached read of `config.manifestURL` (a read
+failure is a soft miss; a parse failure is `{entries: {}, loadError}` so a
+strict throw can say why), else none. `QueryMaterializer.loadPreparedResult`
+then applies the per-query override, re-validates every table name, drops an
+empty non-strict manifest, checks `##! experimental.persistence` (an
+explicitly passed manifest throws without it; a config-supplied one is
+ignored), and fetches a digest per connection the model's persist sources
+name. That last step still goes through `getBuildPlan`, which is why compiling
+a persistence query costs a plan walk.
+
+## Connection digests
+
+Each backend implements `getDigest()` itself; today they all hash the dialect
+name plus the connection's identifying configuration:
 
 | Backend | Hashed |
 |---|---|
@@ -338,106 +245,45 @@ Postgres falls back to hashing the connection *name* when its config is
 supplied as an async reader, since `getDigest()` is synchronous. Trino and
 Presto share `TrinoPrestoConnection.getDigest()`, which tags both as `trino`.
 
-Two consequences worth knowing. Settings that change generated SQL — a DuckDB
-working directory, a setup SQL statement — correctly invalidate the cache. But
-so does pure connection plumbing: the same logical warehouse reached from a
-different host, port, or user produces a different digest and therefore a
-different BuildID, so a manifest built in one environment does not apply in
-another. Separating "which logical database and what SQL semantics" from "how
-we dialed it" is a known design question, not something the code does today.
+Settings that change generated SQL — a DuckDB working directory, a setup SQL
+statement — correctly invalidate the cache. So does pure connection plumbing:
+the same warehouse reached from a different host, port, or user is a different
+digest and so a different BuildID, and a manifest built in one environment does
+not apply in another. Separating "which database, with what SQL semantics"
+from "how it was dialed" is an open design question.
 
-Digests are **computed, never stored** — always taken fresh from
-`connection.getDigest()`. Config drifts, digest changes, entries stop matching.
+`makeDigest` (`model/utils.ts`) length-prefixes each part before hashing, so
+`("ab","c")` and `("a","bc")` cannot collide, and treats `undefined` as
+distinct from `""`.
 
-The compiler is synchronous and `lookupConnection()` is not, so digests cannot
-be fetched mid-compile. The Runtime precomputes a `Record<connectionName,
-digest>` before entering the compiler and passes it as
-`PrepareResultOptions.connectionDigests`; substitution sites index into it by
-connection name.
+## Deprecated: `Model.getBuildPlan()`
 
-## Compiler substitution
-
-`persistedTableFor()` in
-[`model/sql_compiled.ts`](../../model/sql_compiled.ts) is the lookup. It runs
-when the source is `persistent` and both `buildManifest` and
-`connectionDigests` are present. The key is `mkBuildID(connDigest, sql)`, where
-`sql` is compiled under `buildIdOptions()`, which returns a `BuildIdOptions` —
-a type narrow enough that it cannot carry a manifest, so the BuildID cannot
-depend on what is already materialized. It keeps `virtualMap`, which decides
-what table a virtual source reads. It drops `resolvedGivens`, which also
-changes the SQL but which only the compiler can produce; resolving on one side
-only makes the keys disagree, so neither side resolves givens (see #3041).
-`mkBuildTargets` takes the same type. A hit returns `entry.tableName` unquoted; manifest names are
-canonical. A miss under `strict` throws `runtime-manifest-strict-miss` at the
-source's location, appending `loadError` if present. It names the source's
-`sourceID` when there is one; a reference through an inline `extend` has had
-that deleted, so there the error carries only a BuildID and a location.
-
-Two callers:
-
-- **`getStructSourceSQL()`**
-  ([`model/query_query.ts`](../../model/query_query.ts)) — the FROM clause and
-  joins, both persistable types. A hit is used bare, since the call site is
-  `FROM ${structSQL} as ${alias}`. On a miss a `query_source` compiles with the
-  real options and a `sql_select` is parenthesized, so nested dependencies
-  resolve.
-- **`expandPersistableSource()`**
-  ([`model/sql_compiled.ts`](../../model/sql_compiled.ts)) — `%{ }` segments. A
-  hit becomes `(SELECT * FROM <tableName>)`; a segment must work as a subquery.
-
-`QueryQueryRaw` does not look up. Its source is the `conn.sql(...)` at the run
-site, which is unnamed and so never persistent.
-
-`PersistSource.getSQL()` compiles with `finalize=false` for the same reason the
-options are narrowed. On a dialect with a final stage (Postgres wraps in
-`row_to_json`) a finalized SQL would hash differently from what
-`persistedTableFor` recomputes at serve time, and the table would be
-materialized under a key nothing ever looks up.
-
-## Runtime manifest resolution
-
-`Runtime._resolveBuildManifest()`
-([`api/foundation/runtime.ts`](../../api/foundation/runtime.ts)):
-
-1. An explicit `_buildManifest` (constructor option or setter) wins outright.
-2. Otherwise, if `config.manifestURL` is set, read it through the `URLReader`
-   and cache the promise, so concurrent compiles share one round trip. A read
-   failure soft-misses to `undefined`; a parse or shape failure returns
-   `{entries: {}, loadError}`.
-3. No URL, `undefined`.
-
-The setter clears the cached promise so a later compile cannot see a stale soft
-miss.
-
-`QueryMaterializer.loadPreparedResult()` then decides what the compiler
-actually gets: per-query `options.buildManifest` if given, else the resolved
-Runtime manifest; every `tableName` re-validated as canonical; an empty
-non-strict manifest dropped to `undefined` (nothing to substitute, so skip the
-work); a surviving manifest checked against `##! experimental.persistence` —
-throwing for an explicitly-passed manifest, silently ignoring a config-supplied
-one. Only then does it call `getBuildPlan()` to learn which connection names
-matter and fetch a digest for each.
-
-That last step is why compiling a persistence query costs a build plan. It is
-noted as inefficient in the code; a `listConnections()` on `LookupConnection`,
-or caching, would remove it.
+The entry point before `getBuildTargets`, kept until the builders have moved.
+It reports sources keyed by `sourceID`, and a `sourceID` does not name a
+table, so a builder on it has to compute BuildIDs, discover the sources that
+share one, and order the build itself. Its roots are the sources nothing
+depends on, which for a persisted source with an extension is the extension,
+and `BuildGraph.nodes` is typed `BuildNode[][]` but always holds one entry.
+`findPersistentDependencies` and `minimalBuildGraph` exist only for it, as do
+`PersistSource.getSQL` and `makeBuildId`.
 
 ## Glossary
 
-Where a name lives. Deprecated entries are marked; see the sections above for
-what replaced them.
+Where a name lives.
 
 ### Types
 
 | Name | File | What |
 |---|---|---|
 | `BuildID` | `model/malloy_types.ts` | Manifest key: hash of connection digest and SQL |
-| `BuildManifest` | `model/malloy_types.ts` | `BuildID` → table name, plus `strict` |
-| `BuildTarget` | `api/foundation/types.ts` | One table, and every source that maps onto it |
-| `ConnectionBuild` | `api/foundation/types.ts` | One connection's targets, in dependency order |
+| `BuildManifest` | `model/malloy_types.ts` | `BuildID` → table name, plus `strict` and `loadError` |
+| `BuildIdOptions` | `model/sql_compiled.ts` | The context a BuildID's SQL is generated under: `virtualMap`, `resolvedGivens` |
+| `BuildTarget` | `api/foundation/types.ts` | One table, every source that maps onto it, `buildSQL()`, `readsGivens` |
+| `BuildTargetOptions` | `api/foundation/types.ts` | A build's givens and `virtualMap`, over the Runtime's |
 | `BuildTargets` | `api/foundation/types.ts` | What `getBuildTargets` returns |
+| `ConnectionBuild` | `api/foundation/types.ts` | One connection's targets, in dependency order |
+| `UnbuildableSource` | `api/foundation/types.ts` | A persist source with no BuildID, and why |
 | `PersistNode` | `model/persist_utils.ts` | One source the walk yields |
-| `PersistWalk` | `model/persist_utils.ts` | The generator's type |
 | `ResolvedNode` | `api/foundation/build_targets.ts` | A `PersistNode` with its `PersistSource` |
 | `PersistableSourceDef` | `model/malloy_types.ts` | `SQLSourceDef \| QuerySourceDef` |
 | `SourceID` | `model/malloy_types.ts` | Identity of a named source |
@@ -449,14 +295,17 @@ what replaced them.
 | Name | File | What |
 |---|---|---|
 | `Manifest` | `api/foundation/config.ts` | Load, touch, update, `activeEntries` |
-| `PersistSource` | `api/foundation/core.ts` | A persist source: `getSQL`, `makeBuildId`, `location`, annotations |
+| `PersistSource` | `api/foundation/core.ts` | A persist source: identity, `location`, annotations, `_compileSQL`; `getSQL`/`makeBuildId` *deprecated* |
 
 ### Functions
 
 | Name | File | What |
 |---|---|---|
 | `Runtime.getBuildTargets` | `api/foundation/runtime.ts` | The builder entry point |
-| `mkBuildTargets` | `api/foundation/build_targets.ts` | Folds the walk into targets |
+| `Runtime._givensFor` | `api/foundation/runtime.ts` | File → constructor → per-call merge, refusing a finalized name; queries and builds |
+| `bindGivens` | `model/given_binding.ts` | Supplied values plus inline folds, as `resolvedGivens`; queries and builds |
+| `givenUsageOfRelation` | `model/sql_compiled.ts` | The givens a relation reads |
+| `mkBuildTargets` | `api/foundation/build_targets.ts` | Folds the walk into targets and `unbuildable` |
 | `resolvePersistWalk` | `api/foundation/build_targets.ts` | Walks and resolves each node's source |
 | `walkPersistentDependencies` | `model/persist_utils.ts` | The generator; the six paths live here |
 | `Model._walkPersistSources` | `api/foundation/core.ts` | The walk over a whole model |
@@ -466,9 +315,9 @@ what replaced them.
 | `mkSourceID`, `mkBuildID` | `model/source_def_utils.ts` | Identity constructors |
 | `resolveSourceID`, `resolveSourceRef` | `model/source_def_utils.ts` | Registry lookup |
 | `isPersistableSourceDef` | `model/malloy_types.ts` | The persistable test |
-| `Model.getBuildPlan` | `api/foundation/core.ts` | *deprecated* |
-| `findPersistentDependencies` | `model/persist_utils.ts` | *deprecated* — nested view, for the plan |
-| `minimalBuildGraph` | `model/persist_utils.ts` | *deprecated* — the plan's roots |
+| `persistedTableFor` | `model/sql_compiled.ts` | The lookup: BuildID → table, or the strict throw |
+| `buildIdOptions` | `model/sql_compiled.ts` | A query's context minus the manifest |
+| `Model.getBuildPlan`, `findPersistentDependencies`, `minimalBuildGraph` | `api/foundation/core.ts`, `model/persist_utils.ts` | *deprecated* |
 
 ### Where persistence touches the translator
 
@@ -478,45 +327,17 @@ what replaced them.
 | `DynamicSpace.structDef` | `lang/ast/field-space/dynamic-space.ts` | Clears both ids on a modification |
 | `RefinedSource` | `lang/ast/source-elements/refined-source.ts` | Sets `extends` |
 | `Document.setEntry` | `lang/ast/types/malloy-element.ts` | Local registry population |
-| `ImportStatement` | `lang/ast/statements/import-statement.ts` | Registry population across imports |
-
-### Substitution
-
-| Name | File | What |
-|---|---|---|
-| `persistedTableFor` | `model/sql_compiled.ts` | The lookup: BuildID → table, or the strict throw |
-| `buildIdOptions` | `model/sql_compiled.ts` | What a BuildID's SQL is compiled under |
-| `getStructSourceSQL` | `model/query_query.ts` | Caller: the FROM clause and joins |
-| `expandPersistableSource` | `model/sql_compiled.ts` | Caller: `%{ }` segments |
+| `Document.checkPersistSourceGivenSatisfiability` | `lang/ast/types/malloy-element.ts` | The import-time given check |
+| `ImportStatement` | `lang/ast/statements/import-statement.ts` | Registry population across imports; records imported persist sources |
 
 ### Tests and samples
 
 - `test/src/core/persist.spec.ts` — dependency paths, substitution, strict
-  mode, cross-model imports, Runtime manifest, data equivalence
-- `packages/malloy/src/api/foundation/build-targets.spec.ts` — the merge and
-  the ordering, without a connection
+  mode, cross-model imports, Runtime manifest, givens, data equivalence
+- `packages/malloy/src/api/foundation/build-targets.spec.ts` — the merge, the
+  ordering, givens, and build SQL, without a connection
+- `packages/malloy/src/lang/test/givens.spec.ts` — the import-time check,
+  under "imported persisted sources"
 - `scripts/simple_builder/` — a teaching builder. Its spec runs in the
   `simple-builder` jest project (part of `test-duckdb` / `ci-duckdb`), so the
   file the docs cite as an example cannot drift out of true unnoticed
-
-## Design decisions
-
-- **Sources, not queries.** Sources are the unit of reference in Malloy;
-  queries just run them.
-- **Content-addressed.** BuildID = hash(connection digest, SQL). Identity comes
-  from what would be computed, not from what it is called.
-- **The manifest is flat.** One `entries` map keyed by BuildID, no per-model
-  nesting, because the BuildID is already globally unique.
-- **`strict` rides on the manifest** rather than being a separate compiler
-  option, so it travels through every piece of plumbing the manifest already
-  travels through.
-- **`persistent` is an IR flag**, resolved once at `DefineSource` time.
-  Substitution gates on it rather than on `sourceID`, so ordinary named sources
-  never touch the manifest.
-- **Builder metadata stays with the builder.** Timestamps, scheduling, history,
-  freshness policy: the core knows only whether a BuildID is present in the
-  manifest.
-- **JSON, not MOTLY, for config and manifest** — applications need to read,
-  modify, and write these programmatically.
-- **No SQLite.** VS Code has browser contexts where native bindings fail, and
-  manifests are small.

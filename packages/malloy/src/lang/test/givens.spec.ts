@@ -1839,3 +1839,86 @@ describe('inline givens', () => {
     expect(md.contents['IS_ADMIN']?.type).toBe('given');
   });
 });
+
+describe('given: imported persisted sources', () => {
+  // A builder handed the importing model builds every persisted source it
+  // reaches, so the model has to be able to supply every given their SQL
+  // reads. One it cannot is a source nothing here could ever build or query.
+  function importTest(parent: string, child: string): TestTranslator {
+    const t = new TestTranslator(`##! experimental.persistence\n${parent}`, {
+      compilerFlags: ['experimental.givens'],
+    });
+    t.unresolved();
+    t.update({urls: {'internal://test/langtests/child': child}});
+    t.compile();
+    return t;
+  }
+  const CHILD = `
+    ##! experimental { givens persistence }
+    given: TENANT :: string
+    #@ persist name=scoped
+    source: scoped is a -> { where: astr = $TENANT; group_by: astr }
+    source: same_table is scoped extend { dimension: loud is upper(astr) }
+    #@ -persist
+    source: wrapper is scoped extend { dimension: loud is upper(astr) }
+  `;
+
+  test('importing the source without its given is an error at the import', () => {
+    expect(importTest('import { scoped } from "child"', CHILD)).toLog(
+      errorMessage(
+        /Imported persisted source `scoped` references given `TENANT`.*not surfaced in this model and has no default/
+      )
+    );
+  });
+
+  test('a persisted source reached through a non-persistent wrapper is checked too', () => {
+    expect(importTest('import { wrapper } from "child"', CHILD)).toLog(
+      errorMessage(/Imported persisted source `scoped`/)
+    );
+  });
+
+  test('an extension that is the same table does not report the given twice', () => {
+    expect(importTest('import { same_table } from "child"', CHILD)).toLog(
+      errorMessage(/Imported persisted source `scoped`/)
+    );
+  });
+
+  test('importing the given alongside it, in any order, satisfies it', () => {
+    expect(
+      importTest('import { scoped, TENANT } from "child"', CHILD)
+    ).toTranslate();
+    expect(
+      importTest(
+        'import { scoped } from "child"\nimport { TENANT } from "child"',
+        CHILD
+      )
+    ).toTranslate();
+    expect(
+      importTest('import { scoped, T is TENANT } from "child"', CHILD)
+    ).toTranslate();
+  });
+
+  test('a default satisfies it', () => {
+    expect(
+      importTest(
+        'import { scoped } from "child"',
+        CHILD.replace('TENANT :: string', 'TENANT :: string is "acme"')
+      )
+    ).toTranslate();
+  });
+
+  test('a given read only in an extend-block where: is not in the relation', () => {
+    expect(
+      importTest(
+        'import { at_read } from "child"',
+        `
+        ##! experimental { givens persistence }
+        given: TENANT :: string
+        #@ persist name=rollup
+        source: rollup is a -> { group_by: astr }
+        source: at_read is rollup extend { where: astr = $TENANT }
+      `
+      )
+    ).toTranslate();
+  });
+});

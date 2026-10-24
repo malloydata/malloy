@@ -34,6 +34,7 @@ import type {
   FilterCondition,
   StructDef,
 } from '../model/malloy_types';
+import {givenUsageOfRelation} from '../model/sql_compiled';
 import {
   activeName,
   expressionIsScalar,
@@ -44,8 +45,6 @@ import {
   isJoinable,
   isJoined,
   isQuerySegment,
-  isSegmentSource,
-  isSegmentSQL,
   isSourceDef,
   isTimeLiteral,
   isTurtle,
@@ -1574,9 +1573,12 @@ export function computeQueryGivenUsage(pipeline: PipeSegment[]): GivenUsage {
 }
 
 // Returns every given a SourceDef references — its own filterList plus any
-// givens hiding inside an embedded Query. The single point of knowledge for
-// "where can a Query embed in a SourceDef" — when a future SourceDef variant
-// grows an embedded Query, teach this helper.
+// givens hiding inside an embedded Query. For a persistable source the
+// embedded part is `givenUsageOfRelation` (model/sql_compiled.ts), which is
+// also what persistence keys a table on; the filterList is added here because
+// a query over the source applies it, but a table built from the source does
+// not. When a future SourceDef variant grows an embedded Query, teach that
+// helper or this one.
 //
 // Composite sources: composite-source support across the codebase is
 // partial; the givens work isn't chasing it. The `composite` arm here is
@@ -1591,16 +1593,8 @@ export function givenUsageOfSource(sd: SourceDef): GivenUsage {
   );
   switch (sd.type) {
     case 'query_source':
-      return [...fromFilters, ...(sd.query.givenUsage ?? [])];
-    case 'sql_select': {
-      const fromSegments = (sd.selectSegments ?? []).flatMap(seg => {
-        if (isSegmentSQL(seg)) return [];
-        if (isSegmentSource(seg)) return givenUsageOfSource(seg);
-        // Remaining variant of SQLPhraseSegment is `Query`
-        return seg.givenUsage ?? [];
-      });
-      return [...fromFilters, ...fromSegments];
-    }
+    case 'sql_select':
+      return [...fromFilters, ...givenUsageOfRelation(sd)];
     case 'composite':
       return [
         ...fromFilters,

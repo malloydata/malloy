@@ -10,15 +10,18 @@ import type {
   DocumentReference,
   Given,
   GivenID,
+  GivenUsage,
   ModelDef,
   ModelAnnotationEntry,
   ModelID,
   NamedModelObject,
+  PersistableSourceDef,
   Query,
   SourceID,
   SourceRegistryValue,
 } from '../../../model/malloy_types';
-import {isSourceDef} from '../../../model/malloy_types';
+import {activeName, isSourceDef} from '../../../model/malloy_types';
+import {givenUsageOfRelation} from '../../../model/sql_compiled';
 import {mkModelDef, mkModelID} from '../../../model/utils';
 import {Tag} from '@malloydata/malloy-tag';
 import type {
@@ -516,6 +519,13 @@ export class Document extends MalloyElement implements NameSpace {
   documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
   documentGivens = new Map<GivenID, Given>();
+  /** Every persistent source an `import` brought within reach of this model's
+   *  builder, with the import that did so. Checked at end of compile: the
+   *  model has to be able to supply every given their SQL reads. */
+  importedPersistSources = new Map<
+    SourceID,
+    {source: PersistableSourceDef; at: DocumentLocation}
+  >();
   /** {@link ModelAnnotationEntry} of every imported/extended model in the
    *  closure, keyed by ModelID, accumulated as imports/extends are processed;
    *  copied into the result `modelAnnotations` in {@link modelDef}, which then
@@ -604,6 +614,7 @@ export class Document extends MalloyElement implements NameSpace {
     if (needs === undefined) {
       this.checkGivenAliasCollisions();
       this.checkQueryGivenSatisfiability();
+      this.checkPersistSourceGivenSatisfiability();
     }
     const ret: DocumentCompileResult = {
       modelDef: {
@@ -646,36 +657,43 @@ export class Document extends MalloyElement implements NameSpace {
     }
   }
 
+  /**
+   * The givens in `usage` this model can neither supply nor default: not
+   * surfaced in the namespace and declared without a default. The set checked
+   * is each id plus its precomputed default-chain closure (`Given.givenUsage`),
+   * which is already transitive, so there is no recursion here.
+   */
+  private unsatisfiedGivens(usage: GivenUsage): GivenID[] {
+    const namespaceGivens = new Set<GivenID>();
+    for (const m of this.documentModel.values()) {
+      if (m.entry.type === 'given') namespaceGivens.add(m.entry.id);
+    }
+    const allIds = new Set<GivenID>();
+    for (const g of usage) {
+      allIds.add(g.id);
+      const decl = this.documentGivens.get(g.id);
+      for (const t of decl?.givenUsage ?? []) allIds.add(t.id);
+    }
+    const unsatisfied: GivenID[] = [];
+    for (const id of allIds) {
+      if (namespaceGivens.has(id)) continue;
+      if (this.documentGivens.get(id)?.default !== undefined) continue;
+      unsatisfied.push(id);
+    }
+    return unsatisfied;
+  }
+
   private checkQueryGivenSatisfiability(): void {
     // Always runs at end-of-compile, not gated on imports — a notebook cell
     // that calls `extendModel` with a prior modelDef inherits that model's
     // queries and givens, and a query inherited from cell N can become
     // unsatisfiable in cell N+1 if the satisfying given is removed (or
     // never re-supplied). Cheap when there's nothing to check.
-    const namespaceGivens = new Set<GivenID>();
-    for (const m of this.documentModel.values()) {
-      if (m.entry.type === 'given') namespaceGivens.add(m.entry.id);
-    }
     const checkOne = (q: Query, label: string): void => {
-      const usage = q.givenUsage;
-      if (!usage || usage.length === 0) return;
-      // Build the full set of ids the query transitively needs: each id
-      // in Q.givenUsage, plus each id's precomputed default-chain closure
-      // (Given.givenUsage). Since the closure is already transitive, no
-      // recursion at check time.
-      const allIds = new Set<GivenID>();
-      for (const g of usage) {
-        allIds.add(g.id);
-        const decl = this.documentGivens.get(g.id);
-        for (const t of decl?.givenUsage ?? []) allIds.add(t.id);
-      }
-      for (const id of allIds) {
-        if (namespaceGivens.has(id)) continue;
-        const decl = this.documentGivens.get(id);
-        if (decl?.default !== undefined) continue;
+      for (const id of this.unsatisfiedGivens(q.givenUsage ?? [])) {
         this.logError(
           'unsatisfied-given-in-query',
-          unsatisfiedGivenMessage(label, decl, id),
+          unsatisfiedGivenMessage(label, this.documentGivens.get(id), id),
           {at: q.location}
         );
       }
@@ -687,6 +705,38 @@ export class Document extends MalloyElement implements NameSpace {
     // `run:` statements.
     for (const q of this.queryList) {
       checkOne(q, 'run: statement');
+    }
+  }
+
+  /**
+   * A persisted source is built from whatever model a builder is handed, so a
+   * model that imports one has to be able to supply every given its SQL reads;
+   * an import that cannot is a source no build or query here could ever use.
+   * Checked at end of compile rather than at the import, since the given may
+   * be imported by a later statement. A locally declared source cannot fail
+   * this: `$NAME` only resolves to a given in scope.
+   */
+  private checkPersistSourceGivenSatisfiability(): void {
+    // One import routinely reaches several sources that share a table — a
+    // persisted source and its extensions — so each given is reported once
+    // per import, against the first source that reads it.
+    const reported = new Map<DocumentLocation, Set<GivenID>>();
+    for (const {source, at} of this.importedPersistSources.values()) {
+      const seen = reported.get(at) ?? new Set<GivenID>();
+      reported.set(at, seen);
+      for (const id of this.unsatisfiedGivens(givenUsageOfRelation(source))) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        this.logError(
+          'unsatisfied-given-in-persist-source',
+          unsatisfiedGivenMessage(
+            `Imported persisted source \`${activeName(source)}\``,
+            this.documentGivens.get(id),
+            id
+          ),
+          {at}
+        );
+      }
     }
   }
 

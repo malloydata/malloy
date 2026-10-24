@@ -14,6 +14,9 @@ import type {
 } from '@malloydata/malloy';
 import {
   ConnectionRuntime,
+  MalloyConfig,
+  Manifest,
+  Runtime,
   SingleConnectionRuntime,
   EMPTY_BUILD_MANIFEST,
 } from '@malloydata/malloy';
@@ -2656,9 +2659,9 @@ describe('source persistence', () => {
     });
 
     it('a given with an inline default keeps both sides on one key', async () => {
-      // The other half of the rule: `resolvedGivens` also changes the SQL, but
-      // only the compiler can produce one, so neither side resolves givens.
-      // Resolve on one side only and this throws — the builder emits
+      // The other half of the rule: `resolvedGivens` also changes the SQL, so
+      // both sides bind givens through the one function, inline folding
+      // included. Fold on one side only and this throws — the builder emits
       // `'admin'='admin'` where the compiler folds the same expression.
       const model = `${PERSIST_ANNOTATION}
         ##! experimental.givens
@@ -2800,6 +2803,275 @@ describe('source persistence', () => {
         })
         .getSQL();
       expect(sql).toContain('LIMIT 7');
+    });
+  });
+
+  describe('a persisted source that reads a given', () => {
+    // The value is in the SQL that is hashed, and both sides compile that SQL
+    // under the same values, so a query running under other values computes
+    // another key and does not find the table.
+    const GIVEN_MODEL = `
+      ##! experimental { persistence givens }
+      given: CARRIER :: string is "WN"
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: by_carrier is flights -> {
+        where: carrier = $CARRIER
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      query: q is by_carrier -> { select: * }
+    `;
+
+    /** The no-default form, with a second source that reads no given. */
+    const SUPPLIED_MODEL = `
+      ##! experimental { persistence givens }
+      given: CARRIER :: string
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: carrier_stats is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      #@ persist
+      source: by_carrier is flights -> {
+        where: carrier = $CARRIER
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      query: q is by_carrier -> { select: * }
+    `;
+
+    async function onlyTarget(
+      rt: Runtime,
+      modelText: string,
+      givens?: Record<string, string>
+    ): Promise<BuildTarget> {
+      const model = await rt.loadModel(modelText).getModel();
+      const {connections, unbuildable} = await rt.getBuildTargets(
+        model,
+        givens ? {givens} : undefined
+      );
+      expect(unbuildable).toEqual([]);
+      const targets = connections.flatMap(c => c.targets);
+      expect(targets).toHaveLength(1);
+      return targets[0];
+    }
+
+    it('is built for the default, and a query under the default finds it', async () => {
+      const manifest = createManifest();
+      const rt = runtimeWithManifest(manifest);
+      const target = await onlyTarget(rt, GIVEN_MODEL);
+      expect(target.readsGivens).toBe(true);
+      expect(target.sql).toContain("'WN'");
+      addManifestEntry(manifest, target.buildId, 'wn_table');
+
+      const query = rt.loadModel(GIVEN_MODEL).loadQueryByName('q');
+      expect(await query.getSQL()).toContain('wn_table');
+      expect(await query.getSQL({givens: {CARRIER: 'WN'}})).toContain(
+        'wn_table'
+      );
+    });
+
+    it('a query under another value does not find it, and runs live', async () => {
+      const manifest = createManifest();
+      const rt = runtimeWithManifest(manifest);
+      const target = await onlyTarget(rt, GIVEN_MODEL);
+      addManifestEntry(manifest, target.buildId, 'wn_table');
+
+      const sql = await rt
+        .loadModel(GIVEN_MODEL)
+        .loadQueryByName('q')
+        .getSQL({givens: {CARRIER: 'AA'}});
+      expect(sql).not.toContain('wn_table');
+      expect(sql).toContain("'AA'");
+    });
+
+    it('under a strict manifest the miss says the source reads givens', async () => {
+      const manifest = createManifest();
+      manifest.strict = true;
+      const rt = runtimeWithManifest(manifest);
+      const target = await onlyTarget(rt, GIVEN_MODEL);
+      addManifestEntry(manifest, target.buildId, 'wn_table');
+
+      await expect(
+        rt
+          .loadModel(GIVEN_MODEL)
+          .loadQueryByName('q')
+          .getSQL({givens: {CARRIER: 'AA'}})
+      ).rejects.toThrow(/strict manifest.*reads givens/s);
+    });
+
+    it('a build under another value is another table, and each query finds its own', async () => {
+      const manifest = createManifest();
+      const rt = runtimeWithManifest(manifest);
+      const wn = await onlyTarget(rt, GIVEN_MODEL);
+      const aa = await onlyTarget(rt, GIVEN_MODEL, {CARRIER: 'AA'});
+      expect(aa.buildId).not.toBe(wn.buildId);
+      expect(aa.sql).toContain("'AA'");
+      addManifestEntry(manifest, wn.buildId, 'wn_table');
+      addManifestEntry(manifest, aa.buildId, 'aa_table');
+
+      const query = rt.loadModel(GIVEN_MODEL).loadQueryByName('q');
+      expect(await query.getSQL()).toContain('wn_table');
+      expect(await query.getSQL({givens: {CARRIER: 'AA'}})).toContain(
+        'aa_table'
+      );
+    });
+
+    it('the rows a query reads are the rows for its own value', async () => {
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+      try {
+        const flightsPath = 'test/data/malloytest-parquet/flights.parquet';
+        const modelText = GIVEN_MODEL.replace(
+          FLIGHTS_SOURCE,
+          `source: flights is ${tstDB}.table('${flightsPath}')`
+        );
+        const rt = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const manifest = new Manifest();
+        const build = async (name: string, givens?: Record<string, string>) => {
+          const target = await onlyTarget(rt, modelText, givens);
+          await rwConn.runSQL(
+            `CREATE TABLE ${name} AS ${target.buildSQL(manifest.buildManifest)}`
+          );
+          manifest.update(target.buildId, {tableName: name});
+        };
+        await build('wn_table');
+        await build('aa_table', {CARRIER: 'AA'});
+        rt.buildManifest = manifest.buildManifest;
+
+        const query = rt.loadModel(modelText).loadQueryByName('q');
+        const carriers = async (givens?: Record<string, string>) => {
+          const result = await query.run(givens ? {givens} : undefined);
+          return result.data.toObject().map(row => row['carrier']);
+        };
+        expect(await carriers()).toEqual(['WN']);
+        expect(await carriers({CARRIER: 'AA'})).toEqual(['AA']);
+        expect(await query.getSQL({givens: {CARRIER: 'AA'}})).toContain(
+          'aa_table'
+        );
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('with no default and no value for the build it is unbuildable, and the rest is planned', async () => {
+      const model = await tstRuntime.loadModel(SUPPLIED_MODEL).getModel();
+      const {connections, unbuildable} =
+        await tstRuntime.getBuildTargets(model);
+
+      expect(
+        connections.flatMap(c => c.targets).map(t => t.sources[0].name)
+      ).toEqual(['carrier_stats']);
+      expect(unbuildable.map(u => u.source.name)).toEqual(['by_carrier']);
+      const [{problem}] = unbuildable;
+      expect(problem.code).toBe('runtime-persist-given-no-value');
+      expect(problem.message).toMatch(/by_carrier@.*reads given 'CARRIER'/);
+    });
+
+    it('a query over the unbuildable source runs live under a manifest of other tables', async () => {
+      const manifest = createManifest();
+      const rt = runtimeWithManifest(manifest);
+      const model = await rt.loadModel(SUPPLIED_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      const [stats] = connections.flatMap(c => c.targets);
+      addManifestEntry(manifest, stats.buildId, 'carrier_stats_table');
+
+      const sql = await rt
+        .loadModel(SUPPLIED_MODEL)
+        .loadQueryByName('q')
+        .getSQL({givens: {CARRIER: 'WN'}});
+      expect(sql).toContain("'WN'");
+      expect(sql).not.toContain('carrier_stats_table');
+    });
+
+    it('a value supplied to the build is a value', async () => {
+      const target = await onlyTarget(
+        tstRuntime,
+        SUPPLIED_MODEL.replace(/#@ persist\s+source: carrier_stats[^}]*}/, ''),
+        {CARRIER: 'WN'}
+      );
+      expect(target.sql).toContain("'WN'");
+    });
+
+    it("the Runtime's givens are the build's givens", async () => {
+      const rt = new Runtime({
+        connections: tstRuntime.connections,
+        urlReader: testFileSpace,
+        givens: {CARRIER: 'UA'},
+      });
+      const target = await onlyTarget(
+        rt,
+        SUPPLIED_MODEL.replace(/#@ persist\s+source: carrier_stats[^}]*}/, '')
+      );
+      expect(target.sql).toContain("'UA'");
+    });
+
+    it('a finalized given cannot be supplied to a build', async () => {
+      const config = new MalloyConfig(
+        {finalizeGivens: ['CARRIER']},
+        {configURL: 'file:///finalized/malloy-config.json'}
+      );
+      const rt = new Runtime({
+        config,
+        connections: tstRuntime.connections,
+        urlReader: testFileSpace,
+        givens: {CARRIER: 'WN'},
+      });
+      const model = await rt.loadModel(GIVEN_MODEL).getModel();
+      await expect(
+        rt.getBuildTargets(model, {givens: {CARRIER: 'AA'}})
+      ).rejects.toThrow(/'CARRIER'.*finalized/);
+    });
+  });
+
+  describe('a build and its virtualMap', () => {
+    const VIRTUAL_MODEL = `${PERSIST_ANNOTATION}
+      ##! experimental.virtual_source
+      type: ff is { carrier :: string }
+      source: vf is ${tstDB}.virtual('vflights')::ff
+
+      #@ persist
+      source: by_carrier is vf -> { group_by: carrier }
+
+      run: by_carrier -> { select: * }
+    `;
+    const virtualMap: VirtualMap = new Map([
+      [tstDB, new Map([['vflights', 'malloytest.flights']])],
+    ]);
+
+    it('a virtual source with no entry is unbuildable, not a failed plan', async () => {
+      const model = await tstRuntime.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections, unbuildable} =
+        await tstRuntime.getBuildTargets(model);
+      expect(connections).toEqual([]);
+      expect(unbuildable.map(u => u.problem.code)).toEqual([
+        'runtime-virtual-map-missing',
+      ]);
+    });
+
+    it('a virtualMap given to the build keys and builds the table', async () => {
+      const model = await tstRuntime.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections, unbuildable} = await tstRuntime.getBuildTargets(
+        model,
+        {virtualMap}
+      );
+      expect(unbuildable).toEqual([]);
+      const [target] = connections[0].targets;
+      expect(target.sql).toContain('malloytest.flights');
+      expect(target.buildSQL(createManifest())).toContain('malloytest.flights');
     });
   });
 });
