@@ -1827,17 +1827,12 @@ export class PersistSource implements Taggable {
   }
 
   /**
-   * This source's SQL under `opts`, the bare source `SELECT`.
+   * This source's SQL under `opts`: the bare `SELECT`, not finalized, because
+   * `persistedTableFor` hashes the same unfinalized SELECT to look the table
+   * up, and a dialect with a final stage (Postgres) would hash differently.
    *
-   * Compiled with finalize=false. The build-time key (a hash over this SQL)
-   * must equal the serve-time manifest lookup key, which persistedTableFor
-   * recomputes from the same unfinalized SELECT; finalizing would diverge the
-   * two on dialects with a final stage (Postgres) and mis-materialize the
-   * table.
-   *
-   * @internal A builder reads `BuildTarget.sql` and calls
-   *   `BuildTarget.buildSQL()`, which compile under the build's own givens and
-   *   `virtualMap`; `opts` here is whatever the caller says it is.
+   * @internal `opts` is whatever the caller passes; `BuildTarget.sql` and
+   *   `buildSQL()` pass the build's own.
    */
   _compileSQL(opts: PrepareResultOptions): string {
     const sd = this.persistableDef;

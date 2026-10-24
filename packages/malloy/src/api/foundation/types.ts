@@ -198,9 +198,6 @@ export interface ConnectionBuild {
  * `virtualMap` has no entry for, or anything else the compiler reports as a
  * problem with the source rather than with itself. A source that reads it
  * inlines its SQL, so is reported here too.
- *
- * The rest of the model is still planned. Whether this fails the build is the
- * builder's call.
  */
 export interface UnbuildableSource {
   source: PersistSource;

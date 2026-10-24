@@ -19,11 +19,11 @@ what to name tables, how to invalidate, what to do about failures, and how to
 handle environments are all the builder's business — see
 [Building persistent sources](#building-persistent-sources).
 
-For the implementation, see [internal.md](internal.md). The design of record is
-**WN-0022** in the [whatsnext](https://github.com/malloydata/whatsnext)
-repository (`wns/WN-0022-persistence/`) — what persistence is for and what the
-core deliberately refuses to decide. These two documents describe what the code
-does; where they disagree with WN-0022, WN-0022 says what was meant.
+For the implementation, see [internal.md](internal.md). These two documents
+and the code are the design of record; a disagreement between them is resolved
+here, in the source tree. The feature's origin is **WN-0022** in the
+[whatsnext](https://github.com/malloydata/whatsnext) repository
+(`wns/WN-0022-persistence/`), kept for the history of why.
 
 ## Malloy syntax
 

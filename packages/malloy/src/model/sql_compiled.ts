@@ -150,8 +150,8 @@ export function persistedTableFor(
       : 'Persisted source';
     const perValue =
       givenUsageOfRelation(source).length > 0
-        ? ' This source reads givens, so its table is found only under the ' +
-          'given values it was built with.'
+        ? ' This source reads givens, and no table was built for the given ' +
+          'values this query supplies.'
         : '';
     const base =
       `${named} not found in manifest (buildId: ${buildId}); ` +
