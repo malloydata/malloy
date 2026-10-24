@@ -335,9 +335,8 @@ describe('what a target carries', () => {
 });
 
 describe('a source whose SQL reads a given', () => {
-  // The table holds the rows for one value of the given, so the value has to
-  // be in the SQL that is hashed. A build that has no value for it cannot say
-  // which table it would be building.
+  // The value is part of the SQL that is hashed, so a build with no value for
+  // the given has no key to compute.
   test('with no value in the build it is unbuildable, and the rest is planned', () => {
     const {connections, unbuildable} = planOf(
       `

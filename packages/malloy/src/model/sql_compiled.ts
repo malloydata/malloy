@@ -88,15 +88,14 @@ function expandSegment(
  * What a BuildID's SQL is compiled under: everything that changes what the
  * SQL computes and that the builder and the compiler can both know.
  *
- * The manifest is excluded on purpose. A BuildID must not depend on what has
- * already been built or build order would change the key, so this type cannot
- * express one; `mkBuildTargets` takes it for the same reason.
+ * No manifest. A BuildID must not depend on what has already been built, or
+ * build order would change the key, so this type cannot carry one;
+ * `mkBuildTargets` takes it for the same reason.
  *
  * `virtualMap` decides which table a virtual source reads. `resolvedGivens`
  * is the value of every given the SQL reads, supplied or defaulted; both sides
- * produce it through `bindGivens`, so equal values give identical SQL and a
- * different value gives a different key. A table built for one value is never
- * found by a query asking for another.
+ * produce it through `bindGivens`, so equal values give the same key and
+ * different values give different keys.
  */
 export interface BuildIdOptions {
   virtualMap?: VirtualMap;

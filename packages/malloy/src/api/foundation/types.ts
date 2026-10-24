@@ -145,10 +145,9 @@ export interface BuildTarget {
    */
   buildSQL(manifest: BuildManifest): string;
   /**
-   * Whether this table holds the rows for particular given values. Its SQL
-   * reads a given, supplied or defaulted, so a query asking for another value
-   * computes another key and does not find this table. A builder that names
-   * tables by `name=` alone would build every variant under one name.
+   * True when the SQL reads a given, supplied or defaulted. The table is then
+   * one of possibly several for this source, one per value, and a builder
+   * naming it by `name=` alone would build every variant under one name.
    */
   readsGivens: boolean;
   /** Targets that must exist before this one can be built */
@@ -194,15 +193,14 @@ export interface ConnectionBuild {
 }
 
 /**
- * A persist source no table can be built for, because its SQL cannot be
- * written and so no BuildID can be computed: it reads a given that has no
- * value in this build, a virtual source the build's `virtualMap` has no entry
- * for, or anything else the compiler reports as a problem with the source
- * rather than with itself. A source that reads it inlines its SQL, so is
- * reported here too.
+ * A persist source with no BuildID, because its SQL cannot be written: it
+ * reads a given that has no value in this build, a virtual source the build's
+ * `virtualMap` has no entry for, or anything else the compiler reports as a
+ * problem with the source rather than with itself. A source that reads it
+ * inlines its SQL, so is reported here too.
  *
- * Reported rather than thrown, so one such source does not cost the rest of
- * the model its build. Whether it fails the build is the builder's call.
+ * The rest of the model is still planned. Whether this fails the build is the
+ * builder's call.
  */
 export interface UnbuildableSource {
   source: PersistSource;

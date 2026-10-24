@@ -153,8 +153,8 @@ source: by_origin is flights -> {
 
 /**
  * One source reads a given with a default, one reads a given with no value.
- * The first is a table that holds one value's rows, so its `name=` is not the
- * whole name; the second has no table at all.
+ * The first is one table of possibly several, so its `name=` is not the whole
+ * name; the second has no table at all.
  */
 const MODEL_V8 = `##! experimental { persistence givens }
 given: CARRIER :: string is "WN"

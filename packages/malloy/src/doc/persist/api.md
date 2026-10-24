@@ -214,7 +214,7 @@ A **target** is one table:
 | `connectionName` | Where it gets built |
 | `sql` | The BuildID SQL — fully inlined, already hashed. Not the SQL you execute |
 | `buildSQL(manifest)` | The SQL you execute: dependencies in `manifest` are read from their tables |
-| `readsGivens` | Whether the table holds the rows for particular given values |
+| `readsGivens` | Whether the SQL reads a given, making this one table of possibly several |
 | `dependsOn` | The targets that must exist first |
 | `sources` | Every persist source in the model that maps onto this table |
 
@@ -243,11 +243,11 @@ is the builder's call. A failure inside the compiler itself still throws.
 
 ### Givens
 
-A persisted source whose SQL reads a `given:` holds the rows for one value of
-it, and its BuildID says which. Both the build and a query compile the key's
-SQL under the given values in effect — the query's, or the build's — so a query
-running under the values a table was built with finds it, and one running under
-other values misses and runs inline, or throws under `strict`.
+A persisted source whose SQL reads a `given:` is built once per value: the
+value is in the SQL, so it is in the BuildID. Both the build and a query compile
+the key's SQL under the given values in effect — the build's, or the query's —
+so a query running under the values a table was built with finds it, and one
+running under other values misses and runs inline, or throws under `strict`.
 
 A build runs under the Runtime's givens (the config givens file and the
 constructor's `givens`), with the declaration defaults beneath them, and

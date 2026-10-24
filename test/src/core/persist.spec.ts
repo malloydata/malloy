@@ -2807,9 +2807,9 @@ describe('source persistence', () => {
   });
 
   describe('a persisted source that reads a given', () => {
-    // Its table holds the rows for one value of the given, and its key says
-    // which: both sides compile the key's SQL under the same values, so a
-    // query running under other values does not find the table.
+    // The value is in the SQL that is hashed, and both sides compile that SQL
+    // under the same values, so a query running under other values computes
+    // another key and does not find the table.
     const GIVEN_MODEL = `
       ##! experimental { persistence givens }
       given: CARRIER :: string is "WN"

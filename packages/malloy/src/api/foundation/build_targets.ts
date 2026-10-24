@@ -92,18 +92,15 @@ function unvaluedGivenProblem(
     at: use.at ?? source.location,
     message:
       `Persisted source '${source.sourceID}' reads given '${name}', which ` +
-      'has no value in this build and no default. A persisted table holds ' +
-      `the rows for one set of given values: supply '${name}' to the build, ` +
-      'or give it a default at its declaration.',
+      `has no value in this build and no default. Supply '${name}' to the ` +
+      'build, or give it a default at its declaration.',
   };
 }
 
 /**
- * The SQL that keys `source`'s table, with whether it reads a given, or the
- * problem that stops a BuildID from being computed.
- *
- * Only a `MalloyCompileError` is a fact about the source. Anything else is
- * the compiler's own failure and must not pass for one.
+ * Compiles the SQL that keys `source`'s table, or returns why no key can be
+ * computed. A `MalloyCompileError` is a problem with the source; any other
+ * error is the compiler's own and propagates.
  */
 function buildIdSQL(
   source: PersistSource,
@@ -184,10 +181,9 @@ function addUnique(into: string[], seen: Set<string>, keys: string[]): void {
  *
  * @param walk A resolved walk from {@link resolvePersistWalk}, in order
  * @param connectionDigests One digest per connection named by a persist source
- * @param buildIdOpts What the BuildID's SQL is compiled under. The compiler
- *   recomputes the same key at serve time through `buildIdOptions()`, and
- *   `BuildTarget.buildSQL` compiles under the same options, so a table is
- *   always built under the key that describes it.
+ * @param buildIdOpts What every BuildID's SQL is compiled under.
+ *   `BuildTarget.buildSQL` compiles under the same options, and
+ *   `persistedTableFor` recomputes the key under a query's.
  */
 export function mkBuildTargets(
   walk: ResolvedNode[],
@@ -226,8 +222,8 @@ export function mkBuildTargets(
 
     const keyed = buildIdSQL(source, buildIdOpts);
     if ('problem' in keyed) {
-      // Not a table either. Whatever reads it inlines its SQL, so cannot
-      // compute a key of its own and will land here too.
+      // No key, so no table: pass its dependencies up as a route does.
+      // Whatever reads it inlines its SQL and ends up here too.
       unbuildable.push({source, problem: keyed.problem});
       contributes.set(node.sourceID, childKeys);
       continue;

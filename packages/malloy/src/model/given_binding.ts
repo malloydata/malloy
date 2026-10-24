@@ -130,11 +130,11 @@ export function evaluateInlineGivens(
 }
 
 /**
- * Every value a compile binds a given to: the supplied values, then each
- * `inline` given's default folded against them. A query and a persistence
- * build both bind through here, so the two compile a given the same way and
- * a persisted table's key is the key a query recomputes for the same values.
- * Undefined when nothing binds, which downstream reads as "no givens".
+ * Binds the givens a compile runs under: the supplied values, then each
+ * `inline` given's default folded against them. Queries and persistence builds
+ * both bind here, so the same values always compile to the same SQL and a
+ * persisted table's key is the key a query recomputes. Undefined when nothing
+ * binds, which the compiler reads as "no givens".
  */
 export function bindGivens(
   supplied: Record<string, GivenValue> | undefined,

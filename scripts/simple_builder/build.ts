@@ -86,12 +86,13 @@
  *
  * ## Givens
  *
- *   A persisted source whose SQL reads a given holds the rows for one value
- *   of it, and its BuildID says which: a query asking for another value
- *   computes another key and misses. `target.readsGivens` tells a builder
- *   that is so. This sample builds under the Runtime's givens and the
- *   declaration defaults; a builder with several values to build for calls
- *   `getBuildTargets(model, {givens})` once per set, against one Manifest.
+ *   A persisted source whose SQL reads a given is built once per value: the
+ *   value is in the SQL, so it is in the BuildID, and a query asking for
+ *   another value computes another key and misses. `target.readsGivens`
+ *   says which tables these are. This sample builds under the Runtime's
+ *   givens and the declaration defaults; a builder with several values to
+ *   build for calls `getBuildTargets(model, {givens})` once per set, against
+ *   one Manifest.
  *
  * ## Divergences from malloy-cli
  *
@@ -394,10 +395,9 @@ async function runBuild(
       // already visible here.
       const buildSQL = target.buildSQL(manifest.buildManifest);
 
-      // A table that holds the rows for one set of given values is one of
-      // possibly many under the same `name=`, so the name alone would have
-      // every variant overwrite the last. The BuildID is what tells them
-      // apart, so it goes in the name.
+      // A table built for one set of given values is one of possibly many
+      // under the same `name=`; the BuildID tells them apart, so it goes in
+      // the name.
       const nameProvided = !!explicitName;
       const idSuffix = target.buildId.substring(0, 12);
       const tableName = canonicalTableName(
