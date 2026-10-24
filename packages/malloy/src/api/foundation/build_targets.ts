@@ -73,16 +73,9 @@ export function resolvePersistWalk(
 }
 
 /**
- * The problem reported for a given that `source`'s SQL reads and this build
- * has no value for.
- *
- * Found from the IR before compiling, not by catching the compiler's error:
- * that error tells the reader to supply the value to a query, and this one
- * has to say what a build does instead.
- *
- * The given is named as this model surfaces it. The translator rejects a
- * model holding a persisted source that reads a given the model does not
- * surface, so the name is always there to find.
+ * Describes a given that `source` reads and this build has no value for.
+ * Names it by the name this model surfaces it under, since that is the name a
+ * builder supplies a value by: under `import { T is TENANT }` it is `T`.
  */
 function unvaluedGivenProblem(
   source: PersistSource,
