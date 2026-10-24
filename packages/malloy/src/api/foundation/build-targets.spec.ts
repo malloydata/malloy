@@ -108,6 +108,16 @@ const ROLLUP = `
   }
 `;
 
+/** A persisted source whose SQL reads a given; needs the `givens` flag. */
+const SCOPED = `
+  given: TENANT :: string
+  #@ persist name=scoped
+  source: scoped is _db_.table('aTable') -> {
+    where: astr = $TENANT
+    group_by: astr
+  }
+`;
+
 describe('sources collapse onto the artifacts they build', () => {
   test('an extension of a persisted source is not a second table', () => {
     // `#@ persist` is inherited and `extend` does not change the SQL, so
@@ -328,15 +338,6 @@ describe('a source whose SQL reads a given', () => {
   // The table holds the rows for one value of the given, so the value has to
   // be in the SQL that is hashed. A build that has no value for it cannot say
   // which table it would be building.
-  const SCOPED = `
-    given: TENANT :: string
-    #@ persist name=scoped
-    source: scoped is _db_.table('aTable') -> {
-      where: astr = $TENANT
-      group_by: astr
-    }
-  `;
-
   test('with no value in the build it is unbuildable, and the rest is planned', () => {
     const {connections, unbuildable} = planOf(
       `
@@ -375,18 +376,6 @@ describe('a source whose SQL reads a given', () => {
     expect(unbuildable.map(u => u.source.name)).toEqual(['scoped', 'top']);
   });
 
-  test('with a value it is a table, and the value is in the SQL', () => {
-    const {connections, unbuildable} = planOf(SCOPED, {
-      flags: GIVENS,
-      givens: {TENANT: 'acme'},
-    });
-
-    expect(unbuildable).toEqual([]);
-    const [target] = connections[0].targets;
-    expect(target.sql).toContain("'acme'");
-    expect(target.readsGivens).toBe(true);
-  });
-
   test('two values are two tables', () => {
     const acme = findTarget(
       planOf(SCOPED, {flags: GIVENS, givens: {TENANT: 'acme'}}).connections,
@@ -396,7 +385,9 @@ describe('a source whose SQL reads a given', () => {
       planOf(SCOPED, {flags: GIVENS, givens: {TENANT: 'globex'}}).connections,
       'scoped'
     );
+    expect(acme.sql).toContain("'acme'");
     expect(acme.buildId).not.toBe(globex.buildId);
+    expect(acme.readsGivens).toBe(true);
   });
 
   test('a default is a value, and the table still reads the given', () => {
@@ -432,11 +423,6 @@ describe('a source whose SQL reads a given', () => {
     expect(names(target)).toEqual(['mine', 'rollup']);
     expect(target.readsGivens).toBe(false);
   });
-
-  test('a source that reads no given says so', () => {
-    const [target] = targetsOf(ROLLUP);
-    expect(target.readsGivens).toBe(false);
-  });
 });
 
 describe('build SQL', () => {
@@ -465,17 +451,10 @@ describe('build SQL', () => {
   });
 
   test("compiles under the build's givens", () => {
-    const {connections} = planOf(
-      `
-      given: TENANT :: string
-      #@ persist name=scoped
-      source: scoped is _db_.table('aTable') -> {
-        where: astr = $TENANT
-        group_by: astr
-      }
-    `,
-      {flags: GIVENS, givens: {TENANT: 'acme'}}
-    );
+    const {connections} = planOf(SCOPED, {
+      flags: GIVENS,
+      givens: {TENANT: 'acme'},
+    });
     const [target] = connections[0].targets;
     expect(target.buildSQL({entries: {}})).toContain("'acme'");
   });
