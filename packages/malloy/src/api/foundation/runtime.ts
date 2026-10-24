@@ -696,7 +696,7 @@ export class Runtime {
    * in dependency order and each carries its own `dependsOn`. See
    * {@link BuildTargets}.
    *
-   * The build compiles under this Runtime's givens and `virtualMap`, with
+   * The build generates SQL under this Runtime's givens and `virtualMap`, with
    * `options` layered over them, exactly as a query would; a persisted table
    * is therefore found by the queries that run under the same values. A
    * source whose SQL needs a value this build does not have is reported in

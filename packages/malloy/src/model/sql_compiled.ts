@@ -85,7 +85,7 @@ function expandSegment(
 }
 
 /**
- * What a BuildID's SQL is compiled under: everything that changes what the
+ * What a BuildID's SQL is generated under: everything that changes what the
  * SQL computes and that the builder and the compiler can both know.
  *
  * No manifest. A BuildID must not depend on what has already been built, or

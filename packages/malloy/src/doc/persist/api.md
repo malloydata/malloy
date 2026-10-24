@@ -327,7 +327,7 @@ A target carries two SQL strings for one table, and a builder needs both:
   manifest are replaced by their table names. This is what you execute: it
   reads from the tables you just built instead of recomputing them inline.
 
-Both are compiled under the same given values and `virtualMap`, the build's,
+Both are generated under the same given values and `virtualMap`, the build's,
 so the table that gets built is the one its key describes. The manifest is the
 only thing the builder adds.
 

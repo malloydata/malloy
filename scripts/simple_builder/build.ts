@@ -79,7 +79,7 @@
  *     can compute it, because only the builder knows what it has built so
  *     far.
  *
- *   Both are compiled under the same given values and `virtualMap` — the
+ *   Both are generated under the same given values and `virtualMap` — the
  *   Runtime's, with whatever `getBuildTargets(model, options)` layers over
  *   them — so the table that gets built is the one its key describes, and a
  *   query running under the same values finds it.

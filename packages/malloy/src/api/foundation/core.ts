@@ -1815,7 +1815,7 @@ export class PersistSource implements Taggable {
    *   substitute already-built dependencies, giving the SQL to execute.
    * @return The SQL string for this source.
    * @deprecated Read `BuildTarget.sql` and call `BuildTarget.buildSQL()`. This
-   *   compiles under whatever `options` say, so it can disagree with the key
+   *   generates SQL under whatever `options` say, so it can disagree with the key
    *   the build computed; the target's methods cannot. Used only with
    *   `Model.getBuildPlan`.
    */

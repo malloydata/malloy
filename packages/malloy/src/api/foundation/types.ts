@@ -140,7 +140,7 @@ export interface BuildTarget {
    * The SQL to execute, for a `CREATE TABLE`. Dependencies already in
    * `manifest` are read from their tables rather than recomputed, which is
    * why it is a call made as the build proceeds and not a string computed up
-   * front. Compiled under the same givens and `virtualMap` as `sql`, so the
+   * front. Generated under the same givens and `virtualMap` as `sql`, so the
    * table that is built is the one the key describes.
    */
   buildSQL(manifest: BuildManifest): string;
@@ -209,7 +209,7 @@ export interface UnbuildableSource {
 }
 
 /**
- * What a build compiles under, over the Runtime's own values.
+ * What a build generates SQL under, over the Runtime's own values.
  *
  * `givens` layers over the Runtime's file and constructor givens the way a
  * query's do, and a finalized given is refused here the same way. Running

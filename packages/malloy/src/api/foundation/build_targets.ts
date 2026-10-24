@@ -98,7 +98,7 @@ function unvaluedGivenProblem(
 }
 
 /**
- * Compiles the SQL that keys `source`'s table, or returns why no key can be
+ * Generates the SQL that keys `source`'s table, or returns why no key can be
  * computed. A `MalloyCompileError` is a problem with the source; any other
  * error is the compiler's own and propagates.
  */
@@ -181,8 +181,8 @@ function addUnique(into: string[], seen: Set<string>, keys: string[]): void {
  *
  * @param walk A resolved walk from {@link resolvePersistWalk}, in order
  * @param connectionDigests One digest per connection named by a persist source
- * @param buildIdOpts What every BuildID's SQL is compiled under.
- *   `BuildTarget.buildSQL` compiles under the same options, and
+ * @param buildIdOpts What every BuildID's SQL is generated under.
+ *   `BuildTarget.buildSQL` generates its SQL under the same options, and
  *   `persistedTableFor` recomputes the key under a query's.
  */
 export function mkBuildTargets(

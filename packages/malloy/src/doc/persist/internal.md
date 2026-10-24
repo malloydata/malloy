@@ -246,13 +246,13 @@ connection is async, and so is resolving the Runtime's givens; the fold is not.
 So the Runtime materializes the walk, collects the digests it names, binds the
 build's givens (`_givensFor` for the three-layer merge, `bindGivens` for the
 `Map<GivenID, Expr>`), and hands all of it to the fold as the `BuildIdOptions`
-every source is compiled under.
+every source's SQL is generated under.
 
 The walk emits *sources*, and several can share one table. One pass merges
 them, because the walk is in dependency order:
 
-1. a persistent source is compiled under `buildIdOpts` to its BuildID SQL and a
-   BuildID, and joins the target keyed `(connectionName, buildId)` — creating
+1. a persistent source's BuildID SQL is generated under `buildIdOpts` and
+   hashed to a BuildID, and the source joins the target keyed `(connectionName, buildId)` — creating
    it if new, appending to `target.sources` if not;
 2. its children's target keys are already known, so its edges are written
    immediately — minus any that landed on its own key (an extension depending
@@ -260,7 +260,7 @@ them, because the walk is in dependency order:
    other sources on this target recorded (see the cycle note below);
 3. a route contributes its children's keys upward instead of a key of its own,
    and so does a persistent source no BuildID can be computed for: one whose
-   SQL reads a given with no value in the build (checked before compiling, from
+   SQL reads a given with no value in the build (checked before generating, from
    `givenUsageOfRelation`, so the report can name the given) or whose compile
    throws a `MalloyCompileError` (a virtual source with no `virtualMap` entry).
    It goes to `unbuildable` instead of a target; its dependents inline its SQL,
@@ -270,7 +270,7 @@ them, because the walk is in dependency order:
    connection.
 
 Each target closes over `buildIdOpts` and the digests, so `target.buildSQL(
-manifest)` compiles under exactly what keyed it, plus the manifest; the builder
+manifest)` generates its SQL under exactly what keyed it, plus the manifest; the builder
 cannot hand the build SQL a different `virtualMap` or different givens from the
 key's. `target.readsGivens` is `givenUsageOfRelation(source)` being non-empty.
 
@@ -456,7 +456,7 @@ what replaced them.
 | `UnbuildableSource` | `api/foundation/types.ts` | A persist source with no BuildID, and why |
 | `ConnectionBuild` | `api/foundation/types.ts` | One connection's targets, in dependency order |
 | `BuildTargets` | `api/foundation/types.ts` | What `getBuildTargets` returns |
-| `BuildIdOptions` | `model/sql_compiled.ts` | What a BuildID's SQL is compiled under: `virtualMap`, `resolvedGivens` |
+| `BuildIdOptions` | `model/sql_compiled.ts` | What a BuildID's SQL is generated under: `virtualMap`, `resolvedGivens` |
 | `PersistNode` | `model/persist_utils.ts` | One source the walk yields |
 | `PersistWalk` | `model/persist_utils.ts` | The generator's type |
 | `ResolvedNode` | `api/foundation/build_targets.ts` | A `PersistNode` with its `PersistSource` |

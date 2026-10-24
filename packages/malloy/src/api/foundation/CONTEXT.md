@@ -190,7 +190,7 @@ A subtlety: `configURL` doesn't have to be where the config text actually came f
 - *Phase 1 (translator)*: `$NAME` → `GivenID`, scoped to the current file's visible givens. Bakes the id into the `givenRef` node. Sites: `lang/ast/expressions/expr-given.ts`, `lang/ast/statements/define-given.ts`.
 - *Phase 2 (compiler)*: `GivenID` → bound value. Lookup by id in `prepareResultOptions.resolvedGivens`; fall back to the declaration's default; throw if neither. Sites: `model/expression_compiler.ts:case 'given'`, `generateGivenFragment`.
 
-The `resolvedGivens` map is built **at the foundation boundary**, not inside the compiler, and by one function: `bindGivens` in `model/given_binding.ts` resolves the supplied values and folds every `inline` given's default against them. `PreparedQuery.getPreparedResult` calls it for a query and `Runtime.getBuildTargets` for a persistence build, so a persisted table's BuildID — a hash of SQL compiled under those values — is the key a query recomputes under the same values. The compiler trusts the map.
+The `resolvedGivens` map is built **at the foundation boundary**, not inside the compiler, and by one function: `bindGivens` in `model/given_binding.ts` resolves the supplied values and folds every `inline` given's default against them. `PreparedQuery.getPreparedResult` calls it for a query and `Runtime.getBuildTargets` for a persistence build, so a persisted table's BuildID — a hash of SQL generated under those values — is the key a query recomputes under the same values. The compiler trusts the map.
 
 **Foundation-layer pieces a reader needs to find:**
 
