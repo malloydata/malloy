@@ -73,14 +73,16 @@ export function resolvePersistWalk(
 }
 
 /**
- * The report for a given the source's SQL reads and this build has no value
- * for. Found before compiling, from the IR's record of what the SQL reads, so
- * it can name the given and say what a build does about it; the compiler's
- * own error for the same fact tells the reader to supply the value to a query.
+ * The problem reported for a given that `source`'s SQL reads and this build
+ * has no value for.
  *
- * The advice is always followable: the translator refuses a model that holds
- * a persisted source reading a given the model cannot surface, so the given is
- * in this model's namespace, under the name used here.
+ * Found from the IR before compiling, not by catching the compiler's error:
+ * that error tells the reader to supply the value to a query, and this one
+ * has to say what a build does instead.
+ *
+ * The given is named as this model surfaces it. The translator rejects a
+ * model holding a persisted source that reads a given the model does not
+ * surface, so the name is always there to find.
  */
 function unvaluedGivenProblem(
   source: PersistSource,
