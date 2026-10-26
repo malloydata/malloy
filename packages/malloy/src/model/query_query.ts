@@ -45,6 +45,7 @@ import {
   expressionIsCalculation,
   expressionIsScalar,
   activeName,
+  fieldIsIntrinsic,
   isJoinedSource,
   isBasicArray,
   isIndexSegment,
@@ -1283,14 +1284,20 @@ export class QueryQuery extends QueryField {
 
   // What a join contributes to the SELECT of a filtered join's subquery: every
   // column named outside the subquery, and the generated __distinct_key when
-  // the join needed one.
+  // the join needed one. A field is packed under the column it reads, which
+  // is how references outside the subquery name it; a `rename:` leaves that
+  // different from the name the query knows the field by.
   private joinProjectionFieldList(ji: JoinInstance): DialectFieldList {
     const packed = this.packedColumnsByJoin().get(ji.alias);
     const dialect = ji.queryStruct.dialect;
-    const fieldList = getDialectFieldList(
-      ji.queryStruct.structDef,
-      dialect
-    ).filter(d => packed?.has(d.rawName));
+    const fieldList: DialectFieldList = ji.queryStruct.structDef.fields
+      .filter(fieldIsIntrinsic)
+      .filter(f => packed?.has(activeName(f)))
+      .map(f => ({
+        typeDef: f,
+        sqlExpression: dialect.sqlQuoteIdentifier(f.name),
+        rawName: f.name,
+      }));
     if (ji.makeUniqueKey) {
       fieldList.push({
         typeDef: {type: 'string'},
