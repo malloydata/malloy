@@ -1,6 +1,6 @@
 # Malloy Compiler
 
-Malloy compilation has two phases: the **translator** ([`../lang/CONTEXT.md`](../lang/CONTEXT.md) — `src/lang/`, source → IR) and the **compiler** (this document — `src/model/`, IR → SQL). They live in sibling directories and communicate only through the IR.
+Malloy compilation has two phases: the **translator** ([`../lang/CONTEXT.md`](../lang/CONTEXT.md) — `src/lang/`, source → IR) and the **compiler** (this document — `src/model/`, IR → SQL). They live in sibling directories and communicate only through the IR. The dependency runs one way: `lang/` imports from `model/`, and `model/` imports nothing from `lang/` but types.
 
 This document covers the compiler: it takes the Intermediate Representation (IR) produced by the translator and generates executable SQL for specific database dialects.
 
@@ -93,6 +93,12 @@ table", which registers every named source by its `sourceID`):
   - Function calls
   - Field references and path expressions
 - Forms a complete expression tree that can be compiled to SQL
+
+### Shaping an IR type
+
+- **Absence is `undefined`, never `null`,** and when a missing value has a meaning of its own, the field is declared non-optional as `T | undefined` (`Given.default: ConstantExpr | undefined`) so that no read site can forget the case. Keeping `null` out of "absent" leaves it free to mean something real.
+- **Expression types float alongside the tree.** The translator tracks an expression's type as it walks; a node carries `typeDef` only when the node alone does not determine it (a literal), using the `typeDef?: AtomicTypeDef` field from `ExprLeaf`, narrowed where the node's type is fixed (`DateLiteralNode`). A reference recovers its type from what it refers to and does not repeat it.
+- **Declarations keyed by id live beside the tree, not on each reference.** `ModelDef.givens: Record<GivenID, Given>` is the pattern: the reference node carries the id, the side table carries the declaration.
 
 ### Annotations in the IR
 

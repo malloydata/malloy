@@ -23,9 +23,11 @@ The Malloy compiler is split into two distinct parts:
    - IR is a serializable data format that fully describes the semantic model
 
 2. **Compiler** (`packages/malloy/src/model/`) - See [packages/malloy/CONTEXT.md](packages/malloy/CONTEXT.md)
-   - Takes IR and translates it to SQL queries
+   - Takes IR and generates SQL queries
    - Produces SQL + metadata needed to feed query results back into Malloy or render them
      with Malloy semantics.
+
+**Vocabulary.** These two words are precise here: to *translate* is to turn Malloy source into IR, and to *compile* is to turn IR into SQL. SQL is the compiler's output and nothing in this repository compiles SQL, so "compile the SQL" is never the right phrase. Each area's `CONTEXT.md` defines the further terms that are precise in that area.
 
 ## Language Structures
 
@@ -57,7 +59,7 @@ Objects in Malloy (sources, queries, joins, measures, dimensions, `group_by`, `a
 - Block annotations span multiple lines between `#|`/`|#` (object) or `##|`/`|##` (model); the body is dedented to its common leading-whitespace prefix
 - Annotations apply to the construct declared below them; block-level annotations on a multi-item construct (e.g. `dimension: { ... }`) apply to every item
 
-**Prefix and route.** Everything from the marker (`#`/`##`/`#|`/`##|`) up to the first whitespace is the annotation's **prefix**; it resolves to a **route** — a namespace key like `''` (the renderer's default), `!` (compiler flags), `@` (persistence), `dbmeta` (metadata a connection read with the table schema), `docs`, `myApp`. Routes claimed by an app (`#(myApp) ...`) are how applications stake a namespace and decline MOTLY in favor of their own payload language. The grammar is formalized in [packages/malloy/src/prefix.ts](packages/malloy/src/prefix.ts); MOTLY itself is in [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md).
+**Prefix and route.** Everything from the marker (`#`/`##`/`#|`/`##|`) up to the first whitespace is the annotation's **prefix**; it resolves to a **route** — a namespace key like `''` (the renderer's default), `!` (compiler flags), `@` (persistence), `dbmeta` (metadata a connection read with the table schema), `docs`, `myApp`. Routes claimed by an app (`#(myApp) ...`) are how applications stake a namespace and decline MOTLY in favor of their own payload language. The grammar is formalized in [packages/malloy/src/lang/annotation-prefix.ts](packages/malloy/src/lang/annotation-prefix.ts); MOTLY itself is in [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md).
 
 Read annotations on any tagged entity through its `annotations` view (`entity.annotations.parseAsTag(route)` for MOTLY; `entity.annotations.forRoute(route)` for raw text + source offsets when bringing your own parser).
 
@@ -117,7 +119,7 @@ Each database has its own package with connection handling and dialect-specific 
 - `malloy-db-postgres/` - PostgreSQL adapter
 - `malloy-db-mysql/` - MySQL adapter
 - `malloy-db-sqlserver/` - SQL Server adapter
-- `malloy-db-snowflake/` - Snowflake adapter
+- `malloy-db-snowflake/` - Snowflake adapter ([packages/malloy-db-snowflake/CONTEXT.md](packages/malloy-db-snowflake/CONTEXT.md))
 - `malloy-db-trino/` - Trino/Presto adapter
 - `malloy-db-publisher/` - Publishing/caching layer
 
@@ -293,8 +295,7 @@ For more details on test organization and infrastructure, see [test/CONTEXT.md](
 
 ### Code Quality
 ```bash
-npm run lint                  # Run ESLint on all packages
-npm run lint-fix              # Fix ESLint issues automatically
+npm run lint-fix              # Lint every package and fix what ESLint can; this is the command to run
 ```
 
 ### VS Code Integration
