@@ -364,14 +364,18 @@ export class PostgresDialect extends PostgresBase {
     // PostgreSQL requires CAST to NUMERIC before ROUND, which is different
     // than the generic implementation of sqlSumDistinct, but is OK in
     // PostgreSQL because NUMERIC has arbitrary precision.
+    // The sum stays NUMERIC so later stages and derived expressions see the
+    // exact value. A DOUBLE PRECISION cast would keep only ~16 digits. The
+    // ROUND(..., 9) leaves a scale of 9, which would show up in string
+    // conversions as trailing zeros; trim_scale removes it.
     const roundedValue = `ROUND(CAST(COALESCE(${value}, 0) AS NUMERIC), 9)`;
     const sumSQL = `SUM(DISTINCT ${roundedValue} + ${hashKey}) - SUM(DISTINCT ${hashKey})`;
-    const ret = `CAST(${sumSQL} AS DOUBLE PRECISION)`;
+    const ret = `trim_scale(${sumSQL})`;
 
     if (funcName === 'SUM') {
       return ret;
     } else if (funcName === 'AVG') {
-      return `(${ret})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0)`;
+      return `trim_scale((${sumSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0))`;
     }
     throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
