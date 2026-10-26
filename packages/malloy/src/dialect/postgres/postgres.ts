@@ -377,7 +377,7 @@ export class PostgresDialect extends PostgresBase {
     if (funcName === 'SUM') {
       return ret;
     } else if (funcName === 'AVG') {
-      return `(${ret})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0)`;
+      return `trim_scale((${sumSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0))`;
     }
     throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
