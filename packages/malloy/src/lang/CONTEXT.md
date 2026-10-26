@@ -29,6 +29,10 @@ The Malloy language is defined using ANTLR4 grammar files:
 **ANTLR Labeled Alternatives Pattern:**
 The grammar uses `#labelName` in grammar rules to create type-safe visitor methods. This is a very useful pattern that generates specific visitor methods for each alternative in a rule, making the parse tree traversal type-safe and maintainable.
 
+**Grammar conventions:**
+- A list is written `X (COMMA? X)* COMMA?`, the form the existing list rules use. The more compact `X (COMMA | X)*` looks equivalent and is not (it admits consecutive commas).
+- Annotations are not allowed between `is` and the value. `isDefine` accepts them in the grammar only so the AST builder can report that case with a targeted error (`malloy-to-ast.ts` does this for `given:`); a new statement either uses plain `IS` or does the same.
+
 **Building the parser:**
 When modifying grammar files, regenerate the parser:
 ```bash
@@ -88,6 +92,14 @@ The AST is a tree of `MalloyElement` objects that represents the semantic struct
 **Method naming convention in `malloy-to-ast.ts`:**
 - `visitX(pcx: XContext)` — visits a parse-tree node and returns the AST node for it (a `MalloyElement` subclass). Use this even if the method is only ever called from one parent visitor; the name signals "this is the parse-tree-to-AST mapping for rule `X`."
 - `getX(pcx: XContext)` — transforms a parse-tree fragment into something that is *not* an AST node (a typeDef, a primitive, a list of notes, etc.), or is a shared helper used from multiple callers. Distinct from `visitX` so a reader can tell at a glance whether the return is an AST node or a piece of supporting data.
+
+**Helper and constructor conventions:**
+- A helper takes the narrowest parse-tree context it reads. If all it does with a parameter is read one well-typed sub-rule, it takes that sub-rule's context, not the parent `ParserRuleContext`.
+- A helper returns the focused payload (`FilterExprType | undefined`), not an inline structural object; the caller composes the wider shape.
+- A helper does not take an argument it can derive from another: a `MalloyBasicTypeContext` already carries the location to report against.
+- AST node constructors take positional arguments. An `Init` object is justified only when several optional fields would otherwise have callers threading `undefined`. If a parameter name is a reserved word (`default`), rename the parameter (`defaultExpr`) and keep the public field's natural name.
+
+**File layout under `ast/`:** one concept per file. Top-level statements are `statements/define-X.ts` (`define-source.ts`, `define-given.ts`); expression nodes are `expressions/expr-X.ts` (`expr-id-reference.ts`, `expr-given.ts`), described in [ast/expressions/CONTEXT.md](ast/expressions/CONTEXT.md). Types that appear in the IR live in `model/malloy_types.ts` even when only the AST constructs them.
 
 **AST integration entry points:**
 

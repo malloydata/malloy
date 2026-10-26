@@ -17,6 +17,8 @@ This file is about the parts that are fragile and easy to break.
 | `runtime.ts` | `Runtime`, materializers, lazy manifest read |
 | Other files | Model/Query/Result classes — see parent CONTEXT.md |
 
+**Runs in a browser.** Nothing here may assume Node: no `fs`, no `path`, and `process.env` only behind a `typeof process` check (see `config_overlays.ts`). All IO goes through `URLReader`, which is the one seam a host implements.
+
 ## The Pipeline
 
 ```
