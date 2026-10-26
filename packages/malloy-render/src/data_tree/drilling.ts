@@ -51,6 +51,16 @@ export function getStableDrillClauses(
   const result: Malloy.DrillOperation[] = [];
   while (current) {
     const {field} = current;
+    // The clicked leaf itself. A filtered measure (`total_sales {where: ...}`)
+    // carries its own drill_filters, and dropping them would drill to a SUPERSET
+    // of the rows behind the number that was clicked. Only the starting cell can
+    // be a leaf — every parent is an array or a record — so this runs at most
+    // once, and is disjoint from both branches below.
+    if (!field.isArray() && !field.isRecord()) {
+      const filters = field.stableDrillFilters;
+      if (filters === undefined) return undefined;
+      result.unshift(...filters.map(f => ({filter: f})));
+    }
     if (field.isArray()) {
       const filters = field.stableDrillFilters;
       if (filters === undefined) return undefined;
@@ -96,6 +106,12 @@ export function getDrillValues(cell: Cell): DrillValue[] {
   const result: DrillValue[] = [];
   while (current) {
     const field = current.field;
+    // The clicked leaf's own filters — see getStableDrillClauses. drillFilters
+    // falls back to the raw `code` when a filter has no stable form, so unlike
+    // the stable walk there is nothing to bail on here.
+    if (!field.isArray() && !field.isRecord()) {
+      result.unshift(...field.drillFilters.map(f => ({where: f})));
+    }
     if (field.isArray()) {
       const filters = field.drillFilters;
       result.unshift(...filters.map(f => ({where: f})));
