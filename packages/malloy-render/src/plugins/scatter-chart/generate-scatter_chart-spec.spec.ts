@@ -11,9 +11,16 @@ import type {LoggerInterface} from 'vega';
 import {
   runChartQuery,
   closeChartTestRuntime,
+  fakeTooltipItem,
   SOURCE4,
 } from '@/plugins/spec-test-support/harness';
-import {generateScatterChartSpec} from '@/plugins/scatter-chart/generate-scatter_chart-spec';
+import {
+  generateScatterChartSpec,
+  mapScatterRow,
+  scatterTooltip,
+} from '@/plugins/scatter-chart/generate-scatter_chart-spec';
+import {rowOfMark} from '@/component/vega/vega-lite-spec';
+import {CATEGORY_PALETTE} from '@/component/vega/base-vega-config';
 
 afterAll(async () => {
   await closeChartTestRuntime();
@@ -21,7 +28,7 @@ afterAll(async () => {
 
 describe('scatter_chart honors # label tags on channel titles', () => {
   test('x/y axis and color/size/shape legend titles use the # label tags', async () => {
-    const {root, rootCell} = await runChartQuery(
+    const {root} = await runChartQuery(
       SOURCE4,
       `
       # scatter_chart
@@ -63,7 +70,7 @@ describe('scatter_chart honors # label tags on channel titles', () => {
         return this;
       },
     } as unknown as LoggerInterface;
-    const compiled = lite.compile(generateScatterChartSpec(rootCell, root), {
+    const compiled = lite.compile(generateScatterChartSpec(root), {
       logger: quietLogger,
     }).spec;
 
@@ -91,4 +98,88 @@ describe('scatter_chart honors # label tags on channel titles', () => {
       expect(allTitles).not.toContain(rawName);
     }
   }, 60000);
+});
+
+describe('scatter_chart draws live, in the theme colors, with a tooltip', () => {
+  const QUERY = `
+    # scatter_chart
+    run: data4 -> {
+      group_by: audience_name
+      aggregate:
+        # label="Reach (HH)" currency
+        total_reach is reach.sum()
+      group_by: region
+    }
+  `;
+
+  test('its rows come from the live values data source', async () => {
+    const {root} = await runChartQuery(SOURCE4, QUERY);
+    expect(generateScatterChartSpec(root).data).toEqual({name: 'values'});
+  });
+
+  const colorOf = (spec: lite.TopLevelSpec) =>
+    'encoding' in spec ? spec.encoding?.color : undefined;
+
+  test("without a color field, points take the theme's first color", async () => {
+    const {root} = await runChartQuery(
+      SOURCE4,
+      'run: data4 -> { group_by: audience_name; aggregate: total_reach is reach.sum() }'
+    );
+    expect(colorOf(generateScatterChartSpec(root))).toEqual({
+      value: CATEGORY_PALETTE[0],
+    });
+    expect(
+      colorOf(generateScatterChartSpec(root, {range: {category: ['#123456']}}))
+    ).toEqual({value: '#123456'});
+  });
+
+  test("a text color field takes the theme's series colors", async () => {
+    const {root} = await runChartQuery(SOURCE4, QUERY);
+    expect(colorOf(generateScatterChartSpec(root))).toMatchObject({
+      field: 'region',
+      scale: {range: [...CATEGORY_PALETTE]},
+    });
+    expect(
+      colorOf(generateScatterChartSpec(root, {range: {category: ['#123456']}}))
+    ).toMatchObject({scale: {range: ['#123456']}});
+  });
+
+  test('the tooltip labels and formats each column the chart draws', async () => {
+    const {root, rootCell} = await runChartQuery(SOURCE4, QUERY);
+    const row = rootCell.rows.find(
+      r => r.column('audience_name').value === 'Total Universe (HH)'
+    );
+    if (row === undefined) throw new Error('missing row');
+    expect(scatterTooltip(root)(row)).toEqual({
+      title: [],
+      entries: [
+        {
+          label: 'audience_name',
+          value: 'Total Universe (HH)',
+          highlight: false,
+          entryType: 'list-item',
+        },
+        {
+          label: 'Reach (HH)',
+          value: '$75.00',
+          highlight: false,
+          entryType: 'list-item',
+        },
+        {
+          label: 'region',
+          value: 'East',
+          highlight: false,
+          entryType: 'list-item',
+        },
+      ],
+    });
+  });
+
+  test('a mark finds the row it was drawn from; a background mark finds none', async () => {
+    const {rootCell} = await runChartQuery(SOURCE4, QUERY);
+    const row = rootCell.rows[0];
+    const datum = {...mapScatterRow(row, undefined), __row: row};
+    expect(rowOfMark(fakeTooltipItem('marks', datum))).toBe(row);
+    expect(rowOfMark(fakeTooltipItem('marks', {id: '06'}))).toBeUndefined();
+  });
 });
