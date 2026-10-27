@@ -9,6 +9,14 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       avg_cost is retail_price.avg()
     group_by: brand
   }
+
+  #(story)
+  # scatter_chart
+  view: scatter_plot_no_color is {
+    group_by: price is floor(retail_price)
+    aggregate: avg_cost is cost.avg()
+    limit: 150
+  }
 }
 
 source: us_states is duckdb.sql("""

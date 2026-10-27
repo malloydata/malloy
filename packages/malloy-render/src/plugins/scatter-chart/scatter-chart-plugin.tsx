@@ -16,12 +16,13 @@ import {
   generateScatterChartSpec,
   getScatterSize,
   mapScatterRow,
+  scatterTooltip,
 } from './generate-scatter_chart-spec';
+import {VegaLiteChart} from '@/component/vega/vega-lite-chart';
 import {
   compileVegaLiteChart,
-  VegaLiteChart,
   type CompiledVegaLiteChart,
-} from '@/component/vega/vega-lite-chart';
+} from '@/component/vega/vega-lite-spec';
 import type {
   GetResultMetadataOptions,
   RenderMetadata,
@@ -56,6 +57,7 @@ export const ScatterChartPluginFactory: RenderPluginFactory<SolidJSRenderPluginI
       let chart: CompiledVegaLiteChart | undefined;
       let useVegaInterpreter: boolean | undefined;
       const timezone = field.root().queryTimezone;
+      const tooltip = scatterTooltip(field);
 
       return {
         name: 'scatter_chart',
@@ -71,7 +73,8 @@ export const ScatterChartPluginFactory: RenderPluginFactory<SolidJSRenderPluginI
           chart = compileVegaLiteChart(
             generateScatterChartSpec(
               field,
-              options.getVegaConfigOverride?.('scatter_chart') ?? {}
+              options.getVegaConfigOverride?.('scatter_chart') ?? {},
+              options.explicitTheme
             ),
             getScatterSize(field),
             useVegaInterpreter
@@ -92,6 +95,7 @@ export const ScatterChartPluginFactory: RenderPluginFactory<SolidJSRenderPluginI
               data={props.dataColumn}
               chart={chart}
               mapRow={row => mapScatterRow(row, timezone)}
+              tooltip={tooltip}
               useVegaInterpreter={useVegaInterpreter}
             />
           );
