@@ -9,6 +9,7 @@
 import {parseAnnotation} from '@malloydata/malloy-tag';
 import {
   NULL_SYMBOL,
+  axisCellFormat,
   formatDateTime,
   formatNumber,
   resolveCellFormat,
@@ -133,5 +134,64 @@ describe('formatDateTime', () => {
 
   test('null', () => {
     expect(formatDateTime(null)).toBe(NULL_SYMBOL);
+  });
+});
+
+describe('axisCellFormat', () => {
+  const axis = (annotation: string, values: number[]) => {
+    const config = axisCellFormat(fmt(annotation));
+    return values.map(v => formatNumber(v, config));
+  };
+  const VALUES = [1400000, 250000, 950, 0, 12345678, 1500000000];
+
+  test('a currency with no scale is shortened on the axis', () => {
+    expect(axis('# currency', VALUES)).toEqual([
+      '$1.4M',
+      '$250K',
+      '$950',
+      '$0',
+      '$12.35M',
+      '$1.5B',
+    ]);
+    expect(axis('# currency=eur', [1400000])).toEqual(['€1.4M']);
+  });
+
+  test('a currency with its own decimals but no scale is shortened', () => {
+    expect(axis('# currency { decimals=0 }', [1400000])).toEqual(['$1.4M']);
+  });
+
+  test("a currency the author scaled keeps the author's scale", () => {
+    expect(axis('# currency=usd0k', [1400000])).toEqual(['$1,400k']);
+    expect(axis('# currency { scale=m }', [250000])).toEqual(['$0.25M']);
+  });
+
+  test('other formats are unchanged on the axis', () => {
+    for (const annotation of ['# percent', '# number=0k', '']) {
+      const config = fmt(annotation);
+      expect(axisCellFormat(config)).toBe(config);
+    }
+  });
+
+  test('the cell format itself is not shortened', () => {
+    expect(formatNumber(1400000, fmt('# currency'))).toBe('$1,400,000.00');
+  });
+});
+
+describe('negative currency puts the minus before the symbol', () => {
+  test.each([
+    ['# currency', -3200000, '-$3,200,000.00'],
+    ['# currency=usd0m', -3200000, '-$3m'],
+    ['# currency { scale=auto }', -3200000, '-$3.2M'],
+    ['# currency=usd0m', '-3200000', '-$3m'],
+    ['# currency', '-3200000', '-$3,200,000.00'],
+    ['# currency=usd0k', 1500, '$2k'],
+  ])('%s formats %j as %s', (annotation, value, expected) => {
+    expect(formatNumber(value, fmt(annotation))).toBe(expected);
+  });
+
+  test('on a shortened axis too', () => {
+    expect(formatNumber(-3200000, axisCellFormat(fmt('# currency')))).toBe(
+      '-$3.2M'
+    );
   });
 });
