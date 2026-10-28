@@ -38,7 +38,7 @@ import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {RenderMetadata} from '../render-result-metadata';
-import {convertLegacyToVizTag} from '../tag-utils';
+import {normalizedVizTag} from '../tag-utils';
 
 type BarDataRecord = {
   x: string | number;
@@ -110,7 +110,7 @@ export function generateBarChartVegaSpec(
   explore: RepeatedRecordField,
   metadata: RenderMetadata
 ): VegaChartProps {
-  const tag = convertLegacyToVizTag(explore.tag);
+  const tag = normalizedVizTag(explore);
   const chartTag = tag.tag('viz');
   if (!chartTag)
     throw new Error(

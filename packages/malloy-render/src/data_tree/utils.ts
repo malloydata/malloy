@@ -27,7 +27,11 @@ import {
   StringField,
   TimestampField,
 } from './fields';
-import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '../component/tag-utils';
+import {
+  normalizedVizTag,
+  VIZ_CHART_TYPES,
+  VIZ_PLUGIN_TYPES,
+} from '../component/tag-utils';
 import type {FieldBase} from './fields/base';
 import {MALLOY_INTERFACE_TYPES} from '@malloydata/malloy-interfaces';
 
@@ -171,7 +175,7 @@ export function isSQLNativeFieldInfo(
 
 // Legacy renderer tags that map directly to a renderAs value. Chart types
 // (bar_chart/line_chart/combo_chart) are intentionally NOT listed here — they
-// are normalized to `viz=…` by convertLegacyToVizTag and dispatched via the
+// are normalized to `viz=…` by normalizedVizTag and dispatched via the
 // single VIZ_CHART_TYPES source of truth in the `viz` block below, so listing
 // them here would duplicate that concept.
 const RENDER_TAG_LIST = [
@@ -197,7 +201,7 @@ export function shouldRenderAs({
   const pluginRender = field.getPlugins().at(0)?.name;
   if (pluginRender) return pluginRender;
 
-  const tag = convertLegacyToVizTag(tagOverride ?? field.tag);
+  const tag = normalizedVizTag(field, tagOverride);
 
   // Check viz property first (new approach)
   const vizType = tag.text('viz');
@@ -205,6 +209,9 @@ export function shouldRenderAs({
     if (vizType === 'table') return 'table';
     if (vizType === 'dashboard') return 'dashboard';
     if (VIZ_CHART_TYPES.includes(vizType)) return 'chart';
+    if (Object.prototype.hasOwnProperty.call(VIZ_PLUGIN_TYPES, vizType)) {
+      return VIZ_PLUGIN_TYPES[vizType];
+    }
     // Handle other viz types if needed in the future
   }
 
