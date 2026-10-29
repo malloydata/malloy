@@ -1,11 +1,7 @@
 name: 'DB:Trino'
 permissions: {}
 
-on:
-  workflow_call:
-    secrets:
-      BQ_PRESTO_TRINO_KEY:
-        required: true
+on: workflow_call
 
 jobs:
   test-trino:
@@ -27,11 +23,10 @@ jobs:
           npm run ci-trino
           ./test/trino/trino_stop.sh
         env:
-          BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
-          TRINO_CATALOG: bigquery
+          TRINO_CATALOG: hive
           TRINO_SCHEMA: malloytest
           TRINO_SERVER: http://localhost:8080
-          TRINO_USER: malloy-ci-bot@malloydata.org
+          TRINO_USER: malloy-ci
       # - name: Show docker logs
       #   if: always()
       #   run: |

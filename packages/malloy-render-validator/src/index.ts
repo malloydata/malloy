@@ -14,7 +14,7 @@
 // We install fake DOM globals (window, document, navigator) just long
 // enough for the renderer to load, then immediately remove them. If
 // we left them in place, any library that checks
-// `typeof window !== 'undefined'` (e.g. axios, used by trino-client)
+// `typeof window !== 'undefined'` (e.g. axios, used by @trinodb/trino-js-client)
 // would think it's in a browser and break in different ways.
 //
 // We use explicit require() instead of import because TypeScript

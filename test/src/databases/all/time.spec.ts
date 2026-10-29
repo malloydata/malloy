@@ -274,11 +274,11 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     });
   });
 
-  test.when(runtime.dialect.hasTimestamptz)(
+  test.when(timestamptz)(
     'extract from timestamptz without query timezone',
     async () => {
       // TIMESTAMPTZ representing midnight UTC
-      // Without query timezone, extract should happen in UTC (or stored tz for Trino)
+      // Without query timezone, extract should happen in UTC
       // Expected: hour = 0, day = 20
       await expect(
         `run: ${dbName}.sql("SELECT 1 as x") -> {
@@ -290,6 +290,80 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       ).toMatchResult(testModel, {utc_hour: 0, utc_day: 20});
     }
   );
+
+  // 20:00 on the 30th in Mexico City is 02:00 on the 31st in UTC. With no
+  // query time zone the value is read in UTC, not in the zone it was written in.
+  describe('timestamptz written in another zone', () => {
+    const tzModel = () =>
+      mkTestModel(runtime, {
+        tzdata: [
+          {
+            tstz: TV.timestamptz('2020-01-30 20:00:00[America/Mexico_City]'),
+            same_instant: TV.timestamp('2020-01-31 02:00:00'),
+            same_digits: TV.timestamp('2020-01-30 20:00:00'),
+          },
+        ],
+      });
+
+    test.when(timestamptz)('extract', async () => {
+      await expect(
+        'run: tzdata -> { select: h is hour(tstz), d is day(tstz) }'
+      ).toMatchResult(tzModel(), {h: 2, d: 31});
+    });
+
+    test.when(timestamptz)('truncate', async () => {
+      await expect('run: tzdata -> { select: d is tstz.day }').toMatchResult(
+        tzModel(),
+        {d: '2020-01-31T00:00:00.000Z'}
+      );
+    });
+
+    test.when(timestamptz)('add a month', async () => {
+      // Jan 31 + 1 month is Feb 29; Jan 30 + 1 month in Mexico City is Mar 1 UTC
+      await expect(
+        'run: tzdata -> { select: next is tstz + 1 month }'
+      ).toMatchResult(tzModel(), {next: '2020-02-29T02:00:00.000Z'});
+    });
+
+    test.when(timestamptz)('cast to date', async () => {
+      await expect('run: tzdata -> { select: d is tstz::date }').toMatchResult(
+        tzModel(),
+        {d: '2020-01-31'}
+      );
+    });
+
+    test.when(timestamptz)('cast keeps the instant', async () => {
+      await expect(`
+        run: tzdata -> {
+          select:
+            ts is tstz::timestamp
+            same is pick 'yes' when tstz::timestamp = tstz else 'no'
+            back is pick 'yes' when same_instant::timestamptz = tstz else 'no'
+        }
+      `).toMatchResult(tzModel(), {
+        ts: '2020-01-31T02:00:00.000Z',
+        same: 'yes',
+        back: 'yes',
+      });
+    });
+
+    test.when(timestamptz)('compare to timestamp', async () => {
+      await expect(`
+        run: tzdata -> {
+          select:
+            eq_instant is pick 'yes' when tstz = same_instant else 'no'
+            eq_digits is pick 'yes' when tstz = same_digits else 'no'
+            gt_digits is pick 'yes' when tstz > same_digits else 'no'
+            lt_digits is pick 'yes' when same_digits < tstz else 'no'
+        }
+      `).toMatchResult(tzModel(), {
+        eq_instant: 'yes',
+        eq_digits: 'no',
+        gt_digits: 'yes',
+        lt_digits: 'yes',
+      });
+    });
+  });
 
   describe('date truncation', () => {
     test('date trunc day', async () => {
@@ -526,16 +600,16 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       });
       await expect(`
         run: fourTimes -> { select:
-          isBefore is tbefore ? @2026-01-01
-          isFirst is tfirst ? @2026-01-01
-          isLast is tlast ? @2026-01-01
-          isAfter is tafter ? @2026-01-01
+          isBefore is pick 'in' when tbefore ? @2026-01-01 else 'out'
+          isFirst is pick 'in' when tfirst ? @2026-01-01 else 'out'
+          isLast is pick 'in' when tlast ? @2026-01-01 else 'out'
+          isAfter is pick 'in' when tafter ? @2026-01-01 else 'out'
         }
       `).toMatchResult(tm, {
-        isBefore: false,
-        isFirst: true,
-        isLast: true,
-        isAfter: false,
+        isBefore: 'out',
+        isFirst: 'in',
+        isLast: 'in',
+        isAfter: 'out',
       });
     });
   });
@@ -730,6 +804,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
 
 describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   const testModel = wrapTestModel(runtime, '');
+  const timestamptz = runtime.dialect.hasTimestamptz;
   const ts = new TestSelect(runtime.dialect);
   const selectMidnight = `"""${ts.generate({
     utc_midnight_ts: ts.mk_timestamp('2020-02-20 00:00:00'),
@@ -762,7 +837,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).toMatchResult(testModel, {mex_midnight: 18, mex_day: 19});
   });
 
-  test.when(runtime.dialect.hasTimestamptz)(
+  test.when(timestamptz)(
     'extract from timestamptz with query timezone',
     async () => {
       // TIMESTAMPTZ representing midnight UTC
@@ -792,6 +867,16 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).toMatchResult(testModel, {mex_day: mex_19.toJSDate()});
   });
 
+  test('truncate hour in a zone a half hour off UTC', async () => {
+    // 02:10 in Kolkata is 20:40 UTC, and the Kolkata hour starts at 20:30
+    await expect(
+      `run: ${dbName}.sql("SELECT 1 as x") -> {
+        timezone: 'Asia/Kolkata'
+        select: kol_hour is @2020-01-31 02:10:00.hour
+      }`
+    ).toMatchResult(testModel, {kol_hour: '2020-01-30T20:30:00.000Z'});
+  });
+
   test('truncate week', async () => {
     // the 19th in mexico is a wednesday, so trunc to the 15th
     const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
@@ -814,18 +899,15 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       }`
     ).toMatchResult(testModel, {mex_date: '2020-02-19'});
   });
-  test.when(runtime.dialect.hasTimestamptz)(
-    'cast timestamptz to date',
-    async () => {
-      await expect(
-        `run: ${dbName}.sql("SELECT 1 as x") -> {
+  test.when(timestamptz)('cast timestamptz to date', async () => {
+    await expect(
+      `run: ${dbName}.sql("SELECT 1 as x") -> {
           timezone: '${zone}'
           extend: { dimension: utc_tstz is @2020-02-20 00:00:00[UTC]::timestamptz }
           select: mex_date is utc_tstz::date
         }`
-      ).toMatchResult(testModel, {mex_date: '2020-02-19'});
-    }
-  );
+    ).toMatchResult(testModel, {mex_date: '2020-02-19'});
+  });
   test('cast date to timestamp', async () => {
     await expect(
       `run: ${dbName}.sql(${selectMidnight}) -> {
@@ -842,31 +924,95 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       }`
     ).toMatchResult(testModel, {d2020: '2020-02-20'});
   });
-  test.when(runtime.dialect.hasTimestamptz)(
-    'cast date to timestamptz',
-    async () => {
-      await expect(
-        `run: ${dbName}.sql(${selectMidnight}) -> {
+  test.when(timestamptz)('cast date to timestamptz', async () => {
+    await expect(
+      `run: ${dbName}.sql(${selectMidnight}) -> {
           timezone: '${zone}'
           select: mex_date is date_2020::timestamptz
         }`
-      ).toMatchResult(testModel, {mex_date: zone_2020.toJSDate()});
-    }
-  );
+    ).toMatchResult(testModel, {mex_date: zone_2020.toJSDate()});
+  });
 
-  test.when(runtime.dialect.hasTimestamptz)(
-    'compare timestamptz to range',
-    async () => {
-      const tzModel = mkTestModel(runtime, {
+  test.when(timestamptz)('compare timestamptz to range', async () => {
+    const tzModel = mkTestModel(runtime, {
+      tzdata: [
+        {updated: TV.timestamptz('2020-01-15 00:00:00[America/Mexico_City]')},
+      ],
+    });
+    await expect(
+      "run: tzdata -> { select: cmp is pick 'in' when updated ? @2020-01 else 'out' }"
+    ).toMatchResult(tzModel, {cmp: 'in'});
+  });
+
+  // 11:00 on the 31st in Tokyo is 20:00 on the 30th in Mexico City. With a
+  // query time zone the value is read there, not in the zone it was written in.
+  describe('timestamptz written in another zone', () => {
+    const tzModel = () =>
+      mkTestModel(runtime, {
         tzdata: [
-          {updated: TV.timestamptz('2020-01-15 00:00:00[America/Mexico_City]')},
+          {
+            tstz: TV.timestamptz('2020-01-31 11:00:00[Asia/Tokyo]'),
+            same_instant: TV.timestamp('2020-01-31 02:00:00'),
+          },
         ],
       });
-      await expect(
-        'run: tzdata -> { select: cmp is updated ? @2020-01 }'
-      ).toMatchResult(tzModel, {cmp: true});
-    }
-  );
+
+    test.when(timestamptz)('extract', async () => {
+      await expect(`
+        run: tzdata -> {
+          timezone: '${zone}'
+          select: h is hour(tstz), d is day(tstz)
+        }
+      `).toMatchResult(tzModel(), {h: 20, d: 30});
+    });
+
+    test.when(timestamptz)('truncate', async () => {
+      const mex_30 = LuxonDateTime.fromISO('2020-01-30T00:00:00', {zone});
+      await expect(`
+        run: tzdata -> {
+          timezone: '${zone}'
+          select: d is tstz.day
+        }
+      `).toMatchResult(tzModel(), {d: mex_30.toJSDate()});
+    });
+
+    test.when(timestamptz)('add a month', async () => {
+      // Jan 30 + 1 month is Feb 29 in Mexico City; Jan 31 + 1 month in Tokyo
+      // or UTC is a day earlier
+      const mex_29 = LuxonDateTime.fromISO('2020-02-29T20:00:00', {zone});
+      await expect(`
+        run: tzdata -> {
+          timezone: '${zone}'
+          select: next is tstz + 1 month
+        }
+      `).toMatchResult(tzModel(), {next: mex_29.toJSDate()});
+    });
+
+    test.when(timestamptz)('cast to date', async () => {
+      await expect(`
+        run: tzdata -> {
+          timezone: '${zone}'
+          select: d is tstz::date
+        }
+      `).toMatchResult(tzModel(), {d: '2020-01-30'});
+    });
+
+    test.when(timestamptz)('cast keeps the instant', async () => {
+      await expect(`
+        run: tzdata -> {
+          timezone: '${zone}'
+          select:
+            ts is tstz::timestamp
+            same is pick 'yes' when tstz::timestamp = tstz else 'no'
+            back is pick 'yes' when same_instant::timestamptz = tstz else 'no'
+        }
+      `).toMatchResult(tzModel(), {
+        ts: '2020-01-31T02:00:00.000Z',
+        same: 'yes',
+        back: 'yes',
+      });
+    });
+  });
 
   // Test for timezone rendering issue with nested queries
   test.when(runtime.supportsNesting)(
@@ -946,16 +1092,16 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         timezone: 'Europe/Dublin'
         select:
           june1_correct,
-          month_ok is by_month = june1_correct, by_month
-          day_ok is by_day = june1_correct, by_day
-          hour_ok is by_hour = june1_correct, by_hour
-          quarter_ok is by_quarter = august1_correct, by_quarter
+          month_ok is pick 'yes' when by_month = june1_correct else 'no', by_month
+          day_ok is pick 'yes' when by_day = june1_correct else 'no', by_day
+          hour_ok is pick 'yes' when by_hour = june1_correct else 'no', by_hour
+          quarter_ok is pick 'yes' when by_quarter = august1_correct else 'no', by_quarter
       }`
     ).toMatchResult(testModel, {
-      month_ok: true,
-      day_ok: true,
-      hour_ok: true,
-      quarter_ok: true,
+      month_ok: 'yes',
+      day_ok: 'yes',
+      hour_ok: 'yes',
+      quarter_ok: 'yes',
     });
   });
 });

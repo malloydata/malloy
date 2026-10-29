@@ -17,12 +17,11 @@ import {
   type SourceDef,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
-import {detectAndRemovePartialStages} from '../query-utils';
 import {MalloyElement} from '../types/malloy-element';
 import type {QueryComp} from '../types/query-comp';
 
 export abstract class QueryBase extends MalloyElement {
-  abstract queryComp(isRefOk: boolean): QueryComp;
+  abstract queryComp(isRefOk: boolean, isPartialOk: boolean): QueryComp;
 
   protected expandRefUsage(
     inputSource: SourceDef,
@@ -64,11 +63,6 @@ export abstract class QueryBase extends MalloyElement {
   }
 
   query(isRefOk = true): Query {
-    const {query} = this.queryComp(isRefOk);
-
-    return {
-      ...query,
-      pipeline: detectAndRemovePartialStages(query.pipeline, this),
-    };
+    return this.queryComp(isRefOk, false).query;
   }
 }

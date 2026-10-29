@@ -6,7 +6,7 @@
 /**
  * Import this module to register Jest matchers (toMatchResult, toEqualResult).
  *
- * Usage in jest.config.js:
+ * Usage in jest.config.ts:
  *   setupFilesAfterEnv: ['@malloydata/malloy/test/matchers']
  *
  * Or import directly in a test file:

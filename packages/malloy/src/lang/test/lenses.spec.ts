@@ -443,7 +443,17 @@ describe('partial views', () => {
       errorMessage("'undef' is not defined"),
       error('ambiguous-view-type'),
       error('ambiguous-view-type'),
-      errorMessage("'undef' is not defined"),
+      // The first stage of `x -> { where: true } -> { group_by: undef }` is
+      // ambiguous, and that is reported when that stage is built, before the
+      // stage which references `undef` is compiled.
+      error('ambiguous-view-type'),
+      errorMessage("'undef' is not defined")
+    );
+  });
+  test('a partial cannot become a source', () => {
+    // A `query_source` is written into the model, so its pipeline has to be
+    // one the compiler can read.
+    expect(markSource`source: xs is (a -> { where: astr = 'x' })`).toLog(
       error('ambiguous-view-type')
     );
   });

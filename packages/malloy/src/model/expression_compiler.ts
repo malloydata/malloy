@@ -226,7 +226,7 @@ function compileExpr<T extends Expr>(
       // Malloy inequality comparisons always return a boolean
       case '!=': {
         const notEqual = `${expr.kids.left.sql}!=${expr.kids.right.sql}`;
-        return `COALESCE(${notEqual},true)`;
+        return context.dialect.sqlNullIsTrue(notEqual);
       }
       case 'and':
       case 'or':
@@ -242,7 +242,7 @@ function compileExpr<T extends Expr>(
         // null binding collapses to empty-set semantics — not the SQL
         // `IN (NULL)` shape, which has confusing NULL-membership rules.
         if (bound.node === 'null') {
-          return expr.not ? 'TRUE' : 'FALSE';
+          return context.dialect.sqlBoolean(expr.not);
         }
         if (bound.node !== 'arrayLiteral') {
           throw new Error(
@@ -250,7 +250,7 @@ function compileExpr<T extends Expr>(
           );
         }
         if (bound.kids.values.length === 0) {
-          return expr.not ? 'TRUE' : 'FALSE';
+          return context.dialect.sqlBoolean(expr.not);
         }
         const elemSqls = bound.kids.values.map(v =>
           exprToSQL(resultSet, context, v, state)
@@ -269,13 +269,14 @@ function compileExpr<T extends Expr>(
                 expr.kids.right.literal
               )
             : `${expr.kids.left.sql} ${likeIt} ${expr.kids.right.sql}`;
-        return expr.node === 'like' ? compare : `COALESCE(${compare},true)`;
+        return expr.node === 'like'
+          ? compare
+          : context.dialect.sqlNullIsTrue(compare);
       }
       case '()':
         return `(${expr.e.sql})`;
       case 'not':
-        // Malloy not operator always returns a boolean
-        return `COALESCE(NOT ${expr.e.sql},TRUE)`;
+        return context.dialect.sqlNot(expr.e.sql ?? '');
       case 'unary-':
         return `-${expr.e.sql}`;
       case 'is-null':
@@ -284,7 +285,7 @@ function compileExpr<T extends Expr>(
         return `${expr.e.sql} IS NOT NULL`;
       case 'true':
       case 'false':
-        return expr.node;
+        return context.dialect.sqlBoolean(expr.node === 'true');
       case 'null':
         return 'NULL';
       case 'case':

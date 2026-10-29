@@ -29,6 +29,13 @@ const defaultConfig: Config = {
   },
 };
 
+// What the `connector-unit` project claims, excluded from the backend
+// projects that would otherwise also match it.
+const connectorUnitIgnored = [
+  ...(defaultConfig.testPathIgnorePatterns ?? []),
+  '\\.unit\\.spec\\.ts$',
+];
+
 const config: Config = {
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
   setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
@@ -103,6 +110,21 @@ const config: Config = {
       },
     },
     {
+      // Connector tests that need no warehouse — `*.unit.spec.ts` under the
+      // db-* packages. They live in the same directories as the tests that do
+      // need one, so without this project they would run only in that
+      // backend's credentialed CI job: a hermetic test of BigQuery config
+      // parsing would sit out every PR that didn't touch BigQuery, which is
+      // exactly the PR that breaks it. The db-* projects below exclude the
+      // same pattern, so each file still runs in exactly one project — a file
+      // matched by two would appear twice in `jest --listTests` and fail
+      // scripts/ci-test-sanity-check.sh.
+      ...defaultConfig,
+      displayName: 'connector-unit',
+      roots: ['<rootDir>/packages/'],
+      testMatch: ['<rootDir>/packages/malloy-db-*/**/*.unit.spec.ts'],
+    },
+    {
       ...defaultConfig,
       displayName: 'db-all',
       roots: ['<rootDir>/test/src/databases/all/'],
@@ -110,6 +132,7 @@ const config: Config = {
     {
       ...defaultConfig,
       displayName: 'db-bigquery',
+      testPathIgnorePatterns: connectorUnitIgnored,
       roots: [
         '<rootDir>/packages/malloy-db-bigquery/',
         '<rootDir>/test/src/databases/bigquery/',
@@ -129,6 +152,14 @@ const config: Config = {
       roots: ['<rootDir>/test/src/databases/duckdb/'],
     },
     {
+      // The teaching builder in scripts/simple_builder is cited as
+      // documentation, so its spec runs in CI to keep it from drifting. It
+      // builds against DuckDB, hence the duckdb job.
+      ...defaultConfig,
+      displayName: 'simple-builder',
+      roots: ['<rootDir>/scripts/simple_builder/'],
+    },
+    {
       ...defaultConfig,
       displayName: 'db-postgres',
       roots: [
@@ -139,6 +170,7 @@ const config: Config = {
     {
       ...defaultConfig,
       displayName: 'db-presto-trino',
+      testPathIgnorePatterns: connectorUnitIgnored,
       roots: [
         '<rootDir>/packages/malloy-db-trino/src/',
         '<rootDir>/test/src/databases/presto-trino/',
@@ -147,6 +179,7 @@ const config: Config = {
     {
       ...defaultConfig,
       displayName: 'db-publisher',
+      testPathIgnorePatterns: connectorUnitIgnored,
       roots: ['<rootDir>/packages/malloy-db-publisher/'],
     },
     {
@@ -161,7 +194,17 @@ const config: Config = {
     },
     {
       ...defaultConfig,
+      displayName: 'db-sqlserver',
+      testPathIgnorePatterns: connectorUnitIgnored,
+      roots: [
+        '<rootDir>/packages/malloy-db-sqlserver/',
+        '<rootDir>/test/src/databases/sqlserver/',
+      ],
+    },
+    {
+      ...defaultConfig,
       displayName: 'db-databricks',
+      testPathIgnorePatterns: connectorUnitIgnored,
       roots: ['<rootDir>/packages/malloy-db-databricks/'],
     },
   ],

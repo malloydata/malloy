@@ -4,7 +4,11 @@
  */
 
 import type {Connection, LookupConnection} from '../../connection/types';
-import type {ManagedConnectionLookup} from '../../connection/registry';
+import type {
+  ConnectionConfigEntry,
+  ManagedConnectionLookup,
+} from '../../connection/registry';
+import {isConnectionConfigEntry} from '../../connection/registry';
 import type {LogMessage} from '../../lang/parse-log';
 import type {
   BuildID,
@@ -21,10 +25,7 @@ import {
   isThenable,
 } from './config_overlays';
 import type {ConfigOverlays} from './config_overlays';
-import {
-  requireCanonicalTablePathAnyDialect,
-  validateCanonicalTablePathAnyDialect,
-} from '../../connection/validate_table_path';
+import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
 
 /**
  * In-memory manifest store. Reads, updates, and serializes manifest data.
@@ -335,13 +336,14 @@ export class MalloyConfig {
 
     this._managedLookup = buildManagedLookup(
       prepared.compiledConnections,
+      rawConnectionEntries(pojo),
       mergedOverlays,
       log
     );
     this._connections = this._managedLookup;
 
     this._overlays = mergedOverlays;
-    this.virtualMap = toVirtualMap(prepared.virtualMap, log);
+    this.virtualMap = toVirtualMap(prepared.virtualMap);
     this.configURL = configURL;
     this.rootDirectory = rootDirectory;
     this.manifestPath = prepared.manifestPath;
@@ -647,27 +649,19 @@ function validateURLString(
 
 /**
  * Convert the raw virtualMap POJO shape (a dict of dicts of strings) into
- * the runtime Map-of-Maps representation. Invalid entries are dropped and
- * logged — they'd be pasted into FROM clauses downstream otherwise.
+ * the runtime Map-of-Maps representation. Table paths are checked against
+ * the executing dialect when a virtual source is substituted into SQL.
  */
-function toVirtualMap(raw: unknown, log: LogMessage[]): VirtualMap | undefined {
+function toVirtualMap(raw: unknown): VirtualMap | undefined {
   if (!isRecord(raw)) return undefined;
   const outer = new Map<string, Map<string, string>>();
   for (const [connName, inner] of Object.entries(raw)) {
     if (!isRecord(inner)) continue;
     const innerMap = new Map<string, string>();
     for (const [virtualName, tablePath] of Object.entries(inner)) {
-      if (typeof tablePath !== 'string') continue;
-      const invalid = validateCanonicalTablePathAnyDialect(tablePath);
-      if (invalid !== undefined) {
-        log.push({
-          message: `virtualMap entry '${connName}.${virtualName}': ${invalid}`,
-          severity: 'error',
-          code: 'config-validation',
-        });
-        continue;
+      if (typeof tablePath === 'string') {
+        innerMap.set(virtualName, tablePath);
       }
-      innerMap.set(virtualName, tablePath);
     }
     if (innerMap.size > 0) outer.set(connName, innerMap);
   }
@@ -676,6 +670,28 @@ function toVirtualMap(raw: unknown, log: LogMessage[]): VirtualMap | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The connection entries exactly as authored, kept alongside the compiled tree
+ * and handed to each factory as `rawConfigData`. Compilation replaces an
+ * overlay reference with a `ConfigReference` node and resolution replaces that
+ * with the value, so this is the only place a connector can still see *which*
+ * overlay a value came from — which is what BigQuery's `getDigest` needs to
+ * tell two impersonated identities apart.
+ *
+ * No validation here beyond the shape: entries the compiler rejected are
+ * absent from `compiledConnections` and so are never looked up.
+ */
+function rawConnectionEntries(
+  pojo: unknown
+): Record<string, ConnectionConfigEntry> {
+  const entries: Record<string, ConnectionConfigEntry> = {};
+  if (!isRecord(pojo) || !isRecord(pojo['connections'])) return entries;
+  for (const [name, entry] of Object.entries(pojo['connections'])) {
+    if (isConnectionConfigEntry(entry)) entries[name] = entry;
+  }
+  return entries;
 }
 
 export function isBuildManifestEntry(

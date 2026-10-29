@@ -9,6 +9,7 @@ import type {QueryElement} from '../types/query-element';
 import type {View} from '../view-elements/view';
 import {QueryBase} from './query-base';
 import {computeQueryGivenUsage} from '../../composite-source-utils';
+import {detectAndRemovePartialStages} from '../query-utils';
 
 /**
  * A query operation that consists of an exisitng query with refinements.
@@ -25,8 +26,10 @@ export class QueryRefine extends QueryBase implements QueryElement {
     super({base, refinement});
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
-    const q = this.base.queryComp(isRefOk);
+  queryComp(isRefOk: boolean, isPartialOk: boolean): QueryComp {
+    // The refinement is what decides the query class, so the base is the one
+    // place a partial segment is expected rather than an error.
+    const q = this.base.queryComp(isRefOk, true);
     const inputFS = new StaticSourceSpace(q.inputStruct, 'public');
     const pipeline = this.refinement.refine(
       inputFS,
@@ -48,12 +51,16 @@ export class QueryRefine extends QueryBase implements QueryElement {
       pipeline
     );
 
+    const finalPipeline = isPartialOk
+      ? pipelineWithExpandedFieldUsage
+      : detectAndRemovePartialStages(pipelineWithExpandedFieldUsage, this);
+
     return {
       query: {
         ...query,
         compositeResolvedSourceDef,
-        pipeline: pipelineWithExpandedFieldUsage,
-        givenUsage: computeQueryGivenUsage(pipelineWithExpandedFieldUsage),
+        pipeline: finalPipeline,
+        givenUsage: computeQueryGivenUsage(finalPipeline),
       },
       // TODO bleh
       outputStruct: pipeline[pipeline.length - 1].outputStruct,

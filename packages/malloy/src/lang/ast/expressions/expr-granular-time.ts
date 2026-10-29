@@ -62,7 +62,7 @@ export class ExprGranularTime extends ExpressionDef {
     };
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const timeframe = this.units;
     const exprVal = this.expr.getExpression(fs);
     let timeType: TemporalTypeDef;

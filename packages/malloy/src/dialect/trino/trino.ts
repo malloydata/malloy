@@ -15,6 +15,10 @@ import type {
   TimeExtractExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
+  OrderBy,
+  TimestampUnit,
+  ExtractUnit,
+  TimeExpr,
 } from '../../model/malloy_types';
 import {
   activeName,
@@ -25,16 +29,19 @@ import {
   isAtomic,
   isRepeatedRecord,
   safeRecordGet,
+  isDateUnit,
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  CivilTime,
   CompiledOrderBy,
   DialectFieldList,
   OrderByClauseType,
   QueryInfo,
+  TimeOffset,
 } from '../dialect';
-import {turtleGroupSetCondition} from '../dialect';
+import {queryZone, turtleGroupSetCondition} from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {
   PRESTO_DIALECT_FUNCTIONS,
@@ -52,16 +59,6 @@ function timestampMeasureable(units: string): boolean {
     'hour',
     'day',
   ].includes(units);
-}
-
-/**
- * Return a non UTC timezone, if one was specificed.
- */
-function qtz(qi: QueryInfo): string | undefined {
-  const tz = qi.queryTimezone;
-  if (tz && tz !== 'UTC') {
-    return tz;
-  }
 }
 
 declare interface TimeMeasure {
@@ -96,6 +93,40 @@ const trinoToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   // GEOGRAPHY
 };
 
+function trinoTrunc(expr: string, unit: TimestampUnit): string {
+  // Weeks start on Monday here, so truncate the following day
+  if (unit === 'week') {
+    return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
+  }
+  return `DATE_TRUNC('${unit}', ${expr})`;
+}
+
+function trinoDateAdd(
+  expr: string,
+  op: '+' | '-',
+  magnitude: string,
+  unit: TimestampUnit
+): string {
+  // DATE_ADD has no quarter or week
+  let offsetUnit: string = unit;
+  let offsetMag = magnitude;
+  if (unit === 'quarter') {
+    offsetUnit = 'month';
+    offsetMag = `${magnitude}*3`;
+  } else if (unit === 'week') {
+    offsetUnit = 'day';
+    offsetMag = `${magnitude}*7`;
+  }
+  const n = op === '-' ? `(${offsetMag})*-1` : offsetMag;
+  return `DATE_ADD('${offsetUnit}', ${n}, ${expr})`;
+}
+
+function trinoExtract(expr: string, units: ExtractUnit): string {
+  const extracted = `EXTRACT(${timeExtractMap[units] || units} FROM ${expr})`;
+  // Trino counts the days of a week from 1 on Monday
+  return units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
+}
+
 export class TrinoDialect extends PostgresBase {
   name = 'trino';
   experimental = false;
@@ -119,7 +150,7 @@ export class TrinoDialect extends PostgresBase {
   orderByClause: OrderByClauseType = 'output_name';
   nullMatchesFunctionSignature = false;
   supportsSelectReplace = false;
-  supportsComplexFilteredSources = false;
+  supportsComplexFilteredSources = true;
   supportsTempTables = false;
   supportsCountApprox = true;
   supportsHyperLogLog = true;
@@ -169,7 +200,9 @@ export class TrinoDialect extends PostgresBase {
   buildTypeExpression(fieldList: DialectFieldList): string {
     return fieldList
       .map(
-        dlf => `${dlf.sqlOutputName} ${this.malloyTypeToSQLType(dlf.typeDef)}`
+        dlf =>
+          `${this.sqlQuoteIdentifier(dlf.rawName)} ` +
+          this.malloyTypeToSQLType(dlf.typeDef)
       )
       .join(', \n');
   }
@@ -315,17 +348,21 @@ ${indent(sql)}
 
   sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    fieldList: DialectFieldList
+    fieldList: DialectFieldList,
+    orderBy: OrderBy[] | undefined
   ): string {
     const fields = fieldList.map(f => f.sqlExpression).join(', ');
     const definitions = this.buildTypeExpression(fieldList);
-    return `SELECT ARRAY_AGG(CAST(ROW(${fields}) as ROW(${definitions}))) FROM ${lastStageName}\n`;
+    const o = this.sqlCombineLastStageOrderBy(orderBy, fieldList);
+    return `SELECT ARRAY_AGG(CAST(ROW(${fields}) as ROW(${definitions}))${o}) FROM ${lastStageName}\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string, fieldList): string {
-    const fields = fieldList.map(f => f.sqlExpression).join(', ');
+  sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList): string {
+    const fields = fieldList
+      .map(f => `${alias}.${this.sqlQuoteIdentifier(f.rawName)}`)
+      .join(', ');
     const definitions = this.buildTypeExpression(fieldList);
-    return `CAST(ROW(${fields}) as ROW(${definitions})`;
+    return `CAST(ROW(${fields}) as ROW(${definitions}))`;
   }
 
   // TODO(figutierrez): update.
@@ -426,120 +463,56 @@ ${indent(sql)}
   WITH
   WITHIN`.split(/\s/);
 
+  // Civil time is a TIMESTAMP, which Trino keeps without a zone
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    typeDef: AtomicTypeDef
-  ): {sql: string; typeDef: AtomicTypeDef} {
-    // Trino civil time = TIMESTAMPTZ with query timezone as stored timezone
-    // Operations (extract, truncate, etc.) happen in the stored timezone
-    if (typeDef.type === 'timestamp') {
-      // TIMESTAMP (UTC wall clock) → TIMESTAMPTZ in query timezone
-      return {
-        sql: `at_timezone(with_timezone(${expr}, 'UTC'), '${timezone}')`,
-        typeDef: {type: 'timestamptz'},
-      };
+    typeDef: ATimestampTypeDef
+  ): string {
+    const tz = this.sqlTimezoneLiteral(timezone);
+    if (TD.isTimestamptz(typeDef)) {
+      return `CAST(at_timezone(${expr}, ${tz}) AS TIMESTAMP)`;
     }
-    // TIMESTAMPTZ → TIMESTAMPTZ in query timezone (same instant, different stored tz)
-    return {
-      sql: `at_timezone(${expr}, '${timezone}')`,
-      typeDef: {type: 'timestamptz'},
-    };
+    return timezone === 'UTC'
+      ? expr
+      : `CAST(at_timezone(with_timezone(${expr}, 'UTC'), ${tz}) AS TIMESTAMP)`;
   }
 
   sqlConvertFromCivilTime(
     expr: string,
-    _timezone: string,
+    timezone: string,
     destTypeDef: ATimestampTypeDef
   ): string {
-    // From civil TIMESTAMPTZ (in query timezone) to destination type
-    if (destTypeDef.type === 'timestamptz') {
-      // Already TIMESTAMPTZ, keep as-is
-      return expr;
+    const tz = this.sqlTimezoneLiteral(timezone);
+    if (TD.isTimestamptz(destTypeDef)) {
+      return `with_timezone(${expr}, ${tz})`;
     }
-    // To TIMESTAMP: convert to UTC and cast to plain TIMESTAMP
-    return `CAST(at_timezone(${expr}, 'UTC') AS TIMESTAMP)`;
+    return timezone === 'UTC'
+      ? expr
+      : `CAST(at_timezone(with_timezone(${expr}, ${tz}), 'UTC') AS TIMESTAMP)`;
   }
 
   sqlTruncate(
     expr: string,
-    unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
-    // Trino starts weeks on Monday, Malloy wants Sunday
-    // Add 1 day before truncating, subtract 1 day after
-    if (unit === 'week') {
-      return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
-    }
-    return `DATE_TRUNC('${unit}', ${expr})`;
+    return trinoTrunc(expr, unit);
   }
 
   sqlOffsetTime(
     expr: string,
     op: '+' | '-',
     magnitude: string,
-    unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
-    // Convert quarter/week to supported units
-    let offsetUnit = unit;
-    let offsetMag = magnitude;
-    if (unit === 'quarter') {
-      offsetUnit = 'month';
-      offsetMag = `${magnitude}*3`;
-    } else if (unit === 'week') {
-      offsetUnit = 'day';
-      offsetMag = `${magnitude}*7`;
-    }
-
-    // Handle subtraction by negating
-    const n = op === '-' ? `(${offsetMag})*-1` : offsetMag;
-    return `DATE_ADD('${offsetUnit}', ${n}, ${expr})`;
+    return trinoDateAdd(expr, op, magnitude, unit);
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
     const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
-    const tz = qtz(qi);
     const expr = cast.e.sql || '';
-
-    // Timezone-aware casts when query timezone is set
-    if (tz && srcTypeDef && dstTypeDef) {
-      // TIMESTAMP → DATE: interpret as UTC, convert to query timezone
-      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST(at_timezone(with_timezone(${expr}, 'UTC'), '${tz}') AS DATE)`;
-      }
-
-      // TIMESTAMPTZ → DATE: convert to query timezone
-      if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST(at_timezone(${expr}, '${tz}') AS DATE)`;
-      }
-
-      // DATE → TIMESTAMP: interpret date in query timezone, return UTC wall clock
-      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `CAST(at_timezone(with_timezone(CAST(${expr} AS TIMESTAMP), '${tz}'), 'UTC') AS TIMESTAMP)`;
-      }
-
-      // DATE → TIMESTAMPTZ: interpret date in query timezone
-      if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return `with_timezone(CAST(${expr} AS TIMESTAMP), '${tz}')`;
-      }
-
-      // TIMESTAMPTZ → TIMESTAMP: convert to query timezone wall clock
-      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `CAST(at_timezone(${expr}, '${tz}') AS TIMESTAMP)`;
-      }
-
-      // TIMESTAMP → TIMESTAMPTZ: interpret TIMESTAMP as being in query timezone
-      if (TD.isTimestamp(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return `with_timezone(${expr}, '${tz}')`;
-      }
-    }
-
-    // No special handling needed, or no query timezone
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
       return `${castFunc}(${expr} AS ${dstSQLType})`;
@@ -717,48 +690,21 @@ ${indent(sql)}
     return `DATE '${literal}'`;
   }
 
-  sqlTimestampLiteral(
-    qi: QueryInfo,
-    literal: string,
-    timezone: string | undefined
-  ): string {
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      // Interpret wall clock time in timezone, convert to UTC wall clock, cast to TIMESTAMP
-      return `CAST(at_timezone(with_timezone(TIMESTAMP '${literal}', '${tz}'), 'UTC') AS TIMESTAMP)`;
-    }
-    return `TIMESTAMP '${literal}'`;
-  }
-
   sqlTimestamptzLiteral(
     _qi: QueryInfo,
     literal: string,
     timezone: string
   ): string {
     // Use with_timezone to create a TIMESTAMP WITH TIME ZONE
-    return `with_timezone(TIMESTAMP '${literal}', '${timezone}')`;
+    return `with_timezone(TIMESTAMP '${literal}', ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    const pgUnits = timeExtractMap[from.units] || from.units;
-    let extractFrom = from.e.sql || '';
-
-    if (TD.isAnyTimestamp(from.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        // Convert both TIMESTAMP and TIMESTAMPTZ to query timezone for extraction
-        if (from.e.typeDef.type === 'timestamp') {
-          // TIMESTAMP: interpret as UTC, convert to query timezone
-          extractFrom = `at_timezone(with_timezone(${extractFrom}, 'UTC'), '${tz}')`;
-        } else {
-          // TIMESTAMPTZ: convert to query timezone
-          extractFrom = `at_timezone(${extractFrom}, '${tz}')`;
-        }
-      }
-    }
-
-    const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
-    return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    return trinoExtract(expr, units);
   }
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
@@ -796,11 +742,11 @@ export class PrestoDialect extends TrinoDialect {
     literal: string,
     timezone: string | undefined
   ): string {
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `CAST(TIMESTAMP '${literal} ${tz}' AT TIME ZONE 'UTC' AS TIMESTAMP)`;
+    const tz = timezone ?? queryZone(qi);
+    if (tz === 'UTC') {
+      return `TIMESTAMP '${literal}'`;
     }
-    return `TIMESTAMP '${literal}'`;
+    return `CAST(TIMESTAMP '${literal} ${this.checkedTimezoneName(tz)}' AS TIMESTAMP)`;
   }
 
   sqlTimestamptzLiteral(
@@ -808,104 +754,111 @@ export class PrestoDialect extends TrinoDialect {
     literal: string,
     timezone: string
   ): string {
-    return `TIMESTAMP '${literal} ${timezone}'`;
+    return `TIMESTAMP '${literal} ${this.checkedTimezoneName(timezone)}'`;
   }
 
-  sqlConvertToCivilTime(
-    expr: string,
-    timezone: string,
-    _typeDef: AtomicTypeDef
-  ): {sql: string; typeDef: AtomicTypeDef} {
-    // Presto's AT TIME ZONE operator (not function) produces TIMESTAMPTZ
-    // Reinterprets the instant in the target timezone
-    return {
-      sql: `${expr} AT TIME ZONE '${timezone}'`,
-      typeDef: {type: 'timestamptz'},
-    };
+  /*
+   * Presto cannot meet the civil contract: its only way to read a date and
+   * time of day as an instant in a zone is to parse a string, which fails
+   * on a time the zone skips. So Presto never converts to civil time. It
+   * places an instant in the zone as a TIMESTAMP WITH TIME ZONE, whose
+   * functions read the clock in that zone and resolve any skipped or
+   * repeated time themselves. A Presto TIMESTAMP is an instant shown in the
+   * session zone, which is UTC.
+   */
+
+  sqlConvertToCivilTime(): string {
+    throw new Error('Presto has no civil time');
   }
 
-  sqlConvertFromCivilTime(
+  sqlConvertFromCivilTime(): string {
+    throw new Error('Presto has no civil time');
+  }
+
+  /** The instant `expr`, showing the clock of `timezone` */
+  private inZone(
     expr: string,
-    _timezone: string,
-    destTypeDef: ATimestampTypeDef
+    typeDef: ATimestampTypeDef,
+    timezone: string
   ): string {
-    if (destTypeDef.type === 'timestamptz') {
+    if (TD.isTimestamp(typeDef) && timezone === 'UTC') {
       return expr;
     }
-    return `CAST(${expr} AT TIME ZONE 'UTC' AS TIMESTAMP)`;
+    return `(${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)}`;
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
-    const tz = qtz(qi);
-    const expr = cast.e.sql || '';
-
-    // Timezone-aware casts when query timezone is set
-    // Presto uses AT TIME ZONE operator instead of Trino's with_timezone/at_timezone functions
-    if (tz && srcTypeDef && dstTypeDef) {
-      // TIMESTAMP → DATE: interpret as UTC, convert to query timezone
-      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST((${expr} AT TIME ZONE 'UTC') AT TIME ZONE '${tz}' AS DATE)`;
-      }
-
-      // TIMESTAMPTZ → DATE: convert to query timezone
-      if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `CAST(${expr} AT TIME ZONE '${tz}' AS DATE)`;
-      }
-
-      // DATE → TIMESTAMP: interpret date in query timezone, return UTC wall clock
-      // Presto doesn't have a way to interpret TIMESTAMP in a non-UTC timezone,
-      // so we build a TIMESTAMPTZ literal string and cast it
-      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        const tstzLiteral = `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${tz}' AS TIMESTAMP WITH TIME ZONE)`;
-        return `CAST(${tstzLiteral} AS TIMESTAMP)`;
-      }
-
-      // DATE → TIMESTAMPTZ: interpret date in query timezone
-      if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${tz}' AS TIMESTAMP WITH TIME ZONE)`;
-      }
-
-      // TIMESTAMPTZ → TIMESTAMP: convert to query timezone wall clock
-      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `CAST(${expr} AT TIME ZONE '${tz}' AS TIMESTAMP)`;
-      }
-
-      // TIMESTAMP → TIMESTAMPTZ: interpret TIMESTAMP as UTC
-      if (TD.isTimestamp(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return `${expr} AT TIME ZONE 'UTC'`;
-      }
-    }
-
-    // No special handling needed, or no query timezone
-    if (!TD.eq(srcTypeDef, dstTypeDef)) {
-      const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-      return `${castFunc}(${expr} AS ${dstSQLType})`;
+  /** An instant from inZone, as a value of `typeDef` */
+  private fromZone(
+    expr: string,
+    typeDef: ATimestampTypeDef,
+    timezone: string
+  ): string {
+    if (TD.isTimestamp(typeDef) && timezone !== 'UTC') {
+      return `CAST(${expr} AS TIMESTAMP)`;
     }
     return expr;
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    const pgUnits = timeExtractMap[from.units] || from.units;
-    let extractFrom = from.e.sql || '';
+    const time = from.e;
+    const expr = TD.isAnyTimestamp(time.typeDef)
+      ? this.inZone(time.sql!, time.typeDef, queryZone(qi))
+      : time.sql!;
+    return trinoExtract(expr, from.units);
+  }
 
-    if (TD.isAnyTimestamp(from.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        // Convert both TIMESTAMP and TIMESTAMPTZ to query timezone for extraction
-        if (from.e.typeDef.type === 'timestamp') {
-          // TIMESTAMP: interpret as UTC, convert to query timezone
-          // Presto uses AT TIME ZONE operator
-          extractFrom = `(${extractFrom} AT TIME ZONE 'UTC') AT TIME ZONE '${tz}'`;
-        } else {
-          // TIMESTAMPTZ: convert to query timezone
-          extractFrom = `${extractFrom} AT TIME ZONE '${tz}'`;
-        }
+  sqlTruncAndOffset(
+    baseExpr: TimeExpr,
+    qi: QueryInfo,
+    truncateTo?: TimestampUnit,
+    offset?: TimeOffset
+  ): string {
+    const timeType = baseExpr.typeDef;
+    // Adding hours, minutes or seconds to an instant needs no zone
+    const usesQueryZone =
+      TD.isAnyTimestamp(timeType) &&
+      (truncateTo !== undefined ||
+        (offset !== undefined && isDateUnit(offset.unit)));
+    const zone = queryZone(qi);
+    let sql = usesQueryZone
+      ? this.inZone(baseExpr.sql!, timeType, zone)
+      : baseExpr.sql!;
+    if (truncateTo) {
+      sql = trinoTrunc(sql, truncateTo);
+    }
+    if (offset) {
+      sql = trinoDateAdd(sql, offset.op, offset.magnitude, offset.unit);
+    }
+    return usesQueryZone ? this.fromZone(sql, timeType, zone) : sql;
+  }
+
+  sqlTimeCast(qi: QueryInfo, cast: TypecastExpr): string | undefined {
+    const {srcTypeDef, dstTypeDef} = this.sqlCastPrep(cast);
+    const expr = cast.e.sql ?? '';
+    const zone = queryZone(qi);
+    if (TD.isAnyTimestamp(srcTypeDef)) {
+      if (TD.isDate(dstTypeDef)) {
+        return `CAST(${this.inZone(expr, srcTypeDef, zone)} AS DATE)`;
+      }
+      if (TD.isTimestamp(dstTypeDef) && TD.isTimestamptz(srcTypeDef)) {
+        return `CAST(${expr} AS TIMESTAMP)`;
+      }
+      if (TD.isTimestamptz(dstTypeDef) && TD.isTimestamp(srcTypeDef)) {
+        return `(${expr}) AT TIME ZONE 'UTC'`;
       }
     }
-
-    const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
-    return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
+    if (TD.isDate(srcTypeDef) && TD.isAnyTimestamp(dstTypeDef)) {
+      if (zone === 'UTC') {
+        const midnight = `CAST(${expr} AS TIMESTAMP)`;
+        return TD.isTimestamp(dstTypeDef)
+          ? midnight
+          : `(${midnight}) AT TIME ZONE 'UTC'`;
+      }
+      // Fails in a zone which skips the midnight starting the date
+      const midnight = `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${this.checkedTimezoneName(zone)}' AS TIMESTAMP WITH TIME ZONE)`;
+      return this.fromZone(midnight, dstTypeDef, zone);
+    }
+    return undefined;
   }
 
   sqlUnnestAlias(

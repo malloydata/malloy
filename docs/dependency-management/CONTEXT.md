@@ -21,7 +21,7 @@ collected into groups so a bump lands as one reviewable PR with a clear blast ra
 instead of a scatter of one-offs:
 
 - **`connectors`** — the database SDKs (`@google-cloud/*`, `@databricks/*`,
-  `trino-client`, `mysql2`, `pg`, …). Historically these have all been problematic when we update them, so we keep them in their own little corner.
+  `@trinodb/*`, `mysql2`, `pg`, …). Historically these have all been problematic when we update them, so we keep them in their own little corner.
 - **`toolchain`** — the gts / typescript / eslint / prettier cluster, majors only;
   they move together or not at all.
 - **`minor-and-patch`** — everything else's in-range minors/patches, folded into one
@@ -223,11 +223,13 @@ tied to a specific Snowflake issue — verify before acting on it.)*
 Holds open (alert-only — no PR):
 - `fast-xml-parser` — 2×critical, 4×high *(also pulled by BigQuery's
   `@google-cloud/storage`; clears only when every owner moves)*
-- `axios` — high/medium *(also via Trino's `trino-client` and the publisher)*
 - `bn.js` — 2×medium
 
+Snowflake's `axios` resolves to the tree's single hoisted copy, held at `1.19.0` by
+the Trino axios pin below. No axios advisory is open against it.
+
 Waiting for: a security advisory to force our hand (the held `fast-xml-parser` /
-`axios` / `bn.js` alerts are the standing cost, reviewed monthly), **or** Snowflake
+`bn.js` alerts are the standing cost, reviewed monthly), **or** Snowflake
 restructuring the npm package so it bundles downstream. Either way the bump is
 deliberate, verified against the live Snowflake CI env — never a lockfile float.
 
@@ -274,6 +276,41 @@ per-platform `@databricks/databricks-sql-kernel-*` `.node` binaries, `approve-na
 them in each — then take 1.16.0+ and verify against the live Databricks CI env. Until
 then it's supported-or-rots: the connector is welded to the embedding apps' bundlers,
 so it can't float.
+
+### Trino — `axios` pinned exactly at `1.19.0` to match the connector's own pin
+Owned by the **root** `package.json`. `@trinodb/trino-js-client` declares `axios` as
+an exact version, not a range; no upstream rationale is recorded. npm hoists one
+`axios` only while the root resolves to that same version. At any other value — a
+routine in-range float to `1.20.0` included — a **second copy** nests under
+`node_modules/@trinodb/trino-js-client`, and the advisories land on it.
+
+Both surfaces: exact `1.19.0` in the root `package.json` **and** `ignore: axios` in
+`dependabot.yml`.
+
+**The connector is exact-pinned too — `@trinodb/trino-js-client` at `0.3.2` in
+`packages/malloy-db-trino` — and the two move together.** Upstream ships releases
+whose only change is the axios pin (`0.3.0`/`0.3.1` carried `1.13.2`; `0.3.2` carries
+`1.19.0` and nothing else). Under a caret, such a release lands a connector whose
+exact axios no longer matches the root, npm nests a second copy, and the `ignore`
+above guarantees nothing ever proposes re-converging it. **Any `@trinodb` bump must
+move the root `axios` pin to that release's exact axios, in the same PR.**
+
+Deliberately *not* in the `ignore` list: it stays in the `connectors` group so their
+`1.0.0` still arrives as a standalone PR. The group is the notification; the rule
+above is the guard.
+
+The publisher declares `axios ^1.19.0` — a floor, not a pin. `malloy-db-publisher`
+is published, so its range is what downstream consumers resolve; the floor keeps them
+above the advisory range rather than inheriting it. `1.19.0` satisfies it here, so the
+hoisted copy still serves it and there is nothing extra to unwind.
+
+Cost: axios security fixes arrive on the connector's release cadence, not npm's. An
+advisory against `1.19.0` is answered by a `@trinodb/trino-js-client` release
+carrying a newer pin, not by bumping axios here.
+
+Waiting for: **trinodb/trino-js-client#956** — drops axios for native `fetch` +
+`undici`, public API unchanged, targeted at their `1.0.0` (their #982). Taking that
+release ends the constraint and the root returns to a caret.
 
 ### uuid + @noble/hashes — held below their ESM-only majors
 Owned by `packages/malloy` (core, published as `@malloydata/malloy`). **uuid 12+ and
@@ -338,9 +375,9 @@ here only because the rule is "everything ignored is written down."
 
 ## Not pins — context, so this list stays short
 
-- **Connector SDKs other than Snowflake and Databricks** (`trino-client`,
+- **Connector SDKs other than Snowflake and Databricks** (`@trinodb/*`,
   `@google-cloud/*`, `mysql2`, …) aren't pinned — just not-yet-upgraded.
-  Their transitive advisories (`axios`, `thrift`, `fast-xml-parser`, `uuid`) clear
+  Their transitive advisories (`thrift`, `fast-xml-parser`, `uuid`) clear
   by a deliberate per-dialect SDK bump, each verified against that dialect's live
   CI env. They're collected into the `connectors` group in `dependabot.yml` so a
   bump lands as its own deliberate PR instead of riding the routine minor/patch

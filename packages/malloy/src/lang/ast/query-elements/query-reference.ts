@@ -8,6 +8,7 @@ import type {ModelEntryReference} from '../types/malloy-element';
 import {MalloyElement} from '../types/malloy-element';
 import type {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
+import {detectAndRemovePartialStages} from '../query-utils';
 import type {Query} from '../../../model/malloy_types';
 import {refIsStructDef} from '../../../model/malloy_types';
 import type {QueryElement} from '../types/query-element';
@@ -24,7 +25,7 @@ export class QueryReference extends MalloyElement implements QueryElement {
     super();
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
+  queryComp(isRefOk: boolean, isPartialOk: boolean): QueryComp {
     const headEntry = this.modelEntry(this.name);
     const query = headEntry?.entry;
     const oops = function () {
@@ -56,7 +57,15 @@ export class QueryReference extends MalloyElement implements QueryElement {
           ? query
           : {...query, structRef: inputStruct};
       return {
-        query: unRefedQuery,
+        query: isPartialOk
+          ? unRefedQuery
+          : {
+              ...unRefedQuery,
+              pipeline: detectAndRemovePartialStages(
+                unRefedQuery.pipeline,
+                this
+              ),
+            },
         outputStruct,
         inputStruct,
       };
@@ -69,6 +78,6 @@ export class QueryReference extends MalloyElement implements QueryElement {
   }
 
   query(isRefOk = true): Query {
-    return this.queryComp(isRefOk).query;
+    return this.queryComp(isRefOk, false).query;
   }
 }

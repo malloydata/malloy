@@ -1,3 +1,5 @@
+# Config format: node ../../scripts/femto-build.js --help
+
 monarch: {
   inputs = ["grammars/malloy/malloy.tmGrammar.json"]
   commands = [

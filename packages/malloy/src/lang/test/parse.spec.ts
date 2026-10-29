@@ -331,7 +331,7 @@ describe('error cascading', () => {
     'err.month': 'date',
     'day_of_week(err)': 'number',
     'err::string': 'string',
-    '-err': 'number',
+    '-err': 'error',
     'err * 1': 'number',
     '1 * err': 'number',
     'err / 1': 'number',
@@ -826,7 +826,7 @@ describe('extend and refine', () => {
         expect(`
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on 1 = 1 } -> { select: b.* }
-        `).toLog(errorMessage("No such field as 'b'"));
+        `).toLog(errorMessage("'b' is not defined"));
         expect(`
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 } -> { select: * }

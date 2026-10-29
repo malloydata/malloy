@@ -697,6 +697,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: range + { where: t ~ f'2001' }
       `).toMatchRows(range, inRange);
     });
+    test('date in month, in a query time zone east of UTC', async () => {
+      // Midnight starting a month in Tokyo is still the previous day in UTC
+      const range = mkDateRange('2001-01-01', '2001-02-01');
+      await expect(`
+        run: range + { timezone: 'Asia/Tokyo'; where: t ~ f'2001-01' }
+      `).toMatchRows(range, inRange);
+    });
     test('2 days ago', async () => {
       nowIs('2001-01-15 12:00:00');
       const rangeQuery = mkRangeQuery(

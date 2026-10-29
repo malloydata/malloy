@@ -21,6 +21,26 @@ describe('misc tests for regressions that have no better home', () => {
     `).toMatchResult(testModel, {});
   });
 
+  test('rename a field in a join below a filtered join', async () => {
+    // A filtered join becomes a subquery, and the joins below it are packed
+    // into a struct under their column names, which a rename leaves different
+    // from the name the query uses.
+    await expect(`
+      source: two is duckdb.sql("""SELECT 1 as k, 'acme' as name""") extend {
+        rename: two_k is k
+        primary_key: two_k
+      }
+      source: one is duckdb.sql("""SELECT 1 as k, 2 as j""") extend {
+        where: j > 0
+        join_one: two with k
+      }
+      source: zero is duckdb.sql("""SELECT 1 as k""") extend {
+        join_one: one on one.k = k
+      }
+      run: zero -> { group_by: one.two.name, one.two.two_k }
+    `).toMatchResult(testModel, {name: 'acme', two_k: 1});
+  });
+
   test('ambiguous output names are auto-renamed and runnable', async () => {
     // `state` and `s2.state` both want the name `state`; the second is renamed
     // to `s2_state`. The query must compile to runnable SQL. (Small table with

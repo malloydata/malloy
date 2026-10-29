@@ -22,7 +22,8 @@ import {closestMatch} from '../../util/closest_match';
  * A compiled config node. The compiler produces a tree of these; the resolver
  * walks the tree against a ConfigOverlays dict and produces a plain POJO.
  */
-export type ConfigNode = ConfigDict | ConfigLiteral | ConfigReference;
+export type ConfigNode =
+  ConfigDict | ConfigLiteral | ConfigReference | ConfigInvalid;
 
 export interface ConfigDict {
   kind: 'dict';
@@ -44,6 +45,18 @@ export interface ConfigReference {
   source: string;
   /** Path into the overlay. */
   path: string[];
+}
+
+/**
+ * A property the user wrote that can never produce a value — it failed its
+ * type check. Compilation records it rather than dropping it so that a
+ * `mustHaveValue` property can tell "the user wrote something unusable" apart
+ * from "the user wrote nothing." It resolves to `undefined` like any other
+ * failure; the difference is only that the key is still visible in the
+ * compiled tree.
+ */
+export interface ConfigInvalid {
+  kind: 'invalid';
 }
 
 // =============================================================================
@@ -209,11 +222,16 @@ function compileConnectionEntry(
 }
 
 /**
- * Compile a single connection property value. At non-`json` property slots,
- * a single-key object whose value is a string or string[] is recognized as
- * an overlay reference. `json`-typed slots always pass through as literal
- * data — this is the security invariant that prevents reference injection
- * into structured config.
+ * Compile a single connection property value.
+ *
+ * At non-`json` property slots, a single-key object whose value is a string or
+ * string[] is recognized as an overlay reference. `json`-typed slots always
+ * pass through as literal data — this is the security invariant that prevents
+ * reference injection into structured config.
+ *
+ * A property's `source` overrides that reading in both directions. `'literal'`
+ * refuses a reference; `'overlay'` refuses a literal, which is also what lets
+ * a reference be recognized in a slot that would otherwise hold a dictionary.
  */
 function compileConnectionProperty(
   path: string,
@@ -221,39 +239,50 @@ function compileConnectionProperty(
   value: unknown,
   log: LogMessage[]
 ): ConfigNode | undefined {
-  if (value === undefined || value === null) return undefined;
-
-  if (propDef.type === 'json') {
-    return {kind: 'value', value};
+  if (value === undefined || value === null) {
+    return propDef.mustHaveValue ? {kind: 'invalid'} : undefined;
   }
 
   const ref = asReferenceShape(value);
-  if (ref !== undefined) {
-    if (propDef.requireLiteralString) {
-      log.push(
-        makeWarning(
-          path,
-          'must be a literal string and cannot use an overlay reference'
-        )
-      );
-      return {kind: 'value', value};
-    }
-    return ref;
+
+  switch (propDef.source) {
+    case 'overlay':
+      if (ref === undefined) {
+        log.push(
+          makeWarning(
+            path,
+            'must name an overlay, as in {env: "NAME"}; a value written here ' +
+              'directly is not allowed'
+          )
+        );
+        return {kind: 'invalid'};
+      }
+      return ref;
+    case 'literal':
+      if (ref !== undefined) {
+        log.push(
+          makeWarning(
+            path,
+            'must be written here directly and cannot name an overlay'
+          )
+        );
+        return {kind: 'invalid'};
+      }
+      break;
+    default:
+      if (propDef.type === 'json') {
+        return {kind: 'value', value};
+      }
+      if (ref !== undefined) {
+        return ref;
+      }
+      break;
   }
 
   const typeError = checkValueType(value, propDef.type);
   if (typeError) {
-    if (propDef.requireLiteralString) {
-      log.push(
-        makeWarning(
-          path,
-          `must be a literal string, got ${describeConfigValue(value)}`
-        )
-      );
-      return {kind: 'value', value};
-    }
     log.push(makeWarning(path, `${typeError} (expected ${propDef.type})`));
-    return undefined;
+    return propDef.mustHaveValue ? {kind: 'invalid'} : undefined;
   }
   return {kind: 'value', value};
 }
@@ -376,11 +405,6 @@ function makeWarning(path: string, message: string): LogMessage {
   };
 }
 
-function describeConfigValue(value: unknown): string {
-  if (Array.isArray(value)) return 'array';
-  return typeof value;
-}
-
 function checkValueType(
   value: unknown,
   expectedType: ConnectionPropertyType
@@ -403,6 +427,7 @@ function checkValueType(
         return `should be a string, got ${typeof value}`;
       break;
     case 'json':
+    case 'opaque':
       break;
   }
   return undefined;

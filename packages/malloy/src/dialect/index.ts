@@ -23,13 +23,15 @@ export {
   literal,
   sql,
 } from './functions/util';
-export {Dialect, qtz} from './dialect';
+export {Dialect, queryZone} from './dialect';
 export type {
   DialectFieldList,
   CompiledOrderBy,
   LateralJoinExpression,
   QueryInfo,
   FieldReferenceType,
+  GroupByClauseType,
+  OrderByClauseType,
 } from './dialect';
 export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
@@ -38,6 +40,7 @@ export {SnowflakeDialect} from './snowflake';
 export {TrinoDialect} from './trino';
 export {MySQLDialect} from './mysql';
 export {DatabricksDialect} from './databricks';
+export {SQLServerDialect} from './sqlserver';
 export {getDialect, registerDialect} from './dialect_map';
 export {getMalloyStandardFunctions} from './functions';
 export type {MalloyStandardFunctionImplementations} from './functions';

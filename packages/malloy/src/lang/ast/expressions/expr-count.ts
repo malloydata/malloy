@@ -34,7 +34,7 @@ export class ExprCount extends ExprAggregateFunction {
     };
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  protected computeExpression(_fs: FieldSpace): ExprValue {
     const ret: AggregateExpr = {
       node: 'aggregate',
       function: 'count',

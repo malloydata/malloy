@@ -12,6 +12,11 @@ export type {
   CompileQueryOptions,
   BuildNode,
   BuildGraph,
+  BuildTarget,
+  BuildTargetOptions,
+  BuildTargets,
+  ConnectionBuild,
+  UnbuildableSource,
 } from './types';
 export {EMPTY_BUILD_MANIFEST} from './types';
 

@@ -94,6 +94,13 @@ type MessageParameterTypes = {
   'experiment-not-enabled': {experimentId: string};
   'experimental-dialect-not-enabled': {dialect: string};
   'nesting-unsupported': {dialect: string};
+  'boolean-value-unsupported': {dialect: string; where: string; hint: string};
+  'wildcard-omits-boolean': {
+    dialect: string;
+    wildcard: string;
+    name: string;
+    hint: string;
+  };
   'nested-multi-stage-unsupported': {dialect: string};
   'nested-projection-limit-unsupported': {dialect: string};
   'sql-native-not-allowed-in-expression': {
@@ -168,12 +175,10 @@ type MessageParameterTypes = {
   'top-by-non-aggregate': string;
   'definition-name-conflict': string;
   'invalid-field-in-index-query': string;
-  'invalid-wildcard-source': string;
-  'wildcard-source-not-found': string;
   'name-conflict-in-wildcard-expansion': string;
   'invalid-parameter-reference': string;
   'parameter-not-found': string;
-  'wildcard-source-not-defined': string;
+  'wildcard-matched-no-fields': string;
   'unexpected-index-segment': string;
   'accept-parameter': string;
   'except-parameter': string;
@@ -262,11 +267,13 @@ type MessageParameterTypes = {
   'unexpected-source-property': string;
   'aggregate-in-source-filter': string;
   'invalid-connection-for-sql-source': string;
+  'sql-source-connection-mismatch': string;
   'failed-to-fetch-sql-source-schema': string;
   'invalid-sql-source': string;
   'non-top-level-sql-source': string;
   'failed-to-fetch-table-schema': string;
   'invalid-connection-for-table-source': string;
+  'join-connection-mismatch': string;
   'join-on-primary-key-type-mismatch': string;
   'join-primary-key-not-found': string;
   'join-with-without-primary-key': string;
@@ -311,6 +318,7 @@ type MessageParameterTypes = {
   'export-name-not-exportable': string;
   'duplicate-export-name': string;
   'unsatisfied-given-in-query': string;
+  'unsatisfied-given-in-persist-source': string;
   'given-alias-collision': string;
   'failed-to-compute-output-schema': string;
   'invalid-timeframe-for-time-offset': string;
@@ -466,6 +474,10 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'experimental-dialect-not-enabled': e =>
     `Requires compiler flag '##! experimental.dialect.${e.dialect}'`,
   'nesting-unsupported': e => `'${e.dialect}' does not support nested queries`,
+  'boolean-value-unsupported': e =>
+    `'${e.dialect}' does not support a boolean ${e.where}; ${e.hint}`,
+  'wildcard-omits-boolean': e =>
+    `'${e.name}' is left out of '${e.wildcard}': '${e.dialect}' does not support a boolean as a result column; ${e.hint}`,
   'nested-multi-stage-unsupported': e =>
     `'${e.dialect}' does not support a multi-stage pipeline ('->') in a nested query`,
   'nested-projection-limit-unsupported': e =>

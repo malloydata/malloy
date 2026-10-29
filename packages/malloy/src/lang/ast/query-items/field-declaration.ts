@@ -36,6 +36,10 @@ import type {Noteable} from '../types/noteable';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {SpaceField} from '../types/space-field';
 import {DefSpace} from '../field-space/def-space';
+import {
+  booleanValueError,
+  resultColumnHint,
+} from '../expressions/boolean-value';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -81,6 +85,11 @@ export abstract class AtomicFieldDeclaration
     return false;
   }
 
+  // The declaration is a result column of a query
+  outputsValue(): boolean {
+    return false;
+  }
+
   queryFieldDef(exprFS: FieldSpace, exprName: string): AtomicFieldDef {
     let exprValue: ExprValue;
 
@@ -121,28 +130,24 @@ export abstract class AtomicFieldDeclaration
     }
     if (isAtomicFieldType(exprValue.type) && exprValue.type !== 'error') {
       this.typecheckExprValue(exprValue);
+      if (
+        this.outputsValue() &&
+        booleanValueError(
+          exprFS,
+          exprValue,
+          'as a result column',
+          this.expr,
+          resultColumnHint(this.exprSrc ?? '…')
+        )
+      ) {
+        return {name: exprName, type: 'error'};
+      }
       const ret = mkFieldDef(TDU.atomicDef(exprValue), exprName);
       if (TD.isTemporal(ret) && isGranularResult(exprValue)) {
         ret.timeframe = exprValue.timeframe;
       }
       ret.location = this.location;
-      if (
-        exprValue.type === 'boolean' &&
-        exprFS.dialectObj()?.booleanType === 'none'
-      ) {
-        // when generating a boolean field on a database without boolean support
-        // map it to integers
-        ret.e = {
-          node: 'case',
-          kids: {
-            caseWhen: [exprValue.value],
-            caseThen: [{node: 'numberLiteral', literal: '1'}],
-            caseElse: {node: 'numberLiteral', literal: '0'},
-          },
-        };
-      } else {
-        ret.e = exprValue.value;
-      }
+      ret.e = exprValue.value;
       ret.drillExpression = this.expr.drillExpression();
       ret.refSummary = exprValue.refSummary;
       ret.ungroupings = exprValue.ungroupings;
@@ -181,6 +186,9 @@ export abstract class AtomicFieldDeclaration
 
 export class CalculateFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'calculateFieldDeclaration';
+  outputsValue(): boolean {
+    return true;
+  }
   typecheckExprValue(expr: ExprValue) {
     typecheckCalculate(expr, this);
   }
@@ -191,6 +199,9 @@ export class CalculateFieldDeclaration extends AtomicFieldDeclaration {
 
 export class AggregateFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'aggregateFieldDeclaration';
+  outputsValue(): boolean {
+    return true;
+  }
   typecheckExprValue(expr: ExprValue) {
     typecheckAggregate(expr, this);
   }
@@ -198,6 +209,9 @@ export class AggregateFieldDeclaration extends AtomicFieldDeclaration {
 
 export class GroupByFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'groupByFieldDeclaration';
+  outputsValue(): boolean {
+    return true;
+  }
   typecheckExprValue(expr: ExprValue) {
     typecheckGroupBy(expr, this);
   }
@@ -205,6 +219,9 @@ export class GroupByFieldDeclaration extends AtomicFieldDeclaration {
 
 export class ProjectFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'projectFieldDeclaration';
+  outputsValue(): boolean {
+    return true;
+  }
   typecheckExprValue(expr: ExprValue) {
     typecheckProject(expr, this);
   }

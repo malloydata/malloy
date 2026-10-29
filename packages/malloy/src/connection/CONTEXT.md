@@ -8,20 +8,19 @@ The connection subsystem provides database backend abstractions, a centralized r
 - `base_connection.ts` — Abstract base class with schema caching; all backends extend this
 - `registry.ts` — Module-level `Map<string, ConnectionTypeDef>` with register/lookup functions
 - `registry.spec.ts` — Registry tests
+- `dbmeta.ts` — Shared pieces for [database metadata](#database-metadata-dbmeta)
 - `validate_table_path.ts` — Helpers that re-validate a `tablePath` against the destination dialect (or any registered dialect) before it crosses an API boundary into SQL. See [Canonical tablePath invariant](#canonical-tablepath-invariant) below.
 
 ## Canonical tablePath invariant
 
 Any `tablePath` reaching a connection — through `fetchSchemaForTables`, a `virtualMap` entry, or a `BuildManifestEntry.tableName` — is supposed to already be the canonical SQL form produced by `Dialect.sqlValidateTableName`. The translator validates user-supplied paths at translation time (see `dialect/CONTEXT.md` → *Table-path validation contract*) and stores the canonical form on `StructDef.tablePath`; the compiler splices it into `FROM` clauses verbatim with no further quoting.
 
-Application-supplied paths (`virtualMap`, manifest entries) bypass the translator, so the foundation re-validates at every ingress: `Manifest.update`/`loadText`, the runtime's manifest read and query path, `toVirtualMap`, and the legacy `fetchSchemaForTable` adapter. `BaseConnection.fetchSchemaForTables` is the last line of defense: it rejects any entry whose `tablePath` is not canonical for its dialect rather than letting it reach the backend.
+Manifest paths are checked at `Manifest.update`/`loadText` and the runtime's manifest read and query path. The legacy `fetchSchemaForTable` adapter and `BaseConnection.fetchSchemaForTables` reject noncanonical paths for their connection's dialect. Virtual-map paths are checked at substitution in `QueryQuery.getStructSourceSQL`.
 
 The validators live in `validate_table_path.ts`:
 
 - `validateCanonicalTablePath(dialectName, tablePath)` — destination dialect is known.
-- `validateCanonicalTablePathAnyDialect(tablePath)` / `requireCanonicalTablePathAnyDialect(...)` — destination dialect isn't synchronously known (manifest entries, `virtualMap`). Accept iff the value is canonical for *some* registered dialect — loose enough for legitimate cross-dialect manifests, still strict enough to reject malformed strings.
-
-A failure at one of these boundaries means a caller skipped the translator — that's a bug in the caller, not a user-visible error. Error messages name the boundary so the responsible call site is obvious.
+- `validateCanonicalTablePathAnyDialect(tablePath)` / `requireCanonicalTablePathAnyDialect(...)` — destination dialect isn't synchronously known (manifest entries). Accept iff the value is canonical for *some* registered dialect — loose enough for legitimate cross-dialect manifests, still strict enough to reject malformed strings.
 
 ## Architecture
 
@@ -35,15 +34,15 @@ import {registerConnectionType} from '@malloydata/malloy';
 registerConnectionType('duckdb', { displayName: 'DuckDB', factory: async ..., properties: [...] });
 ```
 
-Registered backends: `duckdb`, `bigquery`, `postgres`, `snowflake`, `trino`, `presto`, `mysql`, `publisher`
+Registered backends: `duckdb`, `bigquery`, `postgres`, `snowflake`, `trino`, `presto`, `mysql`, `databricks`, `sqlserver`, `publisher`
 
-The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports all 6 database db-\* packages for side-effect registration (not publisher).
+The convenience package `@malloydata/malloy-connections` (`packages/malloy-connections/`) imports every database db-\* package for side-effect registration (not publisher).
 
 ### ConnectionTypeDef
 
 Each registered backend provides:
 - **displayName**: human-readable label (e.g. `"PostgreSQL"`, `"DuckDB"`)
-- **factory**: `async (config: ConnectionConfig) => Promise<Connection>` — creates a connection from config
+- **factory**: `async (config: ConnectionConfig, rawConfigData?: ConnectionConfigEntry) => Promise<Connection>` — creates a connection from config. `rawConfigData` is the same entry *before* overlay resolution, so an overlay-supplied property still reads as `{tenantAuth: "acme"}` instead of the value it produced. Being unresolved it is the non-secret twin of `config` — `{env: "PGPASSWORD"}` where `config` holds the password. Undefined on the `createConnectionsFromConfig` path, which starts from already-resolved entries.
 - **properties**: `ConnectionPropertyDefinition[]` — machine-readable schema for config fields
 
 ### Lazy Connection Creation
@@ -67,9 +66,26 @@ Each registered backend provides:
 }
 ```
 
-The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against a **`ConfigOverlays` dict** at **`lookupConnection()` time** (not at construction), so the registry and connection factories still only ever see plain resolved values. Overlays may be sync or async (`(path) => unknown | Promise<unknown>`); deferring resolution to lookup gives async overlays a natural seam. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is silently dropped — the factory sees the field as absent. Unknown-overlay-source warnings land on `config.log` when the affected connection is looked up.
+The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against a **`ConfigOverlays` dict** at **`lookupConnection()` time** (not at construction), so the registry and connection factories still only ever see plain resolved values. Overlays may be sync or async (`(path) => unknown | Promise<unknown>`); deferring resolution to lookup gives async overlays a natural seam. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is dropped — the factory sees the field as absent — unless it carries `mustHaveValue`, below. Unknown-overlay-source warnings land on `config.log` when the affected connection is looked up.
 
 Properties declared as `type: 'json'` are never interpreted as references — the entire value passes through literally. This is the security invariant that keeps structured config (SSL options, headers, session objects) from ever invoking overlay lookups.
+
+### `source` and `mustHaveValue`
+
+Two independent per-property fields, enforced in `config_compile.ts` and `config_lookup.ts`. Factories never see either.
+
+`source` constrains where a value may come from; unset means either.
+
+- `'literal'` — a reference-shaped value is warned about and never compiled to a `ConfigReference`.
+- `'overlay'` — a literal is warned about. Checked *ahead of* the `json` short-circuit, so a single-key object in a `json` or `opaque` slot is read as a reference rather than as data. `opaque` properties are always `'overlay'`; a live object has no form a config file can hold.
+
+`mustHaveValue` — when the key is present and nothing survives resolution, `lookupConnection` throws rather than dropping the property. Runs before `applyPropertyDefaults`, so a declared default does not satisfy it. An absent key is unaffected.
+
+Carried by properties whose absence selects a permissive fallback: DuckDB's `securityPolicy` (absent → `none`), BigQuery's `authClient` (absent → ambient credentials).
+
+A value that fails its type check compiles to `{kind: 'invalid'}` instead of being dropped, which is how `mustHaveValue` tells an unusable value from an absent key.
+
+Editors should hide any property with `source: 'overlay'` — no form control can produce a legal value for one.
 
 See `packages/malloy/src/api/foundation/config_overlays.ts` for the `ConfigOverlays` type and the built-in `env` + `config` overlays.
 
@@ -127,6 +143,7 @@ Each `ConnectionPropertyDefinition` has a `type` field that determines UI render
 | `file` | File picker with optional `fileFilters` |
 | `json` | JSON object (structured config like SSL options, headers) |
 | `text` | Multi-line text input |
+| `opaque` | None — a live value with no shape, reachable only through an overlay |
 
 ## Cross-Repo: User-Facing Docs
 
@@ -147,21 +164,29 @@ so the docs site stays in sync. Add to the PR checklist:
 When `shareable: true` (and `databasePath` is a local file), the DuckDB connection binds its primary database to `:memory:` and brackets file access with `ATTACH 'path' AS malloy_db; USE malloy_db.main;` in `setupOnce()` and `DETACH malloy_db` in `idle()`. This releases the OS file lock between operations so other tools (`malloy-cli`, the `duckdb` CLI, another malloy host) can open the same file. The `:memory:` primary stays alive across `idle()`, so the `BaseConnection.schemaCache` and any `CREATE TEMPORARY TABLE` state survive a cycle. Shareable connections do not participate in `DuckDBConnection.activeDBs` sharing — each owns its own in-memory instance. `readOnly: true` is honored via `(READ_ONLY)` on the ATTACH so it scopes the real file, not the writable in-memory primary.
 
 **BigQuery** (`displayName: "BigQuery"`):
-`projectId` (string), `serviceAccountKeyPath` (file), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `setupSQL` (text, advanced)
+`projectId` (string), `serviceAccountKeyPath` (file), `serviceAccountKey` (json), `serviceAccountKeyJson` (secret), `authClient` (opaque, `source: 'overlay'`, `mustHaveValue`), `location` (string), `maximumBytesBilled` (string, advanced), `timeoutMs` (string, advanced), `billingProjectId` (string, advanced), `dbmeta` (boolean, advanced), `setupSQL` (text, advanced)
+
+A service account key can arrive three ways, in this order of precedence: `serviceAccountKey` (the parsed object), `serviceAccountKeyJson` (the key file as a string), then the unregistered `client_email`/`private_key` pair the constructor still honors for programmatic use. `serviceAccountKeyJson` exists because `serviceAccountKey` is `json`-typed and so can never hold a reference — a deployment whose key lives in an environment variable has no way to reach it, and the literal `{env: "..."}` object that does reach the SDK fails as "the incoming JSON object does not contain a client_email field". The string slot takes either raw JSON or base64, detected by whether the trimmed value starts with `{`, and rejects anything that is not a service account key or an `external_account` config rather than passing it to the SDK.
+
+`authClient` is a different credential path, not a fourth way to supply a key: a google-auth `AuthClient` the host mints and supplies through an overlay — impersonation, workload identity federation, a proxied credential — forwarded into `new BigQuerySDK({...})`. Setting it alongside any of the three key routes is an error (`rejectCompetingCredentials`), because `GoogleAuth` caches the auth client and never consults `credentials` or `keyFilename` again: the key would be live-looking dead config and the queries would run as an identity nobody chose. The SDK also resolves the project id through the auth client rather than through ambient credentials, so a connection setting it should also set `billingProjectId`.
 
 **PostgreSQL** (`displayName: "PostgreSQL"`):
 `host` (string), `port` (number), `username` (string), `password` (password), `databaseName` (string), `connectionString` (string, advanced), `setupSQL` (text, advanced), `ssl` (json, advanced)
 
 **Snowflake** (`displayName: "Snowflake"`):
-`account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number, advanced), `schemaSampleTimeoutMs` (number, advanced), `schemaSampleRowLimit` (number, advanced), `schemaSampleFullScanMaxBytes` (number, advanced), `setupSQL` (text, advanced), `poolMin` (number, advanced), `poolMax` (number, advanced), `poolTestOnBorrow` (boolean, advanced)
-Factory extracts `name`, `setupSQL`, `timeoutMs`, and the three pool fields; passes remaining properties as snowflake-sdk `ConnectionOptions`. The pool fields are assembled into a `generic-pool` options object via `buildPoolOptions()` and shallow-merged with `SnowflakeExecutor.defaultPoolOptions_` (`{min: 1, max: 1, testOnBorrow: true, testOnReturn: true}`); omitting all three preserves the defaults.
+`account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKey` (password), `privateKeyPass` (password), `authenticator` (string, advanced), `timeoutMs` (number, advanced), `schemaSampleTimeoutMs` (number, advanced), `schemaSampleRowLimit` (number, advanced), `schemaSampleFullScanMaxBytes` (number, advanced), `setupSQL` (text, advanced), `poolMin` (number, advanced), `poolMax` (number, advanced), `poolTestOnBorrow` (boolean, advanced)
+Factory extracts `name`, `setupSQL`, `timeoutMs`, and the three pool fields; passes remaining properties as snowflake-sdk `ConnectionOptions`. The pool fields are assembled into a `generic-pool` options object via `buildPoolOptions()` and shallow-merged with `SnowflakeExecutor.defaultPoolOptions_` (`{min: 1, max: 1, testOnBorrow: true, testOnReturn: true}`); omitting all three preserves the defaults. The connection sets `authenticator: "SNOWFLAKE_JWT"` when a private key is given without an authenticator, even if a password is also set, since snowflake-sdk otherwise ignores the key and demands a password (`withKeyPairAuthenticator()`).
 
 **Trino** (`displayName: "Trino"`):
 `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced), `source` (string, advanced), `ssl` (json, advanced), `session` (json, advanced), `extraCredential` (json, advanced), `extraHeaders` (json, advanced)
-The json-typed properties pass through to `trino-client`'s `ConnectionOptions` via `extraConfig`.
+The json-typed properties pass through to `@trinodb/trino-js-client`'s `ConnectionOptions` via `extraConfig`.
 
 **Presto** (`displayName: "Presto"`):
 `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
+
+**SQL Server** (`displayName: "SQL Server"`):
+`server` (string), `port` (number, 1433), `database` (string), `authentication` (string: `sql` | `azure-default` | `azure-service-principal` | `azure-msi` | `azure-access-token` | `ntlm`; default `sql`), `user` (string), `password` (password), `domain` (string, advanced), `clientId` (string, advanced), `tenantId` (string, advanced), `clientSecret` (secret, advanced), `accessToken` (secret, advanced), `encrypt` (boolean, default true, advanced), `trustServerCertificate` (boolean, advanced), `hostNameInCertificate` (string, advanced), `instanceName` (string, advanced; a named instance through SQL Browser, the port then unused), `applicationName` (string, advanced), `readOnlyIntent` (boolean, advanced), `multiSubnetFailover` (boolean, advanced), `connectionString` (string, advanced), `setupSQL` (text, advanced), `requestTimeoutMs` (number, advanced), `poolMin`/`poolMax` (number, advanced)
+The `azure-*` kinds are Microsoft Entra ID through tedious; `azure-default` is the DefaultAzureCredential chain (managed identity, workload identity, environment service principal, az CLI). A `connectionString` and the structured fields are not merged: setting both is an error. The digest hashes the principal (`user`, or `clientId` for Entra), never a secret. The connection is read-only: it does not persist results (`canPersist()` is false), so a search index is not built for it.
 
 **MySQL** (`displayName: "MySQL"`):
 `host` (string), `port` (number), `database` (string), `user` (string), `password` (password), `setupSQL` (text, advanced)
@@ -171,6 +196,38 @@ The json-typed properties pass through to `trino-client`'s `ConnectionOptions` v
 
 All backends support `setupSQL` (text) — SQL statements run when the connection is first established.
 
+## Database metadata (`dbmeta`)
+
+A connection can copy table and column descriptions from the database onto
+the schema it returns, as `#(dbmeta) description="..."` annotations. It is
+off unless the connection's `dbmeta` property is set, and it never changes
+query results, so it stays out of `getDigest()`. Only BigQuery implements it.
+To add it to a backend, see
+[adding-a-new-database.md](../doc/adding-a-new-database.md).
+
+## Query metadata
+
+`RunSQLOptions.queryMetadata` is an optional per-query bag of string properties
+(`Record<string, string>`) for the backend's own bookkeeping — cost
+attribution, workload classification, tracing. It is supplied per call and
+never affects query results or data identity: it is **excluded from
+`getDigest()`**, so changing it never re-keys a connection or a BuildID.
+
+Each connector applies it through a mechanism that attaches per query: Snowflake
+uses a per-statement `QUERY_TAG`, BigQuery per-job labels; every other backend
+prepends it as a leading SQL comment. The machinery is `protected` on
+`BaseConnection` — `queryMetadataBag()` for a native key-value mechanism,
+`sqlWithQueryMetadata()` / `queryMetadataComment()` for the comment form — so a
+connector inherits it and none of it is public API. Each validates the bag and
+throws: names are `[A-Za-z0-9_]`, values are printable ASCII excluding `"`,
+capped at a small count — enough to keep the comment form safe and to map onto
+every backend. BigQuery additionally rewrites the bag into its own label grammar
+— lowercasing, substituting disallowed characters, and dropping a key it cannot
+make valid (one not starting with a letter). The publisher connector applies
+nothing itself: it forwards the whole `RunSQLOptions` to the remote publisher,
+whose own connector applies the bag there. There is no connection-level default;
+metadata is per call only.
+
 ## Key Types
 
 ```typescript
@@ -179,8 +236,16 @@ type JsonConfigValue = string | number | boolean | null | JsonConfigValue[] | {[
 interface ConnectionPropertyDefinition {
   name: string;
   displayName: string;
-  type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text';
+  type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text' | 'opaque';
   optional?: true;
+  // Where the value may come from. Unset means either. 'literal' refuses an
+  // overlay reference; 'overlay' refuses a literal, which is what makes a
+  // reference unambiguous in a slot that would otherwise hold a dictionary.
+  source?: 'literal' | 'overlay';
+  // Writing this property promises it will produce a value. Omitting it is
+  // fine; setting it and having nothing survive resolution throws. For
+  // properties whose absence triggers an unsafe fallback.
+  mustHaveValue?: true;
   // Advisory hint to editors: this property is not part of typical
   // configuration and may be hidden, folded under an "advanced" toggle, or
   // ignored entirely. Has no effect on the registry or factory.
@@ -355,3 +420,5 @@ DuckDB has a unique pattern: a static `activeDBs` map groups connections by data
 Every connection implements `getDigest(): string` returning a SHA-256 hash of its "data identity." Used to compute **BuildIDs**: `BuildID = hash(connectionDigest, sql)`. The digest includes only things that could cause the same SQL to produce different results (server identity, database/schema, username, setupSQL) and excludes operational settings (billing, timeouts, credentials).
 
 `makeDigest()` in `packages/malloy/src/model/utils.ts` length-prefixes each part to prevent collisions and represents `undefined` distinctly from empty string.
+
+**Identity counts.** Snowflake hashes `username` and `role`, Trino hashes `user`: two connections that reach the same tables as different principals can see different rows, so they must not share a BuildID. A connection whose identity arrives as an `opaque` value has nothing stable to hash — a live auth client is a different object every process — so it hashes the overlay reference from `rawConfigData` instead. BigQuery does this with `authClient` (`authIdentityOf`), which makes the digest exactly as distinguishing as the reference path: an overlay addressed the same way for every tenant leaves them indistinguishable here too.

@@ -130,7 +130,7 @@ export function installFakeDom(): void {
 
 /**
  * Remove the DOM globals we installed, so libraries loaded later
- * (e.g. axios via trino-client) don't think they're in a browser.
+ * (e.g. axios via @trinodb/trino-js-client) don't think they're in a browser.
  */
 export function removeFakeDom(): void {
   if (!installed) return;

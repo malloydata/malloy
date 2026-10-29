@@ -79,11 +79,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `).toMatchResult(testModel, {fieldName: 'one', weight: 51});
   });
 
-  // bigquery doesn't support row count based sampling.
+  // bigquery doesn't support row count based sampling; sqlserver's TABLESAMPLE
+  // returns whole pages, not the count asked for.
   test.when(
     databaseName !== 'bigquery' &&
       databaseName !== 'trino' &&
-      databaseName !== 'presto'
+      databaseName !== 'presto' &&
+      databaseName !== 'sqlserver'
   )(`index rows count - ${databaseName}`, async () => {
     await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {

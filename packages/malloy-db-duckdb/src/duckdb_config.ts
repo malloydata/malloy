@@ -6,10 +6,7 @@
 import path from 'path';
 import {fileURLToPath} from 'url';
 import {makeDigest} from '@malloydata/malloy';
-import type {
-  ConnectionConfig,
-  ConnectionParameterValue,
-} from '@malloydata/malloy';
+import type {ConnectionConfig} from '@malloydata/malloy';
 import * as pathSecurity from './path_security';
 
 export type DuckDBSecurityPolicy = 'none' | 'local' | 'sandboxed';
@@ -415,9 +412,7 @@ function isSecurityPolicy(value: string): value is DuckDBSecurityPolicy {
   return SECURITY_POLICY_VALUES.includes(value);
 }
 
-function parseSecurityPolicy(
-  rawValue: ConnectionParameterValue | undefined
-): DuckDBSecurityPolicy {
+function parseSecurityPolicy(rawValue: unknown): DuckDBSecurityPolicy {
   if (rawValue === undefined) {
     return 'none';
   }
@@ -483,7 +478,7 @@ function readOptionalInteger(
 }
 
 function readOptionalStringArray(
-  rawValue: ConnectionParameterValue | undefined,
+  rawValue: unknown,
   fieldName: string
 ): string[] | undefined {
   if (rawValue === undefined) {
@@ -502,10 +497,7 @@ function readOptionalStringArray(
   return rawValue;
 }
 
-function normalizeExtensions(
-  rawValue: ConnectionParameterValue | undefined,
-  fieldName: string
-): string[] {
+function normalizeExtensions(rawValue: unknown, fieldName: string): string[] {
   if (rawValue === undefined) {
     return [];
   }

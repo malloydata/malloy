@@ -21,6 +21,7 @@ import type {
   SQLSourceDef,
   NumberTypeDef,
   UserTypeDef,
+  VirtualMap,
 } from '../../model/malloy_types';
 import {
   activeName,
@@ -33,6 +34,7 @@ import {ExpressionDef, MalloyElement} from '../ast';
 import type {NameSpace} from '../ast/types/name-space';
 import type {ModelEntry} from '../ast/types/model-entry';
 import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
+import {Zone} from '../zone';
 import type {
   DataRequestResponse,
   SQLSourceRequest,
@@ -188,6 +190,17 @@ export const aTableDef: TableSourceDef = {
   ],
 };
 
+/**
+ * A second connection speaking the same dialect as `_db_`. Two sources can
+ * then compile to identical SQL on different connections, which isolates the
+ * connection check from the dialect check, and is exactly the case where
+ * persistence could forget that a build target is a table on a connection.
+ */
+export const db2TableDef: TableSourceDef = {
+  ...aTableDef,
+  connection: '_db2_',
+};
+
 // BigQuery-compatible table definition (no timestamptz support)
 export const bqTableDef: SourceDef = {
   type: 'table',
@@ -210,6 +223,17 @@ export const pgTableDef: SourceDef = {
   fields: baseFields,
 };
 
+// SQL Server has no boolean values (booleanType 'none'), so no column of
+// its table is a boolean
+export const mssqlTableDef: SourceDef = {
+  type: 'table',
+  name: 'aTable',
+  dialect: 'sqlserver',
+  tablePath: 'aTable',
+  connection: '_mssql_',
+  fields: baseFields.filter(f => f.name !== 'abool'),
+};
+
 /**
  * A TestTranlator never actually talks to connection, instead uses
  * some mocked schema definitions.
@@ -217,8 +241,10 @@ export const pgTableDef: SourceDef = {
 
 export const mockSchema: TableSourceDef[] = [
   aTableDef,
+  db2TableDef,
   bqTableDef,
   pgTableDef,
+  mssqlTableDef,
   {
     type: 'table',
     name: 'carriers',
@@ -369,6 +395,7 @@ export interface TestTranslatorOptions {
   eventStream?: EventStream | null;
   internalModel?: ModelDef;
   restrictedMode?: boolean;
+  virtualMap?: VirtualMap;
   /**
    * Each entry is a compiler-flag tag fragment — the content that
    * would follow `##! ` in a Malloy source annotation. Rendered to
@@ -379,15 +406,35 @@ export interface TestTranslatorOptions {
   compilerFlags?: string[];
 }
 
+/**
+ * Every connection name a test mentions resolves to a dialect, as it would
+ * through a host's connection lookup: the five listed below to theirs, and
+ * any other name to `TEST_DIALECT`.
+ */
+class TestConnectionDialectZone extends Zone<string> {
+  reference(str: string, loc: DocumentLocation): void {
+    super.reference(str, loc);
+    if (this.getEntry(str).status === 'reference') {
+      this.define(str, TEST_DIALECT);
+    }
+  }
+}
+
 export class TestTranslator extends MalloyTranslator {
-  allDialectsEnabled = true;
   testRoot?: TestRoot;
+  connectionDialectZone = new TestConnectionDialectZone();
   /*
-   * There are two connections:
+   * There are five connections:
    *   _db_  - duckdb dialect, with the following tables ...
    *      aTable, malloytest.carriers, malloytest.flights, malloytest.airports
+   *   _db2_ - duckdb dialect, with one table, aTable. A second connection
+   *      on the same dialect as _db_, for cross-connection tests.
    *   _bq_  - bigquery/standardsql dialect, with one table
    *      aTable
+   *   _pg_  - postgres dialect, with one table
+   *      aTable
+   *   _mssql_ - sqlserver dialect, which has no boolean values, with one
+   *      table, aTable
    *
    * The "aTable" table is a mocked table with one column of each type.
    * The _bq_ version does not have the timestamptz column, and when
@@ -414,8 +461,10 @@ export class TestTranslator extends MalloyTranslator {
     ...mkModelDef(testURI, testURI),
     contents: {
       _db_: {type: 'connection', name: '_db_'},
+      _db2_: {type: 'connection', name: '_db2_'},
       _bq_: {type: 'connection', name: '_bq_'},
       _pg_: {type: 'connection', name: '_pg_'},
+      _mssql_: {type: 'connection', name: '_mssql_'},
       a: {...aTableDef, primaryKey: 'astr', name: 'a'},
       b: {...aTableDef, primaryKey: 'astr', name: 'b'},
       bq_a: {...bqTableDef, primaryKey: 'astr', name: 'bq_a'},
@@ -471,7 +520,8 @@ export class TestTranslator extends MalloyTranslator {
       options.importBaseURL ?? null,
       null,
       options.eventStream ?? null,
-      options.restrictedMode ?? false
+      options.restrictedMode ?? false,
+      options.virtualMap
     );
     this.grammarRule = options.rootRule ?? 'malloyDocument';
     this.importZone.define(testURI, testSrc);
@@ -485,8 +535,10 @@ export class TestTranslator extends MalloyTranslator {
       );
     }
     this.connectionDialectZone.define('_db_', TEST_DIALECT);
+    this.connectionDialectZone.define('_db2_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
     this.connectionDialectZone.define('_pg_', 'postgres');
+    this.connectionDialectZone.define('_mssql_', 'sqlserver');
     for (const flag of options.compilerFlags ?? []) {
       this.compilerFlagSrc.push(`##! ${flag}\n`);
     }
@@ -744,11 +796,30 @@ export function makeModelFunc(
     const {prefix, wrap, ...ttOptions} = options;
     return {
       ...ms,
+      // A marked location is where the mark sits in the whole source, after
+      // the prefix. A wrap could put the code anywhere, so marks stay as
+      // they are.
+      locations: wrap ? ms.locations : ms.locations.map(l => after(prefix, l)),
       translator: new TestTranslator(
         (prefix ?? '') + (wrap ? wrap(ms.code) : ms.code),
         ttOptions
       ),
     };
+  };
+}
+
+function after(prefix: string | undefined, l: DocumentLocation) {
+  if (!prefix) return l;
+  const lines = prefix.split('\n');
+  const dLine = lines.length - 1;
+  const dChar = lines[dLine].length;
+  const shift = (p: {line: number; character: number}) => ({
+    line: p.line + dLine,
+    character: p.line === 0 ? p.character + dChar : p.character,
+  });
+  return {
+    ...l,
+    range: {start: shift(l.range.start), end: shift(l.range.end)},
   };
 }
 
@@ -846,4 +917,33 @@ export function warningMessage(message: string | RegExp): {
   severity: LogSeverity;
 } {
   return {message, severity: 'warn'};
+}
+
+/**
+ * Drain a translation's SQL schema requests, answering each with the schema of
+ * `aTable` on the connection which asked, until it stops asking. A `sql()`
+ * source needs a schema before the translation can finish, and nothing in a
+ * TestTranslator provides one.
+ *
+ * @param selectStr What to record as the block's SELECT. Defaults to the
+ *   statement which was requested; pass a value to hand back something else.
+ */
+export function answerSQLSchemaRequests(
+  translator: TestTranslator,
+  selectStr?: string
+): void {
+  for (;;) {
+    const compileSQL = translator.translate().compileSQL;
+    if (compileSQL === undefined) return;
+    const key = sqlKey(compileSQL.connection, compileSQL.selectStr);
+    const schema: SQLSourceDef = {
+      type: 'sql_select',
+      name: key,
+      dialect: TEST_DIALECT,
+      connection: compileSQL.connection,
+      selectStr: selectStr ?? compileSQL.selectStr,
+      fields: aTableDef.fields,
+    };
+    translator.update({compileSQL: {[key]: schema}});
+  }
 }

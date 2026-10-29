@@ -15,8 +15,11 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
   const ts = new TestSelect(runtime.dialect);
   const testModel = wrapTestModel(runtime, '');
 
+  // A dialect without boolean values has no boolean column
+  const booleans = runtime.dialect.booleanType !== 'none';
+
   // Basic Type Tests
-  test(`${db} inferred basic types`, async () => {
+  test.when(booleans)(`${db} inferred basic types`, async () => {
     const sql = ts.generate(
       {t_int: 1, t_string: 'a', t_bool: true, t_float: 1.5},
       {t_int: 2, t_string: 'b', t_bool: false, t_float: 2.5}
@@ -27,7 +30,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
     ]);
   });
 
-  test(`${db} explicit type hints`, async () => {
+  test.when(booleans)(`${db} explicit type hints`, async () => {
     const sql = ts.generate({
       t_int: ts.mk_int(1),
       t_float: ts.mk_float(1.5),

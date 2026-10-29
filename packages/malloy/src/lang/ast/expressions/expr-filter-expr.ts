@@ -12,7 +12,7 @@ export class ExprFilterExpression extends ExpressionDef {
     super();
   }
 
-  getExpression(): ExprValue {
+  protected computeExpression(): ExprValue {
     return {
       type: 'filter expression',
       value: {node: 'filterLiteral', filterSrc: this.filterText},

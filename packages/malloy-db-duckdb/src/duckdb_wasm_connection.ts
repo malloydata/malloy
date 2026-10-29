@@ -439,7 +439,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   public async *runSQLStream(
     sql: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
+    {rowLimit, abortSignal, queryMetadata}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
     if (!this.connection) {
       throw new Error('duckdb-wasm not connected');
@@ -462,7 +462,9 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
 
     let index = 0;
-    for await (const chunk of await this.connection.send(statements[0])) {
+    for await (const chunk of await this.connection.send(
+      this.sqlWithQueryMetadata(statements[0], queryMetadata)
+    )) {
       if (done) {
         break;
       }

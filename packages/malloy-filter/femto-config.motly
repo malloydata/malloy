@@ -1,3 +1,5 @@
+# Config format: node ../../scripts/femto-build.js --help
+
 codegen: {
   inputs = ["src/grammars/*.peggy"]
   outputs = [

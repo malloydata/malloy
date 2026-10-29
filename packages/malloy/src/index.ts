@@ -11,9 +11,11 @@ export {
   SnowflakeDialect,
   MySQLDialect,
   DatabricksDialect,
+  SQLServerDialect,
   registerDialect,
+  getDialect,
   arg,
-  qtz,
+  queryZone,
   overload,
   minScalar,
   anyExprType,
@@ -216,6 +218,7 @@ export type {Overlay, ConfigOverlays} from './api/foundation';
 export type {FilesystemContext, MalloyConfigOptions} from './api/foundation';
 export type {RuntimeContext} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
+export type {QueryMetadata} from './query_metadata';
 export type {
   EventStream,
   ModelString,
@@ -272,7 +275,16 @@ export {
   annotationToTag,
   annotationToTaglines,
 } from './api/foundation/annotation';
-export type {BuildGraph, BuildNode, BuildPlan} from './api/foundation';
+export type {
+  BuildGraph,
+  BuildNode,
+  BuildPlan,
+  BuildTarget,
+  BuildTargetOptions,
+  BuildTargets,
+  ConnectionBuild,
+  UnbuildableSource,
+} from './api/foundation';
 export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';
 export {Reference} from './api/foundation';
 export type {ReferenceKind} from './api/foundation';

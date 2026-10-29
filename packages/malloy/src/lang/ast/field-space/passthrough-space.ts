@@ -71,4 +71,8 @@ export class PassthroughSpace implements FieldSpace {
   connectionName(): string {
     return this.realFS.connectionName();
   }
+
+  generation(): number {
+    return this.realFS.generation();
+  }
 }

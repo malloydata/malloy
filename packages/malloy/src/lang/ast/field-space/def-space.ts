@@ -28,6 +28,7 @@ export class DefSpace extends PassthroughSpace {
         error: {
           message: `Circular reference to '${this.circular.defineName}' in definition`,
           code: 'circular-reference-in-field-definition',
+          at: symbol[0],
         },
         found: undefined,
       };

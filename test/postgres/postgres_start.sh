@@ -7,9 +7,7 @@ set -e
 rm -rf .tmp
 mkdir .tmp
 
-# run docker
 SCRIPTDIR=$(cd $(dirname $0); pwd)
-DATADIR=$(dirname $SCRIPTDIR)/data/postgres
 
 # Verify required environment variables and show export commands for any that are wrong
 EXPORTS=""
@@ -55,7 +53,7 @@ if docker container inspect "$CONTAINER_NAME" > /dev/null 2>&1; then
   exit 0
 fi
 
-docker run -p 5432:5432 -d -v $DATADIR:/init_data \
+docker run -p 5432:5432 -d \
  --name "$CONTAINER_NAME" \
   -e POSTGRES_USER=root -e POSTGRES_PASSWORD=postgres \
   -e TZ=UTC \
@@ -74,8 +72,6 @@ done
 echo "Container $CONTAINER_NAME is now healthy!"
 
 echo "Loading data ..."
-#  configure
-echo CREATE EXTENSION tsm_system_rows\; | psql
-gunzip -c ${DATADIR}/malloytest-postgres.sql.gz | psql
+sh "$SCRIPTDIR/load_test_data.sh"
 
 echo "Ready"

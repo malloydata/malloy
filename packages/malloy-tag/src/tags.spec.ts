@@ -4,7 +4,7 @@
  */
 
 import type {TagDict} from './tags';
-import {Tag, interfaceFromDict} from './tags';
+import {Tag, interfaceFromDict, quoteString} from './tags';
 import {parseTag, parseAnnotation, TagParser} from './parser';
 import type {SourceOrigin} from './parser';
 
@@ -316,7 +316,7 @@ describe('Tag access', () => {
     test('in property name', () => {
       const base = Tag.withPrefix('#(malloy) ');
       const ext = base.set(['foo bar'], '4');
-      expect(ext.toString()).toBe('#(malloy) `foo bar` = 4\n');
+      expect(ext.toString()).toBe('#(malloy) `foo bar` = "4"\n');
       idempotent(ext);
     });
     test('deleted property name', () => {
@@ -337,6 +337,22 @@ describe('Tag access', () => {
       expect(ext.text('value')).toBe('\n');
       idempotent(ext);
     });
+    test('value has a carriage return', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['value'], 'a\rb');
+      expect(ext.toString()).toBe('#(malloy) value = "a\\rb"\n');
+      expect(ext.text('value')).toBe('a\rb');
+      idempotent(ext);
+    });
+    test.each(['123', '007', '1e5'])(
+      'value %p that looks like a number stays a string',
+      str => {
+        const ext = Tag.withPrefix('#(malloy) ').set(['value'], str);
+        expect(ext.toString()).toBe(`#(malloy) value = "${str}"\n`);
+        const reparsed = parseAnnotation(ext.toString()).tag;
+        expect(reparsed.tag('value')?.getEq()).toBe(str);
+      }
+    );
     test('value has a double quote', () => {
       const base = Tag.withPrefix('#(malloy) ');
       const ext = base.set(['value'], '"');
@@ -360,6 +376,27 @@ describe('Tag access', () => {
       const ext = base.set(['a`b`c'], 1);
       expect(ext.toString()).toBe('#(malloy) `a\\`b\\`c` = 1\n');
       idempotent(ext);
+    });
+  });
+  describe('quoteString', () => {
+    test('quotes even a bare word', () => {
+      expect(quoteString('word')).toBe('"word"');
+    });
+    test('escapes backslash, double quote, newline and carriage return', () => {
+      expect(quoteString('a\\b"c\nd\re')).toBe('"a\\\\b\\"c\\nd\\re"');
+    });
+    test.each([
+      '',
+      'word',
+      'two words',
+      'say "hi"',
+      'back\\slash',
+      'line\nbreak',
+      'lone\rreturn',
+      'crlf\r\nending',
+      'tab\there',
+    ])('round-trips %p through the parser', str => {
+      expect(parseTag(`x=${quoteString(str)}`).tag.text('x')).toBe(str);
     });
   });
   describe('parsing escape sequences in strings', () => {
@@ -868,5 +905,96 @@ describe('Location tracking', () => {
     const size = tag.tag('size');
     expect(color?.location?.url).toBe('file:///a.malloy');
     expect(size?.location?.url).toBe('file:///b.malloy');
+  });
+});
+
+describe('property names inherited from Object.prototype', () => {
+  // A tag property name comes from source text, so `__proto__`, `constructor`
+  // and `toString` are ordinary names with no special meaning.
+  const inheritedNames = ['__proto__', 'constructor', 'toString', 'valueOf'];
+
+  /** Reads through Object.prototype, so it sees a polluted global. */
+  const globalProbe: Record<string, unknown> = {};
+
+  test('parse stores and reads an inherited name', () => {
+    for (const name of inheritedNames) {
+      const {tag, log} = parseTag(`${name}=1 other=2`);
+      expect(log).toEqual([]);
+      expect([...tag.keys()]).toEqual([name, 'other']);
+      expect(tag.numeric(name)).toEqual(1);
+      expect(tag.numeric('other')).toEqual(2);
+    }
+  });
+
+  test('a name the tag does not have reads as absent', () => {
+    const {tag} = parseTag('a=1');
+    for (const name of inheritedNames) {
+      expect(tag.has(name)).toBe(false);
+      expect(tag.tag(name)).toBeUndefined();
+      expect(tag.text(name)).toBeUndefined();
+      expect(tag.getProperty(name)).toBeUndefined();
+    }
+  });
+
+  test('nested properties under an inherited name', () => {
+    const {tag, log} = parseTag('__proto__.polluted=1');
+    expect(log).toEqual([]);
+    expect(tag.numeric('__proto__', 'polluted')).toEqual(1);
+    expect(tag.has('__proto__')).toBe(true);
+  });
+
+  test('set through an inherited name does not reach Object.prototype', () => {
+    for (const name of inheritedNames) {
+      const empty = new Tag().set([name, 'polluted'], 1);
+      expect(empty.numeric(name, 'polluted')).toEqual(1);
+
+      // The bag already exists, so `set` walks into it rather than creating it.
+      const populated = parseTag('a=1').tag.set([name, 'polluted'], 1);
+      expect(populated.numeric(name, 'polluted')).toEqual(1);
+      expect(populated.numeric('a')).toEqual(1);
+
+      expect(globalProbe['polluted']).toBeUndefined();
+      expect(globalProbe['properties']).toBeUndefined();
+    }
+  });
+
+  test('delete and unset reach an inherited name', () => {
+    for (const name of inheritedNames) {
+      const {tag} = parseTag(`${name}=1 other=2`);
+      expect(tag.delete(name).has(name)).toBe(false);
+      expect(tag.has('other')).toBe(true);
+    }
+    const {tag} = parseTag('__proto__=1');
+    expect(tag.unset('__proto__').has('__proto__')).toBe(false);
+  });
+
+  test('an inherited name survives clone and serialization', () => {
+    const {tag} = parseTag('__proto__=1 toString.b=2');
+    const cloned = tag.clone();
+    expect(cloned.numeric('__proto__')).toEqual(1);
+    expect(cloned.numeric('toString', 'b')).toEqual(2);
+
+    const json = JSON.parse(JSON.stringify(tag));
+    expect(Object.keys(json.properties)).toEqual(['__proto__', 'toString']);
+
+    const reparsed = parseAnnotation(tag.toString());
+    expect(reparsed.log).toEqual([]);
+    expect(reparsed.tag.numeric('__proto__')).toEqual(1);
+    expect(reparsed.tag.numeric('toString', 'b')).toEqual(2);
+  });
+
+  test('a Tag built from a plain-object interface reads own names only', () => {
+    const tag = new Tag({properties: {a: {eq: 1}}});
+    expect(tag.numeric('a')).toEqual(1);
+    for (const name of inheritedNames) {
+      expect(tag.has(name)).toBe(false);
+    }
+  });
+
+  test('benign input still parses after an inherited name is parsed', () => {
+    parseTag('__proto__.a=1');
+    const {tag, log} = parseTag('plain=ok');
+    expect(log).toEqual([]);
+    expect(tag.text('plain')).toEqual('ok');
   });
 });

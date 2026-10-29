@@ -43,10 +43,58 @@ Top-level keys:
 | `manifestPath` | Directory where the build manifest lives, relative to the config file. Defaults to `MANIFESTS`. May be a string literal or a sync-resolving overlay reference (e.g. `{"env": "MALLOY_MANIFEST_PATH"}`). |
 | `givensPath` | File where per-runtime [given](givens.md) values live, relative to the config file. JSON object of `name → value` pairs. May be a string literal or a sync-resolving overlay reference. |
 | `finalizeGivens` | Array of [given](givens.md) names that are locked at the runtime layer — per-query supply for these names is rejected, and they are filtered out of `Model.givens` / `PreparedQuery.givens` introspection so UIs don't render editors for them. Security primitive for multi-tenant deployments where the tenant identifier must not be caller-overridable. |
-| `virtualMap` | URL rewrite rules for sources that reference virtual locations. Literal — no overlay expansion. |
+| `virtualMap` | Maps connection names and virtual source names to backing table paths. Literal — no overlay expansion. |
 | `includeDefaultConnections` | If `true`, fabricate one entry per registered backend type not already listed. See below. |
 
 Any non-`json`-typed property value — both inside `connections` and at the top level (`manifestPath`, `givensPath`) — may be a reference instead of a literal. See [Overlay References](#overlay-references). Top-level references carry one extra constraint: the overlay must resolve synchronously, because these values are read at construction time.
+
+## Virtual Sources in SQL Blocks
+
+A virtual map supplies the physical table for each virtual source:
+
+```json
+{
+  "virtualMap": {
+    "duckdb": {
+      "users": "'data/users.parquet'"
+    }
+  }
+}
+```
+
+Each binding is checked against the executing dialect immediately before it is
+substituted into SQL. A used binding must contain a canonical table path for that
+dialect; otherwise SQL generation fails. Invalid paths in unused entries do not
+prevent Runtime construction, model translation, or unrelated queries.
+
+When a SQL block interpolates a query using a virtual source, directly or
+indirectly, Malloy needs an existing backing table **during model translation**
+so the connection can discover the SQL block's output schema. A Runtime uses
+its configured virtual map for this, unless the application supplies a map to
+`loadModel`, `loadQuery`, or `extendModel`. The lower-level `Malloy.compile`
+also accepts `virtualMap`.
+
+An application can supply different maps for translation and execution. Both
+backing tables must provide the virtual source's declared fields with matching
+types. Additional table columns are allowed:
+
+```typescript
+const translationMap = new Map([
+  ['duckdb', new Map([['users', 'translation_users']])],
+]);
+const executionMap = new Map([
+  ['duckdb', new Map([['users', 'production_users']])],
+]);
+
+const model = runtime.loadModel(modelURL, {virtualMap: translationMap});
+const result = await model.loadFinalQuery().run({virtualMap: executionMap});
+```
+
+Virtual references remain in the compiled model. The translation map is also
+the materializer's default execution map; pass an execution override as above
+when the maps differ. A map supplied only to `run()` arrives too late for
+SQL-block schema discovery. Virtual sources used outside SQL blocks can still
+be translated without a map.
 
 ## Overlay References
 
@@ -73,14 +121,15 @@ Overlays may be synchronous or asynchronous — an overlay's return type is `unk
 
 ### Failure Modes
 
-References fail in four distinguishable ways, each handled differently:
+References fail in five distinguishable ways, each handled differently:
 
 1. **Unknown overlay source** (`{zzz: "foo"}` when no `zzz` overlay is registered) — logged as a warning to `config.log`; the property is dropped. Almost always a typo or host/config mismatch.
 2. **Known overlay returns `undefined`** (`{env: "MISSING_VAR"}` — env var unset) — silently dropped. Legitimate "value not present" state. If the dropped property was required, the connection factory complains when the connection is built (lazy, at lookup time), not at config-build time.
 3. **Unresolved reference inside a default** — silently dropped. Defaults are hints, not requirements.
 4. **Async overlay used in a sync-only slot** (e.g. `manifestPath: {secret: "X"}` when `secret` returns a Promise) — logged as a loud warning to `config.log` and dropped. Top-level string settings are read at construction time and can't `await`; this is misuse, not a missing value. The same rule applies to `configURL` on the host-supplied `config` overlay.
+5. **A property that can't safely be absent produced nothing** — an error, and the connection is not built. A few properties fall back to something permissive when they're missing: DuckDB's `securityPolicy` becomes `none`, BigQuery's `authClient` becomes whatever ambient credential the machine has. Writing one of those is treated as a promise that it will come to something, so any of modes 1–3 hitting it stops the connection instead of quietly taking the fallback. Leaving the property out entirely is still fine.
 
-A consequence: a typo'd env var and an unset env var are indistinguishable. This matches established behavior.
+A consequence: for every other property, a typo'd env var and an unset env var are indistinguishable. This matches established behavior.
 
 Mode 1 fires at construction time for top-level references and at first lookup for connection-property references — a consequence of when each is resolved. Mode 4 only fires at construction time, since it's specific to the sync-only slots. Modes 2 and 3 are silent in both cases.
 
@@ -89,6 +138,19 @@ Mode 1 fires at construction time for top-level references and at first lookup f
 Some connection properties (Trino's `ssl`, `session`, `extraHeaders`, etc.) are declared as `type: 'json'` in the registry. These pass through literally — their contents are never interpreted as overlay references. `{env: "X"}` inside a `json` property is literal data.
 
 This is a security invariant: `json`-typed slots can't smuggle overlay lookups. Only properties declared with a scalar type can carry references.
+
+The exception is a property the registry declares as overlay-only. There a value written in the config file isn't legal at all, so a single-key object can only be a reference and there is nothing to confuse it with. BigQuery's `authClient` is the one that exists today — the config names an overlay, and the host supplies a live credential object that has no JSON form:
+
+```json
+"bigquery": {
+  "is": "bigquery",
+  "projectId": "acme-analytics",
+  "billingProjectId": "publisher-billing",
+  "authClient": {"tenantAuth": "acme"}
+}
+```
+
+Nothing secret is in the file. The host registers a `tenantAuth` overlay when it builds the `MalloyConfig`, and it is called at lookup time, so the credential can be minted per connection.
 
 ## Defaults
 

@@ -45,6 +45,7 @@ export function refine(
       if (from.orderBy !== undefined && !from.defaultOrderBy) {
         if (to.orderBy === undefined || to.defaultOrderBy) {
           to.orderBy = from.orderBy;
+          delete to.defaultOrderBy;
         } else {
           logTo.logError(
             'ordering-overridden-in-refinement',

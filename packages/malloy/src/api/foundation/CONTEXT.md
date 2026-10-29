@@ -17,6 +17,8 @@ This file is about the parts that are fragile and easy to break.
 | `runtime.ts` | `Runtime`, materializers, lazy manifest read |
 | Other files | Model/Query/Result classes — see parent CONTEXT.md |
 
+**Runs in a browser.** Nothing here may assume Node: no `fs`, no `path`, and `process.env` only behind a `typeof process` check (see `config_overlays.ts`). All IO goes through `URLReader`, which is the one seam a host implements.
+
 ## The Pipeline
 
 ```
@@ -86,7 +88,7 @@ const TOP_LEVEL_SECTIONS: Record<string, SectionCompiler> = {
 };
 ```
 
-- `compileConnections` is the **only** dynamic section. For each entry, it looks up `is` in the connection registry, walks the declared properties, and at each *non-`json`* property (the reference slots) accepts either a literal or a single-key `{source: path}` reference. At each `json`-typed property it passes raw data through as `ConfigLiteral` — no reference interpretation.
+- `compileConnections` is the **only** dynamic section. For each entry, it looks up `is` in the connection registry, walks the declared properties, and at each *non-`json`* property (the reference slots) accepts either a literal or a single-key `{source: path}` reference. At each `json`-typed property it passes raw data through as `ConfigLiteral` — no reference interpretation. A property's `source` overrides that default reading in either direction: `'literal'` rejects a reference, `'overlay'` rejects a literal and so recognizes a reference even in a slot that would otherwise hold a dictionary.
 - `compileManifestPath` accepts either a literal string or a reference shape. Resolution happens synchronously in `prepareConfig` — see the sync-peek discussion under [Sync/async boundary](#the-pipeline) above.
 - `compileVirtualMap`, `compileIncludeDefaultConnections` are pass-through. `{env: "X"}` *inside* `virtualMap` is literal JSON, not a reference.
 
@@ -134,6 +136,7 @@ Cases and observed behavior: [configuration.md → Failure Modes](../../doc/conf
 | Known overlay returns `undefined` → silent drop | Legitimate "value not present" state, matching env-var semantics. A required-field violation surfaces at connection-build time (lazy, at lookup), not here — keeping the resolver out of policy decisions about what's required. |
 | Unresolved reference in a `default` → silent drop | A default is a hint, not a requirement. "No default applicable" is a normal terminal state, not a failure. |
 | Async overlay used in a sync-only slot → loud warning + drop | A construction-time peek can't `await`. This is misuse rather than absence, so silent drop would hide a wiring bug; throwing would brittly couple to a stack the host might still be assembling. The loud warning gets the host's attention while keeping construction infallible. Applies to `configURL` and to top-level string references like `manifestPath`. |
+| Property carries `mustHaveValue` and produced nothing → throw at lookup | Absence is a normal state for every other property. For one whose fallback is a permission — `securityPolicy` → `none`, `authClient` → ambient credentials — dropping silently selects the permissive branch. Fires only when the key was authored; an absent key still takes its default. |
 
 Consequence: cases 2 and 3 make "typo'd env var" and "legitimately unset env var" indistinguishable. Matches today's behavior. Typo detection would need the resolver to know which properties are required by which factory — not worth crossing that line.
 
@@ -189,7 +192,7 @@ A subtlety: `configURL` doesn't have to be where the config text actually came f
 - *Phase 1 (translator)*: `$NAME` → `GivenID`, scoped to the current file's visible givens. Bakes the id into the `givenRef` node. Sites: `lang/ast/expressions/expr-given.ts`, `lang/ast/statements/define-given.ts`.
 - *Phase 2 (compiler)*: `GivenID` → bound value. Lookup by id in `prepareResultOptions.resolvedGivens`; fall back to the declaration's default; throw if neither. Sites: `model/expression_compiler.ts:case 'given'`, `generateGivenFragment`.
 
-The `resolvedGivens` map is built **at the foundation boundary** (`PreparedQuery.getPreparedResult`), not inside the compiler. The compiler trusts it.
+The `resolvedGivens` map is built **at the foundation boundary** by `bindGivens` (`model/given_binding.ts`), never inside the compiler, which trusts the map. A query binds through it in `PreparedQuery.getPreparedResult` and a persistence build in `Runtime.getBuildTargets`; what the two must agree on is in `doc/persist/internal.md`.
 
 **Foundation-layer pieces a reader needs to find:**
 
@@ -198,8 +201,9 @@ The `resolvedGivens` map is built **at the foundation boundary** (`PreparedQuery
 - **`Runtime.getGivens()`** — async, returns the merged file+constructor view; constructor wins per-key. The honest "what does this runtime supply?" surface.
 - **`Runtime._resolveGivens()`** — lazy + cached file read of `config.givensURL`. Stricter error policy than `_resolveBuildManifest`: missing file or malformed JSON throws on the first compile, with the URL in the message. `Runtime._invalidateGivensCache()` clears the cached promise (file-watching hosts; tests).
 - **`Runtime._withRuntimeContext(model)`** — re-wraps a Model returned from `Malloy.compile()` with this runtime's `RuntimeContext` (currently `{finalizedGivens?}`). The wart-as-bridge between `Malloy.compile` (runtime-unaware) and the runtime-aware `Model.givens` filtering. New runtime-aware concerns add fields to `RuntimeContext` rather than parallel `_with*` methods.
-- **`QueryMaterializer.loadPreparedResult`** — does the three-layer per-key merge (file → constructor → per-query, higher wins), then per-query rejection for finalized names + query-scoped sanity validation. Explicit `undefined` values are rejected at the boundary (in `Runtime` constructor and `resolveSuppliedGivens`).
-- **`PreparedQuery.getPreparedResult`** — calls `resolveSuppliedGivens(options.givens, this._modelDef)` to convert JS values into `Map<GivenID, Expr>` before handing to `compileQuery`. The compiler trusts the resolved map.
+- **`Runtime._givensFor(perCall)`** — the three-layer per-key merge (file → constructor → per-call, higher wins), after refusing a per-call value for a finalized name. `QueryMaterializer.loadPreparedResult` calls it with the query's `givens` and then runs the query-scoped sanity validation; `Runtime.getBuildTargets` calls it with the build's. Explicit `undefined` values are rejected at the boundary (in `Runtime` constructor and `resolveSuppliedGivens`).
+- **`PreparedQuery.getPreparedResult`** — calls `bindGivens(options.givens, this._modelDef)` to convert JS values into `Map<GivenID, Expr>` before handing to `compileQuery`. The compiler trusts the resolved map.
+- **`Runtime.getBuildTargets(model, {givens?, virtualMap?})`** — a persistence build's supply path, layered over the Runtime's the same way; the rest is in `doc/persist/api.md`.
 
 `Model` carries an optional `runtimeContext?: RuntimeContext` constructor parameter. The "Model wears two hats" abstraction violation (compiler artifact + host-facing inspection) is acknowledged as a future structural cleanup; today the `_withRuntimeContext` re-wrap pattern is the tactical bridge.
 

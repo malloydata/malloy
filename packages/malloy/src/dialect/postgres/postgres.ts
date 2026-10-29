@@ -12,8 +12,8 @@ import type {
   BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
-  TimeExtractExpr,
   TimestampUnit,
+  ExtractUnit,
 } from '../../model/malloy_types';
 import {
   isRepeatedRecord,
@@ -25,12 +25,12 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import {
-  qtz,
   turtleGroupSetCondition,
   type CompiledOrderBy,
   type DialectFieldList,
   type FieldReferenceType,
   type QueryInfo,
+  type CivilTime,
 } from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -126,7 +126,7 @@ export class PostgresDialect extends PostgresBase {
         f =>
           `\n  ${f.sqlExpression}${
             f.typeDef.type === 'number' ? `::${this.defaultNumberType}` : ''
-          } as ${f.sqlOutputName}`
+          } as ${this.sqlQuoteIdentifier(f.rawName)}`
       )
       .join(', ');
   }
@@ -151,7 +151,7 @@ export class PostgresDialect extends PostgresBase {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
   }
@@ -278,9 +278,7 @@ export class PostgresDialect extends PostgresBase {
     op: '+' | '-',
     magnitude: string,
     unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    _civilType: CivilTime
   ): string {
     // Convert quarter/week to supported units
     let offsetUnit = unit;
@@ -366,14 +364,18 @@ export class PostgresDialect extends PostgresBase {
     // PostgreSQL requires CAST to NUMERIC before ROUND, which is different
     // than the generic implementation of sqlSumDistinct, but is OK in
     // PostgreSQL because NUMERIC has arbitrary precision.
+    // The sum stays NUMERIC so later stages and derived expressions see the
+    // exact value. A DOUBLE PRECISION cast would keep only ~16 digits. The
+    // ROUND(..., 9) leaves a scale of 9, which would show up in string
+    // conversions as trailing zeros; trim_scale removes it.
     const roundedValue = `ROUND(CAST(COALESCE(${value}, 0) AS NUMERIC), 9)`;
     const sumSQL = `SUM(DISTINCT ${roundedValue} + ${hashKey}) - SUM(DISTINCT ${hashKey})`;
-    const ret = `CAST(${sumSQL} AS DOUBLE PRECISION)`;
+    const ret = `trim_scale(${sumSQL})`;
 
     if (funcName === 'SUM') {
       return ret;
     } else if (funcName === 'AVG') {
-      return `(${ret})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0)`;
+      return `trim_scale((${sumSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0))`;
     }
     throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
@@ -488,20 +490,14 @@ export class PostgresDialect extends PostgresBase {
     return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    const units = timeExtractMap[from.units] || from.units;
-    let extractFrom = from.e.sql;
-    if (TD.isAnyTimestamp(from.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-      }
-    }
-
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
     // PostgreSQL before 14 returns a double precision for EXTRACT, cast to integer
     // since it is common to pass an extraction to mod ( like in fitler expressions )
-    const extracted = `EXTRACT(${units} FROM ${extractFrom})::integer`;
-
-    return from.units === 'day_of_week' ? `(${extracted}+1)` : `(${extracted})`;
+    const extracted = `EXTRACT(${timeExtractMap[units] || units} FROM ${expr})::integer`;
+    return units === 'day_of_week' ? `(${extracted}+1)` : `(${extracted})`;
   }
 }

@@ -7,12 +7,14 @@ import type {
   Sampling,
   MeasureTimeExpr,
   RegexMatchExpr,
-  TimeExtractExpr,
   TypecastExpr,
   BasicAtomicTypeDef,
   AtomicTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
+  ATimestampTypeDef,
+  TimestampUnit,
+  ExtractUnit,
 } from '../../model/malloy_types';
 import {
   isAtomic,
@@ -24,6 +26,7 @@ import {
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import type {
+  CivilTime,
   BooleanTypeSupport,
   CompiledOrderBy,
   DialectFieldList,
@@ -33,7 +36,7 @@ import type {
   OrderByRequest,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
+import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {DATABRICKS_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -400,34 +403,32 @@ export class DatabricksDialect extends Dialect {
     return 'CURRENT_TIMESTAMP()';
   }
 
+  // Civil time is a TIMESTAMP whose reading in the session zone, UTC, is
+  // the civil time
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    _typeDef: AtomicTypeDef
-  ): {sql: string; typeDef: AtomicTypeDef} {
-    // Databricks has no timestamptz type; timestamps are stored as UTC
-    // Convert from UTC to local timezone for civil time operations
-    return {
-      sql: `FROM_UTC_TIMESTAMP(${expr}, '${timezone}')`,
-      typeDef: {type: 'timestamp'},
-    };
+    _typeDef: ATimestampTypeDef
+  ): string {
+    return timezone === 'UTC'
+      ? expr
+      : `FROM_UTC_TIMESTAMP(${expr}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
   sqlConvertFromCivilTime(
     expr: string,
     timezone: string,
-    _destTypeDef: AtomicTypeDef
+    _destTypeDef: ATimestampTypeDef
   ): string {
-    // Convert from local timezone back to UTC
-    return `TO_UTC_TIMESTAMP(${expr}, '${timezone}')`;
+    return timezone === 'UTC'
+      ? expr
+      : `TO_UTC_TIMESTAMP(${expr}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
   sqlTruncate(
     expr: string,
-    unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
     // Databricks DATE_TRUNC starts weeks on Monday; Malloy wants Sunday.
     // Add 1 day before truncating, subtract 1 day after.
@@ -441,10 +442,8 @@ export class DatabricksDialect extends Dialect {
     expr: string,
     op: '+' | '-',
     magnitude: string,
-    unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
     // Use TIMESTAMPADD which accepts expressions for magnitude,
     // unlike INTERVAL which only accepts literals in Databricks.
@@ -461,32 +460,30 @@ export class DatabricksDialect extends Dialect {
     return `TIMESTAMPADD(${offsetUnit}, ${n}, ${expr})`;
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
-    const units = extractionMap[te.units] || te.units;
-    let extractFrom = te.e.sql;
-    if (TD.isTimestamp(te.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = `FROM_UTC_TIMESTAMP(${extractFrom}, '${tz}')`;
-      }
-    }
-    if (extractionMap[te.units]) {
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    const extractUnits = extractionMap[units];
+    if (extractUnits) {
       // DAYOFWEEK, DAYOFYEAR are functions
-      return `${units}(${extractFrom})`;
+      return `${extractUnits}(${expr})`;
     }
-    return `EXTRACT(${units} FROM ${extractFrom})`;
+    return `EXTRACT(${units} FROM ${expr})`;
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    const srcSQL = cast.e.sql || 'internal-error-in-sql-generation';
-    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
-    const tz = qtz(qi);
+  sqlCivilToDate(expr: string): string {
+    return `CAST(${expr} AS DATE)`;
+  }
 
-    if (op === 'timestamp::date' && tz) {
-      return `CAST(FROM_UTC_TIMESTAMP(${srcSQL}, '${tz}') AS DATE)`;
-    } else if (op === 'date::timestamp' && tz) {
-      return `TO_UTC_TIMESTAMP(CAST(${srcSQL} AS TIMESTAMP_NTZ), '${tz}')`;
-    }
+  sqlDateToCivil(expr: string): string {
+    return `CAST(${expr} AS TIMESTAMP)`;
+  }
+
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
+    const srcSQL = cast.e.sql || 'internal-error-in-sql-generation';
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       if (cast.safe) {
         return `TRY_CAST(${srcSQL} AS ${dstSQLType})`;
@@ -507,15 +504,7 @@ export class DatabricksDialect extends Dialect {
     return `DATE '${literal}'`;
   }
 
-  sqlTimestampLiteral(
-    qi: QueryInfo,
-    literal: string,
-    timezone: string | undefined
-  ): string {
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `TO_UTC_TIMESTAMP(TIMESTAMP_NTZ '${literal}', '${tz}')`;
-    }
+  sqlCivilLiteral(literal: string): string {
     return `TIMESTAMP '${literal}'`;
   }
 

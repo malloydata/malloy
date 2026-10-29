@@ -24,7 +24,7 @@ import {
   activeName,
   mkSafeRecord,
 } from './malloy_types';
-import type {DialectFieldList} from '../dialect';
+import type {Dialect, DialectFieldList} from '../dialect';
 
 /**
  * Format a typeDef as user-readable Malloy type syntax. Used in error
@@ -271,15 +271,17 @@ export function composeSQLExpr(from: SQLExprElement[]): GenericSQLExpr {
   return ret;
 }
 
-export function getDialectFieldList(structDef: StructDef): DialectFieldList {
+export function getDialectFieldList(
+  structDef: StructDef,
+  dialect: Dialect
+): DialectFieldList {
   const dialectFieldList: DialectFieldList = [];
 
   for (const f of structDef.fields.filter(fieldIsIntrinsic)) {
     dialectFieldList.push({
       typeDef: f,
-      sqlExpression: activeName(f),
+      sqlExpression: dialect.sqlQuoteIdentifier(activeName(f)),
       rawName: activeName(f),
-      sqlOutputName: activeName(f),
     });
   }
   return dialectFieldList;

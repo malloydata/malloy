@@ -34,6 +34,7 @@ import type {
   FilterCondition,
   StructDef,
 } from '../model/malloy_types';
+import {givenUsageOfRelation} from '../model/sql_compiled';
 import {
   activeName,
   expressionIsScalar,
@@ -44,8 +45,6 @@ import {
   isJoinable,
   isJoined,
   isQuerySegment,
-  isSegmentSource,
-  isSegmentSQL,
   isSourceDef,
   isTimeLiteral,
   isTurtle,
@@ -564,9 +563,10 @@ function expandRefUsage(
   // given usage into the accumulator. Used both in-loop (joins reached
   // via reference paths) and upfront (always-on segment-level joins).
   function activateJoin(joinDef: FieldDef, joinPath: string[]): void {
+    if (!isJoined(joinDef)) return;
     const joinKey = pathToKey('join', joinPath);
     const thisDep = getJoin(activeJoinGraph, joinKey, joinPath);
-    if (!isJoined(joinDef) || thisDep.checked) return;
+    if (thisDep.checked) return;
     thisDep.checked = true;
     const joinFieldUsage = getJoinFieldUsage(joinDef, joinPath);
     addGivens(getJoinGivenUsage(joinDef));
@@ -624,8 +624,13 @@ function expandRefUsage(
       }
     }
 
-    // For paths through joins, additionaly track join relationships
-    for (let joinLen = 1; joinLen < reference.path.length; joinLen++) {
+    // Track the joins along the path.  A path which ends at a join and carries
+    // a unique key requirement is an aggregate computed over that join's rows,
+    // which should then include the join's on-clause fields in the field usage.
+    // A path which merely names a join-typed value does not.
+    const endsInTraversedJoin = reference.uniqueKeyRequirement !== undefined;
+    const joinDepth = reference.path.length - (endsInTraversedJoin ? 0 : 1);
+    for (let joinLen = 1; joinLen <= joinDepth; joinLen++) {
       const joinPath = reference.path.slice(0, joinLen);
       const joinDef = inNamespace(joinPath, fieldNameSpace);
       if (!joinDef) break;
@@ -1568,9 +1573,12 @@ export function computeQueryGivenUsage(pipeline: PipeSegment[]): GivenUsage {
 }
 
 // Returns every given a SourceDef references — its own filterList plus any
-// givens hiding inside an embedded Query. The single point of knowledge for
-// "where can a Query embed in a SourceDef" — when a future SourceDef variant
-// grows an embedded Query, teach this helper.
+// givens hiding inside an embedded Query. For a persistable source the
+// embedded part is `givenUsageOfRelation` (model/sql_compiled.ts), which is
+// also what persistence keys a table on; the filterList is added here because
+// a query over the source applies it, but a table built from the source does
+// not. When a future SourceDef variant grows an embedded Query, teach that
+// helper or this one.
 //
 // Composite sources: composite-source support across the codebase is
 // partial; the givens work isn't chasing it. The `composite` arm here is
@@ -1585,16 +1593,8 @@ export function givenUsageOfSource(sd: SourceDef): GivenUsage {
   );
   switch (sd.type) {
     case 'query_source':
-      return [...fromFilters, ...(sd.query.givenUsage ?? [])];
-    case 'sql_select': {
-      const fromSegments = (sd.selectSegments ?? []).flatMap(seg => {
-        if (isSegmentSQL(seg)) return [];
-        if (isSegmentSource(seg)) return givenUsageOfSource(seg);
-        // Remaining variant of SQLPhraseSegment is `Query`
-        return seg.givenUsage ?? [];
-      });
-      return [...fromFilters, ...fromSegments];
-    }
+    case 'sql_select':
+      return [...fromFilters, ...givenUsageOfRelation(sd)];
     case 'composite':
       return [
         ...fromFilters,

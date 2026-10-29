@@ -37,6 +37,12 @@ registerConnectionType('databricks', {
           : undefined,
       setupSQL:
         typeof config['setupSQL'] === 'string' ? config['setupSQL'] : undefined,
+      timeoutMs:
+        typeof config['timeoutMs'] === 'number'
+          ? config['timeoutMs']
+          : typeof config['timeoutMs'] === 'string'
+            ? parseInt(config['timeoutMs'], 10)
+            : undefined,
     });
   },
   properties: [
@@ -89,6 +95,16 @@ registerConnectionType('databricks', {
       optional: true,
       advanced: true,
       description: 'SQL statements to run when the connection is established',
+    },
+    {
+      name: 'timeoutMs',
+      displayName: 'Timeout (ms)',
+      type: 'number',
+      optional: true,
+      advanced: true,
+      default: 600000,
+      description:
+        'Client-side query timeout in ms; the query is cancelled if it runs longer. Defaults to 600000 (10 min).',
     },
   ],
 });

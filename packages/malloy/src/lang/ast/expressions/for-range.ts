@@ -96,7 +96,7 @@ export class ForRange extends ExpressionDef {
     return undefined;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  protected computeExpression(_fs: FieldSpace): ExprValue {
     return this.loggedErrorExpr('range-as-value', 'A Range is not a value');
   }
 }

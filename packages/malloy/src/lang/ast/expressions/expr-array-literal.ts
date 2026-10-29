@@ -18,7 +18,7 @@ export class ArrayLiteral extends ExpressionDef {
     this.has({elements});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const values: Expr[] = [];
     const fromValues: ExprValue[] = [];
     let firstValue: ExprValue | undefined = undefined;

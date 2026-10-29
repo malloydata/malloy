@@ -16,6 +16,7 @@ import {
   checkRequiredGroupBys,
   computeQueryGivenUsage,
 } from '../../composite-source-utils';
+import {detectAndRemovePartialStages} from '../query-utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -32,7 +33,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     super({source, view});
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
+  queryComp(isRefOk: boolean, isPartialOk: boolean): QueryComp {
     let inputStruct: StructDef;
     let queryBase: Query;
     let fieldSpace: FieldSpace;
@@ -54,7 +55,9 @@ export class QueryArrow extends QueryBase implements QueryElement {
       fieldSpace = new StaticSourceSpace(inputStruct, 'public');
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
-      const lhsQuery = this.source.queryComp(isRefOk);
+      // The LHS stages are complete stages, nothing will refine them, so they
+      // are never allowed to be partial no matter what this caller accepts.
+      const lhsQuery = this.source.queryComp(isRefOk, false);
       queryBase = lhsQuery.query;
       inputStruct = lhsQuery.outputStruct;
       fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct, 'public');
@@ -109,12 +112,16 @@ export class QueryArrow extends QueryBase implements QueryElement {
       ),
     ];
 
+    const finalPipeline = isPartialOk
+      ? pipelineWithExpandedFieldUsage
+      : detectAndRemovePartialStages(pipelineWithExpandedFieldUsage, this);
+
     return {
       query: {
         ...query,
         compositeResolvedSourceDef,
-        pipeline: pipelineWithExpandedFieldUsage,
-        givenUsage: computeQueryGivenUsage(pipelineWithExpandedFieldUsage),
+        pipeline: finalPipeline,
+        givenUsage: computeQueryGivenUsage(finalPipeline),
       },
       outputStruct,
       inputStruct,

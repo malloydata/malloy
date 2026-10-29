@@ -13,18 +13,17 @@ import type {
 } from '../../../model/malloy_types';
 import {expressionIsScalar, TD} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
+import {resultColumnHint} from '../expressions/boolean-value';
 import {
   FieldReference,
   IndexFieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
-import type {FieldSpace} from '../types/field-space';
 import type {MalloyElement} from '../types/malloy-element';
 import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 import {QueryOperationSpace} from './query-spaces';
 import {ReferenceField} from './reference-field';
-import {StructSpaceField} from './static-space';
 
 export class IndexFieldSpace extends QueryOperationSpace {
   readonly segmentType = 'index';
@@ -105,65 +104,42 @@ export class IndexFieldSpace extends QueryOperationSpace {
   addRefineFromFields(_refineThis: never) {}
 
   protected addWild(wild: WildcardFieldReference): void {
-    let current: FieldSpace = this.exprSpace;
-    const joinPath: string[] = [];
-    if (wild.joinPath) {
-      // walk path to determine namespace for *
-      for (const pathPart of wild.joinPath.list) {
-        const part = pathPart.refString;
-        joinPath.push(part);
-
-        const ent = current.entry(part);
-        if (ent) {
-          if (ent instanceof StructSpaceField) {
-            current = ent.fieldSpace;
-          } else {
-            pathPart.logError(
-              'invalid-wildcard-source',
-              `Field '${part}' does not contain rows and cannot be expanded with '*'`
-            );
-            return;
-          }
-        } else {
-          pathPart.logError(
-            'wildcard-source-not-found',
-            `No such field as '${part}'`
-          );
-          return;
-        }
-      }
+    const entries = this.wildcardExpansion(wild);
+    if (entries === undefined) {
+      return;
     }
+    const joinPath = wild.joinPath?.path ?? [];
     const dialect = this.dialectObj();
     const expandEntries: {name: string; entry: SpaceEntry}[] = [];
-    for (const [name, entry] of current.entries()) {
-      if (wild.except.has(name)) {
-        continue;
-      }
-      if (entry.refType === 'parameter') {
-        continue;
-      }
+    for (const [name, entry] of entries) {
       const indexName = IndexFieldReference.indexOutputName([
         ...joinPath,
         name,
       ]);
       if (this.entry(indexName)) {
-        const conflict = this.expandedWild.get(indexName)?.path?.join('.');
-        wild.logError(
-          'name-conflict-in-wildcard-expansion',
-          `Cannot expand '${name}' in '${
-            wild.refString
-          }' because a field with that name already exists${
-            conflict ? ` (conflicts with ${conflict})` : ''
-          }`
+        this.logWildcardConflict(
+          wild,
+          name,
+          this.expandedWild.get(indexName)?.path?.join('.')
         );
       } else {
         const eTypeDesc = entry.typeDesc();
-        // Don't index arrays and records
         if (
+          // Don't index arrays and records
           TD.isBasicAtomic(eTypeDesc) &&
           expressionIsScalar(eTypeDesc.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
+          if (eTypeDesc.type === 'boolean' && dialect?.booleanType === 'none') {
+            const path = [...joinPath, name].join('.');
+            wild.logWarning('wildcard-omits-boolean', {
+              dialect: dialect.name,
+              wildcard: wild.refString,
+              name: path,
+              hint: resultColumnHint(path),
+            });
+            continue;
+          }
           expandEntries.push({name: indexName, entry});
           this.expandedWild.set(indexName, {
             path: joinPath.concat(name),

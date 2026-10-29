@@ -1454,27 +1454,6 @@ export function mapFieldUsage(
   return rs && {...rs, fieldUsage: rs.fieldUsage.map(fn)};
 }
 
-/**
- * Mutating setter for a node's `fieldUsage`. When the node already has a
- * `refSummary`, replaces just the `fieldUsage` slice (preserving `givenUsage`
- * and any future RefSummary fields). When it doesn't, creates a fresh
- * `refSummary` with the supplied usages.
- *
- * Use at sites that mutate an already-constructed IR node; for sites that
- * build a node from a literal, write `{fieldUsage: [...]}` directly or use
- * `mkRefSummary` for possibly-undefined inputs.
- */
-export function setFieldUsage(
-  target: {refSummary?: RefSummary},
-  usages: FieldUsage
-): void {
-  if (target.refSummary) {
-    target.refSummary.fieldUsage = usages;
-  } else {
-    target.refSummary = {fieldUsage: usages};
-  }
-}
-
 export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];

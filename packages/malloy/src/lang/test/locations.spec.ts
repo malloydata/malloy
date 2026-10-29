@@ -276,6 +276,20 @@ describe('source references', () => {
     });
   });
 
+  test('the join named before a star is a reference', () => {
+    const source = markSource`
+      source: x is a extend { join_one: ${'b is a on true'} }
+      run: x -> { select: ${'b'}.* }
+    `;
+    const m = new TestTranslator(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: 'joinReference',
+      text: 'b',
+    });
+  });
+
   test('reference to query in query', () => {
     const source = markSource`
       source: t is a extend {

@@ -36,10 +36,42 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: \`#\` is count(one)
           }
         }
+        // A nest of nothing but aggregates is a single record rather than a
+        // list, and is built by a different dialect method.
+        nest: measures_only is {
+          aggregate: \`#\` is count(one)
+          aggregate: \`order\` is one.sum()
+        }
       }`).toMatchResult(testModel, {
       foo: [{'one': 1, '#': 1, 'deepfoo': [{'one': 1, '#': 1}]}],
+      measures_only: {'#': 1, 'order': 1},
     });
   });
+
+  // A nest's output field names are the user's, so every place a stage
+  // declares or reads them has to quote them -- including the row type a
+  // multi-stage nest builds to carry its first stage into its second.
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(
+    `properly quotes nested field names through a second stage in ${databaseName}`,
+    async () => {
+      await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        where: state = 'CA'
+        group_by: popular_name
+        nest: counted is {
+          group_by: \`order\` is state
+          aggregate: n is count()
+        } -> {
+          group_by: \`order\`
+          aggregate: t is n.sum()
+        }
+      }`).toMatchResult(testModel, {
+        counted: [{'order': 'CA', 't': 1}],
+      });
+    }
+  );
 
   describe('warnings', () => {
     // NOTE: This test generates SQL errors on the console because of

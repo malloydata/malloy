@@ -13,7 +13,6 @@ import {
   fieldUsageFrom,
   isIndexSegment,
   isPartialSegment,
-  setFieldUsage,
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
@@ -140,7 +139,7 @@ export class IndexBuilder implements QueryBuilder {
       path: [],
       uniqueKeyRequirement: {isCount: true},
     });
-    setFieldUsage(indexSegment, fieldUsage);
+    indexSegment.refSummary = {...indexSegment.refSummary, fieldUsage};
 
     return indexSegment;
   }

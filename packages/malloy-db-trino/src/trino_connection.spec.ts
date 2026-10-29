@@ -3,8 +3,16 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {AtomicTypeDef, FieldDef} from '@malloydata/malloy';
-import {TrinoConnection, TrinoExecutor} from '.';
+import type {
+  AtomicTypeDef,
+  FieldDef,
+  SQLSourceDef,
+  StructDef,
+} from '@malloydata/malloy';
+import {TrinoDialect} from '@malloydata/malloy';
+import {PrestoConnection, TrinoConnection, TrinoExecutor} from '.';
+import {TrinoPrestoConnection} from './trino_connection';
+import type {BaseRunner} from './trino_connection';
 
 // array(varchar) is array
 const ARRAY_SCHEMA = 'array(integer)';
@@ -150,5 +158,105 @@ describe('Trino connection', () => {
         });
       });
     });
+  });
+});
+
+class SchemaConnection extends TrinoPrestoConnection {
+  protected async fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void> {
+    await this.loadSchemaForSqlBlock(sql, structDef, `query ${sql}`);
+  }
+}
+
+describe.each(['trino', 'presto'])('%s schema discovery', dialect => {
+  it('retries an empty DESCRIBE and caches only the successful schema', async () => {
+    const runSQL = jest
+      .fn<ReturnType<BaseRunner['runSQL']>, [string]>()
+      .mockResolvedValueOnce({rows: [], columns: []})
+      .mockResolvedValue({rows: [['state', 'varchar', '', '']], columns: []});
+    const connection = new SchemaConnection(dialect, {runSQL});
+    const tables = {states: 'malloytest.state_facts'};
+
+    const failed = await connection.fetchSchemaForTables(tables, {});
+    expect(failed).toEqual({
+      schemas: {},
+      errors: {
+        states:
+          'Could not fetch schema for table malloytest.state_facts: DESCRIBE returned no columns',
+      },
+    });
+
+    const recovered = await connection.fetchSchemaForTables(tables, {});
+    expect(recovered.errors).toEqual({});
+    expect(recovered.schemas['states'].fields).toEqual([
+      {name: 'state', type: 'string'},
+    ]);
+    expect(await connection.fetchSchemaForTables(tables, {})).toEqual(
+      recovered
+    );
+    expect(runSQL).toHaveBeenCalledTimes(2);
+    expect(runSQL).toHaveBeenCalledWith('DESCRIBE malloytest.state_facts', {});
+  });
+});
+
+describe('Presto EXPLAIN schema', () => {
+  function fieldsFromPlan(plan: string): FieldDef[] {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      name: 'explained',
+      connection: 'presto',
+      selectStr: 'SELECT 1 AS a',
+      dialect: 'presto',
+      fields: [],
+    };
+    PrestoConnection.schemaFromExplain(
+      {rows: [{'Query Plan': plan}], totalRows: 1},
+      structDef,
+      new TrinoDialect()
+    );
+    return structDef.fields;
+  }
+
+  it('reads a plan with a PlanNodeId group (presto >= 0.284)', () => {
+    expect(
+      fieldsFromPlan(
+        '- Output[PlanNodeId 5][a, b] => [expr:integer, expr_1:varchar]\n' +
+          '        Estimates: {rows: 1 (5B)}\n'
+      )
+    ).toEqual([
+      {name: 'a', ...intType},
+      {name: 'b', ...stringType},
+    ]);
+  });
+
+  it('reads a plan without a PlanNodeId group (presto < 0.284)', () => {
+    expect(
+      fieldsFromPlan('- Output[a, b] => [expr:integer, expr_1:varchar]\n')
+    ).toEqual([
+      {name: 'a', ...intType},
+      {name: 'b', ...stringType},
+    ]);
+  });
+
+  it('reads a field named PlanNodeId', () => {
+    expect(
+      fieldsFromPlan(
+        '- Output[PlanNodeId 5][PlanNodeId, b] => [expr:integer, expr_1:varchar]\n'
+      )
+    ).toEqual([
+      {name: 'PlanNodeId', ...intType},
+      {name: 'b', ...stringType},
+    ]);
+    expect(fieldsFromPlan('- Output[PlanNodeId] => [expr:integer]\n')).toEqual([
+      {name: 'PlanNodeId', ...intType},
+    ]);
+  });
+
+  it('reads the plan line as reported in issue #3042', () => {
+    expect(fieldsFromPlan('Output[a]=>[expr:integer]')).toEqual([
+      {name: 'a', ...intType},
+    ]);
   });
 });

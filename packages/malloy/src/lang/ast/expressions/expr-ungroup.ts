@@ -28,7 +28,7 @@ export class ExprUngroup extends ExpressionDef {
     super({expr: expr, fields: fields});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const exprVal = this.expr.getExpression(fs);
     if (!expressionIsAggregate(exprVal.expressionType)) {
       return this.expr.loggedErrorExpr(

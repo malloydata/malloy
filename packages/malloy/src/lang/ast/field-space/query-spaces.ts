@@ -5,11 +5,7 @@
 
 import * as model from '../../../model/malloy_types';
 import {mergeFields, nameFromDef} from '../../field-utils';
-import type {
-  FieldSpace,
-  QueryFieldSpace,
-  SourceFieldSpace,
-} from '../types/field-space';
+import type {QueryFieldSpace, SourceFieldSpace} from '../types/field-space';
 import {FieldName} from '../types/field-space';
 import type {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
@@ -20,7 +16,7 @@ import {
 } from '../query-items/field-references';
 import {RefinedSpace} from './refined-space';
 import type {LookupResult} from '../types/lookup-result';
-import {StructSpaceField} from './static-space';
+import {accessibleEntries, resolveNamespace} from './static-space';
 import {QueryInputSpace} from './query-input-space';
 import type {SpaceEntry} from '../types/space-entry';
 import type {
@@ -30,6 +26,7 @@ import type {
 } from '../../parse-log';
 import {mergeRefSummaries} from '../../composite-source-utils';
 import {ErrorFactory} from '../error-factory';
+import {resultColumnHint} from '../expressions/boolean-value';
 import {ReferenceField} from './reference-field';
 import {RefineFromSpaceField} from './refine-from-space-field';
 
@@ -144,53 +141,70 @@ export abstract class QueryOperationSpace
     return true;
   }
 
-  protected addWild(wild: WildcardFieldReference): void {
-    let current: FieldSpace = this.exprSpace;
-    const joinPath: string[] = [];
-    if (wild.joinPath) {
-      // walk path to determine namespace for *
-      for (const pathPart of wild.joinPath.list) {
-        const part = pathPart.refString;
-        joinPath.push(part);
+  protected logWildcardConflict(
+    wild: WildcardFieldReference,
+    name: string,
+    conflict: string | undefined
+  ) {
+    wild.logError(
+      'name-conflict-in-wildcard-expansion',
+      `Cannot expand '${name}' in '${
+        wild.refString
+      }' because a field with that name already exists${
+        conflict ? ` (conflicts with ${conflict})` : ''
+      }`
+    );
+  }
 
-        const ent = current.entry(part);
-        if (ent) {
-          if (ent instanceof StructSpaceField) {
-            current = ent.fieldSpace;
-          } else {
-            pathPart.logError(
-              'invalid-wildcard-source',
-              `Field '${part}' does not contain rows and cannot be expanded with '*'`
-            );
-            return;
-          }
-        } else {
-          pathPart.logError(
-            'wildcard-source-not-defined',
-            `No such field as '${part}'`
-          );
-          return;
-        }
-      }
+  /**
+   * A `*` expands the fields a user of the finished source will see: it
+   * walks its path and reads the namespace at the end as a public reader,
+   * with the same walk and the same per-entry rule as a lookup by name.
+   * A disallowed path is an error, since the user wrote it; a disallowed
+   * field is dropped, since naming it would disclose it. Returns undefined,
+   * having logged, when the path fails or nothing is left to expand.
+   */
+  protected wildcardExpansion(
+    wild: WildcardFieldReference
+  ): [string, SpaceEntry][] | undefined {
+    const ns = resolveNamespace(
+      this.exprSpace,
+      wild.joinPath?.list ?? [],
+      'public',
+      '*'
+    );
+    if (ns.error) {
+      const at = ns.error.at ?? wild;
+      at.logError(ns.error.code, ns.error.message);
+      return undefined;
     }
+    const entries = accessibleEntries(ns.space, ns.accessLevel).filter(
+      ([name, entry]) => !wild.except.has(name) && entry.refType !== 'parameter'
+    );
+    if (entries.length === 0) {
+      wild.logError(
+        'wildcard-matched-no-fields',
+        `'${wild.refString}' did not match any fields`
+      );
+      return undefined;
+    }
+    return entries;
+  }
+
+  protected addWild(wild: WildcardFieldReference): void {
+    const entries = this.wildcardExpansion(wild);
+    if (entries === undefined) {
+      return;
+    }
+    const joinPath = wild.joinPath?.path ?? [];
     const dialect = this.dialectObj();
     const expandEntries: {name: string; entry: SpaceEntry}[] = [];
-    for (const [name, entry] of current.entries()) {
-      if (wild.except.has(name)) {
-        continue;
-      }
-      if (entry.refType === 'parameter') {
-        continue;
-      }
+    for (const [name, entry] of entries) {
       if (this.entry(name)) {
-        const conflict = this.expandedWild.get(name)?.path.join('.');
-        wild.logError(
-          'name-conflict-in-wildcard-expansion',
-          `Cannot expand '${name}' in '${
-            wild.refString
-          }' because a field with that name already exists${
-            conflict ? ` (conflicts with ${conflict})` : ''
-          }`
+        this.logWildcardConflict(
+          wild,
+          name,
+          this.expandedWild.get(name)?.path.join('.')
         );
       } else {
         const eType = entry.typeDesc();
@@ -199,6 +213,16 @@ export abstract class QueryOperationSpace
           model.expressionIsScalar(eType.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
+          if (eType.type === 'boolean' && dialect?.booleanType === 'none') {
+            const path = joinPath.concat(name).join('.');
+            wild.logWarning('wildcard-omits-boolean', {
+              dialect: dialect.name,
+              wildcard: wild.refString,
+              name: path,
+              hint: resultColumnHint(path),
+            });
+            continue;
+          }
           expandEntries.push({name, entry});
           this.expandedWild.set(name, {
             path: joinPath.concat(name),

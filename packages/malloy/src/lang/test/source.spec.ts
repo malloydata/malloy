@@ -1269,6 +1269,31 @@ describe('source:', () => {
       expect(tbl.referenceID).toBeUndefined();
     });
 
+    // A sourceID says "this is the definition named X". Anything that resolves
+    // one through the registry gets the registry's definition, so a def
+    // carrying an id it is not must never exist — it would silently stand in
+    // for a smaller source. Persistence lost a dependency exactly this way: an
+    // inline `extend` kept its base's id and the registry handed back the base,
+    // without whatever the extend had added.
+    test('an unnamed modification does not keep the id of what it modified', () => {
+      const m = sources(`
+        source: base is a extend { dimension: one is 1 }
+        run: base extend { join_one: b on astr = b.astr } -> { group_by: astr }
+      `);
+      const base = defOf(m, 'base');
+      expect(base.sourceID).toBeDefined();
+
+      const structRef = m.translate().modelDef?.queryList[0]?.structRef;
+      if (structRef === undefined || typeof structRef === 'string') {
+        fail('the query does not have an inline extend as its structRef');
+      }
+      const inlineExtend = structRef;
+      // It has the join; the registry's `base` does not. So it cannot claim to
+      // be `base`.
+      expect(inlineExtend.fields.some(f => f.name === 'b')).toBe(true);
+      expect(inlineExtend.sourceID).toBeUndefined();
+    });
+
     test('an unmodified rename references the source it copies', () => {
       const m = sources(`
         source: base is a -> {group_by: astr}

@@ -7,7 +7,6 @@ import {indent} from '../../model/utils';
 import type {
   Sampling,
   AtomicTypeDef,
-  TimeExtractExpr,
   TypecastExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
@@ -15,7 +14,8 @@ import type {
   RecordLiteralNode,
   ArrayLiteralNode,
   TimestampUnit,
-  TimestampTypeDef,
+  ATimestampTypeDef,
+  ExtractUnit,
 } from '../../model/malloy_types';
 import {
   isAtomic,
@@ -35,6 +35,7 @@ import type {
   QueryInfo,
 } from '../dialect';
 import {
+  CivilTime,
   Dialect,
   EscapeStyle,
   MIN_INT64,
@@ -61,16 +62,6 @@ const extractMap: Record<string, string> = {
   'day_of_week': 'dayofweek',
   'day_of_year': 'dayofyear',
 };
-
-/**
- * Return a non UTC timezone, if one was specificed.
- */
-function qtz(qi: QueryInfo): string | undefined {
-  const tz = qi.queryTimezone;
-  if (tz && tz !== 'UTC') {
-    return tz;
-  }
-}
 
 declare interface TimeMeasure {
   use: string;
@@ -172,31 +163,6 @@ export class StandardSQLDialect extends Dialect {
   // backticks they'd need anyway.
   override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_-]*/;
 
-  needsCivilTimeComputation(
-    typeDef: AtomicTypeDef,
-    truncateTo: TimestampUnit | undefined,
-    offsetUnit: TimestampUnit | undefined,
-    qi: QueryInfo
-  ): {needed: boolean; tz: string | undefined} {
-    // In addition to using "civil" space for units where a query time zone is
-    // set, BigQuery also uses civil space for unit operations not supported
-    // by the TIMESTAMP functions.
-    const calendarUnits = ['day', 'week', 'month', 'quarter', 'year'];
-
-    const isCalendarTruncate =
-      truncateTo !== undefined && calendarUnits.includes(truncateTo);
-
-    const isCalendarOffset =
-      offsetUnit !== undefined && calendarUnits.includes(offsetUnit);
-
-    const needed =
-      TD.isAnyTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
-
-    const tz = needed ? qtz(qi) || 'UTC' : undefined;
-
-    return {needed, tz};
-  }
-
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(GENERATE_ARRAY(0,${groupSetCount},1)))`;
   }
@@ -221,7 +187,9 @@ export class StandardSQLDialect extends Dialect {
     filterSQL?: string
   ): string {
     const fields = fieldList
-      .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(
+        f => `\n  ${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`
+      )
       .join(', ');
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
     // BigQuery ARRAY_AGG takes LIMIT as its final sub-clause, after ORDER BY.
@@ -234,7 +202,7 @@ export class StandardSQLDialect extends Dialect {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END)`;
   }
@@ -252,10 +220,10 @@ export class StandardSQLDialect extends Dialect {
     fieldList: DialectFieldList
   ): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     const nullValues = fieldList
-      .map(f => `NULL as ${f.sqlOutputName}`)
+      .map(f => `NULL as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
 
     return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END), STRUCT(${nullValues}))`;
@@ -345,61 +313,49 @@ ${indent(sql)}
     return `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string): string {
-    return `(SELECT AS STRUCT ${alias}.*)`;
+  sqlSelectAliasAsStruct(
+    alias: string,
+    dialectFieldList: DialectFieldList
+  ): string {
+    const fields = dialectFieldList
+      .map(d => `${alias}.${this.sqlQuoteIdentifier(d.rawName)}`)
+      .join(', ');
+    return `(SELECT AS STRUCT ${fields})`;
   }
 
   sqlNowExpr(): string {
     return 'CURRENT_TIMESTAMP()';
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
-    const extractTo = extractMap[te.units] || te.units;
-    const tz = TD.isAnyTimestamp(te.e.typeDef) && qtz(qi);
-    const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
-    return `EXTRACT(${extractTo} FROM ${te.e.sql}${tzAdd})`;
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    return `EXTRACT(${extractMap[units] || units} FROM ${expr})`;
   }
 
+  // Civil time is a DATETIME, which has no zone
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    _typeDef: AtomicTypeDef
-  ): {sql: string; typeDef: AtomicTypeDef} {
-    // BigQuery has no timestamptz type, so typeDef.timestamptz will never be true
-    return {
-      sql: `DATETIME(${expr}, '${timezone}')`,
-      typeDef: {type: 'timestamp'},
-    };
+    _typeDef: ATimestampTypeDef
+  ): string {
+    return `DATETIME(${expr}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
   sqlConvertFromCivilTime(
     expr: string,
     timezone: string,
-    _destTypeDef: TimestampTypeDef
+    _destTypeDef: ATimestampTypeDef
   ): string {
-    return `TIMESTAMP(${expr}, '${timezone}')`;
+    return `TIMESTAMP(${expr}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
-  sqlTruncate(
-    expr: string,
-    unit: TimestampUnit,
-    typeDef: AtomicTypeDef,
-    inCivilTime: boolean,
-    timezone?: string
-  ): string {
-    if (inCivilTime) {
-      // Operating on DATETIME (civil time)
-      return `DATETIME_TRUNC(${expr}, ${unit})`;
-    }
-
-    // Operating on DATE or TIMESTAMP
-    if (TD.isDate(typeDef)) {
-      return `DATE_TRUNC(${expr}, ${unit})`;
-    }
-
-    // TIMESTAMP truncation with optional timezone
-    const tzParam = timezone ? `, '${timezone}'` : '';
-    return `TIMESTAMP_TRUNC(${expr}, ${unit}${tzParam})`;
+  sqlTruncate(expr: string, unit: TimestampUnit, civilType: CivilTime): string {
+    return civilType === CivilTime.Date
+      ? `DATE_TRUNC(${expr}, ${unit})`
+      : `DATETIME_TRUNC(${expr}, ${unit})`;
   }
 
   sqlOffsetTime(
@@ -407,42 +363,28 @@ ${indent(sql)}
     op: '+' | '-',
     magnitude: string,
     unit: TimestampUnit,
-    typeDef: AtomicTypeDef,
-    inCivilTime: boolean,
-    _timezone?: string
+    civilType: CivilTime
   ): string {
-    if (inCivilTime) {
-      // Operating on DATETIME (civil time)
-      const funcName = op === '+' ? 'DATETIME_ADD' : 'DATETIME_SUB';
-      return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
-    }
-
-    // Operating on DATE or TIMESTAMP
-    const baseType = typeDef.type;
-    if (baseType === 'date') {
-      const funcName = op === '+' ? 'DATE_ADD' : 'DATE_SUB';
-      return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
-    }
-
-    // TIMESTAMP with sub-day units only (calendar units go through civil time)
-    const funcName = op === '+' ? 'TIMESTAMP_ADD' : 'TIMESTAMP_SUB';
+    const funcType = civilType === CivilTime.Date ? 'DATE' : 'DATETIME';
+    const funcName = `${funcType}_${op === '+' ? 'ADD' : 'SUB'}`;
     return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
+  }
+
+  sqlCivilToDate(expr: string): string {
+    return `DATE(${expr})`;
+  }
+
+  sqlDateToCivil(expr: string): string {
+    return `DATETIME(${expr})`;
   }
 
   ignoreInProject(fieldName: string): boolean {
     return fieldName === '_PARTITIONTIME';
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
-    const tz = qtz(qi);
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     const src = cast.e.sql || '';
-    if (op === 'timestamp::date' && tz) {
-      return `DATE(${src},'${tz}')`;
-    }
-    if (op === 'date::timestamp' && tz) {
-      return `TIMESTAMP(${src}, '${tz}')`;
-    }
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
       return `${castFunc}(${src} AS ${dstSQLType})`;
@@ -458,17 +400,8 @@ ${indent(sql)}
     return `DATE('${literal}')`;
   }
 
-  sqlTimestampLiteral(
-    qi: QueryInfo,
-    literal: string,
-    timezone: string | undefined
-  ): string {
-    let timestampArgs = `'${literal}'`;
-    const tz = timezone || qtz(qi);
-    if (tz && tz !== 'UTC') {
-      timestampArgs += `,'${tz}'`;
-    }
-    return `TIMESTAMP(${timestampArgs})`;
+  sqlCivilLiteral(literal: string): string {
+    return `DATETIME '${literal}'`;
   }
 
   sqlTimestamptzLiteral(

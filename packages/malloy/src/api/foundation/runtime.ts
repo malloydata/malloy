@@ -17,6 +17,7 @@ import type {
   VirtualMap,
 } from '../../model';
 import {isSourceDef, mkSafeRecord, MalloyCompileError} from '../../model';
+import {bindGivens} from '../../model/given_binding';
 import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
 import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
@@ -27,7 +28,14 @@ import {rowDataToNumber} from '../../api/row_data_utils';
 import type {CacheManager} from './cache';
 import type {MalloyConfig} from './config';
 import {EmptyURLReader, FixedConnectionMap} from './readers';
-import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
+import type {
+  ParseOptions,
+  CompileOptions,
+  CompileQueryOptions,
+  BuildTargets,
+  BuildTargetOptions,
+} from './types';
+import {mkBuildTargets, resolvePersistWalk} from './build_targets';
 import type {PreparedResult, Explore} from './core';
 import {Model, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
@@ -111,7 +119,6 @@ class FluentState<T> {
  * An environment for compiling and running Malloy queries.
  */
 export class Runtime {
-  isTestRuntime = false;
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
   private _eventStream: EventStream | undefined;
@@ -244,6 +251,40 @@ export class Runtime {
     }
     for (const [k, v] of this._constructorGivensMap) merged.set(k, v);
     return merged;
+  }
+
+  /**
+   * The given values one compile runs under: the config file's, then the
+   * constructor's, then `perCall`, each winning per key over the one before.
+   * Undefined when no layer supplies anything.
+   *
+   * A per-call value for a finalized given is refused before anything else
+   * happens: finalizing means the Runtime decides, and that holds for a build
+   * as it does for a query.
+   *
+   * @internal Accessed from QueryMaterializer and getBuildTargets.
+   */
+  public async _givensFor(
+    perCall: Record<string, GivenValue> | undefined
+  ): Promise<Record<string, GivenValue> | undefined> {
+    if (this._finalizedGivensSet.size > 0 && perCall) {
+      for (const name of Object.keys(perCall)) {
+        if (this._finalizedGivensSet.has(name)) {
+          throw new MalloyCompileError(
+            `Cannot supply given '${name}' per call: it is finalized at ` +
+              'the runtime layer via `config.finalizeGivens`.',
+            'runtime-given-finalized',
+            undefined
+          );
+        }
+      }
+    }
+    const fileGivens = await this._resolveGivens();
+    const constructorGivens = mapToRecord(this._constructorGivensMap);
+    const haveAny = fileGivens || constructorGivens || perCall;
+    return haveAny
+      ? {...fileGivens, ...constructorGivens, ...perCall}
+      : undefined;
   }
 
   /**
@@ -412,13 +453,8 @@ export class Runtime {
   }
 
   /**
-   * The virtual map for virtual source resolution.
-   * When set, compiled queries automatically resolve virtual sources
-   * against this map. Can be overridden per-query via
-   * CompileQueryOptions.virtualMap.
-   *
-   * When constructed with a MalloyConfig, falls through to
-   * config.virtualMap.
+   * Default virtual-source bindings for translation and query SQL generation.
+   * Falls back to config.virtualMap when no runtime map is assigned.
    */
   public get virtualMap(): VirtualMap | undefined {
     return this._virtualMap ?? this._config?.virtualMap;
@@ -472,13 +508,6 @@ export class Runtime {
     options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
-    if (this.isTestRuntime) {
-      if (options === undefined) {
-        options = {testEnvironment: true};
-      } else {
-        options = {...options, testEnvironment: true};
-      }
-    }
     const compilable = source instanceof URL ? {url: source} : {source};
     return new ModelMaterializer(
       this,
@@ -491,8 +520,8 @@ export class Runtime {
           noThrowOnError,
           eventStream: this.eventStream,
           importBaseURL: options?.importBaseURL,
-          testEnvironment: options?.testEnvironment,
           cacheManager: this.cacheManager,
+          virtualMap: options?.virtualMap ?? this.virtualMap,
         });
         return this._withRuntimeContext(m);
       },
@@ -652,6 +681,55 @@ export class Runtime {
     options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name, options).getPreparedQuery();
+  }
+
+  /**
+   * What a builder has to build for this model, and in what order.
+   *
+   * This is the builder entry point. A model can only enumerate persistable
+   * *sources*, which is not the same set as the tables they produce — several
+   * sources routinely map onto one table, and only a connection digest can
+   * tell you which. That is why this lives on Runtime: it holds the
+   * connections, so it can finish the answer a model can only start.
+   *
+   * Connections are independent of one another; within one, targets come back
+   * in dependency order and each carries its own `dependsOn`. See
+   * {@link BuildTargets}.
+   *
+   * The build generates SQL under this Runtime's givens and `virtualMap`, with
+   * `options` layered over them, exactly as a query would; a persisted table
+   * is therefore found by the queries that run under the same values. A
+   * source whose SQL needs a value this build does not have is reported in
+   * `unbuildable`, not thrown.
+   *
+   * @param model A compiled model with `##! experimental.persistence`
+   * @param options Given values and a `virtualMap` for this build
+   * @return The targets to build, with any annotation parse messages
+   */
+  public async getBuildTargets(
+    model: Model,
+    options?: BuildTargetOptions
+  ): Promise<BuildTargets> {
+    const tagParseLog: LogMessage[] = [];
+    const walk = resolvePersistWalk(model, tagParseLog);
+
+    const connectionDigests: Record<string, string> = mkSafeRecord();
+    for (const {source} of walk) {
+      if (source === undefined) continue;
+      const connectionName = source.connectionName;
+      if (!(connectionName in connectionDigests)) {
+        const connection =
+          await this.connections.lookupConnection(connectionName);
+        connectionDigests[connectionName] = connection.getDigest();
+      }
+    }
+
+    const givens = await this._givensFor(options?.givens);
+    const {connections, unbuildable} = mkBuildTargets(walk, connectionDigests, {
+      virtualMap: options?.virtualMap ?? this.virtualMap,
+      resolvedGivens: bindGivens(givens, model._modelDef),
+    });
+    return {connections, tagParseLog, unbuildable};
   }
 }
 
@@ -813,32 +891,44 @@ export class ModelMaterializer extends FluentState<Model> {
     query: QueryString | QueryURL,
     options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
-    const {refreshSchemaCache, noThrowOnError} = options || {};
+    // `options` spans three interfaces. The parse/compile half is spent here,
+    // compiling the query text; the `CompileQueryOptions` half belongs to the
+    // materializer, which applies it when the query is turned into SQL — so it
+    // has to reach `makeQueryMaterializer` as well, or a `buildManifest` (or
+    // `givens`, or `defaultRowLimit`) passed here is silently ignored.
+    //
+    // Split by naming the parse/compile keys rather than the query ones, so a
+    // query option added later is carried rather than quietly dropped.
+    // `restrictedMode` and `method` are named to hold them back: this entry
+    // point has never honored them, and `loadRestrictedQuery` is how a caller
+    // asks for restricted compilation.
+    const {
+      importBaseURL,
+      refreshSchemaCache,
+      noThrowOnError,
+      restrictedMode: _restrictedMode,
+      method: _method,
+      ...callQueryOptions
+    } = options ?? {};
+    const compileQueryOptions = {
+      ...this.compileQueryOptions,
+      ...callQueryOptions,
+    };
     return this.makeQueryMaterializer(async () => {
-      const urlReader = this.runtime.urlReader;
-      const connections = this.runtime.connections;
-      if (this.runtime.isTestRuntime) {
-        if (options === undefined) {
-          options = {testEnvironment: true};
-        } else {
-          options = {...options, testEnvironment: true};
-        }
-      }
       const compilable = query instanceof URL ? {url: query} : {source: query};
-      const model = await this.getModel();
       const queryModel = await Malloy.compile({
         ...compilable,
-        urlReader,
-        connections,
-        model,
+        urlReader: this.runtime.urlReader,
+        connections: this.runtime.connections,
+        model: await this.getModel(),
         refreshSchemaCache,
         noThrowOnError,
-        importBaseURL: options?.importBaseURL,
-        testEnvironment: options?.testEnvironment,
-        ...this.compileQueryOptions,
+        importBaseURL,
+        ...compileQueryOptions,
+        virtualMap: compileQueryOptions.virtualMap ?? this.runtime.virtualMap,
       });
       return queryModel.preparedQuery;
-    });
+    }, compileQueryOptions);
   }
 
   /**
@@ -888,7 +978,6 @@ export class ModelMaterializer extends FluentState<Model> {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;
-      const testEnvironment = this.runtime.isTestRuntime ? true : undefined;
       const model = await this.getModel();
       const queryModel = await Malloy.compile({
         source: text,
@@ -897,7 +986,6 @@ export class ModelMaterializer extends FluentState<Model> {
         urlReader,
         connections,
         model,
-        testEnvironment,
         ...this.compileQueryOptions,
       });
       return queryModel.preparedQuery;
@@ -915,13 +1003,8 @@ export class ModelMaterializer extends FluentState<Model> {
     query: QueryString | QueryURL,
     options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
-    if (this.runtime.isTestRuntime) {
-      if (options === undefined) {
-        options = {testEnvironment: true};
-      } else {
-        options = {...options, testEnvironment: true};
-      }
-    }
+    const virtualMap =
+      options?.virtualMap ?? this.compileQueryOptions?.virtualMap;
     return new ModelMaterializer(
       this.runtime,
       async () => {
@@ -939,12 +1022,12 @@ export class ModelMaterializer extends FluentState<Model> {
           refreshSchemaCache: options?.refreshSchemaCache,
           noThrowOnError: options?.noThrowOnError,
           importBaseURL: options?.importBaseURL,
-          testEnvironment: options?.testEnvironment,
           ...this.compileQueryOptions,
+          virtualMap: virtualMap ?? this.runtime.virtualMap,
         });
         return this.runtime._withRuntimeContext(queryModel);
       },
-      options
+      {...options, virtualMap}
     );
   }
 
@@ -1362,49 +1445,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         }
       }
 
-      // Use virtualMap from options if provided, otherwise fall back to Runtime's.
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
-      if (virtualMap) {
-        for (const [connName, inner] of virtualMap) {
-          for (const [virtualName, tablePath] of inner) {
-            requireCanonicalTablePathAnyDialect(
-              tablePath,
-              `virtualMap entry '${connName}.${virtualName}'`
-            );
-          }
-        }
-      }
 
-      // Per-query supply for a finalized given is rejected at API entry
-      // — the finalized-givens set is the runtime's "this can't be
-      // overridden by the caller" guarantee. Fail before any IO so misuse
-      // is loud.
+      const mergedGivens = await this.runtime._givensFor(mergedOptions.givens);
       const finalizedSet = this.runtime._finalizedGivens;
-      if (finalizedSet.size > 0 && mergedOptions.givens) {
-        for (const name of Object.keys(mergedOptions.givens)) {
-          if (finalizedSet.has(name)) {
-            throw new MalloyCompileError(
-              `Cannot supply given '${name}' per-query: it is finalized at ` +
-                'the runtime layer via `config.finalizeGivens`.',
-              'runtime-given-finalized',
-              undefined
-            );
-          }
-        }
-      }
-
-      // Three layers of givens, merged per-key in precedence order:
-      //   1. config.givensURL file (lazy + cached)
-      //   2. Runtime constructor `givens:` option
-      //   3. Per-query supply via `.run({givens: ...})`
-      // Higher-numbered layers win on collision. Each layer is optional;
-      // the merge collapses to undefined when all three are absent.
-      const fileGivens = await this.runtime._resolveGivens();
-      const constructorGivens = mapToRecord(this.runtime._constructorGivens);
-      const haveAny = fileGivens || constructorGivens || mergedOptions.givens;
-      const mergedGivens = haveAny
-        ? {...fileGivens, ...constructorGivens, ...mergedOptions.givens}
-        : undefined;
 
       // Query-scoped validation: of the givens THIS query references,
       // any that are finalized must have a value somewhere (file or
@@ -1541,9 +1585,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
     });
   }
 
-  async *runStream(options?: {
-    rowLimit?: number;
-  }): AsyncIterableIterator<DataRecord> {
+  async *runStream(options?: RunSQLOptions): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
     const stream = Malloy.runStream({

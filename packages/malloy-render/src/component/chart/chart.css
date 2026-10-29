@@ -61,6 +61,18 @@
   overflow: hidden;
 }
 
+/* Zero-row chart placeholder: fills the plot area (grid-row 2) so the chart
+   keeps its footprint, with a centered "No Data" label. */
+.malloy-chart__no-data {
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--malloy-render--table-gutter-color, #b0b0b0);
+  font-size: var(--malloy-render--table-font-size, 12px);
+}
+
 .malloy-chart .y_reference_lines_backdrop {
   -webkit-mask-image: linear-gradient(
     transparent 0%,

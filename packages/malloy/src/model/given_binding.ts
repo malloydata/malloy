@@ -129,6 +129,22 @@ export function evaluateInlineGivens(
   return bound;
 }
 
+/**
+ * Binds the givens a compile runs under: the supplied values, then each
+ * `inline` given's default folded against them. Queries and persistence builds
+ * both bind here, so the same values always compile to the same SQL and a
+ * persisted table's key is the key a query recomputes. Undefined when nothing
+ * binds, which the compiler reads as "no givens".
+ */
+export function bindGivens(
+  supplied: Record<string, GivenValue> | undefined,
+  modelDef: ModelDef | undefined
+): Map<GivenID, Expr> | undefined {
+  const bound = resolveSuppliedGivens(supplied, modelDef);
+  evaluateInlineGivens(bound, modelDef);
+  return bound.size > 0 ? bound : undefined;
+}
+
 function valueToExpr(
   path: string,
   type: GivenTypeDef,

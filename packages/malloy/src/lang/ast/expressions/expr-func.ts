@@ -60,6 +60,7 @@ import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
 import {mergeRefSummaries} from '../../composite-source-utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
+import {booleanValueError, NUMBER_HINT} from './boolean-value';
 
 // Built-in functions that take a string literal of user-supplied SQL
 // and emit it directly. Gated by experimental.sql_functions in plain
@@ -98,7 +99,7 @@ export class ExprFunc extends ExpressionDef {
     return true;
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     if (this.isRaw && this.isRestricted()) {
       const typeStr = this.explicitType
         ? typeDefToString(this.explicitType)
@@ -154,6 +155,16 @@ export class ExprFunc extends ExpressionDef {
   ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     if (this.isRaw) {
+      for (const [i, argExpr] of argExprsWithoutImplicit.entries()) {
+        const noArg = booleanValueError(
+          fs,
+          argExpr,
+          `as an argument of ${this.name}`,
+          this.args[i],
+          NUMBER_HINT
+        );
+        if (noArg) return noArg;
+      }
       const funcCall: SQLExprElement[] = [`${this.name}(`];
       argExprsWithoutImplicit.forEach((expr, i) => {
         if (i !== 0) {
@@ -237,6 +248,16 @@ export class ExprFunc extends ExpressionDef {
       nullabilityErrors,
       returnType,
     } = result;
+    for (const [i, argExpr] of argExprs.entries()) {
+      const noArg = booleanValueError(
+        fs,
+        argExpr,
+        `as an argument of ${this.name}`,
+        this.args[i - (implicitExpr ? 1 : 0)] ?? this,
+        NUMBER_HINT
+      );
+      if (noArg) return noArg;
+    }
     // Report errors for expression type mismatch
     for (const error of expressionTypeErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);

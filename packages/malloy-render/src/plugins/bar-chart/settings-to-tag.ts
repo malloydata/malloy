@@ -6,18 +6,7 @@
 import {Tag} from '@malloydata/malloy-tag';
 import type {BarChartSettings} from './bar-chart-settings';
 import {defaultBarChartSettings} from './bar-chart-settings';
-
-function extractFieldName(fieldPath: string): string {
-  try {
-    const parsed = JSON.parse(fieldPath);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed[parsed.length - 1];
-    }
-  } catch {
-    // If parsing fails, treat as regular string
-  }
-  return fieldPath;
-}
+import {extractFieldName} from '@/plugins/extract-field-name';
 
 export function barChartSettingsToTag(settings: BarChartSettings): Tag {
   let tag = new Tag({
@@ -93,15 +82,12 @@ export function barChartSettingsToTag(settings: BarChartSettings): Tag {
     settings.seriesChannel?.limit !==
     defaultBarChartSettings.seriesChannel.limit
   ) {
-    tag = tag.set(
-      ['viz', 'series', 'limit'],
-      settings.seriesChannel.limit.toString()
-    );
+    tag = tag.set(['viz', 'series', 'limit'], settings.seriesChannel.limit);
   }
 
   // Add x-axis limit if different from default
   if (settings.xChannel?.limit !== defaultBarChartSettings.xChannel.limit) {
-    tag = tag.set(['viz', 'x', 'limit'], settings.xChannel.limit.toString());
+    tag = tag.set(['viz', 'x', 'limit'], settings.xChannel.limit);
   }
 
   return tag;

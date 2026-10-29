@@ -6,18 +6,7 @@
 import {Tag} from '@malloydata/malloy-tag';
 import type {LineChartSettings} from './line-chart-settings';
 import {defaultLineChartSettings} from './line-chart-settings';
-
-function extractFieldName(fieldPath: string): string {
-  try {
-    const parsed = JSON.parse(fieldPath);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed[parsed.length - 1];
-    }
-  } catch {
-    // If parsing fails, treat as regular string
-  }
-  return fieldPath;
-}
+import {extractFieldName} from '@/plugins/extract-field-name';
 
 export function lineChartSettingsToTag(settings: LineChartSettings): Tag {
   let tag = new Tag({
@@ -86,10 +75,7 @@ export function lineChartSettingsToTag(settings: LineChartSettings): Tag {
     settings.seriesChannel?.limit !==
     defaultLineChartSettings.seriesChannel.limit
   ) {
-    tag = tag.set(
-      ['viz', 'series', 'limit'],
-      settings.seriesChannel.limit.toString()
-    );
+    tag = tag.set(['viz', 'series', 'limit'], settings.seriesChannel.limit);
   }
 
   return tag;

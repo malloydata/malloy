@@ -1,6 +1,6 @@
 # Malloy Compiler
 
-Malloy compilation has two phases: the **translator** ([`../lang/CONTEXT.md`](../lang/CONTEXT.md) — `src/lang/`, source → IR) and the **compiler** (this document — `src/model/`, IR → SQL). They live in sibling directories and communicate only through the IR.
+Malloy compilation has two phases: the **translator** ([`../lang/CONTEXT.md`](../lang/CONTEXT.md) — `src/lang/`, source → IR) and the **compiler** (this document — `src/model/`, IR → SQL). They live in sibling directories and communicate only through the IR. The dependency runs one way: `lang/` imports from `model/`, and `model/` imports nothing from `lang/` but types.
 
 This document covers the compiler: it takes the Intermediate Representation (IR) produced by the translator and generates executable SQL for specific database dialects.
 
@@ -94,6 +94,12 @@ table", which registers every named source by its `sourceID`):
   - Field references and path expressions
 - Forms a complete expression tree that can be compiled to SQL
 
+### Shaping an IR type
+
+- **Absence is `undefined`, never `null`,** and when a missing value has a meaning of its own, the field is declared non-optional as `T | undefined` (`Given.default: ConstantExpr | undefined`) so that no read site can forget the case. Keeping `null` out of "absent" leaves it free to mean something real.
+- **Expression types float alongside the tree.** The translator tracks an expression's type as it walks; a node carries `typeDef` only when the node alone does not determine it (a literal), using the `typeDef?: AtomicTypeDef` field from `ExprLeaf`, narrowed where the node's type is fixed (`DateLiteralNode`). A reference recovers its type from what it refers to and does not repeat it.
+- **Declarations keyed by id live beside the tree, not on each reference.** `ModelDef.givens: Record<GivenID, Given>` is the pattern: the reference node carries the id, the side table carries the declaration.
+
 ### Annotations in the IR
 
 Object (`#`) annotations attach to any IR entity via an
@@ -176,25 +182,184 @@ Both `import` and the extend-base init funnel through
 `Document.contributeModelAnnotations` (`malloy-element.ts`) — they differ only
 in namespace/export copying, never in the annotation fold.
 
-### Compiler-flag (`##!`) propagation
+### Compiler flags (`##!`)
 
-Unlike themes, **`##!` compiler flags do not cross `import`.** A flag governs how
-*its own file* is parsed/compiled; it is not data the model carries downstream.
-(Notebook extend is a *continuation*, not an import, so it's outside this rule —
-flags flow along the extend chain as the same authoring session continues.)
-Deferring the inverse — an importable flag preamble (`import "all_experiments"`) —
-is forward-safe: flags are additive, so a file written today keeps compiling if
-imports ever start carrying flags.
+As annotations, `##!` notes are stored like every other `##` route: they fold
+across import and extend, and the annotations API on a model with imports
+reports all of them on route `!`. The compiler does not read them through
+that API. A translator reads the `!` lines of its own file and nothing else,
+so as a compiler flag a `##!` line is a pragma: it governs the file it sits in,
+and an imported file's flags have no effect on the importer's text. Once IR
+exists no reader of route `!` remains in the compiler.
 
-Most `##!` flags are consumed **at translation time** (the `inExperiment` gates
-in `lang/`). The Foundation API also reads `##! experimental.persistence` at
-**runtime** — off the resolved model annotations (`Model.modelAnnotations`, the
-fold, so it carries across extend) — to gate `getBuildPlan()` / manifest
-substitution. There is deliberately no **SQL-gen-time** `##!` mechanism: the
-former per-object `modelAnnotations` carrier and `modelCompilerFlags()` were
-removed once their only consumer (`unsafe_complex_select_query`, a temporary BQ
-escape hatch) proved unnecessary; the guard it bypassed is now a plain compiler
-error.
+The seed for an extension is the exception that touches the fold: a query or
+notebook cell over a model starts from that model's folded `!` notes, so a
+flag in a file the model imports is in force in a query over the model, though
+not in the model's own text.
+
+The readers are the `inExperiment` gates in `lang/` and the experimental-dialect
+check (`lang/CONTEXT.md`, "Compiler flags and experimental dialects"). Two
+runtime readers of `##! experimental.persistence` in the Foundation API are
+tracked for removal in #3112.
+
+## Field usage
+
+Every expression in the IR records the fields it references. The translator
+collates all of it into a per-segment summary, and the compiler computes what it
+needs about joins from that summary rather than walking the expressions itself.
+Field usage is the single source of truth for "what does this query touch".
+
+### The three levels
+
+**Per-expression — `refSummary`.** `RefSummary { fieldUsage, givenUsage }`
+(`malloy_types.ts`) hangs off anything that holds an expression: a `FieldDef`, a
+`FilterCondition`, a join's `on` clause, a `TypeDesc`. `fieldUsage` is a
+`FieldUsageEntry[]`; each entry is
+
+```ts
+interface FieldUsageEntry {
+  path: string[];                            // rooted where the expression is written
+  at?: DocumentLocation;
+  uniqueKeyRequirement?: {isCount: boolean}; // asymmetric aggregate needs a distinct key
+  analyticFunctionUse?: boolean;             // this is a window function
+}
+```
+
+Read `refSummary` through `fieldUsageFrom` / `givenUsageFrom`; rewrite paths
+through `mapFieldUsage`; build one with `mkRefSummary`. An absent `refSummary`
+means "never set", an empty `fieldUsage` means "checked, found nothing".
+
+**Per-segment — `SegmentUsageSummary`.** Every `QuerySegment` and `IndexSegment`
+carries four expanded fields, written by `getExpandedSegment`
+(`lang/composite-source-utils.ts`) and read by the compiler:
+
+| Field | What it holds |
+|---|---|
+| `expandedFieldUsage` | every field the segment reaches, transitively, source-rooted |
+| `activeJoins` | the joins needed, topologically sorted (dependencies first) |
+| `expandedGivenUsage` | every `GivenID` reachable from the segment |
+| `expandedUngroupings` | `all:`/`exclude:` ungroupings, path-adjusted through nests |
+
+**Per-query.** `computeQueryGivenUsage(pipeline)` is the dedup'd union of every
+segment's `expandedGivenUsage`; there is no equivalent roll-up for field usage,
+because the first segment's summary already covers the whole base join tree
+(see "Rooting", below).
+
+### How the expansion closes
+
+`QueryBase.expandRefUsage` (`lang/ast/query-elements/query-base.ts`) walks the
+pipeline calling `getExpandedSegment(segment, stageInput)` once per stage,
+feeding each stage's `outputStruct` in as the next stage's input.
+
+`getExpandedSegment` seeds the walk with three things: the segment's own
+`refSummary`, the field usage of the **input source's `where:` clauses**
+(`getFieldUsageFromFilterList`), and the input source's given usage. It also
+passes `segment.alwaysJoins` — joins that activate with no field reference at
+all.
+
+`expandRefUsage` (same file) then runs a worklist to a fixed point. Dequeueing a
+path adds:
+
+- **a computed field's own usage** — when the path resolves to an atomic def
+  with a `refSummary`, that def's paths are re-rooted onto the reference's join
+  path (`joinedFieldUsage`) and enqueued. A measure named at top level therefore
+  drags its underlying columns into the summary.
+- **an activated join's `on` clause and `where:` clauses** —
+  `getJoinFieldUsage` re-roots the two differently: a joined source's
+  `filterList` paths get the join path *including* the join name; the `on`
+  clause paths get the path *excluding* it, because an `on` is written in the
+  parent's namespace.
+- **the join-dependency edges** — an `on` clause that reaches through a sibling
+  join makes this join depend on it, which is what `findActiveJoins`
+  topologically sorts.
+
+A path activates every join it passes through, and the join it ends at when it
+carries a `uniqueKeyRequirement` — an aggregate computed over a join's rows
+traverses that join, so its `on` clause is a reference like any other. A path which
+merely names a join-typed value (grouping by an array column) does not activate
+it.
+
+Entries are deduped by path, merging `uniqueKeyRequirement` (`isCount` ORs
+together) and `analyticFunctionUse`.
+
+### Rooting — what a path is relative to
+
+Most paths are **source-rooted for the stage that owns the summary**:
+`['one','two','three','ai']` names `ai` inside join `one.two.three` of that
+stage's input source. Three consequences, and one exception:
+
+- **Stage N > 0 is rooted in stage N-1's output**, so its paths are output
+  column names, not base joins. Only `pipeline[0]`'s summary describes the base
+  join tree.
+- **Nests roll up.** A nested view's own segment gets its own summary, *and*
+  everything it references also appears in the enclosing segment's
+  `expandedFieldUsage`. Reading the first segment's summary does not miss a
+  field that only a nest names.
+- **`applyStructFiltersToTurtleDef`** (`query_node.ts`) spreads `pipeline[0]`
+  when it concatenates the source's `filterList` onto the segment, so the
+  expanded fields survive; the filters it adds were already seeded into the
+  walk as the input source's `where:`.
+- **`having:` and `calculate:` are output-rooted**, in the same list. They name
+  fields of the query's *output*, so `having: t > 0` contributes `['t']`
+  whether or not the source has a `t`. Nothing in the entry says which rooting
+  it has, and an output name which happens to match a source column resolves
+  as though it were one — so a consumer resolving paths against the source must
+  treat a name that does not resolve as ordinary, not as a compiler bug.
+
+### A path tail is not always a column
+
+Three kinds of entry share one list:
+
+- **a physical column** — `['one','two','three','ai']`.
+- **a computed field** — `['one','two','three','hidden_sum']`, a measure. Its
+  own dependencies are expanded alongside it, so the computed name is
+  informational; nothing resolves it to a column.
+- **a join, with no field at all** — `['one','two','three']` carrying
+  `uniqueKeyRequirement`. This is how "this join needs a distinct key" is
+  recorded. The empty path `[]` is the same statement about the query's own
+  source.
+
+### What the compiler does with it
+
+Two readers. `QueryQuery.dependenciesFromFieldUsage` (`query_query.ts`), called
+from `prepare()`, builds the join tree and decides what each join needs:
+
+1. it walks `activeJoins` in order, calling `addDependantPath` →
+   `addStructToJoin`;
+2. it walks `expandedFieldUsage` for `uniqueKeyRequirement` (→
+   `addStructToJoin` with the requirement, which `calculateSymmetricAggregates`
+   later turns into `JoinInstance.makeUniqueKey`) and for `analyticFunctionUse`
+   (→ `queryUsesPartitioning`, and on BigQuery `isComplexQuery`);
+3. it walks `expandedUngroupings` to mark the result sets that need ungrouped
+   partitions.
+
+It reads no field names — each entry collapses to which join it is and whether
+that join needs a key. `QueryQuery.packedColumnsByJoin` is the reader that does
+use the names: it resolves each path to the column the innermost join on it has
+to supply, which is how a filtered join's subquery knows what to pack for each
+join below it.
+
+**What the compiler reaches for that no entry names** is a join's declared
+`primary_key`. It is the distinct key for a symmetric aggregate over that join
+(`generateDistinctKeyExpression`, `generateDistinctKeySQL`), so the SQL can read
+`two_0."ai"` with no expression in the query having named `ai`. When the key is
+a computed dimension the SQL reads not its name but the columns its expression
+reads, so anything deciding what a join must supply adds the primary key's own
+field usage, not the key's name.
+
+### Paths and join aliases
+
+`FieldInstanceResultRoot.joins` is a `Map<string, JoinInstance>` keyed by **SQL
+alias** (`two_0`), not by Malloy path, so a consumer holding usage paths has to
+cross between the two. `addDependantPath` crosses one way with
+`getFieldByName(path)`; `packedColumnFor` crosses the other by walking the
+`QueryStruct` tree a name at a time, because it needs the join *and* the member
+of it, and because a record on the path is a column of the join above it rather
+than a join of its own.
+
+`this.firstSegment` is set in the `QueryQuery` constructor, so
+`this.firstSegment.expandedFieldUsage` is in hand in any method of the class,
+including SQL generation.
 
 ## Compilation Pipeline
 
@@ -288,6 +453,15 @@ Compiles IR expression trees into SQL expressions.
 - Function calls
 - Field references and path expressions
 
+**A boolean on a dialect without boolean values.** On a dialect with `booleanType: 'none'`
+(SQL Server) a boolean is a condition and never a value: a declared boolean compiles to its
+comparison, and nothing converts a condition into a `1`/`0`. Malloy's NULL rules for `not`,
+`!=` and `!~` (true where SQL says NULL) go through `Dialect.sqlNot` / `sqlNullIsTrue`, which
+keep the `COALESCE` spelling on every dialect with booleans and write the test as a condition
+on one without. The translator refuses a boolean anywhere SQL would want a value, so the
+compiler does not look for one; the design and the list of refused uses are in
+[`doc/boolean-none.md`](../doc/boolean-none.md).
+
 ### 3. Dialect System
 
 The compiler supports multiple SQL dialects through a plugin architecture.
@@ -308,6 +482,7 @@ The compiler supports multiple SQL dialects through a plugin architecture.
 - MySQL
 - Snowflake
 - Trino/Presto
+- SQL Server (experimental)
 
 Each dialect has its own implementation in `packages/malloy/src/dialect/`.
 
@@ -364,7 +539,7 @@ src/model/
 ├── sql_compiled.ts               # Compiled SQL output types
 ├── field_instance.ts             # Field instances during compilation
 ├── join_instance.ts              # Join instances during compilation
-├── persist_utils.ts              # Persistence/build-plan utilities
+├── persist_utils.ts              # Persistence/build-plan utilities ([doc/persist/internal.md](../doc/persist/internal.md))
 ├── source_def_utils.ts           # SourceDef manipulation utilities
 ├── utils.ts                      # General compilation utilities (mkModelDef, etc.)
 ├── index.ts                      # Barrel exports

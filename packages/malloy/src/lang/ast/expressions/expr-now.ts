@@ -10,7 +10,7 @@ import {ExpressionDef} from '../types/expression-def';
 export class ExprNow extends ExpressionDef {
   elementType = 'timestamp';
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  protected computeExpression(_fs: FieldSpace): ExprValue {
     return {
       type: 'timestamp',
       expressionType: 'scalar',

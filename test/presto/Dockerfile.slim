@@ -1,11 +1,13 @@
 # Slim Presto image for Malloy CI testing
 #
-# This image is ~850MB vs ~9GB for the official prestodb/presto image.
-# It includes only what's needed to run Presto with the BigQuery connector.
+# This image is ~1.4GB vs ~9GB for the official prestodb/presto image.
+# It includes only what's needed to run Presto with the hive connector, which
+# serves the test parquet (see hive.properties), and the CLI that creates the
+# tables.
 #
 # How this was created:
 # 1. The official prestodb/presto:0.287 image contains 42 connector plugins (~2GB)
-#    but we only need presto-bigquery (~36MB)
+#    but we only need hive-hadoop2 (~306MB)
 # 2. We use eclipse-temurin as the base because:
 #    - Presto requires Java 11 (not newer - tested, Java 17 fails with classloading errors)
 #    - Presto requires full JDK (not JRE - needs com.sun.tools.attach classes)
@@ -18,7 +20,7 @@
 #
 # Size comparison (as of 0.287):
 #   Official image: 9.11 GB
-#   This slim image: ~850 MB
+#   This slim image: ~1.4 GB
 
 ARG PRESTO_VERSION=0.287
 
@@ -39,8 +41,12 @@ COPY --from=presto-official /opt/presto-server/lib /opt/presto-server/lib
 COPY --from=presto-official /opt/presto-server/bin /opt/presto-server/bin
 COPY --from=presto-official /opt/presto-server/etc /opt/presto-server/etc
 
-# Copy only BigQuery plugin (the only connector we use for testing)
-COPY --from=presto-official /opt/presto-server/plugin/presto-bigquery /opt/presto-server/plugin/presto-bigquery
+# Copy only the hive plugin (the only connector we use for testing)
+COPY --from=presto-official /opt/presto-server/plugin/hive-hadoop2 /opt/presto-server/plugin/hive-hadoop2
+
+# The CLI, which presto_start.sh uses to create the tables
+COPY --from=presto-official /opt/presto-cli /opt/presto-cli
+RUN ln -s /opt/presto-cli /usr/local/bin/presto-cli
 
 EXPOSE 8080
 

@@ -48,7 +48,7 @@ export class ExprTimeExtract extends ExpressionDef {
     super({args: args});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const extractTo = ExprTimeExtract.extractor(this.extractText);
     if (extractTo) {
       if (this.args.length !== 1) {

@@ -326,3 +326,16 @@
   padding: 8px;
   font-style: italic;
 }
+
+/* Zero-row table placeholder: a centered "No Data" label with a small min
+   height so the card keeps a sensible footprint instead of collapsing. */
+.malloy-table__no-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 64px;
+  padding: 16px;
+  color: var(--malloy-render--table-gutter-color, #b0b0b0);
+  font-size: var(--malloy-render--table-font-size, 12px);
+}

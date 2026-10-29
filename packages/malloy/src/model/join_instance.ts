@@ -8,7 +8,7 @@ import {QueryFieldBoolean} from './query_node';
 import {getDialectFieldList} from './utils';
 import type {JoinRelationship, UniqueKeyRequirement} from './malloy_types';
 
-import {isSourceDef, isJoined} from './malloy_types';
+import {isSourceDef, isJoined, isJoinedSource} from './malloy_types';
 import type {DialectFieldList} from '../dialect';
 
 export class JoinInstance {
@@ -42,6 +42,17 @@ export class JoinInstance {
           )
       );
     }
+  }
+
+  // A filtered join whose own joins go inside its subquery, so that the
+  // subquery has to project them back out for anything outside to name them.
+  isSubquery(): boolean {
+    return (
+      this.children.length > 0 &&
+      this.joinFilterConditions !== undefined &&
+      isJoinedSource(this.queryStruct.structDef) &&
+      this.queryStruct.dialect.supportsComplexFilteredSources
+    );
   }
 
   parentRelationship(): 'root' | JoinRelationship {
@@ -84,6 +95,9 @@ export class JoinInstance {
 
   // postgres unnest needs to know the names of the physical fields.
   getDialectFieldList(): DialectFieldList {
-    return getDialectFieldList(this.queryStruct.structDef);
+    return getDialectFieldList(
+      this.queryStruct.structDef,
+      this.queryStruct.dialect
+    );
   }
 }

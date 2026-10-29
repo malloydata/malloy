@@ -8,14 +8,15 @@ import {indent} from '../../model/utils';
 import type {
   Sampling,
   AtomicTypeDef,
-  TimeExtractExpr,
   TypecastExpr,
   MeasureTimeExpr,
   RegexMatchExpr,
   BasicAtomicTypeDef,
-  TimestampTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
+  ATimestampTypeDef,
+  TimestampUnit,
+  ExtractUnit,
 } from '../../model/malloy_types';
 import {
   activeName,
@@ -38,9 +39,9 @@ import type {
   QueryInfo,
 } from '../dialect';
 import {
+  CivilTime,
   Dialect,
   EscapeStyle,
-  qtz,
   MIN_DECIMAL38,
   MAX_DECIMAL38,
   turtleGroupSetCondition,
@@ -148,7 +149,9 @@ export class SnowflakeDialect extends Dialect {
 
   mapFields(fieldList: DialectFieldList): string {
     return fieldList
-      .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(
+        f => `\n  ${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`
+      )
       .join(', ');
   }
 
@@ -200,7 +203,7 @@ export class SnowflakeDialect extends Dialect {
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const nullValues = fieldList
-      .map(f => `'${f.sqlOutputName}', NULL`)
+      .map(f => `${this.sqlLiteralString(f.rawName)}, NULL`)
       .join(', ');
     return `COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)[0], OBJECT_CONSTRUCT_KEEP_NULL(${nullValues}))`;
   }
@@ -333,48 +336,40 @@ ${indent(sql)}
 `;
   }
 
+  // Civil time is a TIMESTAMP_NTZ, which has no zone
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    typeDef: AtomicTypeDef
-  ): {sql: string; typeDef: AtomicTypeDef} {
-    // For timestamptz (TIMESTAMP_TZ): use 2-arg form
-    // Returns TIMESTAMP_TZ with timezone preserved
-    if (typeDef.type === 'timestamptz') {
-      return {
-        sql: `CONVERT_TIMEZONE('${timezone}', ${expr})`,
-        typeDef: {type: 'timestamptz'},
-      };
+    typeDef: ATimestampTypeDef
+  ): string {
+    const tz = this.sqlTimezoneLiteral(timezone);
+    if (TD.isTimestamptz(typeDef)) {
+      return `CONVERT_TIMEZONE(${tz}, ${expr})::TIMESTAMP_NTZ`;
     }
-    // For plain timestamps (TIMESTAMP_NTZ): use 3-arg form
-    // Must cast to TIMESTAMP_NTZ first, returns TIMESTAMP_NTZ
-    return {
-      sql: `CONVERT_TIMEZONE('UTC', '${timezone}', (${expr})::TIMESTAMP_NTZ)`,
-      typeDef: {type: 'timestamp'},
-    };
+    return timezone === 'UTC'
+      ? expr
+      : `CONVERT_TIMEZONE('UTC', ${tz}, (${expr})::TIMESTAMP_NTZ)`;
   }
 
   sqlConvertFromCivilTime(
     expr: string,
     timezone: string,
-    _destTypeDef: TimestampTypeDef
+    destTypeDef: ATimestampTypeDef
   ): string {
-    // After civil time operations, we have a TIMESTAMP_NTZ in the target timezone
-    // Convert from timezone to UTC, returning TIMESTAMP_NTZ
-    return `CONVERT_TIMEZONE('${timezone}', 'UTC', (${expr})::TIMESTAMP_NTZ)`;
+    const utc =
+      timezone === 'UTC'
+        ? expr
+        : `CONVERT_TIMEZONE(${this.sqlTimezoneLiteral(timezone)}, 'UTC', (${expr})::TIMESTAMP_NTZ)`;
+    // The session time zone is UTC
+    return TD.isTimestamptz(destTypeDef) ? `(${utc})::TIMESTAMP_TZ` : utc;
   }
 
   sqlTruncate(
     expr: string,
-    unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
-    // Snowflake session is configured with WEEK_START=7 (Sunday)
-    // so DATE_TRUNC already truncates to Sunday - no adjustment needed
-    // Unlike PostgreSQL/DuckDB, Snowflake's DATE_TRUNC preserves the input type
-    // (TIMESTAMP_NTZ → TIMESTAMP_NTZ, TIMESTAMP_TZ → TIMESTAMP_TZ)
+    // The session sets WEEK_START to Sunday
     return `DATE_TRUNC('${unit}', ${expr})`;
   }
 
@@ -382,42 +377,35 @@ ${indent(sql)}
     expr: string,
     op: '+' | '-',
     magnitude: string,
-    unit: string,
-    typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    civilType: CivilTime
   ): string {
-    const funcName = typeDef.type === 'date' ? 'DATEADD' : 'TIMESTAMPADD';
+    const funcName = civilType === CivilTime.Date ? 'DATEADD' : 'TIMESTAMPADD';
     const n = op === '+' ? magnitude : `-(${magnitude})`;
     return `${funcName}(${unit}, ${n}, ${expr})`;
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    const extractUnits = extractionMap[from.units] || from.units;
-    let extractFrom = from.e.sql;
-    const tz = qtz(qi);
-
-    if (tz && TD.isAnyTimestamp(from.e.typeDef)) {
-      extractFrom = `CONVERT_TIMEZONE('${tz}', ${extractFrom})`;
-    }
-    return `EXTRACT(${extractUnits} FROM ${extractFrom})`;
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    return `EXTRACT(${extractionMap[units] || units} FROM ${expr})`;
   }
 
-  private atTz(sqlExpr: string, tz: string | undefined): string {
-    if (tz !== undefined) {
-      return `(
-      TO_CHAR(${sqlExpr}::TIMESTAMP_NTZ, 'YYYY-MM-DD HH24:MI:SS.FF9') ||
-      TO_CHAR(CONVERT_TIMEZONE('${tz}', '1970-01-01 00:00:00'), 'TZHTZM')
-    )::TIMESTAMP_TZ`;
-    }
-    return `${sqlExpr}::TIMESTAMP_NTZ`;
+  sqlCivilToDate(expr: string): string {
+    return `TO_DATE(${expr})`;
+  }
+
+  sqlDateToCivil(expr: string): string {
+    return `(${expr})::TIMESTAMP_NTZ`;
   }
 
   sqlNowExpr(): string {
     return 'CURRENT_TIMESTAMP()';
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
     const src = cast.e.sql || '';
     const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     if (TD.eq(srcTypeDef, dstTypeDef)) {
@@ -434,43 +422,6 @@ ${indent(sql)}
       );
     }
 
-    const tz = qtz(qi);
-
-    // Timezone-aware casts when query timezone is set
-    if (tz && srcTypeDef && dstTypeDef) {
-      // TIMESTAMP → DATE: convert to query timezone, then to date
-      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `TO_DATE(CONVERT_TIMEZONE('${tz}', ${src}))`;
-      }
-
-      // TIMESTAMPTZ → DATE: convert to query timezone, then to date
-      if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
-        return `TO_DATE(CONVERT_TIMEZONE('${tz}', ${src}))`;
-      }
-
-      // DATE → TIMESTAMP: interpret date in query timezone, return UTC timestamp
-      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        const retExpr = `TO_TIMESTAMP(${src})`;
-        return this.atTz(retExpr, tz);
-      }
-
-      // DATE → TIMESTAMPTZ: interpret date in query timezone
-      if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        const retExpr = `TO_TIMESTAMP(${src})`;
-        return this.atTz(retExpr, tz);
-      }
-
-      // TIMESTAMPTZ → TIMESTAMP: convert to query timezone, get UTC wall clock
-      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
-        return `CONVERT_TIMEZONE('${tz}', ${src})::TIMESTAMP_NTZ`;
-      }
-
-      // TIMESTAMP → TIMESTAMPTZ: interpret as UTC, convert to TIMESTAMPTZ
-      if (TD.isTimestamp(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
-        return this.atTz(src, tz);
-      }
-    }
-
     const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
     return `${castFunc}(${src} AS ${dstSQLType})`;
   }
@@ -479,20 +430,8 @@ ${indent(sql)}
     return `TO_DATE('${literal}')`;
   }
 
-  sqlTimestampLiteral(
-    qi: QueryInfo,
-    literal: string,
-    timezone: string | undefined
-  ): string {
-    const tz = timezone || qtz(qi);
-    let ret = `'${literal}'::TIMESTAMP_NTZ`;
-
-    if (tz) {
-      // Interpret the literal as being in query timezone, convert to UTC
-      ret = `CONVERT_TIMEZONE('${tz}', 'UTC', ${ret})`;
-    }
-
-    return ret;
+  sqlCivilLiteral(literal: string): string {
+    return `'${literal}'::TIMESTAMP_NTZ`;
   }
 
   sqlTimestamptzLiteral(
@@ -514,7 +453,7 @@ ${indent(sql)}
     const second = dt.second;
     const nanosecond = dt.millisecond * 1000000;
 
-    return `TIMESTAMP_TZ_FROM_PARTS(${year}, ${month}, ${day}, ${hour}, ${minute}, ${second}, ${nanosecond}, '${timezone}')`;
+    return `TIMESTAMP_TZ_FROM_PARTS(${year}, ${month}, ${day}, ${hour}, ${minute}, ${second}, ${nanosecond}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {

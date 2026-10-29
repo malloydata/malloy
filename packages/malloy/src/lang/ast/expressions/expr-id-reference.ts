@@ -30,7 +30,7 @@ export class ExprIdReference extends ExpressionDef {
     };
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
     if (def.found) {
       // TODO Currently the join usage is always equivalent to the reference path here;

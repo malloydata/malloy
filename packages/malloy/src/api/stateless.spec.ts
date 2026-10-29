@@ -467,7 +467,7 @@ describe('api', () => {
   });
   test('compile model with turducken sql dependency', () => {
     const sql =
-      '\n                SELECT carrier FROM (SELECT \n   base."carrier" as "carrier"\nFROM flights as base\nGROUP BY 1\nORDER BY 1 asc NULLS LAST\n)\n              ';
+      '\n                SELECT carrier FROM ((SELECT \n   base."carrier" as "carrier"\nFROM flights as base\nGROUP BY 1\nORDER BY 1 asc NULLS LAST\n))\n              ';
     const result = compileModel({
       model_url: 'file://test.malloy',
       compiler_needs: {

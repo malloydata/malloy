@@ -14,13 +14,14 @@ import type {
   Sampling,
   MeasureTimeExpr,
   RegexMatchExpr,
-  TimeExtractExpr,
   TypecastExpr,
   BasicAtomicTypeDef,
   AtomicTypeDef,
-  TimestampTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
+  ATimestampTypeDef,
+  TimestampUnit,
+  ExtractUnit,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -30,6 +31,7 @@ import {
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import type {
+  CivilTime,
   BooleanTypeSupport,
   CompiledOrderBy,
   DialectFieldList,
@@ -37,7 +39,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
 } from '../dialect';
-import {Dialect, EscapeStyle, qtz, turtleGroupSetCondition} from '../dialect';
+import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -56,38 +58,68 @@ const inSeconds: Record<string, number> = {
   week: 7 * 24 * 3600,
 };
 
+/**
+ * MySQL reports a column type as
+ *
+ *     base [ '(' params ')' ] [ 'unsigned' ] [ 'zerofill' ]
+ *
+ * and normalizes every alias away before reporting, so a schema read only
+ * ever produces canonical base names. A raw cast reaches this map without
+ * that normalization, and any alias it spells -- REAL, INTEGER, NUMERIC --
+ * falls through to `sql native`.
+ *
+ * No modifier changes the Malloy type: `unsigned` only widens the range, and
+ * the sole type whose range crosses a Malloy boundary is bigint, which is
+ * already `bigint`; `zerofill` is presentation. So the map is keyed on the
+ * base name alone. DECIMAL is not in the map because its Malloy type depends
+ * on its parameters.
+ */
 const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
-  // TODO: This assumes tinyint is always going to be a boolean.
-  'tinyint': {type: 'boolean'},
+  'tinyint': {type: 'number', numberType: 'integer'},
   'smallint': {type: 'number', numberType: 'integer'},
   'mediumint': {type: 'number', numberType: 'integer'},
   'int': {type: 'number', numberType: 'integer'},
   'bigint': {type: 'number', numberType: 'bigint'},
-  'tinyint unsigned': {type: 'number', numberType: 'integer'},
-  'smallint unsigned': {type: 'number', numberType: 'integer'},
-  'mediumint unsigned': {type: 'number', numberType: 'integer'},
-  'int unsigned': {type: 'number', numberType: 'integer'},
-  'bigint unsigned': {type: 'number', numberType: 'bigint'},
+  'float': {type: 'number', numberType: 'float'},
   'double': {type: 'number', numberType: 'float'},
-  'varchar': {type: 'string'},
-  'varbinary': {type: 'string'},
   'char': {type: 'string'},
+  'varchar': {type: 'string'},
+  'tinytext': {type: 'string'},
   'text': {type: 'string'},
+  'mediumtext': {type: 'string'},
+  'longtext': {type: 'string'},
   'date': {type: 'date'},
   'datetime': {type: 'timestamp'},
   'timestamp': {type: 'timestamp'},
   'time': {type: 'string'},
-  'decimal': {type: 'number', numberType: 'float'},
-  // TODO: Check if we need special handling for boolean.
-  'tinyint(1)': {type: 'boolean'},
 };
+
+/**
+ * Split a reported type into its base name and numeric parameters.
+ *
+ * Only numeric parameter lists are read. ENUM and SET carry quoted value
+ * lists whose quoting rules a regex should not chase, and nothing needs
+ * their values -- both map to `sql native`.
+ */
+function parseMySQLType(sqlType: string): {base: string; params: number[]} {
+  const text = sqlType.trim().toLowerCase();
+  const base = text.match(/^\w+/)?.[0] ?? text;
+  const params = text.match(/^\w+\s*\((\d+(?:\s*,\s*\d+)*)\)/);
+  return {
+    base,
+    params: params ? params[1].split(',').map(p => parseInt(p, 10)) : [],
+  };
+}
 
 function malloyTypeToJSONTableType(malloyType: AtomicTypeDef): string {
   switch (malloyType.type) {
     case 'number':
-      if (malloyType.numberType === 'integer') {
-        return 'INT';
-      } else if (malloyType.numberType === 'bigint') {
+      // BIGINT for both: JSON_TABLE turns an out-of-range value into NULL
+      // without warning, and `integer` is not bounded at 32 bits.
+      if (
+        malloyType.numberType === 'integer' ||
+        malloyType.numberType === 'bigint'
+      ) {
         return 'BIGINT';
       } else {
         return 'DOUBLE';
@@ -95,7 +127,8 @@ function malloyTypeToJSONTableType(malloyType: AtomicTypeDef): string {
     case 'string':
       return 'CHAR(255)'; // JSON_TABLE needs a length
     case 'boolean':
-      return 'INT'; // or TINYINT(1) if you prefer
+      // MySQL has no boolean; TINYINT(1) is only a spelling of TINYINT.
+      return 'INT';
     case 'record':
     case 'array':
       return 'JSON';
@@ -175,12 +208,25 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
-    // Remove trailing params
-    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
+    const {base, params} = parseMySQLType(sqlType);
+    if (base === 'decimal') {
+      // DECIMAL is exact, so scale 0 is an integer rather than a float. Above
+      // 15 digits it no longer survives a JS double and must be carried as a
+      // bigint. MySQL reports precision and scale on every decimal; the
+      // defaults match its own when a bare DECIMAL is declared.
+      const [precision, scale] = [params[0] ?? 10, params[1] ?? 0];
+      if (scale > 0) {
+        return {type: 'number', numberType: 'float'};
+      }
+      return {
+        type: 'number',
+        numberType: precision <= 15 ? 'integer' : 'bigint',
+      };
+    }
     return (
-      mysqlToMalloyTypes[baseSqlType.toLowerCase()] || {
+      mysqlToMalloyTypes[base] || {
         type: 'sql native',
-        rawType: baseSqlType,
+        rawType: base,
       }
     );
   }
@@ -277,7 +323,7 @@ export class MySQLDialect extends Dialect {
       // string literal.
       const jsonPathLit = this.sqlLiteralString('$.' + f.rawName);
       fields.push(
-        `${this.sqlQuoteIdentifier(f.sqlOutputName)} ${fType}  PATH ${jsonPathLit}`
+        `${this.sqlQuoteIdentifier(f.rawName)} ${fType}  PATH ${jsonPathLit}`
       );
     }
     return fields.join(',\n');
@@ -406,32 +452,31 @@ export class MySQLDialect extends Dialect {
     return 'LOCALTIMESTAMP';
   }
 
+  // Civil time is a DATETIME, which has no zone
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    _typeDef: AtomicTypeDef
-  ): {sql: string; typeDef: AtomicTypeDef} {
-    // MySQL has no timestamptz type, so typeDef.timestamptz will never be true
-    return {
-      sql: `CONVERT_TZ(${expr}, 'UTC', '${timezone}')`,
-      typeDef: {type: 'timestamp'},
-    };
+    _typeDef: ATimestampTypeDef
+  ): string {
+    return timezone === 'UTC'
+      ? expr
+      : `CONVERT_TZ(${expr}, 'UTC', ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
   sqlConvertFromCivilTime(
     expr: string,
     timezone: string,
-    _destTypeDef: TimestampTypeDef
+    _destTypeDef: ATimestampTypeDef
   ): string {
-    return `CONVERT_TZ(${expr}, '${timezone}', 'UTC')`;
+    return timezone === 'UTC'
+      ? expr
+      : `CONVERT_TZ(${expr}, ${this.sqlTimezoneLiteral(timezone)}, 'UTC')`;
   }
 
   sqlTruncate(
     expr: string,
-    unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
     // For week truncation, adjust to Sunday first
     // DAYOFWEEK returns 1=Sunday, 2=Monday, etc., so subtract (DAYOFWEEK-1) days
@@ -471,13 +516,11 @@ export class MySQLDialect extends Dialect {
     expr: string,
     op: '+' | '-',
     magnitude: string,
-    unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
     // Convert quarter/week to supported units
-    let offsetUnit = unit;
+    let offsetUnit: string = unit;
     let offsetMag = magnitude;
     if (unit === 'quarter') {
       offsetUnit = 'month';
@@ -491,27 +534,25 @@ export class MySQLDialect extends Dialect {
     return `(${expr} ${op} ${interval})`;
   }
 
-  sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
-    const msUnits = msExtractionMap[te.units] || te.units;
-    let extractFrom = te.e.sql;
-    if (TD.isTimestamp(te.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = `CONVERT_TZ(${extractFrom}, 'UTC', '${tz}')`;
-      }
-    }
-    return `${msUnits}(${extractFrom})`;
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    return `${msExtractionMap[units] || units}(${expr})`;
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+  sqlCivilToDate(expr: string): string {
+    return `CAST(${expr} AS DATE)`;
+  }
+
+  sqlDateToCivil(expr: string): string {
+    return `CAST(${expr} AS DATETIME)`;
+  }
+
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
     const srcSQL = cast.e.sql || 'internal-error-in-sql-generation';
-    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
-    const tz = qtz(qi);
-    if (op === 'timestamp::date' && tz) {
-      return `CAST(CONVERT_TZ(${srcSQL}, 'UTC', '${tz}') AS DATE) `;
-    } else if (op === 'date::timestamp' && tz) {
-      return ` CONVERT_TZ(${srcSQL}, '${tz}', 'UTC')`;
-    }
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       if (cast.safe) {
         throw new Error("Mysql dialect doesn't support Safe Cast");
@@ -532,15 +573,7 @@ export class MySQLDialect extends Dialect {
     return `DATE '${literal}'`;
   }
 
-  sqlTimestampLiteral(
-    qi: QueryInfo,
-    literal: string,
-    timezone: string | undefined
-  ): string {
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `CONVERT_TZ('${literal}', '${tz}', 'UTC')`;
-    }
+  sqlCivilLiteral(literal: string): string {
     return `TIMESTAMP '${literal}'`;
   }
 
@@ -611,7 +644,7 @@ export class MySQLDialect extends Dialect {
     return fieldList
       .map(
         f =>
-          `${f.sqlOutputName.replace(/`/g, "'")}, ${
+          `${this.sqlLiteralString(f.rawName)}, ${
             nullValues ? 'NULL' : f.sqlExpression
           }\n`
       )

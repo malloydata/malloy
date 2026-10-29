@@ -1,5 +1,5 @@
 export {};
-/*import {Trino, BasicAuth} from 'trino-client';
+/*import {Trino, BasicAuth} from '@trinodb/trino-js-client';
 import PrestoClient from '@prestodb/presto-js-client';
 
 // function CallPresto(client: Client, query: string ) {

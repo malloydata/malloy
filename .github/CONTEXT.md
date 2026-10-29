@@ -6,7 +6,7 @@ permission gate and the OIDC publish flow.
 
 This file covers **Dependabot**, and only its `.github`-local mechanics. The full
 strategy — how we triage reports, every version we deliberately hold, and why — is in
-[`DEPENDENCY-MANAGEMENT.md`](../DEPENDENCY-MANAGEMENT.md).
+[`docs/dependency-management/CONTEXT.md`](../docs/dependency-management/CONTEXT.md).
 
 ## Config — `dependabot.yml`
 
@@ -14,7 +14,7 @@ Monthly npm updates, grouped so a bump lands as one reviewable PR: `duckdb`,
 `connectors`, `toolchain` majors, `minor-and-patch`, plus a `security` group that
 fires on advisory publication and collapses same-run advisories into one PR. The
 `ignore:` block is the durable home for every pin — which ones, and why, in
-[`DEPENDENCY-MANAGEMENT.md`](../DEPENDENCY-MANAGEMENT.md).
+[`docs/dependency-management/CONTEXT.md`](../docs/dependency-management/CONTEXT.md).
 
 ## Alerts vs PRs — two different surfaces
 
@@ -29,7 +29,7 @@ fires on advisory publication and collapses same-run advisories into one PR. The
 
 1. Open the grouped minor/patch PR → "Re-run jobs" to vouch (the gate) → merge.
 2. Handle any individual major PRs deliberately.
-3. Glance at [`DEPENDENCY-MANAGEMENT.md`](../DEPENDENCY-MANAGEMENT.md): is any
+3. Glance at [`docs/dependency-management/CONTEXT.md`](../docs/dependency-management/CONTEXT.md): is any
    "Revisit when" now true? has any pin's cost escalated (a new critical behind it)?
 
 Merges to `main` do **not** publish (release is `workflow_dispatch`-only), so cadence

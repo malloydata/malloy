@@ -16,6 +16,7 @@ import {
   InMemoryURLReader,
   InMemoryModelCache,
   CacheManager,
+  getDialect,
 } from '@malloydata/malloy';
 import {createTestRuntime} from '@malloydata/malloy/test';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
@@ -31,6 +32,10 @@ import {
   MySQLExecutor,
 } from '@malloydata/db-mysql/src/mysql_connection';
 import {DatabricksConnection} from '@malloydata/db-databricks/src/databricks_connection';
+import {
+  SQLServerConnection,
+  SQLServerExecutor,
+} from '@malloydata/db-sqlserver/src/sqlserver_connection';
 import {EventEmitter} from 'events';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
@@ -144,6 +149,21 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
+export class SQLServerTestConnection extends SQLServerConnection {
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
 export class TestCacheManager extends CacheManager {
   constructor(readonly _modelCache: ModelCache) {
     super(_modelCache);
@@ -203,14 +223,26 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         );
         break;
       case 'mssql_via_duckdb':
-        connection = new DuckDBTestConnection({
-          name: dbName,
-          additionalExtensions: ['mssql'],
-          setupSQL: [
-            "ATTACH 'Server=localhost;Port=1433;Database=malloytest;User Id=sa;Password=Malloy_Test_123;TrustServerCertificate=true' AS msdb (TYPE mssql)",
-            'USE msdb.malloytest',
-          ].join(';\n'),
-        });
+        {
+          const s = SQLServerExecutor.getConnectionOptionsFromEnv();
+          if (s.server === undefined) {
+            throw new Error(
+              'MSSQL_HOST is not set; see test/mssql/mssql_start.sh'
+            );
+          }
+          connection = new DuckDBTestConnection({
+            name: dbName,
+            additionalExtensions: ['mssql'],
+            setupSQL: [
+              // The same string test/mssql/connection_string.ts builds for the
+              // loader, written here because packages/malloy-render type-checks
+              // this file alone and admits no import beside it. `Server=host,port`:
+              // the extension reads no separate Port key.
+              `ATTACH 'Server=${s.server},${s.port ?? 1433};Database=${s.database};User Id=${s.user};Password=${s.password};TrustServerCertificate=${s.trustServerCertificate ?? false}' AS msdb (TYPE mssql)`,
+              `USE msdb.${s.database}`,
+            ].join(';\n'),
+          });
+        }
         break;
       case 'motherduck':
         connection = new DuckDBTestConnection({
@@ -246,6 +278,12 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           TrinoExecutor.getConnectionOptionsFromEnv(dbName) // they share configs.
         );
         break;
+      case 'sqlserver':
+        connection = new SQLServerTestConnection(
+          dbName,
+          SQLServerExecutor.getConnectionOptionsFromEnv()
+        );
+        break;
       case 'databricks':
         {
           const warehouseId = process.env['DATABRICKS_WAREHOUSE_ID'];
@@ -264,6 +302,9 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
       default:
         throw new Error(`Unknown runtime "${dbName}`);
     }
+    // The shared suites carry no `##! experimental.dialect.NAME` lines. A
+    // dialect under test is accepted once, for the whole process, instead.
+    getDialect(connection.dialectName).acceptExperimental();
     return testRuntimeFor(connection);
   } catch (error) {
     throw new Error(
@@ -313,7 +354,6 @@ export class RuntimeList {
         database instanceof SingleConnectionRuntime
           ? database
           : runtimeFor(database);
-      rt.isTestRuntime = true;
       this.runtimeMap.set(rt.connection.name, rt);
       this.runtimeList.push([rt.connection.name, rt]);
     }

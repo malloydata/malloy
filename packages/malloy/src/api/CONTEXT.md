@@ -241,6 +241,8 @@ Explicit `buildManifest` always wins over the auto-read.
 
 `MalloyConfig` is the standard entry point for both the CLI (`malloydata/malloy-cli`) and the VS Code extension.
 
+Persistence as a whole — the `#@ persist` annotation, the manifest format, running queries against built tables, and the builder contract behind `Runtime.getBuildTargets()` / `PersistSource` — is documented in [doc/persist/api.md](../doc/persist/api.md), with the implementation in [doc/persist/internal.md](../doc/persist/internal.md).
+
 ### Restricted-mode compilation
 
 `ModelMaterializer.loadRestrictedQuery(text: string): QueryMaterializer` compiles `text` against the materialized trusted model with the translator's `restrictedMode` flag set. Forbidden constructs in `text` (`import`, `given:`, `##!`, `connection.table`, `connection.sql`, `name!type`, and the `sql_*` raw-SQL function family) are rejected at translate time and surface as `MalloyError` problems tagged `errorTag: 'restricted-mode'`.
@@ -259,7 +261,7 @@ API-level documentation lives in the JSDoc on `ModelMaterializer.loadRestrictedQ
 
 `getPreparedResult()` / `getSQL()` / `run()` still throw `MalloyError` on failure; the thrown `.problems` is the same array. A `validate()` followed by a no-options consumer reuses one cached compile via `QueryMaterializer._compileAttempt`.
 
-SQL-compile errors that are user-actionable throw `MalloyCompileError` (`packages/malloy/src/model/malloy_compile_error.ts`) at the throw site, carrying `{message, code, at?}`. The materializer's `_compileAndCollect` helper translates it to a `LogMessage`. Invariant violations stay as bare `Error` and surface with `code: 'compiler-bug'`.
+SQL-compile errors that are user-actionable throw `MalloyCompileError` (`packages/malloy/src/model/malloy_compile_error.ts`) at the throw site, carrying `{message, code, at?}`. The materializer's `_compileAndCollect` helper translates it to a `LogMessage`, and `mkBuildTargets` does the same per persist source, reporting the source in `BuildTargets.unbuildable`. Invariant violations stay as bare `Error` and surface with `code: 'compiler-bug'`.
 
 API-level documentation lives in the JSDoc on the two `validate` methods.
 

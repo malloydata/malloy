@@ -193,6 +193,16 @@ export function ChartV2Inner(props: ChartV2Props) {
     height: props.plotHeight,
   });
 
+  // A zero-row chart has nothing to plot. Rendering an empty Vega view here is
+  // both useless and actively harmful: the chart mounts a ResizeObserver
+  // (use:resize below) whose measured size feeds back into a `1fr` dashboard
+  // grid track, and next to another content-sized empty tile the track width
+  // oscillates -> the observer refires forever -> the dashboard flashes and the
+  // tab eventually OOMs. Render a fixed-size "No Data" placeholder instead: same
+  // box (the outer .malloy-chart keeps totalWidth x totalHeight) and title bar,
+  // but no Vega and no ResizeObserver, so the layout can't thrash.
+  const isEmpty = props.data.rows.length === 0;
+
   return (
     <div
       class="malloy-chart"
@@ -225,20 +235,25 @@ export function ChartV2Inner(props: ChartV2Props) {
           )}
         </div>
       </Show>
-      <div
-        class="malloy-chart__container"
-        use:resize={[chartSpace, setChartSpace]}
+      <Show
+        when={!isEmpty}
+        fallback={<div class="malloy-chart__no-data">No Data</div>}
       >
-        <VegaChart
-          explore={props.data.field}
-          width={chartSpace().width}
-          height={chartSpace().height}
-          onMouseOver={mouseOverHandler}
-          onViewInterface={setViewInterface}
-          runtime={props.runtime}
-          useVegaInterpreter={props.useVegaInterpreter}
-        />
-      </div>
+        <div
+          class="malloy-chart__container"
+          use:resize={[chartSpace, setChartSpace]}
+        >
+          <VegaChart
+            explore={props.data.field}
+            width={chartSpace().width}
+            height={chartSpace().height}
+            onMouseOver={mouseOverHandler}
+            onViewInterface={setViewInterface}
+            runtime={props.runtime}
+            useVegaInterpreter={props.useVegaInterpreter}
+          />
+        </div>
+      </Show>
       <Tooltip show={showTooltip()}>
         <DefaultChartTooltip data={tooltipData()!} />
       </Tooltip>

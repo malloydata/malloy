@@ -25,7 +25,9 @@ export class QueryRaw extends MalloyElement implements QueryElement {
     super({source});
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
+  // A raw segment has no query class to decide, so it is never partial and
+  // `isPartialOk` has nothing to say here.
+  queryComp(isRefOk: boolean, _isPartialOk: boolean): QueryComp {
     const invoked = isRefOk
       ? this.source.structRef(undefined)
       : {structRef: this.source.getSourceDef(undefined)};
@@ -45,6 +47,6 @@ export class QueryRaw extends MalloyElement implements QueryElement {
   }
 
   query(isRefOk = true): Query {
-    return this.queryComp(isRefOk).query;
+    return this.queryComp(isRefOk, false).query;
   }
 }

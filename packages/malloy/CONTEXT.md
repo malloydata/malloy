@@ -55,6 +55,6 @@ For detailed information about the compiler, see [src/model/CONTEXT.md](src/mode
 For deeper details on specific subsystems:
 - [src/api/CONTEXT.md](src/api/CONTEXT.md) - API layers and public API classes (Model, PreparedQuery, Runtime, Materializers)
 - [src/connection/CONTEXT.md](src/connection/CONTEXT.md) - Connection registry, config file format, per-backend properties
-- [src/dialect/CONTEXT.md](src/dialect/CONTEXT.md) - Dialect system: function templates, blueprint system, how to add dialects
+- [src/dialect/CONTEXT.md](src/dialect/CONTEXT.md) - Dialect architecture, including function blueprints, and SQL generation
 - [src/lang/CONTEXT.md](src/lang/CONTEXT.md) - Translator architecture (grammar, AST, IR generation)
 - [src/model/CONTEXT.md](src/model/CONTEXT.md) - Compiler architecture (SQL generation, expression compilation)

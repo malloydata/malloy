@@ -1107,19 +1107,11 @@ export class MalloyToAST
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
   ): ast.TimezoneStatement {
-    const timezone = this.getPlainStringFrom(cx);
-    const timezoneStatement = this.astAt(
-      new ast.TimezoneStatement(timezone),
+    const timezone = this.astAt(
+      new ast.ExprString(this.getPlainStringFrom(cx)),
       cx.string()
     );
-
-    if (!timezoneStatement.isValid) {
-      this.astError(timezoneStatement, 'invalid-timezone', {
-        timezone: timezoneStatement.tz,
-      });
-    }
-
-    return this.astAt(timezoneStatement, cx);
+    return this.astAt(new ast.TimezoneStatement(timezone), cx);
   }
 
   visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QOpDesc {

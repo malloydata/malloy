@@ -4,7 +4,9 @@
  */
 
 import type {EventStream} from '../../runtime_types';
-import type {BuildManifest, GivenValue, VirtualMap} from '../../model';
+import type {BuildID, BuildManifest, GivenValue, VirtualMap} from '../../model';
+import type {LogMessage} from '../../lang';
+import type {PersistSource} from './core';
 
 /**
  * An empty BuildManifest with no entries and strict mode off.
@@ -34,7 +36,6 @@ export interface Loggable {
 
 export interface ParseOptions {
   importBaseURL?: URL;
-  testEnvironment?: boolean;
   /** Reject language constructs that reach outside the trusted model. */
   restrictedMode?: boolean;
   /**
@@ -59,6 +60,7 @@ export type CompileMethod = 'loadModel' | 'extendModel' | 'query';
 export interface CompileOptions {
   refreshSchemaCache?: boolean | number;
   noThrowOnError?: boolean;
+  virtualMap?: VirtualMap;
 }
 
 /** Options given to the Malloy compiler (QueryModel) */
@@ -81,6 +83,12 @@ export interface CompileQueryOptions {
 /**
  * A node in the build graph (recursive DAG structure).
  * Uses sourceID (sourceName@modelURL) for identity.
+ *
+ * A node reached twice is the *same object* both times, so the graph shares
+ * nodes rather than copying them. Anything walking it needs a seen-set on node
+ * identity, or a chain of diamonds is exponential.
+ *
+ * @deprecated Produced only by {@link BuildPlan}. Use `BuildTarget`.
  */
 export interface BuildNode {
   /** Source identity: "sourceName@modelURL" */
@@ -92,15 +100,139 @@ export interface BuildNode {
 /**
  * An ordered build plan for sources on a single connection.
  *
- * The leveled array structure determines build order: sources in the same
- * level can be built in parallel, levels must be built sequentially.
+ * `nodes` is typed for a leveled schedule that was never produced — it always
+ * holds exactly one entry, the roots, with the real ordering in each node's
+ * `dependsOn`.
  *
- * Builders can group graphs by `connectionName` to parallelize across
- * different database connections.
+ * @deprecated Use `BuildTargets`, which reports tables rather than sources.
  */
 export interface BuildGraph {
   /** The connection all sources in this graph run on */
   connectionName: string;
-  /** The leveled build nodes */
+  /** Always one entry: the root nodes */
   nodes: BuildNode[][];
+}
+
+/**
+ * One artifact: a table to build, and every source that maps onto it.
+ *
+ * A `BuildNode` is a source; a `BuildTarget` is a table. The two are not the
+ * same count. `#@ persist` is an annotation, so extending or renaming a
+ * persisted source inherits it — while `extend` never changes the source's
+ * SQL — and several sources routinely name one table. The manifest is keyed by
+ * `BuildID`, so those sources share one entry no matter how many plan nodes
+ * they occupy. `Runtime.getBuildTargets()` does that merge once, in the core,
+ * instead of leaving each builder to discover it by hashing.
+ */
+export interface BuildTarget {
+  /** Manifest key for this artifact: a hash of the connection digest and `sql` */
+  buildId: BuildID;
+  /** The connection this artifact is built on */
+  connectionName: string;
+  /**
+   * The SQL the BuildID is computed from: fully inlined, no manifest
+   * substitution, so it is the same string whatever else has been built.
+   *
+   * It is not the SQL to execute; that is {@link buildSQL}.
+   */
+  sql: string;
+  /**
+   * The SQL to execute, for a `CREATE TABLE`. Dependencies already in
+   * `manifest` are read from their tables rather than recomputed, which is
+   * why it is a call made as the build proceeds and not a string computed up
+   * front. Generated under the same givens and `virtualMap` as `sql`, so the
+   * table that is built is the one the key describes.
+   */
+  buildSQL(manifest: BuildManifest): string;
+  /**
+   * True when the SQL reads a given, supplied or defaulted. The table is then
+   * one of possibly several for this source, one per value, and a builder
+   * naming it by `name=` alone would build every variant under one name.
+   */
+  readsGivens: boolean;
+  /** Targets that must exist before this one can be built */
+  dependsOn: BuildTarget[];
+  /** Every persist source in the model that maps onto this artifact */
+  sources: PersistSource[];
+}
+
+/**
+ * Everything one connection has to build.
+ *
+ * `targets` is in dependency order — everything a target depends on appears
+ * before it — so the simplest correct builder is a loop:
+ *
+ * ```typescript
+ * for (const target of targets) await build(target);
+ * ```
+ *
+ * A builder that wants concurrency uses `target.dependsOn` and starts each one
+ * the moment its own dependencies finish:
+ *
+ * ```typescript
+ * const done = new Map<BuildTarget, Promise<void>>();
+ * for (const target of targets) {
+ *   done.set(target, (async () => {
+ *     await Promise.all(target.dependsOn.map(d => done.get(d)));
+ *     await build(target);
+ *   })());
+ * }
+ * await Promise.all(done.values());
+ * ```
+ *
+ * That is the maximum available: nothing waits for anything it does not read.
+ * Batching the targets into rounds instead — everything at depth 0, then
+ * everything at depth 1 — is easier to write and strictly worse, because a
+ * target then waits on unrelated work that happens to share its depth.
+ */
+export interface ConnectionBuild {
+  /** The connection everything here is built on */
+  connectionName: string;
+  /** Every table to build, dependencies before dependents */
+  targets: BuildTarget[];
+}
+
+/**
+ * A persist source with no BuildID, because its SQL cannot be written: it
+ * reads a given that has no value in this build, a virtual source the build's
+ * `virtualMap` has no entry for, or anything else the compiler reports as a
+ * problem with the source rather than with itself. A source that reads it
+ * inlines its SQL, so is reported here too.
+ */
+export interface UnbuildableSource {
+  source: PersistSource;
+  /** Why no BuildID could be computed, as a query would report it */
+  problem: LogMessage;
+}
+
+/**
+ * What a build generates SQL under, over the Runtime's own values.
+ *
+ * `givens` layers over the Runtime's file and constructor givens the way a
+ * query's do, and a finalized given is refused here the same way. Running
+ * `getBuildTargets` once per set of values is how a model whose persisted
+ * sources read a given gets one table per value.
+ */
+export interface BuildTargetOptions {
+  /** Given values for this build, by surface name, over the Runtime's */
+  givens?: Record<string, GivenValue>;
+  /** Which table each virtual source reads; the Runtime's when omitted */
+  virtualMap?: VirtualMap;
+}
+
+/**
+ * The build schedule for a model.
+ *
+ * Connections come first because they are the largest cut of parallelism: a
+ * query cannot cross a connection, so no dependency ever does either, and each
+ * entry here is a wholly independent build that needs no coordination with any
+ * other.
+ */
+export interface BuildTargets {
+  /** One per connection, mutually independent */
+  connections: ConnectionBuild[];
+  /** Errors and warnings from parsing `#@` annotations on persistable sources */
+  tagParseLog: LogMessage[];
+  /** Persist sources with no table to build, each with the reason */
+  unbuildable: UnbuildableSource[];
 }

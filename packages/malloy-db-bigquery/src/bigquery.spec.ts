@@ -366,6 +366,58 @@ describe('db:BigQuery', () => {
   });
 });
 
+describe('db:BigQuery dbmeta', () => {
+  // A public table with a description on itself and on every column,
+  // including each kind of column a description can sit on.
+  const model =
+    "source: pv is bigquery.table('bigquery-public-data.deps_dev_v1.PackageVersions')";
+
+  async function packageVersions(dbmeta: boolean): Promise<malloy.Explore> {
+    const conn = new BigQueryConnection({name: 'bigquery', dbmeta});
+    const loaded = await createTestRuntime(conn).loadModel(model).getModel();
+    await conn.close();
+    return loaded.getExploreByName('pv');
+  }
+
+  function fieldAt(explore: malloy.Explore, path: string): malloy.Field {
+    const [head, ...rest] = path.split('.');
+    const field = explore.getFieldByName(head);
+    if (rest.length === 0) return field;
+    if (!field.isExploreField()) throw new Error(`${head} is not a record`);
+    return fieldAt(field, rest.join('.'));
+  }
+
+  const description = (entity: malloy.Explore | malloy.Field) =>
+    entity.annotations.parseAsTag('dbmeta').tag.text('description');
+
+  let withDbmeta: malloy.Explore;
+  let withoutDbmeta: malloy.Explore;
+  beforeAll(async () => {
+    withDbmeta = await packageVersions(true);
+    withoutDbmeta = await packageVersions(false);
+  });
+
+  it('reads the table description', () => {
+    expect(description(withDbmeta)).toMatch(/\S/);
+  });
+
+  it.each([
+    ['column', 'Name'],
+    ['repeated column', 'Licenses'],
+    ['record', 'VersionInfo'],
+    ['record field', 'VersionInfo.IsRelease'],
+    ['repeated record', 'Links'],
+    ['repeated record field', 'Links.URL'],
+  ])('reads the description of a %s (%s)', (_kind, path) => {
+    expect(description(fieldAt(withDbmeta, path))).toMatch(/\S/);
+  });
+
+  it('reads nothing when dbmeta is off', () => {
+    expect(description(withoutDbmeta)).toBeUndefined();
+    expect(description(fieldAt(withoutDbmeta, 'Name'))).toBeUndefined();
+  });
+});
+
 const SQL_BLOCK_1: malloy.SQLSourceRequest = {
   connection: 'bigquery',
   selectStr: `
@@ -430,6 +482,40 @@ describe('numeric value reading', () => {
         ).toMatchResult(testModel, {f: 10.5});
       }
     );
+  });
+});
+
+// getQueryResultsUntilComplete decides "still running" from the apiResponse's
+// jobComplete flag, which the paginator only delivers when autoPaginate is off.
+// The hermetic specs stub that callback, so they cannot notice if the real
+// client stops sending it; this pins the contract against BigQuery itself. It
+// waits for one poll of a running job, not for the query, and scans 0 bytes.
+describe('db:BigQuery getQueryResults contract', () => {
+  it('reports jobComplete false while the job is still running', async () => {
+    const sdk = new BigQuerySDK();
+    const [job] = await sdk.createQueryJob({
+      query: `SELECT COUNT(*) AS n
+              FROM UNNEST(GENERATE_ARRAY(1, 1000000)) a
+              CROSS JOIN UNNEST(GENERATE_ARRAY(1, 300)) b`,
+      useQueryCache: false,
+    });
+    try {
+      const {err, apiResponse} = await new Promise<{
+        err: Error | null;
+        apiResponse?: {jobComplete?: boolean} | null;
+      }>(resolve => {
+        job.getQueryResults(
+          {timeoutMs: 1, autoPaginate: false},
+          (err, _rows, _nextQuery, apiResponse) => resolve({err, apiResponse})
+        );
+      });
+      // An error accompanies the still-running response; what matters is that
+      // the response comes with it, not what the error says.
+      expect(err).toBeTruthy();
+      expect(apiResponse?.jobComplete).toBe(false);
+    } finally {
+      await job.cancel();
+    }
   });
 });
 

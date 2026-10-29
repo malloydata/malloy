@@ -6,6 +6,7 @@
  * This ensures that:
  * 1. configuration.baseOptions (including timeout) is merged into axios requests in common.ts
  * 2. RawAxiosRequestConfig is exported from index.ts
+ * 3. createRequestFunction declares its return type in common.ts
  *
  */
 
@@ -53,9 +54,52 @@ if (fs.existsSync(commonTsPath)) {
         } else {
             console.error('✗ Could not find the expected pattern in common.ts');
             console.error('The file format may have changed. Please check manually.');
+            // A missed patch here still compiles — it silently drops
+            // configuration.baseOptions, so per-connection timeoutMs stops being
+            // applied. Fail loudly rather than report success.
+            process.exitCode = 1;
         }
     } else {
         console.log('✓ common.ts already patched, skipping...');
+    }
+} else {
+    console.log('⚠ common.ts not found, skipping...');
+}
+
+// Patch common.ts: give createRequestFunction a nameable return type.
+//
+// axios >= 1.19 defaults request()'s R to a non-exported `unique symbol` and
+// resolves the response through a conditional on it. With the generated
+// `request<T, R>` call, R stays a type parameter, so that conditional never
+// reduces: tsc cannot name the inferred return type (TS2527), and naming it
+// Promise<R> does not type-check either (TS2322).
+//
+// Dropping R and letting request() use its own default makes the response
+// concrete — Promise<AxiosResponse<T>>. Nothing passes R explicitly; all call
+// sites in api.ts infer through the enclosing AxiosPromise<...> return type,
+// which binds T just as well.
+console.log('Patching common.ts to give createRequestFunction a nameable return type...');
+
+if (fs.existsSync(commonTsPath)) {
+    let content = fs.readFileSync(commonTsPath, 'utf8');
+
+    if (!content.includes('BASE_PATH): Promise<AxiosResponse<T>> =>')) {
+        const signature = /return <T = unknown, R = AxiosResponse<T>>\((axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH)\) =>/;
+        const call = /return axios\.request<T, R>\(axiosRequestArgs\);/;
+
+        if (signature.test(content) && call.test(content)) {
+            content = content.replace(signature, 'return <T = unknown>($1): Promise<AxiosResponse<T>> =>');
+            content = content.replace(call, 'return axios.request<T>(axiosRequestArgs);');
+            fs.writeFileSync(commonTsPath, content, 'utf8');
+            console.log('✓ Successfully annotated createRequestFunction');
+            patched = true;
+        } else {
+            console.error('✗ Could not find createRequestFunction in common.ts');
+            console.error('The file format may have changed. Please check manually.');
+            process.exitCode = 1;
+        }
+    } else {
+        console.log('✓ createRequestFunction already annotated, skipping...');
     }
 } else {
     console.log('⚠ common.ts not found, skipping...');

@@ -17,6 +17,10 @@ import {SQReference} from './sq-reference';
  */
 export class SQRefine extends SourceQueryElement {
   elementType = 'sq-refine';
+  // See SQArrow: built once, so a second call neither recompiles nor
+  // duplicates the errors of the first.
+  asQuery?: QueryRefine;
+  asSource?: QuerySource;
 
   constructor(
     readonly toRefine: SourceQueryElement,
@@ -26,6 +30,9 @@ export class SQRefine extends SourceQueryElement {
   }
 
   getQuery() {
+    if (this.asQuery) {
+      return this.asQuery;
+    }
     if (this.toRefine.isSource()) {
       if (this.toRefine instanceof SQReference) {
         this.sqLog(
@@ -42,18 +49,21 @@ export class SQRefine extends SourceQueryElement {
     }
     const refinedQuery = this.toRefine.getQuery();
     if (refinedQuery) {
-      const resultQuery = new QueryRefine(refinedQuery, this.refine);
-      this.has({query: resultQuery});
-      return resultQuery;
+      this.asQuery = new QueryRefine(refinedQuery, this.refine);
+      this.has({query: this.asQuery});
+      return this.asQuery;
     }
   }
 
   getSource() {
+    if (this.asSource) {
+      return this.asSource;
+    }
     const query = this.getQuery();
     if (query) {
-      const queryAsSource = new QuerySource(query);
-      this.has({queryAsSource});
-      return queryAsSource;
+      this.asSource = new QuerySource(query);
+      this.has({queryAsSource: this.asSource});
+      return this.asSource;
     }
   }
 }

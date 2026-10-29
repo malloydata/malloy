@@ -105,9 +105,8 @@ Security sweep — N prod findings
 
 Every CRITICAL and HIGH mapped to the pin it reconciles to (low/moderate stay a count):
   critical  fast-xml-parser              → Snowflake hold (snowflake-sdk 2.3.1)
-  high      fast-xml-parser, axios       → Snowflake hold
+  high      fast-xml-parser              → Snowflake hold
   high      thrift                       → Databricks hold (@databricks/sql 1.15.0)
-  high      axios, trino-client          → Trino connector maintenance
   high      vega ×6                      → Vega v5 renderer hold (vega-lite ^5)
   high      ws, tmp, socket.io-parser    → dev tooling, never ships (out of scope)
 

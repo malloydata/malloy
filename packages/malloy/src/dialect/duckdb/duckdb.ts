@@ -26,6 +26,7 @@ import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  CivilTime,
   CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
@@ -141,7 +142,7 @@ export class DuckDBDialect extends PostgresBase {
     filterSQL?: string
   ): string {
     const fields = fieldList
-      .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
+      .map(f => `\n  ${this.sqlQuoteIdentifier(f.rawName)}: ${f.sqlExpression}`)
       .join(', ');
     const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
     const cond = turtleGroupSetCondition(groupSet, filterSQL);
@@ -156,7 +157,7 @@ export class DuckDBDialect extends PostgresBase {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlOutputName}:=${f.sqlExpression}`)
+      .map(f => `${this.sqlQuoteIdentifier(f.rawName)}:=${f.sqlExpression}`)
       .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT_PACK(${fields}) END)`;
   }
@@ -174,10 +175,10 @@ export class DuckDBDialect extends PostgresBase {
     fieldList: DialectFieldList
   ): string {
     const fields = fieldList
-      .map(f => `${f.sqlOutputName}: ${f.sqlExpression} `)
+      .map(f => `${this.sqlQuoteIdentifier(f.rawName)}: ${f.sqlExpression} `)
       .join(', ');
     const nullValues = fieldList
-      .map(f => `${f.sqlOutputName}: NULL`)
+      .map(f => `${this.sqlQuoteIdentifier(f.rawName)}: NULL`)
       .join(', ');
 
     return `COALESCE(FIRST({${fields}}) FILTER(WHERE group_set=${groupSet}), {${nullValues}})`;
@@ -268,24 +269,9 @@ export class DuckDBDialect extends PostgresBase {
     dialectFieldList: DialectFieldList,
     orderBy: OrderBy[] | undefined
   ): string {
-    let o = '';
-    if (orderBy) {
-      const clauses: string[] = [];
-      for (const c of orderBy) {
-        if (typeof c.field === 'string') {
-          clauses.push(`${c.field} ${c.dir || 'asc'}`);
-        } else {
-          clauses.push(
-            `${dialectFieldList[c.field].sqlOutputName} ${c.dir || 'asc'}`
-          );
-        }
-      }
-      if (clauses.length > 0) {
-        o = ` ORDER BY ${clauses.join(', ')}`;
-      }
-    }
+    const o = this.sqlCombineLastStageOrderBy(orderBy, dialectFieldList);
     return `SELECT LIST(STRUCT_PACK(${dialectFieldList
-      .map(d => this.sqlQuoteIdentifier(d.sqlOutputName))
+      .map(d => this.sqlQuoteIdentifier(d.rawName))
       .join(',')})${o}) FROM ${lastStageName}\n`;
   }
 
@@ -294,7 +280,7 @@ export class DuckDBDialect extends PostgresBase {
     dialectFieldList: DialectFieldList
   ): string {
     return `STRUCT_PACK(${dialectFieldList
-      .map(d => `${alias}.${d.sqlOutputName}`)
+      .map(d => `${alias}.${this.sqlQuoteIdentifier(d.rawName)}`)
       .join(', ')})`;
   }
 
@@ -460,9 +446,7 @@ export class DuckDBDialect extends PostgresBase {
     op: '+' | '-',
     magnitude: string,
     unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    _civilType: CivilTime
   ): string {
     // DuckDB doesn't support INTERVAL '1' WEEK, convert to days
     let offsetUnit = unit;

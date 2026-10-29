@@ -19,7 +19,7 @@ export class Apply extends ExprCompare {
     super(left, '=', right);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     let right = this.right;
     if (!this.right.granular()) {
       const rhs = this.right.requestExpression(fs);
@@ -31,6 +31,6 @@ export class Apply extends ExprCompare {
     if (right instanceof ExprGranularTime) {
       return right.toRange(fs).apply(fs, this.op, this.left);
     }
-    return super.getExpression(fs);
+    return super.computeExpression(fs);
   }
 }

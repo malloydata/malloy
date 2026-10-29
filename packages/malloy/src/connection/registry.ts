@@ -7,9 +7,21 @@ import type {Connection, ConnectionConfig, LookupConnection} from './types';
 
 /**
  * A factory function that creates a Connection from a config object.
+ *
+ * `rawConfigData` is the connection's entry exactly as the user wrote it,
+ * before overlay references were resolved — so an overlay-supplied property
+ * still reads as `{tenantAuth: "acme"}` rather than as the value it produced.
+ * A connector needs it when a resolved value has no stable identity of its own
+ * but the connection's digest depends on which one it is; BigQuery's
+ * `authClient` is the case that exists today. It is undefined for hosts that
+ * build connections from an already-resolved config.
+ *
+ * Being unresolved, it is the *non-secret* twin of `config`: it holds
+ * `{env: "PGPASSWORD"}` where `config` holds the password.
  */
 export type ConnectionTypeFactory = (
-  config: ConnectionConfig
+  config: ConnectionConfig,
+  rawConfigData?: ConnectionConfigEntry
 ) => Promise<Connection>;
 
 /**
@@ -23,7 +35,13 @@ export type ConnectionPropertyType =
   | 'secret'
   | 'file'
   | 'json'
-  | 'text';
+  | 'text'
+  /**
+   * A value with no declared shape that Malloy never inspects. Only reachable
+   * through an overlay — pair it with `source: 'overlay'`, since a config file
+   * has no way to write a live object down.
+   */
+  | 'opaque';
 
 /**
  * Describes a single configuration property for a connection type.
@@ -51,12 +69,31 @@ export interface ConnectionPropertyDefinition {
   /** For type 'file': extension filters for picker dialogs. */
   fileFilters?: Record<string, string[]>;
   /**
-   * For security-sensitive string slots, preserve malformed/reference-shaped
-   * raw values so registry lookup can fail closed instead of silently dropping
-   * the property during generic compilation. Factories must not rely on this
-   * metadata as their only validation layer.
+   * Where this property's value is allowed to come from. Unset means either —
+   * a literal in the config file, or an overlay reference.
+   *
+   * `'literal'` refuses overlay references. For a property whose value is only
+   * meaningful if it was written down deliberately.
+   *
+   * `'overlay'` refuses literals: the config file can only *name* an overlay
+   * the host registered, never supply the value itself. This is also what
+   * makes a reference unambiguous in a slot that would otherwise hold a
+   * dictionary — if a literal isn't legal there, a single-key object can only
+   * be a reference.
    */
-  requireLiteralString?: true;
+  source?: 'literal' | 'overlay';
+  /**
+   * Writing this property is a promise that it will produce a value. Omitting
+   * it is fine; setting it and having nothing survive resolution is an error
+   * rather than a silent drop.
+   *
+   * For properties whose absence triggers a fallback that isn't safe — DuckDB's
+   * `securityPolicy`, where absent means the `none` policy, or a credential
+   * whose absence means the ambient one. Without this, a misspelled overlay
+   * source or an unset environment variable removes the property and the
+   * connection is built as if the user had never asked for it.
+   */
+  mustHaveValue?: true;
 }
 
 /**
@@ -168,27 +205,6 @@ export function getConnectionTypeDef(
 }
 
 /**
- * Enforce registry-level literal-string requirements after overlay resolution
- * and before a connection factory sees the config.
- */
-export function validateConnectionConfigProperties(
-  connectionName: string,
-  typeName: string,
-  config: ConnectionConfig
-): void {
-  const props = registry.get(typeName)?.properties ?? [];
-  for (const prop of props) {
-    if (!prop.requireLiteralString) continue;
-    const value = config[prop.name];
-    if (value !== undefined && typeof value !== 'string') {
-      throw new Error(
-        `Connection "${connectionName}" property "${prop.name}" must be a literal string`
-      );
-    }
-  }
-}
-
-/**
  * Parse a JSON config string into a ConnectionsConfig.
  * Entries without a valid `is` field are silently dropped.
  */
@@ -278,7 +294,6 @@ export function createConnectionsFromConfig(
         }
       }
 
-      validateConnectionConfigProperties(connectionName, entry.is, connConfig);
       const connection = await typeDef.factory(connConfig);
       if (onConnectionCreated) {
         onConnectionCreated(connectionName, connection);

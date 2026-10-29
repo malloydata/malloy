@@ -16,6 +16,9 @@ import {SQLSource} from '../source-elements/sql-source';
  */
 export class SQSource extends SourceQueryElement {
   elementType = 'sq-source';
+  // See SQArrow: built once, so a second call neither recompiles nor
+  // duplicates the errors of the first.
+  asQuery?: QueryRaw;
 
   constructor(readonly theSource: Source) {
     super({theSource});
@@ -30,10 +33,13 @@ export class SQSource extends SourceQueryElement {
   }
 
   getQuery() {
+    if (this.asQuery) {
+      return this.asQuery;
+    }
     if (this.theSource instanceof SQLSource) {
-      const rawQuery = new QueryRaw(this.theSource);
-      this.has({rawQuery});
-      return rawQuery;
+      this.asQuery = new QueryRaw(this.theSource);
+      this.has({rawQuery: this.asQuery});
+      return this.asQuery;
     } else {
       this.sqLog(
         'invalid-source-as-query',

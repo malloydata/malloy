@@ -28,8 +28,8 @@ import {BaseConnection} from '@malloydata/malloy/connection';
 import type {PrestoClientConfig, PrestoQuery} from '@prestodb/presto-js-client';
 import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
-import type {ConnectionOptions} from 'trino-client';
-import {Trino, BasicAuth} from 'trino-client';
+import type {ConnectionOptions} from '@trinodb/trino-js-client';
+import {Trino, BasicAuth} from '@trinodb/trino-js-client';
 import {resultRowToQueryRecord} from './result-to-querydata';
 
 export interface TrinoManagerOptions {
@@ -62,7 +62,10 @@ export type TrinoConnectionOptions = ConnectionConfig;
 export interface BaseRunner {
   runSQL(
     sql: string,
-    options: RunSQLOptions
+    options: RunSQLOptions,
+    // Rendered by the connection; the runner places it itself, because a runner
+    // may wrap the statement it is given.
+    queryMetadataComment?: string
   ): Promise<{
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
@@ -91,11 +94,17 @@ class PrestoRunner implements BaseRunner {
     }
     this.client = new PrestoClient(prestoClientConfig);
   }
-  async runSQL(sql: string, options: RunSQLOptions = {}) {
+  async runSQL(
+    sql: string,
+    options: RunSQLOptions = {},
+    queryMetadataComment = ''
+  ) {
     let ret: PrestoQuery | undefined = undefined;
-    const q = options.rowLimit
-      ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
-      : sql;
+    const q =
+      queryMetadataComment +
+      (options.rowLimit
+        ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
+        : sql);
     let error: string | undefined = undefined;
     try {
       ret = (await this.client.query(q)) || [];
@@ -119,7 +128,7 @@ class TrinoRunner implements BaseRunner {
   client: Trino;
   constructor(config: TrinoConnectionConfiguration) {
     let server = config.server;
-    // trino-client has no separate port field — merge into the server URL
+    // the client has no separate port field — merge into the server URL
     if (server && config.port) {
       try {
         const url = new URL(server);
@@ -140,8 +149,12 @@ class TrinoRunner implements BaseRunner {
       auth: new BasicAuth(config.user!, config.password || ''),
     });
   }
-  async runSQL(sql: string, options: RunSQLOptions = {}) {
-    const result = await this.client.query(sql);
+  async runSQL(
+    sql: string,
+    options: RunSQLOptions = {},
+    queryMetadataComment = ''
+  ) {
+    const result = await this.client.query(queryMetadataComment + sql);
     let queryResult = await result.next();
     if (queryResult.value.error) {
       return {
@@ -276,7 +289,11 @@ export abstract class TrinoPrestoConnection
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
     await this.ensureSetup();
-    const r = await this.client.runSQL(sqlCommand, options);
+    const r = await this.client.runSQL(
+      sqlCommand,
+      options,
+      this.queryMetadataComment(options.queryMetadata)
+    );
 
     if (r.error) {
       throw new Error(r.error);
@@ -379,10 +396,13 @@ export abstract class TrinoPrestoConnection
       }
 
       const rows: string[][] = (queryResult.rows as string[][]) ?? [];
+      if (rows.length === 0) {
+        throw new Error('DESCRIBE returned no columns');
+      }
       this.structDefFromSchema(rows, structDef);
     } catch (e) {
       throw new Error(
-        `Could not fetch schema for ${element} ${
+        `Could not fetch schema for ${element}: ${
           e instanceof Error ? e.message : e
         }`
       );
@@ -575,9 +595,16 @@ class TrinoPrestoSchemaParser extends TinyParser {
     });
   }
 
+  /**
+   * Presto 0.284+ writes "Output[PlanNodeId N][NAME_LIST] => ...",
+   * earlier versions write "Output[NAME_LIST] => ...".
+   */
   fieldNameList(): string[] {
-    this.skipTo(']'); // Skip to end of plan
-    this.expect('['); // Expect start of name list
+    this.skipTo('[');
+    if (this.match('id', 'id')) {
+      // [PlanNodeId N] is the only group with two adjacent ids
+      this.skipTo('[');
+    }
     const fieldNames: string[] = [];
     for (;;) {
       const nmToken = this.expect('id');

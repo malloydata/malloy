@@ -1192,6 +1192,60 @@ describe('field usage with compiler extensions', () => {
       ]);
     }
   });
+  it('drill on a view grouped by a joined field activates the join', () => {
+    const joinModel = model`
+        source: root is a extend { dimension: id is 1 }
+        source: branch is a extend { dimension: id is 1, root_id is 1}
+        source: leaf is a extend { dimension: id is 1, branch_id is 1, color is astr}
+        source: things is a extend {
+          join_many: root on root.id = ai
+          join_many: branch on branch.root_id = root.id
+          join_many: leaf on leaf.branch_id = branch.id
+          view: by_color is { group_by: leaf.color }
+        }
+        run: things -> { drill: by_color.color = 'red'; select: ai }
+    `;
+    expect(joinModel).toTranslate();
+    const segment = joinModel.translator.getQuery(0)?.pipeline[0];
+    if (segment === undefined || !isQuerySegment(segment)) {
+      throw new Error('expected a query segment');
+    }
+    expect(segment.activeJoins).toEqual([
+      {path: ['root']},
+      {path: ['branch']},
+      {path: ['leaf']},
+    ]);
+  });
+  it('aggregate over a join activates that join', () => {
+    // count() names the join and no field in it, so the reference is the join
+    // path itself.  The join still has to be activated, or its `on` clause --
+    // and whatever that clause reaches -- is never seen.
+    const joinModel = model`
+        source: root is a extend { dimension: id is 1 }
+        source: branch is a extend { dimension: id is 1, root_id is 1 }
+        source: things is a extend {
+          join_many: root on root.id = ai
+          join_many: branch on branch.root_id = root.id
+        }
+        run: things -> { aggregate: branch_count is branch.count() }
+    `;
+    expect(joinModel).toTranslate();
+    const mq = joinModel.translator.getQuery(0);
+    expect(mq).toBeDefined();
+    const segment = mq!.pipeline[0];
+    if (isQuerySegment(segment)) {
+      expect(segment.activeJoins).toEqual([
+        {path: ['root']},
+        {path: ['branch']},
+      ]);
+    }
+    const [found, message] = checkForFieldUsage(
+      mq,
+      {path: ['branch', 'root_id']},
+      {path: ['root', 'id']}
+    );
+    expect(found, message).toBeTruthy();
+  });
   it('generateds activation for nested join', () => {
     const joinModel = model`
         source: person0 is a extend {

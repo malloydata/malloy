@@ -129,7 +129,6 @@ export class NamedSource extends Source {
       );
       return;
     } else {
-      this.document()?.checkExperimentalDialect(this, entry.dialect);
       if (isSourceDef(entry)) {
         // This struct is created as an unmodified reference to `entry`. Mark it
         // with entry's own identity; the modification path (DynamicSpace) clears

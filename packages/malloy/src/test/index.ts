@@ -99,18 +99,24 @@ export function databasesFromEnvironmentOr(
 }
 
 /**
- * A replacement for [describe()] that mimics [describe.skip()]
+ * A replacement for [describe()] that mimics [describe.skip()].
+ *
+ * Built on demand, not at module scope: this module is also imported outside
+ * jest (scripts that construct a test connection), where the jest globals do
+ * not exist.
  */
-const describeSkip: jest.Describe = Object.assign(
-  (name: number | string | jest.FunctionLike, fn: jest.EmptyFunction) =>
-    describe.skip(name, fn),
-  {
-    skip: describe.skip,
-    // eslint-disable-next-line no-restricted-properties
-    only: describe.only,
-    each: (() => () => it.skip('skipped', () => {})) as unknown as jest.Each,
-  }
-);
+function makeDescribeSkip(): jest.Describe {
+  return Object.assign(
+    (name: number | string | jest.FunctionLike, fn: jest.EmptyFunction) =>
+      describe.skip(name, fn),
+    {
+      skip: describe.skip,
+      // eslint-disable-next-line no-restricted-properties
+      only: describe.only,
+      each: (() => () => it.skip('skipped', () => {})) as unknown as jest.Each,
+    }
+  );
+}
 
 /**
  * Confirms that one or more of the databases being tested overlaps with
@@ -124,7 +130,9 @@ export function describeIfDatabaseAvailable(
   const currentDatabases = databasesFromEnvironmentOr(acceptableDatabases);
   const overlap = acceptableDatabases.filter(d => currentDatabases.includes(d));
 
-  return overlap.length > 0 ? [describe, overlap] : [describeSkip, overlap];
+  return overlap.length > 0
+    ? [describe, overlap]
+    : [makeDescribeSkip(), overlap];
 }
 
 export function brokenIn(dialectName: string, connectionName: string): boolean {

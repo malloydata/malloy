@@ -114,6 +114,20 @@ Claimed routes:
   equivalent (`#(docs)` ≡ `#<docs>`). This is how a new app stakes a
   namespace.
 
+## Property names
+
+A tag property name comes from source text, so `__proto__`, `constructor` and
+`toString` are ordinary names with no special meaning. Every property bag a
+`Tag` owns is built by `emptyProperties()` and read by name through
+`ownProperty()` — both module-local in `src/tags.ts` — and `ownProperty` sees
+own properties only, so a bag a caller assigned as a plain object reads
+correctly too.
+
+`tag.properties` and `tag.dict` therefore have no prototype: `Object.keys`,
+`Object.entries`, `in`, spread and `JSON.stringify` behave normally, but
+`tag.properties.hasOwnProperty(k)` throws. MOTLY nodes from the parser have the
+same shape.
+
 ## Reading tags from a compiled model
 
 Tag reading lives in `packages/malloy`. From a `Taggable` core entity, use

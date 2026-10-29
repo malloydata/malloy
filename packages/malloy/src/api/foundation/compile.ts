@@ -26,7 +26,12 @@ import type {
   EventStream,
   InvalidationKey,
 } from '../../runtime_types';
-import type {SQLSourceDef, DependencyTree, QueryRunStats} from '../../model';
+import type {
+  SQLSourceDef,
+  DependencyTree,
+  QueryRunStats,
+  VirtualMap,
+} from '../../model';
 import {mkModelDef} from '../../model';
 import {sqlKey} from '../../model/sql_block';
 import type {RunSQLOptions} from '../../run_sql_options';
@@ -89,7 +94,7 @@ export interface MalloyCompileOptions {
   noThrowOnError?: boolean;
   eventStream?: EventStream;
   importBaseURL?: URL;
-  testEnvironment?: boolean;
+  virtualMap?: VirtualMap;
 }
 
 export interface MalloyRunOptions {
@@ -203,9 +208,6 @@ export class Malloy {
       eventStream,
       options?.restrictedMode ?? false
     );
-    if (options?.testEnvironment) {
-      translator.allDialectsEnabled = true;
-    }
     return new Parse(translator, invalidationKey);
   }
 
@@ -303,6 +305,7 @@ export class Malloy {
       restrictedMode,
       method,
     } = req;
+    const virtualMap = req.virtualMap ?? parse?._translator.virtualMap;
     if (restrictedMode) {
       // Restricted-mode compiles do not participate in the model-def
       // cache. The cache key is the URL, but restricted vs. unrestricted
@@ -362,6 +365,7 @@ export class Malloy {
         );
       }
       translator = parse._translator;
+      translator.virtualMap = virtualMap;
       const invalidationKey =
         parse._invalidationKey ?? (await getInvalidationKey(urlReader, url));
       invalidationKeys[_url] = invalidationKey;
@@ -381,7 +385,8 @@ export class Malloy {
           urls: {[_url]: source},
         },
         eventStream,
-        restrictedMode ?? false
+        restrictedMode ?? false,
+        virtualMap
       );
     }
     for (;;) {
@@ -650,7 +655,11 @@ export class Malloy {
       connection = await connections.lookupConnection(connectionName);
     }
     if (sqlStruct) {
-      const data = await connection.runSQL(sqlStruct.selectStr);
+      // Only the metadata: a SQL block's rowLimit/abortSignal handling is what
+      // it was, and changing that is not this feature's business.
+      const data = await connection.runSQL(sqlStruct.selectStr, {
+        queryMetadata: options?.queryMetadata,
+      });
       return new Result(
         {
           structs: [sqlStruct],
