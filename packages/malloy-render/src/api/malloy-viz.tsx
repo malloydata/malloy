@@ -138,15 +138,24 @@ export class MalloyViz {
   setResult(malloyResult: Malloy.Result): void {
     this.result = malloyResult;
     if (this.result) {
+      const installErrorPlugin = (
+        error: Error,
+        plugins: RenderPluginInstance[]
+      ) => {
+        const errorPlugin = ErrorPlugin.create(error.message);
+        plugins.push(errorPlugin);
+      };
       this.metadata = new RenderFieldMetadata(
         this.result,
         this.pluginRegistry,
         this.options.pluginOptions ?? {},
-        (error, _factory, _field, plugins) => {
-          const errorPlugin = ErrorPlugin.create(error.message);
-          plugins.push(errorPlugin);
-        },
-        this.logCollector
+        (error, _factory, _field, plugins) =>
+          installErrorPlugin(error, plugins),
+        this.logCollector,
+        // A plugin that throws from beforeRender/getStyleOverrides is replaced
+        // the same way a plugin that fails to construct is, so the field shows
+        // the real reason rather than a half-initialized chart.
+        (error, _plugin, _field, plugins) => installErrorPlugin(error, plugins)
       );
     }
   }
