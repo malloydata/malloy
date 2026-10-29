@@ -1,35 +1,19 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {maxExpressionType, mergeEvalSpaces, mkExpr} from '../../../model';
-import {FT} from '../fragtype-utils';
-import {ExprValue} from '../types/expr-value';
+import {maxExpressionType, mergeEvalSpaces} from '../../../model';
+import {mergeRefSummaries} from '../../composite-source-utils';
+import * as TDU from '../typedesc-utils';
+import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
+import {booleanValueError, CONDITION_HINT} from './boolean-value';
 
 export class ExprCoalesce extends ExpressionDef {
   elementType = 'coalesce expression';
-  legalChildTypes = FT.anyAtomicT;
+  legalChildTypes = TDU.anyAtomicT;
   constructor(
     readonly expr: ExpressionDef,
     readonly altExpr: ExpressionDef
@@ -37,10 +21,18 @@ export class ExprCoalesce extends ExpressionDef {
     super({expr, altExpr});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const maybeNull = this.expr.getExpression(fs);
     const whenNull = this.altExpr.getExpression(fs);
-    if (maybeNull.dataType === 'null') {
+    const noCoalesce = booleanValueError(
+      fs,
+      maybeNull,
+      'in ??',
+      this,
+      CONDITION_HINT
+    );
+    if (noCoalesce) return noCoalesce;
+    if (maybeNull.type === 'null') {
       return whenNull;
     }
     /**
@@ -51,21 +43,32 @@ export class ExprCoalesce extends ExpressionDef {
      * SQL, but I decided that is will happen when the "expressions are true
      * trees" rewrite happens.
      */
-    if (!FT.typeEq(maybeNull, whenNull)) {
-      this.log(
-        `Mismatched types for coalesce (${maybeNull.dataType}, ${whenNull.dataType})`
+    if (!TDU.typeEq(maybeNull, whenNull)) {
+      this.logError(
+        'mismatched-coalesce-types',
+        `Mismatched types for coalesce (${maybeNull.type}, ${whenNull.type})`
       );
     }
+    const srcForType = maybeNull.type === 'error' ? whenNull : maybeNull;
+    // If both are numbers but subtypes differ, strip the subtype
+    const stripNumberType =
+      srcForType.type === 'number' &&
+      maybeNull.type === 'number' &&
+      whenNull.type === 'number' &&
+      maybeNull.numberType !== whenNull.numberType;
     return {
-      ...whenNull,
-      dataType:
-        maybeNull.dataType === 'error' ? whenNull.dataType : maybeNull.dataType,
+      ...srcForType,
+      ...(stripNumberType ? {numberType: undefined} : {}),
       expressionType: maxExpressionType(
         maybeNull.expressionType,
         whenNull.expressionType
       ),
-      value: mkExpr`COALESCE(${maybeNull.value},${whenNull.value})`,
+      value: {
+        node: 'coalesce',
+        kids: {left: maybeNull.value, right: whenNull.value},
+      },
       evalSpace: mergeEvalSpaces(maybeNull.evalSpace, whenNull.evalSpace),
+      refSummary: mergeRefSummaries(maybeNull.refSummary, whenNull.refSummary),
     };
   }
 }

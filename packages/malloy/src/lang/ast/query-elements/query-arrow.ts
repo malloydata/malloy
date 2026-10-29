@@ -1,34 +1,22 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {Query, StructDef, refIsStructDef} from '../../../model/malloy_types';
+import type {Query, StructDef} from '../../../model/malloy_types';
+import {refIsStructDef} from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
-import {StaticSpace} from '../field-space/static-space';
-import {FieldSpace} from '../types/field-space';
-import {QueryComp} from '../types/query-comp';
-import {QueryElement} from '../types/query-element';
+import {StaticSourceSpace} from '../field-space/static-space';
+import type {FieldSpace} from '../types/field-space';
+import type {QueryComp} from '../types/query-comp';
+import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
-import {View} from '../view-elements/view';
+import type {View} from '../view-elements/view';
+import {
+  checkRequiredGroupBys,
+  computeQueryGivenUsage,
+} from '../../composite-source-utils';
+import {detectAndRemovePartialStages} from '../query-utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -45,41 +33,95 @@ export class QueryArrow extends QueryBase implements QueryElement {
     super({source, view});
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
+  queryComp(isRefOk: boolean, isPartialOk: boolean): QueryComp {
     let inputStruct: StructDef;
     let queryBase: Query;
     let fieldSpace: FieldSpace;
     if (this.source instanceof Source) {
       // We create a fresh query with either the QOPDesc as the head,
       // the view as the head, or the scalar as the head (if scalar lenses is enabled)
-      const structRef = isRefOk
-        ? this.source.structRef()
-        : this.source.structDef();
+      const invoked = isRefOk
+        ? this.source.structRef(undefined)
+        : {structRef: this.source.getSourceDef(undefined)};
       queryBase = {
         type: 'query',
-        structRef,
+        ...invoked,
         pipeline: [],
         location: this.location,
       };
-      inputStruct = refIsStructDef(structRef)
-        ? structRef
-        : this.source.structDef();
-      fieldSpace = new StaticSpace(inputStruct);
+      inputStruct = refIsStructDef(invoked.structRef)
+        ? invoked.structRef
+        : this.source.getSourceDef(undefined);
+      fieldSpace = new StaticSourceSpace(inputStruct, 'public');
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
-      const lhsQuery = this.source.queryComp(isRefOk);
+      // The LHS stages are complete stages, nothing will refine them, so they
+      // are never allowed to be partial no matter what this caller accepts.
+      const lhsQuery = this.source.queryComp(isRefOk, false);
       queryBase = lhsQuery.query;
       inputStruct = lhsQuery.outputStruct;
-      fieldSpace = new StaticSpace(lhsQuery.outputStruct);
+      fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct, 'public');
     }
-    const {pipeline, annotation, outputStruct, name} =
-      this.view.pipelineComp(fieldSpace);
+    const {
+      pipeline: rhsPipeline,
+      annotations,
+      outputStruct,
+      name,
+    } = this.view.pipelineComp(fieldSpace);
+
+    const query = {
+      ...queryBase,
+      name,
+      annotations,
+      pipeline: [...queryBase.pipeline, ...rhsPipeline],
+    };
+
+    const compositeResolvedSourceDef =
+      query.compositeResolvedSourceDef ??
+      this.resolveCompositeSource(inputStruct, rhsPipeline);
+
+    const segment = query.pipeline[0];
+    if (segment !== undefined) {
+      const unsatisfiedGroupBys = checkRequiredGroupBys(
+        compositeResolvedSourceDef ?? inputStruct,
+        segment
+      );
+      for (const unsatisfiedGroupBy of unsatisfiedGroupBys) {
+        this.logError(
+          'missing-required-group-by',
+          `Group by or single value filter of \`${unsatisfiedGroupBy.path.join(
+            '.'
+          )}\` is required but not present`,
+          {
+            at: unsatisfiedGroupBy.at,
+          }
+        );
+      }
+    }
+
+    const pipelineWithExpandedFieldUsage = [
+      // The base query (if it exists) will already have its `expandedFieldUsage` computed
+      ...queryBase.pipeline,
+      ...this.expandRefUsage(
+        this.source instanceof Source
+          ? // If `source ->` then use the composite resolved struct,
+            (compositeResolvedSourceDef ?? inputStruct)
+          : // Otherwise just use the `inputStruct`
+            inputStruct,
+        rhsPipeline
+      ),
+    ];
+
+    const finalPipeline = isPartialOk
+      ? pipelineWithExpandedFieldUsage
+      : detectAndRemovePartialStages(pipelineWithExpandedFieldUsage, this);
+
     return {
       query: {
-        ...queryBase,
-        name,
-        annotation,
-        pipeline: [...queryBase.pipeline, ...pipeline],
+        ...query,
+        compositeResolvedSourceDef,
+        pipeline: finalPipeline,
+        givenUsage: computeQueryGivenUsage(finalPipeline),
       },
       outputStruct,
       inputStruct,

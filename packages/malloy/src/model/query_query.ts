@@ -1,0 +1,2991 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import type {
+  DialectFieldList,
+  CompiledOrderBy,
+  LateralJoinExpression,
+  Dialect,
+} from '../dialect';
+import {exprToSQL} from './expression_compiler';
+import type {
+  TurtleDef,
+  IndexFieldDef,
+  IndexSegment,
+  RefToField,
+  QueryResultDef,
+  StructDef,
+  ResultStructMetadataDef,
+  ResultMetadataDef,
+  PipeSegment,
+  QuerySegment,
+  QueryFieldDef,
+  SegmentFieldDef,
+  FieldDef,
+  RepeatedRecordDef,
+  RecordDef,
+  TemporalTypeDef,
+  NestSourceDef,
+  FinalizeSourceDef,
+  OrderBy,
+  Expression,
+  TurtleDefPlusFilters,
+  UniqueKeyRequirement,
+  Query,
+  PrepareResultOptions,
+} from './malloy_types';
+import {
+  isRawSegment,
+  isSourceDef,
+  isQuerySegment,
+  hasExpression,
+  isAtomic,
+  expressionIsCalculation,
+  expressionIsScalar,
+  activeName,
+  fieldIsIntrinsic,
+  isJoinedSource,
+  isBasicArray,
+  isIndexSegment,
+  isBaseTable,
+  expressionIsAnalytic,
+  isTemporalType,
+  fieldUsageFrom,
+} from './malloy_types';
+import {
+  AndChain,
+  indent,
+  getDialectFieldList,
+  groupingKey,
+  caseGroup,
+  exprWalk,
+} from './utils';
+import type {JoinInstance} from './join_instance';
+import {
+  QueryStruct,
+  isBasicAggregate,
+  isBasicCalculation,
+  isBasicScalar,
+  isScalarField,
+  QueryAtomicField,
+  QueryFieldBoolean,
+  QueryFieldStruct,
+  QueryField,
+} from './query_node';
+import {StageWriter} from './stage_writer';
+import type {FieldInstance} from './field_instance';
+import {
+  FieldInstanceField,
+  FieldInstanceResult,
+  FieldInstanceResultRoot,
+  sqlFullChildReference,
+} from './field_instance';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {CompileQueryCallback} from './sql_compiled';
+import {getCompiledSQL, persistedTableFor} from './sql_compiled';
+import {MalloyCompileError} from './malloy_compile_error';
+import {nestStrategy} from './nest-capability';
+
+function pathToCol(path: string[]): string {
+  return path.map(el => encodeURIComponent(el)).join('/');
+}
+
+/**
+ * Is this result's row limit applied by the ROW_NUMBER "shave" in
+ * generateSQLHavingLimit? A nested projection's is not: its limit slices its
+ * array-agg (see sqlAggregateTurtle), because a projection has no group-by
+ * columns for the shave to partition and order on.
+ */
+function usesShaveLimit(result: FieldInstanceResult): boolean {
+  if (result.getLimit() === undefined) return false;
+  const isNestedProjection =
+    result.parent !== undefined && result.firstSegment.type === 'project';
+  return !isNestedProjection;
+}
+
+/** Is this an analytic (window) field -- a `calculate:`? */
+function fieldIsAnalytic(fi: FieldInstanceField): boolean {
+  return (
+    hasExpression(fi.f.fieldDef) &&
+    expressionIsAnalytic(fi.f.fieldDef.expressionType)
+  );
+}
+
+interface OutputPipelinedSQL {
+  sqlFieldName: string;
+  pipelineSQL: string;
+}
+
+type StageGroupMaping = {fromGroup: number; toGroup: number};
+
+// One item in a stage's SELECT list, paired with the identifier it produces and
+// whether it participates in the GROUP BY. Keeping these together is deliberate:
+// the SELECT list, the GROUP BY terms, the pipelined-stage carry-forward
+// list, and the group_set remap list are all derived from this one array, so
+// none of them can drift from the columns the stage actually emitted.
+interface StageOutputColumn {
+  sql: string; // full SELECT-list item, e.g. `<expr> as "f1__0"` or `group_set`
+  expr: string; // the value expression alone, for a GROUP BY that repeats it
+  name: string; // quoted identifier this item produces in the stage output
+  isDimension: boolean; // is this column part of the GROUP BY?
+  // A dimension whose expression reads no column. An engine may refuse a
+  // constant in GROUP BY, and grouping by one changes nothing but the result
+  // for an empty input, so an expression GROUP BY leaves it out.
+  constant?: boolean;
+}
+
+// `<expr> as <name>`
+function aliasedColumn(
+  expr: string,
+  name: string,
+  role: {isDimension: boolean; constant?: boolean}
+): StageOutputColumn {
+  return {
+    sql: `${expr} as ${name}`,
+    expr,
+    name,
+    isDimension: role.isDimension,
+    constant: role.constant ?? false,
+  };
+}
+
+// Does a field's expression read any column of its source?
+function readsColumn(fieldDef: FieldDef): boolean {
+  if (!hasExpression(fieldDef)) {
+    return true;
+  }
+  for (const node of exprWalk(fieldDef.e)) {
+    switch (node.node) {
+      case 'field':
+      case 'outputField':
+      case 'source-reference':
+      case 'genericSQLExpr':
+        return true;
+    }
+  }
+  return false;
+}
+
+// The dimension columns as GROUP BY terms: 1-based SELECT positions, or the
+// expressions for a dialect without ordinals in GROUP BY.
+function groupByTerms(
+  dialect: Dialect,
+  columns: StageOutputColumn[]
+): string[] {
+  if (dialect.groupByClause === 'ordinal') {
+    return columns.flatMap((c, i) => (c.isDimension ? [`${i + 1}`] : []));
+  }
+  return columns.flatMap(c => (c.isDimension && !c.constant ? [c.expr] : []));
+}
+
+function sqlGroupBy(dialect: Dialect, columns: StageOutputColumn[]): string {
+  const terms = groupByTerms(dialect, columns);
+  if (terms.length > 0) {
+    return `GROUP BY ${terms.join(',')}\n`;
+  }
+  // Dimensions which are all constants still make one group of the input
+  if (
+    dialect.groupByClause === 'expression' &&
+    columns.some(c => c.isDimension)
+  ) {
+    return 'GROUP BY ()\n';
+  }
+  return '';
+}
+
+type StageOutputContext = {
+  columns: StageOutputColumn[];
+  lateralJoinSQLExpressions: LateralJoinExpression[];
+  groupsAggregated: StageGroupMaping[]; // which groups were aggregated
+  outputPipelinedSQL: OutputPipelinedSQL[]; // secondary stages for turtles.
+};
+
+interface DialectFieldArg {
+  fieldDef: FieldDef;
+  sqlExpression: string;
+  rawName: string;
+}
+
+function pushDialectField(dl: DialectFieldList, f: DialectFieldArg) {
+  const {sqlExpression, rawName} = f;
+  if (isAtomic(f.fieldDef)) {
+    dl.push({typeDef: f.fieldDef, sqlExpression, rawName});
+  }
+}
+
+/** Query builder object. */
+export class QueryQuery extends QueryField {
+  fieldDef: TurtleDef;
+  firstSegment: PipeSegment;
+  prepared = false;
+  maxDepth = 0;
+  maxGroupSet = 0;
+  rootResult: FieldInstanceResultRoot;
+  private packedColumns: Map<string, Set<string>> | undefined;
+  resultStage: string | undefined;
+  stageWriter: StageWriter | undefined;
+  isJoinedSubquery: boolean; // this query is a joined subquery.
+  // circularity breaker, we pass a lambda in to look up struct names, so
+  // query_query doesn't have to include query_model because query_model
+  // needs to include query_query. don't love this solution
+  protected structRefToQueryStruct: (name: string) => QueryStruct | undefined;
+
+  constructor(
+    fieldDef: TurtleDef,
+    parent: QueryStruct,
+    stageWriter: StageWriter | undefined,
+    isJoinedSubquery: boolean,
+    lookupStruct: (name: string) => QueryStruct | undefined
+  ) {
+    super(fieldDef, parent);
+    this.fieldDef = fieldDef;
+    this.rootResult = new FieldInstanceResultRoot(fieldDef);
+    this.stageWriter = stageWriter;
+    // do some magic here to get the first segment.
+    this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
+    this.isJoinedSubquery = isJoinedSubquery;
+    this.structRefToQueryStruct = lookupStruct;
+  }
+
+  static makeQuery(
+    fieldDef: TurtleDef,
+    parentStruct: QueryStruct,
+    stageWriter: StageWriter | undefined = undefined,
+    isJoinedSubquery: boolean,
+    lookupStruct: (name: string) => QueryStruct | undefined
+  ): QueryQuery {
+    let parent = parentStruct;
+
+    let turtleWithFilters =
+      parentStruct.applyStructFiltersToTurtleDef(fieldDef);
+    const firstStage = turtleWithFilters.pipeline[0];
+    const sourceDef = parentStruct.structDef;
+
+    // if we are generating code
+    //  and have extended declaration, we need to make a new QueryStruct
+    //  copy the definitions into a new structdef
+    //  edit the declations from the pipeline
+    if (
+      stageWriter !== undefined &&
+      isQuerySegment(firstStage) &&
+      firstStage.extendSource !== undefined
+    ) {
+      parent = new QueryStruct(
+        {
+          ...sourceDef,
+          fields: [...sourceDef.fields, ...firstStage.extendSource],
+        },
+        parentStruct.sourceArguments,
+        parent.parent ? {struct: parent} : {model: parent.getModel()},
+        parent.prepareResultOptions
+      );
+      turtleWithFilters = {
+        ...turtleWithFilters,
+        pipeline: [
+          {
+            ...firstStage,
+            extendSource: undefined,
+          },
+          ...turtleWithFilters.pipeline.slice(1),
+        ],
+      };
+    }
+
+    if (
+      isSourceDef(sourceDef) &&
+      sourceDef.queryTimezone &&
+      isQuerySegment(firstStage) &&
+      firstStage.queryTimezone === undefined
+    ) {
+      firstStage.queryTimezone = sourceDef.queryTimezone;
+    }
+
+    switch (firstStage.type) {
+      case 'reduce':
+        return new QueryQueryReduce(
+          turtleWithFilters,
+          parent,
+          stageWriter,
+          isJoinedSubquery,
+          lookupStruct
+        );
+      case 'project':
+        return new QueryQueryProject(
+          turtleWithFilters,
+          parent,
+          stageWriter,
+          isJoinedSubquery,
+          lookupStruct
+        );
+      case 'index':
+        return new QueryQueryIndex(
+          turtleWithFilters,
+          parent,
+          stageWriter,
+          isJoinedSubquery,
+          lookupStruct
+        );
+      case 'raw':
+        return new QueryQueryRaw(
+          turtleWithFilters,
+          parent,
+          stageWriter,
+          isJoinedSubquery,
+          lookupStruct
+        );
+      case 'partial':
+        throw new Error('Attempt to make query out of partial stage');
+    }
+  }
+
+  inNestedPipeline(): boolean {
+    return this.parent.structDef.type === 'nest_source';
+  }
+
+  // get a field ref and expand it.
+  expandField(f: QueryFieldDef) {
+    const field =
+      f.type === 'fieldref'
+        ? this.parent.getQueryFieldReference(f)
+        : this.parent.makeQueryField(f);
+    const as = field.getIdentifier();
+    return {as, field};
+  }
+
+  private addDependantPath(
+    path: string[],
+    uniqueKeyRequirement: UniqueKeyRequirement
+  ) {
+    const node = this.parent.getFieldByName(path);
+    const joinableParent =
+      node instanceof QueryFieldStruct
+        ? node.queryStruct.getJoinableParent()
+        : node.parent.getJoinableParent();
+    this.rootResult.addStructToJoin(joinableParent, uniqueKeyRequirement);
+  }
+
+  private dependenciesFromFieldUsage() {
+    const resultRoot = this.rootResult;
+    // Only QuerySegment and IndexSegment have fieldUsage, RawSegment does not
+    if (
+      this.firstSegment.type === 'raw' ||
+      this.firstSegment.type === 'partial'
+    ) {
+      throw new Error('QueryQuery attempt to load a raw or partial segment');
+    }
+
+    for (const joinUsage of this.firstSegment.activeJoins || []) {
+      this.addDependantPath(joinUsage.path, undefined);
+    }
+    for (const usage of this.firstSegment.expandedFieldUsage || []) {
+      if (usage.analyticFunctionUse) {
+        resultRoot.queryUsesPartitioning = true;
+
+        // BigQuery-specific handling
+        if (
+          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
+          resultRoot.firstSegment.type === 'reduce'
+        ) {
+          // force the use of a lateral_join_bag
+          resultRoot.isComplexQuery = true;
+          resultRoot.queryUsesPartitioning = true;
+        }
+      }
+      if (usage.uniqueKeyRequirement) {
+        if (usage.path.length === 0) {
+          resultRoot.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
+        } else {
+          this.addDependantPath(usage.path, usage.uniqueKeyRequirement);
+        }
+      }
+    }
+
+    const expandedUngroupings =
+      'expandedUngroupings' in this.firstSegment
+        ? this.firstSegment.expandedUngroupings || []
+        : [];
+
+    for (const ungrouping of expandedUngroupings) {
+      resultRoot.isComplexQuery = true;
+      resultRoot.queryUsesPartitioning = true;
+
+      // Navigate to correct result struct using ungrouping's path
+      let destResult: FieldInstanceResult = resultRoot;
+      for (const pathSegment of ungrouping.path) {
+        const nextStruct = destResult.allFields.get(pathSegment);
+        if (!(nextStruct instanceof FieldInstanceResult)) {
+          throw new MalloyCompileError(
+            `Ungrouping path '${ungrouping.path.join('.')}' references ` +
+              `'${pathSegment}', which is not a nested view at this level.`,
+            'compiler-ungrouped-invalid-path',
+            this.fieldDef.location
+          );
+        }
+        destResult = nextStruct;
+      }
+
+      destResult.resultUsesUngrouped = true;
+
+      if (ungrouping.refFields && ungrouping.refFields.length > 0) {
+        const refType = ungrouping.exclude ? 'exclude' : 'all';
+        const key = groupingKey(refType, ungrouping.refFields);
+        if (destResult.ungroupedSets.get(key) === undefined) {
+          destResult.ungroupedSets.set(key, {
+            type: refType,
+            fields: ungrouping.refFields,
+            groupSet: -1,
+          });
+        }
+      }
+
+      destResult.resultUsesUngrouped = true;
+
+      if (ungrouping.refFields && ungrouping.refFields.length > 0) {
+        const refType = ungrouping.exclude ? 'exclude' : 'all';
+        const key = groupingKey(refType, ungrouping.refFields);
+        if (destResult.ungroupedSets.get(key) === undefined) {
+          destResult.ungroupedSets.set(key, {
+            type: refType,
+            fields: ungrouping.refFields,
+            groupSet: -1,
+          });
+        }
+      }
+    }
+  }
+
+  getSegmentFields(resultStruct: FieldInstanceResult): SegmentFieldDef[] {
+    const fs = resultStruct.firstSegment;
+    return fs.type === 'index'
+      ? fs.indexFields
+      : isQuerySegment(fs)
+        ? fs.queryFields
+        : [];
+  }
+
+  private getDrillExpression(f: QueryFieldDef): Malloy.Expression | undefined {
+    if (isAtomic(f) || f.type === 'fieldref') return f.drillExpression;
+    return undefined;
+  }
+
+  expandFields(resultStruct: FieldInstanceResult) {
+    let resultIndex = 1;
+    for (const f of this.getSegmentFields(resultStruct)) {
+      const {as, field} = this.expandField(f);
+      const drillExpression = this.getDrillExpression(f);
+
+      if (field instanceof QueryQuery) {
+        if (this.firstSegment.type === 'project') {
+          throw new MalloyCompileError(
+            `Cannot include nested view '${field.fieldDef.name}' in a ` +
+              "'select:' stage. Nested views require `group_by:` or " +
+              '`aggregate:` to be included in output.',
+            'compiler-nested-view-in-select',
+            field.fieldDef.location
+          );
+        }
+        const fir = new FieldInstanceResult(
+          field.fieldDef as TurtleDef,
+          resultStruct
+        );
+        this.expandFields(fir);
+        resultStruct.add(as, fir);
+      } else if (field instanceof QueryAtomicField) {
+        resultStruct.addField(
+          as,
+          field,
+          {
+            resultIndex,
+            type: 'result',
+          },
+          drillExpression
+        );
+
+        if (
+          hasExpression(field.fieldDef) &&
+          expressionIsAnalytic(field.fieldDef.expressionType) &&
+          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
+          resultStruct.firstSegment.type === 'reduce'
+        ) {
+          resultStruct.root().isComplexQuery = true;
+          resultStruct.root().queryUsesPartitioning = true;
+        }
+
+        if (isBasicAggregate(field)) {
+          if (this.firstSegment.type === 'project') {
+            throw new MalloyCompileError(
+              `Cannot include aggregate field '${field.fieldDef.name}' in ` +
+                "a 'select:' stage. Use `aggregate:` instead to compute aggregates.",
+              'compiler-aggregate-in-select',
+              field.fieldDef.location
+            );
+          }
+        }
+      } else if (field instanceof QueryFieldStruct) {
+        resultStruct.addField(
+          as,
+          field,
+          {
+            resultIndex,
+            type: 'result',
+          },
+          drillExpression
+        );
+      }
+      resultIndex++;
+    }
+  }
+
+  /**
+   * Recursively walks the input QueryStruct tree and sets up lazy expression
+   * compilation for all records with computed expressions, so that records with
+   * expression values have the correct context for evaluating them if needed.
+   *
+   * @param resultStruct - The FieldInstanceResult containing compilation context
+   * @param source - The QueryStruct to traverse (initially the query's parent/input)
+   */
+  expandRecordExpressions(
+    resultStruct: FieldInstanceResult,
+    source: QueryStruct
+  ) {
+    for (const field of source.nameMap.values()) {
+      if (field instanceof QueryFieldStruct) {
+        const qs = field.queryStruct;
+
+        // Set up closure if this is a record with expression
+        if (
+          qs.structDef.type === 'record' &&
+          hasExpression(qs.structDef) &&
+          qs.parent
+        ) {
+          const parent = qs.parent;
+          const e = qs.structDef.e;
+          qs.computeRecordExpression = () => exprToSQL(resultStruct, parent, e);
+        }
+
+        // Recurse into this structure
+        this.expandRecordExpressions(resultStruct, qs);
+      }
+    }
+  }
+
+  generateSQLFilters(
+    resultStruct: FieldInstanceResult,
+    which: 'where' | 'having'
+    // filterList: FilterCondition[] | undefined = undefined
+  ): AndChain {
+    const resultFilters = new AndChain();
+    const list = resultStruct.firstSegment.filterList;
+    if (list === undefined) {
+      return resultFilters;
+    }
+    // Go through the filters and make or find dependant fields
+    //  add them to the field index. Place the individual filters
+    // in the correct catgory.
+    for (const cond of list || []) {
+      const context = this.parent;
+
+      if (
+        (which === 'having' && expressionIsCalculation(cond.expressionType)) ||
+        (which === 'where' && expressionIsScalar(cond.expressionType))
+      ) {
+        const sqlClause = exprToSQL(resultStruct, context, cond.e, undefined);
+        resultFilters.add(sqlClause);
+      }
+    }
+    return resultFilters;
+  }
+
+  prepare(_stageWriter: StageWriter | undefined) {
+    if (!this.prepared) {
+      this.expandRecordExpressions(this.rootResult, this.parent);
+      // Add the root base join to the joins map
+      this.rootResult.addStructToJoin(this.parent, undefined);
+
+      // Expand fields (just adds them to result, no dependency tracking)
+      this.expandFields(this.rootResult);
+
+      // Process all dependencies from translator's fieldUsage
+      this.dependenciesFromFieldUsage();
+
+      // Handle always joins
+      this.addAlwaysJoins();
+
+      // Calculate symmetric aggregates based on the joins
+      this.rootResult.calculateSymmetricAggregates();
+
+      this.prepared = true;
+    }
+  }
+
+  private findJoins(resultStruct: FieldInstanceResult): void {
+    for (const dim of resultStruct.fields()) {
+      if (!(dim.f instanceof QueryFieldStruct)) {
+        resultStruct.addStructToJoin(dim.f.getJoinableParent(), undefined);
+      }
+    }
+
+    for (const s of resultStruct.structs()) {
+      this.findJoins(s);
+    }
+  }
+
+  addAlwaysJoins() {
+    const stage = this.fieldDef.pipeline[0];
+    if (stage.type !== 'raw') {
+      const alwaysJoins = stage.alwaysJoins ?? [];
+      for (const joinName of alwaysJoins) {
+        const qs = this.parent.getChildByName(joinName);
+        if (qs instanceof QueryFieldStruct) {
+          this.rootResult.addStructToJoin(qs.queryStruct, undefined);
+        }
+      }
+    }
+  }
+
+  // get the source fieldname and filters associated with the field (so we can drill later)
+  getResultMetadata(
+    fi: FieldInstance
+  ): ResultStructMetadataDef | ResultMetadataDef | undefined {
+    if (fi instanceof FieldInstanceField) {
+      if (fi.fieldUsage.type === 'result') {
+        // const fieldDef = fi.f.fieldDef as AtomicField;
+        const fieldDef = fi.f.fieldDef;
+        let filterList;
+        const sourceField =
+          fi.f.parent.getFullOutputName() +
+          (fieldDef.name || fieldDef.as || 'undefined');
+        const sourceExpression = hasExpression(fieldDef)
+          ? fieldDef.code
+          : undefined;
+        const sourceClasses = [sourceField];
+        const referenceId = fi.f.referenceId;
+        const drillExpression = fi.drillExpression;
+        const base = {
+          sourceField,
+          sourceExpression,
+          sourceClasses,
+          referenceId,
+          drillExpression,
+        };
+        if (isBasicCalculation(fi.f)) {
+          filterList = fi.f.getFilterList();
+          return {
+            ...base,
+            filterList,
+            fieldKind: 'measure',
+          };
+        }
+        if (isBasicScalar(fi.f)) {
+          return {
+            ...base,
+            filterList,
+            fieldKind: 'dimension',
+          };
+        } else {
+          return undefined;
+        }
+      }
+      return undefined;
+    } else if (fi instanceof FieldInstanceResult) {
+      const sourceField = fi.turtleDef.name || fi.turtleDef.as;
+      const sourceClasses = sourceField ? [sourceField] : [];
+      const filterList = fi.firstSegment.filterList;
+
+      const lastSegment =
+        fi.turtleDef.pipeline[fi.turtleDef.pipeline.length - 1];
+      const limit = isRawSegment(lastSegment) ? undefined : lastSegment.limit;
+      let orderBy: OrderBy[] | undefined = undefined;
+      const drillable: boolean =
+        isQuerySegment(lastSegment) && fi.turtleDef.pipeline.length === 1;
+      if (isQuerySegment(lastSegment)) {
+        orderBy = lastSegment.orderBy;
+      }
+
+      if (sourceField) {
+        return {
+          sourceField,
+          filterList,
+          sourceClasses,
+          fieldKind: 'struct',
+          limit,
+          orderBy,
+          drillable,
+        };
+      }
+    }
+    return undefined;
+  }
+
+  /**  returns a fields and primary key of a struct for this query */
+  getResultStructDef(
+    resultStruct: FieldInstanceResult = this.rootResult,
+    isRoot = true
+  ): QueryResultDef {
+    const fields: FieldDef[] = [];
+    let primaryKey;
+    this.prepare(undefined);
+
+    let dimCount = 0;
+    for (const [name, fi] of resultStruct.allFields) {
+      const resultMetadata = this.getResultMetadata(fi);
+      if (fi instanceof FieldInstanceResult) {
+        const {structDef, repeatedResultType} = this.generateTurtlePipelineSQL(
+          fi,
+          new StageWriter(true, undefined),
+          '<nosource>'
+        );
+
+        // Get the timezone from the nested query
+        const nestedQueryInfo = fi.getQueryInfo();
+        const queryTimezone = nestedQueryInfo.queryTimezone;
+
+        if (repeatedResultType === 'nested') {
+          const multiLineNest: RepeatedRecordDef = {
+            type: 'array',
+            elementTypeDef: {type: 'record_element'},
+            join: 'many',
+            name,
+            fields: structDef.fields,
+            ...(structDef.annotations && {annotations: structDef.annotations}),
+            resultMetadata,
+            ...(queryTimezone && {queryTimezone}),
+          };
+          fields.push(multiLineNest);
+        } else {
+          const oneLineNest: RecordDef = {
+            type: 'record',
+            join: 'one',
+            name,
+            fields: structDef.fields,
+            ...(structDef.annotations && {annotations: structDef.annotations}),
+            resultMetadata,
+            ...(queryTimezone && {queryTimezone}),
+          };
+          fields.push(oneLineNest);
+        }
+      } else if (fi instanceof FieldInstanceField) {
+        if (fi.fieldUsage.type === 'result') {
+          // if there is only one dimension, it is the primaryKey
+          //  if there are more, primaryKey is undefined.
+          if (isBasicScalar(fi.f)) {
+            if (dimCount === 0 && isRoot) {
+              primaryKey = name;
+            } else {
+              primaryKey = undefined;
+            }
+            dimCount++;
+          }
+
+          // Remove computations because they are all resolved
+          let fOut = fi.f.fieldDef;
+          if (hasExpression(fOut)) {
+            fOut = {...fOut};
+            // "as" because delete needs the property to be optional
+            delete (fOut as Expression).e;
+            delete (fOut as Expression).code;
+            delete (fOut as Expression).expressionType;
+          }
+
+          const location = fOut.location;
+          const annotations = fOut.annotations;
+
+          const common = {
+            resultMetadata,
+            location,
+            annotations,
+          };
+
+          // build out the result fields...
+          switch (fOut.type) {
+            case 'boolean':
+            case 'json':
+            case 'string':
+              fields.push({
+                name,
+                type: fOut.type,
+                ...common,
+              });
+              break;
+            case 'date':
+            case 'timestamp':
+            case 'timestamptz': {
+              const timeframe = fOut.timeframe;
+              const fd: TemporalTypeDef = {type: fOut.type};
+              if (timeframe) {
+                fd.timeframe = timeframe;
+              }
+              fields.push({
+                name,
+                ...fd,
+                ...common,
+              });
+              break;
+            }
+            case 'number':
+              fields.push({
+                name,
+                numberType: fOut.numberType,
+                type: 'number',
+                ...common,
+              });
+              break;
+            case 'sql native':
+            case 'record':
+            case 'array': {
+              fields.push({...fOut, ...common});
+              break;
+            }
+            default:
+              throw new Error(
+                `unknown Field Type in query ${JSON.stringify(fOut)}`
+              );
+          }
+        }
+      }
+    }
+    const outputStruct: StructDef = {
+      type: 'query_result',
+      name: this.resultStage || 'result',
+      fields,
+      dialect: this.parent.dialect.name,
+      primaryKey,
+      connection: this.parent.connectionName,
+      resultMetadata: this.getResultMetadata(this.rootResult),
+      queryTimezone: resultStruct.getQueryInfo().queryTimezone,
+    };
+
+    return outputStruct;
+  }
+
+  getStructSourceSQL(qs: QueryStruct, stageWriter: StageWriter): string {
+    switch (qs.structDef.type) {
+      case 'table':
+        // tablePath is canonical SQL — translator pre-validated.
+        return qs.structDef.tablePath;
+      case 'virtual': {
+        const virtualMap = qs.prepareResultOptions?.virtualMap;
+        const tablePath = virtualMap
+          ?.get(qs.structDef.connection)
+          ?.get(qs.structDef.name);
+        if (tablePath === undefined) {
+          throw new MalloyCompileError(
+            `No virtual-map entry for virtual source '${qs.structDef.name}' ` +
+              `on connection '${qs.structDef.connection}'. ` +
+              'Supply the entry in `virtualMap` when compiling or running the model.',
+            'runtime-virtual-map-missing',
+            qs.structDef.location
+          );
+        }
+        // Check the binding immediately before SQL substitution, using the
+        // executing query's dialect. Other entries in the map may be unused.
+        const dialect = this.parent.dialect;
+        const checked = dialect.sqlValidateTableName(tablePath);
+        if (!checked.ok || checked.canonical !== tablePath) {
+          const reason = checked.ok
+            ? `use the canonical path ${checked.canonical}`
+            : checked.error;
+          throw new MalloyCompileError(
+            `virtualMap entry '${qs.structDef.connection}.${qs.structDef.name}' ` +
+              `has table path ${JSON.stringify(tablePath)}, which is not a ` +
+              `canonical table path for ${dialect.name}: ${reason}`,
+            'runtime-virtual-map-invalid',
+            qs.structDef.location
+          );
+        }
+        return tablePath;
+      }
+      case 'composite':
+        // TODO: throw an error here; not simple because we call into this
+        // code currently before the composite source is resolved in some cases
+        return '{COMPOSITE SOURCE}';
+      case 'finalize':
+        return qs.structDef.name;
+      case 'sql_select': {
+        // A hit is a table name, which is what a FROM clause wants; the
+        // inline form is a SELECT and has to be parenthesized to sit there.
+        const tableName = persistedTableFor(
+          qs.structDef,
+          qs.prepareResultOptions ?? {},
+          this.isolatedQueryCompiler()
+        );
+        if (tableName !== undefined) {
+          return tableName;
+        }
+        return `(${getCompiledSQL(
+          qs.structDef,
+          qs.prepareResultOptions ?? {},
+          this.isolatedQueryCompiler()
+        )})`;
+      }
+      case 'nest_source':
+        return qs.structDef.pipeSQL;
+      case 'query_source': {
+        const tableName = persistedTableFor(
+          qs.structDef,
+          qs.prepareResultOptions ?? {},
+          this.isolatedQueryCompiler()
+        );
+        if (tableName !== undefined) {
+          return tableName;
+        }
+
+        // Not in manifest - compile normally
+        const ret = this.compileQueryToStages(
+          qs.structDef.query,
+          qs.prepareResultOptions,
+          stageWriter,
+          qs.parent !== undefined
+        );
+        return ret.lastStageName;
+      }
+      default:
+        throw new Error(
+          `Cannot create SQL StageWriter from '${activeName(qs.structDef)}' type '${qs.structDef.type}`
+        );
+    }
+  }
+
+  /**
+   * A compile callback which writes to its own StageWriter rather than the
+   * one this query is building, so the SQL comes back as a string. Both the
+   * manifest lookup and inline expansion need a source's SQL in that form.
+   */
+  protected isolatedQueryCompiler(): CompileQueryCallback {
+    return (query, opts) =>
+      this.compileQueryToStages(query, opts ?? {}, undefined, false).sql!;
+  }
+
+  /**
+   * Compile a Query into SQL stages. Used by both query_source compilation
+   * and getCompiledSQL for interpolated sources.
+   *
+   * @param query The query to compile
+   * @param prepareResultOptions Options including manifest for substitution
+   * @param stageWriter If provided, stages are added to this writer and lastStageName is returned.
+   *                    If undefined, a new isolated writer is created and full SQL is returned.
+   * @param isJoinedSubquery Whether this is a joined subquery
+   * @returns { lastStageName, stageWriter, sql } - sql is only set if stageWriter was undefined
+   */
+  compileQueryToStages(
+    query: Query,
+    prepareResultOptions: PrepareResultOptions,
+    stageWriter: StageWriter | undefined,
+    isJoinedSubquery: boolean
+  ): {lastStageName: string; stageWriter: StageWriter; sql?: string} {
+    const turtleDef: TurtleDefPlusFilters = {
+      type: 'turtle',
+      name: 'ignoreme',
+      pipeline: query.pipeline,
+      filterList: query.filterList,
+    };
+
+    const structRef = query.compositeResolvedSourceDef ?? query.structRef;
+
+    let sourceStruct: QueryStruct;
+    if (typeof structRef === 'string') {
+      const struct = this.structRefToQueryStruct(structRef);
+      if (!struct) {
+        throw new MalloyCompileError(
+          `Query references source '${structRef}', ` +
+            'which is not defined in this model.',
+          'compiler-undefined-source',
+          undefined
+        );
+      }
+      sourceStruct = struct;
+    } else {
+      sourceStruct = new QueryStruct(
+        structRef,
+        query.sourceArguments,
+        {model: this.parent.getModel()},
+        prepareResultOptions
+      );
+    }
+
+    // Create isolated stageWriter if none provided
+    const isolated = stageWriter === undefined;
+    // When isPartialQuery is set (e.g., SQL interpolation), don't use CTEs
+    // for dialects that don't support them in subqueries
+    const noCTE =
+      prepareResultOptions.isPartialQuery &&
+      !sourceStruct.dialect.supportsCTEinCoorelatedSubQueries;
+    const writer = stageWriter ?? new StageWriter(!noCTE, undefined);
+
+    const q = QueryQuery.makeQuery(
+      turtleDef,
+      sourceStruct,
+      writer,
+      isJoinedSubquery,
+      this.structRefToQueryStruct
+    );
+
+    const ret = q.generateSQLFromPipeline(writer);
+
+    return {
+      lastStageName: ret.lastStageName,
+      stageWriter: writer,
+      sql: isolated ? writer.generateSQLStages() : undefined,
+    };
+  }
+
+  generateSQLJoinBlock(
+    stageWriter: StageWriter,
+    ji: JoinInstance,
+    depth: number
+  ): string {
+    let s = '';
+    const qs = ji.queryStruct;
+    const qsDef = qs.structDef;
+    qs.eventStream?.emit('join-used', {name: activeName(qsDef)});
+    qs.maybeEmitParameterizedSourceUsage();
+    if (isJoinedSource(qsDef)) {
+      let structSQL = this.getStructSourceSQL(qs, stageWriter);
+      const matrixOperation = (qsDef.matrixOperation || 'left').toUpperCase();
+      if (!this.parent.dialect.supportsFullJoin && matrixOperation === 'FULL') {
+        throw new Error('FULL JOIN not supported');
+      }
+      if (ji.makeUniqueKey) {
+        const passKeys = this.generateSQLPassthroughKeys(qs);
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlQuoteIdentifier(
+          '__distinct_key'
+        )}, x.* ${passKeys} FROM ${structSQL} as x)`;
+      }
+      let onCondition = '';
+      if (qs.parent === undefined) {
+        throw new Error('Expected joined struct to have a parent.');
+      }
+      if (qsDef.onExpression) {
+        // Create a temporary field instance to generate the SQL
+        const boolField = new QueryFieldBoolean(
+          {
+            type: 'boolean',
+            name: 'ignoreme',
+            e: qsDef.onExpression,
+          },
+          qs.parent
+        );
+        const tempInstance = new FieldInstanceField(
+          boolField,
+          {type: 'where'}, // It's used in a WHERE-like context
+          this.rootResult,
+          undefined
+        );
+        onCondition = tempInstance.generateExpression();
+      } else {
+        onCondition = '1=1';
+      }
+      let filters = '';
+      let conditions: string[] | undefined = undefined;
+      if (ji.joinFilterConditions) {
+        conditions = ji.joinFilterConditions.map(qf => {
+          const tempInstance = new FieldInstanceField(
+            qf,
+            {type: 'where'},
+            this.rootResult,
+            undefined
+          );
+          return tempInstance.generateExpression();
+        });
+      }
+
+      if (!ji.isSubquery()) {
+        // LTNOTE: need a check here to see the children's where: conditions are local
+        //  to the source and not to any of it's joined children.
+        //  In Presto, we're going to get a SQL error if in this case
+        //  for now.  We need to inspect the 'condition' of each of the children
+        //  to see if they reference subchildren and blow up if they do
+        //  or move them to the where clause with a (x.distnct_key is NULL or (condition))
+        //
+        // const childrenFiltersAreComplex = somethign(conditions)
+        // if (conditions && childrenFiltersAreComplex !this.parent.dialect.supportsComplexFilteredSources) {
+        //   throw new Error(
+        //     'Cannot join a source with a complex filter on a joined source'
+        //   );
+        // }
+
+        if (conditions !== undefined && conditions.length >= 1) {
+          filters = ` AND (${conditions.join(' AND ')})`;
+        }
+        s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
+      } else {
+        let select = `SELECT ${ji.alias}.*`;
+        let joins = '';
+        // Every join below this one lives inside the subquery, so every one of
+        // them has to be projected out of it, not just the direct children.
+        // A child which became a subquery of its own has already flattened its
+        // whole subtree into columns, so everything under it is read from that
+        // child rather than packed a second time.
+        const projectJoin = (j: JoinInstance, from: string | undefined) => {
+          const fieldList = this.joinProjectionFieldList(j);
+          if (fieldList.length > 0) {
+            select +=
+              from === undefined
+                ? `, ${this.parent.dialect.sqlSelectAliasAsStruct(
+                    j.alias,
+                    fieldList
+                  )} AS ${j.alias}`
+                : `, ${from}.${j.alias} AS ${j.alias}`;
+          }
+          const readFrom = from ?? (j.isSubquery() ? j.alias : undefined);
+          for (const below of j.children) {
+            projectJoin(below, readFrom);
+          }
+        };
+        for (const childJoin of ji.children) {
+          joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
+          projectJoin(childJoin, undefined);
+        }
+        select += `\nFROM ${structSQL} AS ${
+          ji.alias
+        }\n${joins}\nWHERE ${conditions?.join(' AND ')}\n`;
+        s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
+          ji.alias
+        }\n  ON ${onCondition}\n`;
+        return s;
+      }
+    } else if (qsDef.type === 'array') {
+      if (qs.parent === undefined || ji.parent === undefined) {
+        throw new Error('Internal Error, nested structure with no parent.');
+      }
+      // We need an SQL expression which results in the array for us to pass to un-nest
+      let arrayExpression: string;
+
+      if (hasExpression(qsDef)) {
+        // If this array is NOT contained in the parent, but a computed entity
+        // then the thing we are joining is not "parent.childName", but
+        // the expression which is built in that namespace
+        arrayExpression = exprToSQL(this.rootResult, qs.parent, qsDef.e);
+      } else {
+        // If this is a reference through an expression at the top level,
+        // need to generate the expression because the expression is written
+        // in the top level, this call is being used to generate the join.
+        // Below the top level, the expression will have been written into
+        // a join at the top level, and the name will exist.
+        // ... not sure this is the right way to do this
+        // ... the test for this is called "source repeated record containing an array"
+        arrayExpression = sqlFullChildReference(
+          qs.parent,
+          qsDef.name,
+          depth === 0 ? {result: this.rootResult, field: this} : undefined
+        );
+      }
+      // we need to generate primary key.  If parent has a primary key combine
+      // console.log(ji.alias, fieldExpression, this.inNestedPipeline());
+      s += `${this.parent.dialect.sqlUnnestAlias(
+        arrayExpression,
+        ji.alias,
+        ji.getDialectFieldList(),
+        ji.makeUniqueKey,
+        isBasicArray(qsDef),
+        this.inNestedPipeline()
+      )}\n`;
+    } else if (qsDef.type === 'record') {
+      throw new Error(
+        'Internal Error: records should never appear in join trees'
+      );
+    } else {
+      throw new Error(`Join type not implemented ${qs.structDef.type}`);
+    }
+    for (const childJoin of ji.children) {
+      s += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
+    }
+    return s;
+  }
+
+  /**
+   * Which column of which join a reference needs, or undefined when it needs
+   * none.  Walking `path` from `from`, the answer is the member of the
+   * innermost join along it -- a record is kept whole, since a reference into
+   * one is a reference to the column holding it.
+   *
+   * Two kinds of path need no column.  One ending at a computed field
+   * contributes that field's name, which is no column of the source; the
+   * columns the computation reads arrive as references of their own.  And a
+   * `having:` or `calculate:` names an *output* field, so its path is rooted
+   * in the query's output rather than its source and need not resolve here at
+   * all.  An output name which happens to match a source column resolves as
+   * though it were one, which costs nothing: a query's own source is never
+   * packed, only the joins beneath a filtered one.
+   */
+  private packedColumnFor(
+    from: QueryStruct,
+    path: string[]
+  ): [string, string] | undefined {
+    let struct = from;
+    let alias = struct.getIdentifier();
+    let column: string | undefined = undefined;
+    for (const name of path) {
+      const child = struct.getChildByName(name);
+      if (child === undefined) return undefined;
+      if (!(child instanceof QueryFieldStruct)) {
+        column ??= name;
+        break;
+      }
+      struct = child.queryStruct;
+      if (struct.getJoinableParent() === struct) {
+        // A join: what the path named above it says nothing about what this
+        // one has to pack.
+        alias = struct.getIdentifier();
+        column = undefined;
+      } else {
+        column ??= name;
+      }
+    }
+    return column === undefined ? undefined : [alias, column];
+  }
+
+  /**
+   * Which columns of each join have to survive being packed into a struct:
+   * every column the segment's field usage names, plus each join's primary
+   * key, which the compiler reaches for as a distinct key without any
+   * expression in the query naming it.
+   */
+  private packedColumnsByJoin(): Map<string, Set<string>> {
+    if (this.packedColumns === undefined) {
+      const packed = new Map<string, Set<string>>();
+      const needed = (found: [string, string] | undefined) => {
+        if (found === undefined) return;
+        const [alias, column] = found;
+        const columns = packed.get(alias);
+        if (columns) {
+          columns.add(column);
+        } else {
+          packed.set(alias, new Set([column]));
+        }
+      };
+      const usage = isRawSegment(this.firstSegment)
+        ? []
+        : (this.firstSegment.expandedFieldUsage ?? []);
+      for (const {path} of usage) {
+        needed(this.packedColumnFor(this.parent, path));
+      }
+      // What a primary key needs is what it reads: a computed key's name is
+      // not a column, and the columns its expression reads are named nowhere
+      // else in the query.
+      for (const ji of this.rootResult.joins.values()) {
+        const primaryKey = ji.queryStruct.primaryKey();
+        if (primaryKey === undefined) continue;
+        const keyDef = primaryKey.fieldDef;
+        if (hasExpression(keyDef)) {
+          for (const {path} of fieldUsageFrom(keyDef.refSummary)) {
+            needed(this.packedColumnFor(ji.queryStruct, path));
+          }
+        } else {
+          needed(this.packedColumnFor(ji.queryStruct, [activeName(keyDef)]));
+        }
+      }
+      this.packedColumns = packed;
+    }
+    return this.packedColumns;
+  }
+
+  // What a join contributes to the SELECT of a filtered join's subquery: every
+  // column named outside the subquery, and the generated __distinct_key when
+  // the join needed one. A field is packed under the column it reads, which
+  // is how references outside the subquery name it; a `rename:` leaves that
+  // different from the name the query knows the field by.
+  private joinProjectionFieldList(ji: JoinInstance): DialectFieldList {
+    const packed = this.packedColumnsByJoin().get(ji.alias);
+    const dialect = ji.queryStruct.dialect;
+    const fieldList: DialectFieldList = ji.queryStruct.structDef.fields
+      .filter(fieldIsIntrinsic)
+      .filter(f => packed?.has(activeName(f)))
+      .map(f => ({
+        typeDef: f,
+        sqlExpression: dialect.sqlQuoteIdentifier(f.name),
+        rawName: f.name,
+      }));
+    if (ji.makeUniqueKey) {
+      fieldList.push({
+        typeDef: {type: 'string'},
+        sqlExpression: dialect.sqlQuoteIdentifier('__distinct_key'),
+        rawName: '__distinct_key',
+      });
+    }
+    return fieldList;
+  }
+
+  // BigQuery has wildcard psudo columns that are treated differently
+  //  SELECT * FROM xxx doesn't include these psuedo columns but we need them so
+  //  filters can get pushed down properly when generating a UNIQUE key.
+  //  No other dialect really needs this so we are coding here but maybe someday
+  //  this makes its way into the dialect.
+  generateSQLPassthroughKeys(qs: QueryStruct): string {
+    let ret = '';
+    if (qs.dialect.name === 'standardsql') {
+      const psudoCols = [
+        '_TABLE_SUFFIX',
+        '_PARTITIONDATE',
+        '_PARTITIONTIME',
+      ].filter(element => qs.getChildByName(element) !== undefined);
+      if (psudoCols.length > 0) {
+        ret = ', ' + psudoCols.join(', ');
+      }
+    }
+    return ret;
+  }
+
+  generateSQLJoins(stageWriter: StageWriter): string {
+    let s = '';
+    // get the first value from the map (weird, I know)
+    const [[, ji]] = this.rootResult.joins;
+    const qs = ji.queryStruct;
+    // Joins
+    let structSQL = this.getStructSourceSQL(qs, stageWriter);
+    if (isIndexSegment(this.firstSegment)) {
+      structSQL = this.parent.dialect.sqlSampleTable(
+        structSQL,
+        this.firstSegment.sample,
+        qs.structDef.type === 'table'
+      );
+      if (this.firstSegment.sample) {
+        const d = this.parent.dialect;
+        structSQL = stageWriter.addStage(
+          `SELECT * from ${structSQL} as x ${d.sqlOrderByLimit([], 100000)}`
+        );
+      }
+    }
+    if (isBaseTable(qs.structDef)) {
+      if (ji.makeUniqueKey) {
+        const passKeys = this.generateSQLPassthroughKeys(qs);
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlQuoteIdentifier(
+          '__distinct_key'
+        )}, x.* ${passKeys} FROM ${structSQL} as x)`;
+      }
+      s += `FROM ${structSQL} as ${ji.alias}\n`;
+    } else {
+      throw new Error('Internal Error, queries must start from a basetable');
+    }
+
+    // Sort children to ensure array joins are processed before table joins that might reference them
+    //
+    const sortedChildren = [...ji.children].sort((a, b) => {
+      const aIsArray = a.queryStruct.structDef.type === 'array';
+      const bIsArray = b.queryStruct.structDef.type === 'array';
+      if (aIsArray && !bIsArray) return -1;
+      if (!aIsArray && bIsArray) return 1;
+      return 0;
+    });
+
+    for (const childJoin of sortedChildren) {
+      s += this.generateSQLJoinBlock(stageWriter, childJoin, 0);
+    }
+    return s;
+  }
+
+  /**
+   * Collect all array joins from the join tree in depth-first order.
+   * This ordering ensures parent arrays are ordered before child arrays.
+   */
+  collectArrayJoins(ji: JoinInstance): JoinInstance[] {
+    const result: JoinInstance[] = [];
+    if (ji.queryStruct.structDef.type === 'array') {
+      result.push(ji);
+    }
+    for (const child of ji.children) {
+      result.push(...this.collectArrayJoins(child));
+    }
+    return result;
+  }
+
+  genereateSQLOrderBy(
+    queryDef: QuerySegment,
+    resultStruct: FieldInstanceResult
+  ): string[] {
+    // Collect array joins for dialects that need explicit ordering.
+    // Only for project queries - reduce queries aggregate rows so individual
+    // row order doesn't matter, and we can't ORDER BY columns not in GROUP BY.
+    let arrayJoins: JoinInstance[] = [];
+    if (
+      this.parent.dialect.requiresExplicitUnnestOrdering &&
+      this.firstSegment.type === 'project'
+    ) {
+      const [[, rootJoin]] = this.rootResult.joins;
+      arrayJoins = this.collectArrayJoins(rootJoin);
+    }
+
+    if (this.firstSegment.type === 'project' && !queryDef.orderBy) {
+      // For project without explicit ordering, we still need array ordinality
+      // ordering if the dialect requires it
+      if (arrayJoins.length === 0) {
+        return []; // No default ordering for project.
+      }
+    }
+    // Intermediate results (in a pipeline or join) that have no limit, don't need an orderby
+    //  Some database don't have this optimization.
+    if (this.fieldDef.pipeline.length > 1 && queryDef.limit === undefined) {
+      return [];
+    }
+    // ignore orderby if all aggregates.
+    if (resultStruct.getRepeatedResultType() === 'inline_all_numbers') {
+      return [];
+    }
+
+    // if we are in the last stage of a query and the query is a subquery
+    //  and has no limit, ORDER BY is superfluous
+    if (
+      this.isJoinedSubquery &&
+      this.fieldDef.pipeline.length === 1 &&
+      queryDef.limit === undefined
+    ) {
+      return [];
+    }
+
+    const orderBy = queryDef.orderBy || resultStruct.calculateDefaultOrderBy();
+    const o: string[] = [];
+    for (const f of orderBy) {
+      if (typeof f.field === 'string') {
+        // convert name to an index
+        const fi = resultStruct.getField(f.field);
+        if (fi && fi.fieldUsage.type === 'result') {
+          if (this.parent.dialect.orderByClause === 'ordinal') {
+            o.push(`${fi.fieldUsage.resultIndex} ${f.dir || 'ASC'}`);
+          } else if (this.parent.dialect.orderByClause === 'output_name') {
+            o.push(
+              `${this.parent.dialect.sqlQuoteIdentifier(f.field)} ${
+                f.dir || 'ASC'
+              }`
+            );
+          } else if (this.parent.dialect.orderByClause === 'expression') {
+            const fieldExpr = fi.getSQL();
+            o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
+          }
+        } else {
+          throw new MalloyCompileError(
+            `ORDER BY references unknown field '${f.field}'.`,
+            'compiler-orderby-field-not-found',
+            queryDef.referencedAt
+          );
+        }
+      } else {
+        if (this.parent.dialect.orderByClause === 'ordinal') {
+          o.push(`${f.field} ${f.dir || 'ASC'}`);
+        } else if (this.parent.dialect.orderByClause === 'output_name') {
+          const orderingField = resultStruct.getFieldByNumber(f.field);
+          o.push(
+            `${this.parent.dialect.sqlQuoteIdentifier(
+              orderingField.name
+            )} ${f.dir || 'ASC'}`
+          );
+        } else if (this.parent.dialect.orderByClause === 'expression') {
+          const orderingField = resultStruct.getFieldByNumber(f.field);
+          const fieldExpr = orderingField.fif.getSQL();
+          o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
+        }
+      }
+    }
+
+    // Add array ordinality ordering for dialects that require it
+    for (const aj of arrayJoins) {
+      o.push(`${aj.alias}_outer.__row_id ASC`);
+    }
+
+    return o;
+  }
+
+  /**
+   * The single-scan form, with no `group_set` fan-out: one `SELECT` over the
+   * scan, grouped by the dimensions. Used both for a query with no nests and --
+   * via canUseSingleGroupSetSQL -- for one whose only nests are single-stage
+   * grain-preserving projections, which become an array-agg in the same SELECT.
+   * That array-agg needs no `FILTER (WHERE group_set=N)` (every row is in the
+   * one group), and aggregate/window expressions must not gate themselves by
+   * group_set either, so emitsGroupSet is cleared (see FieldInstanceResultRoot).
+   */
+  generateSimpleSQL(stageWriter: StageWriter): string {
+    this.rootResult.emitsGroupSet = false;
+    const limit =
+      !isRawSegment(this.firstSegment) && this.firstSegment.limit
+        ? this.firstSegment.limit
+        : undefined;
+    let s = 'SELECT \n';
+    // A projection groups nothing; a reduce groups its scalar result fields.
+    const grouped = this.firstSegment.type === 'reduce';
+    const columns: StageOutputColumn[] = [];
+    const outputPipelinedSQL: OutputPipelinedSQL[] = [];
+
+    for (const [name, fi] of this.rootResult.allFields) {
+      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
+      if (fi instanceof FieldInstanceField) {
+        if (fi.fieldUsage.type === 'result') {
+          columns.push(
+            aliasedColumn(fi.generateExpression(), sqlName, {
+              isDimension: grouped && isScalarField(fi.f),
+              constant: !readsColumn(fi.f.fieldDef),
+            })
+          );
+        }
+      } else if (fi instanceof FieldInstanceResult) {
+        const turtle = this.generateTurtleSQL(
+          fi,
+          stageWriter,
+          sqlName,
+          outputPipelinedSQL,
+          true
+        );
+        columns.push(aliasedColumn(turtle, sqlName, {isDimension: false}));
+      }
+    }
+    s += indent(columns.map(c => ` ${c.sql}`).join(',\n')) + '\n';
+
+    s += this.generateSQLJoins(stageWriter);
+    s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
+    s += sqlGroupBy(this.parent.dialect, columns);
+
+    s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
+
+    // order by, limit
+    s += this.parent.dialect.sqlOrderByLimit(
+      this.genereateSQLOrderBy(
+        this.firstSegment as QuerySegment,
+        this.rootResult
+      ),
+      limit
+    );
+    this.resultStage = stageWriter.addStage(s);
+    // Consumes any pipelined turtle output. The nests that reach here are
+    // single-stage (canUseSingleGroupSetSQL), so outputPipelinedSQL is empty and
+    // this is a no-op; kept so the function stays correct if that guard widens.
+    this.resultStage = this.generatePipelinedStages(
+      outputPipelinedSQL,
+      this.resultStage,
+      stageWriter,
+      []
+    );
+    return this.resultStage;
+  }
+
+  /**
+   * Can this query take the single-group-set fast path? True when the query
+   * needs no group-set fan-out: it has nests (so it's "complex") but every one
+   * is a single-stage grain-preserving projection riding group_set 0, and there
+   * are no reduce nests, ungroupings, or totals (all of which would mint a
+   * second group set and push maxGroupSet above 0). Anything outside that shape
+   * falls back to the general demux path, which is correct for every case.
+   */
+  canUseSingleGroupSetSQL(): boolean {
+    if (this.maxGroupSet !== 0) return false;
+    if (this.firstSegment.type !== 'reduce') return false;
+    for (const [, fi] of this.rootResult.allFields) {
+      if (fi instanceof FieldInstanceField) {
+        // A root-level `calculate:` (window) needs the general path's analytic
+        // handling: on dialects that can't partition a window on an expression
+        // (BigQuery) it rides a lateral-join bag this path doesn't build.
+        if (fieldIsAnalytic(fi)) return false;
+      } else if (fi instanceof FieldInstanceResult) {
+        if (fi.firstSegment.type !== 'project') return false;
+        if (fi.turtleDef.pipeline.length !== 1) return false;
+        if (fi.getRepeatedResultType() !== 'nested') return false;
+        // A `calculate:` inside a `select:` would put a window function inside
+        // the array-agg, which no dialect allows; leave it on the general path.
+        for (const [, nestField] of fi.allFields) {
+          if (
+            nestField instanceof FieldInstanceField &&
+            fieldIsAnalytic(nestField)
+          ) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  // This probably should be generated in a dialect independat way.
+  //  but for now, it is just googleSQL.
+  generatePipelinedStages(
+    outputPipelinedSQL: OutputPipelinedSQL[],
+    lastStageName: string,
+    stageWriter: StageWriter,
+    // Every column `lastStageName` produces. The replaced turtle columns (in
+    // outputPipelinedSQL) are dropped and re-added by the pipeline expressions;
+    // everything else is carried through unchanged by its emitted name -- for a
+    // grouped stage that is the group-set-suffixed form (e.g. `f1__0`), not the
+    // final output name.
+    priorStageColumns: StageOutputColumn[],
+    finalStageOrderBy = ''
+  ): string {
+    if (outputPipelinedSQL.length === 0) {
+      return lastStageName;
+    }
+
+    const pipelinesSQL = outputPipelinedSQL
+      .map(o => `${o.pipelineSQL} as ${o.sqlFieldName}`)
+      .join(',\n');
+    let retSQL: string;
+    if (this.parent.dialect.supportsSelectReplace) {
+      retSQL = `SELECT * replace (${pipelinesSQL}) FROM ${lastStageName}
+        `;
+    } else {
+      const outputFields = outputPipelinedSQL.map(f => f.sqlFieldName);
+      const fields = priorStageColumns
+        .map(c => c.name)
+        .filter(name => outputFields.indexOf(name) === -1);
+      retSQL = `SELECT ${
+        fields.length > 0 ? fields.join(', ') + ',' : ''
+      } ${pipelinesSQL} FROM ${lastStageName}`;
+      if (finalStageOrderBy.length > 0) {
+        retSQL += `\n${finalStageOrderBy}`;
+      }
+    }
+    return stageWriter.addStage(retSQL);
+  }
+
+  generateStage0Fields(
+    resultSet: FieldInstanceResult,
+    output: StageOutputContext,
+    stageWriter: StageWriter
+  ) {
+    const scalarFields: [string, FieldInstanceField][] = [];
+    const otherFields: [string, FieldInstance][] = [];
+    for (const [name, fi] of resultSet.allFields) {
+      if (fi instanceof FieldInstanceField && isScalarField(fi.f)) {
+        scalarFields.push([name, fi]);
+      } else {
+        otherFields.push([name, fi]);
+      }
+    }
+    const orderedFields = [...scalarFields, ...otherFields];
+
+    for (const [name, fi] of orderedFields) {
+      const outputName = this.parent.dialect.sqlQuoteIdentifier(
+        `${name}__${resultSet.groupSet}`
+      );
+      if (fi instanceof FieldInstanceField) {
+        if (fi.fieldUsage.type === 'result') {
+          const exp = fi.getSQL();
+          if (isScalarField(fi.f)) {
+            if (
+              this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
+              this.rootResult.queryUsesPartitioning &&
+              resultSet.firstSegment.type === 'reduce'
+            ) {
+              // BigQuery can't partition aggregate function except when the field has no
+              //  expression.  Additionally it can't partition by floats.  We stuff expressions
+              //  and numbers as strings into a lateral join when the query has ungrouped expressions
+              const outputFieldName = `__lateral_join_bag.${outputName}`;
+              fi.analyticalSQL = outputFieldName;
+              output.lateralJoinSQLExpressions.push({
+                sql: exp,
+                name: outputName,
+              });
+              output.columns.push({
+                sql: outputFieldName,
+                expr: outputFieldName,
+                name: outputName,
+                isDimension: true,
+              });
+              if (fi.f.fieldDef.type === 'number') {
+                const outputNameString = this.parent.dialect.sqlQuoteIdentifier(
+                  `${name}__${resultSet.groupSet}_string`
+                );
+                const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
+                output.columns.push({
+                  sql: outputFieldNameString,
+                  expr: outputFieldNameString,
+                  name: outputNameString,
+                  isDimension: true,
+                });
+                output.lateralJoinSQLExpressions.push({
+                  sql: `CAST(${exp} as STRING)`,
+                  name: outputNameString,
+                });
+                fi.partitionSQL = outputFieldNameString;
+              }
+            } else {
+              // just treat it like a regular field.
+              output.columns.push(
+                aliasedColumn(exp, outputName, {
+                  isDimension: true,
+                  constant: !readsColumn(fi.f.fieldDef),
+                })
+              );
+            }
+          } else if (isBasicCalculation(fi.f)) {
+            output.columns.push(
+              aliasedColumn(exp, outputName, {isDimension: false})
+            );
+          }
+        }
+      } else if (fi instanceof FieldInstanceResult) {
+        if (fi.firstSegment.type === 'reduce') {
+          this.generateStage0Fields(fi, output, stageWriter);
+        } else if (fi.firstSegment.type === 'project') {
+          const s = this.generateTurtleSQL(
+            fi,
+            stageWriter,
+            outputName,
+            output.outputPipelinedSQL
+          );
+          output.columns.push(
+            aliasedColumn(s, outputName, {isDimension: false})
+          );
+        }
+      }
+    }
+    // LTNOTE: we could optimize here in the future.
+    //  leaf turtles can have their having clauses in the main query
+    //  turtles with leaves need to promote their state to their
+    //  children.
+    const having = this.generateSQLFilters(resultSet, 'having');
+    if (!having.empty()) {
+      // if we have no children, the having can run at the root level
+      if (resultSet.childGroups.length === 1) {
+        resultSet
+          .root()
+          .havings.add(
+            `(group_set<>${resultSet.groupSet} OR (group_set=${
+              resultSet.groupSet
+            } AND ${having.sql()}))`
+          );
+      } else {
+        resultSet.hasHaving = true;
+        output.columns.push(
+          aliasedColumn(
+            `CASE WHEN group_set=${
+              resultSet.groupSet
+            } THEN CASE WHEN ${having.sql()} THEN 0 ELSE 1 END END`,
+            `__delete__${resultSet.groupSet}`,
+            {isDimension: false}
+          )
+        );
+      }
+    }
+  }
+
+  generateSQLWhereChildren(resultStruct: FieldInstanceResult): AndChain {
+    const wheres = new AndChain();
+    for (const [, field] of resultStruct.allFields) {
+      if (field.type === 'query') {
+        const fir = field as FieldInstanceResult;
+        // A projection first stage's `where:` folds into its array-agg
+        // condition (see generateTurtleSQL / sqlAggregateTurtle), not a
+        // scan-level WHERE: it rides its enclosing group_set, so a WHERE here
+        // can't isolate it from the parent, and its childGroups is empty (no
+        // group_set of its own) which would emit a broken `group_set IN ()`.
+        if (fir.firstSegment.type !== 'project') {
+          const turtleWhere = this.generateSQLFilters(fir, 'where');
+          if (turtleWhere.present()) {
+            const groupSets = fir.childGroups.join(',');
+            wheres.add(
+              `(group_set NOT IN (${groupSets})` +
+                ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
+            );
+          }
+        }
+        wheres.addChain(this.generateSQLWhereChildren(fir));
+      }
+    }
+    return wheres;
+  }
+
+  generateSQLWhereTurtled(): string {
+    const wheres = this.generateSQLFilters(this.rootResult, 'where');
+    wheres.addChain(this.generateSQLWhereChildren(this.rootResult));
+    return wheres.sql('where');
+  }
+
+  // iterate over the nested queries looking for Havings and Limits
+  //
+  // Think of the result graph as a tree.
+  //
+  // Havings in leaves have already been removed in the stage0 queries we are only concerned with
+  //. having in nodes with children
+  //
+  //  First step is to generate the partition and order by code for each of the relevent groupsets
+  //
+  //  Next we compute rows that are over the order by limit.  Nodes with children are additionally
+  //    partitioned by having.
+  //
+  // Scan the parent for children.  If there are any nodes that need to be deleted, note them.
+  //
+  // Finally remove any node either over the limit or part of a parent's having.
+  //
+  generateSQLHavingLimit(
+    stageWriter: StageWriter,
+    lastStageName: string
+  ): string {
+    const havingFields: string[] = [];
+    const limitExpressions: string[] = [];
+    const limitValues: number[] = [];
+    const limitComplexClauses: string[] = [];
+    const limitSimpleFilters: string[] = [];
+    const partitionSQL: string[] = [];
+    let hasAnyLimits = false;
+    let hasResultsWithChildren = false;
+
+    const resultsWithHavingOrLimit = this.rootResult.selectStructs(
+      [],
+      (result: FieldInstanceResult) =>
+        result.hasHaving || usesShaveLimit(result)
+    );
+
+    if (resultsWithHavingOrLimit.length > 0) {
+      // loop through an generate the partitions
+      for (const result of this.rootResult.selectStructs(
+        [],
+        (_result: FieldInstanceResult) => true
+      )) {
+        const hasLimit = usesShaveLimit(result);
+        hasResultsWithChildren ||=
+          result.childGroups.length > 1 && (hasLimit || result.hasHaving);
+        hasAnyLimits ||= hasLimit;
+
+        // find all the parent dimension names.
+        const dimensions: string[] = [];
+        let r: FieldInstanceResult | undefined = result;
+        while (r) {
+          for (const name of r.fieldNames(fi => isScalarField(fi.f))) {
+            dimensions.push(
+              this.parent.dialect.sqlQuoteIdentifier(`${name}__${r.groupSet}`)
+            );
+          }
+          r = r.parent;
+        }
+
+        let partition = '';
+        if (dimensions.length > 0) {
+          partition = 'PARTITION BY ';
+          partition += dimensions
+            .map(this.parent.dialect.castToString)
+            .join(',');
+        }
+        partitionSQL[result.groupSet] = partition;
+      }
+
+      for (const result of resultsWithHavingOrLimit) {
+        const limit = result.getLimit();
+        // if we have a limit
+        if (limit) {
+          limitValues[result.groupSet] = limit;
+          const obSQL: string[] = [];
+          let orderingField;
+          const orderByDef =
+            (result.firstSegment as QuerySegment).orderBy ||
+            result.calculateDefaultOrderBy();
+
+          // Build up the ORDER BY clause from all ordering fields
+          for (const ordering of orderByDef) {
+            if (typeof ordering.field === 'string') {
+              orderingField = {
+                name: ordering.field,
+                fif: result.getField(ordering.field),
+              };
+            } else {
+              orderingField = result.getFieldByNumber(ordering.field);
+            }
+            obSQL.push(
+              ' ' +
+                this.parent.dialect.sqlQuoteIdentifier(
+                  `${orderingField.name}__${result.groupSet}`
+                ) +
+                ` ${ordering.dir || 'ASC'}`
+            );
+          }
+
+          // partition for a row number is the parent if it exists.
+          let p = '';
+          if (result.parent && partitionSQL[result.parent.groupSet]) {
+            p = partitionSQL[result.parent.groupSet] + ', group_set';
+          } else {
+            p = 'PARTITION BY group_set';
+          }
+
+          // if this has nested data and a having, we want to partition by the 'having' so we don't count
+          // deleted rows.
+          if (result.hasHaving) {
+            p = p + `, __delete__${result.groupSet}`;
+          }
+
+          // Generate a single ROW_NUMBER() with all ORDER BY fields
+          limitExpressions.push(
+            `CASE WHEN GROUP_SET=${result.groupSet} THEN
+               ROW_NUMBER() OVER (${p} ORDER BY ${obSQL.join(
+                 ','
+               )}) END  as __row_number__${result.groupSet}`
+          );
+
+          // if the group set is a leaf, we can write a simple where clause.
+          const filterClause = `(GROUP_SET = ${
+            result.groupSet
+          } AND __row_number__${result.groupSet} > ${
+            limitValues[result.groupSet]
+          })`;
+          if (result.childGroups.length === 1) {
+            limitSimpleFilters.push(filterClause);
+          } else {
+            // its a complex
+            limitComplexClauses[result.groupSet] =
+              `CASE WHEN ${filterClause} THEN 1 ELSE 0 END`;
+          }
+        }
+      }
+    }
+    // generate over_limit flag
+    if (resultsWithHavingOrLimit.length > 0) {
+      if (limitExpressions.length > 0) {
+        if (hasAnyLimits) {
+          lastStageName = stageWriter.addStage(
+            `SELECT\n  *,\n ${limitExpressions.join(
+              ',\n'
+            )} \nFROM ${lastStageName}\n`
+          );
+        }
+      }
+      let simpleLimits = '1=1';
+      if (limitSimpleFilters.length > 0) {
+        simpleLimits = ` NOT (${limitSimpleFilters.join('\n OR ')})`;
+      }
+      if (hasAnyLimits && !hasResultsWithChildren) {
+        lastStageName = stageWriter.addStage(
+          `SELECT * FROM ${lastStageName}\n WHERE ${simpleLimits}\n`
+        );
+      } else if (hasResultsWithChildren) {
+        // we may or my not have any limits
+        const havings = new AndChain();
+        for (const result of resultsWithHavingOrLimit) {
+          const testKey: string[] = [];
+          // parent group
+          if (result.hasHaving && result.childGroups.length > 1) {
+            testKey.push(`__delete__${result.groupSet}`);
+          }
+          // limit
+          if (limitComplexClauses[result.groupSet]) {
+            testKey.push(limitComplexClauses[result.groupSet]);
+          }
+
+          if (testKey.length > 0 && result.childGroups.length > 1) {
+            havingFields.push(
+              `MAX(CASE WHEN group_set IN (${result.childGroups.join(
+                ','
+              )}) THEN ${testKey.join(' + ')}
+               END) OVER(${partitionSQL[result.groupSet]}) as __shaving__${
+                 result.groupSet
+               }`
+            );
+            havings.add(
+              `group_set IN (${result.childGroups.join(',')}) AND __shaving__${
+                result.groupSet
+              } > 0`
+            );
+          }
+        }
+        lastStageName = stageWriter.addStage(
+          `SELECT\n  *,\n  ${havingFields.join(
+            ',\n  '
+          )} \nFROM ${lastStageName} WHERE ${simpleLimits}\n`
+        );
+        lastStageName = stageWriter.addStage(
+          `SELECT *\nFROM ${lastStageName}\nWHERE NOT (${havings.sqlOr()})\n`
+        );
+      }
+    }
+    return lastStageName;
+  }
+
+  generateSQLStage0(stageWriter: StageWriter): string {
+    let s = 'SELECT\n';
+    let from = this.generateSQLJoins(stageWriter);
+    const wheres = this.generateSQLWhereTurtled();
+
+    const f: StageOutputContext = {
+      columns: [
+        {
+          sql: 'group_set',
+          expr: 'group_set',
+          name: 'group_set',
+          isDimension: true,
+        },
+      ],
+      lateralJoinSQLExpressions: [],
+      groupsAggregated: [],
+      outputPipelinedSQL: [],
+    };
+    this.generateStage0Fields(this.rootResult, f, stageWriter);
+
+    if (this.firstSegment.type === 'project') {
+      throw new MalloyCompileError(
+        "Cannot use 'select:' in a stage that contains nested views. " +
+          'Use `group_by:` or restructure the pipeline.',
+        'compiler-project-with-turtles',
+        this.fieldDef.location
+      );
+    }
+
+    const groupBy = sqlGroupBy(this.parent.dialect, f.columns);
+
+    from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
+
+    s += indent(f.columns.map(c => c.sql).join(',\n')) + '\n';
+
+    if (f.lateralJoinSQLExpressions.length > 0) {
+      from += this.parent.dialect.sqlLateralJoinBag(
+        f.lateralJoinSQLExpressions
+      );
+    }
+    s += from + wheres + groupBy + this.rootResult.havings.sql('having');
+
+    // generate the stage
+    const resultStage = stageWriter.addStage(s);
+
+    // generate stages for havings and limits
+    this.resultStage = this.generateSQLHavingLimit(stageWriter, resultStage);
+
+    this.resultStage = this.generatePipelinedStages(
+      f.outputPipelinedSQL,
+      this.resultStage,
+      stageWriter,
+      f.columns
+    );
+
+    return this.resultStage;
+  }
+
+  generateDepthNFields(
+    depth: number,
+    resultSet: FieldInstanceResult,
+    output: StageOutputContext,
+    stageWriter: StageWriter
+  ) {
+    const groupsToMap: number[] = [];
+    for (const [name, fi] of resultSet.allFields) {
+      const sqlFieldName = this.parent.dialect.sqlQuoteIdentifier(
+        `${name}__${resultSet.groupSet}`
+      );
+      if (fi instanceof FieldInstanceField) {
+        if (fi.fieldUsage.type === 'result') {
+          if (isScalarField(fi.f)) {
+            const exp = caseGroup(
+              resultSet.groupSet > 0 ? resultSet.childGroups : [],
+              sqlFieldName
+            );
+            output.columns.push(
+              aliasedColumn(exp, sqlFieldName, {isDimension: true})
+            );
+          } else if (isBasicCalculation(fi.f)) {
+            const exp = this.parent.dialect.sqlAnyValue(
+              resultSet.groupSet,
+              sqlFieldName
+            );
+            output.columns.push(
+              aliasedColumn(exp, sqlFieldName, {isDimension: false})
+            );
+          }
+        }
+      } else if (fi instanceof FieldInstanceResult) {
+        if (fi.depth > depth) {
+          // ignore it, we've already dealt with it.
+        } else if (fi.depth === depth) {
+          const s = this.generateTurtleSQL(
+            fi,
+            stageWriter,
+            sqlFieldName,
+            output.outputPipelinedSQL
+          );
+          output.groupsAggregated.push({
+            fromGroup: fi.groupSet,
+            toGroup: resultSet.groupSet,
+          });
+          groupsToMap.push(fi.groupSet);
+          output.columns.push(
+            aliasedColumn(s, sqlFieldName, {isDimension: false})
+          );
+        } else {
+          this.generateDepthNFields(depth, fi, output, stageWriter);
+        }
+      }
+    }
+    if (output.groupsAggregated.length > 0) {
+      if (!this.parent.dialect.hasLateralColumnAliasInSelect) {
+        // Safe to remap in-place; aggregate expressions won't see the alias.
+        // This runs on every recursive return but column[0] replacement is
+        // idempotent — last call builds the full CASE from all accumulated
+        // groupsAggregated entries. The output is still named group_set.
+        let groupSetSQL = 'CASE ';
+        for (const m of output.groupsAggregated) {
+          groupSetSQL += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
+        }
+        groupSetSQL += 'ELSE group_set END';
+        output.columns[0] = aliasedColumn(groupSetSQL, 'group_set', {
+          isDimension: true,
+        });
+      }
+      // For hasLateralColumnAliasInSelect, the remap is handled in
+      // generateSQLDepthN to avoid adding it multiple times from recursion.
+    }
+  }
+
+  generateSQLDepthN(
+    depth: number,
+    stageWriter: StageWriter,
+    stageName: string
+  ): string {
+    let s = 'SELECT \n';
+    const f: StageOutputContext = {
+      columns: [
+        {
+          sql: 'group_set',
+          expr: 'group_set',
+          name: 'group_set',
+          isDimension: true,
+        },
+      ],
+      lateralJoinSQLExpressions: [],
+      groupsAggregated: [],
+      outputPipelinedSQL: [],
+    };
+    this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
+
+    // When column aliases are visible in the same SELECT (e.g. Databricks),
+    // replace column[0]'s SQL with the remap CASE aliased as
+    // __remapped_group_set (not group_set). This avoids shadowing the input
+    // group_set column that aggregate expressions reference. GROUP BY still
+    // uses position 1 (the remapped value), so rows with different original
+    // group_sets collapse correctly. A follow-up CTE renames it back, so the
+    // column's carried-forward name stays group_set.
+    const needsRemapStage =
+      f.groupsAggregated.length > 0 &&
+      this.parent.dialect.hasLateralColumnAliasInSelect;
+    if (needsRemapStage) {
+      let groupSetSQL = 'CASE ';
+      for (const m of f.groupsAggregated) {
+        groupSetSQL += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
+      }
+      groupSetSQL += 'ELSE group_set END';
+      f.columns[0] = {
+        sql: `${groupSetSQL} as __remapped_group_set`,
+        expr: groupSetSQL,
+        name: 'group_set',
+        isDimension: true,
+      };
+    }
+
+    s += indent(f.columns.map(c => c.sql).join(',\n')) + '\n';
+    s += `FROM ${stageName}\n`;
+    const where = this.rootResult.eliminateComputeGroupsSQL();
+    if (where.length > 0) {
+      s += `WHERE ${where}\n`;
+    }
+    s += sqlGroupBy(this.parent.dialect, f.columns);
+
+    this.resultStage = stageWriter.addStage(s);
+
+    if (needsRemapStage) {
+      const cols = f.columns.slice(1).map(c => c.name);
+      const remapSQL = `SELECT \n${indent(
+        ['__remapped_group_set as group_set', ...cols].join(',\n')
+      )}\nFROM ${this.resultStage}\n`;
+      this.resultStage = stageWriter.addStage(remapSQL);
+    }
+
+    this.resultStage = this.generatePipelinedStages(
+      f.outputPipelinedSQL,
+      this.resultStage,
+      stageWriter,
+      f.columns
+    );
+
+    return this.resultStage;
+  }
+
+  genereateSQLCombineTurtles(
+    stageWriter: StageWriter,
+    stage0Name: string
+  ): string {
+    const limit =
+      !isRawSegment(this.firstSegment) && this.firstSegment.limit
+        ? this.firstSegment.limit
+        : undefined;
+    let s = 'SELECT\n';
+    // Columns this combine stage emits. Unlike the grouped stages above, these
+    // are the final output names (unsuffixed), not the group-set-suffixed form.
+    // A following pipelined stage carries them forward by name.
+    const columns: StageOutputColumn[] = [];
+    const outputPipelinedSQL: OutputPipelinedSQL[] = [];
+    for (const [name, fi] of this.rootResult.allFields) {
+      const sqlName = this.parent.dialect.sqlQuoteIdentifier(name);
+      if (fi instanceof FieldInstanceField) {
+        if (fi.fieldUsage.type === 'result') {
+          if (isScalarField(fi.f)) {
+            columns.push(
+              aliasedColumn(
+                this.parent.dialect.sqlQuoteIdentifier(
+                  `${name}__${this.rootResult.groupSet}`
+                ),
+                sqlName,
+                {isDimension: true}
+              )
+            );
+          } else if (isBasicCalculation(fi.f)) {
+            const lastTurtle = this.parent.dialect.sqlAnyValueLastTurtle(
+              this.parent.dialect.sqlQuoteIdentifier(
+                `${name}__${this.rootResult.groupSet}`
+              ),
+              this.rootResult.groupSet,
+              sqlName
+            );
+            columns.push({
+              sql: lastTurtle,
+              expr: lastTurtle,
+              name: sqlName,
+              isDimension: false,
+            });
+          }
+        }
+      } else if (fi instanceof FieldInstanceResult) {
+        if (fi.firstSegment.type === 'reduce') {
+          columns.push(
+            aliasedColumn(
+              this.generateTurtleSQL(
+                fi,
+                stageWriter,
+                sqlName,
+                outputPipelinedSQL
+              ),
+              sqlName,
+              {isDimension: false}
+            )
+          );
+        } else if (fi.firstSegment.type === 'project') {
+          const lastTurtle = this.parent.dialect.sqlAnyValueLastTurtle(
+            this.parent.dialect.sqlQuoteIdentifier(
+              `${name}__${this.rootResult.groupSet}`
+            ),
+            this.rootResult.groupSet,
+            sqlName
+          );
+          columns.push({
+            sql: lastTurtle,
+            expr: lastTurtle,
+            name: sqlName,
+            isDimension: false,
+          });
+        }
+      }
+    }
+    s += indent(columns.map(c => c.sql).join(',\n')) + `\nFROM ${stage0Name}\n`;
+
+    const where = this.rootResult.eliminateComputeGroupsSQL();
+    if (where.length > 0) {
+      s += `WHERE ${where}\n`;
+    }
+
+    s += sqlGroupBy(this.parent.dialect, columns);
+
+    // order by, limit
+    const orderTerms = this.genereateSQLOrderBy(
+      this.firstSegment as QuerySegment,
+      this.rootResult
+    );
+    s += this.parent.dialect.sqlOrderByLimit(orderTerms, limit);
+
+    this.resultStage = stageWriter.addStage(s);
+    this.resultStage = this.generatePipelinedStages(
+      outputPipelinedSQL,
+      this.resultStage,
+      stageWriter,
+      columns,
+      this.parent.dialect.sqlOrderByLimit(orderTerms, undefined)
+    );
+
+    return this.resultStage;
+  }
+
+  // create a simplified version of the StructDef for dialects.
+  buildDialectFieldList(resultStruct: FieldInstanceResult): DialectFieldList {
+    const dialectFieldList: DialectFieldList = [];
+
+    for (const [name, field] of resultStruct.allFields) {
+      if (
+        resultStruct.firstSegment.type === 'reduce' &&
+        field instanceof FieldInstanceResult
+      ) {
+        const {structDef, repeatedResultType} = this.generateTurtlePipelineSQL(
+          field,
+          new StageWriter(true, undefined),
+          '<nosource>'
+        );
+        if (repeatedResultType === 'nested') {
+          const multiLineNest: RepeatedRecordDef = {
+            ...structDef,
+            type: 'array',
+            elementTypeDef: {type: 'record_element'},
+            join: 'many',
+            name,
+          };
+          dialectFieldList.push({
+            typeDef: multiLineNest,
+            sqlExpression: this.parent.dialect.sqlQuoteIdentifier(
+              `${name}__${resultStruct.groupSet}`
+            ),
+            rawName: name,
+          });
+        } else {
+          const oneLineNest: RecordDef = {
+            ...structDef,
+            type: 'record',
+            join: 'one',
+            name,
+          };
+          dialectFieldList.push({
+            typeDef: oneLineNest,
+            sqlExpression: this.parent.dialect.sqlQuoteIdentifier(
+              `${name}__${resultStruct.groupSet}`
+            ),
+            rawName: name,
+          });
+        }
+      } else if (
+        resultStruct.firstSegment.type === 'reduce' &&
+        field instanceof FieldInstanceField &&
+        field.fieldUsage.type === 'result'
+      ) {
+        pushDialectField(dialectFieldList, {
+          fieldDef: field.f.fieldDef,
+          sqlExpression: this.parent.dialect.sqlQuoteIdentifier(
+            `${name}__${resultStruct.groupSet}`
+          ),
+          rawName: name,
+        });
+      } else if (
+        resultStruct.firstSegment.type === 'project' &&
+        field instanceof FieldInstanceField &&
+        field.fieldUsage.type === 'result'
+      ) {
+        pushDialectField(dialectFieldList, {
+          fieldDef: field.f.fieldDef,
+          sqlExpression: field.generateExpression(),
+          rawName: name,
+        });
+      }
+    }
+    return dialectFieldList;
+  }
+
+  generateTurtleSQL(
+    resultStruct: FieldInstanceResult,
+    stageWriter: StageWriter,
+    sqlFieldName: string,
+    outputPipelinedSQL: OutputPipelinedSQL[],
+    // The single-group-set fast path (generateSingleGroupSetSQL) has no
+    // group_set column to filter on: every row is in the one group. The
+    // array-agg drops its `FILTER (WHERE group_set=N)` and keeps only a
+    // projection's own `where:`.
+    omitGroupSetFilter = false
+  ): string {
+    // How to emit this nest's first stage — and the last line of defense before
+    // broken SQL for IR that didn't pass through the translator (cached,
+    // deserialized, or query-builder IR). Same `nestStrategy` the translator
+    // uses, so the two can't disagree.
+    const pipeline = resultStruct.turtleDef.pipeline;
+    const strategy = nestStrategy(
+      pipeline[0],
+      this.parent.dialect,
+      pipeline.length > 1
+    );
+    if (strategy.kind === 'unsupported') {
+      throw new MalloyCompileError(
+        `dialect '${this.parent.dialect.name}' cannot emit this nested query (${strategy.reason})`,
+        strategy.reason,
+        resultStruct.turtleDef.location
+      );
+    }
+    // calculate the ordering.
+    const compiledOrderBy: CompiledOrderBy[] = [];
+    let orderingField;
+    const orderByDef =
+      (resultStruct.firstSegment as QuerySegment).orderBy ||
+      resultStruct.calculateDefaultOrderBy();
+    for (const ordering of orderByDef) {
+      if (typeof ordering.field === 'string') {
+        orderingField = {
+          name: ordering.field,
+          fif: resultStruct.getField(ordering.field),
+        };
+      } else {
+        orderingField = resultStruct.getFieldByNumber(ordering.field);
+      }
+      const structField = this.parent.dialect.sqlQuoteIdentifier(
+        orderingField.name
+      );
+      if (resultStruct.firstSegment.type === 'reduce') {
+        compiledOrderBy.push({
+          field: this.parent.dialect.sqlQuoteIdentifier(
+            `${orderingField.name}__${resultStruct.groupSet}`
+          ),
+          structField,
+          dir: ordering.dir || 'asc',
+        });
+      } else if (resultStruct.firstSegment.type === 'project') {
+        compiledOrderBy.push({
+          field: orderingField.fif.generateExpression(),
+          structField,
+          dir: ordering.dir || 'asc',
+        });
+      }
+    }
+    const orderBy = compiledOrderBy.length > 0 ? compiledOrderBy : undefined;
+
+    const dialectFieldList = this.buildDialectFieldList(resultStruct);
+
+    let resultType;
+    let ret;
+    if ((resultType = resultStruct.getRepeatedResultType()) !== 'nested') {
+      if (resultType === 'inline_all_numbers') {
+        ret = this.parent.dialect.sqlCoaleseMeasuresInline(
+          resultStruct.groupSet,
+          dialectFieldList
+        );
+      } else {
+        ret = this.parent.dialect.sqlAnyValueTurtle(
+          resultStruct.groupSet,
+          dialectFieldList
+        );
+      }
+    } else {
+      // A projection first stage applies its own `limit:` by slicing the
+      // array-agg (it has no group-by keys to ROW_NUMBER-shave on) and its
+      // `where:` by folding into the array-agg's group_set condition (it rides
+      // the enclosing group_set, so a scan-level WHERE can't isolate it). This
+      // is a first-stage question: if more stages follow, they consume this
+      // (limited/filtered) array via the recursion in generateTurtlePipelineSQL.
+      // A reduce first stage keeps the shave and the scan-level WHERE.
+      let limit: number | undefined;
+      let filterSQL: string | undefined;
+      if (strategy.kind === 'project') {
+        limit = strategy.limit;
+        const where = this.generateSQLFilters(resultStruct, 'where');
+        if (where.present()) {
+          filterSQL = where.sql();
+        }
+      }
+      // (capability is guarded by nestStrategy at the top of this method)
+      ret = this.parent.dialect.sqlAggregateTurtle(
+        omitGroupSetFilter ? undefined : resultStruct.groupSet,
+        dialectFieldList,
+        orderBy,
+        limit,
+        filterSQL
+      );
+    }
+
+    // If the turtle is a pipeline, generate a UDF to compute it.
+    const newStageWriter = new StageWriter(
+      this.parent.dialect.supportsCTEinCoorelatedSubQueries,
+      stageWriter
+    );
+    const {structDef, pipeOut} = this.generateTurtlePipelineSQL(
+      resultStruct,
+      newStageWriter,
+      this.parent.dialect.supportUnnestArrayAgg ? ret : sqlFieldName
+    );
+
+    // if there was a pipeline.
+    if (pipeOut !== undefined) {
+      const sql = newStageWriter.generateCoorelatedSubQuery(
+        this.parent.dialect,
+        structDef
+      );
+
+      if (this.parent.dialect.supportUnnestArrayAgg) {
+        ret = `(${sql})`;
+      } else {
+        outputPipelinedSQL.push({
+          sqlFieldName,
+          pipelineSQL: `(${sql})`,
+        });
+      }
+    }
+
+    return ret;
+    // return `${aggregateFunction}(CASE WHEN group_set=${
+    //   resultStruct.groupSet
+    // } THEN STRUCT(${fieldsSQL.join(",\n")}) END${tailSQL})`;
+  }
+
+  generateTurtlePipelineSQL(
+    fi: FieldInstanceResult,
+    stageWriter: StageWriter,
+    sourceSQLExpression: string
+  ) {
+    let structDef = this.getResultStructDef(fi, false);
+    const repeatedResultType = fi.getRepeatedResultType();
+    const hasPipeline = fi.turtleDef.pipeline.length > 1;
+    let pipeOut;
+    let outputRepeatedResultType = repeatedResultType;
+    if (hasPipeline) {
+      const pipeline: PipeSegment[] = [...fi.turtleDef.pipeline];
+      pipeline.shift();
+      const newTurtle: TurtleDef = {
+        type: 'turtle',
+        name: 'starthere',
+        pipeline,
+      };
+      const inputStruct: NestSourceDef = {
+        type: 'nest_source',
+        name: '~pipe~',
+        pipeSQL: this.parent.dialect.sqlUnnestPipelineHead(
+          repeatedResultType === 'inline_all_numbers',
+          sourceSQLExpression,
+          getDialectFieldList(structDef, this.parent.dialect)
+        ),
+        fields: structDef.fields,
+        connection: structDef.connection,
+        dialect: structDef.dialect,
+      };
+      const qs = new QueryStruct(
+        inputStruct,
+        undefined,
+        {model: this.parent.getModel()},
+        this.parent.prepareResultOptions
+      );
+      const q = QueryQuery.makeQuery(
+        newTurtle,
+        qs,
+        stageWriter,
+        this.isJoinedSubquery,
+        this.structRefToQueryStruct
+      );
+      pipeOut = q.generateSQLFromPipeline(stageWriter);
+      outputRepeatedResultType = q.rootResult.getRepeatedResultType();
+      // console.log(stageWriter.generateSQLStages());
+      structDef = pipeOut.outputStruct;
+    }
+    structDef.annotations = fi.turtleDef.annotations;
+    return {
+      structDef,
+      pipeOut,
+      repeatedResultType: outputRepeatedResultType,
+    };
+  }
+
+  generateComplexSQL(stageWriter: StageWriter): string {
+    let stageName = this.generateSQLStage0(stageWriter);
+
+    if (this.maxDepth > 1) {
+      let i = this.maxDepth;
+      while (i > 1) {
+        stageName = this.generateSQLDepthN(i, stageWriter, stageName);
+        i--;
+      }
+    }
+
+    // nest the turtles.
+    return this.genereateSQLCombineTurtles(stageWriter, stageName);
+  }
+
+  generateSQL(stageWriter: StageWriter): string {
+    const r = this.rootResult.computeGroups(0, 0);
+    this.maxDepth = r.maxDepth;
+    this.maxGroupSet = r.nextGroupSetNumber - 1;
+
+    this.rootResult.assignFieldsToGroups();
+
+    this.rootResult.isComplexQuery ||= this.maxDepth > 0 || r.isComplex;
+    // A complex query needs the group-set fan-out unless it has just one group
+    // set (only single-stage projection nests), in which case generateSimpleSQL
+    // emits the same no-fan-out form a non-nested query gets.
+    if (this.rootResult.isComplexQuery && !this.canUseSingleGroupSetSQL()) {
+      return this.generateComplexSQL(stageWriter);
+    }
+    return this.generateSimpleSQL(stageWriter);
+  }
+
+  generateSQLFromPipeline(stageWriter: StageWriter): {
+    lastStageName: string;
+    outputStruct: QueryResultDef;
+  } {
+    this.parent.maybeEmitParameterizedSourceUsage();
+    this.prepare(stageWriter);
+    let lastStageName = this.generateSQL(stageWriter);
+    let outputStruct = this.getResultStructDef();
+    const pipeline = [...this.fieldDef.pipeline];
+    if (pipeline.length > 1) {
+      // console.log(pretty(outputStruct));
+      let structDef: FinalizeSourceDef = {
+        ...outputStruct,
+        name: lastStageName,
+        type: 'finalize',
+      };
+      pipeline.shift();
+      for (const transform of pipeline) {
+        const parentArg = this.parent.parent
+          ? {struct: this.parent.parent}
+          : {model: this.parent.getModel()};
+        const s = new QueryStruct(
+          structDef,
+          undefined,
+          parentArg,
+          this.parent.prepareResultOptions
+        );
+        const q = QueryQuery.makeQuery(
+          {type: 'turtle', name: '~computeLastStage~', pipeline: [transform]},
+          s,
+          stageWriter,
+          this.isJoinedSubquery,
+          this.structRefToQueryStruct
+        );
+        q.prepare(stageWriter);
+        lastStageName = q.generateSQL(stageWriter);
+        outputStruct = q.getResultStructDef();
+        structDef = {
+          ...outputStruct,
+          name: lastStageName,
+          type: 'finalize',
+        };
+      }
+    }
+    return {lastStageName, outputStruct};
+  }
+}
+//  wildcards have been expanded
+//  nested repeated fields are safe to use.
+class QueryQueryIndexStage extends QueryQuery {
+  fieldDef: TurtleDef;
+  indexPaths: Record<string, string[]> = {};
+  constructor(
+    fieldDef: TurtleDef,
+    parent: QueryStruct,
+    stageWriter: StageWriter | undefined,
+    isJoinedSubquery: boolean,
+    zz: (name: string) => QueryStruct | undefined
+  ) {
+    super(fieldDef, parent, stageWriter, isJoinedSubquery, zz);
+    this.fieldDef = fieldDef;
+  }
+
+  expandField(f: IndexFieldDef) {
+    const as = f.path.join('.');
+    const field = this.parent.getQueryFieldByName(f.path, f.at);
+    return {as, field};
+  }
+
+  expandFields(resultStruct: FieldInstanceResult) {
+    let resultIndex = 1;
+    const groupIndex = resultStruct.groupSet;
+    this.maxGroupSet = groupIndex;
+
+    for (const f of (this.firstSegment as IndexSegment).indexFields) {
+      const {as, field} = this.expandField(f);
+      const referencePath = f.path;
+      this.indexPaths[as] = referencePath;
+
+      resultStruct.addField(
+        as,
+        field as QueryField,
+        {
+          resultIndex,
+          type: 'result',
+        },
+        undefined
+      );
+      resultIndex++;
+    }
+    const measure = (this.firstSegment as IndexSegment).weightMeasure;
+    if (measure !== undefined) {
+      const f = this.parent.getFieldByName([measure]) as QueryField;
+      resultStruct.addField(
+        measure,
+        f,
+        {
+          resultIndex,
+          type: 'result',
+        },
+        undefined
+      );
+    }
+  }
+
+  generateSQL(stageWriter: StageWriter): string {
+    let measureSQL = 'COUNT(*)';
+    const dialect = this.parent.dialect;
+    const fieldNameColumn = dialect.sqlQuoteIdentifier('fieldName');
+    const fieldPathColumn = dialect.sqlQuoteIdentifier('fieldPath');
+    const fieldValueColumn = dialect.sqlQuoteIdentifier('fieldValue');
+    const fieldTypeColumn = dialect.sqlQuoteIdentifier('fieldType');
+    const fieldRangeColumn = dialect.sqlQuoteIdentifier('fieldRange');
+    const weightColumn = dialect.sqlQuoteIdentifier('weight');
+    const measureName = (this.firstSegment as IndexSegment).weightMeasure;
+    if (measureName) {
+      measureSQL = this.rootResult.getField(measureName).generateExpression();
+    }
+
+    const fields: Array<{
+      name: string;
+      path: string[];
+      type: string;
+      expression: string;
+    }> = [];
+    for (const [name, field] of this.rootResult.allFields) {
+      const fi = field as FieldInstanceField;
+      if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+        const expression = fi.generateExpression();
+        const path = this.indexPaths[name] || [];
+        fields.push({name, path, type: fi.f.fieldDef.type, expression});
+      }
+    }
+
+    // The grouped columns: group_set and one CASE per index column.
+    const caseOnGroupSet = (
+      when: (i: number) => string | undefined,
+      firstWhen?: string
+    ): string => {
+      let c = 'CASE group_set\n';
+      if (firstWhen !== undefined) {
+        c += `    ${firstWhen}\n`;
+      }
+      for (let i = 0; i < fields.length; i++) {
+        const value = when(i);
+        if (value !== undefined) {
+          c += `    WHEN ${i} THEN ${value}\n`;
+        }
+      }
+      return c + '  END';
+    };
+    const grouped: StageOutputColumn[] = [
+      {
+        sql: 'group_set',
+        expr: 'group_set',
+        name: 'group_set',
+        isDimension: true,
+      },
+      aliasedColumn(
+        caseOnGroupSet(i => `'${fields[i].name}'`),
+        fieldNameColumn,
+        {isDimension: true}
+      ),
+      aliasedColumn(
+        caseOnGroupSet(i => `'${pathToCol(fields[i].path)}'`),
+        fieldPathColumn,
+        {isDimension: true}
+      ),
+      aliasedColumn(
+        caseOnGroupSet(i => `'${fields[i].type}'`),
+        fieldTypeColumn,
+        {isDimension: true}
+      ),
+      aliasedColumn(
+        caseOnGroupSet(
+          i => (fields[i].type === 'string' ? fields[i].expression : undefined),
+          `WHEN 99999 THEN ${dialect.castToString('NULL')}`
+        ),
+        fieldValueColumn,
+        {isDimension: true}
+      ),
+    ];
+
+    const limit =
+      !isRawSegment(this.firstSegment) && this.firstSegment.limit
+        ? this.firstSegment.limit
+        : undefined;
+    let s = 'SELECT\n';
+    s += grouped.map(c => `  ${c.sql},\n`).join('');
+    s += ` ${measureSQL} as ${weightColumn},\n`;
+
+    // just in case we don't have any field types, force the case statement to have at least one value.
+    s += "  CASE group_set\n    WHEN 99999 THEN ''";
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === 'number') {
+        s += `    WHEN ${i} THEN ${dialect.concat(
+          `MIN(${dialect.castToString(fields[i].expression)})`,
+          "' to '",
+          dialect.castToString(`MAX(${fields[i].expression})`)
+        )}\n`;
+      }
+      if (isTemporalType(fields[i].type)) {
+        s += `    WHEN ${i} THEN ${dialect.concat(
+          `MIN(${dialect.sqlDateToString(fields[i].expression)})`,
+          "' to '",
+          `MAX(${dialect.sqlDateToString(fields[i].expression)})`
+        )}\n`;
+      }
+    }
+    s += `  END as ${fieldRangeColumn}\n`;
+
+    // CASE
+    //   WHEN field_type = 'timestamp' or field_type = 'date'
+    //     THEN MIN(field_value) || ' to ' || MAX(field_value)
+    //   WHEN field_type = 'number'
+    //     THEN
+    // ELSE NULL
+    // END as field_range\n`;
+
+    s += this.generateSQLJoins(stageWriter);
+
+    s += dialect.sqlGroupSetTable(fields.length) + '\n';
+
+    s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
+
+    s += sqlGroupBy(dialect, grouped);
+    s += dialect.sqlOrderByLimit([], limit);
+    // console.log(s);
+    const resultStage = stageWriter.addStage(s);
+    this.resultStage = stageWriter.addStage(
+      `SELECT
+  ${fieldNameColumn},
+  ${fieldPathColumn},
+  ${fieldTypeColumn},
+  COALESCE(${fieldValueColumn}, ${fieldRangeColumn}) as ${fieldValueColumn},
+  ${weightColumn}
+FROM ${resultStage}\n`
+    );
+    return this.resultStage;
+  }
+}
+
+class QueryQueryIndex extends QueryQuery {
+  fieldDef: TurtleDef;
+  stages: RefToField[][] = [];
+
+  constructor(
+    fieldDef: TurtleDef,
+    parent: QueryStruct,
+    stageWriter: StageWriter | undefined,
+    isJoinedSubquery: boolean,
+    lookupStruct: (name: string) => QueryStruct | undefined
+  ) {
+    super(fieldDef, parent, stageWriter, isJoinedSubquery, lookupStruct);
+    this.fieldDef = fieldDef;
+    this.fieldsToStages();
+  }
+
+  fieldsToStages() {
+    const indexSeg = this.firstSegment as IndexSegment;
+    if (this.parent.dialect.dontUnionIndex) {
+      this.stages = [indexSeg.indexFields];
+      return;
+    }
+
+    // Collect the field references by unique path, the final
+    // index will be a union indexes from each unique path
+    const stageMap: Record<string, RefToField[]> = {};
+    for (const fref of indexSeg.indexFields) {
+      if (fref.path.length > 1) {
+        const stageRoot = pathToCol(fref.path.slice(0, fref.path.length - 1));
+        const stage = stageMap[stageRoot];
+        if (stage === undefined) {
+          const f = this.parent.nameMap.get(fref.path[0]);
+          if (
+            f instanceof QueryFieldStruct &&
+            f.fieldDef.join === 'many' &&
+            f.fieldDef.fields.length > 1
+          ) {
+            const toStage = [fref];
+            stageMap[stageRoot] = toStage;
+            this.stages.push(toStage);
+            continue;
+          }
+        } else {
+          stage.push(fref);
+          continue;
+        }
+      }
+      if (this.stages[0] === undefined) {
+        this.stages[0] = [];
+      }
+      this.stages[0].push(fref);
+    }
+  }
+
+  expandFields(_resultStruct: FieldInstanceResult) {}
+
+  generateSQL(stageWriter: StageWriter): string {
+    const indexSeg = this.firstSegment as IndexSegment;
+    const outputStageNames: string[] = [];
+    for (const fields of this.stages) {
+      const q = new QueryQueryIndexStage(
+        {
+          ...this.fieldDef,
+          pipeline: [
+            {
+              ...indexSeg,
+              indexFields: fields,
+            },
+          ],
+        },
+        this.parent,
+        stageWriter,
+        this.isJoinedSubquery,
+        this.structRefToQueryStruct
+      );
+      q.prepare(stageWriter);
+      const lastStageName = q.generateSQL(stageWriter);
+      outputStageNames.push(lastStageName);
+    }
+    if (outputStageNames.length === 1) {
+      this.resultStage = outputStageNames[0];
+    } else {
+      this.resultStage = stageWriter.addStage(
+        outputStageNames.map(n => `SELECT * FROM ${n}\n`).join(' UNION ALL \n')
+      );
+    }
+    return this.resultStage;
+  }
+
+  /**
+   * All Indexes have the same output schema.
+   *   fieldName is deprecated, dots in fieldName may or may not be join nodes
+   *   fieldPath is a URL encoded slash separated path
+   */
+  getResultStructDef(): QueryResultDef {
+    const ret: StructDef = {
+      type: 'query_result',
+      name: this.resultStage || 'result',
+      dialect: this.parent.dialect.name,
+      fields: [
+        {type: 'string', name: 'fieldName'},
+        {type: 'string', name: 'fieldPath'},
+        {type: 'string', name: 'fieldValue'},
+        {type: 'string', name: 'fieldType'},
+        {type: 'number', name: 'weight', numberType: 'integer'},
+      ],
+      connection: this.parent.connectionName,
+    };
+    return ret;
+  }
+}
+
+class QueryQueryProject extends QueryQuery {}
+
+class QueryQueryRaw extends QueryQuery {
+  generateSQL(stageWriter: StageWriter): string {
+    if (this.parent.structDef.type !== 'sql_select') {
+      throw new Error(
+        'Invalid struct for QueryQueryRaw, currently only supports SQL'
+      );
+    }
+    // No manifest lookup for the source itself: a raw pipeline's source is
+    // always the `conn.sql(...)` written at the run site, which is unnamed and
+    // so never persistent. Its `%{ }` dependencies do substitute, through
+    // getCompiledSQL.
+    return stageWriter.addStage(
+      getCompiledSQL(
+        this.parent.structDef,
+        this.parent.prepareResultOptions ?? {},
+        this.isolatedQueryCompiler()
+      )
+    );
+  }
+
+  prepare() {
+    // Do nothing!
+  }
+
+  getResultStructDef(): QueryResultDef {
+    if (!isSourceDef(this.parent.structDef)) {
+      throw new Error(`Result cannot be type ${this.parent.structDef.type}`);
+    }
+    return {...this.parent.structDef, type: 'query_result'};
+  }
+
+  getResultMetadata(
+    _fi: FieldInstance
+  ): ResultStructMetadataDef | ResultMetadataDef | undefined {
+    return undefined;
+  }
+}
+
+class QueryQueryReduce extends QueryQuery {}

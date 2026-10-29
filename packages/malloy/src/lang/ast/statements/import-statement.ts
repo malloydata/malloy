@@ -1,33 +1,25 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {ModelDataRequest} from '../../translate-response';
+import type {ModelDataRequest} from '../../translate-response';
+import type {DocStatement, Document} from '../types/malloy-element';
+import {ListOf, MalloyElement} from '../types/malloy-element';
+import type {GivenEntry, SourceID} from '../../../model/malloy_types';
 import {
-  DocStatement,
-  Document,
-  ListOf,
-  MalloyElement,
-} from '../types/malloy-element';
+  isSourceDef,
+  isPersistableSourceDef,
+  isSourceRegistryReference,
+  safeRecordGet,
+} from '../../../model/malloy_types';
+import {
+  dialectOfEntry,
+  registerSource,
+  resolveSourceID,
+} from '../../../model/source_def_utils';
+import {walkPersistentDependencies} from '../../../model/persist_utils';
+import {typeDefToString} from '../../../model/utils';
 
 export class ImportSourceName extends MalloyElement {
   elementType = 'importSourceName';
@@ -73,7 +65,7 @@ export class ImportStatement
     try {
       this.fullURL = decodeURI(new URL(url, baseURL).toString());
     } catch (e) {
-      this.log('Invalid URI in import statement');
+      this.logError('invalid-import-url', 'Invalid URL in import statement');
     }
   }
 
@@ -90,45 +82,197 @@ export class ImportStatement
   }
 
   execute(doc: Document): void {
+    if (this.isRestricted()) {
+      this.logError(
+        'restricted-construct-forbidden',
+        `\`import "${this.url}"\` cannot be used in a restricted query — file imports are not permitted.`
+      );
+      return;
+    }
     const trans = this.translator();
     if (!trans) {
-      this.log('Cannot import without translation context');
+      this.logError(
+        'no-translator-for-import',
+        'Cannot import without translation context'
+      );
     } else if (this.fullURL) {
+      const pretranslated = trans.root.pretranslatedModels.get(this.fullURL);
       const src = trans.root.importZone.getEntry(this.fullURL);
-      if (src.status === 'present') {
-        const importable = trans.getChildExports(this.fullURL);
-        if (this.notEmpty()) {
-          // just import the named objects
+      if (pretranslated || src.status === 'present') {
+        const importedModel = trans.importModelDef(this.fullURL);
+        if (importedModel) {
+          const importAll = this.empty();
+          // `Map` rather than plain object — keys are user-provided names and
+          // a plain object would expose Object.prototype keys (`toString`,
+          // etc.).
+          const explicitImport = new Map<string, string[]>();
           for (const importOne of this.list) {
-            const fetchName = importOne.from || importOne;
-            if (doc.getEntry(importOne.text)) {
-              importOne.log(`Cannot redefine '${importOne.text}'`);
-            } else if (importable[fetchName.text]) {
-              const importMe = {...importable[fetchName.text]};
-              if (importOne.from) {
-                importMe.as = importOne.text;
-              }
-              doc.setEntry(importOne.text, {entry: importMe, exported: false});
+            const dstName = importOne.text;
+            const srcName = importOne.from ? importOne.from.text : dstName;
+            if (safeRecordGet(importedModel.contents, srcName) === undefined) {
+              importOne.logError(
+                'selective-import-not-found',
+                `Cannot find '${srcName}', not imported`
+              );
+            } else if (doc.getEntry(dstName)) {
+              importOne.logError(
+                'name-conflict-on-selective-import',
+                `Cannot redefine '${dstName}'`
+              );
             } else {
-              fetchName.log(`Cannot find '${fetchName.text}', not imported`);
+              const existing = explicitImport.get(srcName);
+              if (existing) {
+                existing.push(dstName);
+              } else {
+                explicitImport.set(srcName, [dstName]);
+              }
             }
           }
-        } else {
-          // import everything
-          for (const [importing, entry] of Object.entries(
-            trans.getChildExports(this.fullURL)
-          )) {
-            if (doc.getEntry(importing)) {
-              this.log(`Cannot redefine '${importing}'`);
-            } else {
-              doc.setEntry(importing, {entry, exported: false});
+          const neededSourceIDs = new Set<SourceID>();
+          for (const srcName of importedModel.exports) {
+            const pickedNames = explicitImport.get(srcName);
+            const dstNames = pickedNames ?? (importAll ? [srcName] : []);
+            for (const dstName of dstNames) {
+              const sourceEntry = safeRecordGet(
+                importedModel.contents,
+                srcName
+              );
+              // Non-selective collision: an entry would shadow something
+              // already in the importer's namespace (a local declaration or
+              // an entry brought in by a previous import). Selective
+              // collisions are caught by the per-item check at the top of
+              // the loop; here we re-check because the auto-surface path
+              // bypasses that loop. Applies to every entry kind.
+              if (!pickedNames && doc.getEntry(dstName)) {
+                this.logError(
+                  'name-conflict-on-indiscriminate-import',
+                  `Cannot redefine '${dstName}'`
+                );
+                continue;
+              }
+              if (sourceEntry?.type === 'given') {
+                const givenEntry: GivenEntry = {
+                  type: 'given',
+                  name: dstName,
+                  id: sourceEntry.id,
+                };
+                doc.setEntry(dstName, {entry: givenEntry, exported: false});
+                // Selective import-site reference. `location` covers
+                // the `NAME` token in the selective list;
+                // `definition.location` points at the canonical
+                // `given:` declaration in the imported file. Only
+                // emitted on the selective form — non-selective
+                // auto-surface has no per-name source position.
+                if (pickedNames) {
+                  const givenIR = importedModel.givens?.[sourceEntry.id];
+                  const importOne = this.list.find(
+                    item => item.text === dstName
+                  );
+                  if (importOne && givenIR) {
+                    this.addReference({
+                      type: 'givenReference',
+                      text: dstName,
+                      location: importOne.location,
+                      definition: {
+                        type: typeDefToString(givenIR.type),
+                        annotations: givenIR.annotations,
+                        location: givenIR.location,
+                        defaultText: givenIR.defaultText,
+                      },
+                    });
+                  }
+                }
+                continue;
+              }
+              const importMe = {...sourceEntry!};
+              importMe.as = dstName;
+              const dialect = dialectOfEntry(importMe, importedModel);
+              if (dialect !== undefined) {
+                trans.checkExperimentalDialect(dialect, this.location);
+              }
+              doc.setEntry(dstName, {entry: importMe, exported: false});
+
+              // Every source the walk touched, routes included — not just the
+              // persistent ones. A `#@ -persist` wrapper that adds a join is
+              // not a table, but it can be the only way to reach the tables
+              // under it, and this model has to be able to take the same route.
+              //
+              // The persistent ones are also what a builder will build from
+              // this model, so the document checks at the end of compile that
+              // this model can supply every given their SQL reads.
+              if (isSourceDef(importMe) && isPersistableSourceDef(importMe)) {
+                for (const found of walkPersistentDependencies(
+                  [importMe],
+                  importedModel
+                )) {
+                  neededSourceIDs.add(found.sourceID);
+                  if (!found.persistent) continue;
+                  const def = resolveSourceID(importedModel, found.sourceID);
+                  if (def && !doc.importedPersistSources.has(found.sourceID)) {
+                    doc.importedPersistSources.set(found.sourceID, {
+                      source: def,
+                      at: this.location,
+                    });
+                  }
+                }
+              }
+            }
+          }
+
+          // Always copy the imported model's given declarations into the
+          // local givens map, regardless of whether each given is surfaced
+          // into the namespace. This guarantees that any givenRef in
+          // imported IR (sources/queries that reference `$X`) resolves to
+          // a declaration at SQL-emission time. The import-time
+          // satisfiability check that catches unsatisfiable refs lands
+          // with the refSummary work.
+          if (importedModel.givens) {
+            for (const [id, given] of Object.entries(importedModel.givens)) {
+              if (!doc.documentGivens.has(id)) {
+                doc.documentGivens.set(id, given);
+              }
+            }
+          }
+
+          // Carry the imported model's `##` annotation closure into ours and
+          // record it as a direct predecessor edge (any `import` from a file
+          // contributes that file's whole model-annotation set, in import
+          // order). Shared with the extend-base path via `contributeModelAnnotations`.
+          doc.contributeModelAnnotations(importedModel);
+
+          // Register hidden dependencies from child's registry
+          for (const sourceID of neededSourceIDs) {
+            if (!(sourceID in doc.documentSrcRegistry)) {
+              const value = importedModel.sourceRegistry[sourceID];
+              if (value) {
+                // If entry is a reference, resolve it to actual SourceDef
+                // (parent can't resolve by name since it's not in namespace)
+                let entry = value.entry;
+                if (isSourceRegistryReference(entry)) {
+                  const resolved = safeRecordGet(
+                    importedModel.contents,
+                    entry.name
+                  );
+                  if (
+                    resolved &&
+                    isSourceDef(resolved) &&
+                    isPersistableSourceDef(resolved)
+                  ) {
+                    entry = resolved;
+                  }
+                }
+                registerSource(doc.documentSrcRegistry, sourceID, entry);
+              }
             }
           }
         }
       } else if (src.status === 'error') {
-        this.log(`import failed: '${src.message}'`);
+        this.logError('failed-import', `import failed: '${src.message}'`);
       } else {
-        this.log(`import failed with status: '${src.status}'`);
+        this.logError(
+          'failed-import',
+          `import failed with status: '${src.status}'`
+        );
       }
     }
   }

@@ -1,0 +1,126 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+// Types and interfaces
+export type {
+  Taggable,
+  Loggable,
+  ParseOptions,
+  CompileOptions,
+  CompileQueryOptions,
+  BuildNode,
+  BuildGraph,
+  BuildTarget,
+  BuildTargetOptions,
+  BuildTargets,
+  ConnectionBuild,
+  UnbuildableSource,
+} from './types';
+export {EMPTY_BUILD_MANIFEST} from './types';
+
+// URL readers and connection helpers
+export {
+  EmptyURLReader,
+  InMemoryURLReader,
+  FixedConnectionMap,
+  hashForInvalidationKey,
+  isInternalURL,
+  readURL,
+  getInvalidationKey,
+} from './readers';
+
+// Cache
+export type {ModelCache, CachedModel} from './cache';
+export {CacheManager, InMemoryModelCache} from './cache';
+
+// Document/Parse
+export {
+  Parse,
+  DocumentTablePath,
+  DocumentRange,
+  DocumentPosition,
+  DocumentSymbol,
+  DocumentCompletion,
+} from './document';
+
+// Core classes (tightly coupled)
+export {
+  // Enums
+  SourceRelationship,
+  AtomicFieldType,
+  DateTimeframe,
+  TimestampTimeframe,
+  JoinRelationship,
+  // Types
+  type Field,
+  type SerializedExplore,
+  type SortableField,
+  type PreparedResultJSON,
+  // Types
+  type BuildPlan,
+  // Classes
+  Explore,
+  ExploreField,
+  AtomicField,
+  DateField,
+  TimestampField,
+  NumberField,
+  BooleanField,
+  JSONField,
+  UnsupportedField,
+  StringField,
+  Query,
+  QueryField,
+  Model,
+  PersistSource,
+  PreparedQuery,
+  PreparedResult,
+  Reference,
+  type ReferenceKind,
+} from './core';
+
+// Result and Data classes
+export {
+  type ResultJSON,
+  type DataColumn,
+  type DataArrayOrRecord,
+  Result,
+  DataArray,
+  DataRecord,
+} from './result';
+
+// Writers
+export {type WriteStream, DataWriter, JSONWriter, CSVWriter} from './writers';
+
+// Runtime and Materializers
+export {
+  Runtime,
+  ConnectionRuntime,
+  SingleConnectionRuntime,
+  ModelMaterializer,
+  QueryMaterializer,
+  PreparedResultMaterializer,
+  ExploreMaterializer,
+} from './runtime';
+
+// Config and Manifest
+export {Manifest, MalloyConfig} from './config';
+export type {FilesystemContext, MalloyConfigOptions} from './config';
+export type {Overlay, ConfigOverlays} from './config_overlays';
+export type {RuntimeContext} from './core';
+export {
+  envOverlay,
+  contextOverlay,
+  defaultConfigOverlays,
+} from './config_overlays';
+export {discoverConfig} from './config_discover';
+
+// Compile (Malloy static class)
+export {
+  Malloy,
+  MalloyError,
+  type MalloyCompileOptions,
+  type MalloyRunOptions,
+} from './compile';

@@ -1,0 +1,43 @@
+source: logos is duckdb.table("static/data/logos.csv") extend {
+  #(story)
+  # list
+  view: list is {
+    group_by:
+      brand
+      logo
+  }
+
+  #(story)
+  # list
+  view: list_numbers is {
+    # percent
+    aggregate: ct is count()
+    group_by: brand
+  }
+
+  #(story)
+  # list_detail
+  view: list_detail is {
+    group_by:
+      brand
+    aggregate:
+      ct is count()
+  }
+
+  #(story)
+  # list_detail
+  view: list_detail_renderers is {
+    # image.height=40px
+    group_by:
+      logo
+    aggregate:
+      # percent
+      ct is count()
+  }
+
+  #(story)
+  view: nested_list is {
+    group_by: brand
+    nest: list_detail_renderers
+  }
+};

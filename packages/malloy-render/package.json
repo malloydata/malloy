@@ -1,63 +1,81 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.144",
+  "version": "0.0.437",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
-  "types": "dist/index.d.ts",
+  "types": "dist/module/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/malloydata/malloy"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=20"
   },
   "exports": {
-    ".": "./dist/module/index.umd.js",
-    "./style": "./dist/module/style.css",
-    "./webcomponent": "./dist/webcomponent/malloy-render.umd.js",
-    "./webcomponent/style": "./dist/webcomponent/style.css"
+    ".": {
+      "types": "./dist/module/index.d.ts",
+      "import": "./dist/module/index.mjs",
+      "require": "./dist/module/index.umd.js",
+      "default": "./dist/module/index.umd.js"
+    },
+    "./format": {
+      "types": "./dist/module/format/index.d.ts",
+      "import": "./dist/format/index.mjs",
+      "require": "./dist/format/index.cjs",
+      "default": "./dist/format/index.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "format": [
+        "./dist/module/format/index.d.ts"
+      ]
+    }
   },
   "scripts": {
-    "bundle_renderer": "node src/bundle/esbuild_bundler.js",
-    "lint": "eslint '**/*.ts{,x}'",
-    "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "jest --config=../../jest.config.js",
-    "build": "npm run build-types && npm run build-source && npm run build-webcomponent",
-    "clean": "tsc --build --clean",
+    "test": "cd ../.. && jest packages/malloy-render",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean",
     "prepublishOnly": "npm run build",
-    "storybook": "storybook dev -p 6006",
+    "storybook": "rm -rf ./node_modules/.cache && storybook dev -p 6006",
+    "storybook-windows": "del /s /q .\\node_modules\\.cache && storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
-    "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts",
-    "build-types": "tsc --build --declaration --emitDeclarationOnly"
+    "build": "node ../../scripts/femto-build.js build",
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.144",
-    "@types/luxon": "^2.4.0",
-    "component-register": "^0.8.3",
-    "lodash": "^4.17.20",
-    "luxon": "^2.4.0",
-    "solid-element": "^1.8.0",
-    "solid-js": "^1.8.15",
+    "@malloydata/malloy-interfaces": "0.0.437",
+    "@malloydata/malloy-tag": "0.0.437",
+    "@tanstack/solid-virtual": "^3.13.33",
+    "lodash": "^4.18.1",
+    "luxon": "^3.7.2",
+    "solid-js": "^1.9.14",
     "ssf": "^0.11.2",
-    "us-atlas": "^3.0.0",
-    "vega": "^5.21.0",
+    "us-atlas": "^3.0.1",
+    "vega": "^6.2.0",
+    "vega-interpreter": "^2.0.0",
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@storybook/addon-essentials": "^7.5.0",
-    "@storybook/addon-interactions": "^7.5.0",
-    "@storybook/addon-links": "^7.5.0",
-    "@storybook/blocks": "^7.5.0",
-    "@storybook/html": "^7.5.0",
-    "@storybook/html-vite": "^7.5.0",
-    "@storybook/testing-library": "^0.2.2",
-    "@storybook/types": "^7.5.3",
-    "@types/luxon": "^2.4.0",
-    "esbuild": "0.19.11",
-    "storybook": "^7.5.0",
-    "vite": "^5.1.5",
-    "vite-plugin-solid": "^2.10.1"
+    "@malloydata/db-duckdb": "0.0.437",
+    "@malloydata/malloy": "0.0.437",
+    "@storybook/addon-essentials": "^8.6.18",
+    "@storybook/addon-interactions": "^8.6.18",
+    "@storybook/addon-links": "^8.6.15",
+    "@storybook/blocks": "^8.6.15",
+    "@storybook/builder-vite": "^8.6.15",
+    "@storybook/html": "^8.6.15",
+    "@storybook/html-vite": "^8.6.15",
+    "@storybook/manager-api": "^8.6.18",
+    "@storybook/test": "^8.6.15",
+    "@storybook/theming": "^8.6.18",
+    "@storybook/types": "^8.6.18",
+    "@types/luxon": "^3.7.2",
+    "esbuild": "0.28.1",
+    "storybook": "^8.6.15",
+    "vite": "^6.4.2",
+    "vite-plugin-dts": "^5.0.3",
+    "vite-plugin-solid": "^2.11.12",
+    "vite-tsconfig-paths": "^5.1.4"
   }
 }

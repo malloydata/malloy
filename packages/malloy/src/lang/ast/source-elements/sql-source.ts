@@ -1,62 +1,56 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {
-  StructDef,
-  StructRef,
-  SQLBlockSource,
+import {activeName} from '../../../model/malloy_types';
+import type {
+  InvokedStructRef,
+  SourceDef,
+  SQLSourceDef,
 } from '../../../model/malloy_types';
-import {makeSQLBlock} from '../../../model/sql_block';
-import {NeedCompileSQL} from '../../translate-response';
+import {mkSQLSourceDef} from '../../../model/source_def_utils';
+import {getSourceRequest, sqlKey} from '../../../model/sql_block';
+import type {NeedCompileSQL, SQLSourceRequest} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
-import {SQLString} from '../sql-elements/sql-string';
-import {ModelEntryReference, Document} from '../types/malloy-element';
+import type {SQLString} from '../sql-elements/sql-string';
+import type {ModelEntryReference, Document} from '../types/malloy-element';
 
 export class SQLSource extends Source {
   elementType = 'sqlSource';
-  requestBlock?: SQLBlockSource;
+  requestBlock?: SQLSourceRequest;
   private connectionNameInvalid = false;
   constructor(
     readonly connectionName: ModelEntryReference,
     readonly select: SQLString
   ) {
-    super();
-    this.has({connectionName, select});
+    super({connectionName, select});
   }
 
-  sqlBlock(): SQLBlockSource {
-    if (!this.requestBlock) {
-      this.requestBlock = makeSQLBlock(
-        this.select.sqlPhrases(),
-        this.connectionName.refString
+  sqlSourceRequest(doc: Document): SQLSourceRequest | undefined {
+    const partialModel = this.select.containsQueries
+      ? doc.modelDef()
+      : undefined;
+
+    const [valid, phrases] = this.select.sqlPhrases(
+      this.connectionName.refString
+    );
+    if (valid) {
+      return getSourceRequest(
+        phrases,
+        this.connectionName.refString,
+        partialModel,
+        this.translator()?.root.virtualMap
       );
     }
-    return this.requestBlock;
+    return undefined;
   }
 
-  structRef(): StructRef {
-    return this.structDef();
+  structRef(): InvokedStructRef {
+    return {
+      structRef: this.getSourceDef(),
+    };
   }
 
   validateConnectionName(): boolean {
@@ -70,7 +64,8 @@ export class SQLSource extends Source {
         true
       );
     } else if (connection.entry.type !== 'connection') {
-      this.connectionName.log(
+      this.connectionName.logError(
+        'invalid-connection-for-sql-source',
         `${this.connectionName.refString} is not a connection`
       );
       this.connectionNameInvalid = true;
@@ -85,53 +80,93 @@ export class SQLSource extends Source {
     }
     const childNeeds = super.needs(doc);
     if (childNeeds) return childNeeds;
-    const sql = this.sqlBlock();
+    if (this.requestBlock === undefined) {
+      this.requestBlock = this.sqlSourceRequest(doc);
+    }
+    const sql = this.requestBlock;
+    if (sql === undefined) {
+      return undefined;
+    }
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
-      this.log("Cant't look up schema for sql block");
+      this.logError(
+        'failed-to-fetch-sql-source-schema',
+        "Cant't look up schema for sql block"
+      );
       return;
     }
-    sqlDefEntry.reference(sql.name, this.location);
-    const lookup = sqlDefEntry.getEntry(sql.name);
+    const key = sqlKey(sql.connection, sql.selectStr);
+    sqlDefEntry.reference(key, this.location);
+    const lookup = sqlDefEntry.getEntry(key);
     if (lookup.status === 'reference') {
       return {
         compileSQL: sql,
-        partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
       };
     }
   }
 
-  structDef(): StructDef {
+  getSourceDef(): SourceDef {
+    if (this.isRestricted()) {
+      this.logError(
+        'restricted-construct-forbidden',
+        `\`${this.connectionName.refString}.sql(...)\` cannot be used in a restricted query — raw SQL is not permitted.`
+      );
+      return ErrorFactory.structDef;
+    }
     if (!this.validateConnectionName()) {
       return ErrorFactory.structDef;
     }
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
-      this.log("Cant't look up schema for sql block");
+      this.logError(
+        'failed-to-fetch-sql-source-schema',
+        "Cant't look up schema for sql block"
+      );
       return ErrorFactory.structDef;
     }
-    const sql = this.sqlBlock();
-    sqlDefEntry.reference(sql.name, this.location);
-    const lookup = sqlDefEntry.getEntry(sql.name);
+    if (this.requestBlock === undefined) {
+      // Means we couldn't make a source request or there was
+      // a problem with the source request, both will have logged
+      // errors already.
+      return ErrorFactory.structDef;
+    }
+    const sql = this.requestBlock;
+    const key = sqlKey(sql.connection, sql.selectStr);
+    sqlDefEntry.reference(key, this.location);
+    const lookup = sqlDefEntry.getEntry(key);
     if (lookup.status === 'error') {
       const msgLines = lookup.message.split(/\r?\n/);
-      this.select.log('Invalid SQL, ' + msgLines.join('\n    '));
+      this.select.logError(
+        'invalid-sql-source',
+        'Invalid SQL, ' + msgLines.join('\n    ')
+      );
       return ErrorFactory.structDef;
     } else if (lookup.status === 'present') {
       const location = this.select.location;
-      const locStruct: StructDef = {
+      // Create a base struct with updated fields (adding location and refSummary)
+      const baseStruct: SourceDef = {
         ...lookup.value,
-        fields: lookup.value.fields.map(f => ({...f, location})),
+        fields: lookup.value.fields.map(f => ({
+          ...f,
+          location,
+          refSummary: {fieldUsage: [{path: [activeName(f)], at: location}]},
+        })),
         location: this.location,
       };
-      const fromDoc = this.document();
-      const modelAnnotation = fromDoc?.currentModelAnnotation();
-      if (modelAnnotation) {
-        locStruct.modelAnnotation = modelAnnotation;
-      }
+      // Use factory to create SQLSourceDef without propagating sourceID/extends
+      const [_valid, phrases] = this.select.sqlPhrases(
+        this.connectionName.refString
+      );
+      const selectSegments = this.select.containsQueries ? phrases : undefined;
+      const locStruct: SQLSourceDef = mkSQLSourceDef(
+        baseStruct,
+        lookup.value.selectStr,
+        selectSegments
+      );
       return locStruct;
     } else {
-      this.log(
+      this.logError(
+        'non-top-level-sql-source',
         '`connection_name.sql(...)` can currently only be used in top level source/query definitions'
       );
       return ErrorFactory.structDef;

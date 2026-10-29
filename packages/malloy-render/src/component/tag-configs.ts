@@ -1,0 +1,305 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+/**
+ * Tag config types and resolver functions for built-in renderers.
+ *
+ * Each built-in renderer (image, link, etc.) has a resolver function
+ * that reads all tag properties at setup time and returns a typed
+ * config object. The component uses this config instead of reading
+ * tags directly, ensuring all tag access happens before mounting.
+ *
+ * This enables headless tag validation (no browser/DOM required)
+ * and eliminates the need for BUILTIN_RENDERER_TAGS declarations.
+ */
+
+import type {Field} from '@/data_tree';
+import {resolveCellFormat, type CellFormatConfig} from '@/format/cell-format';
+
+// ---- Image ----
+
+export interface ImageTagConfig {
+  width?: string;
+  height?: string;
+  alt?: string;
+  altField?: string;
+}
+
+export function resolveImageTags(field: Field): ImageTagConfig {
+  const tag = field.tag;
+  const imgTag = tag.tag('image');
+  if (!imgTag) return {};
+
+  const width = imgTag.text('width');
+  const height = imgTag.text('height');
+
+  let alt: string | undefined;
+  let altField: string | undefined;
+  const altTag = imgTag.tag('alt');
+  if (altTag) {
+    altField = altTag.text('field');
+    if (!altField) {
+      alt = altTag.text();
+    }
+  }
+
+  return {
+    width: width ?? undefined,
+    height: height ?? undefined,
+    alt,
+    altField,
+  };
+}
+
+// ---- Link ----
+
+export interface LinkTagConfig {
+  linkField?: string;
+  urlTemplate?: string;
+}
+
+export function resolveLinkTags(field: Field): LinkTagConfig {
+  const tag = field.tag;
+  const linkTag = tag.tag('link');
+  if (!linkTag) return {};
+
+  return {
+    linkField: linkTag.text('field') ?? undefined,
+    urlTemplate: linkTag.text('url_template') ?? undefined,
+  };
+}
+
+// ---- List ----
+
+export interface ListTagConfig {
+  isListDetail: boolean;
+}
+
+export function resolveListTags(field: Field): ListTagConfig {
+  return {
+    isListDetail: field.tag.has('list_detail'),
+  };
+}
+
+// ---- Cell format (numeric, date, duration) ----
+//
+// The config and its resolver live in ../format, the headless entry, so a
+// value can be formatted outside the renderer exactly as a cell is.
+
+export type {
+  CellFormatConfig,
+  CurrencyConfig,
+  DurationConfig,
+  NumberConfig,
+} from '@/format/cell-format';
+
+export function resolveCellFormatTags(field: Field): CellFormatConfig {
+  return resolveCellFormat(field.tag, {isTime: field.isTime()});
+}
+
+// ---- Column ----
+
+export interface ColumnTagConfig {
+  width: number | null;
+  height: number | null;
+  wordBreak: boolean;
+}
+
+const NAMED_COLUMN_WIDTHS: Record<string, number> = {
+  'xs': 28,
+  'sm': 64,
+  'md': 128,
+  'lg': 256,
+  'xl': 384,
+  '2xl': 512,
+};
+
+function resolveColumnTags(field: Field): ColumnTagConfig | undefined {
+  const columnTag = field.tag.tag('column');
+  if (!columnTag) return undefined;
+
+  let width: number | null = null;
+  const textWidth = columnTag.text('width');
+  const numericWidth = columnTag.numeric('width');
+  if (textWidth && NAMED_COLUMN_WIDTHS[textWidth]) {
+    width = NAMED_COLUMN_WIDTHS[textWidth];
+  } else if (numericWidth) {
+    width = numericWidth;
+  }
+
+  const height = columnTag.numeric('height') ?? null;
+  const wordBreak = columnTag.text('word_break') === 'break_all';
+
+  return {width, height, wordBreak};
+}
+
+// ---- Table nest ----
+
+export interface TableNestConfig {
+  fillSize: boolean;
+  transposeLimit?: number;
+  pivotDimensions?: string[];
+}
+
+function resolveTableNestTags(field: Field): TableNestConfig {
+  const tag = field.tag;
+
+  // table.size for fill mode
+  const tableTag = tag.tag('table');
+  const sizeTag = tableTag?.tag('size');
+  const fillSize = sizeTag?.text() === 'fill';
+
+  // Transpose sub-tags
+  let transposeLimit: number | undefined;
+  if (tag.has('transpose')) {
+    transposeLimit = tag.numeric('transpose', 'limit') ?? undefined;
+  }
+
+  // Pivot sub-tags
+  let pivotDimensions: string[] | undefined;
+  if (tag.has('pivot')) {
+    const dims = tag.textArray('pivot', 'dimensions');
+    pivotDimensions = dims && dims.length > 0 ? dims : undefined;
+  }
+
+  return {fillSize, transposeLimit, pivotDimensions};
+}
+
+// ---- Dashboard nest ----
+
+export interface DashboardNestConfig {
+  maxTableHeight: number | null;
+  columns: number | undefined;
+  gap: number | undefined;
+}
+
+/**
+ * Per-child layout config for the direct children of a # dashboard nest.
+ * Resolved once at setup time and stashed on each child via
+ * setDashboardChildConfig, so the dashboard component never reads child
+ * tags at render time and these dashboard-only concepts stay off the
+ * universal field base.
+ */
+export interface DashboardChildConfig {
+  colspan?: number;
+  subtitle?: string;
+  break?: boolean;
+  borderless?: boolean;
+}
+
+function resolveDashboardTags(field: Field): DashboardNestConfig {
+  const tag = field.tag;
+  const dashboardTag = tag.tag('dashboard');
+
+  let maxTableHeight: number | null = 361;
+  const maxTableHeightTag = dashboardTag?.tag('table', 'max_height');
+  if (maxTableHeightTag?.text() === 'none') {
+    maxTableHeight = null;
+  } else if (maxTableHeightTag?.numeric()) {
+    maxTableHeight = maxTableHeightTag.numeric()!;
+  }
+
+  // Drop out-of-range values so layout falls back to defaults; the
+  // validator emits a clear error so the user knows what's wrong.
+  const rawColumns = dashboardTag?.numeric('columns');
+  const columns =
+    rawColumns !== undefined && Number.isInteger(rawColumns) && rawColumns >= 1
+      ? rawColumns
+      : undefined;
+
+  const rawGap = dashboardTag?.numeric('gap');
+  const gap = rawGap !== undefined && rawGap >= 0 ? rawGap : undefined;
+
+  return {maxTableHeight, columns, gap};
+}
+
+// ---- Resolver dispatch ----
+
+/**
+ * Run the appropriate tag resolver for a field based on its renderAs type
+ * and store the result on the field. Called during registerFields().
+ *
+ * Also resolves cross-cutting tag properties (label, column)
+ * for ALL fields, ensuring all tag access happens at setup time.
+ * Components use the resolved configs instead of reading tags directly.
+ */
+export function resolveBuiltInTags(field: Field): void {
+  const renderAs = field.renderAs();
+  const tag = field.tag;
+
+  // Cross-cutting: resolve label for all fields
+  const customLabel = tag.text('label');
+  if (customLabel !== undefined) {
+    field.setResolvedLabel(customLabel);
+  }
+
+  // Cross-cutting: resolve column config for all fields
+  const columnConfig = resolveColumnTags(field);
+  if (columnConfig) {
+    field.setColumnConfig(columnConfig);
+  }
+
+  // Touch size.height which is read by chart-layout-settings
+  // (size and size.width are already read by validateFieldTags)
+  const sizeTag = tag.tag('size');
+  if (sizeTag) {
+    sizeTag.numeric('height');
+  }
+
+  // Renderer-specific config
+  switch (renderAs) {
+    case 'image':
+      field.setTagConfig(resolveImageTags(field));
+      break;
+    case 'link':
+      field.setTagConfig(resolveLinkTags(field));
+      break;
+    case 'list':
+      field.setTagConfig(resolveListTags(field));
+      break;
+    case 'cell':
+      field.setTagConfig(resolveCellFormatTags(field));
+      break;
+    case 'table':
+      field.setTagConfig(resolveTableNestTags(field));
+      break;
+    case 'dashboard':
+      field.setTagConfig(resolveDashboardTags(field));
+      // Resolve dashboard-owned child tags at setup time so the
+      // dashboard component never reads tags at render time.
+      if (field.isNest()) {
+        for (const child of field.fields) {
+          const childTag = child.tag;
+          // Read each child tag unconditionally so any present colspan/subtitle/
+          // break/borderless is marked read; absent tags need no marking since
+          // the unread-tag detector only walks present properties. This is why
+          // the dashboard no longer needs childOwnedPaths entries.
+          const childConfig: DashboardChildConfig = {};
+          const colspanVal = childTag.numeric('colspan');
+          // Drop invalid colspans so the tile keeps its default of one column;
+          // the validator already logged the error.
+          if (
+            colspanVal !== undefined &&
+            Number.isInteger(colspanVal) &&
+            colspanVal >= 1
+          ) {
+            childConfig.colspan = colspanVal;
+          }
+          const subtitle = childTag.text('subtitle');
+          if (subtitle !== undefined) {
+            childConfig.subtitle = subtitle;
+          }
+          if (childTag.has('break')) {
+            childConfig.break = true;
+          }
+          if (childTag.has('borderless')) {
+            childConfig.borderless = true;
+          }
+          child.setDashboardChildConfig(childConfig);
+        }
+      }
+      break;
+  }
+}

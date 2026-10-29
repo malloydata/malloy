@@ -1,0 +1,8 @@
+{
+  "roots": [
+    "../../packages/malloy-malloy-sql/",
+    "../../packages/malloy-syntax-highlight/",
+    "../../packages/malloy/",
+    "../../test/src/core/"
+  ]
+}

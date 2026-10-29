@@ -1,37 +1,23 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {LogMessage, DocumentRange, DocumentPosition} from '@malloydata/malloy';
+import type {
+  LogMessage,
+  DocumentRange,
+  DocumentPosition,
+} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQL';
-import {
+import type {
   MalloySQLStatementConfig,
   MalloySQLStatementBase,
   MalloySQLStatement,
   MalloySQLParseResults,
-  MalloySQLStatementType,
   MalloySQLParseRange,
   MalloySQLParseLocation,
 } from './types';
+import {MalloySQLStatementType} from './types';
 import {MalloySQLSQLParser} from './malloySQLSQLParser';
 import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLErrors';
 
@@ -52,12 +38,14 @@ export class MalloySQLParser {
     };
   }
   private static createParseError(
+    code: string,
     message: string,
     range: MalloySQLParseRange,
     url = '.'
   ): MalloySQLParseError {
     const log: LogMessage = {
       message,
+      code,
       at: {
         url,
         range: this.convertRange(range),
@@ -85,6 +73,7 @@ export class MalloySQLParser {
             e.message,
             [
               {
+                code: 'malloysql-syntax-error',
                 message: e.message,
                 at: {url, range: this.convertRange(e.location)},
                 severity: 'error',
@@ -116,6 +105,7 @@ export class MalloySQLParser {
       ) {
         errors.push(
           this.createParseError(
+            'malloysql-illegal-statement-in-malloy-block',
             'Only comments are allowed after ">>>malloy"',
             parsedStatement.delimiterRange,
             url
@@ -130,6 +120,7 @@ export class MalloySQLParser {
         else
           errors.push(
             this.createParseError(
+              'malloysql-invalid-connection-specification',
               '"connection:" found but no connection value was provided',
               parsedStatement.delimiterRange,
               url
@@ -170,6 +161,7 @@ export class MalloySQLParser {
           if (!previousConnection)
             errors.push(
               this.createParseError(
+                'malloysql-missing-connection-specification',
                 'No connection configuration specified',
                 parsedStatement.delimiterRange,
                 url

@@ -1,28 +1,74 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {v5 as uuidv5} from 'uuid';
-import {Expr, Fragment} from './malloy_types';
+import {v4 as uuidv4, v5 as uuidv5} from 'uuid';
+import {sha256} from '@noble/hashes/sha256';
+import {bytesToHex, utf8ToBytes} from '@noble/hashes/utils';
+import type {
+  AtomicTypeDef,
+  Expr,
+  ExprWithKids,
+  FieldDef,
+  GenericSQLExpr,
+  GivenTypeDef,
+  ModelDef,
+  ModelID,
+  StructDef,
+} from './malloy_types';
+import {
+  exprHasE,
+  exprHasKids,
+  fieldIsIntrinsic,
+  activeName,
+  mkSafeRecord,
+} from './malloy_types';
+import type {Dialect, DialectFieldList} from '../dialect';
+
+/**
+ * Format a typeDef as user-readable Malloy type syntax. Used in error
+ * messages where we want to echo a compound type back to the user in the
+ * same form they wrote it.
+ *
+ *   `string`               → `string`
+ *   `string[]`             → `string[]`
+ *   `{a::string, b::number}` → `{a :: string, b :: number}`
+ *   `{a::string}[]`        → `{a :: string}[]`
+ *   `filter<string>`       → `filter<string>`
+ *   sql-native rawType     → `sql native: jsonb`
+ */
+export function typeDefToString(
+  td: AtomicTypeDef | GivenTypeDef | FieldDef
+): string {
+  switch (td.type) {
+    case 'array':
+      // Repeated record (`elementTypeDef.type === 'record_element'`) carries
+      // its schema in `fields` on the array itself; basic arrays carry it
+      // in `elementTypeDef`.
+      if (td.elementTypeDef.type === 'record_element' && 'fields' in td) {
+        return `${recordFieldsToString(td.fields)}[]`;
+      }
+      if (td.elementTypeDef.type !== 'record_element') {
+        return `${typeDefToString(td.elementTypeDef)}[]`;
+      }
+      return 'array';
+    case 'record':
+      return recordFieldsToString(td.fields);
+    case 'filter expression':
+      return `filter<${td.filterType}>`;
+    case 'sql native':
+      return td.rawType ? `sql native: ${td.rawType}` : 'sql native';
+    default:
+      return td.type;
+  }
+}
+
+function recordFieldsToString(fields: FieldDef[]): string {
+  return `{${fields
+    .map(f => `${f.name} :: ${typeDefToString(f)}`)
+    .join(', ')}}`;
+}
 
 /** simple indent function */
 export function indent(s: string): string {
@@ -105,226 +151,29 @@ export function generateHash(input: string): string {
   return uuidv5(input, MALLOY_UUID);
 }
 
-export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
-  return expr.flatMap(fragment => {
-    const mapped = func(fragment);
-    return mapped.map(fragment => {
-      if (typeof fragment === 'string') {
-        return fragment;
-      }
-      switch (fragment.type) {
-        case 'aggregate':
-        case 'all':
-        case 'spread':
-        case 'sql_expression':
-        case 'exclude':
-          return {
-            ...fragment,
-            e: exprMap(fragment.e, func),
-          };
-        case 'apply':
-          return {
-            ...fragment,
-            to: exprMap(fragment.to, func),
-            value: exprMap(fragment.value, func),
-          };
-        case 'applyVal':
-        case 'field':
-        case 'function_parameter':
-        case 'parameter':
-        case 'outputField':
-        case 'source-reference':
-        case 'aggregate_limit':
-        case 'aggregate_order_by':
-          return fragment;
-        case 'sql-string':
-          return {
-            ...fragment,
-            e: exprMap(fragment.e, func),
-          };
-        case 'function_call':
-          return {
-            ...fragment,
-            args: fragment.args.map(arg => exprMap(arg, func)),
-          };
-        case 'filterExpression':
-          return {
-            ...fragment,
-            e: exprMap(fragment.e, func),
-            filterList: fragment.filterList.map(filter => {
-              return {
-                ...filter,
-                expression: exprMap(filter.expression, func),
-              };
-            }),
-          };
-        case 'dialect': {
-          switch (fragment.function) {
-            case 'cast':
-            case 'regexpMatch':
-              return {
-                ...fragment,
-                expr: exprMap(fragment.expr, func),
-              };
-            case 'delta':
-              return {
-                ...fragment,
-                delta: exprMap(fragment.delta, func),
-              };
-            case 'div':
-              return {
-                ...fragment,
-                denominator: exprMap(fragment.denominator, func),
-                numerator: exprMap(fragment.numerator, func),
-              };
-            case 'now':
-            case 'numberLiteral':
-            case 'stringLiteral':
-            case 'timeLiteral':
-            case 'regexpLiteral':
-              return fragment;
-            case 'extract':
-            case 'trunc':
-              return {
-                ...fragment,
-                expr: {
-                  ...fragment.expr,
-                  value: exprMap(fragment.expr.value, func),
-                },
-              };
-            case 'timeDiff':
-              return {
-                ...fragment,
-                left: {
-                  ...fragment.left,
-                  value: exprMap(fragment.left.value, func),
-                },
-                right: {
-                  ...fragment.left,
-                  value: exprMap(fragment.left.value, func),
-                },
-              };
-            default:
-              throw new Error('unexpected dialect function');
-          }
-        }
-        default:
-          throw new Error('unexpected');
-      }
-    });
-  });
-}
-
-export function exprWalk(expr: Expr, func: (fragment: Fragment) => void): void {
-  expr.forEach(fragment => {
-    func(fragment);
-    if (typeof fragment === 'string') {
-      return fragment;
-    }
-    switch (fragment.type) {
-      case 'aggregate':
-      case 'all':
-      case 'spread':
-      case 'sql_expression':
-      case 'exclude':
-        return {
-          ...fragment,
-          e: exprWalk(fragment.e, func),
-        };
-      case 'apply':
-        return {
-          ...fragment,
-          to: exprWalk(fragment.to, func),
-          value: exprWalk(fragment.value, func),
-        };
-      case 'applyVal':
-      case 'field':
-      case 'function_parameter':
-      case 'parameter':
-      case 'outputField':
-      case 'source-reference':
-      case 'aggregate_limit':
-      case 'aggregate_order_by':
-        return fragment;
-      case 'function_call':
-        return {
-          ...fragment,
-          args: fragment.args.map(arg => exprWalk(arg, func)),
-        };
-      case 'sql-string':
-        return {
-          ...fragment,
-          e: exprWalk(fragment.e, func),
-        };
-      case 'filterExpression':
-        return {
-          ...fragment,
-          e: exprWalk(fragment.e, func),
-          filterList: fragment.filterList.map(filter => {
-            return {
-              ...filter,
-              expression: exprWalk(filter.expression, func),
-            };
-          }),
-        };
-      case 'dialect': {
-        switch (fragment.function) {
-          case 'cast':
-          case 'regexpMatch':
-            return {
-              ...fragment,
-              expr: exprWalk(fragment.expr, func),
-            };
-          case 'delta':
-            return {
-              ...fragment,
-              delta: exprWalk(fragment.delta, func),
-            };
-          case 'div':
-            return {
-              ...fragment,
-              denominator: exprWalk(fragment.denominator, func),
-              numerator: exprWalk(fragment.numerator, func),
-            };
-          case 'now':
-          case 'numberLiteral':
-          case 'stringLiteral':
-          case 'timeLiteral':
-          case 'regexpLiteral':
-            return fragment;
-          case 'extract':
-          case 'trunc':
-            return {
-              ...fragment,
-              expr: {
-                ...fragment.expr,
-                value: exprWalk(fragment.expr.value, func),
-              },
-            };
-          case 'timeDiff':
-            return {
-              ...fragment,
-              left: {
-                ...fragment.left,
-                value: exprWalk(fragment.left.value, func),
-              },
-              right: {
-                ...fragment.left,
-                value: exprWalk(fragment.left.value, func),
-              },
-            };
-          default:
-            throw new Error('unexpected dialect function');
-        }
-      }
-      default:
-        throw new Error(
-          `unexpected fragment type ${
-            (fragment as unknown as {type: string}).type
-          }`
-        );
-    }
-  });
+/**
+ * Compute a digest for lookup/identity purposes.
+ *
+ * Uses @noble/hashes sha256:
+ * - Works in both Node.js and browsers (no native crypto dependency)
+ * - Synchronous API (unlike Web Crypto which is async)
+ * - SHA-256 is appropriate since inputs may contain connection credentials
+ *
+ * Takes variable string arguments and combines them in a collision-resistant
+ * way by including the length of each string (similar to pathToKey pattern).
+ */
+export function makeDigest(...parts: (string | undefined)[]): string {
+  // Combine parts with length prefix to avoid collisions
+  // e.g., ("ab", "c") vs ("a", "bc") both concat to "abc"
+  // but with lengths: "2:ab/1:c" vs "1:a/2:bc"
+  // undefined is distinct from empty string in the hash
+  const combined = parts
+    .map(p => (p === undefined ? '{undefined}' : `${p.length}:${p}`))
+    .join('/');
+  // @noble/hashes is pinned to v1 (v2 is ESM-only — see docs/dependency-management/CONTEXT.md).
+  // v1's sha256 also accepts a string directly, but we utf8-encode explicitly so the
+  // digest is stable and unambiguous (and identical to the v2 form we briefly used).
+  return bytesToHex(sha256(utf8ToBytes(combined)));
 }
 
 export function joinWith<T>(els: T[][], sep: T): T[] {
@@ -340,4 +189,185 @@ export function joinWith<T>(els: T[][], sep: T): T[] {
 
 export function range(start: number, end: number): number[] {
   return Array.from({length: end - start}, (_, index) => index + start);
+}
+
+export function* exprKids(eNode: Expr): IterableIterator<Expr> {
+  if (exprHasKids(eNode)) {
+    for (const kidEnt of Object.values(eNode.kids)) {
+      if (Array.isArray(kidEnt)) {
+        yield* kidEnt;
+      } else if (kidEnt !== null) {
+        yield kidEnt;
+      }
+    }
+  } else if (exprHasE(eNode)) {
+    yield eNode.e;
+  }
+}
+export function* exprWalk(
+  eNode: Expr,
+  order: 'pre' | 'post' = 'post'
+): IterableIterator<Expr> {
+  if (order === 'pre') {
+    yield eNode;
+  }
+  for (const kid of exprKids(eNode)) {
+    yield* exprWalk(kid, order);
+  }
+  if (order === 'post') {
+    yield eNode;
+  }
+}
+
+export function exprMap(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
+  let mapExpr = {...eNode};
+  if (exprHasKids(eNode)) {
+    const parentNode: ExprWithKids = {...eNode};
+    parentNode.kids = {};
+    for (const [name, kidEnt] of Object.entries(eNode.kids)) {
+      if (Array.isArray(kidEnt)) {
+        parentNode.kids[name] = kidEnt.map(kidEl => mapFunc(kidEl));
+      } else if (kidEnt !== null) {
+        parentNode.kids[name] = mapFunc(kidEnt);
+      }
+    }
+    mapExpr = parentNode as Expr;
+  }
+  if (exprHasE(mapExpr)) {
+    mapExpr.e = mapFunc(mapExpr.e);
+  }
+  return mapFunc(mapExpr);
+}
+export type SQLExprElement = string | Expr;
+
+/**
+ * Take a mixed array of strings and Expr and turn it into an SQLExpr
+ * expression node.
+ */
+export function composeSQLExpr(from: SQLExprElement[]): GenericSQLExpr {
+  const ret: GenericSQLExpr = {
+    node: 'genericSQLExpr',
+    kids: {args: []},
+    src: [],
+  };
+  // Build the array of alternating strings and expressions
+  let lastWasString = false;
+  for (const el of from) {
+    if (typeof el === 'string') {
+      if (lastWasString) {
+        ret.src[ret.src.length - 1] += el;
+      } else {
+        ret.src.push(el);
+      }
+      lastWasString = true;
+    } else {
+      if (!lastWasString) {
+        ret.src.push('');
+      }
+      ret.kids.args.push(el);
+      lastWasString = false;
+    }
+  }
+  return ret;
+}
+
+export function getDialectFieldList(
+  structDef: StructDef,
+  dialect: Dialect
+): DialectFieldList {
+  const dialectFieldList: DialectFieldList = [];
+
+  for (const f of structDef.fields.filter(fieldIsIntrinsic)) {
+    dialectFieldList.push({
+      typeDef: f,
+      sqlExpression: dialect.sqlQuoteIdentifier(activeName(f)),
+      rawName: activeName(f),
+    });
+  }
+  return dialectFieldList;
+}
+
+/**
+ * A little extra paranoia to save us from fields which contain the special
+ * characters used to build the grouping key.
+ */
+export function pathToKey(node: string, fields: string[]): string {
+  return node + `/${fields.map(f => `${f.length}:${f}`).join(',')}`;
+}
+
+export function groupingKey(node: string, fields: string[]): string {
+  const sortedFields = [...fields].sort();
+  return pathToKey(node, sortedFields);
+}
+
+export function caseGroup(groupSets: number[], s: string): string {
+  if (groupSets.length === 0) {
+    return s;
+  } else {
+    const exp =
+      groupSets.length === 1
+        ? `=${groupSets[0]}`
+        : ` IN (${groupSets.join(',')})`;
+    return `CASE WHEN group_set${exp} THEN\n  ${s}\n  END`;
+  }
+}
+
+export class GenerateState {
+  whereSQL?: string;
+  applyValue?: string;
+  totalGroupSet = -1;
+
+  withWhere(s?: string): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = s;
+    newState.applyValue = this.applyValue;
+    newState.totalGroupSet = this.totalGroupSet;
+    return newState;
+  }
+
+  withApply(s: string): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = this.whereSQL;
+    newState.applyValue = s;
+    newState.totalGroupSet = this.totalGroupSet;
+    return newState;
+  }
+
+  withTotal(groupSet: number): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = this.whereSQL;
+    newState.applyValue = this.applyValue;
+    newState.totalGroupSet = groupSet;
+    return newState;
+  }
+}
+
+/**
+ * Make a {@link ModelID} for a model. Pass the model's URL for a real model;
+ * omit it for a URL-less model to get a synthetic `"internal <uuid>"` id. The
+ * space makes the synthetic form an illegal URL so it can never collide with a
+ * real model URL.
+ */
+export function mkModelID(url?: string): ModelID {
+  return url ?? `internal ${uuidv4()}`;
+}
+
+/**
+ * Create an empty ModelDef with the given name.
+ * Use this factory to ensure all required fields are present.
+ */
+export function mkModelDef(
+  name: string,
+  modelID: ModelID = mkModelID()
+): ModelDef {
+  return {
+    name,
+    modelID,
+    exports: [],
+    contents: mkSafeRecord(),
+    sourceRegistry: {},
+    modelAnnotations: {},
+    queryList: [],
+    dependencies: {},
+  };
 }

@@ -1,0 +1,49 @@
+import {For} from 'solid-js';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
+import type {RendererProps} from './types';
+import type {ListTagConfig} from './tag-configs';
+
+export function renderList(props: RendererProps) {
+  if (props.dataColumn.isNull()) return '∅';
+  const config = props.dataColumn.field.getTagConfig<ListTagConfig>();
+  if (!config) throw new Error('Missing tag config for List renderer');
+  if (!props.dataColumn.field.isNest())
+    throw new Error('List renderer: Field must be ExploreField');
+  // TODO make this work for Arrays as well using `dataColumn.values`
+  if (!props.dataColumn.isRepeatedRecord())
+    throw new Error('List renderer: DataColumn must be RepeatedRecord');
+  const nonHiddenFields = props.dataColumn.field.fields.filter(field => {
+    return !field.isHidden();
+  });
+  const valueField = nonHiddenFields[0];
+
+  const descriptionField = nonHiddenFields[1];
+  const rows = props.dataColumn.rows;
+
+  return (
+    <div
+      class="malloy-list"
+      style="text-wrap: wrap; line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);"
+    >
+      <For each={rows}>
+        {(row, idx) => (
+          <span>
+            {
+              applyRenderer({
+                dataColumn: row.column(valueField.name),
+              }).renderValue
+            }
+            {config.isListDetail &&
+              descriptionField &&
+              '(' +
+                applyRenderer({
+                  dataColumn: row.column(descriptionField.name),
+                }).renderValue +
+                ')'}
+            {idx() < rows.length - 1 && ', '}
+          </span>
+        )}
+      </For>
+    </div>
+  );
+}

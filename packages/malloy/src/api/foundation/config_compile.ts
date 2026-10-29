@@ -1,0 +1,434 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import type {LogMessage} from '../../lang/parse-log';
+import {
+  getConnectionProperties,
+  getRegisteredConnectionTypes,
+} from '../../connection/registry';
+import type {
+  ConnectionPropertyDefinition,
+  ConnectionPropertyType,
+} from '../../connection/registry';
+import {closestMatch} from '../../util/closest_match';
+
+// =============================================================================
+// Typed dictionary tree
+// =============================================================================
+
+/**
+ * A compiled config node. The compiler produces a tree of these; the resolver
+ * walks the tree against a ConfigOverlays dict and produces a plain POJO.
+ */
+export type ConfigNode =
+  ConfigDict | ConfigLiteral | ConfigReference | ConfigInvalid;
+
+export interface ConfigDict {
+  kind: 'dict';
+  entries: Record<string, ConfigNode>;
+}
+
+/**
+ * A leaf node holding a literal — primitives for typed slots, arbitrary
+ * JSON for `json`-typed slots (no reference expansion, no type checking).
+ */
+export interface ConfigLiteral {
+  kind: 'value';
+  value: unknown;
+}
+
+export interface ConfigReference {
+  kind: 'reference';
+  /** Overlay name: "env", "config", "session", etc. */
+  source: string;
+  /** Path into the overlay. */
+  path: string[];
+}
+
+/**
+ * A property the user wrote that can never produce a value — it failed its
+ * type check. Compilation records it rather than dropping it so that a
+ * `mustHaveValue` property can tell "the user wrote something unusable" apart
+ * from "the user wrote nothing." It resolves to `undefined` like any other
+ * failure; the difference is only that the key is still visible in the
+ * compiled tree.
+ */
+export interface ConfigInvalid {
+  kind: 'invalid';
+}
+
+// =============================================================================
+// Section compilers
+// =============================================================================
+
+export type SectionCompiler = (
+  value: unknown,
+  log: LogMessage[]
+) => ConfigNode | undefined;
+
+const TOP_LEVEL_SECTIONS: Record<string, SectionCompiler> = {
+  connections: compileConnections,
+  manifestPath: compileManifestPath,
+  givensPath: compileGivensPath,
+  finalizeGivens: compileFinalizeGivens,
+  virtualMap: compileVirtualMap,
+  includeDefaultConnections: compileIncludeDefaultConnections,
+};
+
+const KNOWN_TOP_LEVEL_KEYS = new Set(Object.keys(TOP_LEVEL_SECTIONS));
+
+// =============================================================================
+// Entry point
+// =============================================================================
+
+/**
+ * Compile a POJO into a typed dictionary tree, collecting validation warnings.
+ * Does not throw — caller inspects `log` for issues.
+ */
+export function compileConfig(pojo: unknown): {
+  compiled: ConfigDict;
+  log: LogMessage[];
+} {
+  const log: LogMessage[] = [];
+  const compiled: ConfigDict = {kind: 'dict', entries: {}};
+
+  if (!isRecord(pojo)) {
+    log.push({
+      message: 'config is not a JSON object',
+      severity: 'error',
+      code: 'config-validation',
+    });
+    return {compiled, log};
+  }
+
+  for (const [key, value] of Object.entries(pojo)) {
+    const compiler = TOP_LEVEL_SECTIONS[key];
+    if (!compiler) {
+      const suggestion = closestMatch(key, [...KNOWN_TOP_LEVEL_KEYS]);
+      const hint = suggestion ? `. Did you mean "${suggestion}"?` : '';
+      log.push(makeWarning(key, `unknown config key "${key}"${hint}`));
+      continue;
+    }
+    const node = compiler(value, log);
+    if (node !== undefined) {
+      compiled.entries[key] = node;
+    }
+  }
+
+  return {compiled, log};
+}
+
+// =============================================================================
+// connections
+// =============================================================================
+
+function compileConnections(
+  value: unknown,
+  log: LogMessage[]
+): ConfigNode | undefined {
+  if (!isRecord(value)) {
+    log.push(makeWarning('connections', '"connections" should be an object'));
+    return undefined;
+  }
+
+  const registeredTypes = new Set(getRegisteredConnectionTypes());
+  const connections: ConfigDict = {kind: 'dict', entries: {}};
+
+  for (const [name, rawEntry] of Object.entries(value)) {
+    const prefix = `connections.${name}`;
+
+    if (!isRecord(rawEntry)) {
+      log.push(makeWarning(prefix, 'should be an object'));
+      continue;
+    }
+
+    const is = rawEntry['is'];
+    if (is === undefined || is === null || is === '') {
+      log.push(
+        makeWarning(prefix, 'missing required "is" field (connection type)')
+      );
+      continue;
+    }
+
+    if (typeof is !== 'string') {
+      log.push(makeWarning(`${prefix}.is`, '"is" should be a string'));
+      continue;
+    }
+
+    if (!registeredTypes.has(is)) {
+      const suggestion = closestMatch(is, [...registeredTypes]);
+      const hint = suggestion ? ` Did you mean "${suggestion}"?` : '';
+      log.push(
+        makeWarning(
+          `${prefix}.is`,
+          `unknown connection type "${is}".${hint} Available types: ${[...registeredTypes].join(', ')}`
+        )
+      );
+      continue;
+    }
+
+    const entry = compileConnectionEntry(prefix, is, rawEntry, log);
+    connections.entries[name] = entry;
+  }
+
+  return connections;
+}
+
+function compileConnectionEntry(
+  prefix: string,
+  typeName: string,
+  rawEntry: Record<string, unknown>,
+  log: LogMessage[]
+): ConfigDict {
+  const props = getConnectionProperties(typeName) ?? [];
+  const propMap = new Map<string, ConnectionPropertyDefinition>(
+    props.map(p => [p.name, p])
+  );
+
+  const entry: ConfigDict = {kind: 'dict', entries: {}};
+  // Record the connection type as a plain value.
+  entry.entries['is'] = {kind: 'value', value: typeName};
+
+  for (const [key, value] of Object.entries(rawEntry)) {
+    if (key === 'is') continue;
+
+    const propDef = propMap.get(key);
+    if (!propDef) {
+      const suggestion = closestMatch(key, [...propMap.keys()]);
+      const hint = suggestion ? `. Did you mean "${suggestion}"?` : '';
+      log.push(
+        makeWarning(
+          `${prefix}.${key}`,
+          `unknown property "${key}" for connection type "${typeName}"${hint}`
+        )
+      );
+      continue;
+    }
+
+    const node = compileConnectionProperty(
+      `${prefix}.${key}`,
+      propDef,
+      value,
+      log
+    );
+    if (node !== undefined) {
+      entry.entries[key] = node;
+    }
+  }
+
+  return entry;
+}
+
+/**
+ * Compile a single connection property value.
+ *
+ * At non-`json` property slots, a single-key object whose value is a string or
+ * string[] is recognized as an overlay reference. `json`-typed slots always
+ * pass through as literal data — this is the security invariant that prevents
+ * reference injection into structured config.
+ *
+ * A property's `source` overrides that reading in both directions. `'literal'`
+ * refuses a reference; `'overlay'` refuses a literal, which is also what lets
+ * a reference be recognized in a slot that would otherwise hold a dictionary.
+ */
+function compileConnectionProperty(
+  path: string,
+  propDef: ConnectionPropertyDefinition,
+  value: unknown,
+  log: LogMessage[]
+): ConfigNode | undefined {
+  if (value === undefined || value === null) {
+    return propDef.mustHaveValue ? {kind: 'invalid'} : undefined;
+  }
+
+  const ref = asReferenceShape(value);
+
+  switch (propDef.source) {
+    case 'overlay':
+      if (ref === undefined) {
+        log.push(
+          makeWarning(
+            path,
+            'must name an overlay, as in {env: "NAME"}; a value written here ' +
+              'directly is not allowed'
+          )
+        );
+        return {kind: 'invalid'};
+      }
+      return ref;
+    case 'literal':
+      if (ref !== undefined) {
+        log.push(
+          makeWarning(
+            path,
+            'must be written here directly and cannot name an overlay'
+          )
+        );
+        return {kind: 'invalid'};
+      }
+      break;
+    default:
+      if (propDef.type === 'json') {
+        return {kind: 'value', value};
+      }
+      if (ref !== undefined) {
+        return ref;
+      }
+      break;
+  }
+
+  const typeError = checkValueType(value, propDef.type);
+  if (typeError) {
+    log.push(makeWarning(path, `${typeError} (expected ${propDef.type})`));
+    return propDef.mustHaveValue ? {kind: 'invalid'} : undefined;
+  }
+  return {kind: 'value', value};
+}
+
+// =============================================================================
+// Pass-through sections
+// =============================================================================
+
+function compileManifestPath(
+  value: unknown,
+  log: LogMessage[]
+): ConfigNode | undefined {
+  const ref = asReferenceShape(value);
+  if (ref !== undefined) return ref;
+  if (typeof value !== 'string') {
+    log.push(
+      makeWarning(
+        'manifestPath',
+        '"manifestPath" should be a string or an overlay reference'
+      )
+    );
+    return undefined;
+  }
+  return {kind: 'value', value};
+}
+
+function compileGivensPath(
+  value: unknown,
+  log: LogMessage[]
+): ConfigNode | undefined {
+  const ref = asReferenceShape(value);
+  if (ref !== undefined) return ref;
+  if (typeof value !== 'string') {
+    log.push(
+      makeWarning(
+        'givensPath',
+        '"givensPath" should be a string or an overlay reference'
+      )
+    );
+    return undefined;
+  }
+  return {kind: 'value', value};
+}
+
+function compileFinalizeGivens(
+  value: unknown,
+  log: LogMessage[]
+): ConfigNode | undefined {
+  if (!Array.isArray(value) || !value.every(v => typeof v === 'string')) {
+    log.push(
+      makeWarning(
+        'finalizeGivens',
+        '"finalizeGivens" should be an array of given names'
+      )
+    );
+    return undefined;
+  }
+  return {kind: 'value', value};
+}
+
+function compileVirtualMap(
+  value: unknown,
+  _log: LogMessage[]
+): ConfigNode | undefined {
+  // virtualMap is a literal dict slot — no reference expansion, even if
+  // entries happen to look reference-shaped. The resolver will convert the
+  // plain structure into the runtime `VirtualMap` representation.
+  return {kind: 'value', value};
+}
+
+function compileIncludeDefaultConnections(
+  value: unknown,
+  _log: LogMessage[]
+): ConfigNode | undefined {
+  return {kind: 'value', value};
+}
+
+// =============================================================================
+// Reference-shape detection
+// =============================================================================
+
+/**
+ * Inspect a raw POJO value for the "overlay reference" shape: a single-key
+ * object whose value is a string (scalar path) or string[] (nested path).
+ * Returns a ConfigReference node if it matches, otherwise undefined.
+ *
+ * The single-key constraint distinguishes references from literal objects.
+ * This is a runtime invariant — TypeScript can't express "exactly one key".
+ */
+function asReferenceShape(value: unknown): ConfigReference | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const keys = Object.keys(value as Record<string, unknown>);
+  if (keys.length !== 1) return undefined;
+  const source = keys[0];
+  const inner = (value as Record<string, unknown>)[source];
+  if (typeof inner === 'string') {
+    return {kind: 'reference', source, path: [inner]};
+  }
+  if (Array.isArray(inner) && inner.every(x => typeof x === 'string')) {
+    return {kind: 'reference', source, path: inner as string[]};
+  }
+  return undefined;
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function makeWarning(path: string, message: string): LogMessage {
+  return {
+    message: `${path}: ${message}`,
+    severity: 'warn',
+    code: 'config-validation',
+  };
+}
+
+function checkValueType(
+  value: unknown,
+  expectedType: ConnectionPropertyType
+): string | undefined {
+  switch (expectedType) {
+    case 'number':
+      if (typeof value !== 'number')
+        return `should be a number, got ${typeof value}`;
+      break;
+    case 'boolean':
+      if (typeof value !== 'boolean')
+        return `should be a boolean, got ${typeof value}`;
+      break;
+    case 'string':
+    case 'password':
+    case 'secret':
+    case 'file':
+    case 'text':
+      if (typeof value !== 'string')
+        return `should be a string, got ${typeof value}`;
+      break;
+    case 'json':
+    case 'opaque':
+      break;
+  }
+  return undefined;
+}

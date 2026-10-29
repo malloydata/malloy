@@ -1,32 +1,14 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {Source} from '../source-elements/source';
+import type {Source} from '../source-elements/source';
 import {SourceQueryElement} from './source-query-element';
 import {QuerySource} from '../source-elements/query-source';
 import {QueryArrow} from '../query-elements/query-arrow';
-import {View} from '../view-elements/view';
-import {QueryElement} from '../types/query-element';
+import type {View} from '../view-elements/view';
+import type {QueryElement} from '../types/query-element';
 
 /**
  * An expression that adds a segment to a source or query.
@@ -40,6 +22,12 @@ import {QueryElement} from '../types/query-element';
  */
 export class SQArrow extends SourceQueryElement {
   elementType = 'sq-arrow';
+  // Built once. Handing out a new element per call recompiles the query and
+  // duplicates any error it reports, because a message is only deduped
+  // against the element which logged it.
+  asQuery?: QueryElement;
+  asSource?: Source;
+
   constructor(
     readonly applyTo: SourceQueryElement,
     readonly operation: View
@@ -48,26 +36,38 @@ export class SQArrow extends SourceQueryElement {
   }
 
   getQuery(): QueryElement | undefined {
+    if (this.asQuery) {
+      return this.asQuery;
+    }
     const lhs = this.applyTo.isSource()
       ? this.applyTo.getSource()
       : this.applyTo.getQuery();
     if (lhs === undefined) {
-      this.sqLog('Could not get LHS of arrow operation');
+      this.sqLog(
+        'failed-to-compute-arrow-source',
+        'Could not get LHS of arrow operation'
+      );
       return;
     }
-    const arr = new QueryArrow(lhs, this.operation);
-    this.has({query: arr});
-    return arr;
+    this.asQuery = new QueryArrow(lhs, this.operation);
+    this.has({query: this.asQuery});
+    return this.asQuery;
   }
 
   getSource(): Source | undefined {
+    if (this.asSource) {
+      return this.asSource;
+    }
     const query = this.getQuery();
     if (!query) {
-      this.sqLog("Couldn't comprehend query well enough to make a source");
+      this.sqLog(
+        'failed-to-compute-source-from-query',
+        "Couldn't comprehend query well enough to make a source"
+      );
       return;
     }
-    const asSource = new QuerySource(query);
-    this.has({asSource});
-    return asSource;
+    this.asSource = new QuerySource(query);
+    this.has({asSource: this.asSource});
+    return this.asSource;
   }
 }

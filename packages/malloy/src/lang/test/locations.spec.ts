@@ -1,28 +1,11 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {
   TestTranslator,
+  errorMessage,
   getExplore,
   getFieldDef,
   getJoinField,
@@ -34,7 +17,10 @@ import {
   model,
 } from './test-translator';
 import './parse-expects';
-import {DocumentLocation, DocumentPosition} from '../../model/malloy_types';
+import type {
+  DocumentLocation,
+  DocumentPosition,
+} from '../../model/malloy_types';
 
 describe('source locations', () => {
   test('renamed source location', () => {
@@ -54,6 +40,10 @@ describe('source locations', () => {
       source.locations[0]
     );
   });
+
+  // TODO make parameters have locations, and make references to them work
+  // with existing jump-to-definition system
+  test.todo('location of parameter');
 
   test('location of defined dimension', () => {
     const source = markSource`source: na is a extend { dimension: ${'x is 1'} }`;
@@ -139,7 +129,7 @@ describe('source locations', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
       const na = getExplore(m.modelDef, 'na');
@@ -150,12 +140,11 @@ describe('source locations', () => {
 
   test('location of fields inherited from a query', () => {
     const source = markSource`
-      source: na is ${"_db_.table('aTable')"} -> {
+      source: na is _db_.table('aTable') -> {
         group_by:
-          abool
+          ${'abool'}
           ${'y is 1'}
-      }
-    `;
+      }`;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
@@ -241,31 +230,31 @@ describe('source locations', () => {
   });
 
   test('undefined query location', () => {
-    expect(model`run: ${'xyz'}`).translationToFailWith(
-      "Reference to undefined object 'xyz'"
+    expect(model`run: ${'xyz'}`).toLog(
+      errorMessage("Reference to undefined object 'xyz'")
     );
   });
   test('undefined field reference', () => {
-    expect(model`run: a -> { group_by: ${'xyz'} }`).translationToFailWith(
-      "'xyz' is not defined"
+    expect(model`run: a -> { group_by: ${'xyz'} }`).toLog(
+      errorMessage("'xyz' is not defined")
     );
   });
   test('bad query', () => {
-    expect(
-      model`run: a -> { group_by: astr; ${'select: *'} }`
-    ).translationToFailWith(/Not legal in grouping query/);
+    expect(model`run: a -> { group_by: astr; ${'select: *'} }`).toLog(
+      errorMessage(/Use of select: is not allowed in a grouping query/)
+    );
   });
 
   test.skip('undefined field reference in top', () => {
-    expect(
-      model`run: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`
-    ).translationToFailWith("'xyz' is not defined");
+    expect(model`run: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`).toLog(
+      errorMessage("'xyz' is not defined")
+    );
   });
 
   test.skip('undefined field reference in order_by', () => {
-    expect(
-      model`run: a -> { group_by: one is 1; order_by: ${'xyz'} }`
-    ).translationToFailWith("'xyz' is not defined");
+    expect(model`run: a -> { group_by: one is 1; order_by: ${'xyz'} }`).toLog(
+      errorMessage("'xyz' is not defined")
+    );
   });
 });
 
@@ -284,6 +273,20 @@ describe('source references', () => {
       definition: {
         location: source.locations[0],
       },
+    });
+  });
+
+  test('the join named before a star is a reference', () => {
+    const source = markSource`
+      source: x is a extend { join_one: ${'b is a on true'} }
+      run: x -> { select: ${'b'}.* }
+    `;
+    const m = new TestTranslator(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: 'joinReference',
+      text: 'b',
     });
   });
 
@@ -744,5 +747,85 @@ describe('source references', () => {
         location: source.locations[0],
       },
     });
+  });
+});
+
+describe('given references', () => {
+  function pos(location: DocumentLocation): DocumentPosition {
+    return location.range.start;
+  }
+
+  test('use-site $NAME points at the declaration', () => {
+    const source = markSource`
+      ##! experimental.givens
+      given: ${'TENANT :: string is "acme"'}
+      source: x is a extend { where: astr = ${'$TENANT'} }
+    `;
+    const m = new TestTranslator(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
+      type: 'givenReference',
+      text: 'TENANT',
+      location: source.locations[1],
+      definition: {
+        type: 'string',
+        defaultText: '"acme"',
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test('declaration site emits a self-referential reference', () => {
+    const source = markSource`
+      ##! experimental.givens
+      given: ${'TENANT :: string'}
+    `;
+    const m = new TestTranslator(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(pos(source.locations[0]))).toMatchObject({
+      type: 'givenReference',
+      text: 'TENANT',
+      definition: {
+        type: 'string',
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test('reference omits defaultText when no default is declared', () => {
+    const source = markSource`
+      ##! experimental.givens
+      given: ${'TENANT :: string'}
+      source: x is a extend { where: astr = ${'$TENANT'} }
+    `;
+    const m = new TestTranslator(source.code);
+    expect(m).toTranslate();
+    const ref = m.referenceAt(pos(source.locations[1]));
+    expect(ref?.type).toBe('givenReference');
+    if (ref?.type === 'givenReference') {
+      expect(ref.definition.defaultText).toBeUndefined();
+    }
+  });
+
+  test('selective import name points at the declaration in the imported file', () => {
+    const child = markSource`
+      ##! experimental.givens
+      given: ${'TENANT :: string is "acme"'}
+    `;
+    const parent = markSource`
+      ##! experimental.givens
+      import { ${'TENANT'} } from "child"
+    `;
+    const m = new TestTranslator(parent.code);
+    m.unresolved();
+    m.update({urls: {'internal://test/langtests/child': child.code}});
+    m.compile();
+    expect(m).toTranslate();
+    const ref = m.referenceAt(pos(parent.locations[0]));
+    expect(ref?.type).toBe('givenReference');
+    expect(ref?.text).toBe('TENANT');
+    expect(ref?.definition.location?.url).toBe(
+      'internal://test/langtests/child'
+    );
   });
 });

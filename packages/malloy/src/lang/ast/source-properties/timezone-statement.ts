@@ -1,29 +1,13 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {QueryBuilder} from '../types/query-builder';
+import {Dialect} from '../../../dialect/dialect';
+import type {ExprString} from '../expressions/expr-string';
+import type {QueryBuilder} from '../types/query-builder';
 import {MalloyElement} from '../types/malloy-element';
-import {QueryPropertyInterface} from '../types/query-property-interface';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
 
 export class TimezoneStatement
   extends MalloyElement
@@ -32,20 +16,27 @@ export class TimezoneStatement
   elementType = 'timezone';
   forceQueryClass = undefined;
   queryRefinementStage = undefined;
-  constructor(readonly tz: string) {
-    super();
+  constructor(private readonly timezone: ExprString) {
+    super({timezone});
   }
 
-  get isValid(): boolean {
-    try {
-      Intl.DateTimeFormat(undefined, {timeZone: this.tz});
-      return true;
-    } catch {
-      return false;
+  timezoneName(): string | undefined {
+    const name = this.timezone.value;
+    if (!Dialect.isSafeTimezoneName(name)) {
+      this.logError(
+        'invalid-timezone',
+        {timezone: name},
+        {at: this.timezone.location}
+      );
+      return undefined;
     }
+    return name;
   }
 
   queryExecute(executeFor: QueryBuilder) {
-    executeFor.resultFS.setTimezone(this.tz);
+    const timezone = this.timezoneName();
+    if (timezone !== undefined) {
+      executeFor.resultFS.setTimezone(timezone);
+    }
   }
 }

@@ -1,29 +1,42 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 lexer grammar MalloyLexer;
 
+@members {
+  _blockAnnotationColumn: number = 0;
+  _blockAnnotationCloser: string = '|#';
+
+  isBlockAnnotationCloseLine(): boolean {
+    const col = this._blockAnnotationColumn;
+    const closer = this._blockAnnotationCloser;
+    // Characters before the expected closer must be whitespace only
+    for (let i = 0; i < col; i++) {
+      const c = this._input.LA(i + 1);
+      if (c !== 0x20 && c !== 0x09) return false;
+    }
+    // Check closer string at the expected column
+    for (let j = 0; j < closer.length; j++) {
+      if (this._input.LA(col + j + 1) !== closer.charCodeAt(j)) return false;
+    }
+    // For |# closer, ensure it's not actually |##
+    if (closer === '|#') {
+      if (this._input.LA(col + closer.length + 1) === 0x23) return false;
+    }
+    return true;
+  }
+}
+
 fragment SPACE_CHAR: [ \u000B\t\r\n\u00A0];
+
+// KEYWORDS-BEGIN
+// Every rule between the markers is a keyword whose spelling is harvested by
+// build_token_names.js to produce readable parser-error names. Keep this
+// section to plain keyword rules: case-insensitive letter fragments, one-char
+// literals ('_', ':'), SPACE_CHAR, and ?/* quantifiers only. Anything fancier
+// (literals, patterns, punctuation) belongs below the closing marker.
 
 // colon keywords ...
 ACCEPT: A C C E P T SPACE_CHAR* ':';
@@ -33,11 +46,15 @@ CALCULATION: C A L C U L A T I O N SPACE_CHAR* ':';
 CONNECTION: C O N N E C T I O N SPACE_CHAR* ':';
 DECLARE: D E C L A R E  ':' ;
 DIMENSION: D I M E N S I O N SPACE_CHAR* ':';
+DRILL: D R I L L SPACE_CHAR* ':';
 EXCEPT: E X C E P T SPACE_CHAR* ':';
 EXTENDQ: E X T E N D SPACE_CHAR* ':';
+GIVEN: G I V E N SPACE_CHAR* ':';
 GROUP_BY: G R O U P '_' B Y SPACE_CHAR* ':';
+GROUPED_BY: G R O U P E D '_' B Y SPACE_CHAR* ':';
 HAVING: H A V I N G SPACE_CHAR* ':';
 INDEX: I N D E X SPACE_CHAR* ':';
+INTERNAL: I N T E R N A L SPACE_CHAR* ':';
 JOIN_CROSS: J O I N '_' C R O S S ':';
 JOIN_ONE: J O I N '_' O N E SPACE_CHAR* ':';
 JOIN_MANY: J O I N '_' M A N Y SPACE_CHAR* ':';
@@ -47,13 +64,15 @@ NEST: N E S T SPACE_CHAR* ':';
 ORDER_BY: O R D E R '_' B Y SPACE_CHAR* ':';
 PARTITION_BY: P A R T I T I O N '_' B Y SPACE_CHAR* ':';
 PRIMARY_KEY: P R I M A R Y '_' K E Y SPACE_CHAR* ':';
-PROJECT: P R O J E C T SPACE_CHAR* ':';
+PRIVATE: P R I V A T E SPACE_CHAR* ':';
+PUBLIC: P U B L I C SPACE_CHAR* ':';
 QUERY: Q U E R Y SPACE_CHAR* ':';
 RENAME: R E N A M E SPACE_CHAR* ':';
 RUN: R U N SPACE_CHAR* ':';
 SAMPLE: S A M P L E SPACE_CHAR* ':';
 SELECT: S E L E C T SPACE_CHAR* ':';
 SOURCE: S O U R C E SPACE_CHAR* ':';
+TYPE: T Y P E SPACE_CHAR* ':';
 TOP: T O P SPACE_CHAR* ':';
 WHERE: W H E R E SPACE_CHAR* ':';
 VIEW: V I E W SPACE_CHAR* ':' ;
@@ -69,8 +88,8 @@ BOOLEAN: B O O L E A N;
 BY: B Y ;
 CASE: C A S E ;
 CAST: C A S T ;
-CONDITION: C O N D I T I O N ;
 COUNT: C O U N T ;
+COMPOSE: C O M P O S E ;
 DATE: D A T E;
 DAY: D A Y S?;
 DESC: D E S C ;
@@ -78,19 +97,24 @@ DISTINCT: D I S T I N C T ;
 ELSE: E L S E ;
 END: E N D ;
 EXCLUDE: E X C L U D E;
+EXPORT: E X P O R T ;
 EXTEND: E X T E N D ;
 FALSE: F A L S E;
+FILTER: F I L T E R;
 FULL: F U L L;
 FOR: F O R;
 FROM: F R O M ;
 HAS: H A S ;
 HOUR: H O U R S?;
 IMPORT: I M P O R T;
+INCLUDE: I N C L U D E;
 INNER: I N N E R;
 IS: I S ;
+IN: I N ;
+INTERNAL_KW: I N T E R N A L ;
 JSON: J S O N;
-LAST: L A S T ;
 LEFT: L E F T ;
+LIKE: L I K E ;
 MAX: M A X;
 MIN: M I N;
 MINUTE: M I N U T E S?;
@@ -102,6 +126,8 @@ NUMBER: N U M B E R;
 ON: O N ;
 OR: O R ;
 PICK: P I C K ;
+PRIVATE_KW: P R I V A T E ;
+PUBLIC_KW: P U B L I C ;
 QUARTER: Q U A R T E R S?;
 RIGHT: R I G H T ;
 SECOND: S E C O N D S?;
@@ -112,33 +138,63 @@ SQL: S Q L ;
 TABLE: T A B L E;
 THEN: T H E N ;
 THIS: T H I S;
+TIMESTAMPTZ: T I M E S T A M P T Z;
 TIMESTAMP: T I M E S T A M P;
 TO: T O;
 TRUE: T R U E ;
-TURTLE: T U R T L E;
 WEEK: W E E K S?;
 WHEN: W H E N ;
 WITH: W I T H ;
 YEAR: Y E A R S?;
-UNGROUPED: U N G R O U P E D;
+VIRTUAL: V I R T U A L;
+// KEYWORDS-END
 
-STRING_ESCAPE
-  : '\\' '\''
-  | '\\' '\\'
-  | '\\' .
-  ;
-HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
+fragment SQ: '\'';
+fragment BQ: '`';
+fragment DQ: '"';
+fragment SQ3: SQ SQ SQ;
+fragment DQ3: DQ DQ DQ;
+fragment BQ3: BQ BQ BQ;
+fragment RAW_CHAR: ('\\'  ~[\n]) | ~[\\\n];
+fragment RAW3_CHAR: ( '\\' . ) | (~ '\\');
+fragment F_PREFIX: F SPACE_CHAR*;
+fragment S_PREFIX: S SPACE_CHAR*;
+HACKY_REGEX: ('/' | [rR]) SQ RAW_CHAR*? SQ;
+
+RAW_SQ: S_PREFIX SQ RAW_CHAR*? (SQ | '\n');
+RAW_DQ: S_PREFIX DQ RAW_CHAR*? (DQ | '\n');
+
+SQ3_FILTER: F_PREFIX SQ3 RAW3_CHAR*? SQ3;
+SQ_FILTER: F_PREFIX SQ RAW_CHAR*? (SQ | '\n');
+DQ3_FILTER: F_PREFIX DQ3 RAW3_CHAR*? DQ3;
+DQ_FILTER: F_PREFIX DQ RAW_CHAR*? (DQ | '\n');
+BQ3_FILTER: F_PREFIX BQ3 RAW3_CHAR*? BQ3;
+BQ_FILTER: F_PREFIX BQ RAW_CHAR*? (BQ | '\n');
 
 fragment HEX: [0-9a-fA-F];
-fragment UNICODE: '\\u' HEX HEX HEX HEX;
+fragment UNICODE: '\\' U HEX HEX HEX HEX;
 fragment SAFE_NON_QUOTE: ~ ['"`\\\u0000-\u001F];
 fragment ESCAPED: '\\' ~ '\n';
 fragment STR_CHAR: UNICODE | ESCAPED | SAFE_NON_QUOTE | '\t';
-SQ_STRING: '\'' (STR_CHAR | ["`])* '\'';
-DQ_STRING: '"' (STR_CHAR | ['`])* '"';
-BQ_STRING: '`' (STR_CHAR | ['"])* '`';
+SQ_STRING: SQ (STR_CHAR | ["`])* SQ;
+DQ_STRING: DQ (STR_CHAR | ['`])* DQ;
+BQ_STRING: BQ (STR_CHAR | ['"])* BQ;
 
 fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
+
+// Block annotation openers — must precede single-line rules so #| and ##| match first
+DOC_BLOCK_ANNOTATION_BEGIN
+  : '##|' ~[\r\n]* (('\r'? '\n') | EOF)
+    {this._blockAnnotationColumn = this._tokenStartCharPositionInLine; this._blockAnnotationCloser = '|##';}
+  -> pushMode(BLOCK_ANNOTATION_MODE)
+  ;
+
+BLOCK_ANNOTATION_BEGIN
+  : '#|' ~[\r\n]* (('\r'? '\n') | EOF)
+    {this._blockAnnotationColumn = this._tokenStartCharPositionInLine; this._blockAnnotationCloser = '|#';}
+  -> pushMode(BLOCK_ANNOTATION_MODE)
+  ;
+
 DOC_ANNOTATION: '##' F_TO_EOL;
 ANNOTATION: '#' F_TO_EOL;
 
@@ -179,7 +235,6 @@ QMARK: '?';
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;
 fragment F_TZ: '[' (ID_CHAR | '/')* ']';
-fragment LX: '-' 'X' (ID_CHAR | DIGIT)+;
 // @YYYY-MM-DD HH:MM:SS.n
 LITERAL_TIMESTAMP
   : '@' F_YEAR '-' F_DD '-' F_DD
@@ -193,6 +248,8 @@ LITERAL_QUARTER: '@' F_YEAR '-' 'Q' ('1'|'2'|'3'|'4');
 LITERAL_MONTH:   '@' F_YEAR '-' F_DD;
 LITERAL_WEEK:    '@' F_YEAR '-' F_DD '-' F_DD '-' W K;
 LITERAL_YEAR:    '@' F_YEAR;
+
+GIVEN_REF: '$' ID_CHAR ( ID_CHAR | DIGIT )*;
 
 IDENTIFIER: ID_CHAR ( ID_CHAR | DIGIT )*;
 
@@ -219,7 +276,6 @@ COMMENT_TO_EOL: ('--' | '//') F_TO_EOL -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
 
 SQL_BEGIN: '"""' -> pushMode(SQL_MODE);
-CLOSE_CODE: '}%' -> popMode;
 
 // Matching any of these is a parse error
 UNWATED_CHARS_TRAILING_NUMBERS: DIGIT+ ID_CHAR+ (ID_CHAR | DIGIT)*;
@@ -237,3 +293,13 @@ fragment SQL_CHAR
 
 OPEN_CODE: SQL_CHAR*? '%{' -> pushMode(DEFAULT_MODE);
 SQL_END: SQL_CHAR*? '"""' -> popMode;
+
+mode BLOCK_ANNOTATION_MODE;
+
+BLOCK_ANNOTATION_END
+  : {this.isBlockAnnotationCloseLine()}? ~[\r\n]* (('\r'? '\n') | EOF) -> popMode
+  ;
+
+BLOCK_ANNOTATION_TEXT
+  : ~[\r\n]* (('\r'? '\n') | EOF)
+  ;

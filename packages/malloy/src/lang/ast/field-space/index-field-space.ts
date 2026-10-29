@@ -1,45 +1,29 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {
+import {mergeRefSummaries} from '../../composite-source-utils';
+import type {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
-  isAtomicFieldType,
-  expressionIsScalar,
+  RefSummary,
+  SourceDef,
 } from '../../../model/malloy_types';
+import {expressionIsScalar, TD} from '../../../model/malloy_types';
+import {ErrorFactory} from '../error-factory';
+import {resultColumnHint} from '../expressions/boolean-value';
 import {
   FieldReference,
   IndexFieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
-import {FieldSpace} from '../types/field-space';
-import {MalloyElement} from '../types/malloy-element';
-import {SpaceEntry} from '../types/space-entry';
+import type {MalloyElement} from '../types/malloy-element';
+import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 import {QueryOperationSpace} from './query-spaces';
 import {ReferenceField} from './reference-field';
-import {StructSpaceField} from './static-space';
 
 export class IndexFieldSpace extends QueryOperationSpace {
   readonly segmentType = 'index';
@@ -51,94 +35,117 @@ export class IndexFieldSpace extends QueryOperationSpace {
       } else if (indexField instanceof WildcardFieldReference) {
         this.addWild(indexField);
       } else {
-        indexField.log('Internal error, not expected in index query');
+        indexField.logError(
+          'invalid-field-in-index-query',
+          'Internal error, not expected in index query'
+        );
       }
     }
   }
 
+  structDef(): SourceDef {
+    const connection = this.inputSpace().connectionName();
+    return {
+      type: 'query_result',
+      name: 'result',
+      dialect: this.dialectName(),
+      fields: [
+        {type: 'string', name: 'fieldName'},
+        {type: 'string', name: 'fieldPath'},
+        {type: 'string', name: 'fieldValue'},
+        {type: 'string', name: 'fieldType'},
+        {type: 'number', name: 'weight', numberType: 'integer'},
+      ],
+      connection,
+    };
+  }
+
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
     if (refineIndex) {
-      this.log('index query operations cannot be refined');
-      return {type: 'index', indexFields: []};
+      this.logError(
+        'refinement-of-index-segment',
+        'index query operations cannot be refined'
+      );
+      return ErrorFactory.indexSegment;
     }
     const indexFields: IndexFieldDef[] = [];
+    let refSummary: RefSummary | undefined = undefined;
     for (const [name, field] of this.entries()) {
-      if (field instanceof SpaceField) {
-        const wildPath = this.expandedWild[name];
-        if (wildPath) {
-          indexFields.push({type: 'fieldref', path: wildPath});
-          continue;
-        }
-        if (field instanceof ReferenceField) {
-          // attempt to cause a type check
-          const fieldRef = field.fieldRef;
-          const check = fieldRef.getField(this.exprSpace);
-          if (check.error) {
-            fieldRef.log(check.error);
-          } else {
-            indexFields.push(fieldRef.refToField);
-          }
+      if (!(field instanceof SpaceField)) continue;
+      const wild = this.expandedWild.get(name);
+      if (wild) {
+        indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
+        refSummary = mergeRefSummaries(
+          refSummary,
+          {fieldUsage: [{path: wild.path}]},
+          wild.entry.typeDesc().refSummary
+        );
+      } else if (field instanceof ReferenceField) {
+        // attempt to cause a type check
+        const fieldRef = field.fieldRef;
+        const check = fieldRef.getField(this.exprSpace);
+        if (check.error) {
+          fieldRef.logError(check.error.code, check.error.message);
+        } else {
+          indexFields.push(fieldRef.refToField);
+          refSummary = mergeRefSummaries(
+            refSummary,
+            {fieldUsage: [{path: fieldRef.path}]},
+            check.found.typeDesc().refSummary
+          );
         }
       }
     }
-    return {type: 'index', indexFields};
+    this.refSummary = refSummary;
+    const outputStruct = this.structDef();
+    return {type: 'index', indexFields, outputStruct};
   }
 
   addRefineFromFields(_refineThis: never) {}
 
   protected addWild(wild: WildcardFieldReference): void {
-    let current: FieldSpace = this.exprSpace;
-    const joinPath: string[] = [];
-    if (wild.joinPath) {
-      // walk path to determine namespace for *
-      for (const pathPart of wild.joinPath.list) {
-        const part = pathPart.refString;
-        joinPath.push(part);
-
-        const ent = current.entry(part);
-        if (ent) {
-          if (ent instanceof StructSpaceField) {
-            current = ent.fieldSpace;
-          } else {
-            pathPart.log(
-              `Field '${part}' does not contain rows and cannot be expanded with '*'`
-            );
-            return;
-          }
-        } else {
-          pathPart.log(`No such field as '${part}'`);
-          return;
-        }
-      }
+    const entries = this.wildcardExpansion(wild);
+    if (entries === undefined) {
+      return;
     }
+    const joinPath = wild.joinPath?.path ?? [];
     const dialect = this.dialectObj();
     const expandEntries: {name: string; entry: SpaceEntry}[] = [];
-    for (const [name, entry] of current.entries()) {
-      if (wild.except.has(name)) {
-        continue;
-      }
+    for (const [name, entry] of entries) {
       const indexName = IndexFieldReference.indexOutputName([
         ...joinPath,
         name,
       ]);
       if (this.entry(indexName)) {
-        const conflict = this.expandedWild[indexName]?.join('.');
-        wild.log(
-          `Cannot expand '${name}' in '${
-            wild.refString
-          }' because a field with that name already exists${
-            conflict ? ` (conflicts with ${conflict})` : ''
-          }`
+        this.logWildcardConflict(
+          wild,
+          name,
+          this.expandedWild.get(indexName)?.path?.join('.')
         );
       } else {
-        const eType = entry.typeDesc();
+        const eTypeDesc = entry.typeDesc();
         if (
-          isAtomicFieldType(eType.dataType) &&
-          expressionIsScalar(eType.expressionType) &&
+          // Don't index arrays and records
+          TD.isBasicAtomic(eTypeDesc) &&
+          expressionIsScalar(eTypeDesc.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
+          if (eTypeDesc.type === 'boolean' && dialect?.booleanType === 'none') {
+            const path = [...joinPath, name].join('.');
+            wild.logWarning('wildcard-omits-boolean', {
+              dialect: dialect.name,
+              wildcard: wild.refString,
+              name: path,
+              hint: resultColumnHint(path),
+            });
+            continue;
+          }
           expandEntries.push({name: indexName, entry});
-          this.expandedWild[indexName] = joinPath.concat(name);
+          this.expandedWild.set(indexName, {
+            path: joinPath.concat(name),
+            entry,
+            at: wild.location,
+          });
         }
       }
     }

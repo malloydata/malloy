@@ -1,19 +1,25 @@
 {
   "name": "@malloydata/syntax-highlight",
-  "version": "0.0.144",
+  "version": "0.0.437",
   "description": "A package to simplify the process of developing, testing, and syncnig Malloy syntax highlighting grammars",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
   "files": [
     "grammars/**/*.tmGrammar.json",
-    "grammars/**/*-language.json"
+    "grammars/**/*-language.json",
+    "grammars/**/*.monarch.ts"
   ],
   "engines": {
-    "node": ">=16"
+    "node": ">=20"
   },
   "scripts": {
-    "build": "tsc",
-    "clean": "tsc --build --clean && rm -rf dist",
+    "codegen": "node ../../scripts/femto-build.js monarch",
+    "build": "npm run codegen && tsc",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rm -rf dist && node ../../scripts/femto-build.js --clean",
     "gen-malloy-monarch": "ts-node scripts/generateMonarchGrammar grammars/malloy/malloy.tmGrammar.json grammars/malloy/malloy.monarch.ts && prettier grammars/malloy/malloy.monarch.ts --write",
-    "gen-malloy-tokens": "ts-node scripts/generateLanguageTokenizationFile grammars/malloy/tokenizations/darkPlus.ts",
+    "gen-malloy-tokens": "ts-node scripts/generateLanguageTokenizationFile grammars/malloy/tokenizations/darkPlus.ts && prettier grammars/malloy/tokenizations/darkPlus.ts --write",
     "test-monarch-grammars": "rimraf ./dist && tsc && karma start",
     "test-textmate-grammars": "jest",
     "gen-monaco-darkplus": "ts-node scripts/generateMonarchTheme themes/textmate/dark_plus.json themes/monaco/darkPlus.ts",
@@ -21,18 +27,19 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@types/jasmine": "^4.3.5",
+    "@malloydata/motly-ts-parser": "^0.9.1",
+    "@types/jasmine": "^5.1.0",
     "http-server": "^14.1.1",
     "jasmine-core": "^5.1.1",
     "json5": "^2.2.3",
-    "karma": "^6.4.2",
+    "karma": "^6.4.4",
     "karma-chrome-launcher": "^3.2.0",
     "karma-cli": "^2.0.0",
     "karma-jasmine": "^5.1.0",
-    "karma-jasmine-html-reporter": "^2.1.0",
+    "karma-jasmine-html-reporter": "^2.2.0",
     "karma-spec-reporter": "^0.0.36",
-    "monaco-editor": "^0.41.0",
+    "monaco-editor": "^0.55.1",
     "vscode-oniguruma": "^1.7.0",
-    "vscode-textmate": "^9.0.0"
+    "vscode-textmate": "9.0.0"
   }
 }

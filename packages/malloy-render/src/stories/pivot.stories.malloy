@@ -1,0 +1,152 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+// Stories to verify pivot header rendering
+// Tests proper formatting of dimension values in pivot column headers
+
+// Test date/timestamp pivot headers
+source: datetime_pivot_test is duckdb.sql("""
+  SELECT 'Row A' as category, CAST('2024-01-15 10:30:45' AS TIMESTAMP) as ts, 100 as value
+  UNION ALL SELECT 'Row A', CAST('2024-02-20 14:15:00' AS TIMESTAMP), 150
+  UNION ALL SELECT 'Row A', CAST('2024-03-10 09:00:00' AS TIMESTAMP), 200
+  UNION ALL SELECT 'Row B', CAST('2024-01-15 10:30:45' AS TIMESTAMP), 80
+  UNION ALL SELECT 'Row B', CAST('2024-02-20 14:15:00' AS TIMESTAMP), 120
+  UNION ALL SELECT 'Row C', CAST('2024-01-15 10:30:45' AS TIMESTAMP), 60
+  UNION ALL SELECT 'Row C', CAST('2024-03-10 09:00:00' AS TIMESTAMP), 110
+""") extend {
+  #(story) story="Pivot Header: Date .month"
+  view: pivot_date_month is {
+    group_by: category
+    # pivot
+    nest: by_month is {
+      group_by: mo is ts.month
+      aggregate: total is value.sum()
+    }
+  }
+
+  #(story) story="Pivot Header: Timestamp .quarter"
+  view: pivot_ts_quarter is {
+    group_by: category
+    # pivot
+    nest: by_quarter is {
+      group_by: qtr is ts.quarter
+      aggregate: total is value.sum()
+    }
+  }
+
+  #(story) story="Pivot Header: Raw Date"
+  view: pivot_raw_date is {
+    group_by: category
+    # pivot
+    nest: by_date is {
+      group_by: dt is ts::date
+      aggregate: total is value.sum()
+    }
+  }
+
+  #(story) story="Pivot Header: Raw Timestamp"
+  view: pivot_raw_timestamp is {
+    group_by: category
+    # pivot
+    nest: by_ts is {
+      group_by: ts_val is ts
+      aggregate: total is value.sum()
+    }
+  }
+}
+
+// Test numeric pivot headers (integer, formatted, currency, bigint)
+source: numeric_pivot_test is duckdb.sql("""
+  SELECT 'Item A' as item, 1 as region_id, 100 as amount
+  UNION ALL SELECT 'Item A', 2, 150
+  UNION ALL SELECT 'Item A', 3, 200
+  UNION ALL SELECT 'Item B', 1, 80
+  UNION ALL SELECT 'Item B', 2, 120
+  UNION ALL SELECT 'Item C', 1, 60
+  UNION ALL SELECT 'Item C', 3, 110
+""") extend {
+  #(story) story="Pivot Header: Integer"
+  view: pivot_integer is {
+    group_by: item
+    # pivot
+    nest: by_region is {
+      group_by: region_id
+      aggregate: total is amount.sum()
+    }
+  }
+
+  #(story) story="Pivot Header: Formatted Number"
+  view: pivot_formatted_number is {
+    group_by: item
+    # pivot
+    nest: by_formatted is {
+      # number="#,##0"
+      group_by: formatted_num is region_id * 1000000
+      aggregate: total is amount.sum()
+    }
+  }
+
+  #(story) story="Pivot Header: Currency"
+  view: pivot_currency is {
+    group_by: item
+    # pivot
+    nest: by_currency is {
+      # currency
+      group_by: price is region_id * 1000
+      aggregate: total is amount.sum()
+    }
+  }
+}
+
+// Test bigint precision (> 2^53 = 9007199254740992)
+source: bigint_pivot_test is duckdb.sql("""
+  SELECT 'X' as grp, 9007199254740993::BIGINT as big_id, 100 as amt
+  UNION ALL SELECT 'X', 9007199254740994::BIGINT, 150
+  UNION ALL SELECT 'X', 9007199254740995::BIGINT, 200
+  UNION ALL SELECT 'Y', 9007199254740993::BIGINT, 80
+  UNION ALL SELECT 'Y', 9007199254740994::BIGINT, 120
+  UNION ALL SELECT 'Z', 9007199254740993::BIGINT, 60
+  UNION ALL SELECT 'Z', 9007199254740995::BIGINT, 110
+""") extend {
+  #(story) story="Pivot Header: BigInt (> 2^53)"
+  view: pivot_bigint is {
+    group_by: grp
+    # pivot
+    nest: by_bigint is {
+      group_by: big_id
+      aggregate: total is amt.sum()
+    }
+  }
+}
+
+// Test boolean and string pivot headers
+source: mixed_pivot_test is duckdb.sql("""
+  SELECT 'User 1' as user_name, true as is_active, 'premium' as tier, 500 as spend
+  UNION ALL SELECT 'User 1', false, 'basic', 50
+  UNION ALL SELECT 'User 2', true, 'premium', 300
+  UNION ALL SELECT 'User 2', true, 'basic', 100
+  UNION ALL SELECT 'User 3', false, 'premium', 200
+  UNION ALL SELECT 'User 3', false, 'basic', 75
+""") extend {
+  #(story) story="Pivot Header: Boolean"
+  view: pivot_boolean is {
+    group_by: user_name
+    # pivot
+    nest: by_active is {
+      group_by: is_active
+      aggregate: total_spend is spend.sum()
+    }
+  }
+
+  #(story) story="Pivot Header: String"
+  view: pivot_string is {
+    group_by: user_name
+    # pivot
+    nest: by_tier is {
+      group_by: tier
+      aggregate: total_spend is spend.sum()
+    }
+  }
+}

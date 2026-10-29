@@ -1,30 +1,12 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -41,6 +23,56 @@ async function getError<T>(fn: () => Promise<T>) {
 }
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  const testModel = wrapTestModel(runtime, '');
+  it(`properly quotes nested field names in ${databaseName}`, async () => {
+    const one = runtime.dialect.sqlQuoteIdentifier('one');
+    await expect(`
+      run: ${databaseName}.sql(""" SELECT 1 as ${one} """) -> {
+        nest: foo is {
+          group_by: one
+          aggregate: \`#\` is count(one)
+          nest: deepfoo is {
+            group_by: one
+            aggregate: \`#\` is count(one)
+          }
+        }
+        // A nest of nothing but aggregates is a single record rather than a
+        // list, and is built by a different dialect method.
+        nest: measures_only is {
+          aggregate: \`#\` is count(one)
+          aggregate: \`order\` is one.sum()
+        }
+      }`).toMatchResult(testModel, {
+      foo: [{'one': 1, '#': 1, 'deepfoo': [{'one': 1, '#': 1}]}],
+      measures_only: {'#': 1, 'order': 1},
+    });
+  });
+
+  // A nest's output field names are the user's, so every place a stage
+  // declares or reads them has to quote them -- including the row type a
+  // multi-stage nest builds to carry its first stage into its second.
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(
+    `properly quotes nested field names through a second stage in ${databaseName}`,
+    async () => {
+      await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        where: state = 'CA'
+        group_by: popular_name
+        nest: counted is {
+          group_by: \`order\` is state
+          aggregate: n is count()
+        } -> {
+          group_by: \`order\`
+          aggregate: t is n.sum()
+        }
+      }`).toMatchResult(testModel, {
+        counted: [{'order': 'CA', 't': 1}],
+      });
+    }
+  );
+
   describe('warnings', () => {
     // NOTE: This test generates SQL errors on the console because of
     // a hard-coded console.log() in the duckdb-wasm worker

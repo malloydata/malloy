@@ -1,28 +1,16 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {expr, TestTranslator, BetaExpression} from './test-translator';
-import {parseString} from '../parse-utils';
+import {
+  expr,
+  TestTranslator,
+  BetaExpression,
+  error,
+  errorMessage,
+  markSource,
+} from './test-translator';
 import './parse-expects';
 import {isGranularResult} from '../ast/types/granular-result';
 
@@ -33,7 +21,7 @@ describe('literals', () => {
   test('string', () => {
     const m = new BetaExpression("'forty two'");
     expect(m).toTranslate();
-    const m42 = m.generated().value[0];
+    const m42 = m.generated().value;
     expect(m42).toMatchObject({literal: 'forty two'});
   });
 
@@ -44,6 +32,15 @@ describe('literals', () => {
   test('string with quoted backslash', () => {
     const str = "'Is " + '\\' + '\\' + " nice'";
     expect(new BetaExpression(str)).toTranslate();
+  });
+  test("raw s'string", () => {
+    expect("s'a'").compilesTo('{"a"}');
+  });
+  test('raw s"string', () => {
+    expect('s "a"').compilesTo('{"a"}');
+  });
+  test('raw string with quoted end char', () => {
+    expect("s'a\\'b'").compilesTo('{"a\\\'b"}');
   });
   const literalTimes: [string, string, string | undefined, unknown][] = [
     ['@1960', 'date', 'year', {literal: '1960-01-01'}],
@@ -78,7 +75,7 @@ describe('literals', () => {
     ],
     [
       '@1960-06-30 10:30:00[America/Los_Angeles]',
-      'timestamp',
+      'timestamptz',
       undefined,
       {
         literal: '1960-06-30 10:30:00',
@@ -90,7 +87,7 @@ describe('literals', () => {
     const exprModel = new BetaExpression(expr);
     expect(exprModel).toTranslate();
     const ir = exprModel.generated();
-    expect(ir.dataType).toEqual(timeType);
+    expect(ir.type).toEqual(timeType);
     if (timeframe) {
       expect(isGranularResult(ir)).toBeTruthy();
       if (isGranularResult(ir)) {
@@ -99,7 +96,7 @@ describe('literals', () => {
     } else {
       expect(isGranularResult(ir)).toBeFalsy();
     }
-    expect(ir.value[0]).toEqual(expect.objectContaining(result));
+    expect(ir.value).toEqual(expect.objectContaining(result));
   });
   const morphicLiterals: [string, string | undefined][] = [
     ['@1960', '1960-01-01 00:00:00'],
@@ -117,7 +114,7 @@ describe('literals', () => {
     if (morphic) {
       expect(morphTo).toBeDefined();
       if (morphTo) {
-        expect(morphTo[0]).toEqual(expect.objectContaining({literal: morphic}));
+        expect(morphTo).toEqual(expect.objectContaining({literal: morphic}));
       }
     } else {
       expect(morphTo).toBeUndefined();
@@ -145,42 +142,6 @@ describe('literals', () => {
     expect(expr`r'RegularExpression'`).toTranslate();
   });
 
-  describe('quote comprehension inside strings', () => {
-    test('\\b', () => {
-      expect(parseString('\\b')).toEqual('\b');
-    });
-    test('\\f', () => {
-      expect(parseString('\\f')).toEqual('\f');
-    });
-    test('\\n', () => {
-      expect(parseString('\\n')).toEqual('\n');
-    });
-    test('\\r', () => {
-      expect(parseString('\\r')).toEqual('\r');
-    });
-    test('\\t', () => {
-      expect(parseString('\\t')).toEqual('\t');
-    });
-    test('unicode ?', () => {
-      expect(parseString('\\u003f')).toEqual('?');
-      expect(parseString('\\u003F')).toEqual('?');
-    });
-    test('normal stuff', () => {
-      expect(parseString('normal stuff')).toEqual('normal stuff');
-    });
-    test('stuff & nonsense', () => {
-      expect(parseString('stuff \\u0026 nonsense')).toEqual('stuff & nonsense');
-    });
-    test('one thing\\nnext thing', () => {
-      expect(parseString('one thing\\nnext thing')).toEqual(
-        'one thing\nnext thing'
-      );
-    });
-    test('quote stripping works', () => {
-      expect(parseString('|42|', '|')).toEqual('42');
-    });
-  });
-
   describe('string parsing in language', () => {
     const tz = 'America/Mexico_City';
     test('multi-line indent increasing', () => {
@@ -190,7 +151,7 @@ describe('literals', () => {
               right
         """`);
       expect(checking).toTranslate();
-      const v = checking.generated().value[0];
+      const v = checking.generated().value;
       expect(v).toMatchObject({literal: '\nleft\n  mid\n    right\n'});
     });
     test('multi-line indent decreasing', () => {
@@ -200,13 +161,13 @@ describe('literals', () => {
           left
         """`);
       expect(checking).toTranslate();
-      const v = checking.generated().value[0];
+      const v = checking.generated().value;
       expect(v).toMatchObject({literal: '\n    right\n  mid\nleft\n'});
     });
     test('multi-line indent keep', () => {
       const checking = new BetaExpression('"""right\n  mid\nleft"""');
       expect(checking).toTranslate();
-      const v = checking.generated().value[0];
+      const v = checking.generated().value;
       expect(v).toMatchObject({literal: 'right\n  mid\nleft'});
     });
     test('timezone single quote', () => {
@@ -223,10 +184,42 @@ describe('literals', () => {
       );
       expect(m).toParse();
     });
+    test.each(["UTC'", 'UTC"', 'UTC`', 'UTC\\', 'UTC\n', 'UTC\r'])(
+      'rejects unsafe timezone %j at the string literal',
+      timezone => {
+        expect(markSource`run: a -> {
+          timezone: ${JSON.stringify(timezone)}
+          select: *
+        }`).toLog(error('invalid-timezone', {timezone}));
+      }
+    );
+    test.each([
+      [String.raw`"UTC\u0027"`, "UTC'"],
+      [String.raw`"UTC\u005c"`, 'UTC\\'],
+    ])('validates decoded timezone %s', (literal, timezone) => {
+      expect(markSource`run: a -> {
+        timezone: ${literal}
+        select: *
+      }`).toLog(error('invalid-timezone', {timezone}));
+    });
+    test('rejects an unsafe timezone on a source', () => {
+      expect(markSource`source: local is a extend {
+        timezone: ${'"UTC\'"'}
+      }`).toLog(error('invalid-timezone', {timezone: "UTC'"}));
+    });
+    test.each(['Etc/GMT+5', '+05:30', 'EST5EDT,M3.2.0/2,M11.1.0/2'])(
+      'accepts timezone format %s for the database to interpret',
+      timezone => {
+        expect(`run: a -> {
+          timezone: ${JSON.stringify(timezone)}
+          select: *
+        }`).toTranslate();
+      }
+    );
     test('timezone with illegal query', () => {
-      expect(
-        `run: a->{timezone: """${tz}%{ab->aturtle}"""; select: *}`
-      ).translationToFailWith('%{ query } illegal in this string');
+      expect(`run: a->{timezone: """${tz}%{ab->aturtle}"""; select: *}`).toLog(
+        errorMessage('%{ query } illegal in this string')
+      );
     });
     test('table single quote', () => {
       const m = new TestTranslator("source: n is bigquery.table('n')");
@@ -276,6 +269,34 @@ describe('literals', () => {
       const x = new BetaExpression('"""x"""');
       expect(x).toParse();
     });
+    test('Error for missing single in raw string', () => {
+      expect(expr`s'hello\n`).toLog(
+        errorMessage('Missing "\'" before end-of-line')
+      );
+    });
+    test('Error for missing double in raw string', () => {
+      expect(expr`s"hello\n`).toLog(
+        errorMessage("Missing '\"' before end-of-line")
+      );
+    });
     test('a string containing a tab', () => expect(expr`'\t'`).toParse());
+  });
+  describe('compound literals', () => {
+    test('simple record literal', () => {
+      expect('{answer is 42}').compilesTo('{answer:42}');
+    });
+    test('record literal with path', () => {
+      expect('{aninline.column}').compilesTo('{column:aninline.column}');
+    });
+    test('array of records with same schema', () => {
+      expect(
+        '[{name is "one", val is 1},{name is "two", val is 2}]'
+      ).compilesTo('[{name:{"one"}, val:1}, {name:{"two"}, val:2}]');
+    });
+    test('array of records with head schema', () => {
+      expect('[{name is "one", val is 1},{"two", 2}]').compilesTo(
+        '[{name:{"one"}, val:1}, {name:{"two"}, val:2}]'
+      );
+    });
   });
 });

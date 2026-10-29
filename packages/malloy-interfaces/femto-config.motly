@@ -1,0 +1,6 @@
+# Config format: node ../../scripts/femto-build.js --help
+
+flow: {
+  inputs = ["dist/**/*.d.ts"]
+  commands = ["npx ts-node ../../scripts/gen-flow.ts"]
+}

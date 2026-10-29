@@ -1,35 +1,18 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import * as lite from 'vega-lite';
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
+import type * as lite from 'vega-lite';
 import {HTMLChartRenderer} from './chart';
 
 import {getColorScale} from './utils';
-import {StyleDefaults, VegaRenderOptions} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {RendererFactory} from '../renderer_factory';
-import {Renderer} from '../renderer';
+import type {StyleDefaults, VegaRenderOptions} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import {RendererFactory} from './renderer_factory';
+import type {Renderer} from './renderer';
+import {grayMedium, gridGray} from '../component/vega/base-vega-config';
+import type {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -39,10 +22,10 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
     params: [
       {
         name: 'defaultFont',
-        value: "var(--malloy-font-family, 'Roboto')",
+        value: "var(--malloy-font-family, 'Inter')",
       },
-      {name: 'titleColor', value: 'var(--malloy-title-color, #505050)'},
-      {name: 'labelColor', value: 'var(--malloy-label-color, #505050)'},
+      {name: 'titleColor', value: `var(--malloy-title-color, ${grayMedium})`},
+      {name: 'labelColor', value: `var(--malloy-label-color, ${grayMedium})`},
     ],
     background: undefined,
     color: {expr: 'titleColor'},
@@ -71,6 +54,10 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
       titleFontWeight: 500,
       titleColor: {expr: 'titleColor'},
       titleFontSize: 12,
+      gridColor: gridGray,
+      tickColor: gridGray,
+      labelPadding: 5,
+      titlePadding: 10,
     },
     legend: {
       titleFontWeight: 500,
@@ -460,7 +447,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     document: Document,
     styleDefaults: StyleDefaults,
     options: RendererOptions,
-    field: Field | Explore,
+    field: Field,
     vegaRenderOptions: VegaRenderOptions
   ) {
     super(document, styleDefaults, options);
@@ -485,41 +472,41 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     }
   }
 
-  getDataValue(data: DataColumn): Date | string | number | null {
+  getDataValue(data: Cell): Date | string | number | null {
     if (data.isNull()) {
       return null;
-    } else if (
-      data.isTimestamp() ||
-      data.isDate() ||
-      data.isNumber() ||
-      data.isString()
-    ) {
+    } else if (data.isString() || data.isTime()) {
       return data.value;
-    } else {
-      throw new Error('Invalid field type for vega chart.');
+    } else if (data.isNumber()) {
+      return data.value;
     }
+    throw new Error('Invalid data type for vega chart.');
   }
 
   getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp() || field.isString()) {
-        return 'nominal';
-      } else if (field.isNumber()) {
-        return 'quantitative';
-      }
+    if (field.isTime() || field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for vega chart.');
   }
 
-  translateField(explore: Explore, fieldString: string): string {
+  translateField(
+    explore: RecordOrRepeatedRecordField,
+    fieldString: string
+  ): string {
     const m = fieldString.match(/#\{(\d+)\}/);
     if (m && m.groups) {
-      return explore.intrinsicFields[parseInt(m.groups[1]) - 1].name;
+      return explore.fields[parseInt(m.groups[1]) - 1].name;
     }
     return fieldString;
   }
 
-  translateFields(node: DataContainer, explore: Explore): void {
+  translateFields(
+    node: DataContainer,
+    explore: RecordOrRepeatedRecordField
+  ): void {
     if (Array.isArray(node)) {
       for (const e of node) {
         if (isDataContainer(e)) {
@@ -546,10 +533,10 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     }
   }
 
-  // formatData(data: QueryDataRow, metadata: StructDef): VegaData {
+  // formatData(data: QueryRecord, metadata: StructDef): VegaData {
   //   const ret: VegaData = [];
 
-  //   for (const row of QueryDataRow) {
+  //   for (const row of QueryRecord) {
   //     forEach){
 
   //     }
@@ -557,8 +544,8 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   //   return ret;
   // }
 
-  getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {
-    if (data.isNull() || !data.isArray()) {
+  getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRecordOrRepeatedRecord()) {
       throw new Error('Expected struct value not to be null.');
     }
 
@@ -566,7 +553,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
 
     this.translateFields(newSpec as unknown as DataContainer, data.field);
     const rdata = {
-      values: this.mapData(data),
+      values: this.mapData(data.rows),
     };
     newSpec.data = rdata;
 
@@ -581,7 +568,7 @@ export class VegaRendererFactory extends RendererFactory<VegaRenderOptions> {
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    field: Field | Explore,
+    field: Field,
     options: VegaRenderOptions
   ): Renderer {
     return new HTMLVegaSpecRenderer(

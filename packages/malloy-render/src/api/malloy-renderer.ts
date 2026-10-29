@@ -1,0 +1,55 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import type {MalloyRendererOptions} from './types';
+import type {RenderPluginFactory} from './plugin-types';
+import {MalloyViz} from './malloy-viz';
+import {LineChartPluginFactory} from '@/plugins/line-chart/line-chart-plugin';
+import {BarChartPluginFactory} from '@/plugins/bar-chart/bar-chart-plugin';
+import {ComboChartPluginFactory} from '@/plugins/combo-chart/combo-chart-plugin';
+import {BigValuePluginFactory} from '@/plugins/big-value/big-value-plugin';
+import {ScatterChartPluginFactory} from '@/plugins/scatter-chart/scatter-chart-plugin';
+import {ShapeMapPluginFactory} from '@/plugins/shape-map/shape-map-plugin';
+import {SegmentMapPluginFactory} from '@/plugins/segment-map/segment-map-plugin';
+
+export class MalloyRenderer {
+  private globalOptions: MalloyRendererOptions;
+  private pluginRegistry: RenderPluginFactory[];
+
+  constructor(options: MalloyRendererOptions = {}) {
+    this.globalOptions = options;
+    this.pluginRegistry = [
+      LineChartPluginFactory,
+      BarChartPluginFactory,
+      ComboChartPluginFactory,
+      BigValuePluginFactory,
+      ScatterChartPluginFactory,
+      ShapeMapPluginFactory,
+      SegmentMapPluginFactory,
+      ...(options.plugins || []),
+    ];
+  }
+
+  // TODO Figure out whether we should differentiate between global and viz options
+  createViz(additionalOptions: Partial<MalloyRendererOptions> = {}): MalloyViz {
+    const mergedOptions = {...this.globalOptions, ...additionalOptions};
+    return new MalloyViz(mergedOptions, this.pluginRegistry);
+  }
+
+  // Method to update global options
+  updateOptions(newOptions: Partial<MalloyRendererOptions>): void {
+    this.globalOptions = {...this.globalOptions, ...newOptions};
+  }
+
+  // Method to get current global options
+  getOptions(): MalloyRendererOptions {
+    return {...this.globalOptions};
+  }
+
+  // Get registered plugins
+  getRegisteredPlugins(): RenderPluginFactory[] {
+    return [...this.pluginRegistry];
+  }
+}

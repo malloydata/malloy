@@ -1,33 +1,17 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {ErrorFactory} from '../error-factory';
-import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
-import {QueryComp} from '../types/query-comp';
+import type {ModelEntryReference} from '../types/malloy-element';
+import {MalloyElement} from '../types/malloy-element';
+import type {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
-import {Query, refIsStructDef} from '../../../model/malloy_types';
-import {getFinalStruct} from '../struct-utils';
-import {QueryElement} from '../types/query-element';
+import {detectAndRemovePartialStages} from '../query-utils';
+import type {Query} from '../../../model/malloy_types';
+import {refIsStructDef} from '../../../model/malloy_types';
+import type {QueryElement} from '../types/query-element';
 
 /**
  * A query operation that is just a reference to an existing query.
@@ -41,7 +25,7 @@ export class QueryReference extends MalloyElement implements QueryElement {
     super();
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
+  queryComp(isRefOk: boolean, isPartialOk: boolean): QueryComp {
     const headEntry = this.modelEntry(this.name);
     const query = headEntry?.entry;
     const oops = function () {
@@ -52,30 +36,48 @@ export class QueryReference extends MalloyElement implements QueryElement {
       };
     };
     if (!query) {
-      this.log(`Reference to undefined query '${this.name.refString}'`);
+      this.logError(
+        'query-reference-not-found',
+        `Reference to undefined query '${this.name.refString}'`
+      );
       return oops();
     }
     if (query.type === 'query') {
-      const queryHead = new QueryHeadStruct(query.structRef);
+      const queryHead = new QueryHeadStruct(
+        query.structRef,
+        query.sourceArguments
+      );
       this.has({queryHead: queryHead});
-      const inputStruct = queryHead.structDef();
-      const outputStruct = getFinalStruct(this, inputStruct, query.pipeline);
+      const inputStruct = queryHead.getSourceDef(undefined);
+      const outputStruct =
+        query.pipeline[query.pipeline.length - 1].outputStruct;
       const unRefedQuery = isRefOk
         ? query
         : refIsStructDef(query.structRef)
-        ? query
-        : {...query, structRef: inputStruct};
+          ? query
+          : {...query, structRef: inputStruct};
       return {
-        query: unRefedQuery,
+        query: isPartialOk
+          ? unRefedQuery
+          : {
+              ...unRefedQuery,
+              pipeline: detectAndRemovePartialStages(
+                unRefedQuery.pipeline,
+                this
+              ),
+            },
         outputStruct,
         inputStruct,
       };
     }
-    this.log(`Illegal reference to '${this.name}', query expected`);
+    this.logError(
+      'non-query-used-as-query',
+      `Illegal reference to '${this.name}', query expected`
+    );
     return oops();
   }
 
-  query(): Query {
-    return this.queryComp(true).query;
+  query(isRefOk = true): Query {
+    return this.queryComp(isRefOk, false).query;
   }
 }

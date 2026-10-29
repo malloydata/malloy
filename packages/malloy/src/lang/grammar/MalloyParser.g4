@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 parser grammar MalloyParser;
@@ -28,8 +10,11 @@ malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
   : defineSourceStatement
+  | defineUserTypeStatement
   | defineQuery
+  | defineGivenStatement
   | importStatement
+  | exportStatement
   | runStatement
   | docAnnotations
   | ignoredObjectAnnotations
@@ -40,17 +25,91 @@ defineSourceStatement
   : tags SOURCE sourcePropertyList
   ;
 
+defineUserTypeStatement
+  : tags TYPE userTypePropertyList
+  ;
+
+userTypePropertyList
+  : userTypeDefinition (COMMA? userTypeDefinition)* COMMA?
+  ;
+
+userTypeDefinition
+  : tags userTypeNameDef isDefine userTypeExpr
+  ;
+
+userTypeNameDef: id;
+
+userTypeExpr
+  : userTypeName                            # userTypeRef
+  | userTypeShape                            # userTypeInline
+  | userTypeName EXTEND userTypeShape          # userTypeExtend
+  ;
+
+userTypeShape
+  : OCURLY userTypeField (COMMA userTypeField)* COMMA? CCURLY
+  ;
+
+userTypeField
+  : tags id DOUBLECOLON userTypeFieldType
+  ;
+
+userTypeFieldType
+  : malloyBasicType
+  | userTypeShape
+  | userTypeFieldType OBRACK CBRACK
+  | shortString
+  | userTypeName
+  ;
+
 defineQuery
   : topLevelQueryDefs                 # use_top_level_query_defs
-  | tags QUERY topLevelAnonQueryDef   # anonymousQuery
+  ;
+
+defineGivenStatement
+  : tags GIVEN givenDefList
+  ;
+
+givenDefList
+  : givenDef (COMMA? givenDef)* COMMA?
+  ;
+
+givenDef
+  : tags givenModifier? givenNameDef DOUBLECOLON givenType (isDefine fieldExpr)?
+  ;
+
+givenModifier: id;
+
+givenNameDef: id;
+
+givenType
+  : malloyType
+  | FILTER LT malloyBasicType GT
   ;
 
 topLevelAnonQueryDef
   : tags sqExpr
   ;
 
+annotation
+  : ANNOTATION
+  | blockAnnotation
+  ;
+
 tags
-  : ANNOTATION*
+  : annotation*
+  ;
+
+blockAnnotation
+  : BLOCK_ANNOTATION_BEGIN BLOCK_ANNOTATION_TEXT* (BLOCK_ANNOTATION_END | EOF)
+  ;
+
+docAnnotation
+  : DOC_ANNOTATION
+  | docBlockAnnotation
+  ;
+
+docBlockAnnotation
+  : DOC_BLOCK_ANNOTATION_BEGIN BLOCK_ANNOTATION_TEXT* (BLOCK_ANNOTATION_END | EOF)
   ;
 
 isDefine
@@ -66,7 +125,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE sqExpr (CCURLY | CLOSE_CODE)
+  : OPEN_CODE sqExpr CCURLY
   ;
 
 importStatement
@@ -87,16 +146,24 @@ importURL
   : string
   ;
 
+exportStatement
+  : EXPORT OCURLY exportItem (COMMA exportItem)* COMMA? CCURLY
+  ;
+
+exportItem
+  : id
+  ;
+
 docAnnotations
-  : DOC_ANNOTATION+
+  : docAnnotation+
   ;
 
 ignoredObjectAnnotations
-  : ANNOTATION+
+  : annotation+
   ;
 
 ignoredModelAnnotations
-  : DOC_ANNOTATION+
+  : docAnnotation+
   ;
 
 topLevelQueryDefs
@@ -117,20 +184,18 @@ sqlSource
   ;
 
 exploreTable
-  : TABLE OPAREN tableURI CPAREN                     # tableFunction
-  | connectionId DOT TABLE OPAREN tablePath CPAREN   # tableMethod
+  : connectionId DOT TABLE OPAREN tablePath CPAREN
+  ;
+
+virtualSource
+  : connectionId DOT VIRTUAL OPAREN shortString CPAREN
   ;
 
 connectionId
   : id;
 
 queryProperties
-  : filterShortcut
-  | OCURLY (queryStatement | SEMI)* CCURLY
-  ;
-
-filterShortcut
-  : OCURLY QMARK fieldExpr CCURLY
+  : OCURLY (queryStatement | SEMI)* CCURLY
   ;
 
 queryName : id;
@@ -140,50 +205,73 @@ sourcePropertyList
   ;
 
 sourceDefinition
-  : tags sourceNameDef isDefine sqExplore
+  : tags sourceNameDef sourceParameters? isDefine sqExplore
   ;
 
 sqExplore
   : sqExpr
   ;
 
+sourceParameters
+  : OPAREN CPAREN
+  | OPAREN sourceParameter (COMMA sourceParameter)* CPAREN
+  ;
+
+legalParamType
+  : malloyBasicType
+  | FILTER LT malloyBasicType GT;
+
+sourceParameter
+  : parameterNameDef (DOUBLECOLON legalParamType)? (IS fieldExpr)?
+  ;
+
+parameterNameDef: id;
 sourceNameDef: id;
-sourceID: id;
 
 exploreProperties
   : OCURLY (exploreStatement | SEMI)* CCURLY
-  | filterShortcut
   ;
 
 exploreStatement
-  : defDimensions                         # defExploreDimension_stub
-  | defMeasures                           # defExploreMeasure_stub
-  | declareStatement                      # defDeclare_stub
-  | joinStatement                         # defJoin_stub
-  | whereStatement                        # defExploreWhere_stub
-  | PRIMARY_KEY fieldName                 # defExplorePrimaryKey
-  | RENAME renameList                     # defExploreRename
-  | (ACCEPT | EXCEPT) fieldNameList       # defExploreEditField
-  | tags (QUERY | VIEW) subQueryDefList   # defExploreQuery
-  | timezoneStatement                     # defExploreTimezone
-  | ANNOTATION+                           # defExploreAnnotation
-  | ignoredModelAnnotations               # defIgnoreModel_stub
+  : defDimensions                            # defExploreDimension_stub
+  | defMeasures                              # defExploreMeasure_stub
+  | joinStatement                            # defJoin_stub
+  | whereStatement                           # defExploreWhere_stub
+  | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
+  | tags accessLabel? RENAME renameList      # defExploreRename
+  | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
+  | tags accessLabel? VIEW subQueryDefList   # defExploreQuery
+  | timezoneStatement                        # defExploreTimezone
+  | annotation+                              # defExploreAnnotation
+  | ignoredModelAnnotations                  # defIgnoreModel_stub
+  ;
+
+
+accessLabel
+  : PUBLIC_KW
+  | PRIVATE_KW
+  | INTERNAL_KW
+  ;
+
+accessModifierList
+  : fieldNameList
+  | STAR starQualified?
   ;
 
 defMeasures
-  : tags MEASURE defList
+  : tags accessLabel? MEASURE defList
   ;
 
 defDimensions
-  : tags DIMENSION defList
+  : tags accessLabel? DIMENSION defList
   ;
 
 renameList
-  : exploreRenameDef (COMMA? exploreRenameDef)* COMMA?
+  : renameEntry (COMMA? renameEntry)* COMMA?
   ;
 
-exploreRenameDef
-  : fieldName isDefine fieldName
+renameEntry
+  : tags fieldName isDefine fieldName
   ;
 
 defList
@@ -198,13 +286,13 @@ fieldNameDef: id;
 joinNameDef: id;
 
 declareStatement
-  : DECLARE defList
+  : DECLARE accessLabel? defList
   ;
 
 joinStatement
-  : tags JOIN_ONE joinList                  # defJoinOne
-  | tags JOIN_MANY joinList                 # defJoinMany
-  | tags JOIN_CROSS joinList                # defJoinCross
+  : tags accessLabel? JOIN_ONE joinList                  # defJoinOne
+  | tags accessLabel? JOIN_MANY joinList                 # defJoinMany
+  | tags accessLabel? JOIN_CROSS joinList                # defJoinCross
   ;
 
 queryExtend
@@ -217,14 +305,78 @@ modEither
   | declareStatement
   ;
 
+sourceArguments
+  : OPAREN CPAREN
+  | OPAREN sourceArgument (COMMA sourceArgument)* CPAREN
+  ;
+
+argumentId
+  : id
+  ;
+
+sourceArgument
+  : (argumentId IS)? fieldExpr
+  ;
+
 sqExpr
-  : id                                        # SQID
-  | OPAREN sqExpr CPAREN                      # SQParens
-  | sqExpr PLUS segExpr                       # SQRefinedQuery
-  | sqExpr ARROW segExpr                      # SQArrow
-  | sqExpr EXTEND exploreProperties           # SQExtendedSource
-  | exploreTable                              # SQTable
-  | sqlSource                                 # SQSQL
+  : id sourceArguments?                                      # SQID
+  | OPAREN sqExpr CPAREN                                     # SQParens
+  | COMPOSE OPAREN (sqExpr (COMMA sqExpr)*)? CPAREN          # SQCompose
+  | sqExpr PLUS segExpr                                      # SQRefinedQuery
+  | sqExpr ARROW segExpr                                     # SQArrow
+  | sqExpr (INCLUDE includeBlock)? EXTEND exploreProperties  # SQExtendedSource
+  | sqExpr INCLUDE includeBlock                              # SQInclude
+  | sqExpr DOUBLECOLON sourceTypeConstraints                            # SQTypedSource
+  | exploreTable                                             # SQTable
+  | virtualSource                                            # SQVirtual
+  | sqlSource                                                # SQSQL
+  ;
+
+sourceTypeConstraints
+  : userTypeName
+  | OPAREN userTypeName (COMMA userTypeName)* CPAREN
+  ;
+
+userTypeName: id;
+
+includeBlock
+  : OCURLY (includeItem | SEMI)* CCURLY
+  ;
+
+includeItem
+  : tags accessLabelProp includeList
+  | includeList
+  | tags EXCEPT includeExceptList
+  | orphanedAnnotation
+  ;
+
+orphanedAnnotation
+  : annotation
+  ;
+
+accessLabelProp
+  : PUBLIC
+  | PRIVATE
+  | INTERNAL
+  ;
+
+includeExceptList
+  : includeExceptListItem (COMMA? includeExceptListItem)* COMMA?
+  ;
+
+includeExceptListItem
+  : tags fieldPath
+  | tags collectionWildCard
+  ;
+
+includeList
+  : includeField (COMMA? includeField)* COMMA?
+  ;
+
+includeField
+  : tags (as=fieldName isDefine)? name=fieldPath
+  | tags name=fieldPath
+  | tags collectionWildCard
   ;
 
 segExpr
@@ -259,9 +411,15 @@ isExplore
 
 matrixOperation : (LEFT | RIGHT | FULL| INNER);
 
+joinFrom
+  : joinNameDef
+  | joinNameDef sourceArguments
+  | joinNameDef isExplore
+  ;
+
 joinDef
-  : ANNOTATION* joinNameDef isExplore? matrixOperation? WITH fieldExpr        # joinWith
-  | ANNOTATION* joinNameDef isExplore? (matrixOperation? ON joinExpression)?  # joinOn
+  : tags joinFrom matrixOperation? WITH fieldExpr        # joinWith
+  | tags joinFrom (matrixOperation? ON joinExpression)?  # joinOn
   ;
 
 joinExpression: fieldExpr;
@@ -298,6 +456,7 @@ fieldPropertyStatement
   | partitionByStatement
   | aggregateOrderByStatement
   | fieldPropertyLimitStatement
+  | groupedByStatement
   ;
 
 filterClauseList
@@ -319,7 +478,15 @@ subQueryDefList
 exploreQueryNameDef: id;
 
 exploreQueryDef
-  : ANNOTATION* exploreQueryNameDef isDefine vExpr
+  : tags exploreQueryNameDef isDefine vExpr
+  ;
+
+drillStatement
+  : DRILL drillClauseList
+  ;
+
+drillClauseList
+  : fieldExpr (COMMA fieldExpr)* COMMA?
   ;
 
 queryStatement
@@ -339,6 +506,7 @@ queryStatement
   | nestStatement
   | sampleStatement
   | timezoneStatement
+  | drillStatement
   | queryAnnotation
   | ignoredModelAnnotations
   ;
@@ -382,11 +550,15 @@ calculateStatement
   ;
 
 projectStatement
-  : tags (SELECT | PROJECT) fieldCollection
+  : tags SELECT fieldCollection
   ;
 
 partitionByStatement
   : PARTITION_BY id (COMMA id)* COMMA?
+  ;
+
+groupedByStatement
+  : GROUPED_BY id (COMMA id)* COMMA?
   ;
 
 orderByStatement
@@ -398,7 +570,33 @@ ordering
   ;
 
 orderBySpec
-  : (INTEGER_LITERAL | fieldName) ( ASC | DESC ) ?
+  : (INTEGER_LITERAL | possibleBadPath) ( ASC | DESC ) ?
+  ;
+
+// order_by names a single (unquoted) output column, but we accept a more
+// permissive reference -- a dotted path and/or reserved-word segments like time
+// units (`flights.dep_year`) -- and let the visitor decide: a lone ordinary
+// name is fine, a lone reserved word must be quoted, a dotted path is never
+// legal here. Reusable wherever a single name is required and a path or a bare
+// keyword is a likely mistake worth a good error. See visitOrderBySpec.
+possibleBadPath
+  : badWord (DOT badWord)*
+  ;
+
+// A name segment that the parser accepts but that may be reserved. `fieldName`
+// is a legal name; everything else is a reserved word the user would have to
+// quote. Keep in sync with the bare keywords in MalloyLexer.g4 -- MINUS `ASC`
+// and `DESC`, which are the order_by direction suffix (allowing them here would
+// make `order_by: foo asc` ambiguous). `timeframe` covers the time units.
+badWord
+  : fieldName
+  | timeframe
+  | ALL | AND | AS | AVG | BOOLEAN | BY | CASE | CAST | COUNT | COMPOSE | DATE
+  | DISTINCT | ELSE | END | EXCLUDE | EXPORT | EXTEND | FALSE | FILTER | FULL
+  | FOR | FROM | HAS | IMPORT | INCLUDE | INNER | IS | IN | INTERNAL_KW | JSON
+  | LEFT | LIKE | MAX | MIN | NOT | NOW | NULL | NUMBER | ON | OR | PICK
+  | PRIVATE_KW | PUBLIC_KW | RIGHT | STRING | SOURCE_KW | SUM | SQL | TABLE
+  | THEN | THIS | TIMESTAMPTZ | TIMESTAMP | TO | TRUE | WHEN | WITH | VIRTUAL
   ;
 
 limitStatement
@@ -411,7 +609,7 @@ bySpec
   ;
 
 topStatement
-  : TOP INTEGER_LITERAL bySpec?
+  : TOP INTEGER_LITERAL
   ;
 
 indexElement
@@ -436,7 +634,7 @@ timezoneStatement
   ;
 
 queryAnnotation
-  : ANNOTATION
+  : annotation
   ;
 
 sampleSpec
@@ -447,7 +645,23 @@ sampleSpec
 
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
-malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP;
+malloyType
+  : malloyBasicType
+  | malloyRecordType
+  | malloyType OBRACK CBRACK
+  ;
+
+malloyBasicType
+  : STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP | TIMESTAMPTZ
+  ;
+
+malloyRecordType
+  : OCURLY malloyRecordField (COMMA malloyRecordField)* COMMA? CCURLY
+  ;
+
+malloyRecordField
+  : id DOUBLECOLON malloyType
+  ;
 compareOp: MATCH | NOT_MATCH | GT | LT | GTE | LTE | EQ | NE;
 
 string
@@ -459,18 +673,25 @@ shortString
   : (SQ_STRING | DQ_STRING)
   ;
 
+rawString
+  : RAW_SQ
+  | RAW_DQ
+  ;
+
 numericLiteral
   : (NUMERIC_LITERAL | INTEGER_LITERAL)
   ;
 
 literal
   : string                                      # exprString
+  | rawString                                   # stub_rawString
   | numericLiteral                              # exprNumber
   | dateLiteral                                 # exprTime
   | NULL                                        # exprNULL
   | (TRUE | FALSE)                              # exprBool
   | HACKY_REGEX                                 # exprRegex
-  | NOW                                         # exprNow
+  | filterString                                # filterString_stub
+  | NOW (OPAREN CPAREN)?                         # exprNow
   ;
 
 dateLiteral
@@ -507,8 +728,11 @@ malloyOrSQLType
 
 fieldExpr
   : fieldPath                                              # exprFieldPath
-  | fieldExpr fieldProperties                              # exprFieldProps
+  | GIVEN_REF                                              # exprGivenRef
   | literal                                                # exprLiteral
+  | OBRACK fieldExpr (COMMA fieldExpr)* COMMA? CBRACK      # exprArrayLiteral
+  | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
+  | fieldExpr fieldProperties                              # exprFieldProps
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
   | fieldExpr DOUBLECOLON malloyOrSQLType                  # exprCast
@@ -521,29 +745,47 @@ fieldExpr
   | fieldExpr AMPER partialAllowedFieldExpr                # exprAndTree
   | fieldExpr BAR partialAllowedFieldExpr                  # exprOrTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
+  | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
+  | fieldExpr IS NOT? NULL                                 # exprNullCheck
+  | fieldExpr NOT? IN OPAREN fieldExprList CPAREN          # exprWarnIn
+  | fieldExpr NOT? IN GIVEN_REF                            # exprInGiven
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr AND fieldExpr                                # exprLogicalAnd
   | fieldExpr OR fieldExpr                                 # exprLogicalOr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
-  | COUNT OPAREN DISTINCT fieldExpr CPAREN                 # exprCountDisinct
   | (SOURCE_KW DOT)? aggregate
-      OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
+      OPAREN fieldExpr? CPAREN                             # exprPathlessAggregate
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
-  | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
+  | OPAREN fieldExpr CPAREN                                # exprExpr
   | fieldPath DOT id
       OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
   | ((id (EXCLAM malloyType?)?) | timeframe)
       OPAREN ( argumentList? ) CPAREN                      # exprFunc
   | pickStatement                                          # exprPick
+  | caseStatement                                          # exprCase
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;
 
+partialCompare
+  : compareOp fieldExpr
+  ;
+
+partialTest
+  : partialCompare
+  | IS NOT? NULL
+  ;
+
 partialAllowedFieldExpr
-  : OPAREN compareOp? fieldExpr CPAREN
-  | compareOp? fieldExpr
+  : partialTest
+  | OPAREN partialTest CPAREN
+  | fieldExpr
+  ;
+
+fieldExprList
+  : fieldExpr (COMMA fieldExpr)*
   ;
 
 pickStatement
@@ -552,6 +794,20 @@ pickStatement
 
 pick
   : PICK (pickValue=fieldExpr)? WHEN pickWhen=partialAllowedFieldExpr
+  ;
+
+caseStatement
+  : CASE (valueExpr=fieldExpr)? (caseWhen)+ (ELSE caseElse=fieldExpr)? END
+  ;
+
+caseWhen
+  : WHEN condition=fieldExpr THEN result=fieldExpr
+  ;
+
+recordKey: id;
+recordElement
+  : fieldPath                   # recordRef
+  | (recordKey IS)? fieldExpr   # recordExpr
   ;
 
 argumentList
@@ -599,11 +855,30 @@ fieldPath
 joinName: id;
 fieldName: id;
 
-justExpr: fieldExpr EOF;
-
 sqlExploreNameRef: id;
 nameSQLBlock: id;
 connectionName: string;
+
+tripFilterString
+  : SQ3_FILTER
+  | BQ3_FILTER
+  | DQ3_FILTER
+  ;
+
+tickFilterString
+  : SQ_FILTER
+  | BQ_FILTER
+  | DQ_FILTER;
+
+filterString
+  : tripFilterString
+  | tickFilterString;
+
+// These are for debug launch configs. Without the EOF a parse can stop without
+// parsing the entire input, if it is legal up to some token, for the debuger
+// we want to make sure the entire expression parses.
+debugExpr: fieldExpr EOF;
+debugPartial: partialAllowedFieldExpr EOF;
 
 experimentalStatementForTesting // this only exists to enable tests for the experimental compiler flag
   : SEMI SEMI OBRACK string CBRACK

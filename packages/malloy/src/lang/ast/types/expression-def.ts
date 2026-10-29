@@ -1,58 +1,91 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {
-  DivModFragment,
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {
   Expr,
   TimestampUnit,
-  isDateUnit,
-  isTimeFieldType,
-  maxExpressionType,
-  FieldValueType,
-  mergeEvalSpaces,
-  maxOfExpressionTypes,
-  ExpressionValueType,
-  expressionIsAggregate,
+  BasicExpressionType,
+  FilterMatchExpr,
+  NumberTypeDef,
+  FilterExprType,
 } from '../../../model/malloy_types';
-
+import {
+  isDateUnit,
+  isTemporalType,
+  expressionIsAggregate,
+  TD,
+} from '../../../model/malloy_types';
+import * as TDU from '../typedesc-utils';
 import {errorFor} from '../ast-utils';
-import {compose, nullsafeNot} from '../expressions/utils';
-import {FT} from '../fragtype-utils';
-import {timeOffset, timeResult} from '../time-utils';
-import {isComparison} from './comparison';
-import {Equality, isEquality} from './equality';
-import {ExprValue} from './expr-value';
-import {FieldSpace} from './field-space';
+import type {ExprValue} from './expr-value';
+import {
+  computedErrorExprValue,
+  computedExprValue,
+  computedTimeResult,
+} from './expr-value';
+import {timeOffset} from '../time-utils';
+import type {FieldSpace} from './field-space';
 import {isGranularResult} from './granular-result';
 import {MalloyElement} from './malloy-element';
+import type {
+  ArithmeticMalloyOperator,
+  BinaryMalloyOperator,
+  CompareMalloyOperator,
+  EqualityMalloyOperator,
+} from './binary_operators';
+import {getExprNode, isComparison, isEquality} from './binary_operators';
+import {
+  BooleanFilterExpression,
+  NumberFilterExpression,
+  StringFilterExpression,
+  TemporalFilterExpression,
+  isFilterable,
+} from '@malloydata/malloy-filter';
+import {booleanValueError, COMPARE_HINT} from '../expressions/boolean-value';
 
 class TypeMismatch extends Error {}
 
 /**
+ * Mark a value as belonging to everyone. Writing into a memoized value writes
+ * into every other holder's copy and into whatever the IR already stored;
+ * freezing turns that from a silent miscompile into a TypeError naming the
+ * line which did it. Own fields only -- walking every Expr on every
+ * evaluation would cost more than the memo saves.
+ */
+function shareable(v: ExprValue): ExprValue {
+  Object.freeze(v);
+  for (const share of [
+    v.value,
+    v.morphic,
+    v.refSummary,
+    v.refSummary?.fieldUsage,
+    v.refSummary?.givenUsage,
+    v.requiresGroupBy,
+    v.ungroupings,
+  ]) {
+    if (share !== undefined) {
+      Object.freeze(share);
+    }
+  }
+  return v;
+}
+
+/** Node types in an alternation tree */
+export enum ATNodeType {
+  And,
+  Or,
+  Value,
+  Partial,
+}
+
+/**
  * Root node for any element in an expression. These essentially
- * create a sub-tree in the larger AST. Expression nodes know
- * how to write themselves as SQL (or rather, generate the
- * template for SQL required by the query writer)
+ * create a sub-tree in the larger AST. An ExpressionDef, when
+ * given a FieldSpace, can be evaluated to produce an ExprValue
+ * which is the IR for an Expr along with its type and other metadata.
  */
 export abstract class ExpressionDef extends MalloyElement {
   abstract elementType: string;
@@ -61,13 +94,86 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * Returns the "translation" or template for SQL generation. When asking
+   * Returns the "translation" or Expr tree for SQL generation. When asking
    * for a translation you may pass the types you can accept, allowing
    * the translation code a chance to convert to match your expectations
    * @param space Namespace for looking up field references
+   *
+   * THE RETURNED ExprValue IS SHARED -- TREAT IT AS IMMUTABLE. Asking twice
+   * yields the same object, so to derive a value from one, build a new one:
+   * `{...operand, type: 'boolean'}` or `computedExprValue({…, from: [operand]})`.
+   *
+   * DO NOT OVERRIDE THIS. Nodes implement `computeExpression`; an override
+   * here bypasses the memo, which for `+`/`-` chains is the difference
+   * between linear and exponential compile time.
    */
-  abstract getExpression(fs: FieldSpace): ExprValue;
-  legalChildTypes = FT.anyAtomicT;
+  getExpression(fs: FieldSpace): ExprValue {
+    const initialGeneration = fs.generation();
+    if (
+      this.memoValue !== undefined &&
+      this.memoFs === fs &&
+      this.memoGen === initialGeneration
+    ) {
+      return this.memoValue;
+    }
+
+    // If we get here and memoFs is set and memoGen is not set, then somewhere
+    // inside this expression is a recursive call asking this node for the
+    // value it is in the middle of computing. There is nothing to return and
+    // computing one would recurse again, so throw. An abandoned computation
+    // does not look like this -- see the finally below.
+
+    if (this.memoFs !== undefined && this.memoGen === undefined) {
+      throw this.internalError(
+        `ExpressionDef.getExpression memoization failure on ${this.elementType}`
+      );
+    }
+
+    this.memoFs = fs;
+    this.memoGen = undefined;
+    try {
+      const value = this.computeExpression(fs);
+      if (initialGeneration === fs.generation()) {
+        this.memoGen = initialGeneration;
+        this.memoValue = shareable(value);
+      }
+      return value;
+    } finally {
+      if (this.memoGen === undefined) {
+        // Threw, or a name was rebound while we ran. Leave no stamp: a caller
+        // which recovers must get a fresh computation, not our remains.
+        this.memoFs = undefined;
+      }
+    }
+  }
+
+  /**
+   * The last value this node computed, and what it was computed against.
+   * Three states, distinguished by memoGen:
+   *
+   *   memoFs undefined              -- nothing computed, or abandoned
+   *   memoFs set, memoGen undefined -- computing right now, and only that,
+   *                                    since abandoning clears memoFs
+   *   memoFs set, memoGen set       -- memoValue is that computation's result
+   *
+   * Both halves of the stamp are needed: a node can be evaluated under more
+   * than one field space -- ConstantExpression evaluates its child against a
+   * ConstantFieldSpace whatever it was handed -- and a field space can rebind
+   * a name under us.
+   *
+   * One slot, not a map. A node which alternates between two field spaces
+   * simply misses and recomputes, which costs time and never correctness.
+   */
+  private memoFs?: FieldSpace;
+  private memoGen?: number;
+  private memoValue?: ExprValue;
+
+  /**
+   * Evaluate this node. Implemented by every expression node; called only
+   * by `getExpression` above, never directly.
+   */
+  protected abstract computeExpression(fs: FieldSpace): ExprValue;
+  legalChildTypes = TDU.anyAtomicT;
 
   /**
    * Some operators want to give the right hand value a chance to
@@ -90,25 +196,67 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param eVal ...list of expressions that must match legalChildTypes
    */
   typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
-    if (eVal.dataType !== 'error' && !FT.in(eVal, this.legalChildTypes)) {
-      eNode.log(`'${this.elementType}' Can't use type ${FT.inspect(eVal)}`);
+    if (eVal.type !== 'error' && !TDU.any(eVal, this.legalChildTypes)) {
+      if (eVal.type === 'sql native') {
+        eNode.logError('sql-native-not-allowed-in-expression', {
+          rawType: eVal.rawType,
+        });
+      } else {
+        eNode.logError(
+          'expression-type-error',
+          `'${this.elementType}' Can't use type ${TDU.inspect(eVal)}`
+        );
+      }
       return false;
     }
     return true;
   }
 
+  drillExpression(): Malloy.Expression | undefined {
+    return undefined;
+  }
+
   /**
-   * This is the operation which makes partial comparison and value trees work
-   * The default implementation merely constructs LEFT OP RIGHT, but specialized
-   * nodes like alternation trees or or partial comparison can control how
-   * the appplication gets generated
+   * This is the operation which makes partial comparison and value trees work.
+   * `this` is the RIGHT operand; the left arrives here as an argument. All of
+   * the magic of malloy expressions eventually flows through here, where an
+   * operator is applied to two values -- depending on the operator and the
+   * value types that may transform the values or even the operator.
+   *
+   * Specialized nodes like alternation trees and partial comparisons override
+   * this to control how the application gets generated. They are the reason
+   * the right operand is in charge: a partial has no bound left operand, and
+   * only learns it here.
    * @param fs The symbol table
    * @param op The operator being applied
-   * @param expr The "other" (besdies 'this') value
+   * @param left The "other" (besides 'this') value
    * @return The translated expression
    */
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
-    return applyBinary(fs, left, op, this);
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef,
+    _warnOnComplexTree = false
+  ): ExprValue {
+    if (isEquality(op)) {
+      return equality(fs, left, op, this);
+    }
+    if (isComparison(op)) {
+      return compare(fs, left, op, this);
+    }
+    if (op === '+' || op === '-') {
+      return delta(fs, left, op, this);
+    }
+    if (op === '*') {
+      return numeric(fs, left, op, this);
+    }
+    if (op === '/' || op === '%') {
+      return divmod(fs, left, op, this);
+    }
+    return left.loggedErrorExpr(
+      'unexpected-binary-operator',
+      `Cannot use ${op} operator here`
+    );
   }
 
   canSupportPartitionBy() {
@@ -126,11 +274,19 @@ export abstract class ExpressionDef extends MalloyElement {
   supportsWhere(expr: ExprValue) {
     return expressionIsAggregate(expr.expressionType);
   }
+
+  atNodeType(): ATNodeType {
+    return ATNodeType.Value;
+  }
+
+  atExpr(): ExpressionDef {
+    return this;
+  }
 }
 
 export class ExprDuration extends ExpressionDef {
   elementType = 'duration';
-  legalChildTypes = [FT.timestampT, FT.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.timestamptzT, TDU.dateT];
   constructor(
     readonly n: ExpressionDef,
     readonly timeframe: TimestampUnit
@@ -138,13 +294,20 @@ export class ExprDuration extends ExpressionDef {
     super({n: n});
   }
 
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
     const lhs = left.getExpression(fs);
     this.typeCheck(this, lhs);
-    if (isTimeFieldType(lhs.dataType) && (op === '+' || op === '-')) {
+    if (isTemporalType(lhs.type) && (op === '+' || op === '-')) {
       const num = this.n.getExpression(fs);
-      if (!FT.typeEq(num, FT.numberT)) {
-        this.log(`Duration units needs number not '${num.dataType}`);
+      if (!TDU.typeEq(num, TDU.numberT)) {
+        this.logError(
+          'invalid-duration-quantity',
+          `Duration quantity needs number not '${num.type}`
+        );
         return errorFor('illegal unit expression');
       }
       let resultGranularity: TimestampUnit | undefined;
@@ -154,275 +317,306 @@ export class ExprDuration extends ExpressionDef {
       if (isGranularResult(lhs) && lhs.timeframe === this.timeframe) {
         resultGranularity = lhs.timeframe;
       }
-      if (lhs.dataType === 'timestamp') {
-        const result = timeOffset(
-          'timestamp',
-          lhs.value,
-          op,
-          num.value,
-          this.timeframe
-        );
-        return timeResult(
-          {
-            dataType: 'timestamp',
-            expressionType: maxExpressionType(
-              lhs.expressionType,
-              num.expressionType
-            ),
-            evalSpace: mergeEvalSpaces(lhs.evalSpace, num.evalSpace),
-            value: result,
-          },
-          resultGranularity
+      if (lhs.type === 'date' && !isDateUnit(this.timeframe)) {
+        return this.loggedErrorExpr(
+          'invalid-timeframe-for-time-offset',
+          `Cannot offset date by ${this.timeframe}`
         );
       }
-      if (isDateUnit(this.timeframe)) {
-        return timeResult(
-          {
-            dataType: 'date',
-            expressionType: maxExpressionType(
-              lhs.expressionType,
-              num.expressionType
-            ),
-            evalSpace: mergeEvalSpaces(lhs.evalSpace, num.evalSpace),
-            value: timeOffset('date', lhs.value, op, num.value, this.timeframe),
-          },
-          resultGranularity
-        );
-      } else {
-        this.log(`Cannot offset date by ${this.timeframe}`);
-        return errorFor('ofsset date error');
-      }
+      return computedTimeResult({
+        dataType: {type: lhs.type},
+        value: timeOffset(lhs.type, lhs.value, op, num.value, this.timeframe),
+        timeframe: resultGranularity,
+        from: [lhs, num],
+      });
     }
     return super.apply(fs, op, left);
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    return {
-      dataType: 'duration',
-      expressionType: 'scalar',
-      value: ['__ERROR_DURATION_IS_NOT_A_VALUE__'],
-      evalSpace: 'constant',
-    };
+  protected computeExpression(fs: FieldSpace): ExprValue {
+    const num = this.n.getExpression(fs);
+    return computedErrorExprValue({
+      dataType: {type: 'duration'},
+      error: 'Duration is not a value',
+      from: [num],
+    });
   }
 }
 
-function willMorphTo(ev: ExprValue, t: string): Expr | undefined {
-  if (ev.dataType === t) {
+function willMorphTo(ev: ExprValue, t: MorphicType): Expr | undefined {
+  if (ev.type === t || (t === 'timestamp' && ev.type === 'timestamptz')) {
     return ev.value;
   }
   return ev.morphic && ev.morphic[t];
 }
 
+export type MorphicType = 'date' | 'timestamp';
 export function getMorphicValue(
   mv: ExprValue,
-  mt: FieldValueType
+  mt: MorphicType
 ): ExprValue | undefined {
-  if (mv.dataType === mt) {
+  if (mv.type === mt) {
     return mv;
   }
   if (mv.morphic && mv.morphic[mt]) {
-    return {
-      ...mv,
-      dataType: mt,
+    return computedExprValue({
+      dataType: {type: mt},
       value: mv.morphic[mt],
-    };
+      from: [mv],
+    });
   }
 }
 
 function timeCompare(
   left: ExpressionDef,
   lhs: ExprValue,
-  op: string,
+  op: CompareMalloyOperator,
   rhs: ExprValue
 ): Expr | undefined {
-  const leftIsTime = isTimeFieldType(lhs.dataType);
-  const rightIsTime = isTimeFieldType(rhs.dataType);
+  const leftIsTime = isTemporalType(lhs.type);
+  const rightIsTime = isTemporalType(rhs.type);
+  const node = getExprNode(op);
   if (leftIsTime && rightIsTime) {
-    if (lhs.dataType !== rhs.dataType) {
+    if (lhs.type !== rhs.type) {
       const lval = willMorphTo(lhs, 'timestamp');
       const rval = willMorphTo(rhs, 'timestamp');
       if (lval && rval) {
-        return compose(lval, op, rval);
+        return {node, kids: {left: lval, right: rval}};
       }
     } else {
-      return compose(lhs.value, op, rhs.value);
+      return {node, kids: {left: lhs.value, right: rhs.value}};
     }
   }
   if (
     (leftIsTime || rightIsTime) &&
-    lhs.dataType !== 'null' &&
-    rhs.dataType !== 'null'
+    lhs.type !== 'null' &&
+    rhs.type !== 'null'
   ) {
-    left.log(`Cannot compare a ${lhs.dataType} to a ${rhs.dataType}`);
-    return ['false'];
+    left.logError(
+      'time-comparison-type-mismatch',
+      `Cannot compare a ${lhs.type} to a ${rhs.type}`
+    );
+    return {node: 'false'};
   }
   return undefined;
 }
 
 function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
-  if (left.dataType === 'string') {
-    if (right.dataType === 'regular expression') {
-      return [
-        {
-          type: 'dialect',
-          function: 'regexpMatch',
-          expr: left.value,
-          regexp: right.value,
-        },
-      ];
+  if (left.type === 'string') {
+    if (right.type === 'regular expression') {
+      return {
+        node: 'regexpMatch',
+        kids: {expr: left.value, regex: right.value},
+      };
     }
-  } else if (right.dataType === 'string') {
-    if (left.dataType === 'regular expression') {
-      return [
-        {
-          type: 'dialect',
-          function: 'regexpMatch',
-          expr: right.value,
-          regexp: left.value,
-        },
-      ];
+  } else if (right.type === 'string') {
+    if (left.type === 'regular expression') {
+      return {
+        node: 'regexpMatch',
+        kids: {expr: right.value, regex: left.value},
+      };
     }
   }
   return undefined;
 }
 
-function nullCompare(
-  left: ExprValue,
-  op: string,
-  right: ExprValue
-): Expr | undefined {
-  const not = op === '!=' || op === '!~';
-  if (left.dataType === 'null' || right.dataType === 'null') {
-    const maybeNot = not ? ' NOT' : '';
-    if (left.dataType !== 'null') {
-      return [...left.value, ` IS${maybeNot} NULL`];
-    }
-    if (right.dataType !== 'null') {
-      return [...right.value, `IS${maybeNot} NULL`];
-    }
-    return [not ? 'false' : 'true'];
-  }
-  return undefined;
+/**
+ * A boolean can only be compared, with anything, on a dialect with boolean
+ * values. Every comparison operator, applied plainly, as a partial, or
+ * through an alternation, arrives here through equality() or compare().
+ */
+function booleanCompare(
+  fs: FieldSpace,
+  left: ExpressionDef,
+  lhs: ExprValue,
+  op: CompareMalloyOperator,
+  right: ExpressionDef,
+  rhs: ExprValue
+): ExprValue | undefined {
+  const [side, val] = lhs.type === 'boolean' ? [left, lhs] : [right, rhs];
+  return booleanValueError(fs, val, `compared with ${op}`, side, COMPARE_HINT);
 }
 
 function equality(
   fs: FieldSpace,
   left: ExpressionDef,
-  op: Equality,
+  op: EqualityMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
+  const node = getExprNode(op);
 
-  const err = errorCascade('boolean', lhs, rhs);
+  const err =
+    errorCascade('boolean', lhs, rhs) ||
+    booleanCompare(fs, left, lhs, op, right, rhs);
   if (err) return err;
 
   // Unsupported types can be compare with null
-  const checkUnsupport =
-    lhs.dataType === 'unsupported' || rhs.dataType === 'unsupported';
-  if (checkUnsupport) {
-    const oneNull = lhs.dataType === 'null' || rhs.dataType === 'null';
-    const rawMatch = lhs.rawType && lhs.rawType === rhs.rawType;
-    if (!(oneNull || rawMatch)) {
+  const lhRaw = TD.isSQL(lhs) ? lhs.rawType || 'typeless-left' : undefined;
+  const rhRaw = TD.isSQL(rhs) ? rhs.rawType || 'typeless-right' : undefined;
+  if (lhRaw || rhRaw) {
+    const oneNull = lhs.type === 'null' || rhs.type === 'null';
+    if (!(oneNull || lhRaw === rhRaw)) {
       const noGo = unsupportError(left, lhs, right, rhs);
       if (noGo) {
-        return {...noGo, dataType: 'boolean'};
+        return {...noGo, type: 'boolean'};
       }
     }
   }
-  let value =
-    timeCompare(left, lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
-  if (lhs.dataType !== 'error' && rhs.dataType !== 'error') {
-    switch (op) {
-      case '~':
-      case '!~': {
-        if (lhs.dataType === 'string' && rhs.dataType === 'string') {
-          value = compose(lhs.value, 'LIKE', rhs.value);
-        } else {
-          const regexCmp = regexEqual(lhs, rhs);
-          if (regexCmp === undefined) {
-            throw new TypeMismatch(
-              "Incompatible types for match('~') operator"
-            );
+  let value: Expr;
+
+  if (rhs.type === 'filter expression') {
+    if (op !== '~' && op !== '!~') {
+      return right.loggedErrorExpr(
+        'filter-expression-error',
+        `Cannot use the '${op}' operator with a filter expression`
+      );
+    }
+    const noMatch = booleanValueError(
+      fs,
+      lhs,
+      'matched with a filter expression',
+      left,
+      'test the condition itself'
+    );
+    if (noMatch) return noMatch;
+    if (isFilterable(lhs.type)) {
+      let actualFilter = rhs.value;
+      while (actualFilter.node === '()') {
+        actualFilter = actualFilter.e;
+      }
+      if (actualFilter.node !== 'parameter' && actualFilter.node !== 'given') {
+        // Parameter and given values are checked when supplied
+        checkFilterExpression(right, lhs.type, actualFilter);
+      }
+      const filterMatch: FilterMatchExpr = {
+        node: 'filterMatch',
+        dataType: lhs.type,
+        kids: {filterExpr: rhs.value, expr: lhs.value},
+      };
+      if (op === '!~') {
+        filterMatch.notMatch = true;
+      }
+      value = filterMatch;
+    } else {
+      return left.loggedErrorExpr(
+        'filter-expression-type',
+        `Cannot use filter expressions with type '${lhs.type}'`
+      );
+    }
+  } else {
+    value = timeCompare(left, lhs, op, rhs) || {
+      node,
+      kids: {left: lhs.value, right: rhs.value},
+    };
+
+    if (
+      lhs.type !== 'error' &&
+      rhs.type !== 'error' &&
+      (op === '~' || op === '!~')
+    ) {
+      if (lhs.type !== 'string' || rhs.type !== 'string') {
+        let regexCmp = regexEqual(lhs, rhs);
+        if (regexCmp) {
+          if (op[0] === '!') {
+            regexCmp = {node: 'not', e: {...regexCmp}};
           }
-          value = regexCmp;
-        }
-        value = nullsafeNot(value, op);
-        break;
-      }
-      case '=':
-      case '!=': {
-        const nullCmp = nullCompare(lhs, op, rhs);
-        if (nullCmp) {
-          value = nullCmp;
         } else {
-          value = nullsafeNot(
-            regexEqual(lhs, rhs) || compose(lhs.value, '=', rhs.value),
-            op
-          );
+          throw new TypeMismatch("Incompatible types for match('~') operator");
         }
-        break;
+        value = regexCmp;
       }
     }
   }
 
-  return {
-    dataType: 'boolean',
-    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
-    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
+  return computedExprValue({
+    dataType: {type: 'boolean'},
     value,
-  };
+    from: [lhs, rhs],
+  });
 }
 
 function compare(
   fs: FieldSpace,
   left: ExpressionDef,
-  op: string,
+  op: CompareMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
 
-  const err = errorCascade('boolean', lhs, rhs);
+  const err =
+    errorCascade('boolean', lhs, rhs) ||
+    booleanCompare(fs, left, lhs, op, right, rhs);
   if (err) return err;
 
-  const expressionType = maxExpressionType(
-    lhs.expressionType,
-    rhs.expressionType
-  );
   const noCompare = unsupportError(left, lhs, right, rhs);
   if (noCompare) {
-    return {...noCompare, dataType: 'boolean'};
+    return {...noCompare, type: 'boolean'};
   }
-  const value =
-    timeCompare(left, lhs, op, rhs) || compose(lhs.value, op, rhs.value);
-
-  return {
-    dataType: 'boolean',
-    expressionType,
-    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
-    value: value,
+  const value = timeCompare(left, lhs, op, rhs) || {
+    node: getExprNode(op),
+    kids: {left: lhs.value, right: rhs.value},
   };
+
+  return computedExprValue({
+    dataType: {type: 'boolean'},
+    value,
+    from: [lhs, rhs],
+  });
 }
 
-function oneOf(op: string, ...operators: string[]): boolean {
-  return operators.includes(op);
-}
-
-function allAre(oneType: FieldValueType, ...values: ExprValue[]): boolean {
-  for (const v of values) {
-    if (v.dataType !== oneType) {
-      return false;
-    }
+/**
+ * Computes the result numberType for arithmetic operations.
+ * - Division/modulo always return float
+ * - Float wins over integer/bigint
+ * - Bigint wins over integer
+ * - Both integer = integer
+ * - Unknown = no subtype
+ */
+function mergeNumberTypes(
+  lhs: ExprValue,
+  rhs: ExprValue,
+  op: ArithmeticMalloyOperator
+): NumberTypeDef {
+  // Division and modulo always return float
+  if (op === '/' || op === '%') {
+    return {type: 'number', numberType: 'float'};
   }
-  return true;
+
+  // Only applies if both are numbers
+  if (lhs.type !== 'number' || rhs.type !== 'number') {
+    return {type: 'number'};
+  }
+
+  const leftSubtype = lhs.numberType;
+  const rightSubtype = rhs.numberType;
+
+  // If either is float, result is float
+  if (leftSubtype === 'float' || rightSubtype === 'float') {
+    return {type: 'number', numberType: 'float'};
+  }
+
+  // If either is bigint, result is bigint
+  if (leftSubtype === 'bigint' || rightSubtype === 'bigint') {
+    return {type: 'number', numberType: 'bigint'};
+  }
+
+  // Both are integer, result is integer
+  if (leftSubtype === 'integer' && rightSubtype === 'integer') {
+    return {type: 'number', numberType: 'integer'};
+  }
+
+  // Unknown - no subtype
+  return {type: 'number'};
 }
 
 function numeric(
   fs: FieldSpace,
   left: ExpressionDef,
-  op: string,
+  op: ArithmeticMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
   const lhs = left.getExpression(fs);
@@ -432,31 +626,66 @@ function numeric(
   if (err) return err;
 
   const noGo = unsupportError(left, lhs, right, rhs);
-  if (noGo) {
-    return noGo;
-  }
-  const expressionType = maxExpressionType(
-    lhs.expressionType,
-    rhs.expressionType
-  );
+  if (noGo) return noGo;
 
-  if (allAre('number', lhs, rhs)) {
-    return {
-      dataType: 'number',
-      expressionType,
-      value: compose(lhs.value, op, rhs.value),
-      evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
-    };
+  if (lhs.type !== 'number') {
+    left.logError(
+      'arithmetic-operation-type-mismatch',
+      `The '${op}' operator requires a number, not a '${lhs.type}'`
+    );
+  } else if (rhs.type !== 'number') {
+    right.logError(
+      'arithmetic-operation-type-mismatch',
+      `The '${op}' operator requires a number, not a '${rhs.type}'`
+    );
+  } else {
+    return computedExprValue({
+      dataType: mergeNumberTypes(lhs, rhs, op),
+      value: {node: op, kids: {left: lhs.value, right: rhs.value}},
+      from: [lhs, rhs],
+    });
   }
-
-  left.log(`Non numeric('${lhs.dataType},${rhs.dataType}') value with '${op}'`);
   return errorFor('numbers required');
+}
+
+function divmod(
+  fs: FieldSpace,
+  left: ExpressionDef,
+  op: '/' | '%',
+  right: ExpressionDef
+): ExprValue {
+  const num = left.getExpression(fs);
+  const denom = right.getExpression(fs);
+  const noGo = unsupportError(left, num, right, denom);
+  if (noGo) return noGo;
+
+  const err = errorCascade('number', num, denom);
+  if (err) return err;
+
+  if (num.type !== 'number') {
+    left.logError(
+      'arithmetic-operation-type-mismatch',
+      'Numerator must be a number'
+    );
+  } else if (denom.type !== 'number') {
+    right.logError(
+      'arithmetic-operation-type-mismatch',
+      'Denominator must be a number'
+    );
+  } else {
+    return computedExprValue({
+      dataType: mergeNumberTypes(num, denom, op),
+      value: {node: op, kids: {left: num.value, right: denom.value}},
+      from: [num, denom],
+    });
+  }
+  return errorFor('divide type mismatch');
 }
 
 function delta(
   fs: FieldSpace,
   left: ExpressionDef,
-  op: string,
+  op: '+' | '-',
   right: ExpressionDef
 ): ExprValue {
   const lhs = left.getExpression(fs);
@@ -466,21 +695,23 @@ function delta(
     return noGo;
   }
 
-  const timeLHS = isTimeFieldType(lhs.dataType);
+  const timeLHS = isTemporalType(lhs.type);
 
   const err = errorCascade(timeLHS ? 'error' : 'number', lhs, rhs);
   if (err) return err;
 
   if (timeLHS) {
     let duration: ExpressionDef = right;
-    if (rhs.dataType !== 'duration') {
+    if (rhs.type !== 'duration') {
       if (isGranularResult(lhs)) {
         duration = new ExprDuration(right, lhs.timeframe);
-      } else if (lhs.dataType === 'date') {
+      } else if (lhs.type === 'date') {
         duration = new ExprDuration(right, 'day');
       } else {
-        left.log(`Can not offset time by '${rhs.dataType}'`);
-        return errorFor(`time plus ${rhs.dataType}`);
+        return left.loggedErrorExpr(
+          'time-offset-type-mismatch',
+          `Can not offset time by '${rhs.type}'`
+        );
       }
     }
     return duration.apply(fs, op, left);
@@ -488,82 +719,16 @@ function delta(
   return numeric(fs, left, op, right);
 }
 
-/**
- * All of the magic of malloy expressions eventually flows to here,
- * where an operator is applied to two values. Depending on the
- * operator and value types this may involve transformations of
- * the values or even the operator.
- * @param fs FieldSpace for the symbols
- * @param left Left value
- * @param op The operator
- * @param right Right Value
- * @return ExprValue of the expression
- */
-export function applyBinary(
-  fs: FieldSpace,
-  left: ExpressionDef,
-  op: string,
-  right: ExpressionDef
-): ExprValue {
-  if (isEquality(op)) {
-    return equality(fs, left, op, right);
-  }
-  if (isComparison(op)) {
-    return compare(fs, left, op, right);
-  }
-  if (oneOf(op, '+', '-')) {
-    return delta(fs, left, op, right);
-  }
-  if (op === '*') {
-    return numeric(fs, left, op, right);
-  }
-  if (oneOf(op, '/', '%')) {
-    const num = left.getExpression(fs);
-    const denom = right.getExpression(fs);
-    const noGo = unsupportError(left, num, right, denom);
-    if (noGo) {
-      left.log('Cannot operate with unsupported type');
-      return noGo;
-    }
-
-    const err = errorCascade('number', num, denom);
-    if (err) return err;
-
-    if (num.dataType !== 'number') {
-      left.log('Numerator must be a number');
-    } else if (denom.dataType !== 'number') {
-      right.log('Denominator must be a number');
-    } else {
-      const div: DivModFragment = {
-        type: 'dialect',
-        function: op === '/' ? 'div' : 'mod',
-        numerator: num.value,
-        denominator: denom.value,
-      };
-      return {
-        dataType: 'number',
-        expressionType: maxExpressionType(
-          num.expressionType,
-          denom.expressionType
-        ),
-        evalSpace: mergeEvalSpaces(num.evalSpace, denom.evalSpace),
-        value: [div],
-      };
-    }
-    return errorFor('divide type mismatch');
-  }
-  left.log(`Cannot use ${op} operator here`);
-  return errorFor('applybinary bad operator');
-}
-
-function errorCascade(dataType: ExpressionValueType, ...es: ExprValue[]) {
-  if (es.some(e => e.dataType === 'error')) {
-    return {
-      dataType,
-      expressionType: maxOfExpressionTypes(es.map(e => e.expressionType)),
-      value: ["'cascading error'"],
-      evalSpace: mergeEvalSpaces(...es.map(e => e.evalSpace)),
-    };
+function errorCascade(
+  type: BasicExpressionType,
+  ...es: ExprValue[]
+): ExprValue | undefined {
+  if (es.some(e => e.type === 'error')) {
+    return computedExprValue({
+      dataType: {type},
+      value: {node: 'error', message: 'cascading error'},
+      from: es,
+    });
   }
 }
 
@@ -576,19 +741,55 @@ function unsupportError(
   r: ExpressionDef,
   rhs: ExprValue
 ): ExprValue | undefined {
-  const ret = {
-    dataType: lhs.dataType,
-    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
-    value: ["'unsupported operation'"],
-    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
-  };
-  if (lhs.dataType === 'unsupported') {
-    l.log('Unsupported type not allowed in expression');
-    return {...ret, dataType: rhs.dataType};
+  const ret = computedExprValue({
+    dataType: lhs,
+    value: {node: 'error', message: 'sql-native unsupported'},
+    from: [lhs, rhs],
+  });
+  if (lhs.type === 'sql native') {
+    l.logError('sql-native-not-allowed-in-expression', {rawType: lhs.rawType});
+    ret.type = rhs.type;
+    return ret;
   }
-  if (rhs.dataType === 'unsupported') {
-    r.log('Unsupported type not allowed in expression');
+  if (rhs.type === 'sql native') {
+    r.logError('sql-native-not-allowed-in-expression', {rawType: rhs.rawType});
     return ret;
   }
   return undefined;
+}
+
+export function checkFilterExpression(
+  logTo: MalloyElement,
+  ft: FilterExprType,
+  fexpr: Expr
+) {
+  while (fexpr.node === '()') {
+    fexpr = fexpr.e;
+  }
+  if (fexpr.node !== 'filterLiteral') {
+    logTo.logError(
+      'filter-expression-error',
+      'Expected a filter expression literal here'
+    );
+    return;
+  }
+  const fsrc = fexpr.filterSrc;
+  let err: string | undefined;
+  if (isTemporalType(ft)) {
+    err = TemporalFilterExpression.parse(fsrc).log[0]?.message;
+  } else if (ft === 'string') {
+    err = StringFilterExpression.parse(fsrc).log[0]?.message;
+  } else if (ft === 'number') {
+    err = NumberFilterExpression.parse(fsrc).log[0]?.message;
+  } else if (ft === 'boolean') {
+    err = BooleanFilterExpression.parse(fsrc).log[0]?.message;
+  } else {
+    logTo.logError(
+      'filter-expression-type',
+      `Cannot apply filter expression to type ${ft}`
+    );
+  }
+  if (err !== undefined) {
+    logTo.logError('filter-expression-error', `Filter syntax error: ${err}`);
+  }
 }

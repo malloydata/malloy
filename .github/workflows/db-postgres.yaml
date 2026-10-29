@@ -1,15 +1,11 @@
-name: Postgres DB
+name: 'DB:Postgres'
+permissions: {}
 
-on: [pull_request, workflow_call]
+on: workflow_call
 
 jobs:
-  # Label of the container job
   test-postgres:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x]
 
     services:
       postgres:
@@ -26,25 +22,20 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v8
         with:
-          submodules: 'true'
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+          name: workspace
+      - name: Extract workspace
+        run: tar --use-compress-program='zstd -d -T0' -xf workspace.tzst && rm workspace.tzst
+      - name: Use Node.js
+        uses: actions/setup-node@v5
         with:
-          node-version: ${{ matrix.node-version }}
-      - name: npm install, build, and test
+          node-version-file: '.node-version'
+      - name: Test
         run: |
-          npm ci --loglevel error
-          npm run build
-          echo CREATE EXTENSION tsm_system_rows\; | psql
-          gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
-          npm run test-silent -- -- test packages/malloy-db-postgres
-          export MALLOY_DATABASES=duckdb,postgres
-          npm run build-duckdb-db
-          npm run test-silent -- -- test/src/databases/multi-connection/multi_connection.spec.ts
+          sh test/postgres/load_test_data.sh
+          npm run ci-postgres
         env:
-          MALLOY_DATABASES: postgres
           PGHOST: localhost
           PGPORT: 5432
           PGUSER: root

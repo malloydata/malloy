@@ -1,5 +1,7 @@
 src/
 *.map
 tsconfig*
-*.spec
+*.spec.*
 storybook-static
+CONTEXT.md
+dist/module/plugins/spec-test-support

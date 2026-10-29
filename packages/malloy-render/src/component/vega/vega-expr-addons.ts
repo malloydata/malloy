@@ -1,0 +1,101 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import {expressionFunction} from 'vega';
+import {renderNumericField, renderDateTimeField} from '../render-numeric-field';
+import type {BrushData} from '../result-store/result-store';
+import {type RenderTimeStringOptions} from '../../util';
+import type {NestField} from '../../data_tree';
+
+if (!expressionFunction('renderMalloyNumber')) {
+  expressionFunction(
+    'renderMalloyNumber',
+    (explore: NestField, fieldPath: string, value: number) => {
+      if (explore) {
+        const field = explore.fieldAt(fieldPath);
+        return field.isBasic()
+          ? renderNumericField(field, value)
+          : String(value);
+      }
+      return String(value);
+    }
+  );
+}
+
+if (!expressionFunction('renderMalloyTime')) {
+  expressionFunction(
+    'renderMalloyTime',
+    (
+      explore: NestField,
+      fieldPath: string,
+      value: number,
+      extractFormat?: string
+    ) => {
+      if (explore) {
+        const field = explore.fieldAt(fieldPath);
+        if (field.isTime()) {
+          const options: RenderTimeStringOptions = {
+            isDate: field.isDate(),
+            timeframe: field.timeframe,
+          };
+          if (extractFormat) {
+            options.extractFormat =
+              extractFormat as RenderTimeStringOptions['extractFormat'];
+          }
+          return renderDateTimeField(field, new Date(value), options);
+        }
+      }
+      return String(value);
+    }
+  );
+}
+
+if (!expressionFunction('getMalloyBrush')) {
+  expressionFunction(
+    'getMalloyBrush',
+    (brushArray: BrushData[], fieldRefId: string | string[], type?: string) => {
+      const fieldRefs = Array.isArray(fieldRefId) ? fieldRefId : [fieldRefId];
+      return (
+        brushArray.find(brush => {
+          const isField = fieldRefs.includes(brush.fieldRefId);
+          const isType = type ? brush.type === type : true;
+          return isField && isType;
+        })?.value ?? null
+      );
+    }
+  );
+}
+
+if (!expressionFunction('getMalloyMeasureBrushes')) {
+  expressionFunction(
+    'getMalloyMeasureBrushes',
+    (
+      brushArray: BrushData[],
+      fieldRefIds: string[],
+      refsToFieldMap: Record<string, string>
+    ) =>
+      brushArray
+        .filter(brush => fieldRefIds.includes(brush.fieldRefId))
+        .map(brush => ({
+          ...brush,
+          fieldPath: refsToFieldMap[brush.fieldRefId],
+        })) ?? []
+  );
+}
+
+if (!expressionFunction('snapValue')) {
+  expressionFunction(
+    'snapValue',
+    (range: [number, number], stepCt: number, valueToSnap: number) => {
+      const min = range[0];
+      const max = range[1];
+      const stepSize = (max - min) / stepCt;
+
+      // Round the value to the nearest step size
+      const snappedValue = Math.round(valueToSnap / stepSize) * stepSize;
+      return snappedValue;
+    }
+  );
+}

@@ -1,31 +1,19 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {Annotation, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
-
-import {FieldReference} from '../query-items/field-references';
-import {FieldSpace} from '../types/field-space';
-import {SpaceEntry} from '../types/space-entry';
+import type {
+  AnnotationsDef,
+  FieldUsageEntry,
+  QueryFieldDef,
+  TypeDesc,
+} from '../../../model/malloy_types';
+import {TD, mkFieldDef} from '../../../model/malloy_types';
+import * as TDU from '../typedesc-utils';
+import type {FieldReference} from '../query-items/field-references';
+import type {FieldSpace} from '../types/field-space';
+import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 
 export class ReferenceField extends SpaceField {
@@ -52,22 +40,50 @@ export class ReferenceField extends SpaceField {
     if (!this.queryFieldDef) {
       const check = this.fieldRef.getField(fs);
       if (check.error) {
-        this.fieldRef.log(check.error);
+        this.fieldRef.logError(check.error.code, check.error.message);
       }
-      this.queryFieldDef = {
-        type: 'fieldref',
-        path: this.fieldRef.list.map(f => f.name),
-      };
+
+      // TODO investigate removing 'fieldref' as a type, as it obscures the
+      //      actual type of the field and is redundant with the slightly
+      //      more verbose `{ e: [{ type: 'field', path }] }`
+      const path = this.fieldRef.path;
+      if (check.found && check.found.refType === 'parameter') {
+        const foundType = check.found.typeDesc();
+        if (TD.isAtomic(foundType)) {
+          this.queryFieldDef = {
+            ...mkFieldDef(TDU.atomicDef(foundType), path[0]),
+            e: {node: 'parameter', path, at: this.fieldRef.location},
+          };
+        } else {
+          // not sure what to do here, if we get here
+          throw new Error('impossible turtle/join parameter');
+        }
+      } else {
+        this.queryFieldDef = {
+          type: 'fieldref',
+          path,
+          at: this.fieldRef.location,
+          drillExpression: {
+            kind: 'field_reference',
+            name: path[path.length - 1],
+            path: path.slice(0, -1),
+          },
+        };
+      }
       const refTo = this.referenceTo;
-      if (refTo instanceof SpaceField && refTo.haveFieldDef) {
-        const origFd = refTo.haveFieldDef;
-        const notes = this.fieldRef.note;
-        if (origFd.annotation || notes) {
-          const annotation: Annotation = notes || {};
-          if (origFd.annotation) {
-            annotation.inherits = origFd.annotation;
+      if (refTo instanceof SpaceField) {
+        const origFd = refTo.constructorFieldDef();
+        if (origFd) {
+          const notes = this.fieldRef.ownAnnotation;
+          if (origFd.annotations || notes) {
+            const annotations: AnnotationsDef = {
+              ...(notes ?? {}),
+            };
+            if (origFd.annotations) {
+              annotations.inherits = origFd.annotations;
+            }
+            this.queryFieldDef.annotations = annotations;
           }
-          this.queryFieldDef.annotation = annotation;
         }
       }
     }
@@ -78,9 +94,23 @@ export class ReferenceField extends SpaceField {
     if (this.memoTypeDesc) return this.memoTypeDesc;
     const refTo = this.referenceTo;
     if (refTo) {
-      this.memoTypeDesc = refTo.typeDesc();
+      const joinPath = this.fieldRef.list.slice(0, -1).map(x => x.refString);
+      const typeDesc = refTo.typeDesc();
+      const usage: FieldUsageEntry = {
+        path: this.fieldRef.path,
+        at: this.fieldRef.location,
+      };
+      this.memoTypeDesc = {
+        ...typeDesc,
+        refSummary: {fieldUsage: [usage]},
+        requiresGroupBy: typeDesc.requiresGroupBy?.map(gb => ({
+          ...gb,
+          path: [...joinPath, ...gb.path],
+          fieldUsage: usage,
+        })),
+      };
       return this.memoTypeDesc;
     }
-    return {dataType: 'error', expressionType: 'scalar', evalSpace: 'input'};
+    return TDU.errorT;
   }
 }

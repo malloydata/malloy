@@ -1,0 +1,321 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import type {Connection, ConnectionConfig, LookupConnection} from './types';
+
+/**
+ * A factory function that creates a Connection from a config object.
+ *
+ * `rawConfigData` is the connection's entry exactly as the user wrote it,
+ * before overlay references were resolved — so an overlay-supplied property
+ * still reads as `{tenantAuth: "acme"}` rather than as the value it produced.
+ * A connector needs it when a resolved value has no stable identity of its own
+ * but the connection's digest depends on which one it is; BigQuery's
+ * `authClient` is the case that exists today. It is undefined for hosts that
+ * build connections from an already-resolved config.
+ *
+ * Being unresolved, it is the *non-secret* twin of `config`: it holds
+ * `{env: "PGPASSWORD"}` where `config` holds the password.
+ */
+export type ConnectionTypeFactory = (
+  config: ConnectionConfig,
+  rawConfigData?: ConnectionConfigEntry
+) => Promise<Connection>;
+
+/**
+ * The type of a connection property value.
+ */
+export type ConnectionPropertyType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'password'
+  | 'secret'
+  | 'file'
+  | 'json'
+  | 'text'
+  /**
+   * A value with no declared shape that Malloy never inspects. Only reachable
+   * through an overlay — pair it with `source: 'overlay'`, since a config file
+   * has no way to write a live object down.
+   */
+  | 'opaque';
+
+/**
+ * Describes a single configuration property for a connection type.
+ *
+ * `default` accepts either a literal value or a single-key object that names an
+ * overlay source: e.g. `{config: 'rootDirectory'}` or `{env: 'HOME'}`. Defaults
+ * apply uniformly to every connection entry that doesn't specify the property —
+ * both user-listed entries and entries fabricated by `includeDefaultConnections`.
+ * Reference-shaped defaults are resolved through the same config overlays as
+ * inline references.
+ */
+export interface ConnectionPropertyDefinition {
+  name: string;
+  displayName: string;
+  type: ConnectionPropertyType;
+  optional?: true;
+  default?: string | number | boolean | {[source: string]: string | string[]};
+  description?: string;
+  /**
+   * Advisory hint to editors that this property is not part of typical
+   * configuration and may be hidden, folded under an "advanced" toggle, or
+   * ignored. Does not affect registry or factory behavior — purely UI guidance.
+   */
+  advanced?: boolean;
+  /** For type 'file': extension filters for picker dialogs. */
+  fileFilters?: Record<string, string[]>;
+  /**
+   * Where this property's value is allowed to come from. Unset means either —
+   * a literal in the config file, or an overlay reference.
+   *
+   * `'literal'` refuses overlay references. For a property whose value is only
+   * meaningful if it was written down deliberately.
+   *
+   * `'overlay'` refuses literals: the config file can only *name* an overlay
+   * the host registered, never supply the value itself. This is also what
+   * makes a reference unambiguous in a slot that would otherwise hold a
+   * dictionary — if a literal isn't legal there, a single-key object can only
+   * be a reference.
+   */
+  source?: 'literal' | 'overlay';
+  /**
+   * Writing this property is a promise that it will produce a value. Omitting
+   * it is fine; setting it and having nothing survive resolution is an error
+   * rather than a silent drop.
+   *
+   * For properties whose absence triggers a fallback that isn't safe — DuckDB's
+   * `securityPolicy`, where absent means the `none` policy, or a credential
+   * whose absence means the ambient one. Without this, a misspelled overlay
+   * source or an unset environment variable removes the property and the
+   * connection is built as if the user had never asked for it.
+   */
+  mustHaveValue?: true;
+}
+
+/**
+ * A connection type definition: factory plus property metadata.
+ */
+export interface ConnectionTypeDef {
+  displayName: string;
+  factory: ConnectionTypeFactory;
+  properties: ConnectionPropertyDefinition[];
+}
+
+/**
+ * A JSON-compatible value for structured config properties (e.g. SSL options).
+ */
+export type JsonConfigValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonConfigValue[]
+  | {[key: string]: JsonConfigValue};
+
+/**
+ * A single connection entry passed to `createConnectionsFromConfig`. All
+ * values here are already fully resolved — overlay references are expanded
+ * by the config compiler/resolver before the registry ever sees them.
+ */
+export interface ConnectionConfigEntry {
+  is: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Type guard for ConnectionConfigEntry.
+ */
+export function isConnectionConfigEntry(
+  value: unknown
+): value is ConnectionConfigEntry {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as ConnectionConfigEntry).is === 'string'
+  );
+}
+
+/**
+ * The editable intermediate representation of a connections config file.
+ */
+export interface ConnectionsConfig {
+  connections: Record<string, ConnectionConfigEntry>;
+}
+
+// Module-level registry
+const registry = new Map<string, ConnectionTypeDef>();
+
+/**
+ * Register a connection type with its factory and property definitions.
+ *
+ * @param typeName The connection type name (e.g. "duckdb", "bigquery").
+ * @param def The connection type definition (factory + properties).
+ */
+export function registerConnectionType(
+  typeName: string,
+  def: ConnectionTypeDef
+): void {
+  registry.set(typeName, def);
+}
+
+/**
+ * Get the property definitions for a registered connection type.
+ *
+ * @param typeName The connection type name.
+ * @returns The property definitions, or undefined if the type is not registered.
+ */
+export function getConnectionProperties(
+  typeName: string
+): ConnectionPropertyDefinition[] | undefined {
+  return registry.get(typeName)?.properties;
+}
+
+/**
+ * Get the display name for a registered connection type.
+ *
+ * @param typeName The connection type name.
+ * @returns The human-readable display name, or undefined if the type is not registered.
+ */
+export function getConnectionTypeDisplayName(
+  typeName: string
+): string | undefined {
+  return registry.get(typeName)?.displayName;
+}
+
+/**
+ * Get the names of all registered connection types.
+ */
+export function getRegisteredConnectionTypes(): string[] {
+  return [...registry.keys()];
+}
+
+/**
+ * Get the full definition (factory + properties + displayName) for a
+ * registered connection type. Used by the foundation layer's connection
+ * lookup to hand fully-resolved configs to the right factory.
+ */
+export function getConnectionTypeDef(
+  typeName: string
+): ConnectionTypeDef | undefined {
+  return registry.get(typeName);
+}
+
+/**
+ * Parse a JSON config string into a ConnectionsConfig.
+ * Entries without a valid `is` field are silently dropped.
+ */
+export function readConnectionsConfig(jsonText: string): ConnectionsConfig {
+  const parsed = JSON.parse(jsonText);
+  const connections = Object.fromEntries(
+    Object.entries(parsed.connections ?? {}).filter(([, v]) =>
+      isConnectionConfigEntry(v)
+    )
+  );
+  return {...parsed, connections};
+}
+
+/**
+ * Serialize a ConnectionsConfig to a JSON string with 2-space indent.
+ */
+export function writeConnectionsConfig(config: ConnectionsConfig): string {
+  return JSON.stringify(config, null, 2);
+}
+
+/**
+ * A LookupConnection with lifecycle management: close() shuts down all
+ * cached connections, idle() releases their backend resources but keeps
+ * the cache so the same connection objects are reused on next lookup, and
+ * an optional onConnectionCreated callback fires once per connection after
+ * factory creation (before caching).
+ */
+export interface ManagedConnectionLookup extends LookupConnection<Connection> {
+  close(): Promise<void>;
+  idle(): Promise<void>;
+}
+
+/**
+ * Create a ManagedConnectionLookup from a ConnectionsConfig using registered
+ * factories. Connections are cached per name for the lifetime of the returned
+ * object. Call close() to shut down all cached connections.
+ *
+ * @param onConnectionCreated Optional callback invoked once per connection
+ *   immediately after factory creation. Use this for post-creation setup
+ *   (e.g., registering WASM file handlers).
+ */
+export function createConnectionsFromConfig(
+  config: ConnectionsConfig,
+  onConnectionCreated?: (name: string, connection: Connection) => void
+): ManagedConnectionLookup {
+  const entries = Object.entries(config.connections);
+  const firstConnectionName = entries.length > 0 ? entries[0][0] : undefined;
+
+  const cache = new Map<string, Connection>();
+
+  return {
+    async lookupConnection(connectionName?: string): Promise<Connection> {
+      if (connectionName === undefined) {
+        connectionName = firstConnectionName;
+      }
+      if (connectionName === undefined) {
+        throw new Error('No connections defined in config');
+      }
+
+      const cached = cache.get(connectionName);
+      if (cached) return cached;
+
+      const entry = config.connections[connectionName];
+      if (!entry) {
+        throw new Error(
+          `No connection named "${connectionName}" found in config`
+        );
+      }
+
+      const typeDef = registry.get(entry.is);
+      if (!typeDef) {
+        throw new Error(
+          `No registered connection type "${entry.is}" for connection "${connectionName}". ` +
+            'Did you forget to import the connection package?'
+        );
+      }
+
+      // Values are already resolved — the config compiler/resolver handles
+      // overlay references, property defaults, and entry fabrication via
+      // `includeDefaultConnections`. The registry's only job is to hand them
+      // to the factory.
+      const connConfig: ConnectionConfig = {name: connectionName};
+      for (const [key, value] of Object.entries(entry)) {
+        if (key === 'is') continue;
+        if (value !== undefined && value !== null) {
+          connConfig[key] = value as ConnectionConfig[string];
+        }
+      }
+
+      const connection = await typeDef.factory(connConfig);
+      if (onConnectionCreated) {
+        onConnectionCreated(connectionName, connection);
+      }
+      cache.set(connectionName, connection);
+      return connection;
+    },
+
+    async close(): Promise<void> {
+      const connections = [...cache.values()];
+      cache.clear();
+      for (const conn of connections) {
+        await conn.close();
+      }
+    },
+
+    async idle(): Promise<void> {
+      // Cache is preserved — the same Connection objects are reused so that
+      // schema cache and other in-process state survive the idle.
+      for (const conn of cache.values()) {
+        await conn.idle();
+      }
+    },
+  };
+}

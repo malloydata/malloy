@@ -1,31 +1,14 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {Query, refIsStructDef} from '../../../model/malloy_types';
-import {Source} from '../source-elements/source';
+import type {Query} from '../../../model/malloy_types';
+import {refIsStructDef} from '../../../model/malloy_types';
+import type {Source} from '../source-elements/source';
 import {MalloyElement} from '../types/malloy-element';
-import {QueryComp} from '../types/query-comp';
-import {QueryElement} from '../types/query-element';
+import type {QueryComp} from '../types/query-comp';
+import type {QueryElement} from '../types/query-element';
 
 /**
  * A query element which represents running the intrinsic fields of a
@@ -42,18 +25,20 @@ export class QueryRaw extends MalloyElement implements QueryElement {
     super({source});
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
-    const structRef = isRefOk
-      ? this.source.structRef()
-      : this.source.structDef();
-    const structDef = refIsStructDef(structRef)
-      ? structRef
-      : this.source.structDef();
+  // A raw segment has no query class to decide, so it is never partial and
+  // `isPartialOk` has nothing to say here.
+  queryComp(isRefOk: boolean, _isPartialOk: boolean): QueryComp {
+    const invoked = isRefOk
+      ? this.source.structRef(undefined)
+      : {structRef: this.source.getSourceDef(undefined)};
+    const structDef = refIsStructDef(invoked.structRef)
+      ? invoked.structRef
+      : this.source.getSourceDef(undefined);
     return {
       query: {
         type: 'query',
-        structRef,
-        pipeline: [{type: 'raw', fields: []}],
+        ...invoked,
+        pipeline: [{type: 'raw', fields: [], outputStruct: structDef}],
         location: this.location,
       },
       outputStruct: structDef,
@@ -61,7 +46,7 @@ export class QueryRaw extends MalloyElement implements QueryElement {
     };
   }
 
-  query(): Query {
-    return this.queryComp(true).query;
+  query(isRefOk = true): Query {
+    return this.queryComp(isRefOk, false).query;
   }
 }

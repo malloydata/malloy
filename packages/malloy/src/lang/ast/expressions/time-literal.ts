@@ -1,41 +1,27 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import {DateTime as LuxonDateTime} from 'luxon';
 
-import {
-  TimeFieldType,
+import type {
+  TemporalFieldType,
   TimestampUnit,
-  isTimeFieldType,
-  TimeLiteralFragment,
+  TimeLiteralExpr,
 } from '../../../model/malloy_types';
+import {isTemporalType, TD} from '../../../model/malloy_types';
 
-import {ExprValue} from '../types/expr-value';
-import {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import {literalTimeResult} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 import {ExprTime} from './expr-time';
 import {ExpressionDef, getMorphicValue} from '../types/expression-def';
-import {TimeResult} from '../types/time-result';
+import type {TimeResult} from '../types/time-result';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
+import {Dialect} from '../../../dialect/dialect';
 
 export class TimeFormatError extends Error {}
 
@@ -74,14 +60,14 @@ const fTimestamp = `${fMinute}:ss`;
 /**
  * Literals specified with an @ in Malloy all become one of these
  */
-abstract class TimeLiteral extends ExpressionDef {
+export abstract class TimeLiteral extends ExpressionDef {
   literalPart: string;
   nextLit?: string;
   timeZone?: string;
   constructor(
     tm: TimeText,
     readonly units: TimestampUnit | undefined,
-    readonly timeType: TimeFieldType
+    readonly timeType: TemporalFieldType
   ) {
     super();
     this.literalPart = tm.text;
@@ -90,42 +76,95 @@ abstract class TimeLiteral extends ExpressionDef {
     }
   }
 
-  protected makeLiteral(val: string, typ: TimeFieldType): TimeLiteralFragment {
-    const timeFrag: TimeLiteralFragment = {
-      type: 'dialect',
-      function: 'timeLiteral',
-      literal: val,
-      literalType: typ,
-    };
-    if (this.timeZone) {
-      timeFrag.timezone = this.timeZone;
-    }
-    return timeFrag;
+  protected makeLiteral(
+    fs: FieldSpace,
+    val: string,
+    typ: TemporalFieldType,
+    units: TimestampUnit | undefined
+  ): TimeLiteralExpr {
+    return Dialect.makeTimeLiteralNode(
+      fs.dialectObj(),
+      val,
+      this.timeZone,
+      units,
+      typ
+    );
   }
 
-  protected makeValue(val: string, dataType: TimeFieldType): TimeResult {
-    const timeFrag = this.makeLiteral(val, dataType);
-    const expressionType = 'scalar';
-    const value = [timeFrag];
-    if (this.units) {
+  protected makeValue(
+    fs: FieldSpace,
+    val: string,
+    dataType: TemporalFieldType
+  ): TimeResult {
+    const value = this.makeLiteral(fs, val, dataType, this.units);
+    return literalTimeResult({
+      value,
+      dataType: value.typeDef,
+      timeframe: this.units,
+    });
+  }
+
+  getStableLiteral(): Malloy.LiteralValue {
+    const value = this.getValue();
+    let granularity = value.timeframe;
+    const node = value.value;
+
+    if (node.node === 'dateLiteral') {
+      if (
+        granularity === 'hour' ||
+        granularity === 'minute' ||
+        granularity === 'second'
+      ) {
+        // TODO should probably just throw...
+        granularity = 'day';
+      }
       return {
-        dataType,
-        expressionType,
-        value,
-        timeframe: this.units,
-        evalSpace: 'literal',
+        kind: 'date_literal',
+        date_value: node.literal,
+        granularity,
+      };
+    } else if (node.node === 'timestampLiteral') {
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: node.literal,
+        granularity,
+        timezone: node.timezone,
+      };
+    } else if (node.node === 'timestamptzLiteral') {
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: node.literal,
+        granularity,
+        timezone: node.timezone,
       };
     }
-    return {dataType, expressionType, value, evalSpace: 'literal'};
+
+    throw new Error(`Unexpected time literal node type: ${node.node}`);
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    return this.makeValue(this.literalPart, this.timeType);
+  getValue() {
+    // Used for stable literals - no dialect context, so pass undefined
+    const value = Dialect.makeTimeLiteralNode(
+      undefined,
+      this.literalPart,
+      this.timeZone,
+      this.units,
+      this.timeType
+    );
+    return literalTimeResult({
+      value,
+      dataType: value.typeDef,
+      timeframe: this.units,
+    });
   }
 
-  getNext(): ExprValue | undefined {
+  protected computeExpression(fs: FieldSpace): ExprValue {
+    return this.makeValue(fs, this.literalPart, this.timeType);
+  }
+
+  getNext(fs: FieldSpace): ExprValue | undefined {
     if (this.nextLit) {
-      return this.makeValue(this.nextLit, this.timeType);
+      return this.makeValue(fs, this.nextLit, this.timeType);
     }
   }
 
@@ -154,6 +193,7 @@ export class LiteralTimestamp extends TimeLiteral {
     const hasSubsecs = literalTs.match(/^([^.,]+)[,.](\d+)$/);
     if (hasSubsecs) {
       literalTs = hasSubsecs[1];
+      units = undefined;
       // subSecs = hasSubsecs[2];
       // mtoy TODO subsecond units not ignored
     }
@@ -183,21 +223,51 @@ class GranularLiteral extends TimeLiteral {
   constructor(
     tm: TimeText,
     units: TimestampUnit | undefined,
-    timeType: TimeFieldType,
+    timeType: TemporalFieldType,
     readonly nextLit: string
   ) {
     super(tm, units, timeType);
   }
 
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
     // We have a chance to write our own range comparison will all constants.
     let rangeStart = this.getExpression(fs);
-    let rangeEnd = this.getNext();
+    let rangeEnd = this.getNext(fs);
 
     if (rangeEnd) {
       const testValue = left.getExpression(fs);
 
-      if (testValue.dataType === 'timestamp') {
+      if (testValue.type === 'date' && op === '=' && this.units === 'day') {
+        // TODO remove the === 'day' check above and warn
+        // if (this.units !== 'day') {
+        //   this.logWarning(
+        //     'time-equality-not-granular',
+        //     `Equality comparisons of a date to a literal ${this.units} will compare the first day of the ${this.units}; use a literal day instead, or use \`?\` to check whether the date is within the ${this.units}.`
+        //   );
+        // }
+        return super.apply(fs, op, left);
+      }
+
+      if (
+        TD.isAnyTimestamp(testValue) &&
+        op === '=' &&
+        this.units === undefined
+      ) {
+        // TODO remove the === 'second' check above and warn
+        // if (this.units !== 'second') {
+        //   this.logWarning(
+        //     'time-equality-not-granular',
+        //     `Equality comparisons of a timestamp to a literal ${this.units} will compare the first instant of the ${this.units}; use a literal timestamp (to the second) instead, or use \`?\` to check whether the date is within the ${this.units}.`
+        //   );
+        // }
+        return super.apply(fs, op, left);
+      }
+
+      if (TD.isAnyTimestamp(testValue)) {
         const newStart = getMorphicValue(rangeStart, 'timestamp');
         const newEnd = getMorphicValue(rangeEnd, 'timestamp');
         if (newStart && newEnd) {
@@ -208,8 +278,9 @@ class GranularLiteral extends TimeLiteral {
         }
       }
 
-      if (isTimeFieldType(testValue.dataType)) {
-        const rangeType = testValue.dataType;
+      // Compiler is unsure about rangeEnd = newEnd for some reason
+      if (rangeEnd && isTemporalType(testValue.type)) {
+        const rangeType = testValue.type;
         const range = new Range(
           new ExprTime(rangeType, rangeStart.value),
           new ExprTime(rangeType, rangeEnd.value)
@@ -255,19 +326,25 @@ abstract class DateBasedLiteral extends GranularLiteral {
     super(tm, units, 'date', nextLit);
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    const dateValue = this.makeValue(this.literalPart, 'date');
-    const timestamp = [
-      this.makeLiteral(`${this.literalPart} 00:00:00`, 'timestamp'),
-    ];
+  protected computeExpression(fs: FieldSpace): ExprValue {
+    const dateValue = this.makeValue(fs, this.literalPart, 'date');
+    const timestamp = this.makeLiteral(
+      fs,
+      `${this.literalPart} 00:00:00`,
+      'timestamp',
+      this.units
+    );
     return {...dateValue, morphic: {timestamp}, evalSpace: 'literal'};
   }
 
-  getNext(): ExprValue | undefined {
-    const dateValue = this.makeValue(this.nextLit, 'date');
-    const timestamp = [
-      this.makeLiteral(`${this.nextLit} 00:00:00`, 'timestamp'),
-    ];
+  getNext(fs: FieldSpace): ExprValue | undefined {
+    const dateValue = this.makeValue(fs, this.nextLit, 'date');
+    const timestamp = this.makeLiteral(
+      fs,
+      `${this.nextLit} 00:00:00`,
+      'timestamp',
+      this.units
+    );
     return {...dateValue, morphic: {timestamp}};
   }
 }

@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 /*
@@ -27,36 +9,47 @@
  ** here to help you.
  */
 
-import {
+import type {
+  TableSourceDef,
   IndexSegment,
   ProjectSegment,
   Query,
   ReduceSegment,
   StructDef,
+  JoinFieldDef,
 } from '../../model/malloy_types';
 
-const theErrorStruct: StructDef = {
-  type: 'struct',
-  name: '~malformed~',
-  dialect: '~malformed~',
-  structSource: {
-    type: 'table',
-    tablePath: '//undefined_error_table_path',
-  },
-  structRelationship: {
-    type: 'basetable',
-    connectionName: '//undefined_error_connection',
-  },
-  fields: [],
-};
+const ERR_NAME = '~malformed~';
 
 export class ErrorFactory {
-  static get structDef(): StructDef {
-    return {...theErrorStruct};
+  static get structDef(): TableSourceDef {
+    return {
+      type: 'table',
+      name: ERR_NAME,
+      dialect: '~malformed~',
+      connection: '~unknown~',
+      tablePath: '//undefined_error_table_path',
+      fields: [],
+      errorFactory: true,
+    };
   }
 
-  static isErrorStructDef(s: StructDef): boolean {
-    return s.name.includes(theErrorStruct.name);
+  static get joinDef(): JoinFieldDef {
+    return {
+      type: 'table',
+      name: ERR_NAME,
+      dialect: '~malformed~',
+      connection: '~unknown~',
+      tablePath: '//undefined_error_table_path',
+      fields: [],
+      join: 'one',
+      matrixOperation: 'left',
+      errorFactory: true,
+    };
+  }
+
+  static didCreate(s: StructDef | JoinFieldDef): boolean {
+    return s.errorFactory === true;
   }
 
   static get query(): Query {
@@ -67,14 +60,28 @@ export class ErrorFactory {
   }
 
   static get reduceSegment(): ReduceSegment {
-    return {type: 'reduce', queryFields: []};
+    return {
+      type: 'reduce',
+      queryFields: [],
+      outputStruct: ErrorFactory.structDef,
+      isRepeated: false,
+    };
   }
 
   static get projectSegment(): ProjectSegment {
-    return {type: 'project', queryFields: []};
+    return {
+      type: 'project',
+      queryFields: [],
+      outputStruct: ErrorFactory.structDef,
+      isRepeated: true,
+    };
   }
 
   static get indexSegment(): IndexSegment {
-    return {type: 'index', indexFields: []};
+    return {
+      type: 'index',
+      indexFields: [],
+      outputStruct: ErrorFactory.structDef,
+    };
   }
 }

@@ -1,27 +1,18 @@
 /*
- * Copyright 2024 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {TrinoConnection, TrinoExecutor} from '.';
+import type {
+  AtomicTypeDef,
+  FieldDef,
+  SQLSourceDef,
+  StructDef,
+} from '@malloydata/malloy';
+import {TrinoDialect} from '@malloydata/malloy';
+import {PrestoConnection, TrinoConnection, TrinoExecutor} from '.';
+import {TrinoPrestoConnection} from './trino_connection';
+import type {BaseRunner} from './trino_connection';
 
 // array(varchar) is array
 const ARRAY_SCHEMA = 'array(integer)';
@@ -36,6 +27,15 @@ const NESTED_SCHEMA = 'array(row(a double, b integer, c varchar(60)))';
 const DEEP_SCHEMA =
   'array(row(a double, b array(row(c integer, d varchar(60)))))';
 
+const intType: AtomicTypeDef = {type: 'number', numberType: 'integer'};
+const doubleType: AtomicTypeDef = {type: 'number', numberType: 'float'};
+const stringType: AtomicTypeDef = {type: 'string'};
+const recordSchema: FieldDef[] = [
+  {name: 'a', ...doubleType},
+  {name: 'b', ...intType},
+  {name: 'c', ...stringType},
+];
+
 describe('Trino connection', () => {
   let connection: TrinoConnection;
 
@@ -43,7 +43,7 @@ describe('Trino connection', () => {
     connection = new TrinoConnection(
       'trino',
       {},
-      TrinoExecutor.getConnectionOptionsFromEnv()
+      TrinoExecutor.getConnectionOptionsFromEnv('trino')
     );
   });
 
@@ -53,147 +53,210 @@ describe('Trino connection', () => {
 
   describe('schema parser', () => {
     it('parses arrays', () => {
-      expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual({
-        'name': 'test',
-        'type': 'struct',
-        'dialect': 'trino',
-        'structRelationship': {
-          'fieldName': 'test',
-          'isArray': true,
-          'type': 'nested',
-        },
-        'structSource': {
-          'type': 'nested',
-        },
-        'fields': [
-          {
-            'name': 'value',
-            'type': 'number',
-            'numberType': 'integer',
-          },
-        ],
+      expect(connection.malloyTypeFromTrinoType(ARRAY_SCHEMA)).toEqual({
+        type: 'array',
+        elementTypeDef: intType,
       });
     });
 
     it('parses inline', () => {
-      expect(connection.malloyTypeFromTrinoType('test', INLINE_SCHEMA)).toEqual(
-        {
-          'name': 'test',
-          'type': 'struct',
-          'dialect': 'trino',
-          'structRelationship': {
-            'type': 'inline',
-          },
-          'structSource': {
-            'type': 'inline',
-          },
-          'fields': [
-            {
-              'name': 'a',
-              'type': 'number',
-              'numberType': 'float',
-            },
-            {
-              'name': 'b',
-              'type': 'number',
-              'numberType': 'integer',
-            },
-            {
-              'name': 'c',
-              'type': 'string',
-            },
-          ],
-        }
-      );
+      expect(connection.malloyTypeFromTrinoType(INLINE_SCHEMA)).toEqual({
+        'type': 'record',
+        'fields': recordSchema,
+      });
     });
 
     it('parses nested', () => {
-      expect(connection.malloyTypeFromTrinoType('test', NESTED_SCHEMA)).toEqual(
-        {
-          'name': 'test',
-          'type': 'struct',
-          'dialect': 'trino',
-          'structRelationship': {
-            'fieldName': 'test',
-            'isArray': false,
-            'type': 'nested',
-          },
-          'structSource': {'type': 'nested'},
-          'fields': [
-            {'name': 'a', 'numberType': 'float', 'type': 'number'},
-            {'name': 'b', 'numberType': 'integer', 'type': 'number'},
-            {'name': 'c', 'type': 'string'},
-          ],
-        }
-      );
+      expect(connection.malloyTypeFromTrinoType(NESTED_SCHEMA)).toEqual({
+        'type': 'array',
+        'elementTypeDef': {type: 'record_element'},
+        'fields': recordSchema,
+      });
     });
 
     it('parses a simple type', () => {
-      expect(connection.malloyTypeFromTrinoType('test', 'varchar(60)')).toEqual(
-        {
-          'type': 'string',
-        }
+      expect(connection.malloyTypeFromTrinoType('varchar(60)')).toEqual(
+        stringType
       );
     });
 
+    it('parses a decimal integer type', () => {
+      expect(connection.malloyTypeFromTrinoType('decimal(10)')).toEqual({
+        type: 'number',
+        numberType: 'integer',
+      });
+    });
+
+    it('parses a decimal float type', () => {
+      expect(connection.malloyTypeFromTrinoType('decimal(10,10)')).toEqual({
+        type: 'number',
+        numberType: 'float',
+      });
+    });
+
+    it('parses row with timestamp(3)', () => {
+      expect(
+        connection.malloyTypeFromTrinoType('row(la_time timestamp(3))')
+      ).toEqual({
+        type: 'record',
+        fields: [{name: 'la_time', type: 'timestamp'}],
+      });
+    });
+
+    it('parses timestamp with time zone', () => {
+      expect(
+        connection.malloyTypeFromTrinoType('timestamp(3) with time zone)')
+      ).toEqual({type: 'timestamptz'});
+    });
+
     it('parses deep nesting', () => {
-      expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual({
-        'name': 'test',
-        'type': 'struct',
-        'dialect': 'trino',
-        'structRelationship': {
-          'fieldName': 'test',
-          'isArray': false,
-          'type': 'nested',
-        },
-        'structSource': {
-          'type': 'nested',
-        },
+      expect(connection.malloyTypeFromTrinoType(DEEP_SCHEMA)).toEqual({
+        'type': 'array',
+        'elementTypeDef': {type: 'record_element'},
         'fields': [
-          {
-            'name': 'a',
-            'numberType': 'float',
-            'type': 'number',
-          },
+          {'name': 'a', ...doubleType},
           {
             'name': 'b',
-            'type': 'struct',
-            'dialect': 'trino',
-            'structRelationship': {
-              'fieldName': 'b',
-              'isArray': false,
-              'type': 'nested',
-            },
-            'structSource': {
-              'type': 'nested',
-            },
+            'type': 'array',
+            'elementTypeDef': {type: 'record_element'},
+            'join': 'many',
             'fields': [
-              {
-                'name': 'c',
-                'numberType': 'integer',
-                'type': 'number',
-              },
-              {
-                'name': 'd',
-                'type': 'string',
-              },
+              {'name': 'c', ...intType},
+              {'name': 'd', ...stringType},
             ],
           },
         ],
       });
     });
+
+    describe('integer type mappings', () => {
+      it('maps integer to integer', () => {
+        expect(connection.malloyTypeFromTrinoType('integer')).toEqual({
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps smallint to integer', () => {
+        expect(connection.malloyTypeFromTrinoType('smallint')).toEqual({
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps tinyint to integer', () => {
+        expect(connection.malloyTypeFromTrinoType('tinyint')).toEqual({
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps bigint to bigint', () => {
+        expect(connection.malloyTypeFromTrinoType('bigint')).toEqual({
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+    });
+  });
+});
+
+class SchemaConnection extends TrinoPrestoConnection {
+  protected async fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void> {
+    await this.loadSchemaForSqlBlock(sql, structDef, `query ${sql}`);
+  }
+}
+
+describe.each(['trino', 'presto'])('%s schema discovery', dialect => {
+  it('retries an empty DESCRIBE and caches only the successful schema', async () => {
+    const runSQL = jest
+      .fn<ReturnType<BaseRunner['runSQL']>, [string]>()
+      .mockResolvedValueOnce({rows: [], columns: []})
+      .mockResolvedValue({rows: [['state', 'varchar', '', '']], columns: []});
+    const connection = new SchemaConnection(dialect, {runSQL});
+    const tables = {states: 'malloytest.state_facts'};
+
+    const failed = await connection.fetchSchemaForTables(tables, {});
+    expect(failed).toEqual({
+      schemas: {},
+      errors: {
+        states:
+          'Could not fetch schema for table malloytest.state_facts: DESCRIBE returned no columns',
+      },
+    });
+
+    const recovered = await connection.fetchSchemaForTables(tables, {});
+    expect(recovered.errors).toEqual({});
+    expect(recovered.schemas['states'].fields).toEqual([
+      {name: 'state', type: 'string'},
+    ]);
+    expect(await connection.fetchSchemaForTables(tables, {})).toEqual(
+      recovered
+    );
+    expect(runSQL).toHaveBeenCalledTimes(2);
+    expect(runSQL).toHaveBeenCalledWith('DESCRIBE malloytest.state_facts', {});
+  });
+});
+
+describe('Presto EXPLAIN schema', () => {
+  function fieldsFromPlan(plan: string): FieldDef[] {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      name: 'explained',
+      connection: 'presto',
+      selectStr: 'SELECT 1 AS a',
+      dialect: 'presto',
+      fields: [],
+    };
+    PrestoConnection.schemaFromExplain(
+      {rows: [{'Query Plan': plan}], totalRows: 1},
+      structDef,
+      new TrinoDialect()
+    );
+    return structDef.fields;
+  }
+
+  it('reads a plan with a PlanNodeId group (presto >= 0.284)', () => {
+    expect(
+      fieldsFromPlan(
+        '- Output[PlanNodeId 5][a, b] => [expr:integer, expr_1:varchar]\n' +
+          '        Estimates: {rows: 1 (5B)}\n'
+      )
+    ).toEqual([
+      {name: 'a', ...intType},
+      {name: 'b', ...stringType},
+    ]);
   });
 
-  describe('splitColumns', () => {
-    it('handles internal rows', () => {
-      const nested =
-        'popular_name varchar, airport_count double, by_state array(row(state varchar, airport_count double))';
+  it('reads a plan without a PlanNodeId group (presto < 0.284)', () => {
+    expect(
+      fieldsFromPlan('- Output[a, b] => [expr:integer, expr_1:varchar]\n')
+    ).toEqual([
+      {name: 'a', ...intType},
+      {name: 'b', ...stringType},
+    ]);
+  });
 
-      expect(connection.splitColumns(nested)).toEqual([
-        'popular_name varchar',
-        'airport_count double',
-        'by_state array(row(state varchar, airport_count double))',
-      ]);
-    });
+  it('reads a field named PlanNodeId', () => {
+    expect(
+      fieldsFromPlan(
+        '- Output[PlanNodeId 5][PlanNodeId, b] => [expr:integer, expr_1:varchar]\n'
+      )
+    ).toEqual([
+      {name: 'PlanNodeId', ...intType},
+      {name: 'b', ...stringType},
+    ]);
+    expect(fieldsFromPlan('- Output[PlanNodeId] => [expr:integer]\n')).toEqual([
+      {name: 'PlanNodeId', ...intType},
+    ]);
+  });
+
+  it('reads the plan line as reported in issue #3042', () => {
+    expect(fieldsFromPlan('Output[a]=>[expr:integer]')).toEqual([
+      {name: 'a', ...intType},
+    ]);
   });
 });

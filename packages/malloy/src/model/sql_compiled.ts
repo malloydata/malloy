@@ -1,0 +1,239 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import type {
+  Expr,
+  GivenID,
+  GivenUsage,
+  PrepareResultOptions,
+  SQLSourceDef,
+  SQLPhraseSegment,
+  PersistableSourceDef,
+  Query,
+  VirtualMap,
+} from './malloy_types';
+import {isSegmentSQL, isSegmentSource, safeRecordGet} from './malloy_types';
+import {mkBuildID} from './source_def_utils';
+import {MalloyCompileError} from './malloy_compile_error';
+
+/**
+ * Callback type for compiling a Query to SQL.
+ * opts is optional - omit for "full SQL" (BuildID computation),
+ * provide for "run SQL" (with manifest substitution).
+ */
+export type CompileQueryCallback = (
+  query: Query,
+  opts?: PrepareResultOptions
+) => string;
+
+/**
+ * Compile a SQLSourceDef to its final SQL string.
+ *
+ * If the source has selectSegments (interpolated persistent sources), each segment
+ * is expanded by looking up in the manifest or compiling inline.
+ *
+ * @param src The SQLSourceDef to compile
+ * @param opts PrepareResultOptions with buildManifest and connectionDigests
+ * @param compileQuery Callback to compile a Query to SQL
+ */
+export function getCompiledSQL(
+  src: SQLSourceDef,
+  opts: PrepareResultOptions,
+  compileQuery: CompileQueryCallback
+): string {
+  // If no segments, just return the pre-computed selectStr
+  if (!src.selectSegments || src.selectSegments.length === 0) {
+    return src.selectStr;
+  }
+
+  return expandSQLSegments(src.selectSegments, opts, compileQuery);
+}
+
+/** Expand SQL text and interpolations for schema discovery or execution. */
+export function expandSQLSegments(
+  segments: SQLPhraseSegment[],
+  opts: PrepareResultOptions,
+  compileQuery: CompileQueryCallback
+): string {
+  return segments
+    .map(segment => expandSegment(segment, opts, compileQuery))
+    .join('');
+}
+
+/**
+ * Expand a single SQLPhraseSegment to SQL.
+ */
+function expandSegment(
+  segment: SQLPhraseSegment,
+  opts: PrepareResultOptions,
+  compileQuery: CompileQueryCallback
+): string {
+  // Plain SQL string
+  if (isSegmentSQL(segment)) {
+    return segment.sql;
+  }
+
+  // PersistableSourceDef (sql_select or query_source)
+  if (isSegmentSource(segment)) {
+    return expandPersistableSource(segment, opts, compileQuery);
+  }
+
+  // Query segment
+  return expandQuery(segment, opts, compileQuery);
+}
+
+/**
+ * What a BuildID's SQL is generated under: everything that changes what the
+ * SQL computes and that the builder and the compiler can both know.
+ *
+ * No manifest. A BuildID must not depend on what has already been built, or
+ * build order would change the key, so this type cannot carry one;
+ * `mkBuildTargets` takes it for the same reason.
+ *
+ * `virtualMap` decides which table a virtual source reads. `resolvedGivens`
+ * is the value of every given the SQL reads, supplied or defaulted; both sides
+ * produce it through `bindGivens`, so equal values give the same key and
+ * different values give different keys.
+ */
+export interface BuildIdOptions {
+  virtualMap?: VirtualMap;
+  resolvedGivens?: Map<GivenID, Expr>;
+}
+
+/** Project compile options down to what a BuildID is computed under. */
+export function buildIdOptions(opts: PrepareResultOptions): BuildIdOptions {
+  return {virtualMap: opts.virtualMap, resolvedGivens: opts.resolvedGivens};
+}
+
+/**
+ * Ask the manifest what table backs a persistable source.
+ *
+ * Every place the compiler needs SQL for a persistable source goes through
+ * here, so the rule is stated once: a source marked persistent is looked up
+ * by BuildID, a hit yields the table, a miss under `strict` throws, and
+ * anything else falls through to the source's own SQL.
+ *
+ * @return The table name, canonical SQL as the manifest supplied it, or
+ *         undefined when the caller should emit the source's own SQL.
+ */
+export function persistedTableFor(
+  source: PersistableSourceDef,
+  opts: PrepareResultOptions,
+  compileQuery: CompileQueryCallback
+): string | undefined {
+  const {buildManifest, connectionDigests} = opts;
+  if (!buildManifest || !connectionDigests || !source.persistent) {
+    return undefined;
+  }
+  const connDigest = safeRecordGet(connectionDigests, source.connection);
+  if (connDigest === undefined) {
+    return undefined;
+  }
+
+  const buildId = mkBuildID(
+    connDigest,
+    getSourceSQL(source, compileQuery, buildIdOptions(opts))
+  );
+  const entry = buildManifest.entries[buildId];
+  if (entry) {
+    return entry.tableName;
+  }
+
+  if (buildManifest.strict) {
+    // `sourceID` is deleted, not inherited, when a source is modified, so it
+    // either names this source or is absent. `as` and `extends` survive a
+    // modification and would name the base, so neither stands in for it.
+    const named = source.sourceID
+      ? `Persisted source '${source.sourceID}'`
+      : 'Persisted source';
+    const perValue =
+      givenUsageOfRelation(source).length > 0
+        ? ' This source reads givens, and no table was built for the given ' +
+          'values this query supplies.'
+        : '';
+    const base =
+      `${named} not found in manifest (buildId: ${buildId}); ` +
+      'strict manifest mode forbids fallback to live compilation.' +
+      perValue;
+    throw new MalloyCompileError(
+      buildManifest.loadError ? `${base}\n  ${buildManifest.loadError}` : base,
+      'runtime-manifest-strict-miss',
+      source.location
+    );
+  }
+  return undefined;
+}
+
+/**
+ * The givens a persisted source's SQL reads — the relation, not the source.
+ * A `where:` added by `extend` is applied by the query that reads the table,
+ * so it is not here, and a given used only there does not split the table by
+ * value. Mirrors `getSourceSQL`: what that compiles, this reports on.
+ */
+export function givenUsageOfRelation(source: PersistableSourceDef): GivenUsage {
+  if (source.type === 'query_source') {
+    return source.query.givenUsage ?? [];
+  }
+  return (source.selectSegments ?? []).flatMap(segment => {
+    if (isSegmentSQL(segment)) return [];
+    if (isSegmentSource(segment)) return givenUsageOfRelation(segment);
+    return segment.givenUsage ?? [];
+  });
+}
+
+/**
+ * Expand a PersistableSourceDef as a `%{ }` segment.
+ * Always returns a subquery form: (SELECT * FROM table) or (inline SQL)
+ */
+function expandPersistableSource(
+  source: PersistableSourceDef,
+  opts: PrepareResultOptions,
+  compileQuery: CompileQueryCallback
+): string {
+  // A segment has to be usable as a subquery, so a hit is wrapped.
+  const tableName = persistedTableFor(source, opts, compileQuery);
+  if (tableName !== undefined) {
+    return `(SELECT * FROM ${tableName})`;
+  }
+
+  // No manifest or not found - expand inline as subquery
+  const sql = getSourceSQL(source, compileQuery, opts);
+  return `(${sql})`;
+}
+
+/**
+ * Expand a Query segment.
+ */
+function expandQuery(
+  query: Query,
+  opts: PrepareResultOptions,
+  compileQuery: CompileQueryCallback
+): string {
+  // Set isPartialQuery so CTEs aren't used (they can't be nested in subqueries)
+  const sql = compileQuery(query, {...opts, isPartialQuery: true});
+  return `(${sql})`;
+}
+
+/**
+ * Get the SQL for a PersistableSourceDef.
+ *
+ * @param source The persistable source to compile
+ * @param compileQuery Callback to compile a Query to SQL
+ * @param opts Optional - if provided with manifest, nested sources may be substituted.
+ *             Omit for "full SQL" (e.g., when computing BuildID).
+ */
+export function getSourceSQL(
+  source: PersistableSourceDef,
+  compileQuery: CompileQueryCallback,
+  opts?: PrepareResultOptions
+): string {
+  if (source.type === 'sql_select') {
+    // Recursive call for nested sql_select
+    return getCompiledSQL(source, opts ?? {}, compileQuery);
+  }
+
+  // query_source - compile the inner query
+  return compileQuery(source.query, opts);
+}

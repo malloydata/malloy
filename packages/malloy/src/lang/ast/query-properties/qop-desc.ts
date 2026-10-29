@@ -1,40 +1,28 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
-import {QueryBuilder} from '../types/query-builder';
+import type {PipeSegment} from '../../../model/malloy_types';
+import type {QueryBuilder} from '../types/query-builder';
 import {IndexBuilder} from '../query-builders/index-builder';
 import {ProjectBuilder} from '../query-builders/project-builder';
 import {ReduceBuilder} from '../query-builders/reduce-builder';
-import {FieldSpace} from '../types/field-space';
-import {ListOf, MalloyElement} from '../types/malloy-element';
-import {OpDesc} from '../types/op-desc';
-import {opOutputStruct} from '../struct-utils';
-import {QueryProperty} from '../types/query-property';
-import {StaticSpace} from '../field-space/static-space';
+import type {SourceFieldSpace} from '../types/field-space';
+import type {MalloyElement} from '../types/malloy-element';
+import {ListOf} from '../types/malloy-element';
+import type {OpDesc} from '../types/op-desc';
+import type {QueryProperty} from '../types/query-property';
 import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
-import {QueryOperationSpace} from '../field-space/query-spaces';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import {modernizeTermsForUserText} from '../../utils';
+
+function queryContextName(queryClass: QueryClass): string {
+  const className = modernizeTermsForUserText(queryClass);
+  const article = className === 'index' ? 'an' : 'a';
+  return `${article} ${className} query`;
+}
 
 export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
@@ -57,7 +45,13 @@ export class QOpDesc extends ListOf<QueryProperty> {
       if (el.forceQueryClass) {
         if (guessType) {
           if (guessType !== el.forceQueryClass) {
-            el.log(`Not legal in ${guessType} query`);
+            const operationName = el.statement;
+            el.logError(
+              `illegal-${guessType}-operation`,
+              `Use of ${operationName} is not allowed in ${queryContextName(
+                guessType
+              )}`
+            );
           }
         } else {
           guessType = el.forceQueryClass;
@@ -66,9 +60,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
       needsExplicitQueryClass ||= el.needsExplicitQueryClass ?? false;
     }
     if (guessType === undefined && needsExplicitQueryClass) {
-      this.log(
-        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-      );
+      this.logError('ambiguous-view-type', {});
       guessType = QueryClass.Project;
     }
     this.opClass = guessType;
@@ -80,7 +72,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
   }
 
   private getBuilder(
-    baseFS: FieldSpace,
+    baseFS: SourceFieldSpace,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
   ): QueryBuilder {
@@ -97,21 +89,24 @@ export class QOpDesc extends ListOf<QueryProperty> {
   }
 
   getOp(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     isNestIn: QueryOperationSpace | undefined
   ): OpDesc {
     const build = this.getBuilder(inputFS, isNestIn, this);
     for (const qp of this.list) {
+      if (
+        this.opClass &&
+        qp.forceQueryClass &&
+        qp.forceQueryClass !== this.opClass
+      ) {
+        continue;
+      }
       build.execute(qp);
     }
     const segment = build.finalize(this.refineThis);
     return {
       segment,
-      outputSpace: () =>
-        // TODO someday we'd like to get rid of the call to opOutputStruct here.
-        // If the `build.resultFS` is correct, then we should be able to just use that
-        // in a more direct way.
-        new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
+      outputSpace: build.resultFS,
     };
   }
 }

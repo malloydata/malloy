@@ -1,31 +1,13 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {StaticSpace} from '../field-space/static-space';
-import {FieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {PipeSegment} from '../../../model';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import {StaticSourceSpace} from '../field-space/static-space';
+import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {View} from './view';
 
 /**
@@ -46,7 +28,7 @@ export class ViewArrow extends View {
 
   pipelineComp(fs: FieldSpace): PipelineComp {
     const baseComp = this.base.pipelineComp(fs);
-    const nextFS = new StaticSpace(baseComp.outputStruct);
+    const nextFS = new StaticSourceSpace(baseComp.outputStruct, 'public');
     const finalComp = this.operation.pipelineComp(nextFS);
     return {
       pipeline: [...baseComp.pipeline, ...finalComp.pipeline],
@@ -55,11 +37,14 @@ export class ViewArrow extends View {
   }
 
   refine(
-    _inputFS: FieldSpace,
+    _inputFS: SourceFieldSpace,
     _pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
-    this.log('A multi-segment view cannot be used as a refinement');
+    this.logError(
+      'refinement-with-multistage-view',
+      'A multi-segment view cannot be used as a refinement'
+    );
     return [];
   }
 

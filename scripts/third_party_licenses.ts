@@ -1,28 +1,7 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable no-console */
 
 /*
  * This script produces a CSV useful for evaluating licenses for third-party software incuded in a binary, and
@@ -94,6 +73,19 @@ const licenseFoundElsewhere: {[id: string]: string} = {
 
 const packagesWithoutLocationsSpecified: {[id: string]: string} = {};
 
+interface YarnLicenses {
+  data: {
+    body: [
+      name: string,
+      version: string,
+      license: string,
+      url: string,
+      vendorUrl: string,
+      vendorName: string,
+    ][];
+  };
+}
+
 const getLicenses = async () => {
   const out: outputRow[] = [];
   const errors: [string, Error][] = [];
@@ -101,12 +93,11 @@ const getLicenses = async () => {
   // dependencyList.data.head is [ 'Name', 'Version', 'License', 'URL', 'VendorUrl', 'VendorName' ]
   const dependencyList = JSON.parse(
     execSync('yarn --prod true --no-progress licenses list --json').toString()
-  );
+  ) as YarnLicenses;
 
   // if specific versions are required they might be duped in list - de-deup here
   const dedupedDependencies = dependencyList.data.body.filter(
-    (arr: any, index: any, self: any) =>
-      self.findIndex((t: any) => t[0] === arr[0]) === index
+    (arr, index, self) => self.findIndex(t => t[0] === arr[0]) === index
   );
 
   for (const dependency of dedupedDependencies) {
@@ -237,7 +228,7 @@ const getLicenses = async () => {
         'sourceCodeIncluded',
       ],
     },
-    (err: any, output: string) => {
+    (_err, output) => {
       fs.writeFileSync(outputFile, output);
     }
   );

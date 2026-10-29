@@ -1,0 +1,77 @@
+source: sample is duckdb.sql("""
+  SELECT * FROM (VALUES
+    ('Total Universe', '1Q26', 75, 3, 120),
+    ('High Income', '1Q26', 28, 5, 220),
+    ('Auto Intenders', '2Q26', 25, 4, 90),
+    ('Sports Fans', '2Q26', 22, 6, 250)
+  ) AS t(audience_name, period, reach, frequency, spend)
+""") extend {
+  measure:
+    # label="Reach (HH)"
+    total_reach is reach.sum()
+    # label="Total Spend"
+    total_spend is spend.sum()
+    # label="Avg Frequency"
+    avg_frequency is frequency.avg()
+
+  #(story)
+  # bar_chart
+  view: bar_axis_labels is {
+    group_by:
+      # label="Audience"
+      audience_name
+    aggregate: total_reach
+  }
+
+  #(story)
+  # bar_chart
+  view: bar_series_labels is {
+    group_by:
+      # label="Audience"
+      audience_name
+      # label="Quarter"
+      period
+    aggregate: total_reach
+  }
+
+  #(story)
+  # line_chart
+  view: line_labels is {
+    group_by:
+      # label="Audience"
+      audience_name
+      # label="Quarter"
+      period
+    aggregate: total_reach
+  }
+
+  #(story)
+  # scatter_chart
+  view: scatter_labels is {
+    group_by:
+      # label="Frequency"
+      frequency
+    aggregate:
+      # label="Total Spend"
+      total_spend
+      # label="Reach (HH)"
+      total_reach
+    group_by:
+      # label="Audience"
+      audience_name
+  }
+
+  #(story)
+  # bar_chart
+  view: tooltip_label is {
+    group_by:
+      # label="Audience"
+      audience_name
+    aggregate:
+      # label="Reach (HH)"
+      total_reach
+      # tooltip
+      # label="Avg Frequency"
+      avg_frequency
+  }
+}

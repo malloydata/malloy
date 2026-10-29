@@ -1,0 +1,35 @@
+{
+  "name": "@malloydata/malloy-query-builder",
+  "version": "0.0.437",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "test": "cd ../.. && jest packages/malloy-query-builder",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean && rimraf @flowtyped",
+    "dev": "tsc --build",
+    "build": "tsc --build && npm run generate-flow",
+    "prepublishOnly": "npm run clean && npm run build",
+    "generate-flow": "node ../../scripts/femto-build.js flow",
+    "generate-docs": "npx typedoc --excludeInternal",
+    "serve-docs": "npx http-server -o docs"
+  },
+  "dependencies": {
+    "@malloydata/malloy-filter": "0.0.437",
+    "@malloydata/malloy-interfaces": "0.0.437",
+    "@malloydata/malloy-tag": "0.0.437"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "rimraf": "^6.1.3",
+    "typedoc": "^0.28.20"
+  }
+}

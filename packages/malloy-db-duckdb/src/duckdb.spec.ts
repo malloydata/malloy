@@ -1,32 +1,18 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
+import {spawnSync} from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
-import {SQLBlock, StructDef} from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
-
-const [describe] = describeIfDatabaseAvailable(['duckdb']);
+import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
+import {mkArrayDef} from '@malloydata/malloy';
+import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 /*
  * !IMPORTANT
@@ -36,10 +22,9 @@ const [describe] = describeIfDatabaseAvailable(['duckdb']);
  */
 
 describe('DuckDBConnection', () => {
-  let connection: DuckDBConnection;
+  const connection = new DuckDBConnection('duckdb');
 
   beforeAll(async () => {
-    connection = new DuckDBConnection('duckdb');
     await connection.runSQL('SELECT 1');
     expect(Object.keys(DuckDBConnection.activeDBs).length).toEqual(1);
   });
@@ -83,21 +68,48 @@ describe('DuckDBConnection', () => {
     });
 
     it('caches sql schema', async () => {
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(runRawSQL).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes sql schema', async () => {
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
       expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
         refreshTimestamp: Date.now() + 10,
       });
       expect(runRawSQL).toHaveBeenCalledTimes(2);
+    });
+
+    it('fetches schema for a single-quoted file-path table', async () => {
+      await connection.fetchSchemaForTables(
+        {'dashed': "'arrests-latest.parquet'"},
+        {}
+      );
+      expect(runRawSQL).toHaveBeenCalledWith(
+        "DESCRIBE SELECT * FROM 'arrests-latest.parquet'"
+      );
+    });
+
+    it('fetches schema for a bare identifier', async () => {
+      await connection.fetchSchemaForTables({'plain': 'plain_table'}, {});
+      expect(runRawSQL).toHaveBeenCalledWith(
+        'DESCRIBE SELECT * FROM plain_table'
+      );
+    });
+
+    it('fetches schema for a schema-qualified identifier path', async () => {
+      await connection.fetchSchemaForTables(
+        {'qualified': 'main.qualified_table'},
+        {}
+      );
+      expect(runRawSQL).toHaveBeenCalledWith(
+        'DESCRIBE SELECT * FROM main.qualified_table'
+      );
     });
   });
 
@@ -117,9 +129,9 @@ describe('DuckDBConnection', () => {
       );
 
       expect(Object.keys(DuckDBConnection.activeDBs).length).toEqual(1);
-      expect(DuckDBConnection.activeDBs[':memory:'].connections.length).toEqual(
-        3
-      );
+      expect(
+        Object.values(DuckDBConnection.activeDBs)[0].connections.length
+      ).toEqual(3);
       expect(val1).toEqual({rows: [{val: '/home/user1'}], totalRows: 1});
       expect(val2).toEqual({rows: [{val: '/home/user2'}], totalRows: 1});
 
@@ -128,30 +140,368 @@ describe('DuckDBConnection', () => {
     });
   });
 
+  describe('idle', () => {
+    let tempRoot: string;
+
+    beforeAll(() => {
+      tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'malloy-duckdb-idle-'));
+    });
+
+    afterAll(() => {
+      fs.rmSync(tempRoot, {recursive: true, force: true});
+    });
+
+    it('idle does NOT release the file lock cross-process (TODO: fix without crashing)', async () => {
+      // 0.0.389 attempted this fix via `disconnectSync()` in
+      // `detachInstance()`; it caused SIGSEGV / `bad_weak_ptr` from
+      // malloy-internal caches retaining weak_ptrs to the destroyed
+      // C++ Connection. Reverted in 0.0.390. Proper fix needs cache
+      // invalidation coordination (manifest reader is the leading
+      // suspect). Until then this test asserts the current (buggy
+      // but stable) behavior: another process trying to open the
+      // same database path while we hold it idle gets HELD, not FREE.
+      const dbPath = path.join(tempRoot, 'idle-release.duckdb');
+      const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
+      try {
+        await conn.runSQL('SELECT 1');
+        await conn.idle();
+
+        // The OS file lock (fcntl) is per-process — opening the same path
+        // from the same Node process succeeds even when the lock is held
+        // by another DuckDBInstance in this process. To verify the lock
+        // is genuinely released to other processes (the actual user
+        // scenario: VS Code has the file open, CLI tries to write), we
+        // probe from a child process.
+        const result = spawnSync(
+          process.execPath,
+          [
+            '-e',
+            `(async () => {
+              const {DuckDBInstance} = require('@duckdb/node-api');
+              try {
+                const inst = await DuckDBInstance.create(${JSON.stringify(dbPath)});
+                inst.closeSync();
+                process.stdout.write('FREE');
+              } catch (e) {
+                process.stdout.write('HELD: ' + (e && e.message ? e.message.split('\\n')[0] : String(e)));
+              }
+            })();`,
+          ],
+          {encoding: 'utf8', timeout: 10000}
+        );
+        expect(result.stdout.startsWith('HELD')).toBe(true);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('idle on one of two connections sharing an instance keeps the instance alive', async () => {
+      const dbPath = path.join(tempRoot, 'idle-shared-instance.duckdb');
+      // Construct sequentially so the second connection's init() finds
+      // and reuses the first's activeDBs entry instead of racing it.
+      const a = new DuckDBConnection({name: 'duckdb_a', databasePath: dbPath});
+      await a.runSQL('SELECT 1');
+      const b = new DuckDBConnection({name: 'duckdb_b', databasePath: dbPath});
+      await b.runSQL('SELECT 1');
+
+      try {
+        // Find the activeDBs entry these two connections share. The parent
+        // describe also has a `:memory:` entry; we want the one for our
+        // dbPath. Two connections to the same path share one entry, so
+        // looking for `connections.length === 2` reliably picks it out.
+        const sharedKey = Object.keys(DuckDBConnection.activeDBs).find(
+          k => DuckDBConnection.activeDBs[k].connections.length === 2
+        );
+        expect(sharedKey).toBeDefined();
+
+        await a.idle();
+
+        // Refcount went 2 → 1, not 2 → 0. The activeDBs entry survives,
+        // which means the underlying DuckDBInstance was NOT closed and
+        // b's queries continue working. (Same-process verification of
+        // the OS lock is unreliable — DuckDB allows multiple
+        // DuckDBInstances in one process — so we assert on the refcount
+        // bookkeeping instead.)
+        expect(DuckDBConnection.activeDBs[sharedKey!].connections.length).toBe(
+          1
+        );
+        const stillWorks = await b.runSQL('SELECT 99 AS v');
+        expect(stillWorks.rows).toEqual([{v: 99}]);
+
+        // a can lazy-reattach, joining the same instance rather than
+        // creating a new one.
+        const reattached = await a.runSQL('SELECT 2 AS v');
+        expect(reattached.rows).toEqual([{v: 2}]);
+        expect(DuckDBConnection.activeDBs[sharedKey!].connections.length).toBe(
+          2
+        );
+      } finally {
+        await a.close();
+        await b.close();
+      }
+    });
+
+    it('next operation transparently reattaches after idle', async () => {
+      const dbPath = path.join(tempRoot, 'idle-reattach.duckdb');
+      const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
+      try {
+        await conn.runSQL('CREATE TABLE t (val INTEGER)');
+        await conn.runSQL('INSERT INTO t VALUES (42)');
+        await conn.idle();
+        // No explicit reattach call — the next runSQL should just work.
+        const result = await conn.runSQL('SELECT val FROM t');
+        expect(result.rows).toEqual([{val: 42}]);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('idle is a no-op for :memory: (state preserved)', async () => {
+      const conn = new DuckDBConnection({
+        name: 'duckdb_memory_idle',
+        databasePath: ':memory:',
+      });
+      try {
+        await conn.runSQL('CREATE TABLE m (val INTEGER)');
+        await conn.runSQL('INSERT INTO m VALUES (7)');
+        await conn.idle();
+        // If idle had run, the in-memory database would have been destroyed
+        // and the table would no longer exist. State must survive.
+        const result = await conn.runSQL('SELECT val FROM m');
+        expect(result.rows).toEqual([{val: 7}]);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('schema cache survives idle', async () => {
+      const dbPath = path.join(tempRoot, 'idle-schema-cache.duckdb');
+      const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
+      try {
+        await conn.runSQL('CREATE TABLE cached (x INTEGER, y VARCHAR)');
+        // Prime the schema cache.
+        const first = await conn.fetchSchemaForTables({'cached': 'cached'}, {});
+        expect(first.schemas['cached']).toBeDefined();
+
+        const fetchSpy = jest.spyOn(
+          DuckDBConnection.prototype,
+          'fetchTableSchema'
+        );
+
+        await conn.idle();
+        // Re-request — should hit the cache and not call fetchTableSchema.
+        const second = await conn.fetchSchemaForTables(
+          {'cached': 'cached'},
+          {}
+        );
+        expect(second.schemas['cached']).toBeDefined();
+        expect(fetchSpy).not.toHaveBeenCalled();
+        fetchSpy.mockRestore();
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('close() is terminal — subsequent operations fail with a clear error', async () => {
+      const dbPath = path.join(tempRoot, 'close-terminal.duckdb');
+      const conn = new DuckDBConnection({name: 'duckdb', databasePath: dbPath});
+      await conn.runSQL('SELECT 1');
+      await conn.close();
+      await expect(conn.runSQL('SELECT 2')).rejects.toThrow(/closed/);
+    });
+
+    it('shareable: idle releases the OS file lock cross-process', async () => {
+      // The whole point of shareable mode: another process can open the
+      // file while this connection is idled. Verified from a child node
+      // process because fcntl locks are per-process on POSIX.
+      const dbPath = path.join(tempRoot, 'shareable-idle-release.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      try {
+        await conn.runSQL('CREATE TABLE t (val INTEGER)');
+        await conn.runSQL('INSERT INTO t VALUES (1)');
+        await conn.idle();
+        const result = spawnSync(
+          process.execPath,
+          [
+            '-e',
+            `(async () => {
+              const {DuckDBInstance} = require('@duckdb/node-api');
+              try {
+                const inst = await DuckDBInstance.create(${JSON.stringify(dbPath)});
+                inst.closeSync();
+                process.stdout.write('FREE');
+              } catch (e) {
+                process.stdout.write('HELD: ' + (e && e.message ? e.message.split('\\n')[0] : String(e)));
+              }
+            })();`,
+          ],
+          {encoding: 'utf8', timeout: 10000}
+        );
+        expect(result.stdout).toBe('FREE');
+
+        // Reattach transparently and the persisted row is still there.
+        const round = await conn.runSQL('SELECT val FROM t');
+        expect(round.rows).toEqual([{val: 1}]);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('shareable: setupSQL does NOT replay on wake (in-memory primary persists)', async () => {
+      // The in-memory primary survives idle in shareable mode, so user
+      // setupSQL with non-idempotent side effects would fail on a second
+      // wake if it re-ran. Use a bare `CREATE TABLE` (no OR REPLACE) so
+      // any replay would throw "table already exists".
+      const dbPath = path.join(tempRoot, 'shareable-setupsql-once.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_setup',
+        databasePath: dbPath,
+        shareable: true,
+        setupSQL: 'CREATE TABLE memory.main.session (n INTEGER)',
+      });
+      try {
+        await conn.runSQL('SELECT 1');
+        await conn.idle();
+        // If setupSQL replayed, this next runSQL would throw "table
+        // already exists" during the wake-time setupOnce.
+        const result = await conn.runSQL('SELECT 2 AS v');
+        expect(result.rows).toEqual([{v: 2}]);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('shareable: CREATE TABLE on a fresh connection lands in the attached file, not :memory:', async () => {
+      // The cli build path: lookupConnection → conn.runSQL('CREATE TABLE …').
+      // No prior runSQL, no idle. The persistence builder expects the table
+      // to be written to the attached file so that another process can read
+      // it from the file. If `attachIfShareable` were skipped (or somehow the
+      // session still had `memory.main` as default), the unqualified CREATE
+      // would land in the in-memory primary and the file would stay empty.
+      const dbPath = path.join(
+        tempRoot,
+        'shareable-create-lands-in-file.duckdb'
+      );
+      const conn = new DuckDBConnection({
+        name: 'duckdb_shareable_persist',
+        databasePath: dbPath,
+        shareable: true,
+      });
+      try {
+        // Mirror cli/build.ts createTableFromSelect: DROP IF EXISTS then CREATE.
+        await conn.runSQL('DROP TABLE IF EXISTS persisted');
+        await conn.runSQL('CREATE TABLE persisted AS SELECT 42 AS v');
+
+        // Assert on the catalog the table actually lives in. `duckdb_tables()`
+        // exposes the database (catalog) name, which is what would distinguish
+        // memory.main.persisted from malloy_db.main.persisted.
+        const where = await conn.runSQL(
+          "SELECT database_name FROM duckdb_tables() WHERE table_name='persisted'"
+        );
+        expect(where.rows).toEqual([{database_name: 'malloy_db'}]);
+
+        // And: after DETACH, the data must actually be in the file. Idle to
+        // release the lock, then open the file from a child process and
+        // count the rows. If CREATE went to :memory:, the file is empty and
+        // this read returns no rows / the table doesn't exist.
+        await conn.idle();
+        const probe = spawnSync(
+          process.execPath,
+          [
+            '-e',
+            `(async () => {
+              const {DuckDBInstance} = require('@duckdb/node-api');
+              const inst = await DuckDBInstance.create(${JSON.stringify(dbPath)});
+              const c = await inst.connect();
+              const r = await (await c.run("SELECT v FROM persisted")).getRowObjectsJson();
+              process.stdout.write(JSON.stringify(r));
+              inst.closeSync();
+            })().catch(e => { process.stdout.write('ERR:' + (e && e.message ? e.message.split('\\n')[0] : String(e))); });`,
+          ],
+          {encoding: 'utf8', timeout: 10000}
+        );
+        expect(probe.stdout).toBe('[{"v":42}]');
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('setupSQL replays after idle reattach', async () => {
+      const dbPath = path.join(tempRoot, 'idle-setupsql.duckdb');
+      const conn = new DuckDBConnection({
+        name: 'duckdb_idle_setup',
+        databasePath: dbPath,
+        setupSQL: 'CREATE OR REPLACE MACRO triple(x) AS x * 3',
+      });
+      try {
+        const a = await conn.runSQL('SELECT triple(2) AS v');
+        expect(a.rows).toEqual([{v: 6}]);
+        await conn.idle();
+        // After idle, the DuckDBInstance is closed and the macro is gone.
+        // The reattach must replay setupSQL so the macro exists again.
+        const b = await conn.runSQL('SELECT triple(5) AS v');
+        expect(b.rows).toEqual([{v: 15}]);
+      } finally {
+        await conn.close();
+      }
+    });
+  });
+
+  describe('setupSQL', () => {
+    it('runs a single setup statement', async () => {
+      const conn = new DuckDBConnection({
+        name: 'duckdb_single_setup_test',
+        setupSQL: 'CREATE OR REPLACE MACRO add_one(x) AS x + 1',
+      });
+      try {
+        const result = await conn.runSQL('SELECT add_one(41) AS result');
+        expect(result.rows[0]['result']).toBe(42);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('runs multiple setup SQL statements', async () => {
+      const conn = new DuckDBConnection({
+        name: 'duckdb_multi_setup_test',
+        setupSQL:
+          'CREATE OR REPLACE MACRO add_one(x) AS x + 1;\nCREATE OR REPLACE MACRO double_it(x) AS x * 2',
+      });
+      try {
+        const result = await conn.runSQL(
+          'SELECT add_one(41) AS a, double_it(5) AS b'
+        );
+        expect(result).toEqual({rows: [{a: 42, b: 10}], totalRows: 1});
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('handles multi-line statements', async () => {
+      const conn = new DuckDBConnection({
+        name: 'duckdb_multiline_setup_test',
+        setupSQL: 'CREATE OR REPLACE MACRO add_values(x, y) AS\n  x + y',
+      });
+      try {
+        const result = await conn.runSQL('SELECT add_values(3, 4) AS result');
+        expect(result).toEqual({rows: [{result: 7}], totalRows: 1});
+      } finally {
+        await conn.close();
+      }
+    });
+  });
+
   describe('schema parser', () => {
     it('parses arrays', () => {
       const structDef = makeStructDef();
       connection.fillStructDefFromTypeMap(structDef, {test: ARRAY_SCHEMA});
-      expect(structDef.fields[0]).toEqual({
-        'name': 'test',
-        'type': 'struct',
-        'dialect': 'duckdb',
-        'structRelationship': {
-          'fieldName': 'test',
-          'isArray': true,
-          'type': 'nested',
-        },
-        'structSource': {
-          'type': 'nested',
-        },
-        'fields': [
-          {
-            'name': 'value',
-            'type': 'number',
-            'numberType': 'integer',
-          },
-        ],
-      });
+      expect(structDef.fields[0]).toEqual(
+        mkArrayDef({type: 'number', numberType: 'integer'}, 'test')
+      );
     });
 
     it('parses inline', () => {
@@ -159,29 +509,12 @@ describe('DuckDBConnection', () => {
       connection.fillStructDefFromTypeMap(structDef, {test: INLINE_SCHEMA});
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
-        'type': 'struct',
-        'dialect': 'duckdb',
-        'structRelationship': {
-          'type': 'inline',
-        },
-        'structSource': {
-          'type': 'inline',
-        },
+        'type': 'record',
+        'join': 'one',
         'fields': [
-          {
-            'name': 'a',
-            'type': 'number',
-            'numberType': 'float',
-          },
-          {
-            'name': 'b',
-            'type': 'number',
-            'numberType': 'integer',
-          },
-          {
-            'name': 'c',
-            'type': 'string',
-          },
+          {'name': 'a', ...dblType},
+          {'name': 'b', ...intTyp},
+          {'name': 'c', ...strTyp},
         ],
       });
     });
@@ -191,14 +524,9 @@ describe('DuckDBConnection', () => {
       connection.fillStructDefFromTypeMap(structDef, {test: NESTED_SCHEMA});
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
-        'type': 'struct',
-        'dialect': 'duckdb',
-        'structRelationship': {
-          'fieldName': 'test',
-          'isArray': false,
-          'type': 'nested',
-        },
-        'structSource': {'type': 'nested'},
+        'type': 'array',
+        'elementTypeDef': {type: 'record_element'},
+        'join': 'many',
         'fields': [
           {'name': 'a', 'numberType': 'float', 'type': 'number'},
           {'name': 'b', 'numberType': 'integer', 'type': 'number'},
@@ -206,14 +534,198 @@ describe('DuckDBConnection', () => {
         ],
       });
     });
+    it('parses struct with sql native field', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: PROFESSOR_SCHEMA});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'array',
+        'elementTypeDef': {type: 'record_element'},
+        'join': 'many',
+        'fields': [
+          {'name': 'professor_id', 'type': 'sql native', 'rawType': 'UUID'},
+          {'name': 'name', 'type': 'string'},
+          {'name': 'age', 'numberType': 'bigint', 'type': 'number'},
+          {'name': 'total_sections', 'numberType': 'bigint', 'type': 'number'},
+        ],
+      });
+    });
 
     it('parses a simple type', () => {
       const structDef = makeStructDef();
-      connection.fillStructDefFromTypeMap(structDef, {test: 'varchar(60)'});
+      connection.fillStructDefFromTypeMap(structDef, {test: 'VARCHAR(60)'});
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
         'type': 'string',
       });
+    });
+
+    it('parses timestamp with time zone', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {
+        test: 'TIMESTAMP WITH TIME ZONE',
+      });
+      expect(structDef.fields[0]).toEqual({
+        name: 'test',
+        type: 'timestamptz',
+      });
+    });
+
+    it('parses unknown type', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: 'UUID'});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'sql native',
+        'rawType': 'UUID',
+      });
+    });
+
+    describe('integer type mappings', () => {
+      it('maps INTEGER to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'INTEGER'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps SMALLINT to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'SMALLINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps TINYINT to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'TINYINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps BIGINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'BIGINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps HUGEINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'HUGEINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps UBIGINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'UBIGINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps UHUGEINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'UHUGEINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps FLOAT to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'FLOAT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+
+      it('maps DOUBLE to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'DOUBLE'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+
+      it('maps DECIMAL(10,2) to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'DECIMAL(10,2)'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+    });
+  });
+
+  /**
+   * Tests for reading numeric values through Malloy queries
+   */
+  describe('numeric value reading', () => {
+    const runtime = createTestRuntime(connection);
+    const testModel = mkTestModel(runtime, {});
+
+    describe('integer types', () => {
+      it.each([
+        'TINYINT',
+        'SMALLINT',
+        'INTEGER',
+        'BIGINT',
+        'UTINYINT',
+        'USMALLINT',
+        'UINTEGER',
+        'UBIGINT',
+        'HUGEINT',
+        'UHUGEINT',
+      ])('reads %s correctly', async sqlType => {
+        await expect(
+          `run: duckdb.sql("SELECT 10::${sqlType} as d")`
+        ).toMatchResult(testModel, {d: 10});
+      });
+
+      it('preserves precision for literal integers > 2^53', async () => {
+        const largeInt = BigInt('9007199254740993'); // 2^53 + 1
+        await expect(`
+        run: duckdb.sql("select 1") -> { select: d is ${largeInt} }
+      `).toMatchResult(testModel, {d: largeInt});
+      });
+    });
+
+    describe('float types', () => {
+      it.each(['FLOAT', 'DOUBLE', 'DECIMAL(10,2)'])(
+        'reads %s correctly',
+        async sqlType => {
+          await expect(
+            `run: duckdb.sql("SELECT 10.5::${sqlType} as f")`
+          ).toMatchResult(testModel, {f: 10.5});
+        }
+      );
     });
   });
 });
@@ -226,14 +738,11 @@ describe('DuckDBConnection', () => {
  */
 const makeStructDef = (): StructDef => {
   return {
-    type: 'struct',
+    type: 'table',
     name: 'test',
     dialect: 'duckdb',
-    structSource: {type: 'table', tablePath: 'test'},
-    structRelationship: {
-      type: 'basetable',
-      connectionName: 'duckdb',
-    },
+    tablePath: 'test',
+    connection: 'duckdb',
     fields: [],
   };
 };
@@ -244,9 +753,8 @@ const makeStructDef = (): StructDef => {
 //
 
 // Uses string value for table
-const SQL_BLOCK_1 = {
-  type: 'sqlBlock',
-  name: 'block1',
+const SQL_BLOCK_1: SQLSourceRequest = {
+  connection: 'duckdb',
   selectStr: `
 SELECT
 created_at,
@@ -260,12 +768,11 @@ product_category,
 created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-} as SQLBlock;
+};
 
 // Uses read_parquet() for table
-const SQL_BLOCK_2 = {
-  type: 'sqlBlock',
-  name: 'block2',
+const SQL_BLOCK_2: SQLSourceRequest = {
+  connection: 'duckdb',
   selectStr: `
 SELECT
 created_at,
@@ -279,7 +786,7 @@ product_category,
 created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-} as SQLBlock;
+};
 
 //
 // Type strings for testing DuckDBConnection.fillStructDefFromTypeMap()
@@ -293,3 +800,10 @@ const INLINE_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))';
 
 // STRUCT(....)[] is nested
 const NESTED_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))[]';
+
+const intTyp = {type: 'number', numberType: 'integer'};
+const strTyp = {type: 'string'};
+const dblType = {type: 'number', numberType: 'float'};
+
+const PROFESSOR_SCHEMA =
+  'STRUCT(professor_id UUID, "name" VARCHAR, age BIGINT, total_sections BIGINT)[]';

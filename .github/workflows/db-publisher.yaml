@@ -1,0 +1,30 @@
+name: 'DB:Publisher'
+permissions: {}
+
+on:
+  workflow_call:
+
+jobs:
+  test-publisher:
+    runs-on: ubuntu-latest
+
+    services:
+      publisher:
+        image: ms2data/malloy-publisher
+        ports:
+          - 8000:8000
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: workspace
+      - name: Extract workspace
+        run: tar --use-compress-program='zstd -d -T0' -xf workspace.tzst && rm workspace.tzst
+      - name: Use Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+      - name: Test
+        run: npm run ci-publisher
+        env:
+          CI: true

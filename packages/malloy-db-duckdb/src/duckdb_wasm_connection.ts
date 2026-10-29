@@ -1,38 +1,24 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import * as duckdb from '@duckdb/duckdb-wasm';
 import Worker from 'web-worker';
-import {
+import type {
   FetchSchemaOptions,
-  QueryDataRow,
+  QueryRecord,
+  QueryValue,
   QueryOptionsReader,
   RunSQLOptions,
-  StructDef,
-  SQLBlock,
+  SQLSourceDef,
   ConnectionConfig,
+  TableSourceDef,
+  SQLSourceRequest,
 } from '@malloydata/malloy';
-import {StructRow, Table, Vector} from 'apache-arrow';
+import {makeDigest} from '@malloydata/malloy';
+import {Type} from 'apache-arrow';
+import type {StructRow, Table, Schema, Field, DataType} from 'apache-arrow';
 import {DuckDBCommon} from './duckdb_common';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
@@ -40,68 +26,194 @@ const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
 
 const FILE_EXTS = ['.csv', '.tsv', '.parquet'] as const;
 
+// ----------------------------------------------------------------------------
+// Arrow value unwrapping functions
+// These convert Arrow values to vanilla JS using schema type information.
+// ----------------------------------------------------------------------------
+
 /**
- * Arrow's toJSON() doesn't really do what I'd expect, since
- * it still includes Arrow objects like DecimalBigNums and Vectors,
- * so we need this fairly gross function to unwrap those.
- *
- * @param value Element from an Arrow StructRow.
- * @return Vanilla Javascript value
+ * Convert an Arrow value to vanilla JS using the Arrow DataType.
+ * Uses schema type info to correctly handle decimals and nested types.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const unwrapArrow = (value: unknown): any => {
-  if (value === null) {
-    return value;
-  } else if (value instanceof Vector) {
-    return [...value].map(unwrapArrow);
-  } else if (value instanceof Date) {
-    return value;
-  } else if (typeof value === 'bigint') {
-    return Number(value);
-  } else if (typeof value === 'object') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const obj = value as Record<string | symbol, any>;
-    // DecimalBigNums appear as Uint32Arrays, but can be identified
-    // because they have a Symbol.toPrimitive method
-    if (obj[Symbol.toPrimitive]) {
-      // There seems to be a bug in [Symbol.toPrimitive]("number") so
-      // convert to string first and then to number.
-      return Number(obj[Symbol.toPrimitive]());
-    } else if (Array.isArray(value)) {
-      return value.map(unwrapArrow);
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result: Record<string | symbol, any> = {};
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          result[key] = unwrapArrow(obj[key]);
-        }
+function unwrapValue(value: unknown, fieldType: DataType): QueryValue {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const children = (fieldType as any).children as Field[] | null;
+
+  switch (fieldType.typeId) {
+    case Type.Decimal:
+      return unwrapDecimal(value, fieldType);
+
+    case Type.Date:
+    case Type.Timestamp:
+      if (typeof value === 'number') {
+        return new Date(value);
       }
-      return result;
+      if (value instanceof Date) {
+        return value;
+      }
+      return unwrapPrimitive(value);
+
+    case Type.List:
+    case Type.FixedSizeList:
+      if (children && children.length > 0) {
+        return unwrapArray(value, children[0].type);
+      }
+      return unwrapPrimitive(value);
+
+    case Type.Struct:
+      if (children && children.length > 0) {
+        return unwrapStruct(value, children);
+      }
+      return unwrapPrimitive(value);
+
+    case Type.Map:
+      // Maps have a single child which is a struct with key/value fields
+      if (children && children.length > 0) {
+        return unwrapArray(value, children[0].type);
+      }
+      return unwrapPrimitive(value);
+
+    default:
+      return unwrapPrimitive(value);
+  }
+}
+
+function unwrapDecimal(value: unknown, fieldType: DataType): number | string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scale = (fieldType as any).scale ?? 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const obj = value as any;
+
+  if (!obj || !obj[Symbol.toPrimitive]) {
+    return value as number;
+  }
+
+  const raw = obj[Symbol.toPrimitive]();
+
+  if (typeof raw === 'bigint') {
+    // Check if the unscaled value exceeds safe integer range
+    const absRaw = raw < BigInt(0) ? -raw : raw;
+    if (absRaw > BigInt(Number.MAX_SAFE_INTEGER)) {
+      // Too large for precise JS number - format as decimal string
+      return formatBigDecimal(raw, scale);
+    }
+    if (scale > 0) {
+      return Number(raw) / 10 ** scale;
+    }
+    return Number(raw);
+  }
+
+  if (typeof raw === 'string') {
+    // Large decimals may come as strings - check if too large for Number
+    const absStr = raw.startsWith('-') ? raw.slice(1) : raw;
+    if (absStr.length > 15) {
+      // String is likely too large for precise Number - format with decimal
+      return formatBigDecimalFromString(raw, scale);
     }
   }
-  return value;
-};
+
+  const num = Number(raw);
+  return scale > 0 ? num / 10 ** scale : num;
+}
+
+function unwrapArray(value: unknown, elementType: DataType): QueryValue[] {
+  const arr = Array.isArray(value) ? value : [...(value as Iterable<unknown>)];
+  return arr.map(v => unwrapValue(v, elementType));
+}
+
+function unwrapStruct(value: unknown, children: Field[]): QueryRecord {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const obj = value as any;
+  const result: QueryRecord = {};
+  for (const field of children) {
+    result[field.name] = unwrapValue(obj[field.name], field.type);
+  }
+  return result;
+}
+
+function unwrapPrimitive(value: unknown): QueryValue {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'bigint') return safeNumber(value);
+  if (typeof value === 'string' || typeof value === 'number') return value;
+  if (typeof value === 'boolean') return value;
+  if (typeof value !== 'object') return String(value);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const obj = value as any;
+  if (obj[Symbol.toPrimitive]) {
+    return safeNumber(obj[Symbol.toPrimitive]());
+  }
+  return String(value);
+}
+
+function safeNumber(value: number | bigint | string): number | string {
+  if (typeof value === 'number') {
+    return value;
+  }
+  const num = Number(value);
+  if (
+    Number.isSafeInteger(num) ||
+    (Number.isFinite(num) && !Number.isInteger(num))
+  ) {
+    return num;
+  }
+  return String(value);
+}
+
+function formatBigDecimal(raw: bigint, scale: number): string {
+  const isNegative = raw < BigInt(0);
+  const str = (isNegative ? -raw : raw).toString();
+  return formatDecimalString(str, scale, isNegative);
+}
+
+function formatBigDecimalFromString(raw: string, scale: number): string {
+  const isNegative = raw.startsWith('-');
+  const str = isNegative ? raw.slice(1) : raw;
+  return formatDecimalString(str, scale, isNegative);
+}
+
+function formatDecimalString(
+  str: string,
+  scale: number,
+  isNegative: boolean
+): string {
+  let result: string;
+  if (scale <= 0) {
+    result = str;
+  } else if (scale >= str.length) {
+    result = '0.' + '0'.repeat(scale - str.length) + str;
+  } else {
+    result = str.slice(0, -scale) + '.' + str.slice(-scale);
+  }
+  return isNegative ? '-' + result : result;
+}
 
 /**
- * Process a single Arrow result row into a Malloy QueryDataRow
- * Unfortunately simply calling JSONParse(JSON.stringify(row)) even
- * winds up converting DecimalBigNums to strings instead of numbers.
- * For some reason a custom replacer only sees DecimalBigNums as
- * strings, as well.
+ * Process a single Arrow result row into a Malloy QueryRecord.
  */
-export const unwrapRow = (row: StructRow): QueryDataRow => {
-  return unwrapArrow(row.toJSON());
-};
+function unwrapRow(row: StructRow, schema: Schema): QueryRecord {
+  const json = row.toJSON();
+  const result: QueryRecord = {};
+  for (const field of schema.fields) {
+    result[field.name] = unwrapValue(json[field.name], field.type);
+  }
+  return result;
+}
 
 /**
- * Process a duckedb Table into an array of Malloy QueryDataRows
+ * Process a DuckDB Table into an array of Malloy QueryRecords.
  */
-const unwrapTable = (table: Table): QueryDataRow[] => {
-  return table.toArray().map(unwrapRow);
-};
+function unwrapTable(table: Table): QueryRecord[] {
+  return table.toArray().map(row => unwrapRow(row, table.schema));
+}
 
-const isNode = () => typeof navigator === 'undefined';
+const isNode = () =>
+  typeof process !== 'undefined' && typeof process.versions?.node === 'string';
 
 type RemoteFileCallback = (
   tableName: string
@@ -110,9 +222,27 @@ type RemoteFileCallback = (
 export interface DuckDBWasmOptions extends ConnectionConfig {
   additionalExtensions?: string[];
   databasePath?: string;
-  motherDuckToken: string | undefined;
+  motherDuckToken?: string;
   workingDirectory?: string;
+  setupSQL?: string;
 }
+// `workingDirectory` defaults to `config.rootDirectory`, which the config
+// stack carries as a URL string. DuckDB-Wasm's virtual filesystem wants a plain
+// POSIX path; a `file://` URL left intact becomes a bogus FILE_SEARCH_PATH and
+// breaks relative reads. Decode file URLs to their path. Browser-safe — uses
+// the WHATWG `URL` (the native connection's Node `fileURLToPath` is unavailable
+// here). Plain paths and non-file schemes pass through untouched.
+function fileURLToVirtualPath(input: string): string {
+  if (!/^file:\/\//i.test(input)) {
+    return input;
+  }
+  const decoded = decodeURIComponent(new URL(input).pathname);
+  // Drop a trailing separator but keep the filesystem root '/'.
+  return decoded.length > 1 && decoded.endsWith('/')
+    ? decoded.slice(0, -1)
+    : decoded;
+}
+
 export abstract class DuckDBWASMConnection extends DuckDBCommon {
   private additionalExtensions: string[] = [];
   public readonly name: string;
@@ -147,7 +277,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         this.databasePath = arg2;
       }
       if (typeof workingDirectory === 'string') {
-        this.workingDirectory = workingDirectory;
+        this.workingDirectory = fileURLToVirtualPath(workingDirectory);
       }
       if (queryOptions) {
         this.queryOptions = queryOptions;
@@ -161,7 +291,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         this.databasePath = arg.databasePath;
       }
       if (typeof arg.workingDirectory === 'string') {
-        this.workingDirectory = arg.workingDirectory;
+        this.workingDirectory = fileURLToVirtualPath(arg.workingDirectory);
       }
       if (typeof arg.motherDuckToken === 'string') {
         this.motherDuckToken = arg.motherDuckToken;
@@ -169,12 +299,24 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       if (Array.isArray(arg.additionalExtensions)) {
         this.additionalExtensions = arg.additionalExtensions;
       }
+      if (typeof arg.setupSQL === 'string') {
+        this.setupSQL = arg.setupSQL;
+      }
     }
     this.isMotherDuck =
       this.databasePath?.startsWith('md:') ||
       this.databasePath?.startsWith('motherduck:') ||
       false;
     this.connecting = this.init();
+  }
+
+  public getDigest(): string {
+    return makeDigest(
+      'duckdb-wasm',
+      this.databasePath ?? ':memory:',
+      this.workingDirectory,
+      this.setupSQL
+    );
   }
 
   protected async init(): Promise<void> {
@@ -190,14 +332,19 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
             })
           );
 
-      // Instantiate the asynchronous version of DuckDB-wasm
-      this.worker = new Worker(workerUrl);
+      // Instantiate the asynchronous version of DuckDB-wasm. Under Node the
+      // worker bundle is a CommonJS module, so load it as a module worker;
+      // web-worker's classic-script path runs it without a module scope.
+      this.worker = isNode()
+        ? new Worker(workerUrl, {type: 'module'})
+        : new Worker(workerUrl);
       const logger = new duckdb.VoidLogger();
       this._database = new duckdb.AsyncDuckDB(logger, this.worker);
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);
       if (this.databasePath) {
         await this._database.open({
           path: this.databasePath,
+          accessMode: duckdb.DuckDBAccessMode.AUTOMATIC,
         });
       }
       URL.revokeObjectURL(workerUrl);
@@ -248,6 +395,14 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
           console.error(`duckdb setup ${cmd} => ${error}`);
         }
       }
+      if (this.setupSQL) {
+        for (const stmt of this.setupSQL.split(';\n')) {
+          const trimmed = stmt.trim();
+          if (trimmed) {
+            await this.runDuckDBQuery(trimmed);
+          }
+        }
+      }
     };
     await this.connecting;
     if (!this.isSetup) {
@@ -259,7 +414,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   protected async runDuckDBQuery(
     sql: string,
     abortSignal?: AbortSignal
-  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
+  ): Promise<{rows: QueryRecord[]; totalRows: number}> {
     const cancel = () => {
       this.connection?.cancelSent();
     };
@@ -284,8 +439,8 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   public async *runSQLStream(
     sql: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
+    {rowLimit, abortSignal, queryMetadata}: RunSQLOptions = {}
+  ): AsyncIterableIterator<QueryRecord> {
     if (!this.connection) {
       throw new Error('duckdb-wasm not connected');
     }
@@ -307,7 +462,9 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
 
     let index = 0;
-    for await (const chunk of await this.connection.send(statements[0])) {
+    for await (const chunk of await this.connection.send(
+      this.sqlWithQueryMetadata(statements[0], queryMetadata)
+    )) {
       if (done) {
         break;
       }
@@ -318,7 +475,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         ) {
           break;
         }
-        yield unwrapRow(row);
+        yield unwrapRow(row, chunk.schema);
         index++;
       }
     }
@@ -367,11 +524,11 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
+  public async fetchSchemaForSQLStruct(
+    sqlRef: SQLSourceRequest,
     options: FetchSchemaOptions
   ): Promise<
-    | {structDef: StructDef; error?: undefined}
+    | {structDef: SQLSourceDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
     const tables: string[] = [];
@@ -382,14 +539,14 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       tables.push(match[2] || match[3]);
     }
     await this.findTables(tables, options);
-    return super.fetchSchemaForSQLBlock(sqlRef, options);
+    return super.fetchSchemaForSQLStruct(sqlRef, options);
   }
 
   async fetchSchemaForTables(
     missing: Record<string, string>,
     options: FetchSchemaOptions
   ): Promise<{
-    schemas: Record<string, StructDef>;
+    schemas: Record<string, TableSourceDef>;
     errors: Record<string, string>;
   }> {
     const tables = Object.values(missing);

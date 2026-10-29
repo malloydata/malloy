@@ -1,56 +1,91 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {
-  DataColumn,
-  DateTimeframe,
-  Field,
-  Tag,
-  TimestampTimeframe,
-} from '@malloydata/malloy';
 import startCase from 'lodash/startCase';
-import {RenderDef} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
+import type {RenderDef} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {MalloyExplicitTheme} from '../api/types';
 import {DateTime} from 'luxon';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {Field} from '../data_tree';
+
+/**
+ * Default low end of the gradient generated for `mapColor`. A
+ * near-white neutral grey reads well on most light page chrome. When
+ * the operator picks a very light `mapColor`, `pickGradientLow` swaps
+ * in a darker neutral so the gradient retains visible contrast across
+ * data values.
+ */
+const MAP_GRADIENT_LOW_LIGHT = '#f5f5f5';
+const MAP_GRADIENT_LOW_DARK = '#3a3a3a';
+
+// Default blue 2-stop ramp for sequential (non-heatmap) colour scales.
+// Spread at each use so returned ranges don't alias this shared const.
+const DEFAULT_SEQUENTIAL_RANGE = ['#C2D5EE', '#1A73E8'];
+
+/**
+ * sRGB relative luminance per WCAG 2 (0 = black, 1 = white). Returns
+ * `null` for inputs that don't parse as a 3- or 6-digit hex; callers
+ * fall back to the default low.
+ */
+function hexLuminance(hex: string): number | null {
+  const m = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return null;
+  const s =
+    m[1].length === 3
+      ? m[1][0] + m[1][0] + m[1][1] + m[1][1] + m[1][2] + m[1][2]
+      : m[1];
+  const channels = [0, 2, 4].map(i => parseInt(s.slice(i, i + 2), 16) / 255);
+  const linear = channels.map(v =>
+    v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+  );
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+function pickGradientLow(high: string): string {
+  const lum = hexLuminance(high);
+  // If the operator's mapColor is itself very light (pastel/brand-light),
+  // the default near-white low would produce a near-monochrome gradient.
+  // Swap to a dark neutral in that case so the data values stay
+  // distinguishable.
+  return lum !== null && lum > 0.8
+    ? MAP_GRADIENT_LOW_DARK
+    : MAP_GRADIENT_LOW_LIGHT;
+}
 
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,
   isRectMark: boolean,
-  hasOverlappingText = false
+  hasOverlappingText = false,
+  explicitTheme?: MalloyExplicitTheme
 ): {range: string[]} | undefined {
   if (type === undefined) {
     return undefined;
   }
+  // Sequential scales (ordinal / quantitative / temporal, non-rect)
+  // use the operator's `mapColor` as the saturated end of a 2-stop
+  // gradient when supplied. Rect marks keep their existing palettes and
+  // ignore mapColor: the ordinal rect branch stays on the default blue
+  // gradient, while temporal/quantitative rect heatmaps keep their tuned
+  // orange/blue scheme (tuned for the dual-tone heatmap-with-text
+  // rendering, not a map gradient).
+  const sequentialGradient = explicitTheme?.mapColor
+    ? [pickGradientLow(explicitTheme.mapColor), explicitTheme.mapColor]
+    : null;
   switch (type) {
     case 'ordinal':
-      return {range: ['#C2D5EE', '#1A73E8']};
+      return isRectMark
+        ? {range: [...DEFAULT_SEQUENTIAL_RANGE]}
+        : {range: sequentialGradient ?? [...DEFAULT_SEQUENTIAL_RANGE]};
     case 'temporal':
     case 'quantitative':
       return isRectMark
         ? hasOverlappingText
           ? {range: ['#6BA4EE', '#EEA361']}
           : {range: ['#1A73E8', '#E8710A']}
-        : {range: ['#C2D5EE', '#1A73E8']};
+        : {range: sequentialGradient ?? [...DEFAULT_SEQUENTIAL_RANGE]};
     case 'nominal':
       return hasOverlappingText
         ? {
@@ -80,70 +115,68 @@ export function getColorScale(
   }
 }
 
+// Resolve the Vega canvas background for the map plugins from the
+// embedder theme. An unset or empty `theme.background` falls back to
+// `'transparent'` so the map blends with the host chrome; only a
+// non-empty value paints the canvas.
+export function mapCanvasBackground(
+  explicitTheme?: MalloyExplicitTheme
+): string {
+  return explicitTheme?.background || 'transparent';
+}
+
 function numberFixedDigits(value: number, digits: number) {
   return value.toString().padStart(digits, '0');
 }
 
 export function timeToString(
   time: Date,
-  timeframe: DateTimeframe | TimestampTimeframe | undefined,
+  timeframe: Malloy.DateTimeframe | Malloy.TimestampTimeframe | undefined,
   timezone?: string
 ): string {
-  timeframe ||= TimestampTimeframe.Second;
+  timeframe ||= 'second';
 
-  let shouldNormalize = false;
-  switch (timeframe) {
-    case TimestampTimeframe.Hour:
-    case TimestampTimeframe.Minute:
-    case TimestampTimeframe.Second:
-      shouldNormalize = true;
-      break;
-  }
-
+  // For timestamp fields, always use timezone when provided
+  // The caller (renderDateTimeField) already filters to only pass timezone for timestamps
   const dateTime = DateTime.fromJSDate(time, {
-    zone: shouldNormalize && timezone ? timezone : 'UTC',
+    zone: timezone ?? 'UTC',
   });
 
   switch (timeframe) {
-    case TimestampTimeframe.Year:
-    case DateTimeframe.Year: {
+    case 'year': {
       const year = numberFixedDigits(dateTime.year, 4);
       return `${year}`;
     }
-    case TimestampTimeframe.Quarter:
-    case DateTimeframe.Quarter: {
+    case 'quarter': {
       const year = numberFixedDigits(dateTime.year, 4);
       const quarter = Math.floor(dateTime.month / 3) + 1;
       return `${year}-Q${quarter}`;
     }
-    case TimestampTimeframe.Month:
-    case DateTimeframe.Month: {
+    case 'month': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       return `${year}-${month}`;
     }
-    case TimestampTimeframe.Week:
-    case DateTimeframe.Week: {
+    case 'week': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
-      return `WK${year}-${month}-${day}`;
+      return `${year}-${month}-${day}-WK`;
     }
-    case DateTimeframe.Day:
-    case TimestampTimeframe.Day: {
+    case 'day': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
       return `${year}-${month}-${day}`;
     }
-    case TimestampTimeframe.Hour: {
+    case 'hour': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
       const hour = numberFixedDigits(dateTime.hour, 2);
-      return `${year}-${month}-${day} ${hour}:00 for 1 hour`;
+      return `${year}-${month}-${day} ${hour}`;
     }
-    case TimestampTimeframe.Minute: {
+    case 'minute': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
@@ -151,7 +184,7 @@ export function timeToString(
       const minute = numberFixedDigits(dateTime.minute, 2);
       return `${year}-${month}-${day} ${hour}:${minute}`;
     }
-    case TimestampTimeframe.Second: {
+    case 'second': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
@@ -277,43 +310,9 @@ export function formatTitle(
 ) {
   const label = renderDef?.data?.label || field.name;
   let title = options.titleCase ? startCase(label) : label;
-  if (
-    field.isAtomicField() &&
-    (field.isDate() || field.isTimestamp()) &&
-    timezone
-  ) {
+  if (field.isTime() && timezone) {
     title = `${title} (${timezone})`;
   }
 
   return title;
-}
-
-export function getParentRecord(data: DataColumn, n = 0) {
-  let record = data;
-  while (n > 0 && record.parentRecord) {
-    n -= 1;
-    record = record.parentRecord;
-  }
-  return record;
-}
-
-export function getDynamicValue<T = unknown>({
-  tag,
-  data,
-}: {
-  tag: Tag;
-  data: DataColumn;
-}): T | undefined {
-  const match = tag
-    .tag('field')
-    ?.text()
-    ?.match(/^(\^*)(.*)/);
-  if (!match) return undefined;
-
-  const [, parentScoping, fieldName] = match;
-
-  const ancestorCt = parentScoping.length;
-  const scope = getParentRecord(data, ancestorCt);
-  if ('cell' in scope) return scope.cell(fieldName)?.value as T;
-  return undefined;
 }

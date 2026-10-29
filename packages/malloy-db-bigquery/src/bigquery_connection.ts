@@ -1,60 +1,51 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import * as crypto from 'crypto';
-import {
-  BigQuery as BigQuerySDK,
+import type {
+  BigQueryOptions,
   Job,
   PagedResponse,
   Query,
   QueryResultsOptions,
   RowMetadata,
 } from '@google-cloud/bigquery';
-import bigquery from '@google-cloud/bigquery/build/src/types';
-import {ResourceStream} from '@google-cloud/paginator';
+import {BigQuery as BigQuerySDK} from '@google-cloud/bigquery';
+import type bigquery from '@google-cloud/bigquery/build/src/types';
+import type {ResourceStream} from '@google-cloud/paginator';
 import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
-import {
+import type {
   Connection,
   ConnectionConfig,
-  FetchSchemaOptions,
-  FieldTypeDef,
-  Malloy,
+  ConnectionConfigEntry,
+  ConnectionParameterValue,
   MalloyQueryData,
-  NamedStructDefs,
   PersistSQLResults,
-  PooledConnection,
   QueryData,
-  QueryDataRow,
+  QueryRecord,
+  QueryMetadata,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  SQLBlock,
-  StandardSQLDialect,
   StreamingConnection,
+  TableSourceDef,
   StructDef,
-  toAsyncGenerator,
+  SQLSourceDef,
+  SQLSourceRequest,
 } from '@malloydata/malloy';
+import {
+  mkArrayDef,
+  Malloy,
+  StandardSQLDialect,
+  toAsyncGenerator,
+  sqlKey,
+  makeDigest,
+  decodeDottedTablePath,
+} from '@malloydata/malloy';
+import type {TableMetadata} from '@malloydata/malloy/connection';
+import {BaseConnection, dbmetaAnnotations} from '@malloydata/malloy/connection';
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -72,6 +63,61 @@ interface CredentialBody {
   private_key?: string;
 }
 
+/**
+ * A caller-supplied credential. Anything Malloy cannot build from config text
+ * — impersonation, workload identity federation, a proxied or test credential
+ * — arrives as one of these, from a host overlay.
+ */
+type AuthClient = BigQueryOptions['authClient'];
+
+/**
+ * What to hash for the auth client, given the connection's unresolved config.
+ *
+ * An `AuthClient` is a live object with nothing stable to hash, so the digest
+ * uses the reference the config named it by — `{tenantAuth: "acme"}`. Without
+ * it, two connections against the same project holding different impersonated
+ * identities produce the same digest, and so the same BuildIDs, and one
+ * tenant is served rows persisted for another.
+ *
+ * The digest is therefore only as distinguishing as the reference path: an
+ * overlay whose path doesn't vary by identity leaves them indistinguishable
+ * here too.
+ */
+function authIdentityOf(
+  rawConfigData: ConnectionConfigEntry | undefined
+): string | undefined {
+  const reference = rawConfigData?.['authClient'];
+  return reference === undefined ? undefined : JSON.stringify(reference);
+}
+
+/**
+ * An `authClient` and a service account key are two answers to one question,
+ * and the SDK does not treat them as competing: `GoogleAuth` caches the
+ * `authClient` and never consults `credentials` or `keyFilename` again
+ * (`google-auth-library`, `googleauth.js`: `cachedCredential = opts.authClient`).
+ * A config carrying both therefore runs entirely on the auth client while the
+ * key sits there looking live, and whoever wrote it believes the wrong
+ * identity is executing their queries. Refuse it instead.
+ */
+function rejectCompetingCredentials(
+  name: string,
+  config: BigQueryConnectionConfiguration
+): void {
+  if (config.authClient === undefined) return;
+  const alsoSet = [
+    config.credentials !== undefined ? 'a service account key' : undefined,
+    config.serviceAccountKeyPath !== undefined
+      ? 'serviceAccountKeyPath'
+      : undefined,
+  ].filter(what => what !== undefined);
+  if (alsoSet.length === 0) return;
+  throw new Error(
+    `Connection "${name}" sets authClient and also ${alsoSet.join(' and ')}. ` +
+      'An authClient replaces the credential entirely — the key would be ' +
+      'ignored — so supply one or the other.'
+  );
+}
+
 interface BigQueryConnectionConfiguration {
   /** This ID is used for Bigquery Table Normalization */
   projectId?: string;
@@ -80,23 +126,152 @@ interface BigQueryConnectionConfiguration {
   maximumBytesBilled?: string;
   timeoutMs?: string;
   billingProjectId?: string;
-  credentials?: CredentialBody;
+  credentials?: CredentialBody | {[key: string]: ConnectionParameterValue};
+  authClient?: AuthClient;
+  setupSQL?: string;
+  dbmeta?: boolean;
 }
 
 interface BigQueryConnectionOptions extends ConnectionConfig {
   /** This ID is used for Bigquery Table Normalization */
   projectId?: string;
   serviceAccountKeyPath?: string;
+  serviceAccountKey?: {[key: string]: ConnectionParameterValue};
+  /** The key file's contents, as a JSON string or base64-encoded JSON. */
+  serviceAccountKeyJson?: string;
+  authClient?: AuthClient;
+  /**
+   * The connection's entry as written, before overlay resolution. Set by the
+   * registered factory; needed only so `getDigest` can identify which auth
+   * client this connection got. See `authIdentityOf`.
+   */
+  rawConfigData?: ConnectionConfigEntry;
   location?: string;
   maximumBytesBilled?: string;
   timeoutMs?: string;
   billingProjectId?: string;
   client_email?: string;
   private_key?: string;
+  setupSQL?: string;
+  /** Copy table and column descriptions onto the schema as #(dbmeta) annotations. */
+  dbmeta?: boolean;
+}
+
+type JsonObject = {[key: string]: ConnectionParameterValue};
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The two credential shapes the SDK's `credentials` option accepts: a service
+ * account key, and an external account (workload identity federation) config,
+ * which carries no key of its own. Anything else — `{}`, a config file, half a
+ * key — is rejected here rather than at the first query, where it arrives as
+ * "the incoming JSON object does not contain a client_email field" and names
+ * nothing that would lead back to this property.
+ */
+function isCredentialObject(value: JsonObject): boolean {
+  return (
+    (typeof value['client_email'] === 'string' &&
+      typeof value['private_key'] === 'string') ||
+    value['type'] === 'external_account'
+  );
+}
+
+function isProbablyBase64(text: string): boolean {
+  // `{` is not in the base64 alphabet, so JSON can never be mistaken for an
+  // encoding of itself. Everything else is treated as base64 and allowed to
+  // fail the parse below, which keeps the check to the one thing it can be
+  // certain about.
+  return !text.startsWith('{');
+}
+
+/**
+ * A service account key that arrives as a *string* rather than as structured
+ * config, in either of the two encodings a deployment can produce.
+ *
+ * `serviceAccountKey` is a `json`-typed property, and a json-typed slot takes
+ * its value literally: an `{env: "..."}` reference is never resolved in one,
+ * because reference indirection into structured config is exactly what the
+ * config compiler refuses. A deployment whose credentials live in an
+ * environment variable — the normal shape for a server — therefore cannot
+ * reach that slot at all, and the literal `{env: "..."}` object it does reach
+ * the SDK with fails as "the incoming JSON object does not contain a
+ * client_email field". This is a string slot, so a reference resolves and the
+ * value arrives here to be parsed.
+ *
+ * Base64 is accepted because a JSON object full of quotes and braces survives
+ * a shell, a CI secret editor, and a `.env` file poorly; base64 is one token
+ * that survives all three. Which one arrived is detected rather than declared,
+ * so a deployment that switches encodings doesn't also have to edit config.
+ *
+ * Nothing from `text` reaches the error message. It is a private key, and
+ * JSON.parse's own SyntaxError quotes the input it choked on.
+ */
+function credentialsFromJson(text: string): JsonObject {
+  // Buffer's base64 decoder drops characters outside the alphabet rather than
+  // rejecting them, so a mangled value decodes to garbage instead of throwing.
+  // The parse below is what catches that, which is why one message has to
+  // cover both encodings: at this point either could have been intended.
+  const json = isProbablyBase64(text)
+    ? Buffer.from(text, 'base64').toString('utf8')
+    : text;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error(
+      'serviceAccountKeyJson is neither JSON nor base64-encoded JSON. It ' +
+        'must hold the entire service account key file.'
+    );
+  }
+  if (!isJsonObject(parsed) || !isCredentialObject(parsed)) {
+    throw new Error(
+      'serviceAccountKeyJson parsed but is not a service account key: it ' +
+        'has no client_email and private_key. It must hold the entire key ' +
+        'file, not a fragment of one.'
+    );
+  }
+  return parsed;
+}
+
+// BigQuery label grammar: keys and values are lowercase, <=63 chars, and
+// [a-z0-9_-]; keys must start with a lowercase letter. Values are transformed
+// to fit (lowercase, disallowed chars -> '_', truncate); a key that can't be
+// made valid (e.g. it starts with a digit) is dropped. BigQuery's 64-label cap
+// needs no check here: the contract allows fewer properties than that.
+const BQ_MAX_LEN = 63;
+
+function sanitizeBigQueryValue(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '_')
+    .slice(0, BQ_MAX_LEN);
+}
+
+function sanitizeBigQueryKey(key: string): string | undefined {
+  const sanitized = sanitizeBigQueryValue(key);
+  return /^[a-z]/.test(sanitized) ? sanitized : undefined;
+}
+
+/** Render a query's metadata as BigQuery job labels, in BQ's grammar. */
+function toBigQueryLabels(
+  labels: QueryMetadata | undefined
+): Record<string, string> | undefined {
+  if (labels === undefined) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(labels)) {
+    const sanitizedKey = sanitizeBigQueryKey(key);
+    if (sanitizedKey === undefined) continue; // can't be a valid BQ key; drop
+    out[sanitizedKey] = sanitizeBigQueryValue(value);
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
+  description?: string | null;
   needsTableSuffixPseudoColumn: boolean;
   needsPartitionTimePseudoColumn: boolean;
   needsPartitionDatePseudoColumn: boolean;
@@ -136,12 +311,241 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 const MAXIMUM_BYTES_BILLED = String(25 * 1024 * 1024 * 1024);
 
 /**
- * Default timeoutMs value, 10 Mins
+ * Default connection timeoutMs, 10 minutes. Bounds both the BigQuery job
+ * (jobTimeoutMs) and, via getQueryResultsUntilComplete, how long results are
+ * polled. When this connector runs behind an HTTP layer (e.g. the Malloy
+ * Publisher), set the connection's timeoutMs below that layer's socket/request
+ * timeout so a long query is ended by this deadline with a clear error, rather
+ * than racing an opaque socket reset.
  */
 const TIMEOUT_MS = 1000 * 60 * 10;
 
+/**
+ * How long each getQueryResults call asks to wait for the job to finish before
+ * returning. BigQuery returns after at most ~200s regardless of the requested
+ * value, so this is kept under that ceiling; queries that take longer are
+ * covered by polling across multiple calls (see getQueryResultsUntilComplete).
+ */
+const GET_QUERY_RESULTS_POLL_MS = 1000 * 60 * 2;
+
+/**
+ * Minimum spacing between getQueryResults polls. Each call is asked to block
+ * server-side for up to GET_QUERY_RESULTS_POLL_MS, but BigQuery may return
+ * `jobComplete: false` sooner than requested; this floor keeps the loop from
+ * busy-polling in that case. Only the shortfall below it is waited out, so a
+ * poll that already blocked longer adds nothing.
+ */
+const GET_QUERY_RESULTS_MIN_POLL_INTERVAL_MS = 1000;
+
+/** The result of a single getQueryResults poll. */
+type PollOutcome =
+  | {
+      kind: 'complete';
+      value: PagedResponse<
+        RowMetadata,
+        Query,
+        bigquery.IGetQueryResultsResponse
+      >;
+    }
+  | {kind: 'stillRunning'}
+  | {kind: 'aborted'}
+  | {kind: 'error'; error: unknown};
+
+/**
+ * Issue one getQueryResults call via the callback overload so we can read the
+ * structured `jobComplete` flag rather than pattern-matching the client's error
+ * string. On the still-running path the client invokes the callback with a
+ * synthetic "did not complete before ..." Error *and* an apiResponse whose
+ * `jobComplete === false`; we key off that boolean, which does not drift across
+ * client releases the way the message can.
+ *
+ * `autoPaginate: false` is forced, not optional: getQueryResults is
+ * paginator-wrapped, and at the default the paginator hands the callback the
+ * error alone, dropping the apiResponse read here — so every still-running poll
+ * would be misread as a fetch error. It does not change what a completed fetch
+ * returns.
+ *
+ * Resolves promptly if `abortSignal` fires, so a caller's timeout/cancel is not
+ * left blocked behind BigQuery's server-side wait.
+ */
+function pollQueryResults(
+  job: Pick<Job, 'getQueryResults'>,
+  options: QueryResultsOptions,
+  abortSignal?: AbortSignal
+): Promise<PollOutcome> {
+  return new Promise<PollOutcome>(resolve => {
+    let settled = false;
+    const settle = (outcome: PollOutcome) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      abortSignal?.removeEventListener('abort', onAbort);
+      resolve(outcome);
+    };
+    const onAbort = () => settle({kind: 'aborted'});
+    if (abortSignal?.aborted) {
+      settle({kind: 'aborted'});
+      return;
+    }
+    abortSignal?.addEventListener('abort', onAbort);
+    const pollOptions = {...options, autoPaginate: false};
+    job.getQueryResults(pollOptions, (err, rows, nextQuery, apiResponse) => {
+      if (apiResponse?.jobComplete === false) {
+        settle({kind: 'stillRunning'});
+      } else if (err) {
+        settle({kind: 'error', error: err});
+      } else {
+        settle({
+          kind: 'complete',
+          value: [
+            rows ?? [],
+            nextQuery ?? null,
+            apiResponse as bigquery.IGetQueryResultsResponse,
+          ],
+        });
+      }
+    });
+  });
+}
+
+/** Cancel a job without letting a cancel failure mask the caller's real error. */
+async function cancelJobQuietly(job: Pick<Job, 'cancel'>): Promise<void> {
+  try {
+    await job.cancel();
+  } catch {
+    // Best-effort: the job may already be finishing or gone; the caller still
+    // reports the timeout that prompted the cancel.
+  }
+}
+
+/**
+ * A delay used to space out polls; resolves early if `abortSignal` fires, and is
+ * injectable so tests need not wait real time.
+ */
+function delay(ms: number, abortSignal?: AbortSignal): Promise<void> {
+  return new Promise(resolve => {
+    if (abortSignal?.aborted) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(() => {
+      abortSignal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    abortSignal?.addEventListener('abort', onAbort, {once: true});
+  });
+}
+
+/**
+ * Fetch a job's query results, polling until the job completes, `deadlineMs`
+ * elapses, or the caller aborts. A single getQueryResults call cannot wait out a
+ * slow query: BigQuery bounds how long one call blocks server-side (its docs
+ * note the call typically returns after ~200s even when a larger timeoutMs is
+ * requested) and then reports `jobComplete: false` while the job is still
+ * running normally. So for a query that runs longer than one call's server wait
+ * we re-issue getQueryResults until it finishes.
+ *
+ * `deadlineMs` bounds the total wait (the connection's configured timeoutMs).
+ * On reaching it we cancel the job before throwing: BigQuery's jobTimeoutMs
+ * should already be cancelling it server-side, but if that timeout error has not
+ * come back yet, cancelling here stops the job from running (and billing) past
+ * the point we stopped waiting. `abortSignal` lets the loop exit promptly on an
+ * external cancel (the caller cancels the job in that case). A bounded number of
+ * retries absorbs the transient access-denied error BigQuery intermittently
+ * returns on first fetch. Between polls a minimum interval is enforced so a poll
+ * that returns sooner than requested does not spin the loop. `now` and `wait`
+ * are injectable for testing.
+ */
+export async function getQueryResultsUntilComplete(
+  job: Pick<Job, 'getQueryResults' | 'cancel'>,
+  getQueryResultsOptions: QueryResultsOptions,
+  deadlineMs: number,
+  {
+    abortSignal,
+    now = Date.now,
+    wait = delay,
+  }: {
+    abortSignal?: AbortSignal;
+    now?: () => number;
+    wait?: (ms: number, abortSignal?: AbortSignal) => Promise<void>;
+  } = {}
+): Promise<
+  PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
+> {
+  const startedAt = now();
+  let transientRetries = 0;
+  for (;;) {
+    if (abortSignal?.aborted) {
+      throw new Error(
+        'BigQuery getQueryResults was aborted before the query completed.'
+      );
+    }
+    const remainingMs = deadlineMs - (now() - startedAt);
+    if (remainingMs <= 0) {
+      await cancelJobQuietly(job);
+      throw new Error(
+        `BigQuery query did not complete within the configured timeout of ${deadlineMs}ms. ` +
+          "Raise the connection's timeoutMs to allow longer-running queries."
+      );
+    }
+    // Clamp the per-poll server wait to what's left of the deadline: a short
+    // timeout then fails fast, and the overall deadline can't be overshot by a
+    // full poll interval. timeoutMs is applied last so a caller-supplied
+    // timeoutMs cannot override the poll interval.
+    const pollTimeoutMs = Math.max(
+      1,
+      Math.min(GET_QUERY_RESULTS_POLL_MS, remainingMs)
+    );
+    const polledAt = now();
+    const outcome = await pollQueryResults(
+      job,
+      {...getQueryResultsOptions, timeoutMs: pollTimeoutMs},
+      abortSignal
+    );
+    switch (outcome.kind) {
+      case 'complete':
+        return outcome.value;
+      case 'stillRunning': {
+        // BigQuery can return `jobComplete: false` sooner than the timeoutMs we
+        // asked for; without a floor between polls the loop would busy-poll and
+        // hammer the API. Wait out only the shortfall below a minimum interval,
+        // bounded by the remaining deadline, so a poll that already blocked adds
+        // no latency. The abort/deadline checks at the top of the loop then
+        // decide whether to continue, and a still-running poll never consumes
+        // the transient-retry budget.
+        const backoffMs = Math.min(
+          GET_QUERY_RESULTS_MIN_POLL_INTERVAL_MS - (now() - polledAt),
+          deadlineMs - (now() - startedAt)
+        );
+        if (backoffMs > 0) {
+          await wait(backoffMs, abortSignal);
+        }
+        continue;
+      }
+      case 'aborted':
+        throw new Error(
+          'BigQuery getQueryResults was aborted before the query completed.'
+        );
+      case 'error':
+        // A (possibly transient) fetch error — e.g. the intermittent
+        // access-denied BigQuery returns on first fetch. Retry a bounded number
+        // of times, then surface the real error.
+        if (transientRetries++ < 3) {
+          continue;
+        }
+        throw outcome.error;
+    }
+  }
+}
+
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
+  extends BaseConnection
   implements Connection, PersistSQLResults, StreamingConnection
 {
   public readonly name: string;
@@ -159,26 +563,17 @@ export class BigQueryConnection
   // not write the full path to the tables in every source
   private projectId;
 
-  private schemaCache = new Map<
-    string,
-    | {schema: StructDef; error?: undefined; timestamp: number}
-    | {error: string; schema?: undefined; timestamp: number}
-  >();
-  private sqlSchemaCache = new Map<
-    string,
-    | {
-        structDef: StructDef;
-        error?: undefined;
-        timestamp: number;
-      }
-    | {error: string; structDef?: undefined; timestamp: number}
-  >();
-
   private queryOptions?: QueryOptionsReader;
 
   private config: BigQueryConnectionConfiguration;
 
-  private location: string;
+  private location?: string;
+
+  private setupSQL: string | undefined;
+
+  private authIdentity: string | undefined;
+
+  private dbmeta: boolean;
 
   constructor(
     option: BigQueryConnectionOptions,
@@ -194,23 +589,48 @@ export class BigQueryConnection
     queryOptions?: QueryOptionsReader,
     config: BigQueryConnectionConfiguration = {}
   ) {
+    super();
     if (typeof arg === 'string') {
       this.name = arg;
     } else {
-      const {name, client_email, private_key, ...args} = arg;
+      // Every key-bearing property is destructured out of `args`, so a key
+      // never lands in `this.config` — only the credentials object the SDK
+      // needs does. `rawConfigData` comes out for the same reason: it is
+      // read once, for the digest, and is not connection config.
+      const {
+        name,
+        client_email,
+        private_key,
+        serviceAccountKey,
+        serviceAccountKeyJson,
+        rawConfigData,
+        ...args
+      } = arg;
       this.name = name;
+      this.authIdentity = authIdentityOf(rawConfigData);
       config = args;
-      if (client_email || private_key) {
+      // Trimmed before it is looked at: a value that came through a here-doc,
+      // a `$(cat key.json)`, or a secret-store copy tends to carry a trailing
+      // newline, and both the encoding sniff and the emptiness check below
+      // would otherwise read it as content.
+      const keyJson = serviceAccountKeyJson?.trim();
+      if (serviceAccountKey) {
+        config.credentials = serviceAccountKey;
+      } else if (keyJson) {
+        config.credentials = credentialsFromJson(keyJson);
+      } else if (client_email || private_key) {
         config.credentials = {
           client_email,
           private_key,
         };
       }
     }
+    rejectCompetingCredentials(this.name, config);
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
       credentials: config.credentials,
+      authClient: config.authClient,
       projectId: config.billingProjectId,
     });
 
@@ -221,11 +641,21 @@ export class BigQueryConnection
 
     this.queryOptions = queryOptions;
     this.config = config;
-    this.location = config.location || 'US';
+    this.location = config.location;
+    this.setupSQL = config.setupSQL;
+    this.dbmeta = config.dbmeta ?? false;
   }
 
   get dialectName(): string {
     return 'standardsql';
+  }
+
+  private prependSetupSQL(sql: string): string {
+    if (!this.setupSQL) return sql;
+    const setup = this.setupSQL.trimEnd().endsWith(';')
+      ? this.setupSQL
+      : this.setupSQL + ';';
+    return setup + '\n' + sql;
   }
 
   private readQueryOptions(): RunSQLOptions {
@@ -241,10 +671,6 @@ export class BigQueryConnection
     }
   }
 
-  public isPool(): this is PooledConnection {
-    return false;
-  }
-
   public canPersist(): this is PersistSQLResults {
     return true;
   }
@@ -253,20 +679,37 @@ export class BigQueryConnection
     return true;
   }
 
+  public getDigest(): string {
+    // Appended only when an auth client is in play, so connections that don't
+    // use one keep the digests — and so the persisted tables — they have now.
+    return this.authIdentity === undefined
+      ? makeDigest('bigquery', this.projectId, this.setupSQL)
+      : makeDigest(
+          'bigquery',
+          this.projectId,
+          this.setupSQL,
+          this.authIdentity
+        );
+  }
+
   public get supportsNesting(): boolean {
     return true;
   }
 
   private async _runSQL(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {},
+    options: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<{
     data: MalloyQueryData;
     schema: bigquery.ITableFieldSchema | undefined;
   }> {
+    const {rowLimit, abortSignal} = options;
     const defaultOptions = this.readQueryOptions();
     const pageSize = rowLimit ?? defaultOptions.rowLimit;
+    const perCallLabels = toBigQueryLabels(
+      this.queryMetadataBag(options.queryMetadata)
+    );
 
     try {
       const queryResultsOptions: QueryResultsOptions = {
@@ -276,7 +719,7 @@ export class BigQueryConnection
 
       const jobResult = await this.createBigQueryJobAndGetResults(
         sqlCommand,
-        undefined,
+        perCallLabels ? {labels: perCallLabels} : undefined,
         queryResultsOptions,
         abortSignal
       );
@@ -285,7 +728,8 @@ export class BigQueryConnection
         ? jobResult[2].totalRows
         : '0');
 
-      // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
+      // jobComplete is guaranteed here: getQueryResultsUntilComplete only
+      // returns once BigQuery reports the job complete (it polls otherwise).
       const queryCostBytes = jobResult[2]?.totalBytesProcessed;
       const data: MalloyQueryData = {
         rows: jobResult[0],
@@ -312,9 +756,9 @@ export class BigQueryConnection
   }
 
   public async runSQLBlockAndFetchResultSchema(
-    sqlBlock: SQLBlock,
+    sqlBlock: SQLSourceDef,
     options?: RunSQLOptions
-  ): Promise<{data: MalloyQueryData; schema: StructDef}> {
+  ): Promise<{data: MalloyQueryData; schema: SQLSourceDef}> {
     const {data, schema: schemaRaw} = await this._runSQL(
       sqlBlock.selectStr,
       options
@@ -325,7 +769,8 @@ export class BigQueryConnection
       throw new Error('Schema not present');
     }
 
-    const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
+    const schema: SQLSourceDef = {...sqlBlock, fields: []};
+    this.addFieldsToStructDef(schema, schemaRaw);
     return {data, schema};
   }
 
@@ -343,7 +788,7 @@ export class BigQueryConnection
     try {
       const [result] = await this.bigQuery.createQueryJob({
         location: this.location,
-        query: sqlCommand,
+        query: this.prependSetupSQL(sqlCommand),
         dryRun: true,
       });
       return result;
@@ -361,17 +806,32 @@ export class BigQueryConnection
     };
   }
 
-  private normalizeTablePath(tablePath: string): string {
-    if (tablePath.split('.').length === 2) {
-      return `${this.projectId}.${tablePath}`;
-    } else {
-      return tablePath;
+  private decodeTablePath(tablePath: string) {
+    return decodeDottedTablePath(tablePath, {
+      quoteChar: '`',
+      escapeStyle: 'backslash',
+      bareIdentRegex: this.dialect.tablePathBareIdentRegex,
+      dialectName: 'BigQuery',
+    });
+  }
+
+  // The whole-backtick form `` `proj.dataset.table` `` parses as one
+  // quoted segment, but the metadata API still wants the parts
+  // separately — split its decoded body on `.` to recover them.
+  private decodeTablePathSegments(tablePath: string): string[] {
+    const result = this.decodeTablePath(tablePath);
+    if (!result.ok) return [tablePath];
+    if (result.segments.length === 1 && result.segments[0].quoted) {
+      return result.segments[0].value.split('.');
     }
+    return result.segments.map(s => s.value);
   }
 
   public async getTableFieldSchema(tablePath: string): Promise<SchemaInfo> {
-    const segments = this.normalizeTablePath(tablePath).split('.');
-
+    let segments = this.decodeTablePathSegments(tablePath);
+    if (segments.length === 2) {
+      segments = [this.projectId, ...segments];
+    }
     if (segments.length !== 3) {
       throw new Error(
         `Improper table path: ${tablePath}. A table path requires 2 or 3 segments`
@@ -395,6 +855,7 @@ export class BigQueryConnection
       const [metadata] = await metadataPromise;
       return {
         schema: metadata.schema,
+        description: metadata.description,
         needsTableSuffixPseudoColumn: needTableSuffixPseudoColumn,
         needsPartitionTimePseudoColumn:
           metadata.timePartitioning?.type !== undefined &&
@@ -437,7 +898,7 @@ export class BigQueryConnection
    *
    */
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
+    const hash = makeDigest(sqlCommand);
 
     const tempTableName: string | undefined = this.temporaryTables.get(hash);
     if (tempTableName !== undefined) {
@@ -510,13 +971,13 @@ export class BigQueryConnection
     }
 
     const [job] = await this.bigQuery.createQueryJob({
-      query: sqlCommand,
+      query: this.prependSetupSQL(sqlCommand),
       location: this.location,
       destination: table,
     });
 
     // if creating this job didn't throw, there's an ID.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
     return job.id!;
   }
 
@@ -530,156 +991,138 @@ export class BigQueryConnection
       const type = field.type as string;
       const name = field.name as string;
 
-      // check for an array
-      if (field.mode === 'REPEATED' && !['STRUCT', 'RECORD'].includes(type)) {
+      const isRecord = ['STRUCT', 'RECORD'].includes(type);
+      const meta = this.dbmetaFor(field.description);
+      const structShared = {
+        name,
+        dialect: this.dialectName,
+        fields: [],
+        ...meta,
+      };
+      if (field.mode === 'REPEATED' && !isRecord) {
+        // Malloy treats repeated values as an array of scalars.
         const malloyType = this.dialect.sqlTypeToMalloyType(type);
         if (malloyType) {
-          const innerStructDef: StructDef = {
-            type: 'struct',
-            name,
-            dialect: this.dialectName,
-            structSource: {type: 'nested'},
-            structRelationship: {
-              type: 'nested',
-              fieldName: name,
-              isArray: true,
-            },
-            fields: [{...malloyType, name: 'value'} as FieldTypeDef],
-          };
-          structDef.fields.push(innerStructDef);
+          structDef.fields.push({...mkArrayDef(malloyType, name), ...meta});
         }
-      } else if (['STRUCT', 'RECORD'].includes(type)) {
-        const innerStructDef: StructDef = {
-          type: 'struct',
-          name,
-          dialect: this.dialectName,
-          structSource:
-            field.mode === 'REPEATED' ? {type: 'nested'} : {type: 'inline'},
-          structRelationship:
-            field.mode === 'REPEATED'
-              ? {type: 'nested', fieldName: name, isArray: false}
-              : {type: 'inline'},
-          fields: [],
+      } else if (isRecord) {
+        const ifRepeatedRecord: StructDef = {
+          ...structShared,
+          type: 'array',
+          elementTypeDef: {type: 'record_element'},
+          join: 'many',
         };
-        this.addFieldsToStructDef(innerStructDef, field);
-        structDef.fields.push(innerStructDef);
+        const elseRecord: StructDef = {
+          ...structShared,
+          type: 'record',
+          join: 'one',
+        };
+        const recStruct =
+          field.mode === 'REPEATED' ? ifRepeatedRecord : elseRecord;
+        this.addFieldsToStructDef(recStruct, field);
+        structDef.fields.push(recStruct);
       } else {
         const malloyType = this.dialect.sqlTypeToMalloyType(type) ?? {
-          type: 'unsupported',
+          type: 'sql native',
           rawType: type.toLowerCase(),
         };
-        structDef.fields.push({name, ...malloyType} as FieldTypeDef);
+        structDef.fields.push({name, ...malloyType, ...meta});
       }
     }
   }
 
-  private structDefFromTableSchema(
-    tableKey: string,
-    tablePath: string,
-    schemaInfo: SchemaInfo
-  ): StructDef {
-    const structDef: StructDef = {
-      type: 'struct',
-      name: tableKey,
-      dialect: this.dialectName,
-      structSource: {
+  private dbmetaFor(description: string | null | undefined) {
+    return this.dbmeta ? dbmetaAnnotations({description}) : {};
+  }
+
+  async fetchSelectSchema(
+    sqlSource: SQLSourceRequest
+  ): Promise<SQLSourceDef | string> {
+    try {
+      const ret: SQLSourceDef = {
+        type: 'sql_select',
+        ...sqlSource,
+        dialect: this.dialectName,
+        fields: [],
+        name: sqlKey(sqlSource.connection, sqlSource.selectStr),
+      };
+      this.addFieldsToStructDef(ret, await this.getSQLBlockSchema(ret));
+      return ret;
+    } catch (error) {
+      return error.message;
+    }
+  }
+
+  // tablePath is pasted into the FROM clause verbatim — we never edit the
+  // characters the user wrote. The default project is the one sanctioned
+  // addition: BigQuery resolves an unqualified `dataset.table` against the
+  // job's billing/ambient project, so when the user omits the project we
+  // prepend it as a new leading segment. We do this exactly when the user
+  // wrote a two-segment path; anything else (a single segment, an already-
+  // qualified path, or a path wrapped entirely in backticks — which decodes
+  // to one segment) is left as written, and the user supplies the project.
+  // The project is the one segment we render ourselves, so we quote it if
+  // BigQuery requires it (e.g. a legacy `domain.com:project` id).
+  private qualifyTablePath(tablePath: string): string {
+    const decoded = this.decodeTablePath(tablePath);
+    if (!decoded.ok || decoded.segments.length !== 2) {
+      return tablePath;
+    }
+    return `${this.encodeProjectSegment(this.projectId)}.${tablePath}`;
+  }
+
+  private encodeProjectSegment(project: string): string {
+    // Leave it bare only if the whole id is a bare table-path segment (the
+    // regex anchors the start, so require it to match end to end); otherwise
+    // quote it the way BigQuery would any other identifier.
+    const bare = this.dialect.tablePathBareIdentRegex.exec(project);
+    if (bare && bare[0] === project) {
+      return project;
+    }
+    return this.dialect.sqlQuoteIdentifier(project);
+  }
+
+  async fetchTableSchema(
+    tableName: string,
+    tablePath: string
+  ): Promise<TableSourceDef | string> {
+    try {
+      const tableFieldSchema = await this.getTableFieldSchema(tablePath);
+      const tableDef: TableSourceDef = {
         type: 'table',
-        tablePath,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
-      fields: [],
-    };
-    this.addFieldsToStructDef(structDef, schemaInfo.schema);
-    if (schemaInfo.needsTableSuffixPseudoColumn) {
-      structDef.fields.push({
-        type: 'string',
-        name: '_TABLE_SUFFIX',
-      });
-    }
-    if (schemaInfo.needsPartitionTimePseudoColumn) {
-      structDef.fields.push({
-        type: 'timestamp',
-        name: '_PARTITIONTIME',
-      });
-    }
-    if (schemaInfo.needsPartitionDatePseudoColumn) {
-      structDef.fields.push({
-        type: 'date',
-        name: '_PARTITIONDATE',
-      });
-    }
-    return structDef;
-  }
-
-  private structDefFromSQLSchema(
-    sqlBlock: SQLBlock,
-    tableFieldSchema: bigquery.ITableFieldSchema
-  ): StructDef {
-    const structDef: StructDef = {
-      type: 'struct',
-      name: sqlBlock.name,
-      dialect: this.dialectName,
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
-      fields: [],
-    };
-    this.addFieldsToStructDef(structDef, tableFieldSchema);
-    return structDef;
-  }
-
-  public async fetchSchemaForTables(
-    missing: Record<string, string>,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: {[name: string]: string} = {};
-
-    for (const tableKey in missing) {
-      let inCache = this.schemaCache.get(tableKey);
-      if (
-        !inCache ||
-        (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-      ) {
-        const timestamp = refreshTimestamp ?? Date.now();
-        const tablePath = this.normalizeTablePath(missing[tableKey]);
-        try {
-          const tableFieldSchema = await this.getTableFieldSchema(tablePath);
-          inCache = {
-            schema: this.structDefFromTableSchema(
-              tableKey,
-              tablePath,
-              tableFieldSchema
-            ),
-            timestamp,
-          };
-          this.schemaCache.set(tableKey, inCache);
-        } catch (error) {
-          inCache = {error: error.message, timestamp};
-        }
+        name: tableName,
+        dialect: this.dialectName,
+        tablePath: this.qualifyTablePath(tablePath),
+        connection: this.name,
+        fields: [],
+        ...this.dbmetaFor(tableFieldSchema.description),
+      };
+      this.addFieldsToStructDef(tableDef, tableFieldSchema.schema);
+      if (tableFieldSchema.needsTableSuffixPseudoColumn) {
+        tableDef.fields.push({
+          type: 'string',
+          name: '_TABLE_SUFFIX',
+        });
       }
-      if (inCache.schema !== undefined) {
-        schemas[tableKey] = inCache.schema;
-      } else {
-        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
+      if (tableFieldSchema.needsPartitionTimePseudoColumn) {
+        tableDef.fields.push({
+          type: 'timestamp',
+          name: '_PARTITIONTIME',
+        });
       }
+      if (tableFieldSchema.needsPartitionDatePseudoColumn) {
+        tableDef.fields.push({
+          type: 'date',
+          name: '_PARTITIONDATE',
+        });
+      }
+      return tableDef;
+    } catch (error) {
+      return error.message;
     }
-    return {schemas, errors};
   }
 
-  private async getSQLBlockSchema(sqlRef: SQLBlock) {
+  private async getSQLBlockSchema(sqlRef: SQLSourceDef) {
     // We do a simple retry-loop here, as a temporary fix for a transient
     // error in which sometimes requesting results from a job yields an
     // access denied error. It seems that in these cases, simply trying again
@@ -690,7 +1133,7 @@ export class BigQueryConnection
       try {
         const [job] = await this.bigQuery.createQueryJob({
           location: this.location,
-          query: sqlRef.selectStr,
+          query: this.prependSetupSQL(sqlRef.selectStr),
           dryRun: true,
         });
 
@@ -702,37 +1145,19 @@ export class BigQueryConnection
     throw lastFetchError;
   }
 
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  > {
-    const key = sqlRef.name;
-    let inCache = this.sqlSchemaCache.get(key);
-    if (
-      !inCache ||
-      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-    ) {
-      const timestamp = refreshTimestamp ?? Date.now();
-      try {
-        const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
-        inCache = {
-          structDef: this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
-          timestamp,
-        };
-      } catch (error) {
-        inCache = {error: error.message, timestamp};
-      }
-      this.sqlSchemaCache.set(key, inCache);
-    }
-    return inCache;
+  /**
+   * The effective query timeout in milliseconds. A configured value that is
+   * unset, blank, non-numeric, zero, or negative falls back to TIMEOUT_MS; only
+   * a positive number overrides the default. The result bounds both the
+   * BigQuery job (jobTimeoutMs) and the getQueryResultsUntilComplete poll
+   * deadline, so it must be positive: a zero or negative would make the job
+   * cancel on the first poll instead of running.
+   */
+  private resolvedTimeoutMs(): number {
+    const configured = Number(this.config.timeoutMs);
+    return configured > 0 ? configured : TIMEOUT_MS;
   }
 
-  // TODO this needs to extend the wait for results using a timeout set by the user,
-  // and probably needs to loop to check for results - BQ docs now say that after ~2min of waiting,
-  // no matter what you set for timeoutMs, they will probably just return.
   private async createBigQueryJobAndGetResults(
     sqlCommand: string,
     createQueryJobOptions?: Query,
@@ -751,38 +1176,52 @@ export class BigQueryConnection
       };
       abortSignal?.addEventListener('abort', cancel);
 
-      // TODO we should check if this is still required?
-      // We do a simple retry-loop here, as a temporary fix for a transient
-      // error in which sometimes requesting results from a job yields an
-      // access denied error. It seems that in these cases, simply trying again
-      // solves the problem. This is being currently investigated by
-      // @christopherswenson and @lloydtabb.
-      let lastFetchError;
-      for (let retries = 0; retries < 3; retries++) {
-        try {
-          return await job.getQueryResults({
-            timeoutMs: 1000 * 60 * 2, // TODO - this requires some rethinking, and is a hack to resolve some issues. talk to @bporterfield
+      try {
+        // Poll for results until the job completes or the connection's
+        // configured timeout elapses; a single getQueryResults call can't wait
+        // out a long-running query (see getQueryResultsUntilComplete). The
+        // deadline is the same resolved timeout that bounds the job's
+        // jobTimeoutMs, so the client stops waiting right about when BigQuery
+        // stops running the job.
+        return await getQueryResultsUntilComplete(
+          job,
+          {
+            wrapIntegers: {
+              integerTypeCastFunction: (val: string | number) => {
+                const num = Number(val);
+                if (Number.isSafeInteger(num)) {
+                  return num;
+                }
+                return String(val);
+              },
+            },
             ...getQueryResultsOptions,
-          });
-        } catch (fetchError) {
-          lastFetchError = fetchError;
-        } finally {
-          abortSignal?.removeEventListener('abort', cancel);
-        }
+          },
+          this.resolvedTimeoutMs(),
+          {abortSignal}
+        );
+      } finally {
+        abortSignal?.removeEventListener('abort', cancel);
       }
-      throw lastFetchError;
     } catch (e) {
       throw maybeRewriteError(e);
     }
   }
 
   private async createBigQueryJob(createQueryJobOptions?: Query): Promise<Job> {
+    const options = {...createQueryJobOptions};
+    if (options.query) {
+      options.query = this.prependSetupSQL(options.query);
+    }
     const [job] = await this.bigQuery.createQueryJob({
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
-      jobTimeoutMs: Number(this.config.timeoutMs) || TIMEOUT_MS,
-      ...createQueryJobOptions,
+      // Shadow the resolved timeout to the job's server-side limit so BigQuery
+      // cancels a runaway job on its own; getQueryResultsUntilComplete polls up
+      // to the same deadline on the client side.
+      jobTimeoutMs: this.resolvedTimeoutMs(),
+      ...options,
     });
     return job;
   }
@@ -795,17 +1234,18 @@ export class BigQueryConnection
       query: sqlCommand,
       dryRun,
     });
-    const url = `https://console.cloud.google.com/bigquery?project=${this.billingProjectId}&j=bq:${this.location}:${job.id}&page=queryresults`;
+    const url = `https://console.cloud.google.com/bigquery?project=${this.billingProjectId}&j=bq:${job.location}:${job.id}&page=queryresults`;
     return url;
   }
 
   public runSQLStream(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
+    {rowLimit, abortSignal, queryMetadata}: RunSQLOptions = {}
+  ): AsyncIterableIterator<QueryRecord> {
+    const labels = toBigQueryLabels(this.queryMetadataBag(queryMetadata));
     const streamBigQuery = (
       onError: (error: Error) => void,
-      onData: (data: QueryDataRow) => void,
+      onData: (data: QueryRecord) => void,
       onEnd: () => void
     ) => {
       let index = 0;
@@ -822,13 +1262,21 @@ export class BigQueryConnection
           this.end();
         }
       }
+      const query = this.prependSetupSQL(sqlCommand);
       this.bigQuery
-        .createQueryStream(sqlCommand)
+        .createQueryStream(labels ? {query, labels} : query)
         .on('error', onError)
         .on('data', handleData)
         .on('end', onEnd);
     };
-    return toAsyncGenerator<QueryDataRow>(streamBigQuery);
+    return toAsyncGenerator<QueryRecord>(streamBigQuery);
+  }
+
+  async fetchTableMetadata(tablePath: string): Promise<TableMetadata> {
+    const [proj, dataset, table] = this.decodeTablePathSegments(tablePath);
+    return {
+      url: `https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1s${proj}!2s${dataset}!3s${table}`,
+    };
   }
 
   async close(): Promise<void> {

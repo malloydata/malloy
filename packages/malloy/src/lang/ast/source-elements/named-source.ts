@@ -1,62 +1,48 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
+import type {
+  Argument,
+  InvokedStructRef,
+  Parameter,
+  SourceDef,
+} from '../../../model/malloy_types';
 import {
-  isCastType,
-  isSQLBlockStruct,
-  isValueParameter,
+  isBasicAtomicType,
+  isSourceDef,
+  mkSafeRecord,
   paramHasValue,
-  StructDef,
-  StructRef,
+  safeRecordGet,
 } from '../../../model/malloy_types';
 
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
-import {ConstantSubExpression} from '../expressions/constant-sub-expression';
 import {castTo} from '../time-utils';
-import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
-
-export class IsValueBlock extends MalloyElement {
-  elementType = 'isValueBlock';
-
-  constructor(readonly isMap: Record<string, ConstantSubExpression>) {
-    super();
-    this.has(isMap);
-  }
-}
+import {ModelEntryReference} from '../types/malloy-element';
+import type {Argument as HasArgument} from '../parameters/argument';
+import type {
+  LogMessageOptions,
+  MessageCode,
+  MessageParameterType,
+} from '../../parse-log';
+import {ExprIdReference} from '../expressions/expr-id-reference';
+import {ParameterSpace} from '../field-space/parameter-space';
+import type {HasParameter} from '../parameters/has-parameter';
+import {checkFilterExpression} from '../types/expression-def';
 
 export class NamedSource extends Source {
   elementType = 'namedSource';
-  protected isBlock?: IsValueBlock;
 
   constructor(
     readonly ref: ModelEntryReference | string,
-    paramValues: Record<string, ConstantSubExpression> = {}
+    readonly sourceArguments: Record<string, Argument> | undefined,
+    readonly args: HasArgument[] | undefined
   ) {
     super();
-    if (paramValues && Object.keys(paramValues).length > 0) {
-      this.isBlock = new IsValueBlock(paramValues);
-      this.has({parameterValues: this.isBlock});
+    if (args) {
+      this.has({args});
     }
     if (ref instanceof ModelEntryReference) {
       this.has({ref: ref});
@@ -67,44 +53,203 @@ export class NamedSource extends Source {
     return this.ref instanceof ModelEntryReference ? this.ref.name : this.ref;
   }
 
-  structRef(): StructRef {
-    if (this.isBlock) {
-      return this.structDef();
-    }
+  structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
     const modelEnt = this.modelEntry(this.ref);
+    // If we are not exporting the referenced structdef, don't use the reference
     if (modelEnt && !modelEnt.exported) {
-      // If we are not exporting the referenced structdef, don't
-      // use the reference
-      return this.structDef();
+      return {
+        structRef: this.getSourceDef(parameterSpace),
+      };
     }
-    return this.refName;
+    return {
+      structRef: this.refName,
+      sourceArguments: this.evaluateArgumentsForRef(parameterSpace),
+    };
   }
 
-  modelStruct(): StructDef | undefined {
+  refLogError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ) {
+    if (typeof this.ref === 'string') {
+      this.logError(code, parameters, options);
+    } else {
+      this.ref.logError(code, parameters, options);
+    }
+  }
+
+  modelStruct(): SourceDef | undefined {
     const modelEnt = this.modelEntry(this.ref);
     const entry = modelEnt?.entry;
     if (!entry) {
-      const undefMsg = `Undefined source '${this.refName}'`;
-      (this.ref instanceof ModelEntryReference ? this.ref : this).log(undefMsg);
+      this.refLogError(
+        'source-not-found',
+        `Undefined source '${this.refName}'`
+      );
       return;
     }
     if (entry.type === 'query') {
-      this.log(`Cannot construct a source from a query '${this.refName}'`);
+      // I don't understand under what circumstance this code would be
+      // executed, what Malloy you would write to generate this error,
+      // but the error exists so I am leaving it for now.
+      //
+      // Someone with time and courage should either remove this error
+      // because it isn't possible, or go ahead and make a source out
+      // of a query, which is a thing you can do, although when you
+      // do that it currently doesn't go through this path, so I don't
+      // know how you would test that change.
+      this.logError(
+        'invalid-source-from-query',
+        `Cannot construct a source from query '${this.refName}'`
+      );
       return;
     } else if (entry.type === 'function') {
-      this.log(`Cannot construct a source from a function '${this.refName}'`);
+      this.logError(
+        'invalid-source-from-function',
+        `Cannot construct a source from a function '${this.refName}'`
+      );
       return;
     } else if (entry.type === 'connection') {
-      this.log(`Cannot construct a source from a connection '${this.refName}'`);
+      this.logError(
+        'invalid-source-from-connection',
+        `Cannot construct a source from a connection '${this.refName}'`
+      );
       return;
-    } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
-      this.log(`Must use 'from_sql()' for sql source '${this.refName}'`);
+    } else if (entry.type === 'userType') {
+      this.logError(
+        'invalid-source-from-user-type',
+        `Cannot construct a source from a user type '${this.refName}'`
+      );
       return;
+    } else if (entry.type === 'given') {
+      this.logError(
+        'invalid-source-from-given',
+        `Cannot construct a source from given '${this.refName}'`
+      );
+      return;
+    } else {
+      if (isSourceDef(entry)) {
+        // This struct is created as an unmodified reference to `entry`. Mark it
+        // with entry's own identity; the modification path (DynamicSpace) clears
+        // this so only true references carry a referenceID.
+        return {...entry, referenceID: entry.sourceID};
+      }
     }
-    return {...entry};
+    // I think this is now a never
+    this.logError(
+      'invalid-source-source',
+      'Cannot construct a source from a never type'
+    );
   }
 
-  structDef(): StructDef {
+  private evaluateArgumentsForRef(
+    parameterSpace: ParameterSpace | undefined
+  ): Record<string, Parameter> {
+    const base = this.modelStruct();
+    if (base === undefined) {
+      return {};
+    }
+
+    return this.evaluateArguments(parameterSpace, base.parameters, []);
+  }
+
+  private evaluateArguments(
+    parameterSpace: ParameterSpace | undefined,
+    parametersIn: Record<string, Parameter> | undefined,
+    parametersOut: HasParameter[] | undefined
+  ): Record<string, Parameter> {
+    const outArguments = Object.assign(
+      mkSafeRecord<Argument>(),
+      this.sourceArguments
+    );
+    const passedNames = new Set();
+    for (const argument of this.args ?? []) {
+      const id =
+        argument.id ??
+        (argument.value instanceof ExprIdReference
+          ? argument.value.fieldReference
+          : undefined);
+      if (id === undefined) {
+        argument.value.logError(
+          'unnamed-source-argument',
+          'Parameterized source arguments must be named with `parameter_name is`'
+        );
+        continue;
+      }
+      const name = id.outputName;
+      if (passedNames.has(name)) {
+        argument.logError(
+          'duplicate-source-argument',
+          `Cannot pass argument for \`${name}\` more than once`
+        );
+        continue;
+      }
+      passedNames.add(name);
+      const parameter = parametersIn
+        ? safeRecordGet(parametersIn, name)
+        : undefined;
+      if (!parameter) {
+        id.logError(
+          'source-parameter-not-found',
+          `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
+        );
+      } else {
+        const paramSpace =
+          parameterSpace ?? new ParameterSpace(parametersOut ?? []);
+        const pVal = argument.value.getExpression(paramSpace);
+        let value = pVal.value;
+        if (
+          pVal.type === 'filter expression' &&
+          parameter.type === 'filter expression' &&
+          parameter.filterType
+        ) {
+          if (value.node === 'parameter') {
+            const filterType = pVal['filterType'] ?? 'missing-filter-type';
+            if (parameter.filterType !== filterType) {
+              argument.value.logError(
+                'filter-expression-type',
+                `Parameter types filter<${parameter.filterType}> and filter<${filterType}> do not match`
+              );
+            }
+          } else {
+            checkFilterExpression(argument.value, parameter.filterType, value);
+          }
+        }
+        // NOTE: isBasicAtomicType guard here excludes compound types from auto-casting.
+        // Revisit if parameters can ever have compound types.
+        if (pVal.type !== parameter.type && isBasicAtomicType(parameter.type)) {
+          value = castTo({type: parameter.type}, pVal.value, pVal.type, true);
+        }
+        outArguments[name] = {
+          ...parameter,
+          value,
+        };
+      }
+    }
+
+    for (const paramName in parametersIn) {
+      if (!(paramName in outArguments)) {
+        if (!paramHasValue(parametersIn[paramName])) {
+          this.refLogError(
+            'missing-source-argument',
+            `Argument not provided for required parameter \`${paramName}\``
+          );
+        }
+      }
+    }
+
+    return outArguments;
+  }
+
+  getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
+    return this.withParameters(parameterSpace, []);
+  }
+
+  withParameters(
+    parameterSpace: ParameterSpace | undefined,
+    pList: HasParameter[] | undefined
+  ): SourceDef {
     /*
       Can't really generate the callback list until after all the
       things before me are translated, and that kinda screws up
@@ -119,47 +264,38 @@ export class NamedSource extends Source {
       which might result in a full translation.
     */
 
-    const ret = this.modelStruct();
-    if (!ret) {
+    const base = this.modelStruct();
+    if (!base) {
       const notFound = ErrorFactory.structDef;
       const err = `${this.refName}-undefined`;
       notFound.name = notFound.name + err;
       notFound.dialect = notFound.dialect + err;
       return notFound;
     }
-    const declared = {...ret.parameters};
 
-    const makeWith = this.isBlock?.isMap || {};
-    for (const [pName, pExpr] of Object.entries(makeWith)) {
-      const decl = declared[pName];
-      // const pVal = pExpr.constantValue();
-      if (!decl) {
-        this.log(`Value given for undeclared parameter '${pName}`);
-      } else {
-        if (isValueParameter(decl)) {
-          if (decl.constant) {
-            pExpr.log(`Cannot override constant parameter ${pName}`);
-          } else {
-            const pVal = pExpr.constantValue();
-            let value = pVal.value;
-            if (pVal.dataType !== decl.type && isCastType(decl.type)) {
-              value = castTo(decl.type, pVal.value, pVal.dataType, true);
-            }
-            decl.value = value;
-          }
-        } else {
-          // TODO type checking here -- except I am still not sure what
-          // datatype half conditions have ..
-          decl.condition = pExpr.constantCondition(decl.type).value;
-        }
+    const outParameters = mkSafeRecord<Parameter>();
+    for (const parameter of pList ?? []) {
+      const compiled = parameter.parameter();
+      outParameters[compiled.name] = compiled;
+    }
+
+    const outArguments = this.evaluateArguments(
+      parameterSpace,
+      base.parameters,
+      pList
+    );
+    for (const paramName in base.parameters) {
+      if (
+        !(paramName in outArguments) &&
+        paramHasValue(safeRecordGet(base.parameters, paramName)!)
+      ) {
+        outArguments[paramName] = {
+          ...safeRecordGet(base.parameters, paramName)!,
+        };
       }
     }
-    for (const checkDef in ret.parameters) {
-      if (!paramHasValue(declared[checkDef])) {
-        this.log(`Value not provided for required parameter ${checkDef}`);
-      }
-    }
-    this.document()?.rememberToAddModelAnnotations(ret);
+
+    const ret = {...base, parameters: outParameters, arguments: outArguments};
     return ret;
   }
 }

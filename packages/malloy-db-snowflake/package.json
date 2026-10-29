@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-snowflake",
-  "version": "0.0.144",
+  "version": "0.0.437",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,22 +9,23 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
+  "homepage": "https://github.com/malloydata/malloy#readme",
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "jest --config=../../jest.config.js",
+    "test": "cd ../.. && ts-node scripts/check_dialect_connection.ts snowflake && jest packages/malloy-db-snowflake",
     "build": "tsc --build",
-    "clean": "tsc --build --clean",
+    "dev": "tsc --build",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.144",
-    "@types/snowflake-sdk": "^1.6.16",
+    "@malloydata/malloy": "0.0.437",
     "generic-pool": "^3.9.0",
-    "snowflake-sdk": "^1.9.0",
+    "snowflake-sdk": "2.3.1",
     "toml": "^3.0.0"
   }
 }

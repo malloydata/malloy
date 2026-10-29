@@ -1,71 +1,66 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {AtomicFieldType, CastType} from '../../../model';
+import type {AtomicTypeDef} from '../../../model/malloy_types';
 import {castTo} from '../time-utils';
-import {ExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
-import {compressExpr} from './utils';
+import type {FieldSpace} from '../types/field-space';
+import {booleanValueError, NUMBER_HINT} from './boolean-value';
 
 export class ExprCast extends ExpressionDef {
   elementType = 'cast';
   constructor(
     readonly expr: ExpressionDef,
-    readonly castType: CastType | {raw: string},
+    readonly castType: AtomicTypeDef | {raw: string},
     readonly safe = false
   ) {
     super({expr: expr});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  // TODO: Validate senseless casts (e.g. scalar to record) at translate time
+  // for better error messages than what the dialect/database produces.
+  protected computeExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    let dataType: AtomicFieldType = 'unsupported';
-    if (typeof this.castType === 'string') {
+    let dataType: AtomicTypeDef = {type: 'error'};
+    if ('type' in this.castType) {
       dataType = this.castType;
     } else {
       const dialect = fs.dialectObj();
       if (dialect) {
         if (dialect.validateTypeName(this.castType.raw)) {
-          // TODO theoretically `sqlTypeToMalloyType` can get number subtypes,
-          // but `TypeDesc` does not support them.
-          dataType =
-            fs.dialectObj()?.sqlTypeToMalloyType(this.castType.raw)?.type ??
-            'unsupported';
+          dataType = dialect.sqlTypeToMalloyType(this.castType.raw);
         } else {
-          this.log(
+          this.logError(
+            'invalid-sql-native-type',
             `Cast type \`${this.castType.raw}\` is invalid for ${dialect.name} dialect`
+          );
+        }
+        if (this.safe && !dialect.supportsSafeCast) {
+          this.logError(
+            'dialect-cast-unsafe-only',
+            `The SQL dialect '${fs.dialectName()}' does not supply a safe cast operator`
           );
         }
       }
     }
-    return {
+    const noCast =
+      booleanValueError(fs, expr, 'in a cast', this, NUMBER_HINT) ||
+      booleanValueError(
+        fs,
+        dataType,
+        'as the type of a cast',
+        this,
+        'write a comparison'
+      );
+    if (noCast) return noCast;
+    return computedExprValue({
       dataType,
-      expressionType: expr.expressionType,
-      value: compressExpr(
-        castTo(this.castType, expr.value, expr.dataType, this.safe)
-      ),
-      evalSpace: expr.evalSpace,
-    };
+      value: castTo(this.castType, expr.value, expr.type, this.safe),
+      from: [expr],
+    });
   }
 }

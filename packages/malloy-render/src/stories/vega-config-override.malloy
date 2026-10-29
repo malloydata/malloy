@@ -1,0 +1,54 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+  measure: total_sales is retail_price.sum()
+  measure: avg_margin is avg(retail_price - cost)
+  dimension: product is name
+
+  # bar_chart
+  view: topSellingBrands is {
+    group_by: brand
+    aggregate: `Sales $` is retail_price.avg()*500
+    limit: 10
+  }
+
+  view: category_bar is {
+    limit: 2
+    group_by: category
+    # currency
+    aggregate: `Avg Retail` is retail_price.avg()
+
+    nest:
+    `Top Departments` is {
+      group_by: department
+      # currency
+      aggregate: `Avg Retail` is retail_price.avg()
+      limit: 5
+    }
+    # size=lg
+    `Top Selling Brands` is topSellingBrands
+    `Top Products` is {
+      group_by: name
+      # currency
+      aggregate: `Sales` is retail_price.avg()
+      limit: 10
+    }
+    # size=spark
+    spark is topSellingBrands
+    # size=sm
+    sm is topSellingBrands
+    # size=md
+    md is topSellingBrands
+    # size=lg
+    lg is topSellingBrands
+    # size=xl
+    xl is topSellingBrands
+    # size=2xl
+    `2xl` is topSellingBrands
+  }
+
+  # line_chart
+  view: lc is {
+    group_by: id
+    aggregate: avg_retail is retail_price.avg()
+    order_by: id
+  }
+}

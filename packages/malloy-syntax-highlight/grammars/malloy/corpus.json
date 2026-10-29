@@ -1,0 +1,583 @@
+{
+  "description": "Authored grammar corpus — the shared contract between two tests. (1) The drift test in packages/malloy/src/lang/test/ tokenizes each `code` with the real MalloyLexer and asserts every `expect[].text` span maps to a token of the claimed `lexer` kind — catching 'the language moved'. (2) The hermetic grammar test in this package tokenizes each `code` with vscode-textmate and asserts every `expect[].text` span carries the claimed `scope`. `lexer` is verified ground truth (run scripts/oracle); `scope` is an authored design decision. Neither test is generated; this file is the spec.",
+  "scopeConventions": "Theme-portable TextMate scopes only — no borrowed .json/.ts suffixes. Themes key off scope prefixes (string, variable, constant, keyword, punctuation), so the trailing .malloy is specificity for our own theme rules, not a coloring dependency.",
+  "cases": [
+    {
+      "name": "plain single-quoted string",
+      "code": "dimension: a is 'plain'",
+      "expect": [
+        {
+          "text": "'plain'",
+          "lexer": "SQ_STRING",
+          "scope": "string.quoted.single.malloy"
+        }
+      ]
+    },
+    {
+      "name": "plain double-quoted string",
+      "code": "dimension: a is \"plain\"",
+      "expect": [
+        {
+          "text": "\"plain\"",
+          "lexer": "DQ_STRING",
+          "scope": "string.quoted.double.malloy"
+        }
+      ]
+    },
+    {
+      "name": "raw single-quoted string (s-prefix) — UNSUPPORTED today",
+      "code": "where: x = s'C:\\path'",
+      "expect": [
+        {
+          "text": "s'C:\\path'",
+          "lexer": "RAW_SQ",
+          "scope": "string.quoted.raw.single.malloy"
+        }
+      ]
+    },
+    {
+      "name": "raw double-quoted string (s-prefix) — UNSUPPORTED today",
+      "code": "where: x = s\"raw\"",
+      "expect": [
+        {
+          "text": "s\"raw\"",
+          "lexer": "RAW_DQ",
+          "scope": "string.quoted.raw.double.malloy"
+        }
+      ]
+    },
+    {
+      "name": "filter literal, single quote (f-prefix) — UNSUPPORTED today",
+      "code": "where: state ~ f'CA, NY'",
+      "expect": [
+        {
+          "text": "f'CA, NY'",
+          "lexer": "SQ_FILTER",
+          "scope": "string.quoted.filter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "filter literal, triple single quote (f-prefix) — UNSUPPORTED today",
+      "code": "where: ts ~ f'''after @2020'''",
+      "expect": [
+        {
+          "text": "f'''after @2020'''",
+          "lexer": "SQ3_FILTER",
+          "scope": "string.quoted.filter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "filter literal, double quote (f-prefix) — UNSUPPORTED today",
+      "code": "where: s ~ f\"foo\"",
+      "expect": [
+        {
+          "text": "f\"foo\"",
+          "lexer": "DQ_FILTER",
+          "scope": "string.quoted.filter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "filter literal, backtick (f-prefix) — UNSUPPORTED today",
+      "code": "where: s ~ f`bar`",
+      "expect": [
+        {
+          "text": "f`bar`",
+          "lexer": "BQ_FILTER",
+          "scope": "string.quoted.filter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "bare backtick is a quoted identifier, not a string",
+      "code": "dimension: `weird name` is 1",
+      "expect": [
+        {
+          "text": "`weird name`",
+          "lexer": "BQ_STRING",
+          "scope": "variable.other.quoted.malloy"
+        }
+      ]
+    },
+    {
+      "name": "regex literal r'...' and /'...'",
+      "code": "where: state ~ r'C.' | /'N.'",
+      "expect": [
+        {
+          "text": "r'C.'",
+          "lexer": "HACKY_REGEX",
+          "scope": "string.regexp.malloy"
+        },
+        {
+          "text": "/'N.'",
+          "lexer": "HACKY_REGEX",
+          "scope": "string.regexp.malloy"
+        }
+      ]
+    },
+    {
+      "name": "given reference $name — UNSUPPORTED today",
+      "code": "where: y = $start_year",
+      "expect": [
+        {
+          "text": "$start_year",
+          "lexer": "GIVEN_REF",
+          "scope": "variable.parameter.malloy"
+        }
+      ]
+    },
+    {
+      "name": "percent literal — UNSUPPORTED today",
+      "code": "sample: 50%",
+      "expect": [
+        {
+          "text": "50%",
+          "lexer": "PERCENT_LITERAL",
+          "scope": "constant.numeric.percentage.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: a \"\"\" string as an argument to connection.sql(...) IS SQL",
+      "note": "SQL comes from the .sql() context, not the \"\"\" delimiter; the lexer cannot tell.",
+      "code": "run: duckdb.sql(\"\"\"SELECT 1\"\"\")",
+      "expect": [
+        {
+          "text": "\"\"\"",
+          "lexer": "SQL_BEGIN",
+          "scope": "punctuation.definition.string.begin.sql.malloy"
+        },
+        {
+          "text": "SELECT",
+          "lexer": "SQL_END",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: a SHORT string in connection.sql(...) is ALSO SQL",
+      "note": "Any string in .sql() is SQL; the lexer sees only SQ_STRING.",
+      "code": "run: duckdb.sql('SELECT 1')",
+      "expect": [
+        {
+          "text": "'SELECT 1'",
+          "lexer": "SQ_STRING",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: backtick-quoted connection (connectionId is an `id` = IDENTIFIER | BQ_STRING)",
+      "code": "run: `my conn`.sql(\"SELECT 1\")",
+      "expect": [
+        {
+          "text": "`my conn`",
+          "lexer": "BQ_STRING",
+          "scope": "variable.other.malloy"
+        },
+        {
+          "text": "SELECT 1",
+          "lexer": "DQ_STRING",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: Unicode connection name (ID_CHAR is [\\p{Alphabetic}_], not just A-Z)",
+      "code": "run: café.sql('SELECT 1')",
+      "expect": [
+        {
+          "text": "café",
+          "lexer": "IDENTIFIER",
+          "scope": "variable.other.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: a raw s'...' string argument is SQL too",
+      "note": "The s prefix is consumed; the quote opens the SQL string. Lexer sees one RAW_SQ.",
+      "code": "run: duckdb.sql(s'SELECT 1')",
+      "expect": [
+        {
+          "text": "SELECT 1",
+          "lexer": "RAW_SQ",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
+      "name": "SQL block: the string may sit on a different line from .sql(",
+      "note": "Newlines/whitespace between .sql(, the string, and ) — the nested rule spans lines.",
+      "code": "foo.sql(\n\"SELECT * FROM STUFF\"\n)",
+      "expect": [
+        {
+          "text": "foo",
+          "lexer": "IDENTIFIER",
+          "scope": "variable.other.malloy"
+        },
+        {
+          "text": "SELECT * FROM STUFF",
+          "lexer": "DQ_STRING",
+          "scope": "meta.embedded.block.sql.malloy"
+        }
+      ]
+    },
+    {
+      "name": "bare \"\"\" is a MULTI-LINE STRING, not SQL",
+      "note": "Bare \"\"\" is a string, not SQL; the lexer over-fires SQL_BEGIN, so scope follows the parser.",
+      "code": "dimension: doc is \"\"\"line one\nline two\"\"\"",
+      "expect": [
+        {
+          "text": "\"\"\"",
+          "lexer": "SQL_BEGIN",
+          "scope": "string.quoted.triple.malloy"
+        },
+        {
+          "text": "line one",
+          "lexer": "SQL_END",
+          "scope": "string.quoted.triple.malloy"
+        }
+      ]
+    },
+    {
+      "name": "interpolation %{...} INSIDE a .sql() block — valid; closes on plain } (today's }%? end pattern is wrong)",
+      "code": "run: duckdb.sql(\"\"\"SELECT %{ x } FROM t\"\"\")",
+      "expect": [
+        {
+          "text": "%{",
+          "lexer": "OPEN_CODE",
+          "scope": "punctuation.section.embedded.begin.malloy"
+        },
+        {
+          "text": "x",
+          "lexer": "IDENTIFIER",
+          "scope": "variable.other.malloy"
+        },
+        {
+          "text": "}",
+          "lexer": "CCURLY",
+          "scope": "punctuation.section.embedded.end.malloy"
+        }
+      ]
+    },
+    {
+      "name": "%{...} inside a BARE \"\"\" string is NOT an interpolation — plain string text",
+      "note": "Outside .sql(), %{ } is plain string text, not an interpolation.",
+      "code": "dimension: bad is \"\"\"x %{ y } z\"\"\"",
+      "expect": [
+        {
+          "text": "%{",
+          "lexer": "OPEN_CODE",
+          "scope": "string.quoted.triple.malloy"
+        },
+        {
+          "text": " z",
+          "lexer": "SQL_END",
+          "scope": "string.quoted.triple.malloy"
+        }
+      ]
+    },
+    {
+      "name": "annotation: bare object tag",
+      "note": "The lexer emits one ANNOTATION token; the grammar sub-divides the tag content.",
+      "code": "# bar_chart",
+      "expect": [
+        {
+          "text": "#",
+          "lexer": "ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "bar_chart",
+          "lexer": "ANNOTATION",
+          "scope": "entity.name.tag.motly"
+        }
+      ]
+    },
+    {
+      "name": "annotation: key=value (MOTLY distinguishes key from unquoted-string value)",
+      "code": "# size=large",
+      "expect": [
+        {
+          "text": "size",
+          "lexer": "ANNOTATION",
+          "scope": "entity.name.tag.motly"
+        },
+        {
+          "text": "=",
+          "lexer": "ANNOTATION",
+          "scope": "keyword.operator.assignment.motly"
+        },
+        {
+          "text": "large",
+          "lexer": "ANNOTATION",
+          "scope": "string.unquoted.motly"
+        }
+      ]
+    },
+    {
+      "name": "annotation: negated tag",
+      "code": "# -hidden",
+      "expect": [
+        {
+          "text": "-",
+          "lexer": "ANNOTATION",
+          "scope": "keyword.operator.negation.motly"
+        },
+        {
+          "text": "hidden",
+          "lexer": "ANNOTATION",
+          "scope": "entity.name.tag.motly"
+        }
+      ]
+    },
+    {
+      "name": "annotation: quoted value is a string",
+      "code": "# title=\"Hi There\"",
+      "expect": [
+        {
+          "text": "title",
+          "lexer": "ANNOTATION",
+          "scope": "entity.name.tag.motly"
+        },
+        {
+          "text": "\"Hi There\"",
+          "lexer": "ANNOTATION",
+          "scope": "string.quoted.double.motly"
+        }
+      ]
+    },
+    {
+      "name": "model annotation ##",
+      "code": "## dialect=duckdb",
+      "expect": [
+        {
+          "text": "##",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "dialect",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "entity.name.tag.motly"
+        }
+      ]
+    },
+    {
+      "name": "##internal (no space) — parsePrefix routes to a malformed bare-word route; highlighter still colors content as a tag (it does not diagnose)",
+      "code": "##internal",
+      "expect": [
+        {
+          "text": "##",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "internal",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "entity.name.tag.motly"
+        }
+      ]
+    },
+    {
+      "name": "block object annotation #| ... |# (column-matched close)",
+      "note": "Block close is column-matched, approximated by a leading-whitespace backreference.",
+      "code": "#|\n  size=large\n|#",
+      "expect": [
+        {
+          "text": "#|",
+          "lexer": "BLOCK_ANNOTATION_BEGIN",
+          "scope": "punctuation.definition.annotation.begin.malloy"
+        },
+        {
+          "text": "size",
+          "lexer": "BLOCK_ANNOTATION_TEXT",
+          "scope": "entity.name.tag.motly"
+        },
+        {
+          "text": "|#",
+          "lexer": "BLOCK_ANNOTATION_END",
+          "scope": "punctuation.definition.annotation.end.malloy"
+        }
+      ]
+    },
+    {
+      "name": "block model annotation ##| ... |##",
+      "code": "##|\n  note=x\n|##",
+      "expect": [
+        {
+          "text": "##|",
+          "lexer": "DOC_BLOCK_ANNOTATION_BEGIN",
+          "scope": "punctuation.definition.annotation.begin.malloy"
+        },
+        {
+          "text": "|##",
+          "lexer": "BLOCK_ANNOTATION_END",
+          "scope": "punctuation.definition.annotation.end.malloy"
+        }
+      ]
+    },
+    {
+      "name": "documentation route #\" — NOT a tag, styled like documentation",
+      "note": "#\" is the documentation route: prose, not tags.",
+      "code": "#\" This is a tag-free documentation line",
+      "expect": [
+        {
+          "text": "#\"",
+          "lexer": "ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "documentation",
+          "lexer": "ANNOTATION",
+          "scope": "comment.line.documentation.malloy"
+        }
+      ]
+    },
+    {
+      "name": "model documentation route ##\"",
+      "code": "##\" model-level documentation",
+      "expect": [
+        {
+          "text": "##\"",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "documentation",
+          "lexer": "DOC_ANNOTATION",
+          "scope": "comment.line.documentation.malloy"
+        }
+      ]
+    },
+    {
+      "name": "bracketed app route #(name) — content is app-defined, styled as documentation",
+      "note": "Bracketed routes carry app-defined content: documentation, not tags.",
+      "code": "#(viz) renderer config goes here",
+      "expect": [
+        {
+          "text": "#(viz)",
+          "lexer": "ANNOTATION",
+          "scope": "punctuation.definition.annotation.malloy"
+        },
+        {
+          "text": "config",
+          "lexer": "ANNOTATION",
+          "scope": "comment.line.documentation.malloy"
+        }
+      ]
+    },
+    {
+      "name": "block with app route #|(name) … |# — routes apply to blocks too",
+      "note": "Routes apply to blocks too; a bracketed route makes the whole block documentation.",
+      "code": "#|(forYourConsideration)\n  this is not a tag\n|#",
+      "expect": [
+        {
+          "text": "#|(forYourConsideration)",
+          "lexer": "BLOCK_ANNOTATION_BEGIN",
+          "scope": "punctuation.definition.annotation.begin.malloy"
+        },
+        {
+          "text": "not",
+          "lexer": "BLOCK_ANNOTATION_TEXT",
+          "scope": "comment.block.documentation.malloy"
+        },
+        {
+          "text": "|#",
+          "lexer": "BLOCK_ANNOTATION_END",
+          "scope": "punctuation.definition.annotation.end.malloy"
+        }
+      ]
+    },
+    {
+      "name": "keyword coverage: json type",
+      "code": "dimension: j is x::json",
+      "expect": [
+        {
+          "text": "json",
+          "lexer": "JSON",
+          "scope": "storage.type.malloy"
+        }
+      ]
+    },
+    {
+      "name": "keyword coverage: this reference",
+      "code": "this",
+      "expect": [
+        {
+          "text": "this",
+          "lexer": "THIS",
+          "scope": "variable.language.malloy"
+        }
+      ]
+    },
+    {
+      "name": "keyword coverage: calculation:",
+      "code": "calculation: c is sum(x)",
+      "expect": [
+        {
+          "text": "calculation",
+          "lexer": "CALCULATION",
+          "scope": "keyword.control.malloy"
+        }
+      ]
+    },
+    {
+      "name": "source-builder .virtual() is a function like .table() (NOT a control keyword)",
+      "code": "source: v is duckdb.virtual('x')",
+      "expect": [
+        {
+          "text": "virtual",
+          "lexer": "VIRTUAL",
+          "scope": "entity.name.function.malloy"
+        }
+      ]
+    },
+    {
+      "name": "keyword coverage: has",
+      "code": "has",
+      "expect": [
+        {
+          "text": "has",
+          "lexer": "HAS",
+          "scope": "keyword.control.malloy"
+        }
+      ]
+    },
+    {
+      "name": "distinct is an expression keyword inside count(distinct …)",
+      "code": "aggregate: c is count(distinct flight_id)",
+      "expect": [
+        {
+          "text": "count",
+          "lexer": "COUNT",
+          "scope": "support.function.malloy"
+        },
+        {
+          "text": "distinct",
+          "lexer": "DISTINCT",
+          "scope": "keyword.control.malloy"
+        }
+      ]
+    },
+    {
+      "name": "colon-keyword in field position is NOT a keyword (the (?=:) win)",
+      "note": "Bare query has no colon, so it is a field, not a keyword.",
+      "code": "group_by: query",
+      "expect": [
+        {
+          "text": "group_by",
+          "lexer": "GROUP_BY",
+          "scope": "keyword.control.malloy"
+        },
+        {
+          "text": "query",
+          "lexer": "IDENTIFIER",
+          "scope": "variable.other.malloy"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import type {FilterParserResponse, NumberFilter} from './filter_interface';
+import {isNumberFilter} from './filter_interface';
+import {parse as peggyNumberParser} from './lib/fexpr_number_parser';
+import {run_parser} from './peggy_parse';
+
+export const NumberFilterExpression = {
+  parse(src: string): FilterParserResponse<NumberFilter> {
+    if (src.match(/^\s*$/)) {
+      return {parsed: null, log: []};
+    }
+    const parse_result = run_parser(src, peggyNumberParser);
+    if (parse_result.parsed && isNumberFilter(parse_result.parsed)) {
+      return {parsed: parse_result.parsed, log: []};
+    }
+    return {parsed: null, log: parse_result.log};
+  },
+  unparse(nc: NumberFilter | null): string {
+    if (nc === null) {
+      return '';
+    }
+    switch (nc.operator) {
+      case '=':
+        return nc.values.join(', ');
+      case '!=':
+        return '!= ' + nc.values.join(', ');
+      case '>':
+      case '<':
+      case '<=':
+      case '>=':
+        if (nc.not) {
+          return nc.values
+            .map(v =>
+              nc.operator === '=' ? `not ${v}` : `not ${nc.operator} ${v}`
+            )
+            .join(', ');
+        }
+        return nc.values.map(v => `${nc.operator} ${v}`).join(', ');
+      case 'range': {
+        const left = nc.startOperator === '>' ? '(' : '[';
+        const right = nc.endOperator === '<' ? ')' : ']';
+        const rExpr = `${left}${nc.startValue} to ${nc.endValue}${right}`;
+        return nc.not ? `not ${rExpr}` : rExpr;
+      }
+      case 'null': {
+        return nc.not ? 'not null' : 'null';
+      }
+      case 'none': {
+        return nc.not ? 'not none' : 'none';
+      }
+      case 'and':
+      case 'or':
+        return nc.members
+          .map(m => NumberFilterExpression.unparse(m))
+          .join(` ${nc.operator} `);
+      case '()': {
+        const expr = '(' + NumberFilterExpression.unparse(nc.expr) + ')';
+        return nc.not ? 'not ' + expr : expr;
+      }
+    }
+    return `no unparse for ${JSON.stringify(nc)}`;
+  },
+};

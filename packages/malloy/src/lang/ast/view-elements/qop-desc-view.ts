@@ -1,33 +1,15 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {PipeSegment, isRawSegment} from '../../../model/malloy_types';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {StaticSpace} from '../field-space/static-space';
+import type {PipeSegment} from '../../../model/malloy_types';
+import {isRawSegment} from '../../../model/malloy_types';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import {StaticSourceSpace} from '../field-space/static-space';
 import {QOpDesc} from '../query-properties/qop-desc';
-import {getFinalStruct} from '../struct-utils';
-import {FieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {SourceFieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {LegalRefinementStage} from '../types/query-property-interface';
 import {View} from './view';
 
@@ -42,22 +24,25 @@ export class QOpDescView extends View {
     super({operation});
   }
 
-  pipelineComp(fs: FieldSpace, isNestIn?: QueryOperationSpace): PipelineComp {
+  pipelineComp(
+    fs: SourceFieldSpace,
+    isNestIn?: QueryOperationSpace
+  ): PipelineComp {
     const newOperation = this.operation.getOp(fs, isNestIn);
     return {
       pipeline: [newOperation.segment],
-      outputStruct: newOperation.outputSpace().structDef(),
+      outputStruct: newOperation.outputSpace.structDef(),
     };
   }
 
   private getOp(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     isNestIn: QueryOperationSpace | undefined,
     qOpDesc: QOpDesc,
     refineThis: PipeSegment
   ): PipeSegment {
     if (isRawSegment(refineThis)) {
-      this.log('A raw query cannot be refined');
+      this.logError('refinement-of-raw-query', 'A raw query cannot be refined');
       return refineThis;
     }
     qOpDesc.refineFrom(refineThis);
@@ -65,7 +50,7 @@ export class QOpDescView extends View {
   }
 
   refine(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     _pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
@@ -85,13 +70,19 @@ export class QOpDescView extends View {
           headRefinements.push(qop);
           break;
         case LegalRefinementStage.Single:
-          qop.log('Illegal in refinement of a query with more than one stage');
+          qop.logError(
+            'illegal-multistage-refinement-operation',
+            'Illegal in refinement of a query with more than one stage'
+          );
           break;
         case LegalRefinementStage.Tail:
           tailRefinements.push(qop);
           break;
         default:
-          qop.log('Illegal query refinement');
+          qop.logError(
+            'illegal-refinement-operation',
+            'Illegal query refinement'
+          );
       }
     }
     if (headRefinements.notEmpty()) {
@@ -106,13 +97,18 @@ export class QOpDescView extends View {
     if (tailRefinements.notEmpty()) {
       const last = pipeline.length - 1;
       this.has({tailRefinements});
-      const finalIn = getFinalStruct(
-        this,
-        inputFS.structDef(),
-        pipeline.slice(-1)
-      );
-      pipeline[last] = this.getOp(
-        new StaticSpace(finalIn),
+      // The changes above should not be allowed to change the input struct
+      // for the final segment meaningfully, so we can continue to use the existing
+      // second-to-last struct
+      const finalIn =
+        pipeline.length > 1
+          ? new StaticSourceSpace(
+              pipeline[pipeline.length - 2].outputStruct,
+              'public'
+            )
+          : inputFS;
+      pipeline[pipeline.length - 1] = this.getOp(
+        finalIn,
         undefined,
         tailRefinements,
         pipeline[last]

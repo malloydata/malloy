@@ -1,0 +1,631 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import * as Malloy from '@malloydata/malloy-interfaces';
+import type {
+  AnnotationsDef,
+  AtomicTypeDef,
+  DateUnit,
+  Expr,
+  FieldDef,
+  FilterCondition,
+  JoinType,
+  ModelDef,
+  RecordTypeDef,
+  RepeatedRecordTypeDef,
+  ResultMetadataDef,
+  ResultStructMetadataDef,
+  SourceDef,
+  TimestampUnit,
+} from './model';
+import {
+  activeName,
+  expressionIsAggregate,
+  expressionIsScalar,
+  isAtomic,
+  isJoinedSource,
+  isBasicAtomic,
+  isRepeatedRecord,
+  isRecordOrRepeatedRecord,
+  isSourceDef,
+  isTurtle,
+  getResultStructDefForQuery,
+  getResultStructDefForView,
+} from './model';
+import {Annotations} from './api/foundation/annotation';
+import {Tag} from '@malloydata/malloy-tag';
+
+export function sourceDefToSourceInfo(sourceDef: SourceDef): Malloy.SourceInfo {
+  const parameters: Malloy.ParameterInfo[] | undefined =
+    sourceDef.parameters && Object.entries(sourceDef.parameters).length > 0
+      ? Object.entries(sourceDef.parameters).map(([name, parameter]) => {
+          if (isAtomic(parameter)) {
+            return {
+              name,
+              type: typeDefToType(parameter),
+              default_value: convertParameterDefaultValue(parameter.value),
+            };
+          }
+          return {
+            name,
+            type: {
+              kind: 'filter_expression_type',
+              filter_type: {
+                kind: `${parameter.filterType}_type` as const,
+              },
+            },
+            default_value: convertParameterDefaultValue(parameter.value),
+          };
+        })
+      : undefined;
+
+  const sourceInfo: Malloy.SourceInfo = {
+    name: activeName(sourceDef),
+    schema: {
+      fields: convertFieldInfos(sourceDef, sourceDef.fields),
+    },
+    parameters,
+    annotations: toStableAnnotations(sourceDef.annotations),
+  };
+  return sourceInfo;
+}
+
+export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
+  const modelInfo: Malloy.ModelInfo = {
+    entries: [],
+    anonymous_queries: [],
+  };
+  for (const [name, entry] of Object.entries(modelDef.contents)) {
+    if (!modelDef.exports.includes(name)) continue;
+    if (isSourceDef(entry)) {
+      const sourceInfo = sourceDefToSourceInfo(entry);
+      modelInfo.entries.push({
+        kind: 'source',
+        ...sourceInfo,
+      });
+    } else if (entry.type === 'query') {
+      const outputStruct = getResultStructDefForQuery(modelDef, entry);
+      const annotations = toStableAnnotations(entry.annotations);
+      const resultMetadataAnnotation = outputStruct.resultMetadata
+        ? getResultStructMetadataAnnotation(
+            outputStruct,
+            outputStruct.resultMetadata
+          )
+        : undefined;
+      const fieldAnnotations = [
+        ...(annotations ?? []),
+        ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+      ];
+      const queryInfo: Malloy.ModelEntryValueWithSource = {
+        kind: 'source',
+        name,
+        schema: {
+          fields: convertFieldInfos(outputStruct, outputStruct.fields),
+        },
+        annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
+      };
+      modelInfo.entries.push(queryInfo);
+    }
+  }
+  for (const query of modelDef.queryList) {
+    const outputStruct = getResultStructDefForQuery(modelDef, query);
+    const annotations = toStableAnnotations(query.annotations);
+    const resultMetadataAnnotation = outputStruct.resultMetadata
+      ? getResultStructMetadataAnnotation(
+          outputStruct,
+          outputStruct.resultMetadata
+        )
+      : undefined;
+    const fieldAnnotations = [
+      ...(annotations ?? []),
+      ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+    ];
+    const queryInfo: Malloy.AnonymousQueryInfo = {
+      schema: {
+        fields: convertFieldInfos(outputStruct, outputStruct.fields),
+      },
+      annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
+    };
+    modelInfo.anonymous_queries.push(queryInfo);
+  }
+  return modelInfo;
+}
+
+function convertParameterDefaultValue(
+  value: Expr | null
+): Malloy.LiteralValue | undefined {
+  if (value === null) return undefined;
+  switch (value.node) {
+    case 'numberLiteral':
+      // TODO handle all kinds of number literals?
+      return {kind: 'number_literal', number_value: parseFloat(value.literal)};
+    case 'stringLiteral':
+      return {kind: 'string_literal', string_value: value.literal};
+    case 'filterLiteral':
+      return {
+        kind: 'filter_expression_literal',
+        filter_expression_value: value.filterSrc,
+      };
+    case 'dateLiteral':
+      return {
+        kind: 'date_literal',
+        date_value: value.literal,
+      };
+    case 'timestampLiteral':
+    case 'timestamptzLiteral':
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: value.literal,
+        timezone: value.timezone,
+      };
+    case 'true':
+      return {kind: 'boolean_literal', boolean_value: true};
+    case 'false':
+      return {kind: 'boolean_literal', boolean_value: false};
+    case 'null':
+      return {kind: 'null_literal'};
+    default:
+      throw new Error('Invalid parameter default value');
+  }
+}
+
+/**
+ * IR annotation → stable `Malloy.Annotation[]` shape used across `to_stable`
+ * and the api surfaces. The stable shape carries the raw annotation strings;
+ * routes are derivable at the consumer via `parsePrefix` (`./prefix.ts`).
+ */
+export function toStableAnnotations(
+  annot: AnnotationsDef | undefined
+): Malloy.Annotation[] {
+  return new Annotations(annot).texts().map(value => ({value}));
+}
+
+export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
+  const result: Malloy.FieldInfo[] = [];
+  for (const field of fields) {
+    const isPublic = field.accessModifier === undefined;
+    if (!isPublic) continue;
+    const rawAnnotations = toStableAnnotations(field.annotations);
+    const annotations = rawAnnotations.length > 0 ? rawAnnotations : undefined;
+    if (isTurtle(field)) {
+      const outputStruct = getResultStructDefForView(source, field);
+      const resultMetadataAnnotation = outputStruct.resultMetadata
+        ? getResultStructMetadataAnnotation(
+            outputStruct,
+            outputStruct.resultMetadata
+          )
+        : undefined;
+      const fieldAnnotations = [
+        ...(annotations ?? []),
+        ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+      ];
+      const fieldInfo: Malloy.FieldInfo = {
+        kind: 'view',
+        name: activeName(field),
+        annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
+        schema: {fields: convertFieldInfos(outputStruct, outputStruct.fields)},
+      };
+      result.push(fieldInfo);
+    } else if (isAtomic(field)) {
+      const aggregate = expressionIsAggregate(field.expressionType);
+      const scalar = expressionIsScalar(field.expressionType);
+      if (!aggregate && !scalar) continue;
+      if (field.type === 'error') continue;
+      const resultMetadataAnnotation = field.resultMetadata
+        ? getResultMetadataAnnotation(field, field.resultMetadata)
+        : undefined;
+
+      // Check if this field has queryTimezone information (for RecordDef/RepeatedRecordDef)
+      let timezoneAnnotation: Malloy.Annotation | undefined;
+      if (isRecordOrRepeatedRecord(field) && field.queryTimezone) {
+        const timezoneTag = Tag.withPrefix('#(malloy) ');
+        timezoneTag.set(['query_timezone'], field.queryTimezone);
+        timezoneAnnotation = {value: timezoneTag.toString()};
+      }
+
+      const fieldAnnotations = [
+        ...(annotations ?? []),
+        ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+        ...(timezoneAnnotation ? [timezoneAnnotation] : []),
+      ];
+      const fieldInfo: Malloy.FieldInfo = {
+        kind: aggregate ? 'measure' : 'dimension',
+        name: activeName(field),
+        type: typeDefToType(field),
+        annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
+      };
+      result.push(fieldInfo);
+    } else if (isJoinedSource(field)) {
+      const fieldInfo: Malloy.FieldInfo = {
+        kind: 'join',
+        name: activeName(field),
+        annotations,
+        schema: {
+          fields: convertFieldInfos(field, field.fields),
+        },
+        relationship: convertJoinType(field.join),
+      };
+      result.push(fieldInfo);
+    }
+  }
+  return result;
+}
+
+function getResultMetadataAnnotation(
+  field: FieldDef,
+  resultMetadata: ResultMetadataDef
+): Malloy.Annotation | undefined {
+  const tag = Tag.withPrefix('#(malloy) ');
+  let hasAny = false;
+  if (resultMetadata.referenceId !== undefined) {
+    tag.set(['reference_id'], resultMetadata.referenceId);
+    hasAny = true;
+  }
+  if (resultMetadata.fieldKind === 'measure') {
+    tag.set(['calculation']);
+    hasAny = true;
+  }
+  if (resultMetadata.drillable) {
+    tag.set(['drillable']);
+    hasAny = true;
+  }
+  if (resultMetadata.filterList) {
+    addDrillFiltersTag(tag, resultMetadata.filterList);
+    hasAny = true;
+  }
+  if (resultMetadata.drillExpression) {
+    writeExpressionToTag(
+      tag,
+      ['drill_expression'],
+      resultMetadata.drillExpression
+    );
+    hasAny = true;
+  }
+  if (resultMetadata.fieldKind === 'dimension') {
+    const dot = '.';
+    // If field is joined-in from another table i.e. of type `tableName.columnName`,
+    // return sourceField, else return name because this could be a renamed field.
+    const drillExpressionCode =
+      resultMetadata?.sourceExpression ||
+      (resultMetadata?.sourceField.includes(dot)
+        ? resultMetadata?.sourceField
+        : identifierCode(field.name));
+    tag.set(['drill_expression', 'code'], drillExpressionCode);
+    hasAny = true;
+  }
+  return hasAny
+    ? {
+        value: tag.toString(),
+      }
+    : undefined;
+}
+
+function addDrillFiltersTag(tag: Tag, drillFilters: FilterCondition[]) {
+  for (let i = 0; i < drillFilters.length; i++) {
+    const filter = drillFilters[i];
+    if (filter.expressionType !== 'scalar' || filter.isSourceFilter) continue;
+    tag.set(['drill_filters', i, 'code'], filter.code);
+    if (filter.filterView) {
+      tag.set(['drill_filters', i, 'filter_view'], filter.filterView);
+    }
+    if (filter.filterView === undefined && filter.stableFilter !== undefined) {
+      writeExpressionToTag(
+        tag,
+        ['drill_filters', i, 'expression'],
+        filter.stableFilter.expression
+      );
+      if (filter.stableFilter.kind === 'filter_string') {
+        tag.set(['drill_filters', i, 'kind'], 'filter_expression');
+        tag.set(
+          ['drill_filters', i, 'filter_expression'],
+          filter.stableFilter.filter
+        );
+      } else {
+        tag.set(['drill_filters', i, 'kind'], 'literal_equality');
+        writeLiteralToTag(
+          tag,
+          ['drill_filters', i, 'value'],
+          filter.stableFilter.value
+        );
+      }
+    }
+  }
+}
+
+function writeExpressionToTag(
+  tag: Tag,
+  path: (string | number)[],
+  expression: Malloy.Expression
+) {
+  writeMalloyObjectToTag(tag, path, expression, 'Expression');
+}
+
+export function writeLiteralToTag(
+  tag: Tag,
+  path: (string | number)[],
+  literal: Malloy.LiteralValue
+) {
+  writeMalloyObjectToTag(tag, path, literal, 'LiteralValue');
+}
+
+function escapeIdentifier(str: string) {
+  return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
+}
+
+function identifierCode(name: string) {
+  if (name.match(/^[A-Za-z_][0-9A-Za-z_]*$/)) return name;
+  return `\`${escapeIdentifier(name)}\``;
+}
+
+export function getResultStructMetadataAnnotation(
+  field: SourceDef,
+  resultMetadata: ResultStructMetadataDef
+): Malloy.Annotation | undefined {
+  const tag = Tag.withPrefix('#(malloy) ');
+  let hasAny = false;
+  if (resultMetadata.limit !== undefined) {
+    tag.set(['limit'], resultMetadata.limit);
+    hasAny = true;
+  }
+  if (resultMetadata.filterList) {
+    addDrillFiltersTag(tag, resultMetadata.filterList);
+    hasAny = true;
+  }
+  if (resultMetadata.drillable) {
+    tag.set(['drillable']);
+    hasAny = true;
+  }
+  if (resultMetadata.orderBy) {
+    for (let i = 0; i < resultMetadata.orderBy.length; i++) {
+      const orderBy = resultMetadata.orderBy[i];
+      const orderByField =
+        typeof orderBy.field === 'number'
+          ? activeName(field.fields[orderBy.field - 1])
+          : orderBy.field;
+      const direction = orderBy.dir ?? null;
+      tag.set(['ordered_by', i, orderByField], direction);
+    }
+    hasAny = true;
+  }
+  // Include queryTimezone if present on the field
+  if (field.queryTimezone) {
+    tag.set(['query_timezone'], field.queryTimezone);
+    hasAny = true;
+  }
+  return hasAny
+    ? {
+        value: tag.toString(),
+      }
+    : undefined;
+}
+
+function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
+  if (isBasicAtomic(field)) {
+    switch (field.type) {
+      case 'string':
+        return {kind: 'string_type'};
+      case 'number':
+        return {
+          kind: 'number_type',
+          subtype:
+            field.numberType === 'float'
+              ? 'decimal'
+              : field.numberType === 'integer'
+                ? 'integer'
+                : field.numberType === 'bigint'
+                  ? 'bigint'
+                  : undefined,
+        };
+      case 'boolean':
+        return {kind: 'boolean_type'};
+      case 'date': {
+        // TODO there seems to be a bug where date literals with a timestamp truncation have
+        // type: date, but still have a timestamp truncation.
+        const timeframe = field.timeframe;
+        if (timeframe && !isDateTimeframe(timeframe)) {
+          return {
+            kind: 'timestamp_type',
+            timeframe: convertTimestampTimeframe(field.timeframe),
+          };
+        }
+        return {
+          kind: 'date_type',
+          timeframe: convertDateTimeframe(field.timeframe),
+        };
+      }
+      case 'timestamp':
+        return {
+          kind: 'timestamp_type',
+          timeframe: convertTimestampTimeframe(field.timeframe),
+        };
+      case 'timestamptz':
+        return {
+          kind: 'timestamptz_type',
+          timeframe: convertTimestampTimeframe(field.timeframe),
+        };
+      case 'json':
+        return {kind: 'json_type'};
+      case 'sql native':
+        return {
+          kind: 'sql_native_type',
+          sql_type: field.rawType,
+        };
+      case 'error':
+        throw new Error('Error type is not supported in stable interface');
+    }
+  } else if (isRepeatedRecord(field)) {
+    return {
+      kind: 'array_type',
+      element_type: convertRecordType(field),
+    };
+  } else if (field.type === 'record') {
+    return convertRecordType(field);
+  } else if (field.type === 'array') {
+    return {
+      kind: 'array_type',
+      element_type: typeDefToType(field.elementTypeDef),
+    };
+  }
+  throw new Error('Unexpected field type');
+}
+
+function convertRecordType(
+  field: RecordTypeDef | RepeatedRecordTypeDef
+): Malloy.AtomicTypeWithRecordType {
+  return {
+    kind: 'record_type',
+    fields: field.fields.map(f => {
+      const annotations: Malloy.Annotation[] = [];
+      if ('resultMetadata' in f) {
+        if (f.resultMetadata) {
+          const ann = getResultMetadataAnnotation(f, f.resultMetadata);
+          if (ann) {
+            annotations.push(ann);
+          }
+        }
+      }
+      if (f.annotations) {
+        annotations.push(...toStableAnnotations(f.annotations));
+      }
+      if (isAtomic(f)) {
+        return {
+          name: f.name,
+          annotations: annotations.length > 0 ? annotations : undefined,
+          type: typeDefToType(f),
+        };
+      } else {
+        throw new Error(
+          'Expected record type to not have a table as its child'
+        );
+      }
+    }),
+  };
+}
+
+function isDateTimeframe(timeframe: DateUnit): boolean {
+  switch (timeframe) {
+    case 'day':
+    case 'week':
+    case 'month':
+    case 'year':
+    case 'quarter':
+      return true;
+    default:
+      return false;
+  }
+}
+
+function convertDateTimeframe(
+  timeframe: DateUnit | undefined
+): Malloy.DateTimeframe | undefined {
+  switch (timeframe) {
+    case undefined:
+      return undefined;
+    case 'day':
+    case 'week':
+    case 'month':
+    case 'year':
+    case 'quarter':
+      return timeframe;
+    default:
+      throw new Error(`Invalid date timeframe ${timeframe}`);
+  }
+}
+
+function convertTimestampTimeframe(
+  timeframe: TimestampUnit | undefined
+): Malloy.TimestampTimeframe | undefined {
+  return timeframe;
+}
+
+function convertJoinType(type: JoinType): Malloy.Relationship {
+  return type;
+}
+
+/**
+ * Writes a Malloy interface object to a tag at a given path.
+ *
+ * E.g. `writeMalloyObjectToTag(tag, ['expr'], 'Expression', {kind: 'field_reference', name: 'carrier'})`
+ *
+ * produces the tag `#(malloy) expr { kind = field_reference name = carrier }`
+ *
+ * Note: The inverse function `extractMalloyObjectFromTag` lives in the
+ * renderer (malloy-render/src/data_tree/utils.ts) since that is its only
+ * consumer. These two functions are kept separate to avoid the renderer
+ * depending on the malloy core package for deserialization.
+ */
+function writeMalloyObjectToTag(
+  tag: Tag,
+  path: (string | number)[],
+  obj: unknown,
+  type: string
+) {
+  if (type === 'string') {
+    tag.set(path, obj as string);
+    return;
+  } else if (type === 'number') {
+    tag.set(path, obj as number);
+    return;
+  } else if (type === 'boolean') {
+    tag.set(path, (obj as boolean).toString());
+    return;
+  }
+  const typelookup = Malloy.MALLOY_INTERFACE_TYPES[type];
+  if (typelookup === undefined) {
+    throw new Error(`Unknown Malloy interface type ${type}`);
+  }
+  if (typelookup.type === 'enum') {
+    if (typeof obj === 'string') {
+      tag.set(path, obj);
+    } else {
+      throw new Error(`Expected string for enum ${type}`);
+    }
+  } else if (typelookup.type === 'struct') {
+    for (const key in typelookup.fields) {
+      const valueType = typelookup.fields[key];
+      const value = (obj as Record<string, unknown>)[key];
+      if (value === undefined) {
+        if (!valueType.optional) {
+          throw new Error(
+            `Mising value for non-optional field ${key} in type ${type}`
+          );
+        }
+      } else if (valueType.array) {
+        if (Array.isArray(value)) {
+          for (let i = 0; i < value.length; i++) {
+            writeMalloyObjectToTag(
+              tag,
+              [...path, key, i],
+              value[i],
+              valueType.type
+            );
+          }
+        } else {
+          throw new Error(
+            `Expected array for field ${key} of type ${type} but got ${typeof obj}`
+          );
+        }
+      } else {
+        writeMalloyObjectToTag(tag, [...path, key], value, valueType.type);
+      }
+    }
+  } else {
+    // enum
+    const kind = (obj as {kind: 'string'}).kind;
+    tag.set([...path, 'kind'], kind);
+    const unionType = typelookup.options[kind];
+    if (unionType === undefined) {
+      throw new Error(
+        `Unknown Malloy interface union kind ${kind} for type ${type}`
+      );
+    }
+    writeMalloyObjectToTag(tag, path, obj, unionType);
+  }
+}
+
+// Note: The inverse function `extractMalloyObjectFromTag` lives in the
+// renderer (malloy-render/src/data_tree/utils.ts) since that is its only
+// consumer. These two functions are kept separate to avoid the renderer
+// depending on the malloy core package for deserialization.

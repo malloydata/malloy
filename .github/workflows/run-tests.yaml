@@ -1,32 +1,147 @@
 name: Malloy Tests
+permissions: {}
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+  pull_request_target:
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
 jobs:
+  check-permission:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Permission Check
+        uses: malloydata/check-ci-permissions@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.triggering_actor }}
+          error_message: |
+            User does not have write access to this repository. Refer to CONTRIBUTING.md instructions on how to contribute to Malloy.
+
+  # Builds the workspace once and uploads it as an artifact for every
+  # downstream test job to consume. No secrets — produces only build
+  # output from the PR head, which is exactly what each downstream job
+  # would have built itself. Does not need check-permission.
+  pull_and_build:
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v5.1.0 refuses to check out fork PR code under
+      # pull_request_target unless allow-unsafe-pr-checkout is set. The refusal
+      # is actor-independent — check-permission passing does not satisfy it — so
+      # the flag is required for any external PR to build at all. The risk it
+      # guards is checkout persisting GITHUB_TOKEN into .git/config inside the
+      # workspace fork code then runs in; persist-credentials: false removes
+      # that, and permissions: {} above leaves the token powerless regardless.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          allow-unsafe-pr-checkout: true
+          persist-credentials: false
+      - name: Use Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+          # Caches ~/.npm (the tarball store), not node_modules. Safe to share
+          # across PR and main runs: npm ci verifies every tarball against the
+          # lockfile integrity hash, so a poisoned entry cannot be installed.
+          cache: 'npm'
+      - name: Install and build
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run build-duckdb-db
+      - name: Tar workspace
+        run: tar --exclude='./.git' --use-compress-program='zstd -3 -T0' -cf /tmp/workspace.tzst .
+      - uses: actions/upload-artifact@v7
+        with:
+          name: workspace
+          path: /tmp/workspace.tzst
+          retention-days: 1
+          compression-level: 0
+
+  # *** IMPORTANT ***
+  # When modifying these, make sure that needs: check-permission
+  # is part of any job that requires secrets.
+  main:
+    needs: pull_and_build
+    uses: './.github/workflows/main.yaml'
+  db-trino:
+    needs: pull_and_build
+    uses: './.github/workflows/db-trino.yaml'
+  db-presto:
+    needs: pull_and_build
+    uses: './.github/workflows/db-presto.yaml'
+  db-duckdb:
+    needs: pull_and_build
+    uses: './.github/workflows/db-duckdb.yaml'
   db-bigquery:
+    needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-  db-motherduck:
-    uses: './.github/workflows/db-motherduck.yaml'
-    secrets:
-      MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+  # db-motherduck:
+  #   needs: [check-permission, pull_and_build]
+  #   uses: './.github/workflows/db-motherduck.yaml'
+  #   secrets:
+  #     MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
   db-postgres:
+    needs: pull_and_build
     uses: './.github/workflows/db-postgres.yaml'
+  db-publisher:
+    needs: pull_and_build
+    uses: './.github/workflows/db-publisher.yaml'
   db-snowflake:
+    needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
-      SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
-  main:
-    uses: './.github/workflows/main.yaml'
+      SNOW_CI_ACCOUNT: ${{ secrets.SNOW_CI_ACCOUNT }}
+      SNOW_CI_KEY: ${{ secrets.SNOW_CI_KEY }}
+  db-mysql:
+    needs: pull_and_build
+    uses: './.github/workflows/db-mysql.yaml'
+  db-sqlserver:
+    needs: pull_and_build
+    uses: './.github/workflows/db-sqlserver.yaml'
+  db-databricks:
+    needs: [check-permission, pull_and_build]
+    uses: './.github/workflows/db-databricks.yaml'
+    secrets:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
+  db-duckdb-wasm:
+    needs: pull_and_build
+    uses: './.github/workflows/db-duckdb-wasm.yaml'
+  # Consumes the built @malloydata packages as a downstream app would (esbuild
+  # bundle + plain ts-jest), so native/ESM leaks are caught at PR time instead of
+  # post-publish. No secrets — only needs the built workspace.
+  consumer-canary:
+    needs: pull_and_build
+    uses: './.github/workflows/consumer-canary.yaml'
 
+  # I think I have the sorted roughly longest to shortest
+  # so the longer running jobs get workers sooner, not sure
+  # that is the right plan
   malloy-tests:
     needs:
-      - db-bigquery
-      - db-motherduck
-      - db-postgres
-      - db-snowflake
       - main
+      - db-snowflake
+      - db-bigquery
+      - db-duckdb
+      - db-presto
+      - db-duckdb-wasm
+      - db-trino
+      - db-publisher
+      - db-postgres
+      # - db-motherduck
+      - db-mysql
+      - db-sqlserver
+      - db-databricks
+      - consumer-canary
     runs-on: ubuntu-latest
     steps:
       - name: Success

@@ -2,7 +2,7 @@
   "name": "@malloydata/malloy-tests",
   "license": "MIT",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,27 +14,34 @@
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "jest --config=../jest.config.js",
-    "build": "tsc --build",
-    "clean": "tsc --build --clean",
+    "test": "echo 'Read the Testing section of the repo-root CONTEXT.md for information on testing in this monorepo'; exit 1",
+    "build": "node ../node_modules/typescript/bin/tsc --build",
+    "clean": "node ../node_modules/typescript/bin/tsc --build --clean && rm -f tsconfig.tsbuildinfo",
     "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@jest/globals": "^29.4.3",
-    "@malloydata/db-bigquery": "^0.0.144",
-    "@malloydata/db-duckdb": "^0.0.144",
-    "@malloydata/db-postgres": "^0.0.144",
-    "@malloydata/db-snowflake": "^0.0.144",
-    "@malloydata/db-trino": "^0.0.144",
-    "@malloydata/malloy": "^0.0.144",
-    "@malloydata/render": "^0.0.144",
+    "@malloydata/db-bigquery": "0.0.437",
+    "@malloydata/db-duckdb": "0.0.437",
+    "@malloydata/db-postgres": "0.0.437",
+    "@malloydata/db-snowflake": "0.0.437",
+    "@malloydata/db-sqlserver": "0.0.437",
+    "@malloydata/db-trino": "0.0.437",
+    "@malloydata/malloy": "0.0.437",
+    "@malloydata/malloy-tag": "0.0.437",
+    "@malloydata/render": "0.0.437",
+    "@malloydata/render-validator": "0.0.437",
+    "events": "^3.3.0",
     "jsdom": "^22.1.0",
-    "luxon": "^2.4.0",
-    "madge": "^6.0.0"
+    "luxon": "^3.7.2",
+    "madge": "^8.0.0"
   },
   "devDependencies": {
+    "@jest/globals": "^29.4.3",
     "@types/jsdom": "^21.1.1",
-    "@types/luxon": "^2.4.0"
+    "@types/luxon": "^3.7.2"
   },
-  "version": "0.0.144"
+  "overrides": {
+    "typescript": "^6.0.3"
+  },
+  "version": "0.0.437"
 }

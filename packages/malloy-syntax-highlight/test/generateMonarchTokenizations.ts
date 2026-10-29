@@ -1,28 +1,10 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {MonarchTestConfig, TestItem} from './testUtils';
-import {editor as Monaco, Token} from 'monaco-editor';
+import type {MonarchTestConfig, TestItem} from './testUtils';
+import type {editor as Monaco, Token} from 'monaco-editor';
 
 export async function loadMonacoAssets() {
   // Waiting resolves difficult to track down race condition
@@ -49,7 +31,8 @@ export async function loadMonacoAssets() {
   });
 }
 
-function registerLanguages(monacoGlobal, testConfig: MonarchTestConfig) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function registerLanguages(monacoGlobal: any, testConfig: MonarchTestConfig) {
   for (const language of testConfig.embeddedLanguages) {
     monacoGlobal.languages.register({id: language.id});
     monacoGlobal.languages.setMonarchTokensProvider(
@@ -66,7 +49,8 @@ function registerLanguages(monacoGlobal, testConfig: MonarchTestConfig) {
   // monacoGlobal.languages.setLanguageConfiguration(testConfig.language.id, testConfig.language.configuration);
 }
 
-function setupEditor(monacoGlobal, theme: Monaco.IStandaloneThemeData) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setupEditor(monacoGlobal: any, theme: Monaco.IStandaloneThemeData) {
   monacoGlobal.editor.defineTheme('test-theme', theme);
   const element = document.createElement('div');
   element.id = 'editor';
@@ -78,7 +62,8 @@ function setupEditor(monacoGlobal, theme: Monaco.IStandaloneThemeData) {
 }
 
 export function generateMonarchTokenizations(
-  monacoGlobal,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  monacoGlobal: any,
   testConfig: MonarchTestConfig
 ): TestItem[][] {
   const tokenizations: TestItem[][] = [];

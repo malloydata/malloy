@@ -1,52 +1,53 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,p
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {indent} from '../../model/utils';
-import {
+import type {
   Expr,
-  ExtractUnit,
   Sampling,
-  TimeValue,
+  AtomicTypeDef,
+  ATimestampTypeDef,
+  TypecastExpr,
+  RegexMatchExpr,
+  MeasureTimeExpr,
+  TimeExtractExpr,
+  BasicAtomicTypeDef,
+  RecordLiteralNode,
+  OrderBy,
   TimestampUnit,
-  TypecastFragment,
+  ExtractUnit,
+  TimeExpr,
+} from '../../model/malloy_types';
+import {
+  activeName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
-  FieldAtomicTypeDef,
-  DialectFragment,
-  DateUnit,
-  TimeFieldType,
+  TD,
+  isAtomic,
+  isRepeatedRecord,
+  safeRecordGet,
+  isDateUnit,
 } from '../../model/malloy_types';
-import {TRINO_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
-import {
-  Dialect,
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {
+  CivilTime,
+  CompiledOrderBy,
   DialectFieldList,
   OrderByClauseType,
   QueryInfo,
-  isDialectFieldStruct,
+  TimeOffset,
 } from '../dialect';
+import {queryZone, turtleGroupSetCondition} from '../dialect';
+import {PostgresBase, timeExtractMap} from '../pg_impl';
+import {
+  PRESTO_DIALECT_FUNCTIONS,
+  TRINO_DIALECT_FUNCTIONS,
+} from './dialect_functions';
+import {TRINO_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -60,39 +61,81 @@ function timestampMeasureable(units: string): boolean {
   ].includes(units);
 }
 
-const pgExtractionMap: Record<string, string> = {
-  'day_of_week': 'dow',
-  'day_of_year': 'doy',
-};
-
-/**
- * Return a non UTC timezone, if one was specificed.
- */
-function qtz(qi: QueryInfo): string | undefined {
-  const tz = qi.queryTimezone;
-  if (tz && tz !== 'UTC') {
-    return tz;
-  }
-}
-
 declare interface TimeMeasure {
   use: string;
   ratio: number;
 }
 
-const trinoTypeMap = {
-  'string': 'VARCHAR',
-  'number': 'DOUBLE',
+const trinoToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
+  'varchar': {type: 'string'},
+  'integer': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'bigint'},
+  'smallint': {type: 'number', numberType: 'integer'},
+  'tinyint': {type: 'number', numberType: 'integer'},
+  'double': {type: 'number', numberType: 'float'},
+  'decimal': {type: 'number', numberType: 'float'},
+  'string': {type: 'string'},
+  'date': {type: 'date'},
+  'timestamp': {type: 'timestamp'},
+  'boolean': {type: 'boolean'},
+
+  // TODO(figutierrez0): cleanup.
+  /* 'INT64': {type: 'number', numberType: 'integer'},
+  'FLOAT': {type: 'number', numberType: 'float'},
+  'FLOAT64': {type: 'number', numberType: 'float'},
+  'NUMERIC': {type: 'number', numberType: 'float'},
+  'BIGNUMERIC': {type: 'number', numberType: 'float'},
+  'JSON': {type: 'json'},*/
+  // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
+  // BYTES
+  // DATETIME
+  // TIME
+  // GEOGRAPHY
 };
 
-export class TrinoDialect extends Dialect {
+function trinoTrunc(expr: string, unit: TimestampUnit): string {
+  // Weeks start on Monday here, so truncate the following day
+  if (unit === 'week') {
+    return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
+  }
+  return `DATE_TRUNC('${unit}', ${expr})`;
+}
+
+function trinoDateAdd(
+  expr: string,
+  op: '+' | '-',
+  magnitude: string,
+  unit: TimestampUnit
+): string {
+  // DATE_ADD has no quarter or week
+  let offsetUnit: string = unit;
+  let offsetMag = magnitude;
+  if (unit === 'quarter') {
+    offsetUnit = 'month';
+    offsetMag = `${magnitude}*3`;
+  } else if (unit === 'week') {
+    offsetUnit = 'day';
+    offsetMag = `${magnitude}*7`;
+  }
+  const n = op === '-' ? `(${offsetMag})*-1` : offsetMag;
+  return `DATE_ADD('${offsetUnit}', ${n}, ${expr})`;
+}
+
+function trinoExtract(expr: string, units: ExtractUnit): string {
+  const extracted = `EXTRACT(${timeExtractMap[units] || units} FROM ${expr})`;
+  // Trino counts the days of a week from 1 on Monday
+  return units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
+}
+
+export class TrinoDialect extends PostgresBase {
   name = 'trino';
+  experimental = false;
   defaultNumberType = 'DOUBLE';
   defaultDecimalType = 'DECIMAL';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
@@ -102,30 +145,52 @@ export class TrinoDialect extends Dialect {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   cantPartitionWindowFunctionsOnExpressions = false;
   orderByClause: OrderByClauseType = 'output_name';
   nullMatchesFunctionSignature = false;
   supportsSelectReplace = false;
-  supportsComplexFilteredSources = false;
+  supportsComplexFilteredSources = true;
   supportsTempTables = false;
+  supportsCountApprox = true;
+  supportsHyperLogLog = true;
 
-  quoteTablePath(tablePath: string): string {
-    // TODO: look into escaping.
-    //return `${tablePath.replace(/malloytest/g, 'malloy_demo.malloytest')}`;
-    return tablePath;
+  // Trino bare identifier is strict ANSI, matching the Dialect default.
+
+  // Trino/Presto have no E'...' escape string, so encode a newline-bearing
+  // literal as U&'...'. Inside it the quote doubles (''), the backslash
+  // escape-introducer doubles (\\), and a control char becomes \XXXX.
+  sqlLiteralString(literal: string): string {
+    if (!literal.includes('\n')) {
+      return super.sqlLiteralString(literal);
+    }
+    const body = literal.replace(/['\\\n\r\t]/g, ch => {
+      switch (ch) {
+        case "'":
+          return "''";
+        case '\\':
+          return '\\\\';
+        case '\n':
+          return '\\000A';
+        case '\r':
+          return '\\000D';
+        default: // '\t'
+          return '\\0009';
+      }
+    });
+    return `U&'${body}'`;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(SEQUENCE(0,${groupSetCount})))`;
   }
 
-  dialectExpr(qi: QueryInfo, df: DialectFragment): Expr {
-    switch (df.function) {
-      case 'div': {
-        return mkExpr`CAST(${df.numerator} AS DOUBLE)/${df.denominator}`;
-      }
+  exprToSQL(qi: QueryInfo, df: Expr): string | undefined {
+    switch (df.node) {
+      case '/':
+        return `CAST(${df.kids.left.sql} AS DOUBLE)/${df.kids.right.sql}`;
     }
-    return super.dialectExpr(qi, df);
+    return super.exprToSQL(qi, df);
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
@@ -133,41 +198,36 @@ export class TrinoDialect extends Dialect {
   }
 
   buildTypeExpression(fieldList: DialectFieldList): string {
-    const fields: string[] = [];
-    for (const f of fieldList) {
-      if (isDialectFieldStruct(f)) {
-        let s = `ROW(${this.buildTypeExpression(f.nestedStruct)})`;
-        if (f.isArray) {
-          s = `array(${s})`;
-        }
-        fields.push(`${f.sqlOutputName} ${s}`);
-      } else {
-        fields.push(`${f.sqlOutputName} ${trinoTypeMap[f.type] || f.type}`);
-      }
-    }
-    return fields.join(', \n');
+    return fieldList
+      .map(
+        dlf =>
+          `${this.sqlQuoteIdentifier(dlf.rawName)} ` +
+          this.malloyTypeToSQLType(dlf.typeDef)
+      )
+      .join(', \n');
   }
   // can array agg or any_value a struct...
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);
-    let ret = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderBy}) FILTER (WHERE group_set=${groupSet})`;
-    if (limit !== undefined) {
-      ret = `SLICE(${ret}, 1, ${limit})`;
-    }
-    return ret;
+    const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const filterClause = cond ? ` FILTER (WHERE ${cond})` : '';
+    const arrayAgg = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause})${filterClause}`;
+    // SLICE(array, start, length) is 1-based; length n keeps the first n.
+    return limit !== undefined ? `SLICE(${arrayAgg}, 1, ${limit})` : arrayAgg;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
-    const fields = fieldList
-      .map(f => `\n '${f.sqlOutputName}' VALUE ${f.sqlExpression}`)
-      .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN JSON_OBJECT(${fields}))`;
+    const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
+    const definitions = this.buildTypeExpression(fieldList);
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN CAST(ROW(${expressions}) AS ROW(${definitions})) END)`;
   }
 
   sqlAnyValueLastTurtle(
@@ -198,36 +258,46 @@ export class TrinoDialect extends Dialect {
   sqlUnnestAlias(
     source: string,
     alias: string,
-    fieldList: DialectFieldList,
+    _fieldList: DialectFieldList,
     needDistinctKey: boolean,
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
-    const fieldsNames = fieldList.map(f =>
-      this.sqlMaybeQuoteIdentifier(f.sqlOutputName)
-    );
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(zip(${source}, SEQUENCE(1,cardinality(${source})))) as words_0(value,__row_id_from_${alias}) ON TRUE`;
+        // return `LEFT JOIN UNNEST(transform(${source}, x -> ROW(x) )) WITH ORDINALIITY as words_0(value,__row_id_from_${alias}) ON TRUE`;
+        return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) WITH ORDINALITY as ${alias}(value, ignore,__row_id_from_${alias}) ON TRUE`;
       } else {
-        return `LEFT JOIN UNNEST(transform(${source}, x -> ROW(x) )) as ${alias}(value) ON TRUE`;
+        return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) as ${alias}(value, ignore) ON TRUE`;
       }
     } else if (needDistinctKey) {
-      return `LEFT JOIN UNNEST(zip_with(${source}, SEQUENCE(1,cardinality(${source})), (r,__row_id) -> (r, __row_id))) as ${alias}_outer(${alias},__row_id_from_${alias}) ON TRUE`;
+      return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) WITH ORDINALITY as ${alias}_outer(${alias}, ignore,__row_id_from_${alias}) ON TRUE`;
     } else {
-      return `LEFT JOIN UNNEST(${source}) as ${alias}(${fieldsNames.join(
-        ', '
-      )}) ON TRUE`;
+      return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore) ON TRUE`;
     }
   }
+  static dtype = 'DECIMAL(38,0)';
 
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
     sqlDistinctKey = `CAST(${sqlDistinctKey} AS VARCHAR)`;
 
-    const upperPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 1, 15),16) as DECIMAL) * DECIMAL '4294967296' `;
-    const lowerPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 16, 8),16) as DECIMAL) `;
-    const precisionShiftMultiplier = '0.000000001';
-    return `(${upperPart} + ${lowerPart}) * ${precisionShiftMultiplier}`;
+    const upperPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 1, 15),16) as ${TrinoDialect.dtype}) * CAST('4294967296' AS ${TrinoDialect.dtype}) `;
+    const lowerPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 16, 8),16) as ${TrinoDialect.dtype}) `;
+    return `(${upperPart} + ${lowerPart})`;
+  }
+
+  sqlSumDistinct(key: string, value: string, funcName: string): string {
+    const hashKey = this.sqlSumDistinctHashedKey(key);
+    const scale = 100000000;
+    const v = `CAST(COALESCE(${value},0)*${scale} as ${TrinoDialect.dtype})`;
+
+    const sqlSum = `CAST(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}) AS DOUBLE)/${scale}`;
+    if (funcName === 'SUM') {
+      return sqlSum;
+    } else if (funcName === 'AVG') {
+      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   sqlGenerateUUID(): string {
@@ -235,17 +305,16 @@ export class TrinoDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    _parentType: unknown,
+    childName: string,
+    _childType: string
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (fieldName === '__row_id') {
-      return `__row_id_from_${alias}`;
+    if (childName === '__row_id') {
+      return `__row_id_from_${parentAlias}`;
     }
-    return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
+    return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
   }
 
   sqlUnnestPipelineHead(
@@ -279,17 +348,21 @@ ${indent(sql)}
 
   sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    fieldList: DialectFieldList
+    fieldList: DialectFieldList,
+    orderBy: OrderBy[] | undefined
   ): string {
     const fields = fieldList.map(f => f.sqlExpression).join(', ');
     const definitions = this.buildTypeExpression(fieldList);
-    return `SELECT ARRAY_AGG(CAST(ROW(${fields}) as ROW(${definitions}))) FROM ${lastStageName}\n`;
+    const o = this.sqlCombineLastStageOrderBy(orderBy, fieldList);
+    return `SELECT ARRAY_AGG(CAST(ROW(${fields}) as ROW(${definitions}))${o}) FROM ${lastStageName}\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string, fieldList): string {
-    const fields = fieldList.map(f => f.sqlExpression).join(', ');
+  sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList): string {
+    const fields = fieldList
+      .map(f => `${alias}.${this.sqlQuoteIdentifier(f.rawName)}`)
+      .join(', ');
     const definitions = this.buildTypeExpression(fieldList);
-    return `CAST(ROW(${fields}) as ROW(${definitions})`;
+    return `CAST(ROW(${fields}) as ROW(${definitions}))`;
   }
 
   // TODO(figutierrez): update.
@@ -390,110 +463,68 @@ ${indent(sql)}
   WITH
   WITHIN`.split(/\s/);
 
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier + '"';
-  }
-
-  sqlNow(): Expr {
-    return mkExpr`LOCALTIMESTAMP`;
-  }
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
-    // adjusting for monday/sunday weeks
-    const week = units === 'week';
-    const truncThis = week
-      ? mkExpr`DATE_ADD('day', 1, ${sqlTime.value})`
-      : sqlTime.value;
-    if (sqlTime.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        const civilSource = mkExpr`AT_TIMEZONE(${truncThis},'${tz}')`;
-        const civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
-        // MTOY todo ... only need to do this if this is a date ...
-        return mkExpr`AT_TIMEZONE(${civilTrunc},'${tz}')`;
-        // return mkExpr`CAST((${truncTsTz}),TIMESTAMP)`;
-      }
-    }
-    let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    if (week) {
-      result = mkExpr`DATE_ADD('day',-1, ${result})`;
-    }
-    return result;
-  }
-
-  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
-    const pgUnits = pgExtractionMap[units] || units;
-    let extractFrom = from.value;
-    if (from.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = mkExpr`at_timezone(${extractFrom},'${tz}')`;
-      }
-    }
-    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
-    return units === 'day_of_week' ? mkExpr`mod(${extracted}+1,7)` : extracted;
-  }
-
-  sqlAlterTime(
-    op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: DateUnit
-  ): Expr {
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = mkExpr`${n}*3`;
-    }
-    if (timeframe === 'week') {
-      timeframe = 'day';
-      n = mkExpr`${n}*7`;
-    }
-    if (op === '-') {
-      n = mkExpr`(${n})*-1`;
-    }
-    return mkExpr`DATE_ADD('${timeframe}', ${n}, ${expr.value})`;
-  }
-
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
-    const op = `${cast.srcType}=>${cast.dstType}`;
-    const tz = qtz(qi);
-    if (op === 'timestamp=>date' && tz) {
-      const tstz = mkExpr`CAST(${cast.expr} as TIMESTAMP)`;
-      return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
-    } else if (op === 'date=>timestamp' && tz) {
-      return mkExpr`CAST(CONCAT(CAST(CAST(${cast.expr} AS TIMESTAMP) AS VARCHAR), ' ${tz}') AS TIMESTAMP WITH TIME ZONE)`;
-    }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
-      const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
-    }
-    return cast.expr;
-  }
-
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    return mkExpr`REGEXP_LIKE(${expr}, ${regexp})`;
-  }
-
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone: string | undefined
+  // Civil time is a TIMESTAMP, which Trino keeps without a zone
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    typeDef: ATimestampTypeDef
   ): string {
-    if (type === 'date') {
-      return `DATE '${timeString}'`;
+    const tz = this.sqlTimezoneLiteral(timezone);
+    if (TD.isTimestamptz(typeDef)) {
+      return `CAST(at_timezone(${expr}, ${tz}) AS TIMESTAMP)`;
     }
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `TIMESTAMP '${timeString} ${tz}'`;
-    }
-    return `TIMESTAMP '${timeString}'`;
+    return timezone === 'UTC'
+      ? expr
+      : `CAST(at_timezone(with_timezone(${expr}, 'UTC'), ${tz}) AS TIMESTAMP)`;
   }
 
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    destTypeDef: ATimestampTypeDef
+  ): string {
+    const tz = this.sqlTimezoneLiteral(timezone);
+    if (TD.isTimestamptz(destTypeDef)) {
+      return `with_timezone(${expr}, ${tz})`;
+    }
+    return timezone === 'UTC'
+      ? expr
+      : `CAST(at_timezone(with_timezone(${expr}, ${tz}), 'UTC') AS TIMESTAMP)`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: TimestampUnit,
+    _civilType: CivilTime
+  ): string {
+    return trinoTrunc(expr, unit);
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: TimestampUnit,
+    _civilType: CivilTime
+  ): string {
+    return trinoDateAdd(expr, op, magnitude, unit);
+  }
+
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    const expr = cast.e.sql || '';
+    if (!TD.eq(srcTypeDef, dstTypeDef)) {
+      const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
+      return `${castFunc}(${expr} AS ${dstSQLType})`;
+    }
+    return expr;
+  }
+
+  sqlRegexpMatch(reCmp: RegexMatchExpr): string {
+    return `REGEXP_LIKE(${reCmp.kids.expr.sql}, ${reCmp.kids.regex.sql})`;
+  }
+
+  sqlMeasureTimeExpr(mf: MeasureTimeExpr): string {
     const measureMap: Record<string, TimeMeasure> = {
       'microsecond': {use: 'microsecond', ratio: 1},
       'millisecond': {use: 'microsecond', ratio: 1000},
@@ -503,27 +534,36 @@ ${indent(sql)}
       'day': {use: 'hour', ratio: 24},
       'week': {use: 'day', ratio: 7},
     };
-    let lVal = from.value;
-    let rVal = to.value;
-    if (measureMap[units]) {
-      const {use: measureIn, ratio} = measureMap[units];
+    const from = mf.kids.left;
+    const to = mf.kids.right;
+    let lVal = from.sql;
+    let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(mf.units)
+    ) {
+      return `DATE_DIFF('${mf.units}',${lVal},${rVal})`;
+    }
+    if (measureMap[mf.units]) {
+      const {use: measureIn, ratio} = measureMap[mf.units];
       if (!timestampMeasureable(measureIn)) {
         throw new Error(`Measure in '${measureIn} not implemented`);
       }
-      if (from.valueType !== to.valueType) {
+      if (!TD.eq(from.typeDef, to.typeDef)) {
         throw new Error("Can't measure difference between different types");
       }
-      if (from.valueType === 'date') {
-        lVal = mkExpr`CAST(${lVal} AS TIMESTAMP)`;
-        rVal = mkExpr`CAST(${rVal} AS TIMESTAMP)`;
+      if (TD.isDate(from.typeDef)) {
+        lVal = `CAST(${lVal} AS TIMESTAMP)`;
+        rVal = `CAST(${rVal} AS TIMESTAMP)`;
       }
-      let measured = mkExpr`DATE_DIFF('${measureIn}',${lVal},${rVal})`;
+      let measured = `DATE_DIFF('${measureIn}',${lVal},${rVal})`;
       if (ratio !== 1) {
-        measured = mkExpr`FLOOR(CAST(${measured} AS DOUBLE)/${ratio.toString()}.0)`;
+        measured = `FLOOR(CAST(${measured} AS DOUBLE)/${ratio.toString()}.0)`;
       }
       return measured;
     }
-    throw new Error(`Measure '${units} not implemented`);
+    throw new Error(`Measure '${mf.units} not implemented`);
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
@@ -540,35 +580,78 @@ ${indent(sql)}
     return tableSQL;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(TRINO_MALLOY_STANDARD_OVERLOADS);
   }
 
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(TRINO_DIALECT_FUNCTIONS);
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    // TODO: implement
-    return TRINO_FUNCTIONS.get(name);
-  }
-
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
-    if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
-        return 'BIGINT';
-      } else {
-        return 'DOUBLE';
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
+    switch (malloyType.type) {
+      case 'number':
+        if (malloyType.numberType === 'integer') {
+          return 'INTEGER';
+        } else if (malloyType.numberType === 'bigint') {
+          return 'BIGINT';
+        } else {
+          return 'DOUBLE';
+        }
+      case 'string':
+        return 'VARCHAR';
+      case 'timestamptz':
+        return 'TIMESTAMP WITH TIME ZONE';
+      case 'record': {
+        const typeSpec: string[] = [];
+        for (const f of malloyType.fields) {
+          if (isAtomic(f)) {
+            typeSpec.push(
+              `${this.sqlQuoteIdentifier(
+                f.name
+              )} ${this.malloyTypeToSQLType(f)}`
+            );
+          }
+        }
+        return `ROW(${typeSpec.join(',')})`;
       }
-    } else if (malloyType.type === 'string') {
-      return 'VARCHAR';
+      case 'sql native':
+        return malloyType.rawType || 'UNKNOWN-NATIVE';
+      case 'array': {
+        if (isRepeatedRecord(malloyType)) {
+          const typeSpec: string[] = [];
+          for (const f of malloyType.fields) {
+            if (isAtomic(f)) {
+              typeSpec.push(
+                `${this.sqlQuoteIdentifier(
+                  f.name
+                )} ${this.malloyTypeToSQLType(f)}`
+              );
+            }
+          }
+          return `ARRAY<ROW(${typeSpec.join(',')})>`;
+        }
+        return `ARRAY<${this.malloyTypeToSQLType(malloyType.elementTypeDef)}>`;
+      }
+      default:
+        return malloyType.type.toUpperCase();
     }
-    return malloyType.type;
   }
 
-  sqlTypeToMalloyType(_sqlType: string): FieldAtomicTypeDef | undefined {
-    // TODO(figutierrez): unimplemented.
-    return undefined;
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
+    const matchType = sqlType.toLowerCase();
+    if (matchType.startsWith('timestamp with time zone')) {
+      return {type: 'timestamptz'};
+    }
+    const baseSqlType = matchType.match(/^\w+/)?.at(0) ?? matchType;
+    return (
+      trinoToMalloyTypes[baseSqlType] ?? {
+        type: 'sql native',
+        rawType: sqlType,
+      }
+    );
   }
 
   castToString(expression: string): string {
@@ -601,5 +684,217 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Angle Brackets:       ARRAY<INT64>
     return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
+  }
+
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE '${literal}'`;
+  }
+
+  sqlTimestamptzLiteral(
+    _qi: QueryInfo,
+    literal: string,
+    timezone: string
+  ): string {
+    // Use with_timezone to create a TIMESTAMP WITH TIME ZONE
+    return `with_timezone(TIMESTAMP '${literal}', ${this.sqlTimezoneLiteral(timezone)})`;
+  }
+
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    return trinoExtract(expr, units);
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const rowVals: string[] = [];
+    const rowTypes: string[] = [];
+    for (const f of lit.typeDef.fields) {
+      if (isAtomic(f)) {
+        const name = activeName(f);
+        rowVals.push(
+          safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal'
+        );
+        const elType = this.malloyTypeToSQLType(f);
+        rowTypes.push(`${this.sqlQuoteIdentifier(name)} ${elType}`);
+      }
+    }
+    return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;
+  }
+}
+
+export class PrestoDialect extends TrinoDialect {
+  name = 'presto';
+  supportsPipelinesInViews = false; // what a drag...
+  supportsLeftJoinUnnest = false; // we need to fix this....
+
+  sqlGenerateUUID(): string {
+    return 'CAST(UUID() AS VARCHAR)';
+  }
+
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE '${literal}'`;
+  }
+
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    const tz = timezone ?? queryZone(qi);
+    if (tz === 'UTC') {
+      return `TIMESTAMP '${literal}'`;
+    }
+    return `CAST(TIMESTAMP '${literal} ${this.checkedTimezoneName(tz)}' AS TIMESTAMP)`;
+  }
+
+  sqlTimestamptzLiteral(
+    _qi: QueryInfo,
+    literal: string,
+    timezone: string
+  ): string {
+    return `TIMESTAMP '${literal} ${this.checkedTimezoneName(timezone)}'`;
+  }
+
+  /*
+   * Presto cannot meet the civil contract: its only way to read a date and
+   * time of day as an instant in a zone is to parse a string, which fails
+   * on a time the zone skips. So Presto never converts to civil time. It
+   * places an instant in the zone as a TIMESTAMP WITH TIME ZONE, whose
+   * functions read the clock in that zone and resolve any skipped or
+   * repeated time themselves. A Presto TIMESTAMP is an instant shown in the
+   * session zone, which is UTC.
+   */
+
+  sqlConvertToCivilTime(): string {
+    throw new Error('Presto has no civil time');
+  }
+
+  sqlConvertFromCivilTime(): string {
+    throw new Error('Presto has no civil time');
+  }
+
+  /** The instant `expr`, showing the clock of `timezone` */
+  private inZone(
+    expr: string,
+    typeDef: ATimestampTypeDef,
+    timezone: string
+  ): string {
+    if (TD.isTimestamp(typeDef) && timezone === 'UTC') {
+      return expr;
+    }
+    return `(${expr}) AT TIME ZONE ${this.sqlTimezoneLiteral(timezone)}`;
+  }
+
+  /** An instant from inZone, as a value of `typeDef` */
+  private fromZone(
+    expr: string,
+    typeDef: ATimestampTypeDef,
+    timezone: string
+  ): string {
+    if (TD.isTimestamp(typeDef) && timezone !== 'UTC') {
+      return `CAST(${expr} AS TIMESTAMP)`;
+    }
+    return expr;
+  }
+
+  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
+    const time = from.e;
+    const expr = TD.isAnyTimestamp(time.typeDef)
+      ? this.inZone(time.sql!, time.typeDef, queryZone(qi))
+      : time.sql!;
+    return trinoExtract(expr, from.units);
+  }
+
+  sqlTruncAndOffset(
+    baseExpr: TimeExpr,
+    qi: QueryInfo,
+    truncateTo?: TimestampUnit,
+    offset?: TimeOffset
+  ): string {
+    const timeType = baseExpr.typeDef;
+    // Adding hours, minutes or seconds to an instant needs no zone
+    const usesQueryZone =
+      TD.isAnyTimestamp(timeType) &&
+      (truncateTo !== undefined ||
+        (offset !== undefined && isDateUnit(offset.unit)));
+    const zone = queryZone(qi);
+    let sql = usesQueryZone
+      ? this.inZone(baseExpr.sql!, timeType, zone)
+      : baseExpr.sql!;
+    if (truncateTo) {
+      sql = trinoTrunc(sql, truncateTo);
+    }
+    if (offset) {
+      sql = trinoDateAdd(sql, offset.op, offset.magnitude, offset.unit);
+    }
+    return usesQueryZone ? this.fromZone(sql, timeType, zone) : sql;
+  }
+
+  sqlTimeCast(qi: QueryInfo, cast: TypecastExpr): string | undefined {
+    const {srcTypeDef, dstTypeDef} = this.sqlCastPrep(cast);
+    const expr = cast.e.sql ?? '';
+    const zone = queryZone(qi);
+    if (TD.isAnyTimestamp(srcTypeDef)) {
+      if (TD.isDate(dstTypeDef)) {
+        return `CAST(${this.inZone(expr, srcTypeDef, zone)} AS DATE)`;
+      }
+      if (TD.isTimestamp(dstTypeDef) && TD.isTimestamptz(srcTypeDef)) {
+        return `CAST(${expr} AS TIMESTAMP)`;
+      }
+      if (TD.isTimestamptz(dstTypeDef) && TD.isTimestamp(srcTypeDef)) {
+        return `(${expr}) AT TIME ZONE 'UTC'`;
+      }
+    }
+    if (TD.isDate(srcTypeDef) && TD.isAnyTimestamp(dstTypeDef)) {
+      if (zone === 'UTC') {
+        const midnight = `CAST(${expr} AS TIMESTAMP)`;
+        return TD.isTimestamp(dstTypeDef)
+          ? midnight
+          : `(${midnight}) AT TIME ZONE 'UTC'`;
+      }
+      // Fails in a zone which skips the midnight starting the date
+      const midnight = `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${this.checkedTimezoneName(zone)}' AS TIMESTAMP WITH TIME ZONE)`;
+      return this.fromZone(midnight, dstTypeDef, zone);
+    }
+    return undefined;
+  }
+
+  sqlUnnestAlias(
+    source: string,
+    alias: string,
+    _fieldList: DialectFieldList,
+    needDistinctKey: boolean,
+    isArray: boolean,
+    _isInNestedPipeline: boolean
+  ): string {
+    if (isArray) {
+      if (needDistinctKey) {
+        // return `LEFT JOIN UNNEST(transform(${source}, x -> CAST(ROW(x) as ROW(value) )) WITH ORDINALIITY as words_0(value,__row_id_from_${alias}) ON TRUE`;
+        return (
+          '-- Simulate a left join\n' +
+          `CROSS JOIN  UNNEST(COALESCE(${source},ARRAY[NULL])) WITH ORDINALITY as ${alias}(value, __row_id_almost_${alias})\n` +
+          `CROSS JOIN UNNEST(ARRAY[CASE WHEN ${source} IS NOT NULL THEN __row_id_almost_${alias} END]) as ${alias}_ignore(__row_id_from_${alias})`
+        );
+      } else {
+        // return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) as ${alias}(value, ignore)`;
+        return `CROSS JOIN  UNNEST(COALESCE(${source}, ARRAY[NULL])) as ${alias}(value) `;
+      }
+    } else if (needDistinctKey) {
+      // return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) WITH ORDINALITY as ${alias}_outer(${alias}, ignore,__row_id_from_${alias})`;
+      return (
+        '-- Simulate a left join\n' +
+        `CROSS JOIN UNNEST(COALESCE(${source}, ARRAY[NULL])) WITH ORDINALITY as ${alias}_outer(${alias}, __row_id_almost_${alias})\n` +
+        `CROSS JOIN UNNEST(ARRAY[CASE WHEN ${source} IS NOT NULL THEN __row_id_almost_${alias} END]) as ${alias}_ignore(__row_id_from_${alias})`
+      );
+    } else {
+      // return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore)`;
+      return `CROSS JOIN  UNNEST(COALESCE(${source}, ARRAY[NULL])) as ${alias}_outer(${alias})`;
+    }
+  }
+
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(PRESTO_DIALECT_FUNCTIONS);
   }
 }

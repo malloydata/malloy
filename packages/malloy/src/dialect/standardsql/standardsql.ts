@@ -1,43 +1,50 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {indent} from '../../model/utils';
-import {
-  Expr,
-  ExtractUnit,
+import type {
   Sampling,
-  TimeValue,
+  AtomicTypeDef,
+  TypecastExpr,
+  RegexMatchExpr,
+  MeasureTimeExpr,
+  BasicAtomicTypeDef,
+  RecordLiteralNode,
+  ArrayLiteralNode,
   TimestampUnit,
-  TypecastFragment,
+  ATimestampTypeDef,
+  ExtractUnit,
+} from '../../model/malloy_types';
+import {
+  isAtomic,
+  isRepeatedRecord,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
-  FieldAtomicTypeDef,
+  TD,
 } from '../../model/malloy_types';
-import {STANDARDSQL_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {
+  CompiledOrderBy,
+  DialectFieldList,
+  IntegerTypeMapping,
+  OrderByRequest,
+  QueryInfo,
+} from '../dialect';
+import {
+  CivilTime,
+  Dialect,
+  EscapeStyle,
+  MIN_INT64,
+  MAX_INT64,
+  turtleGroupSetCondition,
+  type LateralJoinExpression,
+} from '../dialect';
+import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
+import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -51,35 +58,21 @@ function timestampMeasureable(units: string): boolean {
   ].includes(units);
 }
 
-function dateMeasureable(units: string): boolean {
-  return ['day', 'week', 'month', 'quarter', 'year'].includes(units);
-}
-
 const extractMap: Record<string, string> = {
   'day_of_week': 'dayofweek',
   'day_of_year': 'dayofyear',
 };
-
-/**
- * Return a non UTC timezone, if one was specificed.
- */
-function qtz(qi: QueryInfo): string | undefined {
-  const tz = qi.queryTimezone;
-  if (tz && tz !== 'UTC') {
-    return tz;
-  }
-}
 
 declare interface TimeMeasure {
   use: string;
   ratio: number;
 }
 
-const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const bqToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'DATE': {type: 'date'},
   'STRING': {type: 'string'},
-  'INTEGER': {type: 'number', numberType: 'integer'},
-  'INT64': {type: 'number', numberType: 'integer'},
+  'INTEGER': {type: 'number', numberType: 'bigint'},
+  'INT64': {type: 'number', numberType: 'bigint'},
   'FLOAT': {type: 'number', numberType: 'float'},
   'FLOAT64': {type: 'number', numberType: 'float'},
   'NUMERIC': {type: 'number', numberType: 'float'},
@@ -97,6 +90,10 @@ const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
 
 export class StandardSQLDialect extends Dialect {
   name = 'standardsql';
+  stringLiteralStyle = EscapeStyle.Backslash;
+  identifierEscapeStyle = EscapeStyle.Backslash;
+  identifierQuoteChar = '`';
+  experimental = false;
   defaultNumberType = 'FLOAT64';
   defaultDecimalType = 'NUMERIC';
   udfPrefix = '__udf';
@@ -112,12 +109,59 @@ export class StandardSQLDialect extends Dialect {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   cantPartitionWindowFunctionsOnExpressions = true;
   hasModOperator = false;
 
-  quoteTablePath(tablePath: string): string {
-    return `\`${tablePath}\``;
+  sqlLateralJoinBag(expressions: LateralJoinExpression[]): string {
+    const fields = expressions.map(e => `${e.sql} as ${e.name}`);
+    return `LEFT JOIN UNNEST([STRUCT(${fields.join(',\n')})]) as __lateral_join_bag\n`;
   }
+  nestedArrays = false; // Can't have an array of arrays for some reason
+  supportsHyperLogLog = true;
+  likeEscape = false; // Uses \ instead of ESCAPE 'X' in like clauses
+
+  // BigQuery only has INT64 - all integers can exceed JS Number precision
+  override integerTypeMappings: IntegerTypeMapping[] = [
+    {min: MIN_INT64, max: MAX_INT64, numberType: 'bigint'},
+  ];
+
+  // BigQuery's parser accepts `\`` as a backtick escape inside quoted
+  // identifiers, but BigQuery's schema layer rejects field/table names
+  // containing a literal backtick. Refuse here so the error names the
+  // dialect; the rest of the escape (backslash-doubling) is handled by
+  // the base via identifierEscapeStyle.
+  // Reference: https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical
+  private bqRejectBacktick(name: string, kind: string): void {
+    if (name.includes('`')) {
+      throw new Error(
+        `BigQuery ${kind} cannot contain a backtick: ${JSON.stringify(name)}`
+      );
+    }
+  }
+
+  sqlQuoteIdentifier(identifier: string): string {
+    this.bqRejectBacktick(identifier, 'identifier');
+    return super.sqlQuoteIdentifier(identifier);
+  }
+
+  // BigQuery bare-identifier continuation allows dashes (verified
+  // against the live engine: `proj-foo.dataset.table` resolves to a
+  // table reference, both bare and inside per-segment backticks). The
+  // base `sqlValidateTableName` handles every shape we accept —
+  // bare-dotted, whole-backticked, and per-segment-backticked — because
+  // its grammar is `Segment ('.' Segment)*` and a segment is either
+  // bare or quoted with this dialect's `identifierQuoteChar` /
+  // `identifierEscapeStyle` (`` ` `` / Backslash). The whole-path form
+  // (`` `proj.dataset.table` ``) is accepted naturally as a single
+  // quoted segment.
+  //
+  // `*` is intentionally NOT in this regex. BigQuery's parser only
+  // accepts `*` inside backticks (wildcard tables must be quoted, e.g.
+  // `` `dataset.events_*` ``). Bare wildcards would fail at the engine,
+  // so we reject them up front and require the user to type the
+  // backticks they'd need anyway.
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_-]*/;
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(GENERATE_ARRAY(0,${groupSetCount},1)))`;
@@ -126,28 +170,41 @@ export class StandardSQLDialect extends Dialect {
   sqlAnyValue(groupSet: number, fieldName: string): string {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${fieldName} END)`;
   }
+
+  sqlOrderBy(orderTerms: string[], obr?: OrderByRequest): string {
+    if (obr === 'analytical' || obr === 'turtle') {
+      return `ORDER BY ${orderTerms.join(',')}`;
+    }
+    return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
+  }
+
   // can array agg or any_value a struct...
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += ` LIMIT ${limit}`;
-    }
     const fields = fieldList
-      .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(
+        f => `\n  ${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`
+      )
       .join(', ');
-    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderBy} ${tail})`;
+    const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    // BigQuery ARRAY_AGG takes LIMIT as its final sub-clause, after ORDER BY.
+    const limitClause = limit !== undefined ? ` LIMIT ${limit}` : '';
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const struct = `STRUCT(${fields}\n  )`;
+    const element = cond ? `CASE WHEN ${cond} THEN ${struct} END` : struct;
+    return `ARRAY_AGG(${element} IGNORE NULLS ${orderByClause}${limitClause})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END)`;
   }
 
   sqlAnyValueLastTurtle(
@@ -163,10 +220,10 @@ export class StandardSQLDialect extends Dialect {
     fieldList: DialectFieldList
   ): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     const nullValues = fieldList
-      .map(f => `NULL as ${f.sqlOutputName}`)
+      .map(f => `NULL as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
 
     return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END), STRUCT(${nullValues}))`;
@@ -214,13 +271,13 @@ export class StandardSQLDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    _parentType: unknown,
+    childName: string,
+    _childType: string
   ): string {
-    return `${alias}.${fieldName}`;
+    const child = this.sqlQuoteIdentifier(childName);
+    return `${parentAlias}.${child}`;
   }
 
   sqlUnnestPipelineHead(
@@ -256,212 +313,106 @@ ${indent(sql)}
     return `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string): string {
-    return `(SELECT AS STRUCT ${alias}.*)`;
+  sqlSelectAliasAsStruct(
+    alias: string,
+    dialectFieldList: DialectFieldList
+  ): string {
+    const fields = dialectFieldList
+      .map(d => `${alias}.${this.sqlQuoteIdentifier(d.rawName)}`)
+      .join(', ');
+    return `(SELECT AS STRUCT ${fields})`;
   }
 
-  keywords = `
-  ALL
-  AND
-  ANY
-  ARRAY
-  AS
-  ASC
-  ASSERT_ROWS_MODIFIED
-  AT
-  BETWEEN
-  BY
-  CASE
-  CAST
-  COLLATE
-  CONTAINS
-  CREATE
-  CROSS
-  CUBE
-  CURRENT
-  DEFAULT
-  DEFINE
-  DESC
-  DISTINCT
-  ELSE
-  END
-  ENUM
-  ESCAPE
-  EXCEPT
-  EXCLUDE
-  EXISTS
-  EXTRACT
-  FALSE
-  FETCH
-  FOLLOWING
-  FOR
-  FROM
-  FULL
-  GROUP
-  GROUPING
-  GROUPS
-  HASH
-  HAVING
-  IF
-  IGNORE
-  IN
-  INNER
-  INTERSECT
-  INTERVAL
-  INTO
-  IS
-  JOIN
-  LATERAL
-  LEFT
-  LIKE
-  LIMIT
-  LOOKUP
-  MERGE
-  NATURAL
-  NEW
-  NO
-  NOT
-  NULL
-  NULLS
-  OF
-  ON
-  OR
-  ORDER
-  OUTER
-  OVER
-  PARTITION
-  PRECEDING
-  PROTO
-  RANGE
-  RECURSIVE
-  RESPECT
-  RIGHT
-  ROLLUP
-  ROWS
-  SELECT
-  SET
-  SOME
-  STRUCT
-  TABLESAMPLE
-  THEN
-  TO
-  TREAT
-  TRUE
-  UNBOUNDED
-  UNION
-  UNNEST
-  USING
-  WHEN
-  WHERE
-  WINDOW
-  WITH
-  WITHIN`.split(/\s/);
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    // return this.keywords.indexOf(identifier.toUpperCase()) > 0
-    //   ? '`' + identifier + '`'
-    //   : identifier;
-    return '`' + identifier + '`';
+  sqlNowExpr(): string {
+    return 'CURRENT_TIMESTAMP()';
   }
 
-  sqlNow(): Expr {
-    return mkExpr`CURRENT_TIMESTAMP()`;
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    return `EXTRACT(${extractMap[units] || units} FROM ${expr})`;
   }
 
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
-    const tz = qtz(qi);
-    const tzAdd = tz ? `, "${tz}"` : '';
-    if (sqlTime.valueType === 'date') {
-      if (dateMeasureable(units)) {
-        return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
-      }
-      return mkExpr`TIMESTAMP(${sqlTime.value}${tzAdd})`;
-    }
-    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value},${units}${tzAdd})`;
+  // Civil time is a DATETIME, which has no zone
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    _typeDef: ATimestampTypeDef
+  ): string {
+    return `DATETIME(${expr}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
-  sqlExtract(qi: QueryInfo, expr: TimeValue, units: ExtractUnit): Expr {
-    const extractTo = extractMap[units] || units;
-    const tz = expr.valueType === 'timestamp' && qtz(qi);
-    const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
-    return mkExpr`EXTRACT(${extractTo} FROM ${expr.value}${tzAdd})`;
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    _destTypeDef: ATimestampTypeDef
+  ): string {
+    return `TIMESTAMP(${expr}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
-  sqlAlterTime(
+  sqlTruncate(expr: string, unit: TimestampUnit, civilType: CivilTime): string {
+    return civilType === CivilTime.Date
+      ? `DATE_TRUNC(${expr}, ${unit})`
+      : `DATETIME_TRUNC(${expr}, ${unit})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
     op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: TimestampUnit
-  ): Expr {
-    let theTime = expr.value;
-    let computeType: string = expr.valueType;
-    if (timeframe !== 'day' && timestampMeasureable(timeframe)) {
-      // The units must be done in timestamp, no matter the input type
-      computeType = 'timestamp';
-      if (expr.valueType !== 'timestamp') {
-        theTime = mkExpr`TIMESTAMP(${theTime})`;
-      }
-    } else if (expr.valueType === 'timestamp') {
-      theTime = mkExpr`DATETIME(${theTime})`;
-      computeType = 'datetime';
-    }
-    const funcName = computeType.toUpperCase() + (op === '+' ? '_ADD' : '_SUB');
-    const newTime = mkExpr`${funcName}(${theTime}, INTERVAL ${n} ${timeframe})`;
-    if (computeType === expr.valueType) {
-      return newTime;
-    }
-    return mkExpr`${expr.valueType.toUpperCase()}(${newTime})`;
+    magnitude: string,
+    unit: TimestampUnit,
+    civilType: CivilTime
+  ): string {
+    const funcType = civilType === CivilTime.Date ? 'DATE' : 'DATETIME';
+    const funcName = `${funcType}_${op === '+' ? 'ADD' : 'SUB'}`;
+    return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
+  }
+
+  sqlCivilToDate(expr: string): string {
+    return `DATE(${expr})`;
+  }
+
+  sqlDateToCivil(expr: string): string {
+    return `DATETIME(${expr})`;
   }
 
   ignoreInProject(fieldName: string): boolean {
     return fieldName === '_PARTITIONTIME';
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
-    const op = `${cast.srcType}::${cast.dstType}`;
-    const tz = qtz(qi);
-    if (op === 'timestamp::date' && tz) {
-      return mkExpr`DATE(${cast.expr},'${tz}')`;
-    }
-    if (op === 'date::timestamp' && tz) {
-      return mkExpr`TIMESTAMP(${cast.expr}, '${tz}')`;
-    }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    const src = cast.e.sql || '';
+    if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
+      return `${castFunc}(${src} AS ${dstSQLType})`;
     }
-    return cast.expr;
+    return src;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    return mkExpr`REGEXP_CONTAINS(${expr}, ${regexp})`;
+  sqlRegexpMatch(match: RegexMatchExpr): string {
+    return `REGEXP_CONTAINS(${match.kids.expr.sql},${match.kids.regex.sql})`;
   }
 
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: 'date' | 'timestamp',
-    timezone: string | undefined
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE('${literal}')`;
+  }
+
+  sqlCivilLiteral(literal: string): string {
+    return `DATETIME '${literal}'`;
+  }
+
+  sqlTimestamptzLiteral(
+    _qi: QueryInfo,
+    _literal: string,
+    _timezone: string
   ): string {
-    if (type === 'date') {
-      return `DATE('${timeString}')`;
-    } else if (type === 'timestamp') {
-      let timestampArgs = `'${timeString}'`;
-      const tz = timezone || qtz(qi);
-      if (tz && tz !== 'UTC') {
-        timestampArgs += `,'${tz}'`;
-      }
-      return `TIMESTAMP(${timestampArgs})`;
-    } else {
-      throw new Error(`Unsupported Literal time format ${type}`);
-    }
+    throw new Error('BigQuery does not support timestamptz');
   }
 
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+  sqlMeasureTimeExpr(measure: MeasureTimeExpr): string {
     const measureMap: Record<string, TimeMeasure> = {
       'microsecond': {use: 'microsecond', ratio: 1},
       'millisecond': {use: 'microsecond', ratio: 1000},
@@ -471,27 +422,46 @@ ${indent(sql)}
       'day': {use: 'hour', ratio: 24},
       'week': {use: 'day', ratio: 7},
     };
-    let lVal = from.value;
-    let rVal = to.value;
-    if (measureMap[units]) {
-      const {use: measureIn, ratio} = measureMap[units];
+    const from = measure.kids.left;
+    const to = measure.kids.right;
+    let lVal = from.sql;
+    let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(measure.units)
+    ) {
+      const earlier = `LEAST(${lVal},${rVal})`;
+      const later = `GREATEST(${lVal},${rVal})`;
+      const unit = measure.units.toUpperCase();
+      const candidate = `DATE_DIFF(${later},${earlier},${unit})`;
+      const anniversary = `DATE_ADD(${earlier}, INTERVAL ${candidate} ${unit})`;
+      const measured = `(${candidate} - CASE WHEN ${anniversary} > ${later} THEN 1 ELSE 0 END)`;
+      return `CASE
+        WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
+        WHEN ${rVal} >= ${lVal} THEN ${measured}
+        ELSE -(${measured})
+      END`;
+    }
+    if (measureMap[measure.units]) {
+      const {use: measureIn, ratio} = measureMap[measure.units];
       if (!timestampMeasureable(measureIn)) {
         throw new Error(`Measure in '${measureIn} not implemented`);
       }
-      if (from.valueType !== to.valueType) {
+      if (!TD.eq(from.typeDef, to.typeDef)) {
         throw new Error("Can't measure difference between different types");
       }
-      if (from.valueType === 'date') {
-        lVal = mkExpr`TIMESTAMP(${lVal})`;
-        rVal = mkExpr`TIMESTAMP(${rVal})`;
+      if (TD.isDate(from.typeDef)) {
+        lVal = `TIMESTAMP(${lVal})`;
+        rVal = `TIMESTAMP(${rVal})`;
       }
-      let measured = mkExpr`TIMESTAMP_DIFF(${rVal},${lVal},${measureIn})`;
+      let measured = `TIMESTAMP_DIFF(${rVal},${lVal},${measureIn})`;
       if (ratio !== 1) {
-        measured = mkExpr`FLOOR(${measured}/${ratio.toString()}.0)`;
+        measured = `FLOOR(${measured}/${ratio.toString()}.0)`;
       }
       return measured;
     }
-    throw new Error(`Measure '${units} not implemented`);
+    throw new Error(`Measure '${measure.units} not implemented`);
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
@@ -510,35 +480,58 @@ ${indent(sql)}
     return tableSQL;
   }
 
-  sqlLiteralString(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(STANDARDSQL_MALLOY_STANDARD_OVERLOADS);
   }
 
-  sqlLiteralRegexp(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(STANDARDSQL_DIALECT_FUNCTIONS);
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return STANDARDSQL_FUNCTIONS.get(name);
-  }
-
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
+      if (
+        malloyType.numberType === 'integer' ||
+        malloyType.numberType === 'bigint'
+      ) {
         return 'INT64';
       } else {
         return 'FLOAT64';
       }
+    } else if (malloyType.type === 'record') {
+      const typeSpec: string[] = [];
+      for (const f of malloyType.fields) {
+        if (isAtomic(f)) {
+          typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+        }
+      }
+      return `STRUCT<${typeSpec.join(', ')}>`;
+    } else if (malloyType.type === 'array') {
+      if (isRepeatedRecord(malloyType)) {
+        const typeSpec: string[] = [];
+        for (const f of malloyType.fields) {
+          if (isAtomic(f)) {
+            typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+          }
+        }
+        return `ARRAY<STRUCT<${typeSpec.join(', ')}>>`;
+      }
+      return `ARRAY<${this.malloyTypeToSQLType(malloyType.elementTypeDef)}>`;
     }
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
-    return bqToMalloyTypes[baseSqlType.toUpperCase()];
+    return (
+      bqToMalloyTypes[baseSqlType.toUpperCase()] ?? {
+        type: 'sql native',
+        rawType: sqlType.toLowerCase(),
+      }
+    );
   }
 
   castToString(expression: string): string {
@@ -556,5 +549,19 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Angle Brackets:       ARRAY<INT64>
     return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const ents: string[] = [];
+    for (const [name, val] of Object.entries(lit.kids)) {
+      const expr = val.sql || 'internal-error-literal-record';
+      ents.push(`${expr} AS ${this.sqlQuoteIdentifier(name)}`);
+    }
+    return `STRUCT(${ents.join(',')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return '[' + array.join(',') + ']';
   }
 }

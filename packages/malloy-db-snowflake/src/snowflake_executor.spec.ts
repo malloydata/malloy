@@ -1,103 +1,98 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {SnowflakeExecutor} from './snowflake_executor';
-import {QueryData, RunSQLOptions} from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
-const [describe] = describeIfDatabaseAvailable(['snowflake']);
+const SNOWFLAKE_VARS = [
+  'SNOWFLAKE_ACCOUNT',
+  'SNOWFLAKE_USER',
+  'SNOWFLAKE_PASSWORD',
+  'SNOWFLAKE_ROLE',
+  'SNOWFLAKE_WAREHOUSE',
+  'SNOWFLAKE_DATABASE',
+  'SNOWFLAKE_SCHEMA',
+  'SNOWFLAKE_AUTHENTICATOR',
+  'SNOWFLAKE_PRIVATE_KEY_RAW',
+  'SNOWFLAKE_PRIVATE_KEY_FILE',
+  'SNOWFLAKE_PRIVATE_KEY_PASSPHRASE',
+];
 
-class SnowflakeExecutorTestSetup {
-  private executor_: SnowflakeExecutor;
-  constructor(executor: SnowflakeExecutor) {
-    this.executor_ = executor;
-  }
+describe('getConnectionOptionsFromEnv', () => {
+  const saved = new Map<string, string | undefined>();
 
-  async runBatch(sqlText: string): Promise<QueryData> {
-    let ret: QueryData = [];
-    await (async () => {
-      const rows = await this.executor_.batch(sqlText);
-      return rows;
-    })().then((rows: QueryData) => {
-      ret = rows;
-    });
-    return ret;
-  }
+  beforeEach(() => {
+    for (const name of SNOWFLAKE_VARS) {
+      saved.set(name, process.env[name]);
+      delete process.env[name];
+    }
+  });
 
-  async runStreaming(sqlText: string, queryOptions?: RunSQLOptions) {
-    const rows: QueryData = [];
-    await (async () => {
-      for await (const row of await this.executor_.stream(
-        sqlText,
-        queryOptions
-      )) {
-        rows.push(row);
+  afterEach(() => {
+    for (const [name, value] of saved) {
+      if (value === undefined) {
+        delete process.env[name];
+      } else {
+        process.env[name] = value;
       }
-    })();
-    return rows;
-  }
-
-  async done() {
-    await this.executor_.done();
-  }
-}
-
-describe('db:SnowflakeExecutor', () => {
-  let db: SnowflakeExecutorTestSetup;
-  let query: string;
-
-  beforeAll(() => {
-    const connOptions =
-      SnowflakeExecutor.getConnectionOptionsFromEnv() ||
-      SnowflakeExecutor.getConnectionOptionsFromToml();
-    const executor = new SnowflakeExecutor(connOptions);
-    db = new SnowflakeExecutorTestSetup(executor);
-    query = `
-    select
-    *
-  from
-    (
-      values
-        (1, 'one'),
-        (2, 'two'),
-        (3, 'three'),
-        (4, 'four'),
-        (5, 'five')
-    );
-    `;
+    }
+    saved.clear();
   });
 
-  afterAll(async () => {
-    await db.done();
+  it('returns undefined when SNOWFLAKE_ACCOUNT is unset', () => {
+    process.env['SNOWFLAKE_USER'] = 'someone';
+    expect(SnowflakeExecutor.getConnectionOptionsFromEnv()).toBeUndefined();
   });
 
-  it('verifies batch execute', async () => {
-    const rows = await db.runBatch(query);
-    expect(rows.length).toBe(5);
+  it('returns undefined when SNOWFLAKE_ACCOUNT is empty', () => {
+    // A GitHub Actions secret that does not exist interpolates to '', not unset.
+    process.env['SNOWFLAKE_ACCOUNT'] = '';
+    expect(SnowflakeExecutor.getConnectionOptionsFromEnv()).toBeUndefined();
   });
 
-  it('verifies stream iterable', async () => {
-    const rows = await db.runStreaming(query, {rowLimit: 2});
-    expect(rows.length).toBe(2);
+  it('maps the key-pair variables onto the driver option names', () => {
+    process.env['SNOWFLAKE_ACCOUNT'] = 'acct';
+    process.env['SNOWFLAKE_AUTHENTICATOR'] = 'SNOWFLAKE_JWT';
+    process.env['SNOWFLAKE_PRIVATE_KEY_RAW'] = '-----BEGIN PRIVATE KEY-----';
+    process.env['SNOWFLAKE_PRIVATE_KEY_FILE'] = '/keys/malloy.p8';
+    process.env['SNOWFLAKE_PRIVATE_KEY_PASSPHRASE'] = 'hunter2';
+
+    expect(SnowflakeExecutor.getConnectionOptionsFromEnv()).toMatchObject({
+      authenticator: 'SNOWFLAKE_JWT',
+      privateKey: '-----BEGIN PRIVATE KEY-----',
+      privateKeyPath: '/keys/malloy.p8',
+      privateKeyPass: 'hunter2',
+    });
+  });
+
+  it('maps the identity and namespace variables', () => {
+    process.env['SNOWFLAKE_ACCOUNT'] = 'acct';
+    process.env['SNOWFLAKE_USER'] = 'user';
+    process.env['SNOWFLAKE_PASSWORD'] = 'pw';
+    process.env['SNOWFLAKE_ROLE'] = 'role';
+    process.env['SNOWFLAKE_WAREHOUSE'] = 'wh';
+    process.env['SNOWFLAKE_DATABASE'] = 'db';
+    process.env['SNOWFLAKE_SCHEMA'] = 'sch';
+
+    expect(SnowflakeExecutor.getConnectionOptionsFromEnv()).toMatchObject({
+      account: 'acct',
+      username: 'user',
+      password: 'pw',
+      role: 'role',
+      warehouse: 'wh',
+      database: 'db',
+      schema: 'sch',
+    });
+  });
+
+  it('applies the shared connection defaults', () => {
+    // jsTreatIntegerAsBigInt is load-bearing: without it, integer columns lose
+    // precision. The env path must not diverge from the toml path here.
+    process.env['SNOWFLAKE_ACCOUNT'] = 'acct';
+    expect(SnowflakeExecutor.getConnectionOptionsFromEnv()).toMatchObject({
+      jsTreatIntegerAsBigInt: true,
+      clientSessionKeepAlive: true,
+    });
   });
 });

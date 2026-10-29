@@ -1,52 +1,11 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
-import {Explore, Field, Tag} from '@malloydata/malloy';
-import {hasAny} from './tag-utils';
 
-function getLocationInParent(f: Field | Explore) {
-  const parent = f.parentExplore;
-  return parent?.allFields.findIndex(pf => pf.name === f.name) ?? -1;
-}
+import {type Accessor, createSignal, onMount, type Setter} from 'solid-js';
 
-export function isLastChild(f: Field | Explore) {
-  if (f.parentExplore)
-    return getLocationInParent(f) === f.parentExplore.allFields.length - 1;
-  return true;
-}
-
-export function isFirstChild(f: Field | Explore) {
-  return getLocationInParent(f) === 0;
-}
-
-export function valueIsNumber(f: Field, v: unknown): v is number {
-  return f.isAtomicField() && f.isNumber() && v !== null;
-}
-
-export function valueIsString(f: Field, s: unknown): s is string {
-  return f.isAtomicField() && f.isString() && s !== null;
-}
-
-export function getTextWidth(
+export function getTextWidthCanvas(
   text: string,
   font: string,
   canvasToUse?: HTMLCanvasElement
@@ -58,17 +17,79 @@ export function getTextWidth(
   return metrics.width;
 }
 
+export function getTextWidthDOM(text: string, styles: Record<string, string>) {
+  const measureDiv = document.createElement('div');
+  measureDiv.innerHTML = text;
+  for (const [key, value] of Object.entries(styles)) {
+    measureDiv.style[key] = value;
+  }
+  document.body.appendChild(measureDiv);
+  const rect = measureDiv.getBoundingClientRect();
+  document.body.removeChild(measureDiv);
+  return rect.width;
+}
+
+export function getTextHeightDOM(text: string, styles: Record<string, string>) {
+  const measureDiv = document.createElement('div');
+  measureDiv.innerHTML = text;
+  for (const [key, value] of Object.entries(styles)) {
+    measureDiv.style[key] = value;
+  }
+  document.body.appendChild(measureDiv);
+  const rect = measureDiv.getBoundingClientRect();
+  document.body.removeChild(measureDiv);
+  return rect.height;
+}
+
 export function clamp(s: number, e: number, v: number) {
   return Math.max(s, Math.min(e, v));
 }
 
-export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
-  if (!f.isExplore() && f.isAtomicField()) return 'cell';
-  const tag = tagOverride ?? f.tagParse().tag;
-  if (hasAny(tag, 'bar_chart')) return 'chart';
-  else return 'table';
+export function getRangeSize(range: [number, number]) {
+  return range[1] - range[0] + 1;
 }
 
-export function getFieldKey(f: Field | Explore) {
-  return JSON.stringify(f.fieldPath);
+function rafCallback<T extends (...args: unknown[]) => void>(fn: T) {
+  let rafId: number | null = null;
+  return function (this: unknown, ...args: Parameters<T>) {
+    if (rafId) cancelAnimationFrame(rafId);
+
+    rafId = requestAnimationFrame(() => {
+      fn.apply(this, args);
+    });
+  };
+}
+
+export function createRAFSignal<T>(initialValue: T) {
+  const [signal, setSignal] = createSignal<T>(initialValue);
+  const setRAFSignal = rafCallback(setSignal);
+  return [signal, setRAFSignal] as const;
+}
+
+export type ResizeDirectiveValue = [
+  Accessor<{width: number; height: number}>,
+  Setter<{width: number; height: number}>,
+];
+
+export function resize(
+  el: HTMLElement,
+  value: Accessor<ResizeDirectiveValue>
+): void {
+  onMount(() => {
+    const [parentSize, setParentSize] = value();
+    const setParentSizeRAF = rafCallback(setParentSize);
+
+    const o = new ResizeObserver(entries => {
+      const {width, height} = entries[0].contentRect;
+      if (width !== parentSize().width || height !== parentSize().height) {
+        setParentSizeRAF({
+          width,
+          height,
+        });
+      }
+    });
+
+    o.observe(el);
+    return () => o.disconnect();
+  });
 }

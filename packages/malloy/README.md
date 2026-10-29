@@ -1,6 +1,6 @@
 # Malloy
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
+Malloy is a modern open source language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
 
 ## Building applications or products in javascript with @malloydata/malloy
 
@@ -34,8 +34,8 @@ In practice, much of this loop is handled by various database plugins:
 - [Postgres](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-postgres)
 - [Snowflake](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-snowflake)
 
-## Do you have any examples?
+## What's built with these libraries?
 
-You can find a (very) simple example of writing a CLI for executing Malloy queries [here](https://github.com/malloydata/malloy/tree/main/demo/malloy-demo-bq-cli)
+The [Malloy CLI](https://github.com/malloydata/malloy-cli) uses them to run Malloy queries from the command line.
 
-A more realistic and complex use case - we use these libraries to power our VSCode Extension. Some examples can be found [here](https://github.com/malloydata/malloy-vscode-extension/tree/main/src/extension/commands)
+For a more complex use case, our [VS Code extension](https://github.com/malloydata/malloy-vscode-extension) uses them to power a full Malloy editing and query experience.

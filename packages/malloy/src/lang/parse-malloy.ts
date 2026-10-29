@@ -1,67 +1,45 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {
-  ANTLRErrorListener,
-  CharStreams,
-  CommonTokenStream,
-  ParserRuleContext,
-  Token,
-} from 'antlr4ts';
-import {ParseTree} from 'antlr4ts/tree';
-import {
+import type {
   DocumentLocation,
   DocumentPosition,
-  DocumentRange,
   DocumentReference,
   ImportLocation,
   ModelDef,
-  NamedModelObject,
-  Query,
-  SQLBlockStructDef,
-  StructDef,
+  SourceDef,
+  SQLSourceDef,
+  DependencyTree,
+  DocumentRange,
+  VirtualMap,
 } from '../model/malloy_types';
-import {MalloyLexer} from './lib/Malloy/MalloyLexer';
-import {MalloyParser} from './lib/Malloy/MalloyParser';
+import {mkSafeRecord} from '../model/malloy_types';
+import {mkModelDef, mkModelID} from '../model/utils';
+import {getModelAnnotations} from '../model/annotation_utils';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
-import {LogMessage, MessageLog, MessageLogger} from './parse-log';
-import {
-  findReferences,
-  FindReferencesData,
-} from './parse-tree-walkers/find-external-references';
-import {Zone, ZoneData} from './zone';
+import type {
+  LogMessage,
+  LogMessageOptions,
+  MessageCode,
+  MessageParameterType,
+} from './parse-log';
+import {BaseMessageLogger, makeLogMessage} from './parse-log';
+import type {FindReferencesData} from './parse-tree-walkers/find-external-references';
+import {findReferences} from './parse-tree-walkers/find-external-references';
+import {getDialect} from '../dialect';
+import type {ZoneData} from './zone';
+import {Zone} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
-import {
-  DocumentCompletion,
-  walkForDocumentCompletions,
-} from './parse-tree-walkers/document-completion-walker';
-import {
-  DocumentHelpContext,
-  walkForDocumentHelpContext,
-} from './parse-tree-walkers/document-help-context-walker';
+import type {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
+import {walkForDocumentCompletions} from './parse-tree-walkers/document-completion-walker';
+import type {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
+import {walkForDocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
 import {ReferenceList} from './reference-list';
-import {
+import type {
+  ResponseBase,
   ASTResponse,
   CompletionsResponse,
   DataRequestResponse,
@@ -73,33 +51,31 @@ import {
   ModelDataRequest,
   NeedURLData,
   TranslateResponse,
-  isNeedResponse,
-  ModelAnnotationResponse,
+  TablePathResponse,
 } from './translate-response';
-import {locationContainsPosition} from './utils';
-import {Tag} from '../tags';
-import {MalloyParseInfo} from './malloy-parse-info';
-import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
+import {isNeedResponse} from './translate-response';
+import {
+  getSourceInfo,
+  locationContainsPosition,
+  rangeFromContext,
+} from './utils';
+import type {Tag} from '@malloydata/malloy-tag';
+import {parseAnnotation} from '@malloydata/malloy-tag';
+import type {MalloyParseInfo} from './malloy-parse-info';
+import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
+import type {EventStream} from '../runtime_types';
+import {Annotations} from '../api/foundation/annotation';
+import {runMalloyParser} from './run-malloy-parser';
+import type {ParserRuleContext} from 'antlr4ts';
+import {Timer} from '../timing';
 
 export type StepResponses =
   | DataRequestResponse
   | ASTResponse
   | TranslateResponse
   | ParseResponse
-  | MetadataResponse;
-
-/**
- * This ignores a -> popMode when the mode stack is empty, which is a hack,
- * but it let's us parse }%
- */
-class HandlesOverpoppingLexer extends MalloyLexer {
-  popMode(): number {
-    if (this._modeStack.isEmpty) {
-      return this._mode;
-    }
-    return super.popMode();
-  }
-}
+  | MetadataResponse
+  | PretranslatedResponse;
 
 /**
  * A Translation is a series of translation steps. Each step can depend
@@ -117,10 +93,18 @@ interface TranslationStep {
   step(that: MalloyTranslation): StepResponses;
 }
 
-interface ParseData extends ProblemResponse, NeedURLData, FinalResponse {
+interface ParseData
+  extends ResponseBase, ProblemResponse, NeedURLData, FinalResponse {
   parse: MalloyParseInfo;
 }
+
 export type ParseResponse = Partial<ParseData>;
+
+interface PretranslatedData {
+  translation: ModelDef;
+}
+
+export type PretranslatedResponse = PretranslatedData | null;
 
 /**
  * ParseStep -- Parse the source URL
@@ -135,23 +119,11 @@ class ParseStep implements TranslationStep {
   sourceInfo?: SourceInfo;
 
   step(that: MalloyTranslation): ParseResponse {
+    const stepTimer = new Timer('parse_step');
     if (this.response) {
       return this.response;
     }
 
-    if (that.urlIsFullPath === undefined) {
-      try {
-        const _checkFull = new URL(that.sourceURL);
-        that.urlIsFullPath = true;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : '';
-        that.urlIsFullPath = false;
-        that.root.logger.log({
-          message: `Could not compute full path URL: ${msg}`,
-          severity: 'error',
-        });
-      }
-    }
     if (!that.urlIsFullPath) {
       return that.fatalResponse();
     }
@@ -159,29 +131,33 @@ class ParseStep implements TranslationStep {
     const srcEnt = that.root.importZone.getEntry(that.sourceURL);
     if (srcEnt.status !== 'present') {
       if (srcEnt.status === 'error') {
-        const message = srcEnt.message.includes(that.sourceURL)
-          ? `import error: ${srcEnt.message}`
-          : `import '${that.sourceURL}' error: ${srcEnt.message}`;
         const at = srcEnt.firstReference || that.defaultLocation();
-        that.root.logger.log({message, at, severity: 'error'});
+        that.root.logError(
+          'import-error',
+          {
+            message: srcEnt.message,
+            url: that.sourceURL,
+          },
+          {at}
+        );
         this.response = that.fatalResponse();
         return this.response;
       }
       return {urls: [that.sourceURL]};
     }
+    const parseModelTimer = new Timer('parse_malloy');
     const source = srcEnt.value === '' ? '\n' : srcEnt.value;
-    this.sourceInfo = this.getSourceInfo(source);
+    this.sourceInfo = getSourceInfo(source);
 
     let parse: MalloyParseInfo | undefined;
     try {
-      parse = this.runParser(source, that);
+      parse = this.runParser(source, this.sourceInfo, that);
     } catch (parseException) {
-      that.root.logger.log({
-        message: `Malloy internal parser exception [${parseException.message}]`,
-        severity: 'error',
-      });
+      that.root.logError('parse-exception', {message: parseException.message});
       parse = undefined;
     }
+
+    stepTimer.contribute([parseModelTimer.stop()]);
 
     if (that.root.logger.hasErrors()) {
       this.response = {
@@ -191,83 +167,44 @@ class ParseStep implements TranslationStep {
     } else {
       this.response = {parse};
     }
-    return this.response;
+    return {...this.response, timingInfo: stepTimer.stop()};
   }
 
-  /**
-   * Split the source up into lines so we can correctly compute offset
-   * to the line/char positions favored by LSP and VSCode.
-   */
-  private getSourceInfo(code: string): SourceInfo {
-    const eolRegex = /\r?\n/;
-    const info: SourceInfo = {
-      at: [],
-      lines: [],
-      length: code.length,
-    };
-    let src = code;
-    let lineStart = 0;
-    while (src !== '') {
-      const eol = src.match(eolRegex);
-      if (eol && eol.index !== undefined) {
-        // line text DOES NOT include the EOL
-        info.lines.push(src.slice(0, eol.index));
-        const lineLength = eol.index + eol[0].length;
-        info.at.push({
-          begin: lineStart,
-          end: lineStart + lineLength,
-        });
-        lineStart += lineLength;
-        src = src.slice(lineLength);
-      } else {
-        // last line, does not have a line end
-        info.lines.push(src);
-        info.at.push({begin: lineStart, end: lineStart + src.length});
-        break;
-      }
-    }
-    return info;
-  }
-
-  private runParser(source: string, that: MalloyTranslation): MalloyParseInfo {
-    const inputStream = CharStreams.fromString(source);
-    const lexer = new HandlesOverpoppingLexer(inputStream);
-    const tokenStream = new CommonTokenStream(lexer);
-    const malloyParser = new MalloyParser(tokenStream);
-    malloyParser.removeErrorListeners();
-    malloyParser.addErrorListener(
-      new MalloyParserErrorHandler(that, that.root.logger)
+  private runParser(
+    source: string,
+    sourceInfo: SourceInfo,
+    that: MalloyTranslation
+  ): MalloyParseInfo {
+    const parse = runMalloyParser(
+      source,
+      that.sourceURL,
+      sourceInfo,
+      that.root.logger,
+      that.grammarRule
     );
 
-    // Admitted code smell here, testing likes to parse from an arbitrary
-    // node and this is the simplest way to allow that.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parseFunc = (malloyParser as any)[that.grammarRule];
-    if (!parseFunc) {
-      throw new Error(`No such parse rule as ${that.grammarRule}`);
-    }
-
     return {
-      root: parseFunc.call(malloyParser) as ParseTree,
-      tokenStream: tokenStream,
-      sourceStream: inputStream,
-      sourceURL: that.sourceURL,
+      ...parse,
       importBaseURL: that.importBaseURL || that.sourceURL,
-      rangeFromContext: cx => that.rangeFromContext(cx),
-      // TODO some way to not forget to update this
-      malloyVersion: '4.0.0',
     };
   }
 }
 
 class ImportsAndTablesStep implements TranslationStep {
-  private parseReferences: FindReferencesData | undefined = undefined;
+  parseReferences: FindReferencesData | undefined = undefined;
   constructor(readonly parseStep: ParseStep) {}
 
   step(that: MalloyTranslation): DataRequestResponse | ParseResponse {
     const parseReq = this.parseStep.step(that);
     if (parseReq.parse === undefined) {
       return parseReq;
+    }
+
+    // Every reference this step would register — connection dialects,
+    // imports, table schemas — is for a construct that's forbidden in
+    // restricted code.
+    if (that.root.restrictedMode) {
+      return {timingInfo: parseReq.timingInfo};
     }
 
     if (!this.parseReferences) {
@@ -277,15 +214,18 @@ class ImportsAndTablesStep implements TranslationStep {
         parseReq.parse.root
       );
 
-      for (const ref in this.parseReferences.tables) {
-        that.root.schemaZone.reference(ref, {
+      // Register connection dialects and imports immediately. Table
+      // references are deferred until dialects are resolved, because
+      // validating a table path requires knowing its dialect's grammar.
+
+      for (const [connName, need] of this.parseReferences.connectionDialects) {
+        that.root.connectionDialectZone.reference(connName, {
           url: that.sourceURL,
-          range: this.parseReferences.tables[ref].firstReference,
+          range: need.firstReference,
         });
       }
 
-      for (const relativeRef in this.parseReferences.urls) {
-        const firstRef = this.parseReferences.urls[relativeRef];
+      for (const [relativeRef, firstRef] of this.parseReferences.urls) {
         try {
           const ref = decodeURI(
             new URL(
@@ -306,11 +246,11 @@ class ImportsAndTablesStep implements TranslationStep {
           // This import spec is so bad the URL library threw up, this
           // may be impossible, because it will append any garbage
           // to the known good rootURL assuming it is relative
-          that.root.logger.log({
-            message: `Malformed URL '${relativeRef}'"`,
-            at: {url: that.sourceURL, range: firstRef},
-            severity: 'error',
-          });
+          that.root.logError(
+            'invalid-import-url',
+            `Malformed URL '${relativeRef}'"`,
+            {at: {url: that.sourceURL, range: firstRef}}
+          );
         }
       }
     }
@@ -318,40 +258,88 @@ class ImportsAndTablesStep implements TranslationStep {
     if (that.root.logger.hasErrors()) {
       // Since we knew we parsed without errors, this would only be from
       // having a malformed URL on an import reference.
-      return null;
+      return {timingInfo: parseReq.timingInfo};
     }
 
     let allMissing: DataRequestResponse = {};
+
+    // A path can only be canonicalized once its dialect is known; references
+    // whose dialect isn't resolved yet are skipped and re-scanned next round.
+    // Invalid paths are dropped here and re-reported by the AST step.
+    // tableRequests feeds the missing-table loop below.
+    const tableRequests: Record<
+      string,
+      {connectionName: string; tablePath: string}
+    > = {};
+    for (const info of this.parseReferences.tables.values()) {
+      const dialectName = that.root.connectionDialectZone.get(
+        info.connectionName
+      );
+      if (dialectName === undefined) continue;
+      const result = getDialect(dialectName).sqlValidateTableName(
+        info.tablePath
+      );
+      if (!result.ok) continue;
+      const key = `${info.connectionName}:${result.canonical}`;
+      tableRequests[key] = {
+        connectionName: info.connectionName,
+        tablePath: result.canonical,
+      };
+      that.root.schemaZone.reference(key, {
+        url: that.sourceURL,
+        range: info.firstReference,
+      });
+    }
+
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
       const tables = {};
       for (const key of missingTables) {
-        const info = this.parseReferences.tables[key];
-        tables[key] = {
-          connectionName: info.connectionName,
-          tablePath: info.tablePath,
-        };
+        const request = tableRequests[key];
+        if (request === undefined) continue;
+        tables[key] = request;
       }
-      allMissing = {tables};
+      if (Object.keys(tables).length > 0) {
+        allMissing = {tables};
+      }
     }
 
-    const missingImports = that.root.importZone.getUndefined();
-    if (missingImports) {
-      allMissing = {...allMissing, urls: missingImports};
+    const missingDialects = that.root.connectionDialectZone.getUndefined();
+    if (missingDialects) {
+      // Keyed by connection name, user text: a plain `{}` would turn a
+      // connection named `__proto__` into a prototype and drop the request.
+      const connectionDialects = mkSafeRecord<{connectionName: string}>();
+      for (const connName of missingDialects) {
+        connectionDialects[connName] = {connectionName: connName};
+      }
+      allMissing = {...allMissing, connectionDialects};
+    }
+
+    const missingImports = (that.root.importZone.getUndefined() ?? []).filter(
+      url => that.root.pretranslatedModels.get(url) === undefined
+    );
+    if (missingImports.length > 0) {
+      allMissing = {
+        ...allMissing,
+        urls: missingImports,
+      };
     }
 
     if (isNeedResponse(allMissing)) {
-      return allMissing;
+      return {...allMissing, timingInfo: parseReq.timingInfo};
     }
 
     for (const child of that.childTranslators.values()) {
+      if (that.root.pretranslatedModels.get(child.sourceURL)) {
+        continue;
+      }
       const kidNeeds = child.importsAndTablesStep.step(child);
       if (isNeedResponse(kidNeeds)) {
         return kidNeeds;
       }
     }
 
-    return null;
+    return {timingInfo: parseReq.timingInfo};
   }
 }
 
@@ -360,13 +348,40 @@ class ASTStep implements TranslationStep {
   private walked = false;
   constructor(readonly importStep: ImportsAndTablesStep) {}
 
+  /**
+   * A file acknowledges an experimental dialect with
+   * `##! experimental.dialect.NAME` wherever it names a connection on that
+   * dialect. Every connection name in this file is already resolved to a
+   * dialect by the time the AST exists, and the file's compiler flags are
+   * known only now, so this is the first moment the check can run. The
+   * other place a file takes on a dialect is `import`, checked by
+   * `ImportStatement`.
+   */
+  private checkExperimentalDialects(that: MalloyTranslation): void {
+    const connections = this.importStep.parseReferences?.connectionDialects;
+    if (!connections) {
+      return;
+    }
+    for (const [connName, need] of connections) {
+      const dialect = that.root.connectionDialectZone.get(connName);
+      if (dialect !== undefined) {
+        that.checkExperimentalDialect(dialect, {
+          url: that.sourceURL,
+          range: need.firstReference,
+        });
+      }
+    }
+  }
+
   step(that: MalloyTranslation): ASTResponse {
+    const stepTimer = new Timer('ast_step');
     if (this.response) {
       return this.response;
     }
 
     const mustResolve = this.importStep.step(that);
-    if (mustResolve) {
+    stepTimer.incorporate(mustResolve?.timingInfo);
+    if (isNeedResponse(mustResolve)) {
       return mustResolve;
     }
     const parseResponse = that.parseStep.response;
@@ -382,25 +397,35 @@ class ASTStep implements TranslationStep {
         'TRANSLATOR INTERNAL ERROR: Translator parse response had no errors, but also no parser'
       );
     }
+    stepTimer.incorporate(parseResponse.timingInfo);
     const secondPass = new MalloyToAST(
       parse,
       that.root.logger,
-      that.compilerFlags
+      that.compilerFlagSrc,
+      that.root.restrictedMode
     );
-    const newAst = secondPass.visit(parse.root);
-    that.compilerFlags = secondPass.compilerFlags;
+    const {ast: newAST, compilerFlagSrc, timingInfo} = secondPass.run();
+    stepTimer.contribute([timingInfo]);
+    that.compilerFlagSrc = compilerFlagSrc;
+    this.checkExperimentalDialects(that);
 
-    if (newAst.elementType === 'unimplemented') {
-      newAst.log('INTERNAL COMPILER ERROR: Untranslated parse node');
+    if (newAST.elementType === 'unimplemented') {
+      newAST.logError(
+        'untranslated-parse-node',
+        'INTERNAL COMPILER ERROR: Untranslated parse node'
+      );
     }
 
     if (!this.walked) {
       // The DocumentStatement.needs method has largely replaced the need to walk
       // the AST once it has been translated, this one check remains, though
       // it should probably never be hit
-      for (const walkedTo of newAst.walk()) {
+      for (const walkedTo of newAST.walk()) {
         if (walkedTo instanceof ast.Unimplemented) {
-          walkedTo.log('INTERNAL COMPILER ERROR: Untranslated parse node');
+          walkedTo.logError(
+            'untranslated-parse-node',
+            'INTERNAL COMPILER ERROR: Untranslated parse node'
+          );
         }
       }
       this.walked = true;
@@ -414,19 +439,22 @@ class ASTStep implements TranslationStep {
     // Now make sure that every child has fully translated itself
     // before this tree is ready to also translate ...
     for (const child of that.childTranslators.values()) {
+      if (that.root.pretranslatedModels.get(child.sourceURL)) {
+        continue;
+      }
       const kidNeeds = child.astStep.step(child);
       if (isNeedResponse(kidNeeds)) {
         return kidNeeds;
       }
     }
 
-    newAst.setTranslator(that);
+    newAST.setTranslator(that);
     this.response = {
       ...that.problemResponse(), // these problems will by definition all be warnings
-      ast: newAst,
+      ast: newAST,
       final: true,
     };
-    return this.response;
+    return {...this.response, timingInfo: stepTimer.stop()};
   }
 }
 
@@ -525,29 +553,23 @@ class HelpContextStep implements TranslationStep {
   }
 }
 
-class ModelAnnotationStep implements TranslationStep {
-  response?: ModelAnnotationResponse;
+class TablePathInfoStep implements TranslationStep {
+  response?: TablePathResponse;
   constructor(readonly parseStep: ParseStep) {}
 
-  step(
-    that: MalloyTranslation,
-    extendingModel?: ModelDef
-  ): ModelAnnotationResponse {
+  step(that: MalloyTranslation): TablePathResponse {
     if (!this.response) {
       const tryParse = this.parseStep.step(that);
-      if (!tryParse.parse || tryParse.final) {
+      if (!tryParse.parse) {
         return tryParse;
       } else {
-        const modelAnnotation = walkForModelAnnotation(
+        const tablePath = walkForTablePath(
           that,
           tryParse.parse.tokenStream,
           tryParse.parse
         );
         this.response = {
-          modelAnnotation: {
-            ...modelAnnotation,
-            inherits: extendingModel?.annotation,
-          },
+          pathInfo: tablePath,
         };
       }
     }
@@ -561,20 +583,41 @@ class TranslateStep implements TranslationStep {
   constructor(readonly astStep: ASTStep) {}
 
   step(that: MalloyTranslation, extendingModel?: ModelDef): TranslateResponse {
+    const stepTimer = new Timer('translate_step');
     if (this.response) {
       return this.response;
     }
 
-    // begin with the compiler flags of the model we are extending
+    const pretranslate = that.root.pretranslatedModels.get(that.sourceURL);
+    if (pretranslate !== undefined) {
+      that.modelDef = pretranslate;
+      return {
+        modelDef: pretranslate,
+        final: true,
+        fromSources: that.getDependencies(),
+        modelWasModified: false,
+      };
+    }
+
+    // Layer the extending model's compiler flags on top of whatever was
+    // there already. In production the array starts empty so push vs.
+    // overwrite produce the same result; the push lets constructor-time
+    // seeding (e.g. TestTranslator's compilerFlags option) survive.
     if (extendingModel && !this.importedAnnotations) {
-      const tagParse = Tag.annotationToTag(extendingModel.annotation, {
-        prefix: /^##! /,
-      });
-      that.compilerFlags = tagParse.tag;
+      const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+      // `##!` is a pragma: it governs the file it sits in and does not cross
+      // `import`. An extension is a continuation of the base's text, so the
+      // base's flags are in force here.
+      that.compilerFlagSrc.push(
+        ...new Annotations(getModelAnnotations(extendingModel)).texts('!')
+      );
+
+      stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
       this.importedAnnotations = true;
     }
 
     const astResponse = this.astStep.step(that);
+    stepTimer.incorporate(astResponse.timingInfo);
     if (isNeedResponse(astResponse)) {
       return astResponse;
     }
@@ -587,23 +630,25 @@ class TranslateStep implements TranslationStep {
       if (astResponse.ast instanceof ast.Document) {
         const doc = astResponse.ast;
         doc.initModelDef(extendingModel);
-        for (;;) {
-          const docCompile = doc.compile();
-          if (docCompile.needs) {
-            return docCompile.needs;
-          } else {
-            that.modelDef = docCompile.modelDef;
-            that.queryList = docCompile.queryList;
-            that.sqlBlocks = docCompile.sqlBlocks;
-            break;
-          }
+        const translateModelTimer = new Timer('compile_malloy');
+        const docCompile = doc.compile();
+        const translateTiming = translateModelTimer.stop();
+        stepTimer.contribute([translateTiming]);
+        if (docCompile.needs) {
+          return {
+            ...docCompile.needs,
+            timingInfo: stepTimer.stop(),
+          };
+        } else {
+          that.modelDef = docCompile.modelDef;
+          that.modelWasModified = docCompile.modelWasModified;
         }
       } else {
-        that.root.logger.log({
-          message: `'${that.sourceURL}' did not parse to malloy document`,
-          at: that.defaultLocation(),
-          severity: 'error',
-        });
+        that.root.logError(
+          'parsed-non-malloy-document',
+          {url: that.sourceURL},
+          {at: that.defaultLocation()}
+        );
       }
     }
 
@@ -614,37 +659,42 @@ class TranslateStep implements TranslationStep {
       };
     } else {
       this.response = {
-        translated: {
-          modelDef: that.modelDef,
-          queryList: that.queryList,
-          sqlBlocks: that.sqlBlocks,
+        modelDef: {
+          ...that.modelDef,
+          dependencies: that.getDependencyTree(),
+          references: that.references.toArray(),
+          imports: [...that.imports],
         },
         fromSources: that.getDependencies(),
+        modelWasModified: that.modelWasModified,
         ...that.problemResponse(),
         final: true,
       };
     }
-    return this.response;
+    return {...this.response, timingInfo: stepTimer.stop()};
   }
 }
 
 export abstract class MalloyTranslation {
   abstract root: MalloyTranslator;
   childTranslators: Map<string, MalloyTranslation>;
-  urlIsFullPath?: boolean;
-  queryList: Query[] = [];
-  sqlBlocks: SQLBlockStructDef[] = [];
+  sqlSources: SQLSourceDef[] = [];
   modelDef: ModelDef;
+  modelWasModified = false;
   imports: ImportLocation[] = [];
-  compilerFlags = new Tag();
+  compilerFlagSrc: string[] = [];
+
+  getCompilerFlags(): Tag {
+    return parseAnnotation(this.compilerFlagSrc).tag;
+  }
 
   readonly parseStep: ParseStep;
-  readonly modelAnnotationStep: ModelAnnotationStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
   readonly astStep: ASTStep;
   readonly metadataStep: MetadataStep;
   readonly completionsStep: CompletionsStep;
   readonly helpContextStep: HelpContextStep;
+  readonly tablePathInfoStep: TablePathInfoStep;
   readonly translateStep: TranslateStep;
 
   readonly references: ReferenceList;
@@ -655,11 +705,7 @@ export abstract class MalloyTranslation {
     public grammarRule = 'malloyDocument'
   ) {
     this.childTranslators = new Map<string, MalloyTranslation>();
-    this.modelDef = {
-      name: sourceURL,
-      exports: [],
-      contents: {},
-    };
+    this.modelDef = mkModelDef(sourceURL, mkModelID(sourceURL));
     /**
      * This is sort of the makefile for the translation, all the steps
      * and the dependencies of the steps are declared here. Then when
@@ -668,14 +714,32 @@ export abstract class MalloyTranslation {
      * things will happen automatically.
      */
     this.parseStep = new ParseStep();
-    this.modelAnnotationStep = new ModelAnnotationStep(this.parseStep);
     this.metadataStep = new MetadataStep(this.parseStep);
     this.completionsStep = new CompletionsStep(this.parseStep);
     this.helpContextStep = new HelpContextStep(this.parseStep);
     this.importsAndTablesStep = new ImportsAndTablesStep(this.parseStep);
     this.astStep = new ASTStep(this.importsAndTablesStep);
+    this.tablePathInfoStep = new TablePathInfoStep(this.parseStep);
     this.translateStep = new TranslateStep(this.astStep);
     this.references = new ReferenceList(sourceURL);
+  }
+
+  _urlIsFullPath: boolean | undefined = undefined;
+  get urlIsFullPath(): boolean {
+    if (this._urlIsFullPath === undefined) {
+      try {
+        const _checkFull = new URL(this.sourceURL);
+        this._urlIsFullPath = true;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '';
+        this._urlIsFullPath = false;
+        this.root.logError(
+          'failed-to-compute-absolute-import-url',
+          `Could not compute full path URL: ${msg}`
+        );
+      }
+    }
+    return this._urlIsFullPath;
   }
 
   addChild(url: string): void {
@@ -685,11 +749,45 @@ export abstract class MalloyTranslation {
   }
 
   getDependencies(): string[] {
-    const dependencies = [this.sourceURL];
+    const dependencies = this.getDependencyTree();
+    return [this.sourceURL, ...flattenDependencyTree(dependencies)];
+  }
+
+  getDependencyTree(): DependencyTree {
+    const pretranslated = this.root.pretranslatedModels.get(this.sourceURL);
+    if (pretranslated !== undefined) {
+      return pretranslated.dependencies;
+    }
+    const dependencies: DependencyTree = {};
     for (const [_childURL, child] of this.childTranslators) {
-      dependencies.push(...child.getDependencies());
+      dependencies[_childURL] = child.getDependencyTree();
     }
     return dependencies;
+  }
+
+  newlyTranslatedDependencies(): {url: string; modelDef: ModelDef}[] {
+    const pretranslated = this.root.pretranslatedModels.get(this.sourceURL);
+    if (pretranslated !== undefined) {
+      return [];
+    }
+    const newModels: {url: string; modelDef: ModelDef}[] = [];
+    for (const [url, child] of this.childTranslators) {
+      const pretranslated = this.root.pretranslatedModels.get(url);
+      if (pretranslated !== undefined) {
+        continue;
+      }
+      const result = child.translate();
+      if (result.modelDef) {
+        const modelDef = {
+          ...result.modelDef,
+          references: child.references.toArray(),
+          imports: [...child.imports],
+        };
+        newModels.push({url, modelDef});
+        newModels.push(...child.newlyTranslatedDependencies());
+      }
+    }
+    return newModels;
   }
 
   addReference(reference: DocumentReference): void {
@@ -800,28 +898,18 @@ export abstract class MalloyTranslation {
     if (ret?.compileSQL) {
       return {
         compileSQL: ret.compileSQL,
-        partialModel: ret.partialModel,
       };
     }
   }
 
-  getChildExports(importURL: string): Record<string, NamedModelObject> {
-    const exports: Record<string, NamedModelObject> = {};
+  importModelDef(importURL: string): ModelDef | undefined {
     const childURL = decodeURI(new URL(importURL, this.sourceURL).toString());
     const child = this.childTranslators.get(childURL);
     if (child) {
-      const did = child.translate();
-      if (did.translated) {
-        for (const fromChild of child.modelDef.exports) {
-          const modelEntry = child.modelDef.contents[fromChild];
-          if (modelEntry.type === 'struct' || modelEntry.type === 'query') {
-            exports[fromChild] = modelEntry;
-          }
-        }
-      }
-      // else nothing, assuming there are already errors in the log
+      const result = child.translate();
+      return result.modelDef;
     }
-    return exports;
+    return undefined;
   }
 
   private finalAnswer?: TranslateResponse;
@@ -834,6 +922,10 @@ export abstract class MalloyTranslation {
       this.finalAnswer = attempt;
     }
     return attempt;
+  }
+
+  translatorForDependency(url: string): MalloyTranslation | undefined {
+    return this.childTranslators.get(url);
   }
 
   importAt(position: DocumentPosition): ImportLocation | undefined {
@@ -852,8 +944,8 @@ export abstract class MalloyTranslation {
     return this.metadataStep.step(this);
   }
 
-  modelAnnotation(extendingModel?: ModelDef): ModelAnnotationResponse {
-    return this.modelAnnotationStep.step(this, extendingModel);
+  tablePathInfo(): TablePathResponse {
+    return this.tablePathInfoStep.step(this);
   }
 
   completions(position: {
@@ -881,44 +973,49 @@ export abstract class MalloyTranslation {
   }
 
   rangeFromContext(pcx: ParserRuleContext): DocumentRange {
-    return this.rangeFromTokens(pcx.start, pcx.stop || pcx.start);
+    return rangeFromContext(this.parseStep.sourceInfo, pcx);
   }
 
-  rangeFromTokens(startToken: Token, stopToken: Token): DocumentRange {
-    const start = {
-      line: startToken.line - 1,
-      character: startToken.charPositionInLine,
-    };
-    if (this.parseStep.sourceInfo && stopToken.stopIndex !== -1) {
-      // Find the line which contains the stopIndex
-      const lastLine = this.parseStep.sourceInfo.lines.length - 1;
-      for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {
-        const at = this.parseStep.sourceInfo.at[lineNo];
-        if (stopToken.stopIndex >= at.begin && stopToken.stopIndex <= at.end) {
-          return {
-            start,
-            end: {
-              line: lineNo,
-              character: stopToken.stopIndex - at.begin + 1,
-            },
-          };
-        }
-      }
-      // Should be impossible to get here, but if we do ... return the last
-      // character of the last line of the file
-      return {
-        start,
-        end: {
-          line: lastLine,
-          character: this.parseStep.sourceInfo.lines[lastLine].length,
-        },
-      };
+  /*
+   Experimental dialect support, not confident this is how this should work.
+
+   To prevent cascading errors, each translator will only warn once about use of an experimental dialect.
+
+   To enable tests to run without having to enabled experimental dialects, there is a hook here for
+   the owner of a Translator object to decide if we check the experimental flag.
+
+   Not sure where the logic for this needs to go, this is just my first guess
+   */
+
+  private dialectAlreadyChecked: Record<string, boolean> = {};
+  firstReferenceToDialect(dialect: string): boolean {
+    if (this.dialectAlreadyChecked[dialect]) {
+      return false;
     }
-    return {start, end: start};
+    this.dialectAlreadyChecked[dialect] = true;
+    return true;
   }
 
-  rangeFromToken(token: Token): DocumentRange {
-    return this.rangeFromTokens(token, token);
+  experimentalDialectEnabled(dialect: string): boolean {
+    const experimental = this.getCompilerFlags().tag('experimental');
+    return (
+      experimental !== undefined &&
+      (experimental.bare() || experimental.has('dialect', dialect))
+    );
+  }
+
+  /**
+   * Log, once per dialect per file, that this file uses an experimental
+   * dialect without acknowledging it.
+   */
+  checkExperimentalDialect(dialect: string, at: DocumentLocation): void {
+    if (
+      this.firstReferenceToDialect(dialect) &&
+      getDialect(dialect).isExperimental() &&
+      !this.experimentalDialectEnabled(dialect)
+    ) {
+      this.root.logError('experimental-dialect-not-enabled', {dialect}, {at});
+    }
   }
 }
 
@@ -932,9 +1029,9 @@ export class MalloyChildTranslator extends MalloyTranslation {
 }
 
 /**
- * The main interface to Malloy tranlsation. It has a call pattern
+ * The main interface to Malloy translation. It has a call pattern
  * similar to a server. Once a translator is instantiated
- * you can request tralnsations repeatedly. Responses to that request
+ * you can request translations repeatedly. Responses to that request
  * will either be "NeedResponse" or "TranslateResponse" objects. The
  * correct pattern is to call "translation" in a loop, calling
  * "update" in response to each "NeedResponse" until a "TranslateResponse"
@@ -942,18 +1039,24 @@ export class MalloyChildTranslator extends MalloyTranslation {
  * no need to call again, the translation is finished or error'd.
  */
 export class MalloyTranslator extends MalloyTranslation {
-  schemaZone = new Zone<StructDef>();
+  schemaZone = new Zone<SourceDef>();
   importZone = new Zone<string>();
-  sqlQueryZone = new Zone<SQLBlockStructDef>();
-  logger = new MessageLog();
+  pretranslatedModels = new Map<string, ModelDef>();
+  sqlQueryZone = new Zone<SQLSourceDef>();
+  connectionDialectZone = new Zone<string>();
+  logger: BaseMessageLogger;
   readonly root: MalloyTranslator;
   constructor(
     rootURL: string,
     importURL: string | null = null,
-    preload: ParseUpdate | null = null
+    preload: ParseUpdate | null = null,
+    private readonly eventStream: EventStream | null = null,
+    readonly restrictedMode: boolean = false,
+    public virtualMap?: VirtualMap
   ) {
     super(rootURL, importURL);
     this.root = this;
+    this.logger = new BaseMessageLogger(eventStream);
     if (preload) {
       this.update(preload);
     }
@@ -963,6 +1066,37 @@ export class MalloyTranslator extends MalloyTranslation {
     this.schemaZone.updateFrom(dd.tables, dd.errors?.tables);
     this.importZone.updateFrom(dd.urls, dd.errors?.urls);
     this.sqlQueryZone.updateFrom(dd.compileSQL, dd.errors?.compileSQL);
+    this.connectionDialectZone.updateFrom(
+      dd.connectionDialects,
+      dd.errors?.connectionDialects
+    );
+    for (const url in dd.translations) {
+      this.pretranslatedModels.set(url, dd.translations[url]);
+    }
+  }
+
+  private lockZonesIfRestricted(): void {
+    if (!this.restrictedMode) return;
+    this.schemaZone.lock();
+    this.importZone.lock();
+    this.sqlQueryZone.lock();
+    this.connectionDialectZone.lock();
+  }
+
+  translate(extendingModel?: ModelDef): TranslateResponse {
+    this.lockZonesIfRestricted();
+    return super.translate(extendingModel);
+  }
+
+  logError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    this.logger.log(
+      makeLogMessage(code, parameters, {severity: 'error', ...options})
+    );
+    return code;
   }
 }
 
@@ -970,45 +1104,38 @@ interface ErrorData {
   tables: Record<string, string>;
   urls: Record<string, string>;
   compileSQL: Record<string, string>;
+  translations: Record<string, string>;
+  connectionDialects: Record<string, string>;
 }
 
 export interface URLData {
   urls: ZoneData<string>;
 }
+export interface ModelData {
+  translations: ZoneData<ModelDef>;
+}
 export interface SchemaData {
-  tables: ZoneData<StructDef>;
+  tables: ZoneData<SourceDef>;
 }
-export interface SQLBlockData {
-  compileSQL: ZoneData<SQLBlockStructDef>;
+export interface SQLSources {
+  compileSQL: ZoneData<SQLSourceDef>;
 }
-export interface UpdateData extends URLData, SchemaData, SQLBlockData {
+export interface ConnectionDialects {
+  connectionDialects: ZoneData<string>;
+}
+export interface UpdateData
+  extends URLData, SchemaData, SQLSources, ModelData, ConnectionDialects {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;
 
-export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
-  constructor(
-    readonly translator: MalloyTranslation,
-    readonly messages: MessageLogger
-  ) {}
-
-  syntaxError(
-    recognizer: unknown,
-    offendingSymbol: Token | undefined,
-    line: number,
-    charPositionInLine: number,
-    msg: string,
-    _e: unknown
-  ): void {
-    const errAt = {line: line - 1, character: charPositionInLine};
-    const range = offendingSymbol
-      ? this.translator.rangeFromToken(offendingSymbol)
-      : {start: errAt, end: errAt};
-    const error: LogMessage = {
-      message: msg,
-      at: {url: this.translator.sourceURL, range},
-      severity: 'error',
-    };
-    this.messages.log(error);
-  }
+function flattenDependencyTree(dependencies: DependencyTree) {
+  return [
+    ...Object.keys(dependencies),
+    ...Object.keys(dependencies)
+      .map(dependency => {
+        return flattenDependencyTree(dependencies[dependency]);
+      })
+      .flat(),
+  ];
 }

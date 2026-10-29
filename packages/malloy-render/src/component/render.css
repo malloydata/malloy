@@ -1,4 +1,4 @@
-:host {
+.malloy-render {
   --malloy-theme--table-row-height: 28px;
   --malloy-theme--table-font-size: 12px;
   --malloy-theme--table-header-color: #5d626b;
@@ -7,24 +7,50 @@
   --malloy-theme--table-body-weight: 400;
   --malloy-theme--table-border: 1px solid #e5e7eb;
   --malloy-theme--table-background: white;
-  --malloy-theme--table-gutter-size: 15px;
+  --malloy-theme--table-gutter-size: 8px;
   --malloy-theme--table-pinned-background: #f5fafc;
   --malloy-theme--table-pinned-border: 1px solid #daedf3;
   --malloy-theme--font-family: Inter, system-ui, sans-serif;
+  --malloy-theme--background: white;
+  --malloy-theme--dashboard-bg: white;
+  --malloy-theme--dashboard-card-bg: white;
+  --malloy-theme--dashboard-card-radius: 8px;
+  --malloy-theme--dashboard-card-padding: 20px;
+  --malloy-theme--dashboard-title-size: 14px;
+  --malloy-theme--dashboard-title-weight: 500;
+  --malloy-theme--dashboard-title-color: #4a4d54;
+  --malloy-theme--dashboard-value-size: 32px;
+  --malloy-theme--dashboard-gap: 16px;
 
   font-family: var(--malloy-render--font-family);
   font-size: var(--malloy-render--table-font-size);
+  height: 100%;
+  width: 100%;
+  background-color: var(--malloy-render--background);
 }
 
 @supports (font-variation-settings: normal) {
-  :host {
-    font-family:
-      InterVariable,
-      Inter,
-      system-ui sans-serif;
-
+  .malloy-render {
+    /* No font-family here: it belongs to --malloy-theme--font-family above, which
+       an embedding host overrides. A family in this block would win on order. */
     font-feature-settings:
       'liga' 1,
       'calt' 1;
   }
+}
+
+.malloy-copied-modal {
+  position: fixed;
+  background: #333;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+  color: white;
+  bottom: 24px;
+  left: 100%;
+  text-wrap: nowrap;
+
+  transition: all 0s;
+  animation: modal-slide-in 2s forwards;
 }

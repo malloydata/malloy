@@ -1,46 +1,30 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
+import type {
+  // DuckDBMap,
+  DuckDBRow,
+  DuckDBValue,
+} from '@motherduck/wasm-client';
 import {
   // DuckDBBlob,
   DuckDBDate,
   DuckDBDecimal,
   // DuckDBInterval,
   DuckDBList,
-  // DuckDBMap,
-  DuckDBRow,
   DuckDBStruct,
   DuckDBTime,
   DuckDBTimestampMicroseconds,
   DuckDBTimestampMilliseconds,
   DuckDBTimestampNanoseconds,
   DuckDBTimestampSeconds,
-  DuckDBValue,
   MDConnection,
 } from '@motherduck/wasm-client';
-import {QueryDataRow, QueryValue} from '@malloydata/malloy';
+import type {QueryRecord, QueryValue} from '@malloydata/malloy';
 
 function unwrapMotherDuck(value: DuckDBValue) {
   let result: QueryValue = null;
@@ -71,7 +55,8 @@ function unwrapMotherDuck(value: DuckDBValue) {
       result = value.toString();
     }
   } else if (typeof value === 'bigint') {
-    result = Number(value);
+    // Preserve precision by converting to string
+    result = value.toString();
   } else {
     result = value;
   }
@@ -79,7 +64,7 @@ function unwrapMotherDuck(value: DuckDBValue) {
 }
 
 function unwrapMotherDuckRow(row: DuckDBRow) {
-  const result: QueryDataRow = {};
+  const result: QueryRecord = {};
   for (const entry of Object.entries(row)) {
     const [key, value] = entry;
     result[key] = unwrapMotherDuck(value);
@@ -104,6 +89,7 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
       });
       await mdConnection.isInitialized();
       this._mdConnection = mdConnection;
+      // eslint-disable-next-line no-console
       console.info('MotherDuck initialized');
     } else {
       await super.init();
@@ -136,7 +122,7 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
   protected override async runDuckDBQuery(
     sql: string,
     abortSignal?: AbortSignal
-  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
+  ): Promise<{rows: QueryRecord[]; totalRows: number}> {
     if (this.isMotherDuck) {
       if (this._mdConnection) {
         const connection = this._mdConnection;
@@ -168,15 +154,5 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
     } else {
       return super.runDuckDBQuery(sql, abortSignal);
     }
-  }
-
-  async createHash(sqlCommand: string): Promise<string> {
-    const msgUint8 = new TextEncoder().encode(sqlCommand);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-    return hashHex;
   }
 }

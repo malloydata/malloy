@@ -1,0 +1,602 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import {RuntimeList, allDatabases} from '../../runtimes';
+import {databasesFromEnvironmentOr} from '../../util';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import type {
+  RecordLiteralNode,
+  ArrayLiteralNode,
+  ArrayTypeDef,
+  FieldDef,
+  Expr,
+  SQLSourceRequest,
+} from '@malloydata/malloy';
+
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+
+/*
+ * Tests for the composite atomic data types "record", "array of values",
+ * and "array of records". Each starts with a test that the dialect functions
+ * for literals work, and then bases the rest of the tests on literals,
+ * so fix that one first if the tests are failing.
+ */
+
+function literalNum(num: number): Expr {
+  const literal = num.toString();
+  return {node: 'numberLiteral', literal, sql: literal};
+}
+
+describe.each(runtimes.runtimeList)(
+  'compound atomic datatypes %s',
+  (conName, runtime) => {
+    const testModel = wrapTestModel(runtime, '');
+    const supportsNestedArrays = runtime.dialect.nestedArrays;
+    const quote = (s: string) => runtime.dialect.sqlQuoteIdentifier(s);
+
+    const empty = `${conName}.sql("SELECT 0 as z")`;
+    function arraySelectVal(...val: number[]): string {
+      const literal: ArrayLiteralNode = {
+        node: 'arrayLiteral',
+        typeDef: {
+          type: 'array',
+          elementTypeDef: {type: 'number'},
+        },
+        kids: {values: val.map(v => literalNum(v))},
+      };
+      return runtime.dialect.sqlLiteralArray(literal);
+    }
+    function recordLiteral(fromObj: Record<string, number>): RecordLiteralNode {
+      const kids: Record<string, Expr> = {};
+      const fields: FieldDef[] = Object.keys(fromObj).map(name => {
+        kids[name] = literalNum(fromObj[name]);
+        return {
+          type: 'number',
+          name,
+        };
+      });
+      const literal: RecordLiteralNode = {
+        node: 'recordLiteral',
+        typeDef: {
+          type: 'record',
+          fields,
+        },
+        kids,
+      };
+      literal.sql = runtime.dialect.sqlLiteralRecord(literal);
+      return literal;
+    }
+    function recordSelectVal(fromObj: Record<string, number>): string {
+      return runtime.dialect.sqlLiteralRecord(recordLiteral(fromObj));
+    }
+    const canReadCompoundSchema = runtime.dialect.compoundObjectInSchema;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const ab = recordSelectVal({a: 0, b: 1});
+
+    const malloySizes = 'sizes is {s is 0, m is 1, l is 2, xl is 3}';
+    const sizesObj = {s: 0, m: 1, l: 2, xl: 3};
+    const sizesSQL = recordSelectVal(sizesObj);
+    // Keeping the pipeline simpler makes debugging easier, so don't add
+    // and extra stage unless you have to
+    const sizes = canReadCompoundSchema
+      ? `${conName}.sql(""" SELECT ${sizesSQL} AS ${quote('sizes')} """)`
+      : `${conName}.sql('SELECT 0 AS O') -> { select: ${malloySizes}}`;
+    const evensObj = [2, 4, 6, 8];
+    const evensSQL = arraySelectVal(...evensObj);
+    const evens = `${conName}.sql("""
+      SELECT ${evensSQL} AS ${quote('evens')}
+    """)`;
+    const d4 = [1, 2, 3, 4];
+    const d4SQL = arraySelectVal(...d4);
+
+    describe('simple arrays', () => {
+      test('array literal dialect function', async () => {
+        await expect(`
+          run: ${evens}`).toMatchResult(testModel, {
+          evens: evensObj,
+        });
+      });
+      test('select array', async () => {
+        await expect(`
+          # test.verbose
+          run: ${evens}->{select: nn is evens}
+          `).toMatchResult(testModel, {nn: evensObj});
+      });
+      test.when(canReadCompoundSchema)(
+        'schema read allows array-un-nest on each',
+        async () => {
+          await expect(`
+          run: ${evens}->{ select: n is evens.each }
+        `).toEqualResult(
+            testModel,
+            evensObj.map(n => ({n}))
+          );
+        }
+      );
+      test('array can be passed to !function', async () => {
+        // Used as a standin for "unknown function user might call"
+        const nameOfArrayLenFunction = {
+          'duckdb': 'LEN',
+          'standardsql': 'ARRAY_LENGTH',
+          'postgres': 'JSONB_ARRAY_LENGTH',
+          'presto': 'CARDINALITY',
+          'trino': 'CARDINALITY',
+          'mysql': 'JSON_LENGTH',
+          'snowflake': 'ARRAY_SIZE',
+          'databricks': 'SIZE',
+        };
+        const dialect = runtime.dialect.name;
+        const missing = `Dialect '${dialect}' missing array length function in nameOfArrayLenFunction`;
+        const fn = nameOfArrayLenFunction[dialect] ?? missing;
+        expect(fn).not.toEqual(missing);
+        await expect(
+          `run: ${evens}->{ select: nby2 is ${fn}!number(evens); } `
+        ).toMatchResult(testModel, {nby2: evensObj.length});
+      });
+      test('array.each in source', async () => {
+        await expect(`
+          run: ${empty}
+          extend { dimension: d4 is [1,2,3,4] }
+          -> { select: die_roll is d4.each }
+        `).toEqualResult(testModel, [
+          {die_roll: 1},
+          {die_roll: 2},
+          {die_roll: 3},
+          {die_roll: 4},
+        ]);
+      });
+      test('array.each in extend block', async () => {
+        await expect(`
+          run: ${empty} -> {
+            extend: { dimension: d4 is [1,2,3,4] }
+            select: die_roll is d4.each
+          }
+        `).toEqualResult(testModel, [
+          {die_roll: 1},
+          {die_roll: 2},
+          {die_roll: 3},
+          {die_roll: 4},
+        ]);
+      });
+      test.when(canReadCompoundSchema)('cross join two arrays', async () => {
+        await expect(`
+          run: ${conName}.sql("""
+            SELECT ${d4SQL} as ${quote('d1')}, ${d4SQL} as ${quote('d2')}
+          """) -> { select: roll is d1.each + d2.each }
+          -> {
+            group_by: roll
+            aggregate: n is count()
+            order_by: roll asc
+          }
+          `).toMatchRows(testModel, [
+          {roll: 2, n: 1},
+          {roll: 3, n: 2},
+          {roll: 4, n: 3},
+          {roll: 5, n: 4},
+          {roll: 6, n: 3},
+          {roll: 7, n: 2},
+          {roll: 8, n: 1},
+        ]);
+      });
+      // can't use special chars in column names in bq
+      test.when(conName !== 'bigquery')(
+        'array stored field with special chars in name',
+        async () => {
+          const special_chars = ["'", '"', '.', '`'];
+          for (const c of special_chars) {
+            const qname = '`_\\' + c + '_`';
+            const malloySrc = `
+            # test.verbose
+            run: ${empty}
+            ->{ select: ${qname} is [1]}
+            -> { select: num is ${qname}.each }`;
+            await expect(malloySrc).toMatchResult(testModel, {});
+            const result = await runtime.loadQuery(malloySrc).run();
+            const ok =
+              result.data.path(0, 'num').value === 1
+                ? 'ok'
+                : `Array containing ${c} character is not ok`;
+            expect(ok).toEqual('ok');
+          }
+        }
+      );
+      test.when(supportsNestedArrays && canReadCompoundSchema)(
+        'Can read schema for array of arrays',
+        async () => {
+          // a lot of work to make [[1],[2]] on all dialects
+          const aLit: ArrayLiteralNode = {
+            node: 'arrayLiteral',
+            typeDef: {type: 'array', elementTypeDef: {type: 'number'}},
+            kids: {values: []},
+          };
+          const aOne = {...aLit};
+          aOne.kids.values[0] = {node: 'numberLiteral', literal: '1', sql: '1'};
+          aOne.sql = runtime.dialect.sqlLiteralArray(aOne);
+          const aTwo = {...aLit, sql: '2'};
+          aTwo.kids.values[0] = {node: 'numberLiteral', literal: '2', sql: '2'};
+          aTwo.sql = runtime.dialect.sqlLiteralArray(aTwo);
+          const aoa: ArrayLiteralNode = {
+            node: 'arrayLiteral',
+            typeDef: {type: 'array', elementTypeDef: aLit.typeDef},
+            kids: {values: [aOne, aTwo]},
+          };
+          const sql_aoa = runtime.dialect.sqlLiteralArray(aoa);
+          const asStruct: SQLSourceRequest = {
+            connection: conName,
+            selectStr: `SELECT ${sql_aoa} AS aoa`,
+          };
+          const ret = await runtime.connection.fetchSchemaForSQLStruct(
+            asStruct,
+            {}
+          );
+          expect(ret.structDef).toBeDefined();
+          const aoa_ent = ret.structDef!.fields[0];
+          expect(aoa_ent).toMatchObject(aoa.typeDef);
+        }
+      );
+      test.when(supportsNestedArrays)('bare array of array', async () => {
+        await expect(`
+          run: ${empty} -> { select: aoa is [[1,2]] }
+        `).toMatchResult(testModel, {aoa: [[1, 2]]});
+      });
+      test.when(supportsNestedArrays)('each.each array of array', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: aoa is [[1,2]] } -> { select: aoa.each.each }
+        `).toEqualResult(testModel, [{each: 1}, {each: 2}]);
+      });
+      test('group by array', async () => {
+        const oddsObj = [1, 3, 5, 7];
+        const oddsSql = arraySelectVal(...oddsObj);
+        await expect(`
+          run: ${conName}.sql("""
+            SELECT ${evensSQL} as ${quote('nums')}, 1 as ${quote('n')}
+            UNION ALL SELECT ${evensSQL}, 10
+            UNION ALL SELECT ${oddsSql}, 100
+            UNION ALL SELECT ${oddsSql}, 1000
+          """) -> {
+            group_by: nums
+            aggregate: addem is n.sum()
+            order_by: addem asc
+          }`).toMatchRows(testModel, [
+          {nums: evensObj, addem: 11},
+          {nums: oddsObj, addem: 1100},
+        ]);
+      });
+    });
+    describe('record', () => {
+      function rec_eq(as?: string): Record<string, unknown> {
+        const name = as ?? 'sizes';
+        return {
+          [name]: {s: 0, m: 1, l: 2, xl: 3},
+        };
+      }
+      test('record literal object', async () => {
+        await expect(`
+          run: ${conName}.sql("select 0 as o")
+          -> { select: ${malloySizes}}
+        `).toMatchResult(testModel, rec_eq());
+      });
+      // can't use special chars in column names in bq
+      test.when(conName !== 'bigquery')(
+        'special character in record property name',
+        async () => {
+          const special_chars = ["'", '"', '.', '`'];
+          for (const c of special_chars) {
+            const qname = '_\\' + c + '_';
+            const name = '_' + c + '_';
+            const malloySrc = `run: ${empty} -> { select: \`${qname}\` is 'ok' }`;
+            // no malloyResultMatches because it treats a special in an expect key
+            const query = runtime.loadQuery(malloySrc);
+            const result = await query.run();
+            const p =
+              result.data.path(0, name).value === 'ok'
+                ? 'ok'
+                : `Name containing the ${c} character was not ok`;
+            expect(p).toEqual('ok');
+          }
+        }
+      );
+      // can't use special chars in column names in bq
+      test.when(conName !== 'bigquery')(
+        'record stored in field with special chars in name',
+        async () => {
+          const special_chars = ["'", '"', '.', '`'];
+          for (const c of special_chars) {
+            const qname = '`_\\' + c + '_`';
+            const malloySrc = `
+            run: ${empty}
+            ->{ select: ${qname} is {rnum is 1}}
+            -> { select: num is ${qname}.rnum }`;
+            const result = await runtime.loadQuery(malloySrc).run();
+            const ok =
+              result.data.path(0, 'num').value === 1
+                ? 'ok'
+                : `Array containing ${c} character is not ok`;
+            expect(ok).toEqual('ok');
+          }
+        }
+      );
+      test.when(canReadCompoundSchema)(
+        'can read schema of record object',
+        async () => {
+          await expect(`run: ${conName}.sql("""
+              SELECT ${sizesSQL} AS ${quote('sizes')}
+          """)`).toMatchResult(testModel, rec_eq());
+        }
+      );
+      test('simple record.property access', async () => {
+        await expect(`
+          run: ${sizes} -> { select: small is sizes.s }`).toMatchResult(
+          testModel,
+          {small: 0}
+        );
+      });
+      test('property accessed from aliased record dimension', async () => {
+        await expect(`
+          source: sx is ${sizes} extend {
+            dimension: copy_sizes is sizes
+          }
+          run: sx -> {select: xl is copy_sizes.xl}
+        `).toMatchResult(testModel, {xl: 3});
+      });
+      test('nested data looks like a record', async () => {
+        await expect(`
+          run: ${conName}.sql('SELECT 1 as ${quote('o')}') -> {
+            group_by: row is 'one_row'
+            nest: sizes is {
+              aggregate:
+                s is sum(o) - 1,
+                m is sum(o),
+                x is sum(o) + 1,
+                xl is sum(o) + 2
+            }
+          } -> { select: small is sizes.s }`).toMatchResult(testModel, {
+          small: 0,
+        });
+      });
+      test('record can be selected', async () => {
+        await expect(
+          `
+          run: ${sizes} -> { select: sizes }`
+        ).toMatchResult(testModel, rec_eq());
+      });
+      test('record literal can be selected', async () => {
+        await expect(`
+          run: ${sizes} -> { select: record is sizes }
+        `).toMatchResult(testModel, rec_eq('record'));
+      });
+      test('select record literal from a source', async () => {
+        await expect(`
+          run: ${empty} -> {
+            extend: { dimension: ${malloySizes} }
+            select: sizes
+          }
+        `).toMatchResult(testModel, rec_eq());
+      });
+      test('computed record.property from a source', async () => {
+        await expect(`
+          run: ${empty}
+            extend { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
+            -> { select: small is record.s }
+        `).toMatchResult(testModel, {small: 0});
+      });
+      test('record.property from an extend block', async () => {
+        await expect(`
+          run: ${empty} -> {
+            extend: { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
+            select: small is record.s
+          }
+        `).toMatchResult(testModel, {small: 0});
+      });
+      test('simple each on array property inside record', async () => {
+        await expect(`
+          run: ${empty} -> { select: nums is { odds is [1,3], evens is [2,4]} }
+          -> { select: odd is nums.odds.value }
+        `).toEqualResult(testModel, [{odd: 1}, {odd: 3}]);
+      });
+      test('each on array property inside record from source', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: nums is { odds is [1,3], evens is [2,4]} }
+          -> { select: odd is nums.odds.each }
+        `).toEqualResult(testModel, [{odd: 1}, {odd: 3}]);
+      });
+      const abc = "rec is {a is 'a', bc is {b is 'b', c is 'c'}}";
+      test('record with a record property', async () => {
+        await expect(`
+          run: ${empty} -> { select: ${abc} }
+          -> { select: rec.a, rec.bc.b, rec.bc.c }
+        `).toMatchResult(testModel, {a: 'a', b: 'b', c: 'c'});
+      });
+      test('record in source with a record property', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: ${abc} }
+          -> { select: rec.a, rec.bc.b, rec.bc.c }
+        `).toMatchResult(testModel, {a: 'a', b: 'b', c: 'c'});
+      });
+      test('record dref in source with a record property', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: ${abc} }
+          -> { select: b is pick rec.bc.b when true else 'b' }
+        `).toMatchResult(testModel, {b: 'b'});
+      });
+      test.todo('array or record where first entries are null');
+      // https://github.com/malloydata/malloy/issues/2206
+      test.skip('dereference of literal record (causes stack overflow at one point)', async () => {
+        await expect(`
+          run: ${conName}.sql("""
+            SELECT ${runtime.dialect.sqlLiteralString('Mark')} as first_name,
+                   ${runtime.dialect.sqlLiteralString('Toy')} as last_name
+          """) extend {
+            dimension: owner is {first_name, last_name}
+          } -> {
+            group_by: x is owner.first_name
+          }
+        `).toMatchResult(testModel, {x: 'Mark'});
+      });
+      test('record in join references join fields', async () => {
+        const id = quote('id');
+        const x = quote('x');
+        const y = quote('y');
+        await expect(`
+          source: joined_data is ${conName}.sql("""
+            SELECT 1 as ${id}, 10 as ${x}, 20 as ${y}
+          """) extend { dimension: rec is {xysum is x + y} }
+          source: base is ${conName}.sql("""SELECT 1 as ${id} """) extend {
+            join_one: jd is joined_data on jd.id = id
+          }
+          run: base -> { select: result is jd.rec.xysum }
+        `).toMatchResult(testModel, {result: 30});
+      });
+    });
+    describe('repeated record', () => {
+      const abType: ArrayTypeDef = {
+        type: 'array',
+        elementTypeDef: {type: 'record_element'},
+        fields: [
+          {name: 'a', type: 'number'},
+          {name: 'b', type: 'number'},
+        ],
+      };
+      const values = [
+        recordLiteral({a: 10, b: 11}),
+        recordLiteral({a: 20, b: 21}),
+      ];
+
+      const ab = runtime.dialect.sqlLiteralArray({
+        node: 'arrayLiteral',
+        typeDef: abType,
+        kids: {values},
+      });
+      const ab_eq = [
+        {a: 10, b: 11},
+        {a: 20, b: 21},
+      ];
+      function selectAB(n: string) {
+        return `SELECT ${ab} AS ${quote(n)}`;
+      }
+      const abMalloy = '[{a is 10, b is 11}, {a is 20, b is 21}]';
+
+      test('repeated record from nest', async () => {
+        await expect(`
+            run: ${conName}.sql("""
+              SELECT
+                10 as ${quote('a')},
+                11 as ${quote('b')}
+              UNION ALL SELECT 20 , 21
+            """) -> { nest: ab is { select: a, b } }
+                 -> { select: ab.a, ab.b ; order_by: a}
+        `).toEqualResult(testModel, ab_eq);
+      });
+      test('select repeated record from literal dialect functions', async () => {
+        await expect(`
+          run: ${conName}.sql(""" ${selectAB('ab')} """)
+        `).toMatchResult(testModel, {ab: ab_eq});
+      });
+      test('repeat record from malloy literal', async () => {
+        await expect(`
+          run: ${empty}
+          -> { select: ab is ${abMalloy} }
+        `).toMatchResult(testModel, {ab: ab_eq});
+      });
+      test('repeated record can be selected and renamed', async () => {
+        const src = `
+          run: ${conName}.sql("""
+            ${selectAB('sqlAB')}
+          """) -> { select: ab is sqlAB }
+      `;
+        await expect(src).toMatchResult(testModel, {ab: ab_eq});
+      });
+      test('select repeated record passed down pipeline', async () => {
+        await expect(`
+          run: ${empty}
+          -> { select: pipeAb is ${abMalloy} }
+          -> { select: ab is pipeAb }
+        `).toMatchResult(testModel, {ab: ab_eq});
+      });
+      test('deref repeat record passed down pipeline', async () => {
+        await expect(`
+          run: ${empty}
+          -> { select: pipeAb is ${abMalloy} }
+          -> { select: pipeAb.a, pipeAb.b }
+        `).toEqualResult(testModel, ab_eq);
+      });
+      test('select array of records from source', async () => {
+        await expect(`
+          run: ${empty}
+          extend { dimension: abSrc is ${abMalloy} }
+          -> { select: ab is abSrc }
+        `).toMatchResult(testModel, {ab: ab_eq});
+      });
+      test('deref array of records from source', async () => {
+        await expect(`
+          run: ${empty}
+          extend { dimension: ab is ${abMalloy} }
+          -> { select: ab.a, ab.b }
+        `).toEqualResult(testModel, ab_eq);
+      });
+      test('repeated record in source wth record property', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: rec is [ {bc is  {b is 'b'}} ] }
+          -> { select: rec.bc.b }
+        `).toMatchResult(testModel, {b: 'b'});
+      });
+      test('piped repeated record containing an array', async () => {
+        await expect(`
+          run: ${empty} -> {
+            select: rrec is [
+              { val is 1, names is ['uno', 'one'] },
+              { val is 2, names is ['due', 'two'] }
+            ]
+          } -> {
+            select: val is rrec.val, name is rrec.names.each
+            order_by: val desc, name asc
+          }
+        `).toEqualResult(testModel, [
+          {val: 2, name: 'due'},
+          {val: 2, name: 'two'},
+          {val: 1, name: 'one'},
+          {val: 1, name: 'uno'},
+        ]);
+      });
+      test('source repeated record containing an array', async () => {
+        await expect(`
+          run: ${empty} extend {
+            dimension: rrec is [
+              { val is 1, names is ['uno', 'one'] },
+              { val is 2, names is ['due', 'two'] }
+            ]
+          } -> {
+            select: val is rrec.val, name is rrec.names.each
+            order_by: val desc, name asc
+          }
+        `).toEqualResult(testModel, [
+          {val: 2, name: 'due'},
+          {val: 2, name: 'two'},
+          {val: 1, name: 'one'},
+          {val: 1, name: 'uno'},
+        ]);
+      });
+      test('group_by repeated record', async () => {
+        await expect(`
+          run: ${conName}.sql(""" ${selectAB('ab')} """) -> { group_by: ab }
+        `).toMatchResult(testModel, {ab: ab_eq});
+      });
+      // test for https://github.com/malloydata/malloy/issues/2065
+      test('nest a group_by repeated record', async () => {
+        await expect(`
+          run: ${conName}.sql(""" ${selectAB('ab')} """)
+          -> { nest: gab is {group_by: ab } }
+          -> { select: gab.ab }
+        `).toMatchResult(testModel, {ab: ab_eq});
+      });
+    });
+  }
+);
+
+afterAll(async () => {
+  await runtimes.closeAll();
+});

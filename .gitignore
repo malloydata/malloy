@@ -1,24 +1,15 @@
-/docs
-
 # Workspace related exclusions
 packages/**/build
 packages/**/dist
 packages/**/node_modules
 packages/malloy/src/lang/lib
+packages/malloy/src/dialect/sqlserver/windows_zones.ts
 *.tsbuildinfo
+*.femto.digest
 packages/**/package-lock.json
 packages/**/.eslintcache
 packages/malloy/src/lang/grammar/.antlr
-demo/**/build
-demo/**/dist
-demo/**/node_modules
-demo/**/tsconfig.tsbuildinfo
-demo/**/package-lock.json
-demo/**/.eslintcache
 node_modules
-demo/malloy-demo-composer/composer_config.json
-demo/malloy-demo-composer/public/js
-demo/malloy-demo-composer/pkg
 vscode-extension/**/build
 vscode-extension/**/dist
 vscode-extension/**/node_modules
@@ -26,6 +17,8 @@ vscode-extension/**/tsconfig.tsbuildinfo
 vscode-extension/**/package-lock.json
 vscode-extension/**/.eslintcache
 test/dist
+profiler/dist
+profiler/.clinic
 
 # misc
 .DS_Store
@@ -33,7 +26,6 @@ test/dist
 .env.development.local
 .env.test.local
 .env.production.local
-tsconfig.compile-no-emit.tsbuildinfo
 *.db.wal
 
 npm-debug.log*
@@ -54,8 +46,25 @@ gems/
 .tmp/
 logfile
 .s.PGSQL.5432.lock
-demo/malloy-demo-composer/env
 .env
 test/data/duckdb/duckdb_test.db.wal
 monospace.json
 snowflake.log
+packages/malloy-interfaces/generated-types/
+packages/malloy-query-builder/docs/
+packages/malloy-query-builder/flow/
+.claude
+
+packages/malloy-filter/src/lib
+packages/malloy-tag/src/.antlr
+packages/malloy-tag/src/lib
+
+@flowtyped
+
+# Copied into each published workspace at publish time so the license text
+# ships in the tarball; never committed. See .github/workflows/release.yaml.
+# Covers every workspace in package.json's workspaces.packages, including the
+# published test/ (@malloydata/malloy-tests) and profiler/ workspaces.
+packages/*/LICENSE
+test/LICENSE
+profiler/LICENSE

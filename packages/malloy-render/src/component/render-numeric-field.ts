@@ -1,106 +1,96 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {AtomicField} from '@malloydata/malloy';
-import {Currency, DurationUnit} from '../data_styles';
-import {format} from 'ssf';
+import {
+  formatDateTime,
+  formatNumber,
+  type CellFormatConfig,
+} from '../format/cell-format';
+import type {RenderTimeStringOptions} from '../format/time-format';
+import type {Field, NumberCell} from '../data_tree';
 
-// Map of unit to how many units of the make up the following time unit.
-const multiplierMap = new Map<DurationUnit, number>([
-  [DurationUnit.Nanoseconds, 1000],
-  [DurationUnit.Microseconds, 1000],
-  [DurationUnit.Milliseconds, 1000],
-  [DurationUnit.Seconds, 60],
-  [DurationUnit.Minutes, 60],
-  [DurationUnit.Hours, 24],
-  [DurationUnit.Days, Number.MAX_VALUE],
-]);
+// The formatting itself lives in ../format (the headless
+// `@malloydata/render/format` entry). These wrappers add only what needs a
+// Field: its resolved config and its query's timezone.
 
-function formatTimeUnit(value: number, unit: DurationUnit) {
-  let unitString = unit.toString();
-  if (value === 1) {
-    unitString = unitString.substring(0, unitString.length - 1);
-  }
-  return `${value} ${unitString}`;
+/**
+ * Get the CellFormatConfig for a field, with optional override.
+ * The override is used for array elements, where the array field's
+ * config should be used instead of the element field's config.
+ */
+function getConfig(
+  f: Field,
+  configOverride?: CellFormatConfig
+): CellFormatConfig {
+  return (
+    configOverride ?? f.getTagConfig<CellFormatConfig>() ?? {mode: 'default'}
+  );
 }
 
-export function renderNumericField(f: AtomicField, value: number) {
-  let displayValue: string | number = value;
-  const {tag} = f.tagParse();
-  if (tag.has('currency')) {
-    let unitText = '$';
+/**
+ * Renders a numeric field with formatting based on pre-resolved tag config.
+ *
+ * Supports:
+ * - Currency shorthand: # currency=usd2m, # currency=eur0k
+ * - Currency verbose: # currency { scale=m decimals=2 suffix=finance }
+ * - Number shorthand: # number=1k, # number=0m, # number=auto
+ * - Number verbose: # number { scale=m decimals=2 suffix=word }
+ * - Legacy: # number=big, # currency=euro
+ */
+export function renderNumericField(
+  f: Field,
+  value: number | null | undefined,
+  configOverride?: CellFormatConfig
+): string {
+  return formatNumber(value, getConfig(f, configOverride));
+}
 
-    switch (tag.text('currency')) {
-      case Currency.Euros:
-        unitText = '€';
-        break;
-      case Currency.Pounds:
-        unitText = '£';
-        break;
-      case Currency.Dollars:
-        // Do nothing.
-        break;
-    }
-    displayValue = format(`${unitText}#,##0.00`, value);
-  } else if (tag.has('percent')) displayValue = format('#,##0.00%', value);
-  else if (tag.has('duration')) {
-    const duration_unit = tag.text('duration');
-    const targetUnit = duration_unit ?? DurationUnit.Seconds;
+/**
+ * Render a big number value (stored as string for precision).
+ * Used when NumberCell.stringValue is defined (bigint/bigdecimal subtypes).
+ */
+export function renderBigNumberField(
+  f: Field,
+  value: string | null | undefined,
+  configOverride?: CellFormatConfig
+): string {
+  return formatNumber(value, getConfig(f, configOverride));
+}
 
-    let currentDuration = value;
-    let currentUnitValue = 0;
-    let durationParts: string[] = [];
-    let foundUnit = false;
+/**
+ * Render a NumberCell for display, automatically handling bigint precision.
+ *
+ * USE THIS FUNCTION when rendering numeric values from cells in plugins/components.
+ *
+ * @param cell - A NumberCell from the data tree
+ * @param configOverride - Optional config override (e.g., for array elements, use the array field's config)
+ */
+export function renderNumberCell(
+  cell: NumberCell,
+  configOverride?: CellFormatConfig
+): string {
+  if (cell.stringValue !== undefined) {
+    return renderBigNumberField(cell.field, cell.stringValue, configOverride);
+  }
+  return renderNumericField(cell.field, cell.value, configOverride);
+}
 
-    for (const [unit, multiplier] of multiplierMap) {
-      if (unit === targetUnit) {
-        foundUnit = true;
-      }
+export function renderDateTimeField(
+  f: Field,
+  value: Date | null | undefined,
+  options: RenderTimeStringOptions = {},
+  configOverride?: CellFormatConfig
+): string {
+  // Get the effective query timezone for timestamp fields (not date fields)
+  const effectiveTimezone = !options.isDate
+    ? (options.timezone ?? f.getEffectiveQueryTimezone())
+    : undefined;
 
-      if (!foundUnit) {
-        continue;
-      }
-
-      currentUnitValue = currentDuration % multiplier;
-      currentDuration = Math.floor((currentDuration /= multiplier));
-
-      if (currentUnitValue > 0) {
-        durationParts = [
-          formatTimeUnit(currentUnitValue, unit),
-          ...durationParts,
-        ];
-      }
-
-      if (currentDuration === 0) {
-        break;
-      }
-    }
-
-    if (durationParts.length > 0) {
-      displayValue = durationParts.slice(0, 2).join(' ');
-    } else displayValue = formatTimeUnit(0, targetUnit as DurationUnit);
-  } else if (tag.has('number'))
-    displayValue = format(tag.text('number')!, value);
-  else displayValue = (value as number).toLocaleString();
-  return displayValue;
+  return formatDateTime(value, getConfig(f, configOverride), {
+    ...options,
+    timezone: effectiveTimezone,
+    fieldName: f.name,
+  });
 }

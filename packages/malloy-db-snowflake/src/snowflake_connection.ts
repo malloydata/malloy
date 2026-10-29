@@ -1,28 +1,9 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import * as crypto from 'crypto';
-import {
+import type {
   RunSQLOptions,
   MalloyQueryData,
   QueryRunStats,
@@ -30,22 +11,131 @@ import {
   PersistSQLResults,
   StreamingConnection,
   PooledConnection,
-  SQLBlock,
+  SQLSourceDef,
+  TableSourceDef,
   StructDef,
-  QueryDataRow,
-  SnowflakeDialect,
-  NamedStructDefs,
-  FieldTypeDef,
+  QueryRecord,
+  TestableConnection,
+  SQLSourceRequest,
 } from '@malloydata/malloy';
+import {SnowflakeDialect, sqlKey, makeDigest} from '@malloydata/malloy';
+import {BaseConnection} from '@malloydata/malloy/connection';
+
 import {SnowflakeExecutor} from './snowflake_executor';
 import {
-  FetchSchemaOptions,
-  TestableConnection,
-} from '@malloydata/malloy/dist/runtime_types';
-import {ConnectionOptions} from 'snowflake-sdk';
-import {Options as PoolOptions} from 'generic-pool';
+  accumulateVariantPath,
+  buildTopLevelField,
+  createVariantSchemaState,
+  PathParser,
+  seedTopLevelShape,
+} from './snowflake_variant_schema';
+import type {NestedColumn} from './snowflake_variant_schema';
+import {parseSnowflakeTableName} from './snowflake_table_name';
+import type {ConnectionOptions} from 'snowflake-sdk';
+import type {Options as PoolOptions} from 'generic-pool';
 
 type namespace = {database: string; schema: string};
+
+/**
+ * Output of the INFORMATION_SCHEMA.TABLES probe. Undefined when the
+ * probe didn't run (non-parseable name) or couldn't find numeric size
+ * info (views, missing permissions).
+ */
+export interface TableSizeProbe {
+  bytes: number;
+  rowCount: number;
+}
+
+/**
+ * Three-way tier that drives variant schema sampling. Extracted as a
+ * pure function so cost-policy decisions are unit-testable.
+ *
+ *   full-scan-then-sample: probe confirmed a small base table. One
+ *     full scan catches rare fields. On failure, fall through to the
+ *     sample chain rather than accept opaque variant.
+ *
+ *   tablesample-only: probe confirmed a base table above the small
+ *     threshold. TABLESAMPLE BLOCK is safe (reads a few micro
+ *     partitions); plain LIMIT without a WHERE is unsafe on large
+ *     partitioned tables, so we skip the LIMIT fallback and instead
+ *     escalate the BLOCK percentage until a draw returns rows (see
+ *     sampleVariantBlocks). A column degrades to variant only on a
+ *     genuinely empty table or a hard failure, never an unlucky draw.
+ *
+ *   tablesample-then-limit: probe gave no size info (views, temp
+ *     views, exotic names). We can't distinguish a small view from a
+ *     view over a petabyte table, so we do best-effort sampling. This
+ *     is the acknowledged "can't help you" case from the design doc.
+ */
+export type SampleStrategy =
+  'full-scan-then-sample' | 'tablesample-only' | 'tablesample-then-limit';
+
+export function pickSampleStrategy(
+  probe: TableSizeProbe | undefined,
+  fullScanMaxBytes: number
+): SampleStrategy {
+  if (probe === undefined) return 'tablesample-then-limit';
+  if (probe.bytes <= fullScanMaxBytes) return 'full-scan-then-sample';
+  return 'tablesample-only';
+}
+
+/**
+ * `TABLESAMPLE BLOCK` percentages tried, in order, when sampling a known-large
+ * base table for VARIANT schema inference. Terminates at 100 so the only empty
+ * draw is a genuinely empty table. See sampleVariantBlocks.
+ */
+export const VARIANT_SAMPLE_BLOCK_PERCENTS = [1, 10, 100] as const;
+
+/**
+ * Draw a VARIANT schema sample from a known-large base table, escalating the
+ * `TABLESAMPLE BLOCK` percentage until a draw returns rows.
+ *
+ * BLOCK decides independently per micro-partition, so a low percentage on a
+ * table with few partitions can draw zero rows. An empty draw is
+ * indistinguishable downstream from a genuinely-opaque variant — and, since
+ * BLOCK is unseeded, non-deterministic — so accepting it would silently degrade
+ * every variant column to `sql native`. Escalate instead: an empty draw is
+ * itself evidence the table is small enough to sample harder. (Probabilities
+ * and sizing are in the PR description.)
+ *
+ * Contract: a column degrades to variant only from a genuinely empty table
+ * (empty even at `BLOCK (100)`) or a hard failure — never an unlucky draw.
+ *
+ * `runSample` resolves to the rows, to `[]` on an empty draw (escalate), or to
+ * `undefined` on error/timeout (stop — no "table is small" evidence). Returns
+ * the first non-empty draw, else `undefined`.
+ */
+export async function sampleVariantBlocks(
+  runSample: (blockPercent: number) => Promise<QueryRecord[] | undefined>,
+  blockPercents: readonly number[] = VARIANT_SAMPLE_BLOCK_PERCENTS
+): Promise<QueryRecord[] | undefined> {
+  for (const blockPercent of blockPercents) {
+    const rows = await runSample(blockPercent);
+    // Error/timeout carries no "table is small" evidence, and a higher
+    // percentage only scans more — stop rather than escalate into more timeouts.
+    if (rows === undefined) return undefined;
+    if (rows.length > 0) return rows;
+    // Empty draw: proven small enough to sample harder — escalate.
+  }
+  return undefined;
+}
+
+/**
+ * snowflake-sdk uses a private key only when `authenticator` is
+ * `SNOWFLAKE_JWT`; with no authenticator it falls back to password auth and
+ * fails asking for a password. A key supplied with no authenticator means
+ * key-pair auth, even when a password is also present; the password is then
+ * unused. An empty string is not a key: the driver ignores an empty
+ * `privateKeyPath`, so it must not switch a password login to key-pair. An
+ * explicit authenticator is left alone.
+ */
+export function withKeyPairAuthenticator(
+  opts: ConnectionOptions
+): ConnectionOptions {
+  if (opts.authenticator !== undefined) return opts;
+  if (!opts.privateKey && !opts.privateKeyPath) return opts;
+  return {...opts, authenticator: 'SNOWFLAKE_JWT'};
+}
 
 export interface SnowflakeConnectionOptions {
   // snowflake sdk connection options
@@ -59,65 +149,87 @@ export interface SnowflakeConnectionOptions {
   scratchSpace?: namespace;
 
   queryOptions?: RunSQLOptions;
+
+  // Timeout for the statement
+  timeoutMs?: number;
+
+  // Timeout for the variant schema sampling query (default 15 seconds)
+  schemaSampleTimeoutMs?: number;
+
+  // Row limit used inside the variant schema sample (default 1000). When the
+  // probe reports the table is small enough to full-scan, this limit is
+  // ignored.
+  schemaSampleRowLimit?: number;
+
+  // Byte threshold below which variant schema inference skips sampling and
+  // full-scans the table instead (default 100 MB). A full scan catches rare
+  // fields that a sample would miss.
+  schemaSampleFullScanMaxBytes?: number;
+
+  // SQL statements to run when a connection is acquired from the pool
+  setupSQL?: string;
 }
 
-class StructMap {
-  fieldMap = new Map<string, StructMap>();
-  type = 'record';
-  isArray = false;
-
-  constructor(type: string, isArray: boolean) {
-    this.type = type;
-    this.isArray = isArray;
-  }
-
-  addChild(name: string, type: string): StructMap {
-    const s = new StructMap(type, false);
-    this.fieldMap.set(name, s);
-    return s;
-  }
-}
+/**
+ * Default statement timeoutMs value, 10 Mins
+ */
+const TIMEOUT_MS = 1000 * 60 * 10;
 
 export class SnowflakeConnection
+  extends BaseConnection
   implements
     Connection,
+    PooledConnection,
     PersistSQLResults,
     StreamingConnection,
     TestableConnection
 {
   private readonly dialect = new SnowflakeDialect();
   private executor: SnowflakeExecutor;
-  private schemaCache = new Map<
-    string,
-    | {schema: StructDef; error?: undefined; timestamp: number}
-    | {error: string; schema?: undefined; timestamp: number}
-  >();
-  private sqlSchemaCache = new Map<
-    string,
-    | {
-        structDef: StructDef;
-        error?: undefined;
-        timestamp: number;
-      }
-    | {error: string; structDef?: undefined; timestamp: number}
-  >();
+  private connOptions: ConnectionOptions;
 
   // the database & schema where we do temporary operations like creating a temp table
   private scratchSpace?: namespace;
   private queryOptions: RunSQLOptions;
+  private timeoutMs: number;
+  private schemaSampleTimeoutMs: number;
+  private schemaSampleRowLimit: number;
+  private schemaSampleFullScanMaxBytes: number;
+  private setupSQL: string | undefined;
 
   constructor(
     public readonly name: string,
     options?: SnowflakeConnectionOptions
   ) {
+    super();
     let connOptions = options?.connOptions;
-    if (connOptions === undefined) {
+    if (!connOptions || Object.keys(connOptions).length === 0) {
       // try to get connection options from ~/.snowflake/connections.toml
       connOptions = SnowflakeExecutor.getConnectionOptionsFromToml();
     }
-    this.executor = new SnowflakeExecutor(connOptions, options?.poolOptions);
+    connOptions = withKeyPairAuthenticator(connOptions);
+    this.connOptions = connOptions;
+    this.setupSQL = options?.setupSQL;
+    this.executor = new SnowflakeExecutor(
+      connOptions,
+      options?.poolOptions,
+      this.setupSQL
+    );
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
+    // A configured value that is unset, blank, non-numeric, zero, or negative
+    // falls back to the default; only a positive value overrides it, matching
+    // the BigQuery connector. `> 0` guards the negative case a bare `||` would
+    // let through: the executor schedules setTimeout(cancel, timeoutMs), which
+    // with a negative value fires immediately and aborts the statement.
+    const configuredTimeout = Number(options?.timeoutMs);
+    this.timeoutMs = configuredTimeout > 0 ? configuredTimeout : TIMEOUT_MS;
+    const configuredSampleTimeout = Number(options?.schemaSampleTimeoutMs);
+    this.schemaSampleTimeoutMs =
+      configuredSampleTimeout > 0 ? configuredSampleTimeout : 15_000;
+    this.schemaSampleRowLimit = options?.schemaSampleRowLimit ?? 1000;
+    this.schemaSampleFullScanMaxBytes =
+      options?.schemaSampleFullScanMaxBytes ?? 100_000_000;
   }
 
   get dialectName(): string {
@@ -141,25 +253,53 @@ export class SnowflakeConnection
     return true;
   }
 
+  public getDigest(): string {
+    const scratch = this.scratchSpace
+      ? `${this.scratchSpace.database}:${this.scratchSpace.schema}`
+      : '';
+    return makeDigest(
+      'snowflake',
+      this.connOptions.account,
+      this.connOptions.username,
+      this.connOptions.role,
+      this.connOptions.database,
+      this.connOptions.schema,
+      scratch,
+      this.setupSQL
+    );
+  }
+
   public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
     return {};
   }
 
-  async close(): Promise<void> {
+  public async drain(): Promise<void> {
     await this.executor.done();
   }
 
+  async close(): Promise<void> {
+    await this.drain();
+  }
+
   private getTempViewName(sqlCommand: string): string {
-    const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
-    return `tt${hash}`;
+    const hash = makeDigest(sqlCommand);
+    return `tt${hash.slice(0, this.dialect.maxIdentifierLength - 2)}`;
   }
 
   public async runSQL(
     sql: string,
-    options?: RunSQLOptions
+    options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const rowLimit = options?.rowLimit ?? this.queryOptions?.rowLimit;
-    let rows = await this.executor.batch(sql);
+    const effectiveOptions: RunSQLOptions = {
+      ...this.queryOptions,
+      ...options,
+      // queryMetadata is per-call only; everything else (rowLimit, etc.)
+      // inherits the connection defaults. Validated here, so the executor
+      // renders a bag it can trust.
+      queryMetadata: this.queryMetadataBag(options.queryMetadata),
+    };
+    const rowLimit = effectiveOptions.rowLimit;
+    let rows = await this.executor.batch(sql, effectiveOptions, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
       rows = rows.slice(0, rowLimit);
     }
@@ -169,10 +309,12 @@ export class SnowflakeConnection
   public async *runSQLStream(
     sqlCommand: string,
     options: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
-    const streamQueryOptions = {
+  ): AsyncIterableIterator<QueryRecord> {
+    const streamQueryOptions: RunSQLOptions = {
       ...this.queryOptions,
       ...options,
+      // per-call only, validated here (see runSQL)
+      queryMetadata: this.queryMetadataBag(options.queryMetadata),
     };
 
     for await (const row of await this.executor.stream(
@@ -187,253 +329,275 @@ export class SnowflakeConnection
     await this.executor.batch('SELECT 1 as one');
   }
 
-  private variantToMalloyType(type: string): string {
-    if (type === 'integer') {
-      return 'number';
-    } else if (type === 'varchar') {
-      return 'string';
-    } else {
-      return 'unsupported';
-    }
-  }
-
-  private addFieldsToStructDef(
-    structDef: StructDef,
-    structMap: StructMap
-  ): void {
-    if (structMap.fieldMap.size === 0) return;
-    for (const [field, value] of structMap.fieldMap) {
-      const type = value.type;
-      const name = field;
-
-      // check for an array
-      if (value.isArray && type !== 'object') {
-        const malloyType = this.variantToMalloyType(type);
-        if (malloyType) {
-          const innerStructDef: StructDef = {
-            type: 'struct',
-            name,
-            dialect: this.dialectName,
-            structSource: {type: 'nested'},
-            structRelationship: {
-              type: 'nested',
-              fieldName: name,
-              isArray: true,
-            },
-            fields: [{type: malloyType, name: 'value'} as FieldTypeDef],
-          };
-          structDef.fields.push(innerStructDef);
-        }
-      } else if (type === 'object') {
-        const innerStructDef: StructDef = {
-          type: 'struct',
-          name,
-          dialect: this.dialectName,
-          structSource: value.isArray ? {type: 'nested'} : {type: 'inline'},
-          structRelationship: value.isArray
-            ? {type: 'nested', fieldName: name, isArray: false}
-            : {type: 'inline'},
-          fields: [],
-        };
-        this.addFieldsToStructDef(innerStructDef, value);
-        structDef.fields.push(innerStructDef);
-      } else {
-        const malloyType = this.dialect.sqlTypeToMalloyType(type) ?? {
-          type: 'unsupported',
-          rawType: type.toLowerCase(),
-        };
-        structDef.fields.push({name, ...malloyType} as FieldTypeDef);
-      }
-    }
-  }
-
   private async schemaFromTablePath(
     tablePath: string,
     structDef: StructDef
   ): Promise<void> {
     const infoQuery = `DESCRIBE TABLE ${tablePath}`;
     const rows = await this.executor.batch(infoQuery);
-    const variants: string[] = [];
+    const nestedColumns: NestedColumn[] = [];
     const notVariant = new Map<string, boolean>();
     for (const row of rows) {
-      // data types look like `VARCHAR(1234)`
-      let snowflakeDataType = row['type'] as string;
-      snowflakeDataType = snowflakeDataType.toLocaleLowerCase().split('(')[0];
-      const s = structDef;
-      const malloyType = this.dialect.sqlTypeToMalloyType(snowflakeDataType);
+      // data types look like `VARCHAR(1234)` or `NUMBER(10,2)`
+      const fullType = (row['type'] as string).toLocaleLowerCase();
+      const baseType = fullType.split('(')[0];
       const name = row['name'] as string;
 
-      if (snowflakeDataType === 'variant' || snowflakeDataType === 'array') {
-        variants.push(name);
-        continue;
-      }
-
-      notVariant.set(name, true);
-      if (malloyType) {
-        s.fields.push({...malloyType, name});
+      if (
+        baseType === 'variant' ||
+        baseType === 'array' ||
+        baseType === 'object'
+      ) {
+        nestedColumns.push({kind: baseType, name});
       } else {
-        s.fields.push({
-          type: 'unsupported',
-          rawType: snowflakeDataType,
-          name,
-        });
+        notVariant.set(name, true);
+        // For NUMBER types, pass full string so dialect can inspect scale
+        // For other types, just use the base type
+        const typeForMapping = ['number', 'numeric', 'decimal', 'dec'].includes(
+          baseType
+        )
+          ? fullType
+          : baseType;
+        const malloyType = this.dialect.sqlTypeToMalloyType(typeForMapping);
+        structDef.fields.push({...malloyType, name});
       }
     }
-    // if we have variants, sample the data
-    if (variants.length > 0) {
-      const sampleQuery = `
-        SELECT regexp_replace(PATH, '\\\\[[0-9]*\\\\]', '') as PATH, lower(TYPEOF(value)) as type
-        FROM (select object_construct(*) o from  ${tablePath} limit 100)
+    // VARIANT, ARRAY, and OBJECT columns don't have schema in metadata —
+    // we have to sample actual data and inspect it to discover the
+    // structure. Cost control happens in two places:
+    //   1. project only the nested columns (via object_construct), so
+    //      bytes-on-wire are bounded by actual variant content.
+    //   2. tier the sampling strategy by probeTableSize (see
+    //      pickSampleStrategy) — small base tables get a full scan;
+    //      large base tables get TABLESAMPLE only (no unsafe LIMIT
+    //      fallback); unknown-size sources (views, temp views) get
+    //      the best-effort TABLESAMPLE→LIMIT chain.
+    if (nestedColumns.length > 0) {
+      const variantArgs = nestedColumns
+        .map(v => `'${v.name}', "${v.name}"`)
+        .join(', ');
+      // Flatten sampled rows and emit each distinct (path, type) pair.
+      // Conflicting pairs at the same path flow through to mergeShape,
+      // which collapses them to variant — that is how we honestly
+      // surface mixed-type fields to the user.
+      const makeSampleQuery = (sampleClause: string) => `
+        select
+          regexp_replace(path, '\\\\[[0-9]+\\\\]', '[*]') as path,
+          case
+            when typeof(value) = 'INTEGER' then 'decimal'
+            when typeof(value) = 'DOUBLE' then 'decimal'
+          else lower(typeof(value)) end as type
+        from
+          (${sampleClause})
             ,table(flatten(input => o, recursive => true)) as meta
-        GROUP BY 1,2
-        ORDER BY PATH;
+        where typeof(value) != 'NULL_VALUE'
+        group by 1, 2
+        order by 1;
       `;
-      const fieldPathRows = await this.executor.batch(sampleQuery);
+      const projectVariants = `select object_construct(${variantArgs}) o`;
+      const probe = await this.probeTableSize(tablePath);
+      const strategy = pickSampleStrategy(
+        probe,
+        this.schemaSampleFullScanMaxBytes
+      );
+      const n = this.schemaSampleRowLimit;
+      let fieldPathRows: QueryRecord[] | undefined;
 
-      // take the schema in list form an convert it into a tree.
+      if (strategy === 'full-scan-then-sample') {
+        // Small base table: one full scan catches rare fields that
+        // sampling would miss. tryBatch so a failure doesn't poison
+        // the pool connection (temp views live on it). On failure we
+        // fall through to the sample path so a slow or timed-out full
+        // scan still gets partial structure.
+        fieldPathRows =
+          (await this.executor.tryBatch(
+            makeSampleQuery(`${projectVariants} from ${tablePath}`),
+            {},
+            this.schemaSampleTimeoutMs
+          )) ?? undefined;
+      }
 
-      const structMap = new StructMap('object', true);
-
-      for (const f of fieldPathRows) {
-        const pathString = f['PATH']?.valueOf().toString();
-        const fieldType = f['TYPE']?.valueOf().toString();
-        if (pathString === undefined || fieldType === undefined) continue;
-        const path = pathString.split('.');
-        let parent = structMap;
-
-        // ignore the fields we've already added.
-        if (path.length === 1 && notVariant.get(pathString)) continue;
-
-        let index = 0;
-        for (const segment of path) {
-          let thisNode = parent.fieldMap.get(segment);
-          if (thisNode === undefined) {
-            thisNode = parent.addChild(segment, fieldType);
-          }
-          if (fieldType === 'array') {
-            thisNode.isArray = true;
-            // if this is the last
-          } else if (index === path.length - 1) {
-            thisNode.type = fieldType;
-          }
-          parent = thisNode;
-          index += 1;
+      if (fieldPathRows === undefined) {
+        const blockSampleQuery = (blockPercent: number) =>
+          makeSampleQuery(
+            `${projectVariants} from ${tablePath} TABLESAMPLE BLOCK (${blockPercent}) limit ${n}`
+          );
+        if (strategy === 'tablesample-only') {
+          // Known-large base table: BLOCK decides per-partition, so a low
+          // percentage can draw zero rows; escalate until one returns rows
+          // rather than degrade the column to sql native (see
+          // sampleVariantBlocks). Plain LIMIT without a WHERE is unsafe here,
+          // so there is no LIMIT fallback.
+          fieldPathRows = await sampleVariantBlocks(blockPercent =>
+            this.executor.tryBatch(
+              blockSampleQuery(blockPercent),
+              {},
+              this.schemaSampleTimeoutMs
+            )
+          );
+        } else {
+          // Unknown size (view, temp view, non-parseable name) or
+          // full-scan fallback: best-effort TABLESAMPLE→LIMIT chain.
+          // The LIMIT fallback is the acknowledged "can't help" case
+          // for views over large partitioned tables.
+          fieldPathRows = await this.runSchemaSample(
+            blockSampleQuery(1),
+            makeSampleQuery(`${projectVariants} from ${tablePath} limit ${n}`)
+          );
         }
       }
-      this.addFieldsToStructDef(structDef, structMap);
+
+      const state = createVariantSchemaState();
+      // Snowflake nested-schema inference follows these rules:
+      // - top-level ARRAY/OBJECT from DESCRIBE are authoritative
+      // - descendant paths imply ancestor shape
+      // - conflicting shapes degrade only that prefix to variant
+      // - every top-level nested column still produces a field
+      for (const nestedColumn of nestedColumns) {
+        seedTopLevelShape(state, nestedColumn);
+      }
+
+      if (fieldPathRows !== undefined) {
+        for (const f of fieldPathRows) {
+          const pathString = f['PATH']?.valueOf().toString();
+          const fieldType = f['TYPE']?.valueOf().toString();
+          if (pathString === undefined || fieldType === undefined) continue;
+          const pathParser = new PathParser(pathString);
+          const segments = pathParser.segments();
+          const topLevel = segments[0];
+          if (topLevel?.kind !== 'name' || notVariant.get(topLevel.name)) {
+            continue;
+          }
+          accumulateVariantPath(state, segments, fieldType);
+        }
+      }
+
+      // Always emit one field per top-level nested column from DESCRIBE, even
+      // if sampling produced no usable descendant paths.
+      for (const nestedColumn of nestedColumns) {
+        structDef.fields.push(
+          buildTopLevelField(nestedColumn, state, this.dialect)
+        );
+      }
     }
   }
 
-  private async getTableSchema(
+  /**
+   * Cheap metadata probe: ask INFORMATION_SCHEMA.TABLES for the row count
+   * and byte size of tablePath. Returns undefined when the name doesn't
+   * parse as a two- or three-part identifier, when the probe query fails,
+   * or when the row has no numeric BYTES (views and external tables
+   * typically report NULL).
+   *
+   * Two-part `schema.table` names use the current database's
+   * INFORMATION_SCHEMA; three-part `db.schema.table` names address
+   * INFORMATION_SCHEMA in the named database. Identifiers are parsed
+   * with Snowflake's quoting rules so bare parts case-fold to upper and
+   * quoted parts are compared verbatim against the catalog.
+   */
+  private async probeTableSize(
+    tablePath: string
+  ): Promise<TableSizeProbe | undefined> {
+    const parsed = parseSnowflakeTableName(tablePath);
+    if (parsed === undefined || parsed.schema === undefined) return undefined;
+    const dbQualifier = parsed.database ? `${parsed.database.sql}.` : '';
+    // Use parameter binds for the literal segments. Snowflake honors
+    // backslash escapes inside string literals, so hand-rolled ANSI
+    // quoting wouldn't be safe for decoded identifier text that may
+    // contain a backslash.
+    const rows = await this.executor.tryBatch(
+      `select row_count as rc, bytes as by
+       from ${dbQualifier}information_schema.tables
+       where table_schema = ?
+         and table_name = ?
+       limit 1`,
+      {},
+      this.schemaSampleTimeoutMs,
+      [parsed.schema.literal, parsed.table.literal]
+    );
+    if (!rows || rows.length === 0) return undefined;
+    const row = rows[0];
+    const bytesRaw = row['BY'] ?? row['by'];
+    const rowsRaw = row['RC'] ?? row['rc'];
+    // Views and external tables surface null BYTES / ROW_COUNT; treat
+    // that as "unknown size" so we don't classify them as small and
+    // launch a full scan against something potentially huge.
+    if (bytesRaw === null || bytesRaw === undefined) return undefined;
+    if (rowsRaw === null || rowsRaw === undefined) return undefined;
+    const bytes = Number(bytesRaw);
+    const rowCount = Number(rowsRaw);
+    if (!Number.isFinite(bytes) || !Number.isFinite(rowCount)) return undefined;
+    return {bytes, rowCount};
+  }
+
+  /**
+   * Try to run a schema sampling query, with fallback.
+   * First tries the primary query (e.g. using TABLESAMPLE for speed).
+   * If that fails or returns no rows, tries the fallback query (plain
+   * LIMIT). If both fail or time out, returns undefined so the caller
+   * can degrade to sql native types.
+   *
+   * Uses tryBatch for the primary query so that a failure (e.g.
+   * TABLESAMPLE on a view) doesn't destroy the pool connection —
+   * session-scoped temp views would be lost otherwise.
+   */
+  private async runSchemaSample(
+    primaryQuery: string,
+    fallbackQuery: string
+  ): Promise<QueryRecord[] | undefined> {
+    // tryBatch catches errors inside the pool callback, preserving the
+    // connection and any session state (temp views, session params).
+    const rows = await this.executor.tryBatch(
+      primaryQuery,
+      {},
+      this.schemaSampleTimeoutMs
+    );
+    if (rows && rows.length > 0) {
+      return rows;
+    }
+    // Primary failed or returned no rows — try the fallback.
+    // Also use tryBatch so a timeout doesn't destroy the connection.
+    return (
+      (await this.executor.tryBatch(
+        fallbackQuery,
+        {},
+        this.schemaSampleTimeoutMs
+      )) ?? undefined
+    );
+  }
+
+  async fetchTableSchema(
     tableKey: string,
     tablePath: string
-  ): Promise<StructDef> {
-    const structDef: StructDef = {
-      type: 'struct',
+  ): Promise<TableSourceDef> {
+    const structDef: TableSourceDef = {
+      type: 'table',
       dialect: 'snowflake',
       name: tableKey,
-      structSource: {type: 'table', tablePath},
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
+      tablePath,
+      connection: this.name,
       fields: [],
     };
     await this.schemaFromTablePath(tablePath, structDef);
     return structDef;
   }
 
-  public async fetchSchemaForTables(
-    missing: Record<string, string>,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: {[name: string]: string} = {};
-
-    for (const tableKey in missing) {
-      let inCache = this.schemaCache.get(tableKey);
-      if (
-        !inCache ||
-        (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-      ) {
-        const tablePath = missing[tableKey];
-        const timestamp = refreshTimestamp || Date.now();
-        try {
-          inCache = {
-            schema: await this.getTableSchema(tableKey, tablePath),
-            timestamp,
-          };
-          this.schemaCache.set(tableKey, inCache);
-        } catch (error) {
-          inCache = {error: error.message, timestamp};
-        }
-      }
-      if (inCache.schema !== undefined) {
-        schemas[tableKey] = inCache.schema;
-      } else {
-        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
-      }
-    }
-    return {schemas, errors};
-  }
-
-  private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
-    const structDef: StructDef = {
-      type: 'struct',
-      dialect: 'snowflake',
-      name: sqlRef.name,
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock: sqlRef,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
+  async fetchSelectSchema(sqlRef: SQLSourceRequest): Promise<SQLSourceDef> {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
       fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
-
     // create temp table with same schema as the query
     const tempTableName = this.getTempViewName(sqlRef.selectStr);
-    this.runSQL(
-      `
-      CREATE OR REPLACE TEMP VIEW ${tempTableName} as ${sqlRef.selectStr};
-      `
+    await this.runSQL(
+      `CREATE OR REPLACE TEMP VIEW ${tempTableName} AS (${sqlRef.selectStr});`
     );
 
     await this.schemaFromTablePath(tempTableName, structDef);
     return structDef;
-  }
-
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  > {
-    const key = sqlRef.name;
-    let inCache = this.sqlSchemaCache.get(key);
-    if (
-      !inCache ||
-      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-    ) {
-      const timestamp = refreshTimestamp ?? Date.now();
-      try {
-        inCache = {
-          structDef: await this.getSQLBlockSchema(sqlRef),
-          timestamp,
-        };
-      } catch (error) {
-        inCache = {error: error.message, timestamp};
-      }
-      this.sqlSchemaCache.set(key, inCache);
-    }
-    return inCache;
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {

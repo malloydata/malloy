@@ -1,0 +1,12 @@
+.malloy-error-message {
+  padding: 16px;
+  width: fit-content;
+  border-radius: 8px;
+  margin: 16px;
+  background: color(display-p3 0.863 0.024 0.024/0.028);
+  box-shadow: inset 0 0 0 1px color(display-p3 0.831 0.02 0.004/0.251);
+  color: color(display-p3 0.744 0.234 0.222);
+  font-family: var(--malloy-render--font-family);
+  font-size: 13px;
+  line-height: 1.5;
+}

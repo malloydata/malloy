@@ -1,6 +1,6 @@
 # Malloy Syntax Highlighting
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently supports BigQuery and Postgres, as well as querying Parquet and CSV files via DuckDB.
+Malloy is a modern open source language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently supports BigQuery and Postgres, as well as querying Parquet and CSV files via DuckDB.
 
 Currently, two other dialects of Malloy are supported in addition to the standard syntax used in `.malloy` files: the Malloy notebook format (`.malloynb`) and Malloy SQL (`.malloysql`). Ensuring the visual and semantic accuracy of the syntax highlighting provided by each dialects' TextMate grammars was previously done through manual verification alone and often caused syncing issues between Malloy packages that each maintained their own copy of these grammars.
 

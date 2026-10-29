@@ -1,38 +1,42 @@
-/*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+import type {Config} from 'jest';
 
-process.env.TZ = 'America/Los_Angeles';
+process.env['TZ'] = 'America/Los_Angeles';
 
-const transformIgnoreModules = [
-  'lit-html',
-  'lit-element',
-  'lit',
-  '@lit',
-  '@lit-labs',
-  '@motherduck/wasm-client',
-].join('|');
+// ESM-only deps that ship plain static import/export: jest's CJS runtime can't
+// load them as-is, so they must be transformed (not ignored). See the Class-1
+// ESM note in docs/dependency-management/CONTEXT.md. (uuid and @noble/hashes were here until
+// they were pinned to CJS-consumable majors — an ESM-only runtime dep leaks
+// downstream like a native binary, so the core stays CJS.)
+const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
 
-module.exports = {
+const defaultConfig: Config = {
+  preset: 'ts-jest',
+  setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
+  testMatch: ['<rootDir>**/*.spec.(ts|js)?(x)'],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
+  // node_modules is left untransformed except the Class-1 ESM-only deps above,
+  // which must be run through babel to become loadable under jest's CJS runtime.
+  transformIgnorePatterns: [`node_modules/(?!(${transformIgnoreModules})/)`],
+  transform: {
+    '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/test/tsconfig.json'}],
+    '^.+\\.(js|jsx)$': [
+      'babel-jest',
+      {
+        'presets': ['@babel/preset-env'],
+        'plugins': [['@babel/transform-runtime']],
+      },
+    ],
+  },
+};
+
+// What the `connector-unit` project claims, excluded from the backend
+// projects that would otherwise also match it.
+const connectorUnitIgnored = [
+  ...(defaultConfig.testPathIgnorePatterns ?? []),
+  '\\.unit\\.spec\\.ts$',
+];
+
+const config: Config = {
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
   setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
   testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
@@ -51,4 +55,159 @@ module.exports = {
   testTimeout: 100000,
   verbose: true,
   testEnvironment: 'node',
+  projects: [
+    {
+      ...defaultConfig,
+      displayName: 'malloy-core',
+      roots: [
+        '<rootDir>/packages/malloy/',
+        '<rootDir>/packages/malloy-filter/',
+        '<rootDir>/packages/malloy-interfaces/',
+        '<rootDir>/packages/malloy-malloy-sql/',
+        '<rootDir>/packages/malloy-syntax-highlight/',
+        '<rootDir>/packages/malloy-tag/',
+        '<rootDir>/packages/malloy/',
+        '<rootDir>/packages/malloy-query-builder/',
+        '<rootDir>/test/src/core/',
+      ],
+    },
+    {
+      // The render tests need a DOM (jest.setup.dom.ts). They are kept in
+      // their own project so the fake `document` global is not in scope for
+      // the duckdb-wasm tests in malloy-core — web-worker's browser detection
+      // keys off `typeof document` and breaks under Node when it is present.
+      ...defaultConfig,
+      displayName: 'malloy-render-test',
+      setupFilesAfterEnv: [
+        '<rootDir>/test/jest.setup.dom.ts',
+        ...(defaultConfig.setupFilesAfterEnv ?? []),
+      ],
+      roots: ['<rootDir>/test/src/render/'],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'malloy-render',
+      rootDir: '<rootDir>/packages/malloy-render',
+      testMatch: ['<rootDir>/src/**/*.spec.(ts|js)?(x)'],
+      setupFilesAfterEnv: [],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+      },
+      transform: {
+        '^.+\\.(ts|tsx)$': [
+          'ts-jest',
+          {
+            tsconfig: '<rootDir>/tsconfig.json',
+          },
+        ],
+        '^.+\\.(js|jsx)$': [
+          'babel-jest',
+          {
+            'presets': ['@babel/preset-env'],
+            'plugins': [['@babel/transform-runtime']],
+          },
+        ],
+      },
+    },
+    {
+      // Connector tests that need no warehouse — `*.unit.spec.ts` under the
+      // db-* packages. They live in the same directories as the tests that do
+      // need one, so without this project they would run only in that
+      // backend's credentialed CI job: a hermetic test of BigQuery config
+      // parsing would sit out every PR that didn't touch BigQuery, which is
+      // exactly the PR that breaks it. The db-* projects below exclude the
+      // same pattern, so each file still runs in exactly one project — a file
+      // matched by two would appear twice in `jest --listTests` and fail
+      // scripts/ci-test-sanity-check.sh.
+      ...defaultConfig,
+      displayName: 'connector-unit',
+      roots: ['<rootDir>/packages/'],
+      testMatch: ['<rootDir>/packages/malloy-db-*/**/*.unit.spec.ts'],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-all',
+      roots: ['<rootDir>/test/src/databases/all/'],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-bigquery',
+      testPathIgnorePatterns: connectorUnitIgnored,
+      roots: [
+        '<rootDir>/packages/malloy-db-bigquery/',
+        '<rootDir>/test/src/databases/bigquery/',
+      ],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-duckdb',
+      roots: [
+        '<rootDir>/packages/malloy-db-duckdb/',
+        '<rootDir>/test/src/databases/duckdb-all/',
+      ],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-duckdb-core',
+      roots: ['<rootDir>/test/src/databases/duckdb/'],
+    },
+    {
+      // The teaching builder in scripts/simple_builder is cited as
+      // documentation, so its spec runs in CI to keep it from drifting. It
+      // builds against DuckDB, hence the duckdb job.
+      ...defaultConfig,
+      displayName: 'simple-builder',
+      roots: ['<rootDir>/scripts/simple_builder/'],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-postgres',
+      roots: [
+        '<rootDir>/packages/malloy-db-postgres/',
+        '<rootDir>/test/src/databases/postgres/',
+      ],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-presto-trino',
+      testPathIgnorePatterns: connectorUnitIgnored,
+      roots: [
+        '<rootDir>/packages/malloy-db-trino/src/',
+        '<rootDir>/test/src/databases/presto-trino/',
+      ],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-publisher',
+      testPathIgnorePatterns: connectorUnitIgnored,
+      roots: ['<rootDir>/packages/malloy-db-publisher/'],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-snowflake',
+      roots: ['<rootDir>/packages/malloy-db-snowflake/'],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-mysql',
+      roots: ['<rootDir>/packages/malloy-db-mysql/'],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-sqlserver',
+      testPathIgnorePatterns: connectorUnitIgnored,
+      roots: [
+        '<rootDir>/packages/malloy-db-sqlserver/',
+        '<rootDir>/test/src/databases/sqlserver/',
+      ],
+    },
+    {
+      ...defaultConfig,
+      displayName: 'db-databricks',
+      testPathIgnorePatterns: connectorUnitIgnored,
+      roots: ['<rootDir>/packages/malloy-db-databricks/'],
+    },
+  ],
 };
+
+module.exports = config;

@@ -1,51 +1,19 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import * as malloy from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+import type * as malloy from '@malloydata/malloy';
+import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 import {BigQueryConnection} from './bigquery_connection';
-import {BigQuery as BigQuerySDK, TableMetadata} from '@google-cloud/bigquery';
-import * as util from 'util';
-import * as fs from 'fs';
-import {fileURLToPath} from 'url';
+import type {TableMetadata} from '@google-cloud/bigquery';
+import {BigQuery as BigQuerySDK} from '@google-cloud/bigquery';
 
-const [describe] = describeIfDatabaseAvailable(['bigquery']);
+const bq = new BigQueryConnection('test');
+const runtime = createTestRuntime(bq);
 
 describe('db:BigQuery', () => {
-  let bq: BigQueryConnection;
-  let runtime: malloy.Runtime;
-
-  beforeAll(() => {
-    bq = new BigQueryConnection('test');
-    const files = {
-      readURL: async (url: URL) => {
-        const filePath = fileURLToPath(url);
-        return await util.promisify(fs.readFile)(filePath, 'utf8');
-      },
-    };
-    runtime = new malloy.Runtime(files, bq);
-  });
-
   it('runs a SQL query', async () => {
     const res = await bq.runSQL('SELECT 1 as t');
     expect(res.rows[0]['t']).toBe(1);
@@ -53,13 +21,15 @@ describe('db:BigQuery', () => {
 
   it('costs a SQL query', async () => {
     const res = await bq.estimateQueryCost(
-      'SELECT * FROM malloy-data.faa.airports'
+      'SELECT * FROM malloydata-org.malloytest.airports'
     );
     expect(res.queryCostBytes).toBe(3029200);
   });
 
   it('gets table schema', async () => {
-    const res = await bq.getTableFieldSchema('malloy-data.faa.carriers');
+    const res = await bq.getTableFieldSchema(
+      'malloydata-org.malloytest.carriers'
+    );
     expect(res.schema).toStrictEqual({
       fields: [
         {name: 'code', type: 'STRING'},
@@ -71,10 +41,30 @@ describe('db:BigQuery', () => {
 
   it.todo('gets table structdefs');
 
+  it('maps INT64 to bigint', async () => {
+    const schema = await bq.fetchSchemaForSQLStruct(
+      {
+        connection: 'bigquery',
+        selectStr: 'SELECT CAST(1 AS INT64) AS int_val',
+      },
+      {}
+    );
+    if (schema.error) {
+      throw new Error(`Error fetching schema: ${schema.error}`);
+    }
+    if (schema.structDef) {
+      expect(schema.structDef.fields[0]).toEqual({
+        name: 'int_val',
+        type: 'number',
+        numberType: 'bigint',
+      });
+    }
+  });
+
   it('runs a Malloy query', async () => {
     const sql = await runtime
       .loadModel(
-        "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
+        "source: carriers is bigquery.table('malloydata-org.malloytest.carriers') extend { measure: carrier_count is count() }"
       )
       .loadQuery('run: carriers -> { aggregate: carrier_count }')
       .getSQL();
@@ -85,7 +75,7 @@ describe('db:BigQuery', () => {
   it('streams a Malloy query for download', async () => {
     const sql = await runtime
       .loadModel(
-        "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
+        "source: carriers is bigquery.table('malloydata-org.malloytest.carriers') extend { measure: carrier_count is count() }"
       )
       .loadQuery('run: carriers -> { group_by: name }')
       .getSQL();
@@ -111,57 +101,39 @@ describe('db:BigQuery', () => {
     expect(exists).toBeTruthy();
   });
 
-  describe.skip('manifests permanent table', () => {
-    const datasetName = 'test_malloy_test_dataset';
-    const tableName = 'test_malloy_test_table';
-    const sdk = new BigQuerySDK();
+  const skipThisTestSetion = false; // describe.skip is not ok, given how we patch describe
+  if (skipThisTestSetion) {
+    describe.skip('manifests permanent table', () => {
+      const datasetName = 'test_malloy_test_dataset';
+      const tableName = 'test_malloy_test_table';
+      const sdk = new BigQuerySDK();
 
-    // delete entire dataset before each test and once tests are complete
-    const deleteTestDataset = async () => {
-      const dataset = sdk.dataset(datasetName);
-      if ((await dataset.exists())[0]) {
-        await dataset.delete({
-          force: true,
-        });
-      }
-    };
-    beforeEach(deleteTestDataset);
-    afterAll(deleteTestDataset);
+      // delete entire dataset before each test and once tests are complete
+      const deleteTestDataset = async () => {
+        const dataset = sdk.dataset(datasetName);
+        if ((await dataset.exists())[0]) {
+          await dataset.delete({
+            force: true,
+          });
+        }
+      };
+      beforeEach(deleteTestDataset);
+      afterAll(deleteTestDataset);
 
-    it('throws if dataset does not exist and createDataset=false', async () => {
-      await expect(async () => {
-        await bq.manifestPermanentTable(
-          'SELECT 1 as t',
-          datasetName,
-          tableName,
-          false,
-          false
-        );
-      }).rejects.toThrowError(`Dataset ${datasetName} does not exist`);
-    });
+      it('throws if dataset does not exist and createDataset=false', async () => {
+        await expect(async () => {
+          await bq.manifestPermanentTable(
+            'SELECT 1 as t',
+            datasetName,
+            tableName,
+            false,
+            false
+          );
+        }).rejects.toThrowError(`Dataset ${datasetName} does not exist`);
+      });
 
-    it('creates dataset if createDataset=true', async () => {
-      // note - dataset does not exist b/c of beforeEach()
-      await bq.manifestPermanentTable(
-        'SELECT 1 as t',
-        datasetName,
-        tableName,
-        false,
-        true
-      );
-
-      const dataset = sdk.dataset(datasetName);
-      const [exists] = await dataset.exists();
-      expect(exists).toBeTruthy();
-    });
-
-    it('throws if table exist and overwriteExistingTable=false', async () => {
-      const newDatasetResponse = await sdk.createDataset(datasetName);
-      const dataset = newDatasetResponse[0];
-      const tableMeta: TableMetadata = {name: tableName};
-      await dataset.createTable(tableName, tableMeta);
-
-      await expect(async () => {
+      it('creates dataset if createDataset=true', async () => {
+        // note - dataset does not exist b/c of beforeEach()
         await bq.manifestPermanentTable(
           'SELECT 1 as t',
           datasetName,
@@ -169,32 +141,160 @@ describe('db:BigQuery', () => {
           false,
           true
         );
-      }).rejects.toThrowError(`Table ${tableName} already exists`);
+
+        const dataset = sdk.dataset(datasetName);
+        const [exists] = await dataset.exists();
+        expect(exists).toBeTruthy();
+      });
+
+      it('throws if table exist and overwriteExistingTable=false', async () => {
+        const newDatasetResponse = await sdk.createDataset(datasetName);
+        const dataset = newDatasetResponse[0];
+        const tableMeta: TableMetadata = {name: tableName};
+        await dataset.createTable(tableName, tableMeta);
+
+        await expect(async () => {
+          await bq.manifestPermanentTable(
+            'SELECT 1 as t',
+            datasetName,
+            tableName,
+            false,
+            true
+          );
+        }).rejects.toThrowError(`Table ${tableName} already exists`);
+      });
+
+      it('manifests a table', async () => {
+        const jobId = await bq.manifestPermanentTable(
+          'SELECT 1 as t',
+          datasetName,
+          tableName,
+          false,
+          true
+        );
+
+        // wait for job to complete
+        const [job] = await sdk.job(jobId).get();
+        let [metaData] = await job.getMetadata();
+        while (metaData.status.state !== 'DONE') {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          [metaData] = await job.getMetadata();
+        }
+
+        // query the new table
+        const [queryJob] = await sdk.createQueryJob(
+          `SELECT * FROM ${datasetName}.${tableName}`
+        );
+        const [results] = await queryJob.getQueryResults();
+        expect(results[0]).toStrictEqual({t: 1});
+      });
+    });
+  }
+
+  describe('setupSQL', () => {
+    it('prepends setup SQL to queries', async () => {
+      const conn = new BigQueryConnection({
+        name: 'bq_setup_test',
+        setupSQL:
+          'CREATE TEMP FUNCTION add_one(x INT64) RETURNS INT64 AS (x + 1)',
+      });
+      try {
+        const result = await conn.runSQL('SELECT add_one(41) AS result');
+        expect(result.rows[0]['result']).toBe(42);
+      } finally {
+        await conn.close();
+      }
     });
 
-    it('manifests a table', async () => {
-      const jobId = await bq.manifestPermanentTable(
-        'SELECT 1 as t',
-        datasetName,
-        tableName,
-        false,
-        true
-      );
-
-      // wait for job to complete
-      const [job] = await sdk.job(jobId).get();
-      let [metaData] = await job.getMetadata();
-      while (metaData.status.state !== 'DONE') {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        [metaData] = await job.getMetadata();
+    it('prepends multiple setup SQL statements', async () => {
+      const conn = new BigQueryConnection({
+        name: 'bq_multi_setup_test',
+        setupSQL:
+          'CREATE TEMP FUNCTION add_one(x INT64) RETURNS INT64 AS (x + 1);\nCREATE TEMP FUNCTION double_it(x INT64) RETURNS INT64 AS (x * 2)',
+      });
+      try {
+        const result = await conn.runSQL(
+          'SELECT add_one(41) AS a, double_it(5) AS b'
+        );
+        expect(result.rows[0]['a']).toBe(42);
+        expect(result.rows[0]['b']).toBe(10);
+      } finally {
+        await conn.close();
       }
+    });
+  });
 
-      // query the new table
-      const [queryJob] = await sdk.createQueryJob(
-        `SELECT * FROM ${datasetName}.${tableName}`
+  describe('table path project qualification', () => {
+    // The default project (BigQuery's defaultProjectId / connection
+    // `projectId`) must end up in the stored tablePath so it lands in the
+    // emitted SQL. Otherwise an unqualified `dataset.table` resolves against
+    // the job's billing/ambient project rather than the default project.
+    const emptySchema = {
+      schema: {fields: []},
+      needsTableSuffixPseudoColumn: false,
+      needsPartitionTimePseudoColumn: false,
+      needsPartitionDatePseudoColumn: false,
+    };
+
+    function makeConnection(
+      projectId = 'my-default-project'
+    ): BigQueryConnection {
+      const conn = new BigQueryConnection({name: 'qualify_test', projectId});
+      jest.spyOn(conn, 'getTableFieldSchema').mockResolvedValue(emptySchema);
+      return conn;
+    }
+
+    async function tablePathOf(
+      conn: BigQueryConnection,
+      tablePath: string
+    ): Promise<string> {
+      const tableDef = await conn.fetchTableSchema('t', tablePath);
+      if (typeof tableDef === 'string') {
+        throw new Error(tableDef);
+      }
+      return tableDef.tablePath;
+    }
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('prepends the default project to a 2-part table path', async () => {
+      expect(await tablePathOf(makeConnection(), 'malloytest.carriers')).toBe(
+        'my-default-project.malloytest.carriers'
       );
-      const [results] = await queryJob.getQueryResults();
-      expect(results[0]).toStrictEqual({t: 1});
+    });
+
+    it('leaves a fully-qualified 3-part table path unchanged', async () => {
+      expect(
+        await tablePathOf(makeConnection(), 'other-project.malloytest.carriers')
+      ).toBe('other-project.malloytest.carriers');
+    });
+
+    it('prepends the project but leaves a quoted segment verbatim', async () => {
+      // The user's text is pasted as written; we only add the project in front.
+      expect(
+        await tablePathOf(makeConnection(), 'malloytest.`weird table`')
+      ).toBe('my-default-project.malloytest.`weird table`');
+    });
+
+    it('quotes a project id that BigQuery requires quoted', async () => {
+      // A legacy domain-scoped project id is not a bare identifier, so the one
+      // segment we render ourselves gets backtick-quoted.
+      expect(
+        await tablePathOf(
+          makeConnection('google.com:acme'),
+          'malloytest.carriers'
+        )
+      ).toBe('`google.com:acme`.malloytest.carriers');
+    });
+
+    it('leaves a whole-backtick path verbatim (one segment, not two)', async () => {
+      // `\`dataset.table\`` decodes to a single quoted segment, so the
+      // two-segment rule does not fire and we touch nothing.
+      expect(await tablePathOf(makeConnection(), '`my dataset.events_*`')).toBe(
+        '`my dataset.events_*`'
+      );
     });
   });
 
@@ -224,7 +324,7 @@ describe('db:BigQuery', () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      jest.restoreAllMocks();
     });
 
     it('caches table schema', async () => {
@@ -247,18 +347,18 @@ describe('db:BigQuery', () => {
     });
 
     it('caches sql schema', async () => {
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
     });
 
     it('refreshes sql schema', async () => {
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
         refreshTimestamp: Date.now() + 10,
       });
       expect(getSQLBlockSchema).toBeCalledTimes(2);
@@ -266,9 +366,60 @@ describe('db:BigQuery', () => {
   });
 });
 
-const SQL_BLOCK_1 = {
-  type: 'sqlBlock',
-  name: 'block1',
+describe('db:BigQuery dbmeta', () => {
+  // A public table with a description on itself and on every column,
+  // including each kind of column a description can sit on.
+  const model =
+    "source: pv is bigquery.table('bigquery-public-data.deps_dev_v1.PackageVersions')";
+
+  async function packageVersions(dbmeta: boolean): Promise<malloy.Explore> {
+    const conn = new BigQueryConnection({name: 'bigquery', dbmeta});
+    const loaded = await createTestRuntime(conn).loadModel(model).getModel();
+    await conn.close();
+    return loaded.getExploreByName('pv');
+  }
+
+  function fieldAt(explore: malloy.Explore, path: string): malloy.Field {
+    const [head, ...rest] = path.split('.');
+    const field = explore.getFieldByName(head);
+    if (rest.length === 0) return field;
+    if (!field.isExploreField()) throw new Error(`${head} is not a record`);
+    return fieldAt(field, rest.join('.'));
+  }
+
+  const description = (entity: malloy.Explore | malloy.Field) =>
+    entity.annotations.parseAsTag('dbmeta').tag.text('description');
+
+  let withDbmeta: malloy.Explore;
+  let withoutDbmeta: malloy.Explore;
+  beforeAll(async () => {
+    withDbmeta = await packageVersions(true);
+    withoutDbmeta = await packageVersions(false);
+  });
+
+  it('reads the table description', () => {
+    expect(description(withDbmeta)).toMatch(/\S/);
+  });
+
+  it.each([
+    ['column', 'Name'],
+    ['repeated column', 'Licenses'],
+    ['record', 'VersionInfo'],
+    ['record field', 'VersionInfo.IsRelease'],
+    ['repeated record', 'Links'],
+    ['repeated record field', 'Links.URL'],
+  ])('reads the description of a %s (%s)', (_kind, path) => {
+    expect(description(fieldAt(withDbmeta, path))).toMatch(/\S/);
+  });
+
+  it('reads nothing when dbmeta is off', () => {
+    expect(description(withoutDbmeta)).toBeUndefined();
+    expect(description(fieldAt(withoutDbmeta, 'Name'))).toBeUndefined();
+  });
+});
+
+const SQL_BLOCK_1: malloy.SQLSourceRequest = {
+  connection: 'bigquery',
   selectStr: `
 SELECT
 created_at,
@@ -282,11 +433,10 @@ product_category,
 created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-} as malloy.SQLBlock;
+};
 
-const SQL_BLOCK_2 = {
-  type: 'sqlBlock',
-  name: 'block2',
+const SQL_BLOCK_2: malloy.SQLSourceRequest = {
+  connection: 'bigquery',
   selectStr: `
 SELECT
 created_at,
@@ -300,4 +450,75 @@ product_category,
 created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-} as malloy.SQLBlock;
+};
+
+/**
+ * Tests for reading numeric values through Malloy queries
+ */
+describe('numeric value reading', () => {
+  const testModel = mkTestModel(runtime, {});
+
+  describe('integer types', () => {
+    const largeInt = BigInt('9007199254740993'); // 2^53 + 1
+    it.each(['INT64', 'INTEGER'])('reads %s correctly', async sqlType => {
+      await expect(
+        `run: bigquery.sql("SELECT CAST(${largeInt} AS ${sqlType}) as d")`
+      ).toMatchResult(testModel, {d: largeInt});
+    });
+
+    it('preserves precision for literal integers > 2^53', async () => {
+      await expect(`
+        run: bigquery.sql("select 1") -> { select: d is ${largeInt} }
+      `).toMatchResult(testModel, {d: largeInt});
+    });
+  });
+
+  describe('float types', () => {
+    it.each(['FLOAT64', 'NUMERIC', 'BIGNUMERIC'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: bigquery.sql("SELECT CAST(10.5 AS ${sqlType}) as f")`
+        ).toMatchResult(testModel, {f: 10.5});
+      }
+    );
+  });
+});
+
+// getQueryResultsUntilComplete decides "still running" from the apiResponse's
+// jobComplete flag, which the paginator only delivers when autoPaginate is off.
+// The hermetic specs stub that callback, so they cannot notice if the real
+// client stops sending it; this pins the contract against BigQuery itself. It
+// waits for one poll of a running job, not for the query, and scans 0 bytes.
+describe('db:BigQuery getQueryResults contract', () => {
+  it('reports jobComplete false while the job is still running', async () => {
+    const sdk = new BigQuerySDK();
+    const [job] = await sdk.createQueryJob({
+      query: `SELECT COUNT(*) AS n
+              FROM UNNEST(GENERATE_ARRAY(1, 1000000)) a
+              CROSS JOIN UNNEST(GENERATE_ARRAY(1, 300)) b`,
+      useQueryCache: false,
+    });
+    try {
+      const {err, apiResponse} = await new Promise<{
+        err: Error | null;
+        apiResponse?: {jobComplete?: boolean} | null;
+      }>(resolve => {
+        job.getQueryResults(
+          {timeoutMs: 1, autoPaginate: false},
+          (err, _rows, _nextQuery, apiResponse) => resolve({err, apiResponse})
+        );
+      });
+      // An error accompanies the still-running response; what matters is that
+      // the response comes with it, not what the error says.
+      expect(err).toBeTruthy();
+      expect(apiResponse?.jobComplete).toBe(false);
+    } finally {
+      await job.cancel();
+    }
+  });
+});
+
+afterAll(async () => {
+  await runtime.connection.close();
+});

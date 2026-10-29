@@ -1,4 +1,5 @@
 src/
 *.map
 tsconfig*
-*.spec
+*.spec.*
+CONTEXT.md

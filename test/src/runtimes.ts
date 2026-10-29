@@ -1,35 +1,24 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {
+import type {
   Connection,
-  EmptyURLReader,
   MalloyQueryData,
-  QueryDataRow,
+  QueryRecord,
   Result,
   RunSQLOptions,
-  SingleConnectionRuntime,
+  ModelCache,
 } from '@malloydata/malloy';
+import {
+  SingleConnectionRuntime,
+  InMemoryURLReader,
+  InMemoryModelCache,
+  CacheManager,
+  getDialect,
+} from '@malloydata/malloy';
+import {createTestRuntime} from '@malloydata/malloy/test';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
@@ -37,6 +26,17 @@ import {SnowflakeConnection} from '@malloydata/db-snowflake';
 import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
+import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
+import {
+  MySQLConnection,
+  MySQLExecutor,
+} from '@malloydata/db-mysql/src/mysql_connection';
+import {DatabricksConnection} from '@malloydata/db-databricks/src/databricks_connection';
+import {
+  SQLServerConnection,
+  SQLServerExecutor,
+} from '@malloydata/db-sqlserver/src/sqlserver_connection';
+import {EventEmitter} from 'events';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
   public async runSQL(
@@ -54,6 +54,23 @@ export class SnowflakeTestConnection extends SnowflakeConnection {
 }
 
 export class BigQueryTestConnection extends BigQueryConnection {
+  // we probably need a better way to do this.
+
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
+export class MySQLTestConnection extends MySQLConnection {
   // we probably need a better way to do this.
 
   public async runSQL(
@@ -104,6 +121,17 @@ export class DuckDBTestConnection extends DuckDBConnection {
   }
 }
 
+export class DuckDBROTestConnection extends DuckDBTestConnection {
+  constructor(name: string, databasePath?: string, workingDirectory?: string) {
+    super({
+      name,
+      databasePath,
+      workingDirectory,
+      readOnly: true,
+    });
+  }
+}
+
 export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   // we probably need a better way to do this.
 
@@ -121,9 +149,44 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
-const files = new EmptyURLReader();
+export class SQLServerTestConnection extends SQLServerConnection {
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
 
-export function rows(qr: Result): QueryDataRow[] {
+export class TestCacheManager extends CacheManager {
+  constructor(readonly _modelCache: ModelCache) {
+    super(_modelCache);
+  }
+}
+
+export class TestURLReader extends InMemoryURLReader {
+  constructor() {
+    super(new Map());
+  }
+
+  setFile(url: URL, contents: string) {
+    this.files.set(url.toString(), contents);
+  }
+
+  deleteFile(url: URL) {
+    this.files.delete(url.toString());
+  }
+}
+
+export const testFileSpace = new TestURLReader();
+
+export function rows(qr: Result): QueryRecord[] {
   return qr.data.value;
 }
 
@@ -135,13 +198,19 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         connection = new BigQueryTestConnection(
           dbName,
           {},
-          {projectId: 'malloy-data'}
+          {projectId: 'malloydata-org'}
         );
         break;
       case 'postgres':
         connection = new PostgresTestConnection(dbName);
         break;
       case 'duckdb':
+        connection = new DuckDBROTestConnection(
+          dbName,
+          'test/data/duckdb/duckdb_test.db'
+        );
+        break;
+      case 'duckdb_rw':
         connection = new DuckDBTestConnection(
           dbName,
           'test/data/duckdb/duckdb_test.db'
@@ -153,8 +222,34 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           'test/data/duckdb/duckdb_test.db'
         );
         break;
+      case 'mssql_via_duckdb':
+        {
+          const s = SQLServerExecutor.getConnectionOptionsFromEnv();
+          if (s.server === undefined) {
+            throw new Error(
+              'MSSQL_HOST is not set; see test/mssql/mssql_start.sh'
+            );
+          }
+          connection = new DuckDBTestConnection({
+            name: dbName,
+            additionalExtensions: ['mssql'],
+            setupSQL: [
+              // The same string test/mssql/connection_string.ts builds for the
+              // loader, written here because packages/malloy-render type-checks
+              // this file alone and admits no import beside it. `Server=host,port`:
+              // the extension reads no separate Port key.
+              `ATTACH 'Server=${s.server},${s.port ?? 1433};Database=${s.database};User Id=${s.user};Password=${s.password};TrustServerCertificate=${s.trustServerCertificate ?? false}' AS msdb (TYPE mssql)`,
+              `USE msdb.${s.database}`,
+            ].join(';\n'),
+          });
+        }
+        break;
       case 'motherduck':
-        connection = new DuckDBTestConnection(dbName, 'md:my_db');
+        connection = new DuckDBTestConnection({
+          name: dbName,
+          databasePath: 'md:my_db',
+          motherDuckToken: process.env['TEST_MD_TOKEN'],
+        });
         break;
       case 'snowflake':
         {
@@ -166,12 +261,50 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         connection = new TrinoConnection(
           dbName,
           {},
-          TrinoExecutor.getConnectionOptionsFromEnv()
+          TrinoExecutor.getConnectionOptionsFromEnv(dbName)
         );
+        break;
+      case 'mysql':
+        connection = new MySQLConnection(
+          dbName,
+          MySQLExecutor.getConnectionOptionsFromEnv(),
+          {}
+        );
+        break;
+      case 'presto':
+        connection = new PrestoConnection(
+          dbName,
+          {},
+          TrinoExecutor.getConnectionOptionsFromEnv(dbName) // they share configs.
+        );
+        break;
+      case 'sqlserver':
+        connection = new SQLServerTestConnection(
+          dbName,
+          SQLServerExecutor.getConnectionOptionsFromEnv()
+        );
+        break;
+      case 'databricks':
+        {
+          const warehouseId = process.env['DATABRICKS_WAREHOUSE_ID'];
+          const dbPath =
+            process.env['DATABRICKS_PATH'] ||
+            (warehouseId ? `/sql/1.0/warehouses/${warehouseId}` : '');
+          connection = new DatabricksConnection(dbName, {
+            host: process.env['DATABRICKS_HOST'] || '',
+            path: dbPath,
+            token: process.env['DATABRICKS_TOKEN'],
+            defaultCatalog: process.env['DATABRICKS_CATALOG'],
+            defaultSchema: process.env['DATABRICKS_SCHEMA'],
+          });
+        }
         break;
       default:
         throw new Error(`Unknown runtime "${dbName}`);
     }
+    // The shared suites carry no `##! experimental.dialect.NAME` lines. A
+    // dialect under test is accepted once, for the whole process, instead.
+    getDialect(connection.dialectName).acceptExperimental();
     return testRuntimeFor(connection);
   } catch (error) {
     throw new Error(
@@ -181,9 +314,17 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
 }
 
 export function testRuntimeFor(connection: Connection) {
-  return new SingleConnectionRuntime(files, connection);
+  return createTestRuntime(connection, {
+    urlReader: testFileSpace,
+    eventStream: new EventEmitter(),
+    cacheManager: new TestCacheManager(new InMemoryModelCache()),
+  });
 }
 
+/**
+ * All databases which should be tested by default. Experimental dialects
+ * should not be in this list. Use MALLOY_DATABASE=dialect_name to test those
+ */
 export const allDatabases = [
   'postgres',
   'bigquery',
@@ -191,6 +332,7 @@ export const allDatabases = [
   'duckdb_wasm',
   'snowflake',
   'trino',
+  'mysql',
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
@@ -221,8 +363,8 @@ export class RuntimeList {
     for (const [_key, runtime] of this.runtimeMap) {
       await runtime.connection.close();
     }
-    // Unfortunate hack to avoid slow to die background threads tripping
-    // up jest
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    // TODO delete this line if it turns out not to be needed.
+    // At one time duckdb_wasm needed this
+    // await new Promise(resolve => setTimeout(resolve, 2000));
   }
 }

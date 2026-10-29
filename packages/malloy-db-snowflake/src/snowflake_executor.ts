@@ -1,43 +1,52 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import snowflake, {
+import type {
   SnowflakeError,
-  Statement,
+  RowStatement,
   Connection,
   ConnectionOptions,
+  Binds,
 } from 'snowflake-sdk';
-import {Pool, Options as PoolOptions} from 'generic-pool';
+import snowflake from 'snowflake-sdk';
+import type {Pool, Options as PoolOptions} from 'generic-pool';
 import * as toml from 'toml';
 import * as fs from 'fs';
 import * as path from 'path';
-import {Readable} from 'stream';
-import {
-  toAsyncGenerator,
-  QueryData,
-  QueryDataRow,
-  RunSQLOptions,
-} from '@malloydata/malloy';
+import type {Readable} from 'stream';
+import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
+import {toAsyncGenerator} from '@malloydata/malloy';
+
+// Disable snowflake-sdk logging by default (issue #2565)
+snowflake.configure({logLevel: 'OFF'});
+
+// Snowflake QUERY_TAG is a single free-form string, max 2000 chars.
+const MAX_QUERY_TAG_LENGTH = 2000;
+
+/**
+ * Render a query's metadata into a Snowflake `QUERY_TAG` value: the property
+ * bag serialized as JSON, so the properties are queryable in `QUERY_HISTORY` /
+ * `QUERY_ATTRIBUTION_HISTORY`. Case is preserved. Clamped to Snowflake's
+ * 2000-char limit as a runtime backstop.
+ *
+ * The tag is applied per statement via `parameters.QUERY_TAG` (see `_execute`);
+ * the connection-level `connOptions.queryTag` is deliberately never set,
+ * because the SDK overwrites caller-supplied per-statement parameters whenever
+ * it is (snowflake-sdk `statement.js`).
+ *
+ * The bag arrives already validated: SnowflakeConnection checks it before
+ * handing it to the executor.
+ */
+export function snowflakeQueryTag(options?: RunSQLOptions): string | undefined {
+  const bag = options?.queryMetadata;
+  if (bag === undefined || Object.keys(bag).length === 0) return undefined;
+  const tag = JSON.stringify(bag);
+  return tag.length > MAX_QUERY_TAG_LENGTH
+    ? tag.slice(0, MAX_QUERY_TAG_LENGTH)
+    : tag;
+}
 
 export interface ConnectionConfigFile {
   // a toml file with snowflake connection settings
@@ -48,8 +57,8 @@ export interface ConnectionConfigFile {
   connection_name?: string;
 }
 
-// function columnNameToLowerCase(row: QueryDataRow): QueryDataRow {
-//   const ret: QueryDataRow = {};
+// function columnNameToLowerCase(row: QueryRecord): QueryRecord {
+//   const ret: QueryRecord = {};
 //   for (const key in row) {
 //     ret[key.toLowerCase()] = row[key];
 //   }
@@ -67,10 +76,21 @@ export class SnowflakeExecutor {
   private static defaultConnectionOptions = {
     clientSessionKeepAlive: true, // default = false
     clientSessionKeepAliveHeartbeatFrequency: 900, // default = 3600
+    // Return integers as native JS BigInt to preserve precision
+    jsTreatIntegerAsBigInt: true,
   };
 
   private pool_: Pool<Connection>;
-  constructor(connOptions: ConnectionOptions, poolOptions?: PoolOptions) {
+  private setupSQL: string | undefined;
+
+  private sessionInitialized = new WeakMap<Connection, Promise<void>>();
+
+  constructor(
+    connOptions: ConnectionOptions,
+    poolOptions?: PoolOptions,
+    setupSQL?: string
+  ) {
+    this.setupSQL = setupSQL;
     this.pool_ = snowflake.createPool(connOptions, {
       ...SnowflakeExecutor.defaultPoolOptions_,
       ...(poolOptions ?? {}),
@@ -79,22 +99,25 @@ export class SnowflakeExecutor {
 
   public static getConnectionOptionsFromEnv(): ConnectionOptions | undefined {
     const account = process.env['SNOWFLAKE_ACCOUNT'];
-    if (account) {
-      const username = process.env['SNOWFLAKE_USER'];
-      const password = process.env['SNOWFLAKE_PASSWORD'];
-      const warehouse = process.env['SNOWFLAKE_WAREHOUSE'];
-      const database = process.env['SNOWFLAKE_DATABASE'];
-      const schema = process.env['SNOWFLAKE_SCHEMA'];
-      return {
-        account,
-        username,
-        password,
-        warehouse,
-        database,
-        schema,
-      };
+    if (!account) {
+      return undefined;
     }
-    return undefined;
+    return {
+      ...SnowflakeExecutor.defaultConnectionOptions,
+      account,
+      username: process.env['SNOWFLAKE_USER'],
+      password: process.env['SNOWFLAKE_PASSWORD'],
+      role: process.env['SNOWFLAKE_ROLE'],
+      warehouse: process.env['SNOWFLAKE_WAREHOUSE'],
+      database: process.env['SNOWFLAKE_DATABASE'],
+      schema: process.env['SNOWFLAKE_SCHEMA'],
+      // Key-pair auth requires SNOWFLAKE_AUTHENTICATOR=SNOWFLAKE_JWT.
+      // Names match the Snowflake CLI's; _RAW is PEM text, _FILE a path.
+      authenticator: process.env['SNOWFLAKE_AUTHENTICATOR'],
+      privateKey: process.env['SNOWFLAKE_PRIVATE_KEY_RAW'],
+      privateKeyPath: process.env['SNOWFLAKE_PRIVATE_KEY_FILE'],
+      privateKeyPass: process.env['SNOWFLAKE_PRIVATE_KEY_PASSPHRASE'],
+    };
   }
 
   public static getConnectionOptionsFromToml(
@@ -149,82 +172,330 @@ export class SnowflakeExecutor {
     });
   }
 
-  public async _execute(sqlText: string, conn: Connection): Promise<QueryData> {
-    return new Promise((resolve, reject) => {
-      const _statment = conn.execute({
-        sqlText,
-        complete: (
-          err: SnowflakeError | undefined,
-          _stmt: Statement,
-          rows?: QueryData
-        ) => {
-          if (err) {
-            reject(err);
-          } else if (rows) {
-            resolve(rows);
-          }
-        },
-      });
+  public async _execute(
+    sqlText: string,
+    conn: Connection,
+    options?: RunSQLOptions,
+    timeoutMs?: number,
+    binds?: Binds
+  ): Promise<QueryData> {
+    const abortSignal = options?.abortSignal;
+    // Fail fast if already aborted before we even start executing
+    if (abortSignal?.aborted) {
+      throw new Error('Query aborted');
+    }
+    // Apply the query tag per statement (never via connOptions.queryTag — the
+    // SDK clobbers per-statement parameters when that is set).
+    const queryTag = snowflakeQueryTag(options);
+    const parameters = queryTag ? {QUERY_TAG: queryTag} : undefined;
+    let _statement: RowStatement | undefined;
+    const cancel = () => {
+      _statement?.cancel();
+    };
+    const timeoutId = timeoutMs ? setTimeout(cancel, timeoutMs) : undefined;
+    if (abortSignal) {
+      abortSignal.addEventListener('abort', cancel, {once: true});
+    }
+    return await new Promise((resolve, reject) => {
+      try {
+        _statement = conn.execute({
+          sqlText,
+          binds,
+          parameters,
+          complete: (
+            err: SnowflakeError | undefined,
+            _stmt: RowStatement,
+            rows?: QueryData
+          ) => {
+            if (abortSignal) {
+              abortSignal.removeEventListener('abort', cancel);
+            }
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
+            if (err) {
+              reject(err);
+            } else {
+              // Snowflake occasionally calls complete with no rows (e.g. DDL); without this branch
+              // the Promise never settles and generic-pool holds the connection forever.
+              resolve(rows ?? []);
+            }
+          },
+        });
+      } catch (err) {
+        if (abortSignal) {
+          abortSignal.removeEventListener('abort', cancel);
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        reject(err);
+      }
     });
   }
 
-  private async _setSessionParams(conn: Connection) {
+  private async _setSessionParams(
+    conn: Connection,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ) {
     // set some default session parameters
     // ensure we do not ignore case for quoted identifiers
-    await this._execute("ALTER SESSION SET QUOTED_IDENTIFIERS_IGNORE_CASE = FALSE;", conn);
+    await this._execute(
+      'ALTER SESSION SET QUOTED_IDENTIFIERS_IGNORE_CASE = FALSE;',
+      conn,
+      options,
+      timeoutMs
+    );
     // set utc as the default timezone which is the malloy convention
-    await this._execute("ALTER SESSION SET TIMEZONE = 'UTC';", conn);
+    await this._execute(
+      "ALTER SESSION SET TIMEZONE = 'UTC';",
+      conn,
+      options,
+      timeoutMs
+    );
     // ensure week starts on Sunday which is the malloy convention
-    await this._execute("ALTER SESSION SET WEEK_START = 7;", conn);
-    // so javascript can parse the dates
+    await this._execute(
+      'ALTER SESSION SET WEEK_START = 7;',
+      conn,
+      options,
+      timeoutMs
+    );
+    // so javascript can parse the dates. LTZ is pinned to the same ISO format
+    // as NTZ because Malloy maps TIMESTAMP_LTZ to `timestamp` (and writes its
+    // own timestamp columns as LTZ), so LTZ values reach the same JS parse path.
     await this._execute(
       "ALTER SESSION SET TIMESTAMP_NTZ_OUTPUT_FORMAT='YYYY-MM-DDTHH24:MI:SS.FF3TZH:TZM';",
-      conn
+      conn,
+      options,
+      timeoutMs
     );
+    await this._execute(
+      "ALTER SESSION SET TIMESTAMP_LTZ_OUTPUT_FORMAT='YYYY-MM-DDTHH24:MI:SS.FF3TZH:TZM';",
+      conn,
+      options,
+      timeoutMs
+    );
+    if (this.setupSQL) {
+      for (const stmt of this.setupSQL.split(';\n')) {
+        const trimmed = stmt.trim();
+        if (trimmed) {
+          await this._execute(trimmed, conn, options, timeoutMs);
+        }
+      }
+    }
   }
 
-  public async batch(sqlText: string): Promise<QueryData> {
+  private ensureSessionInitialized(
+    connection: Connection,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<void> {
+    const existing = this.sessionInitialized.get(connection);
+    if (existing) {
+      return existing;
+    }
+    const init = this._setSessionParams(connection, options, timeoutMs).catch(
+      err => {
+        this.sessionInitialized.delete(connection);
+        throw err;
+      }
+    );
+    this.sessionInitialized.set(connection, init);
+    return init;
+  }
+
+  public async batch(
+    sqlText: string,
+    options?: RunSQLOptions,
+    timeoutMs?: number,
+    binds?: Binds
+  ): Promise<QueryData> {
     return await this.pool_.use(async (conn: Connection) => {
-      await this._setSessionParams(conn);
-      return await this._execute(sqlText, conn);
+      await this.ensureSessionInitialized(conn, options, timeoutMs);
+      return await this._execute(sqlText, conn, options, timeoutMs, binds);
+    });
+  }
+
+  /**
+   * Like batch(), but returns undefined on failure instead of throwing.
+   * This keeps the pool connection alive — generic-pool destroys
+   * connections when pool.use() sees a thrown error, which is wrong
+   * for SQL errors (the connection itself is fine). Use this for
+   * speculative queries where failure is expected and the connection
+   * may hold session state (e.g. temp views) that must be preserved.
+   */
+  public async tryBatch(
+    sqlText: string,
+    options?: RunSQLOptions,
+    timeoutMs?: number,
+    binds?: Binds
+  ): Promise<QueryData | undefined> {
+    return await this.pool_.use(async (conn: Connection) => {
+      await this.ensureSessionInitialized(conn, options, timeoutMs);
+      try {
+        return await this._execute(sqlText, conn, options, timeoutMs, binds);
+      } catch {
+        return undefined;
+      }
     });
   }
 
   public async stream(
     sqlText: string,
     options?: RunSQLOptions
-  ): Promise<AsyncIterableIterator<QueryDataRow>> {
-    const pool: Pool<Connection> = this.pool_;
-    return await pool.acquire().then(async (conn: Connection) => {
-      await this._setSessionParams(conn);
-      const stmt: Statement = conn.execute({
-        sqlText,
-        streamResult: true,
-      });
-      const stream: Readable = stmt.streamRows();
-      function streamSnowflake(
-        onError: (error: Error) => void,
-        onData: (data: QueryDataRow) => void,
-        onEnd: () => void
-      ) {
-        function handleEnd() {
-          onEnd();
-          pool.release(conn);
-        }
+  ): Promise<AsyncIterableIterator<QueryRecord>> {
+    // Fail fast if already aborted before we acquire a connection
+    if (options?.abortSignal?.aborted) {
+      throw new Error('Query aborted');
+    }
 
-        let index = 0;
-        function handleData(this: Readable, row: QueryDataRow) {
-          onData(row);
-          index += 1;
-          if (options?.rowLimit !== undefined && index >= options.rowLimit) {
-            onEnd();
-          }
+    const pool: Pool<Connection> = this.pool_;
+    const conn: Connection = await pool.acquire();
+
+    const releaseOnce = (() => {
+      let released = false;
+      return () => {
+        if (!released) {
+          released = true;
+          pool.release(conn).catch(() => {});
         }
-        stream.on('error', onError);
-        stream.on('data', handleData);
-        stream.on('end', handleEnd);
+      };
+    })();
+
+    try {
+      await this.ensureSessionInitialized(conn, options);
+    } catch (err) {
+      releaseOnce();
+      throw err;
+    }
+
+    // Check again after the awaits — signal may have fired while we were blocked
+    if (options?.abortSignal?.aborted) {
+      releaseOnce();
+      throw new Error('Query aborted');
+    }
+
+    // Apply the query tag per statement (see _execute).
+    const queryTag = snowflakeQueryTag(options);
+    const parameters = queryTag ? {QUERY_TAG: queryTag} : undefined;
+    // Track the statement so abort can cancel it during conn.execute()
+    let _statement: RowStatement | undefined;
+    const abortSignal = options?.abortSignal;
+    const cancelFromAbort = abortSignal
+      ? () => {
+          _statement?.cancel();
+        }
+      : undefined;
+
+    if (cancelFromAbort) {
+      abortSignal!.addEventListener('abort', cancelFromAbort, {once: true});
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        _statement = conn.execute({
+          sqlText,
+          streamResult: true,
+          parameters,
+          complete: (err: SnowflakeError | undefined, _stmt: RowStatement) => {
+            if (err) {
+              if (cancelFromAbort) {
+                abortSignal!.removeEventListener('abort', cancelFromAbort);
+              }
+              releaseOnce();
+              reject(err);
+              return;
+            }
+
+            const stream: Readable = _stmt.streamRows();
+
+            function streamSnowflake(
+              onError: (error: Error) => void,
+              onData: (data: QueryRecord) => void,
+              onEnd: () => void
+            ) {
+              let streamEnded = false;
+
+              // Replace the pre-execute abort listener with one that also
+              // tears down the stream.
+              const onAbort = abortSignal
+                ? () => {
+                    _stmt.cancel();
+                    handleEnd();
+                  }
+                : undefined;
+
+              if (cancelFromAbort) {
+                abortSignal!.removeEventListener('abort', cancelFromAbort);
+              }
+
+              function cleanup() {
+                streamEnded = true;
+                stream.removeListener('data', handleData);
+                stream.removeListener('error', handleError);
+                stream.removeListener('end', handleEnd);
+                if (onAbort) {
+                  abortSignal?.removeEventListener('abort', onAbort);
+                }
+                if (!stream.destroyed) {
+                  stream.destroy();
+                }
+              }
+
+              function handleEnd() {
+                if (streamEnded) return;
+                cleanup();
+                onEnd();
+                releaseOnce();
+              }
+
+              function handleError(error: Error) {
+                if (streamEnded) return;
+                cleanup();
+                onError(error);
+                releaseOnce();
+              }
+
+              function handleData(this: Readable, row: QueryRecord) {
+                if (streamEnded) return;
+                onData(row);
+                if (
+                  options?.rowLimit !== undefined &&
+                  ++index >= options.rowLimit
+                ) {
+                  _stmt.cancel();
+                  handleEnd();
+                }
+              }
+
+              let index = 0;
+              stream.on('error', handleError);
+              stream.on('data', handleData);
+              stream.on('end', handleEnd);
+
+              // Wire abort signal to cancel the stream
+              if (onAbort) {
+                if (abortSignal?.aborted) {
+                  onAbort();
+                } else {
+                  abortSignal?.addEventListener('abort', onAbort, {
+                    once: true,
+                  });
+                }
+              }
+            }
+
+            resolve(toAsyncGenerator<QueryRecord>(streamSnowflake));
+          },
+        });
+      } catch (err) {
+        if (cancelFromAbort) {
+          abortSignal!.removeEventListener('abort', cancelFromAbort);
+        }
+        releaseOnce();
+        reject(err);
       }
-      return Promise.resolve(toAsyncGenerator<QueryDataRow>(streamSnowflake));
     });
   }
 }

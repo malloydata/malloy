@@ -1,65 +1,132 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
-import {errorFor} from '../ast-utils';
-import {ExprValue} from '../types/expr-value';
-import {BinaryBoolean} from './binary-boolean';
-import {FieldSpace} from '../types/field-space';
-import {ExpressionDef} from '../types/expression-def';
-import {compose} from './utils';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
+import {ATNodeType, ExpressionDef} from '../types/expression-def';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
+import {isEquality} from '../types/binary_operators';
+import {booleanValueError, COMPARE_HINT} from './boolean-value';
 
-export class ExprAlternationTree extends BinaryBoolean<'|' | '&'> {
+/**
+ * Return a flattened version of an alternation tree, if the tree is
+ * composed entirely values and "or"s.
+ *
+ * @param node Root of the tree
+ * @returns Undefined if other nodes are found in the tree
+ */
+function flattenOrTree(inNode: ExpressionDef): ExpressionDef[] | undefined {
+  const node = inNode.atExpr();
+  switch (node.atNodeType()) {
+    case ATNodeType.And:
+    case ATNodeType.Partial:
+      return undefined;
+    case ATNodeType.Or: {
+      if (node instanceof ExprAlternationTree) {
+        const left = flattenOrTree(node.left);
+        if (left) {
+          const right = flattenOrTree(node.right);
+          if (right) {
+            return [...left, ...right];
+          }
+        }
+      }
+      return undefined;
+    }
+    default:
+      return node.granular() ? undefined : [node];
+  }
+}
+
+export class ExprAlternationTree extends ExpressionDef {
   elementType = 'alternation';
-  constructor(left: ExpressionDef, op: '|' | '&', right: ExpressionDef) {
-    super(left, op, right);
+  inList?: ExpressionDef[];
+  constructor(
+    readonly left: ExpressionDef,
+    readonly op: '|' | '&',
+    readonly right: ExpressionDef
+  ) {
+    super({left, right});
     this.elementType = `${op}alternation${op}`;
   }
 
-  apply(fs: FieldSpace, applyOp: string, expr: ExpressionDef): ExprValue {
+  equalityList(): ExpressionDef[] {
+    if (this.inList === undefined) {
+      this.inList = flattenOrTree(this) || [];
+    }
+    return this.inList;
+  }
+
+  apply(
+    fs: FieldSpace,
+    applyOp: BinaryMalloyOperator,
+    expr: ExpressionDef,
+    warnOnComplexTree: boolean
+  ): ExprValue {
+    if (isEquality(applyOp)) {
+      const inList = this.equalityList();
+      if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
+        const isIn = expr.getExpression(fs);
+        const values = inList.map(v => v.getExpression(fs));
+        // A boolean on either side of the comparison, the tested value or
+        // any of the choices, is a boolean compared with something.
+        for (const [el, val] of [
+          [expr, isIn] as const,
+          ...inList.map((el, i) => [el, values[i]] as const),
+        ]) {
+          const noIn = booleanValueError(
+            fs,
+            val,
+            `compared with ${applyOp}`,
+            el,
+            COMPARE_HINT
+          );
+          if (noIn) return noIn;
+        }
+        return computedExprValue({
+          dataType: {type: 'boolean'},
+          value: {
+            node: 'in',
+            not: applyOp === '!=',
+            kids: {e: isIn.value, oneOf: values.map(v => v.value)},
+          },
+          from: [isIn, ...values],
+        });
+      }
+      if (inList.length === 0 && warnOnComplexTree) {
+        this.logWarning(
+          'or-choices-only',
+          `Only | seperated values are legal when used with ${applyOp} operator`
+        );
+      }
+    }
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
-    return {
-      dataType: 'boolean',
-      expressionType: maxExpressionType(
-        choice1.expressionType,
-        choice2.expressionType
-      ),
-      evalSpace: mergeEvalSpaces(choice1.evalSpace, choice2.evalSpace),
-      value: compose(
-        choice1.value,
-        this.op === '&' ? 'and' : 'or',
-        choice2.value
-      ),
-    };
+    return computedExprValue({
+      dataType: {type: 'boolean'},
+      value: {
+        node: this.op === '&' ? 'and' : 'or',
+        kids: {left: choice1.value, right: choice2.value},
+      },
+      from: [choice1, choice2],
+    });
   }
 
   requestExpression(_fs: FieldSpace): ExprValue | undefined {
     return undefined;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    this.log('Alternation tree has no value');
-    return errorFor('no value from alternation tree');
+  protected computeExpression(_fs: FieldSpace): ExprValue {
+    return this.loggedErrorExpr(
+      'alternation-as-value',
+      'Alternation tree has no value'
+    );
+  }
+
+  atNodeType(): ATNodeType {
+    return this.op === '|' ? ATNodeType.Or : ATNodeType.And;
   }
 }

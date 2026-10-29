@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 /**
@@ -29,11 +11,11 @@
  * specialized QuerySpace for each type of query operation.
  */
 
-import {AtomicFieldDeclaration} from '../query-items/field-declaration';
-import {Join} from '../source-properties/joins';
-import {SourceSpec, SpaceSeed} from '../space-seed';
-import {QueryFieldSpace} from '../types/field-space';
-import {QueryOperationSpace} from './query-spaces';
+import type {AccessModifierLabel, SourceDef} from '../../../model';
+import type {AtomicFieldDeclaration} from '../query-items/field-declaration';
+import {Join} from '../source-properties/join';
+import type {QueryFieldSpace} from '../types/field-space';
+import type {QueryOperationSpace} from './query-spaces';
 import {RefinedSpace} from './refined-space';
 
 export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
@@ -46,11 +28,11 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
    * @param queryOutput MUST BE A QuerySpace
    */
   constructor(
-    input: SourceSpec,
-    private queryOutput: QueryOperationSpace
+    input: SourceDef,
+    private queryOutput: QueryOperationSpace,
+    public readonly _accessProtectionLevel: AccessModifierLabel
   ) {
-    const inputSpace = new SpaceSeed(input);
-    super(inputSpace.structDef);
+    super(input);
   }
 
   extendSource(extendField: Join | AtomicFieldDeclaration): void {
@@ -62,7 +44,7 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
     }
   }
 
-  isQueryFieldSpace() {
+  isQueryFieldSpace(): this is QueryFieldSpace {
     return true;
   }
 
@@ -72,5 +54,13 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
 
   inputSpace() {
     return this;
+  }
+
+  accessProtectionLevel(): AccessModifierLabel {
+    return this._accessProtectionLevel;
+  }
+
+  isQueryOutputSpace() {
+    return false;
   }
 }

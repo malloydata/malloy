@@ -1,0 +1,28 @@
+{
+  "name": "@malloydata/malloy-profiler",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "echo 'Read the Testing section of the repo-root CONTEXT.md for information on testing in this monorepo'; exit 1",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "profile": "./scripts/flame_profile.sh",
+    "time": "ts-node src/timer.ts"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "0.0.437",
+    "@malloydata/malloy-interfaces": "0.0.437"
+  },
+  "version": "0.0.437"
+}

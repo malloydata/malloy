@@ -1,45 +1,43 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {StructDef} from '../../../model/malloy_types';
-import {
-  constructTableKey,
-  deprecatedParseTableURI,
-} from '../../parse-tree-walkers/find-external-references';
+import {activeName} from '../../../model/malloy_types';
+import type {SourceDef} from '../../../model/malloy_types';
+import {constructTableKey} from '../../parse-tree-walkers/find-external-references';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
-import {ModelEntryReference} from '../types/malloy-element';
+import type {ModelEntryReference} from '../types/malloy-element';
+import {getDialect} from '../../../dialect';
 
-type TableInfo = {tablePath: string; connectionName?: string | undefined};
+type TableInfo = {tablePath: string; connectionName: string};
 export abstract class TableSource extends Source {
   abstract getTableInfo(): TableInfo | undefined;
 
-  structDef(): StructDef {
+  getSourceDef(): SourceDef {
     const info = this.getTableInfo();
     if (info === undefined) {
       return ErrorFactory.structDef;
     }
-    const {tablePath, connectionName} = info;
+    const {tablePath: rawTablePath, connectionName} = info;
+
+    // Re-validate the table path. ImportsAndTablesStep validated and
+    // silently skipped invalid entries; we re-validate here so we can
+    // log a precise translator error at the AST element's location.
+    let tablePath = rawTablePath;
+    const dialectName =
+      this.translator()?.root.connectionDialectZone.get(connectionName);
+    if (dialectName !== undefined) {
+      const validation =
+        getDialect(dialectName).sqlValidateTableName(rawTablePath);
+      if (!validation.ok) {
+        this.logError('invalid-table-path', validation.error);
+        return ErrorFactory.structDef;
+      }
+      tablePath = validation.canonical;
+    }
+
     const key = constructTableKey(connectionName, tablePath);
     const tableDefEntry = this.translator()?.root.schemaZone.getEntry(key);
     let msg = `Schema read failure for table '${tablePath}' for connection '${connectionName}'`;
@@ -54,17 +52,19 @@ export abstract class TableSource extends Source {
           fields: tableDefEntry.value.fields.map(field => ({
             ...field,
             location: this.location,
+            refSummary: {
+              fieldUsage: [{path: [activeName(field)], at: this.location}],
+            },
           })),
           location: this.location,
         };
-        this.document()?.rememberToAddModelAnnotations(ret);
         return ret;
       }
       if (tableDefEntry.status === 'error') {
         msg = tableDefEntry.message;
       }
     }
-    this.log(msg);
+    this.logError('failed-to-fetch-table-schema', msg);
     return ErrorFactory.structDef;
   }
 }
@@ -80,6 +80,13 @@ export class TableMethodSource extends TableSource {
   }
 
   getTableInfo(): TableInfo | undefined {
+    if (this.isRestricted()) {
+      this.logError(
+        'restricted-construct-forbidden',
+        `\`${this.connectionName.refString}.table(...)\` cannot be used in a restricted query — direct table access is not permitted.`
+      );
+      return undefined;
+    }
     const connection = this.modelEntry(this.connectionName);
     const name = this.connectionName.refString;
     if (connection === undefined) {
@@ -89,7 +96,8 @@ export class TableMethodSource extends TableSource {
         true
       );
     } else if (connection.entry.type !== 'connection') {
-      this.connectionName.log(
+      this.connectionName.logError(
+        'invalid-connection-for-table-source',
         `${this.connectionName.refString} is not a connection`
       );
       return undefined;
@@ -98,18 +106,5 @@ export class TableMethodSource extends TableSource {
       tablePath: this.tablePath,
       connectionName: this.connectionName.refString,
     };
-  }
-}
-
-export class TableFunctionSource extends TableSource {
-  elementType = 'tableFunctionSource';
-  constructor(readonly tableURI: string) {
-    super();
-  }
-
-  getTableInfo(): TableInfo | undefined {
-    // This use of `deprecatedParseTableURI` is ok because it is for handling the
-    // old, soon-to-be-deprecated table syntax.
-    return deprecatedParseTableURI(this.tableURI);
   }
 }

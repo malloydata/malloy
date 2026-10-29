@@ -1,27 +1,12 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {SQLPhrase} from '../../../model/malloy_types';
+import {
+  isPersistableSourceDef,
+  type SQLPhraseSegment,
+} from '../../../model/malloy_types';
 
 import {MalloyElement} from '../types/malloy-element';
 import {SourceQueryElement} from '../source-query-elements/source-query-element';
@@ -48,25 +33,71 @@ export class SQLString extends MalloyElement {
       this.containsQueries = true;
       el.parent = this;
     } else {
-      el.log('This element is not legal inside an SQL string');
+      el.logError(
+        'invalid-sql-source-interpolation',
+        'This element is not legal inside an SQL string'
+      );
     }
   }
 
-  sqlPhrases(): SQLPhrase[] {
-    const ret: SQLPhrase[] = [];
+  sqlPhrases(forConnection: string): [boolean, SQLPhraseSegment[]] {
+    const ret: SQLPhraseSegment[] = [];
+    let valid = true;
     for (const el of this.elements) {
       if (typeof el === 'string') {
         ret.push({sql: el});
+      } else if (el.isSource()) {
+        // Check if it's a persistable source first
+        const source = el.getSource();
+        if (source) {
+          const sourceDef = source.getSourceDef(undefined);
+          const connectionMismatch = sourceDef.connection !== forConnection;
+          const persistable = isPersistableSourceDef(sourceDef);
+          if (!connectionMismatch && persistable) {
+            ret.push(sourceDef);
+            continue;
+          }
+          valid = false;
+          // A source can be wrong in both ways at once, and both are worth
+          // saying, so claim the report and then say everything.
+          if (el.sqClaimError()) {
+            if (connectionMismatch) {
+              el.logError(
+                'sql-source-connection-mismatch',
+                `Source is on connection ${sourceDef.connection}, but this SQL is for ${forConnection}`
+              );
+            }
+            if (!persistable) {
+              el.logError(
+                'invalid-sql-source-interpolation',
+                'Source is not persistable, cannot be used in SQL'
+              );
+            }
+          }
+        } else {
+          el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
+          valid = false;
+        }
       } else {
+        // Not a source - try as a query
         const queryObject = el.getQuery();
         if (queryObject) {
-          ret.push(queryObject.query());
+          const queryComp = queryObject.queryComp(false, false);
+          if (queryComp.inputStruct.connection !== forConnection) {
+            el.sqLog(
+              'sql-source-connection-mismatch',
+              `Query is on connection ${queryComp.inputStruct.connection}, but this SQL is for ${forConnection}`
+            );
+            valid = false;
+          }
+          ret.push(queryComp.query);
         } else {
-          el.sqLog('Cannot expand into a query');
+          el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
+          valid = false;
         }
       }
     }
-    return ret;
+    return [valid, ret];
   }
 }
 

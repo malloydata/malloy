@@ -1,11 +1,9 @@
-import {JSDOM, VirtualConsole} from 'jsdom';
-const {window} = new JSDOM('', {
-  virtualConsole: new VirtualConsole().sendTo(console, {omitJSDOMErrors: true}),
+import {DuckDBConnection} from '@malloydata/db-duckdb';
+
+// Clean up all DuckDB instances after each test file to release file locks
+afterAll(() => {
+  DuckDBConnection.closeAllInstances();
 });
-global.document = window.document;
-global.HTMLElement = window.HTMLElement;
-global.customElements = window.customElements;
-global.CSSStyleSheet = window.CSSStyleSheet;
 
 /**
  * A replacement for [test()] that mimics [test.skip()]

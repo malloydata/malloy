@@ -1,27 +1,14 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
+export type {
+  DialectFunctionOverloadDef,
+  DefinitionBlueprint,
+  DefinitionBlueprintMap,
+  OverloadedDefinitionBlueprint,
+} from './functions/util';
 export {
   arg,
   anyExprType,
@@ -31,18 +18,39 @@ export {
   minAggregate,
   maxScalar,
   spread,
-  sqlFragment,
   param,
-  params,
+  variadicParam,
   literal,
   sql,
 } from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
+export {Dialect, queryZone} from './dialect';
+export type {
+  DialectFieldList,
+  CompiledOrderBy,
+  LateralJoinExpression,
+  QueryInfo,
+  FieldReferenceType,
+  GroupByClauseType,
+  OrderByClauseType,
+} from './dialect';
 export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';
 export {SnowflakeDialect} from './snowflake';
 export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+export {MySQLDialect} from './mysql';
+export {DatabricksDialect} from './databricks';
+export {SQLServerDialect} from './sqlserver';
+export {getDialect, registerDialect} from './dialect_map';
+export {getMalloyStandardFunctions} from './functions';
+export type {MalloyStandardFunctionImplementations} from './functions';
+export type {TinyToken} from './tiny_parser';
+export {TinyParser} from './tiny_parser';
+export type {
+  DecodeDottedTablePathResult,
+  DottedTablePathOptions,
+  TablePathEscapeStyle,
+  TablePathSegment,
+  ValidateTablePathResult,
+} from './table-path';
+export {decodeDottedTablePath, validateDottedTablePath} from './table-path';

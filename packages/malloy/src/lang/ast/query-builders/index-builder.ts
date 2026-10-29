@@ -1,58 +1,47 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {
-  FilterExpression,
+import type {
+  FieldUsage,
+  FilterCondition,
   PipeSegment,
   Sampling,
+} from '../../../model/malloy_types';
+import {
+  fieldUsageFrom,
   isIndexSegment,
   isPartialSegment,
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldName, FieldSpace} from '../types/field-space';
+import type {FieldName, SourceFieldSpace} from '../types/field-space';
 import {Filter} from '../query-properties/filters';
 import {Index} from '../query-properties/indexing';
 import {Limit} from '../query-properties/limit';
 import {SampleProperty} from '../query-properties/sampling';
 import {IndexFieldSpace} from '../field-space/index-field-space';
-import {QueryProperty} from '../types/query-property';
-import {QueryBuilder} from '../types/query-builder';
-import {QueryInputSpace} from '../field-space/query-input-space';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {MalloyElement} from '../types/malloy-element';
+import type {QueryProperty} from '../types/query-property';
+import type {QueryBuilder} from '../types/query-builder';
+import type {QueryInputSpace} from '../field-space/query-input-space';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {MalloyElement} from '../types/malloy-element';
+import {emptyFieldUsage, mergeFieldUsage} from '../../composite-source-utils';
 
 export class IndexBuilder implements QueryBuilder {
-  filters: FilterExpression[] = [];
+  filters: FilterCondition[] = [];
   limit?: Limit;
   indexOn?: FieldName;
   sample?: Sampling;
   resultFS: IndexFieldSpace;
   inputFS: QueryInputSpace;
+  alwaysJoins: string[] = [];
+  requiredGroupBys: string[] = [];
   readonly type = 'index';
 
   constructor(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
@@ -63,30 +52,46 @@ export class IndexBuilder implements QueryBuilder {
 
   execute(qp: QueryProperty): void {
     if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.inputFS));
+      qp.queryExecute(this);
     } else if (qp instanceof Limit) {
       if (this.limit) {
-        this.limit.log('Ignored, too many limit: statements');
+        this.limit.logError(
+          'index-limit-already-specified',
+          'Ignored, too many limit: statements'
+        );
       }
       this.limit = qp;
     } else if (qp instanceof Index) {
       this.resultFS.pushFields(...qp.fields.list);
       if (qp.weightBy) {
         if (this.indexOn) {
-          this.indexOn.log('Ignoring previous BY');
+          this.indexOn.logError(
+            'index-by-already-specified',
+            'Ignoring previous BY'
+          );
         }
         this.indexOn = qp.weightBy;
       }
     } else if (qp instanceof SampleProperty) {
       this.sample = qp.sampling();
     } else {
-      qp.log('Not legal in an index query operation');
+      qp.logError(
+        'illegal-operation-for-index',
+        'Not legal in an index query operation'
+      );
     }
+  }
+
+  get fieldUsage(): FieldUsage {
+    return this.resultFS.fieldUsage;
   }
 
   finalize(from: PipeSegment | undefined): PipeSegment {
     if (from && !isIndexSegment(from) && !isPartialSegment(from)) {
-      this.resultFS.log(`Can't refine index with ${from.type}`);
+      this.resultFS.logError(
+        'refinement-of-index-segment',
+        `Can't refine index with ${from.type}`
+      );
       return ErrorFactory.indexSegment;
     }
 
@@ -116,6 +121,25 @@ export class IndexBuilder implements QueryBuilder {
     if (this.sample) {
       indexSegment.sample = this.sample;
     }
+
+    if (this.alwaysJoins.length > 0) {
+      indexSegment.alwaysJoins = [...this.alwaysJoins];
+    }
+
+    const fromFieldUsage =
+      from && from.type === 'index'
+        ? fieldUsageFrom(from.refSummary)
+        : emptyFieldUsage();
+    const fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage) ?? [];
+
+    // Index queries always compute an aggregate for weight (at minimum COUNT(*)).
+    // The compiler needs a uniqueKeyRequirement on the base path so that
+    // symmetric aggregation is enabled when joins are present.
+    fieldUsage.push({
+      path: [],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    indexSegment.refSummary = {...indexSegment.refSummary, fieldUsage};
 
     return indexSegment;
   }

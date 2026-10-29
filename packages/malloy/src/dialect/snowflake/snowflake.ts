@@ -1,52 +1,60 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
+import {DateTime as LuxonDateTime} from 'luxon';
 import {indent} from '../../model/utils';
-import {
-  DateUnit,
-  Expr,
-  ExtractUnit,
+import type {
   Sampling,
-  TimeFieldType,
-  TimeValue,
+  AtomicTypeDef,
+  TypecastExpr,
+  MeasureTimeExpr,
+  RegexMatchExpr,
+  BasicAtomicTypeDef,
+  ArrayLiteralNode,
+  RecordLiteralNode,
+  ATimestampTypeDef,
   TimestampUnit,
-  TypecastFragment,
+  ExtractUnit,
+} from '../../model/malloy_types';
+import {
+  activeName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
-  FieldAtomicTypeDef,
+  TD,
+  isAtomic,
+  isRepeatedRecord,
+  isBasicArray,
+  safeRecordGet,
 } from '../../model/malloy_types';
-import {SNOWFLAKE_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {
+  CompiledOrderBy,
+  DialectFieldList,
+  FieldReferenceType,
+  IntegerTypeMapping,
+  QueryInfo,
+} from '../dialect';
+import {
+  CivilTime,
+  Dialect,
+  EscapeStyle,
+  MIN_DECIMAL38,
+  MAX_DECIMAL38,
+  turtleGroupSetCondition,
+} from '../dialect';
+import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
+import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 const extractionMap: Record<string, string> = {
   'day_of_week': 'dayofweek',
   'day_of_year': 'dayofyear',
 };
 
-const snowflakeToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   // string
   'varchar': {type: 'string'},
   'text': {type: 'string'},
@@ -57,17 +65,15 @@ const snowflakeToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'nvarchar2': {type: 'string'},
   'char varying': {type: 'string'},
   'nchar varying': {type: 'string'},
-  // numbers
-  'number': {type: 'number', numberType: 'integer'},
-  'numeric': {type: 'number', numberType: 'integer'},
-  'decimal': {type: 'number', numberType: 'integer'},
-  'dec': {type: 'number', numberType: 'integer'},
-  'integer': {type: 'number', numberType: 'integer'},
-  'int': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
-  'smallint': {type: 'number', numberType: 'integer'},
-  'tinyint': {type: 'number', numberType: 'integer'},
-  'byteint': {type: 'number', numberType: 'integer'},
+  // numbers - Snowflake uses NUMBER(38,0) for all integers, which exceeds 64-bit
+  // NUMBER, NUMERIC, DECIMAL, DEC are handled dynamically in sqlTypeToMalloyType
+  // because they can be integers or floats depending on scale.
+  'integer': {type: 'number', numberType: 'bigint'},
+  'int': {type: 'number', numberType: 'bigint'},
+  'bigint': {type: 'number', numberType: 'bigint'},
+  'smallint': {type: 'number', numberType: 'bigint'},
+  'tinyint': {type: 'number', numberType: 'bigint'},
+  'byteint': {type: 'number', numberType: 'bigint'},
   'float': {type: 'number', numberType: 'float'},
   'float4': {type: 'number', numberType: 'float'},
   'float8': {type: 'number', numberType: 'float'},
@@ -81,24 +87,35 @@ const snowflakeToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'timestampntz': {type: 'timestamp'},
   'timestamp_ntz': {type: 'timestamp'},
   'timestamp without time zone': {type: 'timestamp'},
-  'timestamptz': {type: 'timestamp'},
-  'timestamp_tz': {type: 'timestamp'},
-  'timestamp with time zone': {type: 'timestamp'},
-  /* timestamp_ltz is not supported in malloy snowflake dialect */
+  'timestamptz': {type: 'timestamptz'},
+  'timestamp_tz': {type: 'timestamptz'},
+  'timestamp with time zone': {type: 'timestamptz'},
+  // TIMESTAMP_LTZ is a genuine instant (persisted UTC); under Malloy's UTC
+  // session pin it is indistinguishable from NTZ, so it maps to `timestamp`
+  // like NTZ. malloyTypeToSQLType writes instants here too.
+  'timestampltz': {type: 'timestamp'},
+  'timestamp_ltz': {type: 'timestamp'},
+  'timestamp with local time zone': {type: 'timestamp'},
 };
 
 export class SnowflakeDialect extends Dialect {
   name = 'snowflake';
+  experimental = false;
+  hasTimestamptz = true;
+  stringLiteralStyle = EscapeStyle.Backslash;
+  identifierEscapeStyle = EscapeStyle.Doubled;
+  identifierQuoteChar = '"';
   defaultNumberType = 'NUMBER';
   defaultDecimalType = 'NUMBER';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = false;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
   defaultSampling = {rows: 50000};
-  globalFunctions = SNOWFLAKE_FUNCTIONS;
+  supportsHyperLogLog = true;
 
   // NOTE: safely setting all these to false for now
   // more many be implemented in future
@@ -109,13 +126,16 @@ export class SnowflakeDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsPipelinesInViews = false;
+  supportsComplexFilteredSources = false;
 
+  // Snowflake bare-identifier continuation allows `$` (verified against
+  // the live engine).
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
 
-
-  // don't mess with the table pathing.
-  quoteTablePath(tablePath: string): string {
-    return tablePath;
-  }
+  // Snowflake uses NUMBER(38,0) for all integers - can exceed JS Number precision
+  override integerTypeMappings: IntegerTypeMapping[] = [
+    {min: MIN_DECIMAL38, max: MAX_DECIMAL38, numberType: 'bigint'},
+  ];
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT index as group_set FROM TABLE(FLATTEN(ARRAY_GENERATE_RANGE(0, ${
@@ -129,29 +149,39 @@ export class SnowflakeDialect extends Dialect {
 
   mapFields(fieldList: DialectFieldList): string {
     return fieldList
-      .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(
+        f => `\n  ${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`
+      )
       .join(', ');
   }
 
   mapFieldsForObjectConstruct(fieldList: DialectFieldList): string {
     return fieldList
-      .map(f => `'${f.rawName}', (${f.sqlExpression})`)
+      .map(f => `${this.sqlLiteralString(f.rawName)}, (${f.sqlExpression})`)
       .join(', ');
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
-    const orderByClause = orderBy ? ` WITHIN GROUP (${orderBy})` : '';
-    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
-    if (limit === undefined) {
-      return `COALESCE(${aggClause}, [])`;
-    }
-    return `COALESCE(ARRAY_SLICE(${aggClause}, 0, ${limit}), [])`;
+    const orderByClause = orderBy
+      ? ` WITHIN GROUP (${this.sqlTurtleOrderByClause(orderBy)})`
+      : '';
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const struct = `OBJECT_CONSTRUCT_KEEP_NULL(${fields})`;
+    const element = cond ? `CASE WHEN ${cond} THEN ${struct} END` : struct;
+    const aggClause = `ARRAY_AGG(${element})${orderByClause}`;
+    // ARRAY_SLICE is 0-based, end-exclusive, so (0, n) keeps the first n.
+    const limited =
+      limit !== undefined
+        ? `ARRAY_SLICE(${aggClause}, 0, ${limit})`
+        : aggClause;
+    return `COALESCE(${limited}, [])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -173,7 +203,7 @@ export class SnowflakeDialect extends Dialect {
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const nullValues = fieldList
-      .map(f => `'${f.sqlOutputName}', NULL`)
+      .map(f => `${this.sqlLiteralString(f.rawName)}, NULL`)
       .join(', ');
     return `COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)[0], OBJECT_CONSTRUCT_KEEP_NULL(${nullValues}))`;
   }
@@ -186,20 +216,12 @@ export class SnowflakeDialect extends Dialect {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
+    const as = this.sqlQuoteIdentifier(alias);
     if (isArray) {
-      // if (needDistinctKey) {
-      //   // return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, value FROM UNNEST(${source}) value))) as ${alias}`;
-      // } else {
-      //   return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
-      // }
-      return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${alias}`;
+      return `LEFT JOIN lateral flatten(input => ${source}) as ${as}`;
     } else {
       // have to have a non empty row or it treats it like an inner join :barf-emoji:
-      return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${alias}`;
-      //   return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, * FROM UNNEST(${source})))) as ${alias}`;
-      // } else {
-      //   return `LEFT JOIN UNNEST(${source}) as ${alias}`;
-      // }
+      return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${as}`;
     }
   }
 
@@ -225,34 +247,60 @@ export class SnowflakeDialect extends Dialect {
     sqlDistinctKey = `${sqlDistinctKey}::STRING`;
     const upperPart = `to_number(substr(md5_hex(${sqlDistinctKey}), 1, 15), repeat('X', 15)) * 4294967296`;
     const lowerPart = `to_number(substr(md5_hex(${sqlDistinctKey}), 16, 8), repeat('X', 8))`;
-    const precisionShiftMultiplier = '0.000000001';
-    return `(${upperPart} + ${lowerPart}) * ${precisionShiftMultiplier}`;
+    return `(${upperPart} + ${lowerPart})`;
   }
 
+  sqlSumDistinct(key: string, value: string, funcName: string): string {
+    const hashKey = this.sqlSumDistinctHashedKey(key);
+    const scale = 100000000.0;
+    const v = `(CAST (COALESCE(${value},0)*${scale} as INT))`;
+
+    const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))/${scale}`;
+    if (funcName === 'SUM') {
+      return sqlSum;
+    } else if (funcName === 'AVG') {
+      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
+  }
   sqlGenerateUUID(): string {
     return 'UUID_STRING()';
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string {
-    if (fieldName === '__row_id') {
-      return `${alias}.INDEX::varchar`;
-    } else if (!isNested) {
-      return `${alias}."${fieldName}"`;
-    } else {
-      let snowflakeType = fieldType;
-      if (fieldType === 'string') {
-        snowflakeType = 'varchar';
-      } else if (fieldType === 'struct') {
-        snowflakeType = 'variant';
+    const sqlName = this.sqlQuoteIdentifier(childName);
+    if (childName === '__row_id') {
+      return `"${parentAlias}".INDEX::varchar`;
+    } else if (parentType.startsWith('array')) {
+      let arrayRef = `"${parentAlias}".value`;
+      if (parentType === 'array[record]') {
+        arrayRef += `:${sqlName}`;
       }
-      return `${alias}.value:"${fieldName}"::${snowflakeType}`;
+      switch (childType) {
+        case 'record':
+        case 'array':
+          childType = 'VARIANT';
+          break;
+        case 'string':
+          childType = 'VARCHAR';
+          break;
+        case 'number':
+          childType = 'DOUBLE';
+          break;
+        case 'struct':
+          throw new Error('NOT STRUCT PLEASE');
+        // boolean and timestamp and date are all ok
+      }
+      return `${arrayRef}::${childType}`;
+    } else if (parentType === 'record') {
+      return `${parentAlias}:${sqlName}`;
     }
+    return `${parentAlias}.${sqlName}`;
   }
 
   sqlUnnestPipelineHead(
@@ -278,9 +326,6 @@ export class SnowflakeDialect extends Dialect {
   sqlSelectAliasAsStruct(alias: string): string {
     return `OBJECT_CONSTRUCT_KEEP_NULL(${alias}.*)`;
   }
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return `"${identifier}"`;
-  }
 
   sqlCreateTableAsSelect(tableName: string, sql: string): string {
     return `
@@ -291,56 +336,82 @@ ${indent(sql)}
 `;
   }
 
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
-    const tz = qtz(qi);
-    let truncThis = sqlTime.value;
-    if (tz && sqlTime.valueType === 'timestamp') {
-      truncThis = mkExpr`CONVERT_TIMEZONE('${tz}', ${truncThis})`;
+  // Civil time is a TIMESTAMP_NTZ, which has no zone
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    typeDef: ATimestampTypeDef
+  ): string {
+    const tz = this.sqlTimezoneLiteral(timezone);
+    if (TD.isTimestamptz(typeDef)) {
+      return `CONVERT_TIMEZONE(${tz}, ${expr})::TIMESTAMP_NTZ`;
     }
-    return mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
+    return timezone === 'UTC'
+      ? expr
+      : `CONVERT_TIMEZONE('UTC', ${tz}, (${expr})::TIMESTAMP_NTZ)`;
   }
 
-  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
-    const extractUnits = extractionMap[units] || units;
-    let extractFrom = from.value;
-    const tz = qtz(qi);
-
-    if (tz && from.valueType === 'timestamp') {
-      extractFrom = mkExpr`CONVERT_TIMEZONE('${tz}', ${extractFrom})`;
-    }
-    const extracted = mkExpr`EXTRACT(${extractUnits} FROM ${extractFrom})`;
-    return extracted;
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    destTypeDef: ATimestampTypeDef
+  ): string {
+    const utc =
+      timezone === 'UTC'
+        ? expr
+        : `CONVERT_TIMEZONE(${this.sqlTimezoneLiteral(timezone)}, 'UTC', (${expr})::TIMESTAMP_NTZ)`;
+    // The session time zone is UTC
+    return TD.isTimestamptz(destTypeDef) ? `(${utc})::TIMESTAMP_TZ` : utc;
   }
 
-  sqlAlterTime(
+  sqlTruncate(
+    expr: string,
+    unit: TimestampUnit,
+    _civilType: CivilTime
+  ): string {
+    // The session sets WEEK_START to Sunday
+    return `DATE_TRUNC('${unit}', ${expr})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
     op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: DateUnit
-  ): Expr {
-    const interval = mkExpr`INTERVAL '${n} ${timeframe}'`;
-    return mkExpr`((${expr.value})${op}${interval})`;
+    magnitude: string,
+    unit: TimestampUnit,
+    civilType: CivilTime
+  ): string {
+    const funcName = civilType === CivilTime.Date ? 'DATEADD' : 'TIMESTAMPADD';
+    const n = op === '+' ? magnitude : `-(${magnitude})`;
+    return `${funcName}(${unit}, ${n}, ${expr})`;
   }
 
-  private atTz(expr: Expr, tz: string | undefined): Expr {
-    if (tz !== undefined) {
-      return mkExpr`(
-      TO_CHAR(${expr}::TIMESTAMP_NTZ, 'YYYY-MM-DD HH24:MI:SS.FF9') ||
-      TO_CHAR(CONVERT_TIMEZONE('${tz}', '1970-01-01 00:00:00'), 'TZHTZM')
-    )::TIMESTAMP_TZ`;
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    return `EXTRACT(${extractionMap[units] || units} FROM ${expr})`;
+  }
+
+  sqlCivilToDate(expr: string): string {
+    return `TO_DATE(${expr})`;
+  }
+
+  sqlDateToCivil(expr: string): string {
+    return `(${expr})::TIMESTAMP_NTZ`;
+  }
+
+  sqlNowExpr(): string {
+    return 'CURRENT_TIMESTAMP()';
+  }
+
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
+    const src = cast.e.sql || '';
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    if (TD.eq(srcTypeDef, dstTypeDef)) {
+      return src;
     }
-    return mkExpr`${expr}::TIMESTAMP_NTZ`;
-  }
-
-  sqlNow(): Expr {
-    return mkExpr`CURRENT_TIMESTAMP()`;
-  }
-
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
-    if (cast.srcType === cast.dstType) {
-      return cast.expr;
-    }
-    if (cast.safe && typeof cast.srcType !== 'string') {
+    if (cast.safe && !TD.isString(srcTypeDef)) {
       // safe cast is only supported for a few combinations of src -> dst types
       // so we will not support it in the general case
       // see: https://docs.snowflake.com/en/sql-reference/functions/try_cast
@@ -351,74 +422,79 @@ ${indent(sql)}
       );
     }
 
-    const tz = qtz(qi);
-    // casting timestamps and dates
-    if (cast.dstType === 'date' && cast.srcType === 'timestamp') {
-      let castExpr = cast.expr;
-      if (tz) {
-        castExpr = mkExpr`CONVERT_TIMEZONE('${tz}', ${castExpr})`;
-      }
-      return mkExpr`TO_DATE(${castExpr})`;
-    } else if (cast.dstType === 'timestamp' && cast.srcType === 'date') {
-      const retExpr = mkExpr`TO_TIMESTAMP(${cast.expr})`;
-      return this.atTz(retExpr, tz);
-    }
-
-    const dstType =
-      typeof cast.dstType === 'string'
-        ? this.malloyTypeToSQLType({type: cast.dstType})
-        : cast.dstType.raw;
     const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-    return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
+    return `${castFunc}(${src} AS ${dstSQLType})`;
   }
 
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone: string | undefined
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `TO_DATE('${literal}')`;
+  }
+
+  sqlCivilLiteral(literal: string): string {
+    return `'${literal}'::TIMESTAMP_NTZ`;
+  }
+
+  sqlTimestamptzLiteral(
+    _qi: QueryInfo,
+    literal: string,
+    timezone: string
   ): string {
-    const tz = qtz(qi);
-    // just making it explicit that timestring does not have timezone info
-    let ret = `'${timeString}'::TIMESTAMP_NTZ`;
-    // now do the hack to add timezone to a timestamp ntz
-    const targetTimeZone = timezone ?? tz;
-    if (targetTimeZone) {
-      const targetTimeZoneSuffix = `TO_CHAR(CONVERT_TIMEZONE('${targetTimeZone}', '1970-01-01 00:00:00'), 'TZHTZM')`;
-      const retTimeString = `TO_CHAR(${ret}, 'YYYY-MM-DD HH24:MI:SS.FF9')`;
-      ret = `${retTimeString} || ${targetTimeZoneSuffix}`;
-      ret = `(${ret})::TIMESTAMP_TZ`;
+    // Use TIMESTAMP_TZ_FROM_PARTS to create timestamptz
+    const dt = LuxonDateTime.fromFormat(literal, 'yyyy-LL-dd HH:mm:ss');
+    if (!dt.isValid) {
+      throw new Error(`Invalid timestamp literal: ${literal}`);
     }
 
-    switch (type) {
-      case 'date':
-        return `TO_DATE(${ret})`;
-      case 'timestamp': {
-        return ret;
-      }
-    }
+    const year = dt.year;
+    const month = dt.month;
+    const day = dt.day;
+    const hour = dt.hour;
+    const minute = dt.minute;
+    const second = dt.second;
+    const nanosecond = dt.millisecond * 1000000;
+
+    return `TIMESTAMP_TZ_FROM_PARTS(${year}, ${month}, ${day}, ${hour}, ${minute}, ${second}, ${nanosecond}, ${this.sqlTimezoneLiteral(timezone)})`;
   }
 
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+  sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
+    const from = df.kids.left;
+    const to = df.kids.right;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(df.units)
+    ) {
+      const lVal = from.sql;
+      const rVal = to.sql;
+      const earlier = `LEAST(${lVal}, ${rVal})`;
+      const later = `GREATEST(${lVal}, ${rVal})`;
+      const candidate = `DATEDIFF(${df.units}, ${earlier}, ${later})`;
+      const anniversary = `DATEADD(${df.units}, ${candidate}, ${earlier})`;
+      const measured = `(${candidate} - CASE WHEN ${anniversary} > ${later} THEN 1 ELSE 0 END)`;
+      return `CASE
+        WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
+        WHEN ${rVal} >= ${lVal} THEN ${measured}
+        ELSE -(${measured})
+      END`;
+    }
     let extractUnits = 'nanoseconds';
-    if (from.valueType === 'date' || to.valueType === 'date') {
+    if (TD.isDate(from.typeDef) || TD.isDate(to.typeDef)) {
       extractUnits = 'seconds';
     }
 
-    return mkExpr`TIMESTAMPDIFF(
-      '${units}',
+    return `TIMESTAMPDIFF(
+      '${df.units}',
       '1970-01-01 00:00:00'::TIMESTAMP_NTZ,
       TIMESTAMPADD(
         '${extractUnits}',
-        EXTRACT('epoch_${extractUnits}', ${to.value}) - EXTRACT('epoch_${extractUnits}', ${from.value}),
+        EXTRACT('epoch_${extractUnits}', ${to.sql}) - EXTRACT('epoch_${extractUnits}', ${from.sql}),
         '1970-01-01 00:00:00'::TIMESTAMP_NTZ
       )
     )`;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    // regexp_match captures any partial match
-    return mkExpr`(REGEXP_INSTR(${expr}, ${regexp}) != 0)`;
+  sqlRegexpMatch(compare: RegexMatchExpr): string {
+    return `REGEXP_INSTR(${compare.kids.expr.sql}, ${compare.kids.regex.sql}) != 0`;
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
@@ -439,35 +515,85 @@ ${indent(sql)}
     return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
-  sqlLiteralString(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(SNOWFLAKE_MALLOY_STANDARD_OVERLOADS);
   }
 
-  sqlLiteralRegexp(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(SNOWFLAKE_DIALECT_FUNCTIONS);
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return SNOWFLAKE_FUNCTIONS.get(name);
-  }
-
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
-    if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
-        return 'integer';
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
+    if (malloyType.type === 'string') {
+      return 'VARCHAR';
+    } else if (malloyType.type === 'number') {
+      if (
+        malloyType.numberType === 'integer' ||
+        malloyType.numberType === 'bigint'
+      ) {
+        return 'NUMBER';
       } else {
-        return 'double';
+        return 'DOUBLE';
       }
+    } else if (malloyType.type === 'record' || isRepeatedRecord(malloyType)) {
+      const sqlFields = malloyType.fields.reduce((ret, f) => {
+        if (isAtomic(f)) {
+          const name = activeName(f);
+          const oneSchema = `${this.sqlQuoteIdentifier(
+            name
+          )} ${this.malloyTypeToSQLType(f)}`;
+          ret.push(oneSchema);
+        }
+        return ret;
+      }, [] as string[]);
+      const recordScehma = `OBJECT(${sqlFields.join(',')})`;
+      return malloyType.type === 'record'
+        ? recordScehma
+        : `ARRAY(${recordScehma})`;
+    } else if (isBasicArray(malloyType)) {
+      return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
+    } else if (malloyType.type === 'timestamptz') {
+      return 'TIMESTAMP_TZ';
+    } else if (malloyType.type === 'timestamp') {
+      // A Malloy `timestamp` is an instant, and TIMESTAMP_LTZ is Snowflake's
+      // instant type. Emit it explicitly rather than the bare word TIMESTAMP,
+      // whose type is decided per account (TIMESTAMP_TYPE_MAPPING: NTZ or LTZ).
+      // NTZ only reads as an instant under the UTC session pin; LTZ is correct
+      // without it, and leaves NTZ for the future `datetime` type.
+      return 'TIMESTAMP_LTZ';
     }
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
-    return snowflakeToMalloyTypes[baseSqlType.trim().toLowerCase()];
+    const lowerType = baseSqlType.trim().toLowerCase();
+    const mapped = snowflakeToMalloyTypes[lowerType];
+    if (mapped) {
+      return mapped;
+    }
+
+    // Handle NUMBER/NUMERIC/DECIMAL with scale
+    // If scale > 0, it's a float (decimal). If scale == 0 or omitted, it's a bigint (integer).
+    if (['number', 'numeric', 'decimal', 'dec'].includes(lowerType)) {
+      const match = sqlType.match(/\(\s*\d+\s*,\s*(\d+)\s*\)/);
+      if (match) {
+        const scale = parseInt(match[1], 10);
+        if (scale > 0) {
+          return {type: 'number', numberType: 'float'};
+        }
+      }
+      // Default to bigint if scale is 0 or not specified (Snowflake defaults to NUMBER(38,0))
+      return {type: 'number', numberType: 'bigint'};
+    }
+
+    return {
+      type: 'sql native',
+      rawType: sqlType,
+    };
   }
 
   castToString(expression: string): string {
@@ -485,5 +611,25 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Square Brackets:      INT64[]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const rowVals: string[] = [];
+    for (const f of lit.typeDef.fields) {
+      const name = activeName(f);
+      const propVal =
+        safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal';
+      rowVals.push(`${this.sqlLiteralString(name)},${propVal}`);
+    }
+    return `OBJECT_CONSTRUCT_KEEP_NULL(${rowVals.join(',')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    const arraySchema = `[${array.join(',')}]`;
+    return arraySchema;
+    // return lit.typeDef.elementTypeDef.type === 'record_element'
+    //   ? `${arraySchema}::${this.malloyTypeToSQLType(lit.typeDef)}`
+    //   : arraySchema;
   }
 }

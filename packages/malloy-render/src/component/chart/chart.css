@@ -1,0 +1,89 @@
+.malloy-chart {
+  width: fit-content;
+  height: fit-content;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+.malloy-chart_debug_menu {
+  width: fit-content;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  color: #666;
+  padding: 2px;
+  border-radius: 4px;
+  background: white;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #eee;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.malloy-chart:hover .malloy-chart_debug_menu,
+.malloy-chart_debug_menu:hover {
+  display: flex;
+}
+
+.malloy-chart_debug_menu:hover {
+  color: black;
+  border-color: #246ae9;
+}
+
+.malloy-chart_debug_icon {
+  width: 16px;
+}
+
+.malloy-chart__titles-bar {
+  padding-inline: 8px;
+  padding-top: 8px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
+  grid-row: 1;
+}
+
+.malloy-chart__title {
+  font-weight: bold;
+}
+
+.malloy-chart__container {
+  grid-row: 2;
+  overflow: hidden;
+}
+
+/* Zero-row chart placeholder: fills the plot area (grid-row 2) so the chart
+   keeps its footprint, with a centered "No Data" label. */
+.malloy-chart__no-data {
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--malloy-render--table-gutter-color, #b0b0b0);
+  font-size: var(--malloy-render--table-font-size, 12px);
+}
+
+.malloy-chart .y_reference_lines_backdrop {
+  -webkit-mask-image: linear-gradient(
+    transparent 0%,
+    black 27.7%,
+    black 70%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    transparent 0%,
+    black 27.7%,
+    black 70%,
+    transparent 100%
+  );
+}

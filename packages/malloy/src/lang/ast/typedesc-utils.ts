@@ -1,0 +1,143 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import type {
+  AtomicTypeDef,
+  EvalSpace,
+  ExpressionType,
+  ExpressionValueType,
+  Parameter,
+  TypeDesc,
+} from '../../model';
+import {expressionIsScalar, TD} from '../../model';
+
+function mkTypeDesc(
+  // The problem is that record and array, as currently defined, require a dialect
+  // which isn't available. In retrospect the dialect shouldn't be in the type,
+  // it should only be in the field, which I wil do eventually.
+  dataType: Exclude<ExpressionValueType, 'record' | 'array' | 'turtle'>,
+  expressionType: ExpressionType = 'scalar',
+  evalSpace: EvalSpace = 'constant'
+): TypeDesc {
+  return {
+    type: dataType,
+    expressionType,
+    evalSpace,
+  };
+}
+
+export const nullT = mkTypeDesc('null');
+export const numberT = mkTypeDesc('number');
+export const stringT = mkTypeDesc('string');
+export const dateT = mkTypeDesc('date');
+export const timestampT = mkTypeDesc('timestamp');
+export const timestamptzT = mkTypeDesc('timestamptz');
+export const boolT = mkTypeDesc('boolean');
+export const errorT = mkTypeDesc('error');
+export const aggregateBoolT = mkTypeDesc('boolean', 'aggregate');
+export const anyAtomicT = [numberT, stringT, dateT, timestampT, boolT];
+
+/**
+ * Checks if a given type is in a list
+ * @param check The type to check (can be undefined)
+ * @param from List of types which are OK
+ */
+export function any(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
+  if (check) {
+    const found = from.find(okType => eq(okType, check));
+    return found !== undefined;
+  }
+  return false;
+}
+
+/**
+ * Checks if a possibly undefined candidate matches a type
+ * @param good The real type
+ * @param checkThis The possibly undefined candidate
+ */
+export function eq(good: TypeDesc, checkThis: TypeDesc | undefined): boolean {
+  return (
+    checkThis !== undefined &&
+    TD.eq(good, checkThis) &&
+    good.expressionType === checkThis.expressionType
+  );
+}
+
+/**
+ * Checks if a given type is in a list, ignoring aggregate
+ * @param check The type to check (can be undefined)
+ * @param from List of types which are OK
+ */
+export function typeIn(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
+  if (check) {
+    const found = from.find(okType => typeEq(okType, check));
+    return found !== undefined;
+  }
+  return false;
+}
+
+/**
+ * Checks if the base types, ignoring expressionType, are equal
+ * @param left Left type
+ * @param right Right type
+ * @param nullOk True if a NULL is an acceptable match
+ */
+export function typeEq(
+  left: TypeDesc,
+  right: TypeDesc,
+  nullOk = false,
+  errorOk = true
+): boolean {
+  const maybeEq = TD.eq(left, right);
+  const nullEq = nullOk && (left.type === 'null' || right.type === 'null');
+  const errorEq = errorOk && (left.type === 'error' || right.type === 'error');
+  return maybeEq || nullEq || errorEq;
+}
+
+/**
+ *
+ * For error messages, returns a comma seperated list of readable names
+ * for a list of types.
+ * @param types List of type or objects with types
+ */
+export function inspect(...types: (TypeDesc | undefined)[]): string {
+  const strings = types.map(type => {
+    if (type) {
+      let inspected: string = type.type;
+      if (!expressionIsScalar(type.expressionType)) {
+        inspected = `${type.expressionType} ${inspected}`;
+      }
+      return inspected;
+    }
+    return 'undefined';
+  });
+  return strings.join(',');
+}
+
+/**
+ * Used when using a TypeDesc or TypeDesc-like interface to
+ * create a field, don't copy the non type fields. Thin wrapper over
+ * `TD.atomicDef`; exists in `lang/` so callers can pass a `TypeDesc`
+ * (translator-side) without leaking that type into the model layer.
+ */
+export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
+  return TD.atomicDef(td);
+}
+
+export function parameterTypeDesc(
+  p: Parameter,
+  evalSpace: EvalSpace
+): TypeDesc {
+  const t = p.type;
+  const theType =
+    t === 'filter expression'
+      ? {type: t, filterType: p.filterType}
+      : atomicDef(p);
+  return {
+    ...theType,
+    expressionType: 'scalar',
+    evalSpace,
+  };
+}

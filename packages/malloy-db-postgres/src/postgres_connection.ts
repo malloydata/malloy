@@ -1,24 +1,6 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 // LTNOTE: we need this extension to be installed to correctly index
@@ -27,28 +9,77 @@
 //     create extension if not exists tsm_system_rows
 //
 
-import * as crypto from 'crypto';
-import {
+import type {
   Connection,
   ConnectionConfig,
-  FetchSchemaOptions,
   MalloyQueryData,
-  NamedStructDefs,
   PersistSQLResults,
   PooledConnection,
-  PostgresDialect,
   QueryData,
-  QueryDataRow,
+  QueryRecord,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  SQLBlock,
+  SQLSourceDef,
+  TableSourceDef,
   StreamingConnection,
   StructDef,
+  SQLSourceRequest,
 } from '@malloydata/malloy';
+import {
+  PostgresDialect,
+  mkArrayDef,
+  sqlKey,
+  makeDigest,
+  decodeDottedTablePath,
+} from '@malloydata/malloy';
+import {BaseConnection} from '@malloydata/malloy/connection';
+
 import {Client, Pool} from 'pg';
+import type {ClientBase, ClientConfig, FieldDef} from 'pg';
 import QueryStream from 'pg-query-stream';
-import {randomUUID} from 'crypto';
+
+/**
+ * Serializable TLS options for a Postgres connection, forwarded verbatim into
+ * pg's native `Object.assign(clientOptions, ssl)`. This is the subset that can
+ * live in a saved/registry connection config (all PEM strings + booleans).
+ *
+ * Semantics (these mirror pg / Node `tls`, NOT libpq):
+ * - `ssl: true` (or `rejectUnauthorized: true`, the default) → full
+ *   verification against the trust store, including hostname (verify-full).
+ * - `rejectUnauthorized: false` → encrypt but do NOT verify (libpq's
+ *   `sslmode=require` / `no-verify`); use only when you can't verify.
+ * - `ca` pins a trusted CA (PEM, or an array of PEMs).
+ *
+ * `servername` only takes effect when the connection `host` is an IP literal
+ * (e.g. `127.0.0.1`) — pg overwrites `servername` with `host` whenever `host`
+ * is a DNS name like `localhost`, so servername-based verification through a
+ * tunnel requires connecting via IP. When the certificate doesn't match the
+ * host pg connected to, pg throws; the connector annotates that error with
+ * this servername/host guidance.
+ *
+ * verify-ca against a cert with no matching SAN/CN (e.g. Cloud SQL legacy
+ * per-instance certs) needs `checkServerIdentity`, a function — not
+ * expressible here or in `type: 'json'` config. Pass the full pg `ssl`
+ * (`tls.ConnectionOptions`) via the config-reader constructor form
+ * (`new PostgresConnection(name, queryOptions, () => ({..., ssl}))`) for that
+ * case; the serializable options object is limited to this subset.
+ *
+ * `ssl` is passed through literally — `type: 'json'` config is never
+ * reference-resolved (a malloy security invariant), so secret `key`/
+ * `passphrase` material cannot be pulled from an `{env:...}`/overlay
+ * reference. Inject secrets programmatically at construction; never persist
+ * them in a shared connection config. Secrets are never logged.
+ */
+export type PostgresSSLConfig = {
+  ca?: string | string[];
+  cert?: string;
+  key?: string;
+  passphrase?: string;
+  crl?: string | string[];
+  servername?: string;
+  rejectUnauthorized?: boolean;
+};
 
 interface PostgresConnectionConfiguration {
   host?: string;
@@ -57,6 +88,28 @@ interface PostgresConnectionConfiguration {
   password?: string;
   databaseName?: string;
   connectionString?: string;
+  setupSQL?: string;
+  // Programmatic callers get pg's full ssl surface (incl. `checkServerIdentity`
+  // for verify-ca). Saved/registry config is limited to the serializable
+  // PostgresSSLConfig subset — see PostgresConnectionOptions.
+  ssl?: ClientConfig['ssl'];
+}
+
+interface InfoSchemaColumn {
+  columnName: string;
+  dataType: string; // c.data_type    (e.g. 'ARRAY', 'integer', 'USER-DEFINED')
+  elementType: string | null; // e.data_type    (or NULL for scalars)
+}
+
+/** internal shape of pg_type we care about */
+interface PgTypeRow {
+  oid: number;
+  typname: string;
+  typtype: string; // 'b'=base, 'd'=domain, 'e'=enum, 'c'=composite, 'r'=range, 'm'=multirange, 'p'=pseudo
+  typcategory: string; // 'A'=array
+  typelem: number; // element OID if array
+  typbasetype: number; // base OID if domain
+  formatted: string; // format_type(oid,NULL)
 }
 
 type PostgresConnectionConfigurationReader =
@@ -66,28 +119,83 @@ type PostgresConnectionConfigurationReader =
 const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
+// pg verifies the server certificate against the host it actually connects to,
+// not `ssl.servername` (which pg drops when the host is a DNS name). When that
+// check fails, pg throws a terse altname error; augment it with how to fix a
+// tunneled connection rather than trying to predict pg's host resolution up
+// front. Mutates and returns the original error so its type and stack survive.
+function addTlsHint(err: unknown): unknown {
+  if (!(err instanceof Error)) return err;
+  const code = (err as {code?: unknown}).code;
+  const isCertHostMismatch =
+    code === 'ERR_TLS_CERT_ALTNAME_INVALID' ||
+    (/certificate/i.test(err.message) &&
+      /altname|does not match/i.test(err.message));
+  if (isCertHostMismatch) {
+    err.message +=
+      "\n[malloy-db-postgres] The server certificate does not match the host pg connected to. pg verifies against the connection host, not ssl.servername, unless the host is an IP. For a tunnel, connect via the DB's IP (e.g. host '127.0.0.1') and set ssl.servername to the real hostname; or omit ssl.servername to verify against the host directly.";
+  }
+  return err;
+}
+
+// Closes an unpooled client without making the caller wait for it. In pg 8.7.3,
+// end() resolves on the connection's next 'end' event and never checks whether
+// one already fired, so after the socket has closed on its own (the server or
+// the network dropped it) an awaited end() never returns.
+function closeClient(client: Client): void {
+  client.end().catch(() => {});
+}
+
+// Fails a row stream when the connection under it drops. pg-query-stream 4.2.3
+// tears a failed stream down by closing its cursor, which waits for a server
+// reply that a dead connection never sends, so without this the stream neither
+// ends nor errors. Returns a function that detaches the listener; call it before
+// the client is closed or released.
+function failStreamOnClientError(
+  client: ClientBase,
+  stream: QueryStream
+): () => void {
+  const onError = (err: Error) => stream.emit('error', err);
+  client.on('error', onError);
+  return () => client.removeListener('error', onError);
+}
+
+/**
+ * Decode a canonical Postgres dotted-table path into its underlying
+ * identifier strings as they appear in `information_schema`. The schema
+ * lookup is a string-literal comparison, not an identifier reference,
+ * so Postgres's bare-name lowercase folding doesn't happen for us — we
+ * apply it here: bare segments → lowercase, `"…"` segments → as-is.
+ */
+function decodeDottedSegments(input: string): string[] | undefined {
+  const result = decodeDottedTablePath(input, {
+    quoteChar: '"',
+    escapeStyle: 'doubled',
+    bareIdentRegex: /^[A-Za-z_][A-Za-z0-9_$]*/,
+    dialectName: 'Postgres',
+  });
+  if (!result.ok) return undefined;
+  return result.segments.map(s => (s.quoted ? s.value : s.value.toLowerCase()));
+}
+
 export interface PostgresConnectionOptions
-  extends ConnectionConfig,
-    PostgresConnectionConfiguration {}
+  extends ConnectionConfig, Omit<PostgresConnectionConfiguration, 'ssl'> {
+  // Serializable subset only. Full pg TLS options (functions/Buffers) are not
+  // representable in `type: 'json'` config; pass them programmatically via the
+  // `PostgresConnectionConfiguration` (name/configReader) constructor form.
+  ssl?: boolean | PostgresSSLConfig;
+}
 
 export class PostgresConnection
+  extends BaseConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
   public readonly name: string;
+  protected setupSQL: string | undefined;
   private queryOptionsReader: QueryOptionsReader = {};
   private configReader: PostgresConnectionConfigurationReader = {};
 
   private readonly dialect = new PostgresDialect();
-  private schemaCache = new Map<
-    string,
-    | {schema: StructDef; error?: undefined; timestamp: number}
-    | {error: string; schema?: undefined; timestamp: number}
-  >();
-  private sqlSchemaCache = new Map<
-    string,
-    | {structDef: StructDef; error?: undefined; timestamp: number}
-    | {error: string; structDef?: undefined; timestamp: number}
-  >();
 
   constructor(
     options: PostgresConnectionOptions,
@@ -103,14 +211,16 @@ export class PostgresConnection
     queryOptionsReader?: QueryOptionsReader,
     configReader?: PostgresConnectionConfigurationReader
   ) {
+    super();
     if (typeof arg === 'string') {
       this.name = arg;
       if (configReader) {
         this.configReader = configReader;
       }
     } else {
-      const {name, ...configReader} = arg;
+      const {name, setupSQL, ...configReader} = arg;
       this.name = name;
+      this.setupSQL = setupSQL;
       this.configReader = configReader;
     }
     if (queryOptionsReader) {
@@ -150,237 +260,273 @@ export class PostgresConnection
     return true;
   }
 
+  public getDigest(): string {
+    // If configReader is an object (not a function), use its properties
+    if (typeof this.configReader !== 'function') {
+      const {host, port, username, databaseName, connectionString} =
+        this.configReader;
+      return makeDigest(
+        'postgres',
+        host,
+        port !== undefined ? String(port) : undefined,
+        username,
+        databaseName,
+        connectionString,
+        this.setupSQL
+      );
+    }
+    // Fall back to connection name if config is async
+    return makeDigest('postgres', this.name);
+  }
+
   public get supportsNesting(): boolean {
     return true;
   }
 
-  public async fetchSchemaForTables(
-    missing: Record<string, string>,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: {[name: string]: string} = {};
-
-    for (const tableKey in missing) {
-      let inCache = this.schemaCache.get(tableKey);
-      if (
-        !inCache ||
-        (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-      ) {
-        const tablePath = missing[tableKey];
-        const timestamp = refreshTimestamp || Date.now();
-        try {
-          inCache = {
-            schema: await this.getTableSchema(tableKey, tablePath),
-            timestamp,
-          };
-          this.schemaCache.set(tableKey, inCache);
-        } catch (error) {
-          inCache = {error: error.message, timestamp};
-        }
-      }
-      if (inCache.schema !== undefined) {
-        schemas[tableKey] = inCache.schema;
-      } else {
-        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
-      }
-    }
-    return {schemas, errors};
+  protected buildClientConfig(
+    cfg: PostgresConnectionConfiguration
+  ): ClientConfig {
+    return {
+      user: cfg.username,
+      password: cfg.password,
+      database: cfg.databaseName,
+      port: cfg.port,
+      host: cfg.host,
+      connectionString: cfg.connectionString,
+      ssl: cfg.ssl,
+    };
   }
 
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  > {
-    const key = sqlRef.name;
-    let inCache = this.sqlSchemaCache.get(key);
-    if (
-      !inCache ||
-      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-    ) {
-      const timestamp = refreshTimestamp ?? Date.now();
-      try {
-        inCache = {
-          structDef: await this.getSQLBlockSchema(sqlRef),
-          timestamp,
-        };
-      } catch (error) {
-        inCache = {error: error.message, timestamp};
-      }
-      this.sqlSchemaCache.set(key, inCache);
+  // Runs a connect/query op, annotating pg's terse certificate-mismatch error
+  // with actionable TLS guidance (see addTlsHint).
+  protected async withTlsHint<T>(op: () => Promise<T>): Promise<T> {
+    try {
+      return await op();
+    } catch (e) {
+      throw addTlsHint(e);
     }
-    return inCache;
   }
 
   protected async getClient(): Promise<Client> {
-    const {
-      username: user,
-      password,
-      databaseName: database,
-      port,
-      host,
-      connectionString,
-    } = await this.readConfig();
-    return new Client({
-      user,
-      password,
-      database,
-      port,
-      host,
-      connectionString,
-    });
+    const client = new Client(this.buildClientConfig(await this.readConfig()));
+    // When the socket drops, pg emits 'error' on the client whether or not a
+    // query is running. A running query fails on its own (a row stream through
+    // failStreamOnClientError); without this listener the event itself would
+    // be an uncaught exception.
+    client.on('error', () => {});
+    return client;
   }
 
   protected async runPostgresQuery(
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJSON: boolean
+    deJSON: boolean,
+    values?: unknown[]
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
-    await client.connect();
-    await this.connectionSetup(client);
+    try {
+      await this.withTlsHint(() => client.connect());
+      await this.connectionSetup(client);
 
-    let result = await client.query(sqlCommand);
-    if (Array.isArray(result)) {
-      result = result.pop();
-    }
-    if (deJSON) {
-      for (let i = 0; i < result.rows.length; i++) {
-        result.rows[i] = result.rows[i].row;
+      let result = await client.query(sqlCommand, values);
+      if (Array.isArray(result)) {
+        result = result.pop();
       }
+      if (deJSON) {
+        for (let i = 0; i < result.rows.length; i++) {
+          result.rows[i] = result.rows[i].row;
+        }
+      }
+      return {
+        rows: result.rows as QueryData,
+        totalRows: result.rows.length,
+      };
+    } finally {
+      closeClient(client);
     }
-    await client.end();
-    return {
-      rows: result.rows as QueryData,
-      totalRows: result.rows.length,
-    };
   }
 
-  private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
-    const structDef: StructDef = {
-      type: 'struct',
-      dialect: 'postgres',
-      name: sqlRef.name,
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock: sqlRef,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
+  async fetchSelectSchema(
+    sqlRef: SQLSourceRequest
+  ): Promise<SQLSourceDef | string> {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
       fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
-
-    const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
-    const infoQuery = `
-      drop table if exists ${tempTableName};
-      create temp table ${tempTableName} as SELECT * FROM (
-        ${sqlRef.selectStr}
-      ) as x where false;
-      SELECT column_name, c.data_type, e.data_type as element_type
-      FROM information_schema.columns c LEFT JOIN information_schema.element_types e
-        ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
-          = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
-      where table_name='${tempTableName}';
-    `;
+    const client = await this.getClient();
     try {
-      await this.schemaFromQuery(infoQuery, structDef);
-    } catch (error) {
-      throw new Error(`Error fetching schema for ${sqlRef.name}: ${error}`);
+      await this.withTlsHint(() => client.connect());
+      await this.connectionSetup(client);
+      // 1) Get row-descriptor without fetching data
+      const res = await client.query({
+        text: `SELECT * FROM (${sqlRef.selectStr}) _t LIMIT 0`,
+      });
+
+      // 2) Resolve every OID we might touch (field, array element, domain base)
+      const neededOids = new Set<number>();
+
+      res.fields.forEach(f => neededOids.add(f.dataTypeID));
+      // we'll add more OIDs later (typelem / typebasetype) lazily
+
+      // helper to fetch pg_type rows on demand, with cache
+      const pgTypeCache = new Map<number, PgTypeRow>();
+
+      const loadTypes = async (oids: number[]) => {
+        if (oids.length === 0) return;
+        const params = oids.map((_, i) => `$${i + 1}`).join(',');
+        const {rows} = await client.query<PgTypeRow>(
+          `
+      SELECT
+        oid,
+        typname,
+        typtype,
+        typcategory,
+        typelem,
+        typbasetype,
+        format_type(oid, NULL) AS formatted
+      FROM pg_type
+      WHERE oid IN (${params})
+      `,
+          oids
+        );
+        rows.forEach(r => pgTypeCache.set(r.oid, r));
+      };
+
+      // Prime the cache
+      await loadTypes([...neededOids]);
+
+      // 3) recursive mapper → info-schema compliant strings
+      const mapDataType = async (oid: number): Promise<string> => {
+        let t = pgTypeCache.get(oid);
+        if (!t) {
+          await loadTypes([oid]);
+          t = pgTypeCache.get(oid)!;
+        }
+
+        // ARRAY?
+        if (t.typcategory === 'A') return 'ARRAY';
+
+        // DOMAIN?  recurse to its base type
+        if (t.typtype === 'd') return mapDataType(t.typbasetype);
+
+        // ENUM, COMPOSITE, RANGE, MULTIRANGE, PSEUDO  → USER-DEFINED
+        if (['e', 'c', 'r', 'm', 'p'].includes(t.typtype))
+          return 'USER-DEFINED';
+
+        // built-in scalar or base type of domain
+        return t.formatted;
+      };
+
+      // helper to resolve element_type (NULL for scalars)
+      const mapElementType = async (oid: number): Promise<string | null> => {
+        let t = pgTypeCache.get(oid);
+        if (!t) {
+          await loadTypes([oid]);
+          t = pgTypeCache.get(oid)!;
+        }
+        if (t.typcategory !== 'A') return null; // not an array
+
+        // Ensure element row cached
+        if (!pgTypeCache.has(t.typelem)) await loadTypes([t.typelem]);
+        return mapDataType(t.typelem);
+      };
+
+      // 4) Build final array in original column order
+      const result: InfoSchemaColumn[] = [];
+      for (const field of res.fields as FieldDef[]) {
+        result.push({
+          columnName: field.name,
+          dataType: await mapDataType(field.dataTypeID),
+          elementType: await mapElementType(field.dataTypeID),
+        });
+      }
+      for (const row of result) {
+        const postgresDataType = row.dataType;
+        const name = row.columnName;
+        if (postgresDataType === 'ARRAY') {
+          const elementType = this.dialect.sqlTypeToMalloyType(
+            row.elementType as string
+          );
+          structDef.fields.push(mkArrayDef(elementType, name));
+        } else {
+          const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
+          structDef.fields.push({...malloyType, name});
+        }
+      }
+    } finally {
+      closeClient(client);
     }
     return structDef;
   }
 
   private async schemaFromQuery(
     infoQuery: string,
-    structDef: StructDef
+    structDef: StructDef,
+    values?: unknown[]
   ): Promise<void> {
     const {rows, totalRows} = await this.runPostgresQuery(
       infoQuery,
       SCHEMA_PAGE_SIZE,
       0,
-      false
+      false,
+      values
     );
     if (!totalRows) {
       throw new Error('Unable to read schema.');
     }
     for (const row of rows) {
       const postgresDataType = row['data_type'] as string;
-      let s = structDef;
-      let malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
-      let name = row['column_name'] as string;
+      const name = row['column_name'] as string;
       if (postgresDataType === 'ARRAY') {
-        malloyType = this.dialect.sqlTypeToMalloyType(
+        const elementType = this.dialect.sqlTypeToMalloyType(
           row['element_type'] as string
         );
-        s = {
-          type: 'struct',
-          name: row['column_name'] as string,
-          dialect: this.dialectName,
-          structRelationship: {
-            type: 'nested',
-            fieldName: name,
-            isArray: true,
-          },
-          structSource: {type: 'nested'},
-          fields: [],
-        };
-        structDef.fields.push(s);
-        name = 'value';
-      }
-      if (malloyType) {
-        s.fields.push({...malloyType, name});
+        structDef.fields.push(mkArrayDef(elementType, name));
       } else {
-        s.fields.push({
-          type: 'unsupported',
-          rawType: postgresDataType.toLowerCase(),
-          name,
-        });
+        const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
+        structDef.fields.push({...malloyType, name});
       }
     }
   }
 
-  private async getTableSchema(
+  async fetchTableSchema(
     tableKey: string,
     tablePath: string
-  ): Promise<StructDef> {
+  ): Promise<TableSourceDef | string> {
     const structDef: StructDef = {
-      type: 'struct',
+      type: 'table',
       name: tableKey,
       dialect: 'postgres',
-      structSource: {type: 'table', tablePath},
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
+      tablePath,
+      connection: this.name,
       fields: [],
     };
-    const [schema, table] = tablePath.split('.');
-    if (table === undefined) {
-      throw new Error('Default schema not yet supported in Postgres');
+    // tablePath is canonical SQL — bare segments (case-folded to lower by
+    // Postgres) or `"…"` quoted segments (case-preserving, `""` escape).
+    // The information_schema lookup needs the raw identifier strings, not
+    // the SQL surface form, so decode each segment.
+    const segments = decodeDottedSegments(tablePath);
+    if (segments === undefined || segments.length < 2) {
+      return 'Default schema not yet supported in Postgres';
     }
+    const [schema, table] = segments.slice(-2);
     const infoQuery = `
       SELECT column_name, c.data_type, e.data_type as element_type
       FROM information_schema.columns c LEFT JOIN information_schema.element_types e
         ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
           = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
-        WHERE table_name = '${table}'
-          AND table_schema = '${schema}'
+        WHERE table_name = $1
+          AND table_schema = $2
     `;
 
     try {
-      await this.schemaFromQuery(infoQuery, structDef);
+      await this.schemaFromQuery(infoQuery, structDef, [table, schema]);
     } catch (error) {
-      throw new Error(`Error fetching schema for ${tablePath}: ${error}`);
+      return `Error fetching schema for ${tablePath}: ${error.message}`;
     }
     return structDef;
   }
@@ -391,18 +537,26 @@ export class PostgresConnection
 
   public async connectionSetup(client: Client): Promise<void> {
     await client.query("SET TIME ZONE 'UTC'");
+    if (this.setupSQL) {
+      for (const stmt of this.setupSQL.split(';\n')) {
+        const trimmed = stmt.trim();
+        if (trimmed) {
+          await client.query(trimmed);
+        }
+      }
+    }
   }
 
   public async runSQL(
     sql: string,
-    {rowLimit}: RunSQLOptions = {},
+    options: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
     return this.runPostgresQuery(
-      sql,
-      rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
+      this.sqlWithQueryMetadata(sql, options.queryMetadata),
+      options.rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
@@ -410,25 +564,35 @@ export class PostgresConnection
 
   public async *runSQLStream(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
-    const query = new QueryStream(sqlCommand);
+    options: RunSQLOptions = {}
+  ): AsyncIterableIterator<QueryRecord> {
+    const {rowLimit, abortSignal} = options;
+    const query = new QueryStream(
+      this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
+    );
     const client = await this.getClient();
-    await client.connect();
-    const rowStream = client.query(query);
-    let index = 0;
-    for await (const row of rowStream) {
-      yield row.row as QueryDataRow;
-      index += 1;
-      if (
-        (rowLimit !== undefined && index >= rowLimit) ||
-        abortSignal?.aborted
-      ) {
-        query.destroy();
-        break;
+    let detach = () => {};
+    try {
+      await this.withTlsHint(() => client.connect());
+      await this.connectionSetup(client);
+      const rowStream = client.query(query);
+      detach = failStreamOnClientError(client, rowStream);
+      let index = 0;
+      for await (const row of rowStream) {
+        yield row.row as QueryRecord;
+        index += 1;
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
+          query.destroy();
+          break;
+        }
       }
+    } finally {
+      detach();
+      closeClient(client);
     }
-    await client.end();
   }
 
   public async estimateQueryCost(_: string): Promise<QueryRunStats> {
@@ -436,8 +600,8 @@ export class PostgresConnection
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
-    const tableName = `tt${hash}`;
+    const hash = makeDigest(sqlCommand);
+    const tableName = `tt${hash.slice(0, this.dialect.maxIdentifierLength - 2)}`;
 
     const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
     // console.log(cmd);
@@ -477,7 +641,7 @@ export class PooledPostgresConnection
     }
   }
 
-  public isPool(): true {
+  public isPool(): this is PooledConnection {
     return true;
   }
 
@@ -487,23 +651,23 @@ export class PooledPostgresConnection
 
   async getPool(): Promise<Pool> {
     if (!this._pool) {
-      const {
-        username: user,
-        password,
-        databaseName: database,
-        port,
-        host,
-        connectionString,
-      } = await this.readConfig();
-      this._pool = new Pool({
-        user,
-        password,
-        database,
-        port,
-        host,
-        connectionString,
+      this._pool = new Pool(this.buildClientConfig(await this.readConfig()));
+      // An idle client whose socket drops reaches the pool as an 'error' event.
+      // pg-pool has already removed the dead client by then, and there is no
+      // caller to report to, so there is nothing to act on; without a listener
+      // the event would be an uncaught exception.
+      this._pool.on('error', () => {});
+      this._pool.on('acquire', client => {
+        client.query("SET TIME ZONE 'UTC'");
+        if (this.setupSQL) {
+          for (const stmt of this.setupSQL.split(';\n')) {
+            const trimmed = stmt.trim();
+            if (trimmed) {
+              client.query(trimmed);
+            }
+          }
+        }
       });
-      this._pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
     }
     return this._pool;
   }
@@ -512,10 +676,11 @@ export class PooledPostgresConnection
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJSON: boolean
+    deJSON: boolean,
+    values?: unknown[]
   ): Promise<MalloyQueryData> {
     const pool = await this.getPool();
-    let result = await pool.query(sqlCommand);
+    let result = await this.withTlsHint(() => pool.query(sqlCommand, values));
 
     if (Array.isArray(result)) {
       result = result.pop();
@@ -533,29 +698,58 @@ export class PooledPostgresConnection
 
   public async *runSQLStream(
     sqlCommand: string,
-    {rowLimit, abortSignal}: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
-    const query = new QueryStream(sqlCommand);
+    options: RunSQLOptions = {}
+  ): AsyncIterableIterator<QueryRecord> {
+    const {rowLimit, abortSignal} = options;
+    const query = new QueryStream(
+      this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
+    );
     let index = 0;
     // This is a strange hack... `this.pool.query(query)` seems to return the wrong
     // type. Because `query` is a `QueryStream`, the result is supposed to be a
     // `QueryStream` as well, but it's not. So instead, we get a client and call
     // `client.query(query)`, which does what it's supposed to.
     const pool = await this.getPool();
-    const client = await pool.connect();
-    const resultStream: QueryStream = client.query(query);
-    for await (const row of resultStream) {
-      yield row.row as QueryDataRow;
-      index += 1;
-      if (
-        (rowLimit !== undefined && index >= rowLimit) ||
-        abortSignal?.aborted
-      ) {
-        query.destroy();
-        break;
+    const client = await this.withTlsHint(() => pool.connect());
+    // pg-pool takes its own 'error' listener off a client while it is checked
+    // out, so this listener is also what keeps a dropped connection from
+    // surfacing as an uncaught exception.
+    const detach = failStreamOnClientError(client, query);
+    let drained = false;
+    try {
+      const resultStream: QueryStream = client.query(query);
+      for await (const row of resultStream) {
+        yield row.row as QueryRecord;
+        index += 1;
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
+          // The rows of a result that fits in one batch arrive with its end.
+          // Once pg-cursor 2.7.3 has that end its state is 'done': no fetch is
+          // in flight and closing it sends nothing, so the client can be reused.
+          drained = query.cursor.state === 'done';
+          query.destroy();
+          return;
+        }
       }
+      drained = true;
+    } finally {
+      // release(), not end(): this client came from pool.connect(), so it goes
+      // back to the pool rather than closing its session. Nothing else returns
+      // it on a throw or an early consumer exit, and a client that is never
+      // released holds one of the pool's `max` slots for good.
+      //
+      // A stream that stopped before its end can leave a fetch in flight on
+      // the client, so it is released with an error, which makes the pool
+      // discard it instead of handing the next caller a client mid-query.
+      detach();
+      client.release(
+        drained
+          ? undefined
+          : new Error('row stream stopped before reading all its rows')
+      );
     }
-    client.release();
   }
 
   async close(): Promise<void> {

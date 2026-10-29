@@ -1,0 +1,126 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import type {JSXElement} from 'solid-js';
+import {renderLink} from '@/component/render-link';
+import MalloyTable from '@/component/table/table';
+import {renderList} from '@/component/render-list';
+import {renderImage} from '@/component/render-image';
+import {Dashboard} from '@/component/dashboard/dashboard';
+import {NULL_SYMBOL} from '@/util';
+import type {RendererProps} from '@/component/types';
+import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
+import {renderCellValue} from '@/component/cell-utils';
+import type {CellFormatConfig} from '@/component/tag-configs';
+import {ErrorMessage} from '@/component/error-message/error-message';
+
+export function applyRenderer(props: RendererProps) {
+  const {dataColumn, customProps = {}} = props;
+  const field = props.dataColumn.field;
+
+  const renderAs = field.renderAs();
+
+  // Check for plugins first
+  const plugin = field.getPlugins().at(0);
+  if (plugin) {
+    return {
+      renderAs,
+      renderValue: (
+        <PluginRenderContainer
+          plugin={plugin}
+          renderProps={{
+            dataColumn,
+            field,
+            customProps,
+          }}
+        />
+      ),
+    };
+  }
+
+  // Fallback to existing renderer logic
+  let renderValue: JSXElement = '';
+  const propsToPass = customProps[renderAs] || {};
+  if (dataColumn.isNull()) {
+    renderValue = NULL_SYMBOL;
+  } else {
+    switch (renderAs) {
+      case 'cell': {
+        if (dataColumn.isArray()) {
+          // Plain array (e.g., string[], number[]) - render as comma-separated values
+          // Use the array field's pre-resolved config for formatting (currency, percent, etc.)
+          const arrayConfig = field.getTagConfig<CellFormatConfig>();
+          const renderedElements = dataColumn.values.map(elementCell =>
+            renderCellValue(elementCell, {config: arrayConfig})
+          );
+          renderValue = renderedElements.join(', ');
+        } else {
+          renderValue = renderCellValue(dataColumn);
+        }
+        break;
+      }
+      case 'link': {
+        // renderAs will only return link for AtomicFields. TODO: add additional typeguard here?
+        renderValue = renderLink(field, dataColumn);
+        break;
+      }
+      case 'list': {
+        // TODO: typeguard here?
+        renderValue = renderList(props);
+        break;
+      }
+      case 'image': {
+        renderValue = renderImage(props);
+        break;
+      }
+      case 'dashboard': {
+        if (dataColumn.isRecordOrRepeatedRecord())
+          renderValue = <Dashboard data={dataColumn} {...propsToPass} />;
+        else
+          throw new Error(
+            `Malloy render: wrong data type passed to the dashboard renderer for field ${field.name}`
+          );
+        break;
+      }
+      case 'table': {
+        if (dataColumn.isRecordOrRepeatedRecord()) {
+          renderValue = <MalloyTable data={dataColumn} {...propsToPass} />;
+        } else {
+          throw new Error(
+            `Malloy render: wrong data type passed to the table renderer for field ${field.name}`
+          );
+        }
+        break;
+      }
+      default: {
+        // A renderer tag resolved but no plugin/built-in handled the field.
+        const validationErrors = field.getValidationErrors();
+        const value = dataColumn.value;
+        if (validationErrors.length > 0) {
+          // The validator flagged this field (e.g. a misconfigured # big_value):
+          // show the specific reason rather than stringifying to '[object Object]'.
+          renderValue = <ErrorMessage message={validationErrors.join(' ')} />;
+        } else if (
+          renderAs === 'none' ||
+          value === null ||
+          typeof value !== 'object'
+        ) {
+          // 'none' (a record a parent renderer consumes, e.g. a chart child) and
+          // scalars keep the existing string fallback.
+          renderValue = String(value);
+        } else {
+          // A structured value with no renderer would stringify to
+          // '[object Object]'; surface it inline (not thrown).
+          renderValue = (
+            <ErrorMessage
+              message={`Malloy render: no renderer handled '${renderAs}' on field '${field.name}'. Check that the renderer tag is supported and applies to this field's shape.`}
+            />
+          );
+        }
+      }
+    }
+  }
+  return {renderAs, renderValue};
+}

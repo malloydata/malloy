@@ -1,50 +1,40 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {indent} from '../../model/utils';
-import {
-  DateUnit,
-  Expr,
-  ExtractUnit,
+import type {
   Sampling,
-  TimeFieldType,
-  TimeValue,
+  AtomicTypeDef,
+  TypecastExpr,
+  MeasureTimeExpr,
+  BasicAtomicTypeDef,
+  RecordLiteralNode,
+  ArrayLiteralNode,
   TimestampUnit,
-  TypecastFragment,
+  ExtractUnit,
+} from '../../model/malloy_types';
+import {
+  isRepeatedRecord,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
-  FieldAtomicTypeDef,
+  TD,
 } from '../../model/malloy_types';
-import {POSTGRES_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
-
-const pgExtractionMap: Record<string, string> = {
-  'day_of_week': 'dow',
-  'day_of_year': 'doy',
-};
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import {
+  turtleGroupSetCondition,
+  type CompiledOrderBy,
+  type DialectFieldList,
+  type FieldReferenceType,
+  type QueryInfo,
+  type CivilTime,
+} from '../dialect';
+import {PostgresBase, timeExtractMap} from '../pg_impl';
+import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
+import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 const pgMakeIntervalMap: Record<string, string> = {
   'year': 'years',
@@ -64,18 +54,20 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+// TODO there needs be an audit of this data structure
+const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
   'text': {type: 'string'},
   'date': {type: 'date'},
   'integer': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'bigint'},
   'double precision': {type: 'number', numberType: 'float'},
-  'timestamp without time zone': {type: 'timestamp'}, // maybe not
+  'timestamp without time zone': {type: 'timestamp'},
+  'timestamp with time zone': {type: 'timestamptz'},
+  'timestamptz': {type: 'timestamptz'},
   'oid': {type: 'string'},
   'boolean': {type: 'boolean'},
-  // ARRAY: "string",
   'timestamp': {type: 'timestamp'},
   '"char"': {type: 'string'},
   'character': {type: 'string'},
@@ -91,14 +83,14 @@ const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'varchar': {type: 'string'},
 };
 
-export class PostgresDialect extends Dialect {
+export class PostgresDialect extends PostgresBase {
   name = 'postgres';
   defaultNumberType = 'DOUBLE PRECISION';
   defaultDecimalType = 'NUMERIC';
   udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
@@ -107,16 +99,18 @@ export class PostgresDialect extends Dialect {
   supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
-  globalFunctions = POSTGRES_FUNCTIONS;
   supportsNesting = true;
+  supportsNestedProjectionLimit = true;
+  experimental = false;
   readsNestedData = false;
+  supportsComplexFilteredSources = false;
+  compoundObjectInSchema = false;
+  likeEscape = false;
+  maxIdentifierLength = 63;
 
-  quoteTablePath(tablePath: string): string {
-    return tablePath
-      .split('.')
-      .map(part => `"${part}"`)
-      .join('.');
-  }
+  // Postgres bare-identifier continuation allows `$` (verified against
+  // the live engine: `postgres.table('foo$bar')` resolves successfully).
+  override tablePathBareIdentRegex = /^[A-Za-z_][A-Za-z0-9_$]*/;
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN GENERATE_SERIES(0,${groupSetCount},1) as group_set`;
@@ -131,31 +125,33 @@ export class PostgresDialect extends Dialect {
       .map(
         f =>
           `\n  ${f.sqlExpression}${
-            f.type === 'number' ? `::${this.defaultNumberType}` : ''
-          } as ${f.sqlOutputName}`
-        //`${f.sqlExpression} ${f.type} as ${f.sqlOutputName}`
+            f.typeDef.type === 'number' ? `::${this.defaultNumberType}` : ''
+          } as ${this.sqlQuoteIdentifier(f.rawName)}`
       )
       .join(', ');
   }
 
   sqlAggregateTurtle(
-    groupSet: number,
+    groupSet: number | undefined,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: CompiledOrderBy[] | undefined,
+    limit?: number,
+    filterSQL?: string
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += `[1:${limit}]`;
-    }
     const fields = this.mapFields(fieldList);
-    // return `(ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}`;
-    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}),'[]'::JSONB)`;
+    const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const filterClause = cond ? ` FILTER (WHERE ${cond})` : '';
+    const arrayAgg = `(ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderByClause} )${filterClause})`;
+    // Slice the native ARRAY (1-based, inclusive) before TO_JSONB turns it into
+    // a single jsonb value — a jsonb scalar can't be range-sliced.
+    const limited = limit !== undefined ? `${arrayAgg}[1:${limit}]` : arrayAgg;
+    return `COALESCE(TO_JSONB(${limited}),'[]'::JSONB)`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlExpression} as ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
   }
@@ -176,41 +172,6 @@ export class PostgresDialect extends Dialect {
     return `TO_JSONB((ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x)) FILTER (WHERE group_set=${groupSet}))[1])`;
   }
 
-  // UNNEST((select ARRAY((SELECT ROW(gen_random_uuid()::text, state, airport_count) FROM UNNEST(base.by_state) as by_state(state text, airport_count numeric, by_fac_type record[]))))) as by_state(__distinct_key text, state text, airport_count numeric)
-
-  // sqlUnnestAlias(
-  //   source: string,
-  //   alias: string,
-  //   fieldList: DialectFieldList,
-  //   needDistinctKey: boolean
-  // ): string {
-  //   const fields = [];
-  //   for (const f of fieldList) {
-  //     let t = undefined;
-  //     switch (f.type) {
-  //       case "string":
-  //         t = "text";
-  //         break;
-  //       case "number":
-  //         t = this.defaultNumberType;
-  //         break;
-  //       case "struct":
-  //         t = "record[]";
-  //         break;
-  //     }
-  //     fields.push(`${f.sqlOutputName} ${t || f.type}`);
-  //   }
-  //   if (needDistinctKey) {
-  //     return `UNNEST((select ARRAY((SELECT ROW(gen_random_uuid()::text, ${fieldList
-  //       .map((f) => f.sqlOutputName)
-  //       .join(", ")}) FROM UNNEST(${source}) as ${alias}(${fields.join(
-  //       ", "
-  //     )}))))) as ${alias}(__distinct_key text, ${fields.join(", ")})`;
-  //   } else {
-  //     return `UNNEST(${source}) as ${alias}(${fields.join(", ")})`;
-  //   }
-  // }
-
   sqlUnnestAlias(
     source: string,
     alias: string,
@@ -221,9 +182,9 @@ export class PostgresDialect extends Dialect {
   ): string {
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
       } else {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
       }
     } else if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
@@ -243,27 +204,35 @@ export class PostgresDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string {
-    let ret = `(${alias}->>'${fieldName}')`;
-    if (isNested) {
-      switch (fieldType) {
+    if (childName === '__row_id') {
+      return `(${parentAlias}->>'__row_id')`;
+    }
+    if (parentType !== 'table') {
+      const nameLit = this.sqlLiteralString(childName);
+      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},${nameLit})`;
+      switch (childType) {
         case 'string':
           break;
         case 'number':
           ret = `${ret}::double precision`;
           break;
         case 'struct':
-          ret = `${ret}::jsonb`;
+        case 'array':
+        case 'record':
+        case 'array[record]':
+        case 'sql native':
+          ret = `JSONB_EXTRACT_PATH(${parentAlias},${nameLit})`;
           break;
       }
       return ret;
     } else {
-      return `${alias}."${fieldName}"`;
+      const child = this.sqlQuoteIdentifier(childName);
+      return `${parentAlias}.${child}`;
     }
   }
 
@@ -284,8 +253,9 @@ export class PostgresDialect extends Dialect {
     )}\n$$ LANGUAGE SQL;\n`;
   }
 
+  //
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
+    return `SELECT JSONB_AGG(${lastStageName}) FROM ${lastStageName}\n`;
   }
 
   sqlFinalStage(lastStageName: string, _fields: string[]): string {
@@ -295,10 +265,6 @@ export class PostgresDialect extends Dialect {
   sqlSelectAliasAsStruct(alias: string): string {
     return `ROW(${alias})`;
   }
-  // TODO
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return `"${identifier}"`;
-  }
 
   // The simple way to do this is to add a comment on the table
   //  with the expiration time. https://www.postgresql.org/docs/current/sql-comment.html
@@ -307,126 +273,111 @@ export class PostgresDialect extends Dialect {
     throw new Error('Not implemented Yet');
   }
 
-  sqlNow(): Expr {
-    return mkExpr`LOCALTIMESTAMP`;
-  }
-
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
-    // adjusting for monday/sunday weeks
-    const week = units === 'week';
-    const truncThis = week
-      ? mkExpr`${sqlTime.value} + INTERVAL '1' DAY`
-      : sqlTime.value;
-    if (sqlTime.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        const civilSource = mkExpr`(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-        let civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
-        // MTOY todo ... only need to do this if this is a date ...
-        civilTrunc = mkExpr`${civilTrunc}::TIMESTAMP`;
-        const truncTsTz = mkExpr`${civilTrunc} AT TIME ZONE '${tz}'`;
-        return mkExpr`(${truncTsTz})::TIMESTAMP`;
-      }
-    }
-    let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    if (week) {
-      result = mkExpr`(${result} - INTERVAL '1' DAY)`;
-    }
-    return result;
-  }
-
-  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
-    const pgUnits = pgExtractionMap[units] || units;
-    let extractFrom = from.value;
-    if (from.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = mkExpr`(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-      }
-    }
-    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
-    return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
-  }
-
-  sqlAlterTime(
+  sqlOffsetTime(
+    expr: string,
     op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: DateUnit
-  ): Expr {
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = mkExpr`${n}*3`;
-    }
-    const interval = mkExpr`make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
-    return mkExpr`((${expr.value})${op}${interval})`;
-  }
-
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
-    const op = `${cast.srcType}::${cast.dstType}`;
-    const tz = qtz(qi);
-    if (op === 'timestamp::date' && tz) {
-      const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
-      return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
-    } else if (op === 'date::timestamp' && tz) {
-      return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
-    }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
-      if (cast.safe) {
-        throw new Error("Postgres dialect doesn't support Safe Cast");
-      }
-      const castFunc = 'CAST';
-      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
-    }
-    return cast.expr;
-  }
-
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    return mkExpr`(${expr} ~ ${regexp})`;
-  }
-
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone: string | undefined
+    magnitude: string,
+    unit: TimestampUnit,
+    _civilType: CivilTime
   ): string {
-    if (type === 'date') {
-      return `DATE '${timeString}'`;
+    // Convert quarter/week to supported units
+    let offsetUnit = unit;
+    let offsetMag = magnitude;
+    if (unit === 'quarter') {
+      offsetUnit = 'month';
+      offsetMag = `(${magnitude})*3`;
+    } else if (unit === 'week') {
+      offsetUnit = 'day';
+      offsetMag = `(${magnitude})*7`;
     }
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
-    }
-    return `TIMESTAMP '${timeString}'`;
+
+    // Map to make_interval parameter name
+    const intervalParam = pgMakeIntervalMap[offsetUnit];
+    const interval = `make_interval(${intervalParam}=>(${offsetMag})::integer)`;
+    return `(${expr} ${op} ${interval})`;
   }
 
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
-    let lVal = from.value;
-    let rVal = to.value;
-    if (inSeconds[units]) {
-      lVal = mkExpr`EXTRACT(EPOCH FROM ${lVal})`;
-      rVal = mkExpr`EXTRACT(EPOCH FROM ${rVal})`;
-      const duration = mkExpr`${rVal}-${lVal}`;
-      return units === 'second'
-        ? mkExpr`FLOOR(${duration})`
-        : mkExpr`FLOOR((${duration})/${inSeconds[units].toString()}.0)`;
+  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+    if (cast.safe) {
+      throw new Error("Postgres dialect doesn't support Safe Cast");
     }
-    throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
+    return super.sqlCast(qi, cast);
   }
+
+  sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
+    const from = df.kids.left;
+    const to = df.kids.right;
+    let lVal = from.sql;
+    let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(df.units)
+    ) {
+      const earlier = `LEAST(${lVal}, ${rVal})`;
+      const later = `GREATEST(${lVal}, ${rVal})`;
+      const age = `AGE(${later}, ${earlier})`;
+      const months = `(EXTRACT(YEAR FROM ${age}) * 12 + EXTRACT(MONTH FROM ${age}))`;
+      let measured: string;
+      if (df.units === 'week') {
+        measured = `TRUNC((${later} - ${earlier}) / 7.0)`;
+      } else if (df.units === 'month') {
+        measured = months;
+      } else if (df.units === 'quarter') {
+        measured = `TRUNC(${months} / 3.0)`;
+      } else {
+        measured = `EXTRACT(YEAR FROM ${age})`;
+      }
+      return `CASE
+        WHEN ${lVal} IS NULL OR ${rVal} IS NULL THEN NULL
+        WHEN ${rVal} >= ${lVal} THEN ${measured}
+        ELSE -(${measured})
+      END`;
+    }
+    if (inSeconds[df.units]) {
+      lVal = `EXTRACT(EPOCH FROM ${lVal})`;
+      rVal = `EXTRACT(EPOCH FROM ${rVal})`;
+      const duration = `${rVal}-${lVal}`;
+      return df.units === 'second'
+        ? `FLOOR(${duration})`
+        : `FLOOR((${duration})/${inSeconds[df.units].toString()}.0)`;
+    }
+    throw new Error(`Unknown or unhandled postgres time unit: ${df.units}`);
+  }
+
+  // This looks like a partial implementation of a method similar to how DuckDB
+  // does symmetric aggregates, which was abandoned. Leaving it in here for now
+  // in case the original author wants to pick it up again.
+  // sqlSumDistinct(key: string, value: string, funcName: string): string {
+  //   // return `sum_distinct(list({key:${key}, val: ${value}}))`;
+  //   return `(
+  //     SELECT ${funcName}((a::json->>'f2')::DOUBLE PRECISION) as value
+  //     FROM (
+  //       SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
+  //     ) a
+  //   )`;
+  // }
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    // return `sum_distinct(list({key:${key}, val: ${value}}))`;
-    return `(
-      SELECT ${funcName}((a::json->>'f2')::DOUBLE PRECISION) as value
-      FROM (
-        SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
-      ) a
-    )`;
+    const hashKey = this.sqlSumDistinctHashedKey(key);
+
+    // PostgreSQL requires CAST to NUMERIC before ROUND, which is different
+    // than the generic implementation of sqlSumDistinct, but is OK in
+    // PostgreSQL because NUMERIC has arbitrary precision.
+    // The sum stays NUMERIC so later stages and derived expressions see the
+    // exact value. A DOUBLE PRECISION cast would keep only ~16 digits. The
+    // ROUND(..., 9) leaves a scale of 9, which would show up in string
+    // conversions as trailing zeros; trim_scale removes it.
+    const roundedValue = `ROUND(CAST(COALESCE(${value}, 0) AS NUMERIC), 9)`;
+    const sumSQL = `SUM(DISTINCT ${roundedValue} + ${hashKey}) - SUM(DISTINCT ${hashKey})`;
+    const ret = `trim_scale(${sumSQL})`;
+
+    if (funcName === 'SUM') {
+      return ret;
+    } else if (funcName === 'AVG') {
+      return `trim_scale((${sumSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0))`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   // TODO this does not preserve the types of the arguments, meaning we have to hack
@@ -465,35 +416,48 @@ export class PostgresDialect extends Dialect {
     return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
-  sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(POSTGRES_MALLOY_STANDARD_OVERLOADS);
   }
 
-  sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(POSTGRES_DIALECT_FUNCTIONS);
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return POSTGRES_FUNCTIONS.get(name);
-  }
-
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'integer';
+      } else if (malloyType.numberType === 'bigint') {
+        return 'bigint';
       } else {
         return 'double precision';
       }
     } else if (malloyType.type === 'string') {
       return 'varchar';
+    } else if (malloyType.type === 'record') {
+      throw new Error('PostgreSQL does not support CAST to record type');
+    } else if (malloyType.type === 'array') {
+      if (isRepeatedRecord(malloyType)) {
+        throw new Error('PostgreSQL does not support CAST to array of records');
+      }
+      return `${this.malloyTypeToSQLType(malloyType.elementTypeDef)}[]`;
     }
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(rawSqlType: string): BasicAtomicTypeDef {
+    const sqlType = rawSqlType.toLowerCase();
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
-    return postgresToMalloyTypes[baseSqlType.trim().toLowerCase()];
+    return (
+      postgresToMalloyTypes[baseSqlType.trim().toLowerCase()] ?? {
+        type: 'sql native',
+        rawType: sqlType,
+      }
+    );
   }
 
   castToString(expression: string): string {
@@ -511,5 +475,29 @@ export class PostgresDialect extends Dialect {
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Square Brackets:      INT64[]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const props: string[] = [];
+    for (const [kName, kVal] of Object.entries(lit.kids)) {
+      props.push(`${this.sqlLiteralString(kName)},${kVal.sql}`);
+    }
+    return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
+  }
+
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    // PostgreSQL before 14 returns a double precision for EXTRACT, cast to integer
+    // since it is common to pass an extraction to mod ( like in fitler expressions )
+    const extracted = `EXTRACT(${timeExtractMap[units] || units} FROM ${expr})::integer`;
+    return units === 'day_of_week' ? `(${extracted}+1)` : `(${extracted})`;
   }
 }

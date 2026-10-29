@@ -1,8 +1,14 @@
 {
+  // vscode-jest-runner doesn't support jest's `projects` config.
+  // Map test files to simpler configs so the extension's run buttons appear.
+  "jestrunner.configPath": {
+    "**/*.spec.ts": "./jest.config.simple.ts"
+  },
   "files.trimFinalNewlines": true,
   "files.trimTrailingWhitespace": true,
   "files.exclude": {
     "**/node_modules": true,
+    "**/.claude": true,
     "**/*.tsbuildinfo": true
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -14,7 +20,7 @@
     "editor.insertSpaces": true,
     "editor.tabSize": 4
   },
-  "cSpell.words": ["antlr"],
+  "cSpell.words": ["antlr", "pretranslated"],
   "typescript.tsdk": "node_modules/typescript/lib",
   "task.allowAutomaticTasks": "on"
 }

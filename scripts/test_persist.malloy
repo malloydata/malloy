@@ -1,0 +1,33 @@
+// Test file for simple-builder.ts (source persistence)
+
+source: flights is duckdb.table('flights') extend {
+  measure: flight_count is count()
+}
+
+// Simple persist source - will get auto-generated table name
+#@ persist
+source: carrier_stats is flights -> {
+  group_by: carrier
+  aggregate: flight_count
+}
+
+// Persist source with explicit table name
+#@ persist name=origin_summary
+source: origin_stats is flights -> {
+  group_by: origin
+  aggregate: flight_count
+}
+
+// This persist source depends on carrier_stats
+#@ persist name=top_carriers
+source: top_carrier_list is carrier_stats -> {
+  select: *
+  order_by: flight_count desc
+  limit: 10
+}
+
+// sql_select persist source that interpolates carrier_stats
+#@ persist name=carrier_wrapper
+source: carrier_sql is duckdb.sql("""
+  SELECT * FROM %{ carrier_stats } WHERE flight_count > 100
+""")

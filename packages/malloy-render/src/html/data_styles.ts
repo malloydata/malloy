@@ -1,0 +1,252 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import type * as lite from 'vega-lite';
+import type {Config} from 'vega';
+
+export type DataStyles = {[fieldName: string]: RenderDef};
+export type ChartSize = 'small' | 'medium' | 'large';
+
+export type RenderDef =
+  | ({renderer?: undefined} & DataRenderOptions)
+  | ({renderer: 'table'} & TableRenderOptions)
+  | ({renderer: 'dashboard'} & DashboardRenderOptions)
+  | ({renderer: 'text'} & TextRenderOptions)
+  | ({renderer: 'currency'} & CurrencyRenderOptions)
+  | ({renderer: 'image'} & ImageRenderOptions)
+  | ({renderer: 'time'} & TimeRenderOptions)
+  | ({renderer: 'json'} & JSONRenderOptions)
+  | ({renderer: 'single_value'} & SingleValueRenderOptions)
+  | ({renderer: 'list'} & ListRenderOptions)
+  | ({renderer: 'list_detail'} & ListDetailRenderOptions)
+  | ({renderer: 'cartesian_chart'} & CartesianChartRenderOptions)
+  | ({renderer: 'bar_chart'} & BarChartRenderOptions)
+  | ({renderer: 'scatter_chart'} & ScatterChartRenderOptions)
+  | ({renderer: 'line_chart'} & LineChartRenderOptions)
+  | ({renderer: 'point_map'} & PointMapRenderOptions)
+  | ({renderer: 'segment_map'} & SegmentMapRenderOptions)
+  | ({renderer: 'shape_map'} & ShapeMapRenderOptions)
+  | ({renderer: 'number'} & NumberRenderOptions)
+  | ({renderer: 'percent'} & PercentRenderOptions)
+  | ({renderer: 'boolean'} & BooleanRenderOptions)
+  | ({renderer: 'sparkline'} & SparkLineRenderOptions)
+  | ({renderer: 'bytes'} & BytesRenderOptions)
+  | ({renderer: 'url'} & LinkRenderOptions)
+  | ({renderer: 'vega'} & VegaRenderOptions);
+
+export interface DataRenderOptions {
+  data?: {
+    color?: string;
+    label?: string;
+  };
+  sheet?: DataStyles;
+}
+
+export type StyleDefaults = {
+  size?: ChartSize;
+};
+
+export interface TableRenderOptions extends DataRenderOptions {
+  table?: {
+    pivot?: string | string[];
+  };
+}
+
+export interface DashboardRenderOptions extends DataRenderOptions {
+  dashboard?: Record<string, unknown>;
+}
+
+export interface TextRenderOptions extends DataRenderOptions {
+  text?: {
+    italic?: boolean;
+  };
+}
+
+export interface BytesRenderOptions extends TextRenderOptions {
+  bytes?: Record<string, unknown>;
+}
+
+export enum Currency {
+  Dollars = 'usd',
+  Euros = 'euro',
+  Pounds = 'pound',
+}
+
+// Scale options: k=thousands, m=millions, b=billions, t=trillions, q=quadrillions, auto=dynamic
+export type Scale = 'k' | 'm' | 'b' | 't' | 'q' | 'auto';
+
+// Suffix format options for controlling how scale suffixes are displayed
+export type SuffixFormat =
+  | 'letter' // K, M, B, T, Q (uppercase)
+  | 'lower' // k, m, b, t, q (lowercase) - default for shorthand
+  | 'word' // Thousand, Million, Billion, Trillion, Quadrillion
+  | 'short' // K, Mil, Bil, Tril, Quad
+  | 'finance' // M, MM, B, T, Q (financial convention)
+  | 'scientific' // ×10³, ×10⁶, ×10⁹, ×10¹², ×10¹⁵
+  | 'none'; // no suffix
+
+export interface CurrencyRenderOptions extends TextRenderOptions {
+  currency?: Currency;
+  scale?: Scale;
+  decimals?: number;
+  suffix?: SuffixFormat;
+}
+
+export interface TimeRenderOptions extends TextRenderOptions {
+  time?: Record<string, unknown>;
+}
+
+export interface NumberRenderOptions extends TextRenderOptions {
+  value_format?: string; // SSF format string (e.g., "#,##0.00") or 'big'/'auto' for auto-scaling
+  scale?: Scale; // k, m, b, t, q, auto
+  decimals?: number; // 0-4 decimal places
+  suffix?: SuffixFormat; // letter, lower, word, short, finance, scientific, none
+}
+
+export enum DataVolumeUnit {
+  Bytes = 'bytes',
+  Kilobytes = 'kb',
+  Megabytes = 'mb',
+  Gigabytes = 'gb',
+  Terabytes = 'tb',
+}
+
+export interface DataVolumeRenderOptions extends TextRenderOptions {
+  data_volume_unit?: DataVolumeUnit;
+}
+
+export enum DurationUnit {
+  Nanoseconds = 'nanoseconds',
+  Microseconds = 'microseconds',
+  Milliseconds = 'milliseconds',
+  Seconds = 'seconds',
+  Minutes = 'minutes',
+  Hours = 'hours',
+  Days = 'days',
+}
+
+export function isDurationUnit(unit: string): unit is DurationUnit {
+  return Object.values(DurationUnit).includes(unit as DurationUnit);
+}
+
+export interface DurationRenderOptions extends TextRenderOptions {
+  duration_unit?: DurationUnit;
+}
+
+export interface ImageRenderOptions extends TextRenderOptions {
+  border?: boolean;
+}
+
+export interface PercentRenderOptions extends TextRenderOptions {
+  percent?: Record<string, unknown>;
+}
+
+export interface BooleanRenderOptions extends TextRenderOptions {
+  boolean?: Record<string, unknown>;
+}
+
+export interface JSONRenderOptions extends DataRenderOptions {
+  json?: Record<string, unknown>;
+}
+
+export interface LinkRenderOptions extends DataRenderOptions {
+  link?: Record<string, unknown>;
+}
+
+export interface VegaRenderOptions extends DataRenderOptions {
+  spec?: lite.TopLevelSpec;
+  spec_name?: string;
+}
+
+export interface SingleValueRenderOptions extends DataRenderOptions {
+  single_value?: Record<string, unknown>;
+}
+
+export interface ListRenderOptions extends DataRenderOptions {
+  list?: {
+    separator?: string;
+    value?: string;
+  };
+}
+
+export interface ListDetailRenderOptions extends DataRenderOptions {
+  list?: {
+    separator?: string;
+    value?: string;
+    detail?: string;
+  };
+}
+
+export interface ChartRenderOptions extends DataRenderOptions {
+  size?: ChartSize;
+  chart?: {
+    color?: string;
+    shape?: string;
+  };
+  vegaConfigOverride?: Config;
+}
+
+export interface CartesianChartRenderOptions extends ChartRenderOptions {
+  chart?: {
+    x_axis?: string;
+
+    y_axis?: string;
+    color?: string;
+    shape?: string;
+    spark_line?: boolean;
+  };
+}
+
+export interface BarChartRenderOptions extends DataRenderOptions {
+  size?: ChartSize;
+}
+
+export interface BarSparkLineRenderOptions extends BarChartRenderOptions {
+  size?: ChartSize;
+}
+
+export interface ColumnSparkLineRenderOptions extends BarChartRenderOptions {
+  size?: ChartSize;
+}
+
+export interface ScatterChartRenderOptions extends CartesianChartRenderOptions {
+  scatter_chart?: Record<string, unknown>;
+}
+
+export interface LineChartRenderOptions extends CartesianChartRenderOptions {
+  line_chart?: Record<string, unknown>;
+}
+
+export interface SparkLineRenderOptions extends DataRenderOptions {
+  size?: ChartSize;
+}
+
+export interface PointMapRenderOptions extends ChartRenderOptions {
+  chart?: {
+    latitude?: string;
+    longitude?: string;
+    color?: string;
+    shape?: string;
+  };
+}
+
+export interface SegmentMapRenderOptions extends ChartRenderOptions {
+  chart?: {
+    latitude1?: string;
+    longitude1?: string;
+    latitude2?: string;
+    longitude2?: string;
+    color?: string;
+    shape?: string;
+  };
+}
+
+export interface ShapeMapRenderOptions extends ChartRenderOptions {
+  chart?: {
+    region?: string;
+    color?: string;
+    shape?: string;
+  };
+}

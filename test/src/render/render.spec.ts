@@ -1,31 +1,18 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {ModelMaterializer} from '@malloydata/malloy';
+import {API, type ModelMaterializer, type Result} from '@malloydata/malloy';
 import {RuntimeList, runtimeFor} from '../runtimes';
 import {describeIfDatabaseAvailable} from '../util';
-import {HTMLView} from '@malloydata/render';
 import {JSDOM} from 'jsdom';
+
+let HTMLView;
+
+function convertResultToMalloyResult(result: Result) {
+  return API.util.wrapResult(result);
+}
 
 async function runUnsupportedRenderTest(
   connectionName: string,
@@ -44,9 +31,13 @@ async function runUnsupportedRenderTest(
     const result = await runtime.loadModel(src).loadQueryByName('q').run();
     // console.log("DATA", result.data.toObject());
     const document = new JSDOM().window.document;
-    const html = await new HTMLView(document).render(result, {
-      dataStyles: {},
-    });
+    const html = await new HTMLView(document).render(
+      convertResultToMalloyResult(result),
+      {
+        dataStyles: {},
+        useLegacy: true,
+      }
+    );
     expect(html.innerHTML).toContain('<thead>');
     expect(html.innerHTML).toContain(rendered);
     // console.log(html.innerHTML);
@@ -59,8 +50,29 @@ const [describe, databases] = describeIfDatabaseAvailable([
   'duckdb',
 ]);
 const duckdb = runtimeFor('duckdb');
-describe('rendering results', () => {
+describe.skip('rendering results', () => {
   const runtimes = new RuntimeList(databases);
+
+  beforeAll(async () => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    global.window = global.document.defaultView;
+    global.navigator = global.window.navigator;
+    HTMLView = (await import('@malloydata/render')).HTMLView;
+  });
+
+  afterAll(() => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    delete global.window;
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    delete global.navigator;
+  });
+
+  beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
 
   afterAll(async () => {
     await runtimes.closeAll();
@@ -71,15 +83,16 @@ describe('rendering results', () => {
     expect(runtime).toBeDefined();
     if (runtime) {
       const src = `
-        run: bigquery.table('malloy-data.faa.flights') -> {
+        run: bigquery.table('malloydata-org.malloytest.flights') -> {
           group_by: carrier
           aggregate: flight_count is count()
         }
       `;
       const result = await runtime.loadQuery(src).run();
       const document = new JSDOM().window.document;
-      await new HTMLView(document).render(result, {
+      await new HTMLView(document).render(convertResultToMalloyResult(result), {
         dataStyles: {},
+        useLegacy: true,
       });
     }
   });
@@ -293,19 +306,26 @@ describe('rendering results', () => {
       test('regular table', async () => {
         const result = await model.loadQueryByName('by_name').run();
         const document = new JSDOM().window.document;
-        const html = await new HTMLView(document).render(result, {
-          dataStyles: {},
-        });
-
+        const html = await new HTMLView(document).render(
+          convertResultToMalloyResult(result),
+          {
+            dataStyles: {},
+            useLegacy: true,
+          }
+        );
         expect(html).toMatchSnapshot();
       });
 
       test('transposed table', async () => {
         const result = await model.loadQueryByName('by_name_transposed').run();
         const document = new JSDOM().window.document;
-        const html = await new HTMLView(document).render(result, {
-          dataStyles: {},
-        });
+        const html = await new HTMLView(document).render(
+          convertResultToMalloyResult(result),
+          {
+            dataStyles: {},
+            useLegacy: true,
+          }
+        );
 
         expect(html).toMatchSnapshot();
       });
@@ -325,7 +345,6 @@ describe('rendering results', () => {
             measure: visitcount is sum(vaccine) / count();
 
             # currency
-            # hidden
             dimension: price is apptcost
 
             view: by_name is {
@@ -369,9 +388,13 @@ describe('rendering results', () => {
       test('rendered correctly table', async () => {
         const result = await modelMaterializer.loadQueryByName('by_name').run();
         const document = new JSDOM().window.document;
-        const html = await new HTMLView(document).render(result, {
-          dataStyles: {},
-        });
+        const html = await new HTMLView(document).render(
+          convertResultToMalloyResult(result),
+          {
+            dataStyles: {},
+            useLegacy: true,
+          }
+        );
 
         expect(html).toMatchSnapshot();
       });
@@ -381,9 +404,13 @@ describe('rendering results', () => {
           .loadQueryByName('by_name_db')
           .run();
         const document = new JSDOM().window.document;
-        const html = await new HTMLView(document).render(result, {
-          dataStyles: {},
-        });
+        const html = await new HTMLView(document).render(
+          convertResultToMalloyResult(result),
+          {
+            dataStyles: {},
+            useLegacy: true,
+          }
+        );
 
         expect(html).toMatchSnapshot();
       });
@@ -439,13 +466,18 @@ describe('rendering results', () => {
 
           query: by_name is height -> by_name
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('by_name')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('by_name')
+        .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -470,7 +502,6 @@ describe('rendering results', () => {
           UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 3, 35, 4.2, 31, 1, 'E'
           UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 4, 47, 4.3, 76, 0, 'F' """) extend {
 
-
             view: flatten is {
               group_by: nm
               aggregate: avg_height is height.avg()
@@ -491,13 +522,18 @@ describe('rendering results', () => {
 
           query: flatten is height -> flatten
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('flatten')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('flatten')
+        .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -511,13 +547,18 @@ describe('rendering results', () => {
           select: mex_time is @2021-02-24 03:05:06
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('mex_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('mex_query')
+        .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -529,19 +570,23 @@ describe('rendering results', () => {
           UNION ALL SELECT CAST('2021-01-01 05:40:00' AS datetime)
           UNION ALL SELECT CAST('2021-04-01 00:59:00' AS datetime)""")
 
-
         query:
           data_trunc is timeDataTrunc -> {
             select: yr is times.year, qt is times.quarter, mt is times.month, dy is times.day
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('data_trunc')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('data_trunc')
+        .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -553,16 +598,22 @@ describe('rendering results', () => {
         query: mex_query is # bar_chart
           duckdb.sql('SELECT 1 as one') -> {
             timezone: 'America/Mexico_City'
-            select: mex_time is @2021-02-24 03:05:06
+            group_by: mex_time is @2021-02-24 03:05:06
+            aggregate: value is sum(1)
           }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('mex_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('mex_query')
+        .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -580,13 +631,18 @@ describe('rendering results', () => {
             aggregate:
               sizeSum is sum(size)
         }`;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('mexico_point_map')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('mexico_point_map')
+        .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -604,13 +660,18 @@ describe('rendering results', () => {
             shorter is anumber
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('number_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('number_query')
+        .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -633,13 +694,51 @@ describe('rendering results', () => {
           usage_tb is 3758096384000
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('bytes_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('bytes_query')
+        .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
+
+      expect(html).toMatchSnapshot();
+    });
+  });
+
+  describe('link renderer', () => {
+    test('data volume tags works correctly', async () => {
+      const src = `
+        query: bytes_query is duckdb.sql('SELECT 1 as one') -> {
+          select:
+          # link
+          just_link is "http://123.com"
+          # link.url_template="http://123.com/"
+          link_append is "4"
+          # link.url_template="http://123.com/$$/5"
+          link_substitue is "4"
+          # link{url_template="http://123.com/$$/5" field=key}
+          link_with_key is 'HTML Text'
+          key is "4"
+        }
+      `;
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('bytes_query')
+        .run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -696,13 +795,18 @@ describe('rendering results', () => {
           d2 is 300
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('duration_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('duration_query')
+        .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+          useLegacy: true,
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });

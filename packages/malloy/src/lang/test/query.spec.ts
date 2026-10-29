@@ -1,35 +1,26 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {TestTranslator, aTableDef, markSource, model} from './test-translator';
-import './parse-expects';
 import {
-  Query,
-  QueryFieldDef,
-  QuerySegment,
+  TestTranslator,
+  aTableDef,
+  answerSQLSchemaRequests,
+  markSource,
+  model,
+  errorMessage,
+  warningMessage,
+  error,
+} from './test-translator';
+import './parse-expects';
+import type {Query, QueryFieldDef, QuerySegment} from '../../model';
+import {
+  activeName,
   expressionIsCalculation,
-  isAtomicFieldType,
+  isJoined,
   isQuerySegment,
+  isAtomic,
 } from '../../model';
 
 function getFirstQuerySegment(q: Query | undefined): QuerySegment | undefined {
@@ -42,6 +33,13 @@ function getFirstQuerySegment(q: Query | undefined): QuerySegment | undefined {
 function getFirstSegmentFields(q: Query | undefined): QueryFieldDef[] {
   const qSeg = getFirstQuerySegment(q);
   return qSeg?.queryFields ?? [];
+}
+
+function getIndexFieldPaths(q: Query | undefined): string[] {
+  const seg = q?.pipeline[0];
+  return seg?.type === 'index'
+    ? seg.indexFields.map(f => f.path.join('.'))
+    : [];
 }
 
 function getFirstSegmentFieldNames(q: Query | undefined): string[] {
@@ -57,14 +55,6 @@ describe('query:', () => {
   describe('basic query syntax', () => {
     test('run:anonymous query', () =>
       expect('run: a -> { group_by: astr }').toTranslate());
-    test('query:anonymous query m4 warning', () => {
-      expect(
-        markSource`##! m4warnings=warn
-          query: ${'a  -> { group_by: astr }'}`
-      ).toTranslateWithWarnings(
-        'Anonymous `query:` statements are deprecated, use `run:` instead'
-      );
-    });
     test('named query:', () =>
       expect('query: aq is a -> { group_by: astr }').toTranslate());
     test('run query ref', () =>
@@ -101,8 +91,8 @@ describe('query:', () => {
       ).toTranslate();
     });
     test('query with shortcut filtered turtle', () => {
-      expect(`##! -m4warnings
-        query: allA is ab -> aturtle + {? astr ~ 'a%' }`).toTranslate();
+      expect(`
+        query: allA is ab -> aturtle + {where: astr ~ 'a%' }`).toTranslate();
     });
     test('query with filtered turtle', () => {
       expect(
@@ -173,7 +163,7 @@ describe('query:', () => {
           group_by: ai
           aggregate: bi_count is all(count(), afloat)
         }
-      }`).translationToFailWith("all() 'afloat' is missing from query output");
+      }`).toLog(errorMessage("all() 'afloat' is missing from query output"));
     });
     test('exclude ungroup with args', () => {
       expect(`
@@ -201,7 +191,7 @@ describe('query:', () => {
           }
         }
       }
-    `).translationToFailWith("exclude() 'aaa' is missing from query output");
+    `).toLog(errorMessage("exclude() 'aaa' is missing from query output"));
     });
     test('exclude problem revealed by production models', () => {
       expect(`
@@ -247,108 +237,106 @@ describe('query:', () => {
   describe('query operation typechecking', () => {
     describe('field declarations', () => {
       test('cannot use aggregate in group_by', () => {
-        expect('run: a -> { group_by: s is count()}').translationToFailWith(
-          'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+        expect('run: a -> { group_by: s is count()}').toLog(
+          errorMessage(
+            'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+          )
         );
       });
       test('cannot use ungrouped_aggregate in group_by', () => {
-        expect(
-          'run: a -> { group_by: s is all(count())}'
-        ).translationToFailWith(
-          'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+        expect('run: a -> { group_by: s is all(count())}').toLog(
+          errorMessage(
+            'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+          )
         );
       });
       test('cannot use analytic in group_by', () => {
-        expect(
-          'run: a -> { group_by: s is row_number()}'
-        ).translationToFailWith(
-          'Cannot use an analytic field in a group_by operation, did you mean to use a calculate operation instead?'
+        expect('run: a -> { group_by: s is row_number()}').toLog(
+          errorMessage(
+            'Cannot use an analytic field in a group_by operation, did you mean to use a calculate operation instead?'
+          )
         );
       });
       test('cannot use aggregate in dimension', () => {
-        expect(
-          'source: a1 is a extend { dimension: s is count()}'
-        ).translationToFailWith(
-          'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+        expect('source: a1 is a extend { dimension: s is count()}').toLog(
+          errorMessage(
+            'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+          )
         );
       });
       test('cannot use ungrouped_aggregate in dimension', () => {
-        expect(
-          'source: a1 is a extend { dimension: s is all(count())}'
-        ).translationToFailWith(
-          'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+        expect('source: a1 is a extend { dimension: s is all(count())}').toLog(
+          errorMessage(
+            'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+          )
         );
       });
       test('cannot use analytic in dimension', () => {
-        expect(
-          'source: a1 is a extend { dimension: s is row_number()}'
-        ).translationToFailWith(
-          'Cannot use an analytic field in a dimension declaration'
+        expect('source: a1 is a extend { dimension: s is row_number()}').toLog(
+          errorMessage(
+            'Cannot use an analytic field in a dimension declaration'
+          )
         );
       });
       test('cannot use scalar in measure', () => {
-        expect(
-          'source: a1 is a extend { measure: s is 1}'
-        ).translationToFailWith(
-          'Cannot use a scalar field in a measure declaration, did you mean to use a dimension declaration instead?'
+        expect('source: a1 is a extend { measure: s is 1}').toLog(
+          errorMessage(
+            'Cannot use a scalar field in a measure declaration, did you mean to use a dimension declaration instead?'
+          )
         );
       });
       test('cannot use analytic in measure', () => {
-        expect(
-          'source: a1 is a extend { measure: s is lag(count())}'
-        ).translationToFailWith(
-          'Cannot use an analytic field in a measure declaration'
+        expect('source: a1 is a extend { measure: s is lag(count())}').toLog(
+          errorMessage('Cannot use an analytic field in a measure declaration')
         );
       });
       test('cannot use scalar in aggregate', () => {
-        expect('run: a -> { aggregate: s is 1}').translationToFailWith(
-          'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or select operation instead?'
+        expect('run: a -> { aggregate: s is 1}').toLog(
+          errorMessage(
+            'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or select operation instead?'
+          )
         );
       });
       test('cannot use analytic in aggregate', () => {
-        expect(
-          'run: a -> { aggregate: s is lag(count())}'
-        ).translationToFailWith(
-          'Cannot use an analytic field in an aggregate operation, did you mean to use a calculate operation instead?'
+        expect('run: a -> { aggregate: s is lag(count())}').toLog(
+          errorMessage(
+            'Cannot use an analytic field in an aggregate operation, did you mean to use a calculate operation instead?'
+          )
         );
       });
       test('cannot use scalar in calculate', () => {
-        expect(
-          'run: a -> { group_by: a is 1; calculate: s is 1 }'
-        ).translationToFailWith(
-          'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or select operation instead?'
+        expect('run: a -> { group_by: a is 1; calculate: s is 1 }').toLog(
+          errorMessage(
+            'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or select operation instead?'
+          )
         );
       });
       test('cannot use aggregate in calculate', () => {
-        expect(
-          'run: a -> { group_by: a is 1; calculate: s is count() }'
-        ).translationToFailWith(
-          'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+        expect('run: a -> { group_by: a is 1; calculate: s is count() }').toLog(
+          errorMessage(
+            'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+          )
         );
       });
       test('cannot use aggregate in project', () => {
-        expect('run: a -> { select: s is count() }').translationToFailWith(
-          'Cannot use an aggregate field in a select operation, did you mean to use an aggregate operation instead?'
+        expect('run: a -> { select: s is count() }').toLog(
+          errorMessage(
+            'Cannot use an aggregate field in a select operation, did you mean to use an aggregate operation instead?'
+          )
         );
       });
       test('cannot use analytic in project', () => {
-        expect('run: a -> { select: s is row_number() }').translationToFailWith(
-          'Cannot use an analytic field in a select operation, did you mean to use a calculate operation instead?'
-        );
-      });
-      test('cannot use analytic in extended source', () => {
-        expect(
-          `##! -m4warnings
-          run: a -> { group_by: a is 1; declare: s is row_number() }`
-        ).translationToFailWith(
-          'Analytic expressions can not be used in a declare block'
+        expect('run: a -> { select: s is row_number() }').toLog(
+          errorMessage(
+            'Cannot use an analytic field in a select operation, did you mean to use a calculate operation instead?'
+          )
         );
       });
       test('cannot use aggregate in index', () => {
         expect(
           'run: a extend { measure: acount is count() } -> { index: acount }'
-        ).translationToFailWith(
-          'Cannot use an aggregate field in an index operation'
+        ).toLog(
+          errorMessage('Cannot use an aggregate field in an index operation')
         );
       });
       test('can use aggregate in except', () => {
@@ -362,64 +350,78 @@ describe('query:', () => {
       test('cannot use aggregate in group_by', () => {
         expect(
           'run: a -> { extend: {measure: acount is count()} group_by: acount }'
-        ).translationToFailWith(
-          'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+        ).toLog(
+          errorMessage(
+            'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+          )
         );
       });
       test('cannot use query in group_by', () => {
         expect(
           'run: a extend { view: q is { group_by: x is 1 } } -> { group_by: q }'
-        ).translationToFailWith(
-          'Cannot use a view field in a group_by operation, did you mean to use a nest operation instead?'
+        ).toLog(
+          errorMessage(
+            'Cannot use a view field in a group_by operation, did you mean to use a nest operation instead?'
+          )
         );
       });
       test('cannot use scalar in aggregate', () => {
         expect(
           'run: a -> { extend: {dimension: aconst is 1} aggregate: aconst }'
-        ).translationToFailWith(
-          'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or select operation instead?'
+        ).toLog(
+          errorMessage(
+            'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or select operation instead?'
+          )
         );
       });
       test('cannot use scalar in calculate', () => {
         expect(
           'run: a -> { extend: {dimension: aconst is 1} group_by: x is 1; calculate: aconst }'
-        ).translationToFailWith(
-          'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or select operation instead?'
+        ).toLog(
+          errorMessage(
+            'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or select operation instead?'
+          )
         );
       });
       test('cannot use aggregate in calculate', () => {
         expect(
           'run: a -> { extend: {measure: acount is count()} group_by: x is 1; calculate: acount }'
-        ).translationToFailWith(
-          'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+        ).toLog(
+          errorMessage(
+            'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+          )
         );
       });
       test('cannot use query in project', () => {
         expect(
           'run: a extend { view: q is { group_by: x is 1 } } -> { select: q }'
-        ).translationToFailWith(
-          'Cannot use a view field in a select operation, did you mean to use a nest operation instead?'
+        ).toLog(
+          errorMessage(
+            'Cannot use a view field in a select operation, did you mean to use a nest operation instead?'
+          )
         );
       });
       test('cannot use query in index', () => {
         expect(
           'run: a extend { view: q is { group_by: x is 1 } } -> { index: q }'
-        ).translationToFailWith(
-          'Cannot use a view field in an index operation'
-        );
+        ).toLog(errorMessage('Cannot use a view field in an index operation'));
       });
       test('cannot use query in calculate', () => {
         expect(
           'run: a extend { view: q is { group_by: x is 1 } } -> { group_by: x is 1; calculate: q }'
-        ).translationToFailWith(
-          'Cannot use a view field in a calculate operation, did you mean to use a nest operation instead?'
+        ).toLog(
+          errorMessage(
+            'Cannot use a view field in a calculate operation, did you mean to use a nest operation instead?'
+          )
         );
       });
       test('cannot use query in aggregate', () => {
         expect(
           'run: a extend { view: q is { group_by: x is 1 } } -> { aggregate: q }'
-        ).translationToFailWith(
-          'Cannot use a view field in an aggregate operation, did you mean to use a nest operation instead?'
+        ).toLog(
+          errorMessage(
+            'Cannot use a view field in an aggregate operation, did you mean to use a nest operation instead?'
+          )
         );
       });
       test('cannot use aggregate in calculate, preserved over refinement', () => {
@@ -428,8 +430,10 @@ describe('query:', () => {
         }
         run: a1 + {
           calculate: b is c
-        }`).translationToFailWith(
-          'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+        }`).toLog(
+          errorMessage(
+            'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+          )
         );
       });
       test('cannot use scalar in calculate, preserved over refinement', () => {
@@ -438,8 +442,10 @@ describe('query:', () => {
         }
         run: a1 + {
           calculate: b is c
-        }`).translationToFailWith(
-          'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or select operation instead?'
+        }`).toLog(
+          errorMessage(
+            'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or select operation instead?'
+          )
         );
       });
       test('cannot use analytic in group_by, preserved over refinement', () => {
@@ -449,9 +455,9 @@ describe('query:', () => {
         }
         run: a1 + {
           group_by: b is c2
-        }`).translationToFailWith(
+        }`).toLog(
           // c2 is not defined because group_by doesn't know to look in the output space
-          "'c2' is not defined"
+          errorMessage("'c2' is not defined")
         );
       });
       test('cannot use analytic in order_by, preserved over refinement', () => {
@@ -461,27 +467,27 @@ describe('query:', () => {
         }
         run: a1 + {
           order_by: c2
-        }`).translationToFailWith('Illegal order by of analytic field c2');
+        }`).toLog(errorMessage('Illegal order by of analytic field c2'));
       });
       test('cannot ungroup an ungrouped', () => {
         expect(`query: a1 is a -> {
           group_by: c is 1
           aggregate: c2 is all(all(sum(ai)))
-        }`).translationToFailWith(
-          'all() expression must not already be ungrouped'
+        }`).toLog(
+          errorMessage('all() expression must not already be ungrouped')
         );
       });
       test('cannot aggregate an ungrouped', () => {
         expect(`query: a1 is a -> {
           group_by: c is 1
           aggregate: c2 is sum(all(sum(ai)))
-        }`).translationToFailWith('Aggregate expression cannot be aggregate');
+        }`).toLog(errorMessage('Aggregate expression cannot be aggregate'));
       });
       test('cannot aggregate an aggregate', () => {
         expect(`query: a1 is a -> {
           group_by: c is 1
           aggregate: c2 is sum(sum(ai))
-        }`).translationToFailWith('Aggregate expression cannot be aggregate');
+        }`).toLog(errorMessage('Aggregate expression cannot be aggregate'));
       });
       test('can use field def in group_by, preserved over refinement', () => {
         expect(`query: a1 is a -> {
@@ -499,6 +505,30 @@ describe('query:', () => {
           order_by: c
         }`).toTranslate();
       });
+      test('can order by a date grouped by timeframe', () => {
+        expect(`
+          run: a -> {
+            group_by: ats.day
+            order_by: ats
+          }
+        `).toTranslate();
+      });
+      test('use a calculate on a self-named group_by', () => {
+        expect(`
+        run: a -> {
+          group_by: ai is round(ai)
+          calculate: lats is lag(ai)
+        }
+      `).toTranslate();
+      });
+      test('use a having on a self-named aggregate', () => {
+        expect(`
+        run: a -> {
+          aggregate: ai is round(ai.sum())
+          having: ai > 0
+        }
+      `).toTranslate();
+      });
     });
   });
   describe('function typechecking', () => {
@@ -510,22 +540,26 @@ describe('query:', () => {
     test('function incorrect case', () => {
       expect(`run: a -> {
         group_by: s is CONCAT('a', 'b')
-      }`).toTranslateWithWarnings(
-        "Case insensitivity for function names is deprecated, use 'concat' instead"
+      }`).toLog(
+        warningMessage(
+          "Case insensitivity for function names is deprecated, use 'concat' instead"
+        )
       );
     });
     test('function no matching overload', () => {
       expect(`run: a -> {
         group_by: s is floor('a', 'b')
-      }`).translationToFailWith(
-        'No matching overload for function floor(string, string)'
+      }`).toLog(
+        errorMessage('No matching overload for function floor(string, string)')
       );
     });
     test('unknown function', () => {
       expect(`run: a -> {
         group_by: s is asdfasdf()
-      }`).translationToFailWith(
-        "Unknown function 'asdfasdf'. Use 'asdfasdf!(...)' to call a SQL function directly."
+      }`).toLog(
+        errorMessage(
+          "Unknown function 'asdfasdf'. Use 'asdfasdf!(...)' to call a SQL function directly."
+        )
       );
     });
     test('can select different overload', () => {
@@ -548,7 +582,9 @@ describe('query:', () => {
     test('function return type incorrect', () => {
       expect(`run: a -> {
           group_by: s is floor(1.2) + 'a'
-      }`).translationToFailWith("Non numeric('number,string') value with '+'");
+      }`).toLog(
+        errorMessage("The '+' operator requires a number, not a 'string'")
+      );
     });
     test('can use output value in calculate', () => {
       expect(`run: a -> {
@@ -560,32 +596,36 @@ describe('query:', () => {
       expect(`run: a -> {
         group_by: x is 1
         group_by: y is x
-      }`).translationToFailWith("'x' is not defined");
+      }`).toLog(errorMessage("'x' is not defined"));
     });
     test('lag can check that other args are constant', () => {
       expect(`run: a -> {
         group_by: x is 1
         calculate: s is lag(x, 1, x)
-      }`).translationToFailWith(
+      }`).toLog(
         // TODO improve this error message
-        "Parameter 3 ('default') of lag must be literal or constant, but received output"
+        errorMessage(
+          "Parameter 3 ('default') of lag must be literal or constant, but received output"
+        )
       );
     });
     test('lag can check that other args are literal', () => {
       expect(`run: a -> {
         group_by: x is 1
         calculate: s is lag(x, 1 + 1)
-      }`).translationToFailWith(
+      }`).toLog(
         // TODO improve this error message
-        "Parameter 2 ('offset') of lag must be literal, but received constant"
+        errorMessage(
+          "Parameter 2 ('offset') of lag must be literal, but received constant"
+        )
       );
     });
     test('lag can check that other args are nonnull', () => {
       expect(`run: a -> {
         group_by: x is 1
         calculate: s is lag(x, null)
-      }`).translationToFailWith(
-        "Parameter 2 ('offset') of lag must not be a literal null"
+      }`).toLog(
+        errorMessage("Parameter 2 ('offset') of lag must not be a literal null")
       );
     });
     test('lag can use constant values for other args', () => {
@@ -595,11 +635,9 @@ describe('query:', () => {
       }`).toTranslate();
     });
     test('cannot name top level objects same as functions', () => {
-      expect(
-        markSource`query: ${'concat is a -> { group_by: x is 1 }'}`
-      ).translationToFailWith(
+      expect(markSource`query: ${'concat is a -> { group_by: x is 1 }'}`).toLog(
         // TODO improve this error message
-        "'concat' is already defined, cannot redefine"
+        errorMessage("'concat' is already defined, cannot redefine")
       );
     });
     test('`now` is considered constant`', () => {
@@ -616,8 +654,10 @@ describe('query:', () => {
           group_by: ai, pi is pi()
           calculate: l is lag(ai, 1, pi)
         }`
-      ).translationToFailWith(
-        "Parameter 3 ('default') of lag must be literal or constant, but received output"
+      ).toLog(
+        errorMessage(
+          "Parameter 3 ('default') of lag must be literal or constant, but received output"
+        )
       );
     });
     test('cannot use struct in function arg', () => {
@@ -626,22 +666,24 @@ describe('query:', () => {
           group_by: b.astr
           calculate: foo is lag(b)
         }`
-      ).translationToFailWith('No matching overload for function lag(struct)');
+      ).toLog(errorMessage('No matching overload for function lag(table)'));
     });
     // TODO this doesn't work today, we're not rigorous enough with integer
     // subtypes. But we should probably make this typecheck properly.
     test.skip('cannot use float in round precision', () => {
       expect(`run: a -> {
         group_by: x is round(1.5, 1.6)
-      }`).translationToFailWith(
+      }`).toLog(
         // TODO improve this error message
-        "Parameter 2 ('precision') for round must be integer, received float"
+        errorMessage(
+          "Parameter 2 ('precision') for round must be integer, received float"
+        )
       );
     });
     test('cannot use stddev with no arguments', () => {
       expect(`run: a -> {
         aggregate: x is stddev()
-      }`).translationToFailWith('No matching overload for function stddev()');
+      }`).toLog(errorMessage('No matching overload for function stddev()'));
     });
     test('can use stddev with postfix syntax', () => {
       expect(`run: a -> {
@@ -665,12 +707,14 @@ describe('query:', () => {
       expect(`run: a -> {
         group_by: y is 1
         calculate: x is lag(ai)
-      }`).translationToFailWith(
+      }`).toLog(
         // TODO improve this error message:
         // Parameter 1 ('value') of 'lag' must be a constant, an aggregate, or an expression using
         // only fields that appear in the query output. Received an expression which uses a field
         // that is not in the query output.
-        "Parameter 1 ('value') of lag must be literal, constant or output, but received input"
+        errorMessage(
+          "Parameter 1 ('value') of lag must be literal, constant or output, but received input"
+        )
       );
     });
     test('can use calculate with aggregate field which is not in query', () => {
@@ -682,16 +726,16 @@ describe('query:', () => {
     test('cannot use agregate as argument to agg function', () => {
       expect(`run: a -> {
         aggregate: x is stddev(count())
-      }`).translationToFailWith(
-        "Parameter 1 ('value') of stddev must be scalar, but received aggregate"
+      }`).toLog(
+        errorMessage(
+          "Parameter 1 ('value') of stddev must be scalar, but received aggregate"
+        )
       );
     });
     test('cannot use calculate with no other fields', () => {
       expect(`run: a -> {
         calculate: x is row_number()
-      }`).translationToFailWith(
-        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-      );
+      }`).toLog(error('ambiguous-view-type', {}));
     });
     // TODO someday make it so we can order by an analytic function
     test('today: cannot order by analytic function', () => {
@@ -699,7 +743,7 @@ describe('query:', () => {
         group_by: astr
         calculate: row_num is row_number()
         order_by: row_num desc
-      }`).translationToFailWith('Illegal order by of analytic field row_num');
+      }`).toLog(errorMessage('Illegal order by of analytic field row_num'));
     });
     test('cannot use analytic in calculate -- and preserved over refinement', () => {
       expect(`query: a1 is a -> {
@@ -708,21 +752,42 @@ describe('query:', () => {
       }
       run: a1 + {
         calculate: p1 is lag(p)
-      }`).translationToFailWith(
-        "Parameter 1 ('value') of lag must be scalar or aggregate, but received scalar_analytic"
+      }`).toLog(
+        errorMessage(
+          "Parameter 1 ('value') of lag must be scalar or aggregate, but received scalar_analytic"
+        )
       );
     });
     test('cannot use aggregate analytic in project', () => {
       expect(`run: a -> {
         select: astr
         calculate: p is lag(count())
-      }`).translationToFailWith('Cannot add aggregate analyics to project');
+      }`).toLog(errorMessage('Cannot add aggregate analyics to select'));
     });
     test('reference field in join', () => {
       expect(`run: a -> {
         extend: { join_one: b with astr }
         group_by: b.ai
       }`).toTranslate();
+    });
+    test('reference field in double nested join inside nest', () => {
+      expect(`
+        source: a_2 is a extend { join_one: b is b extend {
+          join_one: c is b on 1 = c.ai
+        } with astr }
+
+        run: a_2 -> {
+          nest: x is {
+            group_by: ai is b.c.ai
+          }
+        }
+      `).toTranslate();
+    });
+    test.skip('reference join as field', () => {
+      expect(`run: a -> {
+        extend: { join_one: b with astr }
+        group_by: b
+      }`).toLog(errorMessage('foo'));
     });
     test('can reference select: inline join.* field in calculate', () => {
       expect(`run: a -> {
@@ -744,6 +809,18 @@ describe('query:', () => {
         aggregate: s is aaa.big_i.sum()
         calculate: a is lag(big_i)
       }`).toTranslate();
+    });
+    describe('dialect functions', () => {
+      test('can use function enabled in this dialect (standardsql)', () => {
+        expect(`run: bq_a -> {
+          group_by: d is date_from_unix_date(1000)
+        }`).toTranslate();
+      });
+      test('cannot use function enabled in a different dialect (duckdb)', () => {
+        expect(`run: bq_a -> {
+          group_by: ts is to_timestamp(1000)
+        }`).toLog(errorMessage(/Unknown function/));
+      });
     });
   });
 
@@ -769,6 +846,50 @@ describe('query:', () => {
       expect(
         'run: a->{ select: astr, ai calculate: num is lag(ai) }'
       ).toTranslate();
+    });
+    test('nest illegal in a select segment', () => {
+      // A nest needs a grouping grain, so it may appear only in a grouping
+      // segment; in a select it forces a grouping/select collision.
+      expect(
+        markSource`run: a->{ select: astr; ${'nest: b is { group_by: ai }'} }`
+      ).toLog(errorMessage('Use of nest: is not allowed in a select query'));
+    });
+    test('group_by illegal in a select segment', () => {
+      expect(markSource`run: a->{ select: astr; ${'group_by: ai'} }`).toLog(
+        errorMessage('Use of group_by: is not allowed in a select query')
+      );
+    });
+    test('aggregate illegal in a select segment', () => {
+      expect(
+        markSource`run: a->{ select: astr; ${'aggregate: c is count()'} }`
+      ).toLog(
+        errorMessage('Use of aggregate: is not allowed in a select query')
+      );
+    });
+    test('index illegal in a select segment', () => {
+      expect(markSource`run: a->{ select: astr; ${'index: *'} }`).toLog(
+        errorMessage('Use of index: is not allowed in a select query')
+      );
+    });
+    test('sample illegal in a select segment', () => {
+      expect(markSource`run: a->{ select: astr; ${'sample: true'} }`).toLog(
+        errorMessage('Use of sample: is not allowed in a select query')
+      );
+    });
+    test('select illegal in a grouping segment', () => {
+      expect(markSource`run: a->{ group_by: astr; ${'select: ai'} }`).toLog(
+        errorMessage('Use of select: is not allowed in a grouping query')
+      );
+    });
+    test('index illegal in a grouping segment', () => {
+      expect(markSource`run: a->{ group_by: astr; ${'index: *'} }`).toLog(
+        errorMessage('Use of index: is not allowed in a grouping query')
+      );
+    });
+    test('select illegal in an index segment', () => {
+      expect(markSource`run: a->{ index: *; ${'select: astr'} }`).toLog(
+        errorMessage('Use of select: is not allowed in an index query')
+      );
     });
     test('aggregate reference', () => {
       const doc = model`run: a->{ aggregate: ai.sum() }`;
@@ -799,7 +920,7 @@ describe('query:', () => {
       expect('run:ab->{ select: b.astr }').toTranslate();
     });
     const afields = aTableDef.fields
-      .filter(f => isAtomicFieldType(f.type))
+      .filter(f => isAtomic(f))
       .map(f => f.name)
       .sort();
     test('expands star correctly', () => {
@@ -827,21 +948,33 @@ describe('query:', () => {
       const fields = getFirstSegmentFieldNames(selstar.translator.getQuery(0));
       expect(fields).toEqual(filterdFields);
     });
+    test('array in query is passed into fields', () => {
+      const selArray = model`run: a -> { select: ais }`;
+      expect(selArray).toTranslate();
+      const fields = getFirstSegmentFieldNames(selArray.translator.getQuery(0));
+      expect(fields).toEqual(['ais']);
+    });
     test('star error checking', () => {
-      expect(markSource`run: a->{select: ${'zzz'}.*}`).translationToFailWith(
-        "No such field as 'zzz'"
+      expect(markSource`run: a->{select: ${'zzz'}.*}`).toLog(
+        errorMessage("'zzz' is not defined")
       );
-      expect(markSource`run: ab->{select: b.${'zzz'}.*}`).translationToFailWith(
-        "No such field as 'zzz'"
+      expect(markSource`run: ab->{select: b.${'zzz'}.*}`).toLog(
+        errorMessage("'zzz' is not defined")
       );
-      expect(markSource`run: a->{select: ${'ai'}.*}`).translationToFailWith(
-        "Field 'ai' does not contain rows and cannot be expanded with '*'"
+      expect(markSource`run: a->{select: ${'ai'}.*}`).toLog(
+        errorMessage(
+          "'ai' does not contain fields and cannot be expanded with '*'"
+        )
       );
-      expect(markSource`run: a->{select:ai,${'*'}}`).translationToFailWith(
-        "Cannot expand 'ai' in '*' because a field with that name already exists"
+      expect(markSource`run: a->{select:ai,${'*'}}`).toLog(
+        errorMessage(
+          "Cannot expand 'ai' in '*' because a field with that name already exists"
+        )
       );
-      expect(markSource`run: ab->{select:ai,${'b.*'}}`).translationToFailWith(
-        "Cannot expand 'ai' in 'b.*' because a field with that name already exists"
+      expect(markSource`run: ab->{select:ai,${'b.*'}}`).toLog(
+        errorMessage(
+          "Cannot expand 'ai' in 'b.*' because a field with that name already exists"
+        )
       );
       const m = `
         source: nab is a extend {
@@ -850,9 +983,166 @@ describe('query:', () => {
         }
         run: nab->{select: b.*,*}
       `;
-      expect(m).translationToFailWith(
-        "Cannot expand 'ai' in '*' because a field with that name already exists (conflicts with b.ai)"
+      expect(m).toLog(
+        errorMessage(
+          "Cannot expand 'ai' in '*' because a field with that name already exists (conflicts with b.ai)"
+        )
       );
+    });
+    describe('star expansion and access modifiers', () => {
+      const visibleFields = (...hidden: string[]) =>
+        afields.filter(f => !hidden.includes(f));
+
+      test('star does not expand a private field', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai }
+          run: c -> { select: * }
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+        expect(fields).toEqual(visibleFields('ai'));
+      });
+      test('star does not expand an internal field', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; internal: ai }
+          run: c -> { select: * }
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+        expect(fields).toEqual(visibleFields('ai'));
+      });
+      test('a name in the statement declaring the modifiers still reaches a private field', () => {
+        expect(`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai } extend {
+            dimension: doubled is ai + ai
+          }
+          run: c -> { group_by: doubled }
+        `).toTranslate();
+      });
+      test('star in the scope declaring the modifiers sees everything', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai } extend {
+            view: everything is { select: * }
+          }
+          run: c -> everything
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+        expect(fields).toEqual(afields);
+      });
+      test('star in a later extension is public only', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            *
+            private: ai
+            internal: af
+          }
+          source: d is c extend {
+            view: v is { select: * }
+          }
+          run: d -> v
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+        expect(fields).toEqual(visibleFields('ai', 'af'));
+      });
+      test('join dot star does not expand the joined private field', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai }
+          source: d is a extend { join_one: c on true }
+          run: d -> { select: c.* }
+        `;
+        expect(m).toTranslate();
+        const fields = getFirstSegmentFields(m.translator.getQuery(0)).map(f =>
+          f.type === 'fieldref' ? f.path : `wrong field type ${f.type}`
+        );
+        expect(fields).toEqual(visibleFields('ai').map(f => ['c', f]));
+      });
+      test('a star cannot walk a join it is legal to name', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a
+          source: d is a extend { join_one: c on true } include { internal: c }
+          source: e is d extend {
+            dimension: byName is c.ai
+            view: v is { select: ${'c'}.* }
+          }
+        `).toLog(errorMessage("'c' is internal"));
+      });
+      test('star through an inaccessible join is an error', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a
+          source: d is a extend {
+            join_one: c on true
+          } include {
+            internal: c
+          }
+          run: d -> { select: ${'c'}.* }
+        `).toLog(errorMessage("'c' is internal"));
+      });
+      test('index star does not index a private field', () => {
+        const m = model`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai }
+          run: c -> { index: * }
+          run: a -> { index: * }
+        `;
+        expect(m).toTranslate();
+        const withPrivate = getIndexFieldPaths(m.translator.getQuery(0));
+        const everything = getIndexFieldPaths(m.translator.getQuery(1));
+        expect(withPrivate).toEqual(everything.filter(f => f !== 'ai'));
+        expect(everything).toContain('ai');
+      });
+      test('index star through an inaccessible join is an error', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a
+          source: d is a extend {
+            join_one: c on true
+          } include {
+            internal: c
+          }
+          run: d -> { index: ${'c'}.* }
+        `).toLog(errorMessage("'c' is internal"));
+      });
+      test('a star which names nothing is an error', () => {
+        expect(
+          `run: a -> { select: * { except: ${afields.join(', ')} } }`
+        ).toLog(error('wildcard-matched-no-fields'));
+      });
+      test('a star which names nothing because nothing is public is an error', () => {
+        expect(`
+          ##! experimental.access_modifiers
+          source: c is a include { private: * }
+          run: c -> { select: * }
+        `).toLog(error('wildcard-matched-no-fields'));
+      });
+      test('an index star which names nothing is an error', () => {
+        expect(`
+          ##! experimental.access_modifiers
+          source: c is a include { private: * }
+          run: c -> { index: * }
+        `).toLog(error('wildcard-matched-no-fields'));
+      });
+      test('a star which matches nothing is an error even beside a named field', () => {
+        expect(
+          `run: a -> { select: ai, * { except: ${afields.join(', ')} } }`
+        ).toLog(error('wildcard-matched-no-fields'));
+      });
+    });
+    test('a star can expand a dimension which turned out to be a join', () => {
+      const m = model`
+        source: x is a extend { dimension: copy is ais }
+        run: x -> { select: copy.* }
+      `;
+      expect(m).toTranslate();
     });
     test('regress check extend: and star', () => {
       const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
@@ -904,7 +1194,7 @@ describe('query:', () => {
         const index = q.pipeline[0];
         expect(index.type).toBe('index');
         if (index.type === 'index') {
-          expect(index.indexFields).toEqual([
+          expect(index.indexFields).toMatchObject([
             {type: 'fieldref', path: ['af']},
             {type: 'fieldref', path: ['astr']},
           ]);
@@ -939,46 +1229,168 @@ describe('query:', () => {
     test('top N', () => {
       expect('run: a->{ top: 5; group_by: astr }').toTranslate();
     });
-    test('top N by field', () => {
-      expect(
-        `##! m4warnings=warn
-        run: a->{top: 5 ${'by astr'}; group_by: astr}`
-      ).toTranslateWithWarnings(
-        'by clause of top statement unupported. Use order_by instead'
-      );
-    });
-    test('top N by expression', () => {
-      expect(
-        `##! m4warnings=warn
-        run: ab->{top: 5 by ai + 1; group_by: ai}`
-      ).toTranslateWithWarnings(
-        'by clause of top statement unupported. Use order_by instead'
-      );
-    });
     test('limit N', () => {
       expect('run: a->{ limit: 5; group_by: astr }').toTranslate();
     });
-    test('order by', () => {
-      expect('run: a->{ order_by: astr; group_by: astr }').toTranslate();
-    });
-    test('order by preserved over refinement', () => {
-      expect(`
-        query: a1 is a -> { group_by: astr }
-        run: a1 + { order_by: astr }
-      `).toTranslate();
-    });
-    test('order by must be in the output space', () =>
-      expect(
-        'run: a -> { order_by: af; group_by: astr }'
-      ).translationToFailWith('Unknown field af in output space'));
-    test('order by asc', () => {
-      expect('run: a->{ order_by: astr asc; group_by: astr }').toTranslate();
-    });
-    test('order by desc', () => {
-      expect('run: a->{ order_by: astr desc; group_by: astr }').toTranslate();
-    });
-    test('order by N', () => {
-      expect('run: a->{ order_by: 1 asc; group_by: astr }').toTranslate();
+    describe('order by variations', () => {
+      test('order by', () => {
+        expect('run: a->{ order_by: astr; group_by: astr }').toTranslate();
+      });
+      test('order by preserved over refinement', () => {
+        expect(`
+          query: a1 is a -> { group_by: astr }
+          run: a1 + { order_by: astr }
+        `).toTranslate();
+      });
+      test('order by must be in the output space', () =>
+        expect('run: a -> { order_by: af; group_by: astr }').toLog(
+          errorMessage('Unknown field af in output space')
+        ));
+      test('order by rejects a dotted path with a helpful error', () =>
+        expect('run: a -> { group_by: astr; order_by: aninline.column }').toLog(
+          errorMessage(
+            "order_by takes the name of a field in the query output, not a path ('aninline.column'). To order by 'column', make it an output field and order by its name: column."
+          )
+        ));
+      test('order by dotted path suggests quoting a reserved segment', () =>
+        expect('run: a -> { group_by: astr; order_by: aninline.year }').toLog(
+          errorMessage(
+            "order_by takes the name of a field in the query output, not a path ('aninline.year'). To order by 'year', make it an output field and order by its name, quoting it because 'year' is a reserved word: `year`."
+          )
+        ));
+      test('order by a bare reserved word suggests quoting', () =>
+        expect('run: a -> { group_by: astr; order_by: year }').toLog(
+          errorMessage(
+            "'year' is a reserved word, so to order by it you must quote it: `year`"
+          )
+        ));
+      test('order by asc', () => {
+        expect('run: a->{ order_by: astr asc; group_by: astr }').toTranslate();
+      });
+      test('order by desc', () => {
+        expect('run: a->{ order_by: astr desc; group_by: astr }').toTranslate();
+      });
+      test('order by N', () => {
+        expect('run: a->{ order_by: 1 asc; group_by: astr }').toTranslate();
+      });
+      test('first aggregate used for default ordering', () => {
+        const m = model`run: a->{
+          group_by: astr
+          aggregate: t is ai.sum()
+        }`;
+        expect(m).toTranslate();
+        const runStmt = m.translator.getQuery(0)!;
+        expect(runStmt).toBeDefined();
+        const reduce = runStmt.pipeline[0];
+        expect(reduce.type).toEqual('reduce');
+        if (reduce.type === 'reduce') {
+          expect(reduce.defaultOrderBy).toBeTruthy();
+          expect(reduce.orderBy).toEqual([{field: 't', dir: 'desc'}]);
+        }
+      });
+      test('first temporal used for default ordering', () => {
+        const m = model`run: a->{
+          group_by: astr, ats
+        }`;
+        expect(m).toTranslate();
+        const runStmt = m.translator.getQuery(0)!;
+        expect(runStmt).toBeDefined();
+        const reduce = runStmt.pipeline[0];
+        expect(reduce.type).toEqual('reduce');
+        if (reduce.type === 'reduce') {
+          expect(reduce.defaultOrderBy).toBeTruthy();
+          expect(reduce.orderBy).toEqual([{field: 'ats', dir: 'desc'}]);
+        }
+      });
+      test('first used for ordering when appropriate', () => {
+        const m = model`run: a->{
+          group_by: astr, big is upper(astr)
+        }`;
+        expect(m).toTranslate();
+        const runStmt = m.translator.getQuery(0)!;
+        expect(runStmt).toBeDefined();
+        const reduce = runStmt.pipeline[0];
+        expect(reduce.type).toEqual('reduce');
+        if (reduce.type === 'reduce') {
+          expect(reduce.defaultOrderBy).toBeTruthy();
+          expect(reduce.orderBy).toEqual([{field: 'astr', dir: 'asc'}]);
+        }
+      });
+      // `x + y` is computed one of two ways, chosen by how y is written.
+      // Inline y (`x + { ... }`) runs through a query builder: y's statements
+      // run as if written inside x, and on a conflicting limit or order_by,
+      // y wins. Named y (`x + w`) merges two finished segments in refine():
+      // a conflicting limit or order_by is an error, so combining named
+      // views does not depend on their order. A named view must have fields,
+      // so a bare limit or order_by can only be written inline.
+      //
+      // A segment's orderBy is either written by the author or computed by
+      // the translator, marked defaultOrderBy. Both paths must carry a
+      // written ordering through, and recompute a computed one for the merged
+      // fields.
+      test.skip('named refinement recomputes the default ordering', () => {
+        const m = model`
+          source: aa is a extend {
+            view: g is { group_by: astr }
+            view: c is { aggregate: c is count() }
+          }
+          run: aa -> g + c`;
+        expect(m).toTranslate();
+        const seg = m.translator.getQuery(0)!.pipeline[0];
+        expect(seg).toMatchObject({
+          orderBy: [{field: 'c', dir: 'desc'}],
+          defaultOrderBy: true,
+        });
+      });
+      describe('refinement keeps a written ordering', () => {
+        const src = `
+          source: aa is a extend {
+            view: by_t2 is {
+              group_by: astr
+              aggregate: t1 is ai.sum(), t2 is af.sum()
+              order_by: t2 desc
+            }
+            view: sel is { select: astr, ai; order_by: ai desc }
+            view: unordered is { group_by: astr; aggregate: t1 is ai.sum() }
+            view: t2_asc is { aggregate: t2 is af.sum(); order_by: t2 asc }
+            view: combo is unordered + t2_asc
+          }
+        `;
+        function firstSegment(query: string) {
+          const m = model`${src} ${query}`;
+          expect(m).toTranslate();
+          return m.translator.getQuery(0)!.pipeline[0];
+        }
+        const t2Desc = [{field: 't2', dir: 'desc'}];
+        const t2Asc = [{field: 't2', dir: 'asc'}];
+
+        test('inline limit', () => {
+          const seg = firstSegment('run: aa -> by_t2 + { limit: 5 }');
+          expect(seg).toMatchObject({orderBy: t2Desc, limit: 5});
+          expect(seg).not.toHaveProperty('defaultOrderBy');
+        });
+        // select: never computes a default, so losing the ordering here
+        // means no ORDER BY at all.
+        test('inline limit on a select view', () => {
+          const seg = firstSegment('run: aa -> sel + { limit: 5 }');
+          expect(seg).toMatchObject({
+            orderBy: [{field: 'ai', dir: 'desc'}],
+            limit: 5,
+          });
+        });
+        test('named view ordering replacing a default is explicit', () => {
+          const seg = firstSegment('run: aa -> combo');
+          expect(seg).toMatchObject({orderBy: t2Asc});
+          expect(seg).not.toHaveProperty('defaultOrderBy');
+        });
+        // If combo's written ordering were still marked as computed, this
+        // refinement would replace it with a recomputed default.
+        test('inline refinement of a named-view refinement', () => {
+          const seg = firstSegment('run: aa -> combo + { where: astr = "x" }');
+          expect(seg).toMatchObject({orderBy: t2Asc});
+          expect(seg).not.toHaveProperty('defaultOrderBy');
+        });
+      });
     });
     test('order by multiple', () => {
       expect(`
@@ -991,20 +1403,22 @@ describe('query:', () => {
     test('agg cannot be used in where', () => {
       expect(
         'run:ab->{ aggregate: acount; group_by: astr; where: acount > 10 }'
-      ).translationToFailWith(
-        'Aggregate expressions are not allowed in `where:`; use `having:`'
+      ).toLog(
+        errorMessage(
+          'Aggregate expressions are not allowed in `where:`; use `having:`'
+        )
       );
     });
     test('analytic cannot be used in where', () => {
       expect(
         'run:ab->{ calculate: prevc is lag(count()); group_by: astr; where: prevc > 10 }'
-      ).translationToFailWith("'prevc' is not defined");
+      ).toLog(errorMessage("'prevc' is not defined"));
     });
     test('analytic cannot be used in having', () => {
       expect(
         'run:ab->{ calculate: prevc is lag(count()); group_by: astr; having: prevc > 10 }'
-      ).translationToFailWith(
-        'Analytic expressions are not allowed in `having:`'
+      ).toLog(
+        errorMessage('Analytic expressions are not allowed in `having:`')
       );
     });
     test('where single', () => {
@@ -1053,7 +1467,7 @@ describe('query:', () => {
       const notb = model.getSourceDef('notb');
       expect(notb).toBeDefined();
       if (notb) {
-        const d = notb.fields.find(f => f.as || f.name === 'd');
+        const d = notb.fields.find(f => activeName(f) === 'd');
         expect(d).toBeDefined();
         expect(d?.type).toBe('number');
         if (d?.type === 'number') {
@@ -1118,31 +1532,16 @@ describe('query:', () => {
       });
     });
     describe('declare/query join warnings', () => {
-      test('declare warning in query', () => {
-        expect(
-          markSource`##! m4warnings=warn
-          run: a -> { ${'declare: x is 1'}; group_by: x }`
-        ).toTranslateWithWarnings(
-          '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
-        );
-      });
-      test('declare warning in source', () => {
-        expect(
-          markSource`##! m4warnings=warn
-          source: a2 is a extend { ${'declare: x is 1'} }`
-        ).toTranslateWithWarnings(
-          '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
-        );
-      });
       test('joins in query', () => {
         expect(
-          markSource`##! m4warnings=warn
-          run: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
-        ).toTranslateWithWarnings(
-          'Joins in queries are deprecated, move into an `extend:` block.',
-          'Joins in queries are deprecated, move into an `extend:` block.',
-          'Joins in queries are deprecated, move into an `extend:` block.'
-        );
+          markSource`
+          run: a -> {
+            join_one: b on true
+            join_many: c is b on true
+            join_cross: d is b on true
+            group_by: b.astr
+          }`
+        ).toTranslate();
       });
     });
     test('refine query with extended source', () => {
@@ -1155,8 +1554,8 @@ describe('query:', () => {
       `);
       expect(m).toTranslate();
       const t = m.translate();
-      if (t.translated) {
-        const q = t.translated.queryList[0].pipeline[0];
+      if (t.modelDef) {
+        const q = t.modelDef.queryList[0].pipeline[0];
         expect(q).toBeDefined();
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
@@ -1179,8 +1578,8 @@ describe('query:', () => {
       `);
       expect(m).toTranslate();
       const t = m.translate();
-      if (t.translated) {
-        const q = t.translated.queryList[0].pipeline[0];
+      if (t.modelDef) {
+        const q = t.modelDef.queryList[0].pipeline[0];
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
           const f = q.extendSource[0];
@@ -1202,11 +1601,12 @@ describe('query:', () => {
       `);
       expect(m).toTranslate();
       const t = m.translate();
-      if (t.translated) {
-        const q = t.translated.queryList[0].pipeline[0];
+      if (t.modelDef) {
+        const q = t.modelDef.queryList[0].pipeline[0];
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
-          expect(q.extendSource[0].type).toBe('struct');
+          expect(isJoined(q.extendSource[0])).toBeTruthy();
+          expect(q.extendSource[0].type).toBe('table');
         } else {
           fail('Did not generate extendSource');
         }
@@ -1274,31 +1674,31 @@ describe('query:', () => {
       expect(
         markSource`query: refineme is a -> { select: stage is "stage1" } -> { select: stage is "stage2" }
         query: checkme is refineme + { ${'group_by: stage'} }`
-      ).translationToFailWith(stageErr);
+      ).toLog(errorMessage(stageErr));
     });
     test('aggregate illegal in long pipes', () => {
       expect(
         markSource`query: refineme is a -> { select: stage is "stage1" } -> { select: stage is "stage2" }
         query: checkme is refineme + { ${'aggregate: c is count()'} }`
-      ).translationToFailWith(stageErr);
+      ).toLog(errorMessage(stageErr));
     });
     test('calcluate illegal in long pipes', () => {
       expect(
         markSource`query: refineme is a -> { select: stage is "stage1" } -> { select: stage is "stage2" }
         query: checkme is refineme + { ${'calculate: c is count()'} }`
-      ).translationToFailWith(stageErr);
+      ).toLog(errorMessage(stageErr));
     });
     test('extend illegal in long pipes', () => {
       expect(
         markSource`query: refineme is a -> { select: stage is "stage1" } -> { select: stage is "stage2" }
         query: checkme is refineme + { ${'extend: {measure: c is count()}'} }`
-      ).translationToFailWith(stageErr);
+      ).toLog(errorMessage(stageErr));
     });
     test('nest illegal in long pipes', () => {
       expect(
         markSource`query: refineme is a -> { select: stage is "stage1" } -> { select: stage is "stage2" }
         query: checkme is refineme + { ${'nest: b is {group_by: stage}'} }`
-      ).translationToFailWith(stageErr);
+      ).toLog(errorMessage(stageErr));
     });
     test('all single stage refinements are accepted', () => {
       expect(
@@ -1311,6 +1711,1591 @@ describe('query:', () => {
           calculate: l is lag(ai)
         }`
       ).toTranslate();
+    });
+  });
+  describe('drill:', () => {
+    test('do not need experimental flag', () => {
+      expect(`
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill: by_ai.ai = 2
+          group_by: astr
+        }
+      `).toTranslate();
+    });
+    test('basic drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill: by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('do not double-collect view filters for multiple dimensions in the same nest', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            where: is_cool
+            group_by: ai, abool
+          }
+          dimension: is_cool is false
+        }
+        run: aext -> {
+          drill:
+            by_ai.ai = 2,
+            by_ai.abool = true
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(2);
+      expect(f[0]).toBeExpr('{filterCondition {is_cool and {ai = 2}}}');
+      expect(f[1]).toBeExpr('{filterCondition {abool = true}}');
+    });
+    test('do not double-collect view filters for multiple dimensions in overlapping nests', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            where: is_cool
+            group_by: ai
+            nest: nested is {
+              where: is_awesome
+              group_by: abool
+            }
+          }
+          dimension: is_cool is false
+          dimension: is_awesome is true
+        }
+        run: aext -> {
+          drill:
+            by_ai.ai = 2,
+            by_ai.nested.abool = true
+          group_by: astr
+        }
+        run: aext -> {
+          drill:
+            by_ai.nested.abool = true,
+            by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q1 = m.modelDef.queryList[0];
+      const f1 = q1.pipeline[0].filterList!;
+      expect(f1.length).toBe(2);
+      expect(f1[0]).toBeExpr('{filterCondition {is_cool and {ai = 2}}}');
+      expect(f1[1]).toBeExpr(
+        '{filterCondition {is_awesome and {abool = true}}}'
+      );
+      const q2 = m.modelDef.queryList[1];
+      const f2 = q2.pipeline[0].filterList!;
+      expect(f2.length).toBe(2);
+      expect(f2[0]).toBeExpr(
+        '{filterCondition {{is_cool and is_awesome} and {abool = true}}}'
+      );
+      expect(f2[1]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('can include normal filters in drill statement', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+          dimension: is_cool is false
+          dimension: is_special is false
+        }
+        run: aext -> {
+          drill:
+            astr = 'foo',
+            af > 100,
+            is_cool and is_special,
+            by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(4);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+      expect(f[1]).toBeExpr('{filterCondition {af > 100}}');
+      expect(f[2]).toBeExpr('{filterCondition {is_cool and is_special}}');
+      expect(f[3]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('drill view is not defined', () => {
+      expect(
+        markSource`
+          run: a -> {
+            drill: ${'by_ai'}.ai = 2
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('No such view `by_ai`'));
+    });
+    test('drill field is not defined', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: astr
+            }
+          }
+          run: aext -> {
+            drill: by_ai.${'ai'} = 2
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('No such field `ai` found in `by_ai`'));
+    });
+    test('drill nest found', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            nest: nested is {
+              group_by: astr
+            }
+          }
+        }
+        run: aext -> {
+          drill: by_ai.nested.astr = 'foo'
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+    });
+    test('can drill a nest and a field from another view', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            nest: nested is {
+              group_by: astr
+            }
+          }
+          view: other_view is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill:
+            by_ai.nested.astr = 'foo',
+            other_view.ai = 1
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(2);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+      expect(f[1]).toBeExpr('{filterCondition {ai = 1}}');
+    });
+    test('does not think you need to drill on measures', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+              aggregate: c is count()
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toTranslate();
+    });
+    test('does not collect havings', () => {
+      const m = new TestTranslator(`
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+              aggregate: c is count()
+              having: c > 100
+            }
+          }
+          run: aext -> {
+            drill: view_one.astr = "foo",
+            group_by: ai
+          }
+        `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+    });
+    test('drill missing some fields (sibling)', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              nest: nest_one is {
+                group_by: astr
+                group_by: abool
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.nest_one.abool`'
+        )
+      );
+    });
+    test('drill multi-stage view', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+            } -> { select: * }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one'}.astr = "foo",
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage('`drill:` may not be used with multi-segment views')
+      );
+    });
+    test('drill index view', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              index: *
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one'}.fieldName = "astr",
+            group_by: ai
+          }
+        `
+      ).toLog(errorMessage('Index segments are not compatible with `drill:`'));
+    });
+    test('drill missing some fields (private sibling)', () => {
+      expect(
+        markSource`
+          ##! experimental {access_modifiers}
+          source: aext is a include { public: *; private: abool } extend {
+            view: view_one is {
+              nest: nest_one is {
+                group_by: astr
+                group_by: abool
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.nest_one.abool`'
+        )
+      );
+    });
+    test('drill missing some fields (parent)', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              group_by: abool
+              nest: nest_one is {
+                group_by: astr
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.abool`'
+        )
+      );
+    });
+    test('drill nest not found', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: astr
+            }
+          }
+          run: aext -> {
+            drill: by_ai.nested.astr = 'foo'
+            group_by: ai
+          }
+        `
+      ).toLog(errorMessage('No such nest `nested` found in `by_ai`'));
+    });
+    test.skip('drill wrong type', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: ai
+            }
+          }
+          run: aext -> {
+            drill: by_ai.ai = 'foo'
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('Mismathcing type??'));
+    });
+    test('drill picks up wheres', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            where: ai = 2
+            nest: nested is {
+              where: abool = true
+              group_by: astr
+            }
+          }
+        }
+        run: aext -> {
+          drill: by_ai.nested.astr = 'foo'
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr(
+        '{filterCondition {{{ai = 2} and {abool = true}} and {astr = {"foo"}}}}'
+      );
+    });
+    test('can filter on private field with drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          private dimension: private_ai is ai
+          view: by_private_ai is {
+            group_by: private_ai
+          }
+        }
+        run: aext -> {
+          drill: by_private_ai.private_ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {private_ai = 2}}');
+    });
+    test('can filter on private nest field with drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          private view: private_by_ai is {
+            group_by: ai
+          }
+          view: nest_private_by_ai is { nest: private_by_ai }
+        }
+        run: aext -> {
+          drill: nest_private_by_ai.private_by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('can filter on join with drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          join_one: b on true
+          view: by_b_ai is {
+            group_by: b.ai
+          }
+        }
+        run: aext -> {
+          drill: by_b_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {b.ai = 2}}');
+    });
+    test('resolve composite slice correctly when using drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { composite_sources }
+        source: a_with_x is a extend { dimension: x is 1 }
+        source: a_with_y is a extend { dimension: y is 1 }
+        source: a_with_x_and_y is a_with_x extend { dimension: y is 1 }
+        source: aext is compose(
+          a,
+          a_with_x,
+          a_with_y,
+          a_with_x_and_y
+        ) extend {
+          view: by_y is {
+            where: x = 1
+            group_by: y
+          }
+        }
+        run: aext -> {
+          drill: by_y.y = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {{x = 1} and {y = 2}}}');
+      expect(q.compositeResolvedSourceDef?.as).toBe('a_with_x_and_y');
+    });
+    test('can filter on param with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { parameters }
+        source: aext(param is 1) is a extend {
+          view: by_param is {
+            group_by: param
+          }
+        }
+        run: aext -> {
+          drill: by_param.param = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {{parameter param} = 2}}');
+    });
+    test.todo('cannot drill on joined view');
+    test('can filter on expression with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { parameters }
+        source: aext(param is 1) is a extend {
+          dimension: private_field is 1
+          view: by_param is {
+            group_by: x is param + private_field
+          }
+        }
+        run: aext -> {
+          drill: by_param.x = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr(
+        '{filterCondition {{{parameter param} + private_field} = 2}}'
+      );
+    });
+  });
+  describe('grouped_by', () => {
+    test('grouped_by requires compiler flag', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Experimental flag `grouped_by` is not set, feature not available'
+        )
+      );
+    });
+    test('grouped_by basic success', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { group_by: astr; aggregate: aisum }
+        `
+      ).toTranslate();
+    });
+    test('grouped_by basic failure', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { aggregate: ${'aisum'} }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    describe('single value filters', () => {
+      test('single value filter equal basic success', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              measure: aisum is ai.sum() { grouped_by: astr }
+            }
+            run: aext -> { where: astr = 'foo'; aggregate: aisum }
+          `
+        ).toTranslate();
+      });
+      test('multi value filter equal basic failure', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              measure: aisum is ai.sum() { grouped_by: astr }
+            }
+            run: aext -> { where: astr = 'foo' | 'bar'; aggregate: aisum }
+          `
+        ).toLog(
+          errorMessage(
+            'Group by or single value filter of `astr` is required but not present'
+          )
+        );
+      });
+      test('single value filter equal works with boolean, string, number, timestamp, date, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr = 'foo',
+                abool = true,
+                abool2 = false,
+                ai = 2,
+                ad = @2003-01-01,
+                ats = @2003-01-01 10:00:00,
+                af is null
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter ANDED equal works with boolean, string, number, timestamp, date, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr = 'foo'
+                and abool = true
+                and abool2 = false
+                and ai = 2
+                and ad = @2003-01-01
+                and ats = @2003-01-01 10:00:00
+                and af is null
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter ANDED (parenthesized) equal works with boolean, string, number, timestamp, date, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                (astr = 'foo'
+                and abool = true)
+                and (abool2 = false
+                and ai = 2
+                and ad = @2003-01-01
+                and (ats = @2003-01-01 10:00:00
+                and af is null))
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter expression works with boolean, string, number, date, timestamp, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              dimension: abool3 is abool
+              dimension: astr2 is astr
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, abool3, astr2, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr ~ f'foo',
+                abool ~ f'true',
+                abool2 ~ f'=false',
+                ai ~ f'2',
+                ad ~ f'2003-01-01',
+                ats ~ f'2003-01-01 10:00:00',
+                af ~ f'null',
+                abool3 ~ f'null',
+                astr2 ~ f'null'
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter expression ANDed together works with boolean, string, number, date, timestamp, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              dimension: abool3 is abool
+              dimension: astr2 is astr
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, abool3, astr2, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr ~ f'foo'
+                and abool ~ f'true'
+                and abool2 ~ f'=false'
+                and ai ~ f'2'
+                and ad ~ f'2003-01-01'
+                and ats ~ f'2003-01-01 10:00:00'
+                and af ~ f'null'
+                and abool3 ~ f'null'
+                and astr2 ~ f'null'
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('no single value filter expression trickery', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, ai, ad, ats
+              }
+            }
+            run: aext -> {
+              where:
+                astr ~ f'foo, bar',
+                astr ~ f'-null',
+                astr ~ f'-foo',
+                abool ~ f'false', // false or null
+                abool ~ f'not null',
+                ai ~ f'not null',
+                ai ~ f'> 3',
+                ai ~ f'not 3',
+                ad ~ f'2003',
+                ad ~ f'not 2003-01-01',
+                ats ~ f'2003-01-01 10:00', // not granular enough?
+                ats ~ f'not 2003-01-01 10:00:00',
+              aggregate: aisum
+            }
+          `
+        ).toLog(
+          errorMessage(
+            'Group by or single value filter of `astr` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `abool` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `ai` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `ad` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `ats` is required but not present'
+          )
+        );
+      });
+    });
+    test('grouped_by double failure on same path', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: afsum is af.sum() { grouped_by: astr }
+          }
+          run: aext -> {
+            aggregate: ${'aisum'}, ${'afsum'}
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        ),
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    // TODO would be nice to have an error here, before you use it
+    test.skip('failure in multi-stage view in source', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: x is { aggregate: ${'aisum'} } -> { select: * }
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('failure in multi-stage view used later', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: x is { aggregate: aisum } -> { select: * }
+          }
+          run: aext -> ${'x'}
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('failure in multi-stage view used in nest', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: x is { aggregate: aisum } -> { select: * }
+          }
+          run: aext -> {
+            nest: ${'x'}
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('grouped_by failure direct in query', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          run: a -> { aggregate: aisum is ${'ai.sum() { grouped_by: astr }'} }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('view with inherited grouped_by failure', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: requires_astr is {
+              aggregate: aisum
+            }
+          }
+          run: aext -> { nest: ${'requires_astr'} }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('view with inherited grouped_by success', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: requires_astr is {
+              aggregate: aisum
+            }
+          }
+          run: aext -> { group_by: astr; nest: requires_astr }
+        `
+      ).toTranslate();
+    });
+    test('lens error shows up in the right place', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: aisum_plus_one is aisum + 1
+          }
+          run: aext -> { where: true } + ${'aisum_plus_one'}
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('nest satisfies required group by', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> {
+            group_by: ai
+            nest: no_require is {
+              group_by: astr
+              aggregate: aisum
+            }
+          }
+        `
+      ).toTranslate();
+    });
+    test('composed source picked correctly', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a,
+            a extend { dimension: x is 1 }
+          ) extend {
+            measure: aisum is ai.sum() { grouped_by: x }
+          }
+          run: aext -> {
+            group_by: x
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
+    test('composed source input skipped when invalid require group by usage but field is present in source', () => {
+      const t = new TestTranslator(`
+        ##! experimental { composite_sources grouped_by }
+        source: s1 is a extend {
+          measure: aisum is ai.sum() { grouped_by: astr }
+        }
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(s1, s2)
+        run: aext -> {
+          aggregate: aisum
+        }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      expect(q.compositeResolvedSourceDef?.as).toBe('s2');
+    });
+    test('composed source input skipped when invalid require group by usage', () => {
+      const t = new TestTranslator(`
+        ##! experimental { composite_sources grouped_by }
+        source: s1 is a extend {
+          dimension: x is 1
+          measure: aisum is ai.sum() { grouped_by: x }
+        }
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(s1, s2)
+        run: aext -> {
+          aggregate: aisum
+        }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      expect(q.compositeResolvedSourceDef?.as).toBe('s2');
+    });
+    test('required group by causes composed source to fall off end', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              measure: aisum is ai.sum() { grouped_by: x }
+            },
+            a extend {
+              dimension: y is 1
+              measure: aisum is ai.sum() { grouped_by: y }
+            }
+          )
+          run: aext -> { aggregate: ${'aisum'} }
+        `
+      ).toLog(
+        errorMessage(
+          'This operation uses field `aisum`, resulting in invalid usage of the composite source, as there is a missing required group by or single value filter of `x` and/or `y` (fields required in source: `aisum`)'
+        )
+      );
+    });
+    test('required group by fails one slice; other slice fails because of field usage', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              measure: aisum is ai.sum() { grouped_by: x }
+              dimension: foo is 1
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          run: aext -> {
+            aggregate: aisum
+            group_by: ${'foo'}
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'This operation uses field `foo`, resulting in invalid usage of the composite source, as there is no composite input source which defines `foo` without having an unsatisfied required group by or single value filter on `x` (fields required in source: `aisum` and `foo`)'
+        )
+      );
+    });
+    test('joined composed source input skipped when invalid require group by usage', () => {
+      const t = new TestTranslator(`
+        ##! experimental { composite_sources grouped_by }
+        source: s1 is a extend {
+          dimension: x is 1
+          measure: aisum is ai.sum() { grouped_by: x }
+        }
+        # only_on_s2
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(s1, s2)
+        source: bext is b extend {
+          join_one: aext on true
+        }
+        run: bext -> {
+          aggregate: aext.aisum
+        }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      const aext = q.compositeResolvedSourceDef?.fields.find(
+        f => f.as === 'aext'
+      );
+      expect(aext).toBeDefined();
+      expect(aext?.annotations?.blockNotes).toMatchObject([
+        {text: '# only_on_s2\n'},
+      ]);
+    });
+    test('evil case where cannot resolve join composite because of field in root', () => {
+      // Here, `aext_aisum` is defined in `bext`, which means that when we are looking up the
+      // aggregate usage of `aext_aisum` (when deciding whether the first slice of the joined
+      // composite is valid), we need to know `bext`'s fields.
+      const t = new TestTranslator(`
+        ##! experimental { composite_sources grouped_by }
+        # only_on_s2
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(
+          a extend {
+            dimension: x is 1
+            measure: aisum is ai.sum() { grouped_by: x }
+          },
+          s2
+        )
+        source: bext is b extend {
+          join_one: aext on true
+          measure: aext_aisum is aext.aisum
+        }
+        run: bext -> {
+          aggregate: aext_aisum
+        }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      const aext = q.compositeResolvedSourceDef?.fields.find(
+        f => f.as === 'aext'
+      );
+      expect(aext).toBeDefined();
+      expect(aext?.annotations?.blockNotes).toMatchObject([
+        {text: '# only_on_s2\n'},
+      ]);
+    });
+    test('require_group_by expression additive', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum1 is ai.sum() { grouped_by: astr }
+            measure: aisum2 is ai.sum() { grouped_by: abool }
+          }
+          run: aext -> { aggregate: aisum is ${'aisum1'} + ${'aisum2'} }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        ),
+        errorMessage(
+          'Group by or single value filter of `abool` is required but not present'
+        )
+      );
+    });
+    test('grouped_by basic joined success', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> { group_by: aext.astr; aggregate: aext.aisum }
+        `
+      ).toTranslate();
+    });
+    test('grouped_by basic joined failure', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          // Note that the 'group_by: astr' does not fool the checker!
+          run: bext -> { group_by: astr; aggregate: aext.aisum }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `aext.astr` is required but not present'
+        )
+      );
+    });
+    test('grouped by failure when ungrouped (all, expression)', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          run: a -> { group_by: astr; aggregate: x is all(ai.sum() { grouped_by: astr }) }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('grouped by success when ungrouped (exclude okay, expression)', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          run: a -> { group_by: astr, abool; aggregate: x is exclude(ai.sum() { grouped_by: astr }, abool) }
+        `
+      ).toTranslate();
+    });
+    test('grouped by failure when ungrouped (all) direct in query', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { group_by: astr; aggregate: x is all(aisum) }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('grouped by failure when ungrouped (exclude)', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('grouped by success when ungrouped (exclude, different name)', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { group_by: astr, abool; aggregate: x is exclude(aisum, abool) }
+        `
+      ).toTranslate();
+    });
+    // Ideally, in cases where the aggregate usage is known when the measure is defined,
+    // we should log an error immediately rather than waiting until it is used in a query.
+    test.skip('grouped by failure when ungrouped (all) in measure definition not used in query', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: x is all(${'aisum'})
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Ungrouped aggregate results in unsatisfiable required Group by or single value filter of `astr`'
+        )
+      );
+    });
+    test('grouped by failure when ungrouped (all) in measure definition then used in query', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: x is all(aisum)
+          }
+          run: aext -> { group_by: astr; aggregate: ${'x'} }
+        `
+      ).toLog(
+        // TODO Might not really need both these errors...
+        // errorMessage(
+        //   'Ungrouped aggregate results in unsatisfiable required Group by or single value filter of `astr`'
+        // ),
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('ungroup fails composite slice', () => {
+      const t = new TestTranslator(`
+        ##! experimental { grouped_by composite_sources }
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(
+          a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          },
+          s2
+        )
+        run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      expect(q.compositeResolvedSourceDef?.as).toBe('s2');
+    });
+    test('ungroup fails composite source', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: slice_1 is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          source: aext is compose(
+            slice_1,
+            a extend {
+              measure: aisum is ai.sum() { grouped_by: abool }
+            }
+          )
+          run: aext -> { group_by: astr, abool; aggregate: x is exclude(aisum, astr, abool) }
+        `
+      ).toLog(
+        errorMessage(
+          'This operation uses field `aisum`, resulting in invalid usage of the composite source, as there is a missing required group by or single value filter of `astr` and/or `abool` (fields required in source: `astr`, `abool`, and `aisum`)'
+        )
+      );
+    });
+    test('grouped_by: is ignored if field does not exist in slice', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources access_modifiers }
+          source: abase is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr, abool }
+          }
+          source: aext is compose(
+            abase include {
+              except: *
+              public: ai, astr, aisum
+            } extend {
+              dimension: x is 1
+            },
+            abase include {
+              except: *
+              public: ai, abool, aisum
+            } extend {
+              dimension: y is 1
+            }
+          )
+          run: aext -> {
+            group_by: astr, x
+            aggregate: aisum
+          }
+          run: aext -> {
+            group_by: abool, y
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
+    test('ignore grouped_by which has been removed from source (non-composite)', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources access_modifiers }
+          source: abase is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr, abool }
+          }
+          source: aext is abase include {
+            except: *
+            public: ai, astr, aisum
+          } extend {
+            dimension: x is 1
+          }
+          run: aext -> {
+            group_by: astr, x
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
+    test('ungroup in join expression', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> { group_by: aext.astr; aggregate: x is exclude(${'aext.aisum'}, astr) }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `aext.astr` is required but not present'
+        )
+      );
+    });
+    test('ungroup in join reference', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: x is all(aisum)
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> { group_by: aext.astr; aggregate: ${'aext.x'} }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `aext.astr` is required but not present'
+        )
+      );
+    });
+    test('ungroup shadowed by definition', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> {
+            group_by: astr;
+            nest: foo is {
+              group_by: astr is 'foo'
+              aggregate: x is exclude(${'aisum'}, astr)
+            }
+          }
+        `
+      ).toTranslate();
+    });
+    test('ungroup shadowed by reference', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            join_one: a on true
+          }
+          run: aext -> {
+            group_by: astr;
+            nest: foo is {
+              group_by: a.astr
+              aggregate: x is exclude(${'aisum'}, astr)
+            }
+          }
+        `
+      ).toTranslate();
+    });
+    test('ungroup nested', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> {
+            group_by: astr;
+            nest: foo is {
+              aggregate: x is exclude(${'aisum'}, astr)
+            }
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    test('malformed query source does not die with "Unknown Dialect"', () => {
+      expect('source: nsq is a->no_such_query').toLog(
+        errorMessage("'no_such_query' is not defined")
+      );
+    });
+  });
+  describe('Object.prototype field name collisions', () => {
+    test('constructor as view group_by alias', () => {
+      expect(`
+        source: x is a extend {
+          view: v is {
+            group_by: constructor is astr
+            aggregate: acount is count()
+          }
+        }
+      `).toTranslate();
+    });
+    test('constructor as query name', () => {
+      expect('query: constructor is a -> { select: * }').toTranslate();
+    });
+  });
+});
+/*
+ * Malloy has no way to execute a query which spans two connections, so
+ * everything a query reaches has to be on the connection the query runs on.
+ * These tests cover the places where a second connection can be named and
+ * therefore has to be rejected.
+ */
+describe('cross connection references are errors', () => {
+  describe('joins', () => {
+    test('join_one from another connection', () => {
+      expect(markSource`
+        source: xa is _db_.table('aTable')
+        source: xb is _db2_.table('aTable')
+        run: xa extend { join_one: ${'xb on astr = xb.astr'} } -> { group_by: xb.astr }
+      `).toLog(
+        errorMessage(
+          "Cannot join 'xb', which is on connection '_db2_', " +
+            "into a source on connection '_db_'"
+        )
+      );
+    });
+    test('join_many from another connection', () => {
+      expect(markSource`
+        source: xb is _db2_.table('aTable')
+        run: a extend { join_many: ${'xb on astr = xb.astr'} } -> { group_by: xb.astr }
+      `).toLog(error('join-connection-mismatch'));
+    });
+    test('join_cross from another connection', () => {
+      expect(markSource`
+        source: xb is _db2_.table('aTable')
+        run: a extend { join_cross: ${'xb'} } -> { group_by: xb.astr }
+      `).toLog(error('join-connection-mismatch'));
+    });
+    test('join in a source extension', () => {
+      expect(markSource`
+        source: xb is _db2_.table('aTable')
+        source: xa is a extend { join_one: ${'xb on astr = xb.astr'} }
+      `).toLog(error('join-connection-mismatch'));
+    });
+    test('join with a primary key', () => {
+      expect(markSource`
+        source: xb is _db2_.table('aTable') extend { primary_key: astr }
+        source: xa is a extend { join_one: ${'xb with astr'} }
+      `).toLog(error('join-connection-mismatch'));
+    });
+    test('join of a query on another connection', () => {
+      expect(markSource`
+        source: xb is _db2_.table('aTable')
+        source: xa is a extend {
+          join_one: xq is ${'xb -> { group_by: astr }'} on astr = xq.astr
+        }
+      `).toLog(error('join-connection-mismatch'));
+    });
+    test('a base whose schema failed does not also report a connection', () => {
+      // The error source stands in for a base whose schema never arrived, and
+      // its connection is a sentinel. Reporting it would put `~unknown~` in
+      // front of a user who has a real error to read already.
+      const translator = model`
+        source: xa is _db_.table('noSuchTable') extend {
+          join_one: a on astr = a.astr
+        }
+      `.translator;
+      translator.translate();
+      translator.update({
+        errors: {tables: {'_db_:noSuchTable': 'no such table'}},
+      });
+      translator.translate();
+      const codes = translator.logger.getLog().map(l => l.code);
+      expect(codes).toContain('failed-to-fetch-table-schema');
+      expect(codes).not.toContain('join-connection-mismatch');
+    });
+    test('the connection check also catches a cross-dialect join', () => {
+      expect(markSource`
+        run: a extend { join_one: ${'bq_a on astr = bq_a.astr'} } -> { group_by: bq_a.astr }
+      `).toLog(error('join-connection-mismatch'));
+    });
+    test('joining into the other connection is also an error', () => {
+      expect(markSource`
+        source: xb is _db2_.table('aTable')
+        source: xa is xb extend { join_one: ${'a on astr = a.astr'} }
+      `).toLog(error('join-connection-mismatch'));
+    });
+  });
+
+  describe('sql() interpolation', () => {
+    test('query from another connection', () => {
+      expect(markSource`
+        source: xa is _db_.table('aTable') -> { group_by: astr }
+        source: xs is _db2_.sql("""SELECT * FROM %{ ${'xa -> { select: * }'} }""")
+      `).toLog(error('sql-source-connection-mismatch'));
+    });
+    test('source from another connection', () => {
+      expect(markSource`
+        source: xq is _db2_.table('aTable') -> { select: * }
+        source: xs is _db_.sql("""SELECT * FROM %{ ${'xq'} }""")
+      `).toLog(error('sql-source-connection-mismatch'));
+    });
+    test('wrong connection and not persistable both report', () => {
+      // `a` is a table, so it can never be interpolated, and it is also on
+      // the wrong connection. Both complaints belong to the same element, so
+      // both are logged.
+      expect(markSource`
+        source: xs is _db2_.sql("""SELECT * FROM %{ ${'a'} }""")
+      `).toLog(
+        error('sql-source-connection-mismatch'),
+        error('invalid-sql-source-interpolation')
+      );
+    });
+    test('a rejected interpolation does not ask for a schema', () => {
+      const translator = model`
+        source: xa is _db_.table('aTable') -> { group_by: astr }
+        source: xs is _db2_.sql("""SELECT * FROM %{ xa -> { select: * } }""")
+      `.translator;
+      const response = translator.translate();
+      expect(response).not.toHaveProperty('compileSQL');
+      expect(response.final).toBe(true);
+    });
+  });
+
+  describe('single connection references still translate', () => {
+    test('a second connection is usable on its own', () => {
+      expect(`
+        source: xb is _db2_.table('aTable')
+        run: xb -> { group_by: astr }
+      `).toTranslate();
+    });
+    test('join within the second connection', () => {
+      expect(`
+        source: xb is _db2_.table('aTable')
+        run: xb extend { join_one: xb2 is _db2_.table('aTable') on astr = xb2.astr }
+          -> { group_by: xb2.astr }
+      `).toTranslate();
+    });
+    test('interpolation within the second connection', () => {
+      const translator = model`
+        source: xa is _db2_.table('aTable') -> { group_by: astr }
+        source: xs is _db2_.sql("""SELECT * FROM %{ xa -> { select: * } }""")
+      `.translator;
+      answerSQLSchemaRequests(translator);
+      expect(translator).toTranslate();
     });
   });
 });

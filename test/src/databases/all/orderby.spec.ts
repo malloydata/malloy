@@ -1,30 +1,13 @@
-/* eslint-disable no-console */
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import {Dialect} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -33,39 +16,49 @@ afterAll(async () => {
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
-  const orderByModel = runtime.loadModel(`
+  const orderByModel = wrapTestModel(
+    runtime,
+    `
     source: models is ${databaseName}.table('malloytest.aircraft_models') extend {
       measure: model_count is count()
-    }`);
+    }`
+  );
 
-  it(`boolean type - ${databaseName}`, async () => {
-    await expect(`
+  // A dialect without boolean values cannot group by one
+  it.when(runtime.dialect.booleanType !== 'none')(
+    `boolean type - ${databaseName}`,
+    async () => {
+      await expect(`
       run: models-> {
         group_by: big is seats >=20
         aggregate: model_count is count()
       }
-    `).malloyResultMatches(orderByModel, {
-      big: false,
-      model_count: 58451,
-    });
-  });
+    `).toMatchResult(orderByModel, {
+        big: false,
+        model_count: 58451,
+      });
+    }
+  );
 
-  it(`boolean in pipeline - ${databaseName}`, async () => {
-    await expect(`
+  it.when(runtime.dialect.booleanType !== 'none')(
+    `boolean in pipeline - ${databaseName}`,
+    async () => {
+      await expect(`
       run: models->{
         group_by:
           manufacturer,
-          big is seats >=21
+          big is seats >= 21
         aggregate: model_count is count()
-      }->{
+      } -> {
         group_by: big
         aggregate: model_count is model_count.sum()
       }
-    `).malloyResultMatches(orderByModel, {
-      big: false,
-      model_count: 58500,
-    });
-  });
+    `).toMatchResult(orderByModel, {
+        big: false,
+        model_count: 58500,
+      });
+    }
+  );
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
     await expect(`
@@ -74,7 +67,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         group_by: j_names
       }
-    `).malloyResultMatches(orderByModel, {j_names: 1358});
+    `).toMatchResult(orderByModel, {j_names: 1358});
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
@@ -84,16 +77,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }->{
         group_by: fetch
       }
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
   });
 
   test.when(runtime.supportsNesting)(
     `reserved words are quoted in turtles - ${databaseName}`,
     async () => {
       await expect(`
-      run: models->{
+      run: ${databaseName}.table('malloytest.state_facts')->{
         nest: withx is {
-          group_by: select is UPPER(manufacturer)
+          group_by: select is upper(popular_name)
           aggregate: fetch is count()
         }
       } -> {
@@ -101,7 +94,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           withxz is lower(withx.select)
           fetch is withx.fetch
       }
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
     }
   );
 
@@ -116,7 +109,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         select: withxis lower(withx.select)
         select: fetch is with.fetch
       }
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
   });
 
   it(`aggregate and scalar conditions - ${databaseName}`, async () => {
@@ -124,7 +117,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: models->{
         aggregate: model_count is count(){ where: manufacturer ? ~'A%' }
       }
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
   });
 
   // I'm not sure I have the syntax right here...
@@ -139,7 +132,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         order_by: 2
         select: manufacturer, model_count
       }
-    `).malloyResultMatches(orderByModel, {model_count: 102});
+    `).toMatchResult(orderByModel, {model_count: 102});
   });
 
   test.when(runtime.supportsNesting)(
@@ -160,7 +153,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           order_by: 2
           select: manufacturer, model_count
         }
-      `).malloyResultMatches(orderByModel, {model_count: 102});
+      `).toMatchResult(orderByModel, {model_count: 102});
     }
   );
 
@@ -182,6 +175,168 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: a.aircraft_count
         }
       } -> foo
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
+  });
+
+  // There's a problem with null ordering in MySQL which we are ignoring for now
+  const testNullOrdering = databaseName !== 'mysql';
+  const testTimes =
+    testNullOrdering && !['presto', 'trino'].includes(databaseName);
+  describe('null ordering', () => {
+    const q = runtime.getQuoter();
+    const a = runtime.dialect.sqlLiteralString('a');
+    const b = runtime.dialect.sqlLiteralString('b');
+    const c = runtime.dialect.sqlLiteralString('c');
+    const abc = `${databaseName}.sql("""
+      SELECT ${a} as ${q`l`}, 'a' as ${q`ln`}
+      UNION ALL SELECT ${c}, 'c'
+      UNION ALL SELECT ${b}, 'b'
+      UNION ALL SELECT NULL, 'null'
+    """)`;
+    test.when(testNullOrdering)(
+      'null last in select string with ascending order',
+      async () => {
+        await expect(
+          `run: ${abc} -> { select: *; order_by: l asc }`
+        ).toMatchRows(orderByModel, [
+          {ln: 'a'},
+          {ln: 'b'},
+          {ln: 'c'},
+          {ln: 'null'},
+        ]);
+      }
+    );
+    test.when(testNullOrdering)(
+      'null last in select string with descending order',
+      async () => {
+        await expect(
+          `run: ${abc} -> { select: *; order_by: l desc }`
+        ).toMatchRows(orderByModel, [
+          {ln: 'c'},
+          {ln: 'b'},
+          {ln: 'a'},
+          {ln: 'null'},
+        ]);
+      }
+    );
+    test.when(testNullOrdering)(
+      'null last in reduce string with default ascending order',
+      async () => {
+        await expect(`
+          #! test.verbose
+          run: ${abc} -> { group_by: l }`).toMatchRows(orderByModel, [
+          {l: 'a'},
+          {l: 'b'},
+          {l: 'c'},
+          {l: null},
+        ]);
+      }
+    );
+    const nums = `${databaseName}.sql("""
+      SELECT 1 as ${q`n`}
+      UNION ALL SELECT 9
+      UNION ALL SELECT 5
+      UNION ALL SELECT NULL
+      """)`;
+    test.when(testNullOrdering)(
+      'null last in numbers with ascending order',
+      async () => {
+        await expect(
+          `run: ${nums} -> { select: n; order_by: n asc }`
+        ).toMatchRows(orderByModel, [{n: 1}, {n: 5}, {n: 9}, {n: null}]);
+      }
+    );
+    test.when(testNullOrdering)(
+      'null last in numbers with descending order',
+      async () => {
+        await expect(
+          `run: ${nums} -> { select: n; order_by: n desc }`
+        ).toMatchRows(orderByModel, [{n: 9}, {n: 5}, {n: 1}, {n: null}]);
+      }
+    );
+    test.when(testNullOrdering)(
+      'null last in reduce measure with default descending order',
+      async () => {
+        await expect(`
+          # test.verbose
+          run: ${nums} -> {
+            group_by: nstr is n ? pick 'null' when is null else concat('number', n::string)
+            aggregate: nTotal is n.sum()
+          }`).toMatchRows(orderByModel, [
+          {nstr: 'number9'},
+          {nstr: 'number5'},
+          {nstr: 'number1'},
+          {nstr: 'null'},
+        ]);
+      }
+    );
+    const y2020Node = Dialect.makeTimeLiteralNode(
+      runtime.dialect,
+      '2020-01-01 00:00:00',
+      undefined,
+      undefined,
+      'timestamp'
+    );
+    const y2020 = runtime.dialect.exprToSQL({}, y2020Node) || '';
+    const d2020 = '2020-01-01T00:00:00.000Z';
+    const d2022 = '2022-01-01T00:00:00.000Z';
+    const d2025 = '2025-01-01T00:00:00.000Z';
+    const y2025Node = Dialect.makeTimeLiteralNode(
+      runtime.dialect,
+      '2025-01-01 00:00:00',
+      undefined,
+      undefined,
+      'timestamp'
+    );
+    const y2025 = runtime.dialect.exprToSQL({}, y2025Node) || '';
+    const y2022Node = Dialect.makeTimeLiteralNode(
+      runtime.dialect,
+      '2022-01-01 00:00:00',
+      undefined,
+      undefined,
+      'timestamp'
+    );
+    const y2022 = runtime.dialect.exprToSQL({}, y2022Node) || '';
+    const times = `${databaseName}.sql("""
+      SELECT ${y2020} as ${q`t`}
+      UNION ALL SELECT ${y2025}
+      UNION ALL SELECT ${y2022}
+      UNION ALL SELECT NULL
+    """)`;
+    test.when(testTimes)(
+      'null last in timestamps with ascending order',
+      async () => {
+        await expect(
+          `run: ${times} -> { select: t; order_by: t asc }`
+        ).toMatchRows(orderByModel, [
+          {t: d2020},
+          {t: d2022},
+          {t: d2025},
+          {t: null},
+        ]);
+      }
+    );
+    test.when(testTimes)(
+      'null last in timestamps with descending order',
+      async () => {
+        await expect(
+          `run: ${times} -> { select: t; order_by: t desc }`
+        ).toMatchRows(orderByModel, [
+          {t: d2025},
+          {t: d2022},
+          {t: d2020},
+          {t: null},
+        ]);
+      }
+    );
+    test.when(testTimes)(
+      'null last in reduce timestamps with default descending order',
+      async () => {
+        await expect(`run: ${times} -> { group_by: t }`).toMatchRows(
+          orderByModel,
+          [{t: d2025}, {t: d2022}, {t: d2020}, {t: null}]
+        );
+      }
+    );
   });
 });

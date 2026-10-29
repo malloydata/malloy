@@ -1,0 +1,3077 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import {runtimeFor, testFileSpace, DuckDBROTestConnection} from '../runtimes';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import type {
+  BuildNode,
+  BuildManifest,
+  BuildPlan,
+  BuildTarget,
+  VirtualMap,
+} from '@malloydata/malloy';
+import {
+  ConnectionRuntime,
+  MalloyConfig,
+  Manifest,
+  Runtime,
+  SingleConnectionRuntime,
+  EMPTY_BUILD_MANIFEST,
+} from '@malloydata/malloy';
+import {DuckDBConnection} from '@malloydata/db-duckdb';
+
+// Helper to extract all sourceIDs from a nested BuildNode array (recursive)
+function getAllSourceIDs(nodes: BuildNode[]): string[] {
+  const ids: string[] = [];
+  for (const node of nodes) {
+    ids.push(node.sourceID);
+    ids.push(...getAllSourceIDs(node.dependsOn));
+  }
+  return ids;
+}
+
+// Helper to check if a sourceID pattern exists anywhere in nested deps
+function hasDependency(nodes: BuildNode[], pattern: string): boolean {
+  return getAllSourceIDs(nodes).some(id => id.includes(pattern));
+}
+
+const tstDB = 'duckdb';
+const tstRuntime = runtimeFor(tstDB);
+
+// All persist tests require the experimental.persistence compiler flag
+const PERSIST_ANNOTATION = '##! experimental.persistence';
+
+// Combine model + plan setup
+async function getPersistPlan(malloyCode: string) {
+  const testModel = wrapTestModel(
+    tstRuntime,
+    `${PERSIST_ANNOTATION}\n${malloyCode}`
+  );
+  const model = await testModel.model.getModel();
+  return {model, plan: model.getBuildPlan()};
+}
+
+// Find node by pattern in graph nodes
+function findNode(nodes: BuildNode[][], pattern: string) {
+  return nodes.flat().find(n => n.sourceID.includes(pattern))!;
+}
+
+// Common model fragments
+const FLIGHTS_SOURCE = `source: flights is ${tstDB}.table('malloytest.flights')`;
+
+const CARRIER_STATS_PERSIST_MODEL = `${PERSIST_ANNOTATION}
+  ${FLIGHTS_SOURCE}
+
+  #@ persist
+  source: carrier_stats is flights -> {
+    group_by: carrier
+    aggregate: flight_count is count()
+  }
+`;
+
+// Create empty manifest
+function createManifest(): BuildManifest {
+  return {entries: {}};
+}
+
+// Add entry to manifest
+function addManifestEntry(
+  manifest: BuildManifest,
+  buildId: string,
+  tableName: string
+) {
+  manifest.entries[buildId] = {tableName};
+}
+
+// Connection digest (cached)
+let cachedDigest: string | undefined;
+async function getDigest() {
+  if (!cachedDigest) {
+    const conn = await tstRuntime.connections.lookupConnection(tstDB);
+    cachedDigest = await conn.getDigest();
+  }
+  return cachedDigest;
+}
+
+// Build a manifest for a named source from a model's build plan
+async function buildManifestFor(
+  plan: BuildPlan,
+  sourceName: string,
+  tableName: string
+): Promise<{manifest: BuildManifest; buildId: string}> {
+  const source = Object.values(plan.sources).find(s => s.name === sourceName)!;
+  const connectionDigest = await getDigest();
+  const buildId = source.makeBuildId(connectionDigest, source.getSQL());
+  const manifest = createManifest();
+  addManifestEntry(manifest, buildId, tableName);
+  return {manifest, buildId};
+}
+
+// Create a runtime with a manifest and get SQL for a query
+function runtimeWithManifest(manifest: BuildManifest) {
+  const rt = new SingleConnectionRuntime({
+    connection: tstRuntime.connection,
+    urlReader: testFileSpace,
+  });
+  rt.buildManifest = manifest;
+  return rt;
+}
+
+afterAll(async () => {
+  await tstRuntime.connection.close();
+});
+
+describe('source persistence', () => {
+  describe('PersistSource', () => {
+    describe('makeBuildId', () => {
+      it('different sourceID produce different buildIds', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+        `);
+
+        const sourceA = Object.values(plan.sources).find(s =>
+          s.sourceID.includes('source_a')
+        )!;
+        const sourceB = Object.values(plan.sources).find(s =>
+          s.sourceID.includes('source_b')
+        )!;
+
+        const sqlA = sourceA.getSQL();
+        const sqlB = sourceB.getSQL();
+        const digest = 'test-digest';
+
+        const buildIdA = sourceA.makeBuildId(digest, sqlA);
+        const buildIdB = sourceB.makeBuildId(digest, sqlB);
+
+        // Different SQL produces different buildIds (buildId is a hash)
+        expect(buildIdA).not.toBe(buildIdB);
+        // BuildId is a hash, not a formatted string
+        expect(buildIdA).toMatch(/^[a-f0-9]{64}$/);
+        expect(buildIdB).toMatch(/^[a-f0-9]{64}$/);
+      });
+
+      it('different connection digests produce different buildIds', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+        `);
+
+        const source = Object.values(plan.sources)[0];
+        const sql = source.getSQL();
+
+        const buildId1 = source.makeBuildId('digest-user1', sql);
+        const buildId2 = source.makeBuildId('digest-user2', sql);
+
+        // Different connection digests produce different buildIds
+        expect(buildId1).not.toBe(buildId2);
+        // BuildId is a hash
+        expect(buildId1).toMatch(/^[a-f0-9]{64}$/);
+        expect(buildId2).toMatch(/^[a-f0-9]{64}$/);
+      });
+
+      it('different SQL produces different buildIds', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+        `);
+
+        const source = Object.values(plan.sources)[0];
+        const digest = 'test-digest';
+
+        const buildId1 = source.makeBuildId(digest, 'SELECT 1');
+        const buildId2 = source.makeBuildId(digest, 'SELECT 2');
+
+        // Different SQL produces different buildIds
+        expect(buildId1).not.toBe(buildId2);
+        // BuildId is a hash
+        expect(buildId1).toMatch(/^[a-f0-9]{64}$/);
+        expect(buildId2).toMatch(/^[a-f0-9]{64}$/);
+      });
+    });
+
+    describe('getSQL', () => {
+      it('returns SQL for query_source', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+        `);
+
+        const source = Object.values(plan.sources)[0];
+        const sql = source.getSQL();
+
+        expect(sql).toContain('SELECT');
+        expect(sql).toContain('carrier');
+        expect(sql).toContain('COUNT(');
+      });
+
+      it('returns SQL for sql_select', async () => {
+        const {plan} = await getPersistPlan(`
+          #@ persist
+          source: custom_sql is ${tstDB}.sql("""
+            SELECT carrier, COUNT(*) as flight_count
+            FROM malloytest.flights
+            GROUP BY carrier
+          """)
+        `);
+
+        const source = Object.values(plan.sources)[0];
+        const sql = source.getSQL();
+
+        expect(sql).toContain('SELECT');
+        expect(sql).toContain('carrier');
+        expect(sql).toContain('COUNT(*)');
+      });
+
+      it('substitutes manifest tables when buildManifest provided', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: wrapper is ${tstDB}.sql("""
+            SELECT * FROM %{ carrier_stats }
+          """)
+        `);
+
+        const {manifest} = await buildManifestFor(
+          plan,
+          'carrier_stats',
+          'my_schema.persisted_carrier_stats'
+        );
+
+        const wrapper = Object.values(plan.sources).find(
+          s => s.name === 'wrapper'
+        )!;
+        const connectionDigest = await getDigest();
+        const sql = wrapper.getSQL({
+          buildManifest: manifest,
+          connectionDigests: {[tstDB]: connectionDigest},
+        });
+
+        expect(sql).toContain('my_schema.persisted_carrier_stats');
+        expect(sql).not.toContain('COUNT(');
+      });
+
+      it('expands SQL when manifest entry not found', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: wrapper is ${tstDB}.sql("""
+            SELECT * FROM %{ carrier_stats }
+          """)
+        `);
+
+        const connectionDigest = await getDigest();
+        const wrapper = Object.values(plan.sources).find(
+          s => s.name === 'wrapper'
+        )!;
+        const sql = wrapper.getSQL({
+          buildManifest: createManifest(),
+          connectionDigests: {[tstDB]: connectionDigest},
+        });
+
+        expect(sql).toContain('SELECT');
+        expect(sql).toContain('carrier');
+        expect(sql).toContain('COUNT(');
+      });
+
+      it('throws in strict mode when manifest entry not found', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: wrapper is ${tstDB}.sql("""
+            SELECT * FROM %{ carrier_stats }
+          """)
+        `);
+
+        const connectionDigest = await getDigest();
+        const wrapper = Object.values(plan.sources).find(
+          s => s.name === 'wrapper'
+        )!;
+
+        expect(() =>
+          wrapper.getSQL({
+            buildManifest: {entries: {}, strict: true},
+            connectionDigests: {[tstDB]: connectionDigest},
+          })
+        ).toThrow(/not found in manifest/);
+      });
+
+      it('query_source substitutes manifest tables for its structRef', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: derived is carrier_stats -> { select: * }
+        `);
+
+        const {manifest} = await buildManifestFor(
+          plan,
+          'carrier_stats',
+          'cached.carrier_stats_table'
+        );
+
+        const derived = Object.values(plan.sources).find(
+          s => s.name === 'derived'
+        )!;
+        const connectionDigest = await getDigest();
+        const sql = derived.getSQL({
+          buildManifest: manifest,
+          connectionDigests: {[tstDB]: connectionDigest},
+        });
+
+        expect(sql).toContain('cached.carrier_stats_table');
+        expect(sql).not.toContain('COUNT(');
+      });
+    });
+  });
+
+  describe('Model.getBuildPlan', () => {
+    it('returns empty plan when no persist sources', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        source: not_persisted is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+
+      expect(plan.graphs).toEqual([]);
+      expect(plan.sources).toEqual({});
+    });
+
+    it('returns single source with no dependencies', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+
+      expect(plan.graphs).toHaveLength(1);
+      expect(plan.graphs[0].connectionName).toBe('duckdb');
+      expect(plan.graphs[0].nodes).toHaveLength(1);
+      expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+      expect(plan.graphs[0].nodes[0][0].dependsOn).toEqual([]);
+
+      expect(Object.keys(plan.sources)).toHaveLength(1);
+    });
+
+    describe('dependency ordering', () => {
+      it('independent sources in same level', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: by_carrier is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: by_origin is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(2);
+
+        for (const node of graph.nodes[0]) {
+          expect(node.dependsOn).toEqual([]);
+        }
+      });
+
+      it('dependent sources in different levels', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(1);
+
+        const node = graph.nodes[0][0];
+        expect(node.sourceID).toMatch(/source_b/);
+        expect(node.dependsOn).toHaveLength(1);
+        expect(node.dependsOn[0].sourceID).toMatch(/source_a/);
+      });
+
+      it('diamond dependency pattern with extended sources', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a extend {
+            dimension: b_marker is 'b'
+          } -> { select: * }
+
+          #@ persist
+          source: source_c is source_a extend {
+            dimension: c_marker is 'c'
+          } -> { select: * }
+
+          #@ persist
+          source: source_d is ${tstDB}.sql("""SELECT * FROM %{ source_b } UNION ALL SELECT * FROM %{ source_c }""")
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(1);
+
+        const nodeD = graph.nodes[0][0];
+        expect(nodeD.sourceID).toMatch(/source_d/);
+
+        // Both readers of source_a record the edge to it. A source reached a
+        // second time returns what it returned the first time, so the second
+        // reader is not left claiming it depends on nothing.
+        const [depB, depC] = nodeD.dependsOn;
+        expect(nodeD.dependsOn).toHaveLength(2);
+        expect(depB.sourceID).toMatch(/source_b/);
+        expect(depC.sourceID).toMatch(/source_c/);
+        expect(depB.dependsOn[0].sourceID).toMatch(/source_a/);
+        expect(depC.dependsOn[0].sourceID).toMatch(/source_a/);
+        // ...and it is the same node object both times, not a copy.
+        expect(depB.dependsOn[0]).toBe(depC.dependsOn[0]);
+        expect(getAllSourceIDs(nodeD.dependsOn)).toHaveLength(4);
+      });
+
+      it('diamond dependency pattern with query_source chains', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is source_a -> { select: * }
+
+          #@ persist
+          source: source_d is ${tstDB}.sql("""SELECT * FROM %{ source_b } UNION ALL SELECT * FROM %{ source_c }""")
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(1);
+
+        const nodeD = graph.nodes[0][0];
+        expect(nodeD.sourceID).toMatch(/source_d/);
+
+        // Both readers of source_a record the edge to it. A source reached a
+        // second time returns what it returned the first time, so the second
+        // reader is not left claiming it depends on nothing.
+        const [depB, depC] = nodeD.dependsOn;
+        expect(nodeD.dependsOn).toHaveLength(2);
+        expect(depB.sourceID).toMatch(/source_b/);
+        expect(depC.sourceID).toMatch(/source_c/);
+        expect(depB.dependsOn[0].sourceID).toMatch(/source_a/);
+        expect(depC.dependsOn[0].sourceID).toMatch(/source_a/);
+        // ...and it is the same node object both times, not a copy.
+        expect(depB.dependsOn[0]).toBe(depC.dependsOn[0]);
+        expect(getAllSourceIDs(nodeD.dependsOn)).toHaveLength(4);
+      });
+    });
+
+    describe('dependency detection', () => {
+      it('query_source: detects dependency on structRef source', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+        `);
+
+        const nodeB = findNode(plan.graphs[0].nodes, 'source_b');
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
+      });
+
+      it('query_source: detects dependency through source extend', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a extend {
+            dimension: extra_field is 'test'
+          } -> { select: * }
+        `);
+
+        const nodeB = findNode(plan.graphs[0].nodes, 'source_b');
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
+      });
+
+      it('query_source: detects dependency through chained extends', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a extend {
+            dimension: b_field is 'b'
+          } -> { select: * }
+
+          #@ persist
+          source: source_c is source_b extend {
+            dimension: c_field is 'c'
+          } -> { select: * }
+        `);
+
+        expect(plan.graphs[0].nodes).toHaveLength(1);
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const nodeC = plan.graphs[0].nodes[0][0];
+        expect(nodeC.sourceID).toMatch(/source_c/);
+
+        // source_c reaches source_a two ways: through source_b, and directly,
+        // because source_c's SQL inlines source_b's, which inlines source_a's.
+        // Both edges are true, and the direct one is redundant for ordering —
+        // source_b already sits between them.
+        const directDeps = nodeC.dependsOn.map(d => d.sourceID);
+        expect(directDeps.filter(id => id.includes('source_b'))).toHaveLength(
+          1
+        );
+        expect(directDeps.filter(id => id.includes('source_a'))).toHaveLength(
+          1
+        );
+
+        const allDeps = getAllSourceIDs(nodeC.dependsOn);
+        expect(allDeps).toHaveLength(3);
+        expect(hasDependency(nodeC.dependsOn, 'source_a')).toBe(true);
+        expect(hasDependency(nodeC.dependsOn, 'source_b')).toBe(true);
+      });
+
+      it('sql_select: detects dependency on interpolated persist source', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is ${tstDB}.sql("""SELECT * FROM %{ source_a }""")
+        `);
+
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const nodeB = plan.graphs[0].nodes[0][0];
+        expect(nodeB.sourceID).toMatch(/source_b/);
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
+      });
+
+      it('sql_select: detects dependency on query in interpolation', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is ${tstDB}.sql("""
+            SELECT * FROM %{ source_a -> { select: * } }
+          """)
+        `);
+
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const nodeB = plan.graphs[0].nodes[0][0];
+        expect(nodeB.sourceID).toMatch(/source_b/);
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
+      });
+
+      it('sql_select: detects transitive dependency through non-persistent interpolated source', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is ${tstDB}.sql("""SELECT * FROM %{ source_b }""")
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        expect(plan.graphs[0].nodes).toHaveLength(1);
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const node = plan.graphs[0].nodes[0][0];
+        expect(node.sourceID).toMatch(/source_c/);
+        expect(node.dependsOn).toHaveLength(1);
+        expect(node.dependsOn[0].sourceID).toMatch(/source_a/);
+      });
+
+      it('detects transitive dependency through non-persistent intermediate source', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is source_b -> { select: * }
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        expect(plan.graphs[0].nodes).toHaveLength(1);
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const node = plan.graphs[0].nodes[0][0];
+        expect(node.sourceID).toMatch(/source_c/);
+        expect(node.dependsOn).toHaveLength(1);
+        expect(node.dependsOn[0].sourceID).toMatch(/source_a/);
+      });
+
+      it('does NOT detect dependencies in source fields array (only extends)', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+        `);
+
+        expect(plan.graphs[0].nodes[0]).toHaveLength(2);
+
+        const nodeA = findNode(plan.graphs[0].nodes, 'source_a');
+        const nodeB = findNode(plan.graphs[0].nodes, 'source_b');
+
+        expect(nodeA.dependsOn).toEqual([]);
+        expect(nodeB.dependsOn).toEqual([]);
+      });
+
+      it('non-persistent source joining persistent source shows dependency', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+          source: carriers is ${tstDB}.table('malloytest.carriers')
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          source: carriers_with_stats is carriers extend {
+            join_one: stats is carrier_stats on stats.carrier = code
+          }
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+        expect(
+          graph.nodes[0].some(n => n.sourceID.includes('carrier_stats'))
+        ).toBe(true);
+      });
+
+      it('query with join in extend block detects persistent dependency', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+          source: carriers is ${tstDB}.table('malloytest.carriers')
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          query: carriers_query is carriers -> {
+            extend: {
+              join_one: stats is carrier_stats on stats.carrier = code
+            }
+            select: *
+          }
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+        expect(
+          graph.nodes[0].some(n => n.sourceID.includes('carrier_stats'))
+        ).toBe(true);
+      });
+    });
+
+    describe('minimal build set', () => {
+      it('returns only leaf sources, not intermediate dependencies', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is source_b -> { select: * }
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(1);
+
+        const node = graph.nodes[0][0];
+        expect(node.sourceID).toMatch(/^source_c@/);
+
+        const allDeps = getAllSourceIDs(node.dependsOn);
+        expect(allDeps).toHaveLength(2);
+        expect(hasDependency(node.dependsOn, 'source_a')).toBe(true);
+        expect(hasDependency(node.dependsOn, 'source_b')).toBe(true);
+      });
+
+      it('returns leaves from multiple disjoint chains', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_d is source_c -> { select: * }
+        `);
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(2);
+
+        const nodeIds = graph.nodes[0].map(n => n.sourceID);
+        expect(nodeIds.some(id => id.includes('source_b'))).toBe(true);
+        expect(nodeIds.some(id => id.includes('source_d'))).toBe(true);
+
+        const nodeB = findNode(graph.nodes, 'source_b');
+        const nodeD = findNode(graph.nodes, 'source_d');
+
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
+
+        expect(nodeD.dependsOn).toHaveLength(1);
+        expect(nodeD.dependsOn[0].sourceID).toMatch(/source_c/);
+      });
+    });
+
+    describe('connection grouping', () => {
+      // Create a second duckdb connection for multi-connection tests
+      const duckdb2Conn = new DuckDBROTestConnection(
+        'duckdb2',
+        'test/data/duckdb/duckdb_test.db'
+      );
+
+      afterAll(async () => {
+        await duckdb2Conn.close();
+      });
+
+      it('groups sources by connection', async () => {
+        // Create a model with persist sources on two different connections
+        testFileSpace.setFile(
+          new URL('test://multi-conn.malloy'),
+          `${PERSIST_ANNOTATION}
+          source: flights1 is duckdb.table('malloytest.flights')
+          source: flights2 is duckdb2.table('malloytest.flights')
+
+          #@ persist
+          source: stats1 is flights1 -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: stats2 is flights2 -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+          `
+        );
+
+        // Use a runtime that has both connections
+        const multiRuntime = new ConnectionRuntime({
+          urlReader: testFileSpace,
+          connections: [tstRuntime.connection, duckdb2Conn],
+        });
+
+        const model = await multiRuntime
+          .loadModel(new URL('test://multi-conn.malloy'))
+          .getModel();
+        const plan = model.getBuildPlan();
+
+        // Should have two separate graphs, one for each connection
+        expect(plan.graphs).toHaveLength(2);
+
+        // Each graph should have one source
+        const connNames = plan.graphs.map(g => g.connectionName).sort();
+        expect(connNames).toEqual(['duckdb', 'duckdb2']);
+
+        // Clean up
+        testFileSpace.deleteFile(new URL('test://multi-conn.malloy'));
+      });
+
+      it('returns separate graphs for different connections', async () => {
+        // More detailed test: verify graph structure with dependencies
+        testFileSpace.setFile(
+          new URL('test://multi-conn2.malloy'),
+          `${PERSIST_ANNOTATION}
+          source: flights1 is duckdb.table('malloytest.flights')
+          source: flights2 is duckdb2.table('malloytest.flights')
+
+          #@ persist
+          source: base1 is flights1 -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: derived1 is base1 -> { select: * }
+
+          #@ persist
+          source: base2 is flights2 -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+          `
+        );
+
+        const multiRuntime = new ConnectionRuntime({
+          urlReader: testFileSpace,
+          connections: [tstRuntime.connection, duckdb2Conn],
+        });
+
+        const model = await multiRuntime
+          .loadModel(new URL('test://multi-conn2.malloy'))
+          .getModel();
+        const plan = model.getBuildPlan();
+
+        // Should have two separate graphs
+        expect(plan.graphs).toHaveLength(2);
+
+        // Find each graph by connection
+        const graph1 = plan.graphs.find(g => g.connectionName === 'duckdb')!;
+        const graph2 = plan.graphs.find(g => g.connectionName === 'duckdb2')!;
+
+        expect(graph1).toBeDefined();
+        expect(graph2).toBeDefined();
+
+        // duckdb graph: derived1 is leaf, depends on base1
+        expect(graph1.nodes).toHaveLength(1);
+        expect(graph1.nodes[0]).toHaveLength(1);
+        expect(graph1.nodes[0][0].sourceID).toContain('derived1');
+        expect(graph1.nodes[0][0].dependsOn).toHaveLength(1);
+        expect(graph1.nodes[0][0].dependsOn[0].sourceID).toContain('base1');
+
+        // duckdb2 graph: base2 is leaf with no dependencies
+        expect(graph2.nodes).toHaveLength(1);
+        expect(graph2.nodes[0]).toHaveLength(1);
+        expect(graph2.nodes[0][0].sourceID).toContain('base2');
+        expect(graph2.nodes[0][0].dependsOn).toHaveLength(0);
+
+        // Clean up
+        testFileSpace.deleteFile(new URL('test://multi-conn2.malloy'));
+      });
+    });
+
+    describe('persist annotation filtering', () => {
+      it('only includes sources with #@ persist', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: persisted is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          source: not_persisted is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+        `);
+
+        expect(Object.keys(plan.sources)).toHaveLength(1);
+        expect(Object.values(plan.sources)[0].name).toBe('persisted');
+      });
+
+      it('ignores sources without persist annotation', async () => {
+        const {plan} = await getPersistPlan(`
+          ${FLIGHTS_SOURCE}
+
+          # Some other annotation
+          source: annotated_not_persist is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          source: no_annotation is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+        `);
+
+        expect(plan.graphs).toEqual([]);
+        expect(plan.sources).toEqual({});
+      });
+
+      it('ignores non-persistable source types (table)', async () => {
+        const {plan} = await getPersistPlan(`
+          #@ persist
+          ${FLIGHTS_SOURCE}
+        `);
+
+        expect(plan.graphs).toEqual([]);
+        expect(plan.sources).toEqual({});
+      });
+    });
+  });
+
+  describe('sql_select persistence', () => {
+    it('sql_select source can be persisted', async () => {
+      const {plan} = await getPersistPlan(`
+        #@ persist
+        source: custom_query is ${tstDB}.sql("""
+          SELECT carrier, COUNT(*) as cnt
+          FROM malloytest.flights
+          GROUP BY carrier
+        """)
+      `);
+
+      expect(Object.keys(plan.sources)).toHaveLength(1);
+      const source = Object.values(plan.sources)[0];
+      expect(source.name).toBe('custom_query');
+      expect(source.sourceID).toMatch(/custom_query@/);
+    });
+
+    it('sql_select with interpolated persist source has dependency', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        #@ persist
+        source: combined is ${tstDB}.sql("""
+          SELECT * FROM %{ carrier_stats }
+          WHERE flight_count > 100
+        """)
+      `);
+
+      expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+      const node = plan.graphs[0].nodes[0][0];
+      expect(node.sourceID).toMatch(/combined/);
+      expect(node.dependsOn).toHaveLength(1);
+      expect(node.dependsOn[0].sourceID).toMatch(/carrier_stats/);
+    });
+
+    it('getSQL expands interpolated sources to subqueries', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        #@ persist
+        source: wrapper is ${tstDB}.sql("""
+          SELECT * FROM %{ carrier_stats }
+        """)
+      `);
+
+      const wrapperSource = Object.values(plan.sources).find(
+        s => s.name === 'wrapper'
+      )!;
+
+      const sql = wrapperSource.getSQL();
+
+      expect(sql).toContain('SELECT');
+      expect(sql).toContain('carrier');
+    });
+
+    it('getSQL substitutes from manifest', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        #@ persist
+        source: wrapper is ${tstDB}.sql("""
+          SELECT * FROM %{ carrier_stats }
+        """)
+      `);
+
+      const connectionDigest = await getDigest();
+
+      const carrierStats = Object.values(plan.sources).find(
+        s => s.name === 'carrier_stats'
+      )!;
+      const carrierStatsSQL = carrierStats.getSQL();
+      const carrierStatsBuildId = carrierStats.makeBuildId(
+        connectionDigest,
+        carrierStatsSQL
+      );
+
+      const manifest = createManifest();
+      addManifestEntry(
+        manifest,
+        carrierStatsBuildId,
+        'cache.carrier_stats_built'
+      );
+
+      const wrapper = Object.values(plan.sources).find(
+        s => s.name === 'wrapper'
+      )!;
+      const sql = wrapper.getSQL({
+        buildManifest: manifest,
+        connectionDigests: {[tstDB]: connectionDigest},
+      });
+
+      expect(sql).toContain('cache.carrier_stats_built');
+      expect(sql).not.toContain('COUNT(');
+    });
+  });
+
+  describe('build workflow integration', () => {
+    it('full build workflow: getBuildPlan -> getSQL -> makeBuildId', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+
+      expect(plan.graphs).toHaveLength(1);
+      expect(Object.keys(plan.sources)).toHaveLength(1);
+
+      const source = Object.values(plan.sources)[0];
+      const sql = source.getSQL();
+      expect(sql).toContain('SELECT');
+      expect(sql).toContain('carrier');
+
+      const mockConnectionDigest = 'mock-connection-digest';
+      const buildId = source.makeBuildId(mockConnectionDigest, sql);
+
+      expect(buildId).toMatch(/^[a-f0-9]{64}$/);
+
+      const buildId2 = source.makeBuildId(mockConnectionDigest, sql);
+      expect(buildId).toBe(buildId2);
+
+      const parsed = source.tagParse({prefix: /^#@ /});
+      expect(parsed.tag.has('persist')).toBe(true);
+    });
+
+    it('manifest round-trip: build then query with manifest', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        #@ persist
+        source: wrapper is ${tstDB}.sql("""
+          SELECT * FROM %{ carrier_stats } WHERE flight_count > 100
+        """)
+      `);
+
+      const connectionDigest = await getDigest();
+      const manifest = createManifest();
+
+      const carrierStats = Object.values(plan.sources).find(
+        s => s.name === 'carrier_stats'
+      )!;
+      const carrierStatsSQL = carrierStats.getSQL();
+      const carrierStatsBuildId = carrierStats.makeBuildId(
+        connectionDigest,
+        carrierStatsSQL
+      );
+      addManifestEntry(
+        manifest,
+        carrierStatsBuildId,
+        'build_cache.carrier_stats_v1'
+      );
+
+      const wrapper = Object.values(plan.sources).find(
+        s => s.name === 'wrapper'
+      )!;
+      const wrapperSQL = wrapper.getSQL({
+        buildManifest: manifest,
+        connectionDigests: {[tstDB]: connectionDigest},
+      });
+
+      expect(wrapperSQL).toContain('build_cache.carrier_stats_v1');
+      expect(wrapperSQL).toContain('flight_count > 100');
+
+      const wrapperBuildId = wrapper.makeBuildId(connectionDigest, wrapperSQL);
+      addManifestEntry(manifest, wrapperBuildId, 'build_cache.wrapper_v1');
+
+      expect(Object.keys(manifest.entries)).toHaveLength(2);
+      expect(carrierStatsBuildId).not.toBe(wrapperBuildId);
+    });
+  });
+
+  describe('cross-model imports', () => {
+    afterEach(() => {
+      // Clean up test files
+      testFileSpace.deleteFile(new URL('test://model1.malloy'));
+      testFileSpace.deleteFile(new URL('test://model2.malloy'));
+      testFileSpace.deleteFile(new URL('test://model3.malloy'));
+    });
+
+    it('detects dependency on imported persist source through extend', async () => {
+      // Model 1: defines a persist source
+      const model1 = `${PERSIST_ANNOTATION}
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: base_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `;
+
+      // Model 2: imports model1 and extends the persist source
+      const model2 = `${PERSIST_ANNOTATION}
+        import "test://model1.malloy"
+
+        #@ persist
+        source: extended_stats is base_stats extend {
+          dimension: extra_field is 'test'
+        } -> { select: * }
+      `;
+
+      testFileSpace.setFile(new URL('test://model1.malloy'), model1);
+      testFileSpace.setFile(new URL('test://model2.malloy'), model2);
+
+      const testModel = {
+        model: tstRuntime.loadModel(new URL('test://model2.malloy')),
+        dialect: tstRuntime.dialect,
+      };
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      // extended_stats should depend on base_stats from model1
+      expect(plan.graphs).toHaveLength(1);
+      const node = plan.graphs[0].nodes[0].find(n =>
+        n.sourceID.includes('extended_stats')
+      );
+      expect(node).toBeDefined();
+
+      // The dependency should include base_stats (from the imported model)
+      expect(node!.dependsOn.some(d => d.sourceID.includes('base_stats'))).toBe(
+        true
+      );
+    });
+
+    it('detects persistent base through non-persistent imported extend chain', async () => {
+      // Model 1: defines persist source A
+      const model1 = `${PERSIST_ANNOTATION}
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: source_a is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `;
+
+      // Model 2: imports model1, extends A to create B (NOT persist)
+      const model2 = `${PERSIST_ANNOTATION}
+        import "test://model1.malloy"
+
+        source: source_b is source_a extend {
+          dimension: b_field is 'b'
+        }
+      `;
+
+      // Model 3: imports model2, extends B to create C (NOT persist)
+      const model3 = `${PERSIST_ANNOTATION}
+        import "test://model2.malloy"
+
+        source: source_c is source_b extend {
+          dimension: c_field is 'c'
+        }
+      `;
+
+      testFileSpace.setFile(new URL('test://model1.malloy'), model1);
+      testFileSpace.setFile(new URL('test://model2.malloy'), model2);
+      testFileSpace.setFile(new URL('test://model3.malloy'), model3);
+
+      const testModel = {
+        model: tstRuntime.loadModel(new URL('test://model3.malloy')),
+        dialect: tstRuntime.dialect,
+      };
+      const model = await testModel.model.getModel();
+
+      const plan = model.getBuildPlan();
+
+      // Persistence is inherited through extends chain, so all three sources
+      // are persistent. source_c is the root (nothing depends on it).
+      // All three will generate the same SQL and use the same build artifact.
+      expect(plan.graphs).toHaveLength(1);
+      const graph = plan.graphs[0];
+
+      // Build graph has 1 level with the root node (source_c)
+      // Dependencies are nested in dependsOn
+      expect(graph.nodes).toHaveLength(1);
+      expect(graph.nodes[0]).toHaveLength(1);
+
+      // Root: source_c
+      const source_c = graph.nodes[0][0];
+      expect(source_c.sourceID).toContain('source_c');
+
+      // source_c depends on source_b
+      expect(source_c.dependsOn).toHaveLength(1);
+      const source_b = source_c.dependsOn[0];
+      expect(source_b.sourceID).toContain('source_b');
+
+      // source_b depends on source_a
+      expect(source_b.dependsOn).toHaveLength(1);
+      const source_a = source_b.dependsOn[0];
+      expect(source_a.sourceID).toContain('source_a');
+
+      // source_a has no dependencies
+      expect(source_a.dependsOn).toHaveLength(0);
+    });
+
+    it('breaks persistence inheritance with #@ -persist', async () => {
+      // Model 1: defines persist source A
+      const model1 = `${PERSIST_ANNOTATION}
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: source_a is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `;
+
+      // Model 2: imports model1, extends A to create B with #@ -persist
+      // This breaks the persistence inheritance chain
+      const model2 = `${PERSIST_ANNOTATION}
+        import "test://model1.malloy"
+
+        #@ -persist
+        source: source_b is source_a extend {
+          dimension: b_field is 'b'
+        }
+      `;
+
+      // Model 3: imports model2, extends B to create C (NOT persistent)
+      // source_c is not persistent because source_b broke the chain
+      const model3 = `${PERSIST_ANNOTATION}
+        import "test://model2.malloy"
+
+        source: source_c is source_b extend {
+          dimension: c_field is 'c'
+        }
+      `;
+
+      testFileSpace.setFile(new URL('test://model1.malloy'), model1);
+      testFileSpace.setFile(new URL('test://model2.malloy'), model2);
+      testFileSpace.setFile(new URL('test://model3.malloy'), model3);
+
+      const testModel = {
+        model: tstRuntime.loadModel(new URL('test://model3.malloy')),
+        dialect: tstRuntime.dialect,
+      };
+      const model = await testModel.model.getModel();
+
+      const plan = model.getBuildPlan();
+
+      // Only source_a is persistent - source_b used #@ -persist to break the chain
+      expect(plan.graphs).toHaveLength(1);
+      const graph = plan.graphs[0];
+
+      // Build graph has 1 level with just source_a
+      expect(graph.nodes).toHaveLength(1);
+      expect(graph.nodes[0]).toHaveLength(1);
+
+      // Root: source_a (the only persistent source)
+      const source_a = graph.nodes[0][0];
+      expect(source_a.sourceID).toContain('source_a');
+      expect(source_a.dependsOn).toHaveLength(0);
+    });
+
+    it('an inline extend at the query site still routes to the table', async () => {
+      // `run: persisted extend { ... } -> { ... }` is the ordinary way to use a
+      // persisted source, and the inline extend is not a named source. It finds
+      // its dependency through `extends` rather than through an id of its own,
+      // and it substitutes because substitution keys on `persistent` plus the
+      // SQL hash — an extend changes neither.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: complex_thing is flights -> {
+            group_by: carrier
+            aggregate: n is count()
+          }
+
+          run: complex_thing extend {
+            dimension: loud is upper(carrier)
+          } -> {
+            group_by: loud
+            aggregate: total is n.sum()
+          }
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+
+      // The query's dependency on the persisted source is found.
+      const {connections} = await tstRuntime.getBuildTargets(model);
+      expect(connections).toHaveLength(1);
+      expect(connections[0].targets).toHaveLength(1);
+      const target = connections[0].targets[0];
+      expect(target.sources.map(s => s.name)).toEqual(['complex_thing']);
+
+      // And a query through the inline extend reads the built table.
+      const manifest: BuildManifest = {
+        entries: {[target.buildId]: {tableName: 'cached.complex_thing'}},
+      };
+      const sql = await runtimeWithManifest(manifest)
+        .loadQueryByIndex(new URL('test://model1.malloy'), 0)
+        .getSQL();
+      expect(sql).toContain('cached.complex_thing');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('a named extend is the same table, and routes to it', async () => {
+      // The named counterpart of the test above. `moreComplex` inherits the
+      // whole annotation — `name=` included — and does not change the
+      // materialization SQL, so it is a second name for one table rather than
+      // a second table.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist name=complex_thing
+          source: complex_base is flights -> {
+            group_by: carrier
+            aggregate: n is count()
+          }
+
+          source: more_complex is complex_base extend {
+            dimension: loud is upper(carrier)
+          }
+
+          run: more_complex -> { group_by: loud; aggregate: total is n.sum() }
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const {connections} = await tstRuntime.getBuildTargets(model);
+
+      expect(connections[0].targets).toHaveLength(1);
+      const target = connections[0].targets[0];
+      expect(target.sources.map(s => s.name).sort()).toEqual([
+        'complex_base',
+        'more_complex',
+      ]);
+      // Both inherited the same requested name, so there is nothing to resolve.
+      const asked = target.sources.map(s =>
+        s.annotations.parseAsTag('@').tag.text('name')
+      );
+      expect(new Set(asked)).toEqual(new Set(['complex_thing']));
+
+      const manifest: BuildManifest = {
+        entries: {[target.buildId]: {tableName: 'cached.complex_thing'}},
+      };
+      const sql = await runtimeWithManifest(manifest)
+        .loadQueryByIndex(new URL('test://model1.malloy'), 0)
+        .getSQL();
+      expect(sql).toContain('cached.complex_thing');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('a diamond orders both readers after the source they share', async () => {
+      // Two readers of one source, both read by a fourth. Every reader has to
+      // record the shared dependency: one that records no edge can be started
+      // before the table it reads exists.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: shared is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: lo_side is shared extend { dimension: side is 'lo' } -> { select: * }
+
+          #@ persist
+          source: hi_side is shared extend { dimension: side is 'hi' } -> { select: * }
+
+          #@ persist
+          source: both is ${tstDB}.sql("""
+            SELECT * FROM %{ lo_side } UNION ALL SELECT * FROM %{ hi_side }
+          """)
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const {connections} = await tstRuntime.getBuildTargets(model);
+
+      expect(connections).toHaveLength(1);
+      const targets = connections[0].targets;
+      const nameOf = (t: BuildTarget) =>
+        t.sources
+          .map(s => s.name)
+          .sort()
+          .join('+');
+
+      // Dependencies before dependents, whichever order the walk found them.
+      const at = (n: string) => targets.findIndex(t => nameOf(t) === n);
+      expect(at('shared')).toBeLessThan(at('lo_side'));
+      expect(at('shared')).toBeLessThan(at('hi_side'));
+      expect(at('lo_side')).toBeLessThan(at('both'));
+      expect(at('hi_side')).toBeLessThan(at('both'));
+
+      // Both readers record the shared dependency — not just the first one.
+      const shared = targets[at('shared')];
+      expect(targets[at('lo_side')].dependsOn).toEqual([shared]);
+      expect(targets[at('hi_side')].dependsOn).toEqual([shared]);
+      expect(targets[at('both')].dependsOn.map(nameOf).sort()).toEqual([
+        'hi_side',
+        'lo_side',
+      ]);
+    });
+
+    it('reaches dependencies through a non-persistent wrapper', async () => {
+      // The importing model has to be able to take the same route the walk
+      // took. `joined` is correctly not a table — it adds a join and nothing
+      // else, so it materializes identically to source_a — but it is the only
+      // way to reach either dependency. Copy only the persistent sources and
+      // the route is severed: the plan comes back holding `report` alone, and
+      // two sources the user marked `#@ persist` are never built.
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is flights -> {
+            group_by: carrier
+            aggregate: dep_count is count()
+          }
+
+          #@ -persist
+          source: joined is source_a extend {
+            join_one: source_b on carrier = source_b.carrier
+          }
+
+          #@ persist
+          source: report is joined -> {
+            group_by: carrier
+            group_by: n is flight_count
+            group_by: d is source_b.dep_count
+          }
+        `
+      );
+      testFileSpace.setFile(
+        new URL('test://model2.malloy'),
+        `${PERSIST_ANNOTATION}
+          import "test://model1.malloy"
+          run: report -> { select: * }
+        `
+      );
+
+      const direct = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const imported = await tstRuntime
+        .loadModel(new URL('test://model2.malloy'))
+        .getModel();
+
+      const namesIn = (plan: BuildPlan) =>
+        Object.keys(plan.sources)
+          .map(id => id.split('@')[0])
+          .sort();
+
+      // Importing the report must not change what has to be built.
+      expect(namesIn(imported.getBuildPlan())).toEqual([
+        'report',
+        'source_a',
+        'source_b',
+      ]);
+      expect(namesIn(imported.getBuildPlan())).toEqual(
+        namesIn(direct.getBuildPlan())
+      );
+
+      // The wrapper is a route, not a table, so it is not in the plan at all —
+      // `report` depends on the two tables it reaches through it.
+      const node = imported.getBuildPlan().graphs[0].nodes[0][0];
+      expect(node.sourceID).toContain('report');
+      expect(node.dependsOn.map(d => d.sourceID.split('@')[0]).sort()).toEqual([
+        'source_a',
+        'source_b',
+      ]);
+    });
+  });
+
+  describe('cross-model manifest substitution', () => {
+    afterEach(() => {
+      testFileSpace.deleteFile(new URL('test://model1.malloy'));
+      testFileSpace.deleteFile(new URL('test://model2.malloy'));
+    });
+
+    // Set model1 to CARRIER_STATS_PERSIST_MODEL and build its manifest
+    async function buildCarrierStatsManifest() {
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        CARRIER_STATS_PERSIST_MODEL
+      );
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const plan = model.getBuildPlan();
+      return (
+        await buildManifestFor(
+          plan,
+          'carrier_stats',
+          'cached.carrier_stats_table'
+        )
+      ).manifest;
+    }
+
+    // Load query from model2 with manifest, return SQL
+    async function getModel2SQL(manifest: BuildManifest) {
+      return runtimeWithManifest(manifest)
+        .loadQuery(new URL('test://model2.malloy'))
+        .getSQL();
+    }
+
+    it('query against imported persist source uses manifest', async () => {
+      const manifest = await buildCarrierStatsManifest();
+      testFileSpace.setFile(
+        new URL('test://model2.malloy'),
+        `${PERSIST_ANNOTATION}
+          import "test://model1.malloy"
+          run: carrier_stats -> { select: * }
+        `
+      );
+
+      const sql = await getModel2SQL(manifest);
+      expect(sql).toContain('cached.carrier_stats_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('query against imported persist source with extend uses manifest', async () => {
+      // Model1 has extend on the persist source itself
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          } extend {
+            view: all_rows is { select: * }
+          }
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const {manifest} = await buildManifestFor(
+        model.getBuildPlan(),
+        'carrier_stats',
+        'cached.carrier_stats_table'
+      );
+
+      testFileSpace.setFile(
+        new URL('test://model2.malloy'),
+        `${PERSIST_ANNOTATION}
+          import "test://model1.malloy"
+          run: carrier_stats -> all_rows
+        `
+      );
+
+      const sql = await getModel2SQL(manifest);
+      expect(sql).toContain('cached.carrier_stats_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('imported persist source extended in importing file uses manifest', async () => {
+      const manifest = await buildCarrierStatsManifest();
+      testFileSpace.setFile(
+        new URL('test://model2.malloy'),
+        `${PERSIST_ANNOTATION}
+          import "test://model1.malloy"
+
+          source: extended is carrier_stats extend {
+            view: all_rows is { select: * }
+          }
+
+          run: extended -> all_rows
+        `
+      );
+
+      const sql = await getModel2SQL(manifest);
+      expect(sql).toContain('cached.carrier_stats_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('cross-model join of imported persistent sources works with manifest', async () => {
+      // Matches IMDB pattern: transform.malloy defines chained persistent
+      // sources (titles_base, principals_base joins titles_base), imdb.malloy
+      // imports them and joins them into a non-persistent source.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+
+      try {
+        const flightsPath = 'test/data/malloytest-parquet/flights.parquet';
+        const carriersPath = 'test/data/malloytest-parquet/carriers.parquet';
+
+        // model1 = "transform.malloy": defines persistent sources
+        // Uses SQL sources as base (like IMDB's raw_* sources)
+        testFileSpace.setFile(
+          new URL('test://model1.malloy'),
+          `${PERSIST_ANNOTATION}
+            ##! experimental.virtual_source
+            source: raw_flights is ${tstDB}.sql("""
+              SELECT * FROM '${flightsPath}'
+            """)
+
+            source: raw_carriers is ${tstDB}.sql("""
+              SELECT * FROM '${carriersPath}'
+            """)
+
+            type: stats_type is {
+              carrier:: string,
+              flight_count:: number
+            }
+
+            #@ persist name=by_carrier
+            source: by_carrier is raw_flights -> {
+              group_by: carrier
+              aggregate: flight_count is count()
+            }::stats_type extend {
+              view: test is { select: *; limit: 10 }
+            }
+
+            type: principal_type is {
+              code:: string,
+              carrier:: string,
+              flight_count:: number
+            }
+
+            #@ persist name=carrier_principals
+            source: carrier_principals is raw_carriers -> {
+              join_one: stats is by_carrier on stats.carrier = code
+              where: stats.carrier is not null
+              select:
+                code
+                stats.carrier
+                stats.flight_count
+            }::principal_type extend {
+              view: test is { select: *; limit: 10 }
+            }
+          `
+        );
+
+        // model2 = "imdb.malloy": imports, extends persistent sources
+        // with added joins, then queries through them.
+        // Matches IMDB: people extends people_base (persistent) with ::type,
+        // principals extends principals_base (persistent) with join to people,
+        // movies extends titles_base (persistent) with join to principals.
+        testFileSpace.setFile(
+          new URL('test://model2.malloy'),
+          `${PERSIST_ANNOTATION}
+            ##! experimental.virtual_source
+            import "test://model1.malloy"
+
+            source: people is by_carrier::stats_type extend {
+              primary_key: carrier
+            }
+
+            source: principals is carrier_principals extend {
+              join_one: people on people.carrier = carrier
+            }
+
+            source: movies is by_carrier extend {
+              join_one: cp is principals on cp.carrier = carrier
+            }
+
+            run: movies -> {
+              select: carrier, cp.flight_count
+              order_by: carrier
+              limit: 5
+            }
+          `
+        );
+
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+
+        // Build manifest from model1
+        const model1 = await rwRuntime
+          .loadModel(new URL('test://model1.malloy'))
+          .getModel();
+        const plan = model1.getBuildPlan();
+        const connectionDigest = rwConn.getDigest();
+
+        const manifest = createManifest();
+        for (const source of Object.values(plan.sources)) {
+          const buildSQL = source.getSQL();
+          const buildId = source.makeBuildId(connectionDigest, buildSQL);
+          await rwConn.runSQL(`CREATE TABLE ${source.name} AS ${buildSQL}`);
+          addManifestEntry(manifest, buildId, source.name);
+        }
+        manifest.strict = true;
+        rwRuntime.buildManifest = manifest;
+
+        // Run model2 query with strict manifest
+        const resultManifest = await rwRuntime
+          .loadQuery(new URL('test://model2.malloy'))
+          .run();
+        // Run without manifest
+        const resultPlain = await rwRuntime
+          .loadQuery(new URL('test://model2.malloy'), {
+            buildManifest: EMPTY_BUILD_MANIFEST,
+          })
+          .run();
+
+        const dataManifest = resultManifest.data.toObject();
+        const dataPlain = resultPlain.data.toObject();
+
+        expect(dataManifest.length).toBeGreaterThan(0);
+        expect(dataManifest.length).toBe(dataPlain.length);
+
+        type Row = {carrier: string; flight_count: number};
+        const rowsManifest = dataManifest as Row[];
+        const rowsPlain = dataPlain as Row[];
+        for (let i = 0; i < rowsPlain.length; i++) {
+          expect(rowsManifest[i].carrier).toBe(rowsPlain[i].carrier);
+          expect(rowsManifest[i].flight_count).toBe(rowsPlain[i].flight_count);
+        }
+      } finally {
+        testFileSpace.deleteFile(new URL('test://model1.malloy'));
+        testFileSpace.deleteFile(new URL('test://model2.malloy'));
+        await rwConn.close();
+      }
+    });
+  });
+
+  describe('tagParseLog', () => {
+    it('reports tag parse errors in build plan', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ x=y.z
+        #@ persist
+        source: bad_tag is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+      // Source should still be found (persist tag is valid)
+      expect(plan.graphs).toHaveLength(1);
+      // But the bad tag line should produce parse errors
+      expect(plan.tagParseLog.length).toBeGreaterThan(0);
+    });
+
+    it('tagParseLog is empty when annotations are valid', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: good_tag is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+      expect(plan.graphs).toHaveLength(1);
+      expect(plan.tagParseLog).toHaveLength(0);
+    });
+  });
+
+  describe('experimental.persistence annotation requirement', () => {
+    it('getBuildPlan throws without experimental.persistence annotation', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+        `
+      );
+      const model = await testModel.model.getModel();
+
+      expect(() => model.getBuildPlan()).toThrow('experimental.persistence');
+    });
+
+    it('getBuildPlan inherits experimental.persistence across extendModel', async () => {
+      // The base declares the flag; the extension does not. `##!` carries across
+      // extend, and the persistence gate reads the resolved (folded) model
+      // annotations — so getBuildPlan on the extension must still work.
+      const base = wrapTestModel(
+        tstRuntime,
+        `${PERSIST_ANNOTATION}\n${FLIGHTS_SOURCE}`
+      ).model;
+      const extended = base.extendModel(`
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+      const model = await extended.getModel();
+      expect(() => model.getBuildPlan()).not.toThrow();
+    });
+
+    it('running query with non-empty buildManifest throws without experimental.persistence annotation', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        ${FLIGHTS_SOURCE}
+
+        query: test_query is flights -> { group_by: carrier }
+        `
+      );
+
+      const manifest = createManifest();
+      addManifestEntry(manifest, 'fake-build-id', 'some_table');
+
+      await expect(
+        testModel.model
+          .loadQueryByName('test_query')
+          .run({buildManifest: manifest})
+      ).rejects.toThrow('experimental.persistence');
+    });
+
+    it('Runtime-level manifest is silently ignored for non-persistence models', async () => {
+      const modelCode = `
+        ${FLIGHTS_SOURCE}
+        run: flights -> { group_by: carrier }
+      `;
+
+      const result = await runtimeWithManifest(createManifest())
+        .loadQuery(modelCode)
+        .run();
+      expect(result.data.value.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Runtime buildManifest property', () => {
+    const BY_CARRIER_QUERY_MODEL = `${PERSIST_ANNOTATION}
+      ${FLIGHTS_SOURCE}
+
+      #@ persist name=by_carrier
+      source: by_carrier is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      run: by_carrier -> { select: * }
+    `;
+
+    async function buildByCarrierManifest() {
+      const model = await tstRuntime
+        .loadModel(BY_CARRIER_QUERY_MODEL)
+        .getModel();
+      return (
+        await buildManifestFor(model.getBuildPlan(), 'by_carrier', 'by_carrier')
+      ).manifest;
+    }
+
+    it('query uses Runtime manifest by default, empty override suppresses it', async () => {
+      const manifest = await buildByCarrierManifest();
+      const rt = runtimeWithManifest(manifest);
+
+      // Default: uses Runtime's manifest — SQL should reference the table
+      const sqlWithManifest = await rt
+        .loadQuery(BY_CARRIER_QUERY_MODEL)
+        .getSQL();
+      expect(sqlWithManifest).toMatch(/FROM\s+by_carrier\s/);
+
+      // Override with empty manifest — SQL should NOT reference the table
+      const sqlWithoutManifest = await rt
+        .loadQuery(BY_CARRIER_QUERY_MODEL, {
+          buildManifest: EMPTY_BUILD_MANIFEST,
+        })
+        .getSQL();
+      expect(sqlWithoutManifest).not.toMatch(/FROM\s+by_carrier\s/);
+    });
+
+    it('query results match with and without manifest', async () => {
+      // This test needs a writable DuckDB to CREATE the persisted table.
+      // Use parquet file directly since the in-memory DB has no tables.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+
+      try {
+        // Use parquet path so the in-memory connection can read flights
+        const flightsPath = 'test/data/malloytest-parquet/flights.parquet';
+        const modelCode = `${PERSIST_ANNOTATION}
+          source: flights is ${tstDB}.table('${flightsPath}') extend {
+            measure: flight_count is count()
+          }
+
+          #@ persist name=by_carrier
+          source: by_carrier is flights -> {
+            group_by: carrier
+            aggregate: flight_count
+          }
+
+          run: by_carrier -> { select: * }
+        `;
+
+        // Compile with the writable runtime to get consistent digests
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const model = await rwRuntime.loadModel(modelCode).getModel();
+        const plan = model.getBuildPlan();
+
+        const source = Object.values(plan.sources).find(
+          s => s.name === 'by_carrier'
+        )!;
+        const connectionDigest = rwConn.getDigest();
+        const buildSQL = source.getSQL();
+        const buildId = source.makeBuildId(connectionDigest, buildSQL);
+
+        // Create the persisted table
+        await rwConn.runSQL(`CREATE TABLE by_carrier AS ${buildSQL}`);
+
+        const manifest = createManifest();
+        addManifestEntry(manifest, buildId, 'by_carrier');
+        rwRuntime.buildManifest = manifest;
+
+        // Run with manifest (reads from persisted table)
+        const resultManifest = await rwRuntime.loadQuery(modelCode).run();
+        // Run without manifest (inlines the query)
+        const resultPlain = await rwRuntime
+          .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
+          .run();
+
+        const dataManifest = resultManifest.data.toObject();
+        const dataPlain = resultPlain.data.toObject();
+
+        expect(dataManifest.length).toBeGreaterThan(0);
+        expect(dataManifest.length).toBe(dataPlain.length);
+
+        // Sort and compare
+        type Row = {carrier: string; flight_count: number};
+        const sort = (a: Row, b: Row) => a.carrier.localeCompare(b.carrier);
+        const rowsManifest = (dataManifest as Row[]).sort(sort);
+        const rowsPlain = (dataPlain as Row[]).sort(sort);
+        for (let i = 0; i < rowsPlain.length; i++) {
+          expect(rowsManifest[i].carrier).toBe(rowsPlain[i].carrier);
+          expect(rowsManifest[i].flight_count).toBe(rowsPlain[i].flight_count);
+        }
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('join of persistent source works with manifest', async () => {
+      // Matches the IMDB pattern: persistent source A (by_carrier) is joined
+      // by persistent source B (carrier_principals), which is cast to a type
+      // and extended. A non-persistent source (movies) extends A and joins B.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+
+      try {
+        const flightsPath = 'test/data/malloytest-parquet/flights.parquet';
+        const carriersPath = 'test/data/malloytest-parquet/carriers.parquet';
+        const modelCode = `${PERSIST_ANNOTATION}
+          ##! experimental.virtual_source
+          source: flights is ${tstDB}.table('${flightsPath}') extend {
+            measure: flight_count is count()
+          }
+
+          type: stats_type is {
+            carrier:: string,
+            flight_count:: number
+          }
+
+          #@ persist name=by_carrier
+          source: by_carrier is flights -> {
+            group_by: carrier
+            aggregate: flight_count
+          }::stats_type extend {
+            view: test is { select: *; limit: 10 }
+          }
+
+          type: principal_type is {
+            code:: string,
+            carrier:: string,
+            flight_count:: number
+          }
+
+          #@ persist name=carrier_principals
+          source: carrier_principals is ${tstDB}.table('${carriersPath}') -> {
+            join_one: stats is by_carrier on stats.carrier = code
+            where: stats.carrier is not null
+            select:
+              code
+              stats.carrier
+              stats.flight_count
+          }::principal_type extend {
+            view: test is { select: *; limit: 10 }
+          }
+
+          source: movies is by_carrier extend {
+            join_one: cp is carrier_principals on cp.carrier = carrier
+          }
+
+          run: movies -> {
+            select: carrier, cp.flight_count
+            order_by: carrier
+            limit: 5
+          }
+        `;
+
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const model = await rwRuntime.loadModel(modelCode).getModel();
+        const plan = model.getBuildPlan();
+        const connectionDigest = rwConn.getDigest();
+
+        // Build all persistent sources
+        const manifest = createManifest();
+        for (const source of Object.values(plan.sources)) {
+          const buildSQL = source.getSQL();
+          const buildId = source.makeBuildId(connectionDigest, buildSQL);
+          await rwConn.runSQL(`CREATE TABLE ${source.name} AS ${buildSQL}`);
+          addManifestEntry(manifest, buildId, source.name);
+        }
+        manifest.strict = true;
+        rwRuntime.buildManifest = manifest;
+
+        // Run with manifest (joins read from persisted tables)
+        const resultManifest = await rwRuntime.loadQuery(modelCode).run();
+        // Run without manifest (joins inline the queries)
+        const resultPlain = await rwRuntime
+          .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
+          .run();
+
+        const dataManifest = resultManifest.data.toObject();
+        const dataPlain = resultPlain.data.toObject();
+
+        expect(dataManifest.length).toBeGreaterThan(0);
+        expect(dataManifest.length).toBe(dataPlain.length);
+
+        type Row = {carrier: string; flight_count: number};
+        const rowsManifest = dataManifest as Row[];
+        const rowsPlain = dataPlain as Row[];
+        for (let i = 0; i < rowsPlain.length; i++) {
+          expect(rowsManifest[i].carrier).toBe(rowsPlain[i].carrier);
+          expect(rowsManifest[i].flight_count).toBe(rowsPlain[i].flight_count);
+        }
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('buildManifest setter updates manifest after construction', async () => {
+      const manifest = await buildByCarrierManifest();
+
+      // Create runtime WITHOUT manifest
+      const runtime = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+
+      // Without manifest — SQL should NOT reference the table
+      const sqlBefore = await runtime
+        .loadQuery(BY_CARRIER_QUERY_MODEL)
+        .getSQL();
+      expect(sqlBefore).not.toMatch(/FROM\s+by_carrier\s/);
+
+      // Set manifest via setter
+      runtime.buildManifest = manifest;
+
+      // Now SQL SHOULD reference the table
+      const sqlAfter = await runtime.loadQuery(BY_CARRIER_QUERY_MODEL).getSQL();
+      expect(sqlAfter).toMatch(/FROM\s+by_carrier\s/);
+    });
+  });
+
+  describe('strict manifest', () => {
+    const strictModelCode = `${PERSIST_ANNOTATION}
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: by_carrier is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      run: by_carrier -> { select: * }
+    `;
+
+    it('strict manifest throws when persist source is missing from manifest', async () => {
+      const manifest = createManifest();
+      manifest.strict = true;
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(strictModelCode).getSQL()
+      ).rejects.toThrow('not found in manifest');
+    });
+
+    it('the throw names the source when it still has an identity', async () => {
+      const manifest = createManifest();
+      manifest.strict = true;
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(strictModelCode).getSQL()
+      ).rejects.toThrow(/Persisted source 'by_carrier@/);
+    });
+
+    it('and does not guess a name when the reference has none', async () => {
+      // An inline extend has had its sourceID deleted; `as` and `extends`
+      // survive but name the base, so neither stands in for it.
+      const manifest = createManifest();
+      manifest.strict = true;
+      const inlineExtend = `${CARRIER_STATS_PERSIST_MODEL}
+        run: carrier_stats extend { dimension: loud is upper(carrier) } -> {
+          group_by: loud
+        }
+      `;
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(inlineExtend).getSQL()
+      ).rejects.toThrow(/Persisted source not found in manifest/);
+    });
+
+    it('strict manifest with loadError surfaces the load error in the throw', async () => {
+      // Simulates the runtime auto-read path producing an empty manifest
+      // because the file was unparseable. The strict throw should mention
+      // the underlying parse failure so the user knows the manifest is
+      // broken, not just empty.
+      const manifest = createManifest();
+      manifest.strict = true;
+      manifest.loadError =
+        'Manifest file at file:///MANIFESTS/malloy-manifest.json could not be parsed: Unexpected token x';
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(strictModelCode).getSQL()
+      ).rejects.toThrow(/could not be parsed: Unexpected token x/);
+    });
+
+    it('strict manifest succeeds when persist source is in manifest', async () => {
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+
+      const {manifest} = await buildManifestFor(
+        plan,
+        'by_carrier',
+        'cached.by_carrier'
+      );
+      manifest.strict = true;
+
+      const resultSQL = await runtimeWithManifest(manifest)
+        .loadQuery(strictModelCode)
+        .getSQL();
+      expect(resultSQL).toContain('cached.by_carrier');
+    });
+
+    it('non-strict manifest falls through when persist source is missing', async () => {
+      // Should not throw — falls through to inline SQL
+      const sql = await runtimeWithManifest(createManifest())
+        .loadQuery(strictModelCode)
+        .getSQL();
+      expect(sql).toContain('COUNT(');
+    });
+
+    it('strict manifest ignores non-persistent query_source used as join', async () => {
+      const modelCode = `${PERSIST_ANNOTATION}
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        query: carrier_map is flights -> {
+          group_by: carrier
+        }
+
+        source: extended is by_carrier extend {
+          join_many: carrier_map on carrier = carrier_map.carrier
+          dimension: mapped_carrier is carrier_map.carrier
+        }
+
+        run: extended -> { where: mapped_carrier = 'WN'; select: * }
+      `;
+
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+
+      const {manifest} = await buildManifestFor(
+        plan,
+        'by_carrier',
+        'cached.by_carrier'
+      );
+      manifest.strict = true;
+
+      // Should not throw — carrier_map is not persistent, just a joined query
+      const sql = await runtimeWithManifest(manifest)
+        .loadQuery(modelCode)
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('strict manifest ignores named non-persistent source used as join', async () => {
+      const modelCode = `${PERSIST_ANNOTATION}
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        source: carrier_summary is flights -> {
+          group_by: carrier
+        }
+
+        source: extended is by_carrier extend {
+          join_many: carrier_summary on carrier = carrier_summary.carrier
+          dimension: summary_carrier is carrier_summary.carrier
+        }
+
+        run: extended -> { where: summary_carrier = 'WN'; select: * }
+      `;
+
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+
+      const {manifest} = await buildManifestFor(
+        plan,
+        'by_carrier',
+        'cached.by_carrier'
+      );
+      manifest.strict = true;
+
+      // Should not throw — carrier_summary has a sourceID but is not persistent
+      const sql = await runtimeWithManifest(manifest)
+        .loadQuery(modelCode)
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+  });
+
+  // Reported on #3015. Both describes assert the behavior the documentation
+  // describes, so a failure here is the report reproducing.
+  describe('sql_select substitution', () => {
+    // One model, two persisted sources of the two persistable kinds, plus a
+    // third that reaches the sql_select through interpolation.
+    const TWO_KINDS = `${PERSIST_ANNOTATION}
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: qs is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      #@ persist
+      source: ss is ${tstDB}.sql("""
+        SELECT carrier, COUNT(*) as flight_count
+        FROM malloytest.flights
+        GROUP BY carrier
+      """)
+
+      #@ persist
+      source: via_interp is ${tstDB}.sql("""
+        SELECT * FROM %{ ss }
+      """)
+    `;
+
+    // A manifest holding a built table for each named persist source, or for
+    // every one of them when no names are given.
+    async function manifestFor(names?: string[]): Promise<BuildManifest> {
+      const model = await wrapTestModel(tstRuntime, TWO_KINDS).model.getModel();
+      const digest = await getDigest();
+      const manifest = createManifest();
+      for (const source of Object.values(model.getBuildPlan().sources)) {
+        if (names && !names.includes(source.name)) continue;
+        addManifestEntry(
+          manifest,
+          source.makeBuildId(digest, source.getSQL()),
+          `cached.${source.name}_table`
+        );
+      }
+      return manifest;
+    }
+
+    async function sqlForQuery(
+      query: string,
+      built?: string[]
+    ): Promise<string> {
+      const manifest = await manifestFor(built);
+      return runtimeWithManifest(manifest)
+        .loadQuery(`${TWO_KINDS}\n${query}`)
+        .getSQL();
+    }
+
+    it('query_source reads its built table', async () => {
+      const sql = await sqlForQuery('run: qs -> { select: * }');
+      expect(sql).toContain('cached.qs_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('sql_select reads its built table', async () => {
+      const sql = await sqlForQuery('run: ss -> { select: * }');
+      expect(sql).toContain('cached.ss_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('sql_select reached by interpolation reads its built table', async () => {
+      // The manifest key and the entry are right — this path finds them.
+      // Only `ss` is built, so via_interp has to reach it rather than being
+      // substituted itself.
+      const sql = await sqlForQuery('run: via_interp -> { select: * }', ['ss']);
+      expect(sql).toContain('cached.ss_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('strict mode catches a missing sql_select entry', async () => {
+      // Strict mode's promise is that a persist source with no manifest entry
+      // throws rather than silently compiling to inline SQL.
+      const strict = createManifest();
+      strict.strict = true;
+      await expect(
+        runtimeWithManifest(strict)
+          .loadQuery(`${TWO_KINDS}\nrun: ss -> { select: * }`)
+          .getSQL()
+      ).rejects.toThrow(/not found in manifest/);
+    });
+
+    it('reads the built table, not the SQL that built it', async () => {
+      // Substitution is only real if the rows come from the table. Build one
+      // whose contents disagree with the source's SQL: a query that reads the
+      // table says 'stale', one that recomputes says 'live'. Before #3016 the
+      // sql_select leg always said 'live' — it looked fresh because it was
+      // never reading what had been built.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+      try {
+        const modelCode = `${PERSIST_ANNOTATION}
+          #@ persist
+          source: ss is ${tstDB}.sql("""SELECT 'live' as tag""")
+
+          run: ss -> { select: * }
+        `;
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const model = await rwRuntime.loadModel(modelCode).getModel();
+        const source = Object.values(model.getBuildPlan().sources).find(
+          s => s.name === 'ss'
+        )!;
+        const buildId = source.makeBuildId(rwConn.getDigest(), source.getSQL());
+
+        await rwConn.runSQL(
+          "CREATE TABLE ss_freshness AS SELECT 'stale' as tag"
+        );
+        const manifest = createManifest();
+        addManifestEntry(manifest, buildId, 'ss_freshness');
+        rwRuntime.buildManifest = manifest;
+
+        const built = await rwRuntime.loadQuery(modelCode).run();
+        const recomputed = await rwRuntime
+          .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
+          .run();
+
+        expect(built.data.toObject()).toEqual([{tag: 'stale'}]);
+        expect(recomputed.data.toObject()).toEqual([{tag: 'live'}]);
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('a join of both kinds substitutes both', async () => {
+      const sql = await sqlForQuery(`
+        run: flights extend {
+          join_one: q is qs on carrier = q.carrier
+          join_one: s is ss on carrier = s.carrier
+        } -> {
+          group_by: carrier
+          aggregate: a is q.flight_count.sum(), b is s.flight_count.sum()
+        }
+      `);
+      expect(sql).toContain('cached.qs_table');
+      expect(sql).toContain('cached.ss_table');
+    });
+  });
+
+  describe('BuildID SQL carries what changes the SQL', () => {
+    // The BuildID must ignore the manifest and nothing else. A virtualMap
+    // decides what table a virtual source reads, so a BuildID computed without
+    // it cannot be compiled at all — which is what both sides used to do.
+    const VIRTUAL_MODEL = `${PERSIST_ANNOTATION}
+      ##! experimental.virtual_source
+      type: ff is { carrier :: string }
+      source: vf is ${tstDB}.virtual('vflights')::ff
+
+      #@ persist
+      source: by_carrier is vf -> { group_by: carrier }
+
+      run: by_carrier -> { select: * }
+    `;
+
+    const virtualMap: VirtualMap = new Map([
+      [tstDB, new Map([['vflights', 'malloytest.flights']])],
+    ]);
+
+    function virtualRuntime() {
+      const rt = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+      rt.virtualMap = virtualMap;
+      return rt;
+    }
+
+    it('a persisted source over a virtual source can be planned', async () => {
+      const rt = virtualRuntime();
+      const model = await rt.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      expect(connections[0].targets[0].sql).toContain('malloytest.flights');
+    });
+
+    it('a given with an inline default keeps both sides on one key', async () => {
+      // The other half of the rule: `resolvedGivens` also changes the SQL, so
+      // both sides bind givens through the one function, inline folding
+      // included. Fold on one side only and this throws — the builder emits
+      // `'admin'='admin'` where the compiler folds the same expression.
+      const model = `${PERSIST_ANNOTATION}
+        ##! experimental.givens
+        given:
+          ROLE :: string is "admin"
+          inline IS_ADMIN :: boolean is $ROLE = 'admin'
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: gated is flights -> {
+          where: $IS_ADMIN
+          group_by: carrier
+        }
+
+        run: gated -> { select: * }
+      `;
+      const rt = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+      const {connections} = await rt.getBuildTargets(
+        await rt.loadModel(model).getModel()
+      );
+      const target = connections[0].targets[0];
+
+      const manifest = createManifest();
+      addManifestEntry(manifest, target.buildId, 'cached.gated');
+      manifest.strict = true;
+      rt.buildManifest = manifest;
+
+      const sql = await rt.loadQuery(model).getSQL();
+      expect(sql).toContain('cached.gated');
+    });
+
+    it('and the query finds the table the plan named', async () => {
+      // The whole point of the pair: the key the builder writes is the key the
+      // compiler recomputes. Build from getBuildTargets, then query.
+      const rt = virtualRuntime();
+      const model = await rt.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      const target = connections[0].targets[0];
+
+      const manifest = createManifest();
+      addManifestEntry(manifest, target.buildId, 'cached.virtual_by_carrier');
+      manifest.strict = true;
+      rt.buildManifest = manifest;
+
+      const sql = await rt.loadQuery(VIRTUAL_MODEL).getSQL();
+      expect(sql).toContain('cached.virtual_by_carrier');
+      expect(sql).not.toContain('malloytest.flights');
+    });
+  });
+
+  describe('per-call buildManifest on ModelMaterializer.loadQuery', () => {
+    const MODEL = `${PERSIST_ANNOTATION}
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: by_carrier is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+    `;
+    const QUERY = 'run: by_carrier -> { select: * }';
+
+    async function manifestForByCarrier(): Promise<BuildManifest> {
+      const model = await wrapTestModel(tstRuntime, MODEL).model.getModel();
+      const {manifest} = await buildManifestFor(
+        model.getBuildPlan(),
+        'by_carrier',
+        'cached.by_carrier'
+      );
+      return manifest;
+    }
+
+    function plainRuntime() {
+      return new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+    }
+
+    it('applies a manifest passed to the call', async () => {
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadModel(MODEL)
+        .loadQuery(QUERY, {buildManifest: manifest})
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('applies a manifest passed to loadModel', async () => {
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadModel(MODEL, {buildManifest: manifest})
+        .loadQuery(QUERY)
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('EMPTY_BUILD_MANIFEST suppresses the runtime manifest', async () => {
+      // The dangerous direction: asking for unsubstituted SQL and being
+      // handed the substituted form.
+      const manifest = await manifestForByCarrier();
+      const sql = await runtimeWithManifest(manifest)
+        .loadModel(MODEL)
+        .loadQuery(QUERY, {buildManifest: EMPTY_BUILD_MANIFEST})
+        .getSQL();
+      expect(sql).not.toContain('cached.by_carrier');
+      expect(sql).toContain('COUNT(');
+    });
+
+    it('loadQueryByName applies a manifest passed to the call', async () => {
+      // The sibling loaders merge their options; this is the control.
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadModel(`${MODEL}\nquery: named is by_carrier -> { select: * }`)
+        .loadQueryByName('named', {buildManifest: manifest})
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('Runtime.loadQuery applies a manifest passed to the call', async () => {
+      // The other control: the same options on the Runtime entry point.
+      const manifest = await manifestForByCarrier();
+      const sql = await plainRuntime()
+        .loadQuery(`${MODEL}\n${QUERY}`, {buildManifest: manifest})
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('applies defaultRowLimit passed to the call', async () => {
+      // buildManifest is not special: nothing in CompileQueryOptions
+      // survives this call.
+      const sql = await plainRuntime()
+        .loadModel(MODEL)
+        .loadQuery('run: flights -> { select: carrier }', {
+          defaultRowLimit: 7,
+        })
+        .getSQL();
+      expect(sql).toContain('LIMIT 7');
+    });
+  });
+
+  describe('a persisted source that reads a given', () => {
+    // The value is in the SQL that is hashed, and both sides compile that SQL
+    // under the same values, so a query running under other values computes
+    // another key and does not find the table.
+    const GIVEN_MODEL = `
+      ##! experimental { persistence givens }
+      given: CARRIER :: string is "WN"
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: by_carrier is flights -> {
+        where: carrier = $CARRIER
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      query: q is by_carrier -> { select: * }
+    `;
+
+    /** The no-default form, with a second source that reads no given. */
+    const SUPPLIED_MODEL = `
+      ##! experimental { persistence givens }
+      given: CARRIER :: string
+      ${FLIGHTS_SOURCE}
+
+      #@ persist
+      source: carrier_stats is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      #@ persist
+      source: by_carrier is flights -> {
+        where: carrier = $CARRIER
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      query: q is by_carrier -> { select: * }
+    `;
+
+    async function onlyTarget(
+      rt: Runtime,
+      modelText: string,
+      givens?: Record<string, string>
+    ): Promise<BuildTarget> {
+      const model = await rt.loadModel(modelText).getModel();
+      const {connections, unbuildable} = await rt.getBuildTargets(
+        model,
+        givens ? {givens} : undefined
+      );
+      expect(unbuildable).toEqual([]);
+      const targets = connections.flatMap(c => c.targets);
+      expect(targets).toHaveLength(1);
+      return targets[0];
+    }
+
+    it('is built for the default, and a query under the default finds it', async () => {
+      const manifest = createManifest();
+      const rt = runtimeWithManifest(manifest);
+      const target = await onlyTarget(rt, GIVEN_MODEL);
+      expect(target.readsGivens).toBe(true);
+      expect(target.sql).toContain("'WN'");
+      addManifestEntry(manifest, target.buildId, 'wn_table');
+
+      const query = rt.loadModel(GIVEN_MODEL).loadQueryByName('q');
+      expect(await query.getSQL()).toContain('wn_table');
+      expect(await query.getSQL({givens: {CARRIER: 'WN'}})).toContain(
+        'wn_table'
+      );
+    });
+
+    it('a query under another value does not find it, and runs live', async () => {
+      const manifest = createManifest();
+      const rt = runtimeWithManifest(manifest);
+      const target = await onlyTarget(rt, GIVEN_MODEL);
+      addManifestEntry(manifest, target.buildId, 'wn_table');
+
+      const sql = await rt
+        .loadModel(GIVEN_MODEL)
+        .loadQueryByName('q')
+        .getSQL({givens: {CARRIER: 'AA'}});
+      expect(sql).not.toContain('wn_table');
+      expect(sql).toContain("'AA'");
+    });
+
+    it('under a strict manifest the miss says the source reads givens', async () => {
+      const manifest = createManifest();
+      manifest.strict = true;
+      const rt = runtimeWithManifest(manifest);
+      const target = await onlyTarget(rt, GIVEN_MODEL);
+      addManifestEntry(manifest, target.buildId, 'wn_table');
+
+      await expect(
+        rt
+          .loadModel(GIVEN_MODEL)
+          .loadQueryByName('q')
+          .getSQL({givens: {CARRIER: 'AA'}})
+      ).rejects.toThrow(/strict manifest.*reads givens/s);
+    });
+
+    it('a build under another value is another table, and each query finds its own', async () => {
+      const manifest = createManifest();
+      const rt = runtimeWithManifest(manifest);
+      const wn = await onlyTarget(rt, GIVEN_MODEL);
+      const aa = await onlyTarget(rt, GIVEN_MODEL, {CARRIER: 'AA'});
+      expect(aa.buildId).not.toBe(wn.buildId);
+      expect(aa.sql).toContain("'AA'");
+      addManifestEntry(manifest, wn.buildId, 'wn_table');
+      addManifestEntry(manifest, aa.buildId, 'aa_table');
+
+      const query = rt.loadModel(GIVEN_MODEL).loadQueryByName('q');
+      expect(await query.getSQL()).toContain('wn_table');
+      expect(await query.getSQL({givens: {CARRIER: 'AA'}})).toContain(
+        'aa_table'
+      );
+    });
+
+    it('the rows a query reads are the rows for its own value', async () => {
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+      try {
+        const flightsPath = 'test/data/malloytest-parquet/flights.parquet';
+        const modelText = GIVEN_MODEL.replace(
+          FLIGHTS_SOURCE,
+          `source: flights is ${tstDB}.table('${flightsPath}')`
+        );
+        const rt = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const manifest = new Manifest();
+        const build = async (name: string, givens?: Record<string, string>) => {
+          const target = await onlyTarget(rt, modelText, givens);
+          await rwConn.runSQL(
+            `CREATE TABLE ${name} AS ${target.buildSQL(manifest.buildManifest)}`
+          );
+          manifest.update(target.buildId, {tableName: name});
+        };
+        await build('wn_table');
+        await build('aa_table', {CARRIER: 'AA'});
+        rt.buildManifest = manifest.buildManifest;
+
+        const query = rt.loadModel(modelText).loadQueryByName('q');
+        const carriers = async (givens?: Record<string, string>) => {
+          const result = await query.run(givens ? {givens} : undefined);
+          return result.data.toObject().map(row => row['carrier']);
+        };
+        expect(await carriers()).toEqual(['WN']);
+        expect(await carriers({CARRIER: 'AA'})).toEqual(['AA']);
+        expect(await query.getSQL({givens: {CARRIER: 'AA'}})).toContain(
+          'aa_table'
+        );
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('with no default and no value for the build it is unbuildable, and the rest is planned', async () => {
+      const model = await tstRuntime.loadModel(SUPPLIED_MODEL).getModel();
+      const {connections, unbuildable} =
+        await tstRuntime.getBuildTargets(model);
+
+      expect(
+        connections.flatMap(c => c.targets).map(t => t.sources[0].name)
+      ).toEqual(['carrier_stats']);
+      expect(unbuildable.map(u => u.source.name)).toEqual(['by_carrier']);
+      const [{problem}] = unbuildable;
+      expect(problem.code).toBe('runtime-persist-given-no-value');
+      expect(problem.message).toMatch(/by_carrier@.*reads given 'CARRIER'/);
+    });
+
+    it('a query over the unbuildable source runs live under a manifest of other tables', async () => {
+      const manifest = createManifest();
+      const rt = runtimeWithManifest(manifest);
+      const model = await rt.loadModel(SUPPLIED_MODEL).getModel();
+      const {connections} = await rt.getBuildTargets(model);
+      const [stats] = connections.flatMap(c => c.targets);
+      addManifestEntry(manifest, stats.buildId, 'carrier_stats_table');
+
+      const sql = await rt
+        .loadModel(SUPPLIED_MODEL)
+        .loadQueryByName('q')
+        .getSQL({givens: {CARRIER: 'WN'}});
+      expect(sql).toContain("'WN'");
+      expect(sql).not.toContain('carrier_stats_table');
+    });
+
+    it('a value supplied to the build is a value', async () => {
+      const target = await onlyTarget(
+        tstRuntime,
+        SUPPLIED_MODEL.replace(/#@ persist\s+source: carrier_stats[^}]*}/, ''),
+        {CARRIER: 'WN'}
+      );
+      expect(target.sql).toContain("'WN'");
+    });
+
+    it("the Runtime's givens are the build's givens", async () => {
+      const rt = new Runtime({
+        connections: tstRuntime.connections,
+        urlReader: testFileSpace,
+        givens: {CARRIER: 'UA'},
+      });
+      const target = await onlyTarget(
+        rt,
+        SUPPLIED_MODEL.replace(/#@ persist\s+source: carrier_stats[^}]*}/, '')
+      );
+      expect(target.sql).toContain("'UA'");
+    });
+
+    it('a finalized given cannot be supplied to a build', async () => {
+      const config = new MalloyConfig(
+        {finalizeGivens: ['CARRIER']},
+        {configURL: 'file:///finalized/malloy-config.json'}
+      );
+      const rt = new Runtime({
+        config,
+        connections: tstRuntime.connections,
+        urlReader: testFileSpace,
+        givens: {CARRIER: 'WN'},
+      });
+      const model = await rt.loadModel(GIVEN_MODEL).getModel();
+      await expect(
+        rt.getBuildTargets(model, {givens: {CARRIER: 'AA'}})
+      ).rejects.toThrow(/'CARRIER'.*finalized/);
+    });
+  });
+
+  describe('a build and its virtualMap', () => {
+    const VIRTUAL_MODEL = `${PERSIST_ANNOTATION}
+      ##! experimental.virtual_source
+      type: ff is { carrier :: string }
+      source: vf is ${tstDB}.virtual('vflights')::ff
+
+      #@ persist
+      source: by_carrier is vf -> { group_by: carrier }
+
+      run: by_carrier -> { select: * }
+    `;
+    const virtualMap: VirtualMap = new Map([
+      [tstDB, new Map([['vflights', 'malloytest.flights']])],
+    ]);
+
+    it('a virtual source with no entry is unbuildable, not a failed plan', async () => {
+      const model = await tstRuntime.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections, unbuildable} =
+        await tstRuntime.getBuildTargets(model);
+      expect(connections).toEqual([]);
+      expect(unbuildable.map(u => u.problem.code)).toEqual([
+        'runtime-virtual-map-missing',
+      ]);
+    });
+
+    it('a virtualMap given to the build keys and builds the table', async () => {
+      const model = await tstRuntime.loadModel(VIRTUAL_MODEL).getModel();
+      const {connections, unbuildable} = await tstRuntime.getBuildTargets(
+        model,
+        {virtualMap}
+      );
+      expect(unbuildable).toEqual([]);
+      const [target] = connections[0].targets;
+      expect(target.sql).toContain('malloytest.flights');
+      expect(target.buildSQL(createManifest())).toContain('malloytest.flights');
+    });
+  });
+});

@@ -1,25 +1,6 @@
-/* eslint-disable no-console */
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {
@@ -27,8 +8,13 @@ import {
   TestTranslator,
   markSource,
   getSelectOneStruct,
+  errorMessage,
+  warningMessage,
+  getQueryFieldDef,
+  error,
 } from './test-translator';
 import './parse-expects';
+import {sqlKey} from '../../model/sql_block';
 
 describe('model statements', () => {
   describe('table method', () => {
@@ -51,33 +37,29 @@ describe('model statements', () => {
       // is basically ignored in the end, as we still eventually get the error
       // that a1 is not a connection (it's a source).
       m.translator.update({
-        errors: {tables: {'a1:aTable': 'invalid connection'}},
+        errors: {
+          tables: {'a1:aTable': 'invalid connection'},
+          connectionDialects: {a1: 'invalid connection'},
+        },
       });
-      expect(m).translationToFailWith('a1 is not a connection');
+      expect(m).toLog(errorMessage('a1 is not a connection'));
     });
     test('cannot refine table', () => {
-      expect(
-        markSource`run: \`_db_\`.table('aTable') + { limit: 10 }`
-      ).translationToFailWith('Cannot add view refinements to a source');
-    });
-    test('table function is deprecated', () => {
-      expect(`##! m4warnings=warn
-      source: testA is table('_db_:aTable')
-    `).toTranslateWithWarnings(
-        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
+      expect(markSource`run: \`_db_\`.table('aTable') + { limit: 10 }`).toLog(
+        errorMessage('Cannot add view refinements to a source')
       );
     });
     test('cannot run table', () => {
-      expect(markSource`run: \`_db_\`.table('aTable')`).translationToFailWith(
-        'This source cannot be used as a query'
+      expect(markSource`run: \`_db_\`.table('aTable')`).toLog(
+        errorMessage('This source cannot be used as a query')
       );
     });
   });
 
   test('errors on redefinition of query', () => {
-    expect(
-      'query: q1 is a -> { select: * }, q1 is a -> { select: * }'
-    ).translationToFailWith("'q1' is already defined, cannot redefine");
+    expect('query: q1 is a -> { select: * }, q1 is a -> { select: * }').toLog(
+      errorMessage("'q1' is already defined, cannot redefine")
+    );
   });
 
   test('##! experimental enables all experiments', () => {
@@ -93,33 +75,42 @@ describe('model statements', () => {
   test('experiments do not bleed into one another', () => {
     expect(
       '##! experimental { this_experiment_does_not_exist }\n;;[ "x" ]'
-    ).translationToFailWith(
-      "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
+    ).toLog(
+      error('experiment-not-enabled', {
+        experimentId: 'compilerTestExperimentParse',
+      })
     );
   });
 
   test('experiment failures in parse are flagged', () => {
-    expect(';;[ "x" ]').translationToFailWith(
-      "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
+    expect(';;[ "x" ]').toLog(
+      error('experiment-not-enabled', {
+        experimentId: 'compilerTestExperimentParse',
+      })
     );
   });
 
   test('experiment failures in second pass are flagged', () => {
-    expect(
-      '##! experimental.compilerTestExperimentParse\n;;[ "x" ]'
-    ).translationToFailWith(
-      "Experimental flag 'compilerTestExperimentTranslate' is not set, feature not available"
+    expect('##! experimental.compilerTestExperimentParse\n;;[ "x" ]').toLog(
+      error('experiment-not-enabled', {
+        experimentId: 'compilerTestExperimentTranslate',
+      })
     );
   });
 });
 
 describe('error handling', () => {
+  test('no close brace', () => {
+    expect('run: a -> { group_by: ai').toLog(
+      errorMessage("Missing '}' at '<EOF>'")
+    );
+  });
   test('field and query with same name does not overflow', () => {
     expect(`
       source: flights is _db_.table('malloytest.flights') extend {
         view: carrier is { group_by: carrier }
       }
-    `).translationToFailWith("Cannot redefine 'carrier'");
+    `).toLog(errorMessage("Cannot redefine 'carrier'"));
   });
   test('redefine source', () => {
     expect(markSource`
@@ -129,19 +120,19 @@ describe('error handling', () => {
       source: airports is _db_.table('malloytest.airports') extend {
         primary_key: code
       }
-    `).translationToFailWith("Cannot redefine 'airports'");
+    `).toLog(errorMessage("Cannot redefine 'airports'"));
   });
   test('query from undefined source', () => {
-    expect(markSource`run: ${'x'}->{ select: y }`).translationToFailWith(
-      "Reference to undefined object 'x'"
+    expect(markSource`run: ${'x'}->{ select: y }`).toLog(
+      errorMessage("Reference to undefined object 'x'")
     );
   });
   test('query with expression from undefined source', () => {
     // Regression check: Once upon a time this died with an exception even
     // when "query: x->{ group_by: y}" (above) generated the correct error.
-    expect(
-      markSource`run: ${'x'}->{ select: y is z / 2 }`
-    ).translationToFailWith("Reference to undefined object 'x'");
+    expect(markSource`run: ${'x'}->{ select: y is z / 2 }`).toLog(
+      errorMessage("Reference to undefined object 'x'")
+    );
   });
   test('join reference before definition', () => {
     expect(
@@ -149,17 +140,17 @@ describe('error handling', () => {
         source: newAB is a extend { join_one: newB is ${'bb'} on astring }
         source: newB is b
       `
-    ).translationToFailWith("Reference to undefined object 'bb'");
+    ).toLog(errorMessage("Reference to undefined object 'bb'"));
   });
   test('non-rename rename', () => {
-    expect(
-      'source: na is a extend { rename: astr is astr }'
-    ).translationToFailWith("Can't rename field to itself");
+    expect('source: na is a extend { rename: astr is astr }').toLog(
+      errorMessage("Can't rename field to itself")
+    );
   });
   test('reference to field in its definition', () => {
-    expect(
-      'source: na is a extend { dimension: ustr is upper(ustr) } '
-    ).translationToFailWith("Circular reference to 'ustr' in definition");
+    expect('source: na is a extend { dimension: ustr is upper(ustr) } ').toLog(
+      errorMessage("Circular reference to 'ustr' in definition")
+    );
   });
   test('empty model', () => {
     expect('').toTranslate();
@@ -168,34 +159,32 @@ describe('error handling', () => {
     expect('\n').toTranslate();
   });
   test('query without fields', () => {
-    expect('run: a -> { top: 5 }').translationToFailWith(
-      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-    );
+    expect('run: a -> { top: 5 }').toLog(error('ambiguous-view-type'));
   });
   test('refine cannot change query type', () => {
-    expect('run: ab -> aturtle + { select: astr }').translationToFailWith(
-      /Not legal in grouping query/
+    expect('run: ab -> aturtle + { select: astr }').toLog(
+      errorMessage(/Use of select: is not allowed in a grouping query/)
     );
   });
   test('undefined field ref in query', () => {
-    expect('run: ab -> { aggregate: xyzzy }').translationToFailWith(
-      "'xyzzy' is not defined"
+    expect('run: ab -> { aggregate: xyzzy }').toLog(
+      errorMessage("'xyzzy' is not defined")
     );
   });
   test('query on source with errors', () => {
     expect(markSource`
         source: na is a extend { join_one: ${'n'} on astr }
-      `).translationToFailWith("Reference to undefined object 'n'");
+      `).toLog(errorMessage("Reference to undefined object 'n'"));
   });
   test('detect duplicate output field names', () => {
-    expect(
-      markSource`run: ab -> { group_by: astr, ${'astr'} }`
-    ).translationToFailWith("Output already has a field named 'astr'");
+    expect(markSource`run: ab -> { group_by: astr, ${'astr'} }`).toLog(
+      errorMessage("Output already has a field named 'astr'")
+    );
   });
-  test('detect join tail overlap existing ref', () => {
-    expect(
-      markSource`run: ab -> { group_by: astr, ${'b.astr'} }`
-    ).translationToFailWith("Output already has a field named 'astr'");
+  test('join tail overlap auto-renames with a warning', () => {
+    expect(markSource`run: ab -> { group_by: astr, ${'b.astr'} }`).toLog(
+      warningMessage(/'b\.astr' was renamed to 'b_astr'/)
+    );
   });
   test('undefined in expression with regex compare', () => {
     expect(
@@ -204,14 +193,17 @@ describe('error handling', () => {
           dimension: d is meaning_of_life ~ r'(forty two|fifty four)'
         }
       `
-    ).translationToFailWith("'meaning_of_life' is not defined");
+    ).toLog(errorMessage("'meaning_of_life' is not defined"));
   });
-  test('detect output collision on join references', () => {
-    expect(`
-      run: ab -> {
-        group_by: astr, b.astr
-      }
-    `).translationToFailWith("Output already has a field named 'astr'");
+  test('output collision on join reference renames the second field', () => {
+    const m = new TestTranslator('run: ab -> { group_by: astr, b.astr }');
+    const seg = m.getQuery(0)?.pipeline[0];
+    expect(seg).toBeDefined();
+    // first `astr` keeps its name (a bare reference), `b.astr` is renamed
+    const kept = getQueryFieldDef(seg!, 'astr');
+    expect(kept.type).toBe('fieldref');
+    const renamed = getQueryFieldDef(seg!, 'b_astr');
+    expect(renamed.type).toBe('string');
   });
   test('rejoin a query is renamed', () => {
     expect(`
@@ -228,10 +220,6 @@ describe('error handling', () => {
     }
     `).toTranslate();
   });
-  test('popping out of embedding when not embedded', () => {
-    expect('}%').translationToFailWith(/extraneous input '}%' expecting/);
-  });
-
   test('bad sql in sql block', () => {
     const badSelect = model`source: someName is _db_.sql(")")`;
     const badTrans = badSelect.translator;
@@ -239,15 +227,19 @@ describe('error handling', () => {
     const needSchema = badTrans.translate();
     expect(needSchema.compileSQL).toBeDefined();
     if (needSchema.compileSQL) {
+      const key = sqlKey(
+        needSchema.compileSQL.connection,
+        needSchema.compileSQL.selectStr
+      );
       badTrans.update({
         errors: {
           compileSQL: {
-            [needSchema.compileSQL.name]: 'Nobody ZZZZ',
+            [key]: 'Nobody ZZZZ',
           },
         },
       });
     }
-    expect(badTrans).translationToFailWith('Invalid SQL, Nobody ZZZZ');
+    expect(badTrans).toLog(errorMessage('Invalid SQL, Nobody ZZZZ'));
   });
 });
 
@@ -279,7 +271,7 @@ describe('translation need error locations', () => {
     m.update({
       errors: {urls: {[(result.urls || [])[0]]: 'Bad file!'}},
     });
-    expect(source).translationToFailWith(/Bad file!/);
+    expect(source).toLog(errorMessage(/Bad file!/));
   });
 
   test('sql struct error location', () => {
@@ -292,7 +284,8 @@ describe('translation need error locations', () => {
     const req = m.translate().compileSQL;
     expect(req).toBeDefined();
     if (req) {
-      m.update({errors: {compileSQL: {[req.name]: 'Bad SQL!'}}});
+      const key = sqlKey(req.connection, req.selectStr);
+      m.update({errors: {compileSQL: {[key]: 'Bad SQL!'}}});
     }
     expect(m).not.toTranslate();
     const errList = m.problems();
@@ -301,7 +294,7 @@ describe('translation need error locations', () => {
 
   test('table struct error location', () => {
     const source = model`
-      source: bad_explore is ${"_db_.table('malloy-data.bad.table')"}
+      source: bad_explore is ${"_db_.table('malloydata-org.bad.table')"}
     `;
     const m = source.translator;
     const result = m.translate();
@@ -310,7 +303,7 @@ describe('translation need error locations', () => {
         tables: {[Object.keys(result.tables || {})[0]]: 'Bad table!'},
       },
     });
-    expect(m).translationToFailWith(/Bad table!/);
+    expect(m).toLog(errorMessage(/Bad table!/));
   });
 });
 
@@ -321,9 +314,13 @@ describe('error cascading', () => {
         source: a1 is a extend { dimension: ${'x is count()'} }
         source: a2 is a extend { dimension: ${'x is count()'} }
       `
-    ).translationToFailWith(
-      'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?',
-      'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+    ).toLog(
+      errorMessage(
+        'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+      ),
+      errorMessage(
+        'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+      )
     );
   });
 
@@ -334,7 +331,7 @@ describe('error cascading', () => {
     'err.month': 'date',
     'day_of_week(err)': 'number',
     'err::string': 'string',
-    '-err': 'number',
+    '-err': 'error',
     'err * 1': 'number',
     '1 * err': 'number',
     'err / 1': 'number',
@@ -404,7 +401,10 @@ describe('error cascading', () => {
               .join('\n            ')}
         }
       `
-    ).translationToFailWith("'nothing' is not defined", "'foo' is not defined");
+    ).toLog(
+      errorMessage("'nothing' is not defined"),
+      errorMessage("'foo' is not defined")
+    );
   });
 
   test('error type inference is good', () => {
@@ -416,9 +416,11 @@ describe('error cascading', () => {
               dim is length(${scalar}, 1)
           }
         `;
-      expect(source).translationToFailWith(
-        "'nothing' is not defined",
-        `No matching overload for function length(${typedScalars[scalar]}, number)`
+      expect(source).toLog(
+        errorMessage("'nothing' is not defined"),
+        errorMessage(
+          `No matching overload for function length(${typedScalars[scalar]}, number)`
+        )
       );
     }
   });
@@ -443,7 +445,10 @@ describe('error cascading', () => {
               .join('\n            ')}
         }
       `
-    ).translationToFailWith("'nothing' is not defined", "'foo' is not defined");
+    ).toLog(
+      errorMessage("'nothing' is not defined"),
+      errorMessage("'foo' is not defined")
+    );
   });
 });
 
@@ -470,7 +475,7 @@ describe('pipeline comprehension', () => {
           }
         }
       `
-    ).translationToFailWith("'ai' is not defined");
+    ).toLog(errorMessage("'ai' is not defined"));
   });
   test('new query can append ops to existing query', () => {
     expect(`
@@ -487,12 +492,11 @@ describe('pipeline comprehension', () => {
   test('new query can refine and append to exisiting query', () => {
     expect(`
       source: aq is _db_.table('aTable') extend {
-        view: by_region is { group_by: astr }
-        view: by_region2 is by_region + {
+        view: by_region is {
+          group_by: region is astr
           nest: dateNest is { group_by: ad }
-        } -> {
-          select: astr, dateNest.ad
         }
+        -> { select: dateNest.ad }
       }
     `).toTranslate();
   });
@@ -545,7 +549,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -560,7 +564,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -575,7 +579,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -591,7 +595,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -606,7 +610,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -621,7 +625,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -636,11 +640,9 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
-      expect(m).translationToFailWith(
-        'Cannot add view refinements to a source'
-      );
+      expect(m).toLog(errorMessage('Cannot add view refinements to a source'));
     }
   });
 
@@ -656,7 +658,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -671,7 +673,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -686,7 +688,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -701,7 +703,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -717,9 +719,9 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
-      expect(m).translationToFailWith('A raw query cannot be refined');
+      expect(m).toLog(errorMessage('A raw query cannot be refined'));
     }
   });
 
@@ -732,11 +734,9 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
-      expect(m).translationToFailWith(
-        'Cannot add view refinements to a source'
-      );
+      expect(m).toLog(errorMessage('Cannot add view refinements to a source'));
     }
   });
 });
@@ -762,8 +762,10 @@ describe('extend and refine', () => {
     });
 
     test('source name with query refinements', () => {
-      expect('run: a + { group_by: ai }').translationToFailWith(
-        "Cannot add view refinements to 'a' because it is a source"
+      expect('run: a + { group_by: ai }').toLog(
+        errorMessage(
+          "Cannot add view refinements to 'a' because it is a source"
+        )
       );
     });
 
@@ -806,8 +808,10 @@ describe('extend and refine', () => {
     });
 
     test('source name with query refinements', () => {
-      expect('run: a + { group_by: one }').translationToFailWith(
-        "Cannot add view refinements to 'a' because it is a source"
+      expect('run: a + { group_by: one }').toLog(
+        errorMessage(
+          "Cannot add view refinements to 'a' because it is a source"
+        )
       );
     });
 
@@ -820,36 +824,22 @@ describe('extend and refine', () => {
     describe('query name with ambiguous refinements', () => {
       test('adding segment to ambuguously refined query', () => {
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on 1 = 1 } -> { select: b.* }
-        `).translationToFailWith("No such field as 'b'");
+        `).toLog(errorMessage("'b' is not defined"));
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 } -> { select: * }
-        `).toTranslate();
-        expect(`
-          ##! -m4warnings
-          query: q is a -> { group_by: ai }
-          run: q + { declare: three is 3 } -> { select: * }
         `).toTranslate();
       });
       test('automatically recognize this as a query refinement without new stage', () => {
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on 1 = 1 }
         `).toTranslate();
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 }
-        `).toTranslate();
-        expect(`
-          ##! -m4warnings
-          query: q is a -> { group_by: ai }
-          run: q + { declare: three is 3 }
         `).toTranslate();
       });
       test('can extend a query into a source', () => {
@@ -862,28 +852,19 @@ describe('extend and refine', () => {
         // Of course, number 1 and 3 are actually useless because you're defining
         // something and then not using it...
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on b.ai = ai } -> { select: * }
         `).toTranslate();
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 } -> { select: * }
         `).toTranslate();
-        expect(`
-          ##! -m4warnings
-          query: q is a -> { group_by: ai }
-          run: q + { declare: three is 3 } -> { select: * }
-        `).toTranslate();
         // Alternatively, fix 1 and 3 by actually using the declared thing
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on b.ai = ai; group_by: ai2 is b.ai }
         `).toTranslate();
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { extend: {dimension: three is 3} group_by: three }
         `).toTranslate();
@@ -893,14 +874,16 @@ describe('extend and refine', () => {
 
   describe('extend and refine fallout', () => {
     test('syntactically valid to run a source, but still illegal', () => {
-      expect('run: a').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+      expect('run: a').toLog(
+        errorMessage("Illegal reference to 'a', query expected")
       );
     });
 
     test('syntactically valid to refine a source, but illegal', () => {
-      expect('run: a + { group_by: ai } ').translationToFailWith(
-        "Cannot add view refinements to 'a' because it is a source"
+      expect('run: a + { group_by: ai } ').toLog(
+        errorMessage(
+          "Cannot add view refinements to 'a' because it is a source"
+        )
       );
     });
   });
@@ -944,50 +927,26 @@ describe('extend and refine', () => {
   });
 });
 
-describe('miscellaneous m4 warnings', () => {
-  test('project is deprecated', () => {
-    expect(`
-      ##! m4warnings=warn
-      query: q is a -> { project: * }
-    `).toTranslateWithWarnings('project: keyword is deprecated, use select:');
-  });
-  test('query leading arrow', () => {
-    expect(`
-      ##! m4warnings=warn
-      query: x is a -> { select: * }
-      run: x
-    `).toTranslate();
-    expect(`
-      ##! m4warnings=warn
-      query: x is a -> { select: * }
-      run: x -> { select: * }
-    `).toTranslate();
-  });
-});
-
-describe('m3/m4 source query sentences', () => {
+describe('source query sentences', () => {
   const srcExtend = '{accept:ai}';
   const qryRefine = '{limit:1}';
   const query = '{select:*}';
   // todo MTOY write test to make sure arrow has correct precedence vs +
   // also maybe arrow vs extend
   test('M4 should error on these sq expressions', () => {
-    expect(`source: s is a + ${qryRefine}`).translationToFailWith(
-      "Cannot add view refinements to 'a' because it is a source"
+    expect(`source: s is a + ${qryRefine}`).toLog(
+      errorMessage("Cannot add view refinements to 'a' because it is a source")
     );
-    expect(`query: q_m4_err is a + ${qryRefine}`).translationToFailWith(
-      "Cannot add view refinements to 'a' because it is a source"
+    expect(`query: q_m4_err is a + ${qryRefine}`).toLog(
+      errorMessage("Cannot add view refinements to 'a' because it is a source")
     );
   });
   test('legal sqexpressions', () => {
-    // some things that are m4 warnings are commented out
     expect(`
       source: s is a
       query: q is s -> ${query}
 
       source: s0 is a;
-      // source: s0_extbare is s ${srcExtend};
-      // source: s0_extplus is s + ${srcExtend};
       source: s0_ext is s extend ${srcExtend};
       source: qs is q;
       source: qs0 is q extend ${srcExtend};
@@ -996,12 +955,9 @@ describe('m3/m4 source query sentences', () => {
       source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
       source: s3 is s extend ${srcExtend};
       source: s4 is q extend ${srcExtend};
-      // source: s5 is from(s -> ${query})
 
       query: q0 is q;
-      // query: q0_refbare is q ${qryRefine};
       query: q0_refplus is q + ${qryRefine};
-      // query: q1_bare is ab -> aturtle ${qryRefine};
       query: q1_plus is ab -> aturtle + ${qryRefine};
       query: q2 is s -> ${query} extend ${srcExtend} -> ${query};
 

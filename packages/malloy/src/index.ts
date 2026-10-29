@@ -1,33 +1,21 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
+
 export {
   DuckDBDialect,
   StandardSQLDialect,
+  TrinoDialect,
   PostgresDialect,
   SnowflakeDialect,
+  MySQLDialect,
+  DatabricksDialect,
+  SQLServerDialect,
   registerDialect,
+  getDialect,
   arg,
-  qtz,
+  queryZone,
   overload,
   minScalar,
   anyExprType,
@@ -35,45 +23,51 @@ export {
   maxScalar,
   sql,
   makeParam,
-  sqlFragment,
   param,
-  params,
+  variadicParam,
   literal,
   spread,
   Dialect,
-  FUNCTIONS,
+  decodeDottedTablePath,
+  validateDottedTablePath,
 } from './dialect';
 export type {
   DialectFieldList,
   DialectFunctionOverloadDef,
   QueryInfo,
+  MalloyStandardFunctionImplementations,
+  DefinitionBlueprint,
+  DefinitionBlueprintMap,
+  OverloadedDefinitionBlueprint,
+  DecodeDottedTablePathResult,
+  DottedTablePathOptions,
+  TablePathEscapeStyle,
+  TablePathSegment,
+  ValidateTablePathResult,
 } from './dialect';
 // TODO tighten up exports
 export type {
-  QueryDataRow,
-  // Currently needed only by tests
-  Fragment,
+  QueryRecord,
   // Needed for DB
   StructDef,
-  StructRelationship,
-  NamedStructDefs,
+  TableSourceDef,
+  SQLSourceDef,
+  SourceDef,
+  JoinFieldDef,
+  NamedSourceDefs,
   MalloyQueryData,
-  AtomicFieldType as AtomicFieldTypeInner,
   DateUnit,
   ExtractUnit,
   TimestampUnit,
-  TimeFieldType,
+  TemporalFieldType,
   QueryData,
   QueryValue,
-  FieldTypeDef,
   Expr,
-  DialectFragment,
-  TimeValue,
   // Needed for drills in render
-  FilterExpression,
-  SQLBlock,
-  // Used in Composer Demo
-  FieldAtomicDef,
+  FilterCondition,
+  // Used in Composer
+  Argument,
+  Parameter,
   FieldDef,
   PipeSegment,
   QueryFieldDef,
@@ -84,8 +78,10 @@ export type {
   ModelDef,
   Query,
   QueryResult,
+  QueryResultDef,
   QueryRunStats,
-  NamedQuery,
+  QueryScalar,
+  NamedQueryDef,
   NamedModelObject,
   ExpressionType,
   FunctionDef,
@@ -93,35 +89,74 @@ export type {
   FunctionParameterDef,
   ExpressionValueType,
   TypeDesc,
-  FieldValueType,
-  ExpressionTypeDesc,
   FunctionParamTypeDesc,
   // used in MalloyError.log
   DocumentLocation,
   DocumentRange,
   DocumentPosition,
   Sampling,
-  TypecastFragment,
-  Annotation,
-  FieldAtomicTypeDef,
-  SQLBlockStructDef,
+  BasicAtomicTypeDef,
+  BasicAtomicDef,
+  AtomicTypeDef,
+  AtomicFieldDef,
+  ArrayDef,
+  ArrayTypeDef,
+  RecordTypeDef,
+  RepeatedRecordTypeDef,
+  RecordDef,
+  RepeatedRecordDef,
+  // Used in testing, not really public API
+  RecordLiteralNode,
+  StringLiteralNode,
+  ArrayLiteralNode,
+  SourceComponentInfo,
+  DateLiteralNode,
+  TimestampLiteralNode,
+  TimestamptzLiteralNode,
+  TimeLiteralExpr,
+  TypecastExpr,
+  // Build API types
+  BuildID,
+  BuildManifest,
+  BuildManifestEntry,
+  GivenValue,
+  VirtualMap,
 } from './model';
 export {
+  isSourceDef,
   // Used in Composer Demo
-  Segment,
+  isAtomic,
+  isBasicAtomic,
+  isCompoundArrayData,
+  isJoined,
+  isJoinedSource,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
+  isRepeatedRecord,
+  isBasicArray,
+  mkArrayDef,
+  mkFieldDef,
+  expressionIsAggregate,
+  expressionIsAnalytic,
   expressionIsCalculation,
+  expressionIsScalar,
+  expressionIsUngroupedAggregate,
   indent,
+  composeSQLExpr,
+  isTimestampUnit,
+  isDateUnit,
+  // Used in testing, not really public API
+  constantExprToSQL,
 } from './model';
 export {
+  malloyToQuery,
   // Needed for tests only
   MalloyTranslator,
 } from './lang';
 export type {LogMessage, TranslateResponse} from './lang';
 export {
+  Model,
   Malloy,
   Runtime,
   AtomicFieldType,
@@ -143,9 +178,16 @@ export {
   Parse,
   DataWriter,
   Explore,
-} from './malloy';
+  InMemoryModelCache,
+  CacheManager,
+  Manifest,
+  MalloyConfig,
+  envOverlay,
+  contextOverlay,
+  defaultConfigOverlays,
+  discoverConfig,
+} from './api/foundation';
 export type {
-  Model,
   PreparedQuery,
   Field,
   AtomicField,
@@ -158,34 +200,93 @@ export type {
   DataArrayOrRecord,
   Loggable,
   ModelMaterializer,
+  DocumentTablePath,
   DocumentSymbol,
   ResultJSON,
+  PreparedResultJSON,
   PreparedResultMaterializer,
-  SQLBlockMaterializer,
   ExploreMaterializer,
   WriteStream,
   SerializedExplore,
-} from './malloy';
+  ModelCache,
+  CachedModel,
+  // Needed for renderer type narrowing
+  DateField,
+  TimestampField,
+} from './api/foundation';
+export type {Overlay, ConfigOverlays} from './api/foundation';
+export type {FilesystemContext, MalloyConfigOptions} from './api/foundation';
+export type {RuntimeContext} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
+export type {QueryMetadata} from './query_metadata';
+export type {
+  EventStream,
+  ModelString,
+  ModelURL,
+  QueryString,
+  QueryURL,
+  URLReader,
+  InvalidationKey,
+} from './runtime_types';
 export type {
   Connection,
   ConnectionConfig,
-  ConnectionFactory,
-  ConnectionParameter,
   ConnectionParameterValue,
-  ConnectionConfigSchema,
   FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
-  ModelString,
-  ModelURL,
   PersistSQLResults,
   PooledConnection,
-  QueryString,
-  QueryURL,
   TestableConnection,
   StreamingConnection,
-  URLReader,
-} from './runtime_types';
+} from './connection/types';
+export {
+  registerConnectionType,
+  getConnectionProperties,
+  getConnectionTypeDisplayName,
+  getRegisteredConnectionTypes,
+  createConnectionsFromConfig,
+} from './connection/registry';
+export type {
+  ConnectionTypeFactory,
+  ConnectionPropertyType,
+  ConnectionPropertyDefinition,
+  ConnectionTypeDef,
+  ConnectionConfigEntry,
+  ConnectionsConfig,
+  JsonConfigValue,
+  ManagedConnectionLookup,
+} from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';
-export {type TagParse, Tag, type TagDict} from './tags';
+export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
+export * as API from './api';
+export type {SQLSourceRequest} from './lang/translate-response';
+export {sqlKey} from './model/sql_block';
+export {Annotations, RoutedNote} from './api/foundation/annotation';
+export {
+  routeOf,
+  payloadOf,
+  annotationsForRoute,
+  tagFromAnnotations,
+} from './api/annotation-utils';
+/** @deprecated — use the `.annotations` view on a Foundation entity
+ *  (`entity.annotations.parseAsTag(route)` / `.texts(route)`). */
+export {
+  annotationToTag,
+  annotationToTaglines,
+} from './api/foundation/annotation';
+export type {
+  BuildGraph,
+  BuildNode,
+  BuildPlan,
+  BuildTarget,
+  BuildTargetOptions,
+  BuildTargets,
+  ConnectionBuild,
+  UnbuildableSource,
+} from './api/foundation';
+export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';
+export {Reference} from './api/foundation';
+export type {ReferenceKind} from './api/foundation';
+export type {ImportLocation} from './model';
+export {makeDigest} from './model';

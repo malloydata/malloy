@@ -1,37 +1,96 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {ExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
+import type {BinaryMalloyOperator, FieldSpace} from '..';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue, literalExprValue} from '../types/expr-value';
+import {ATNodeType, ExpressionDef} from '../types/expression-def';
+import {booleanValueError, CONDITION_HINT} from './boolean-value';
+
+function doIsNull(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  // Build a new value rather than retyping the operand's in place: what
+  // getExpression hands back is shared, and the operand is usually asked for
+  // its value again after this.
+  const nullCmp = expr.getExpression(fs);
+  const noTest = booleanValueError(
+    fs,
+    nullCmp,
+    'in a null test',
+    expr,
+    CONDITION_HINT
+  );
+  if (noTest) return noTest;
+  return computedExprValue({
+    dataType: {type: 'boolean'},
+    value: {
+      node: op === '=' ? 'is-null' : 'is-not-null',
+      e: nullCmp.value,
+    },
+    from: [nullCmp],
+  });
+}
 
 export class ExprNULL extends ExpressionDef {
   elementType = 'NULL';
-  getExpression(): ExprValue {
-    return {
-      dataType: 'null',
-      value: ['NULL'],
-      expressionType: 'scalar',
-      evalSpace: 'literal',
-    };
+
+  protected computeExpression(): ExprValue {
+    return literalExprValue({
+      dataType: {type: 'null'},
+      value: {node: 'null'},
+    });
+  }
+
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
+    if (op === '!=' || op === '=') {
+      return doIsNull(fs, op, left);
+    }
+    return super.apply(fs, op, left, true);
+  }
+}
+
+export class PartialIsNull extends ExpressionDef {
+  elementType = '<=> NULL';
+  constructor(readonly op: '=' | '!=') {
+    super();
+  }
+
+  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+    return doIsNull(fs, this.op, expr);
+  }
+
+  requestExpression(_fs: FieldSpace): ExprValue | undefined {
+    return undefined;
+  }
+
+  protected computeExpression(_fs: FieldSpace): ExprValue {
+    return this.loggedErrorExpr(
+      'partial-as-value',
+      'Partial null check does not have a value'
+    );
+  }
+
+  atNodeType(): ATNodeType {
+    return ATNodeType.Partial;
+  }
+}
+
+export class ExprIsNull extends ExpressionDef {
+  elementType = 'is null';
+  constructor(
+    readonly expr: ExpressionDef,
+    readonly op: '=' | '!='
+  ) {
+    super();
+    this.has({expr});
+  }
+
+  protected computeExpression(fs: FieldSpace): ExprValue {
+    return doIsNull(fs, this.op, this.expr);
   }
 }

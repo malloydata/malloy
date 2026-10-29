@@ -1,0 +1,54 @@
+# Slim Presto image for Malloy CI testing
+#
+# This image is ~1.4GB vs ~9GB for the official prestodb/presto image.
+# It includes only what's needed to run Presto with the hive connector, which
+# serves the test parquet (see hive.properties), and the CLI that creates the
+# tables.
+#
+# How this was created:
+# 1. The official prestodb/presto:0.287 image contains 42 connector plugins (~2GB)
+#    but we only need hive-hadoop2 (~306MB)
+# 2. We use eclipse-temurin as the base because:
+#    - Presto requires Java 11 (not newer - tested, Java 17 fails with classloading errors)
+#    - Presto requires full JDK (not JRE - needs com.sun.tools.attach classes)
+# 3. Python is required because the Presto launcher (bin/launcher) is a Python script
+#
+# To update when Presto version changes:
+# 1. Update the PRESTO_VERSION arg below
+# 2. Verify Java version compatibility (check: docker run --rm prestodb/presto:X.XXX java -version)
+# 3. Test locally: ./test/presto/presto_start.sh --slim && npm run ci-presto
+#
+# Size comparison (as of 0.287):
+#   Official image: 9.11 GB
+#   This slim image: ~1.4 GB
+
+ARG PRESTO_VERSION=0.287
+
+# Stage to reference the official Presto image
+FROM prestodb/presto:${PRESTO_VERSION} AS presto-official
+
+FROM eclipse-temurin:11-jdk-jammy
+
+# Install Python for the launcher script
+RUN apt-get update && apt-get install -y --no-install-recommends python3 && \
+    ln -s /usr/bin/python3 /usr/bin/python && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV PRESTO_HOME=/opt/presto-server
+
+# Copy Presto server core
+COPY --from=presto-official /opt/presto-server/lib /opt/presto-server/lib
+COPY --from=presto-official /opt/presto-server/bin /opt/presto-server/bin
+COPY --from=presto-official /opt/presto-server/etc /opt/presto-server/etc
+
+# Copy only the hive plugin (the only connector we use for testing)
+COPY --from=presto-official /opt/presto-server/plugin/hive-hadoop2 /opt/presto-server/plugin/hive-hadoop2
+
+# The CLI, which presto_start.sh uses to create the tables
+COPY --from=presto-official /opt/presto-cli /opt/presto-cli
+RUN ln -s /opt/presto-cli /usr/local/bin/presto-cli
+
+EXPOSE 8080
+
+WORKDIR /opt/presto-server
+CMD ["./bin/launcher", "run"]

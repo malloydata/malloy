@@ -1,39 +1,24 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import {StructDef} from '../../model/malloy_types';
-import {Explore} from '../../malloy';
+import type {
+  ModelAnnotationEntry,
+  ModelID,
+  Note,
+  StructDef,
+  TableSourceDef,
+} from '../../model/malloy_types';
+import {Explore, pseudoModelFor} from '../../api/foundation/core';
 
-export const CHILD_EXPLORE: StructDef = {
-  type: 'struct',
+export const CHILD_EXPLORE: TableSourceDef = {
+  type: 'table',
   name: 'some_ns.child',
   as: 'child',
   dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'some_ns.child',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  tablePath: 'some_ns.child',
+  connection: 'bigquery',
   primaryKey: 'id1',
   fields: [
     {type: 'string', name: 'carrier'},
@@ -41,21 +26,18 @@ export const CHILD_EXPLORE: StructDef = {
       type: 'number',
       name: 'flight_count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
 
-export const PARENT_EXPLORE: StructDef = {
-  type: 'struct',
+export const PARENT_EXPLORE: TableSourceDef = {
+  type: 'table',
   name: 'some_ns.parent',
   as: 'parent',
   dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'some_ns.parent',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  tablePath: 'some_ns.parent',
+  connection: 'bigquery',
   primaryKey: 'id2',
   fields: [
     {type: 'string', name: 'name'},
@@ -63,43 +45,37 @@ export const PARENT_EXPLORE: StructDef = {
       type: 'number',
       name: 'some_parent_count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
 
-export const GRADPARENT_EXPLORE: StructDef = {
-  type: 'struct',
+export const GRANDPARENT_EXPLORE: TableSourceDef = {
+  type: 'table',
   name: 'some_ns.gradparent',
-  as: 'parent',
+  as: 'grandparent',
   dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'some_ns.gradparent',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  tablePath: 'some_ns.grandparent',
+  connection: 'bigquery',
   primaryKey: 'id3',
   fields: [
     {type: 'string', name: 'name'},
     {
       type: 'number',
-      name: 'some_gradparent_count',
+      name: 'some_grandparent_count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
 
 export const SOURCE_EXPLORE: StructDef = {
-  type: 'struct',
+  type: 'table',
   name: 'some_ns.source',
   as: 'source',
   dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'some_ns.source',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  tablePath: 'some_ns.grandparent',
+  connection: 'bigquery',
   primaryKey: 'id4',
   fields: [
     {type: 'string', name: 'name'},
@@ -107,31 +83,48 @@ export const SOURCE_EXPLORE: StructDef = {
       type: 'number',
       name: 'some_child_count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
 
 describe('serializeModel', () => {
   test('Stringify on an `explore` with no parent nor source explore', async () => {
-    const parent_explore = new Explore(PARENT_EXPLORE);
+    const parent_explore = new Explore(
+      pseudoModelFor(PARENT_EXPLORE),
+      PARENT_EXPLORE
+    );
     expect(JSON.stringify(parent_explore)).toStrictEqual(
-      '{"_structDef":{"type":"struct","name":"some_ns.parent","as":"parent","dialect":"standardsql","structSource":{"type":"table","tablePath":"some_ns.parent"},"structRelationship":{"type":"basetable","connectionName":"bigquery"},"primaryKey":"id2","fields":[{"type":"string","name":"name"},{"type":"number","name":"some_parent_count","expressionType":"aggregate","e":[{"type":"aggregate","function":"count","e":[]}]}]}}'
+      '{"_structDef":{"type":"table","name":"some_ns.parent","as":"parent","dialect":"standardsql","tablePath":"some_ns.parent","connection":"bigquery","primaryKey":"id2","fields":[{"type":"string","name":"name"},{"type":"number","name":"some_parent_count","expressionType":"aggregate","e":{"node":"aggregate","function":"count","e":{"node":""}}}]},"modelID":"internal://generated-model","modelAnnotations":{}}'
     );
   });
 
   test('No parent nor source explore', async () => {
-    const parent_explore = new Explore(PARENT_EXPLORE);
+    const parent_explore = new Explore(
+      pseudoModelFor(PARENT_EXPLORE),
+      PARENT_EXPLORE
+    );
     expect(Explore.fromJSON(parent_explore.toJSON())).toStrictEqual(
       parent_explore
     );
   });
 
   test('Having parent and source explores', async () => {
-    const gradparent_explore = new Explore(GRADPARENT_EXPLORE);
-    const parent_explore = new Explore(PARENT_EXPLORE, gradparent_explore);
-    const source_explore = new Explore(SOURCE_EXPLORE);
+    const grandparent_explore = new Explore(
+      pseudoModelFor(GRANDPARENT_EXPLORE),
+      GRANDPARENT_EXPLORE
+    );
+    const parent_explore = new Explore(
+      pseudoModelFor(PARENT_EXPLORE),
+      PARENT_EXPLORE,
+      grandparent_explore
+    );
+    const source_explore = new Explore(
+      pseudoModelFor(SOURCE_EXPLORE),
+      SOURCE_EXPLORE
+    );
     const child_explore = new Explore(
+      pseudoModelFor(CHILD_EXPLORE),
       CHILD_EXPLORE,
       parent_explore,
       source_explore
@@ -139,5 +132,31 @@ describe('serializeModel', () => {
     expect(Explore.fromJSON(child_explore.toJSON())).toStrictEqual(
       child_explore
     );
+  });
+
+  test('model annotations survive serialization round-trip', async () => {
+    const at = {
+      url: 'test',
+      range: {start: {line: 0, character: 0}, end: {line: 0, character: 0}},
+    };
+    const note = (text: string): Note => ({text, at});
+    // A struct owned by model `M`, whose `##` lives in the model-annotation
+    // closure. Resolution is model-level, so the struct needs no per-object
+    // provenance — the fold reads `M`'s entry, which must cross the wire.
+    const struct: TableSourceDef = {...CHILD_EXPLORE};
+    const modelAnnotations: Record<ModelID, ModelAnnotationEntry> = {
+      M: {ownNotes: {notes: [note('## theme=foo\n')]}, inheritsFrom: []},
+    };
+    const explore = new Explore(
+      pseudoModelFor(struct, 'M', modelAnnotations),
+      struct
+    );
+
+    // The live Explore folds the model annotation...
+    expect(explore.modelAnnotations.texts()).toEqual(['## theme=foo\n']);
+    // ...and the deserialized one folds it identically (the map crossed the
+    // wire; without it `fromJSON` would fold against an empty map).
+    const round = Explore.fromJSON(explore.toJSON());
+    expect(round.modelAnnotations.texts()).toEqual(['## theme=foo\n']);
   });
 });

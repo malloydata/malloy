@@ -1,62 +1,46 @@
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
-import * as lite from 'vega-lite';
-import {DataArray, DataColumn, Explore, Field} from '@malloydata/malloy';
+import type * as lite from 'vega-lite';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale} from './utils';
-import {RendererFactory} from '../renderer_factory';
-import {SegmentMapRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
+import {RendererFactory} from './renderer_factory';
+import type {SegmentMapRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
-  getDataValue(data: DataColumn): string | number | null {
-    if (data.isNull() || data.isNumber() || data.isString()) {
+  getDataValue(data: Cell): string | number | null {
+    if (data.isNull()) {
+      return null;
+    } else if (data.isNumber()) {
+      return data.value;
+    } else if (data.isString()) {
       return data.value;
     }
     throw new Error('Invalid field type for segment map.');
   }
 
   getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isString()) {
-        return 'nominal';
-      } else if (field.isNumber()) {
-        return 'quantitative';
-      }
-      // TODO dates nominal?
+    if (field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
+    // TODO dates nominal?
     throw new Error('Invalid field type for segment map.');
   }
 
-  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    if (data.isNull()) {
+  getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRepeatedRecord()) {
       throw new Error('Expected struct value not to be null.');
     }
 
-    const fields = data.field.intrinsicFields;
+    const fields = data.field.fields;
 
     const lat1Field = fields[0];
     const lon1Field = fields[1];
@@ -86,7 +70,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
     return {
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.rows),
       },
       projection: {
         type: 'albersUsa',
@@ -158,7 +142,7 @@ export class SegmentMapRendererFactory extends RendererFactory<SegmentMapRenderO
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: SegmentMapRenderOptions,
     timezone?: string
   ): Renderer {

@@ -1,0 +1,681 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+// import {
+//   Dialect,
+//   DialectFieldList,
+//   QueryInfo,
+//   qtz,
+//   DialectFunctionOverloadDef,
+// } from '..';
+import type {
+  Sampling,
+  MeasureTimeExpr,
+  RegexMatchExpr,
+  TypecastExpr,
+  BasicAtomicTypeDef,
+  AtomicTypeDef,
+  ArrayLiteralNode,
+  RecordLiteralNode,
+  ATimestampTypeDef,
+  TimestampUnit,
+  ExtractUnit,
+} from '../../model/malloy_types';
+import {
+  isSamplingEnable,
+  isSamplingRows,
+  isSamplingPercent,
+  TD,
+} from '../../model/malloy_types';
+import {indent} from '../../model/utils';
+import type {
+  CivilTime,
+  BooleanTypeSupport,
+  CompiledOrderBy,
+  DialectFieldList,
+  FieldReferenceType,
+  OrderByClauseType,
+  QueryInfo,
+} from '../dialect';
+import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandBlueprintMap, expandOverrideMap} from '../functions';
+import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
+import {MYSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+
+const msExtractionMap: Record<string, string> = {
+  day_of_week: 'DAYOFWEEK',
+  day_of_year: 'DAYOFYEAR',
+};
+
+const inSeconds: Record<string, number> = {
+  second: 1,
+  minute: 60,
+  hour: 3600,
+  day: 24 * 3600,
+  week: 7 * 24 * 3600,
+};
+
+/**
+ * MySQL reports a column type as
+ *
+ *     base [ '(' params ')' ] [ 'unsigned' ] [ 'zerofill' ]
+ *
+ * and normalizes every alias away before reporting, so a schema read only
+ * ever produces canonical base names. A raw cast reaches this map without
+ * that normalization, and any alias it spells -- REAL, INTEGER, NUMERIC --
+ * falls through to `sql native`.
+ *
+ * No modifier changes the Malloy type: `unsigned` only widens the range, and
+ * the sole type whose range crosses a Malloy boundary is bigint, which is
+ * already `bigint`; `zerofill` is presentation. So the map is keyed on the
+ * base name alone. DECIMAL is not in the map because its Malloy type depends
+ * on its parameters.
+ */
+const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
+  'tinyint': {type: 'number', numberType: 'integer'},
+  'smallint': {type: 'number', numberType: 'integer'},
+  'mediumint': {type: 'number', numberType: 'integer'},
+  'int': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'bigint'},
+  'float': {type: 'number', numberType: 'float'},
+  'double': {type: 'number', numberType: 'float'},
+  'char': {type: 'string'},
+  'varchar': {type: 'string'},
+  'tinytext': {type: 'string'},
+  'text': {type: 'string'},
+  'mediumtext': {type: 'string'},
+  'longtext': {type: 'string'},
+  'date': {type: 'date'},
+  'datetime': {type: 'timestamp'},
+  'timestamp': {type: 'timestamp'},
+  'time': {type: 'string'},
+};
+
+/**
+ * Split a reported type into its base name and numeric parameters.
+ *
+ * Only numeric parameter lists are read. ENUM and SET carry quoted value
+ * lists whose quoting rules a regex should not chase, and nothing needs
+ * their values -- both map to `sql native`.
+ */
+function parseMySQLType(sqlType: string): {base: string; params: number[]} {
+  const text = sqlType.trim().toLowerCase();
+  const base = text.match(/^\w+/)?.[0] ?? text;
+  const params = text.match(/^\w+\s*\((\d+(?:\s*,\s*\d+)*)\)/);
+  return {
+    base,
+    params: params ? params[1].split(',').map(p => parseInt(p, 10)) : [],
+  };
+}
+
+function malloyTypeToJSONTableType(malloyType: AtomicTypeDef): string {
+  switch (malloyType.type) {
+    case 'number':
+      // BIGINT for both: JSON_TABLE turns an out-of-range value into NULL
+      // without warning, and `integer` is not bounded at 32 bits.
+      if (
+        malloyType.numberType === 'integer' ||
+        malloyType.numberType === 'bigint'
+      ) {
+        return 'BIGINT';
+      } else {
+        return 'DOUBLE';
+      }
+    case 'string':
+      return 'CHAR(255)'; // JSON_TABLE needs a length
+    case 'boolean':
+      // MySQL has no boolean; TINYINT(1) is only a spelling of TINYINT.
+      return 'INT';
+    case 'record':
+    case 'array':
+      return 'JSON';
+    case 'timestamp':
+      return 'DATETIME';
+    default:
+      return malloyType.type.toUpperCase();
+  }
+}
+
+export class MySQLDialect extends Dialect {
+  name = 'mysql';
+  stringLiteralStyle = EscapeStyle.Backslash;
+  identifierEscapeStyle = EscapeStyle.Doubled;
+  identifierQuoteChar = '`';
+  defaultNumberType = 'DOUBLE PRECISION';
+  defaultDecimalType = 'DECIMAL';
+  udfPrefix = 'ms_temp.__udf';
+  hasFinalStage = false;
+  // TODO: this may not be enough for larger casts.
+  stringTypeName = 'VARCHAR(255)';
+  divisionIsInteger = true;
+  supportsSumDistinctFunction = true;
+  unnestWithNumbers = false;
+  defaultSampling = {rows: 50000};
+  supportUnnestArrayAgg = true;
+  supportsAggDistinct = false;
+  supportsCTEinCoorelatedSubQueries = true;
+  supportsSafeCast = false;
+  dontUnionIndex = false;
+  supportsQualify = false;
+  supportsNesting = true;
+  experimental = false;
+  supportsFullJoin = false;
+  supportsPipelinesInViews = false;
+  readsNestedData = false;
+  supportsComplexFilteredSources = false;
+  supportsArraysInData = false;
+  // MySQL builds nested arrays with GROUP_CONCAT (not an array type), which has
+  // no in-expression slice; limiting would need query-level ROW_NUMBER plumbing
+  // the sqlAggregateTurtle seam doesn't expose. Left false (default) explicitly.
+  supportsNestedProjectionLimit = false;
+  compoundObjectInSchema = false;
+  booleanType: BooleanTypeSupport = 'simulated';
+  orderByClause: OrderByClauseType = 'ordinal';
+  maxIdentifierLength = 64;
+
+  // MySQL bare identifiers allow `$` and may start with a digit, but
+  // cannot be entirely digits (or they lex as number literals). The
+  // regex requires at least one non-digit char somewhere in the run.
+  // Verified against the live engine.
+  override tablePathBareIdentRegex = /^[A-Za-z0-9_$]*[A-Za-z_$][A-Za-z0-9_$]*/;
+
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
+    switch (malloyType.type) {
+      case 'number':
+        if (
+          malloyType.numberType === 'integer' ||
+          malloyType.numberType === 'bigint'
+        ) {
+          return 'SIGNED';
+        } else {
+          return 'DOUBLE';
+        }
+      case 'string':
+        return 'CHAR';
+      case 'boolean':
+        return 'SIGNED';
+      case 'record':
+      case 'array':
+        return 'JSON';
+      case 'timestamp':
+        return 'DATETIME';
+      default:
+        return malloyType.type;
+    }
+  }
+
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
+    const {base, params} = parseMySQLType(sqlType);
+    if (base === 'decimal') {
+      // DECIMAL is exact, so scale 0 is an integer rather than a float. Above
+      // 15 digits it no longer survives a JS double and must be carried as a
+      // bigint. MySQL reports precision and scale on every decimal; the
+      // defaults match its own when a bare DECIMAL is declared.
+      const [precision, scale] = [params[0] ?? 10, params[1] ?? 0];
+      if (scale > 0) {
+        return {type: 'number', numberType: 'float'};
+      }
+      return {
+        type: 'number',
+        numberType: precision <= 15 ? 'integer' : 'bigint',
+      };
+    }
+    return (
+      mysqlToMalloyTypes[base] || {
+        type: 'sql native',
+        rawType: base,
+      }
+    );
+  }
+
+  sqlGroupSetTable(groupSetCount: number): string {
+    return `CROSS JOIN (select number - 1 as group_set from JSON_TABLE(cast(concat("[1", repeat(",1", ${groupSetCount}), "]") as JSON),"$[*]" COLUMNS(number FOR ORDINALITY)) group_set) as group_set`;
+  }
+
+  sqlAnyValue(_groupSet: number, fieldName: string): string {
+    return `MAX(${fieldName})`;
+  }
+
+  private mapFields(fieldList: DialectFieldList): string {
+    // JSON_OBJECT key is a string value. Routing rawName through
+    // sqlLiteralString also keeps the SQL valid under ANSI_QUOTES mode.
+    return fieldList
+      .map(f => `${this.sqlLiteralString(f.rawName)}, ${f.sqlExpression}`)
+      .join(', ');
+  }
+
+  sqlAggregateTurtle(
+    groupSet: number | undefined,
+    fieldList: DialectFieldList,
+    orderBy: CompiledOrderBy[] | undefined,
+    _limit?: number,
+    filterSQL?: string
+  ): string {
+    const separator = ',';
+    const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    const cond = turtleGroupSetCondition(groupSet, filterSQL);
+    const json = `JSON_OBJECT(${this.mapFields(fieldList)})`;
+    const element = cond
+      ? `IF(${cond},
+        ${json}
+        , null
+        )`
+      : json;
+    let gc = `GROUP_CONCAT(
+      ${element}
+      ${orderByClause}
+      SEPARATOR '${separator}'
+    )`;
+    gc = `COALESCE(JSON_EXTRACT(CONCAT('[',${gc},']'),'$'),JSON_ARRAY())`;
+    return gc;
+  }
+
+  sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
+    const fields = this.mapFieldsForJsonObject(fieldList);
+    return `MAX(CASE WHEN group_set=${groupSet} THEN JSON_OBJECT(${fields}) END)`;
+  }
+
+  sqlAnyValueLastTurtle(
+    name: string,
+    groupSet: number,
+    sqlName: string
+  ): string {
+    return `MAX(CASE WHEN group_set=${groupSet} AND ${name} IS NOT NULL THEN ${name} END) as ${sqlName}`;
+  }
+
+  sqlCoaleseMeasuresInline(
+    groupSet: number,
+    fieldList: DialectFieldList
+  ): string {
+    const fields = this.mapFieldsForJsonObject(fieldList);
+    const nullValues = this.mapFieldsForJsonObject(fieldList, true);
+
+    return `COALESCE(MAX(CASE WHEN group_set=${groupSet} THEN JSON_OBJECT(${fields}) END),JSON_OBJECT(${nullValues}))`;
+  }
+
+  malloyToSQL(t: string) {
+    if (t === 'number') {
+      return 'DOUBLE';
+    } else if (t === 'string') {
+      return 'TEXT';
+    } else if (t === 'struct' || t === 'array' || t === 'record') {
+      return 'JSON';
+    } else return t;
+  }
+
+  unnestColumns(fieldList: DialectFieldList) {
+    const fields: string[] = [];
+    for (const f of fieldList) {
+      let fType = malloyTypeToJSONTableType(f.typeDef);
+      if (
+        f.typeDef.type === 'sql native' &&
+        f.typeDef.rawType &&
+        f.typeDef.rawType?.match(/json/)
+      ) {
+        fType = f.typeDef.rawType.toUpperCase();
+      }
+      // JSON_TABLE PATH argument is a string literal containing a
+      // JSONPath. Render rawName through sqlLiteralString so a single
+      // quote in the user-controlled field name cannot close the SQL
+      // string literal.
+      const jsonPathLit = this.sqlLiteralString('$.' + f.rawName);
+      fields.push(
+        `${this.sqlQuoteIdentifier(f.rawName)} ${fType}  PATH ${jsonPathLit}`
+      );
+    }
+    return fields.join(',\n');
+  }
+
+  jsonTable(
+    source: string,
+    fieldList: DialectFieldList,
+    isSingleton: boolean
+  ): string {
+    let fields = this.unnestColumns(fieldList);
+    if (isSingleton) {
+      // LTNOTE: we need the type of array here.
+      fields = "`value` JSON PATH '$'";
+    }
+    return `JSON_TABLE(CAST(${source} AS JSON), '$[*]'
+        COLUMNS (
+          __row_id FOR ORDINALITY,
+          ${fields}
+        )
+      )`;
+  }
+
+  sqlUnnestAlias(
+    source: string,
+    alias: string,
+    fieldList: DialectFieldList,
+    _needDistinctKey: boolean,
+    isArray: boolean,
+    _isInNestedPipeline: boolean
+  ): string {
+    return `
+      LEFT JOIN ${this.jsonTable(
+        source,
+        fieldList,
+        isArray
+      )} as ${alias} ON 1=1`;
+  }
+
+  sqlUnnestPipelineHead(
+    isSingleton: boolean,
+    sourceSQLExpression: string,
+    fieldList: DialectFieldList
+  ): string {
+    return this.jsonTable(sourceSQLExpression, fieldList, isSingleton);
+  }
+
+  sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
+    return 'UNUSED';
+  }
+
+  sqlSumDistinct(key: string, value: string, funcName: string): string {
+    const sqlDistinctKey = `CONCAT(${key}, '')`;
+    const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(55, 10)) * 4294967296`;
+    const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(55, 10))`;
+    const hashkey = `(${upperPart} + ${lowerPart})`;
+    const v = `CAST(COALESCE(${value},0) as DECIMAL(55, 10))`;
+    const sqlSum = `(SUM(DISTINCT ${hashkey} + ${v}) - SUM(DISTINCT ${hashkey}))`;
+    if (funcName === 'SUM') {
+      return sqlSum;
+    } else if (funcName === 'AVG') {
+      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
+  }
+
+  sqlGenerateUUID(): string {
+    // TODO: This causes the query to become slow, figure out another way to make UUID deterministic.
+    return 'CONCAT(ROW_NUMBER() OVER(), UUID())';
+  }
+
+  sqlFieldReference(
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
+  ): string {
+    if (parentType === 'array[scalar]' || parentType === 'record') {
+      // childName comes from user-controlled record field names; render
+      // the JSON path through sqlLiteralString so a single quote in the
+      // name cannot close the SQL string literal.
+      const jsonPathLit = this.sqlLiteralString('$.' + childName);
+      let ret = `JSON_UNQUOTE(JSON_EXTRACT(${parentAlias},${jsonPathLit}))`;
+      if (parentType === 'array[scalar]') {
+        ret = `JSON_UNQUOTE(${parentAlias}.\`value\`)`;
+      }
+      switch (childType) {
+        case 'string':
+          return `CONCAT(${ret}, '')`;
+        case 'number':
+          return `CAST(${ret} as double)`;
+        case 'record':
+        case 'array':
+          return `CAST(${ret} as JSON)`;
+      }
+    }
+    const child = this.sqlQuoteIdentifier(childName);
+    return `${parentAlias}.${child}`;
+  }
+
+  sqlCreateFunction(id: string, funcText: string): string {
+    // TODO:
+    return `CREATE FUNCTION ${id}(JSONB) RETURNS JSONB AS $$\n${indent(
+      funcText
+    )}\n$$ LANGUAGE SQL;\n`;
+  }
+
+  sqlCreateFunctionCombineLastStage(lastStageName: string): string {
+    // TODO:
+    return `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
+  }
+
+  sqlSelectAliasAsStruct(_alias: string, _fieldList: DialectFieldList) {
+    return 'MYSQL: Implement this';
+    // return `JSON_OBJECT(${physicalFieldNames
+    //   .map(name => `'${name.replace(/`/g, '')}', \`${alias}\`.${name}`)
+    //   .join(',')})`;
+  }
+
+  // TODO: Check what this is.
+  sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
+    throw new Error('Not implemented Yet');
+  }
+
+  sqlNowExpr(): string {
+    return 'LOCALTIMESTAMP';
+  }
+
+  // Civil time is a DATETIME, which has no zone
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    _typeDef: ATimestampTypeDef
+  ): string {
+    return timezone === 'UTC'
+      ? expr
+      : `CONVERT_TZ(${expr}, 'UTC', ${this.sqlTimezoneLiteral(timezone)})`;
+  }
+
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    _destTypeDef: ATimestampTypeDef
+  ): string {
+    return timezone === 'UTC'
+      ? expr
+      : `CONVERT_TZ(${expr}, ${this.sqlTimezoneLiteral(timezone)}, 'UTC')`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: TimestampUnit,
+    _civilType: CivilTime
+  ): string {
+    // For week truncation, adjust to Sunday first
+    // DAYOFWEEK returns 1=Sunday, 2=Monday, etc., so subtract (DAYOFWEEK-1) days
+    const adjustedExpr =
+      unit === 'week'
+        ? `DATE_SUB(${expr}, INTERVAL DAYOFWEEK(${expr}) - 1 DAY)`
+        : expr;
+
+    // Generate truncation using DATE_FORMAT
+    let format = "'%Y-%m-%d %H:%i:%s'";
+    switch (unit) {
+      case 'minute':
+        format = "'%Y-%m-%d %H:%i:00'";
+        break;
+      case 'hour':
+        format = "'%Y-%m-%d %H:00:00'";
+        break;
+      case 'day':
+      case 'week':
+        format = "'%Y-%m-%d 00:00:00'";
+        break;
+      case 'month':
+        format = "'%Y-%m-01 00:00:00'";
+        break;
+      case 'quarter':
+        format = `CASE WHEN MONTH(${adjustedExpr}) > 9 THEN '%Y-10-01 00:00:00' WHEN MONTH(${adjustedExpr}) > 6 THEN '%Y-07-01 00:00:00' WHEN MONTH(${adjustedExpr}) > 3 THEN '%Y-04-01 00:00:00' ELSE '%Y-01-01 00:00:00' end`;
+        break;
+      case 'year':
+        format = "'%Y-01-01 00:00:00'";
+        break;
+    }
+
+    return `TIMESTAMP(DATE_FORMAT(${adjustedExpr}, ${format}))`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: TimestampUnit,
+    _civilType: CivilTime
+  ): string {
+    // Convert quarter/week to supported units
+    let offsetUnit: string = unit;
+    let offsetMag = magnitude;
+    if (unit === 'quarter') {
+      offsetUnit = 'month';
+      offsetMag = `${magnitude}*3`;
+    } else if (unit === 'week') {
+      offsetUnit = 'day';
+      offsetMag = `${magnitude}*7`;
+    }
+
+    const interval = `INTERVAL ${offsetMag} ${offsetUnit}`;
+    return `(${expr} ${op} ${interval})`;
+  }
+
+  sqlCivilExtract(
+    expr: string,
+    units: ExtractUnit,
+    _civilType: CivilTime
+  ): string {
+    return `${msExtractionMap[units] || units}(${expr})`;
+  }
+
+  sqlCivilToDate(expr: string): string {
+    return `CAST(${expr} AS DATE)`;
+  }
+
+  sqlDateToCivil(expr: string): string {
+    return `CAST(${expr} AS DATETIME)`;
+  }
+
+  sqlCast(_qi: QueryInfo, cast: TypecastExpr): string {
+    const srcSQL = cast.e.sql || 'internal-error-in-sql-generation';
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    if (!TD.eq(srcTypeDef, dstTypeDef)) {
+      if (cast.safe) {
+        throw new Error("Mysql dialect doesn't support Safe Cast");
+      }
+      if (TD.isString(dstTypeDef)) {
+        return `CONCAT(${srcSQL}, '')`;
+      }
+      return `CAST(${srcSQL} AS ${dstSQLType})`;
+    }
+    return srcSQL;
+  }
+
+  sqlRegexpMatch(df: RegexMatchExpr): string {
+    return `REGEXP_LIKE(${df.kids.expr.sql}, ${df.kids.regex.sql})`;
+  }
+
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE '${literal}'`;
+  }
+
+  sqlCivilLiteral(literal: string): string {
+    return `TIMESTAMP '${literal}'`;
+  }
+
+  sqlTimestamptzLiteral(
+    _qi: QueryInfo,
+    _literal: string,
+    _timezone: string
+  ): string {
+    throw new Error('MySQL does not support timestamptz');
+  }
+
+  sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
+    const from = df.kids.left;
+    const to = df.kids.right;
+    let lVal = from.sql;
+    let rVal = to.sql;
+    if (
+      TD.isDate(from.typeDef) &&
+      TD.isDate(to.typeDef) &&
+      ['week', 'month', 'quarter', 'year'].includes(df.units)
+    ) {
+      return `TIMESTAMPDIFF(${df.units.toUpperCase()}, ${lVal}, ${rVal})`;
+    }
+    if (inSeconds[df.units]) {
+      lVal = `UNIX_TIMESTAMP(${lVal})`;
+      rVal = `UNIX_TIMESTAMP(${rVal})`;
+      const duration = `${rVal}-${lVal}`;
+      return df.units === 'second'
+        ? `FLOOR(${duration})`
+        : `FLOOR((${duration})/${inSeconds[df.units].toString()}.0)`;
+    }
+    throw new Error(`Unknown or unhandled MySQL time unit: ${df.units}`);
+  }
+
+  sqlAggDistinct(
+    _key: string,
+    _values: string[],
+    _func: (valNames: string[]) => string
+  ): string {
+    throw new Error('MySQL dialect does not support nesting.');
+  }
+
+  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+    if (sample !== undefined) {
+      if (isSamplingEnable(sample) && sample.enable) {
+        sample = this.defaultSampling;
+      }
+      if (isSamplingRows(sample)) {
+        return `(SELECT * FROM ${tableSQL} ORDER BY rand() LIMIT ${sample.rows} )`;
+      } else if (isSamplingPercent(sample)) {
+        return `(SELECT * FROM (SELECT ROW_NUMBER() OVER (ORDER BY rand()) as __row_number, __source_tbl.* from ${tableSQL} as __source_tbl) as __rand_tbl where __row_number % FLOOR(100.0 / ${sample.percent}) = 1)`;
+      }
+    }
+    return tableSQL;
+  }
+
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(MYSQL_MALLOY_STANDARD_OVERLOADS);
+  }
+
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(MYSQL_DIALECT_FUNCTIONS);
+  }
+
+  mapFieldsForJsonObject(fieldList: DialectFieldList, nullValues?: boolean) {
+    return fieldList
+      .map(
+        f =>
+          `${this.sqlLiteralString(f.rawName)}, ${
+            nullValues ? 'NULL' : f.sqlExpression
+          }\n`
+      )
+      .join(', ');
+  }
+
+  castToString(expression: string): string {
+    return `CONCAT(${expression}, '')`;
+  }
+
+  concat(...values: string[]): string {
+    return `CONCAT(${values.join(',')})`;
+  }
+  validateTypeName(sqlType: string): boolean {
+    // Letters:              BIGINT
+    // Numbers:              INT8
+    // Spaces,
+    // Parentheses, Commas:  NUMERIC(5, 2)
+    return sqlType.match(/^[A-Za-z\s(),0-9]*$/) !== null;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return `JSON_ARRAY(${array.join(',')})`;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const pairs = Object.entries(lit.kids).map(
+      ([propName, propVal]) =>
+        `${this.sqlLiteralString(propName)},${propVal.sql}`
+    );
+    return `JSON_OBJECT(${pairs.join(', ')})`;
+  }
+}
