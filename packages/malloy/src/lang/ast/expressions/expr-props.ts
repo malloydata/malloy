@@ -54,7 +54,7 @@ export class ExprProps extends ExpressionDef {
         ) {
           where.logError(
             'aggregate-filter-expression-not-scalar',
-            'Cannot filter an expresion with an aggregate or analytical computation'
+            'Cannot filter an expression with an aggregate or analytical computation'
           );
           return expr;
         }
