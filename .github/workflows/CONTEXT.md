@@ -127,6 +127,4 @@ The artifact pattern (build once, fan out) lives entirely inside `release.yaml` 
 
 **Recovering a partial release:** the publish loop skips already-published versions (npm versions are immutable), so fix the cause, merge, and **re-run at the same version** — don't bump. The version bump is the last step, so a failed release correctly leaves the repo at the version it was finishing.
 
-There is no pre-release publishing workflow. The former workflow was removed after going unused for over a year and losing its obsolete token-based authentication. Restoring pre-release publishing requires a design that respects the one-publisher rule above; do not add an `NPM_TOKEN` back.
-
 The CLI (`malloydata/malloy-cli`) and explorer (`malloydata/malloy-explorer`) publish from their own repos with their own registrations.
