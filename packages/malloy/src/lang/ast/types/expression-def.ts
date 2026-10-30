@@ -496,10 +496,7 @@ function equality(
         dataType: lhs.type,
         kids: {filterExpr: rhs.value, expr: lhs.value},
       };
-      if (op === '!~') {
-        filterMatch.notMatch = true;
-      }
-      value = filterMatch;
+      value = op === '!~' ? {node: 'not', e: filterMatch} : filterMatch;
     } else {
       return left.loggedErrorExpr(
         'filter-expression-type',

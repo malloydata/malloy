@@ -113,6 +113,9 @@ describe('Filter Expressions In Source', () => {
   test('simple string filter', () => {
     expect("astr ~ f'5'").compilesTo('{filterString astr | 5}');
   });
+  test('negated string filter', () => {
+    expect("astr !~ f'5'").compilesTo('{not {filterString astr | 5}}');
+  });
   test('simple boolean filter', () => {
     expect("abool ~ f'true'").compilesTo('{filterBoolean abool | true}');
   });
