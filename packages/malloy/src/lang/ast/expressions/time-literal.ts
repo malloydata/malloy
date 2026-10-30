@@ -82,10 +82,15 @@ export abstract class TimeLiteral extends ExpressionDef {
     typ: TemporalFieldType,
     units: TimestampUnit | undefined
   ): TimeLiteralExpr {
+    let timeZone = this.timeZone;
+    if (timeZone !== undefined && !Dialect.isSafeTimezoneName(timeZone)) {
+      this.logError('invalid-timezone', {timezone: timeZone});
+      timeZone = undefined;
+    }
     return Dialect.makeTimeLiteralNode(
       fs.dialectObj(),
       val,
-      this.timeZone,
+      timeZone,
       units,
       typ
     );

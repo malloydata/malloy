@@ -123,6 +123,26 @@ describe('literals', () => {
   test('minute+locale', () => {
     expect(expr`@1960-06-30 10:30[America/Los_Angeles]`).toTranslate();
   });
+  test.each([
+    'America/Port-au-Prince',
+    'Etc/GMT+5',
+    '+05:30',
+    'EST5EDT,M3.2.0/2,M11.1.0/2',
+  ])('literal timezone %s is left for the database to interpret', timezone => {
+    const exprModel = new BetaExpression(`@1960-06-30 10:30:00[${timezone}]`);
+    expect(exprModel).toTranslate();
+    expect(exprModel.generated().value).toEqual(
+      expect.objectContaining({timezone})
+    );
+  });
+  test.each(["UTC'", 'UTC"', 'UTC`', 'UTC\\'])(
+    'rejects unsafe literal timezone %j',
+    timezone => {
+      expect(new BetaExpression(`@1960-06-30 10:30:00[${timezone}]`)).toLog(
+        error('invalid-timezone', {timezone})
+      );
+    }
+  );
   test('second 8601', () => {
     expect(expr`@1960-06-30T10:30:31`).toTranslate();
   });

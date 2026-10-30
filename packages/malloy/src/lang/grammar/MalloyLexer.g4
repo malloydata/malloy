@@ -234,7 +234,8 @@ QMARK: '?';
 
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;
-fragment F_TZ: '[' (ID_CHAR | '/')* ']';
+// Timezone-name validity belongs to the database; see Dialect.isSafeTimezoneName
+fragment F_TZ: '[' ~[\]\r\n]+ ']';
 // @YYYY-MM-DD HH:MM:SS.n
 LITERAL_TIMESTAMP
   : '@' F_YEAR '-' F_DD '-' F_DD

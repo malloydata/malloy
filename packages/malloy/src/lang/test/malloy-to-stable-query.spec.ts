@@ -855,6 +855,280 @@ describe('Malloy to Stable Query', () => {
       });
     });
   });
+  describe('escaping', () => {
+    const awkwardStrings = [
+      'plain',
+      'say "hi"',
+      "it's",
+      'both \' and "',
+      'back`tick',
+      '`\'"',
+      'C:\\',
+      'backslash \\n is not a newline',
+      'line\nbreak',
+      'cr\rlf\r\n',
+      'tab\there',
+      'controls \b\f\v\0\x01\x1f\x7f',
+      'unicode é 😀 \u2028',
+    ];
+
+    function whereQuery(
+      fieldName: string,
+      filter: Malloy.Filter['kind'],
+      value: string
+    ): Malloy.Query {
+      const expression: Malloy.Expression = {
+        kind: 'field_reference',
+        name: fieldName,
+      };
+      return {
+        definition: {
+          kind: 'arrow',
+          source: {kind: 'source_reference', name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'where',
+                filter:
+                  filter === 'filter_string'
+                    ? {kind: 'filter_string', expression, filter: value}
+                    : {
+                        kind: 'literal_equality',
+                        expression,
+                        value: {kind: 'string_literal', string_value: value},
+                      },
+              },
+            ],
+          },
+        },
+      };
+    }
+
+    test.each(awkwardStrings)('string literal %j round trips', str => {
+      roundTrip(whereQuery('carrier', 'literal_equality', str));
+    });
+
+    test.each(awkwardStrings)('source parameter %j round trips', str => {
+      roundTrip({
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+            parameters: [
+              {name: 'p', value: {kind: 'string_literal', string_value: str}},
+            ],
+          },
+          view: {kind: 'view_reference', name: 'v'},
+        },
+      });
+    });
+
+    test.each(awkwardStrings)('identifier %j round trips', str => {
+      roundTrip(whereQuery(str, 'literal_equality', 'AA'));
+    });
+
+    test.each(awkwardStrings.filter(s => s !== 'C:\\'))(
+      'filter string %j round trips',
+      str => {
+        roundTrip(whereQuery('carrier', 'filter_string', str));
+      }
+    );
+
+    test('string literal uses the quote it does not contain', () => {
+      expect(
+        Malloy.queryToMalloy(
+          whereQuery('carrier', 'literal_equality', 'say "hi"')
+        )
+      ).toContain('carrier = \'say "hi"\'');
+      expect(
+        Malloy.queryToMalloy(whereQuery('carrier', 'literal_equality', "it's"))
+      ).toContain('carrier = "it\'s"');
+    });
+
+    test('filter string uses triple quotes when it needs them', () => {
+      expect(
+        Malloy.queryToMalloy(whereQuery('carrier', 'filter_string', 'a`\'"b'))
+      ).toContain('carrier ~ f```a`\'"b```');
+      expect(
+        Malloy.queryToMalloy(whereQuery('carrier', 'filter_string', 'a\nb'))
+      ).toContain('carrier ~ f```a\nb```');
+    });
+
+    test('filter string that no quoting can hold is an error', () => {
+      expect(() =>
+        Malloy.queryToMalloy(whereQuery('carrier', 'filter_string', 'C:\\'))
+      ).toThrow('cannot be written as a Malloy filter string');
+    });
+
+    function timestampQuery(timezone: string, minute?: 'minute'): Malloy.Query {
+      return {
+        definition: {
+          kind: 'arrow',
+          source: {kind: 'source_reference', name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'literal_equality',
+                  expression: {kind: 'field_reference', name: 'dep_time'},
+                  value: {
+                    kind: 'timestamp_literal',
+                    timestamp_value: minute
+                      ? '2020-01-01 12:34:00'
+                      : '2020-01-01 12:34:56',
+                    granularity: minute,
+                    timezone,
+                  },
+                },
+              },
+            ],
+          },
+        },
+      };
+    }
+
+    const timezones = [
+      'America/Los_Angeles',
+      'America/Port-au-Prince',
+      'Etc/GMT+5',
+      '+05:30',
+      'EST5EDT,M3.2.0/2,M11.1.0/2',
+    ];
+
+    test.each(timezones)('timestamp timezone %s round trips', timezone => {
+      roundTrip(timestampQuery(timezone));
+    });
+
+    test.each(timezones)(
+      'minute timestamp timezone %s round trips',
+      timezone => {
+        roundTrip(timestampQuery(timezone, 'minute'));
+      }
+    );
+
+    test.each(['UTC] x', 'UTC\nx', 'UTC\rx', ''])(
+      'timestamp timezone %j that a literal cannot hold is an error',
+      timezone => {
+        expect(() => Malloy.queryToMalloy(timestampQuery(timezone))).toThrow(
+          'cannot be written in a timestamp literal'
+        );
+      }
+    );
+  });
+  describe('annotation printing', () => {
+    const annotationValues = [
+      '# bar_chart\n',
+      '# label = "two\\nlines"\n',
+      '#|\nlabel="a"',
+      '#| opener text\nline one\n\n  indented\n\tline two',
+      '#|\nbody line\n|#\nafter a body |#',
+      '#|',
+      '#|\n',
+      '#|\na\n\n\n\n\n\n',
+      '#|\n\na\n\n',
+      '#|\n   ',
+      '#|\n\t\n  \n',
+      '#|\n  \na\n    ',
+    ];
+
+    function groupBys(
+      ...annotations: (Malloy.Annotation[] | undefined)[]
+    ): Malloy.Query {
+      return {
+        definition: {
+          kind: 'arrow',
+          source: {kind: 'source_reference', name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: annotations.map((a, i) => ({
+              kind: 'group_by',
+              field: {
+                expression: {kind: 'field_reference', name: `f${i}`},
+                annotations: a,
+              },
+            })),
+          },
+        },
+      };
+    }
+
+    test.each(annotationValues)('query annotation %j round trips', value => {
+      roundTrip({...groupBys(undefined), annotations: [{value}]});
+    });
+
+    test.each(annotationValues)(
+      'annotation %j on a lone field round trips',
+      value => {
+        roundTrip(groupBys([{value}]));
+      }
+    );
+
+    test.each(annotationValues)(
+      'annotation %j on one of several fields round trips',
+      value => {
+        roundTrip(groupBys(undefined, [{value}, {value: '# second\n'}]));
+      }
+    );
+
+    test.each([0, 1, 4])(
+      'block annotations round trip with tab width %d',
+      tabWidth => {
+        for (const value of annotationValues) {
+          roundTrip(groupBys(undefined, [{value}]), {tabWidth});
+        }
+      }
+    );
+
+    test.each([
+      ['  # leading space\n', '# leading space\n'],
+      ['# crlf\r\n', '# crlf\n'],
+      ['#|\r\na\r\nb', '#|\na\nb'],
+    ])('annotation %j prints as %j', (value, printed) => {
+      const query = groupBys([{value}]);
+      expect(
+        malloyToQuery(Malloy.queryToMalloy(query)).query?.definition
+      ).toEqual(groupBys([{value: printed}]).definition);
+    });
+
+    test('block annotation keeps its trailing blank lines', () => {
+      const src =
+        '#|\na\n\n\n\n\n\n\n|#\nrun: flights -> { group_by: carrier }';
+      const parsed = malloyToQuery(src);
+      expect(parsed.query?.annotations).toEqual([{value: '#|\na\n\n\n\n\n\n'}]);
+      roundTrip(parsed.query!);
+    });
+
+    test('block annotation from source survives printing', () => {
+      const src = [
+        'run: flights -> {',
+        '  #|',
+        '    label="a"',
+        '      |#',
+        '  |#',
+        '  group_by: carrier',
+        '}',
+      ].join('\n');
+      const parsed = malloyToQuery(src);
+      expect(parsed.logs).toEqual([]);
+      roundTrip(parsed.query!);
+    });
+
+    test.each([
+      '## model annotation\n',
+      '##| model block',
+      'group_by: x',
+      '# two\nlines\n',
+      '# carriage\rreturn\n',
+    ])('annotation %j that is not an object annotation is an error', value => {
+      expect(() => Malloy.queryToMalloy(groupBys([{value}]))).toThrow(
+        'cannot be written as an object annotation'
+      );
+    });
+  });
   describe('Render annotations', () => {
     test('single render annotation', () => {
       idempotent('# bar_chart\nrun: flights -> { group_by: carrier }', {
@@ -899,6 +1173,11 @@ function idempotent(query: string, expected?: QueryAndLogs) {
   expect(result.query).not.toBeUndefined();
   const malloy = Malloy.queryToMalloy(result.query!);
   expect(query).toEqual(malloy);
+}
+
+function roundTrip(query: Malloy.Query, options?: {tabWidth: number}) {
+  const malloy = Malloy.queryToMalloy(query, options);
+  expect(malloyToQuery(malloy)).toEqual({query, logs: []});
 }
 
 function simplified(
