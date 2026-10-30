@@ -611,7 +611,7 @@ function readSyncString(
   key: string,
   log: LogMessage[]
 ): string | undefined {
-  const v = overlay([key]);
+  const v = overlay([key], {type: 'string'});
   if (isThenable(v)) {
     log.push({
       message: `the legacy \`config\` overlay returned a Promise for \`${key}\`; top-level FS context must resolve synchronously. ${key} will be undefined.`,

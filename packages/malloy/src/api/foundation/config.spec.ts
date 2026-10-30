@@ -5,7 +5,10 @@
 
 import {MalloyConfig} from './config';
 import {discoverConfig} from './config_discover';
+import {textOverlay} from './config_overlays';
+import type {OverlayRequest} from './config_overlays';
 import {registerConnectionType} from '../../connection/registry';
+import type {ConnectionPropertyType} from '../../connection/registry';
 import type {ConnectionConfig, Connection} from '../../connection/types';
 import type {URLReader} from '../../runtime_types';
 
@@ -989,5 +992,179 @@ describe('MalloyConfig mustHaveValue properties', () => {
     expect(config.log.map(entry => entry.message)).toContain(
       'connections.strict.mode: should be a string, got boolean (expected string)'
     );
+  });
+});
+
+describe('textOverlay', () => {
+  it.each<[ConnectionPropertyType, string, unknown]>([
+    ['boolean', 'true', true],
+    ['boolean', 'TRUE', true],
+    ['boolean', ' false\n', false],
+    ['boolean', 'yes', 'yes'],
+    ['boolean', '1', '1'],
+    ['number', '5432', 5432],
+    ['number', ' -1.5 ', -1.5],
+    ['number', '', ''],
+    ['number', '  ', '  '],
+    ['number', 'abc', 'abc'],
+    ['number', 'Infinity', 'Infinity'],
+    ['string', ' false ', ' false '],
+    ['password', '5432', '5432'],
+  ])('reads a %s from %p as %p', (type, text, expected) => {
+    expect(textOverlay(() => text)(['X'], {type})).toEqual(expected);
+  });
+
+  it('returns the text unchanged when no type is asked for', () => {
+    expect(textOverlay(() => 'true')(['X'])).toBe('true');
+  });
+
+  it('returns undefined when there is no text', () => {
+    expect(textOverlay(() => undefined)(['X'], {type: 'number'})).toBe(
+      undefined
+    );
+  });
+
+  it('reads an async source', async () => {
+    const overlay = textOverlay(async () => '7');
+    await expect(overlay(['X'], {type: 'number'})).resolves.toBe(7);
+  });
+});
+
+describe('MalloyConfig type-checks values from overlays', () => {
+  const FLAG = 'TEST_TYPED_FLAG';
+  const PORT = 'TEST_TYPED_PORT';
+  const DEPTH = 'TEST_TYPED_DEPTH';
+  let captured: ConnectionConfig | undefined;
+
+  beforeEach(() => {
+    captured = undefined;
+    registerConnectionType('typeddb', {
+      displayName: 'TypedDB',
+      factory: async (config: ConnectionConfig) => {
+        captured = {...config};
+        return mockConnection(config.name, 'typeddb-dialect');
+      },
+      properties: [
+        {name: 'flag', displayName: 'Flag', type: 'boolean', optional: true},
+        {name: 'port', displayName: 'Port', type: 'number', optional: true},
+        {name: 'label', displayName: 'Label', type: 'string', optional: true},
+        {
+          name: 'guard',
+          displayName: 'Guard',
+          type: 'boolean',
+          optional: true,
+          mustHaveValue: true,
+        },
+        {
+          name: 'depth',
+          displayName: 'Depth',
+          type: 'number',
+          optional: true,
+          default: {env: DEPTH},
+        },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    delete process.env[FLAG];
+    delete process.env[PORT];
+    delete process.env[DEPTH];
+  });
+
+  async function lookUp(
+    entry: Record<string, unknown>,
+    overlays?: Record<string, (path: string[], r?: OverlayRequest) => unknown>
+  ): Promise<string[]> {
+    const config = new MalloyConfig(
+      {connections: {db: {is: 'typeddb', ...entry}}},
+      overlays ? {overlays} : undefined
+    );
+    await config.connections.lookupConnection('db');
+    return config.log.map(m => m.message);
+  }
+
+  it('converts env text to the property type', async () => {
+    process.env[FLAG] = 'false';
+    process.env[PORT] = '5432';
+    expect(await lookUp({flag: {env: FLAG}, port: {env: PORT}})).toEqual([]);
+    expect(captured?.['flag']).toBe(false);
+    expect(captured?.['port']).toBe(5432);
+  });
+
+  it('drops a value of the wrong type, with a warning that hides the value', async () => {
+    process.env[PORT] = 'hunter2';
+    const log = await lookUp({port: {env: PORT}});
+    expect(log).toEqual([
+      'connections.db.port: {"env":"TEST_TYPED_PORT"} should be a number, got string (expected number)',
+    ]);
+    expect(log.join()).not.toContain('hunter2');
+    expect(captured).not.toHaveProperty('port');
+  });
+
+  it('does not convert a string literal', async () => {
+    expect(await lookUp({flag: 'false', port: '5432'})).toEqual([
+      'connections.db.flag: should be a boolean, got string (expected boolean)',
+      'connections.db.port: should be a number, got string (expected number)',
+    ]);
+    expect(captured).not.toHaveProperty('flag');
+    expect(captured).not.toHaveProperty('port');
+  });
+
+  it('passes the property type to the overlay', async () => {
+    const requests: unknown[] = [];
+    await lookUp(
+      {flag: {host: 'f'}, label: {host: 'l'}},
+      {
+        host: (_path, request) => {
+          requests.push(request);
+          return undefined;
+        },
+      }
+    );
+    expect(requests).toEqual([{type: 'boolean'}, {type: 'string'}]);
+  });
+
+  it('keeps a value of the right type from an overlay', async () => {
+    expect(await lookUp({port: {host: 'port'}}, {host: () => 5432})).toEqual(
+      []
+    );
+    expect(captured?.['port']).toBe(5432);
+  });
+
+  it('does not convert text from an overlay not built with textOverlay', async () => {
+    expect(await lookUp({flag: {host: 'flag'}}, {host: () => 'false'})).toEqual(
+      [
+        'connections.db.flag: {"host":"flag"} should be a boolean, got string (expected boolean)',
+      ]
+    );
+    expect(captured).not.toHaveProperty('flag');
+  });
+
+  it('drops a non-string in a string property', async () => {
+    expect(await lookUp({label: {host: ['a', 'b']}}, {host: () => 7})).toEqual([
+      'connections.db.label: {"host":["a","b"]} should be a string, got number (expected string)',
+    ]);
+    expect(captured).not.toHaveProperty('label');
+  });
+
+  it('throws for a mustHaveValue property whose value is the wrong type', async () => {
+    process.env[FLAG] = 'maybe';
+    await expect(lookUp({guard: {env: FLAG}})).rejects.toThrow(
+      'Connection "db" sets "guard", but no value arrived'
+    );
+    expect(captured).toBeUndefined();
+  });
+
+  it('converts a default that is a reference', async () => {
+    process.env[DEPTH] = '7';
+    expect(await lookUp({})).toEqual([]);
+    expect(captured?.['depth']).toBe(7);
+  });
+
+  it('silently drops a default whose value is the wrong type', async () => {
+    process.env[DEPTH] = 'deep';
+    expect(await lookUp({})).toEqual([]);
+    expect(captured).not.toHaveProperty('depth');
   });
 });

@@ -203,7 +203,7 @@ function resolveSyncStringSetting(
       });
       return undefined;
     }
-    const v = overlay(node.path);
+    const v = overlay(node.path, {type: 'string'});
     if (isThenable(v)) {
       log.push({
         message: `the \`${node.source}\` overlay returned a Promise for "${settingName}"; top-level string settings must resolve synchronously`,

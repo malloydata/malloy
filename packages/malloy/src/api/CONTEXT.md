@@ -110,7 +110,7 @@ For the configuration pipeline internals (three states, section compilers, overl
 | `writers.ts` | `WriteStream`, `DataWriter`, `JSONWriter`, `CSVWriter` |
 | `runtime.ts` | `Runtime`, Materializers, `FluentState` |
 | `config.ts` | `MalloyConfig`, `Manifest` |
-| `config_overlays.ts` | `Overlay`, `ConfigOverlays`, `envOverlay`, `contextOverlay`, `defaultConfigOverlays` |
+| `config_overlays.ts` | `Overlay`, `OverlayRequest`, `ConfigOverlays`, `envOverlay`, `textOverlay`, `contextOverlay`, `defaultConfigOverlays` |
 | `config_compile.ts` | Schema-directed compiler: POJO → `ConfigDict`/`ConfigLiteral`/`ConfigReference` tree |
 | `config_resolve.ts` | Walks the compiled tree against a `ConfigOverlays` dict → `ResolvedConfig` POJO |
 | `config_discover.ts` | URL-walking `discoverConfig()` helper for local hosts — returns a built `MalloyConfig` |

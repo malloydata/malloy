@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type {ConnectionPropertyType} from '../../connection/registry';
+
 /**
  * An overlay is a lambda that takes a compiled reference path and returns
  * a value (or undefined if the path is not present in the overlay source).
@@ -19,8 +21,21 @@
  *   {user: ["address", "zip"]} -> path = ["address", "zip"]
  *
  * Overlay values should resolve to ordinary JSON-compatible values.
+ *
+ * `request.type` is the type of the property being filled, and the overlay
+ * should return a value of that type. An overlay over a source that only
+ * holds text, like `env`, should be built with `textOverlay`, which does the
+ * conversion. An overlay may ignore `request`; what it returns is
+ * type-checked either way. `MalloyConfig.readOverlay` passes no `request`.
  */
-export type Overlay = (path: string[]) => unknown | Promise<unknown>;
+export type Overlay = (
+  path: string[],
+  request?: OverlayRequest
+) => unknown | Promise<unknown>;
+
+export interface OverlayRequest {
+  type: ConnectionPropertyType;
+}
 
 /**
  * A dict keyed by overlay name. A config reference like
@@ -50,7 +65,55 @@ export function envOverlay(): Overlay {
   if (typeof process === 'undefined' || !process.env) {
     return () => undefined;
   }
-  return path => process.env[path[0]];
+  return textOverlay(path => process.env[path[0]]);
+}
+
+/**
+ * Make an overlay from a function that looks up text, for a source that only
+ * holds strings: environment variables, a secret store, a table of strings.
+ * `read` returns the text at a path, or undefined if there is none, and may
+ * be async.
+ *
+ * For a boolean property, "true" and "false" become booleans. For a number
+ * property, numeric text becomes a number. Case and surrounding spaces are
+ * ignored. Any other text is returned unchanged, so the type check reports
+ * it as a bad value; returning undefined would mean "not set", and the
+ * property would silently disappear.
+ */
+export function textOverlay(
+  read: (path: string[]) => string | undefined | Promise<string | undefined>
+): Overlay {
+  // Not async: `manifestPath: {env: ...}` is read synchronously, while the
+  // MalloyConfig is being constructed.
+  return (path, request) => {
+    const text = read(path);
+    if (typeof text === 'object') {
+      return text.then(t => readTextAs(t, request));
+    }
+    return readTextAs(text, request);
+  };
+}
+
+function readTextAs(
+  text: string | undefined,
+  request: OverlayRequest | undefined
+): unknown {
+  if (text === undefined || request === undefined) return text;
+  const trimmed = text.trim();
+  switch (request.type) {
+    case 'boolean': {
+      const lower = trimmed.toLowerCase();
+      if (lower === 'true') return true;
+      if (lower === 'false') return false;
+      return text;
+    }
+    case 'number': {
+      const n = Number(trimmed);
+      return trimmed !== '' && Number.isFinite(n) ? n : text;
+    }
+    default:
+      return text;
+  }
 }
 
 /**
