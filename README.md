@@ -68,8 +68,6 @@ npm install @malloydata/malloy @malloydata/malloy-connections
 
 Importing @malloydata/malloy-connections registers all supported database backends.
 
-The packages are scoped under `@malloydata`. The unscoped `malloy` on npm is an unrelated logging library, so `npm install malloy` does not install Malloy.
-
 Run a query from Node.js:
 
 ```javascript
