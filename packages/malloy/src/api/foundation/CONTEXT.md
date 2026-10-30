@@ -47,7 +47,9 @@ MalloyConfig instance (what Runtime consumes; references not yet resolved)
    │
    ▼  lookupConnection(name)  (async, overlays may do IO)
    │
-   │  6. walk the compiled entry; await each ConfigReference's overlay
+   │  6. walk the compiled entry; await each ConfigReference's overlay;
+   │     a reference in a boolean property that resolved to "true" or
+   │     "false" becomes that boolean
    │  7. apply property defaults (resolving reference-shaped defaults
    │     through the same overlays)
    │  8. hand fully resolved POJO to the registered factory
@@ -135,6 +137,7 @@ Cases and observed behavior: [configuration.md → Failure Modes](../../doc/conf
 | Unknown overlay source → warning + drop | Almost always a typo or host/config mismatch. Silent-dropping would hide real bugs; throwing would punish a host that hasn't yet registered an optional overlay. The `config.log` warning splits the difference. |
 | Known overlay returns `undefined` → silent drop | Legitimate "value not present" state, matching env-var semantics. A required-field violation surfaces at connection-build time (lazy, at lookup), not here — keeping the resolver out of policy decisions about what's required. |
 | Unresolved reference in a `default` → silent drop | A default is a hint, not a requirement. "No default applicable" is a normal terminal state, not a failure. |
+| Reference in a `boolean` property resolves to something other than `"true"`/`"false"` → warning, value passed through | The `env` overlay only returns strings and `"false"` is truthy, so those two spellings are mapped to booleans (`readBooleanReferences` in `config_lookup.ts`). Anything else reaches the factory unchanged rather than dropped. Dropping would pick the property's fallback on the connector's behalf (DuckDB's `readOnly` → a writable database), while each connector already has a rule for a value it can't use: DuckDB throws, and Snowflake, SQL Server and BigQuery ignore it. |
 | Async overlay used in a sync-only slot → loud warning + drop | A construction-time peek can't `await`. This is misuse rather than absence, so silent drop would hide a wiring bug; throwing would brittly couple to a stack the host might still be assembling. The loud warning gets the host's attention while keeping construction infallible. Applies to `configURL` and to top-level string references like `manifestPath`. |
 | Property carries `mustHaveValue` and produced nothing → throw at lookup | Absence is a normal state for every other property. For one whose fallback is a permission — `securityPolicy` → `none`, `authClient` → ambient credentials — dropping silently selects the permissive branch. Fires only when the key was authored; an absent key still takes its default. |
 

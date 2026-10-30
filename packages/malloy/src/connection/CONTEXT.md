@@ -68,6 +68,8 @@ Each registered backend provides:
 
 The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against a **`ConfigOverlays` dict** at **`lookupConnection()` time** (not at construction), so the registry and connection factories still only ever see plain resolved values. Overlays may be sync or async (`(path) => unknown | Promise<unknown>`); deferring resolution to lookup gives async overlays a natural seam. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is dropped — the factory sees the field as absent — unless it carries `mustHaveValue`, below. Unknown-overlay-source warnings land on `config.log` when the affected connection is looked up.
 
+A reference in a `boolean` property reaches the factory as a boolean when it resolved to `"true"` or `"false"`. Any other value arrives unchanged, with a `config.log` warning, and so can a non-boolean from a caller that constructs the connection directly. Read boolean properties with `=== true` or `typeof value === 'boolean'`, never `??` or truthiness: `"false" ?? false` is `"false"`, which is truthy.
+
 Properties declared as `type: 'json'` are never interpreted as references — the entire value passes through literally. This is the security invariant that keeps structured config (SSL options, headers, session objects) from ever invoking overlay lookups.
 
 ### `source` and `mustHaveValue`

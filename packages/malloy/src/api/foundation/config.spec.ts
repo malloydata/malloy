@@ -991,3 +991,90 @@ describe('MalloyConfig mustHaveValue properties', () => {
     );
   });
 });
+
+describe('MalloyConfig boolean properties written as references', () => {
+  // A literal is type-checked when the config compiles; a reference resolves
+  // later, and the env overlay always returns a string. "false" is truthy.
+  const ENV = 'TEST_FLAG_VALUE';
+  let captured: Record<string, unknown>;
+
+  beforeEach(() => {
+    captured = {};
+    registerConnectionType('flagdb', {
+      displayName: 'FlagDB',
+      factory: async (config: ConnectionConfig) => {
+        captured = {flag: config['flag'], label: config['label']};
+        return mockConnection(config.name, 'flagdb-dialect');
+      },
+      properties: [
+        {name: 'flag', displayName: 'Flag', type: 'boolean', optional: true},
+        {name: 'label', displayName: 'Label', type: 'string', optional: true},
+      ],
+    });
+  });
+
+  afterEach(() => {
+    delete process.env[ENV];
+  });
+
+  async function lookUp(entry: Record<string, unknown>) {
+    const config = new MalloyConfig({
+      connections: {db: {is: 'flagdb', ...entry}},
+    });
+    await config.connections.lookupConnection('db');
+    return config.log.map(m => m.message);
+  }
+
+  it.each([
+    ['true', true],
+    ['false', false],
+    ['TRUE', true],
+    ['False', false],
+    [' false\n', false],
+  ])('reads %p from the environment as %p', async (value, expected) => {
+    process.env[ENV] = value;
+    expect(await lookUp({flag: {env: ENV}})).toEqual([]);
+    expect(captured['flag']).toBe(expected);
+  });
+
+  it('passes any other value through, with a warning that names the reference', async () => {
+    process.env[ENV] = 'yes';
+    expect(await lookUp({flag: {env: ENV}})).toEqual([
+      'connections.db.flag: {"env":"TEST_FLAG_VALUE"} should resolve to "true" or "false" (expected boolean)',
+    ]);
+    expect(captured['flag']).toBe('yes');
+  });
+
+  it('keeps a boolean an overlay returns', async () => {
+    const config = new MalloyConfig(
+      {connections: {db: {is: 'flagdb', flag: {host: ['flags', 'on']}}}},
+      {overlays: {host: () => false}}
+    );
+    await config.connections.lookupConnection('db');
+    expect(config.log).toEqual([]);
+    expect(captured['flag']).toBe(false);
+  });
+
+  it('names a path reference as it was written', async () => {
+    const config = new MalloyConfig(
+      {connections: {db: {is: 'flagdb', flag: {host: ['flags', 'on']}}}},
+      {overlays: {host: () => 1}}
+    );
+    await config.connections.lookupConnection('db');
+    expect(config.log.map(m => m.message)).toEqual([
+      'connections.db.flag: {"host":["flags","on"]} should resolve to "true" or "false" (expected boolean)',
+    ]);
+    expect(captured['flag']).toBe(1);
+  });
+
+  it('leaves a string property alone', async () => {
+    process.env[ENV] = 'false';
+    expect(await lookUp({label: {env: ENV}})).toEqual([]);
+    expect(captured['label']).toBe('false');
+  });
+
+  it('leaves literals to the compile-time check', async () => {
+    expect(await lookUp({flag: false})).toEqual([]);
+    expect(captured['flag']).toBe(false);
+  });
+});

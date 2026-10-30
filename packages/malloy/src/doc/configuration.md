@@ -119,6 +119,8 @@ Overlays may be synchronous or asynchronous — an overlay's return type is `unk
 
 **Sync-only at the top level.** Top-level string settings written as references (`manifestPath: {env: "..."}`, `givensPath: {env: "..."}`) must resolve synchronously. They feed into `manifestURL` and `givensURL`, which are computed once in the `MalloyConfig` constructor — and constructors can't `await`. If an overlay returns a Promise for one of these, `MalloyConfig` pushes a loud warning to `config.log` and drops the value; without the warning, persistence (or per-runtime givens) would silently stop working.
 
+**Booleans.** An `env` value is always a string, and `"false"` is truthy. So in a `boolean` property, a reference that resolves to `"true"` or `"false"` (any case, surrounding whitespace ignored) becomes that boolean. Any other value reaches the connection unchanged, with a warning on `config.log`, and the connection decides what it means. A literal is checked when the config is read instead: `"dbmeta": "false"` written directly is dropped with a warning.
+
 ### Failure Modes
 
 References fail in five distinguishable ways, each handled differently:

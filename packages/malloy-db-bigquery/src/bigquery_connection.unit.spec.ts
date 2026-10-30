@@ -4,7 +4,11 @@
  */
 
 import type {BigQueryOptions} from '@google-cloud/bigquery';
+import {MalloyConfig} from '@malloydata/malloy';
+import type {TableSourceDef} from '@malloydata/malloy';
 import {BigQueryConnection} from './bigquery_connection';
+// Registers the 'bigquery' connection type for the MalloyConfig tests.
+import './index';
 
 // The callback overload yields (err, rows, nextQuery, apiResponse).
 type Cb = (
@@ -176,5 +180,97 @@ describe('BigQueryConnection dbmeta', () => {
         dbmeta,
       }).getDigest();
     expect(digest(true)).toBe(digest(false));
+  });
+
+  // The table's metadata call stubbed: one described table, one described
+  // column. The schema fetch itself is real.
+  async function schemaOf(conn: BigQueryConnection): Promise<TableSourceDef> {
+    jest.spyOn(conn, 'getTableFieldSchema').mockResolvedValue({
+      schema: {fields: [{name: 'id', type: 'INTEGER', description: 'Id.'}]},
+      description: 'Orders.',
+      needsTableSuffixPseudoColumn: false,
+      needsPartitionTimePseudoColumn: false,
+      needsPartitionDatePseudoColumn: false,
+    });
+    const def = await conn.fetchTableSchema('orders', 'proj.ds.orders');
+    if (typeof def === 'string') throw new Error(def);
+    return def;
+  }
+
+  const notes = (def: TableSourceDef) => [
+    ...(def.annotations?.notes ?? []).map(n => n.text),
+    ...def.fields.flatMap(f => (f.annotations?.notes ?? []).map(n => n.text)),
+  ];
+
+  const DESCRIBED = [
+    '#(dbmeta) description="Orders."\n',
+    '#(dbmeta) description="Id."\n',
+  ];
+
+  it('describes the table and its columns when dbmeta is true', async () => {
+    const conn = new BigQueryConnection({
+      name: 'bq',
+      projectId: 'proj',
+      dbmeta: true,
+    });
+    expect(notes(await schemaOf(conn))).toEqual(DESCRIBED);
+  });
+
+  it.each([false, undefined, 'false', 'true', 1])(
+    'describes nothing when dbmeta is %p',
+    async dbmeta => {
+      const conn = new BigQueryConnection({
+        name: 'bq',
+        projectId: 'proj',
+        dbmeta: dbmeta as boolean,
+      });
+      expect(notes(await schemaOf(conn))).toEqual([]);
+    }
+  );
+
+  describe('set through an {env: ...} reference', () => {
+    const ENV = 'TEST_BIGQUERY_DBMETA';
+
+    afterEach(() => {
+      delete process.env[ENV];
+    });
+
+    async function connect(value: string) {
+      process.env[ENV] = value;
+      const config = new MalloyConfig({
+        connections: {
+          bq: {is: 'bigquery', projectId: 'proj', dbmeta: {env: ENV}},
+        },
+      });
+      const conn = await config.connections.lookupConnection('bq');
+      expect(conn).toBeInstanceOf(BigQueryConnection);
+      return {conn: conn as BigQueryConnection, log: config.log};
+    }
+
+    it.each(['true', 'TRUE', ' true\n'])('turns it on for %p', async value => {
+      const {conn, log} = await connect(value);
+      expect(notes(await schemaOf(conn))).toEqual(DESCRIBED);
+      expect(log).toEqual([]);
+    });
+
+    it.each(['false', 'False', ' false\n'])(
+      'leaves it off for %p',
+      async value => {
+        const {conn, log} = await connect(value);
+        expect(notes(await schemaOf(conn))).toEqual([]);
+        expect(log).toEqual([]);
+      }
+    );
+
+    it.each(['0', 'no', ''])(
+      'leaves it off for %p, with a warning',
+      async value => {
+        const {conn, log} = await connect(value);
+        expect(notes(await schemaOf(conn))).toEqual([]);
+        expect(log.map(m => m.message)).toEqual([
+          'connections.bq.dbmeta: {"env":"TEST_BIGQUERY_DBMETA"} should resolve to "true" or "false" (expected boolean)',
+        ]);
+      }
+    );
   });
 });
