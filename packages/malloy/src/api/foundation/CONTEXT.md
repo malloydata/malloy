@@ -9,7 +9,7 @@ This file is about the parts that are fragile and easy to break.
 | File | Contents |
 |---|---|
 | `config.ts` | `MalloyConfig` class (constructor pipeline, `wrapConnections`, `shutdown`, `readOverlay`) and standalone `Manifest` |
-| `config_overlays.ts` | `Overlay` (sync-or-async), `ConfigOverlays`, `envOverlay()`, `contextOverlay()`, `defaultConfigOverlays()` |
+| `config_overlays.ts` | `Overlay` (sync-or-async), `OverlayRequest`, `ConfigOverlays`, `envOverlay()`, `textOverlay()`, `contextOverlay()`, `defaultConfigOverlays()` |
 | `config_compile.ts` | Schema-directed POJO → typed tree. Section compilers. The **security boundary**. |
 | `config_resolve.ts` | `prepareConfig()` — synchronous extraction of top-level sections; fabricates default-connection entries. Sync-peeks overlays for top-level string references (e.g. `manifestPath: {env: "X"}`); async overlays warn + drop. |
 | `config_lookup.ts` | `buildManagedLookup()` — async, per-lookup reference resolution + property defaults + factory invocation. Where overlay calls actually happen. |
@@ -47,7 +47,9 @@ MalloyConfig instance (what Runtime consumes; references not yet resolved)
    │
    ▼  lookupConnection(name)  (async, overlays may do IO)
    │
-   │  6. walk the compiled entry; await each ConfigReference's overlay
+   │  6. resolve each property; await each ConfigReference's overlay,
+   │     telling it the property's type, and drop + warn on a value
+   │     that isn't of it
    │  7. apply property defaults (resolving reference-shaped defaults
    │     through the same overlays)
    │  8. hand fully resolved POJO to the registered factory
@@ -61,7 +63,7 @@ The compiled tree exists from step 2 onward and is held by `ManagedConnectionLoo
 
 **Sync/async boundary.** Construction is synchronous and does zero IO. All overlay calls — and anything they might do (secret stores, session fetches, enterprise-injected values) — happen at `lookupConnection` time, which is already async. This means:
 
-- An `Overlay` is `(path: string[]) => unknown | Promise<unknown>`. The resolver `await`s every overlay result, so sync and async overlays are interchangeable from the caller's perspective.
+- An `Overlay` is `(path: string[], request?: OverlayRequest) => unknown | Promise<unknown>`. The resolver `await`s every overlay result, so sync and async overlays are interchangeable from the caller's perspective.
 - `readOverlay()` on `MalloyConfig` is async for the same reason.
 - Construction-time overlay peeks are the exception to the deferred-resolution rule. Two cases peek synchronously: (1) `computeManifestURL` reads `configURL` from the `config` overlay; (2) `prepareConfig`'s `resolveSyncStringSetting` resolves top-level string references like `manifestPath: {env: "X"}`. **All sync-peek overlays MUST return synchronously**; if any returns a Promise, the resolver pushes a loud warning to `config.log` and drops the value — failing audibly instead of silently breaking persistence or losing the setting. Inside the `config` overlay, only `configURL` is sync-only; other keys (`rootDirectory`, etc.) can still be async because they're consumed at lookup time. Hosts that build overlays from mixed sync/async sources should branch on the key.
 
@@ -112,7 +114,15 @@ A reference is a single-key object where the key names an overlay source and the
 
 The single-key constraint is a runtime invariant — TypeScript can't express "exactly one key." `compileConnections` validates it.
 
-An overlay is `(path: string[]) => unknown | Promise<unknown>`. `ConfigOverlays` is `Record<string, Overlay>`. Overlays can be sync or async; the resolver awaits every result. Async fits naturally because resolution is deferred to `lookupConnection` (already async).
+An overlay is `(path: string[], request?: OverlayRequest) => unknown | Promise<unknown>`. `ConfigOverlays` is `Record<string, Overlay>`. Overlays can be sync or async; the resolver awaits every result. Async fits naturally because resolution is deferred to `lookupConnection` (already async).
+
+### Typed Values
+
+Every caller that knows the type of the slot a reference fills passes it as `request.type`: connection properties, reference-shaped defaults, and the top-level string settings. The overlay should return a value of that type. The resolver doesn't trust it to: `resolveProperty` in `config_lookup.ts` runs the compiler's own `checkValueType` on the result, so a reference and a literal are held to one definition of what a property accepts, and an overlay that ignores `request` is still held to the type.
+
+Conversion from text belongs to the overlay, not the resolver. Only a text-only source has a reason to convert, and only the overlay knows whether it is one — a `session` overlay handing back the string `"false"` for a boolean has produced a wrong value, not a spelling of `false`. `textOverlay(read)` is the conversion, packaged as a way to build an overlay from a function that reads text; `env` is built with it. Text that doesn't read as the requested type comes back unchanged rather than `undefined`, so the type check reports it instead of the property silently vanishing as "not set."
+
+`readOverlay` passes no request — it has no slot — and gets the overlay's own representation.
 
 ### Merge Semantics
 
@@ -126,7 +136,7 @@ Plain spread. This gives callers three moves without any extra API:
 - **Replace** — passing an existing key clobbers the default (`config` → discovery-populated or Publisher's).
 - **Disable** — omit; the default is already a no-op for `config`.
 
-### Four Failure Modes
+### Failure Modes
 
 Cases and observed behavior: [configuration.md → Failure Modes](../../doc/configuration.md#failure-modes). Why each behaves the way it does — the rationale that matters when you're tempted to "improve" them in code:
 
@@ -135,6 +145,7 @@ Cases and observed behavior: [configuration.md → Failure Modes](../../doc/conf
 | Unknown overlay source → warning + drop | Almost always a typo or host/config mismatch. Silent-dropping would hide real bugs; throwing would punish a host that hasn't yet registered an optional overlay. The `config.log` warning splits the difference. |
 | Known overlay returns `undefined` → silent drop | Legitimate "value not present" state, matching env-var semantics. A required-field violation surfaces at connection-build time (lazy, at lookup), not here — keeping the resolver out of policy decisions about what's required. |
 | Unresolved reference in a `default` → silent drop | A default is a hint, not a requirement. "No default applicable" is a normal terminal state, not a failure. |
+| Reference produces a value of the wrong type → warning + drop | The same outcome as a wrong-typed literal at compile, so where a value was written doesn't change what it means. The warning names the reference, never the value, because a reference can point at a secret. Dropping rather than passing the value through keeps every factory seeing only typed values; a property whose fallback is unsafe carries `mustHaveValue`, which turns the drop into a throw. In a default the drop is silent, like any unresolved default. |
 | Async overlay used in a sync-only slot → loud warning + drop | A construction-time peek can't `await`. This is misuse rather than absence, so silent drop would hide a wiring bug; throwing would brittly couple to a stack the host might still be assembling. The loud warning gets the host's attention while keeping construction infallible. Applies to `configURL` and to top-level string references like `manifestPath`. |
 | Property carries `mustHaveValue` and produced nothing → throw at lookup | Absence is a normal state for every other property. For one whose fallback is a permission — `securityPolicy` → `none`, `authClient` → ambient credentials — dropping silently selects the permissive branch. Fires only when the key was authored; an absent key still takes its default. |
 

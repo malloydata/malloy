@@ -115,23 +115,26 @@ Built-in overlay sources:
 
 Hosts can register additional overlays — VS Code adds a `secret` overlay backed by VS Code's SecretStorage; Publisher adds a `session` overlay backed by the request. A `malloy-config.json` that uses only `{env: ...}` references is portable between hosts. One that uses `{secret: ...}` is not — only VS Code has a `secret` overlay.
 
+**Typed values.** A reference fills a property that has a type, and the value it produces must be of that type: a reference in a `boolean` property must produce a boolean. The overlay is told the type it is filling, as the second argument, `{type}`. The `env` overlay can only hold text, so it reads `"true"` or `"false"` as a boolean and numeric text as a number, ignoring case and surrounding whitespace. A host whose overlay reads from another text-only store — a secret store, a table of strings — builds it with `textOverlay(read)`, where `read` returns the text at a path, and gets the same reading. A value that is not of the property's type is dropped with a warning, the same as a literal of the wrong type; see failure mode 6.
+
 Overlays may be synchronous or asynchronous — an overlay's return type is `unknown | Promise<unknown>`. Use sync for purely in-memory sources (env vars, context dicts); use async for anything that touches IO (secret stores, session fetches, enterprise-injected values). Reference resolution is deferred to connection-lookup time (already async), so async overlays don't force the host to change anything else.
 
 **Sync-only at the top level.** Top-level string settings written as references (`manifestPath: {env: "..."}`, `givensPath: {env: "..."}`) must resolve synchronously. They feed into `manifestURL` and `givensURL`, which are computed once in the `MalloyConfig` constructor — and constructors can't `await`. If an overlay returns a Promise for one of these, `MalloyConfig` pushes a loud warning to `config.log` and drops the value; without the warning, persistence (or per-runtime givens) would silently stop working.
 
 ### Failure Modes
 
-References fail in five distinguishable ways, each handled differently:
+References fail in six distinguishable ways, each handled differently:
 
 1. **Unknown overlay source** (`{zzz: "foo"}` when no `zzz` overlay is registered) — logged as a warning to `config.log`; the property is dropped. Almost always a typo or host/config mismatch.
 2. **Known overlay returns `undefined`** (`{env: "MISSING_VAR"}` — env var unset) — silently dropped. Legitimate "value not present" state. If the dropped property was required, the connection factory complains when the connection is built (lazy, at lookup time), not at config-build time.
 3. **Unresolved reference inside a default** — silently dropped. Defaults are hints, not requirements.
 4. **Async overlay used in a sync-only slot** (e.g. `manifestPath: {secret: "X"}` when `secret` returns a Promise) — logged as a loud warning to `config.log` and dropped. Top-level string settings are read at construction time and can't `await`; this is misuse, not a missing value. The same rule applies to `configURL` on the host-supplied `config` overlay.
-5. **A property that can't safely be absent produced nothing** — an error, and the connection is not built. A few properties fall back to something permissive when they're missing: DuckDB's `securityPolicy` becomes `none`, BigQuery's `authClient` becomes whatever ambient credential the machine has. Writing one of those is treated as a promise that it will come to something, so any of modes 1–3 hitting it stops the connection instead of quietly taking the fallback. Leaving the property out entirely is still fine.
+5. **A property that can't safely be absent produced nothing** — an error, and the connection is not built. A few properties fall back to something permissive when they're missing: DuckDB's `securityPolicy` becomes `none`, BigQuery's `authClient` becomes whatever ambient credential the machine has. Writing one of those is treated as a promise that it will come to something, so any of modes 1–3 or 6 hitting it stops the connection instead of quietly taking the fallback. Leaving the property out entirely is still fine.
+6. **A reference produced a value of the wrong type** (`"port": {"env": "PG_PORT"}` with `PG_PORT=abc`) — logged as a warning to `config.log`, naming the reference but not the value, since a reference can point at a secret; the property is dropped. A literal of the wrong type is treated the same way when the config is read. In a default, the value is dropped silently, like mode 3.
 
 A consequence: for every other property, a typo'd env var and an unset env var are indistinguishable. This matches established behavior.
 
-Mode 1 fires at construction time for top-level references and at first lookup for connection-property references — a consequence of when each is resolved. Mode 4 only fires at construction time, since it's specific to the sync-only slots. Modes 2 and 3 are silent in both cases.
+Mode 1 fires at construction time for top-level references and at first lookup for connection-property references — a consequence of when each is resolved. Mode 6 fires at first lookup. Mode 4 only fires at construction time, since it's specific to the sync-only slots. Modes 2 and 3 are silent in both cases.
 
 ### The `json` Property Type
 

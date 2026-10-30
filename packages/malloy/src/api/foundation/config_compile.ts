@@ -397,7 +397,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function makeWarning(path: string, message: string): LogMessage {
+export function makeWarning(path: string, message: string): LogMessage {
   return {
     message: `${path}: ${message}`,
     severity: 'warn',
@@ -405,7 +405,7 @@ function makeWarning(path: string, message: string): LogMessage {
   };
 }
 
-function checkValueType(
+export function checkValueType(
   value: unknown,
   expectedType: ConnectionPropertyType
 ): string | undefined {
