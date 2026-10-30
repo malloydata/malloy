@@ -30,9 +30,9 @@ import type {ConfigOverlays, OverlayRequest} from './config_overlays';
  *
  * Lookup flow for a connection name:
  *   1. Find its compiled entry. Throw if the name is unknown.
- *   2. Resolve each property, `await`-ing each overlay reference. The
- *      overlay is told the property's type, and a value that isn't of it is
- *      dropped with a warning, as a literal of the wrong type is at compile.
+ *   2. Resolve each property. A reference calls its overlay, passing the
+ *      property's type. A value of the wrong type is dropped with a
+ *      warning, the same as a wrong-typed literal.
  *   3. Fill in any property whose definition carries a `default` and that
  *      the user didn't specify (including post-step-2 drops from unresolved
  *      inline references).
@@ -41,7 +41,7 @@ import type {ConfigOverlays, OverlayRequest} from './config_overlays';
  *      the whole pipeline.
  *
  * Warnings collected during steps 2–3 (unknown overlay source, a reference
- * that resolved to the wrong type) are pushed into the shared `log` array —
+ * value of the wrong type) are pushed into the shared `log` array — the
  * same array exposed as `MalloyConfig.log`.
  * The log grows the first time a connection is looked up; callers that
  * read `log` before any lookup won't see resolution warnings. That's an
@@ -210,10 +210,11 @@ function requireAuthoredValues(
 }
 
 /**
- * Resolve one property of a connection entry; `undefined` drops it. A literal
- * was type-checked at compile. A reference is held to the property's type
- * here: a value of the wrong type is dropped with a warning, as a literal of
- * the wrong type is at compile, so a `mustHaveValue` property throws for it.
+ * Return the value of one property, or undefined to leave it out. Literals
+ * were type-checked when the config was compiled. A reference is checked
+ * here: a value of the wrong type is left out with a warning, the same as a
+ * bad literal. For a `mustHaveValue` property, `requireAuthoredValues` then
+ * turns the missing value into an error.
  */
 async function resolveProperty(
   connectionName: string,
@@ -249,7 +250,7 @@ async function resolveProperty(
   if (value === undefined) return undefined;
   const typeError = checkValueType(value, propDef.type);
   if (typeError === undefined) return value;
-  // Names the reference, never the value: a reference can point at a secret.
+  // The warning shows the reference, not the value, which may be a secret.
   const written = ref.path.length === 1 ? ref.path[0] : ref.path;
   log.push(
     makeWarning(
@@ -286,9 +287,9 @@ async function resolveReference(
  * Fill in missing properties on a resolved entry from the registry's
  * declared defaults. Reference-shaped defaults (like DuckDB's
  * `workingDirectory: {config: 'rootDirectory'}`) resolve through the same
- * overlays as inline refs, and are held to the property's type. Unresolved
- * or wrong-typed defaults are silently dropped — a default is a hint, not a
- * requirement (case 3).
+ * overlays as inline refs, and are type-checked the same way. A default
+ * that doesn't resolve, or has the wrong type, is silently dropped — a
+ * default is a hint, not a requirement (case 3).
  *
  * Interaction with inline references: if the user wrote a property as a
  * reference that resolved to `undefined` or to the wrong type, it was already

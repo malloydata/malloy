@@ -47,9 +47,9 @@ MalloyConfig instance (what Runtime consumes; references not yet resolved)
    │
    ▼  lookupConnection(name)  (async, overlays may do IO)
    │
-   │  6. resolve each property; await each ConfigReference's overlay,
-   │     telling it the property's type, and drop + warn on a value
-   │     that isn't of it
+   │  6. resolve each property; a reference awaits its overlay,
+   │     passing the property's type; a value of the wrong type is
+   │     dropped with a warning
    │  7. apply property defaults (resolving reference-shaped defaults
    │     through the same overlays)
    │  8. hand fully resolved POJO to the registered factory
@@ -118,11 +118,13 @@ An overlay is `(path: string[], request?: OverlayRequest) => unknown | Promise<u
 
 ### Typed Values
 
-Every caller that knows the type of the slot a reference fills passes it as `request.type`: connection properties, reference-shaped defaults, and the top-level string settings. The overlay should return a value of that type. The resolver doesn't trust it to: `resolveProperty` in `config_lookup.ts` runs the compiler's own `checkValueType` on the result, so a reference and a literal are held to one definition of what a property accepts, and an overlay that ignores `request` is still held to the type.
+Every property has a type, and whatever an overlay returns must match it. Literals are checked when the config is compiled. References are checked in `resolveProperty` (`config_lookup.ts`) after the overlay returns, with the same `checkValueType`. So a value means the same thing whether it was written in the file or came from an overlay. This covers connection properties and reference-shaped defaults; the top-level string settings are told `string` too.
 
-Conversion from text belongs to the overlay, not the resolver. Only a text-only source has a reason to convert, and only the overlay knows whether it is one — a `session` overlay handing back the string `"false"` for a boolean has produced a wrong value, not a spelling of `false`. `textOverlay(read)` is the conversion, packaged as a way to build an overlay from a function that reads text; `env` is built with it. Text that doesn't read as the requested type comes back unchanged rather than `undefined`, so the type check reports it instead of the property silently vanishing as "not set."
+The overlay is told the type it is filling (`request.type`), because only the overlay knows whether its source can hold real booleans and numbers. The environment only holds text, so `env` turns `"false"` into `false`. A `session` overlay that returns `"false"` for a boolean has returned the wrong thing, and the check rejects it.
 
-`readOverlay` passes no request — it has no slot — and gets the overlay's own representation.
+`textOverlay(read)` is that conversion, packaged so any text-only source can use it: give it a function that looks up a string, and it returns an overlay. `env` is built this way. Text that can't be converted comes back unchanged, so the type check reports it; returning `undefined` would mean "not set", and the property would silently disappear.
+
+`readOverlay` passes no type, so it gets the overlay's raw value.
 
 ### Merge Semantics
 
@@ -145,7 +147,7 @@ Cases and observed behavior: [configuration.md → Failure Modes](../../doc/conf
 | Unknown overlay source → warning + drop | Almost always a typo or host/config mismatch. Silent-dropping would hide real bugs; throwing would punish a host that hasn't yet registered an optional overlay. The `config.log` warning splits the difference. |
 | Known overlay returns `undefined` → silent drop | Legitimate "value not present" state, matching env-var semantics. A required-field violation surfaces at connection-build time (lazy, at lookup), not here — keeping the resolver out of policy decisions about what's required. |
 | Unresolved reference in a `default` → silent drop | A default is a hint, not a requirement. "No default applicable" is a normal terminal state, not a failure. |
-| Reference produces a value of the wrong type → warning + drop | The same outcome as a wrong-typed literal at compile, so where a value was written doesn't change what it means. The warning names the reference, never the value, because a reference can point at a secret. Dropping rather than passing the value through keeps every factory seeing only typed values; a property whose fallback is unsafe carries `mustHaveValue`, which turns the drop into a throw. In a default the drop is silent, like any unresolved default. |
+| Reference produces a value of the wrong type → warning + drop | A wrong-typed literal is treated the same way, so it doesn't matter where the value was written. The warning shows the reference, not the value, which may be a secret. Dropping the value, rather than passing it along, means factories only ever see values of the right type. Where dropping would be unsafe, the property has `mustHaveValue`, and the drop becomes an error. In a default the drop is silent, like any default that doesn't resolve. |
 | Async overlay used in a sync-only slot → loud warning + drop | A construction-time peek can't `await`. This is misuse rather than absence, so silent drop would hide a wiring bug; throwing would brittly couple to a stack the host might still be assembling. The loud warning gets the host's attention while keeping construction infallible. Applies to `configURL` and to top-level string references like `manifestPath`. |
 | Property carries `mustHaveValue` and produced nothing → throw at lookup | Absence is a normal state for every other property. For one whose fallback is a permission — `securityPolicy` → `none`, `authClient` → ambient credentials — dropping silently selects the permissive branch. Fires only when the key was authored; an absent key still takes its default. |
 

@@ -1030,7 +1030,7 @@ describe('textOverlay', () => {
   });
 });
 
-describe('MalloyConfig references are held to the property type', () => {
+describe('MalloyConfig type-checks values from overlays', () => {
   const FLAG = 'TEST_TYPED_FLAG';
   const PORT = 'TEST_TYPED_PORT';
   const DEPTH = 'TEST_TYPED_DEPTH';
@@ -1084,7 +1084,7 @@ describe('MalloyConfig references are held to the property type', () => {
     return config.log.map(m => m.message);
   }
 
-  it('reads environment text as the property type', async () => {
+  it('converts env text to the property type', async () => {
     process.env[FLAG] = 'false';
     process.env[PORT] = '5432';
     expect(await lookUp({flag: {env: FLAG}, port: {env: PORT}})).toEqual([]);
@@ -1092,7 +1092,7 @@ describe('MalloyConfig references are held to the property type', () => {
     expect(captured?.['port']).toBe(5432);
   });
 
-  it('drops text that is not of the type, warning with the reference and not the value', async () => {
+  it('drops a value of the wrong type, with a warning that hides the value', async () => {
     process.env[PORT] = 'hunter2';
     const log = await lookUp({port: {env: PORT}});
     expect(log).toEqual([
@@ -1102,7 +1102,7 @@ describe('MalloyConfig references are held to the property type', () => {
     expect(captured).not.toHaveProperty('port');
   });
 
-  it('does not read a literal string as the property type', async () => {
+  it('does not convert a string literal', async () => {
     expect(await lookUp({flag: 'false', port: '5432'})).toEqual([
       'connections.db.flag: should be a boolean, got string (expected boolean)',
       'connections.db.port: should be a number, got string (expected number)',
@@ -1111,7 +1111,7 @@ describe('MalloyConfig references are held to the property type', () => {
     expect(captured).not.toHaveProperty('port');
   });
 
-  it('tells the overlay the type of the property it fills', async () => {
+  it('passes the property type to the overlay', async () => {
     const requests: unknown[] = [];
     await lookUp(
       {flag: {host: 'f'}, label: {host: 'l'}},
@@ -1125,14 +1125,14 @@ describe('MalloyConfig references are held to the property type', () => {
     expect(requests).toEqual([{type: 'boolean'}, {type: 'string'}]);
   });
 
-  it('keeps a typed value from an overlay', async () => {
+  it('keeps a value of the right type from an overlay', async () => {
     expect(await lookUp({port: {host: 'port'}}, {host: () => 5432})).toEqual(
       []
     );
     expect(captured?.['port']).toBe(5432);
   });
 
-  it('does not convert text from an overlay that ignores the type', async () => {
+  it('does not convert text from an overlay not built with textOverlay', async () => {
     expect(await lookUp({flag: {host: 'flag'}}, {host: () => 'false'})).toEqual(
       [
         'connections.db.flag: {"host":"flag"} should be a boolean, got string (expected boolean)',
@@ -1148,7 +1148,7 @@ describe('MalloyConfig references are held to the property type', () => {
     expect(captured).not.toHaveProperty('label');
   });
 
-  it('fails for a mustHaveValue property whose value is the wrong type', async () => {
+  it('throws for a mustHaveValue property whose value is the wrong type', async () => {
     process.env[FLAG] = 'maybe';
     await expect(lookUp({guard: {env: FLAG}})).rejects.toThrow(
       'Connection "db" sets "guard", but no value arrived'
@@ -1156,13 +1156,13 @@ describe('MalloyConfig references are held to the property type', () => {
     expect(captured).toBeUndefined();
   });
 
-  it('reads a reference default as the property type', async () => {
+  it('converts a default that is a reference', async () => {
     process.env[DEPTH] = '7';
     expect(await lookUp({})).toEqual([]);
     expect(captured?.['depth']).toBe(7);
   });
 
-  it('silently drops a reference default that is not of the type', async () => {
+  it('silently drops a default whose value is the wrong type', async () => {
     process.env[DEPTH] = 'deep';
     expect(await lookUp({})).toEqual([]);
     expect(captured).not.toHaveProperty('depth');

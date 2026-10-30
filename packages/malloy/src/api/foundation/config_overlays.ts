@@ -22,12 +22,11 @@ import type {ConnectionPropertyType} from '../../connection/registry';
  *
  * Overlay values should resolve to ordinary JSON-compatible values.
  *
- * `request` says what the caller wants: when a reference fills a typed slot,
- * `request.type` is that slot's type, and the value should be of it. The
- * resolver checks, so an overlay that ignores `request` is held to the type
- * anyway. A source that can only produce text, like the environment, gets
- * the conversion from `textOverlay`. `request` is absent when nothing is
- * known about the slot, as in `MalloyConfig.readOverlay`.
+ * `request.type` is the type of the property being filled, and the overlay
+ * should return a value of that type. An overlay over a source that only
+ * holds text, like `env`, should be built with `textOverlay`, which does the
+ * conversion. An overlay may ignore `request`; what it returns is
+ * type-checked either way. `MalloyConfig.readOverlay` passes no `request`.
  */
 export type Overlay = (
   path: string[],
@@ -70,21 +69,22 @@ export function envOverlay(): Overlay {
 }
 
 /**
- * Build an overlay over a source that holds only text — the environment, a
- * secret store, a table of strings. `read` returns the text at a path, or
- * undefined when there is none; it may be async.
+ * Make an overlay from a function that looks up text, for a source that only
+ * holds strings: environment variables, a secret store, a table of strings.
+ * `read` returns the text at a path, or undefined if there is none, and may
+ * be async.
  *
- * Text asked for as a `boolean` becomes one when it reads `true` or `false`,
- * and as a `number` when it reads as a finite number; case and surrounding
- * whitespace don't matter. Text that doesn't read as the requested type is
- * returned unchanged, so the resolver's type check reports it — `undefined`
- * would mean "not set" and drop it without a word.
+ * For a boolean property, "true" and "false" become booleans. For a number
+ * property, numeric text becomes a number. Case and surrounding spaces are
+ * ignored. Any other text is returned unchanged, so the type check reports
+ * it as a bad value; returning undefined would mean "not set", and the
+ * property would silently disappear.
  */
 export function textOverlay(
   read: (path: string[]) => string | undefined | Promise<string | undefined>
 ): Overlay {
-  // Stays synchronous when `read` is, so it still serves the slots that are
-  // read at construction time, like `manifestPath`.
+  // Not async: `manifestPath: {env: ...}` is read synchronously, while the
+  // MalloyConfig is being constructed.
   return (path, request) => {
     const text = read(path);
     if (typeof text === 'object') {
