@@ -29,7 +29,9 @@ import type {ConfigOverlays} from './config_overlays';
  *
  * Lookup flow for a connection name:
  *   1. Find its compiled entry. Throw if the name is unknown.
- *   2. Walk the entry tree, `await`-ing each overlay reference.
+ *   2. Walk the entry tree, `await`-ing each overlay reference. A reference
+ *      in a `boolean` property that resolved to "true" or "false" becomes a
+ *      boolean.
  *   3. Fill in any property whose definition carries a `default` and that
  *      the user didn't specify (including post-step-2 drops from unresolved
  *      inline references).
@@ -37,7 +39,8 @@ import type {ConfigOverlays} from './config_overlays';
  *   5. Cache the resulting `Connection` by name so subsequent lookups skip
  *      the whole pipeline.
  *
- * Warnings collected during steps 2–3 (unknown overlay source) are pushed
+ * Warnings collected during steps 2–3 (unknown overlay source, a boolean
+ * reference that is neither "true" nor "false") are pushed
  * into the shared `log` array — same array exposed as `MalloyConfig.log`.
  * The log grows the first time a connection is looked up; callers that
  * read `log` before any lookup won't see resolution warnings. That's an
@@ -153,11 +156,53 @@ async function resolveCompiledEntry(
       'Connection entry did not resolve to a valid {is: string, ...} dict'
     );
   }
+  readBooleanReferences(connectionName, entry, resolved, log);
   // Before defaults, so that a declared default can't quietly satisfy a
   // promise the user's own value failed to keep.
   requireAuthoredValues(connectionName, entry, resolved);
   await applyPropertyDefaults(resolved, overlays);
   return resolved;
+}
+
+/**
+ * Give `boolean` properties written as references a boolean.
+ *
+ * A literal is type-checked when the config is compiled; a reference can't
+ * be, and the `env` overlay always returns a string. Without this, `{env:
+ * "X"}` with `X=false` reaches the factory as `"false"`, which is truthy.
+ * `"true"` and `"false"` (any case, surrounding whitespace ignored) become
+ * booleans. Anything else is left as it is, with a warning, so each
+ * connector keeps its own rule for a value it can't use.
+ */
+function readBooleanReferences(
+  connectionName: string,
+  entry: ConfigDict,
+  resolved: ConnectionConfigEntry,
+  log: LogMessage[]
+): void {
+  for (const prop of getConnectionProperties(resolved.is) ?? []) {
+    if (prop.type !== 'boolean') continue;
+    const node = entry.entries[prop.name];
+    if (node?.kind !== 'reference') continue;
+    const value = resolved[prop.name];
+    if (value === undefined || typeof value === 'boolean') continue;
+    const text = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (text === 'true' || text === 'false') {
+      resolved[prop.name] = text === 'true';
+      continue;
+    }
+    // The message names the reference, not the value: a reference can point
+    // at anything, a secret included.
+    const written = node.path.length === 1 ? node.path[0] : node.path;
+    log.push({
+      message:
+        `connections.${connectionName}.${prop.name}: ` +
+        `${JSON.stringify({[node.source]: written})} ` +
+        'should resolve to "true" or "false" (expected boolean)',
+      severity: 'warn',
+      code: 'config-validation',
+    });
+  }
 }
 
 /**

@@ -643,7 +643,8 @@ export class BigQueryConnection
     this.config = config;
     this.location = config.location;
     this.setupSQL = config.setupSQL;
-    this.dbmeta = config.dbmeta ?? false;
+    // Only a real `true`: a string such as "false" is truthy.
+    this.dbmeta = config.dbmeta === true;
   }
 
   get dialectName(): string {
