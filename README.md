@@ -4,6 +4,9 @@
 
 **A semantic modeling and query language built on top of SQL**
 
+Define your data once — sources, joins, measures — then query that model from SQL engines,
+applications, and AI agents over the Model Context Protocol (MCP).
+
 [![CI](https://github.com/malloydata/malloy/actions/workflows/run-tests.yaml/badge.svg)](https://github.com/malloydata/malloy/actions/workflows/run-tests.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js >=20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
@@ -120,13 +123,15 @@ See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/i
 
 ### Serve models with Publisher
 
-[Publisher](https://github.com/malloydata/publisher) is the open-source semantic model server for Malloy. It serves your `.malloy` models through REST and MCP APIs so apps, BI tools, and AI agents can query them through one interface:
+[Publisher](https://github.com/malloydata/publisher) is the open-source semantic model server for Malloy. It serves your `.malloy` models through REST and Model Context Protocol (MCP) APIs, so apps, BI tools, and AI agents such as Claude Code, Cursor, and Codex all query the same model through one interface:
 
 ```bash
 npx @malloy-publisher/server --port 4000 --server_root path/to/your/models
 ```
 
-Open `http://localhost:4000` to browse models, run queries, and grab MCP endpoints. See the [Publisher repo](https://github.com/malloydata/publisher) for setup, sample models, and deployment options.
+Open `http://localhost:4000` to browse models and run queries; the MCP endpoint is served separately on `http://localhost:4040/mcp`. Because the agent queries the semantic model rather than the database, it works from the sources and measures you defined and cannot reference a table the model does not expose.
+
+See [Connect an AI agent over MCP](https://docs.malloydata.dev/documentation/user_guides/publishing/mcp_agents) for client setup, and the [Publisher repo](https://github.com/malloydata/publisher) for sample models and deployment options.
 
 ---
 
