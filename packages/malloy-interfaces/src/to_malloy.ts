@@ -1,5 +1,5 @@
 import type * as Malloy from './types';
-import {maybeQuoteIdentifier} from './util';
+import {escapeQuoted, maybeQuoteIdentifier} from './util';
 
 export function queryToMalloy(
   query: Malloy.Query,
@@ -24,6 +24,7 @@ const OPTIONAL_NEWLINE_INDENT = Symbol('optional_newline_indent');
 
 type Fragment =
   | string
+  | {unindented: string}
   | typeof INDENT
   | typeof OUTDENT
   | typeof NEWLINE
@@ -43,6 +44,9 @@ function codeFromFragments(fragments: Fragment[], {tabWidth} = {tabWidth: 2}) {
       indent++;
     } else if (fragment === OPTIONAL_NEWLINE_INDENT) {
       continue; // TODO
+    } else if (typeof fragment === 'object') {
+      code += fragment.unindented;
+      isStartOfLine = false;
     } else {
       if (isStartOfLine) {
         code += ' '.repeat(indent * tabWidth);
@@ -68,8 +72,9 @@ function wrap(
   return [open, maybeSpace, ...block, maybeSpace, close];
 }
 
-function escapeString(str: string): {contents: string; quoteCharacter: string} {
-  return {contents: str, quoteCharacter: '"'}; // TODO
+function quoteString(str: string): string {
+  const quote = str.includes('"') && !str.includes("'") ? "'" : '"';
+  return quote + escapeQuoted(str, quote) + quote;
 }
 
 function join(fragments: Fragment[], separator: string): Fragment[] {
@@ -90,10 +95,8 @@ function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
       return [quoteFilter(literal.filter_expression_value)];
     case 'boolean_literal':
       return [literal.boolean_value.toString()];
-    case 'string_literal': {
-      const {contents, quoteCharacter} = escapeString(literal.string_value);
-      return [quoteCharacter, contents, quoteCharacter];
-    }
+    case 'string_literal':
+      return [quoteString(literal.string_value)];
     case 'number_literal':
       // TODO big numbers etc?
       return [literal.number_value.toString()];
@@ -143,6 +146,18 @@ function parseDate(date: string): string[] {
   return ['1970', '01', '01', '00', '00', '00'];
 }
 
+function timezoneSuffix(timezone: string | undefined): string {
+  if (timezone === undefined) {
+    return '';
+  }
+  if (timezone === '' || /[\]\r\n]/.test(timezone)) {
+    throw new Error(
+      `Timezone ${JSON.stringify(timezone)} cannot be written in a timestamp literal, which needs a non-empty timezone without ']' or line breaks`
+    );
+  }
+  return `[${timezone}]`;
+}
+
 function serializeDateAsLiteral(
   [year, month, day, hour, minute, second]: string[],
   granularity: Malloy.TimestampTimeframe,
@@ -169,13 +184,10 @@ function serializeDateAsLiteral(
       return `@${year}-${month}-${day} ${hour}`;
     }
     case 'minute': {
-      return `@${year}-${month}-${day} ${hour}:${minute}`;
+      return `@${year}-${month}-${day} ${hour}:${minute}${timezoneSuffix(timezone)}`;
     }
     case 'second': {
-      if (timezone !== undefined) {
-        return `@${year}-${month}-${day} ${hour}:${minute}:${second}[${timezone}]`;
-      }
-      return `@${year}-${month}-${day} ${hour}:${minute}:${second}`;
+      return `@${year}-${month}-${day} ${hour}:${minute}:${second}${timezoneSuffix(timezone)}`;
     }
     default:
       throw new Error('Unknown timeframe.');
@@ -557,38 +569,58 @@ function havingToFragments(having: Malloy.FilterOperation[]): Fragment[] {
   return formatBlock('having', having.map(filterOperationItemToFragments), ',');
 }
 
-const FILTER_QUOTES = ['`', "'", '"']; // technically , '"""', "'''" are valid too, but they're ugly
+// Filter strings are raw: the text between the quotes reaches the filter
+// parser unchanged, and `\` only keeps the next character from ending the
+// string. Adding an escape would change the filter, so a filter is written
+// verbatim in the first quoting that can hold it.
+const FILTER_QUOTES = ['`', "'", '"', '```', "'''", '"""'];
 
 function quoteFilter(filter: string): string {
-  let bestQuote: string | undefined = undefined;
-  let bestEscaped: string | undefined = undefined;
-  for (const quote of FILTER_QUOTES) {
-    const escaped = escapeFilter(filter, quote);
-    if (escaped === filter) {
-      return `f${quote}${filter}${quote}`;
-    }
-    if (bestEscaped === undefined || escaped.length < bestEscaped.length) {
-      bestQuote = quote;
-      bestEscaped = escaped;
-    }
+  const quote = FILTER_QUOTES.find(q => fitsRawQuote(filter, q));
+  if (quote === undefined) {
+    const problem = endsInUnpairedBackslash(filter)
+      ? 'it ends in a \\ that would escape the closing quote'
+      : 'its own text would end every filter quoting early';
+    throw new Error(
+      `Filter ${JSON.stringify(filter)} cannot be written as a Malloy filter string, which is raw: ${problem}`
+    );
   }
-  return `f${bestQuote}${bestEscaped}${bestQuote}`;
+  return `f${quote}${filter}${quote}`;
 }
 
-function escapeFilter(filter: string, quote: string): string {
-  let result = '';
-  for (let i = 0; i < filter.length; i++) {
-    if (filter.slice(i).startsWith(quote)) {
-      result += '\\' + quote;
-      i += quote.length;
-    } else {
-      result += filter[i];
-      if (filter[i] === '\\') {
-        result += filter[++i];
+function endsInUnpairedBackslash(filter: string): boolean {
+  let i = 0;
+  while (i < filter.length) {
+    i += filter[i] === '\\' ? 2 : 1;
+  }
+  return i > filter.length;
+}
+
+/**
+ * True when `filter` followed by the closing `quote` lexes as one raw
+ * string ending exactly at that closing quote.
+ */
+function fitsRawQuote(filter: string, quote: string): boolean {
+  const multiLine = quote.length === 3;
+  const text = filter + quote;
+  let i = 0;
+  while (i < text.length) {
+    if (text.startsWith(quote, i)) {
+      return i === filter.length;
+    }
+    if (text[i] === '\\') {
+      if (!multiLine && text[i + 1] === '\n') {
+        return false;
       }
+      i += 2;
+    } else {
+      if (!multiLine && text[i] === '\n') {
+        return false;
+      }
+      i += 1;
     }
   }
-  return result;
+  return false;
 }
 
 function filterToFragments(filter: Malloy.Filter): Fragment[] {
@@ -620,6 +652,47 @@ function annotationsToFragments(
   return annotations ? annotations.flatMap(annotationToFragments) : [];
 }
 
+// Fixed rather than a tab stop, so no tab width can put a body line in the
+// opener's column, where a `|#` body line would read as the closer.
+const BLOCK_BODY_INDENT = '  ';
+
 function annotationToFragments(annotation: Malloy.Annotation): Fragment[] {
-  return [annotation.value.trim(), NEWLINE];
+  // The parser stores annotation text with LF line endings
+  const value = annotation.value.trimStart().replace(/\r\n/g, '\n');
+  const isBlock = value.startsWith('#|');
+  // A line annotation's text keeps its line ending; a block's text has only
+  // the line ending of its last body line removed, so every other newline in
+  // a block is a body line.
+  const text = isBlock ? value : value.replace(/\n$/, '');
+  const problem = !text.startsWith('#')
+    ? 'it does not start with #'
+    : text.startsWith('##')
+      ? '## marks a model annotation'
+      : text.includes('\r')
+        ? 'it contains a carriage return that is not part of a line ending'
+        : !isBlock && text.includes('\n')
+          ? 'a multi-line annotation must start with #|'
+          : undefined;
+  if (problem !== undefined) {
+    throw new Error(
+      `Annotation ${JSON.stringify(annotation.value)} cannot be written as an object annotation: ${problem}`
+    );
+  }
+  if (!isBlock) {
+    return [text, NEWLINE];
+  }
+  // A block annotation's text is its opening line and its dedented body; the
+  // closing line is not part of it. The parser dedents the body by the
+  // indentation its non-blank lines share, which removes the added indent
+  // again. A body with no non-blank line is not dedented, so it is written
+  // exactly as stored; it cannot contain a closer.
+  const [opener, ...body] = text.split('\n');
+  const dedented = body.some(line => /\S/.test(line));
+  const bodyFragments = body.flatMap((line): Fragment[] => {
+    if (line === '') {
+      return [NEWLINE];
+    }
+    return [dedented ? BLOCK_BODY_INDENT + line : {unindented: line}, NEWLINE];
+  });
+  return [opener, NEWLINE, ...bodyFragments, '|#', NEWLINE];
 }
