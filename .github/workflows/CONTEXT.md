@@ -106,6 +106,10 @@ The artifact lives and dies inside one run, so the runtime gate bounds what it c
 - **Content the consumer verifies.** `pull_and_build` uses `setup-node`'s `cache: npm`, which holds npm's tarball store; `npm ci` checks every tarball against the lockfile's integrity hash, so a poisoned entry cannot be installed.
 - **Never written by a PR run.** `db-presto.yaml` caches the built slim presto image (`docker save`/`load`), because building it pulls the 9 GB official image. The save steps run only on `push` and `workflow_dispatch`; PR runs only restore. A dispatch on a branch writes a cache scoped to that branch, which `main` never reads — that is how a branch exercises the load path before merging (dispatch twice: the first builds and saves, the second loads). `Dockerfile.slim` and `presto_start.sh` are in the key, so a PR that changes either builds from scratch.
 
+### PR status labels (`pr-status-labels.yaml`)
+
+This is the one `pull_request_target` workflow whose token can write: `issues` and `pull-requests` write, to edit labels. That is safe only because it never runs pull request code. It checks out the default branch and runs that branch's `scripts/pr-status-labels.ts`, which reads each PR through the API. Checking out the PR head, or running anything from it, would give fork code a token that can edit this repo's issues and pull requests. It passes no secrets, so it needs no `check-permission` gate. The labels it maintains are described in [`docs/pull-requests/status-labels.md`](../../docs/pull-requests/status-labels.md).
+
 Contributor-facing side (DCO sign-off, licensing, review) is in [CONTRIBUTING.md](../../CONTRIBUTING.md). Adding a dialect: [adding-a-new-database.md](../../packages/malloy/src/doc/adding-a-new-database.md).
 
 ## Publishing (`release.yaml`)

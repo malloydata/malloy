@@ -1,0 +1,66 @@
+name: PR Status Labels
+
+# Labels each open pull request with the last action taken on it. The rules
+# are in scripts/pr-status-labels.ts; the maintainer view is in
+# docs/pull-requests/status-labels.md.
+#
+# This workflow holds a write token, so it never checks out pull request code:
+# every trigger below runs the default branch's copy of the script, which only
+# reads the PR through the API and edits labels.
+permissions:
+  contents: read
+  checks: read
+  issues: write
+  pull-requests: write
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - converted_to_draft
+      - labeled
+      - unlabeled
+  issue_comment:
+    types: [created, edited]
+  # Review events can't be acted on for fork PRs (their token is read-only),
+  # so reviews and inline review comments are picked up by this sweep.
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: pr-status-labels-${{ github.event.pull_request.number || github.event.issue.number || 'all' }}
+
+jobs:
+  label:
+    # Of the label events, only adding or removing `parked` changes a status.
+    # The script's own label edits use GITHUB_TOKEN and don't trigger runs.
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
+      (github.event_name == 'pull_request_target' &&
+        ((github.event.action != 'labeled' &&
+          github.event.action != 'unlabeled') ||
+         github.event.label.name == 'parked'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+      - name: Label
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          if [ -n "$PR" ]; then
+            node scripts/pr-status-labels.ts --pr "$PR" --apply
+          else
+            node scripts/pr-status-labels.ts --all --apply
+          fi

@@ -50,6 +50,16 @@ use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://docs.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
 
+### How a pull request moves through review
+
+- **Iterate as a draft.** Open the pull request as a draft while you are still
+  working on it. A draft is not a request for review, so you can push and
+  discuss freely.
+- **Ask for review.** When it is ready, click **Ready for review**. After you
+  have answered a review, comment with a line reading `status: ready` to ask for
+  another look. This is optional: any comment or push is noticed, but
+  `status: ready` says you are done.
+
 All pull requests must pass tests. Because some tests use database credentials
 that only the Malloy team's CI holds, **CI doesn't run automatically on fork
 PRs** — a Malloy team member reviews and triggers it. If your PR is ready and CI
