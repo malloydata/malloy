@@ -33,6 +33,10 @@ the header of `scripts/pr-status-labels.ts`; that comment is the specification.
   parked it.
 - **Reply normally.** A comment, review, or push is all the script needs. When you ask a
   submitter for changes, mention that they can comment `status: ready` when done.
+- **Comment without handing the PR back.** A comment that doesn't ask the submitter for
+  anything, such as "I'll look at this next week", would still make the label say it's
+  their move. Put a line reading `status: ignore` (or `status: unchanged`) in it, and
+  the comment doesn't count: the label stays as it was.
 
 ## Landing
 

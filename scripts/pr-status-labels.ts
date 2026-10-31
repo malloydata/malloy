@@ -33,6 +33,10 @@
  * Only the submitter can ask for review. A maintainer who marks the PR ready
  * or writes `status: ready` sets `status: maintainer comment`.
  *
+ * A comment with a line reading `status: ignore` or `status: unchanged` is not
+ * an action, whoever writes it, so the label stays as it was. A maintainer uses
+ * it for a comment that doesn't ask the submitter for anything.
+ *
  * The color says whose move it is:
  *   orange  review was requested: opened, submitter ready
  *   amber   a maintainer's move, though the submitter did not ask for
@@ -75,9 +79,12 @@
  */
 
 const STATUS_PREFIX = 'status: ';
-// One line, alone, optionally wrapped in markdown code or emphasis marks.
+// Each is one line, alone, optionally wrapped in markdown code or emphasis
+// marks.
 const READY_LINE =
   /^[ \t]*[`*_]*[ \t]*status:[ \t]*(submitter[ \t]+)?ready[ \t]*[`*_]*[ \t]*$/im;
+const IGNORE_LINE =
+  /^[ \t]*[`*_]*[ \t]*status:[ \t]*(ignore|unchanged)[ \t]*[`*_]*[ \t]*$/im;
 
 const PARKED = 'parked';
 
@@ -554,6 +561,7 @@ async function lastAction(
     },
   };
   for (const action of await prActions(gh, pr)) {
+    if (action.kind === 'comment' && IGNORE_LINE.test(action.body)) continue;
     let role: Role;
     if (action.kind === 'parked') {
       role = 'maintainer';
