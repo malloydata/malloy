@@ -25,7 +25,7 @@
   "dependencies": {
     "@malloydata/malloy": "0.0.438",
     "@types/node": "^22.20.0",
-    "mssql": "^12.7.2"
+    "mssql": "^12.7.13"
   },
   "devDependencies": {
     "@types/mssql": "^12.3.0"
