@@ -87,6 +87,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: nm; order_by: nm asc
         }`).toEqualResult(abcTestModel, got('def,xback,z-empty,z-null'));
     });
+    test('!~ abc', async () => {
+      await expect(`
+        run: abc -> {
+          where: s !~ f'abc',
+          select: nm; order_by: nm asc
+        }`).toEqualResult(abcTestModel, got('def,xback,z-empty,z-null'));
+    });
     test('-starts', async () => {
       await expect(`
         # test.verbose
@@ -323,6 +330,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: t; order_by: t asc
         }`).toEqualResult(numsTestModel, [{t: '0'}, {t: '4'}]);
     });
+    test('!~ [1 to 3]', async () => {
+      await expect(`
+        run: nums -> {
+          where: n !~ f'[1 to 3]'
+          select: t; order_by: t asc
+        }`).toEqualResult(numsTestModel, [{t: '0'}, {t: '4'}, {t: 'null'}]);
+    });
     test('123', async () => {
       await expect(`
         run: nums -> {
@@ -436,6 +450,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           where: b ~ f'tRuE'
           select: t; order_by: t asc
         }`).toEqualResult(factsTestModel, [{t: 'true'}]);
+    });
+    test.when(testBoolean)('!~ true', async () => {
+      await expect(`
+        run: ${factsSrc} -> {
+          where: b !~ f'true'
+          select: t; order_by: t asc
+        }`).toEqualResult(factsTestModel, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('=true', async () => {
       await expect(`
@@ -696,6 +717,12 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       await expect(`
         run: range + { where: t ~ f'2001' }
       `).toMatchRows(range, inRange);
+    });
+    test('date !~ year', async () => {
+      const range = mkDateRange('2001-01-01', '2002-01-01');
+      await expect(`
+        run: range + { where: t !~ f'2001' }
+      `).toMatchRows(range, [...notInRange, {n: 'z-null'}]);
     });
     test('date in month, in a query time zone east of UTC', async () => {
       // Midnight starting a month in Tokyo is still the previous day in UTC

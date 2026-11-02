@@ -349,7 +349,6 @@ export function isFilterExprType(s: string): s is FilterExprType {
 export interface FilterMatchExpr extends ExprWithKids {
   node: 'filterMatch';
   dataType: FilterExprType;
-  notMatch?: true;
   kids: {filterExpr: Expr; expr: Expr};
 }
 
