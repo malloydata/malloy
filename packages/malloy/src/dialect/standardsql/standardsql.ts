@@ -314,11 +314,11 @@ ${indent(sql)}
   }
 
   sqlSelectAliasAsStruct(
-    alias: string,
+    _alias: string,
     dialectFieldList: DialectFieldList
   ): string {
     const fields = dialectFieldList
-      .map(d => `${alias}.${this.sqlQuoteIdentifier(d.rawName)}`)
+      .map(d => `${d.sqlExpression} AS ${this.sqlQuoteIdentifier(d.rawName)}`)
       .join(', ');
     return `(SELECT AS STRUCT ${fields})`;
   }

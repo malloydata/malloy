@@ -189,32 +189,93 @@ describe.each(runtimes.runtimeList)(
       `).toMatchResult(testModel, {});
     });
 
+    // A join whose on clause names a field nested inside the joined source
     // https://github.com/malloydata/malloy/issues/1481
-    test(`join on nested field - ${databaseName}`, async () => {
-      await expect(`
-      source: a is ${databaseName}.table('malloytest.airports') -> {
-        group_by: state
-        aggregate: airport_count is count()
-        nest: by_fac_type is {
-          group_by: fac_type
+    describe('join on nested field', () => {
+      const stateFacTypes = `
+        source: a is ${databaseName}.table('malloytest.airports') -> {
+          group_by: state
           aggregate: airport_count is count()
+          nest: by_fac_type is {
+            group_by: fac_type
+            aggregate: airport_count is count()
+          }
         }
-      }
 
-      source: fac_types is a -> {
-        group_by: by_fac_type.fac_type
-        aggregate: by_fac_type.airport_count.sum()
-      }
-
-      run: fac_types -> {
-        extend: {
-          join_many: a on fac_type = a.by_fac_type.fac_type
+        source: fac_types is a -> {
+          group_by: by_fac_type.fac_type
+          aggregate: by_fac_type.airport_count.sum()
         }
-        group_by: a.by_fac_type.fac_type
-        aggregate: a.by_fac_type.airport_count.sum()
-      }
-      `).toMatchResult(testModel, {
-        fac_type: 'AIRPORT',
+      `;
+
+      test('on a nested field', async () => {
+        await expect(`
+          ${stateFacTypes}
+          run: fac_types -> {
+            extend: {
+              join_many: a on fac_type = a.by_fac_type.fac_type
+            }
+            where: fac_type = 'AIRPORT'
+            group_by: a.by_fac_type.fac_type
+            aggregate: a.by_fac_type.airport_count.sum()
+          }
+        `).toMatchResult(testModel, {
+          fac_type: 'AIRPORT',
+          airport_count: 13925,
+        });
+      });
+
+      test('distinct keys of the join and of its unnest', async () => {
+        // 473 seaplane bases in 41 states, which have 15430 airports in all
+        await expect(`
+          ${stateFacTypes}
+          run: fac_types -> {
+            extend: {
+              join_many: a on fac_type = a.by_fac_type.fac_type
+            }
+            where: fac_type = 'SEAPLANE BASE'
+            aggregate:
+              state_count is a.by_fac_type.count()
+              seaplane_count is a.by_fac_type.airport_count.sum()
+              state_airport_count is a.airport_count.sum()
+          }
+        `).toMatchResult(testModel, {
+          state_count: 41,
+          seaplane_count: 473,
+          state_airport_count: 15430,
+        });
+      });
+
+      test('through a dimension of the joined source', async () => {
+        await expect(`
+          ${stateFacTypes}
+          source: a_fac is a extend {
+            dimension: nested_fac_type is by_fac_type.fac_type
+          }
+          run: a_fac -> { group_by: nested_fac_type } extend {
+            join_many: a_fac on nested_fac_type = a_fac.nested_fac_type
+          } -> {
+            where: nested_fac_type = 'AIRPORT'
+            group_by: nested_fac_type
+            aggregate: airport_count is a_fac.by_fac_type.airport_count.sum()
+          }
+        `).toMatchResult(testModel, {
+          nested_fac_type: 'AIRPORT',
+          airport_count: 13925,
+        });
+      });
+
+      test('filtered join with a nested field', async () => {
+        // 1486 airports in the states in state_facts whose names start with A
+        await expect(`
+          ${stateFacTypes}
+          run: ${databaseName}.table('malloytest.state_facts') extend {
+            join_many: a_states is a extend { where: state ~ 'A%' }
+              on state = a_states.state
+          } -> {
+            aggregate: airport_count is a_states.by_fac_type.airport_count.sum()
+          }
+        `).toMatchResult(testModel, {airport_count: 1486});
       });
     });
   }

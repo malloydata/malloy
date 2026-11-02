@@ -63,6 +63,7 @@ import {
   exprWalk,
 } from './utils';
 import type {JoinInstance} from './join_instance';
+import {PACKED_ROW_ID} from './join_instance';
 import {
   QueryStruct,
   isBasicAggregate,
@@ -1138,9 +1139,11 @@ export class QueryQuery extends QueryField {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
           projectJoin(childJoin, undefined);
         }
-        select += `\nFROM ${structSQL} AS ${
-          ji.alias
-        }\n${joins}\nWHERE ${conditions?.join(' AND ')}\n`;
+        const where =
+          conditions !== undefined && conditions.length >= 1
+            ? `\nWHERE ${conditions.join(' AND ')}`
+            : '';
+        select += `\nFROM ${structSQL} AS ${ji.alias}\n${joins}${where}\n`;
         s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
           ji.alias
         }\n  ON ${onCondition}\n`;
@@ -1282,28 +1285,48 @@ export class QueryQuery extends QueryField {
     return this.packedColumns;
   }
 
-  // What a join contributes to the SELECT of a filtered join's subquery: every
-  // column named outside the subquery, and the generated __distinct_key when
-  // the join needed one. A field is packed under the column it reads, which
-  // is how references outside the subquery name it; a `rename:` leaves that
-  // different from the name the query knows the field by.
+  // What a join contributes to the SELECT of a join's subquery: every column
+  // named outside the subquery, and whatever its distinct key is made of when
+  // the join needed one -- the generated __distinct_key of a source, or the
+  // row number of an unnest. A field is packed under the column it reads,
+  // which is how references outside the subquery name it; a `rename:` leaves
+  // that different from the name the query knows the field by.
   private joinProjectionFieldList(ji: JoinInstance): DialectFieldList {
     const packed = this.packedColumnsByJoin().get(ji.alias);
-    const dialect = ji.queryStruct.dialect;
-    const fieldList: DialectFieldList = ji.queryStruct.structDef.fields
+    const qs = ji.queryStruct;
+    const dialect = qs.dialect;
+    const fieldList: DialectFieldList = qs.structDef.fields
       .filter(fieldIsIntrinsic)
       .filter(f => packed?.has(activeName(f)))
       .map(f => ({
         typeDef: f,
-        sqlExpression: dialect.sqlQuoteIdentifier(f.name),
+        sqlExpression: `${ji.alias}.${dialect.sqlQuoteIdentifier(f.name)}`,
         rawName: f.name,
       }));
     if (ji.makeUniqueKey) {
-      fieldList.push({
-        typeDef: {type: 'string'},
-        sqlExpression: dialect.sqlQuoteIdentifier('__distinct_key'),
-        rawName: '__distinct_key',
-      });
+      if (qs.structDef.type === 'array') {
+        fieldList.push({
+          typeDef: {type: 'number'},
+          sqlExpression: dialect.sqlFieldReference(
+            ji.alias,
+            'table',
+            '__row_id',
+            'number'
+          ),
+          rawName: PACKED_ROW_ID,
+        });
+      } else {
+        fieldList.push({
+          typeDef: {type: 'string'},
+          sqlExpression: dialect.sqlFieldReference(
+            ji.alias,
+            'table',
+            '__distinct_key',
+            'string'
+          ),
+          rawName: '__distinct_key',
+        });
+      }
     }
     return fieldList;
   }

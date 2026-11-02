@@ -25,7 +25,7 @@ import {
   isTemporalType,
 } from './malloy_types';
 import {AndChain, caseGroup, type GenerateState} from './utils';
-import {JoinInstance} from './join_instance';
+import {JoinInstance, unnestRowIdSQL} from './join_instance';
 import {
   isBasicAggregate,
   isBasicScalar,
@@ -133,29 +133,17 @@ export class FieldInstanceField implements FieldInstance {
       const pkField = this.parent.getField(pkName);
       return pkField.generateExpression();
     } else if (this.f.parent.structDef.type === 'array') {
+      const rowIdSQL = unnestRowIdSQL(
+        this.f.parent,
+        this.root().joins.get(this.f.parent.getIdentifier())
+      );
       const parentDistinctKey = this.f.parent.parent?.getDistinctKey();
       if (parentDistinctKey && this.parent.parent) {
         const keyField = this.parent.parent.getField('__distinct_key');
         const parentKeySQL = keyField.generateExpression();
-        return this.f.parent.dialect.sqlMakeUnnestKey(
-          parentKeySQL,
-          this.f.parent.dialect.sqlFieldReference(
-            this.f.parent.getIdentifier(),
-            'table',
-            '__row_id',
-            'string'
-          )
-        );
+        return this.f.parent.dialect.sqlMakeUnnestKey(parentKeySQL, rowIdSQL);
       }
-      return this.f.parent.dialect.sqlMakeUnnestKey(
-        '',
-        this.f.parent.dialect.sqlFieldReference(
-          this.f.parent.getIdentifier(),
-          'table',
-          '__row_id',
-          'string'
-        )
-      );
+      return this.f.parent.dialect.sqlMakeUnnestKey('', rowIdSQL);
     } else {
       return this.f.parent.dialect.sqlFieldReference(
         this.f.parent.getIdentifier(),

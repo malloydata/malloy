@@ -48,6 +48,7 @@ import {
   type UngroupSet,
 } from './field_instance';
 import {FilterCompilers} from './filter_compilers';
+import {unnestRowIdSQL} from './join_instance';
 import type {SQLExprElement} from './utils';
 import {
   exprMap,
@@ -1236,12 +1237,7 @@ function generateDistinctKeySQL(
     }
     return parent.dialect.sqlMakeUnnestKey(
       parentKeySQL,
-      parent.dialect.sqlFieldReference(
-        parent.getIdentifier(),
-        'table',
-        '__row_id',
-        'string'
-      )
+      unnestRowIdSQL(parent, resultSet.root().joins.get(parent.getIdentifier()))
     );
   } else {
     return parent.dialect.sqlFieldReference(
