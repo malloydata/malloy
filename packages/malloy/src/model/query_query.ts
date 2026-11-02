@@ -1120,15 +1120,11 @@ export class QueryQuery extends QueryField {
         // whole subtree into columns, so everything under it is read from that
         // child rather than packed a second time.
         const projectJoin = (j: JoinInstance, from: string | undefined) => {
-          const fieldList = this.joinProjectionFieldList(j);
-          if (fieldList.length > 0) {
+          for (const [column, sql] of this.joinProjection(j)) {
             select +=
               from === undefined
-                ? `, ${this.parent.dialect.sqlSelectAliasAsStruct(
-                    j.alias,
-                    fieldList
-                  )} AS ${j.alias}`
-                : `, ${from}.${j.alias} AS ${j.alias}`;
+                ? `, ${sql} AS ${column}`
+                : `, ${from}.${column} AS ${column}`;
           }
           const readFrom = from ?? (j.isSubquery() ? j.alias : undefined);
           for (const below of j.children) {
@@ -1139,11 +1135,12 @@ export class QueryQuery extends QueryField {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
           projectJoin(childJoin, undefined);
         }
-        const where =
-          conditions !== undefined && conditions.length >= 1
-            ? `\nWHERE ${conditions.join(' AND ')}`
-            : '';
-        select += `\nFROM ${structSQL} AS ${ji.alias}\n${joins}${where}\n`;
+        // Each join block ends its own line, so the WHERE, when there is
+        // one, starts a line of its own after them.
+        select += `\nFROM ${structSQL} AS ${ji.alias}\n${joins}`;
+        if (conditions !== undefined && conditions.length > 0) {
+          select += `WHERE ${conditions.join(' AND ')}\n`;
+        }
         s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
           ji.alias
         }\n  ON ${onCondition}\n`;
@@ -1217,27 +1214,30 @@ export class QueryQuery extends QueryField {
     from: QueryStruct,
     path: string[]
   ): [string, string] | undefined {
-    let struct = from;
-    let alias = struct.getIdentifier();
+    const fields = from.getFieldsAlongPath(path);
+    if (fields === undefined) return undefined;
+    let join = from;
     let column: string | undefined = undefined;
-    for (const name of path) {
-      const child = struct.getChildByName(name);
-      if (child === undefined) return undefined;
-      if (!(child instanceof QueryFieldStruct)) {
-        column ??= name;
+    for (const [i, field] of fields.entries()) {
+      if (!(field instanceof QueryFieldStruct)) {
+        column ??= path[i];
         break;
       }
-      struct = child.queryStruct;
+      const struct = field.queryStruct;
       if (struct.getJoinableParent() === struct) {
         // A join: what the path named above it says nothing about what this
         // one has to pack.
-        alias = struct.getIdentifier();
+        join = struct;
         column = undefined;
       } else {
-        column ??= name;
+        column ??= path[i];
       }
     }
-    return column === undefined ? undefined : [alias, column];
+    if (column === undefined) return undefined;
+    // An array of scalars has one column, `value`; its `each` is computed
+    // from it, and nothing else names `value` on the computation's behalf.
+    if (isBasicArray(join.structDef)) column = 'value';
+    return [join.getIdentifier(), column];
   }
 
   /**
@@ -1285,50 +1285,92 @@ export class QueryQuery extends QueryField {
     return this.packedColumns;
   }
 
-  // What a join contributes to the SELECT of a join's subquery: every column
-  // named outside the subquery, and whatever its distinct key is made of when
-  // the join needed one -- the generated __distinct_key of a source, or the
-  // row number of an unnest. A field is packed under the column it reads,
-  // which is how references outside the subquery name it; a `rename:` leaves
-  // that different from the name the query knows the field by.
-  private joinProjectionFieldList(ji: JoinInstance): DialectFieldList {
+  /**
+   * The columns a join below a subquery adds to the subquery's SELECT, as
+   * `[column, sql]` pairs, empty when nothing outside reads the join.
+   *
+   * A join is carried out as one struct column under its own alias, holding
+   * every column named outside the subquery and whatever its distinct key is
+   * made of when it needs one: a source's generated `__distinct_key`, or an
+   * unnest's row number. A dialect which names an unnested scalar by its
+   * alias alone gets the bare value under the alias instead, with the row
+   * number in a column beside it (`JoinInstance.packsAsValue`).
+   *
+   * A field is packed under the column it reads, which is how references
+   * outside the subquery name it; a `rename:` leaves that different from the
+   * name the query knows the field by.
+   */
+  private joinProjection(ji: JoinInstance): [string, string][] {
     const packed = this.packedColumnsByJoin().get(ji.alias);
     const qs = ji.queryStruct;
     const dialect = qs.dialect;
+    const carriesRowId = this.carriesRowId(ji);
+    if (ji.packsAsValue()) {
+      const columns: [string, string][] = [];
+      if (packed?.has('value')) {
+        columns.push([ji.alias, qs.sqlSimpleChildReference('value')]);
+      }
+      if (carriesRowId) {
+        columns.push([
+          dialect.sqlQuoteIdentifier(ji.packedRowIdColumn()),
+          ji.innerRowIdSQL(),
+        ]);
+      }
+      return columns;
+    }
     const fieldList: DialectFieldList = qs.structDef.fields
       .filter(fieldIsIntrinsic)
       .filter(f => packed?.has(activeName(f)))
       .map(f => ({
         typeDef: f,
-        sqlExpression: `${ji.alias}.${dialect.sqlQuoteIdentifier(f.name)}`,
+        sqlExpression: qs.sqlSimpleChildReference(f.name),
         rawName: f.name,
       }));
-    if (ji.makeUniqueKey) {
-      if (qs.structDef.type === 'array') {
-        fieldList.push({
-          typeDef: {type: 'number'},
-          sqlExpression: dialect.sqlFieldReference(
-            ji.alias,
-            'table',
-            '__row_id',
-            'number'
-          ),
-          rawName: PACKED_ROW_ID,
-        });
-      } else {
-        fieldList.push({
-          typeDef: {type: 'string'},
-          sqlExpression: dialect.sqlFieldReference(
-            ji.alias,
-            'table',
-            '__distinct_key',
-            'string'
-          ),
-          rawName: '__distinct_key',
-        });
-      }
+    if (carriesRowId) {
+      fieldList.push({
+        typeDef: {type: 'number', numberType: 'bigint'},
+        sqlExpression: ji.innerRowIdSQL(),
+        rawName: PACKED_ROW_ID,
+      });
+    } else if (ji.makeUniqueKey && qs.structDef.type !== 'array') {
+      fieldList.push({
+        typeDef: {type: 'string'},
+        sqlExpression: dialect.sqlFieldReference(
+          ji.alias,
+          'table',
+          '__distinct_key',
+          'string'
+        ),
+        rawName: '__distinct_key',
+      });
     }
-    return fieldList;
+    if (fieldList.length === 0) return [];
+    return [[ji.alias, dialect.sqlSelectAliasAsStruct(ji.alias, fieldList)]];
+  }
+
+  /**
+   * Whether an unnest has to carry its row number out of the subquery it is
+   * in: for its distinct key, or for the row ordering a dialect needs on a
+   * project (`orderByUnnestRows`).
+   */
+  private carriesRowId(ji: JoinInstance): boolean {
+    return (
+      ji.queryStruct.structDef.type === 'array' &&
+      (ji.makeUniqueKey || this.orderByUnnestRows())
+    );
+  }
+
+  /**
+   * Whether this query orders its rows by each unnest's row number, which a
+   * dialect without an implicit unnest order needs to keep array elements in
+   * order on a project. A reduce aggregates the rows, so their order does
+   * not matter there.
+   */
+  private orderByUnnestRows(): boolean {
+    return (
+      this.parent.dialect.requiresExplicitUnnestOrdering &&
+      this.firstSegment.type === 'project'
+    );
   }
 
   // BigQuery has wildcard psudo columns that are treated differently
@@ -1422,10 +1464,7 @@ export class QueryQuery extends QueryField {
     // Only for project queries - reduce queries aggregate rows so individual
     // row order doesn't matter, and we can't ORDER BY columns not in GROUP BY.
     let arrayJoins: JoinInstance[] = [];
-    if (
-      this.parent.dialect.requiresExplicitUnnestOrdering &&
-      this.firstSegment.type === 'project'
-    ) {
+    if (this.orderByUnnestRows()) {
       const [[, rootJoin]] = this.rootResult.joins;
       arrayJoins = this.collectArrayJoins(rootJoin);
     }
@@ -1503,7 +1542,7 @@ export class QueryQuery extends QueryField {
 
     // Add array ordinality ordering for dialects that require it
     for (const aj of arrayJoins) {
-      o.push(`${aj.alias}_outer.__row_id ASC`);
+      o.push(`${aj.rowIdSQL()} ASC`);
     }
 
     return o;

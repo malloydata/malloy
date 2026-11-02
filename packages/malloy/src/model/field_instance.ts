@@ -25,7 +25,7 @@ import {
   isTemporalType,
 } from './malloy_types';
 import {AndChain, caseGroup, type GenerateState} from './utils';
-import {JoinInstance, unnestRowIdSQL} from './join_instance';
+import {JoinInstance} from './join_instance';
 import {
   isBasicAggregate,
   isBasicScalar,
@@ -133,10 +133,7 @@ export class FieldInstanceField implements FieldInstance {
       const pkField = this.parent.getField(pkName);
       return pkField.generateExpression();
     } else if (this.f.parent.structDef.type === 'array') {
-      const rowIdSQL = unnestRowIdSQL(
-        this.f.parent,
-        this.root().joins.get(this.f.parent.getIdentifier())
-      );
+      const rowIdSQL = unnestJoin(this.parent, this.f.parent).rowIdSQL();
       const parentDistinctKey = this.f.parent.parent?.getDistinctKey();
       if (parentDistinctKey && this.parent.parent) {
         const keyField = this.parent.parent.getField('__distinct_key');
@@ -681,6 +678,22 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
       }
     }
   }
+}
+
+/**
+ * The join an unnest is in this query, which says where its row number is
+ * read: in place, or from what a subquery above it carried out.
+ */
+export function unnestJoin(
+  resultSet: FieldInstanceResult,
+  unnest: QueryStruct
+): JoinInstance {
+  const name = unnest.getIdentifier();
+  const join = resultSet.root().joins.get(name);
+  if (join === undefined) {
+    throw new Error(`Join ${name} not found in result set`);
+  }
+  return join;
 }
 
 export function sqlFullChildReference(
