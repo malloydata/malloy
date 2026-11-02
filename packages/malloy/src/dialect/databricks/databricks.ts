@@ -388,9 +388,9 @@ export class DatabricksDialect extends Dialect {
     return `SELECT COLLECT_LIST(${namedStruct}) FROM ${lastStageName}\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList) {
+  sqlSelectAliasAsStruct(_alias: string, fieldList: DialectFieldList) {
     const fields = fieldList
-      .map(f => `${alias}.${this.sqlQuoteIdentifier(f.rawName)}`)
+      .map(f => `${f.sqlExpression} AS ${this.sqlQuoteIdentifier(f.rawName)}`)
       .join(', ');
     return `STRUCT(${fields})`;
   }

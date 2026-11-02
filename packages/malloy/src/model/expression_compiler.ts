@@ -43,6 +43,7 @@ import {
 } from '@malloydata/malloy-filter';
 import {
   sqlFullChildReference,
+  unnestJoin,
   type FieldInstanceResult,
   type FieldInstanceField,
   type UngroupSet,
@@ -1206,8 +1207,6 @@ export function* stringsFromSQLExpression(
   }
 }
 
-// Add this function to expression_compiler.ts
-
 function generateDistinctKeySQL(
   fieldRef: QueryField,
   resultSet: FieldInstanceResult
@@ -1236,12 +1235,7 @@ function generateDistinctKeySQL(
     }
     return parent.dialect.sqlMakeUnnestKey(
       parentKeySQL,
-      parent.dialect.sqlFieldReference(
-        parent.getIdentifier(),
-        'table',
-        '__row_id',
-        'string'
-      )
+      unnestJoin(resultSet, parent).rowIdSQL()
     );
   } else {
     return parent.dialect.sqlFieldReference(

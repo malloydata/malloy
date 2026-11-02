@@ -600,6 +600,14 @@ export abstract class Dialect {
   ): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
+  /**
+   * A struct holding the fields of `fieldList`, each under its `rawName` and
+   * valued by its `sqlExpression`. It carries a join out of the subquery of
+   * the join above it, so that outside the subquery `alias.field` reads what
+   * `field` read inside. A dialect which builds the struct from fields must
+   * use each field's `sqlExpression`, which is not always `alias.rawName`;
+   * `alias` is for a dialect which packs the whole row it names instead.
+   */
   abstract sqlSelectAliasAsStruct(
     alias: string,
     fieldList: DialectFieldList

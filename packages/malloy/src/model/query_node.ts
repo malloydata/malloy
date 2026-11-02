@@ -655,6 +655,29 @@ export class QueryStruct {
     return this.nameMap.get(name);
   }
 
+  /**
+   * The field each name of `path` resolves to, walking from this struct, or
+   * undefined when some name along it does not resolve.  For a consumer which
+   * has to know what a path crosses -- the joins, arrays and records along it
+   * -- and not only where it ends.
+   */
+  getFieldsAlongPath(path: string[]): QueryField[] | undefined {
+    const fields: QueryField[] = [];
+    for (const name of path) {
+      const last = fields[fields.length - 1];
+      const lookIn =
+        last === undefined
+          ? this
+          : last instanceof QueryFieldStruct
+            ? last.queryStruct
+            : undefined;
+      const found = lookIn?.getChildByName(name);
+      if (found === undefined) return undefined;
+      fields.push(found);
+    }
+    return fields;
+  }
+
   /** convert a path into a field reference */
   getFieldByName(path: string[], at?: DocumentLocation): QueryField {
     let found: QueryField | undefined = undefined;

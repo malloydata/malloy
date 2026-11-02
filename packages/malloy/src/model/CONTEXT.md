@@ -336,8 +336,39 @@ from `prepare()`, builds the join tree and decides what each join needs:
 It reads no field names — each entry collapses to which join it is and whether
 that join needs a key. `QueryQuery.packedColumnsByJoin` is the reader that does
 use the names: it resolves each path to the column the innermost join on it has
-to supply, which is how a filtered join's subquery knows what to pack for each
-join below it.
+to supply, which is how a join's subquery knows what to pack for each join
+below it.
+
+### Joins written as subqueries
+
+A join is written as a subquery, its own joins inside it, when
+`JoinInstance.isSubquery()` holds. Two kinds of join need that, on a dialect
+with `supportsComplexFilteredSources`:
+
+- **a filtered join** — a source with a `where:`, whose filter has to apply
+  before the join, not to the joined rows;
+- **a join whose on clause reaches into data nested inside it** —
+  `join_many: orders on product_id = orders.items.product_id`. The ON names the
+  alias of the unnest of `items`, which is joined after the ON is written, so
+  outside a subquery the alias would not exist yet.
+
+Outside the subquery, each join below it is read from what the subquery
+carried out for it (`QueryQuery.joinProjection`): a struct column under the
+join's alias, holding the columns `packedColumnsByJoin` names. A reference such
+as `items_0."product_id"` then reads the same text it read inside. Two things
+are not columns of the join and are carried explicitly:
+
+- **a distinct key** — a source's generated `__distinct_key`, or an unnest's
+  row number, packed as `__packed_row_id` because each dialect names the row
+  number its own way inside the subquery (`_outer.__row_id` on DuckDB,
+  `__row_id_from_<alias>` on Trino). DuckDB also orders a project by every
+  unnest's row number, so the row number is carried there too.
+  `JoinInstance.rowIdSQL()` is where every reference to an unnest's row number
+  is written, inside a subquery or not.
+- **a scalar on DuckDB** — DuckDB names an unnested scalar by the unnest's
+  alias alone, so a struct under that alias would read as the wrong type. Such
+  an unnest is carried as the bare value under its alias, with its row number
+  in a column beside it (`JoinInstance.packsAsValue()`).
 
 **What the compiler reaches for that no entry names** is a join's declared
 `primary_key`. It is the distinct key for a symmetric aggregate over that join
