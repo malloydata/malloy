@@ -275,6 +275,21 @@ export class DuckDBDialect extends PostgresBase {
       .join(',')})${o}) FROM ${lastStageName}\n`;
   }
 
+  // A list lambda tests the elements in place, without unnesting the array.
+  // The lambda parameter is the unnest's alias, so the condition reads an
+  // element exactly as it does after the unnest. A column of the same name
+  // in scope would win over the parameter, so this is only written where
+  // the unnest has not happened yet.
+  sqlArrayAnyMatch(
+    source: string,
+    alias: string,
+    _fieldList: DialectFieldList,
+    _isArray: boolean,
+    condition: string
+  ): string {
+    return `LEN(LIST_FILTER(${source}, ${alias} -> ${condition})) > 0`;
+  }
+
   sqlSelectAliasAsStruct(
     _alias: string,
     dialectFieldList: DialectFieldList

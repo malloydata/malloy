@@ -370,6 +370,15 @@ are not columns of the join and are carried explicitly:
   an unnest is carried as the bare value under its alias, with its row number
   in a column beside it (`JoinInstance.packsAsValue()`).
 
+**Predicate pushdown.** A condition of the query's `where:` which reads only
+the joined source is also applied inside the subquery, to the joined rows
+before any unnest, and stays in the outer WHERE as well
+(`QueryQuery.pushedDownConditions`, `predicate_pushdown.ts`). A condition on an
+array's elements becomes the dialect's `sqlArrayAnyMatch`, and a condition on
+the query's join key is rewritten through the ON equality first. Only
+comparisons with constants are copied: the copy may only remove rows the outer
+condition rejects anyway, which a condition matching nulls does not promise.
+
 **What the compiler reaches for that no entry names** is a join's declared
 `primary_key`. It is the distinct key for a symmetric aggregate over that join
 (`generateDistinctKeyExpression`, `generateDistinctKeySQL`), so the SQL can read

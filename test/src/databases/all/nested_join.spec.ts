@@ -182,6 +182,148 @@ describe.each(runtimes.runtimeList)(
         await expect(query).toMatchResult(tm, {airport_count: 19701});
       }
     );
+
+    /*
+     * Predicate pushdown: a `where:` condition is also written inside the
+     * join's subquery, so it runs before the unnest. Each test checks the
+     * answer, and whether the subquery got a WHERE.
+     */
+    describe('predicate pushdown', () => {
+      // The SQL of the subquery joined as `alias`, which ends at its ON. A
+      // source given a distinct key is wrapped in a `(...) AS alias` of its
+      // own inside the subquery, with no ON after it.
+      async function subquery(query: string, alias: string): Promise<string> {
+        const sql = await runtime.loadModel(model).loadQuery(query).getSQL();
+        const start = sql.indexOf(`SELECT ${alias}.*`);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const end = sql
+          .slice(start)
+          .search(new RegExp(`\\) AS ${alias}\\s+ON`));
+        expect(end).toBeGreaterThanOrEqual(0);
+        return sql.slice(start, start + end);
+      }
+      // A pushed condition filters the joined rows before the unnest.
+      const pushedDown = /FROM \(SELECT \*[^]*WHERE/;
+      const byFacType = (where: string) => `
+        run: fac_types -> {
+          extend: {
+            join_many: a on fac_type = a.by_fac_type.fac_type
+          }
+          where: ${where}
+          aggregate: airport_count is a.by_fac_type.airport_count.sum()
+        }
+      `;
+
+      test.when(supported)('a condition on the joined row', async () => {
+        const query = byFacType("a.state = 'AK'");
+        expect(await subquery(query, 'a_0')).toMatch(pushedDown);
+        await expect(query).toMatchResult(tm, {airport_count: 608});
+      });
+
+      test.when(supported)('a list of values', async () => {
+        const query = byFacType("a.state ? 'AK' | 'AL'");
+        expect(await subquery(query, 'a_0')).toMatch(pushedDown);
+        await expect(query).toMatchResult(tm, {airport_count: 868});
+      });
+
+      test.when(supported)('a condition on a nested element', async () => {
+        // Only Texas has a facility type with more than 1000 airports.
+        const query = byFacType('a.by_fac_type.airport_count > 1000');
+        expect(await subquery(query, 'a_0')).toMatch(pushedDown);
+        await expect(query).toMatchResult(tm, {airport_count: 1389});
+      });
+
+      test.when(supported)('two conditions, each pushed', async () => {
+        const query = byFacType(
+          "a.state = 'AK' and a.by_fac_type.fac_type = 'SEAPLANE BASE'"
+        );
+        const sql = await subquery(query, 'a_0');
+        expect(sql).toMatch(pushedDown);
+        expect(sql).toMatch(/WHERE[^]*'AK'[^]*AND[^]*'SEAPLANE BASE'/);
+        await expect(query).toMatchResult(tm, {airport_count: 104});
+      });
+
+      test.when(supported)(
+        'a condition on the join key, through the ON',
+        async () => {
+          const query = byFacType("fac_type = 'SEAPLANE BASE'");
+          const sql = await subquery(query, 'a_0');
+          expect(sql).toMatch(pushedDown);
+          expect(sql).toMatch(/'SEAPLANE BASE'/);
+          await expect(query).toMatchResult(tm, {airport_count: 473});
+        }
+      );
+
+      test.when(supported)(
+        'a condition on the join key of an array of scalars',
+        async () => {
+          const query = `
+            run: genre_list -> {
+              where: genre = 'Emma'
+              group_by: genre
+              aggregate: movie_count is movies.count()
+            }
+          `;
+          const sql = await subquery(query, 'movies_0');
+          expect(sql).toMatch(pushedDown);
+          expect(sql).toMatch(/'Emma'/);
+          await expect(query).toEqualResult(tm, [
+            {genre: 'Emma', movie_count: 6},
+          ]);
+        }
+      );
+
+      // The answer is the same whether or not the copy runs before the
+      // unnest, so only the plan shows it: 6 movies are named Emma, so their
+      // unnest yields 12 genres, not all 102.
+      test.when(db === 'duckdb')(
+        'the unnest sees only matching rows',
+        async () => {
+          const query = `
+          run: genre_list -> {
+            where: genre = 'Emma'
+            group_by: genre
+            aggregate: movie_count is movies.count()
+          }
+        `;
+          const sql = await runtime.loadModel(model).loadQuery(query).getSQL();
+          const connection = await runtime.connections.lookupConnection(db);
+          const plan = await connection.runSQL(
+            `EXPLAIN (ANALYZE, FORMAT JSON) ${sql}`
+          );
+          const unnestRows: number[] = [];
+          const walk = (node: {
+            operator_name?: string;
+            operator_cardinality?: number;
+            extra_info?: {Name?: string};
+            children?: [];
+          }) => {
+            if (node.extra_info?.Name === 'unnest') {
+              unnestRows.push(Number(node.operator_cardinality));
+            }
+            for (const child of node.children ?? []) walk(child);
+          };
+          walk(JSON.parse(String(Object.values(plan.rows[0])[1])));
+          expect(unnestRows.length).toBeGreaterThan(0);
+          expect(Math.max(...unnestRows)).toBeLessThanOrEqual(12);
+        }
+      );
+
+      test.when(supported)('!= is not pushed: it matches nulls', async () => {
+        const query = byFacType("a.state != 'AK'");
+        expect(await subquery(query, 'a_0')).not.toMatch(/WHERE/);
+        await expect(query).toMatchResult(tm, {airport_count: 19185});
+      });
+
+      test.when(supported)(
+        'an OR across both sides is not pushed',
+        async () => {
+          const query = byFacType("a.state = 'AK' or fac_type = 'HELIPORT'");
+          expect(await subquery(query, 'a_0')).not.toMatch(/WHERE/);
+          await expect(query).toMatchResult(tm, {airport_count: 5713});
+        }
+      );
+    });
   }
 );
 
