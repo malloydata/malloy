@@ -574,6 +574,35 @@ export abstract class Dialect {
     isInNestedPipeline: boolean
   ): string;
 
+  /**
+   * A condition true when some element of an array satisfies `condition`.
+   * `condition` reads the element the way SQL after this dialect's own
+   * `sqlUnnestAlias(source, alias, ...)` reads it, so the default is that
+   * unnest inside an EXISTS. A dialect with a cheaper way to test the
+   * elements in place overrides it; one which cannot test them returns
+   * undefined, and the condition is not pushed down. It is written where
+   * the array's row is in scope and its unnest is not.
+   */
+  sqlArrayAnyMatch(
+    source: string,
+    alias: string,
+    fieldList: DialectFieldList,
+    isArray: boolean,
+    condition: string
+  ): string | undefined {
+    const unnest = this.sqlUnnestAlias(
+      source,
+      alias,
+      fieldList,
+      false,
+      isArray,
+      false
+    );
+    return `EXISTS (SELECT 1 FROM (SELECT 1 AS ${this.sqlQuoteIdentifier(
+      '__one'
+    )}) AS ${this.sqlQuoteIdentifier(`${alias}_exists`)}\n${unnest}\nWHERE ${condition})`;
+  }
+
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 
   abstract sqlGenerateUUID(): string;

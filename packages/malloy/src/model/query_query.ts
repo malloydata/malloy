@@ -11,6 +11,7 @@ import type {
 } from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
+  Expr,
   TurtleDef,
   IndexFieldDef,
   IndexSegment,
@@ -64,6 +65,12 @@ import {
 } from './utils';
 import type {JoinInstance} from './join_instance';
 import {PACKED_ROW_ID} from './join_instance';
+import {
+  conditionSource,
+  conjuncts,
+  isCopyableCondition,
+  rewriteThroughOn,
+} from './predicate_pushdown';
 import {
   QueryStruct,
   isBasicAggregate,
@@ -1135,9 +1142,20 @@ export class QueryQuery extends QueryField {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
           projectJoin(childJoin, undefined);
         }
+        // Conditions pushed down from the query's `where:` filter the joined
+        // rows before any unnest, where only the joined row's own columns are
+        // in scope. An "any element" test there can name its element by the
+        // unnest's alias without an unnested column of that name hiding it.
+        let joinedRows = structSQL;
+        const pushed = this.pushedDownConditions(ji);
+        if (pushed.length > 0) {
+          joinedRows = `(SELECT *${this.generateSQLPassthroughKeys(qs)} FROM ${structSQL} AS ${
+            ji.alias
+          } WHERE ${pushed.join(' AND ')})`;
+        }
         // Each join block ends its own line, so the WHERE, when there is
         // one, starts a line of its own after them.
-        select += `\nFROM ${structSQL} AS ${ji.alias}\n${joins}`;
+        select += `\nFROM ${joinedRows} AS ${ji.alias}\n${joins}`;
         if (conditions !== undefined && conditions.length > 0) {
           select += `WHERE ${conditions.join(' AND ')}\n`;
         }
@@ -1150,28 +1168,7 @@ export class QueryQuery extends QueryField {
       if (qs.parent === undefined || ji.parent === undefined) {
         throw new Error('Internal Error, nested structure with no parent.');
       }
-      // We need an SQL expression which results in the array for us to pass to un-nest
-      let arrayExpression: string;
-
-      if (hasExpression(qsDef)) {
-        // If this array is NOT contained in the parent, but a computed entity
-        // then the thing we are joining is not "parent.childName", but
-        // the expression which is built in that namespace
-        arrayExpression = exprToSQL(this.rootResult, qs.parent, qsDef.e);
-      } else {
-        // If this is a reference through an expression at the top level,
-        // need to generate the expression because the expression is written
-        // in the top level, this call is being used to generate the join.
-        // Below the top level, the expression will have been written into
-        // a join at the top level, and the name will exist.
-        // ... not sure this is the right way to do this
-        // ... the test for this is called "source repeated record containing an array"
-        arrayExpression = sqlFullChildReference(
-          qs.parent,
-          qsDef.name,
-          depth === 0 ? {result: this.rootResult, field: this} : undefined
-        );
-      }
+      const arrayExpression = this.arrayExpressionSQL(qs, depth);
       // we need to generate primary key.  If parent has a primary key combine
       // console.log(ji.alias, fieldExpression, this.inNestedPipeline());
       s += `${this.parent.dialect.sqlUnnestAlias(
@@ -1193,6 +1190,94 @@ export class QueryQuery extends QueryField {
       s += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
     }
     return s;
+  }
+
+  /**
+   * SQL for the array an unnest join unnests, written where the join is.
+   * `depth` is how far below the query's source the join is written.
+   */
+  private arrayExpressionSQL(qs: QueryStruct, depth: number): string {
+    const sd = qs.structDef;
+    if (qs.parent === undefined || sd.type !== 'array') {
+      throw new Error('Internal Error, nested structure with no parent.');
+    }
+    if (hasExpression(sd)) {
+      // If this array is NOT contained in the parent, but a computed entity
+      // then the thing we are joining is not "parent.childName", but
+      // the expression which is built in that namespace
+      return exprToSQL(this.rootResult, qs.parent, sd.e);
+    }
+    // If this is a reference through an expression at the top level,
+    // need to generate the expression because the expression is written
+    // in the top level, this call is being used to generate the join.
+    // Below the top level, the expression will have been written into
+    // a join at the top level, and the name will exist.
+    // ... not sure this is the right way to do this
+    // ... the test for this is called "source repeated record containing an array"
+    return sqlFullChildReference(
+      qs.parent,
+      sd.name,
+      depth === 0 ? {result: this.rootResult, field: this} : undefined
+    );
+  }
+
+  /**
+   * The conditions of the query's `where:` copied into the subquery of `ji`,
+   * so they run before its unnests; see predicate_pushdown.ts. Only for a
+   * join of the query's own source, whose paths the `where:` shares.
+   */
+  private pushedDownConditions(ji: JoinInstance): string[] {
+    const qs = ji.queryStruct;
+    const sd = qs.structDef;
+    if (qs.parent !== this.parent || isRawSegment(this.firstSegment)) {
+      return [];
+    }
+    // The joined row, or the elements of one of its arrays.
+    const isOnto = (source: QueryStruct) =>
+      source === qs ||
+      (source.structDef.type === 'array' &&
+        source.parent?.getJoinableParent() === qs);
+    const pushed: string[] = [];
+    for (const filter of this.firstSegment.filterList ?? []) {
+      if (!expressionIsScalar(filter.expressionType)) continue;
+      for (const c of conjuncts(filter.e)) {
+        if (!isCopyableCondition(c)) continue;
+        let condition: Expr | undefined = c;
+        let source = conditionSource(this.parent, c);
+        if (
+          source !== undefined &&
+          source !== 'constant' &&
+          !isOnto(source) &&
+          isJoinedSource(sd) &&
+          sd.onExpression !== undefined
+        ) {
+          condition = rewriteThroughOn(c, sd.onExpression, this.parent, isOnto);
+          source = condition && conditionSource(this.parent, condition);
+        }
+        if (
+          condition === undefined ||
+          source === undefined ||
+          source === 'constant' ||
+          !isOnto(source)
+        ) {
+          continue;
+        }
+        const sql = exprToSQL(this.rootResult, this.parent, condition);
+        if (source === qs) {
+          pushed.push(sql);
+          continue;
+        }
+        const anyMatch = source.dialect.sqlArrayAnyMatch(
+          this.arrayExpressionSQL(source, 1),
+          source.getIdentifier(),
+          getDialectFieldList(source.structDef, source.dialect),
+          isBasicArray(source.structDef),
+          sql
+        );
+        if (anyMatch !== undefined) pushed.push(anyMatch);
+      }
+    }
+    return pushed;
   }
 
   /**
