@@ -46,12 +46,32 @@ registerMalloyRender({
 });
 ```
 
+## Scrolling with the host page
+
+By default a table or dashboard scrolls inside its own box. To let the page (or another element) scroll it, pass that element as `scrollEl`:
+
+```javascript
+const viz = new MalloyRenderer().createViz({
+  scrollEl: document.scrollingElement,
+});
+```
+
+Pinned headers then stick to the top of `scrollEl`. These CSS variables can be set on any ancestor of the rendering:
+
+| Variable                                    | Default | What it sets                                                                                                        |
+| ------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| `--malloy-render--sticky-top`               | `0px`   | How far below the top of `scrollEl` headers pin, e.g. the height of a fixed page header. Only used with `scrollEl`. |
+| `--malloy-render--table-header-z-index`     | `100`   | Stacking order of a table's pinned header row.                                                                      |
+| `--malloy-render--dashboard-header-z-index` | `200`   | Stacking order of a dashboard's pinned row header.                                                                  |
+
+A table inside a dashboard tile still scrolls inside its tile. A dashboard still needs a container with a height to render.
+
 ## Plugin System
 
 The Malloy Renderer supports a plugin system for creating custom visualizations. See the plugin documentation:
 
 - [Plugin System Overview](./docs/plugin-system.md) - Comprehensive guide to the plugin architecture
-- [Plugin Quick Start](./docs/plugin-quick-start.md) - Get started quickly with minimal examples  
+- [Plugin Quick Start](./docs/plugin-quick-start.md) - Get started quickly with minimal examples
 - [Plugin API Reference](./docs/plugin-api-reference.md) - Complete API documentation
 
 # Developing

@@ -237,7 +237,7 @@ const TableField = (props: {
   // TODO: review what should be sticky
   else if (SUPPORTS_STICKY && props.field.isBasic()) {
     style.position = 'sticky';
-    style.top = `var(--malloy-render--table-header-cumulative-height-${fieldLayout.depth})`;
+    style.top = `calc(var(--malloy-render--table-sticky-top, 0px) + var(--malloy-render--table-header-cumulative-height-${fieldLayout.depth}))`;
   }
 
   const tableGutterLeft = fieldLayout.depth > 0 && props.field.isFirstChild();
