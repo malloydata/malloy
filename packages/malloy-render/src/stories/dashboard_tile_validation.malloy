@@ -1,0 +1,15 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+  # colspan=2 subtitle='Last 30 days' borderless
+  # bar_chart
+  view: tile_view is {
+    group_by: department
+    aggregate: product_count is count()
+  }
+
+  # colspan=0
+  # bar_chart
+  view: bad_colspan_tile is {
+    group_by: department
+    aggregate: product_count is count()
+  }
+}

@@ -30,16 +30,29 @@ removeFakeDom();
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
+export interface ValidateRenderTagsOptions {
+  /**
+   * The result will be drawn as one tile of the caller's dashboard layout,
+   * so its top-level `# colspan`, `# subtitle`, `# break` and `# borderless`
+   * are validated as tile settings instead of reported as unknown tags.
+   */
+  dashboardTile?: boolean;
+}
+
 /**
  * Validate renderer tags on a Malloy result without executing the query
  * or requiring a browser DOM. Intended for headless / MCP use.
  *
  * @param result A `Malloy.Result` (typically from `PreparedResult.toStableResult()`)
+ * @param options See {@link ValidateRenderTagsOptions}
  * @returns Array of log messages (errors, warnings) from tag validation
  */
-export function validateRenderTags(result: Malloy.Result): Malloy.LogMessage[] {
+export function validateRenderTags(
+  result: Malloy.Result,
+  options: ValidateRenderTagsOptions = {}
+): Malloy.LogMessage[] {
   const renderer = new MalloyRenderer();
-  const viz = renderer.createViz();
+  const viz = renderer.createViz({dashboardTile: options.dashboardTile});
   viz.setResult(result);
   return viz.getLogs();
 }

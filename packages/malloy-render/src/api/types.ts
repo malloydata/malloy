@@ -98,6 +98,14 @@ export interface MalloyRendererOptions {
   dashboardConfig?: Partial<DashboardConfig>;
   modalElement?: HTMLElement;
   scrollEl?: HTMLElement;
+  /**
+   * The result is drawn as one tile of the host's own dashboard layout, as a
+   * child of a `# dashboard` nest would be. Its top-level `# colspan`,
+   * `# subtitle`, `# break` and `# borderless` are then layout settings for
+   * the host: they are validated like a tile's, are not reported as unknown
+   * tags, and are readable as the root field's `getDashboardChildConfig()`.
+   */
+  dashboardTile?: boolean;
   onError?: (error: Error) => void;
   plugins?: RenderPluginFactory[];
   pluginOptions?: Record<string, unknown>;
