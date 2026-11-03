@@ -142,6 +142,12 @@ export class TrinoDialect extends PostgresBase {
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
+  // A query on an array runs only where it is computed in place, with
+  // lambdas. Presto rejects correlated subqueries ("Given correlated
+  // subquery is not supported"); Trino has them, but its sqlArrayQueryHead
+  // is not written yet.
+  supportsArrayQueries = true;
+  supportsCorrelatedArrayQueries = false;
   supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
@@ -812,11 +818,6 @@ export class PrestoDialect extends TrinoDialect {
   name = 'presto';
   supportsPipelinesInViews = false; // what a drag...
   supportsLeftJoinUnnest = false; // we need to fix this....
-  // Presto rejects correlated subqueries ("Given correlated subquery is not
-  // supported"), so a query on an array runs only where it is computed in
-  // place, with lambdas.
-  supportsArrayQueries = true;
-  supportsCorrelatedArrayQueries = false;
 
   sqlGenerateUUID(): string {
     return 'CAST(UUID() AS VARCHAR)';
