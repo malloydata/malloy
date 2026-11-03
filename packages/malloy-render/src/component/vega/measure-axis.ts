@@ -67,12 +67,12 @@ export function createMeasureAxis({
       labels: {
         enter: {
           text: {
-            signal: `renderMalloyNumber(malloyExplore, '${fieldPath}', datum.value, datum, item)`,
+            signal: `renderMalloyAxisNumber(malloyExplore, '${fieldPath}', datum.value, datum, item)`,
           },
         },
         update: {
           text: {
-            signal: `renderMalloyNumber(malloyExplore, '${fieldPath}', datum.value, datum, item)`,
+            signal: `renderMalloyAxisNumber(malloyExplore, '${fieldPath}', datum.value, datum, item)`,
           },
           fillOpacity: [
             ...(showBrushes

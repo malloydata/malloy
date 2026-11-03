@@ -637,6 +637,8 @@ These tags are typically applied directly to individual fields within a query.
 
 Formats a numeric field as currency. Supports both **shorthand** and **verbose** syntax for scaling and formatting options.
 
+**On chart axes:** a currency with no scale of its own is shortened on a chart's measure axis (`$1.4M`, `$250K`) so the ticks stay readable. Tables and tooltips keep the full value. A currency with a scale (`usd0m`, `scale=k`) uses that scale on the axis too.
+
 #### Shorthand Syntax (Recommended)
 
 Pattern: `# currency={code}{decimals}{scale}`
