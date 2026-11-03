@@ -1346,6 +1346,14 @@ export interface SegmentUsageSummary {
   expandedFieldUsage?: FieldUsage;
   expandedGivenUsage?: GivenUsage;
   expandedUngroupings?: AggregateUngrouping[];
+  /**
+   * The joins in `activeJoins` which only the segment's own `where:` needs:
+   * no field, nest, `having:`, source filter or other join of the segment
+   * reaches them. The compiler can test such an array's elements in place
+   * and leave its unnest out. Absent means none are known to be, which is
+   * always safe.
+   */
+  whereOnlyJoins?: FieldUsage;
 }
 
 export interface IndexSegment extends Filtered, SegmentUsageSummary {
@@ -1462,6 +1470,13 @@ export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   queryTimezone?: string;
   alwaysJoins?: string[];
   refSummary?: RefSummary;
+  /**
+   * Translator-internal: what the segment names outside its own `where:`,
+   * from which `getExpandedSegment` derives `whereOnlyJoins`, removing this
+   * as it does. A segment stored unexpanded, such as a source's view, keeps
+   * it until a query expands a copy. The compiler never reads it.
+   */
+  refSummaryOutsideWhere?: RefSummary;
   referencedAt?: DocumentLocation;
   outputStruct: SourceDef;
   isRepeated: boolean;

@@ -575,13 +575,20 @@ export abstract class Dialect {
   ): string;
 
   /**
+   * Whether `sqlArrayAnyMatch` can test an array's elements in this
+   * dialect. Without it a condition on an array's elements is only ever
+   * applied to the unnested elements.
+   */
+  supportsArrayAnyMatch = true;
+
+  /**
    * A condition true when some element of an array satisfies `condition`.
    * `condition` reads the element the way SQL after this dialect's own
    * `sqlUnnestAlias(source, alias, ...)` reads it, so the default is that
    * unnest inside an EXISTS. A dialect with a cheaper way to test the
-   * elements in place overrides it; one which cannot test them returns
-   * undefined, and the condition is not pushed down. It is written where
-   * the array's row is in scope and its unnest is not.
+   * elements in place overrides it; one which cannot test them sets
+   * `supportsArrayAnyMatch` false. It is written where the array's row is in
+   * scope and its unnest is not.
    */
   sqlArrayAnyMatch(
     source: string,
@@ -589,7 +596,7 @@ export abstract class Dialect {
     fieldList: DialectFieldList,
     isArray: boolean,
     condition: string
-  ): string | undefined {
+  ): string {
     const unnest = this.sqlUnnestAlias(
       source,
       alias,

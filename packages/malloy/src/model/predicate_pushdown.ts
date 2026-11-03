@@ -191,3 +191,28 @@ export function rewriteThroughOn(
   }
   return undefined;
 }
+
+/**
+ * Whether an expression read from `from` reads anything through `target`, a
+ * join or an array: a path that crosses it, or a computed field whose
+ * expression does. A path which does not resolve counts as reading it, since
+ * nothing can be known about it.
+ */
+export function readsThrough(
+  from: QueryStruct,
+  e: Expr,
+  target: QueryStruct
+): boolean {
+  return fieldNodes(e).some(field => {
+    const fields = from.getFieldsAlongPath(field.path);
+    if (fields === undefined) return true;
+    for (const along of fields) {
+      if (along instanceof QueryFieldStruct) {
+        if (along.queryStruct === target) return true;
+      } else if (hasExpression(along.fieldDef)) {
+        return readsThrough(along.parent, along.fieldDef.e, target);
+      }
+    }
+    return false;
+  });
+}

@@ -122,6 +122,15 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     const fromRefSummary =
       from && isQuerySegment(from) ? from.refSummary : undefined;
     to.refSummary = mergeRefSummaries(fromRefSummary, this.refSummary);
+    // Everything a refined segment names counts as outside the `where:`,
+    // its own `where:` included: that can only keep a join, never drop one.
+    const outsideWhere = this.resultFS.refSummaryOutsideWhere;
+    if (outsideWhere !== undefined) {
+      to.refSummaryOutsideWhere = mergeRefSummaries(
+        fromRefSummary,
+        outsideWhere
+      ) ?? {fieldUsage: []};
+    }
   }
 }
 

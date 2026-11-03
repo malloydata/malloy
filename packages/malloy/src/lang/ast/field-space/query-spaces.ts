@@ -89,6 +89,13 @@ export abstract class QueryOperationSpace
     this._refSummary = rs;
     this._refSummaryComputed = true;
   }
+  // The same, leaving out what only the segment's `where:` names; computed
+  // with it. Undefined where nothing computed it, which a consumer must read
+  // as "everything is outside the `where:`".
+  protected _refSummaryOutsideWhere: model.RefSummary | undefined = undefined;
+  get refSummaryOutsideWhere(): model.RefSummary | undefined {
+    return this._refSummaryOutsideWhere;
+  }
   get fieldUsage(): model.FieldUsage {
     return model.fieldUsageFrom(this.refSummary);
   }
@@ -426,8 +433,13 @@ export abstract class QuerySpace extends QueryOperationSpace {
     }
     const fields: TranslatedQueryField[] = [];
     let refSummary: model.RefSummary | undefined = undefined;
+    let outsideWhere: model.RefSummary | undefined = undefined;
     for (const user of this.compositeFieldUsers) {
       let nextRefSummary: model.RefSummary | undefined = undefined;
+      // A scalar filter is a `where:`; a `having:` filter is not.
+      const isWhere =
+        user.type === 'filter' &&
+        model.expressionIsScalar(user.filter.expressionType);
       if (user.type === 'filter') {
         nextRefSummary = user.filter.refSummary;
       } else {
@@ -467,8 +479,12 @@ export abstract class QuerySpace extends QueryOperationSpace {
         }
       }
       refSummary = mergeRefSummaries(refSummary, nextRefSummary);
+      if (!isWhere) {
+        outsideWhere = mergeRefSummaries(outsideWhere, nextRefSummary);
+      }
     }
     this.refSummary = refSummary;
+    this._refSummaryOutsideWhere = outsideWhere ?? {fieldUsage: []};
 
     for (const drillDimension of this.drillDimensions) {
       if (!drillDimension.satisfied) {

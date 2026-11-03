@@ -12,6 +12,7 @@ import type {
 import {exprToSQL} from './expression_compiler';
 import type {
   Expr,
+  FieldUsage,
   TurtleDef,
   IndexFieldDef,
   IndexSegment,
@@ -69,6 +70,7 @@ import {
   conditionSource,
   conjuncts,
   isCopyableCondition,
+  readsThrough,
   rewriteThroughOn,
 } from './predicate_pushdown';
 import {
@@ -371,6 +373,8 @@ export class QueryQuery extends QueryField {
       node instanceof QueryFieldStruct
         ? node.queryStruct.getJoinableParent()
         : node.parent.getJoinableParent();
+    // An array whose elements the `where:` tests in place is never unnested.
+    if (this.arraysTestedInPlace().has(joinableParent)) return;
     this.rootResult.addStructToJoin(joinableParent, uniqueKeyRequirement);
   }
 
@@ -582,26 +586,45 @@ export class QueryQuery extends QueryField {
   generateSQLFilters(
     resultStruct: FieldInstanceResult,
     which: 'where' | 'having'
-    // filterList: FilterCondition[] | undefined = undefined
   ): AndChain {
     const resultFilters = new AndChain();
     const list = resultStruct.firstSegment.filterList;
     if (list === undefined) {
       return resultFilters;
     }
+    const context = this.parent;
+    // The query's own `where:` conditions on an array tested in place are
+    // replaced by that test; see arraysTestedInPlace.
+    const inPlace =
+      resultStruct === this.rootResult && which === 'where'
+        ? this.arraysTestedInPlace()
+        : new Map<QueryStruct, Expr[]>();
+    const replaced = new Set([...inPlace.values()].flat());
     // Go through the filters and make or find dependant fields
     //  add them to the field index. Place the individual filters
     // in the correct catgory.
-    for (const cond of list || []) {
-      const context = this.parent;
-
+    for (const cond of list) {
       if (
         (which === 'having' && expressionIsCalculation(cond.expressionType)) ||
         (which === 'where' && expressionIsScalar(cond.expressionType))
       ) {
-        const sqlClause = exprToSQL(resultStruct, context, cond.e, undefined);
-        resultFilters.add(sqlClause);
+        const parts = conjuncts(cond.e);
+        if (!parts.some(c => replaced.has(c))) {
+          resultFilters.add(exprToSQL(resultStruct, context, cond.e));
+          continue;
+        }
+        for (const c of parts) {
+          if (!replaced.has(c)) {
+            resultFilters.add(exprToSQL(resultStruct, context, c));
+          }
+        }
       }
+    }
+    for (const [array, conditions] of inPlace) {
+      const condition = conditions
+        .map(c => exprToSQL(resultStruct, context, c))
+        .join(' AND ');
+      resultFilters.add(this.arrayAnyMatchSQL(array, 0, condition));
     }
     return resultFilters;
   }
@@ -1221,6 +1244,102 @@ export class QueryQuery extends QueryField {
     );
   }
 
+  /** SQL testing whether some element of `array` satisfies `condition`. */
+  private arrayAnyMatchSQL(
+    array: QueryStruct,
+    depth: number,
+    condition: string
+  ): string {
+    return array.dialect.sqlArrayAnyMatch(
+      this.arrayExpressionSQL(array, depth),
+      array.getIdentifier(),
+      getDialectFieldList(array.structDef, array.dialect),
+      isBasicArray(array.structDef),
+      condition
+    );
+  }
+
+  private inPlaceArrayTests: Map<QueryStruct, Expr[]> | undefined;
+
+  /**
+   * The arrays of the query's own source which only its `where:` reads, each
+   * with the `where:` conditions which read it. Such an array is left out of
+   * the join tree, and its conditions become one test of the source row: it
+   * has an element where all of them hold. The conditions on one array make
+   * one test, not one each, because they have to hold for the same element.
+   *
+   * The translator says which joins only the `where:` needs
+   * (`whereOnlyJoins`). An array of them qualifies when every condition
+   * which reads it reads only its elements and rejects nulls, and no other
+   * join reads it. Rejecting nulls is what makes the test equal to the
+   * unnest: an empty array unnests to one null element, which such a
+   * condition is false for, so a row with no matching element is dropped
+   * either way.
+   */
+  private arraysTestedInPlace(): Map<QueryStruct, Expr[]> {
+    if (this.inPlaceArrayTests !== undefined) return this.inPlaceArrayTests;
+    const tests = new Map<QueryStruct, Expr[]>();
+    this.inPlaceArrayTests = tests;
+    const segment = this.firstSegment;
+    if (
+      isRawSegment(segment) ||
+      isIndexSegment(segment) ||
+      this.inNestedPipeline() ||
+      !this.parent.dialect.supportsArrayAnyMatch
+    ) {
+      return tests;
+    }
+    const conditions = (segment.filterList ?? [])
+      .filter(f => expressionIsScalar(f.expressionType))
+      .flatMap(f => conjuncts(f.e));
+    for (const join of segment.whereOnlyJoins ?? []) {
+      const field = this.parent.getFieldsAlongPath(join.path)?.at(-1);
+      if (!(field instanceof QueryFieldStruct)) continue;
+      const array = field.queryStruct;
+      if (
+        array.structDef.type !== 'array' ||
+        array.parent?.getJoinableParent() !== this.parent
+      ) {
+        continue;
+      }
+      const reading = conditions.filter(c =>
+        readsThrough(this.parent, c, array)
+      );
+      if (
+        reading.length > 0 &&
+        reading.every(
+          c =>
+            isCopyableCondition(c) && conditionSource(this.parent, c) === array
+        ) &&
+        !this.anotherJoinReads(array, segment.activeJoins ?? [])
+      ) {
+        tests.set(array, reading);
+      }
+    }
+    return tests;
+  }
+
+  /**
+   * Whether a join other than `array` reads it: an on clause, or a computed
+   * array, which reads through it, and so needs it unnested.
+   */
+  private anotherJoinReads(array: QueryStruct, joins: FieldUsage): boolean {
+    for (const join of joins) {
+      const field = this.parent.getFieldsAlongPath(join.path)?.at(-1);
+      if (!(field instanceof QueryFieldStruct)) continue;
+      const struct = field.queryStruct;
+      const parent = struct.parent;
+      if (struct === array || parent === undefined) continue;
+      const sd = struct.structDef;
+      const reads =
+        (isJoinedSource(sd) && sd.onExpression) ||
+        (sd.type === 'array' && hasExpression(sd) && sd.e) ||
+        undefined;
+      if (reads && readsThrough(parent, reads, array)) return true;
+    }
+    return false;
+  }
+
   /**
    * The conditions of the query's `where:` copied into the subquery of `ji`,
    * so they run before its unnests; see predicate_pushdown.ts. Only for a
@@ -1267,14 +1386,9 @@ export class QueryQuery extends QueryField {
           pushed.push(sql);
           continue;
         }
-        const anyMatch = source.dialect.sqlArrayAnyMatch(
-          this.arrayExpressionSQL(source, 1),
-          source.getIdentifier(),
-          getDialectFieldList(source.structDef, source.dialect),
-          isBasicArray(source.structDef),
-          sql
-        );
-        if (anyMatch !== undefined) pushed.push(anyMatch);
+        if (source.dialect.supportsArrayAnyMatch) {
+          pushed.push(this.arrayAnyMatchSQL(source, 1, sql));
+        }
       }
     }
     return pushed;

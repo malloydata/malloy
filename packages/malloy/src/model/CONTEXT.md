@@ -230,7 +230,7 @@ through `mapFieldUsage`; build one with `mkRefSummary`. An absent `refSummary`
 means "never set", an empty `fieldUsage` means "checked, found nothing".
 
 **Per-segment — `SegmentUsageSummary`.** Every `QuerySegment` and `IndexSegment`
-carries four expanded fields, written by `getExpandedSegment`
+carries these expanded fields, written by `getExpandedSegment`
 (`lang/composite-source-utils.ts`) and read by the compiler:
 
 | Field | What it holds |
@@ -239,6 +239,14 @@ carries four expanded fields, written by `getExpandedSegment`
 | `activeJoins` | the joins needed, topologically sorted (dependencies first) |
 | `expandedGivenUsage` | every `GivenID` reachable from the segment |
 | `expandedUngroupings` | `all:`/`exclude:` ungroupings, path-adjusted through nests |
+| `whereOnlyJoins` | the joins of `activeJoins` only the segment's own `where:` needs (query segments only) |
+
+`whereOnlyJoins` comes from expanding the segment's usage a second time,
+without what only its `where:` names. The query field space keeps that usage
+apart as it builds the segment (`refSummaryOutsideWhere`, translator-internal),
+and a refined segment counts all of its base segment's usage as outside the
+`where:`, which can only keep a join. The compiler uses it to test an array's
+elements in place rather than unnest it (`QueryQuery.arraysTestedInPlace`).
 
 **Per-query.** `computeQueryGivenUsage(pipeline)` is the dedup'd union of every
 segment's `expandedGivenUsage`; there is no equivalent roll-up for field usage,
@@ -378,6 +386,14 @@ array's elements becomes the dialect's `sqlArrayAnyMatch`, and a condition on
 the query's join key is rewritten through the ON equality first. Only
 comparisons with constants are copied: the copy may only remove rows the outer
 condition rejects anyway, which a condition matching nulls does not promise.
+
+**Arrays tested in place.** An array of the query's own source which only the
+`where:` reads (`whereOnlyJoins`) is not unnested at all when every condition
+reading it reads only its elements and rejects nulls, and no other join reads
+it. Its conditions are replaced in the query's WHERE by one
+`sqlArrayAnyMatch` of their AND, since together they have to hold for the same
+element, and `addDependantPath` leaves the array out of the join tree. With
+no fan-out, an aggregate over the source needs no distinct key.
 
 **What the compiler reaches for that no entry names** is a join's declared
 `primary_key`. It is the distinct key for a symmetric aggregate over that join

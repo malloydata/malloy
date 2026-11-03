@@ -23,6 +23,7 @@ import type {
   GivenID,
   GivenUsage,
   PipeSegment,
+  QuerySegment,
   RefSummary,
   SourceDef,
   Expr,
@@ -423,13 +424,53 @@ export function getExpandedSegment(
   // Merge ungroupings from direct collection and field expansion
   const allUngroupings = [...collectedUngroupings, ...expanded.ungroupings];
 
-  return {
+  const result: PipeSegment = {
     ...updatedSegment,
     expandedFieldUsage: expanded.fieldUsage,
     expandedGivenUsage: expanded.givenUsage,
     activeJoins: expanded.activeJoins,
     expandedUngroupings: allUngroupings,
   };
+  if (isQuerySegment(result)) {
+    const whereOnlyJoins = getWhereOnlyJoins(
+      result,
+      inputSource,
+      fields,
+      alwaysJoinNames,
+      expanded.activeJoins
+    );
+    delete result.refSummaryOutsideWhere;
+    if (whereOnlyJoins.length > 0) {
+      result.whereOnlyJoins = whereOnlyJoins;
+    }
+  }
+  return result;
+}
+
+/**
+ * The active joins which only the segment's own `where:` needs: the joins
+ * left over when the segment's usage is expanded again without what only its
+ * `where:` names. The input source's filters, the segment's always-joins and
+ * the on clauses of the joins still active all stay in, so a join any of them
+ * reaches stays out of the list. Empty when the segment has no record of what
+ * its `where:` names alone.
+ */
+function getWhereOnlyJoins(
+  segment: QuerySegment,
+  inputSource: SourceDef,
+  fields: FieldDef[],
+  alwaysJoinNames: string[],
+  activeJoins: FieldUsage
+): FieldUsage {
+  if (segment.refSummaryOutsideWhere === undefined) return [];
+  const seed = mergeRefSummaries(segment.refSummaryOutsideWhere, {
+    fieldUsage: getFieldUsageFromFilterList(inputSource),
+  });
+  const withoutWhere = expandRefUsage(seed, fields, alwaysJoinNames);
+  return activeJoins.filter(
+    join =>
+      !withoutWhere.activeJoins.some(other => pathEq(other.path, join.path))
+  );
 }
 
 interface JoinDependency {
