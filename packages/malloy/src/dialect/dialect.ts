@@ -45,6 +45,20 @@ interface DialectField {
 export type DialectFieldList = DialectField[];
 
 /**
+ * One aggregate over the elements of an array (`Dialect.sqlArrayAggregate`):
+ * `function` of `value` over the elements for which `filter` holds. A
+ * `count` is of the elements themselves and has no `value`; a `distinct` is
+ * the number of distinct non-null values, as Malloy's `count(x)` is.
+ */
+export interface ArrayAggregate {
+  source: string;
+  element: string;
+  function: 'sum' | 'avg' | 'count' | 'distinct' | 'min' | 'max';
+  value?: string;
+  filter?: string;
+}
+
+/**
  * Order-by entry with field references resolved to SQL expressions
  * and direction defaulted. Used by sqlAggregateTurtle so each dialect
  * can format ordering in its own syntax.
@@ -573,6 +587,18 @@ export abstract class Dialect {
     isArray: boolean,
     isInNestedPipeline: boolean
   ): string;
+
+  /**
+   * An aggregate over the elements of an array of the current row, computed
+   * in place without unnesting the array, or undefined where the dialect has
+   * no way to; the query on the array is then written as a correlated
+   * subquery. `element` names an element in `value` and `filter`. Sums and
+   * counts are 0, and the others null, over no elements, as the subquery's
+   * would be.
+   */
+  sqlArrayAggregate(_aggregate: ArrayAggregate): string | undefined {
+    return undefined;
+  }
 
   /**
    * Whether `array -> { ... }`, a query on the elements of an array of the

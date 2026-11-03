@@ -11,6 +11,7 @@ import type {
 } from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
+  Expr,
   TurtleDef,
   IndexFieldDef,
   IndexSegment,
@@ -2565,6 +2566,111 @@ export class QueryQuery extends QueryField {
   }
 
   /**
+   * `array -> { ... }` as one aggregate over the array's elements, computed in
+   * place by the dialect (`sqlArrayAggregate`), when the query is that simple
+   * and the dialect can; undefined otherwise, and it is written as a
+   * correlated subquery instead.
+   *
+   * The element expressions are compiled against a copy of the array's
+   * struct under a name of its own, so they read an element by an alias no
+   * join of this query uses, which the dialect gives the element. The
+   * array's own alias would not do: if this query also unnests the array, a
+   * column of that name is in scope, and in a lambda the column would win.
+   */
+  private arrayAggregateSQL(
+    array: QueryStruct,
+    arraySQL: string,
+    pipeline: PipeSegment[]
+  ): string | undefined {
+    const [segment, ...moreSegments] = pipeline;
+    if (
+      moreSegments.length > 0 ||
+      segment?.type !== 'reduce' ||
+      array.parent === undefined
+    ) {
+      return undefined;
+    }
+    const [field, ...moreFields] = segment.queryFields;
+    if (
+      moreFields.length > 0 ||
+      field === undefined ||
+      field.type === 'fieldref' ||
+      field.type === 'turtle' ||
+      !hasExpression(field)
+    ) {
+      return undefined;
+    }
+    // The query's `where:`, and a filter on the aggregate, both choose the
+    // elements it aggregates.
+    const filters = (segment.filterList ?? [])
+      .filter(f => expressionIsScalar(f.expressionType))
+      .map(f => f.e);
+    let measure = field.e;
+    if (measure.node === 'filteredExpr') {
+      filters.push(...measure.kids.filterList.map(f => f.e));
+      measure = measure.kids.e;
+    }
+    if (measure.node !== 'aggregate' || measure.structPath !== undefined) {
+      return undefined;
+    }
+    // Only `count()` counts the elements themselves; `count(x)` is distinct.
+    const value = measure.e.node === '' ? undefined : measure.e;
+    if ((measure.function === 'count') !== (value === undefined)) {
+      return undefined;
+    }
+    const element = new QueryStruct(
+      {
+        ...array.structDef,
+        name: `${activeName(array.structDef)}_element`,
+        as: undefined,
+      },
+      undefined,
+      {struct: array.parent},
+      array.prepareResultOptions
+    );
+    const read = value ? [value, ...filters] : filters;
+    if (!read.every(e => this.readsOnlyElementsOf(element, e))) {
+      return undefined;
+    }
+    const sql = (e: Expr) => exprToSQL(this.rootResult, element, e);
+    return array.dialect.sqlArrayAggregate({
+      source: arraySQL,
+      element: element.getIdentifier(),
+      function: measure.function,
+      value: value && sql(value),
+      filter: filters.length > 0 ? filters.map(sql).join(' AND ') : undefined,
+    });
+  }
+
+  /**
+   * Whether `e`, read from the array, reads only an element's own fields:
+   * through records, but not through another array or a join, and with no
+   * aggregate of its own.
+   */
+  private readsOnlyElementsOf(array: QueryStruct, e: Expr): boolean {
+    for (const node of exprWalk(e)) {
+      if (node.node === 'aggregate' || node.node === 'outputField') {
+        return false;
+      }
+      if (node.node !== 'field') continue;
+      let struct: QueryStruct = array;
+      for (const name of node.path) {
+        const child = struct.getChildByName(name);
+        if (child === undefined) return false;
+        if (child instanceof QueryFieldStruct) {
+          if (child.queryStruct.structDef.type !== 'record') return false;
+          struct = child.queryStruct;
+        } else if (hasExpression(child.fieldDef)) {
+          if (!this.readsOnlyElementsOf(child.parent, child.fieldDef.e)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
    * SQL for `array -> { ... }`: the pipeline compiled as a query whose source
    * is the row's array, `arraySQL`, written as a correlated subquery. This is
    * how a later stage of a nest runs on the stage before it, except that the
@@ -2576,6 +2682,8 @@ export class QueryQuery extends QueryField {
     arraySQL: string,
     pipeline: PipeSegment[]
   ): string {
+    const inPlace = this.arrayAggregateSQL(array, arraySQL, pipeline);
+    if (inPlace !== undefined) return inPlace;
     const dialect = this.parent.dialect;
     const elements: NestSourceDef = {
       type: 'nest_source',

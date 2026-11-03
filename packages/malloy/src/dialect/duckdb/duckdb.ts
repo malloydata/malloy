@@ -26,6 +26,7 @@ import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  ArrayAggregate,
   CivilTime,
   CompiledOrderBy,
   DialectFieldList,
@@ -257,6 +258,40 @@ export class DuckDBDialect extends PostgresBase {
       p = `[${p}]`;
     }
     return `(SELECT UNNEST(${p}) as base)`;
+  }
+
+  // DuckDB runs a correlated subquery over UNNEST as a full unnest and join,
+  // so a query on an array which is one aggregate is computed with list
+  // functions instead. The lambda parameter is named `element`, which the
+  // caller chooses so that no column of that name is in scope: a column
+  // would win over the parameter.
+  sqlArrayAggregate({
+    source,
+    element,
+    function: func,
+    value,
+    filter,
+  }: ArrayAggregate): string {
+    const elements = filter
+      ? `LIST_FILTER(${source}, ${element} -> ${filter})`
+      : source;
+    const values = value
+      ? `LIST_TRANSFORM(${elements}, ${element} -> ${value})`
+      : elements;
+    switch (func) {
+      case 'count':
+        return `COALESCE(LEN(${elements}), 0)`;
+      case 'distinct':
+        return `COALESCE(LIST_UNIQUE(${values}), 0)`;
+      case 'sum':
+        return `COALESCE(LIST_SUM(${values}), 0)`;
+      case 'avg':
+        return `LIST_AVG(${values})`;
+      case 'min':
+        return `LIST_MIN(${values})`;
+      case 'max':
+        return `LIST_MAX(${values})`;
+    }
   }
 
   sqlArrayQueryHead(source: string, isScalarArray: boolean): string {
