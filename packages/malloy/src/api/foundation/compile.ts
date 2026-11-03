@@ -144,6 +144,8 @@ type CompileRequest = Compilable &
     connections: LookupConnection<InfoConnection>;
     model?: Model;
     cacheManager?: CacheManager;
+    /** Given names restricted text may not declare. */
+    finalizedGivens?: ReadonlySet<string>;
   };
 
 export class Malloy {
@@ -304,6 +306,7 @@ export class Malloy {
       eventStream,
       restrictedMode,
       method,
+      finalizedGivens,
     } = req;
     const virtualMap = req.virtualMap ?? parse?._translator.virtualMap;
     if (restrictedMode) {
@@ -366,6 +369,7 @@ export class Malloy {
       }
       translator = parse._translator;
       translator.virtualMap = virtualMap;
+      translator.finalizedGivens = finalizedGivens;
       const invalidationKey =
         parse._invalidationKey ?? (await getInvalidationKey(urlReader, url));
       invalidationKeys[_url] = invalidationKey;
@@ -386,7 +390,8 @@ export class Malloy {
         },
         eventStream,
         restrictedMode ?? false,
-        virtualMap
+        virtualMap,
+        finalizedGivens
       );
     }
     for (;;) {

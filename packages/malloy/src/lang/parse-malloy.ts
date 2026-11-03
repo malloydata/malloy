@@ -1052,7 +1052,8 @@ export class MalloyTranslator extends MalloyTranslation {
     preload: ParseUpdate | null = null,
     private readonly eventStream: EventStream | null = null,
     readonly restrictedMode: boolean = false,
-    public virtualMap?: VirtualMap
+    public virtualMap?: VirtualMap,
+    public finalizedGivens?: ReadonlySet<string>
   ) {
     super(rootURL, importURL);
     this.root = this;

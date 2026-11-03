@@ -293,7 +293,8 @@ export class Runtime {
    * these names throws; `Model.givens` and `PreparedQuery.givens` filter
    * them out so introspection-driven UIs don't render editors for them.
    *
-   * @internal Accessed from QueryMaterializer and Model construction.
+   * @internal Accessed from QueryMaterializer, Model construction, and
+   * restricted compiles.
    */
   public get _finalizedGivens(): ReadonlySet<string> {
     return this._finalizedGivensSet;
@@ -942,8 +943,6 @@ export class ModelMaterializer extends FluentState<Model> {
    * Restricted-mode compilation rejects these constructs:
    *
    * - `import` statements
-   * - `given:` declarations (restricted queries may still reference
-   *   givens the model declared, via `$NAME`)
    * - `##!` compiler-flag annotations
    * - `connection.table(...)` and `connection.sql(...)` source forms
    * - `name!type(args)` raw-SQL function calls
@@ -954,6 +953,14 @@ export class ModelMaterializer extends FluentState<Model> {
    * measures, functions, givens declared by the model author — is
    * fully available regardless of whether the model's own definitions
    * use any of the forbidden constructs.
+   *
+   * A restricted query may declare its own givens with `given:` and supply
+   * them through `.run({givens})`. These are separate from the model's
+   * givens, even under the same name as a given the model doesn't surface,
+   * so they can't change what the model's own definitions see. A name the
+   * model surfaces, or one listed in `finalizeGivens`, can't be declared.
+   * Given values appear in generated SQL, so a given is not a way to keep a
+   * value from the author of a restricted query.
    *
    * Errors reach the caller in the same way as any other Malloy
    * compile: `.validate()` returns a `LogMessage[]`, and `.run()` /
@@ -986,6 +993,7 @@ export class ModelMaterializer extends FluentState<Model> {
         urlReader,
         connections,
         model,
+        finalizedGivens: this.runtime._finalizedGivens,
         ...this.compileQueryOptions,
       });
       return queryModel.preparedQuery;

@@ -95,10 +95,22 @@ export class GivenDeclaration
     return ` ${this.name} :: ${typeDefToString(this.typeDef)}`;
   }
 
+  /**
+   * Supplying a value for a name the model doesn't surface fails every query.
+   * A host that finalizes a name can depend on that, so restricted text must
+   * not be able to satisfy the name with a declaration of its own.
+   */
+  private isFinalizedInRestrictedText(): boolean {
+    return (
+      this.isRestricted() &&
+      (this.translator()?.root.finalizedGivens?.has(this.name) ?? false)
+    );
+  }
+
   execute(doc: Document): void {
     if (this.typeDef.type === 'error') return;
 
-    if (doc.modelEntry(this.name)) {
+    if (doc.modelEntry(this.name) || this.isFinalizedInRestrictedText()) {
       this.logError(
         'given-definition-name-conflict',
         `Cannot redefine '${this.name}'`
@@ -273,16 +285,5 @@ export class DefineGivens extends DocStatementList {
   constructor(givens: GivenDeclaration[]) {
     super(givens);
     this.givens = givens;
-  }
-
-  executeList(doc: Document) {
-    if (this.isRestricted()) {
-      this.logError(
-        'restricted-construct-forbidden',
-        '`given:` cannot declare new givens in a restricted query — only `$NAME` references to existing givens are allowed.'
-      );
-      return undefined;
-    }
-    return super.executeList(doc);
   }
 }
