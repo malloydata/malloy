@@ -30,7 +30,7 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
     }),
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
-      const hasTag = fieldTag.has('scatter_chart');
+      const hasTag = field.vizType() === 'scatter';
       const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
       if (hasTag && !isRepeatedRecord) {

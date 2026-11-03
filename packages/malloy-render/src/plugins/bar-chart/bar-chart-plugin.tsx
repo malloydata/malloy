@@ -23,7 +23,7 @@ import {
   resolveChartDisplayConfig,
   type ChartDisplayConfig,
 } from '@/component/chart/resolve-chart-display';
-import {convertLegacyToVizTag} from '@/component/tag-utils';
+import {normalizedVizTag} from '@/component/tag-utils';
 import {type Config, parse, type Runtime} from 'vega';
 import 'vega-interpreter';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
@@ -72,9 +72,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
       // Match repeated record fields with bar chart tags
-      const hasBarChartTag = fieldTag.has('viz')
-        ? fieldTag.text('viz') === 'bar'
-        : fieldTag.has('bar_chart');
+      const hasBarChartTag = field.vizType() === 'bar';
       const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
       if (hasBarChartTag && !isRepeatedRecord) {
@@ -103,7 +101,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
       // Resolve chart display tags (title, subtitle, size) at setup time so
       // chart.tsx and chart-layout-settings.ts don't need to read tags at
       // render time.
-      const normalizedTag = convertLegacyToVizTag(field.tag);
+      const normalizedTag = normalizedVizTag(field);
       const vizTag = normalizedTag.tag('viz')!;
       const chartDisplay = resolveChartDisplayConfig(field, vizTag);
 

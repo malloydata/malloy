@@ -61,7 +61,7 @@ Worth knowing before editing here:
 
 ### Dispatch
 
-`RenderFieldMetadata` (`src/render-field-metadata.ts`) is the orchestrator: for each field it runs every plugin factory's `matches()` and attaches the first hit. At render time, `applyRenderer` (`src/component/renderer/apply-renderer.tsx`) uses the plugin if one matched, otherwise switches on the field's precomputed `renderAs()` value (`table`, `dashboard`, `link`, `image`, `list`, `cell`, `chart`, or a plugin name; last-declared renderer tag wins, and legacy `bar_chart`/`line_chart` are normalized into the `viz` namespace by `convertLegacyToVizTag`).
+`RenderFieldMetadata` (`src/render-field-metadata.ts`) is the orchestrator: for each field it runs every plugin factory's `matches()` and attaches the first hit. At render time, `applyRenderer` (`src/component/renderer/apply-renderer.tsx`) uses the plugin if one matched, otherwise switches on the field's precomputed `renderAs()` value (`table`, `dashboard`, `link`, `image`, `list`, `cell`, `chart`, or a plugin name; an explicit `viz` wins over every chart tag, else the last-declared chart tag wins — resolved once per field by `resolveVizType` in `component/tag-utils.ts` from the annotation lines in order, read as `field.vizType()`; every chart plugin's `matches()` checks it, and legacy `bar_chart`/`line_chart`/`combo_chart` are normalized into the `viz` namespace by `normalizedVizTag`).
 
 A parent renderer hands options to a child via `RenderProps.customProps`, keyed by renderer name — e.g. `customProps.table.shouldFillWidth`, `customProps.big_value.embedded`. This is how the dashboard configures the tiles it nests.
 

@@ -7,7 +7,7 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {XChannel} from '@/component/types';
 import type {Field, NestField} from '@/data_tree';
 import {walkFields} from '@/util';
-import {convertLegacyToVizTag} from '@/component/tag-utils';
+import {normalizedVizTag} from '@/component/tag-utils';
 import {
   COMBO_MARK_TYPES,
   defaultComboChartSettings,
@@ -34,7 +34,7 @@ export function getComboChartSettings(
   explore: NestField,
   tagOverride?: Tag
 ): ComboChartSettings {
-  const normalizedTag = convertLegacyToVizTag(tagOverride ?? explore.tag);
+  const normalizedTag = normalizedVizTag(explore, tagOverride);
 
   if (normalizedTag.text('viz') !== 'combo') {
     throw new Error(

@@ -7,7 +7,7 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {XChannel, SeriesChannel, YChannel} from '@/component/types';
 import type {Field, NestField} from '@/data_tree';
 import {walkFields} from '@/util';
-import {convertLegacyToVizTag} from '@/component/tag-utils';
+import {normalizedVizTag} from '@/component/tag-utils';
 import {
   defaultBarChartSettings,
   type BarChartSettings,
@@ -19,7 +19,7 @@ export function getBarChartSettings(
   explore: NestField,
   tagOverride?: Tag
 ): BarChartSettings {
-  const normalizedTag = convertLegacyToVizTag(tagOverride ?? explore.tag);
+  const normalizedTag = normalizedVizTag(explore, tagOverride);
 
   if (normalizedTag.text('viz') !== 'bar') {
     throw new Error(

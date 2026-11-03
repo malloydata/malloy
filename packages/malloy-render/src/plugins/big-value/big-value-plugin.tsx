@@ -178,7 +178,7 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
      * Match fields with the # big_value annotation
      */
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
-      const hasBigValueTag = fieldTag.has('big_value');
+      const hasBigValueTag = field.vizType() === 'big_value';
       const bigValueTag = fieldTag.tag('big_value');
       const hasChildConfigTag = BIG_VALUE_CHILD_TAG_PATHS.some(
         ([, childProp]) =>

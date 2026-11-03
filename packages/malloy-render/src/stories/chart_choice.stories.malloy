@@ -1,0 +1,67 @@
+// Which chart a view draws when it carries more than one chart tag:
+// an explicit viz wins over every chart tag; otherwise the chart tag
+// declared last wins, and a nest's own tag replaces its view's.
+
+source: products is duckdb.table("static/data/products.parquet") extend {
+  measure:
+    product_count is count()
+    avg_retail is retail_price.avg()
+    total_retail is retail_price.sum()
+    avg_cost is cost.avg()
+
+  #(story) story="viz=table over big_value"
+  # big_value viz=table
+  view: viz_table_over_big_value is {
+    aggregate: product_count, avg_retail
+  }
+
+  #(story) story="viz=scatter over bar_chart"
+  # bar_chart viz=scatter
+  view: viz_scatter_over_bar is {
+    group_by: brand
+    aggregate: avg_retail, avg_cost
+    limit: 40
+  }
+
+  # bar_chart
+  view: by_department_bar is {
+    group_by: department
+    aggregate: product_count
+  }
+
+  #(story) story="Nest's big_value over its view's bar_chart"
+  view: own_big_value_over_bar is {
+    group_by: x is 'all'
+    # big_value
+    nest: own is by_department_bar
+  }
+
+  # scatter_chart
+  # big_value
+  view: scatter_then_big_value is {
+    group_by: brand
+    aggregate: avg_retail, avg_cost
+    limit: 30
+  }
+
+  #(story) story="scatter_chart declared again"
+  view: redeclared_scatter is {
+    group_by: x is 'all'
+    # scatter_chart
+    nest: own is scatter_then_big_value
+  }
+}
+
+source: state_sales is duckdb.sql("""
+  SELECT * FROM (VALUES
+    ('California', 39538), ('Texas', 29145), ('Florida', 21538),
+    ('New York', 20201), ('Illinois', 12812), ('Washington', 7614)
+  ) AS t(state, sales)
+""") extend {
+  #(story) story="viz=table over shape_map"
+  # shape_map viz=table
+  view: viz_table_over_shape_map is {
+    group_by: state
+    aggregate: total_sales is sales.sum()
+  }
+}

@@ -90,7 +90,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
     }),
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
-      const hasTag = fieldTag.has('segment_map');
+      const hasTag = field.vizType() === 'segment_map';
       const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
       if (hasTag && !isRepeatedRecord) {
