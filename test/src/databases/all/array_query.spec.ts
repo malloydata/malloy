@@ -128,9 +128,10 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
           types is by_fac_type -> { aggregate: n is count(fac_type) }
       } -> {
         where: state = 'AK'
-        select: fewest, most, mean, types
+        // Each database rounds the last digit of 608 / 3 its own way.
+        select: fewest, most, mean is round(mean, 6), types
       }
-    `).toMatchResult(tm, {fewest: 30, most: 474, mean: 608 / 3, types: 3});
+    `).toMatchResult(tm, {fewest: 30, most: 474, mean: 202.666667, types: 3});
   });
 
   test.when(supported)("the array query's own where:", async () => {
