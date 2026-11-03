@@ -108,6 +108,7 @@ export type Expr =
   | InCompareExpr
   | InGivenExpr
   | CompositeFieldExpr
+  | ArrayQueryExpr
   | ErrorNode;
 
 export type BinaryOperator =
@@ -446,6 +447,19 @@ export interface CaseExpr extends ExprWithKids {
 
 export interface CompositeFieldExpr extends ExprLeaf {
   node: 'compositeField';
+}
+
+/**
+ * A query run on the elements of an array of the current row, whose one
+ * result is a value of that row: `items -> { aggregate: price.sum() }`.
+ * `kids.array` is the array, and `pipeline` runs with its elements as the
+ * source, the way a later stage of a nest runs on the stage before it.
+ * Experimental (`##! experimental.array_queries`).
+ */
+export interface ArrayQueryExpr extends ExprWithKids {
+  node: 'arrayQuery';
+  kids: {array: Expr};
+  pipeline: PipeSegment[];
 }
 
 export interface InCompareExpr extends ExprWithKids {

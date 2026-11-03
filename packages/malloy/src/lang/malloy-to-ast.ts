@@ -1647,6 +1647,18 @@ export class MalloyToAST
     return this.astAt(idRef, pcx);
   }
 
+  visitExprArrayQuery(pcx: parse.ExprArrayQueryContext): ast.ExpressionDef {
+    this.inExperiment('array_queries', pcx);
+    const array = this.astAt(
+      new ast.ExprIdReference(
+        this.getFieldPath(pcx.fieldPath(), ast.ExpressionFieldReference)
+      ),
+      pcx.fieldPath()
+    );
+    const query = new ast.ExprArrayQuery(array, this.getVExpr(pcx.vExpr()));
+    return this.astAt(query, pcx);
+  }
+
   visitExprGivenRef(pcx: parse.ExprGivenRefContext): ast.GivenReference {
     this.inExperiment('givens', pcx);
     // GIVEN_REF token text is `$NAME`; strip the leading `$`.

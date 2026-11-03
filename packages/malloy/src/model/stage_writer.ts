@@ -121,6 +121,20 @@ export class StageWriter {
     return udfs + pdts + sql + this.withs[lastStageNum];
   }
 
+  /**
+   * A correlated subquery whose value is the column `column` of the last
+   * stage's one row, for a query on an array which returns one value.
+   */
+  generateCorrelatedScalar(column: string): string {
+    if (!this.useCTE) {
+      return `SELECT ${column} FROM (${this.withs[0]})`;
+    }
+    return (
+      this.combineStages(true).sql +
+      `SELECT ${column} FROM ${this.getName(this.withs.length - 1)}`
+    );
+  }
+
   generateCoorelatedSubQuery(dialect: Dialect, structDef: StructDef): string {
     if (!this.useCTE) {
       return dialect.sqlCreateFunctionCombineLastStage(

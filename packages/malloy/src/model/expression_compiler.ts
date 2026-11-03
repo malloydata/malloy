@@ -13,6 +13,7 @@ import {
   safeRecordGet,
 } from './malloy_types';
 import type {
+  ArrayQueryExpr,
   Expr,
   FilterMatchExpr,
   FunctionCallNode,
@@ -58,7 +59,7 @@ import {
   GenerateState,
   caseGroup,
 } from './utils';
-import {isBasicScalar} from './query_node';
+import {QueryFieldStruct, isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
 import type {Dialect, QueryInfo} from '../dialect';
 import {MalloyCompileError} from './malloy_compile_error';
@@ -170,6 +171,8 @@ function compileExpr<T extends Expr>(
         return Array.from(
           stringsFromSQLExpression(resultSet, context, expr, state)
         ).join('');
+      case 'arrayQuery':
+        return generateArrayQueryFragment(resultSet, context, expr);
       case 'aggregate': {
         let agg = '';
         if (expr.function === 'sum') {
@@ -1207,6 +1210,27 @@ export function* stringsFromSQLExpression(
 }
 
 // Add this function to expression_compiler.ts
+
+// `array -> { ... }`: a correlated subquery over the row's array, which the
+// query compiler writes.
+function generateArrayQueryFragment(
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: ArrayQueryExpr
+): string {
+  const array = expr.kids.array;
+  const arrayField =
+    array.node === 'field' ? context.getFieldByName(array.path) : undefined;
+  const compile = resultSet.root().compileArrayQuery;
+  if (
+    !(arrayField instanceof QueryFieldStruct) ||
+    array.sql === undefined ||
+    compile === undefined
+  ) {
+    throw new Error('Internal Error: an array query needs a named array');
+  }
+  return compile(arrayField.queryStruct, array.sql, expr.pipeline);
+}
 
 function generateDistinctKeySQL(
   fieldRef: QueryField,

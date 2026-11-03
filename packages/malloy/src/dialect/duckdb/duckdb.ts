@@ -83,6 +83,7 @@ export class DuckDBDialect extends PostgresBase {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
+  supportsArrayQueries = true;
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = true;
@@ -256,6 +257,11 @@ export class DuckDBDialect extends PostgresBase {
       p = `[${p}]`;
     }
     return `(SELECT UNNEST(${p}) as base)`;
+  }
+
+  sqlArrayQueryHead(source: string, isScalarArray: boolean): string {
+    const name = isScalarArray ? this.sqlQuoteIdentifier('value') : 'base';
+    return `(SELECT UNNEST(${source}) AS ${name})`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

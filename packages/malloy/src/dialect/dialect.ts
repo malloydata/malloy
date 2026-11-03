@@ -574,6 +574,24 @@ export abstract class Dialect {
     isInNestedPipeline: boolean
   ): string;
 
+  /**
+   * Whether `array -> { ... }`, a query on the elements of an array of the
+   * current row, compiles in this dialect (`sqlArrayQueryHead`).
+   * Experimental.
+   */
+  supportsArrayQueries = false;
+
+  /**
+   * The FROM of a query on the elements of an array of the current row
+   * (`array -> { ... }`), as a correlated subquery. It is read `AS base`,
+   * and the query reads a record's fields from it as `base.field` and an
+   * array of scalars' elements as `base.value`. Only called where
+   * `supportsArrayQueries`.
+   */
+  sqlArrayQueryHead(_source: string, _isScalarArray: boolean): string {
+    throw new Error(`The ${this.name} dialect cannot query an array with ->`);
+  }
+
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 
   abstract sqlGenerateUUID(): string;

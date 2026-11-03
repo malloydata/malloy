@@ -607,6 +607,16 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
   queryUsesPartitioning = false;
   computeOnlyGroups: number[] = [];
   elimatedComputeGroups = false;
+  /**
+   * SQL for `array -> { ... }` (an `arrayQuery` node) in this query: the
+   * query compiler fills it in, so that the expression compiler can compile
+   * a pipeline without depending on the query compiler.
+   */
+  compileArrayQuery?: (
+    array: QueryStruct,
+    arraySQL: string,
+    pipeline: PipeSegment[]
+  ) => string;
 
   constructor(turtleDef: TurtleDef) {
     super(turtleDef, undefined);

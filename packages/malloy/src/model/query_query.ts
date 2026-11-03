@@ -242,6 +242,8 @@ export class QueryQuery extends QueryField {
     super(fieldDef, parent);
     this.fieldDef = fieldDef;
     this.rootResult = new FieldInstanceResultRoot(fieldDef);
+    this.rootResult.compileArrayQuery = (array, arraySQL, pipeline) =>
+      this.arrayQuerySQL(array, arraySQL, pipeline);
     this.stageWriter = stageWriter;
     // do some magic here to get the first segment.
     this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
@@ -2560,6 +2562,57 @@ export class QueryQuery extends QueryField {
       pipeOut,
       repeatedResultType: outputRepeatedResultType,
     };
+  }
+
+  /**
+   * SQL for `array -> { ... }`: the pipeline compiled as a query whose source
+   * is the row's array, `arraySQL`, written as a correlated subquery. This is
+   * how a later stage of a nest runs on the stage before it, except that the
+   * array is a column of the row rather than the result of an aggregate.
+   * For now the pipeline returns one row with one column, whose value this is.
+   */
+  private arrayQuerySQL(
+    array: QueryStruct,
+    arraySQL: string,
+    pipeline: PipeSegment[]
+  ): string {
+    const dialect = this.parent.dialect;
+    const elements: NestSourceDef = {
+      type: 'nest_source',
+      name: '~array~',
+      pipeSQL: dialect.sqlArrayQueryHead(
+        arraySQL,
+        isBasicArray(array.structDef)
+      ),
+      fields: array.structDef.fields,
+      connection: this.parent.connectionName,
+      dialect: dialect.name,
+    };
+    const qs = new QueryStruct(
+      elements,
+      undefined,
+      {model: this.parent.getModel()},
+      this.parent.prepareResultOptions
+    );
+    const stageWriter = new StageWriter(
+      dialect.supportsCTEinCoorelatedSubQueries,
+      this.stageWriter
+    );
+    const query = QueryQuery.makeQuery(
+      {type: 'turtle', name: '~array_query~', pipeline},
+      qs,
+      stageWriter,
+      this.isJoinedSubquery,
+      this.structRefToQueryStruct
+    );
+    const {outputStruct} = query.generateSQLFromPipeline(stageWriter);
+    const [result] = outputStruct.fields;
+    if (result === undefined) {
+      throw new Error('Internal Error: an array query returned no column');
+    }
+    return `(${stageWriter.generateCorrelatedScalar(
+      dialect.sqlQuoteIdentifier(result.name)
+    )})`;
   }
 
   generateComplexSQL(stageWriter: StageWriter): string {
