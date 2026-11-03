@@ -528,6 +528,33 @@ source: missing_data is duckdb.table("static/data/missing_data.csv") extend {
     view: OverrideLineChartWithTable is WithNullMeasureValue + {}
 }
 
+source: weekly_sales is duckdb.sql("""
+  select 1 as week_no, 10 as sales, 11 as last_year_sales
+  union all select 2, 15, 12
+  union all select 3, 20, 13
+  union all select 4, 25, 14
+  union all select 5, 35, 15
+  union all select 6, null, 25
+  union all select 7, null, 30
+  union all select 8, null, 40
+  union all select 9, null, 45
+""") extend {
+
+  // A null in one # y field drops only that series' point
+  #(story)
+  # line_chart
+  view: null_in_one_y_series is {
+    # x
+    select:
+      week_no
+      # y
+      sales
+      # y
+      last_year_sales
+    order_by: week_no
+  }
+}
+
 source: random_data_nulls is duckdb.sql("""
   from (SELECT i  FROM range(0, 1000) t(i))
   select
