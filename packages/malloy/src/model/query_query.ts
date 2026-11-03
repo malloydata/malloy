@@ -49,6 +49,7 @@ import {
   fieldIsIntrinsic,
   isJoinedSource,
   isBasicArray,
+  arrayQueryReturnsValue,
   isIndexSegment,
   isBaseTable,
   expressionIsAnalytic,
@@ -2571,11 +2572,7 @@ export class QueryQuery extends QueryField {
    * and the dialect can; undefined otherwise, and it is written as a
    * correlated subquery instead.
    *
-   * The element expressions are compiled against a copy of the array's
-   * struct under a name of its own, so they read an element by an alias no
-   * join of this query uses, which the dialect gives the element. The
-   * array's own alias would not do: if this query also unnests the array, a
-   * column of that name is in scope, and in a lambda the column would win.
+   * The element expressions are compiled against `arrayElementStruct`.
    */
   private arrayAggregateSQL(
     array: QueryStruct,
@@ -2583,11 +2580,7 @@ export class QueryQuery extends QueryField {
     pipeline: PipeSegment[]
   ): string | undefined {
     const [segment, ...moreSegments] = pipeline;
-    if (
-      moreSegments.length > 0 ||
-      segment?.type !== 'reduce' ||
-      array.parent === undefined
-    ) {
+    if (moreSegments.length > 0 || segment?.type !== 'reduce') {
       return undefined;
     }
     const [field, ...moreFields] = segment.queryFields;
@@ -2618,16 +2611,8 @@ export class QueryQuery extends QueryField {
     if ((measure.function === 'count') !== (value === undefined)) {
       return undefined;
     }
-    const element = new QueryStruct(
-      {
-        ...array.structDef,
-        name: `${activeName(array.structDef)}_element`,
-        as: undefined,
-      },
-      undefined,
-      {struct: array.parent},
-      array.prepareResultOptions
-    );
+    const element = this.arrayElementStruct(array);
+    if (element === undefined) return undefined;
     const read = value ? [value, ...filters] : filters;
     if (!read.every(e => this.readsOnlyElementsOf(element, e))) {
       return undefined;
@@ -2638,6 +2623,87 @@ export class QueryQuery extends QueryField {
       element: element.getIdentifier(),
       function: measure.function,
       value: value && sql(value),
+      filter: filters.length > 0 ? filters.map(sql).join(' AND ') : undefined,
+    });
+  }
+
+  /**
+   * A copy of the array's struct under a name of its own, for compiling
+   * expressions on its elements in place: they read an element by an alias
+   * no join of this query uses, which the dialect gives the element. The
+   * array's own alias would not do: if this query also unnests the array, a
+   * column of that name is in scope, and in a lambda the column would win.
+   */
+  private arrayElementStruct(array: QueryStruct): QueryStruct | undefined {
+    if (array.parent === undefined) return undefined;
+    return new QueryStruct(
+      {
+        ...array.structDef,
+        name: `${activeName(array.structDef)}_element`,
+        as: undefined,
+      },
+      undefined,
+      {struct: array.parent},
+      array.prepareResultOptions
+    );
+  }
+
+  /**
+   * `array -> { select: ... }` as the array's elements made into records in
+   * place by the dialect (`sqlArraySelect`), when the query is one `select:`
+   * with an optional `where:` of the elements, and the dialect can;
+   * undefined otherwise. An `order_by:` or `limit:` is left to the
+   * correlated subquery.
+   */
+  private arraySelectSQL(
+    array: QueryStruct,
+    arraySQL: string,
+    pipeline: PipeSegment[]
+  ): string | undefined {
+    const [segment, ...moreSegments] = pipeline;
+    if (
+      moreSegments.length > 0 ||
+      segment?.type !== 'project' ||
+      segment.limit !== undefined ||
+      (segment.orderBy ?? []).length > 0
+    ) {
+      return undefined;
+    }
+    const outputs = segment.outputStruct.fields;
+    if (outputs.length !== segment.queryFields.length) return undefined;
+    const values: Expr[] = [];
+    for (const field of segment.queryFields) {
+      if (field.type === 'fieldref') {
+        values.push({node: 'field', path: field.path});
+      } else if (
+        field.type !== 'turtle' &&
+        hasExpression(field) &&
+        expressionIsScalar(field.expressionType)
+      ) {
+        values.push(field.e);
+      } else if (field.type !== 'turtle' && !hasExpression(field)) {
+        values.push({node: 'field', path: [field.name]});
+      } else {
+        return undefined;
+      }
+    }
+    const filterList = segment.filterList ?? [];
+    if (!filterList.every(f => expressionIsScalar(f.expressionType))) {
+      return undefined;
+    }
+    const filters = filterList.map(f => f.e);
+    const element = this.arrayElementStruct(array);
+    if (
+      element === undefined ||
+      ![...values, ...filters].every(e => this.readsOnlyElementsOf(element, e))
+    ) {
+      return undefined;
+    }
+    const sql = (e: Expr) => exprToSQL(this.rootResult, element, e);
+    return array.dialect.sqlArraySelect({
+      source: arraySQL,
+      element: element.getIdentifier(),
+      fields: values.map((v, i) => ({name: outputs[i].name, sql: sql(v)})),
       filter: filters.length > 0 ? filters.map(sql).join(' AND ') : undefined,
     });
   }
@@ -2675,14 +2741,18 @@ export class QueryQuery extends QueryField {
    * is the row's array, `arraySQL`, written as a correlated subquery. This is
    * how a later stage of a nest runs on the stage before it, except that the
    * array is a column of the row rather than the result of an aggregate.
-   * For now the pipeline returns one row with one column, whose value this is.
+   * A pipeline which returns one value (`arrayQueryReturnsValue`) is that
+   * value; any other returns its rows as an array of records.
    */
   private arrayQuerySQL(
     array: QueryStruct,
     arraySQL: string,
     pipeline: PipeSegment[]
   ): string {
-    const inPlace = this.arrayAggregateSQL(array, arraySQL, pipeline);
+    const returnsValue = arrayQueryReturnsValue(pipeline);
+    const inPlace = returnsValue
+      ? this.arrayAggregateSQL(array, arraySQL, pipeline)
+      : this.arraySelectSQL(array, arraySQL, pipeline);
     if (inPlace !== undefined) return inPlace;
     const dialect = this.parent.dialect;
     const elements: NestSourceDef = {
@@ -2714,6 +2784,11 @@ export class QueryQuery extends QueryField {
       this.structRefToQueryStruct
     );
     const {outputStruct} = query.generateSQLFromPipeline(stageWriter);
+    if (!returnsValue) {
+      return dialect.sqlArrayOrEmpty(
+        `(${stageWriter.generateCoorelatedSubQuery(dialect, outputStruct)})`
+      );
+    }
     const [result] = outputStruct.fields;
     if (result === undefined) {
       throw new Error('Internal Error: an array query returned no column');

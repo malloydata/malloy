@@ -50,6 +50,18 @@ export type DialectFieldList = DialectField[];
  * `count` is of the elements themselves and has no `value`; a `distinct` is
  * the number of distinct non-null values, as Malloy's `count(x)` is.
  */
+/**
+ * The elements of an array made into records (`Dialect.sqlArraySelect`):
+ * those for which `filter` holds, each as a record with a field for each of
+ * `fields`, valued by its `sql`.
+ */
+export interface ArraySelect {
+  source: string;
+  element: string;
+  fields: {name: string; sql: string}[];
+  filter?: string;
+}
+
 export interface ArrayAggregate {
   source: string;
   element: string;
@@ -598,6 +610,26 @@ export abstract class Dialect {
    */
   sqlArrayAggregate(_aggregate: ArrayAggregate): string | undefined {
     return undefined;
+  }
+
+  /**
+   * The elements of an array of the current row which `filter` holds for,
+   * each made into a record of `fields`, computed in place without
+   * unnesting the array; or undefined where the dialect has no way to, and
+   * the query on the array is written as a correlated subquery. `element`
+   * names an element in `filter` and in each field's `sql`. Over no
+   * elements, or a null array, it is an empty array.
+   */
+  sqlArraySelect(_select: ArraySelect): string | undefined {
+    return undefined;
+  }
+
+  /**
+   * An array of records from a correlated subquery, made empty rather than
+   * null where the subquery has no rows.
+   */
+  sqlArrayOrEmpty(arraySQL: string): string {
+    return arraySQL;
   }
 
   /**

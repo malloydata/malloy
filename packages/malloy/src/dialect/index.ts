@@ -26,6 +26,7 @@ export {
 export {Dialect, queryZone} from './dialect';
 export type {
   ArrayAggregate,
+  ArraySelect,
   DialectFieldList,
   CompiledOrderBy,
   LateralJoinExpression,

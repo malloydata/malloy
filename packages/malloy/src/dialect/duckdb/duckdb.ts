@@ -27,6 +27,7 @@ import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
   ArrayAggregate,
+  ArraySelect,
   CivilTime,
   CompiledOrderBy,
   DialectFieldList,
@@ -292,6 +293,21 @@ export class DuckDBDialect extends PostgresBase {
       case 'max':
         return `LIST_MAX(${values})`;
     }
+  }
+
+  sqlArraySelect({source, element, fields, filter}: ArraySelect): string {
+    const elements = filter
+      ? `LIST_FILTER(${source}, ${element} -> ${filter})`
+      : source;
+    const record = fields
+      .map(f => `${this.sqlQuoteIdentifier(f.name)} := ${f.sql}`)
+      .join(', ');
+    return `COALESCE(LIST_TRANSFORM(${elements}, ${element} -> STRUCT_PACK(${record})), [])`;
+  }
+
+  // LIST() over no rows is null.
+  sqlArrayOrEmpty(arraySQL: string): string {
+    return `COALESCE(${arraySQL}, [])`;
   }
 
   sqlArrayQueryHead(source: string, isScalarArray: boolean): string {

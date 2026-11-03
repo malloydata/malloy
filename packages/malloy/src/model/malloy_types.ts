@@ -462,6 +462,31 @@ export interface ArrayQueryExpr extends ExprWithKids {
   pipeline: PipeSegment[];
 }
 
+/**
+ * Whether a query on an array (`ArrayQueryExpr`) returns one value of the
+ * row, rather than an array of records: one stage of `aggregate:` alone,
+ * with one field, which returns exactly one row with one column.
+ */
+export function arrayQueryReturnsValue(pipeline: PipeSegment[]): boolean {
+  const [segment, ...moreSegments] = pipeline;
+  return (
+    moreSegments.length === 0 &&
+    segment?.type === 'reduce' &&
+    segment.outputStruct.fields.length === 1 &&
+    arrayQueryOnlyAggregates(segment)
+  );
+}
+
+/** Whether a stage of a query on an array has only `aggregate:` fields. */
+export function arrayQueryOnlyAggregates(segment: QuerySegment): boolean {
+  return segment.queryFields.every(
+    f =>
+      f.type !== 'fieldref' &&
+      f.type !== 'turtle' &&
+      expressionIsAggregate(f.expressionType)
+  );
+}
+
 export interface InCompareExpr extends ExprWithKids {
   node: 'in';
   not: boolean;

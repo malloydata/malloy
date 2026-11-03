@@ -59,11 +59,37 @@ describe('array queries', () => {
     `).not.toTranslate();
   });
 
-  test('for now, only one aggregate', () => {
-    expect(model`
+  test('a query with rows returns an array of records', () => {
+    const m = model`
       ##! experimental.array_queries
-      run: a -> { group_by: t is astruct -> { group_by: column } }
-    `).not.toTranslate();
+      source: s is a extend {
+        dimension:
+          picked is astruct -> { select: *; where: column > 1 }
+          grouped is astruct -> {
+            group_by: column
+            aggregate: n is count()
+          }
+      }
+      run: s -> { select: picked, grouped }
+    `;
+    expect(m).toTranslate();
+    const segment = m.translator.getQuery(0)?.pipeline[0];
+    if (segment === undefined || !isQuerySegment(segment)) {
+      throw new Error('expected a query segment');
+    }
+    const [picked, grouped] = segment.outputStruct.fields;
+    expect(picked).toMatchObject({
+      type: 'array',
+      elementTypeDef: {type: 'record_element'},
+      fields: [{name: 'column'}],
+    });
+    expect(grouped).toMatchObject({
+      type: 'array',
+      fields: [{name: 'column'}, {name: 'n'}],
+    });
+  });
+
+  test('for now, not several aggregates', () => {
     expect(model`
       ##! experimental.array_queries
       run: a -> {

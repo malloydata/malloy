@@ -32,6 +32,22 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         seaplanes is by_fac_type -> {
           aggregate: n is airport_count.sum() { where: fac_type = 'SEAPLANE BASE' }
         }
+        small_types is by_fac_type -> { select: *; where: airport_count < 50 }
+        doubled is by_fac_type -> {
+          select: fac_type, double_count is airport_count * 2
+        }
+        by_size is by_fac_type -> {
+          group_by: big is airport_count > 100
+          aggregate: n is airport_count.sum()
+        }
+        busy_types is by_fac_type -> {
+          group_by: fac_type
+          aggregate: n is airport_count.sum()
+        } -> {
+          where: n > 50
+          select: fac_type
+        }
+        none is by_fac_type -> { select: *; where: airport_count > 1000 }
     }
 
     // States as "movies", each with an array of genres: its most popular
@@ -227,6 +243,87 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         },
       ]);
     });
+  });
+
+  /*
+   * A query on an array with rows of its own returns them as an array of
+   * records, which can be selected, or reached into with a path like any
+   * other array.
+   */
+  describe('array results', () => {
+    test.when(supported)('select: with a where:', async () => {
+      await expect(`
+        run: a -> { where: state = 'AK'; select: small_types }
+      `).toEqualResult(tm, [
+        {small_types: [{fac_type: 'HELIPORT', airport_count: 30}]},
+      ]);
+    });
+
+    test.when(supported)('none selected is an empty array', async () => {
+      await expect(`
+        run: a -> { where: state = 'AK'; select: none }
+      `).toEqualResult(tm, [{none: []}]);
+    });
+
+    test.when(supported)('a path into the result', async () => {
+      // 167 groups of a state and a facility type have fewer than 50
+      // airports, 1236 in all. One more has no state, and an element's
+      // distinct key is made of its row's key, so it is left out.
+      await expect(`
+        run: a -> {
+          where: state is not null
+          aggregate:
+            small_groups is small_types.count()
+            small_total is small_types.airport_count.sum()
+        }
+      `).toMatchResult(tm, {small_groups: 167, small_total: 1236});
+    });
+
+    test.when(supported)('select: of an expression', async () => {
+      await expect(`
+        run: a -> {
+          where: state = 'AK'
+          aggregate: n is doubled.double_count.sum()
+        }
+      `).toMatchResult(tm, {n: 1216});
+    });
+
+    test.when(supported)('group_by:', async () => {
+      // Alaska's airports and seaplane bases each number over 100
+      await expect(`
+        run: a -> {
+          where: state = 'AK' and by_size.big = true
+          aggregate: n is by_size.n.sum()
+        }
+      `).toMatchResult(tm, {n: 578});
+    });
+
+    test.when(supported)('several stages', async () => {
+      await expect(`
+        run: a -> {
+          where: state = 'AK'
+          aggregate: n is busy_types.count()
+        }
+      `).toMatchResult(tm, {n: 2});
+    });
+
+    test.when(db === 'duckdb')(
+      'DuckDB makes a select: in place, a group_by: as a subquery',
+      async () => {
+        const sqlOf = (dimension: string) =>
+          runtime
+            .loadModel(model)
+            .loadQuery(
+              `run: a -> { where: state = 'AK'; select: ${dimension} }`
+            )
+            .getSQL();
+        const selected = await sqlOf('small_types');
+        expect(selected).toMatch(/LIST_FILTER/);
+        expect(selected).not.toMatch(/SELECT UNNEST\(base\./);
+        const grouped = await sqlOf('by_size');
+        expect(grouped).toMatch(/SELECT UNNEST\(base\./);
+      }
+    );
   });
 });
 
