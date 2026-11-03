@@ -18,10 +18,16 @@ export interface BarChartSettings extends Record<string, unknown> {
   yChannel: YChannel;
   seriesChannel: SeriesChannel;
   isStack: boolean;
+  // 'horizontal' draws the bars left to right, with the categories down the
+  // left side, so long category labels can be read in full.
+  orient: BarChartOrient;
   interactive: boolean;
   hideReferences: boolean;
   disableEmbedded: boolean;
 }
+
+export const BAR_CHART_ORIENTS = ['vertical', 'horizontal'] as const;
+export type BarChartOrient = (typeof BAR_CHART_ORIENTS)[number];
 
 // Default settings object
 export const defaultBarChartSettings: BarChartSettings = {
@@ -43,6 +49,7 @@ export const defaultBarChartSettings: BarChartSettings = {
     limit: 'auto',
   },
   isStack: false,
+  orient: 'vertical',
   interactive: true,
   hideReferences: false,
   disableEmbedded: false,
@@ -81,6 +88,7 @@ export interface IBarChartSettingsSchema extends JSONSchemaObject {
       };
     };
     isStack: JSONSchemaBoolean;
+    orient: JSONSchemaString;
     interactive: JSONSchemaBoolean;
     hideReferences: JSONSchemaBoolean;
     disableEmbedded: JSONSchemaBoolean;
@@ -229,6 +237,14 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
       type: 'boolean',
       default: false,
     },
+    orient: {
+      title: 'Orientation',
+      description:
+        'Whether bars run up from the x axis (vertical) or across from the left (horizontal). Horizontal suits long category labels.',
+      type: 'string',
+      enum: [...BAR_CHART_ORIENTS],
+      default: 'vertical',
+    },
     interactive: {
       title: 'Interactive',
       description:
@@ -255,6 +271,7 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
     'yChannel',
     'seriesChannel',
     'isStack',
+    'orient',
     'interactive',
     'hideReferences',
     'disableEmbedded',

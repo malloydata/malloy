@@ -9,7 +9,9 @@ import type {Field, NestField} from '@/data_tree';
 import {walkFields} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {
+  BAR_CHART_ORIENTS,
   defaultBarChartSettings,
+  type BarChartOrient,
   type BarChartSettings,
 } from './bar-chart-settings';
 
@@ -107,6 +109,14 @@ export function getBarChartSettings(
   }
 
   const isStack = vizTag.has('stack');
+
+  // An unknown orient falls back to vertical; the validator reports it.
+  const orientText = vizTag.text('orient');
+  const orient: BarChartOrient = (
+    BAR_CHART_ORIENTS as readonly string[]
+  ).includes(orientText ?? '')
+    ? (orientText as BarChartOrient)
+    : defaultBarChartSettings.orient;
 
   // Parse top level tags from viz properties
   if (vizTag.text('x')) {
@@ -271,6 +281,7 @@ export function getBarChartSettings(
     yChannel,
     seriesChannel,
     isStack,
+    orient,
     interactive,
     hideReferences,
     disableEmbedded,
