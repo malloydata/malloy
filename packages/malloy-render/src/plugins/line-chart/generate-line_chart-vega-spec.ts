@@ -136,6 +136,7 @@ export function generateLineChartVegaSpecV2(
   };
 
   const yField = explore.fieldAt(yFieldPath);
+  const yFields = settings.yChannel.fields.map(f => explore.fieldAt(f));
   let seriesField: Field | SyntheticSeriesField | null = seriesFieldPath
     ? explore.fieldAt(seriesFieldPath)
     : null;
@@ -546,6 +547,11 @@ export function generateLineChartVegaSpecV2(
       type: 'formula',
       as: 'series',
       expr: "replace(datum.series, '__values.', '')",
+    });
+    // Drop each series' missing points, as a single # y field does
+    valuesData.transform!.push({
+      type: 'filter',
+      expr: 'isValid(datum.y)',
     });
   }
 
@@ -1061,8 +1067,9 @@ export function generateLineChartVegaSpecV2(
       if (skipSeries(seriesVal)) {
         return;
       }
-      // Filter out missing metric values
-      const isMissingY = row.column(yField.name).value === null;
+      // Filter out missing metric values. With several # y fields, keep the
+      // row while any of them has a value; the fold drops each series' nulls.
+      const isMissingY = yFields.every(f => row.column(f.name).value === null);
       if (isMissingY) {
         return;
       }
