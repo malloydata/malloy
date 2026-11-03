@@ -295,10 +295,37 @@ export class DuckDBDialect extends PostgresBase {
     }
   }
 
-  sqlArraySelect({source, element, fields, filter}: ArraySelect): string {
-    const elements = filter
+  // An order_by is LIST_GRADE_UP of the keys, which gives the elements'
+  // positions in order, and LIST_SELECT of those positions. It is not
+  // stable on long lists, so several keys are one sort on a record of them,
+  // not one sort per key. A record's nulls sort last ascending but not
+  // descending, so several keys are only done when all are ascending; the
+  // rest is left to the correlated subquery.
+  sqlArraySelect({
+    source,
+    element,
+    fields,
+    filter,
+    orderBy = [],
+    limit,
+  }: ArraySelect): string | undefined {
+    if (orderBy.length > 1 && orderBy.some(o => o.dir === 'desc')) {
+      return undefined;
+    }
+    let elements = filter
       ? `LIST_FILTER(${source}, ${element} -> ${filter})`
       : source;
+    if (orderBy.length > 0) {
+      const key =
+        orderBy.length === 1
+          ? orderBy[0].sql
+          : `{${orderBy.map((o, i) => `'k${i}': ${o.sql}`).join(', ')}}`;
+      const dir = orderBy[0].dir === 'desc' ? 'DESC' : 'ASC';
+      elements = `LIST_SELECT(${elements}, LIST_GRADE_UP(LIST_TRANSFORM(${elements}, ${element} -> ${key}), '${dir}', 'NULLS LAST'))`;
+    }
+    if (limit !== undefined) {
+      elements = `LIST_SLICE(${elements}, 1, ${limit})`;
+    }
     const record = fields
       .map(f => `${this.sqlQuoteIdentifier(f.name)} := ${f.sql}`)
       .join(', ');

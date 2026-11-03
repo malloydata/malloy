@@ -307,6 +307,93 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 2});
     });
 
+    // Alaska's facility types, as a query on its array
+    const alaskaTypes = (query: string) => `
+      run: a extend { dimension: types is by_fac_type -> ${query} } -> {
+        where: state = 'AK'
+        select: types
+      }
+    `;
+
+    test.when(supported)('order_by: and limit:', async () => {
+      await expect(
+        alaskaTypes(`{
+          select: fac_type, airport_count
+          order_by: airport_count desc
+          limit: 1
+        }`)
+      ).toEqualResult(tm, [
+        {types: [{fac_type: 'AIRPORT', airport_count: 474}]},
+      ]);
+      await expect(
+        alaskaTypes(`{
+          select: fac_type, airport_count
+          order_by: airport_count
+          limit: 2
+        }`)
+      ).toEqualResult(tm, [
+        {
+          types: [
+            {fac_type: 'HELIPORT', airport_count: 30},
+            {fac_type: 'SEAPLANE BASE', airport_count: 104},
+          ],
+        },
+      ]);
+    });
+
+    test.when(supported)('order_by: a position', async () => {
+      await expect(
+        alaskaTypes('{ select: fac_type, airport_count; order_by: 2 desc }')
+      ).toEqualResult(tm, [
+        {
+          types: [
+            {fac_type: 'AIRPORT', airport_count: 474},
+            {fac_type: 'SEAPLANE BASE', airport_count: 104},
+            {fac_type: 'HELIPORT', airport_count: 30},
+          ],
+        },
+      ]);
+    });
+
+    test.when(supported)('order_by: keys in both directions', async () => {
+      await expect(
+        alaskaTypes(`{
+          select: fac_type, big is airport_count > 50
+          order_by: big desc, fac_type
+        }`)
+      ).toEqualResult(tm, [
+        {
+          types: [
+            {fac_type: 'AIRPORT', big: true},
+            {fac_type: 'SEAPLANE BASE', big: true},
+            {fac_type: 'HELIPORT', big: false},
+          ],
+        },
+      ]);
+    });
+
+    test.when(db === 'duckdb')(
+      'DuckDB sorts in place, unless the keys go both ways',
+      async () => {
+        const sqlOf = (query: string) =>
+          runtime.loadModel(model).loadQuery(alaskaTypes(query)).getSQL();
+        const sorted = await sqlOf(
+          '{ select: fac_type; order_by: fac_type desc; limit: 2 }'
+        );
+        expect(sorted).toMatch(/LIST_GRADE_UP/);
+        expect(sorted).toMatch(/LIST_SLICE/);
+        expect(sorted).not.toMatch(/SELECT UNNEST\(base\./);
+        const ascending = await sqlOf(
+          '{ select: fac_type, airport_count; order_by: fac_type, airport_count }'
+        );
+        expect(ascending).toMatch(/LIST_GRADE_UP/);
+        const bothWays = await sqlOf(
+          '{ select: fac_type, airport_count; order_by: fac_type, airport_count desc }'
+        );
+        expect(bothWays).toMatch(/SELECT UNNEST\(base\./);
+      }
+    );
+
     test.when(db === 'duckdb')(
       'DuckDB makes a select: in place, a group_by: as a subquery',
       async () => {

@@ -2651,9 +2651,8 @@ export class QueryQuery extends QueryField {
   /**
    * `array -> { select: ... }` as the array's elements made into records in
    * place by the dialect (`sqlArraySelect`), when the query is one `select:`
-   * with an optional `where:` of the elements, and the dialect can;
-   * undefined otherwise. An `order_by:` or `limit:` is left to the
-   * correlated subquery.
+   * of the elements, with an optional `where:`, `order_by:` of selected
+   * fields and `limit:`, and the dialect can; undefined otherwise.
    */
   private arraySelectSQL(
     array: QueryStruct,
@@ -2661,12 +2660,7 @@ export class QueryQuery extends QueryField {
     pipeline: PipeSegment[]
   ): string | undefined {
     const [segment, ...moreSegments] = pipeline;
-    if (
-      moreSegments.length > 0 ||
-      segment?.type !== 'project' ||
-      segment.limit !== undefined ||
-      (segment.orderBy ?? []).length > 0
-    ) {
+    if (moreSegments.length > 0 || segment?.type !== 'project') {
       return undefined;
     }
     const outputs = segment.outputStruct.fields;
@@ -2700,11 +2694,23 @@ export class QueryQuery extends QueryField {
       return undefined;
     }
     const sql = (e: Expr) => exprToSQL(this.rootResult, element, e);
+    // An `order_by:` names a selected field, by name or by position.
+    const orderBy: {sql: string; dir: 'asc' | 'desc'}[] = [];
+    for (const {field, dir} of segment.orderBy ?? []) {
+      const i =
+        typeof field === 'number'
+          ? field - 1
+          : outputs.findIndex(o => o.name === field);
+      if (values[i] === undefined) return undefined;
+      orderBy.push({sql: sql(values[i]), dir: dir ?? 'asc'});
+    }
     return array.dialect.sqlArraySelect({
       source: arraySQL,
       element: element.getIdentifier(),
       fields: values.map((v, i) => ({name: outputs[i].name, sql: sql(v)})),
       filter: filters.length > 0 ? filters.map(sql).join(' AND ') : undefined,
+      orderBy,
+      limit: segment.limit,
     });
   }
 

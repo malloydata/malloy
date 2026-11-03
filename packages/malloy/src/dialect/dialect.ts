@@ -52,14 +52,18 @@ export type DialectFieldList = DialectField[];
  */
 /**
  * The elements of an array made into records (`Dialect.sqlArraySelect`):
- * those for which `filter` holds, each as a record with a field for each of
- * `fields`, valued by its `sql`.
+ * those for which `filter` holds, in the order of `orderBy`, the first
+ * `limit` of them, each as a record with a field for each of `fields`,
+ * valued by its `sql`. Each `orderBy` key is an expression of an element,
+ * and its nulls sort last.
  */
 export interface ArraySelect {
   source: string;
   element: string;
   fields: {name: string; sql: string}[];
   filter?: string;
+  orderBy?: {sql: string; dir: 'asc' | 'desc'}[];
+  limit?: number;
 }
 
 export interface ArrayAggregate {
