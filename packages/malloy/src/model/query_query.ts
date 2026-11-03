@@ -4,6 +4,7 @@
  */
 
 import type {
+  ArrayComparator,
   ArraySelect,
   DialectFieldList,
   CompiledOrderBy,
@@ -14,6 +15,7 @@ import {exprToSQL} from './expression_compiler';
 import type {
   AtomicTypeDef,
   Expr,
+  FilterCondition,
   TurtleDef,
   IndexFieldDef,
   IndexSegment,
@@ -2570,6 +2572,39 @@ export class QueryQuery extends QueryField {
   }
 
   /**
+   * What both in-place forms of `array -> { ... }` need: an element struct
+   * to compile expressions on, and the `where:` conditions compiled for it.
+   * Undefined, so that the query is written as a correlated subquery, when
+   * any condition is not of one element (a `having:` is an aggregate), or
+   * when `filters` or `values` read anything but an element's own fields.
+   */
+  private inPlaceElements(
+    array: QueryStruct,
+    filters: FilterCondition[],
+    values: Expr[]
+  ): {element: QueryStruct; filter: string | undefined} | undefined {
+    if (!filters.every(f => expressionIsScalar(f.expressionType))) {
+      return undefined;
+    }
+    const element = this.arrayElementStruct(array);
+    if (
+      element === undefined ||
+      ![...values, ...filters.map(f => f.e)].every(e =>
+        this.readsOnlyElementsOf(element, e)
+      )
+    ) {
+      return undefined;
+    }
+    const filter =
+      filters.length > 0
+        ? filters
+            .map(f => exprToSQL(this.rootResult, element, f.e))
+            .join(' AND ')
+        : undefined;
+    return {element, filter};
+  }
+
+  /**
    * `array -> { ... }` as one aggregate over the array's elements, computed in
    * place by the dialect (`sqlArrayAggregate`), when the query is that simple
    * and the dialect can; undefined otherwise, and it is written as a
@@ -2586,6 +2621,10 @@ export class QueryQuery extends QueryField {
     if (moreSegments.length > 0 || segment?.type !== 'reduce') {
       return undefined;
     }
+    // One aggregate is one row, which only a `limit: 0` would remove.
+    if (segment.limit !== undefined && segment.limit < 1) {
+      return undefined;
+    }
     const [field, ...moreFields] = segment.queryFields;
     if (
       moreFields.length > 0 ||
@@ -2598,12 +2637,10 @@ export class QueryQuery extends QueryField {
     }
     // The query's `where:`, and a filter on the aggregate, both choose the
     // elements it aggregates.
-    const filters = (segment.filterList ?? [])
-      .filter(f => expressionIsScalar(f.expressionType))
-      .map(f => f.e);
+    const filters = [...(segment.filterList ?? [])];
     let measure = field.e;
     if (measure.node === 'filteredExpr') {
-      filters.push(...measure.kids.filterList.map(f => f.e));
+      filters.push(...measure.kids.filterList);
       measure = measure.kids.e;
     }
     if (measure.node !== 'aggregate' || measure.structPath !== undefined) {
@@ -2614,28 +2651,27 @@ export class QueryQuery extends QueryField {
     if ((measure.function === 'count') !== (value === undefined)) {
       return undefined;
     }
-    const element = this.arrayElementStruct(array);
-    if (element === undefined) return undefined;
-    const read = value ? [value, ...filters] : filters;
-    if (!read.every(e => this.readsOnlyElementsOf(element, e))) {
-      return undefined;
-    }
-    const sql = (e: Expr) => exprToSQL(this.rootResult, element, e);
+    const inPlace = this.inPlaceElements(array, filters, value ? [value] : []);
+    if (inPlace === undefined) return undefined;
+    const {element, filter} = inPlace;
     return array.dialect.sqlArrayAggregate({
       source: arraySQL,
       element: element.getIdentifier(),
       function: measure.function,
-      value: value && sql(value),
-      filter: filters.length > 0 ? filters.map(sql).join(' AND ') : undefined,
+      value: value && exprToSQL(this.rootResult, element, value),
+      filter,
+      resultType: isAtomic(field) ? TD.atomicDef(field) : undefined,
     });
   }
 
   /**
    * A copy of the array's struct under a name of its own, for compiling
    * expressions on its elements in place: they read an element by an alias
-   * no join of this query uses, which the dialect gives the element. The
-   * array's own alias would not do: if this query also unnests the array, a
-   * column of that name is in scope, and in a lambda the column would win.
+   * which the dialect gives the element. The array's own alias would not do:
+   * if this query also unnests the array, a column of that name is in scope,
+   * and in a lambda the column would win. The alias is unique among this
+   * query's aliases, and starts with `__`, as Malloy's own names do, so that
+   * a table's column is unlikely to share it.
    */
   private arrayElementStruct(
     array: QueryStruct,
@@ -2645,7 +2681,7 @@ export class QueryQuery extends QueryField {
     const element = new QueryStruct(
       {
         ...array.structDef,
-        name: `${activeName(array.structDef)}_${role}`,
+        name: `__${activeName(array.structDef)}_${role}`,
         as: undefined,
       },
       undefined,
@@ -2689,18 +2725,13 @@ export class QueryQuery extends QueryField {
         return undefined;
       }
     }
-    const filterList = segment.filterList ?? [];
-    if (!filterList.every(f => expressionIsScalar(f.expressionType))) {
-      return undefined;
-    }
-    const filters = filterList.map(f => f.e);
-    const element = this.arrayElementStruct(array);
-    if (
-      element === undefined ||
-      ![...values, ...filters].every(e => this.readsOnlyElementsOf(element, e))
-    ) {
-      return undefined;
-    }
+    const inPlace = this.inPlaceElements(
+      array,
+      segment.filterList ?? [],
+      values
+    );
+    if (inPlace === undefined) return undefined;
+    const {element, filter} = inPlace;
     const sql = (e: Expr, of = element) => exprToSQL(this.rootResult, of, e);
     const fields: {name: string; sql: string; typeDef: AtomicTypeDef}[] = [];
     for (const [i, output] of outputs.entries()) {
@@ -2711,12 +2742,8 @@ export class QueryQuery extends QueryField {
         typeDef: TD.atomicDef(output),
       });
     }
-    // An `order_by:` names a selected field, by name or by position. Each
-    // key is compiled for the element, and for the two elements a
-    // comparator compares.
-    const left = this.arrayElementStruct(array, 'left');
-    const right = this.arrayElementStruct(array, 'right');
-    if (left === undefined || right === undefined) return undefined;
+    // An `order_by:` names a selected field, by name or by position.
+    const keys: Expr[] = [];
     const orderBy: ArraySelect['orderBy'] = [];
     for (const {field, dir} of segment.orderBy ?? []) {
       const i =
@@ -2724,22 +2751,30 @@ export class QueryQuery extends QueryField {
           ? field - 1
           : outputs.findIndex(o => o.name === field);
       if (values[i] === undefined) return undefined;
-      orderBy.push({
-        sql: sql(values[i]),
-        left: sql(values[i], left),
-        right: sql(values[i], right),
-        dir: dir ?? 'asc',
-      });
+      keys.push(values[i]);
+      orderBy.push({sql: sql(values[i]), dir: dir ?? 'asc'});
     }
+    // The same keys for the two elements a comparator compares, compiled
+    // only for a dialect which sorts with one.
+    const comparator = (): ArrayComparator => {
+      const left = this.arrayElementStruct(array, 'left');
+      const right = this.arrayElementStruct(array, 'right');
+      if (left === undefined || right === undefined) {
+        throw new Error('Internal Error: an array element has no parent');
+      }
+      return {
+        left: left.getIdentifier(),
+        right: right.getIdentifier(),
+        keys: keys.map(k => ({left: sql(k, left), right: sql(k, right)})),
+      };
+    };
     return array.dialect.sqlArraySelect({
       source: arraySQL,
       element: element.getIdentifier(),
       fields,
-      filter:
-        filters.length > 0 ? filters.map(e => sql(e)).join(' AND ') : undefined,
+      filter,
       orderBy,
-      leftElement: left.getIdentifier(),
-      rightElement: right.getIdentifier(),
+      comparator,
       limit: segment.limit,
     });
   }

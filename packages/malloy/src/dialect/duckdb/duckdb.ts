@@ -303,7 +303,9 @@ export class DuckDBDialect extends PostgresBase {
   // stable on long lists, so several keys are one sort on a record of them,
   // not one sort per key. A record's nulls sort last ascending but not
   // descending, so several keys are only done when all are ascending; the
-  // rest is left to the correlated subquery.
+  // rest is left to the correlated subquery. The list is sorted inside a
+  // lambda over a one-element list, so that it is named once and computed
+  // once, rather than written out for both LIST_SELECT and LIST_GRADE_UP.
   sqlArraySelect({
     source,
     element,
@@ -324,7 +326,8 @@ export class DuckDBDialect extends PostgresBase {
           ? `(${orderBy[0].sql})`
           : `{${orderBy.map((o, i) => `'k${i}': (${o.sql})`).join(', ')}}`;
       const dir = orderBy[0].dir === 'desc' ? 'DESC' : 'ASC';
-      elements = `LIST_SELECT(${elements}, LIST_GRADE_UP(LIST_TRANSFORM(${elements}, ${element} -> ${key}), '${dir}', 'NULLS LAST'))`;
+      const list = `${element}_list`;
+      elements = `LIST_TRANSFORM([${elements}], ${list} -> LIST_SELECT(${list}, LIST_GRADE_UP(LIST_TRANSFORM(${list}, ${element} -> ${key}), '${dir}', 'NULLS LAST')))[1]`;
     }
     if (limit !== undefined) {
       elements = `LIST_SLICE(${elements}, 1, ${limit})`;

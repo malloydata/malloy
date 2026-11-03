@@ -45,16 +45,10 @@ interface DialectField {
 export type DialectFieldList = DialectField[];
 
 /**
- * One aggregate over the elements of an array (`Dialect.sqlArrayAggregate`):
- * `function` of `value` over the elements for which `filter` holds. A
- * `count` is of the elements themselves and has no `value`; a `distinct` is
- * the number of distinct non-null values, as Malloy's `count(x)` is.
- */
-/**
  * The elements of an array made into records (`Dialect.sqlArraySelect`):
  * those for which `filter` holds, in the order of `orderBy`, the first
  * `limit` of them, each as a record with a field for each of `fields`,
- * valued by its `sql`. Each `orderBy` key is an expression of an element,
+ * valued by its `sql`. Each `orderBy` key is an expression of `element`,
  * and its nulls sort last.
  */
 export interface ArraySelect {
@@ -62,22 +56,37 @@ export interface ArraySelect {
   element: string;
   fields: {name: string; sql: string; typeDef: AtomicTypeDef}[];
   filter?: string;
+  orderBy?: {sql: string; dir: 'asc' | 'desc'}[];
   /**
-   * Each key as `sql` of `element`, and as `left` and `right` of the two
-   * elements a comparator compares, named `leftElement` and `rightElement`.
+   * The `orderBy` keys of the two elements a comparator compares, named
+   * `left` and `right`: compiled only when called, by a dialect which sorts
+   * with a comparator.
    */
-  orderBy?: {sql: string; left: string; right: string; dir: 'asc' | 'desc'}[];
-  leftElement?: string;
-  rightElement?: string;
+  comparator?: () => ArrayComparator;
   limit?: number;
 }
 
+export interface ArrayComparator {
+  left: string;
+  right: string;
+  keys: {left: string; right: string}[];
+}
+
+/**
+ * One aggregate over the elements of an array (`Dialect.sqlArrayAggregate`):
+ * `function` of `value` over the elements for which `filter` holds. A
+ * `count` is of the elements themselves and has no `value`; a `distinct` is
+ * the number of distinct non-null values, as Malloy's `count(x)` is.
+ * `resultType` is the type of the aggregate, so that a sum of integers can
+ * stay exact.
+ */
 export interface ArrayAggregate {
   source: string;
   element: string;
   function: 'sum' | 'avg' | 'count' | 'distinct' | 'min' | 'max';
   value?: string;
   filter?: string;
+  resultType?: AtomicTypeDef;
 }
 
 /**

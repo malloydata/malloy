@@ -141,6 +141,44 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     await expect(query).toEqualResult(tm, [{d: 578}]);
   });
 
+  test.when(correlated)("the array query's own having:", async () => {
+    // Alaska has three facility types; a having: which no row passes leaves
+    // no row, so no value
+    await expect(
+      alaska('by_fac_type -> { aggregate: n is count(); having: n > 3 }')
+    ).toEqualResult(tm, [{d: null}]);
+    await expect(
+      alaska('by_fac_type -> { aggregate: n is count(); having: n > 2 }')
+    ).toEqualResult(tm, [{d: 3}]);
+  });
+
+  test.when(supported && !correlated)(
+    'without a correlated subquery, a having: is an error',
+    async () => {
+      await expect(
+        runtime
+          .loadModel(model)
+          .loadQuery(
+            alaska('by_fac_type -> { aggregate: n is count(); having: n > 3 }')
+          )
+          .getSQL()
+      ).rejects.toThrow(/can only query an array/);
+    }
+  );
+
+  test.when(db === 'trino' || db === 'presto')(
+    'a sum of integers stays an integer',
+    async () => {
+      const sql = await runtime
+        .loadModel(model)
+        .loadQuery(
+          alaska('by_fac_type -> { aggregate: n is airport_count.sum() }')
+        )
+        .getSQL();
+      expect(sql).toMatch(/CAST\(0 AS BIGINT\)/);
+    }
+  );
+
   test.when(supported)('a where: and a filtered aggregate', async () => {
     const query = alaska(`by_fac_type -> {
       where: airport_count > 50
@@ -199,7 +237,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         }
       `);
       expect(sql).toMatch(/LIST_SUM/);
-      expect(sql).toMatch(/by_fac_type_element_0 ->/);
+      expect(sql).toMatch(/__by_fac_type_element_0 ->/);
     });
 
     test.when(duckdb)('empty and null arrays', async () => {
@@ -371,6 +409,18 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       ]);
     });
 
+    test.when(supported)('where: with order_by:', async () => {
+      await expect(
+        alaskaTypes(`{
+          select: fac_type
+          where: airport_count > 50
+          order_by: fac_type desc
+        }`)
+      ).toEqualResult(tm, [
+        {types: [{fac_type: 'SEAPLANE BASE'}, {fac_type: 'AIRPORT'}]},
+      ]);
+    });
+
     test.when(supported)('order_by: keys in both directions', async () => {
       await expect(
         alaskaTypes(`{
@@ -403,6 +453,12 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
           '{ select: fac_type, airport_count; order_by: fac_type, airport_count }'
         );
         expect(ascending).toMatch(/LIST_GRADE_UP/);
+        // The filtered list is computed once, and sorted inside a lambda.
+        const filtered = await sqlOf(
+          '{ select: fac_type; where: airport_count > 50; order_by: fac_type desc }'
+        );
+        expect(filtered.match(/LIST_FILTER/g)).toHaveLength(1);
+        expect(filtered).toMatch(/LIST_GRADE_UP/);
         const bothWays = await sqlOf(
           '{ select: fac_type, airport_count; order_by: fac_type, airport_count desc }'
         );

@@ -296,6 +296,7 @@ export class TrinoDialect extends PostgresBase {
     function: func,
     value,
     filter,
+    resultType,
   }: ArrayAggregate): string {
     const elements = filter
       ? `filter(${source}, ${element} -> ${filter})`
@@ -311,8 +312,16 @@ export class TrinoDialect extends PostgresBase {
         return `COALESCE(cardinality(${elements}), 0)`;
       case 'distinct':
         return `COALESCE(cardinality(array_distinct(${nonNull})), 0)`;
-      case 'sum':
-        return `COALESCE(reduce(${nonNull}, CAST(0 AS DOUBLE), (${acc}, ${v}) -> ${acc} + ${v}, ${acc} -> ${acc}), 0)`;
+      case 'sum': {
+        // reduce's state has one type, so a sum of integers is a BIGINT, and
+        // any other sum a DOUBLE.
+        const integral =
+          resultType?.type === 'number' &&
+          (resultType.numberType === 'integer' ||
+            resultType.numberType === 'bigint');
+        const zero = `CAST(0 AS ${integral ? 'BIGINT' : 'DOUBLE'})`;
+        return `COALESCE(reduce(${nonNull}, ${zero}, (${acc}, ${v}) -> ${acc} + ${v}, ${acc} -> ${acc}), 0)`;
+      }
       case 'avg': {
         const state = 'ROW(s DOUBLE, n BIGINT)';
         return `reduce(${nonNull}, CAST(ROW(0.0, 0) AS ${state}), (${acc}, ${v}) -> CAST(ROW(${acc}.s + ${v}, ${acc}.n + 1) AS ${state}), ${acc} -> IF(${acc}.n = 0, NULL, ${acc}.s / ${acc}.n))`;
@@ -330,26 +339,27 @@ export class TrinoDialect extends PostgresBase {
     fields,
     filter,
     orderBy = [],
-    leftElement,
-    rightElement,
+    comparator,
     limit,
   }: ArraySelect): string | undefined {
     let elements = filter
       ? `filter(${source}, ${element} -> ${filter})`
       : source;
     if (orderBy.length > 0) {
-      if (leftElement === undefined || rightElement === undefined) {
+      if (comparator === undefined) {
         return undefined;
       }
+      const {left, right, keys} = comparator();
       // Each key in turn, nulls last either way; equal on every key is 0.
       let compare = '0';
-      for (const key of [...orderBy].reverse()) {
-        const [before, after] = key.dir === 'desc' ? ['1', '-1'] : ['-1', '1'];
-        const l = `(${key.left})`;
-        const r = `(${key.right})`;
+      for (let i = orderBy.length - 1; i >= 0; i--) {
+        const [before, after] =
+          orderBy[i].dir === 'desc' ? ['1', '-1'] : ['-1', '1'];
+        const l = `(${keys[i].left})`;
+        const r = `(${keys[i].right})`;
         compare = `CASE WHEN ${l} IS NULL AND ${r} IS NULL THEN ${compare} WHEN ${l} IS NULL THEN 1 WHEN ${r} IS NULL THEN -1 WHEN ${l} < ${r} THEN ${before} WHEN ${l} > ${r} THEN ${after} ELSE ${compare} END`;
       }
-      elements = `array_sort(${elements}, (${leftElement}, ${rightElement}) -> ${compare})`;
+      elements = `array_sort(${elements}, (${left}, ${right}) -> ${compare})`;
     }
     if (limit !== undefined) {
       elements = `slice(${elements}, 1, ${limit})`;
