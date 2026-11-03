@@ -34,9 +34,12 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  ArrayAggregate,
+  ArraySelect,
   CivilTime,
   CompiledOrderBy,
   DialectFieldList,
+  FieldReferenceType,
   OrderByClauseType,
   QueryInfo,
   TimeOffset,
@@ -276,6 +279,84 @@ export class TrinoDialect extends PostgresBase {
       return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore) ON TRUE`;
     }
   }
+  // Arrays are computed on in place with lambdas: filter, transform,
+  // reduce, array_sort with a comparator, and slice. Lambda parameters are
+  // named after the element so that they cannot be hidden by a column.
+  // array_max and array_min are null if any element is, so nulls are
+  // filtered out first, as an aggregate ignores them.
+  sqlArrayAggregate({
+    source,
+    element,
+    function: func,
+    value,
+    filter,
+  }: ArrayAggregate): string {
+    const elements = filter
+      ? `filter(${source}, ${element} -> ${filter})`
+      : source;
+    const values = value
+      ? `transform(${elements}, ${element} -> ${value})`
+      : elements;
+    const v = `${element}_value`;
+    const acc = `${element}_acc`;
+    const nonNull = `filter(${values}, ${v} -> ${v} IS NOT NULL)`;
+    switch (func) {
+      case 'count':
+        return `COALESCE(cardinality(${elements}), 0)`;
+      case 'distinct':
+        return `COALESCE(cardinality(array_distinct(${nonNull})), 0)`;
+      case 'sum':
+        return `COALESCE(reduce(${nonNull}, CAST(0 AS DOUBLE), (${acc}, ${v}) -> ${acc} + ${v}, ${acc} -> ${acc}), 0)`;
+      case 'avg': {
+        const state = 'ROW(s DOUBLE, n BIGINT)';
+        return `reduce(${nonNull}, CAST(ROW(0.0, 0) AS ${state}), (${acc}, ${v}) -> CAST(ROW(${acc}.s + ${v}, ${acc}.n + 1) AS ${state}), ${acc} -> IF(${acc}.n = 0, NULL, ${acc}.s / ${acc}.n))`;
+      }
+      case 'min':
+        return `array_min(${nonNull})`;
+      case 'max':
+        return `array_max(${nonNull})`;
+    }
+  }
+
+  sqlArraySelect({
+    source,
+    element,
+    fields,
+    filter,
+    orderBy = [],
+    leftElement,
+    rightElement,
+    limit,
+  }: ArraySelect): string | undefined {
+    let elements = filter
+      ? `filter(${source}, ${element} -> ${filter})`
+      : source;
+    if (orderBy.length > 0) {
+      if (leftElement === undefined || rightElement === undefined) {
+        return undefined;
+      }
+      // Each key in turn, nulls last either way; equal on every key is 0.
+      let compare = '0';
+      for (const key of [...orderBy].reverse()) {
+        const [before, after] = key.dir === 'desc' ? ['1', '-1'] : ['-1', '1'];
+        const l = `(${key.left})`;
+        const r = `(${key.right})`;
+        compare = `CASE WHEN ${l} IS NULL AND ${r} IS NULL THEN ${compare} WHEN ${l} IS NULL THEN 1 WHEN ${r} IS NULL THEN -1 WHEN ${l} < ${r} THEN ${before} WHEN ${l} > ${r} THEN ${after} ELSE ${compare} END`;
+      }
+      elements = `array_sort(${elements}, (${leftElement}, ${rightElement}) -> ${compare})`;
+    }
+    if (limit !== undefined) {
+      elements = `slice(${elements}, 1, ${limit})`;
+    }
+    const fieldList: DialectFieldList = fields.map(f => ({
+      typeDef: f.typeDef,
+      sqlExpression: f.sql,
+      rawName: f.name,
+    }));
+    const record = `CAST(ROW(${fields.map(f => f.sql).join(', ')}) AS ROW(${this.buildTypeExpression(fieldList)}))`;
+    return `COALESCE(transform(${elements}, ${element} -> ${record}), ARRAY[])`;
+  }
+
   static dtype = 'DECIMAL(38,0)';
 
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
@@ -306,10 +387,13 @@ export class TrinoDialect extends PostgresBase {
 
   sqlFieldReference(
     parentAlias: string,
-    _parentType: unknown,
+    parentType: FieldReferenceType,
     childName: string,
     _childType: string
   ): string {
+    if (parentType === 'element[scalar]') {
+      return parentAlias;
+    }
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
     if (childName === '__row_id') {
       return `__row_id_from_${parentAlias}`;
@@ -728,6 +812,11 @@ export class PrestoDialect extends TrinoDialect {
   name = 'presto';
   supportsPipelinesInViews = false; // what a drag...
   supportsLeftJoinUnnest = false; // we need to fix this....
+  // Presto rejects correlated subqueries ("Given correlated subquery is not
+  // supported"), so a query on an array runs only where it is computed in
+  // place, with lambdas.
+  supportsArrayQueries = true;
+  supportsCorrelatedArrayQueries = false;
 
   sqlGenerateUUID(): string {
     return 'CAST(UUID() AS VARCHAR)';

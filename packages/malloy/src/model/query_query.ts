@@ -4,6 +4,7 @@
  */
 
 import type {
+  ArraySelect,
   DialectFieldList,
   CompiledOrderBy,
   LateralJoinExpression,
@@ -11,6 +12,7 @@ import type {
 } from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
+  AtomicTypeDef,
   Expr,
   TurtleDef,
   IndexFieldDef,
@@ -43,6 +45,7 @@ import {
   isQuerySegment,
   hasExpression,
   isAtomic,
+  TD,
   expressionIsCalculation,
   expressionIsScalar,
   activeName,
@@ -2634,18 +2637,23 @@ export class QueryQuery extends QueryField {
    * array's own alias would not do: if this query also unnests the array, a
    * column of that name is in scope, and in a lambda the column would win.
    */
-  private arrayElementStruct(array: QueryStruct): QueryStruct | undefined {
+  private arrayElementStruct(
+    array: QueryStruct,
+    role: 'element' | 'left' | 'right' = 'element'
+  ): QueryStruct | undefined {
     if (array.parent === undefined) return undefined;
-    return new QueryStruct(
+    const element = new QueryStruct(
       {
         ...array.structDef,
-        name: `${activeName(array.structDef)}_element`,
+        name: `${activeName(array.structDef)}_${role}`,
         as: undefined,
       },
       undefined,
       {struct: array.parent},
       array.prepareResultOptions
     );
+    element.isLambdaElement = true;
+    return element;
   }
 
   /**
@@ -2693,23 +2701,45 @@ export class QueryQuery extends QueryField {
     ) {
       return undefined;
     }
-    const sql = (e: Expr) => exprToSQL(this.rootResult, element, e);
-    // An `order_by:` names a selected field, by name or by position.
-    const orderBy: {sql: string; dir: 'asc' | 'desc'}[] = [];
+    const sql = (e: Expr, of = element) => exprToSQL(this.rootResult, of, e);
+    const fields: {name: string; sql: string; typeDef: AtomicTypeDef}[] = [];
+    for (const [i, output] of outputs.entries()) {
+      if (!isAtomic(output)) return undefined;
+      fields.push({
+        name: output.name,
+        sql: sql(values[i]),
+        typeDef: TD.atomicDef(output),
+      });
+    }
+    // An `order_by:` names a selected field, by name or by position. Each
+    // key is compiled for the element, and for the two elements a
+    // comparator compares.
+    const left = this.arrayElementStruct(array, 'left');
+    const right = this.arrayElementStruct(array, 'right');
+    if (left === undefined || right === undefined) return undefined;
+    const orderBy: ArraySelect['orderBy'] = [];
     for (const {field, dir} of segment.orderBy ?? []) {
       const i =
         typeof field === 'number'
           ? field - 1
           : outputs.findIndex(o => o.name === field);
       if (values[i] === undefined) return undefined;
-      orderBy.push({sql: sql(values[i]), dir: dir ?? 'asc'});
+      orderBy.push({
+        sql: sql(values[i]),
+        left: sql(values[i], left),
+        right: sql(values[i], right),
+        dir: dir ?? 'asc',
+      });
     }
     return array.dialect.sqlArraySelect({
       source: arraySQL,
       element: element.getIdentifier(),
-      fields: values.map((v, i) => ({name: outputs[i].name, sql: sql(v)})),
-      filter: filters.length > 0 ? filters.map(sql).join(' AND ') : undefined,
+      fields,
+      filter:
+        filters.length > 0 ? filters.map(e => sql(e)).join(' AND ') : undefined,
       orderBy,
+      leftElement: left.getIdentifier(),
+      rightElement: right.getIdentifier(),
       limit: segment.limit,
     });
   }
@@ -2761,6 +2791,13 @@ export class QueryQuery extends QueryField {
       : this.arraySelectSQL(array, arraySQL, pipeline);
     if (inPlace !== undefined) return inPlace;
     const dialect = this.parent.dialect;
+    if (!dialect.supportsCorrelatedArrayQueries) {
+      throw new MalloyCompileError(
+        `The ${dialect.name} dialect can only query an array with one aggregate, or with a select: of its elements`,
+        'array-query-not-in-place',
+        undefined
+      );
+    }
     const elements: NestSourceDef = {
       type: 'nest_source',
       name: '~array~',

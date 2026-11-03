@@ -243,7 +243,10 @@ export class DuckDBDialect extends PostgresBase {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
     if (!this.unnestWithNumbers && childName === '__row_id') {
       return `${parentAlias}_outer.__row_id`;
-    } else if (parentType === 'array[scalar]') {
+    } else if (
+      parentType === 'array[scalar]' ||
+      parentType === 'element[scalar]'
+    ) {
       return parentAlias;
     } else {
       return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
@@ -318,8 +321,8 @@ export class DuckDBDialect extends PostgresBase {
     if (orderBy.length > 0) {
       const key =
         orderBy.length === 1
-          ? orderBy[0].sql
-          : `{${orderBy.map((o, i) => `'k${i}': ${o.sql}`).join(', ')}}`;
+          ? `(${orderBy[0].sql})`
+          : `{${orderBy.map((o, i) => `'k${i}': (${o.sql})`).join(', ')}}`;
       const dir = orderBy[0].dir === 'desc' ? 'DESC' : 'ASC';
       elements = `LIST_SELECT(${elements}, LIST_GRADE_UP(LIST_TRANSFORM(${elements}, ${element} -> ${key}), '${dir}', 'NULLS LAST'))`;
     }

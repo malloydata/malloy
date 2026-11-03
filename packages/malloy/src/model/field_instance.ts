@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {FieldReferenceType, QueryInfo} from '../dialect';
+import type {QueryInfo} from '../dialect';
 import type {QueryStruct} from './query_node';
 import type {
   Expr,
@@ -726,18 +726,12 @@ export function sqlFullChildReference(
       struct.structDef.e
     );
   }
-  let refType: FieldReferenceType = 'table';
-  if (struct.structDef.type === 'record') {
-    refType = 'record';
-  } else if (struct.structDef.type === 'array') {
-    refType =
-      struct.structDef.elementTypeDef.type === 'record_element'
-        ? 'array[record]'
-        : 'array[scalar]';
-  } else if (struct.structDef.type === 'nest_source') {
-    refType = 'nest source';
-  }
   const child = struct.getChildByName(name);
   const childType = child?.fieldDef.type || 'unknown';
-  return struct.dialect.sqlFieldReference(parentRef, refType, name, childType);
+  return struct.dialect.sqlFieldReference(
+    parentRef,
+    struct.fieldReferenceType(),
+    name,
+    childType
+  );
 }

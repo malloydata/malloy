@@ -62,6 +62,9 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
   `;
   const tm = wrapTestModel(runtime, model);
   const supported = runtime.dialect.supportsArrayQueries;
+  // A query which is not computed in place needs a correlated subquery.
+  const correlated =
+    supported && runtime.dialect.supportsCorrelatedArrayQueries;
 
   test.when(supported)('aggregates a record array per row', async () => {
     // Alaska has 608 airports, 104 of them seaplane bases
@@ -288,7 +291,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 1216});
     });
 
-    test.when(supported)('group_by:', async () => {
+    test.when(correlated)('group_by:', async () => {
       // Alaska's airports and seaplane bases each number over 100
       await expect(`
         run: a -> {
@@ -298,7 +301,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 578});
     });
 
-    test.when(supported)('several stages', async () => {
+    test.when(correlated)('several stages', async () => {
       await expect(`
         run: a -> {
           where: state = 'AK'
@@ -306,6 +309,18 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         }
       `).toMatchResult(tm, {n: 2});
     });
+
+    test.when(supported && !correlated)(
+      'without a correlated subquery, a group_by: is an error',
+      async () => {
+        await expect(
+          runtime
+            .loadModel(model)
+            .loadQuery("run: a -> { where: state = 'AK'; select: by_size }")
+            .getSQL()
+        ).rejects.toThrow(/can only query an array/);
+      }
+    );
 
     // Alaska's facility types, as a query on its array
     const alaskaTypes = (query: string) => `

@@ -60,9 +60,15 @@ export type DialectFieldList = DialectField[];
 export interface ArraySelect {
   source: string;
   element: string;
-  fields: {name: string; sql: string}[];
+  fields: {name: string; sql: string; typeDef: AtomicTypeDef}[];
   filter?: string;
-  orderBy?: {sql: string; dir: 'asc' | 'desc'}[];
+  /**
+   * Each key as `sql` of `element`, and as `left` and `right` of the two
+   * elements a comparator compares, named `leftElement` and `rightElement`.
+   */
+  orderBy?: {sql: string; left: string; right: string; dir: 'asc' | 'desc'}[];
+  leftElement?: string;
+  rightElement?: string;
   limit?: number;
 }
 
@@ -159,8 +165,20 @@ export interface TimeOffset {
   unit: TimestampUnit;
 }
 
+/**
+ * What a field is read from. An `element[...]` is an element of an array
+ * named by a lambda parameter, where the dialect computes on an array in
+ * place: a record element's fields are read from the parameter, and a
+ * scalar element is the parameter itself.
+ */
 export type FieldReferenceType =
-  'table' | 'nest source' | 'array[scalar]' | 'array[record]' | 'record';
+  | 'table'
+  | 'nest source'
+  | 'array[scalar]'
+  | 'array[record]'
+  | 'record'
+  | 'element[scalar]'
+  | 'element[record]';
 
 const allUnits = [
   'microsecond',
@@ -642,6 +660,13 @@ export abstract class Dialect {
    * Experimental.
    */
   supportsArrayQueries = false;
+
+  /**
+   * Whether a query on an array which the dialect cannot compute in place
+   * (`sqlArrayAggregate`, `sqlArraySelect`) can be written as a correlated
+   * subquery instead. Without it such a query is a compile error.
+   */
+  supportsCorrelatedArrayQueries = true;
 
   /**
    * The FROM of a query on the elements of an array of the current row
