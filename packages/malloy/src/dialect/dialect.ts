@@ -1132,8 +1132,31 @@ export abstract class Dialect {
     return `ORDER BY ${orderTerms.join(',')}`;
   }
 
+  /**
+   * The distinct key of an element of an unnested array: the key of the row
+   * which holds the array, then the element's row number. `key` is empty when
+   * the holding row has no key.
+   *
+   * The row's key can be null (a query source keyed by a `group_by` value which
+   * is null), and a null anywhere in a concatenation makes the whole key null,
+   * which `COUNT(DISTINCT)` and the symmetric aggregates then ignore. So the
+   * row's key is encoded as 'k' followed by its value, or 'n' when it is null;
+   * the two can never be equal. The row number is not coalesced: it is null
+   * only when the array is empty, and an empty array has no element to count.
+   */
   sqlMakeUnnestKey(key: string, rowKey: string) {
-    return this.concat(key, "'x'", rowKey);
+    if (key === '') {
+      return this.concat("'x'", rowKey);
+    }
+    return this.concat(this.sqlUnnestParentKey(key), "'x'", rowKey);
+  }
+
+  /**
+   * The never-null encoding of a row's key, for `sqlMakeUnnestKey`. This
+   * relies on `concat` being null when any part of it is null.
+   */
+  protected sqlUnnestParentKey(key: string): string {
+    return `COALESCE(${this.concat("'k'", this.castToString(key))}, 'n')`;
   }
 
   // default implementation

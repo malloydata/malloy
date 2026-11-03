@@ -663,7 +663,11 @@ ${indent(sql)}
   }
 
   sqlMakeUnnestKey(key: string, rowKey: string) {
-    return `CAST(${key} as VARCHAR) || 'x' || CAST(${rowKey} as VARCHAR)`;
+    const rowKeySQL = `CAST(${rowKey} as VARCHAR)`;
+    if (key === '') {
+      return `'x' || ${rowKeySQL}`;
+    }
+    return `${this.sqlUnnestParentKey(key)} || 'x' || ${rowKeySQL}`;
   }
 
   sqlStringAggDistinct(

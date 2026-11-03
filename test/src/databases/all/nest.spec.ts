@@ -234,4 +234,35 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(row['capped']).not.toBe(null);
     }
   );
+
+  // The key of an element of a nest is the key of the row holding the nest
+  // plus the element's row number. Here that row's key is the group_by value,
+  // which is null for every state but CA. A null key must still be a key, or
+  // the 50 elements under it are not counted, and are summed as one.
+  // Each element's \`one\` is 1, so a sum which merges elements is also wrong.
+  // Reaching into \`by_name\` makes the sum over \`states\` a symmetric one.
+  test.when(runtime.supportsNesting)(
+    `elements of a nest under a null group are each counted - ${databaseName}`,
+    async () => {
+      await expect(`
+        source: by_k is ${databaseName}.table('malloytest.state_facts') -> {
+          group_by: k is pick state when state = 'CA' else null
+          nest: states is {
+            group_by: state
+            aggregate: one is count()
+            nest: by_name is { group_by: popular_name }
+          }
+        }
+        run: by_k -> {
+          aggregate:
+            state_count is states.count()
+            one_sum is states.one.sum()
+            name_count is states.by_name.count()
+        }`).toMatchResult(model, {
+        state_count: 51,
+        one_sum: 51,
+        name_count: 51,
+      });
+    }
+  );
 });
