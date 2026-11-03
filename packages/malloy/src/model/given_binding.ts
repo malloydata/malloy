@@ -6,7 +6,12 @@
 import {DateTime} from 'luxon';
 import {closestMatch} from '../util/closest_match';
 import {inlineExpr} from './inline_expr';
-import {isRepeatedRecord, mkSafeRecord, TD} from './malloy_types';
+import {
+  isRepeatedRecord,
+  mkSafeRecord,
+  safeRecordGet,
+  TD,
+} from './malloy_types';
 import type {
   AtomicTypeDef,
   Expr,
@@ -56,18 +61,7 @@ export function resolveSuppliedGivens(
     }
     const entry = modelDef.contents[name];
     if (!entry || entry.type !== 'given') {
-      const surfaceNames: string[] = [];
-      for (const [k, v] of Object.entries(modelDef.contents)) {
-        if (v.type === 'given') surfaceNames.push(k);
-      }
-      const suggestion = closestMatch(name, surfaceNames);
-      const hint = suggestion ? ` (did you mean '${suggestion}'?)` : '';
-      throw new MalloyCompileError(
-        `givens: unknown given '${name}'${hint}. ` +
-          `Model surfaces [${surfaceNames.join(', ')}]`,
-        'runtime-given-unknown',
-        undefined
-      );
+      throw unknownGivenError(name, surfacedGivenNames(modelDef));
     }
     const decl = givens[entry.id];
     if (!decl) {
@@ -80,6 +74,53 @@ export function resolveSuppliedGivens(
     out.set(entry.id, valueToExpr(name, decl.type, value));
   }
   return out;
+}
+
+function surfacedGivenNames(modelDef: ModelDef): string[] {
+  const names: string[] = [];
+  for (const [name, entry] of Object.entries(modelDef.contents)) {
+    if (entry.type === 'given') names.push(name);
+  }
+  return names;
+}
+
+function unknownGivenError(
+  name: string,
+  surfaceNames: string[]
+): MalloyCompileError {
+  const suggestion = closestMatch(name, surfaceNames);
+  const hint = suggestion ? ` (did you mean '${suggestion}'?)` : '';
+  return new MalloyCompileError(
+    `givens: unknown given '${name}'${hint}. ` +
+      `Model surfaces [${surfaceNames.join(', ')}]`,
+    'runtime-given-unknown',
+    undefined
+  );
+}
+
+/**
+ * Config-file values are written without sight of any query, so one can't be
+ * meant for a given declared in restricted text. A value whose name leads to
+ * such a given is therefore unknown, as if the declaration weren't there. It
+ * has to throw: skipping the value would let the query run on the default.
+ */
+export function refuseFileValuesForRestrictedGivens(
+  fileGivens: Record<string, GivenValue> | undefined,
+  modelDef: ModelDef | undefined
+): void {
+  if (!fileGivens || !modelDef) return;
+  const isRestricted = (name: string) => {
+    const entry = safeRecordGet(modelDef.contents, name);
+    return entry?.type === 'given' && modelDef.givens?.[entry.id]?.restricted;
+  };
+  for (const name of Object.keys(fileGivens)) {
+    if (isRestricted(name)) {
+      throw unknownGivenError(
+        name,
+        surfacedGivenNames(modelDef).filter(n => !isRestricted(n))
+      );
+    }
+  }
 }
 
 /**

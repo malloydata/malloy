@@ -63,10 +63,6 @@ describe('restricted mode', () => {
       finalizedGivens: new Set(['X']),
     });
 
-    test('can be declared in restricted mode', () => {
-      expect(restrictedGivens`given: X :: number is 1`).toTranslate();
-    });
-
     test('can be used across the restricted text', () => {
       expect(restrictedGivens`
         given: X :: number is 1
@@ -83,10 +79,17 @@ describe('restricted mode', () => {
       );
     });
 
-    test('a finalized name cannot be declared', () => {
-      expect(restrictedFinalizedX`given: X :: number is 1`).toLog(
-        errorMessage(/Cannot redefine 'X'/)
-      );
+    test('is marked restricted in the IR', () => {
+      const t = restrictedGivens`given: X :: number is 1`.translator;
+      const givens = Object.values(t.translate().modelDef?.givens ?? {});
+      expect(givens.map(g => g.restricted)).toEqual([true]);
+    });
+
+    test('a finalized name cannot be declared, and one error covers its uses', () => {
+      expect(restrictedFinalizedX`
+        given: X :: number is 1
+        run: a -> { select: x is $X, y is $X + 1 }
+      `).toLog(error('restricted-construct-forbidden'));
     });
 
     test('an unfinalized name can be declared when others are finalized', () => {
@@ -99,6 +102,9 @@ describe('restricted mode', () => {
         finalizedGivens: new Set(['X']),
       });
       expect(trustedFinalizedX`given: X :: number is 1`).toTranslate();
+      const t = trustedFinalizedX`given: X :: number is 1`.translator;
+      const givens = Object.values(t.translate().modelDef?.givens ?? {});
+      expect(givens.map(g => g.restricted)).toEqual([undefined]);
     });
 
     test('`sql_*` is rejected in a default', () => {

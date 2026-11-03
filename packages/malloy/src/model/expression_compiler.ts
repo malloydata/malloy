@@ -882,7 +882,9 @@ function resolveGivenBoundExpr(context: QueryStruct, ref: GivenRefNode): Expr {
   );
   if (value !== undefined) return value;
   throw new MalloyCompileError(
-    unsatisfiedGivenMessage(ref.refName),
+    context.getModel().givens?.[ref.id]?.restricted
+      ? unsatisfiedRestrictedGivenMessage(ref.refName)
+      : unsatisfiedGivenMessage(ref.refName),
     'compiler-given-no-value',
     ref.at
   );
@@ -898,6 +900,14 @@ export function generateGivenFragment(
   // compile handles default chains.
   const bound = resolveGivenBoundExpr(context, expr);
   return exprToSQL(resultSet, context, bound, state);
+}
+
+function unsatisfiedRestrictedGivenMessage(refName: string): string {
+  return (
+    `Given '${refName}' has no value and no default. ` +
+    `To fix: supply it via \`.run({givens: {${refName}: ...}})\`, ` +
+    'or add a default at its declaration.'
+  );
 }
 
 function unsatisfiedGivenMessage(refName: string): string {

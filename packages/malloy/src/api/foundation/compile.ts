@@ -144,7 +144,8 @@ type CompileRequest = Compilable &
     connections: LookupConnection<InfoConnection>;
     model?: Model;
     cacheManager?: CacheManager;
-    /** Given names restricted text may not declare. */
+    /** Given names restricted text may not declare. Read when the translator
+     *  is constructed, so it doesn't apply to a pre-parsed `parse`. */
     finalizedGivens?: ReadonlySet<string>;
   };
 
@@ -369,7 +370,6 @@ export class Malloy {
       }
       translator = parse._translator;
       translator.virtualMap = virtualMap;
-      translator.finalizedGivens = finalizedGivens;
       const invalidationKey =
         parse._invalidationKey ?? (await getInvalidationKey(urlReader, url));
       invalidationKeys[_url] = invalidationKey;

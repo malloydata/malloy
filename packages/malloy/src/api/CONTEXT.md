@@ -250,7 +250,7 @@ Persistence as a whole — the `#@ persist` annotation, the manifest format, run
 The signature deliberately takes a string, not a URL: restricted text arrives from an untrusted caller as bytes the host already has in hand, so there is no host-side trust mechanism for fetching it. The method exists only on `ModelMaterializer` for the same reason — a restricted compile is meaningful only as part of the trusted-then-restricted pattern.
 
 Two-layer enforcement, both in `packages/malloy/src/lang/`:
-- **AST-level rejection** at each forbidden construct's integration method (`ImportStatement.execute`, `DefineGivens.executeList`, `ModelAnnotation.execute`, `TableMethodSource.getTableInfo`, `SQLSource.getSourceDef`, `ExprFunc.getExpression` — both for `isRaw` and for calls to the `sql_*` family). Each produces the user-visible diagnostic with the offending source text quoted.
+- **AST-level rejection** at each forbidden construct's integration method (`ImportStatement.execute`, `ModelAnnotation.execute`, `TableMethodSource.getTableInfo`, `SQLSource.getSourceDef`, `ExprFunc.getExpression` — both for `isRaw` and for calls to the `sql_*` family). Each produces the user-visible diagnostic with the offending source text quoted.
 - **Zone lock** on the four needs-bearing zones (`importZone`, `schemaZone`, `sqlQueryZone`, `connectionDialectZone`) at the top of `MalloyTranslator.translate()`. After the lock, `reference()`/`define()`/`updateFrom()` are silent no-ops, so the translator is structurally unable to ask the host for outward resources regardless of whether each AST-level rejection fires.
 
 API-level documentation lives in the JSDoc on `ModelMaterializer.loadRestrictedQuery`.

@@ -17,7 +17,10 @@ import type {
   VirtualMap,
 } from '../../model';
 import {isSourceDef, mkSafeRecord, MalloyCompileError} from '../../model';
-import {bindGivens} from '../../model/given_binding';
+import {
+  bindGivens,
+  refuseFileValuesForRestrictedGivens,
+} from '../../model/given_binding';
 import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
 import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
@@ -293,8 +296,7 @@ export class Runtime {
    * these names throws; `Model.givens` and `PreparedQuery.givens` filter
    * them out so introspection-driven UIs don't render editors for them.
    *
-   * @internal Accessed from QueryMaterializer, Model construction, and
-   * restricted compiles.
+   * @internal
    */
   public get _finalizedGivens(): ReadonlySet<string> {
     return this._finalizedGivensSet;
@@ -954,13 +956,15 @@ export class ModelMaterializer extends FluentState<Model> {
    * fully available regardless of whether the model's own definitions
    * use any of the forbidden constructs.
    *
-   * A restricted query may declare its own givens with `given:` and supply
-   * them through `.run({givens})`. These are separate from the model's
-   * givens, even under the same name as a given the model doesn't surface,
-   * so they can't change what the model's own definitions see. A name the
-   * model surfaces, or one listed in `finalizeGivens`, can't be declared.
-   * Given values appear in generated SQL, so a given is not a way to keep a
-   * value from the author of a restricted query.
+   * A restricted query may declare its own givens with `given:`. These are
+   * separate from the model's givens, even under the same name as a given
+   * the model doesn't surface, so they can't change what the model's own
+   * definitions see. A name the model surfaces, or one listed in
+   * `finalizeGivens`, can't be declared. One takes its value from its
+   * default, `.run({givens})`, or the Runtime's `givens` option. A value in
+   * the config's givens file with the same name fails with
+   * `runtime-given-unknown`. Given values appear in generated SQL, so a given
+   * is not a way to keep a value from the author of a restricted query.
    *
    * Errors reach the caller in the same way as any other Malloy
    * compile: `.validate()` returns a `LogMessage[]`, and `.run()` /
@@ -1456,6 +1460,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
 
       const mergedGivens = await this.runtime._givensFor(mergedOptions.givens);
+      refuseFileValuesForRestrictedGivens(
+        await this.runtime._resolveGivens(),
+        preparedQuery._modelDef
+      );
       const finalizedSet = this.runtime._finalizedGivens;
 
       // Query-scoped validation: of the givens THIS query references,

@@ -95,27 +95,28 @@ export class GivenDeclaration
     return ` ${this.name} :: ${typeDefToString(this.typeDef)}`;
   }
 
-  /**
-   * Supplying a value for a name the model doesn't surface fails every query.
-   * A host that finalizes a name can depend on that, so restricted text must
-   * not be able to satisfy the name with a declaration of its own.
-   */
-  private isFinalizedInRestrictedText(): boolean {
-    return (
-      this.isRestricted() &&
-      (this.translator()?.root.finalizedGivens?.has(this.name) ?? false)
-    );
-  }
-
   execute(doc: Document): void {
     if (this.typeDef.type === 'error') return;
 
-    if (doc.modelEntry(this.name) || this.isFinalizedInRestrictedText()) {
+    if (doc.modelEntry(this.name)) {
       this.logError(
         'given-definition-name-conflict',
         `Cannot redefine '${this.name}'`
       );
       return;
+    }
+
+    // Supplying a value for a name the model doesn't surface fails every query,
+    // and a host that finalizes a name can depend on that. Keep going after the
+    // error: the given still registers so its uses don't each log another.
+    if (
+      this.isRestricted() &&
+      this.translator()?.root.finalizedGivens?.has(this.name)
+    ) {
+      this.logError(
+        'restricted-construct-forbidden',
+        `\`given: ${this.name}\` cannot be declared in a restricted query — the host reserves the name \`${this.name}\`. Use a different name.`
+      );
     }
 
     // An inline given with no default has nothing to evaluate at bind
@@ -249,6 +250,7 @@ export class GivenDeclaration
       location: this.location,
       annotations: this.ownAnnotation ? {...this.ownAnnotation} : undefined,
       ...(this.inline ? {inline: true} : {}),
+      ...(this.isRestricted() ? {restricted: true} : {}),
     };
     doc.documentGivens.set(id, givenIR);
 

@@ -42,7 +42,7 @@ Top-level keys:
 | `connections` | Named connection entries. Each has an `is` field naming a registered backend, plus backend-specific properties. |
 | `manifestPath` | Directory where the build manifest lives, relative to the config file. Defaults to `MANIFESTS`. May be a string literal or a sync-resolving overlay reference (e.g. `{"env": "MALLOY_MANIFEST_PATH"}`). |
 | `givensPath` | File where per-runtime [given](givens.md) values live, relative to the config file. JSON object of `name → value` pairs. May be a string literal or a sync-resolving overlay reference. |
-| `finalizeGivens` | Array of [given](givens.md) names that are locked at the runtime layer — per-query supply for these names is rejected, and they are filtered out of `Model.givens` / `PreparedQuery.givens` introspection so UIs don't render editors for them. Security primitive for multi-tenant deployments where the tenant identifier must not be caller-overridable. |
+| `finalizeGivens` | Array of [given](givens.md) names that are locked at the runtime layer — per-query supply for these names is rejected, and they are filtered out of `Model.givens` / `PreparedQuery.givens` introspection so UIs don't render editors for them. A restricted query can't declare these names. Security primitive for multi-tenant deployments where the tenant identifier must not be caller-overridable. |
 | `virtualMap` | Maps connection names and virtual source names to backing table paths. Literal — no overlay expansion. |
 | `includeDefaultConnections` | If `true`, fabricate one entry per registered backend type not already listed. See below. |
 
@@ -255,7 +255,7 @@ Per-environment routing is the canonical use of the env-overlay form on `givensP
 
 A developer sets `MALLOY_GIVENS_FILE` to a local fixture; CI sets it to a test fixture; production sets it to a deployment-managed file. Same project config everywhere; the env-var binding chooses the actual file.
 
-**Resolution.** `MalloyConfig` computes `givensURL` from `givensPath` joined against `configURL`. The Runtime lazily reads the file on the first compile that needs givens, parses JSON, and uses the values as defaults for every query that runs through it. Per-query supply via `.run({givens: ...})` overrides the per-runtime layer per-key.
+**Resolution.** `MalloyConfig` computes `givensURL` from `givensPath` joined against `configURL`. The Runtime lazily reads the file on the first compile that needs givens, parses JSON, and uses the values as defaults for every query that runs through it. Per-query supply via `.run({givens: ...})` overrides the per-runtime layer per-key. A given declared in a restricted query doesn't bind from this file, and a value in the file with its name fails that query with `runtime-given-unknown`.
 
 **Failure policy.** Stricter than the manifest: a missing `givensPath` file or malformed JSON throws on the first compile, with the resolved URL in the error message. The per-runtime givens layer is a configured contract, not an opportunistic read; a misconfigured path should fail loudly at the first compile, not silently degrade.
 

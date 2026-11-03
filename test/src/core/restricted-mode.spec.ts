@@ -108,6 +108,8 @@ describe('givens declared in restricted text', () => {
     'file:///test/base.malloy': `${flag}given: OPEN :: string is ''\n${docs}`,
     'file:///test/hides.malloy': `${flag}import {docs} from "base.malloy"\n`,
     'file:///test/surfaces.malloy': `${flag}import {docs, OPEN} from "base.malloy"\n`,
+    'file:///test/w.json': JSON.stringify({W: 9}),
+    'file:///test/open.json': JSON.stringify({OPEN: 'alice'}),
   };
   const urlReader: URLReader = {
     readURL: async url => {
@@ -121,20 +123,23 @@ describe('givens declared in restricted text', () => {
     options: {
       givens?: Record<string, GivenValue>;
       finalizeGivens?: string[];
+      givensPath?: string;
     } = {}
   ) {
+    const {finalizeGivens, givensPath} = options;
     return new Runtime({
       urlReader,
       connections: {
         lookupConnection: () => Promise.resolve(runtime.connection),
       },
       givens: options.givens,
-      config: options.finalizeGivens
-        ? new MalloyConfig(
-            {finalizeGivens: options.finalizeGivens},
-            {configURL: 'file:///test/malloy-config.json'}
-          )
-        : undefined,
+      config:
+        finalizeGivens || givensPath
+          ? new MalloyConfig(
+              {finalizeGivens, givensPath},
+              {configURL: 'file:///test/malloy-config.json'}
+            )
+          : undefined,
     });
   }
 
@@ -197,7 +202,7 @@ describe('givens declared in restricted text', () => {
 
   test('with no default, fails unless supplied', async () => {
     await expect(restrictedOn('hides.malloy', noDefault).run()).rejects.toThrow(
-      /Given 'W' has no value and no default/
+      /Given 'W' has no value and no default.*add a default at its declaration\.$/m
     );
   });
 
@@ -297,13 +302,63 @@ describe('givens declared in restricted text', () => {
     ).rejects.toThrow(/unknown given 'W'/);
   });
 
+  describe('a config file value', () => {
+    const unknownW = /unknown given 'W'.*Model surfaces \[\]/;
+
+    test('with its name fails the query, even though it has a default', async () => {
+      const rt = makeRuntime({givensPath: './w.json'});
+      await expect(
+        restrictedOn('hides.malloy', ownW, rt).run()
+      ).rejects.toThrow(unknownW);
+      await expect(
+        restrictedOn('hides.malloy', ownW, rt).getSQL()
+      ).rejects.toThrow(unknownW);
+    });
+
+    test('with its name fails the query when the call supplies it too', async () => {
+      const rt = makeRuntime({givensPath: './w.json'});
+      await expect(
+        restrictedOn('hides.malloy', ownW, rt).run({givens: {W: 7}})
+      ).rejects.toThrow(unknownW);
+    });
+
+    test('still binds to the given the model surfaces', async () => {
+      const rt = makeRuntime({givensPath: './open.json'});
+      const result = await restrictedOn(
+        'surfaces.malloy',
+        "given: X :: string is 'x'\nrun: docs -> { select: owner, x is $X }",
+        rt
+      ).run();
+      expect(result.data.toObject()).toEqual([{owner: 'alice', x: 'x'}]);
+    });
+
+    test('still binds to a given declared in trusted text', async () => {
+      const rt = makeRuntime({givensPath: './w.json'});
+      const result = await rt
+        .loadModel(new URL('file:///test/hides.malloy'))
+        .loadQuery(ownW)
+        .run();
+      expect(result.data.toObject()).toEqual([
+        {owner: 'alice', scaled: 9},
+        {owner: 'bob', scaled: 18},
+      ]);
+    });
+  });
+
   describe('a finalized name', () => {
     const finalized = {givens: {W: 9}, finalizeGivens: ['W']};
 
     test('cannot be declared', async () => {
       await expect(
         restrictedOn('hides.malloy', ownW, makeRuntime(finalized)).run()
-      ).rejects.toThrow(/Cannot redefine 'W'/);
+      ).rejects.toMatchObject({
+        problems: [
+          expect.objectContaining({
+            code: 'restricted-construct-forbidden',
+            errorTag: 'restricted-mode',
+          }),
+        ],
+      });
     });
 
     test('still fails an ordinary query on a model without it', async () => {
