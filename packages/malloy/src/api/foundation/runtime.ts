@@ -263,12 +263,14 @@ export class Runtime {
    *
    * A per-call value for a finalized given is refused before anything else
    * happens: finalizing means the Runtime decides, and that holds for a build
-   * as it does for a query.
+   * as it does for a query. A config-file value for a given declared in
+   * restricted text is refused too.
    *
    * @internal Accessed from QueryMaterializer and getBuildTargets.
    */
   public async _givensFor(
-    perCall: Record<string, GivenValue> | undefined
+    perCall: Record<string, GivenValue> | undefined,
+    modelDef: ModelDef
   ): Promise<Record<string, GivenValue> | undefined> {
     if (this._finalizedGivensSet.size > 0 && perCall) {
       for (const name of Object.keys(perCall)) {
@@ -283,6 +285,7 @@ export class Runtime {
       }
     }
     const fileGivens = await this._resolveGivens();
+    refuseFileValuesForRestrictedGivens(fileGivens, modelDef);
     const constructorGivens = mapToRecord(this._constructorGivensMap);
     const haveAny = fileGivens || constructorGivens || perCall;
     return haveAny
@@ -727,7 +730,7 @@ export class Runtime {
       }
     }
 
-    const givens = await this._givensFor(options?.givens);
+    const givens = await this._givensFor(options?.givens, model._modelDef);
     const {connections, unbuildable} = mkBuildTargets(walk, connectionDigests, {
       virtualMap: options?.virtualMap ?? this.virtualMap,
       resolvedGivens: bindGivens(givens, model._modelDef),
@@ -1459,9 +1462,8 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
 
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
 
-      const mergedGivens = await this.runtime._givensFor(mergedOptions.givens);
-      refuseFileValuesForRestrictedGivens(
-        await this.runtime._resolveGivens(),
+      const mergedGivens = await this.runtime._givensFor(
+        mergedOptions.givens,
         preparedQuery._modelDef
       );
       const finalizedSet = this.runtime._finalizedGivens;
@@ -1476,7 +1478,13 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       // "you locked it but forgot to supply it."
       const queryGivenUsage = preparedQuery._query.givenUsage ?? [];
       if (finalizedSet.size > 0 && queryGivenUsage.length > 0) {
-        const referencedIds = new Set(queryGivenUsage.map(g => g.id));
+        const referenced = [
+          ...queryGivenUsage,
+          ...queryGivenUsage.flatMap(
+            g => preparedQuery._modelDef.givens?.[g.id]?.givenUsage ?? []
+          ),
+        ];
+        const referencedIds = new Set(referenced.map(g => g.id));
         const missingProblems: LogMessage[] = [];
         for (const [surfaceName, entry] of Object.entries(
           preparedQuery._modelDef.contents
@@ -1485,7 +1493,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
           if (!referencedIds.has(entry.id)) continue;
           if (!finalizedSet.has(surfaceName)) continue;
           if (mergedGivens && surfaceName in mergedGivens) continue;
-          const firstUse = queryGivenUsage.find(u => u.id === entry.id);
+          const firstUse = referenced.find(u => u.id === entry.id);
           missingProblems.push({
             message:
               `Finalized given '${surfaceName}' has no resolved value. ` +

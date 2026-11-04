@@ -144,8 +144,7 @@ type CompileRequest = Compilable &
     connections: LookupConnection<InfoConnection>;
     model?: Model;
     cacheManager?: CacheManager;
-    /** Given names restricted text may not declare. Read when the translator
-     *  is constructed, so it doesn't apply to a pre-parsed `parse`. */
+    /** Given names restricted text may not declare. */
     finalizedGivens?: ReadonlySet<string>;
   };
 
@@ -366,6 +365,11 @@ export class Malloy {
       ) {
         throw new Error(
           `Malloy.compile: restrictedMode (${restrictedMode}) does not match the pre-parsed translator's restrictedMode (${parse._translator.restrictedMode}). Set restrictedMode at parse time.`
+        );
+      }
+      if (finalizedGivens !== undefined) {
+        throw new Error(
+          'Malloy.compile: finalizedGivens cannot be applied to a pre-parsed translator. Compile from `source` or `url` instead.'
         );
       }
       translator = parse._translator;

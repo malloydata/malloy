@@ -61,7 +61,21 @@ export function resolveSuppliedGivens(
     }
     const entry = modelDef.contents[name];
     if (!entry || entry.type !== 'given') {
-      throw unknownGivenError(name, surfacedGivenNames(modelDef));
+      const surfaceNames: string[] = [];
+      for (const [k, v] of Object.entries(modelDef.contents)) {
+        if (v.type === 'given') surfaceNames.push(k);
+      }
+      const suggestion = closestMatch(name, surfaceNames);
+      const hint = suggestion ? ` (did you mean '${suggestion}'?)` : '';
+      const surfaced =
+        surfaceNames.length > 0
+          ? ` Model surfaces [${surfaceNames.join(', ')}]`
+          : '';
+      throw new MalloyCompileError(
+        `givens: unknown given '${name}'${hint}.${surfaced}`,
+        'runtime-given-unknown',
+        undefined
+      );
     }
     const decl = givens[entry.id];
     if (!decl) {
@@ -76,48 +90,25 @@ export function resolveSuppliedGivens(
   return out;
 }
 
-function surfacedGivenNames(modelDef: ModelDef): string[] {
-  const names: string[] = [];
-  for (const [name, entry] of Object.entries(modelDef.contents)) {
-    if (entry.type === 'given') names.push(name);
-  }
-  return names;
-}
-
-function unknownGivenError(
-  name: string,
-  surfaceNames: string[]
-): MalloyCompileError {
-  const suggestion = closestMatch(name, surfaceNames);
-  const hint = suggestion ? ` (did you mean '${suggestion}'?)` : '';
-  return new MalloyCompileError(
-    `givens: unknown given '${name}'${hint}. ` +
-      `Model surfaces [${surfaceNames.join(', ')}]`,
-    'runtime-given-unknown',
-    undefined
-  );
-}
-
 /**
  * Config-file values are written without sight of any query, so one can't be
- * meant for a given declared in restricted text. A value whose name leads to
- * such a given is therefore unknown, as if the declaration weren't there. It
- * has to throw: skipping the value would let the query run on the default.
+ * meant for a given declared in restricted text. It has to throw: skipping the
+ * value would let the query run on the default.
  */
 export function refuseFileValuesForRestrictedGivens(
   fileGivens: Record<string, GivenValue> | undefined,
-  modelDef: ModelDef | undefined
+  modelDef: ModelDef
 ): void {
-  if (!fileGivens || !modelDef) return;
-  const isRestricted = (name: string) => {
-    const entry = safeRecordGet(modelDef.contents, name);
-    return entry?.type === 'given' && modelDef.givens?.[entry.id]?.restricted;
-  };
+  if (!fileGivens) return;
   for (const name of Object.keys(fileGivens)) {
-    if (isRestricted(name)) {
-      throw unknownGivenError(
-        name,
-        surfacedGivenNames(modelDef).filter(n => !isRestricted(n))
+    const entry = safeRecordGet(modelDef.contents, name);
+    if (entry?.type !== 'given') continue;
+    const decl = modelDef.givens?.[entry.id];
+    if (decl?.restricted) {
+      throw new MalloyCompileError(
+        `\`given: ${name}\` cannot be declared in a restricted query — the name \`${name}\` is reserved. Use a different name.`,
+        'runtime-given-unknown',
+        decl.location
       );
     }
   }

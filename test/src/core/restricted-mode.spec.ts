@@ -4,7 +4,7 @@
  */
 
 import {runtimeFor} from '../runtimes';
-import {MalloyConfig, MalloyError, Runtime} from '@malloydata/malloy';
+import {Malloy, MalloyConfig, MalloyError, Runtime} from '@malloydata/malloy';
 import type {GivenValue, URLReader} from '@malloydata/malloy';
 
 const runtime = runtimeFor('duckdb');
@@ -108,6 +108,12 @@ describe('givens declared in restricted text', () => {
     'file:///test/base.malloy': `${flag}given: OPEN :: string is ''\n${docs}`,
     'file:///test/hides.malloy': `${flag}import {docs} from "base.malloy"\n`,
     'file:///test/surfaces.malloy': `${flag}import {docs, OPEN} from "base.malloy"\n`,
+    'file:///test/plain.malloy': `${flag}given: TENANT :: string is 'model default'
+source: docs is duckdb.sql("SELECT 'alice' AS owner, 1 AS n")
+`,
+    'file:///test/persists.malloy': `##! experimental { givens persistence }
+source: docs is duckdb.sql("SELECT 'alice' AS owner, 1 AS n")
+`,
     'file:///test/w.json': JSON.stringify({W: 9}),
     'file:///test/open.json': JSON.stringify({OPEN: 'alice'}),
   };
@@ -167,16 +173,6 @@ describe('givens declared in restricted text', () => {
     expect(result.data.toObject()).toEqual([
       {owner: 'alice', scaled: 2},
       {owner: 'bob', scaled: 4},
-    ]);
-  });
-
-  test('takes a per-call value', async () => {
-    const result = await restrictedOn('hides.malloy', ownW).run({
-      givens: {W: 7},
-    });
-    expect(result.data.toObject()).toEqual([
-      {owner: 'alice', scaled: 7},
-      {owner: 'bob', scaled: 14},
     ]);
   });
 
@@ -256,7 +252,7 @@ describe('givens declared in restricted text', () => {
       restrictedOn('hides.malloy', 'run: docs -> { select: owner }').run({
         givens: {OPEN: 'alice'},
       })
-    ).rejects.toThrow(/unknown given 'OPEN'/);
+    ).rejects.toThrow(/unknown given 'OPEN'\.$/m);
   });
 
   test('the model keeps no trace of the declaration', async () => {
@@ -303,23 +299,53 @@ describe('givens declared in restricted text', () => {
   });
 
   describe('a config file value', () => {
-    const unknownW = /unknown given 'W'.*Model surfaces \[\]/;
+    const reservedW = /the name `W` is reserved\. Use a different name\./;
 
     test('with its name fails the query, even though it has a default', async () => {
       const rt = makeRuntime({givensPath: './w.json'});
       await expect(
         restrictedOn('hides.malloy', ownW, rt).run()
-      ).rejects.toThrow(unknownW);
+      ).rejects.toThrow(reservedW);
       await expect(
         restrictedOn('hides.malloy', ownW, rt).getSQL()
-      ).rejects.toThrow(unknownW);
+      ).rejects.toThrow(reservedW);
+    });
+
+    test('with its name reports the declaration', async () => {
+      const rt = makeRuntime({givensPath: './w.json'});
+      await expect(
+        restrictedOn('hides.malloy', ownW, rt).run()
+      ).rejects.toMatchObject({
+        problems: [
+          expect.objectContaining({
+            code: 'runtime-given-unknown',
+            at: expect.objectContaining({
+              range: expect.objectContaining({
+                start: expect.objectContaining({line: 1}),
+              }),
+            }),
+          }),
+        ],
+      });
     });
 
     test('with its name fails the query when the call supplies it too', async () => {
       const rt = makeRuntime({givensPath: './w.json'});
       await expect(
         restrictedOn('hides.malloy', ownW, rt).run({givens: {W: 7}})
-      ).rejects.toThrow(unknownW);
+      ).rejects.toThrow(reservedW);
+    });
+
+    test('with its name fails a persistence build', async () => {
+      const rt = makeRuntime({givensPath: './w.json'});
+      const prepared = await restrictedOn(
+        'persists.malloy',
+        'given: W :: number is 2\nrun: docs -> { select: w is $W }',
+        rt
+      ).getPreparedQuery();
+      await expect(rt.getBuildTargets(prepared.model)).rejects.toThrow(
+        reservedW
+      );
     });
 
     test('still binds to the given the model surfaces', async () => {
@@ -371,13 +397,17 @@ describe('givens declared in restricted text', () => {
       ).rejects.toThrow(/unknown given 'W'/);
     });
 
-    test('does not stop other names being declared', async () => {
-      const result = await restrictedOn(
-        'surfaces.malloy',
-        'given: X :: string is $OPEN\nrun: docs -> { select: owner, x is $X }',
-        makeRuntime({givens: {OPEN: 'alice'}, finalizeGivens: ['OPEN']})
-      ).run();
-      expect(result.data.toObject()).toEqual([{owner: 'alice', x: 'alice'}]);
+    test('with no value fails a query that reads it through a default', async () => {
+      const throughDefault =
+        'given: X :: string is $TENANT\nrun: docs -> { select: x is $X }';
+      const rt = makeRuntime({finalizeGivens: ['TENANT']});
+      const materializer = rt.loadModel(new URL('file:///test/plain.malloy'));
+      await expect(
+        materializer.loadRestrictedQuery(throughDefault).run()
+      ).rejects.toThrow(/Finalized given 'TENANT' has no resolved value/);
+      await expect(
+        materializer.loadQuery(throughDefault).run()
+      ).rejects.toThrow(/Finalized given 'TENANT' has no resolved value/);
     });
 
     test('cannot be declared when the model also surfaces it', async () => {
@@ -389,5 +419,24 @@ describe('givens declared in restricted text', () => {
         ).run()
       ).rejects.toThrow(/Cannot redefine 'OPEN'/);
     });
+  });
+});
+
+describe('Malloy.compile', () => {
+  test('refuses finalizedGivens with a pre-parsed translator', async () => {
+    const parse = Malloy.parse({
+      source: 'given: W :: number is 1',
+      options: {restrictedMode: true},
+    });
+    await expect(
+      Malloy.compile({
+        parse,
+        urlReader: {readURL: () => Promise.reject(new Error('unused'))},
+        connections: {
+          lookupConnection: () => Promise.resolve(runtime.connection),
+        },
+        finalizedGivens: new Set(['W']),
+      })
+    ).rejects.toThrow(/finalizedGivens cannot be applied/);
   });
 });

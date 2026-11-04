@@ -106,16 +106,17 @@ export class GivenDeclaration
       return;
     }
 
-    // Supplying a value for a name the model doesn't surface fails every query,
-    // and a host that finalizes a name can depend on that. Keep going after the
-    // error: the given still registers so its uses don't each log another.
+    // A value for a name the model doesn't surface fails every query. Declaring
+    // a finalized name would give that value a given to bind to, so a query a
+    // host relies on failing would run. The given still registers after the
+    // error, so its uses don't each log another.
     if (
       this.isRestricted() &&
       this.translator()?.root.finalizedGivens?.has(this.name)
     ) {
       this.logError(
         'restricted-construct-forbidden',
-        `\`given: ${this.name}\` cannot be declared in a restricted query — the host reserves the name \`${this.name}\`. Use a different name.`
+        `\`given: ${this.name}\` cannot be declared in a restricted query — the name \`${this.name}\` is reserved. Use a different name.`
       );
     }
 
