@@ -66,13 +66,16 @@ export function resolveSuppliedGivens(
         if (v.type === 'given') surfaceNames.push(k);
       }
       const suggestion = closestMatch(name, surfaceNames);
-      const hint = suggestion ? ` (did you mean '${suggestion}'?)` : '';
-      const surfaced =
-        surfaceNames.length > 0
-          ? ` Model surfaces [${surfaceNames.join(', ')}]`
-          : '';
+      const others = surfaceNames.filter(n => n !== suggestion);
+      const hints: string[] = [];
+      if (suggestion) hints.push(`did you mean '${suggestion}'?`);
+      if (others.length > 0) {
+        const label = suggestion ? 'Other alternatives' : 'alternatives';
+        hints.push(`${label}: [${others.join(', ')}]`);
+      }
+      const hint = hints.length > 0 ? ` (${hints.join(' ')})` : '.';
       throw new MalloyCompileError(
-        `givens: unknown given '${name}'${hint}.${surfaced}`,
+        `givens: unknown given '${name}'${hint}`,
         'runtime-given-unknown',
         undefined
       );

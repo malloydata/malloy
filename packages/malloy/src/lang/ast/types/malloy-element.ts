@@ -22,7 +22,7 @@ import type {
 } from '../../../model/malloy_types';
 import {activeName, isSourceDef} from '../../../model/malloy_types';
 import {givenUsageOfRelation} from '../../../model/sql_compiled';
-import {mkModelDef, mkModelID} from '../../../model/utils';
+import {mkModelDef, mkModelID, typeDefToString} from '../../../model/utils';
 import {Tag} from '@malloydata/malloy-tag';
 import type {
   LogMessageOptions,
@@ -507,9 +507,9 @@ function unsatisfiedGivenMessage(
     : '';
   return (
     `${label} references given \`${surface}\`${where}, ` +
-    'which is not surfaced in this model and has no default. ' +
-    `Either import it (e.g. \`import { ${surface} } from "..."\`) ` +
-    'or supply a default at the declaration site.'
+    'which is not imported and has no default. ' +
+    `Import it (e.g. \`import { ${surface} } from "..."\`) ` +
+    'or add a default where it is declared.'
   );
 }
 
@@ -646,13 +646,13 @@ export class Document extends MalloyElement implements NameSpace {
         ? ` (declared in ${decl.location.url})`
         : '';
       const sorted = [...names].sort();
+      const type = decl ? typeDefToString(decl.type) : 'T';
       this.logError(
         'given-alias-collision',
-        `Given \`${sourceName}\`${where} is surfaced under multiple names ` +
-          `[${sorted.join(', ')}] in this model. ` +
-          'Surfacing the same given under two names is ambiguous at supply ' +
-          'time. To expose it under a second name, declare a local given ' +
-          `with a default-chain reference: \`given: NEW_NAME :: T is $${sourceName}\`.`
+        `Given \`${sourceName}\`${where} is imported under more than one name: ` +
+          `[${sorted.join(', ')}]. Import it under one name. To use a second ` +
+          'name, declare a given that defaults to it: ' +
+          `\`given: NEW_NAME :: ${type} is $${sourceName}\`.`
       );
     }
   }

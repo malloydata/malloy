@@ -131,6 +131,56 @@ describe('givens — runtime supply path (Stage 4)', () => {
     ).rejects.toThrow(/unknown given 'TENNANT'.*did you mean 'TENANT'/);
   });
 
+  describe('unknown given key message', () => {
+    const q =
+      "query: q is duckdb.table('malloytest.state_facts') -> { group_by: state }";
+    const message = async (givens: string, name: string) => {
+      const model = runtime.loadModel(`
+        ##! experimental.givens
+        ${givens}
+        ${q}
+      `);
+      const supplied = await model
+        .loadQueryByName('q')
+        .run({givens: {[name]: 'acme'}})
+        .then(() => undefined)
+        .catch((e: Error) => e);
+      return supplied?.message;
+    };
+
+    test('with nothing to suggest', async () => {
+      expect(await message('', 'X')).toBe("givens: unknown given 'X'.");
+    });
+
+    test('with only a close match', async () => {
+      expect(await message('given: TENANT :: string is "a"', 'TENNANT')).toBe(
+        "givens: unknown given 'TENNANT' (did you mean 'TENANT'?)"
+      );
+    });
+
+    test('with a close match and others', async () => {
+      expect(
+        await message(
+          'given: TENANT :: string is "a", REGION :: string is "b"',
+          'TENNANT'
+        )
+      ).toBe(
+        "givens: unknown given 'TENNANT' (did you mean 'TENANT'? Other alternatives: [REGION])"
+      );
+    });
+
+    test('with no close match', async () => {
+      expect(
+        await message(
+          'given: TENANT :: string is "a", REGION :: string is "b"',
+          'ZZZZZZZZZZ'
+        )
+      ).toBe(
+        "givens: unknown given 'ZZZZZZZZZZ' (alternatives: [TENANT, REGION])"
+      );
+    });
+  });
+
   test('type mismatch throws at boundary', async () => {
     const model = runtime.loadModel(`
       ##! experimental.givens

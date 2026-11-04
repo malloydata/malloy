@@ -31,7 +31,7 @@ export class GivenReference extends ExpressionDef {
     if (entry === undefined) {
       return this.loggedErrorExpr(
         'given-not-found',
-        `\`$${this.name}\` references a given named \`${this.name}\`, which is not declared in this model`
+        `\`$${this.name}\` references a given named \`${this.name}\`, which is not declared or imported.`
       );
     }
     if (entry.type !== 'given') {
