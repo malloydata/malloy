@@ -377,7 +377,7 @@ function generateAppliedFilter(
         filterExpr = decl.default;
       } else {
         throw new MalloyCompileError(
-          unsatisfiedGivenMessage(filterExpr.refName),
+          unsatisfiedGivenMessage(filterExpr.refName, decl?.restricted),
           'compiler-given-no-value',
           filterExpr.at
         );
@@ -882,7 +882,10 @@ function resolveGivenBoundExpr(context: QueryStruct, ref: GivenRefNode): Expr {
   );
   if (value !== undefined) return value;
   throw new MalloyCompileError(
-    unsatisfiedGivenMessage(ref.refName),
+    unsatisfiedGivenMessage(
+      ref.refName,
+      context.getModel().givens?.[ref.id]?.restricted
+    ),
     'compiler-given-no-value',
     ref.at
   );
@@ -900,10 +903,17 @@ export function generateGivenFragment(
   return exprToSQL(resultSet, context, bound, state);
 }
 
-function unsatisfiedGivenMessage(refName: string): string {
+function unsatisfiedGivenMessage(
+  refName: string,
+  restricted: boolean | undefined
+): string {
+  const noValue = `Given '${refName}' has no value and no default. To fix: `;
+  const supply = `supply it via \`.run({givens: {${refName}: ...}})\``;
+  if (restricted) {
+    return `${noValue}${supply}, or add a default at its declaration.`;
+  }
   return (
-    `Given '${refName}' has no value and no default. ` +
-    `To fix: supply it via \`.run({givens: {${refName}: ...}})\` if it's in scope, ` +
+    `${noValue}${supply} if it's in scope, ` +
     'or add a default at its declaration, ' +
     `or import the given by name so a value can be supplied (e.g. \`import { ${refName} } from "..."\`).`
   );

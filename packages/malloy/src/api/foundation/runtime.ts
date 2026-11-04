@@ -17,7 +17,10 @@ import type {
   VirtualMap,
 } from '../../model';
 import {isSourceDef, mkSafeRecord, MalloyCompileError} from '../../model';
-import {bindGivens} from '../../model/given_binding';
+import {
+  bindGivens,
+  refuseFileValuesForRestrictedGivens,
+} from '../../model/given_binding';
 import type {LogMessage} from '../../lang';
 import {getDialect} from '../../dialect';
 import {requireCanonicalTablePathAnyDialect} from '../../connection/validate_table_path';
@@ -260,12 +263,14 @@ export class Runtime {
    *
    * A per-call value for a finalized given is refused before anything else
    * happens: finalizing means the Runtime decides, and that holds for a build
-   * as it does for a query.
+   * as it does for a query. A config-file value for a given declared in
+   * restricted text is refused too.
    *
    * @internal Accessed from QueryMaterializer and getBuildTargets.
    */
   public async _givensFor(
-    perCall: Record<string, GivenValue> | undefined
+    perCall: Record<string, GivenValue> | undefined,
+    modelDef: ModelDef
   ): Promise<Record<string, GivenValue> | undefined> {
     if (this._finalizedGivensSet.size > 0 && perCall) {
       for (const name of Object.keys(perCall)) {
@@ -280,6 +285,7 @@ export class Runtime {
       }
     }
     const fileGivens = await this._resolveGivens();
+    refuseFileValuesForRestrictedGivens(fileGivens, modelDef);
     const constructorGivens = mapToRecord(this._constructorGivensMap);
     const haveAny = fileGivens || constructorGivens || perCall;
     return haveAny
@@ -293,7 +299,7 @@ export class Runtime {
    * these names throws; `Model.givens` and `PreparedQuery.givens` filter
    * them out so introspection-driven UIs don't render editors for them.
    *
-   * @internal Accessed from QueryMaterializer and Model construction.
+   * @internal
    */
   public get _finalizedGivens(): ReadonlySet<string> {
     return this._finalizedGivensSet;
@@ -724,7 +730,7 @@ export class Runtime {
       }
     }
 
-    const givens = await this._givensFor(options?.givens);
+    const givens = await this._givensFor(options?.givens, model._modelDef);
     const {connections, unbuildable} = mkBuildTargets(walk, connectionDigests, {
       virtualMap: options?.virtualMap ?? this.virtualMap,
       resolvedGivens: bindGivens(givens, model._modelDef),
@@ -942,8 +948,6 @@ export class ModelMaterializer extends FluentState<Model> {
    * Restricted-mode compilation rejects these constructs:
    *
    * - `import` statements
-   * - `given:` declarations (restricted queries may still reference
-   *   givens the model declared, via `$NAME`)
    * - `##!` compiler-flag annotations
    * - `connection.table(...)` and `connection.sql(...)` source forms
    * - `name!type(args)` raw-SQL function calls
@@ -954,6 +958,16 @@ export class ModelMaterializer extends FluentState<Model> {
    * measures, functions, givens declared by the model author — is
    * fully available regardless of whether the model's own definitions
    * use any of the forbidden constructs.
+   *
+   * A restricted query may declare its own givens with `given:`. These are
+   * separate from the model's givens, even under the same name as a given
+   * the model doesn't surface, so they can't change what the model's own
+   * definitions see. A name the model surfaces, or one listed in
+   * `finalizeGivens`, can't be declared. One takes its value from its
+   * default, `.run({givens})`, or the Runtime's `givens` option. A value in
+   * the config's givens file with the same name fails with
+   * `runtime-given-unknown`. Given values appear in generated SQL, so a given
+   * is not a way to keep a value from the author of a restricted query.
    *
    * Errors reach the caller in the same way as any other Malloy
    * compile: `.validate()` returns a `LogMessage[]`, and `.run()` /
@@ -986,6 +1000,7 @@ export class ModelMaterializer extends FluentState<Model> {
         urlReader,
         connections,
         model,
+        finalizedGivens: this.runtime._finalizedGivens,
         ...this.compileQueryOptions,
       });
       return queryModel.preparedQuery;
@@ -1447,7 +1462,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
 
       const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
 
-      const mergedGivens = await this.runtime._givensFor(mergedOptions.givens);
+      const mergedGivens = await this.runtime._givensFor(
+        mergedOptions.givens,
+        preparedQuery._modelDef
+      );
       const finalizedSet = this.runtime._finalizedGivens;
 
       // Query-scoped validation: of the givens THIS query references,
@@ -1460,7 +1478,13 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       // "you locked it but forgot to supply it."
       const queryGivenUsage = preparedQuery._query.givenUsage ?? [];
       if (finalizedSet.size > 0 && queryGivenUsage.length > 0) {
-        const referencedIds = new Set(queryGivenUsage.map(g => g.id));
+        const referenced = [
+          ...queryGivenUsage,
+          ...queryGivenUsage.flatMap(
+            g => preparedQuery._modelDef.givens?.[g.id]?.givenUsage ?? []
+          ),
+        ];
+        const referencedIds = new Set(referenced.map(g => g.id));
         const missingProblems: LogMessage[] = [];
         for (const [surfaceName, entry] of Object.entries(
           preparedQuery._modelDef.contents
@@ -1469,7 +1493,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
           if (!referencedIds.has(entry.id)) continue;
           if (!finalizedSet.has(surfaceName)) continue;
           if (mergedGivens && surfaceName in mergedGivens) continue;
-          const firstUse = queryGivenUsage.find(u => u.id === entry.id);
+          const firstUse = referenced.find(u => u.id === entry.id);
           missingProblems.push({
             message:
               `Finalized given '${surfaceName}' has no resolved value. ` +

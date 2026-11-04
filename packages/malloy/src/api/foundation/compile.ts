@@ -144,6 +144,8 @@ type CompileRequest = Compilable &
     connections: LookupConnection<InfoConnection>;
     model?: Model;
     cacheManager?: CacheManager;
+    /** Given names restricted text may not declare. */
+    finalizedGivens?: ReadonlySet<string>;
   };
 
 export class Malloy {
@@ -304,6 +306,7 @@ export class Malloy {
       eventStream,
       restrictedMode,
       method,
+      finalizedGivens,
     } = req;
     const virtualMap = req.virtualMap ?? parse?._translator.virtualMap;
     if (restrictedMode) {
@@ -364,6 +367,11 @@ export class Malloy {
           `Malloy.compile: restrictedMode (${restrictedMode}) does not match the pre-parsed translator's restrictedMode (${parse._translator.restrictedMode}). Set restrictedMode at parse time.`
         );
       }
+      if (finalizedGivens !== undefined) {
+        throw new Error(
+          'Malloy.compile: finalizedGivens cannot be applied to a pre-parsed translator. Compile from `source` or `url` instead.'
+        );
+      }
       translator = parse._translator;
       translator.virtualMap = virtualMap;
       const invalidationKey =
@@ -386,7 +394,8 @@ export class Malloy {
         },
         eventStream,
         restrictedMode ?? false,
-        virtualMap
+        virtualMap,
+        finalizedGivens
       );
     }
     for (;;) {

@@ -106,6 +106,20 @@ export class GivenDeclaration
       return;
     }
 
+    // A value for a name the model doesn't surface fails every query. Declaring
+    // a finalized name would give that value a given to bind to, so a query a
+    // host relies on failing would run. The given still registers after the
+    // error, so its uses don't each log another.
+    if (
+      this.isRestricted() &&
+      this.translator()?.root.finalizedGivens?.has(this.name)
+    ) {
+      this.logError(
+        'restricted-construct-forbidden',
+        `\`given: ${this.name}\` cannot be declared in a restricted query — the name \`${this.name}\` is reserved. Use a different name.`
+      );
+    }
+
     // An inline given with no default has nothing to evaluate at bind
     // time. Log and keep going — the given still registers in the
     // namespace so downstream errors don't cascade pointlessly.
@@ -237,6 +251,7 @@ export class GivenDeclaration
       location: this.location,
       annotations: this.ownAnnotation ? {...this.ownAnnotation} : undefined,
       ...(this.inline ? {inline: true} : {}),
+      ...(this.isRestricted() ? {restricted: true} : {}),
     };
     doc.documentGivens.set(id, givenIR);
 
@@ -273,16 +288,5 @@ export class DefineGivens extends DocStatementList {
   constructor(givens: GivenDeclaration[]) {
     super(givens);
     this.givens = givens;
-  }
-
-  executeList(doc: Document) {
-    if (this.isRestricted()) {
-      this.logError(
-        'restricted-construct-forbidden',
-        '`given:` cannot declare new givens in a restricted query — only `$NAME` references to existing givens are allowed.'
-      );
-      return undefined;
-    }
-    return super.executeList(doc);
   }
 }

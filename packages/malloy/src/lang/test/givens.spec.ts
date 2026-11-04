@@ -681,6 +681,20 @@ describe('given: imports', () => {
     ).toLog(errorMessage(/Cannot find 'NOT_A_GIVEN'/));
   });
 
+  test('the alias collision message suggests a given of the same type', () => {
+    const t = importTest(
+      `
+        import { MAX_ROWS } from "child"
+        import { CAP is MAX_ROWS } from "child"
+      `,
+      `
+        ##! experimental.givens
+        given: MAX_ROWS :: number is 100
+      `
+    );
+    expect(t).toLog(errorMessage(/`given: NEW_NAME :: number is \$MAX_ROWS`/));
+  });
+
   test('importing the same given under two names is rejected as an alias collision', () => {
     // The supply-side contract is one surface name per given; aliasing
     // is ambiguous. Workaround: declare a local given with a default-chain
@@ -695,7 +709,7 @@ describe('given: imports', () => {
         given: MAX_ROWS :: number is 100
       `
     );
-    expect(t).toLog(errorMessage(/surfaced under multiple names/));
+    expect(t).toLog(errorMessage(/imported under more than one name/));
   });
 
   test("chained imports: C's given flows through B into A", () => {
@@ -1132,7 +1146,7 @@ describe('given: query satisfiability check', () => {
         )
       ).toLog(
         errorMessage(
-          /run: statement references given `TENANT`.*not surfaced in this model and has no default/
+          /run: statement references given `TENANT`.*not imported and has no default/
         )
       );
     });
@@ -1153,7 +1167,7 @@ describe('given: query satisfiability check', () => {
         )
       ).toLog(
         errorMessage(
-          /references given .* which is not surfaced in this model and has no default/
+          /references given .* which is not imported and has no default/
         )
       );
     });
@@ -1174,7 +1188,7 @@ describe('given: query satisfiability check', () => {
         )
       ).toLog(
         errorMessage(
-          /references given .* which is not surfaced in this model and has no default/
+          /references given .* which is not imported and has no default/
         )
       );
     });
@@ -1199,7 +1213,7 @@ describe('given: query satisfiability check', () => {
         )
       ).toLog(
         errorMessage(
-          /references given .* which is not surfaced in this model and has no default/
+          /references given .* which is not imported and has no default/
         )
       );
     });
@@ -1242,7 +1256,7 @@ describe('given: query satisfiability check', () => {
       cell2.translate();
       expect(cell2).toLog(
         errorMessage(
-          /references given .* which is not surfaced in this model and has no default/
+          /references given .* which is not imported and has no default/
         )
       );
     });
@@ -1268,9 +1282,7 @@ describe('given: query satisfiability check', () => {
         `
         )
       ).toLog(
-        errorMessage(
-          /references given `B`.*not surfaced in this model and has no default/
-        )
+        errorMessage(/references given `B`.*not imported and has no default/)
       );
     });
 
@@ -1315,9 +1327,7 @@ describe('given: query satisfiability check', () => {
         `
         )
       ).toLog(
-        errorMessage(
-          /references given `C`.*not surfaced in this model and has no default/
-        )
+        errorMessage(/references given `C`.*not imported and has no default/)
       );
     });
 
@@ -1340,7 +1350,7 @@ describe('given: query satisfiability check', () => {
         )
       ).toLog(
         errorMessage(
-          /references given .* which is not surfaced in this model and has no default/
+          /references given .* which is not imported and has no default/
         )
       );
     });
@@ -1450,7 +1460,7 @@ describe('given: PreparedQuery.givens introspection', () => {
         `,
       },
     });
-    expect(t).toLog(errorMessage(/surfaced under multiple names/));
+    expect(t).toLog(errorMessage(/imported under more than one name/));
   });
 
   test('annotations on the given declaration surface via tagParse / getTaglines', () => {
@@ -1575,7 +1585,7 @@ describe('given: Model.givens introspection', () => {
         `,
       },
     });
-    expect(t).toLog(errorMessage(/surfaced under multiple names/));
+    expect(t).toLog(errorMessage(/imported under more than one name/));
   });
 
   test('annotations on given declarations surface via tagParse / getTaglines', () => {
@@ -1866,7 +1876,7 @@ describe('given: imported persisted sources', () => {
   test('importing the source without its given is an error at the import', () => {
     expect(importTest('import { scoped } from "child"', CHILD)).toLog(
       errorMessage(
-        /Imported persisted source `scoped` references given `TENANT`.*not surfaced in this model and has no default/
+        /Imported persisted source `scoped` references given `TENANT`.*not imported and has no default/
       )
     );
   });

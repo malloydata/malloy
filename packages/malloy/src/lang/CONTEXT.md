@@ -193,12 +193,11 @@ For the compiler-side phase and the runtime supply pipeline, see [`../api/founda
 
 `MalloyTranslator.restrictedMode` (boolean, default false) marks a compile as a *restricted query* — Malloy text submitted by an untrusted author against an already-loaded trusted model. The flag is set only by `ModelMaterializer.loadRestrictedQuery`; direct callers of `Malloy.compile` *could* pass `restrictedMode: true` on the request, but that is not a documented surface.
 
-Seven constructs are rejected when the flag is set. Each rejection lives at the construct's existing integration point, logs `restricted-construct-forbidden` with `errorTag: 'restricted-mode'`, and quotes the offending source text in the message:
+Six constructs are rejected when the flag is set. Each rejection lives at the construct's existing integration point, logs `restricted-construct-forbidden` with `errorTag: 'restricted-mode'`, and quotes the offending source text in the message:
 
 | Construct | AST node | Where the check fires |
 |---|---|---|
 | `import` | `ImportStatement` (`ast/statements/import-statement.ts`) | `execute(doc)` |
-| `given:` declaration | `DefineGivens` (`ast/statements/define-given.ts`) | `executeList(doc)` |
 | `##!` annotation | `ModelAnnotation` (`ast/types/annotation-elements.ts`) | `execute(doc)`, per-note |
 | `connection.table(...)` | `TableMethodSource` (`ast/source-elements/table-source.ts`) | `getTableInfo()` |
 | `connection.sql(...)` | `SQLSource` (`ast/source-elements/sql-source.ts`) | `getSourceDef()` |
@@ -208,6 +207,8 @@ Seven constructs are rejected when the flag is set. Each rejection lives at the 
 The two `ExprFunc` rejections cover the two raw-SQL escape hatches in the language: the `!type(args)` syntactic form and the named `sql_*` function family. Both end up emitting user-supplied SQL into the query if allowed. The two checks fire at slightly different points — `isRaw` is decidable from the AST node alone, while the `sql_*` check needs the resolved `FunctionDef` and so lives alongside the existing `experimental.sql_functions` gate inside `getPropsExpression`.
 
 The rejections fire at integration time (`execute` / `getSourceDef` / `getExpression`) — not during AST build — so a single compile collects all violations rather than stopping at the first. `ASTStep`'s `hasErrors()` short-circuit doesn't trip because none of these sites have logged yet.
+
+A `given:` in restricted text gets a `GivenID` built from the text's own URL, so references in the trusted model keep theirs, and its `Given` is marked `restricted`, which `refuseFileValuesForRestrictedGivens` and the no-value error read. A name the model surfaces is the usual `Cannot redefine`. A name in `MalloyTranslator.finalizedGivens`, which `loadRestrictedQuery` fills from the runtime's `finalizeGivens`, logs `restricted-construct-forbidden`, and the given still registers so its uses add no errors.
 
 The `##!` case has a structural twist: `MalloyToAST.updateCompilerFlags` is where compiler-flag lines would normally be pushed onto `compilerFlagSrc` during the visitor walk. In restricted mode, that push is suppressed so the flag never takes effect; the *user-visible diagnostic* is logged later from `ModelAnnotation.execute()`. The trusted-model seeding path in TranslateStep (which feeds `compilerFlagSrc` from `extendingModel.annotations`) is untouched — flags declared by the producer carry through.
 

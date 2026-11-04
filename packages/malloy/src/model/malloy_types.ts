@@ -565,6 +565,9 @@ export interface Given extends HasLocation, HasAnnotations {
    *  Translator validates the default is eager-evaluable; bind-time
    *  evaluator (`model/inline_expr.ts`) performs the reduction. */
   inline?: boolean;
+  /** A config-file value with this given's name fails the query. Set on a
+   *  given declared in restricted text. */
+  restricted?: boolean;
 }
 
 export interface GivenEntry {
