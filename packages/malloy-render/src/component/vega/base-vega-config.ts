@@ -3,21 +3,24 @@ import type {Config} from 'vega';
 export const grayMedium = '#727883';
 export const gridGray = '#E5E7EB';
 
+/** The series colors charts draw with, unless the host's theme overrides them. */
+export const CATEGORY_PALETTE: readonly string[] = [
+  '#1877F2',
+  '#30C8B4',
+  '#5A24C7',
+  '#E42C97',
+  '#F0701A',
+  '#00487C',
+  '#A87CFF',
+  '#9C4300',
+  '#DA8600',
+  '#68013D',
+  '#56585C',
+];
+
 export const baseVegaConfig: () => Config = () => ({
   'range': {
-    'category': [
-      '#1877F2',
-      '#30C8B4',
-      '#5A24C7',
-      '#E42C97',
-      '#F0701A',
-      '#00487C',
-      '#A87CFF',
-      '#9C4300',
-      '#DA8600',
-      '#68013D',
-      '#56585C',
-    ],
+    'category': [...CATEGORY_PALETTE],
     'diverging': [
       '#3F1691',
       '#5A24C7',

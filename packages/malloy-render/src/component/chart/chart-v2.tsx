@@ -20,6 +20,7 @@ import {useResultContext} from '../result-context';
 import {createRAFSignal, resize} from '../util';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './chart.css?raw';
+import {CHART_VALUES_DATA} from './chart-values-data';
 
 let IS_STORYBOOK = false;
 try {
@@ -68,7 +69,7 @@ export function ChartV2Inner(props: ChartV2Props) {
   createEffect(() => {
     const _view = view();
     if (_view) {
-      _view.data('values', props.values);
+      _view.data(CHART_VALUES_DATA, props.values);
       _view.resize();
       _view.runAsync();
       props.onView?.(_view);
