@@ -226,7 +226,7 @@ The short version for plugin authors:
 - **`solidjs`** — return a `JSXElement` from `renderComponent()`. Used by built-in charts and tables.
 - **`dom`** — implement `renderToDOM(container, props)` for direct DOM manipulation (for third-party libraries that need a DOM node). Optional `cleanup(container)`.
 
-A chart written as a Vega-Lite spec (scatter, shape map, segment map) builds the spec in a Solid-free `generate-*-spec.ts`, compiles it once in `beforeRender` with `compileVegaLiteChart` (`src/component/vega/vega-lite-spec.ts`), and draws it with `VegaLiteChart` (`src/component/vega/vega-lite-chart.tsx`). That routes it through `ChartV2` for the same tooltip and hover handling as the bar and line charts. The spec reads its rows from `CHART_VALUES_DATA`, and each chart supplies its own tooltip.
+A chart written as a Vega-Lite spec (scatter, shape map, segment map) builds the spec in a Solid-free `generate-*-spec.ts`, using helpers from `src/component/vega/vega-lite-spec.ts`. It compiles the spec once in `beforeRender` with `compileVegaLiteChart` and draws it with `VegaLiteChart`, both in `src/component/vega/vega-lite-chart.tsx`. That routes it through `ChartV2` for the same tooltip and hover handling as the bar and line charts. `compileVegaLiteChart` parses with the base config and the host's `vegaConfigOverride`, as the bar and line charts do, so the spec leaves series colors to the config's `category` range. The spec reads its rows from `CHART_VALUES_DATA`, and each chart supplies its own tooltip.
 
 ### Core Viz Plugins
 

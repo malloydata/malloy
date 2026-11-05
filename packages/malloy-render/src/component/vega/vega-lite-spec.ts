@@ -4,81 +4,92 @@
  */
 
 // The Solid-free half of drawing a Vega-Lite chart through ChartV2 (the other
-// half is VegaLiteChart in ./vega-lite-chart). Spec code and its tests use
-// only this file.
+// half is ./vega-lite-chart). Spec code and its tests use only this file, so
+// it must not load vega at runtime.
 
-import type {Item} from 'vega';
-import {parse, type Runtime} from 'vega';
-import * as lite from 'vega-lite';
+import type {Config, Item} from 'vega';
+import type * as lite from 'vega-lite';
 import {RecordCell, type Field} from '@/data_tree';
 import type {ChartTooltipEntry} from '@/component/types';
 import {renderCellValue} from '@/component/cell-utils';
 import type {MalloyExplicitTheme} from '@/api/types';
-import {getColorScale} from '@/html/utils';
-import {CATEGORY_PALETTE} from './base-vega-config';
+import {getColorScale, mapCanvasBackground} from '@/html/utils';
+import {baseVegaConfig} from './base-vega-config';
+import {mergeVegaConfigs} from './merge-vega-configs';
 
 export type VegaLiteChartSize = {width: number; height: number};
 
-export type CompiledVegaLiteChart = {
-  runtime: Runtime;
-  vegaSpec: unknown;
-  size: VegaLiteChartSize;
-};
+/** The whole chart's box, axes and legend included. */
+export function chartSize(field: Field): VegaLiteChartSize {
+  return field.isRoot() ? {width: 500, height: 350} : {width: 250, height: 175};
+}
 
 /**
- * Compile a Vega-Lite spec whose rows come from ChartV2's values data source,
- * sized to fill `size` exactly.
+ * The config to parse a compiled chart with: the base theme, then the chart's
+ * own config, then the host's override. Bar and line charts use the same
+ * order, so a host's series colors (a list or a named scheme) and fonts reach
+ * these charts too.
  */
-export function compileVegaLiteChart(
-  spec: lite.TopLevelSpec,
-  size: VegaLiteChartSize,
-  useVegaInterpreter = false
-): CompiledVegaLiteChart {
-  const vegaSpec = lite.compile({
-    ...spec,
-    ...size,
-    // ChartV2 sizes the view to its container, so the spec's width and height
-    // must be the whole chart, axes and legend included.
-    autosize: {type: 'fit', contains: 'padding'},
-  }).spec;
-  const runtime = parse(
-    vegaSpec,
-    undefined,
-    useVegaInterpreter ? {ast: true} : undefined
-  );
-  return {runtime, vegaSpec, size};
-}
-
-/** The theme's series colors: the host's override if it sets one. */
-export function categoryPalette(
+export function chartVegaConfig(
+  chartConfig: Config | undefined,
   vegaConfigOverride: Record<string, unknown>
-): readonly string[] {
-  const range = vegaConfigOverride['range'];
-  if (typeof range === 'object' && range !== null && 'category' in range) {
-    const category = range.category;
-    if (
-      Array.isArray(category) &&
-      category.length > 0 &&
-      category.every((c): c is string => typeof c === 'string')
-    ) {
-      return category;
-    }
-  }
-  return CATEGORY_PALETTE;
+): Config {
+  return mergeVegaConfigs(
+    mergeVegaConfigs(baseVegaConfig(), chartConfig ?? {}),
+    vegaConfigOverride
+  ) as Config;
 }
 
 /**
- * The color scale for a color field. Categories take the theme's series
- * colors, as the bar and line charts do; ordered values keep a gradient.
+ * The color scale for a color field. A text field gets no explicit range, so
+ * it takes the config's category range: the theme's series colors. Ordered
+ * values get a gradient. Pass `explicitTheme` only for maps, where the
+ * theme's `mapColor` ends that gradient.
  */
 export function colorFieldScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal',
-  palette: readonly string[],
   explicitTheme?: MalloyExplicitTheme
 ): {range: string[]} | undefined {
   return type === 'nominal'
-    ? {range: [...palette]}
+    ? undefined
     : getColorScale(type, false, false, explicitTheme);
+}
+
+const MAP_FONT = "var(--malloy-font-family, 'Inter')";
+const MAP_TITLE_COLOR = 'var(--malloy-title-color, #505050)';
+const MAP_LABEL_COLOR = 'var(--malloy-label-color, #000000)';
+
+const MAP_VEGA_CONFIG: lite.Config = {
+  axis: {
+    labelFont: MAP_FONT,
+    titleFont: MAP_FONT,
+    titleFontWeight: 500,
+    titleColor: MAP_TITLE_COLOR,
+    labelColor: MAP_LABEL_COLOR,
+    titleFontSize: 12,
+  },
+  legend: {
+    labelFont: MAP_FONT,
+    titleFont: MAP_FONT,
+    titleFontWeight: 500,
+    titleColor: MAP_TITLE_COLOR,
+    labelColor: MAP_LABEL_COLOR,
+    titleFontSize: 12,
+  },
+  header: {labelFont: MAP_FONT, titleFont: MAP_FONT, titleFontWeight: 500},
+  mark: {font: MAP_FONT},
+  title: {font: MAP_FONT, subtitleFont: MAP_FONT, fontWeight: 500},
+};
+
+/** The parts of a US map spec that the shape and segment maps share. */
+export function usMapFrame(explicitTheme: MalloyExplicitTheme | undefined) {
+  return {
+    projection: {type: 'albersUsa'} as const,
+    // A host's vegaConfigOverride can't change the background: a top-level
+    // background shadows config.background.
+    background: mapCanvasBackground(explicitTheme),
+    config: MAP_VEGA_CONFIG,
+  };
 }
 
 /** The row a mark was drawn from; undefined for marks such as map backgrounds. */

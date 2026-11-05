@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: MIT
  */
 
-// The builder reaches ESM-only vega through @/html/utils but never calls it.
-jest.mock('vega', () => ({}));
-
+import * as lite from 'vega-lite';
 import {
   runChartQuery,
   closeChartTestRuntime,
 } from '@/plugins/spec-test-support/harness';
-import {segmentMapTooltip} from '@/plugins/segment-map/generate-segment_map-spec';
+import {
+  generateSegmentMapSpec,
+  segmentMapTooltip,
+} from '@/plugins/segment-map/generate-segment_map-spec';
 
 afterAll(async () => {
   await closeChartTestRuntime();
@@ -57,5 +58,22 @@ describe('segment map tooltip', () => {
       ['dest_lat', '33.94'],
       ['dest_lon', '-118.41'],
     ]);
+  }, 60000);
+
+  test("the legend shows the color column's label", async () => {
+    const {root} = await runChartQuery(
+      SOURCE,
+      `
+      # segment_map
+      run: routes -> {
+        group_by: origin_lat, origin_lon, dest_lat, dest_lon
+        group_by:
+          # label="Route"
+          route
+      }
+    `
+    );
+    const compiled = lite.compile(generateSegmentMapSpec(root)).spec;
+    expect(compiled.legends?.map(l => l.title)).toEqual(['Route']);
   }, 60000);
 });

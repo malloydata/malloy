@@ -14,15 +14,15 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {JSXElement} from 'solid-js';
 import {
   generateScatterChartSpec,
-  getScatterSize,
   mapScatterRow,
   scatterTooltip,
 } from './generate-scatter_chart-spec';
-import {VegaLiteChart} from '@/component/vega/vega-lite-chart';
 import {
   compileVegaLiteChart,
+  VegaLiteChart,
   type CompiledVegaLiteChart,
-} from '@/component/vega/vega-lite-spec';
+} from '@/component/vega/vega-lite-chart';
+import {chartSize} from '@/component/vega/vega-lite-spec';
 import type {
   GetResultMetadataOptions,
   RenderMetadata,
@@ -71,12 +71,9 @@ export const ScatterChartPluginFactory: RenderPluginFactory<SolidJSRenderPluginI
         ): void => {
           useVegaInterpreter = options.useVegaInterpreter;
           chart = compileVegaLiteChart(
-            generateScatterChartSpec(
-              field,
-              options.getVegaConfigOverride?.('scatter_chart') ?? {},
-              options.explicitTheme
-            ),
-            getScatterSize(field),
+            generateScatterChartSpec(field),
+            chartSize(field),
+            options.getVegaConfigOverride?.('scatter_chart') ?? {},
             useVegaInterpreter
           );
         },

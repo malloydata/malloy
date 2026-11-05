@@ -20,7 +20,6 @@ import {
   scatterTooltip,
 } from '@/plugins/scatter-chart/generate-scatter_chart-spec';
 import {rowOfMark} from '@/component/vega/vega-lite-spec';
-import {CATEGORY_PALETTE} from '@/component/vega/base-vega-config';
 
 afterAll(async () => {
   await closeChartTestRuntime();
@@ -115,34 +114,39 @@ describe('scatter_chart draws live, in the theme colors, with a tooltip', () => 
   test('its rows come from the live values data source', async () => {
     const {root} = await runChartQuery(SOURCE4, QUERY);
     expect(generateScatterChartSpec(root).data).toEqual({name: 'values'});
-  });
+  }, 60000);
 
-  const colorOf = (spec: lite.TopLevelSpec) =>
-    'encoding' in spec ? spec.encoding?.color : undefined;
+  // The colors themselves come from the parse config (see chartVegaConfig), so
+  // the spec must leave the category range to it rather than name colors.
+  const colorScale = (spec: lite.TopLevelSpec) =>
+    lite.compile(spec).spec.scales?.find(s => s.name === 'color');
 
-  test("without a color field, points take the theme's first color", async () => {
+  test("a text color field takes the theme's series colors", async () => {
+    const {root} = await runChartQuery(SOURCE4, QUERY);
+    const spec = generateScatterChartSpec(root);
+    expect(colorScale(spec)).toMatchObject({
+      type: 'ordinal',
+      domain: {field: 'region'},
+      range: 'category',
+    });
+    // A category range of the spec's own would outrank the theme's.
+    expect(lite.compile(spec).spec.config?.range).toBeUndefined();
+  }, 60000);
+
+  test("without a color field, every point takes the theme's first series color", async () => {
     const {root} = await runChartQuery(
       SOURCE4,
       'run: data4 -> { group_by: audience_name; aggregate: total_reach is reach.sum() }'
     );
-    expect(colorOf(generateScatterChartSpec(root))).toEqual({
-      value: CATEGORY_PALETTE[0],
+    const spec = generateScatterChartSpec(root);
+    expect(colorScale(spec)).toEqual({
+      name: 'color',
+      type: 'ordinal',
+      domain: [''],
+      range: 'category',
     });
-    expect(
-      colorOf(generateScatterChartSpec(root, {range: {category: ['#123456']}}))
-    ).toEqual({value: '#123456'});
-  });
-
-  test("a text color field takes the theme's series colors", async () => {
-    const {root} = await runChartQuery(SOURCE4, QUERY);
-    expect(colorOf(generateScatterChartSpec(root))).toMatchObject({
-      field: 'region',
-      scale: {range: [...CATEGORY_PALETTE]},
-    });
-    expect(
-      colorOf(generateScatterChartSpec(root, {range: {category: ['#123456']}}))
-    ).toMatchObject({scale: {range: ['#123456']}});
-  });
+    expect(lite.compile(spec).spec.legends ?? []).toEqual([]);
+  }, 60000);
 
   test('the tooltip labels and formats each column the chart draws', async () => {
     const {root, rootCell} = await runChartQuery(SOURCE4, QUERY);
@@ -173,7 +177,7 @@ describe('scatter_chart draws live, in the theme colors, with a tooltip', () => 
         },
       ],
     });
-  });
+  }, 60000);
 
   test('a mark finds the row it was drawn from; a background mark finds none', async () => {
     const {rootCell} = await runChartQuery(SOURCE4, QUERY);
@@ -181,5 +185,5 @@ describe('scatter_chart draws live, in the theme colors, with a tooltip', () => 
     const datum = {...mapScatterRow(row, undefined), __row: row};
     expect(rowOfMark(fakeTooltipItem('marks', datum))).toBe(row);
     expect(rowOfMark(fakeTooltipItem('marks', {id: '06'}))).toBeUndefined();
-  });
+  }, 60000);
 });

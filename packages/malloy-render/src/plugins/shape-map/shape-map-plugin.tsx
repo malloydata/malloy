@@ -12,18 +12,18 @@ import type {
 import {type Field, FieldType} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {JSXElement} from 'solid-js';
-import {VegaLiteChart} from '@/component/vega/vega-lite-chart';
 import {
   compileVegaLiteChart,
+  VegaLiteChart,
   type CompiledVegaLiteChart,
-} from '@/component/vega/vega-lite-spec';
+} from '@/component/vega/vega-lite-chart';
+import {chartSize} from '@/component/vega/vega-lite-spec';
 import type {
   GetResultMetadataOptions,
   RenderMetadata,
 } from '@/component/render-result-metadata';
 import {
   generateShapeMapSpec,
-  getShapeMapSize,
   mapShapeRow,
   shapeMapTooltip,
 } from './generate-shape_map-spec';
@@ -71,12 +71,9 @@ export const ShapeMapPluginFactory: RenderPluginFactory<SolidJSRenderPluginInsta
         ): void => {
           useVegaInterpreter = options.useVegaInterpreter;
           chart = compileVegaLiteChart(
-            generateShapeMapSpec(
-              field,
-              options.getVegaConfigOverride?.('shape_map') ?? {},
-              options.explicitTheme
-            ),
-            getShapeMapSize(field),
+            generateShapeMapSpec(field, options.explicitTheme),
+            chartSize(field),
+            options.getVegaConfigOverride?.('shape_map') ?? {},
             useVegaInterpreter
           );
         },

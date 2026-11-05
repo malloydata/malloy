@@ -9,14 +9,12 @@ import usAtlas from 'us-atlas/states-10m.json';
 import type {MalloyExplicitTheme} from '@/api/types';
 import type {ChartTooltipEntry} from '@/component/types';
 import {CHART_VALUES_DATA} from '@/component/chart/chart-values-data';
-import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
 import {
-  categoryPalette,
   cellText,
   colorFieldScale,
   tooltipLine,
+  usMapFrame,
 } from '@/component/vega/vega-lite-spec';
-import {mapCanvasBackground} from '@/html/utils';
 
 function getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
   if (field.isString()) return 'nominal';
@@ -38,43 +36,6 @@ export function mapSegmentRow(row: RecordCell): Record<string, unknown> {
   }
   return mapped;
 }
-
-export function getSegmentMapSize(field: Field): {
-  height: number;
-  width: number;
-} {
-  return field.isRoot() ? {height: 350, width: 500} : {height: 175, width: 250};
-}
-
-const SEGMENT_MAP_VEGA_CONFIG: lite.Config = {
-  axis: {
-    labelFont: "var(--malloy-font-family, 'Inter')",
-    titleFont: "var(--malloy-font-family, 'Inter')",
-    titleFontWeight: 500 as const,
-    titleColor: 'var(--malloy-title-color, #505050)',
-    labelColor: 'var(--malloy-label-color, #000000)',
-    titleFontSize: 12,
-  },
-  legend: {
-    labelFont: "var(--malloy-font-family, 'Inter')",
-    titleFont: "var(--malloy-font-family, 'Inter')",
-    titleFontWeight: 500 as const,
-    titleColor: 'var(--malloy-title-color, #505050)',
-    labelColor: 'var(--malloy-label-color, #000000)',
-    titleFontSize: 12,
-  },
-  header: {
-    labelFont: "var(--malloy-font-family, 'Inter')",
-    titleFont: "var(--malloy-font-family, 'Inter')",
-    titleFontWeight: 500 as const,
-  },
-  mark: {font: "var(--malloy-font-family, 'Inter')"},
-  title: {
-    font: "var(--malloy-font-family, 'Inter')",
-    subtitleFont: "var(--malloy-font-family, 'Inter')",
-    fontWeight: 500 as const,
-  },
-};
 
 /**
  * The tooltip for one segment. A text fifth column (such as a route name) is
@@ -100,7 +61,6 @@ export function segmentMapTooltip(field: NestField) {
  */
 export function generateSegmentMapSpec(
   field: NestField,
-  vegaConfigOverride: Record<string, unknown> = {},
   explicitTheme?: MalloyExplicitTheme
 ): lite.TopLevelSpec {
   const fields = field.fields;
@@ -116,18 +76,14 @@ export function generateSegmentMapSpec(
     colorDef = {
       field: colorField.name,
       type: colorType,
-      axis: {title: colorField.name},
-      scale: colorFieldScale(
-        colorType,
-        categoryPalette(vegaConfigOverride),
-        explicitTheme
-      ),
+      legend: {title: colorField.getLabel()},
+      scale: colorFieldScale(colorType, explicitTheme),
     };
   }
 
   const spec: lite.TopLevelSpec = {
+    ...usMapFrame(explicitTheme),
     data: {name: CHART_VALUES_DATA},
-    projection: {type: 'albersUsa'},
     layer: [
       {
         data: {
@@ -153,15 +109,6 @@ export function generateSegmentMapSpec(
         },
       },
     ],
-    // Map canvas background from the embedder theme; an unset or
-    // empty value falls back to transparent so the map blends with
-    // the host chrome. `vegaConfigOverride` cannot change this: it
-    // merges only into spec.config, which a top-level spec.background
-    // shadows in Vega-Lite.
-    background: mapCanvasBackground(explicitTheme),
-    config: SEGMENT_MAP_VEGA_CONFIG,
   };
-
-  spec.config = mergeVegaConfigs(spec.config ?? {}, vegaConfigOverride);
   return spec;
 }

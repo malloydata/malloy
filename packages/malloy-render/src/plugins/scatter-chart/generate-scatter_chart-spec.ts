@@ -5,17 +5,11 @@
 
 import type {Field, Cell, NestField, RecordCell} from '@/data_tree';
 import type * as lite from 'vega-lite';
-import type {MalloyExplicitTheme} from '@/api/types';
 import type {ChartTooltipEntry} from '@/component/types';
 import {CHART_VALUES_DATA} from '@/component/chart/chart-values-data';
-import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
 import {DEFAULT_SPEC} from '@/html/vega_spec';
 import {normalizeToTimezone} from '@/html/utils';
-import {
-  categoryPalette,
-  colorFieldScale,
-  tooltipLine,
-} from '@/component/vega/vega-lite-spec';
+import {colorFieldScale, tooltipLine} from '@/component/vega/vega-lite-spec';
 
 function getDataType(
   field: Field
@@ -49,10 +43,6 @@ export function mapScatterRow(
   return mapped;
 }
 
-export function getScatterSize(field: Field): {height: number; width: number} {
-  return field.isRoot() ? {height: 350, width: 500} : {height: 175, width: 250};
-}
-
 /** The scatter's columns, by position: x, y, then optional color, size, shape. */
 function scatterChannels(field: NestField) {
   const [x, y, color, size, shape] = field.fields;
@@ -69,15 +59,15 @@ export function scatterTooltip(field: NestField) {
   });
 }
 
+// Vega-Lite reads config.color as a table of named colors and points the
+// category range at it, which would hide the theme's series colors.
+const {color: _namedColors, ...SCATTER_CONFIG} = DEFAULT_SPEC.config ?? {};
+
 /**
  * The scatter chart's Vega-Lite spec. It reads its rows (see mapScatterRow)
  * from ChartV2's values data source at render time.
  */
-export function generateScatterChartSpec(
-  field: NestField,
-  vegaConfigOverride: Record<string, unknown> = {},
-  explicitTheme?: MalloyExplicitTheme
-): lite.TopLevelSpec {
+export function generateScatterChartSpec(field: NestField): lite.TopLevelSpec {
   const {
     x: xField,
     y: yField,
@@ -90,7 +80,6 @@ export function generateScatterChartSpec(
   const yType = getDataType(yField);
   const sizeType = sizeField ? getDataType(sizeField) : undefined;
   const shapeType = shapeField ? getDataType(shapeField) : undefined;
-  const palette = categoryPalette(vegaConfigOverride);
 
   let colorDef;
   if (colorField !== undefined) {
@@ -99,10 +88,13 @@ export function generateScatterChartSpec(
       field: colorField.name,
       type: colorType,
       legend: {title: colorField.getLabel()},
-      scale: colorFieldScale(colorType, palette, explicitTheme),
+      // No theme: its mapColor tints maps only.
+      scale: colorFieldScale(colorType),
     };
   } else {
-    colorDef = {value: palette[0]};
+    // One constant on the category scale draws every point in the theme's
+    // first series color, whether the theme lists its colors or names a scheme.
+    colorDef = {datum: '', legend: null};
   }
 
   const sizeDef = sizeField
@@ -125,7 +117,8 @@ export function generateScatterChartSpec(
   const ySort = yType === 'nominal' ? null : undefined;
 
   const spec: lite.TopLevelSpec = {
-    ...DEFAULT_SPEC,
+    $schema: DEFAULT_SPEC.$schema,
+    config: SCATTER_CONFIG,
     data: {name: CHART_VALUES_DATA},
     mark: 'point',
     encoding: {
@@ -149,8 +142,6 @@ export function generateScatterChartSpec(
     },
     background: 'transparent',
   };
-
-  spec.config = mergeVegaConfigs(spec.config ?? {}, vegaConfigOverride);
 
   return spec;
 }
