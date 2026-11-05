@@ -70,6 +70,14 @@ export function VegaLiteChart(props: {
     const record = props.mapRow(row);
     return record ? [{...record, __row: row}] : [];
   });
+  // ChartV2 asks for tooltip data on every mouse move. Hand back the same
+  // object while the mouse stays on one row, as the bar and line charts do,
+  // so the tooltip isn't rebuilt each move.
+  const tooltips = new Map<RecordCell, ChartTooltipEntry | null>();
+  const tooltipOf = (row: RecordCell) => {
+    if (!tooltips.has(row)) tooltips.set(row, props.tooltip(row));
+    return tooltips.get(row) ?? null;
+  };
   return (
     <ChartV2
       data={props.data}
@@ -82,7 +90,7 @@ export function VegaLiteChart(props: {
       totalHeight={props.chart.size.height}
       getTooltipData={item => {
         const row = rowOfMark(item);
-        return row ? props.tooltip(row) : null;
+        return row ? tooltipOf(row) : null;
       }}
       useVegaInterpreter={props.useVegaInterpreter}
     />
