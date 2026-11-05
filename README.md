@@ -123,7 +123,7 @@ See the [Malloy CLI docs](https://docs.malloydata.dev/documentation/malloy_cli/i
 
 ### Serve models with Publisher
 
-[Publisher](https://github.com/malloydata/publisher) is the open-source semantic model server for Malloy. It serves your `.malloy` models through REST and Model Context Protocol (MCP) APIs, so apps, BI tools, and AI agents such as Claude Code, Cursor, and Codex all query the same model through one interface:
+[Publisher](https://github.com/malloydata/publisher) is an open-source semantic model server for Malloy. It serves your `.malloy` models through REST and Model Context Protocol (MCP) APIs, so apps, BI tools, and AI agents such as Claude Code, Cursor, and Codex all query the same model through one interface:
 
 ```bash
 npx @malloy-publisher/server --port 4000 --server_root path/to/your/models
