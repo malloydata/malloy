@@ -144,8 +144,8 @@ export class TrinoDialect extends PostgresBase {
   supportUnnestArrayAgg = false;
   // A query on an array runs only where it is computed in place, with
   // lambdas. Presto rejects correlated subqueries ("Given correlated
-  // subquery is not supported"); Trino has them, but its sqlArrayQueryHead
-  // is not written yet.
+  // subquery is not supported"); Trino has them, but its head for an array
+  // (sqlUnnestPipelineHead with isScalarArray) is not written yet.
   supportsArrayQueries = true;
   supportsCorrelatedArrayQueries = false;
   supportsAggDistinct = false;

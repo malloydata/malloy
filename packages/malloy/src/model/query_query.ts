@@ -1221,15 +1221,19 @@ export class QueryQuery extends QueryField {
    */
   private packedColumnFor(
     from: QueryStruct,
-    path: string[]
+    path: string[],
+    endsInColumn = false
   ): [string, string] | undefined {
     let struct = from;
     let alias = struct.getIdentifier();
     let column: string | undefined = undefined;
-    for (const name of path) {
+    for (const [i, name] of path.entries()) {
       const child = struct.getChildByName(name);
       if (child === undefined) return undefined;
-      if (!(child instanceof QueryFieldStruct)) {
+      if (
+        !(child instanceof QueryFieldStruct) ||
+        (endsInColumn && i === path.length - 1)
+      ) {
         column ??= name;
         break;
       }
@@ -1268,8 +1272,16 @@ export class QueryQuery extends QueryField {
       const usage = isRawSegment(this.firstSegment)
         ? []
         : (this.firstSegment.expandedFieldUsage ?? []);
-      for (const {path} of usage) {
-        needed(this.packedColumnFor(this.parent, path));
+      for (const {path, inPlaceDepth} of usage) {
+        // A weak reference reads its array in place, as a column of the
+        // join above it, not as a join of its own.
+        const read =
+          inPlaceDepth === undefined
+            ? path
+            : path.slice(0, path.length - inPlaceDepth + 1);
+        needed(
+          this.packedColumnFor(this.parent, read, inPlaceDepth !== undefined)
+        );
       }
       // What a primary key needs is what it reads: a computed key's name is
       // not a column, and the columns its expression reads are named nowhere
@@ -2826,9 +2838,13 @@ export class QueryQuery extends QueryField {
       : this.arraySelectSQL(array, arraySQL, pipeline);
     if (inPlace !== undefined) return inPlace;
     const dialect = this.parent.dialect;
+    // The translator rejects every shape which cannot be computed in place
+    // (`arrayQueryNotInPlace`); what reaches here is a shape which could
+    // be, but whose expressions read something other than an element's own
+    // fields (`readsOnlyElementsOf`).
     if (!dialect.supportsCorrelatedArrayQueries) {
       throw new MalloyCompileError(
-        `The ${dialect.name} dialect can only query an array with one aggregate, or with a select: of its elements`,
+        `The ${dialect.name} dialect can only query an array in place, which this query on an array cannot be: it reads something other than its elements' own fields`,
         'array-query-not-in-place',
         undefined
       );
@@ -2836,8 +2852,10 @@ export class QueryQuery extends QueryField {
     const elements: NestSourceDef = {
       type: 'nest_source',
       name: '~array~',
-      pipeSQL: dialect.sqlArrayQueryHead(
+      pipeSQL: dialect.sqlUnnestPipelineHead(
+        false,
         arraySQL,
+        undefined,
         isBasicArray(array.structDef)
       ),
       fields: array.structDef.fields,

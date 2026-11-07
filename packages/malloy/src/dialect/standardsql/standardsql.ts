@@ -283,20 +283,18 @@ export class StandardSQLDialect extends Dialect {
 
   sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    _fieldList?: DialectFieldList,
+    isScalarArray = false
   ): string {
     let p = sourceSQLExpression;
     if (isSingleton) {
       p = `[${p}]`;
     }
-    return `UNNEST(${p})`;
-  }
-
-  sqlArrayQueryHead(source: string, isScalarArray: boolean): string {
     if (isScalarArray) {
-      return `(SELECT value FROM UNNEST(${source}) AS value)`;
+      return `(SELECT value FROM UNNEST(${p}) AS value)`;
     }
-    return `UNNEST(${source})`;
+    return `UNNEST(${p})`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

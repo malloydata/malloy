@@ -1655,7 +1655,18 @@ export class MalloyToAST
       ),
       pcx.fieldPath()
     );
-    const query = new ast.ExprArrayQuery(array, this.getVExpr(pcx.vExpr()));
+    // Only `{ ... }` stages: an array's elements have no views to name or
+    // refine, and after each closing brace the parser is back in an
+    // expression, so a following `+ field` is addition.
+    const stages: ast.View[] = pcx
+      .queryProperties()
+      .map(qp =>
+        this.astAt(new ast.QOpDescView(this.visitQueryProperties(qp)), qp)
+      );
+    const view = stages.reduce((base, op) =>
+      this.astAt(new ast.ViewArrow(base, op), pcx)
+    );
+    const query = new ast.ExprArrayQuery(array, view);
     return this.astAt(query, pcx);
   }
 

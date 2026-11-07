@@ -255,13 +255,16 @@ export class DuckDBDialect extends PostgresBase {
 
   sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    _fieldList?: DialectFieldList,
+    isScalarArray = false
   ): string {
     let p = sourceSQLExpression;
     if (isSingleton) {
       p = `[${p}]`;
     }
-    return `(SELECT UNNEST(${p}) as base)`;
+    const name = isScalarArray ? this.sqlQuoteIdentifier('value') : 'base';
+    return `(SELECT UNNEST(${p}) as ${name})`;
   }
 
   // DuckDB runs a correlated subquery over UNNEST as a full unnest and join,
@@ -341,11 +344,6 @@ export class DuckDBDialect extends PostgresBase {
   // LIST() over no rows is null.
   sqlArrayOrEmpty(arraySQL: string): string {
     return `COALESCE(${arraySQL}, [])`;
-  }
-
-  sqlArrayQueryHead(source: string, isScalarArray: boolean): string {
-    const name = isScalarArray ? this.sqlQuoteIdentifier('value') : 'base';
-    return `(SELECT UNNEST(${source}) AS ${name})`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

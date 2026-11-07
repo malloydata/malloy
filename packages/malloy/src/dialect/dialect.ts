@@ -665,7 +665,7 @@ export abstract class Dialect {
 
   /**
    * Whether `array -> { ... }`, a query on the elements of an array of the
-   * current row, compiles in this dialect (`sqlArrayQueryHead`).
+   * current row, compiles in this dialect.
    * Experimental.
    */
   supportsArrayQueries = false;
@@ -676,17 +676,6 @@ export abstract class Dialect {
    * subquery instead. Without it such a query is a compile error.
    */
   supportsCorrelatedArrayQueries = true;
-
-  /**
-   * The FROM of a query on the elements of an array of the current row
-   * (`array -> { ... }`), as a correlated subquery. It is read `AS base`,
-   * and the query reads a record's fields from it as `base.field` and an
-   * array of scalars' elements as `base.value`. Only called where
-   * `supportsArrayQueries`.
-   */
-  sqlArrayQueryHead(_source: string, _isScalarArray: boolean): string {
-    throw new Error(`The ${this.name} dialect cannot query an array with ->`);
-  }
 
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 
@@ -699,10 +688,22 @@ export abstract class Dialect {
     childType: string
   ): string;
 
+  /**
+   * The FROM of a query on rows held in a column of the outer row, written
+   * as a correlated subquery and read `AS base`: a later stage of a nest,
+   * over the rows the stage before it made, or a query on an array
+   * (`array -> { ... }`), over the array's elements. The query reads a
+   * record's fields as `base.field`, and an array of scalars' elements as
+   * `base.value`.
+   *
+   * `isSingleton`: the source is one record, not an array of them.
+   * `isScalarArray`: the source is an array of scalars, not of records.
+   */
   abstract sqlUnnestPipelineHead(
     isSingleton: boolean,
     sourceSQLExpression: string,
-    fieldList?: DialectFieldList
+    fieldList?: DialectFieldList,
+    isScalarArray?: boolean
   ): string;
 
   abstract sqlCreateFunction(id: string, funcText: string): string;

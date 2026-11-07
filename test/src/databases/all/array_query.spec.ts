@@ -15,6 +15,24 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
  * current row, whose value is a value of that row. Experimental.
  */
 describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
+  const supported = runtime.dialect.supportsArrayQueries;
+  // A query which is not computed in place needs a correlated subquery.
+  const correlated =
+    supported && runtime.dialect.supportsCorrelatedArrayQueries;
+  // Queries on an array which only a correlated subquery can run; without
+  // one, each is a translation error, so the model has them only with one.
+  const needSubquery = `
+        by_size is by_fac_type -> {
+          group_by: big is airport_count > 100
+          aggregate: n is airport_count.sum()
+        }
+        busy_types is by_fac_type -> {
+          group_by: fac_type
+          aggregate: n is airport_count.sum()
+        } -> {
+          where: n > 50
+          select: fac_type
+        }`;
   const model = `
     ##! experimental.array_queries
 
@@ -36,17 +54,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         doubled is by_fac_type -> {
           select: fac_type, double_count is airport_count * 2
         }
-        by_size is by_fac_type -> {
-          group_by: big is airport_count > 100
-          aggregate: n is airport_count.sum()
-        }
-        busy_types is by_fac_type -> {
-          group_by: fac_type
-          aggregate: n is airport_count.sum()
-        } -> {
-          where: n > 50
-          select: fac_type
-        }
+        ${correlated ? needSubquery : ''}
         none is by_fac_type -> { select: *; where: airport_count > 1000 }
     }
 
@@ -61,10 +69,6 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     }
   `;
   const tm = wrapTestModel(runtime, model);
-  const supported = runtime.dialect.supportsArrayQueries;
-  // A query which is not computed in place needs a correlated subquery.
-  const correlated =
-    supported && runtime.dialect.supportsCorrelatedArrayQueries;
 
   test.when(supported)('aggregates a record array per row', async () => {
     // Alaska has 608 airports, 104 of them seaplane bases
@@ -355,7 +359,12 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         await expect(
           runtime
             .loadModel(model)
-            .loadQuery("run: a -> { where: state = 'AK'; select: by_size }")
+            .loadQuery(
+              `run: a -> {
+                where: state = 'AK'
+                select: by_size is by_fac_type -> { group_by: big is airport_count > 100 }
+              }`
+            )
             .getSQL()
         ).rejects.toThrow(/can only query an array/);
       }

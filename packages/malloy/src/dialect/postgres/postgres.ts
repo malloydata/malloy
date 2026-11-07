@@ -241,26 +241,23 @@ export class PostgresDialect extends PostgresBase {
     }
   }
 
+  // A query on an array is always a correlated subquery here: Postgres has
+  // no list lambdas to compute one in place. Nested records are JSONB, and
+  // an array of scalars, which may be a native array, is made JSONB and
+  // each element wrapped as {"value": v}, the way sqlUnnestAlias does.
   sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    _fieldList?: DialectFieldList,
+    isScalarArray = false
   ): string {
     if (isSingleton) {
       return `UNNEST(ARRAY((SELECT ${sourceSQLExpression})))`;
+    } else if (isScalarArray) {
+      return `(SELECT JSONB_BUILD_OBJECT('value', __v) AS base FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${sourceSQLExpression})) AS __v)`;
     } else {
       return `JSONB_ARRAY_ELEMENTS(${sourceSQLExpression})`;
     }
-  }
-
-  // A query on an array is always a correlated subquery over the array's
-  // elements; Postgres has no list lambdas to compute one in place. The
-  // elements are JSONB, read as a nest's are: a record's fields from the
-  // element, and a scalar wrapped as {"value": v}.
-  sqlArrayQueryHead(source: string, isScalarArray: boolean): string {
-    if (isScalarArray) {
-      return `(SELECT JSONB_BUILD_OBJECT('value', __v) AS base FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) AS __v)`;
-    }
-    return `JSONB_ARRAY_ELEMENTS(TO_JSONB(${source}))`;
   }
 
   // JSONB_AGG over no rows is null.
