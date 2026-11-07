@@ -223,6 +223,17 @@ export const pgTableDef: SourceDef = {
   fields: baseFields,
 };
 
+// Presto computes a query on an array only in place, with lambdas: it has
+// no correlated subquery to fall back on.
+export const prestoTableDef: SourceDef = {
+  type: 'table',
+  name: 'aTable',
+  dialect: 'presto',
+  tablePath: 'aTable',
+  connection: '_presto_',
+  fields: baseFields,
+};
+
 // SQL Server has no boolean values (booleanType 'none'), so no column of
 // its table is a boolean
 export const mssqlTableDef: SourceDef = {
@@ -244,6 +255,7 @@ export const mockSchema: TableSourceDef[] = [
   db2TableDef,
   bqTableDef,
   pgTableDef,
+  prestoTableDef,
   mssqlTableDef,
   {
     type: 'table',
@@ -408,7 +420,7 @@ export interface TestTranslatorOptions {
 
 /**
  * Every connection name a test mentions resolves to a dialect, as it would
- * through a host's connection lookup: the five listed below to theirs, and
+ * through a host's connection lookup: the six listed below to theirs, and
  * any other name to `TEST_DIALECT`.
  */
 class TestConnectionDialectZone extends Zone<string> {
@@ -424,7 +436,7 @@ export class TestTranslator extends MalloyTranslator {
   testRoot?: TestRoot;
   connectionDialectZone = new TestConnectionDialectZone();
   /*
-   * There are five connections:
+   * There are six connections:
    *   _db_  - duckdb dialect, with the following tables ...
    *      aTable, malloytest.carriers, malloytest.flights, malloytest.airports
    *   _db2_ - duckdb dialect, with one table, aTable. A second connection
@@ -433,6 +445,7 @@ export class TestTranslator extends MalloyTranslator {
    *      aTable
    *   _pg_  - postgres dialect, with one table
    *      aTable
+   *   _presto_ - presto dialect, with one table, aTable
    *   _mssql_ - sqlserver dialect, which has no boolean values, with one
    *      table, aTable
    *
@@ -464,6 +477,7 @@ export class TestTranslator extends MalloyTranslator {
       _db2_: {type: 'connection', name: '_db2_'},
       _bq_: {type: 'connection', name: '_bq_'},
       _pg_: {type: 'connection', name: '_pg_'},
+      _presto_: {type: 'connection', name: '_presto_'},
       _mssql_: {type: 'connection', name: '_mssql_'},
       a: {...aTableDef, primaryKey: 'astr', name: 'a'},
       b: {...aTableDef, primaryKey: 'astr', name: 'b'},
@@ -538,6 +552,7 @@ export class TestTranslator extends MalloyTranslator {
     this.connectionDialectZone.define('_db2_', TEST_DIALECT);
     this.connectionDialectZone.define('_bq_', 'standardsql');
     this.connectionDialectZone.define('_pg_', 'postgres');
+    this.connectionDialectZone.define('_presto_', 'presto');
     this.connectionDialectZone.define('_mssql_', 'sqlserver');
     for (const flag of options.compilerFlags ?? []) {
       this.compilerFlagSrc.push(`##! ${flag}\n`);

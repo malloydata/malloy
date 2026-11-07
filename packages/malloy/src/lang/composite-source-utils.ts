@@ -536,6 +536,20 @@ function expandRefUsage(
       return true;
     }
     const existing = seen[key];
+    // A path reached weakly, from inside an array query, and also strongly
+    // is a strong reference, and is walked again to activate its joins.
+    let strengthened = false;
+    if (
+      existing.inPlaceDepth !== undefined &&
+      (usage.inPlaceDepth ?? 0) < existing.inPlaceDepth
+    ) {
+      if (usage.inPlaceDepth === undefined) {
+        delete existing.inPlaceDepth;
+      } else {
+        existing.inPlaceDepth = usage.inPlaceDepth;
+      }
+      strengthened = true;
+    }
     if (usage.uniqueKeyRequirement) {
       existing.uniqueKeyRequirement = {
         isCount:
@@ -546,7 +560,7 @@ function expandRefUsage(
     if (usage.analyticFunctionUse) {
       existing.analyticFunctionUse = true;
     }
-    return false;
+    return strengthened;
   }
 
   // Initialize: mark original inputs and add them to processing queue
@@ -572,16 +586,19 @@ function expandRefUsage(
     addGivens(getJoinGivenUsage(joinDef));
 
     for (const usage of joinFieldUsage) {
-      const key = pathToKey('field', usage.path);
-      if (!seen[key]) {
-        seen[key] = usage;
+      if (mergeIntoSeen(usage)) {
         toProcess.push(usage);
       }
       const isInternalReference =
         usage.path.length === joinPath.length + 1 &&
         pathBegins(usage.path, joinPath);
-      if (!isInternalReference && usage.path.length > 1) {
-        const dependencyPath = usage.path.slice(0, -1);
+      // A weak reference depends on the join above the array it reads in
+      // place, not on the array.
+      const dependencyPath = usage.path.slice(
+        0,
+        usage.inPlaceDepth === undefined ? -1 : -usage.inPlaceDepth
+      );
+      if (!isInternalReference && dependencyPath.length > 0) {
         const dependencyKey = pathToKey('join', dependencyPath);
         getJoin(activeJoinGraph, dependencyKey, dependencyPath);
         thisDep.dependsOn.add(dependencyKey);
@@ -614,8 +631,23 @@ function expandRefUsage(
       // Add the atomic field's dependencies to the queue
       const refPath = reference.path.slice(0, -1);
       for (const usage of joinedFieldUsage(refPath, fieldUsage)) {
-        if (mergeIntoSeen(usage)) {
-          toProcess.push(usage);
+        // A computed field read in place, inside an array's elements, reads
+        // its own fields in place too.
+        const inPlace =
+          reference.inPlaceDepth === undefined
+            ? usage
+            : {
+                ...usage,
+                inPlaceDepth: Math.max(
+                  usage.inPlaceDepth ?? 0,
+                  reference.inPlaceDepth -
+                    1 +
+                    usage.path.length -
+                    refPath.length
+                ),
+              };
+        if (mergeIntoSeen(inPlace)) {
+          toProcess.push(inPlace);
         }
       }
 
@@ -627,9 +659,13 @@ function expandRefUsage(
     // Track the joins along the path.  A path which ends at a join and carries
     // a unique key requirement is an aggregate computed over that join's rows,
     // which should then include the join's on-clause fields in the field usage.
-    // A path which merely names a join-typed value does not.
+    // A path which merely names a join-typed value does not. A weak path,
+    // from inside an array query, activates only the joins above the array
+    // it reads in place.
     const endsInTraversedJoin = reference.uniqueKeyRequirement !== undefined;
-    const joinDepth = reference.path.length - (endsInTraversedJoin ? 0 : 1);
+    const joinDepth =
+      reference.path.length -
+      (reference.inPlaceDepth ?? (endsInTraversedJoin ? 0 : 1));
     for (let joinLen = 1; joinLen <= joinDepth; joinLen++) {
       const joinPath = reference.path.slice(0, joinLen);
       const joinDef = inNamespace(joinPath, fieldNameSpace);

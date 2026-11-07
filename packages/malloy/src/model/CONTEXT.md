@@ -222,6 +222,7 @@ interface FieldUsageEntry {
   at?: DocumentLocation;
   uniqueKeyRequirement?: {isCount: boolean}; // asymmetric aggregate needs a distinct key
   analyticFunctionUse?: boolean;             // this is a window function
+  inPlaceDepth?: number;                     // a weak reference, read in place (below)
 }
 ```
 
@@ -282,6 +283,28 @@ it.
 Entries are deduped by path, merging `uniqueKeyRequirement` (`isCount` ORs
 together) and `analyticFunctionUse`.
 
+### Weak references — reads in place
+
+An array query (`items -> { ... }`, experimental) reads its array as a column
+of the row, without unnesting it. What the query reads from the elements still
+belongs in the summary, so `ExprArrayQuery` bubbles its first stage's expanded
+usage out through the array's path: `price` inside `items -> { ... }` becomes
+`['items','price']` with `inPlaceDepth: 2`, meaning the last two names, the
+array and the element's field, are read in place.
+
+A weak entry activates the joins on its path **above** the array, and makes an
+activated join depend on the join above the array, never on the array itself.
+The array and anything below it stay inactive, so the reference does not fan
+the row out. It carries no `uniqueKeyRequirement` or `analyticFunctionUse`:
+those describe the inner query's own aggregation over the elements, not
+anything the row's query has to do. A path reached both weakly and strongly is
+strong, and is walked again so its joins activate. Rerooting keeps the depth,
+since it counts from the end of the path.
+
+The arrow's own pipeline is expanded too, stage by stage against the elements,
+so a query on the elements knows the joins it needs of its own (an array
+inside the elements).
+
 ### Rooting — what a path is relative to
 
 Most paths are **source-rooted for the stage that owns the summary**:
@@ -337,7 +360,8 @@ It reads no field names — each entry collapses to which join it is and whether
 that join needs a key. `QueryQuery.packedColumnsByJoin` is the reader that does
 use the names: it resolves each path to the column the innermost join on it has
 to supply, which is how a filtered join's subquery knows what to pack for each
-join below it.
+join below it. For a weak entry the column is the array itself, a column of
+the join above it.
 
 **What the compiler reaches for that no entry names** is a join's declared
 `primary_key`. It is the distinct key for a symmetric aggregate over that join

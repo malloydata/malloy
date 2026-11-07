@@ -45,6 +45,51 @@ interface DialectField {
 export type DialectFieldList = DialectField[];
 
 /**
+ * The elements of an array made into records (`Dialect.sqlArraySelect`):
+ * those for which `filter` holds, in the order of `orderBy`, the first
+ * `limit` of them, each as a record with a field for each of `fields`,
+ * valued by its `sql`. Each `orderBy` key is an expression of `element`,
+ * and its nulls sort last.
+ */
+export interface ArraySelect {
+  source: string;
+  element: string;
+  fields: {name: string; sql: string; typeDef: AtomicTypeDef}[];
+  filter?: string;
+  orderBy?: {sql: string; dir: 'asc' | 'desc'}[];
+  /**
+   * The `orderBy` keys of the two elements a comparator compares, named
+   * `left` and `right`: compiled only when called, by a dialect which sorts
+   * with a comparator.
+   */
+  comparator?: () => ArrayComparator;
+  limit?: number;
+}
+
+export interface ArrayComparator {
+  left: string;
+  right: string;
+  keys: {left: string; right: string}[];
+}
+
+/**
+ * One aggregate over the elements of an array (`Dialect.sqlArrayAggregate`):
+ * `function` of `value` over the elements for which `filter` holds. A
+ * `count` is of the elements themselves and has no `value`; a `distinct` is
+ * the number of distinct non-null values, as Malloy's `count(x)` is.
+ * `resultType` is the type of the aggregate, so that a sum of integers can
+ * stay exact.
+ */
+export interface ArrayAggregate {
+  source: string;
+  element: string;
+  function: 'sum' | 'avg' | 'count' | 'distinct' | 'min' | 'max';
+  value?: string;
+  filter?: string;
+  resultType?: AtomicTypeDef;
+}
+
+/**
  * Order-by entry with field references resolved to SQL expressions
  * and direction defaulted. Used by sqlAggregateTurtle so each dialect
  * can format ordering in its own syntax.
@@ -129,8 +174,20 @@ export interface TimeOffset {
   unit: TimestampUnit;
 }
 
+/**
+ * What a field is read from. An `element[...]` is an element of an array
+ * named by a lambda parameter, where the dialect computes on an array in
+ * place: a record element's fields are read from the parameter, and a
+ * scalar element is the parameter itself.
+ */
 export type FieldReferenceType =
-  'table' | 'nest source' | 'array[scalar]' | 'array[record]' | 'record';
+  | 'table'
+  | 'nest source'
+  | 'array[scalar]'
+  | 'array[record]'
+  | 'record'
+  | 'element[scalar]'
+  | 'element[record]';
 
 const allUnits = [
   'microsecond',
@@ -574,6 +631,52 @@ export abstract class Dialect {
     isInNestedPipeline: boolean
   ): string;
 
+  /**
+   * An aggregate over the elements of an array of the current row, computed
+   * in place without unnesting the array, or undefined where the dialect has
+   * no way to; the query on the array is then written as a correlated
+   * subquery. `element` names an element in `value` and `filter`. Sums and
+   * counts are 0, and the others null, over no elements, as the subquery's
+   * would be.
+   */
+  sqlArrayAggregate(_aggregate: ArrayAggregate): string | undefined {
+    return undefined;
+  }
+
+  /**
+   * The elements of an array of the current row which `filter` holds for,
+   * each made into a record of `fields`, computed in place without
+   * unnesting the array; or undefined where the dialect has no way to, and
+   * the query on the array is written as a correlated subquery. `element`
+   * names an element in `filter` and in each field's `sql`. Over no
+   * elements, or a null array, it is an empty array.
+   */
+  sqlArraySelect(_select: ArraySelect): string | undefined {
+    return undefined;
+  }
+
+  /**
+   * An array of records from a correlated subquery, made empty rather than
+   * null where the subquery has no rows.
+   */
+  sqlArrayOrEmpty(arraySQL: string): string {
+    return arraySQL;
+  }
+
+  /**
+   * Whether `array -> { ... }`, a query on the elements of an array of the
+   * current row, compiles in this dialect.
+   * Experimental.
+   */
+  supportsArrayQueries = false;
+
+  /**
+   * Whether a query on an array which the dialect cannot compute in place
+   * (`sqlArrayAggregate`, `sqlArraySelect`) can be written as a correlated
+   * subquery instead. Without it such a query is a compile error.
+   */
+  supportsCorrelatedArrayQueries = true;
+
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 
   abstract sqlGenerateUUID(): string;
@@ -585,10 +688,22 @@ export abstract class Dialect {
     childType: string
   ): string;
 
+  /**
+   * The FROM of a query on rows held in a column of the outer row, written
+   * as a correlated subquery and read `AS base`: a later stage of a nest,
+   * over the rows the stage before it made, or a query on an array
+   * (`array -> { ... }`), over the array's elements. The query reads a
+   * record's fields as `base.field`, and an array of scalars' elements as
+   * `base.value`.
+   *
+   * `isSingleton`: the source is one record, not an array of them.
+   * `isScalarArray`: the source is an array of scalars, not of records.
+   */
   abstract sqlUnnestPipelineHead(
     isSingleton: boolean,
     sourceSQLExpression: string,
-    fieldList?: DialectFieldList
+    fieldList?: DialectFieldList,
+    isScalarArray?: boolean
   ): string;
 
   abstract sqlCreateFunction(id: string, funcText: string): string;

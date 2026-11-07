@@ -92,6 +92,10 @@ type MessageParameterTypes = {
   'pick-when-must-be-boolean': {whenType: ExpressionValueType};
   'pick-non-atomic-type': string;
   'experiment-not-enabled': {experimentId: string};
+  'array-query-not-array': string;
+  'array-query-not-scalar': string;
+  'array-query-not-supported': string;
+  'array-query-not-in-place': string;
   'experimental-dialect-not-enabled': {dialect: string};
   'nesting-unsupported': {dialect: string};
   'boolean-value-unsupported': {dialect: string; where: string; hint: string};

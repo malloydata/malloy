@@ -103,6 +103,7 @@ export class StandardSQLDialect extends Dialect {
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
+  supportsArrayQueries = true;
   supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
@@ -282,11 +283,16 @@ export class StandardSQLDialect extends Dialect {
 
   sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    _fieldList?: DialectFieldList,
+    isScalarArray = false
   ): string {
     let p = sourceSQLExpression;
     if (isSingleton) {
       p = `[${p}]`;
+    }
+    if (isScalarArray) {
+      return `(SELECT value FROM UNNEST(${p}) AS value)`;
     }
     return `UNNEST(${p})`;
   }

@@ -234,4 +234,38 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(row['capped']).not.toBe(null);
     }
   );
+
+  // Alaska's three facility types: 474 airports, 104 seaplane bases and 30
+  // heliports.
+  const alaskaByFacType = (nest: string) => `
+    run: ${databaseName}.table('malloytest.airports') -> {
+      where: state = 'AK'
+      group_by: state
+      nest: by_fac_type is { ${nest} }
+    }`;
+
+  // Counting a nest's elements reads each element's distinct key back out of
+  // the nest.
+  test.when(runtime.supportsNesting)(
+    `the elements of a nest can be counted in the next stage - ${databaseName}`,
+    async () => {
+      await expect(`
+        ${alaskaByFacType('group_by: fac_type; aggregate: c is count()')} -> {
+          aggregate:
+            fac_types is by_fac_type.count()
+            airports is by_fac_type.c.sum()
+        }`).toMatchResult(model, {fac_types: 3, airports: 608});
+    }
+  );
+
+  test.when(runtime.supportsNesting)(
+    `a boolean read back out of a nest is a boolean - ${databaseName}`,
+    async () => {
+      await expect(`
+        ${alaskaByFacType("group_by: fac_type, is_airport is fac_type = 'AIRPORT'")} -> {
+          where: by_fac_type.is_airport = true
+          group_by: by_fac_type.fac_type
+        }`).toEqualResult(model, [{fac_type: 'AIRPORT'}]);
+    }
+  );
 });
