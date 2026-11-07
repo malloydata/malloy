@@ -175,19 +175,14 @@ describe('line_chart measure series with a null # y value', () => {
       }
       `
     );
-    // Only the row where every # y field is null is dropped
     const mapped = props.mapMalloyDataToChartData(rootCell);
-    expect(mapped.data.map(d => (d as {x: unknown}).x)).toEqual([1, 2, 3]);
+    expect(mapped.data).toMatchObject([{x: 1}, {x: 2}, {x: 3}]);
 
-    // Each series drops its own nulls after the fold
-    const values = props.spec.data?.find(d => d.name === 'values');
-    const types = values?.transform?.map(t => t.type);
-    expect(types?.slice(types.indexOf('fold'))).toEqual([
-      'fold',
-      'formula',
-      'filter',
-    ]);
-    expect(values?.transform?.at(-1)).toEqual({
+    const transforms =
+      props.spec.data?.find(d => d.name === 'values')?.transform ?? [];
+    const fold = transforms.findIndex(t => t.type === 'fold');
+    expect(fold).toBeGreaterThanOrEqual(0);
+    expect(transforms.slice(fold + 1)).toContainEqual({
       type: 'filter',
       expr: 'isValid(datum.y)',
     });

@@ -540,7 +540,6 @@ source: weekly_sales is duckdb.sql("""
   union all select 9, null, 45
 """) extend {
 
-  // A null in one # y field drops only that series' point
   #(story)
   # line_chart
   view: null_in_one_y_series is {
