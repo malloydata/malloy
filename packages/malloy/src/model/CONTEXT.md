@@ -204,40 +204,17 @@ tracked for removal in #3112.
 
 ## Reference summaries and field usage
 
-Every expression value carries a **`refSummary`**, the record of what it
-references. `RefSummary { fieldUsage, givenUsage }` (`malloy_types.ts`) has two
-parts, the fields the expression reads and the givens it reads, and the two
-always travel together. The translator collects summaries as it builds
-expression trees; once a query is assembled it expands them; the compiler reads
-the expanded result instead of walking expressions itself. The summary is the
-single source of truth for "what does this query touch". Three rules hold it
-together:
-
-- **Collection merges children.** A node's summary is the merge of its
-  children's summaries and nothing else (`computedExprValue` →
-  `mergeRefSummaries`). A `FieldDef`, a `FilterCondition`, a join's `on` clause
-  and a `TypeDesc` carry the summary of the expression they hold. A segment's
-  own `refSummary` is collected the same way: the result field space merges
-  the summary of every query field and filter in the segment
-  (`lang/ast/field-space/query-spaces.ts`), and a refinement merges in the
-  summary of the view it refines (`lang/ast/query-builders/reduce-builder.ts`).
-- **Expansion is the last pass over a translated query, for the compiler.**
-  Once a query's IR is complete, `getExpandedSegment` reads each segment's
-  `refSummary` and closes it over joins and computed fields into the four
-  expanded fields below. They are a summary of finished IR: correct only at
-  that point, and read only by the compiler and by the per-query roll-ups.
-  Nothing in the translator reads an expanded field while it is still
-  building IR, and no node computes a closure of its own; a node that forwards
-  or re-roots another node's references takes that node's `refSummary` through
-  `mapFieldUsage`, which rewrites the paths and keeps the rest of the summary
-  intact.
-- **Split only at the readers.** `fieldUsageFrom` / `givenUsageFrom` pull one
-  half out of a summary, for the readers at the end: the compiler and the
-  given-satisfiability checks. Wherever a summary is being built, combined or
-  rewritten it is handled whole: `mergeRefSummaries` to combine,
-  `mapFieldUsage` to rewrite paths, `mkRefSummary` to build one from parts. An
-  absent `refSummary` means "never set"; an empty `fieldUsage` means "checked,
-  found nothing".
+Every expression value, and every `FieldDef`, `FilterCondition`, join `on`
+clause, `TypeDesc` and `QuerySegment`, carries a **`refSummary`**: the record
+of what it references. `RefSummary { fieldUsage, givenUsage }`
+(`malloy_types.ts`) has two parts, the fields read and the givens read, and the
+two always travel together. The translator collects summaries while it builds
+IR and, as the last pass over a finished query, expands each segment's into the
+four expanded fields below; how it does both is in `lang/CONTEXT.md`,
+"Reference summaries: collection and expansion". This section is the contract
+the compiler reads: what an entry means, what a path is rooted at, and what the
+two readers do with it. The expanded summary is the single source of truth for
+"what does this query touch"; the compiler never walks expressions to find out.
 
 ### Field usage entries
 
@@ -254,13 +231,24 @@ interface FieldUsageEntry {
 ```
 
 `givenUsage` is a `GivenUsageEntry[]`, each a `GivenID` and the location of the
-reference.
+reference. An absent `refSummary` means "never set"; an empty `fieldUsage`
+means "checked, found nothing".
+
+**A weak entry** (`inPlaceDepth`) comes from an array query (`items -> { ... }`,
+experimental), which reads its array as a column of the row without unnesting
+it: `price` inside `items -> { ... }` is `['items','price']` with
+`inPlaceDepth: 2`, meaning the last two names, the array and the element's
+field, are read in place. The array and anything below it are not joins the
+row's query needs, so `activeJoins` never lists the array on a weak entry's
+account, and the entry carries no `uniqueKeyRequirement` or
+`analyticFunctionUse`; those would describe the inner query's own aggregation
+over the elements, not anything the row's query has to do.
 
 ### The expanded segment — `SegmentUsageSummary`
 
 Beside its collected `refSummary`, every `QuerySegment` and `IndexSegment`
-carries four expanded fields, written by `getExpandedSegment`
-(`lang/composite-source-utils.ts`) and read by the compiler:
+carries four expanded fields, written by the translator's expansion pass and
+read by the compiler:
 
 | Field | What it holds |
 |---|---|
@@ -273,66 +261,6 @@ Per query, `computeQueryGivenUsage(pipeline)` is the dedup'd union of every
 segment's `expandedGivenUsage`; there is no equivalent roll-up for field usage,
 because the first segment's summary already covers the whole base join tree
 (see "Rooting", below).
-
-### How the expansion closes
-
-`QueryBase.expandRefUsage` (`lang/ast/query-elements/query-base.ts`) walks the
-pipeline calling `getExpandedSegment(segment, stageInput)` once per stage,
-feeding each stage's `outputStruct` in as the next stage's input.
-
-`getExpandedSegment` seeds the walk with three things: the segment's own
-`refSummary`, the field usage of the **input source's `where:` clauses**
-(`getFieldUsageFromFilterList`), and the input source's given usage. It also
-passes `segment.alwaysJoins` — joins that activate with no field reference at
-all.
-
-`expandRefUsage` (same file) then runs a worklist to a fixed point. Dequeueing a
-path adds:
-
-- **a computed field's own usage** — when the path resolves to an atomic def
-  with a `refSummary`, that def's paths are re-rooted onto the reference's join
-  path (`joinedFieldUsage`) and enqueued. A measure named at top level therefore
-  drags its underlying columns into the summary.
-- **an activated join's `on` clause and `where:` clauses** —
-  `getJoinFieldUsage` re-roots the two differently: a joined source's
-  `filterList` paths get the join path *including* the join name; the `on`
-  clause paths get the path *excluding* it, because an `on` is written in the
-  parent's namespace.
-- **the join-dependency edges** — an `on` clause that reaches through a sibling
-  join makes this join depend on it, which is what `findActiveJoins`
-  topologically sorts.
-
-A path activates every join it passes through, and the join it ends at when it
-carries a `uniqueKeyRequirement` — an aggregate computed over a join's rows
-traverses that join, so its `on` clause is a reference like any other. A path which
-merely names a join-typed value (grouping by an array column) does not activate
-it.
-
-Entries are deduped by path, merging `uniqueKeyRequirement` (`isCount` ORs
-together) and `analyticFunctionUse`.
-
-### Weak references — reads in place
-
-An array query (`items -> { ... }`, experimental) reads its array as a column
-of the row, without unnesting it. What the query reads from the elements still
-belongs in the summary, so `ExprArrayQuery` merges its first stage's references
-into its own summary, re-rooted through the array's path and marked weak:
-`price` inside `items -> { ... }` becomes `['items','price']` with
-`inPlaceDepth: 2`, meaning the last two names, the array and the element's
-field, are read in place.
-
-A weak entry activates the joins on its path **above** the array, and makes an
-activated join depend on the join above the array, never on the array itself.
-The array and anything below it stay inactive, so the reference does not fan
-the row out. It carries no `uniqueKeyRequirement` or `analyticFunctionUse`:
-those describe the inner query's own aggregation over the elements, not
-anything the row's query has to do. A path reached both weakly and strongly is
-strong, and is walked again so its joins activate. Rerooting keeps the depth,
-since it counts from the end of the path.
-
-The arrow's own pipeline is expanded too, stage by stage against the elements,
-so a query on the elements knows the joins it needs of its own (an array
-inside the elements).
 
 ### Rooting — what a path is relative to
 
