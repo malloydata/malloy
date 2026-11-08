@@ -94,6 +94,7 @@ export class PostgresDialect extends PostgresBase {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
+  supportsArrayQueries = true;
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   supportsSafeCast = false;
@@ -188,7 +189,8 @@ export class PostgresDialect extends PostgresBase {
       }
     } else if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
-      return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_number', row_number() over())|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
+      // The key is `__row_id`, as sqlFieldReference reads it.
+      return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over())|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
     } else {
       // return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
       return `LEFT JOIN JSONB_ARRAY_ELEMENTS(${source}) as ${alias} ON true`;
@@ -221,6 +223,9 @@ export class PostgresDialect extends PostgresBase {
         case 'number':
           ret = `${ret}::double precision`;
           break;
+        case 'boolean':
+          ret = `${ret}::boolean`;
+          break;
         case 'struct':
         case 'array':
         case 'record':
@@ -236,15 +241,28 @@ export class PostgresDialect extends PostgresBase {
     }
   }
 
+  // A query on an array is always a correlated subquery here: Postgres has
+  // no list lambdas to compute one in place. Nested records are JSONB, and
+  // an array of scalars, which may be a native array, is made JSONB and
+  // each element wrapped as {"value": v}, the way sqlUnnestAlias does.
   sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    _fieldList?: DialectFieldList,
+    isScalarArray = false
   ): string {
     if (isSingleton) {
       return `UNNEST(ARRAY((SELECT ${sourceSQLExpression})))`;
+    } else if (isScalarArray) {
+      return `(SELECT JSONB_BUILD_OBJECT('value', __v) AS base FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${sourceSQLExpression})) AS __v)`;
     } else {
       return `JSONB_ARRAY_ELEMENTS(${sourceSQLExpression})`;
     }
+  }
+
+  // JSONB_AGG over no rows is null.
+  sqlArrayOrEmpty(arraySQL: string): string {
+    return `COALESCE(${arraySQL}, '[]'::jsonb)`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

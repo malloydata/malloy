@@ -478,22 +478,38 @@ export class QueryStruct {
     }
   }
 
+  /**
+   * Set on an array's struct whose identifier names an element inside a
+   * dialect's lambda, where the array is computed on in place: its fields
+   * are then read as `element[...]` references.
+   */
+  isLambdaElement = false;
+
+  /** What a field of this struct is read from, for `sqlFieldReference`. */
+  fieldReferenceType(): FieldReferenceType {
+    const sd = this.structDef;
+    if (sd.type === 'record') return 'record';
+    if (sd.type === 'nest_source') return 'nest source';
+    if (sd.type === 'array') {
+      const record = sd.elementTypeDef.type === 'record_element';
+      if (this.isLambdaElement) {
+        return record ? 'element[record]' : 'element[scalar]';
+      }
+      return record ? 'array[record]' : 'array[scalar]';
+    }
+    return 'table';
+  }
+
   sqlSimpleChildReference(name: string) {
     const parentRef = this.getSQLIdentifier();
-    let refType: FieldReferenceType = 'table';
-    if (this.structDef.type === 'record') {
-      refType = 'record';
-    } else if (this.structDef.type === 'array') {
-      refType =
-        this.structDef.elementTypeDef.type === 'record_element'
-          ? 'array[record]'
-          : 'array[scalar]';
-    } else if (this.structDef.type === 'nest_source') {
-      refType = 'nest source';
-    }
     const child = this.getChildByName(name);
     const childType = child?.fieldDef.type || 'unknown';
-    return this.dialect.sqlFieldReference(parentRef, refType, name, childType);
+    return this.dialect.sqlFieldReference(
+      parentRef,
+      this.fieldReferenceType(),
+      name,
+      childType
+    );
   }
 
   // return the name of the field in SQL

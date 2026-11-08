@@ -4,6 +4,8 @@
  */
 
 import type {
+  ArrayComparator,
+  ArraySelect,
   DialectFieldList,
   CompiledOrderBy,
   LateralJoinExpression,
@@ -11,6 +13,9 @@ import type {
 } from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
+  AtomicTypeDef,
+  Expr,
+  FilterCondition,
   TurtleDef,
   IndexFieldDef,
   IndexSegment,
@@ -42,12 +47,14 @@ import {
   isQuerySegment,
   hasExpression,
   isAtomic,
+  TD,
   expressionIsCalculation,
   expressionIsScalar,
   activeName,
   fieldIsIntrinsic,
   isJoinedSource,
   isBasicArray,
+  arrayQueryReturnsValue,
   isIndexSegment,
   isBaseTable,
   expressionIsAnalytic,
@@ -242,6 +249,8 @@ export class QueryQuery extends QueryField {
     super(fieldDef, parent);
     this.fieldDef = fieldDef;
     this.rootResult = new FieldInstanceResultRoot(fieldDef);
+    this.rootResult.compileArrayQuery = (array, arraySQL, pipeline) =>
+      this.arrayQuerySQL(array, arraySQL, pipeline);
     this.stageWriter = stageWriter;
     // do some magic here to get the first segment.
     this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
@@ -1212,15 +1221,19 @@ export class QueryQuery extends QueryField {
    */
   private packedColumnFor(
     from: QueryStruct,
-    path: string[]
+    path: string[],
+    endsInColumn = false
   ): [string, string] | undefined {
     let struct = from;
     let alias = struct.getIdentifier();
     let column: string | undefined = undefined;
-    for (const name of path) {
+    for (const [i, name] of path.entries()) {
       const child = struct.getChildByName(name);
       if (child === undefined) return undefined;
-      if (!(child instanceof QueryFieldStruct)) {
+      if (
+        !(child instanceof QueryFieldStruct) ||
+        (endsInColumn && i === path.length - 1)
+      ) {
         column ??= name;
         break;
       }
@@ -1259,8 +1272,16 @@ export class QueryQuery extends QueryField {
       const usage = isRawSegment(this.firstSegment)
         ? []
         : (this.firstSegment.expandedFieldUsage ?? []);
-      for (const {path} of usage) {
-        needed(this.packedColumnFor(this.parent, path));
+      for (const {path, inPlaceDepth} of usage) {
+        // A weak reference reads its array in place, as a column of the
+        // join above it, not as a join of its own.
+        const read =
+          inPlaceDepth === undefined
+            ? path
+            : path.slice(0, path.length - inPlaceDepth + 1);
+        needed(
+          this.packedColumnFor(this.parent, read, inPlaceDepth !== undefined)
+        );
       }
       // What a primary key needs is what it reads: a computed key's name is
       // not a column, and the columns its expression reads are named nowhere
@@ -2560,6 +2581,317 @@ export class QueryQuery extends QueryField {
       pipeOut,
       repeatedResultType: outputRepeatedResultType,
     };
+  }
+
+  /**
+   * What both in-place forms of `array -> { ... }` need: an element struct
+   * to compile expressions on, and the `where:` conditions compiled for it.
+   * Undefined, so that the query is written as a correlated subquery, when
+   * any condition is not of one element (a `having:` is an aggregate), or
+   * when `filters` or `values` read anything but an element's own fields.
+   */
+  private inPlaceElements(
+    array: QueryStruct,
+    filters: FilterCondition[],
+    values: Expr[]
+  ): {element: QueryStruct; filter: string | undefined} | undefined {
+    if (!filters.every(f => expressionIsScalar(f.expressionType))) {
+      return undefined;
+    }
+    const element = this.arrayElementStruct(array);
+    if (
+      element === undefined ||
+      ![...values, ...filters.map(f => f.e)].every(e =>
+        this.readsOnlyElementsOf(element, e)
+      )
+    ) {
+      return undefined;
+    }
+    const filter =
+      filters.length > 0
+        ? filters
+            .map(f => exprToSQL(this.rootResult, element, f.e))
+            .join(' AND ')
+        : undefined;
+    return {element, filter};
+  }
+
+  /**
+   * `array -> { ... }` as one aggregate over the array's elements, computed in
+   * place by the dialect (`sqlArrayAggregate`), when the query is that simple
+   * and the dialect can; undefined otherwise, and it is written as a
+   * correlated subquery instead.
+   *
+   * The element expressions are compiled against `arrayElementStruct`.
+   */
+  private arrayAggregateSQL(
+    array: QueryStruct,
+    arraySQL: string,
+    pipeline: PipeSegment[]
+  ): string | undefined {
+    const [segment, ...moreSegments] = pipeline;
+    if (moreSegments.length > 0 || segment?.type !== 'reduce') {
+      return undefined;
+    }
+    // One aggregate is one row, which only a `limit: 0` would remove.
+    if (segment.limit !== undefined && segment.limit < 1) {
+      return undefined;
+    }
+    const [field, ...moreFields] = segment.queryFields;
+    if (
+      moreFields.length > 0 ||
+      field === undefined ||
+      field.type === 'fieldref' ||
+      field.type === 'turtle' ||
+      !hasExpression(field)
+    ) {
+      return undefined;
+    }
+    // The query's `where:`, and a filter on the aggregate, both choose the
+    // elements it aggregates.
+    const filters = [...(segment.filterList ?? [])];
+    let measure = field.e;
+    if (measure.node === 'filteredExpr') {
+      filters.push(...measure.kids.filterList);
+      measure = measure.kids.e;
+    }
+    if (measure.node !== 'aggregate' || measure.structPath !== undefined) {
+      return undefined;
+    }
+    // Only `count()` counts the elements themselves; `count(x)` is distinct.
+    const value = measure.e.node === '' ? undefined : measure.e;
+    if ((measure.function === 'count') !== (value === undefined)) {
+      return undefined;
+    }
+    const inPlace = this.inPlaceElements(array, filters, value ? [value] : []);
+    if (inPlace === undefined) return undefined;
+    const {element, filter} = inPlace;
+    return array.dialect.sqlArrayAggregate({
+      source: arraySQL,
+      element: element.getIdentifier(),
+      function: measure.function,
+      value: value && exprToSQL(this.rootResult, element, value),
+      filter,
+      resultType: isAtomic(field) ? TD.atomicDef(field) : undefined,
+    });
+  }
+
+  /**
+   * A copy of the array's struct under a name of its own, for compiling
+   * expressions on its elements in place: they read an element by an alias
+   * which the dialect gives the element. The array's own alias would not do:
+   * if this query also unnests the array, a column of that name is in scope,
+   * and in a lambda the column would win. The alias is unique among this
+   * query's aliases, and starts with `__`, as Malloy's own names do, so that
+   * a table's column is unlikely to share it.
+   */
+  private arrayElementStruct(
+    array: QueryStruct,
+    role: 'element' | 'left' | 'right' = 'element'
+  ): QueryStruct | undefined {
+    if (array.parent === undefined) return undefined;
+    const element = new QueryStruct(
+      {
+        ...array.structDef,
+        name: `__${activeName(array.structDef)}_${role}`,
+        as: undefined,
+      },
+      undefined,
+      {struct: array.parent},
+      array.prepareResultOptions
+    );
+    element.isLambdaElement = true;
+    return element;
+  }
+
+  /**
+   * `array -> { select: ... }` as the array's elements made into records in
+   * place by the dialect (`sqlArraySelect`), when the query is one `select:`
+   * of the elements, with an optional `where:`, `order_by:` of selected
+   * fields and `limit:`, and the dialect can; undefined otherwise.
+   */
+  private arraySelectSQL(
+    array: QueryStruct,
+    arraySQL: string,
+    pipeline: PipeSegment[]
+  ): string | undefined {
+    const [segment, ...moreSegments] = pipeline;
+    if (moreSegments.length > 0 || segment?.type !== 'project') {
+      return undefined;
+    }
+    const outputs = segment.outputStruct.fields;
+    if (outputs.length !== segment.queryFields.length) return undefined;
+    const values: Expr[] = [];
+    for (const field of segment.queryFields) {
+      if (field.type === 'fieldref') {
+        values.push({node: 'field', path: field.path});
+      } else if (
+        field.type !== 'turtle' &&
+        hasExpression(field) &&
+        expressionIsScalar(field.expressionType)
+      ) {
+        values.push(field.e);
+      } else if (field.type !== 'turtle' && !hasExpression(field)) {
+        values.push({node: 'field', path: [field.name]});
+      } else {
+        return undefined;
+      }
+    }
+    const inPlace = this.inPlaceElements(
+      array,
+      segment.filterList ?? [],
+      values
+    );
+    if (inPlace === undefined) return undefined;
+    const {element, filter} = inPlace;
+    const sql = (e: Expr, of = element) => exprToSQL(this.rootResult, of, e);
+    const fields: {name: string; sql: string; typeDef: AtomicTypeDef}[] = [];
+    for (const [i, output] of outputs.entries()) {
+      if (!isAtomic(output)) return undefined;
+      fields.push({
+        name: output.name,
+        sql: sql(values[i]),
+        typeDef: TD.atomicDef(output),
+      });
+    }
+    // An `order_by:` names a selected field, by name or by position.
+    const keys: Expr[] = [];
+    const orderBy: ArraySelect['orderBy'] = [];
+    for (const {field, dir} of segment.orderBy ?? []) {
+      const i =
+        typeof field === 'number'
+          ? field - 1
+          : outputs.findIndex(o => o.name === field);
+      if (values[i] === undefined) return undefined;
+      keys.push(values[i]);
+      orderBy.push({sql: sql(values[i]), dir: dir ?? 'asc'});
+    }
+    // The same keys for the two elements a comparator compares, compiled
+    // only for a dialect which sorts with one.
+    const comparator = (): ArrayComparator => {
+      const left = this.arrayElementStruct(array, 'left');
+      const right = this.arrayElementStruct(array, 'right');
+      if (left === undefined || right === undefined) {
+        throw new Error('Internal Error: an array element has no parent');
+      }
+      return {
+        left: left.getIdentifier(),
+        right: right.getIdentifier(),
+        keys: keys.map(k => ({left: sql(k, left), right: sql(k, right)})),
+      };
+    };
+    return array.dialect.sqlArraySelect({
+      source: arraySQL,
+      element: element.getIdentifier(),
+      fields,
+      filter,
+      orderBy,
+      comparator,
+      limit: segment.limit,
+    });
+  }
+
+  /**
+   * Whether `e`, read from the array, reads only an element's own fields:
+   * through records, but not through another array or a join, and with no
+   * aggregate of its own.
+   */
+  private readsOnlyElementsOf(array: QueryStruct, e: Expr): boolean {
+    for (const node of exprWalk(e)) {
+      if (node.node === 'aggregate' || node.node === 'outputField') {
+        return false;
+      }
+      if (node.node !== 'field') continue;
+      let struct: QueryStruct = array;
+      for (const name of node.path) {
+        const child = struct.getChildByName(name);
+        if (child === undefined) return false;
+        if (child instanceof QueryFieldStruct) {
+          if (child.queryStruct.structDef.type !== 'record') return false;
+          struct = child.queryStruct;
+        } else if (hasExpression(child.fieldDef)) {
+          if (!this.readsOnlyElementsOf(child.parent, child.fieldDef.e)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * SQL for `array -> { ... }`: the pipeline compiled as a query whose source
+   * is the row's array, `arraySQL`, written as a correlated subquery. This is
+   * how a later stage of a nest runs on the stage before it, except that the
+   * array is a column of the row rather than the result of an aggregate.
+   * A pipeline which returns one value (`arrayQueryReturnsValue`) is that
+   * value; any other returns its rows as an array of records.
+   */
+  private arrayQuerySQL(
+    array: QueryStruct,
+    arraySQL: string,
+    pipeline: PipeSegment[]
+  ): string {
+    const returnsValue = arrayQueryReturnsValue(pipeline);
+    const inPlace = returnsValue
+      ? this.arrayAggregateSQL(array, arraySQL, pipeline)
+      : this.arraySelectSQL(array, arraySQL, pipeline);
+    if (inPlace !== undefined) return inPlace;
+    const dialect = this.parent.dialect;
+    // The translator rejects every shape which cannot be computed in place
+    // (`arrayQueryNotInPlace`); what reaches here is a shape which could
+    // be, but whose expressions read something other than an element's own
+    // fields (`readsOnlyElementsOf`).
+    if (!dialect.supportsCorrelatedArrayQueries) {
+      throw new MalloyCompileError(
+        `The ${dialect.name} dialect can only query an array in place, which this query on an array cannot be: it reads something other than its elements' own fields`,
+        'array-query-not-in-place',
+        undefined
+      );
+    }
+    const elements: NestSourceDef = {
+      type: 'nest_source',
+      name: '~array~',
+      pipeSQL: dialect.sqlUnnestPipelineHead(
+        false,
+        arraySQL,
+        undefined,
+        isBasicArray(array.structDef)
+      ),
+      fields: array.structDef.fields,
+      connection: this.parent.connectionName,
+      dialect: dialect.name,
+    };
+    const qs = new QueryStruct(
+      elements,
+      undefined,
+      {model: this.parent.getModel()},
+      this.parent.prepareResultOptions
+    );
+    const stageWriter = new StageWriter(
+      dialect.supportsCTEinCoorelatedSubQueries,
+      this.stageWriter
+    );
+    const query = QueryQuery.makeQuery(
+      {type: 'turtle', name: '~array_query~', pipeline},
+      qs,
+      stageWriter,
+      this.isJoinedSubquery,
+      this.structRefToQueryStruct
+    );
+    const {outputStruct} = query.generateSQLFromPipeline(stageWriter);
+    if (!returnsValue) {
+      return dialect.sqlArrayOrEmpty(
+        `(${stageWriter.generateCoorelatedSubQuery(dialect, outputStruct)})`
+      );
+    }
+    const [result] = outputStruct.fields;
+    if (result === undefined) {
+      throw new Error('Internal Error: an array query returned no column');
+    }
+    return `(${stageWriter.generateCorrelatedScalar(
+      dialect.sqlQuoteIdentifier(result.name)
+    )})`;
   }
 
   generateComplexSQL(stageWriter: StageWriter): string {

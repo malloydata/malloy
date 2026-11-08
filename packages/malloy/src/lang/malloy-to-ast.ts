@@ -1647,6 +1647,29 @@ export class MalloyToAST
     return this.astAt(idRef, pcx);
   }
 
+  visitExprArrayQuery(pcx: parse.ExprArrayQueryContext): ast.ExpressionDef {
+    this.inExperiment('array_queries', pcx);
+    const array = this.astAt(
+      new ast.ExprIdReference(
+        this.getFieldPath(pcx.fieldPath(), ast.ExpressionFieldReference)
+      ),
+      pcx.fieldPath()
+    );
+    // Only `{ ... }` stages: an array's elements have no views to name or
+    // refine, and after each closing brace the parser is back in an
+    // expression, so a following `+ field` is addition.
+    const stages: ast.View[] = pcx
+      .queryProperties()
+      .map(qp =>
+        this.astAt(new ast.QOpDescView(this.visitQueryProperties(qp)), qp)
+      );
+    const view = stages.reduce((base, op) =>
+      this.astAt(new ast.ViewArrow(base, op), pcx)
+    );
+    const query = new ast.ExprArrayQuery(array, view);
+    return this.astAt(query, pcx);
+  }
+
   visitExprGivenRef(pcx: parse.ExprGivenRefContext): ast.GivenReference {
     this.inExperiment('givens', pcx);
     // GIVEN_REF token text is `$NAME`; strip the leading `$`.

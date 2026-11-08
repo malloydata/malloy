@@ -26,6 +26,8 @@ import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  ArrayAggregate,
+  ArraySelect,
   CivilTime,
   CompiledOrderBy,
   DialectFieldList,
@@ -83,6 +85,7 @@ export class DuckDBDialect extends PostgresBase {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
+  supportsArrayQueries = true;
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = true;
@@ -240,7 +243,10 @@ export class DuckDBDialect extends PostgresBase {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
     if (!this.unnestWithNumbers && childName === '__row_id') {
       return `${parentAlias}_outer.__row_id`;
-    } else if (parentType === 'array[scalar]') {
+    } else if (
+      parentType === 'array[scalar]' ||
+      parentType === 'element[scalar]'
+    ) {
       return parentAlias;
     } else {
       return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
@@ -249,13 +255,95 @@ export class DuckDBDialect extends PostgresBase {
 
   sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    _fieldList?: DialectFieldList,
+    isScalarArray = false
   ): string {
     let p = sourceSQLExpression;
     if (isSingleton) {
       p = `[${p}]`;
     }
-    return `(SELECT UNNEST(${p}) as base)`;
+    const name = isScalarArray ? this.sqlQuoteIdentifier('value') : 'base';
+    return `(SELECT UNNEST(${p}) as ${name})`;
+  }
+
+  // DuckDB runs a correlated subquery over UNNEST as a full unnest and join,
+  // so a query on an array which is one aggregate is computed with list
+  // functions instead. The lambda parameter is named `element`, which the
+  // caller chooses so that no column of that name is in scope: a column
+  // would win over the parameter.
+  sqlArrayAggregate({
+    source,
+    element,
+    function: func,
+    value,
+    filter,
+  }: ArrayAggregate): string {
+    const elements = filter
+      ? `LIST_FILTER(${source}, ${element} -> ${filter})`
+      : source;
+    const values = value
+      ? `LIST_TRANSFORM(${elements}, ${element} -> ${value})`
+      : elements;
+    switch (func) {
+      case 'count':
+        return `COALESCE(LEN(${elements}), 0)`;
+      case 'distinct':
+        return `COALESCE(LIST_UNIQUE(${values}), 0)`;
+      case 'sum':
+        return `COALESCE(LIST_SUM(${values}), 0)`;
+      case 'avg':
+        return `LIST_AVG(${values})`;
+      case 'min':
+        return `LIST_MIN(${values})`;
+      case 'max':
+        return `LIST_MAX(${values})`;
+    }
+  }
+
+  // An order_by is LIST_GRADE_UP of the keys, which gives the elements'
+  // positions in order, and LIST_SELECT of those positions. It is not
+  // stable on long lists, so several keys are one sort on a record of them,
+  // not one sort per key. A record's nulls sort last ascending but not
+  // descending, so several keys are only done when all are ascending; the
+  // rest is left to the correlated subquery. The list is sorted inside a
+  // lambda over a one-element list, so that it is named once and computed
+  // once, rather than written out for both LIST_SELECT and LIST_GRADE_UP.
+  sqlArraySelect({
+    source,
+    element,
+    fields,
+    filter,
+    orderBy = [],
+    limit,
+  }: ArraySelect): string | undefined {
+    if (orderBy.length > 1 && orderBy.some(o => o.dir === 'desc')) {
+      return undefined;
+    }
+    let elements = filter
+      ? `LIST_FILTER(${source}, ${element} -> ${filter})`
+      : source;
+    if (orderBy.length > 0) {
+      const key =
+        orderBy.length === 1
+          ? `(${orderBy[0].sql})`
+          : `{${orderBy.map((o, i) => `'k${i}': (${o.sql})`).join(', ')}}`;
+      const dir = orderBy[0].dir === 'desc' ? 'DESC' : 'ASC';
+      const list = `${element}_list`;
+      elements = `LIST_TRANSFORM([${elements}], ${list} -> LIST_SELECT(${list}, LIST_GRADE_UP(LIST_TRANSFORM(${list}, ${element} -> ${key}), '${dir}', 'NULLS LAST')))[1]`;
+    }
+    if (limit !== undefined) {
+      elements = `LIST_SLICE(${elements}, 1, ${limit})`;
+    }
+    const record = fields
+      .map(f => `${this.sqlQuoteIdentifier(f.name)} := ${f.sql}`)
+      .join(', ');
+    return `COALESCE(LIST_TRANSFORM(${elements}, ${element} -> STRUCT_PACK(${record})), [])`;
+  }
+
+  // LIST() over no rows is null.
+  sqlArrayOrEmpty(arraySQL: string): string {
+    return `COALESCE(${arraySQL}, [])`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

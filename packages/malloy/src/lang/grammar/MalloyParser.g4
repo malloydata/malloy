@@ -728,6 +728,7 @@ malloyOrSQLType
 
 fieldExpr
   : fieldPath                                              # exprFieldPath
+  | fieldPath (ARROW queryProperties)+                     # exprArrayQuery
   | GIVEN_REF                                              # exprGivenRef
   | literal                                                # exprLiteral
   | OBRACK fieldExpr (COMMA fieldExpr)* COMMA? CBRACK      # exprArrayLiteral

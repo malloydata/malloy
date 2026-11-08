@@ -108,6 +108,7 @@ export type Expr =
   | InCompareExpr
   | InGivenExpr
   | CompositeFieldExpr
+  | ArrayQueryExpr
   | ErrorNode;
 
 export type BinaryOperator =
@@ -446,6 +447,90 @@ export interface CaseExpr extends ExprWithKids {
 
 export interface CompositeFieldExpr extends ExprLeaf {
   node: 'compositeField';
+}
+
+/**
+ * A query run on the elements of an array of the current row, whose one
+ * result is a value of that row: `items -> { aggregate: price.sum() }`.
+ * `kids.array` is the array, and `pipeline` runs with its elements as the
+ * source, the way a later stage of a nest runs on the stage before it.
+ * Experimental (`##! experimental.array_queries`).
+ */
+export interface ArrayQueryExpr extends ExprWithKids {
+  node: 'arrayQuery';
+  kids: {array: Expr};
+  pipeline: PipeSegment[];
+}
+
+/**
+ * Whether a query on an array (`ArrayQueryExpr`) returns one value of the
+ * row, rather than an array of records: one stage of `aggregate:` alone,
+ * with one field, which returns exactly one row with one column.
+ */
+export function arrayQueryReturnsValue(pipeline: PipeSegment[]): boolean {
+  const [segment, ...moreSegments] = pipeline;
+  return (
+    moreSegments.length === 0 &&
+    segment?.type === 'reduce' &&
+    segment.outputStruct.fields.length === 1 &&
+    arrayQueryOnlyAggregates(segment)
+  );
+}
+
+/** Whether a stage of a query on an array has only `aggregate:` fields. */
+export function arrayQueryOnlyAggregates(segment: QuerySegment): boolean {
+  return segment.queryFields.every(
+    f =>
+      f.type !== 'fieldref' &&
+      f.type !== 'turtle' &&
+      expressionIsAggregate(f.expressionType)
+  );
+}
+
+/**
+ * What, in a query on an array, keeps it from being computed in place, as
+ * a dialect without a correlated subquery must; undefined if its shape can
+ * be. The shapes which can are one stage of one aggregate, or of a
+ * `select:` of values. What an expression in it reads is checked only when
+ * the SQL is written.
+ */
+export function arrayQueryNotInPlace(
+  pipeline: PipeSegment[]
+): string | undefined {
+  const [segment, ...moreSegments] = pipeline;
+  if (moreSegments.length > 0) return 'several stages';
+  if (segment === undefined || !isQuerySegment(segment)) {
+    return 'this kind of query';
+  }
+  if (segment.type === 'project') {
+    const notValue = segment.outputStruct.fields.find(
+      f => f.type === 'record' || f.type === 'array' || f.type === 'turtle'
+    );
+    return notValue && `selecting \`${notValue.name}\`, which is not a value`;
+  }
+  if (segment.type !== 'reduce' || !arrayQueryReturnsValue(pipeline)) {
+    return 'a `group_by:`, `nest:` or `calculate:`';
+  }
+  if (
+    (segment.filterList ?? []).some(f => !expressionIsScalar(f.expressionType))
+  ) {
+    return 'a `having:`';
+  }
+  const [field] = segment.queryFields;
+  if (
+    field !== undefined &&
+    field.type !== 'fieldref' &&
+    hasExpression(field)
+  ) {
+    const e = field.e.node === 'filteredExpr' ? field.e.kids.e : field.e;
+    if (e.node !== 'aggregate') {
+      return `\`${field.name}\`, which is not one aggregate`;
+    }
+    if (e.structPath !== undefined) {
+      return `\`${field.name}\`, an aggregate of an array inside the elements`;
+    }
+  }
+  return undefined;
 }
 
 export interface InCompareExpr extends ExprWithKids {
@@ -1367,6 +1452,15 @@ export interface FieldUsageEntry {
   at?: DocumentLocation;
   uniqueKeyRequirement?: UniqueKeyRequirement;
   analyticFunctionUse?: boolean;
+  /**
+   * A weak reference, made from inside an array query (`items -> { ... }`):
+   * the last `inPlaceDepth` names of `path` are the array and the fields of
+   * its elements, which the array query reads as a column of the row. The
+   * joins on the path above the array activate as for any reference; the
+   * array, and anything below it, does not, so the reference does not fan
+   * the row out.
+   */
+  inPlaceDepth?: number;
 }
 
 /** Plural alias — most "field usage" data is a collection of entries. */
