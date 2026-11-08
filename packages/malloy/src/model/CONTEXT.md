@@ -226,23 +226,13 @@ interface FieldUsageEntry {
   at?: DocumentLocation;
   uniqueKeyRequirement?: {isCount: boolean}; // asymmetric aggregate needs a distinct key
   analyticFunctionUse?: boolean;             // this is a window function
-  inPlaceDepth?: number;                     // a weak reference, read in place (below)
+  inPlaceDepth?: number;                     // a weak reference through an array query; see its doc comment
 }
 ```
 
 `givenUsage` is a `GivenUsageEntry[]`, each a `GivenID` and the location of the
 reference. An absent `refSummary` means "never set"; an empty `fieldUsage`
 means "checked, found nothing".
-
-**A weak entry** (`inPlaceDepth`) comes from an array query (`items -> { ... }`,
-experimental), which reads its array as a column of the row without unnesting
-it: `price` inside `items -> { ... }` is `['items','price']` with
-`inPlaceDepth: 2`, meaning the last two names, the array and the element's
-field, are read in place. The array and anything below it are not joins the
-row's query needs, so `activeJoins` never lists the array on a weak entry's
-account, and the entry carries no `uniqueKeyRequirement` or
-`analyticFunctionUse`; those would describe the inner query's own aggregation
-over the elements, not anything the row's query has to do.
 
 ### The expanded segment — `SegmentUsageSummary`
 

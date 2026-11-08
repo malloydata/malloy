@@ -195,11 +195,7 @@ references. The translator builds it in three steps:
 The expanded fields are a summary of finished IR and are correct only after
 step 2. Nothing in the translator should read one while it is still building
 IR, and no node should compute a closure of its own; a node that forwards
-another node's references takes its `refSummary` through `mapFieldUsage`. An array query
-(`items -> { ... }`, experimental) is the one node that re-roots: its first
-stage's references are merged into its summary through the array's path and
-marked weak (`inPlaceDepth`), so expansion activates the joins above the array
-and not the array itself.
+another node's references takes its `refSummary` through `mapFieldUsage`.
 
 What an entry means, what a path is rooted at, and what the compiler does with
 the four fields are the contract in
