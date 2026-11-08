@@ -167,16 +167,21 @@ The translator produces **Intermediate Representation (IR)** - a serializable, d
 
 For detailed information about IR structure and types, see [../model/CONTEXT.md](../model/CONTEXT.md).
 
-## Field usage
+## Reference summaries and field usage
 
-Expressions record the fields they reference (`refSummary`), and the translator
-collates that into a per-segment summary the compiler reads instead of walking
-expressions itself. The translator side is `composite-source-utils.ts`
-(`getExpandedSegment` / `expandRefUsage`), driven per pipeline stage by
-`QueryBase.expandRefUsage` in `ast/query-elements/query-base.ts`. The whole
-chain — entry shape, how the expansion closes over joins and computed fields,
-what each path is rooted at, and what the compiler does with the result — is
-documented in [../model/CONTEXT.md](../model/CONTEXT.md#field-usage).
+Every expression value carries a `refSummary` of the fields and givens it
+references, built by merging its children's summaries as the tree is built;
+a segment's `refSummary` is the merge of its fields' and filters'. Once a
+query is assembled, `QueryBase.expandRefUsage` in
+`ast/query-elements/query-base.ts` runs `getExpandedSegment` /
+`expandRefUsage` (`composite-source-utils.ts`) over each stage, closing the
+collected summaries over joins and computed fields into the expanded fields the
+compiler reads. Collection and expansion are different layers: an expression
+node merges or re-roots summaries whole (`mergeRefSummaries`, `mapFieldUsage`)
+and never reads an expanded field. The whole chain — the two parts of a
+summary, how the expansion closes, what each path is rooted at, and what the
+compiler does with the result — is documented in
+[../model/CONTEXT.md](../model/CONTEXT.md#reference-summaries-and-field-usage).
 
 ## Givens — translator side
 

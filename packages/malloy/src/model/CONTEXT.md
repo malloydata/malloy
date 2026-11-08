@@ -202,19 +202,44 @@ check (`lang/CONTEXT.md`, "Compiler flags and experimental dialects"). Two
 runtime readers of `##! experimental.persistence` in the Foundation API are
 tracked for removal in #3112.
 
-## Field usage
+## Reference summaries and field usage
 
-Every expression in the IR records the fields it references. The translator
-collates all of it into a per-segment summary, and the compiler computes what it
-needs about joins from that summary rather than walking the expressions itself.
-Field usage is the single source of truth for "what does this query touch".
+Every expression value carries a **`refSummary`**, the record of what it
+references. `RefSummary { fieldUsage, givenUsage }` (`malloy_types.ts`) has two
+parts, the fields the expression reads and the givens it reads, and the two
+always travel together. The translator collects summaries as it builds
+expression trees; once a query is assembled it expands them; the compiler reads
+the expanded result instead of walking expressions itself. The summary is the
+single source of truth for "what does this query touch". Three rules hold it
+together:
 
-### The three levels
+- **Collection merges children.** A node's summary is the merge of its
+  children's summaries and nothing else (`computedExprValue` →
+  `mergeRefSummaries`). A `FieldDef`, a `FilterCondition`, a join's `on` clause
+  and a `TypeDesc` carry the summary of the expression they hold. A segment's
+  own `refSummary` is collected the same way: the result field space merges
+  the summary of every query field and filter in the segment
+  (`lang/ast/field-space/query-spaces.ts`), and a refinement merges in the
+  summary of the view it refines (`lang/ast/query-builders/reduce-builder.ts`).
+- **Expansion is a separate, later pass over finished summaries.** When the
+  query is translated, `getExpandedSegment` reads each segment's `refSummary`
+  and closes it over joins and computed fields into the four expanded fields
+  below. That closure happens only there. Nothing in the expression layer
+  reads an expanded field, and no node computes a closure of its own; a node
+  that forwards or re-roots another node's references takes that node's
+  `refSummary` through `mapFieldUsage`, which rewrites the paths and keeps the
+  rest of the summary intact.
+- **Split only at the readers.** `fieldUsageFrom` / `givenUsageFrom` pull one
+  half out of a summary, for the readers at the end: the compiler and the
+  given-satisfiability checks. Wherever a summary is being built, combined or
+  rewritten it is handled whole: `mergeRefSummaries` to combine,
+  `mapFieldUsage` to rewrite paths, `mkRefSummary` to build one from parts. An
+  absent `refSummary` means "never set"; an empty `fieldUsage` means "checked,
+  found nothing".
 
-**Per-expression — `refSummary`.** `RefSummary { fieldUsage, givenUsage }`
-(`malloy_types.ts`) hangs off anything that holds an expression: a `FieldDef`, a
-`FilterCondition`, a join's `on` clause, a `TypeDesc`. `fieldUsage` is a
-`FieldUsageEntry[]`; each entry is
+### Field usage entries
+
+`fieldUsage` is a `FieldUsageEntry[]`; each entry is
 
 ```ts
 interface FieldUsageEntry {
@@ -226,11 +251,12 @@ interface FieldUsageEntry {
 }
 ```
 
-Read `refSummary` through `fieldUsageFrom` / `givenUsageFrom`; rewrite paths
-through `mapFieldUsage`; build one with `mkRefSummary`. An absent `refSummary`
-means "never set", an empty `fieldUsage` means "checked, found nothing".
+`givenUsage` is a `GivenUsageEntry[]`, each a `GivenID` and the location of the
+reference.
 
-**Per-segment — `SegmentUsageSummary`.** Every `QuerySegment` and `IndexSegment`
+### The expanded segment — `SegmentUsageSummary`
+
+Beside its collected `refSummary`, every `QuerySegment` and `IndexSegment`
 carries four expanded fields, written by `getExpandedSegment`
 (`lang/composite-source-utils.ts`) and read by the compiler:
 
@@ -241,7 +267,7 @@ carries four expanded fields, written by `getExpandedSegment`
 | `expandedGivenUsage` | every `GivenID` reachable from the segment |
 | `expandedUngroupings` | `all:`/`exclude:` ungroupings, path-adjusted through nests |
 
-**Per-query.** `computeQueryGivenUsage(pipeline)` is the dedup'd union of every
+Per query, `computeQueryGivenUsage(pipeline)` is the dedup'd union of every
 segment's `expandedGivenUsage`; there is no equivalent roll-up for field usage,
 because the first segment's summary already covers the whole base join tree
 (see "Rooting", below).
@@ -287,10 +313,11 @@ together) and `analyticFunctionUse`.
 
 An array query (`items -> { ... }`, experimental) reads its array as a column
 of the row, without unnesting it. What the query reads from the elements still
-belongs in the summary, so `ExprArrayQuery` bubbles its first stage's expanded
-usage out through the array's path: `price` inside `items -> { ... }` becomes
-`['items','price']` with `inPlaceDepth: 2`, meaning the last two names, the
-array and the element's field, are read in place.
+belongs in the summary, so `ExprArrayQuery` merges its first stage's references
+into its own summary, re-rooted through the array's path and marked weak:
+`price` inside `items -> { ... }` becomes `['items','price']` with
+`inPlaceDepth: 2`, meaning the last two names, the array and the element's
+field, are read in place.
 
 A weak entry activates the joins on its path **above** the array, and makes an
 activated join depend on the join above the array, never on the array itself.
