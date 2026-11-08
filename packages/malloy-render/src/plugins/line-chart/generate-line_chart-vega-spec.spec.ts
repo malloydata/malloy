@@ -149,3 +149,42 @@ describe('line_chart YoY synthetic series field', () => {
     expect(spec.legends?.[0]?.title).toBe('Year');
   }, 60000);
 });
+
+describe('line_chart measure series with a null # y value', () => {
+  const WEEKLY_SALES = `source: weekly_sales is duckdb.sql("""
+    select 1 as week_no, 10 as sales, 11 as last_year_sales
+    union all select 2, null, 12
+    union all select 3, 20, null
+    union all select 4, null, null
+  """)`;
+
+  test('a null drops the point from its own series only', async () => {
+    const {props, rootCell} = await buildLine(
+      WEEKLY_SALES,
+      `
+      # line_chart
+      run: weekly_sales -> {
+        # x
+        select:
+          week_no
+          # y
+          sales
+          # y
+          last_year_sales
+        order_by: week_no
+      }
+      `
+    );
+    const mapped = props.mapMalloyDataToChartData(rootCell);
+    expect(mapped.data).toMatchObject([{x: 1}, {x: 2}, {x: 3}]);
+
+    const transforms =
+      props.spec.data?.find(d => d.name === 'values')?.transform ?? [];
+    const fold = transforms.findIndex(t => t.type === 'fold');
+    expect(fold).toBeGreaterThanOrEqual(0);
+    expect(transforms.slice(fold + 1)).toContainEqual({
+      type: 'filter',
+      expr: 'isValid(datum.y)',
+    });
+  }, 60000);
+});

@@ -29,6 +29,7 @@ import type {
   Signal,
   Spec,
   SymbolMark,
+  Transforms,
 } from 'vega';
 import {
   renderNumericField,
@@ -136,6 +137,7 @@ export function generateLineChartVegaSpecV2(
   };
 
   const yField = explore.fieldAt(yFieldPath);
+  const yFields = settings.yChannel.fields.map(f => explore.fieldAt(f));
   let seriesField: Field | SyntheticSeriesField | null = seriesFieldPath
     ? explore.fieldAt(seriesFieldPath)
     : null;
@@ -495,16 +497,40 @@ export function generateLineChartVegaSpecV2(
   }
 
   // Source data and transforms
+  const valuesTransforms: Transforms[] = [
+    {
+      type: 'formula',
+      expr: `datum.x === null || datum.x === "${NULL_SYMBOL}"`,
+      as: 'isNull',
+    },
+  ];
+
+  // For measure series, unpivot the measures into the series column
+  if (isMeasureSeries) {
+    // Pull the series values from the source record, then remap the names to remove __values
+    valuesTransforms.push(
+      {
+        type: 'fold',
+        fields: yFields.map(f => `__values.${f.name}`),
+        as: ['series', 'y'],
+      },
+      {
+        type: 'formula',
+        as: 'series',
+        expr: "replace(datum.series, '__values.', '')",
+      },
+      // Drop each series' missing points, as a single # y field does
+      {
+        type: 'filter',
+        expr: 'isValid(datum.y)',
+      }
+    );
+  }
+
   const valuesData: Data = {
     name: 'values',
     values: [],
-    transform: [
-      {
-        type: 'formula',
-        expr: `datum.x === null || datum.x === "${NULL_SYMBOL}"`,
-        as: 'isNull',
-      },
-    ],
+    transform: valuesTransforms,
   };
 
   const nonNullXValues: Data = {
@@ -531,23 +557,6 @@ export function generateLineChartVegaSpecV2(
       },
     ],
   };
-
-  // For measure series, unpivot the measures into the series column
-  if (isMeasureSeries) {
-    // Pull the series values from the source record, then remap the names to remove __values
-    valuesData.transform!.push({
-      type: 'fold',
-      fields: settings.yChannel.fields.map(
-        f => `__values.${explore.fieldAt(f).name}`
-      ),
-      as: ['series', 'y'],
-    });
-    valuesData.transform!.push({
-      type: 'formula',
-      as: 'series',
-      expr: "replace(datum.series, '__values.', '')",
-    });
-  }
 
   /**************************************
    *
@@ -1061,8 +1070,9 @@ export function generateLineChartVegaSpecV2(
       if (skipSeries(seriesVal)) {
         return;
       }
-      // Filter out missing metric values
-      const isMissingY = row.column(yField.name).value === null;
+      // Filter out missing metric values. With several # y fields, the filter
+      // after the fold drops each series' nulls.
+      const isMissingY = yFields.every(f => row.column(f.name).value === null);
       if (isMissingY) {
         return;
       }
