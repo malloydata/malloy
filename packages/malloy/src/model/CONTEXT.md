@@ -221,14 +221,16 @@ together:
   the summary of every query field and filter in the segment
   (`lang/ast/field-space/query-spaces.ts`), and a refinement merges in the
   summary of the view it refines (`lang/ast/query-builders/reduce-builder.ts`).
-- **Expansion is a separate, later pass over finished summaries.** When the
-  query is translated, `getExpandedSegment` reads each segment's `refSummary`
-  and closes it over joins and computed fields into the four expanded fields
-  below. That closure happens only there. Nothing in the expression layer
-  reads an expanded field, and no node computes a closure of its own; a node
-  that forwards or re-roots another node's references takes that node's
-  `refSummary` through `mapFieldUsage`, which rewrites the paths and keeps the
-  rest of the summary intact.
+- **Expansion is the last pass over a translated query, for the compiler.**
+  Once a query's IR is complete, `getExpandedSegment` reads each segment's
+  `refSummary` and closes it over joins and computed fields into the four
+  expanded fields below. They are a summary of finished IR: correct only at
+  that point, and read only by the compiler and by the per-query roll-ups.
+  Nothing in the translator reads an expanded field while it is still
+  building IR, and no node computes a closure of its own; a node that forwards
+  or re-roots another node's references takes that node's `refSummary` through
+  `mapFieldUsage`, which rewrites the paths and keeps the rest of the summary
+  intact.
 - **Split only at the readers.** `fieldUsageFrom` / `givenUsageFrom` pull one
   half out of a summary, for the readers at the end: the compiler and the
   given-satisfiability checks. Wherever a summary is being built, combined or
