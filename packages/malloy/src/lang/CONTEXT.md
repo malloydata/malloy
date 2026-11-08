@@ -167,16 +167,39 @@ The translator produces **Intermediate Representation (IR)** - a serializable, d
 
 For detailed information about IR structure and types, see [../model/CONTEXT.md](../model/CONTEXT.md).
 
-## Field usage
+## Reference summaries: collection and expansion
 
-Expressions record the fields they reference (`refSummary`), and the translator
-collates that into a per-segment summary the compiler reads instead of walking
-expressions itself. The translator side is `composite-source-utils.ts`
-(`getExpandedSegment` / `expandRefUsage`), driven per pipeline stage by
-`QueryBase.expandRefUsage` in `ast/query-elements/query-base.ts`. The whole
-chain — entry shape, how the expansion closes over joins and computed fields,
-what each path is rooted at, and what the compiler does with the result — is
-documented in [../model/CONTEXT.md](../model/CONTEXT.md#field-usage).
+A `refSummary` (`RefSummary { fieldUsage, givenUsage }`,
+`model/malloy_types.ts`) is the record of the fields and givens a piece of IR
+references. The translator builds it in three steps:
+
+1. **Collection.** A node's summary is the merge of its children's
+   (`computedExprValue`, `ast/types/expr-value.ts`), and a segment's is the
+   merge of every expression it holds: its fields, its filters, and the view it
+   refines (`ast/field-space/query-spaces.ts`). A summary is always handled
+   whole: `mergeRefSummaries` to combine, `mapFieldUsage` to re-root paths and
+   keep the rest, `mkRefSummary` to build one. `fieldUsageFrom` /
+   `givenUsageFrom` split one apart and belong only to the readers at the end.
+2. **Expansion.** Once a query's IR is complete, `QueryBase.expandRefUsage`
+   (`ast/query-elements/query-base.ts`) runs `getExpandedSegment`
+   (`composite-source-utils.ts`) over each stage as a last pass. Starting from
+   the segment's summary and the input source's `where:`, it follows every
+   reference to what it depends on, a computed field's own references and an
+   activated join's `on` and `where:`, until the tree closes.
+3. **Derivation.** From the closed tree it writes the segment's four expanded
+   fields for the compiler: `expandedFieldUsage`, `activeJoins` (which joins
+   are active, in dependency order), `expandedGivenUsage` and
+   `expandedUngroupings`. A distinct-key requirement or window-function use
+   on an entry survives into `expandedFieldUsage` for the compiler to read.
+
+The expanded fields are a summary of finished IR and are correct only after
+step 2. Nothing in the translator should read one while it is still building
+IR, and no node should compute a closure of its own; a node that forwards
+another node's references takes its `refSummary` through `mapFieldUsage`.
+
+What an entry means, what a path is rooted at, and what the compiler does with
+the four fields are the contract in
+[../model/CONTEXT.md](../model/CONTEXT.md#reference-summaries-and-field-usage).
 
 ## Givens — translator side
 

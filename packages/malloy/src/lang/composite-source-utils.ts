@@ -592,8 +592,10 @@ function expandRefUsage(
       const isInternalReference =
         usage.path.length === joinPath.length + 1 &&
         pathBegins(usage.path, joinPath);
-      // A weak reference depends on the join above the array it reads in
-      // place, not on the array.
+      // An `on` or `where:` which reaches into another join makes this join
+      // depend on that one, so that `findActiveJoins` orders it after the
+      // join it reads. A weak reference depends on the join above the array
+      // it reads in place, not on the array.
       const dependencyPath = usage.path.slice(
         0,
         usage.inPlaceDepth === undefined ? -1 : -usage.inPlaceDepth
