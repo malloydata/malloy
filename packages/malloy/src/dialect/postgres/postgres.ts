@@ -27,6 +27,7 @@ import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import {
   turtleGroupSetCondition,
   type CompiledOrderBy,
+  type ArrayQuerySupport,
   type DialectFieldList,
   type FieldReferenceType,
   type QueryInfo,
@@ -94,7 +95,11 @@ export class PostgresDialect extends PostgresBase {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
-  supportsArrayQueries = true;
+  arrayQueries: ArrayQuerySupport = {
+    inPlace: false,
+    subquery: 'any',
+    readsSubqueryRows: true,
+  };
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   supportsSafeCast = false;

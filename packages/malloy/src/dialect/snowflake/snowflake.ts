@@ -39,6 +39,7 @@ import type {
   FieldReferenceType,
   IntegerTypeMapping,
   QueryInfo,
+  ArrayQuerySupport,
 } from '../dialect';
 import {
   CivilTime,
@@ -130,10 +131,13 @@ export class SnowflakeDialect extends Dialect {
   supportsPipelinesInViews = false;
   supportsComplexFilteredSources = false;
   // A query on an array is computed in place, with higher-order functions.
-  supportsArrayQueries = true;
-  computesArrayQueriesInPlace = true;
-  supportsCorrelatedArrayQueries = false;
-  supportsArraySortInPlace = false;
+  // Snowflake rejects a correlated subquery over FLATTEN ("Unsupported
+  // subquery type cannot be evaluated"), and ARRAY_SORT takes no key.
+  arrayQueries: ArrayQuerySupport = {
+    inPlace: {sort: false},
+    subquery: 'none',
+    readsSubqueryRows: true,
+  };
 
   // Snowflake bare-identifier continuation allows `$` (verified against
   // the live engine).
@@ -382,13 +386,7 @@ export class SnowflakeDialect extends Dialect {
       // ARRAY_SLICE is 0-based, end-exclusive, so (0, n) keeps the first n.
       elements = `ARRAY_SLICE(${elements}, 0, ${limit})`;
     }
-    const record = `OBJECT_CONSTRUCT_KEEP_NULL(${this.mapFieldsForObjectConstruct(
-      fields.map(f => ({
-        typeDef: f.typeDef,
-        sqlExpression: f.sql,
-        rawName: f.name,
-      }))
-    )})`;
+    const record = `OBJECT_CONSTRUCT_KEEP_NULL(${this.mapFieldsForObjectConstruct(fields)})`;
     return `COALESCE(TRANSFORM(${elements}, ${element} -> ${record}), [])`;
   }
 

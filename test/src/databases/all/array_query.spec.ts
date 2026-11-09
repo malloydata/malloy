@@ -15,26 +15,24 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
  * current row, whose value is a value of that row. Experimental.
  */
 describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
-  const supported = runtime.dialect.supportsArrayQueries;
-  // A query which is not computed in place needs a correlated subquery.
-  const correlated =
-    supported && runtime.dialect.supportsCorrelatedArrayQueries;
+  const support = runtime.dialect.arrayQueries;
+  const supported = support !== undefined;
+  // A shape which is not computed in place runs as a correlated subquery,
+  // which is any query, only one grouping, or none.
+  const correlated = support !== undefined && support.subquery !== 'none';
+  const subqueryAny = support?.subquery === 'any';
   // The rows a correlated subquery made can be unnested, to reach into
-  // them with a path.
-  const unnestsSubquery =
-    correlated && runtime.dialect.supportsReadingCorrelatedArrayRows;
-  // An array which an in-place query on an array made can be read
-  // further: it is in place, or the dialect reads a subquery's rows.
+  // them with a path, or queried again with ->.
+  const unnestsSubquery = correlated && support.readsSubqueryRows;
+  // An array an arrow made from a simple shape can be read further: it is
+  // made in place, or by a subquery whose rows the dialect reads.
   const readsMadeArrays =
-    supported &&
-    (runtime.dialect.computesArrayQueriesInPlace ||
-      runtime.dialect.supportsReadingCorrelatedArrayRows);
-  // The correlated subquery can be any query, not only one grouping.
-  const subqueryAny =
-    correlated && runtime.dialect.correlatedArrayQueries === 'any';
+    support !== undefined &&
+    (support.inPlace !== false || support.readsSubqueryRows);
   // An order_by: inside the arrow is sorted in place, or by the subquery.
   const sorts =
-    supported && (correlated || runtime.dialect.supportsArraySortInPlace);
+    support !== undefined &&
+    ((support.inPlace !== false && support.inPlace.sort) || subqueryAny);
   // Queries on an array which only a correlated subquery can run; without
   // one, each is a translation error, so the model has them only with one.
   const needSubquery = `

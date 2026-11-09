@@ -38,10 +38,13 @@ import type {
   OrderByClauseType,
   OrderByRequest,
   QueryInfo,
+  ArrayQuerySupport,
 } from '../dialect';
 import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
+import type {LambdaArrayDialect} from '../array_lambdas';
+import {lambdaArrayAggregate, lambdaArraySelect} from '../array_lambdas';
 import {DATABRICKS_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DATABRICKS_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -106,9 +109,11 @@ export class DatabricksDialect extends Dialect {
   // A query on an array is computed in place with higher-order functions
   // where it can be, and otherwise as a correlated subquery over the
   // exploded array.
-  supportsArrayQueries = true;
-  computesArrayQueriesInPlace = true;
-  supportsReadingCorrelatedArrayRows = false;
+  arrayQueries: ArrayQuerySupport = {
+    inPlace: {sort: true},
+    subquery: 'any',
+    readsSubqueryRows: false,
+  };
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
@@ -393,94 +398,22 @@ export class DatabricksDialect extends Dialect {
     return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
   }
 
-  // size() of a null array is -1 or null, depending on the session's
-  // legacy setting, so an empty count is written out.
-  private arraySize(arraySQL: string): string {
-    return `CASE WHEN ${arraySQL} IS NULL THEN 0 ELSE size(${arraySQL}) END`;
+  private readonly lambdaArrays: LambdaArrayDialect = {
+    // size() of a null array is -1 or null, depending on the session's
+    // legacy setting, so the empty count is written out.
+    size: a => `CASE WHEN ${a} IS NULL THEN 0 ELSE size(${a}) END`,
+    sum: (a, zero, acc, v) =>
+      `aggregate(${a}, ${zero}, (${acc}, ${v}) -> ${acc} + ${v})`,
+    record: fields => this.buildNamedStructExpression(fields),
+    emptyArray: 'array()',
+  };
+
+  sqlArrayAggregate(aggregate: ArrayAggregate): string {
+    return lambdaArrayAggregate(aggregate, this.lambdaArrays);
   }
 
-  // array_max and array_min skip nulls, as an aggregate does; the other
-  // aggregates filter them out first.
-  sqlArrayAggregate({
-    source,
-    element,
-    function: func,
-    value,
-    filter,
-    resultType,
-  }: ArrayAggregate): string {
-    const elements = filter
-      ? `filter(${source}, ${element} -> ${filter})`
-      : source;
-    const values = value
-      ? `transform(${elements}, ${element} -> ${value})`
-      : elements;
-    const v = `${element}_value`;
-    const acc = `${element}_acc`;
-    const nonNull = `filter(${values}, ${v} -> ${v} IS NOT NULL)`;
-    switch (func) {
-      case 'count':
-        return this.arraySize(elements);
-      case 'distinct':
-        return this.arraySize(`array_distinct(${nonNull})`);
-      case 'sum': {
-        // aggregate's state has one type, so a sum of integers is a BIGINT,
-        // and any other sum a DOUBLE.
-        const integral =
-          resultType?.type === 'number' &&
-          (resultType.numberType === 'integer' ||
-            resultType.numberType === 'bigint');
-        const zero = `CAST(0 AS ${integral ? 'BIGINT' : 'DOUBLE'})`;
-        return `COALESCE(aggregate(${nonNull}, ${zero}, (${acc}, ${v}) -> ${acc} + ${v}), 0)`;
-      }
-      case 'avg':
-        return `aggregate(${nonNull}, CAST(0 AS DOUBLE), (${acc}, ${v}) -> ${acc} + ${v}) / NULLIF(size(${nonNull}), 0)`;
-      case 'min':
-        return `array_min(${values})`;
-      case 'max':
-        return `array_max(${values})`;
-    }
-  }
-
-  sqlArraySelect({
-    source,
-    element,
-    fields,
-    filter,
-    orderBy = [],
-    comparator,
-    limit,
-  }: ArraySelect): string | undefined {
-    let elements = filter
-      ? `filter(${source}, ${element} -> ${filter})`
-      : source;
-    if (orderBy.length > 0) {
-      if (comparator === undefined) {
-        return undefined;
-      }
-      const {left, right, keys} = comparator();
-      // Each key in turn, nulls last either way; equal on every key is 0.
-      let compare = '0';
-      for (let i = orderBy.length - 1; i >= 0; i--) {
-        const [before, after] =
-          orderBy[i].dir === 'desc' ? ['1', '-1'] : ['-1', '1'];
-        const l = `(${keys[i].left})`;
-        const r = `(${keys[i].right})`;
-        compare = `CASE WHEN ${l} IS NULL AND ${r} IS NULL THEN ${compare} WHEN ${l} IS NULL THEN 1 WHEN ${r} IS NULL THEN -1 WHEN ${l} < ${r} THEN ${before} WHEN ${l} > ${r} THEN ${after} ELSE ${compare} END`;
-      }
-      elements = `array_sort(${elements}, (${left}, ${right}) -> ${compare})`;
-    }
-    if (limit !== undefined) {
-      elements = `slice(${elements}, 1, ${limit})`;
-    }
-    const record = this.buildNamedStructExpression(
-      fields.map(f => ({
-        typeDef: f.typeDef,
-        sqlExpression: f.sql,
-        rawName: f.name,
-      }))
-    );
-    return `COALESCE(transform(${elements}, ${element} -> ${record}), array())`;
+  sqlArraySelect(select: ArraySelect): string | undefined {
+    return lambdaArraySelect(select, this.lambdaArrays);
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

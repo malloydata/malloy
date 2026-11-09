@@ -227,7 +227,7 @@ describe('array queries', () => {
     });
   });
 
-  test('for now, not several aggregates', () => {
+  test('several aggregates are refused', () => {
     expect(model`
       ##! experimental.array_queries
       run: a -> {

@@ -39,6 +39,7 @@ import type {
   FieldReferenceType,
   OrderByClauseType,
   QueryInfo,
+  ArrayQuerySupport,
 } from '../dialect';
 import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
@@ -172,8 +173,11 @@ export class MySQLDialect extends Dialect {
   // A table function's argument cannot reference an outer table from
   // inside a subquery ("Unknown table in a table function argument"), so
   // an array such a subquery made can only be selected.
-  supportsArrayQueries = true;
-  supportsReadingCorrelatedArrayRows = false;
+  arrayQueries: ArrayQuerySupport = {
+    inPlace: false,
+    subquery: 'any',
+    readsSubqueryRows: false,
+  };
   // MySQL builds nested arrays with GROUP_CONCAT (not an array type), which has
   // no in-expression slice; limiting would need query-level ROW_NUMBER plumbing
   // the sqlAggregateTurtle seam doesn't expose. Left false (default) explicitly.

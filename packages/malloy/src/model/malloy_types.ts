@@ -488,17 +488,10 @@ export function arrayQueryOnlyAggregates(segment: QuerySegment): boolean {
 }
 
 /**
- * What, in a query on an array, keeps it from being computed in place, as
- * a dialect without a correlated subquery must; undefined if its shape can
- * be. The shapes which can are one stage of one aggregate, or of a
- * `select:` of values. What an expression in it reads is checked only when
- * the SQL is written.
- */
-/**
  * What, in a query on an array, keeps it from being one grouping: one stage
  * of `group_by:` and `aggregate:` with no `having:`, `limit:`, `nest:` or
  * `calculate:`, the only correlated subquery some dialects can run
- * (`Dialect.correlatedArrayQueries`); undefined if it is one.
+ * (`ArrayQuerySupport.subquery`); undefined if it is one.
  */
 export function arrayQueryNotOneGrouping(
   pipeline: PipeSegment[]
@@ -523,6 +516,13 @@ export function arrayQueryNotOneGrouping(
   return undefined;
 }
 
+/**
+ * What, in a query on an array, keeps it from being computed in place
+ * (`Dialect.arrayQueryRoutes`); undefined if its shape can be. The shapes
+ * which can are one stage of one aggregate, or of a `select:` of values,
+ * and an `order_by:` only where `canSort`. What an expression in it reads
+ * is checked only when the SQL is written.
+ */
 export function arrayQueryNotInPlace(
   pipeline: PipeSegment[],
   {canSort = true}: {canSort?: boolean} = {}

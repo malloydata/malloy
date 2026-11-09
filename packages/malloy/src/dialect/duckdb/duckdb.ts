@@ -33,6 +33,7 @@ import type {
   DialectFieldList,
   FieldReferenceType,
   IntegerTypeMapping,
+  ArrayQuerySupport,
 } from '../dialect';
 import {
   inDays,
@@ -85,8 +86,11 @@ export class DuckDBDialect extends PostgresBase {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
-  supportsArrayQueries = true;
-  computesArrayQueriesInPlace = true;
+  arrayQueries: ArrayQuerySupport = {
+    inPlace: {sort: true},
+    subquery: 'any',
+    readsSubqueryRows: true,
+  };
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = true;
@@ -270,9 +274,7 @@ export class DuckDBDialect extends PostgresBase {
 
   // DuckDB runs a correlated subquery over UNNEST as a full unnest and join,
   // so a query on an array which is one aggregate is computed with list
-  // functions instead. The lambda parameter is named `element`, which the
-  // caller chooses so that no column of that name is in scope: a column
-  // would win over the parameter.
+  // functions instead.
   sqlArrayAggregate({
     source,
     element,
@@ -337,7 +339,7 @@ export class DuckDBDialect extends PostgresBase {
       elements = `LIST_SLICE(${elements}, 1, ${limit})`;
     }
     const record = fields
-      .map(f => `${this.sqlQuoteIdentifier(f.name)} := ${f.sql}`)
+      .map(f => `${this.sqlQuoteIdentifier(f.rawName)} := ${f.sqlExpression}`)
       .join(', ');
     return `COALESCE(LIST_TRANSFORM(${elements}, ${element} -> STRUCT_PACK(${record})), [])`;
   }

@@ -33,6 +33,8 @@ import {
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {LambdaArrayDialect} from '../array_lambdas';
+import {lambdaArrayAggregate, lambdaArraySelect} from '../array_lambdas';
 import type {
   ArrayAggregate,
   ArraySelect,
@@ -43,6 +45,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
   TimeOffset,
+  ArrayQuerySupport,
 } from '../dialect';
 import {queryZone, turtleGroupSetCondition} from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
@@ -145,9 +148,11 @@ export class TrinoDialect extends PostgresBase {
   // A query on an array is computed in place with lambdas where it can be,
   // and otherwise as a correlated subquery over the unnested array, which
   // Trino's optimizer can rewrite only for one plain grouping.
-  supportsArrayQueries = true;
-  computesArrayQueriesInPlace = true;
-  correlatedArrayQueries: 'any' | 'one grouping' = 'one grouping';
+  arrayQueries: ArrayQuerySupport = {
+    inPlace: {sort: true},
+    subquery: 'one grouping',
+    readsSubqueryRows: true,
+  };
   supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
@@ -285,92 +290,21 @@ export class TrinoDialect extends PostgresBase {
       return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore) ON TRUE`;
     }
   }
-  // Arrays are computed on in place with lambdas: filter, transform,
-  // reduce, array_sort with a comparator, and slice. Lambda parameters are
-  // named after the element so that they cannot be hidden by a column.
-  // array_max and array_min are null if any element is, so nulls are
-  // filtered out first, as an aggregate ignores them.
-  sqlArrayAggregate({
-    source,
-    element,
-    function: func,
-    value,
-    filter,
-    resultType,
-  }: ArrayAggregate): string {
-    const elements = filter
-      ? `filter(${source}, ${element} -> ${filter})`
-      : source;
-    const values = value
-      ? `transform(${elements}, ${element} -> ${value})`
-      : elements;
-    const v = `${element}_value`;
-    const acc = `${element}_acc`;
-    const nonNull = `filter(${values}, ${v} -> ${v} IS NOT NULL)`;
-    switch (func) {
-      case 'count':
-        return `COALESCE(cardinality(${elements}), 0)`;
-      case 'distinct':
-        return `COALESCE(cardinality(array_distinct(${nonNull})), 0)`;
-      case 'sum': {
-        // reduce's state has one type, so a sum of integers is a BIGINT, and
-        // any other sum a DOUBLE.
-        const integral =
-          resultType?.type === 'number' &&
-          (resultType.numberType === 'integer' ||
-            resultType.numberType === 'bigint');
-        const zero = `CAST(0 AS ${integral ? 'BIGINT' : 'DOUBLE'})`;
-        return `COALESCE(reduce(${nonNull}, ${zero}, (${acc}, ${v}) -> ${acc} + ${v}, ${acc} -> ${acc}), 0)`;
-      }
-      case 'avg': {
-        const state = 'ROW(s DOUBLE, n BIGINT)';
-        return `reduce(${nonNull}, CAST(ROW(0.0, 0) AS ${state}), (${acc}, ${v}) -> CAST(ROW(${acc}.s + ${v}, ${acc}.n + 1) AS ${state}), ${acc} -> IF(${acc}.n = 0, NULL, ${acc}.s / ${acc}.n))`;
-      }
-      case 'min':
-        return `array_min(${nonNull})`;
-      case 'max':
-        return `array_max(${nonNull})`;
-    }
+  private readonly lambdaArrays: LambdaArrayDialect = {
+    size: a => `COALESCE(cardinality(${a}), 0)`,
+    sum: (a, zero, acc, v) =>
+      `reduce(${a}, ${zero}, (${acc}, ${v}) -> ${acc} + ${v}, ${acc} -> ${acc})`,
+    record: fields =>
+      `CAST(ROW(${fields.map(f => f.sqlExpression).join(', ')}) AS ROW(${this.buildTypeExpression(fields)}))`,
+    emptyArray: 'ARRAY[]',
+  };
+
+  sqlArrayAggregate(aggregate: ArrayAggregate): string {
+    return lambdaArrayAggregate(aggregate, this.lambdaArrays);
   }
 
-  sqlArraySelect({
-    source,
-    element,
-    fields,
-    filter,
-    orderBy = [],
-    comparator,
-    limit,
-  }: ArraySelect): string | undefined {
-    let elements = filter
-      ? `filter(${source}, ${element} -> ${filter})`
-      : source;
-    if (orderBy.length > 0) {
-      if (comparator === undefined) {
-        return undefined;
-      }
-      const {left, right, keys} = comparator();
-      // Each key in turn, nulls last either way; equal on every key is 0.
-      let compare = '0';
-      for (let i = orderBy.length - 1; i >= 0; i--) {
-        const [before, after] =
-          orderBy[i].dir === 'desc' ? ['1', '-1'] : ['-1', '1'];
-        const l = `(${keys[i].left})`;
-        const r = `(${keys[i].right})`;
-        compare = `CASE WHEN ${l} IS NULL AND ${r} IS NULL THEN ${compare} WHEN ${l} IS NULL THEN 1 WHEN ${r} IS NULL THEN -1 WHEN ${l} < ${r} THEN ${before} WHEN ${l} > ${r} THEN ${after} ELSE ${compare} END`;
-      }
-      elements = `array_sort(${elements}, (${left}, ${right}) -> ${compare})`;
-    }
-    if (limit !== undefined) {
-      elements = `slice(${elements}, 1, ${limit})`;
-    }
-    const fieldList: DialectFieldList = fields.map(f => ({
-      typeDef: f.typeDef,
-      sqlExpression: f.sql,
-      rawName: f.name,
-    }));
-    const record = `CAST(ROW(${fields.map(f => f.sql).join(', ')}) AS ROW(${this.buildTypeExpression(fieldList)}))`;
-    return `COALESCE(transform(${elements}, ${element} -> ${record}), ARRAY[])`;
+  sqlArraySelect(select: ArraySelect): string | undefined {
+    return lambdaArraySelect(select, this.lambdaArrays);
   }
 
   static dtype = 'DECIMAL(38,0)';
@@ -838,7 +772,11 @@ export class PrestoDialect extends TrinoDialect {
   // Presto rejects a correlated subquery over an array ("Given correlated
   // subquery is not supported"), so a query on an array runs only where
   // it is computed in place.
-  supportsCorrelatedArrayQueries = false;
+  arrayQueries: ArrayQuerySupport = {
+    inPlace: {sort: true},
+    subquery: 'none',
+    readsSubqueryRows: true,
+  };
   supportsLeftJoinUnnest = false; // we need to fix this....
 
   sqlGenerateUUID(): string {

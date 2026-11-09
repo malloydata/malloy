@@ -26,6 +26,8 @@ export {
 export {Dialect, queryZone} from './dialect';
 export type {
   ArrayAggregate,
+  ArrayQueryRoutes,
+  ArrayQuerySupport,
   ArrayComparator,
   ArraySelect,
   DialectFieldList,

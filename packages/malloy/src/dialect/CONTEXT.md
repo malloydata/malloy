@@ -105,6 +105,34 @@ Tests:
 - `packages/malloy/src/lang/test/table-path-validation.spec.ts` — end-to-end translator-error tests with source-range assertions.
 - `test/src/databases/duckdb-all/duckdb.spec.ts` — DuckDB-specific shapes (file paths, globs).
 
+## Queries on arrays
+
+`array -> { ... }` (experimental) runs a query on the elements of an array of the current row. A dialect declares how it compiles one in `arrayQueries` (`ArrayQuerySupport`, in `dialect.ts`); undefined means the translator refuses the arrow.
+
+There are two routes:
+
+- **In place**, with the dialect's array functions: `sqlArrayAggregate` for one aggregate, `sqlArraySelect` for a `select:` of values with `where:`, `order_by:` and `limit:`. Dialects whose functions are `filter`, `transform`, `array_sort` with a comparator and `slice` (Trino, Presto, Databricks) share one implementation, `array_lambdas.ts`, and supply only what differs.
+- **A correlated subquery** over the elements: `sqlUnnestPipelineHead` with `isScalarArray` is its FROM, read `AS base`, and `sqlCreateFunctionCombineLastStage` collects its rows back into an array, in the stage's order.
+
+`Dialect.arrayQueryRoutes(pipeline)` says why a pipeline cannot take each route, from the shape alone (`arrayQueryNotInPlace`, `arrayQueryNotOneGrouping` in `malloy_types.ts`). It is the one statement of the rule:
+
+- the translator (`ExprArrayQuery`) refuses a pipeline which neither route can take, with `array-query-not-in-place`;
+- the compiler (`QueryQuery.arrayQuerySQL`) tries in place first. A shape which could be in place but reads something other than an element's own fields, or which the dialect's functions decline, goes to the subquery, and is a compile error where the subquery route is closed;
+- where `readsSubqueryRows` is false, the compiler refuses to unnest, or to query again with `->`, an array a subquery made, following the computed arrays an expression reads (`refuseReadingSubqueryRows`).
+
+| Dialect | In place | Subquery | Reads a subquery's rows | Why |
+|---|---|---|---|---|
+| DuckDB | yes, sorts | any | yes | A correlated subquery over `UNNEST` is a full join, so list functions come first; `LIST_GRADE_UP` sorts one key or all ascending, and declines the rest |
+| BigQuery | no | any | yes | |
+| Postgres | no | any | yes | No list lambdas |
+| Trino | yes, sorts | one grouping | yes | The optimizer rewrites only one plain grouping as a join; others fail with "Given correlated subquery is not supported" |
+| Presto | yes, sorts | none | n/a | Rejects a correlated subquery over an array |
+| Snowflake | yes, no sort | none | n/a | `ARRAY_SORT` takes no key; a correlated subquery over `FLATTEN` is "Unsupported subquery type" |
+| Databricks | yes, sorts | any | no | A correlated subquery cannot feed `EXPLODE` or a higher-order function |
+| MySQL | no | any | no | No lambdas; a table function's argument cannot reference an outer table from inside a subquery |
+
+`test/src/databases/all/array_query.spec.ts` gates each test on these facts.
+
 ## Key Source Files
 
 | File | Purpose |
@@ -114,6 +142,7 @@ Tests:
 | `{dialect}/function_overrides.ts` | Dialect's overrides for standard library |
 | `{dialect}/dialect_functions.ts` | Dialect-unique function definitions |
 | `dialect.ts` | Abstract Dialect base class |
+| `array_lambdas.ts` | In-place queries on an array, shared by the lambda dialects |
 | `dialect_map.ts` | Dialect registry |
 | `../lang/ast/expressions/expr-func.ts` | Parser-side: function call AST, overload resolution |
 | `../lang/ast/types/global-name-space.ts` | Assembles standard functions + overrides across all dialects |

@@ -13,7 +13,6 @@ import type {
 } from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
-  AtomicTypeDef,
   Expr,
   FilterCondition,
   TurtleDef,
@@ -54,7 +53,6 @@ import {
   fieldIsIntrinsic,
   isJoinedSource,
   isBasicArray,
-  arrayQueryNotInPlace,
   arrayQueryReturnsValue,
   isIndexSegment,
   isBaseTable,
@@ -1167,7 +1165,7 @@ export class QueryQuery extends QueryField {
         // If this array is NOT contained in the parent, but a computed entity
         // then the thing we are joining is not "parent.childName", but
         // the expression which is built in that namespace
-        this.checkReadsArrayRows(qs, 'reach into its rows with a path');
+        this.refuseReadingSubqueryRows(qs, 'reach into its rows with a path');
         arrayExpression = exprToSQL(this.rootResult, qs.parent, qsDef.e);
       } else {
         // If this is a reference through an expression at the top level,
@@ -2680,12 +2678,11 @@ export class QueryQuery extends QueryField {
 
   /**
    * A copy of the array's struct under a name of its own, for compiling
-   * expressions on its elements in place: they read an element by an alias
-   * which the dialect gives the element. The array's own alias would not do:
-   * if this query also unnests the array, a column of that name is in scope,
-   * and in a lambda the column would win. The alias is unique among this
-   * query's aliases, and starts with `__`, as Malloy's own names do, so that
-   * a table's column is unlikely to share it.
+   * expressions on its elements in place, read through the lambda parameter
+   * `ArraySelect.element` names. The name is unique among this query's
+   * aliases, and starts with `__`, as Malloy's own names do. The array's own
+   * alias would not do: a query which also unnests the array has a column
+   * of that name in scope.
    */
   private arrayElementStruct(
     array: QueryStruct,
@@ -2747,12 +2744,12 @@ export class QueryQuery extends QueryField {
     if (inPlace === undefined) return undefined;
     const {element, filter} = inPlace;
     const sql = (e: Expr, of = element) => exprToSQL(this.rootResult, of, e);
-    const fields: {name: string; sql: string; typeDef: AtomicTypeDef}[] = [];
+    const fields: DialectFieldList = [];
     for (const [i, output] of outputs.entries()) {
       if (!isAtomic(output)) return undefined;
       fields.push({
-        name: output.name,
-        sql: sql(values[i]),
+        rawName: output.name,
+        sqlExpression: sql(values[i]),
         typeDef: TD.atomicDef(output),
       });
     }
@@ -2764,9 +2761,9 @@ export class QueryQuery extends QueryField {
         typeof field === 'number'
           ? field - 1
           : outputs.findIndex(o => o.name === field);
-      if (values[i] === undefined) return undefined;
+      if (values[i] === undefined || fields[i] === undefined) return undefined;
       keys.push(values[i]);
-      orderBy.push({sql: sql(values[i]), dir: dir ?? 'asc'});
+      orderBy.push({sql: fields[i].sqlExpression, dir: dir ?? 'asc'});
     }
     // The same keys for the two elements a comparator compares, compiled
     // only for a dialect which sorts with one.
@@ -2822,23 +2819,15 @@ export class QueryQuery extends QueryField {
   }
 
   /**
-   * SQL for `array -> { ... }`: the pipeline compiled as a query whose source
-   * is the row's array, `arraySQL`, written as a correlated subquery. This is
-   * how a later stage of a nest runs on the stage before it, except that the
-   * array is a column of the row rather than the result of an aggregate.
-   * A pipeline which returns one value (`arrayQueryReturnsValue`) is that
-   * value; any other returns its rows as an array of records.
-   */
-  /**
    * A dialect which cannot read the rows a correlated subquery made
-   * (`supportsReadingCorrelatedArrayRows`) can only select an array which
+   * (`ArrayQuerySupport.readsSubqueryRows`) can only select an array which
    * a query on an array made that way, or which reads one; `doing` is the
    * read it refuses.
    */
-  private checkReadsArrayRows(array: QueryStruct, doing: string) {
+  private refuseReadingSubqueryRows(array: QueryStruct, doing: string) {
     const dialect = this.parent.dialect;
-    if (dialect.supportsReadingCorrelatedArrayRows) return;
-    const made = this.correlatedArrayIn(array, new Set());
+    if (dialect.arrayQueries?.readsSubqueryRows !== false) return;
+    const made = this.subqueryMadeArrayIn(array, new Set());
     if (made === undefined) return;
     const name = activeName(array.structDef);
     const which =
@@ -2857,7 +2846,7 @@ export class QueryQuery extends QueryField {
    * itself and the computed arrays its expression reads; undefined if none
    * is.
    */
-  private correlatedArrayIn(
+  private subqueryMadeArrayIn(
     array: QueryStruct,
     seen: Set<QueryStruct>
   ): string | undefined {
@@ -2866,13 +2855,11 @@ export class QueryQuery extends QueryField {
       return undefined;
     }
     seen.add(array);
-    const dialect = this.parent.dialect;
-    const canSort = dialect.supportsArraySortInPlace;
     for (const node of exprWalk(def.e)) {
       if (
         node.node === 'arrayQuery' &&
-        (!dialect.computesArrayQueriesInPlace ||
-          arrayQueryNotInPlace(node.pipeline, {canSort}) !== undefined)
+        this.parent.dialect.arrayQueryRoutes(node.pipeline).inPlace !==
+          undefined
       ) {
         return activeName(def);
       }
@@ -2884,7 +2871,7 @@ export class QueryQuery extends QueryField {
           continue;
         }
         if (read instanceof QueryFieldStruct) {
-          const made = this.correlatedArrayIn(read.queryStruct, seen);
+          const made = this.subqueryMadeArrayIn(read.queryStruct, seen);
           if (made !== undefined) return made;
         }
       }
@@ -2892,26 +2879,40 @@ export class QueryQuery extends QueryField {
     return undefined;
   }
 
+  /**
+   * SQL for `array -> { ... }`: computed in place by the dialect where it
+   * can be, and otherwise the pipeline compiled as a query whose source is
+   * the row's array, `arraySQL`, written as a correlated subquery. This is
+   * how a later stage of a nest runs on the stage before it, except that the
+   * array is a column of the row rather than the result of an aggregate.
+   * A pipeline which returns one value (`arrayQueryReturnsValue`) is that
+   * value; any other returns its rows as an array of records.
+   */
   private arrayQuerySQL(
     array: QueryStruct,
     arraySQL: string,
     pipeline: PipeSegment[]
   ): string {
-    this.checkReadsArrayRows(array, 'query it with ->');
+    this.refuseReadingSubqueryRows(array, 'query it with ->');
     const returnsValue = arrayQueryReturnsValue(pipeline);
     const inPlace = returnsValue
       ? this.arrayAggregateSQL(array, arraySQL, pipeline)
       : this.arraySelectSQL(array, arraySQL, pipeline);
     if (inPlace !== undefined) return inPlace;
     const dialect = this.parent.dialect;
-    // The translator rejects every shape which cannot be computed in place
-    // (`arrayQueryNotInPlace`); what reaches here is a shape which could
-    // be, but whose expressions read something other than an element's own
-    // fields (`readsOnlyElementsOf`), or which the dialect's array functions
-    // decline (`sqlArraySelect`).
-    if (!dialect.supportsCorrelatedArrayQueries) {
+    // The translator refuses a shape which neither route can take
+    // (`Dialect.arrayQueryRoutes`). A shape which reaches here could be
+    // computed in place, but reads something other than an element's own
+    // fields (`readsOnlyElementsOf`), or the dialect's array functions
+    // decline it (`sqlArraySelect`); it needs the subquery.
+    const {subquery} = dialect.arrayQueryRoutes(pipeline);
+    if (subquery !== undefined) {
+      const noSubquery =
+        dialect.arrayQueries?.subquery === 'none'
+          ? 'it has no correlated subquery to run it as'
+          : `its correlated subquery cannot have ${subquery}`;
       throw new MalloyCompileError(
-        `The ${dialect.name} dialect can only query an array in place, and cannot compute this query on an array in place: it reads something other than its elements' own fields, or the dialect's array functions cannot express it`,
+        `The ${dialect.name} dialect cannot compute this query on an array in place: it reads something other than its elements' own fields, or the dialect's array functions cannot express it; and ${noSubquery}`,
         'array-query-not-in-place',
         undefined
       );

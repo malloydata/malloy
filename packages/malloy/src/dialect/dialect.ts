@@ -21,8 +21,16 @@ import type {
   TimeExpr,
   TemporalFieldType,
   ExtractUnit,
+  PipeSegment,
 } from '../model/malloy_types';
-import {isRawCast, isBasicAtomic, TD, isDateUnit} from '../model/malloy_types';
+import {
+  isRawCast,
+  isBasicAtomic,
+  TD,
+  isDateUnit,
+  arrayQueryNotInPlace,
+  arrayQueryNotOneGrouping,
+} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 import type {ValidateTablePathResult} from './table-path';
 import {validateDottedTablePath} from './table-path';
@@ -45,16 +53,58 @@ interface DialectField {
 export type DialectFieldList = DialectField[];
 
 /**
+ * How a dialect compiles a query on an array (`Dialect.arrayQueries`).
+ */
+export interface ArrayQuerySupport {
+  /**
+   * Whether some shapes are computed in place with the dialect's array
+   * functions (`sqlArrayAggregate`, `sqlArraySelect`), and whether an
+   * `order_by:` is among them.
+   */
+  inPlace: {sort: boolean} | false;
+  /**
+   * The correlated subquery the other shapes are written as, over the
+   * array's elements (`sqlUnnestPipelineHead` with `isScalarArray`): any
+   * query, only one grouping (`arrayQueryNotOneGrouping`; Trino's optimizer
+   * rewrites only that as a join), or none.
+   */
+  subquery: 'any' | 'one grouping' | 'none';
+  /**
+   * Whether the rows a correlated subquery made can be read further:
+   * unnested, to reach into them with a path, or queried in place by
+   * another `->`. Databricks and MySQL allow a correlated subquery only
+   * where it is not the argument of a table function or a higher-order
+   * function, so there such an array can only be selected.
+   */
+  readsSubqueryRows: boolean;
+}
+
+/**
+ * Why a query on an array cannot be computed in place, and why it cannot
+ * be a correlated subquery; undefined where it can be
+ * (`Dialect.arrayQueryRoutes`).
+ */
+export interface ArrayQueryRoutes {
+  inPlace: string | undefined;
+  subquery: string | undefined;
+}
+
+/**
  * The elements of an array made into records (`Dialect.sqlArraySelect`):
  * those for which `filter` holds, in the order of `orderBy`, the first
  * `limit` of them, each as a record with a field for each of `fields`,
- * valued by its `sql`. Each `orderBy` key is an expression of `element`,
- * and its nulls sort last.
+ * valued by its `sqlExpression`. Each `orderBy` key is an expression of
+ * `element`, and its nulls sort last.
  */
 export interface ArraySelect {
   source: string;
+  /**
+   * The lambda parameter which names an element in `filter`, `fields` and
+   * `orderBy`: an alias of its own, which no column in scope shares, since
+   * a column would hide a lambda parameter of its name.
+   */
   element: string;
-  fields: {name: string; sql: string; typeDef: AtomicTypeDef}[];
+  fields: DialectFieldList;
   filter?: string;
   orderBy?: {sql: string; dir: 'asc' | 'desc'}[];
   /**
@@ -82,6 +132,10 @@ export interface ArrayComparator {
  */
 export interface ArrayAggregate {
   source: string;
+  /**
+   * The lambda parameter which names an element in `value` and `filter`,
+   * chosen as `ArraySelect.element` is.
+   */
   element: string;
   function: 'sum' | 'avg' | 'count' | 'distinct' | 'min' | 'max';
   value?: string;
@@ -664,49 +718,48 @@ export abstract class Dialect {
   }
 
   /**
-   * Whether `array -> { ... }`, a query on the elements of an array of the
-   * current row, compiles in this dialect.
+   * How `array -> { ... }`, a query on the elements of an array of the
+   * current row, compiles in this dialect; undefined where it does not.
    * Experimental.
    */
-  supportsArrayQueries = false;
+  arrayQueries: ArrayQuerySupport | undefined = undefined;
 
   /**
-   * Whether a query on an array which the dialect cannot compute in place
-   * (`sqlArrayAggregate`, `sqlArraySelect`) can be written as a correlated
-   * subquery instead. Without it such a query is a compile error.
+   * Why a query on an array cannot be computed in place, and why it cannot
+   * be a correlated subquery, in this dialect; each is undefined where it
+   * can be. The translator refuses a query on an array which neither can
+   * be; the compiler tries in place first.
    */
-  supportsCorrelatedArrayQueries = true;
+  arrayQueryRoutes(pipeline: PipeSegment[]): ArrayQueryRoutes {
+    const support = this.arrayQueries;
+    if (support === undefined) {
+      return {
+        inPlace: 'no queries on arrays',
+        subquery: 'no queries on arrays',
+      };
+    }
+    const inPlace = support.inPlace
+      ? arrayQueryNotInPlace(pipeline, {canSort: support.inPlace.sort})
+      : 'no queries on arrays in place';
+    const subquery =
+      support.subquery === 'any'
+        ? undefined
+        : support.subquery === 'one grouping'
+          ? arrayQueryNotOneGrouping(pipeline)
+          : 'no correlated subquery';
+    return {inPlace, subquery};
+  }
 
   /**
-   * Whether the dialect computes some queries on an array in place
-   * (`sqlArrayAggregate`, `sqlArraySelect`); without it every query on an
-   * array is a correlated subquery.
+   * What this dialect can do with a query on an array, and what in
+   * `routes` it cannot, for an error refusing it.
    */
-  computesArrayQueriesInPlace = false;
-
-  /**
-   * Whether the rows a correlated subquery made for a query on an array can
-   * be read further: unnested, to reach into them with a path, or queried
-   * in place by another `->`. Databricks allows a correlated subquery only
-   * in a projection, a filter or an aggregate, and not inside a
-   * higher-order function, so there such an array can only be selected.
-   */
-  supportsReadingCorrelatedArrayRows = true;
-
-  /**
-   * Whether `sqlArraySelect` can sort an array's elements in place, for an
-   * `order_by:` in a query on an array.
-   */
-  supportsArraySortInPlace = true;
-
-  /**
-   * What the correlated subquery of a query on an array can be, where
-   * `supportsCorrelatedArrayQueries`: any query, or only one grouping, one
-   * stage of `group_by:` and `aggregate:` with no `having:`, `limit:`,
-   * `nest:` or `calculate:` (`arrayQueryNotOneGrouping`). Trino's
-   * optimizer can rewrite only that as a join.
-   */
-  correlatedArrayQueries: 'any' | 'one grouping' = 'any';
+  arrayQueryRefusal(routes: ArrayQueryRoutes): string {
+    if (this.arrayQueries?.subquery === 'one grouping') {
+      return `The ${this.name} dialect can only query an array with one aggregate, with a select: of its elements' values, or with one stage of group_by: and aggregate:, so not with ${routes.subquery}`;
+    }
+    return `The ${this.name} dialect can only query an array with one aggregate, or with a select: of its elements' values, so not with ${routes.inPlace}`;
+  }
 
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 

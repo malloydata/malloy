@@ -13,8 +13,6 @@ import type {
 } from '../../../model/malloy_types';
 import {
   TD,
-  arrayQueryNotInPlace,
-  arrayQueryNotOneGrouping,
   arrayQueryOnlyAggregates,
   arrayQueryReturnsValue,
   fieldUsageFrom,
@@ -42,7 +40,7 @@ import type {ExprIdReference} from './expr-id-reference';
  * or `value` and `each` for an array of scalars. One stage of `aggregate:`
  * alone, with one field, returns that field's value; any other query
  * returns its rows, as an array of records. One stage of `aggregate:` with
- * several fields, which would be a record, is still to come.
+ * several fields, which would be a record, is refused.
  */
 export class ExprArrayQuery extends ExpressionDef {
   elementType = 'arrayQuery';
@@ -56,7 +54,7 @@ export class ExprArrayQuery extends ExpressionDef {
 
   protected computeExpression(fs: FieldSpace): ExprValue {
     const dialect = fs.dialectObj();
-    if (dialect !== undefined && !dialect.supportsArrayQueries) {
+    if (dialect !== undefined && dialect.arrayQueries === undefined) {
       return this.loggedErrorExpr(
         'array-query-not-supported',
         `The ${dialect.name} dialect cannot query an array with ->`
@@ -103,32 +101,16 @@ export class ExprArrayQuery extends ExpressionDef {
     });
     const from: ExprValue[] = [{...arrayValue, refSummary: reads}];
 
-    const notInPlace =
-      dialect !== undefined && !dialect.supportsCorrelatedArrayQueries
-        ? arrayQueryNotInPlace(pipeline, {
-            canSort: dialect.supportsArraySortInPlace,
-          })
-        : undefined;
-    if (notInPlace !== undefined) {
+    // Computed in place, or as a correlated subquery, or refused.
+    const routes = dialect?.arrayQueryRoutes(pipeline);
+    if (
+      dialect !== undefined &&
+      routes?.inPlace !== undefined &&
+      routes.subquery !== undefined
+    ) {
       return this.loggedErrorExpr(
         'array-query-not-in-place',
-        `The ${dialect?.name} dialect can only query an array with one aggregate, or with a select: of its elements' values, so not with ${notInPlace}`
-      );
-    }
-    // Where the correlated subquery can only be one grouping, a query which
-    // needs the subquery has to be one.
-    const notOneGrouping =
-      dialect?.supportsCorrelatedArrayQueries &&
-      dialect.correlatedArrayQueries === 'one grouping' &&
-      arrayQueryNotInPlace(pipeline, {
-        canSort: dialect.supportsArraySortInPlace,
-      }) !== undefined
-        ? arrayQueryNotOneGrouping(pipeline)
-        : undefined;
-    if (notOneGrouping !== undefined) {
-      return this.loggedErrorExpr(
-        'array-query-not-in-place',
-        `The ${dialect?.name} dialect can only query an array with one aggregate, with a select: of its elements' values, or with one stage of group_by: and aggregate:, so not with ${notOneGrouping}`
+        dialect.arrayQueryRefusal(routes)
       );
     }
 
@@ -158,7 +140,7 @@ export class ExprArrayQuery extends ExpressionDef {
     ) {
       return this.loggedErrorExpr(
         'array-query-not-scalar',
-        'A query on an array with only `aggregate:` must, for now, have one field'
+        'A query on an array with only `aggregate:` must have one field'
       );
     }
     // Any other query returns rows, which make an array of records.
