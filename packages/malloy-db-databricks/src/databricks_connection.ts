@@ -124,8 +124,10 @@ export interface DatabricksConfiguration {
   // longer. Defaults to TIMEOUT_MS (10 min); a non-positive value falls back
   // to that default.
   timeoutMs?: number;
-  // HTTP(S) or SOCKS proxy URL, e.g. http://user:pass@host:3128. Needed
-  // because @databricks/sql ignores HTTPS_PROXY.
+  // HTTP(S) or SOCKS proxy URL, e.g. http://user:pass@host:3128, with
+  // credentials percent-encoded. Needed because @databricks/sql ignores
+  // HTTPS_PROXY. TLS to the workspace is verified through the tunnel, so a
+  // TLS-intercepting proxy needs its CA in NODE_EXTRA_CA_CERTS.
   proxy?: string;
 }
 
@@ -150,21 +152,23 @@ function isProxyProtocol(p: string): p is DatabricksProxyOptions['protocol'] {
 
 /**
  * Turn a proxy URL into the driver's proxy options. Throws an error naming
- * the setting when the URL is malformed or uses an unsupported scheme.
+ * the setting when the URL is malformed or uses an unsupported scheme; the
+ * error never includes the URL's credentials.
  */
 export function parseProxyUrl(proxyUrl: string): DatabricksProxyOptions {
+  const shown = proxyUrl.replace(/\/\/[^/@]*@/, '//***@');
   let u: URL;
   try {
     u = new URL(proxyUrl);
   } catch {
     throw new Error(
-      `Databricks proxy: invalid URL '${proxyUrl}' (expected e.g. http://host:3128)`
+      `Databricks proxy: invalid URL '${shown}' (expected e.g. http://host:3128)`
     );
   }
   const protocol = u.protocol.replace(/:$/, '');
   if (!isProxyProtocol(protocol) || !u.hostname) {
     throw new Error(
-      `Databricks proxy: unsupported URL '${proxyUrl}' (expected ${Object.keys(PROXY_DEFAULT_PORTS).join('/')}://host[:port])`
+      `Databricks proxy: unsupported URL '${shown}' (expected ${Object.keys(PROXY_DEFAULT_PORTS).join('/')}://host[:port])`
     );
   }
   const options: DatabricksProxyOptions = {
@@ -173,10 +177,10 @@ export function parseProxyUrl(proxyUrl: string): DatabricksProxyOptions {
     port: u.port ? Number(u.port) : PROXY_DEFAULT_PORTS[protocol],
   };
   if (u.username) {
-    options.auth = {
-      username: decodeURIComponent(u.username),
-      password: decodeURIComponent(u.password),
-    };
+    // Leave these percent-encoded: @databricks/sql pastes them back into a
+    // proxy URL string without encoding them, and proxy-agent decodes them
+    // from there. Decoding here breaks passwords containing # / ? or %.
+    options.auth = {username: u.username, password: u.password};
   }
   return options;
 }

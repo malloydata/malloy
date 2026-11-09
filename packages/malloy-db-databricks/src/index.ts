@@ -110,11 +110,11 @@ registerConnectionType('databricks', {
     {
       name: 'proxy',
       displayName: 'Proxy URL',
-      type: 'string',
+      type: 'secret',
       optional: true,
       advanced: true,
       description:
-        'HTTP(S) or SOCKS proxy for reaching the workspace, e.g. http://host:3128',
+        'HTTP(S) or SOCKS proxy for reaching the workspace, e.g. http://user:pass@host:3128 (percent-encode credentials). A TLS-intercepting proxy needs its CA in NODE_EXTRA_CA_CERTS.',
     },
   ],
 });
