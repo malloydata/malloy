@@ -54,6 +54,7 @@ import {
   fieldIsIntrinsic,
   isJoinedSource,
   isBasicArray,
+  arrayQueryNotInPlace,
   arrayQueryReturnsValue,
   isIndexSegment,
   isBaseTable,
@@ -1166,6 +1167,7 @@ export class QueryQuery extends QueryField {
         // If this array is NOT contained in the parent, but a computed entity
         // then the thing we are joining is not "parent.childName", but
         // the expression which is built in that namespace
+        this.checkReadsArrayRows(qsDef, 'reach into its rows with a path');
         arrayExpression = exprToSQL(this.rootResult, qs.parent, qsDef.e);
       } else {
         // If this is a reference through an expression at the top level,
@@ -2827,11 +2829,39 @@ export class QueryQuery extends QueryField {
    * A pipeline which returns one value (`arrayQueryReturnsValue`) is that
    * value; any other returns its rows as an array of records.
    */
+  /**
+   * A dialect which cannot read the rows a correlated subquery made
+   * (`supportsReadingCorrelatedArrayRows`) can only select an array which
+   * a query on an array made that way; `doing` is the read it refuses.
+   */
+  private checkReadsArrayRows(arrayDef: StructDef, doing: string) {
+    const dialect = this.parent.dialect;
+    const made =
+      arrayDef.type === 'array' && hasExpression(arrayDef)
+        ? arrayDef.e
+        : undefined;
+    if (
+      dialect.supportsReadingCorrelatedArrayRows ||
+      made?.node !== 'arrayQuery' ||
+      arrayQueryNotInPlace(made.pipeline, {
+        canSort: dialect.supportsArraySortInPlace,
+      }) === undefined
+    ) {
+      return;
+    }
+    throw new MalloyCompileError(
+      `The ${dialect.name} dialect cannot ${doing}: '${arrayDef.name}' is made by a correlated subquery, and ${dialect.name} can only select such an array`,
+      'array-query-not-in-place',
+      undefined
+    );
+  }
+
   private arrayQuerySQL(
     array: QueryStruct,
     arraySQL: string,
     pipeline: PipeSegment[]
   ): string {
+    this.checkReadsArrayRows(array.structDef, 'query it with ->');
     const returnsValue = arrayQueryReturnsValue(pipeline);
     const inPlace = returnsValue
       ? this.arrayAggregateSQL(array, arraySQL, pipeline)

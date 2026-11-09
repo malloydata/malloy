@@ -15,6 +15,7 @@ import type {
   ATimestampTypeDef,
   TimestampUnit,
   ExtractUnit,
+  OrderBy,
 } from '../../model/malloy_types';
 import {
   isAtomic,
@@ -102,9 +103,11 @@ export class DatabricksDialect extends Dialect {
   experimental = false;
   supportsFullJoin = true;
   supportsPipelinesInViews = false;
-  // A query on an array is computed in place, with higher-order functions.
+  // A query on an array is computed in place with higher-order functions
+  // where it can be, and otherwise as a correlated subquery over the
+  // exploded array.
   supportsArrayQueries = true;
-  supportsCorrelatedArrayQueries = false;
+  supportsReadingCorrelatedArrayRows = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
@@ -317,16 +320,23 @@ export class DatabricksDialect extends Dialect {
     return `LATERAL VIEW OUTER EXPLODE(${source}) ${alias}_outer AS ${alias}`;
   }
 
+  // The head is a subquery whose columns are what the query reads from
+  // `base`: INLINE makes a column of each field of a record, and an array
+  // of scalars is exploded into `value`.
   sqlUnnestPipelineHead(
     isSingleton: boolean,
     sourceSQLExpression: string,
-    _fieldList?: DialectFieldList
+    _fieldList?: DialectFieldList,
+    isScalarArray = false
   ): string {
     let p = sourceSQLExpression;
     if (isSingleton) {
       p = `ARRAY(${p})`;
     }
-    return `EXPLODE(${p})`;
+    if (isScalarArray) {
+      return `(SELECT EXPLODE(${p}) AS ${this.sqlQuoteIdentifier('value')})`;
+    }
+    return `(SELECT INLINE(${p}))`;
   }
 
   // Two-chunk MD5 hash: upper 15 hex chars * 4294967296 + lower 8 hex chars
@@ -478,12 +488,28 @@ export class DatabricksDialect extends Dialect {
     )}\n);\n`;
   }
 
+  // COLLECT_LIST keeps no order, so the stage's order_by: sorts the array
+  // it makes, as sqlAggregateTurtle does.
   sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    fieldList: DialectFieldList
+    fieldList: DialectFieldList,
+    orderBy?: OrderBy[]
   ): string {
     const namedStruct = this.buildNamedStructExpression(fieldList);
-    return `SELECT COLLECT_LIST(${namedStruct}) FROM ${lastStageName}\n`;
+    const collected = `COLLECT_LIST(${namedStruct})`;
+    const keys: CompiledOrderBy[] = [];
+    for (const {field, dir} of orderBy ?? []) {
+      const name =
+        typeof field === 'number' ? fieldList[field - 1]?.rawName : field;
+      if (name === undefined) continue;
+      const quoted = this.sqlQuoteIdentifier(name);
+      keys.push({field: quoted, structField: quoted, dir: dir ?? 'asc'});
+    }
+    const sorted =
+      keys.length > 0
+        ? `ARRAY_SORT(${collected}, (l, r) -> ${this.buildArraySortComparator(keys)})`
+        : collected;
+    return `SELECT ${sorted} FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList) {

@@ -678,6 +678,15 @@ export abstract class Dialect {
   supportsCorrelatedArrayQueries = true;
 
   /**
+   * Whether the rows a correlated subquery made for a query on an array can
+   * be read further: unnested, to reach into them with a path, or queried
+   * in place by another `->`. Databricks allows a correlated subquery only
+   * in a projection, a filter or an aggregate, and not inside a
+   * higher-order function, so there such an array can only be selected.
+   */
+  supportsReadingCorrelatedArrayRows = true;
+
+  /**
    * Whether `sqlArraySelect` can sort an array's elements in place, for an
    * `order_by:` in a query on an array.
    */

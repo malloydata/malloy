@@ -19,6 +19,10 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
   // A query which is not computed in place needs a correlated subquery.
   const correlated =
     supported && runtime.dialect.supportsCorrelatedArrayQueries;
+  // The rows a correlated subquery made can be unnested, to reach into
+  // them with a path.
+  const unnestsSubquery =
+    correlated && runtime.dialect.supportsReadingCorrelatedArrayRows;
   // An order_by: inside the arrow is sorted in place, or by the subquery.
   const sorts =
     supported && (correlated || runtime.dialect.supportsArraySortInPlace);
@@ -337,7 +341,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 1216});
     });
 
-    test.when(correlated)('group_by:', async () => {
+    test.when(unnestsSubquery)('group_by:', async () => {
       // Alaska's airports and seaplane bases each number over 100
       await expect(`
         run: a -> {
@@ -347,7 +351,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 578});
     });
 
-    test.when(correlated)('several stages', async () => {
+    test.when(unnestsSubquery)('several stages', async () => {
       await expect(`
         run: a -> {
           where: state = 'AK'
@@ -355,6 +359,65 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         }
       `).toMatchResult(tm, {n: 2});
     });
+
+    test.when(correlated)('group_by:, selected, in its order', async () => {
+      await expect(`
+        run: a -> { where: state = 'AK'; select: by_size }
+      `).toEqualResult(tm, [
+        {
+          by_size: [
+            {big: true, n: 578},
+            {big: false, n: 30},
+          ],
+        },
+      ]);
+    });
+
+    test.when(unnestsSubquery)('group_by:, queried again with ->', async () => {
+      await expect(`
+        run: a -> {
+          where: state = 'AK'
+          select: big is by_size -> { where: big = true; aggregate: t is n.sum() }
+        }
+      `).toEqualResult(tm, [{big: 578}]);
+    });
+
+    test.when(correlated)(
+      'several stages ending in one aggregate',
+      async () => {
+        await expect(`
+        run: a -> {
+          where: state = 'AK'
+          select: busy is by_fac_type -> {
+            group_by: fac_type
+            aggregate: n is airport_count.sum()
+          } -> {
+            where: n > 50
+            aggregate: c is count()
+          }
+        }
+      `).toEqualResult(tm, [{busy: [{c: 2}]}]);
+      }
+    );
+
+    test.when(correlated && !unnestsSubquery)(
+      'rows a correlated subquery made can only be selected',
+      async () => {
+        const sqlOf = (query: string) =>
+          runtime.loadModel(model).loadQuery(query).getSQL();
+        await expect(
+          sqlOf(
+            "run: a -> { where: state = 'AK'; aggregate: n is by_size.n.sum() }"
+          )
+        ).rejects.toThrow(/cannot reach into its rows/);
+        await expect(
+          sqlOf(`run: a -> {
+            where: state = 'AK'
+            select: big is by_size -> { aggregate: t is n.sum() }
+          }`)
+        ).rejects.toThrow(/cannot query it with ->/);
+      }
+    );
 
     test.when(supported && !correlated)(
       'without a correlated subquery, a group_by: is an error',
