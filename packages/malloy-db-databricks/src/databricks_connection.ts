@@ -188,6 +188,25 @@ export class DatabricksConnection
       connectOptions.token = this.config.token;
     }
 
+    // @databricks/sql ignores HTTPS_PROXY and uses a proxy only when one is
+    // passed explicitly. DATABRICKS_HTTPS_PROXY (e.g. http://host:port) opts in.
+    const proxyUrl = process.env['DATABRICKS_HTTPS_PROXY'];
+    if (proxyUrl) {
+      const u = new URL(proxyUrl);
+      const protocol = u.protocol.replace(':', '');
+      connectOptions.proxy = {
+        protocol,
+        host: u.hostname,
+        port: Number(u.port) || (protocol === 'https' ? 443 : 80),
+        ...(u.username && {
+          auth: {
+            username: decodeURIComponent(u.username),
+            password: decodeURIComponent(u.password),
+          },
+        }),
+      };
+    }
+
     await this.client.connect(connectOptions);
     this.session = await this.client.openSession();
 
