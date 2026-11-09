@@ -274,14 +274,35 @@ export class DuckDBDialect extends PostgresBase {
 
   // DuckDB runs a correlated subquery over UNNEST as a full unnest and join,
   // so a query on an array which is one aggregate is computed with list
-  // functions instead.
+  // functions instead. An aggregate of an array inside the elements is of
+  // the inner arrays made one list, their values taken inside the lambda
+  // where the outer element is in scope.
   sqlArrayAggregate({
     source,
     element,
     function: func,
     value,
     filter,
+    resultType,
+    nested,
   }: ArrayAggregate): string {
+    if (nested) {
+      const outer = filter
+        ? `LIST_FILTER(${source}, ${element} -> ${filter})`
+        : source;
+      const inner = nested.filter
+        ? `LIST_FILTER(${nested.array}, ${nested.element} -> ${nested.filter})`
+        : nested.array;
+      const innerValues = value
+        ? `LIST_TRANSFORM(${inner}, ${nested.element} -> ${value})`
+        : inner;
+      return this.sqlArrayAggregate({
+        source: `FLATTEN(LIST_TRANSFORM(${outer}, ${element} -> COALESCE(${innerValues}, [])))`,
+        element: nested.element,
+        function: func,
+        resultType,
+      });
+    }
     const elements = filter
       ? `LIST_FILTER(${source}, ${element} -> ${filter})`
       : source;

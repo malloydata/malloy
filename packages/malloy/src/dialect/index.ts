@@ -30,6 +30,7 @@ export type {
   ArrayQuerySupport,
   ArrayComparator,
   ArraySelect,
+  NestedArrayAggregate,
   DialectFieldList,
   CompiledOrderBy,
   LateralJoinExpression,

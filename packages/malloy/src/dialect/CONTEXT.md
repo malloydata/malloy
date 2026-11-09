@@ -112,6 +112,7 @@ Tests:
 There are two routes:
 
 - **In place**, with the dialect's array functions: `sqlArrayAggregate` for one aggregate, `sqlArraySelect` for a `select:` of values with `where:`, `order_by:` and `limit:`. Dialects whose functions are `filter`, `transform`, `array_sort` with a comparator and `slice` (Trino, Presto, Databricks) share one implementation, `array_lambdas.ts`, and supply only what differs.
+  An aggregate of an array inside the elements (`items -> { aggregate: n is tags.count() }`) is in place too: the compiler reads the inner array through a lambda element of its own (`ArrayAggregate.nested`), conditions on the outer element choose the outer elements, and conditions on the inner one go in a lambda inside the lambda, where the outer element's parameter is still in scope. The inner arrays are flattened into one and aggregated. Snowflake's inner lambda cannot see the outer parameter, so it declines when a condition or the value reads both.
 - **A correlated subquery** over the elements: `sqlUnnestPipelineHead` with `isScalarArray` is its FROM, read `AS base`, and `sqlCreateFunctionCombineLastStage` collects its rows back into an array, in the stage's order.
 
 `Dialect.arrayQueryRoutes(pipeline)` says why a pipeline cannot take each route, from the shape alone (`arrayQueryNotInPlace`, `arrayQueryNotOneGrouping` in `malloy_types.ts`). It is the one statement of the rule:

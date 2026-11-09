@@ -85,6 +85,36 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         genre_count is genres -> { aggregate: n is count() }
         isabella is genres -> { aggregate: n is count() { where: each = 'Isabella' } }
     }
+
+    // One row per state, with its counties, each with its airports by
+    // facility type: an array inside the elements.
+    source: states is ${db}.table('malloytest.airports') -> {
+      group_by: state
+      aggregate: airport_count is count()
+      nest: by_county is {
+        group_by: county
+        nest: by_fac_type is {
+          group_by: fac_type
+          aggregate: airport_count is count()
+        }
+      }
+    } extend {
+      dimension:
+        nested_total is by_county -> {
+          aggregate: n is by_fac_type.airport_count.sum()
+        }
+        a_heliports is by_county -> {
+          where: county ~ 'A%'
+          aggregate: n is by_fac_type.airport_count.sum() {
+            where: by_fac_type.fac_type = 'HELIPORT'
+          }
+        }
+        heliport_or_jefferson is by_county -> {
+          aggregate: n is by_fac_type.count() {
+            where: by_fac_type.fac_type = 'HELIPORT' or county = 'JEFFERSON'
+          }
+        }
+    }
   `;
   const tm = wrapTestModel(runtime, model);
 
@@ -223,6 +253,60 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     ]);
   });
 
+  describe('an aggregate of an array inside the elements', () => {
+    test.when(supported)('is over all the inner elements', async () => {
+      // Each state's facility types, summed across its counties, are all
+      // of its airports.
+      await expect(`
+        run: states -> {
+          aggregate:
+            total is nested_total.sum()
+            mismatched is count() { where: nested_total != airport_count }
+        }
+      `).toEqualResult(tm, [{total: 19793, mismatched: 0}]);
+    });
+
+    test.when(supported)(
+      'with conditions on the outer and the inner elements',
+      async () => {
+        // 169 heliports are in counties whose names start with A
+        await expect(
+          'run: states -> { aggregate: n is a_heliports.sum() }'
+        ).toEqualResult(tm, [{n: 169}]);
+      }
+    );
+
+    // Snowflake's lambda inside a lambda cannot read the outer element, so
+    // one condition on both is computed only by the other dialects. On
+    // Postgres it runs as a correlated subquery, whose head loses its
+    // elements when it is given a distinct key, as this count needs; that
+    // is a gap in Postgres's subqueries, not in computing in place.
+    test.when(supported && db !== 'snowflake' && db !== 'postgres')(
+      'a condition on both the outer and the inner element',
+      async () => {
+        // Of the 4,991 county and facility type groups, 1,590 are heliports
+        // or in a county named Jefferson
+        await expect(
+          'run: states -> { aggregate: n is heliport_or_jefferson.sum() }'
+        ).toEqualResult(tm, [{n: 1590}]);
+      }
+    );
+
+    test.when(db === 'snowflake')(
+      'on Snowflake, a condition on both is an error',
+      async () => {
+        await expect(
+          runtime
+            .loadModel(model)
+            .loadQuery(
+              'run: states -> { aggregate: n is heliport_or_jefferson.sum() }'
+            )
+            .getSQL()
+        ).rejects.toThrow(/cannot compute this query on an array in place/);
+      }
+    );
+  });
+
   /*
    * DuckDB computes a query on an array which is one aggregate with list
    * functions, in place, instead of a correlated subquery over UNNEST.
@@ -241,6 +325,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         ),
         "run: movies -> { select: isabella; where: state = 'AL' }",
         alaska('by_fac_type -> { aggregate: n is count(fac_type) }'),
+        "run: states -> { select: nested_total; where: state = 'AK' }",
       ]) {
         const sql = await sqlOf(query);
         expect(sql).toMatch(/LIST_|LEN\(/);

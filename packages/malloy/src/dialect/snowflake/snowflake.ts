@@ -327,7 +327,12 @@ export class SnowflakeDialect extends Dialect {
   // An array's elements are VARIANTs, so a null field is filtered out
   // before its value is taken: once in an array it is a JSON null, which
   // IS NOT NULL does not see. ARRAY_MIN and ARRAY_MAX return a VARIANT,
-  // cast back to the aggregate's type.
+  // cast back to the aggregate's type. A lambda inside a lambda cannot read
+  // the outer one's parameter, so an aggregate of an array inside the
+  // elements is computed only when its value and filter read just the inner
+  // element: the inner arrays of the chosen elements are made one array,
+  // which is then aggregated. A missing inner array is a JSON null, or not
+  // there, and is taken as empty.
   sqlArrayAggregate({
     source,
     element,
@@ -335,7 +340,23 @@ export class SnowflakeDialect extends Dialect {
     value,
     filter,
     resultType,
-  }: ArrayAggregate): string {
+    nested,
+  }: ArrayAggregate): string | undefined {
+    if (nested) {
+      if (nested.readsOuter) return undefined;
+      const outer = filter
+        ? `FILTER(${source}, ${element} -> ${filter})`
+        : source;
+      const inner = `IFF(IS_ARRAY(${nested.array}), ${nested.array}::ARRAY, ARRAY_CONSTRUCT())`;
+      return this.sqlArrayAggregate({
+        source: `ARRAY_FLATTEN(TRANSFORM(${outer}, ${element} -> ${inner}))`,
+        element: nested.element,
+        function: func,
+        value,
+        filter: nested.filter,
+        resultType,
+      });
+    }
     const elements = filter
       ? `FILTER(${source}, ${element} -> ${filter})`
       : source;

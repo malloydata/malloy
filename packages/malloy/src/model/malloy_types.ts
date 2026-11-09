@@ -519,9 +519,10 @@ export function arrayQueryNotOneGrouping(
 /**
  * What, in a query on an array, keeps it from being computed in place
  * (`Dialect.arrayQueryRoutes`); undefined if its shape can be. The shapes
- * which can are one stage of one aggregate, or of a `select:` of values,
- * and an `order_by:` only where `canSort`. What an expression in it reads
- * is checked only when the SQL is written.
+ * which can are one stage of one aggregate, which may be of an array
+ * inside the elements, or of a `select:` of values, and an `order_by:` only
+ * where `canSort`. What an expression in it reads is checked only when the
+ * SQL is written.
  */
 export function arrayQueryNotInPlace(
   pipeline: PipeSegment[],
@@ -558,9 +559,6 @@ export function arrayQueryNotInPlace(
     const e = field.e.node === 'filteredExpr' ? field.e.kids.e : field.e;
     if (e.node !== 'aggregate') {
       return `\`${field.name}\`, which is not one aggregate`;
-    }
-    if (e.structPath !== undefined) {
-      return `\`${field.name}\`, an aggregate of an array inside the elements`;
     }
   }
   return undefined;

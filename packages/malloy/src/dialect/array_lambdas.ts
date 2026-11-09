@@ -18,7 +18,7 @@ export interface LambdaArrayDialect {
   sum(array: string, zero: string, acc: string, v: string): string;
   /** A record of `fields`, each valued by its `sqlExpression`. */
   record(fields: DialectFieldList): string;
-  /** An empty array, which a null array of records becomes. */
+  /** An empty array, which a null array becomes. */
   emptyArray: string;
 }
 
@@ -26,9 +26,41 @@ export interface LambdaArrayDialect {
 // values are filtered out before any aggregate, as an aggregate ignores
 // them.
 export function lambdaArrayAggregate(
-  {source, element, function: func, value, filter, resultType}: ArrayAggregate,
+  {
+    source,
+    element,
+    function: func,
+    value,
+    filter,
+    resultType,
+    nested,
+  }: ArrayAggregate,
   d: LambdaArrayDialect
 ): string {
+  if (nested) {
+    // The inner arrays of the chosen elements, filtered, and their values
+    // taken inside the lambda where the outer element is in scope, made
+    // one array; then aggregated as an array of values. A null inner array
+    // is empty: flatten is null if one is, on Databricks.
+    const outer = filter
+      ? `filter(${source}, ${element} -> ${filter})`
+      : source;
+    const inner = nested.filter
+      ? `filter(${nested.array}, ${nested.element} -> ${nested.filter})`
+      : nested.array;
+    const innerValues = value
+      ? `transform(${inner}, ${nested.element} -> ${value})`
+      : inner;
+    return lambdaArrayAggregate(
+      {
+        source: `flatten(transform(${outer}, ${element} -> COALESCE(${innerValues}, ${d.emptyArray})))`,
+        element: nested.element,
+        function: func,
+        resultType,
+      },
+      d
+    );
+  }
   const elements = filter
     ? `filter(${source}, ${element} -> ${filter})`
     : source;

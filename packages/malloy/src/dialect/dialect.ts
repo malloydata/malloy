@@ -141,6 +141,26 @@ export interface ArrayAggregate {
   value?: string;
   filter?: string;
   resultType?: AtomicTypeDef;
+  /** Set for an aggregate of an array inside the elements. */
+  nested?: NestedArrayAggregate;
+}
+
+/**
+ * An aggregate of an array inside the elements, `items -> { aggregate:
+ * n is tags.count() }`: the aggregate is over the elements of each
+ * element's `array`, all in one. `ArrayAggregate.filter` then reads only
+ * the outer element, and chooses the elements whose arrays are taken;
+ * `filter` chooses among the inner elements, and `value` is of an inner
+ * element. Both name an inner element `element`, and they may read the
+ * outer element too, which `readsOuter` says: a dialect whose lambda
+ * inside a lambda cannot see the outer one's parameter declines those.
+ */
+export interface NestedArrayAggregate {
+  /** The inner array, read from the outer element. */
+  array: string;
+  element: string;
+  filter?: string;
+  readsOuter: boolean;
 }
 
 /**
