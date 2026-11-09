@@ -144,10 +144,19 @@ describe('parseProxyUrl', () => {
     for (const bad of [
       'http://user:s3cret@proxy:99999',
       'ftp://user:s3cret@proxy',
+      // An unencoded '/' in the password, and a missing scheme
+      'http://user:s3/cret@proxy:3128',
+      'user:s3cret@proxy:3128',
     ]) {
       expect(() => parseProxyUrl(bad)).toThrow(/Databricks proxy/);
       expect(() => parseProxyUrl(bad)).not.toThrow(/s3cret/);
     }
+  });
+
+  it('rejects a scheme which only an inherited property names', () => {
+    expect(() => parseProxyUrl('constructor://proxy:3128')).toThrow(
+      /Databricks proxy: unsupported URL/
+    );
   });
 
   it('omits auth when the URL has no credentials', () => {
@@ -184,9 +193,7 @@ describe('DatabricksConnection proxy option', () => {
       path: 'p',
       proxy,
     });
-    await expect(
-      (conn as unknown as {ensureConnected(): Promise<void>}).ensureConnected()
-    ).rejects.toThrow('stop');
+    await expect(conn.test()).rejects.toThrow('stop');
     return connect.mock.calls[0][0];
   }
 

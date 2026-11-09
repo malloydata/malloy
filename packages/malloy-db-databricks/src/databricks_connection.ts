@@ -147,7 +147,17 @@ const PROXY_DEFAULT_PORTS: Record<DatabricksProxyOptions['protocol'], number> =
   };
 
 function isProxyProtocol(p: string): p is DatabricksProxyOptions['protocol'] {
-  return p in PROXY_DEFAULT_PORTS;
+  return Object.prototype.hasOwnProperty.call(PROXY_DEFAULT_PORTS, p);
+}
+
+// Everything before the last '@' may be credentials, whether or not the
+// URL parses: an unencoded '/' in a password, or a missing scheme, leaves
+// them outside any userinfo a URL parser would find.
+function maskCredentials(proxyUrl: string): string {
+  const at = proxyUrl.lastIndexOf('@');
+  if (at < 0) return proxyUrl;
+  const scheme = /^[a-z][a-z0-9+.-]*:\/\//i.exec(proxyUrl)?.[0] ?? '';
+  return `${scheme}***${proxyUrl.slice(at)}`;
 }
 
 /**
@@ -156,7 +166,7 @@ function isProxyProtocol(p: string): p is DatabricksProxyOptions['protocol'] {
  * error never includes the URL's credentials.
  */
 export function parseProxyUrl(proxyUrl: string): DatabricksProxyOptions {
-  const shown = proxyUrl.replace(/\/\/[^/@]*@/, '//***@');
+  const shown = maskCredentials(proxyUrl);
   let u: URL;
   try {
     u = new URL(proxyUrl);
