@@ -677,6 +677,12 @@ export abstract class Dialect {
    */
   supportsCorrelatedArrayQueries = true;
 
+  /**
+   * Whether `sqlArraySelect` can sort an array's elements in place, for an
+   * `order_by:` in a query on an array.
+   */
+  supportsArraySortInPlace = true;
+
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 
   abstract sqlGenerateUUID(): string;

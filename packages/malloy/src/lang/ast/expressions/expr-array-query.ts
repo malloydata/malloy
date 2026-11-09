@@ -104,7 +104,9 @@ export class ExprArrayQuery extends ExpressionDef {
 
     const notInPlace =
       dialect !== undefined && !dialect.supportsCorrelatedArrayQueries
-        ? arrayQueryNotInPlace(pipeline)
+        ? arrayQueryNotInPlace(pipeline, {
+            canSort: dialect.supportsArraySortInPlace,
+          })
         : undefined;
     if (notInPlace !== undefined) {
       return this.loggedErrorExpr(

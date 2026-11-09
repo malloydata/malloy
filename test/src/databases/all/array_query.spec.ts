@@ -19,6 +19,9 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
   // A query which is not computed in place needs a correlated subquery.
   const correlated =
     supported && runtime.dialect.supportsCorrelatedArrayQueries;
+  // An order_by: inside the arrow is sorted in place, or by the subquery.
+  const sorts =
+    supported && (correlated || runtime.dialect.supportsArraySortInPlace);
   // Queries on an array which only a correlated subquery can run; without
   // one, each is a translation error, so the model has them only with one.
   const needSubquery = `
@@ -170,7 +173,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     }
   );
 
-  test.when(db === 'trino' || db === 'presto')(
+  test.when(db === 'trino' || db === 'presto' || db === 'databricks')(
     'a sum of integers stays an integer',
     async () => {
       const sql = await runtime
@@ -378,7 +381,19 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       }
     `;
 
-    test.when(supported)('order_by: and limit:', async () => {
+    test.when(supported && !sorts)(
+      'without an in-place sort or a correlated subquery, an order_by: is an error',
+      async () => {
+        await expect(
+          runtime
+            .loadModel(model)
+            .loadQuery(alaskaTypes('{ select: fac_type; order_by: fac_type }'))
+            .getSQL()
+        ).rejects.toThrow(/can only query an array.*order_by/);
+      }
+    );
+
+    test.when(sorts)('order_by: and limit:', async () => {
       await expect(
         alaskaTypes(`{
           select: fac_type, airport_count
@@ -404,7 +419,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       ]);
     });
 
-    test.when(supported)('order_by: a position', async () => {
+    test.when(sorts)('order_by: a position', async () => {
       await expect(
         alaskaTypes('{ select: fac_type, airport_count; order_by: 2 desc }')
       ).toEqualResult(tm, [
@@ -418,7 +433,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       ]);
     });
 
-    test.when(supported)('where: with order_by:', async () => {
+    test.when(sorts)('where: with order_by:', async () => {
       await expect(
         alaskaTypes(`{
           select: fac_type
@@ -430,7 +445,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       ]);
     });
 
-    test.when(supported)('order_by: keys in both directions', async () => {
+    test.when(sorts)('order_by: keys in both directions', async () => {
       await expect(
         alaskaTypes(`{
           select: fac_type, big is airport_count > 50

@@ -2841,10 +2841,11 @@ export class QueryQuery extends QueryField {
     // The translator rejects every shape which cannot be computed in place
     // (`arrayQueryNotInPlace`); what reaches here is a shape which could
     // be, but whose expressions read something other than an element's own
-    // fields (`readsOnlyElementsOf`).
+    // fields (`readsOnlyElementsOf`), or which the dialect's array functions
+    // decline (`sqlArraySelect`).
     if (!dialect.supportsCorrelatedArrayQueries) {
       throw new MalloyCompileError(
-        `The ${dialect.name} dialect can only query an array in place, which this query on an array cannot be: it reads something other than its elements' own fields`,
+        `The ${dialect.name} dialect can only query an array in place, and cannot compute this query on an array in place: it reads something other than its elements' own fields, or the dialect's array functions cannot express it`,
         'array-query-not-in-place',
         undefined
       );

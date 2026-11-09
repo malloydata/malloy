@@ -495,7 +495,8 @@ export function arrayQueryOnlyAggregates(segment: QuerySegment): boolean {
  * the SQL is written.
  */
 export function arrayQueryNotInPlace(
-  pipeline: PipeSegment[]
+  pipeline: PipeSegment[],
+  {canSort = true}: {canSort?: boolean} = {}
 ): string | undefined {
   const [segment, ...moreSegments] = pipeline;
   if (moreSegments.length > 0) return 'several stages';
@@ -503,6 +504,9 @@ export function arrayQueryNotInPlace(
     return 'this kind of query';
   }
   if (segment.type === 'project') {
+    if (!canSort && (segment.orderBy ?? []).length > 0) {
+      return 'an `order_by:`';
+    }
     const notValue = segment.outputStruct.fields.find(
       f => f.type === 'record' || f.type === 'array' || f.type === 'turtle'
     );

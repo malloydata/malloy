@@ -32,6 +32,8 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  ArrayAggregate,
+  ArraySelect,
   CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
@@ -127,6 +129,10 @@ export class SnowflakeDialect extends Dialect {
   supportsQualify = false;
   supportsPipelinesInViews = false;
   supportsComplexFilteredSources = false;
+  // A query on an array is computed in place, with higher-order functions.
+  supportsArrayQueries = true;
+  supportsCorrelatedArrayQueries = false;
+  supportsArraySortInPlace = false;
 
   // Snowflake bare-identifier continuation allows `$` (verified against
   // the live engine).
@@ -274,33 +280,115 @@ export class SnowflakeDialect extends Dialect {
     childType: string
   ): string {
     const sqlName = this.sqlQuoteIdentifier(childName);
-    if (childName === '__row_id') {
+    if (parentType.startsWith('element')) {
+      // An element named by a lambda parameter is the VARIANT itself.
+      const elementRef =
+        parentType === 'element[record]'
+          ? `${parentAlias}:${sqlName}`
+          : parentAlias;
+      return `${elementRef}::${this.variantCastType(childType)}`;
+    } else if (childName === '__row_id') {
       return `"${parentAlias}".INDEX::varchar`;
     } else if (parentType.startsWith('array')) {
       let arrayRef = `"${parentAlias}".value`;
       if (parentType === 'array[record]') {
         arrayRef += `:${sqlName}`;
       }
-      switch (childType) {
-        case 'record':
-        case 'array':
-          childType = 'VARIANT';
-          break;
-        case 'string':
-          childType = 'VARCHAR';
-          break;
-        case 'number':
-          childType = 'DOUBLE';
-          break;
-        case 'struct':
-          throw new Error('NOT STRUCT PLEASE');
-        // boolean and timestamp and date are all ok
-      }
-      return `${arrayRef}::${childType}`;
+      return `${arrayRef}::${this.variantCastType(childType)}`;
     } else if (parentType === 'record') {
       return `${parentAlias}:${sqlName}`;
     }
     return `${parentAlias}.${sqlName}`;
+  }
+
+  // The SQL type a field read out of a VARIANT is cast to.
+  private variantCastType(childType: string): string {
+    switch (childType) {
+      case 'record':
+      case 'array':
+        return 'VARIANT';
+      case 'string':
+        return 'VARCHAR';
+      case 'number':
+        return 'DOUBLE';
+      case 'struct':
+        throw new Error('NOT STRUCT PLEASE');
+      // boolean and timestamp and date are all ok
+      default:
+        return childType;
+    }
+  }
+
+  // An array's elements are VARIANTs, so a null field is filtered out
+  // before its value is taken: once in an array it is a JSON null, which
+  // IS NOT NULL does not see. ARRAY_MIN and ARRAY_MAX return a VARIANT,
+  // cast back to the aggregate's type.
+  sqlArrayAggregate({
+    source,
+    element,
+    function: func,
+    value,
+    filter,
+    resultType,
+  }: ArrayAggregate): string {
+    const elements = filter
+      ? `FILTER(${source}, ${element} -> ${filter})`
+      : source;
+    const nonNull = value
+      ? `FILTER(${elements}, ${element} -> (${value}) IS NOT NULL)`
+      : elements;
+    const values = value
+      ? `TRANSFORM(${nonNull}, ${element} -> ${value})`
+      : nonNull;
+    const acc = `${element}_acc`;
+    const sum = `REDUCE(${nonNull}, 0::DOUBLE, (${acc}, ${element}) -> ${acc} + (${value}))`;
+    switch (func) {
+      case 'count':
+        return `COALESCE(ARRAY_SIZE(${elements}), 0)`;
+      case 'distinct':
+        return `COALESCE(ARRAY_SIZE(ARRAY_DISTINCT(${values})), 0)`;
+      case 'sum':
+        return `COALESCE(${sum}, 0)`;
+      case 'avg':
+        return `${sum} / NULLIF(ARRAY_SIZE(${nonNull}), 0)`;
+      case 'min':
+      case 'max': {
+        const cast = resultType
+          ? `::${this.malloyTypeToSQLType(resultType)}`
+          : '';
+        return `${func === 'min' ? 'ARRAY_MIN' : 'ARRAY_MAX'}(${values})${cast}`;
+      }
+    }
+  }
+
+  // ARRAY_SORT sorts an array by its own values, with no key or
+  // comparator, so an order_by: is not computed in place.
+  sqlArraySelect({
+    source,
+    element,
+    fields,
+    filter,
+    orderBy = [],
+    limit,
+  }: ArraySelect): string | undefined {
+    if (orderBy.length > 0) {
+      return undefined;
+    }
+    let elements = filter
+      ? `FILTER(${source}, ${element} -> ${filter})`
+      : source;
+    if (limit !== undefined) {
+      // ARRAY_SLICE is 0-based, end-exclusive, so (0, n) keeps the first n.
+      elements = `ARRAY_SLICE(${elements}, 0, ${limit})`;
+    }
+    const record = `OBJECT_CONSTRUCT_KEEP_NULL(${this.mapFieldsForObjectConstruct(
+      fields.map(f => ({
+        typeDef: f.typeDef,
+        sqlExpression: f.sql,
+        rawName: f.name,
+      }))
+    )})`;
+    return `COALESCE(TRANSFORM(${elements}, ${element} -> ${record}), [])`;
   }
 
   sqlUnnestPipelineHead(
