@@ -20,6 +20,7 @@ const dbr_connection = new DatabricksConnection('databricks', {
   path,
   token,
   defaultCatalog,
+  proxy: process.env['DATABRICKS_HTTPS_PROXY'],
 });
 
 afterAll(async () => {
