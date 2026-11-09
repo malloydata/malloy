@@ -173,11 +173,42 @@ function abortedBeforeEnd(): Error {
 // statement that may be cancelled waits for them, so a cancel can only reach it.
 const poolClientSetups = new WeakMap<ClientBase, Promise<unknown>>();
 
-// pg 8.7.3 has these on Client, without type declarations.
+// pg 8.7.3 has these on Client and its Connection, without type declarations.
 type CancellingClient = Client & {
-  connection: {on(event: 'error', listener: () => void): void};
-  cancel(client: ClientBase, query: unknown): void;
+  ssl: unknown;
+  connection: {
+    connect(portOrPath: number | string, host?: string): void;
+    requestSsl(): void;
+    cancel(processID: number, secretKey: number): void;
+    on(event: 'error', listener: () => void): void;
+    once(event: 'connect' | 'sslconnect', listener: () => void): void;
+  };
 };
+
+// Sends the protocol's CancelRequest for the statement running on `target`
+// from `canceller`, a client that is not connected, built with the same
+// settings. It opens the connection the way pg's Client.connect does: when the
+// settings ask for TLS, it negotiates TLS first and sends the request inside
+// it. pg's own Client.cancel writes the request as soon as TCP connects, in
+// plain text, even when the query's connection uses TLS.
+function sendCancelRequest(canceller: Client, target: ClientBase): void {
+  const c = canceller as CancellingClient;
+  const {processID, secretKey} = target as unknown as {
+    processID: number;
+    secretKey: number;
+  };
+  const con = c.connection;
+  // The server closes this connection once it has read the request.
+  con.on('error', () => {});
+  const send = () => con.cancel(processID, secretKey);
+  con.once('connect', () => (c.ssl ? con.requestSsl() : send()));
+  con.once('sslconnect', send);
+  if (c.host && c.host.startsWith('/')) {
+    con.connect(`${c.host}/.s.PGSQL.${c.port}`);
+  } else {
+    con.connect(c.port, c.host);
+  }
+}
 
 /**
  * Decode a canonical Postgres dotted-table path into its underlying
@@ -337,8 +368,10 @@ export class PostgresConnection
   }
 
   // Cancels the statement running on `client` when `abortSignal` fires, as
-  // libpq's PQcancel does: a second connection sends the protocol's
-  // CancelRequest with the backend's key (pg's Client.cancel). Call it once
+  // libpq does: a second connection sends the protocol's CancelRequest with
+  // the backend's key, over TLS when the settings use TLS (sendCancelRequest).
+  // That connection never logs in; the server closes it once it has read the
+  // request. Call it once
   // that statement is the only one left to run on `client`. Returns a function
   // that removes the listener and says whether the signal fired. The request
   // lands a moment after the abort, so a client it was sent for must not run
@@ -355,15 +388,7 @@ export class PostgresConnection
     const onAbort = () => {
       fired = true;
       void this.getClient()
-        .then(canceller => {
-          const c = canceller as CancellingClient;
-          // The server closes this connection once it has read the request.
-          c.connection.on('error', () => {});
-          c.cancel(
-            client,
-            (client as unknown as {activeQuery: unknown}).activeQuery
-          );
-        })
+        .then(canceller => sendCancelRequest(canceller, client))
         .catch(() => {});
     };
     abortSignal.addEventListener('abort', onAbort, {once: true});

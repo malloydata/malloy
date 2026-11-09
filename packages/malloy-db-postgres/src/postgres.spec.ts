@@ -8,6 +8,7 @@ import {
   PostgresConnection,
 } from './postgres_connection';
 import crypto from 'crypto';
+import net from 'net';
 import {Client} from 'pg';
 import type {SQLSourceDef} from '@malloydata/malloy';
 import * as malloy from '@malloydata/malloy';
@@ -718,6 +719,66 @@ describe('connection cleanup on query failure', () => {
       clearTimeout(timer);
       return outcome;
     };
+
+    // A local server stands in for Postgres and records every byte the cancel
+    // connection sends. It answers an SSLRequest with 'N' (no TLS), so with
+    // TLS settings nothing past the SSLRequest may arrive: the CancelRequest
+    // must never be sent in plain text.
+    const SSL_REQUEST_CODE = 80877103;
+    const CANCEL_REQUEST_CODE = 80877102;
+    class CancellingConnection extends PostgresConnection {
+      public cancelWhenAborted(target: unknown, abortSignal: AbortSignal) {
+        return this.cancelOnAbort(target as Client, abortSignal);
+      }
+    }
+    for (const tls of [true, false]) {
+      it(`sends its cancel request ${tls ? 'only inside TLS when the connection uses TLS' : 'directly when the connection does not use TLS'}`, async () => {
+        let bytes: Buffer[] = [];
+        let closed = () => {};
+        const socketClosed = new Promise<void>(resolve => {
+          closed = resolve;
+        });
+        const server = net.createServer(socket => {
+          socket.on('error', () => {});
+          // Postgres closes after a CancelRequest; 'N' refuses TLS.
+          socket.once('data', () => (tls ? socket.end('N') : socket.end()));
+          socket.on('data', data => bytes.push(data));
+          socket.on('close', () => closed());
+        });
+        await new Promise<void>(resolve =>
+          server.listen(0, '127.0.0.1', resolve)
+        );
+        try {
+          const {port} = server.address() as net.AddressInfo;
+          const connection = new CancellingConnection({
+            name: 'postgres',
+            host: '127.0.0.1',
+            port,
+            ssl: tls ? {rejectUnauthorized: false} : false,
+          });
+          const controller = new AbortController();
+          const target = {processID: 1234, secretKey: 5678};
+          connection.cancelWhenAborted(target, controller.signal);
+          controller.abort();
+          expect(await settledWithin(settled(socketClosed), 5000)).toBe(
+            'returned'
+          );
+          const sent = Buffer.concat(bytes);
+          bytes = [];
+          if (tls) {
+            expect(sent.length).toBe(8);
+            expect(sent.readInt32BE(4)).toBe(SSL_REQUEST_CODE);
+          } else {
+            expect(sent.length).toBe(16);
+            expect(sent.readInt32BE(4)).toBe(CANCEL_REQUEST_CODE);
+            expect(sent.readInt32BE(8)).toBe(target.processID);
+            expect(sent.readInt32BE(12)).toBe(target.secretKey);
+          }
+        } finally {
+          await new Promise(resolve => server.close(resolve));
+        }
+      });
+    }
 
     for (const pooled of [false, true]) {
       const kind = pooled ? 'pooled' : 'unpooled';
