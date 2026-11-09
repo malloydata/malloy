@@ -1167,7 +1167,7 @@ export class QueryQuery extends QueryField {
         // If this array is NOT contained in the parent, but a computed entity
         // then the thing we are joining is not "parent.childName", but
         // the expression which is built in that namespace
-        this.checkReadsArrayRows(qsDef, 'reach into its rows with a path');
+        this.checkReadsArrayRows(qs, 'reach into its rows with a path');
         arrayExpression = exprToSQL(this.rootResult, qs.parent, qsDef.e);
       } else {
         // If this is a reference through an expression at the top level,
@@ -2832,28 +2832,62 @@ export class QueryQuery extends QueryField {
   /**
    * A dialect which cannot read the rows a correlated subquery made
    * (`supportsReadingCorrelatedArrayRows`) can only select an array which
-   * a query on an array made that way; `doing` is the read it refuses.
+   * a query on an array made that way, or which reads one; `doing` is the
+   * read it refuses.
    */
-  private checkReadsArrayRows(arrayDef: StructDef, doing: string) {
+  private checkReadsArrayRows(array: QueryStruct, doing: string) {
     const dialect = this.parent.dialect;
-    const made =
-      arrayDef.type === 'array' && hasExpression(arrayDef)
-        ? arrayDef.e
-        : undefined;
-    if (
-      dialect.supportsReadingCorrelatedArrayRows ||
-      made?.node !== 'arrayQuery' ||
-      arrayQueryNotInPlace(made.pipeline, {
-        canSort: dialect.supportsArraySortInPlace,
-      }) === undefined
-    ) {
-      return;
-    }
+    if (dialect.supportsReadingCorrelatedArrayRows) return;
+    const made = this.correlatedArrayIn(array, new Set());
+    if (made === undefined) return;
+    const name = activeName(array.structDef);
+    const which =
+      made === name
+        ? `'${name}' is made by a correlated subquery`
+        : `'${name}' reads '${made}', which is made by a correlated subquery`;
     throw new MalloyCompileError(
-      `The ${dialect.name} dialect cannot ${doing}: '${arrayDef.name}' is made by a correlated subquery, and ${dialect.name} can only select such an array`,
+      `The ${dialect.name} dialect cannot ${doing}: ${which}, and ${dialect.name} can only select such an array`,
       'array-query-not-in-place',
       undefined
     );
+  }
+
+  /**
+   * The name of the array which a correlated subquery makes, among `array`
+   * itself and the computed arrays its expression reads; undefined if none
+   * is.
+   */
+  private correlatedArrayIn(
+    array: QueryStruct,
+    seen: Set<QueryStruct>
+  ): string | undefined {
+    const def = array.structDef;
+    if (seen.has(array) || def.type !== 'array' || !hasExpression(def)) {
+      return undefined;
+    }
+    seen.add(array);
+    const canSort = this.parent.dialect.supportsArraySortInPlace;
+    for (const node of exprWalk(def.e)) {
+      if (
+        node.node === 'arrayQuery' &&
+        arrayQueryNotInPlace(node.pipeline, {canSort}) !== undefined
+      ) {
+        return activeName(def);
+      }
+      if (node.node === 'field' && array.parent !== undefined) {
+        let read: QueryField | undefined;
+        try {
+          read = array.parent.getFieldByName(node.path);
+        } catch {
+          continue;
+        }
+        if (read instanceof QueryFieldStruct) {
+          const made = this.correlatedArrayIn(read.queryStruct, seen);
+          if (made !== undefined) return made;
+        }
+      }
+    }
+    return undefined;
   }
 
   private arrayQuerySQL(
@@ -2861,7 +2895,7 @@ export class QueryQuery extends QueryField {
     arraySQL: string,
     pipeline: PipeSegment[]
   ): string {
-    this.checkReadsArrayRows(array.structDef, 'query it with ->');
+    this.checkReadsArrayRows(array, 'query it with ->');
     const returnsValue = arrayQueryReturnsValue(pipeline);
     const inPlace = returnsValue
       ? this.arrayAggregateSQL(array, arraySQL, pipeline)

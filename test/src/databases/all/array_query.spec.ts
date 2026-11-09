@@ -39,7 +39,8 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         } -> {
           where: n > 50
           select: fac_type
-        }`;
+        }
+        by_size_again is by_size`;
   const model = `
     ##! experimental.array_queries
 
@@ -341,6 +342,18 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 1216});
     });
 
+    test.when(unnestsSubquery)(
+      'group_by:, through another dimension',
+      async () => {
+        await expect(`
+        run: a -> {
+          where: state = 'AK' and by_size_again.big = true
+          aggregate: n is by_size_again.n.sum()
+        }
+      `).toMatchResult(tm, {n: 578});
+      }
+    );
+
     test.when(unnestsSubquery)('group_by:', async () => {
       // Alaska's airports and seaplane bases each number over 100
       await expect(`
@@ -416,6 +429,12 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
             select: big is by_size -> { aggregate: t is n.sum() }
           }`)
         ).rejects.toThrow(/cannot query it with ->/);
+        // Through a dimension which only reads it
+        await expect(
+          sqlOf(
+            "run: a -> { where: state = 'AK'; aggregate: n is by_size_again.n.sum() }"
+          )
+        ).rejects.toThrow(/'by_size_again' reads 'by_size'/);
       }
     );
 
