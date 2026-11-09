@@ -241,10 +241,12 @@ describe('connection cleanup on query failure', () => {
   // rest of this file connects with.
   const newAppName = (prefix: string) =>
     `${prefix}_${crypto.randomBytes(4).toString('hex')}`;
-  const taggedConnectionString = (appName: string) => {
+  const taggedConnectionString = (appName: string, hostPort?: string) => {
     const e = process.env;
     const auth = `${encodeURIComponent(e['PGUSER'] ?? 'postgres')}:${encodeURIComponent(e['PGPASSWORD'] ?? '')}`;
-    return `postgresql://${auth}@${e['PGHOST'] ?? 'localhost'}:${e['PGPORT'] ?? '5432'}/${e['PGDATABASE'] ?? 'postgres'}?application_name=${appName}`;
+    const address =
+      hostPort ?? `${e['PGHOST'] ?? 'localhost'}:${e['PGPORT'] ?? '5432'}`;
+    return `postgresql://${auth}@${address}/${e['PGDATABASE'] ?? 'postgres'}?application_name=${appName}`;
   };
 
   // runSQL de-JSONs each row as `row.row`, so these queries wrap their result
@@ -780,6 +782,33 @@ describe('connection cleanup on query failure', () => {
       });
     }
 
+    // Forwards connections to the test database, and drops them all the way a
+    // network failure does: the client's socket closes with no error message
+    // from the server first.
+    const droppableProxy = async () => {
+      const sockets = new Set<net.Socket>();
+      const server = net.createServer(downstream => {
+        const upstream = net.connect(
+          Number(process.env['PGPORT'] ?? '5432'),
+          process.env['PGHOST'] ?? 'localhost'
+        );
+        for (const socket of [downstream, upstream]) {
+          sockets.add(socket);
+          socket.on('error', () => {});
+          socket.on('close', () => sockets.delete(socket));
+        }
+        downstream.pipe(upstream).pipe(downstream);
+      });
+      await new Promise<void>(resolve =>
+        server.listen(0, '127.0.0.1', resolve)
+      );
+      return {
+        port: (server.address() as net.AddressInfo).port,
+        dropAll: () => sockets.forEach(socket => socket.destroy()),
+        close: () => new Promise(resolve => server.close(resolve)),
+      };
+    };
+
     for (const pooled of [false, true]) {
       const kind = pooled ? 'pooled' : 'unpooled';
 
@@ -951,6 +980,52 @@ describe('connection cleanup on query failure', () => {
           await connection.close();
         }
       });
+
+      // pg emits 'error' on a client whose socket drops, even while a query
+      // runs on it, and pg-pool takes its own listener off a checked-out
+      // client. With no listener, that event is an uncaught exception.
+      for (const withSignal of [false, true]) {
+        it(`fails runSQL whose connection drops while it runs (${kind}, ${withSignal ? 'with' : 'without'} an abortSignal)`, async () => {
+          const appName = newAppName(`abort_test_dropped_runsql_${kind}`);
+          const proxy = await droppableProxy();
+          const config = {
+            name: 'postgres',
+            connectionString: taggedConnectionString(
+              appName,
+              `127.0.0.1:${proxy.port}`
+            ),
+          };
+          const connection = pooled
+            ? new PooledPostgresConnection(config)
+            : new PostgresConnection(config);
+          const outcome = connection
+            .runSQL(sleepsBeforeFirstRow, {
+              abortSignal: withSignal
+                ? new AbortController().signal
+                : undefined,
+            })
+            .then(
+              () => new Error('Expected runSQL to fail, but it returned rows'),
+              (e: Error) => e
+            );
+          try {
+            expect(
+              await pollFor(
+                () => countSleepingSessions(appName),
+                n => n === 1
+              )
+            ).toBe(1);
+            proxy.dropAll();
+            expect((await outcome).message).toMatch(/terminated unexpectedly/);
+          } finally {
+            // The server does not notice the dropped socket during the sleep.
+            await terminateSessionsByAppName(appName);
+            await outcome;
+            await connection.close();
+            await proxy.close();
+          }
+        });
+      }
     }
   });
 });
@@ -994,6 +1069,51 @@ describe('setupSQL', () => {
       await connection.close();
     }
   });
+
+  // A statement must not run without its setup: with `SET ROLE`, it would run
+  // as the login user.
+  for (const pooled of [false, true]) {
+    const kind = pooled ? 'pooled' : 'unpooled';
+    it(`fails a query whose setup statement fails, without running it (${kind})`, async () => {
+      const config = {
+        name: 'postgres',
+        setupSQL: `SET ROLE no_such_role_${uid}`,
+      };
+      const connection = pooled
+        ? new PooledPostgresConnection(config)
+        : new PostgresConnection(config);
+      const whoAmI =
+        'SELECT row_to_json(t) AS row FROM (SELECT current_user AS u) t';
+      const setupFailed = new RegExp(
+        `role "no_such_role_${uid}" does not exist`
+      );
+      try {
+        for (const abortSignal of [undefined, new AbortController().signal]) {
+          await expect(
+            connection.runSQL(whoAmI, {abortSignal})
+          ).rejects.toThrow(setupFailed);
+          const rows: unknown[] = [];
+          await expect(
+            (async () => {
+              for await (const row of connection.runSQLStream(whoAmI, {
+                abortSignal,
+              })) {
+                rows.push(row);
+              }
+            })()
+          ).rejects.toThrow(setupFailed);
+          expect(rows).toEqual([]);
+        }
+        if (connection instanceof PooledPostgresConnection) {
+          const pool = await connection.getPool();
+          // Checked-out clients: anything a failed query did not release.
+          expect(pool.totalCount - pool.idleCount).toBe(0);
+        }
+      } finally {
+        await connection.close();
+      }
+    });
+  }
 
   it('handles multi-line statements', async () => {
     const table = `setup_multiline_${uid}`;

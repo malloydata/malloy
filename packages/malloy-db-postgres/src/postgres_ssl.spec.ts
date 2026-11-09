@@ -6,7 +6,7 @@
 const mockClient = jest.fn();
 const mockPool = jest.fn();
 const mockClientConnect = jest.fn();
-const mockPoolQuery = jest.fn();
+const mockPoolConnect = jest.fn();
 
 jest.mock('pg', () => ({
   Client: jest.fn().mockImplementation(config => {
@@ -21,8 +21,8 @@ jest.mock('pg', () => ({
   Pool: jest.fn().mockImplementation(config => {
     mockPool(config);
     return {
-      query: mockPoolQuery,
-      connect: jest.fn(),
+      query: jest.fn(),
+      connect: mockPoolConnect,
       on: jest.fn(),
     };
   }),
@@ -67,7 +67,6 @@ function altnameError(): Error {
 describe('postgres ssl passthrough', () => {
   beforeEach(() => {
     mockClientConnect.mockResolvedValue(undefined);
-    mockPoolQuery.mockResolvedValue({rows: [], fields: []});
   });
 
   afterEach(() => {
@@ -167,7 +166,7 @@ describe('postgres ssl passthrough', () => {
     });
 
     it('annotates pg cert-mismatch on the pooled path', async () => {
-      mockPoolQuery.mockRejectedValueOnce(altnameError());
+      mockPoolConnect.mockRejectedValueOnce(altnameError());
       const connection = new PooledPostgresConnection(
         makeOptions({host: 'localhost', ssl: {servername: 'db.example.com'}})
       );

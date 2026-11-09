@@ -169,8 +169,10 @@ function abortedBeforeEnd(): Error {
   return new Error('Postgres query was aborted before it completed.');
 }
 
-// The setup statements a pool's 'acquire' queued on a checked-out client. A
-// statement that may be cancelled waits for them, so a cancel can only reach it.
+// The setup statements a pool's 'acquire' queued on a checked-out client. Each
+// pooled statement waits for them, as connectionSetup makes an unpooled one
+// wait: one that fails fails the statement, which never runs without its setup,
+// and a cancel can only reach the statement.
 const poolClientSetups = new WeakMap<ClientBase, Promise<unknown>>();
 
 // pg 8.7.3 has these on Client and its Connection, without type declarations.
@@ -809,44 +811,20 @@ export class PooledPostgresConnection
     values?: unknown[],
     abortSignal?: AbortSignal
   ): Promise<MalloyQueryData> {
-    const pool = await this.getPool();
-    if (abortSignal) {
-      return this.queryPoolClient(
-        pool,
-        sqlCommand,
-        deJSON,
-        values,
-        abortSignal
-      );
-    }
-    let result = await this.withTlsHint(() => pool.query(sqlCommand, values));
-
-    if (Array.isArray(result)) {
-      result = result.pop();
-    }
-    if (deJSON) {
-      for (let i = 0; i < result.rows.length; i++) {
-        result.rows[i] = result.rows[i].row;
-      }
-    }
-    return {
-      rows: result.rows as QueryData,
-      totalRows: result.rows.length,
-    };
-  }
-
-  // pool.query, on a client of our own so its statement can be cancelled.
-  private async queryPoolClient(
-    pool: Pool,
-    sqlCommand: string,
-    deJSON: boolean,
-    values: unknown[] | undefined,
-    abortSignal: AbortSignal
-  ): Promise<MalloyQueryData> {
-    if (abortSignal.aborted) {
+    if (abortSignal?.aborted) {
       throw abortedBeforeStart();
     }
+    // What pool.query does, on a client of our own: the statement waits for
+    // the client's setup statements, and a cancel knows which backend to stop.
+    const pool = await this.getPool();
     const client = await this.withTlsHint(() => pool.connect());
+    // pg-pool takes its own 'error' listener off a client while it is checked
+    // out. When the socket drops, the running statement fails on its own; this
+    // listener, like the one pool.query adds, keeps the event itself from
+    // being an uncaught exception.
+    const ignoreError = () => {};
+    client.on('error', ignoreError);
+    let failed = true;
     try {
       await poolClientSetups.get(client);
       const data = await this.queryClient(
@@ -856,12 +834,12 @@ export class PooledPostgresConnection
         values,
         abortSignal
       );
-      client.release();
+      failed = false;
       return data;
-    } catch (e) {
+    } finally {
+      client.removeListener('error', ignoreError);
       // As pool.query does: a client a statement failed on is discarded.
-      client.release(true);
-      throw e;
+      client.release(failed);
     }
   }
 
@@ -890,13 +868,11 @@ export class PooledPostgresConnection
     let drained = false;
     let cancelled = () => false;
     try {
-      if (abortSignal) {
-        await poolClientSetups.get(client);
-        if (abortSignal.aborted) {
-          throw abortedBeforeStart();
-        }
-        cancelled = this.cancelOnAbort(client, abortSignal);
+      await poolClientSetups.get(client);
+      if (abortSignal?.aborted) {
+        throw abortedBeforeStart();
       }
+      cancelled = this.cancelOnAbort(client, abortSignal);
       const resultStream: QueryStream = client.query(query);
       for await (const row of resultStream) {
         yield row.row as QueryRecord;
