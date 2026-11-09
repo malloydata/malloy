@@ -146,6 +146,7 @@ export class TrinoDialect extends PostgresBase {
   // and otherwise as a correlated subquery over the unnested array, which
   // Trino's optimizer can rewrite only for one plain grouping.
   supportsArrayQueries = true;
+  computesArrayQueriesInPlace = true;
   correlatedArrayQueries: 'any' | 'one grouping' = 'one grouping';
   supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;

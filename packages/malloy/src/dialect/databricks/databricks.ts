@@ -107,6 +107,7 @@ export class DatabricksDialect extends Dialect {
   // where it can be, and otherwise as a correlated subquery over the
   // exploded array.
   supportsArrayQueries = true;
+  computesArrayQueriesInPlace = true;
   supportsReadingCorrelatedArrayRows = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;

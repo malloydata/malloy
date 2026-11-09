@@ -23,6 +23,12 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
   // them with a path.
   const unnestsSubquery =
     correlated && runtime.dialect.supportsReadingCorrelatedArrayRows;
+  // An array which an in-place query on an array made can be read
+  // further: it is in place, or the dialect reads a subquery's rows.
+  const readsMadeArrays =
+    supported &&
+    (runtime.dialect.computesArrayQueriesInPlace ||
+      runtime.dialect.supportsReadingCorrelatedArrayRows);
   // The correlated subquery can be any query, not only one grouping.
   const subqueryAny =
     correlated && runtime.dialect.correlatedArrayQueries === 'any';
@@ -146,10 +152,10 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
           types is by_fac_type -> { aggregate: n is count(fac_type) }
       } -> {
         where: state = 'AK'
-        // Each database rounds the last digit of 608 / 3 its own way.
-        select: fewest, most, mean is round(mean, 6), types
+        // Each database rounds 608 / 3 its own way; MySQL keeps four places.
+        select: fewest, most, mean is round(mean, 4), types
       }
-    `).toMatchResult(tm, {fewest: 30, most: 474, mean: 202.666667, types: 3});
+    `).toMatchResult(tm, {fewest: 30, most: 474, mean: 202.6667, types: 3});
   });
 
   test.when(supported)("the array query's own where:", async () => {
@@ -325,7 +331,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toEqualResult(tm, [{none: []}]);
     });
 
-    test.when(supported)('a path into the result', async () => {
+    test.when(readsMadeArrays)('a path into the result', async () => {
       // 167 groups of a state and a facility type have fewer than 50
       // airports, 1236 in all. One more has no state, and an element's
       // distinct key is made of its row's key, so it is left out.
@@ -339,7 +345,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {small_groups: 167, small_total: 1236});
     });
 
-    test.when(supported)('select: of an expression', async () => {
+    test.when(readsMadeArrays)('select: of an expression', async () => {
       await expect(`
         run: a -> {
           where: state = 'AK'

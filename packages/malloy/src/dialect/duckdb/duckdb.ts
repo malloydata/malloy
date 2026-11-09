@@ -86,6 +86,7 @@ export class DuckDBDialect extends PostgresBase {
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
   supportsArrayQueries = true;
+  computesArrayQueriesInPlace = true;
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = true;

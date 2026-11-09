@@ -2866,11 +2866,13 @@ export class QueryQuery extends QueryField {
       return undefined;
     }
     seen.add(array);
-    const canSort = this.parent.dialect.supportsArraySortInPlace;
+    const dialect = this.parent.dialect;
+    const canSort = dialect.supportsArraySortInPlace;
     for (const node of exprWalk(def.e)) {
       if (
         node.node === 'arrayQuery' &&
-        arrayQueryNotInPlace(node.pipeline, {canSort}) !== undefined
+        (!dialect.computesArrayQueriesInPlace ||
+          arrayQueryNotInPlace(node.pipeline, {canSort}) !== undefined)
       ) {
         return activeName(def);
       }
@@ -2920,7 +2922,7 @@ export class QueryQuery extends QueryField {
       pipeSQL: dialect.sqlUnnestPipelineHead(
         false,
         arraySQL,
-        undefined,
+        getDialectFieldList(array.structDef, dialect),
         isBasicArray(array.structDef)
       ),
       fields: array.structDef.fields,

@@ -131,6 +131,7 @@ export class SnowflakeDialect extends Dialect {
   supportsComplexFilteredSources = false;
   // A query on an array is computed in place, with higher-order functions.
   supportsArrayQueries = true;
+  computesArrayQueriesInPlace = true;
   supportsCorrelatedArrayQueries = false;
   supportsArraySortInPlace = false;
 

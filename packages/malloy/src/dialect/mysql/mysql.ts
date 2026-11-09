@@ -22,6 +22,7 @@ import type {
   ATimestampTypeDef,
   TimestampUnit,
   ExtractUnit,
+  OrderBy,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -167,6 +168,12 @@ export class MySQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
+  // A query on an array is always a correlated subquery over JSON_TABLE.
+  // A table function's argument cannot reference an outer table from
+  // inside a subquery ("Unknown table in a table function argument"), so
+  // an array such a subquery made can only be selected.
+  supportsArrayQueries = true;
+  supportsReadingCorrelatedArrayRows = false;
   // MySQL builds nested arrays with GROUP_CONCAT (not an array type), which has
   // no in-expression slice; limiting would need query-level ROW_NUMBER plumbing
   // the sqlAggregateTurtle seam doesn't expose. Left false (default) explicitly.
@@ -363,11 +370,22 @@ export class MySQLDialect extends Dialect {
       )} as ${alias} ON 1=1`;
   }
 
+  // A query on an array has no lambdas to run in place, so it is always
+  // a correlated subquery over JSON_TABLE, with a typed column for each
+  // field of a record, or one `value` column for an array of scalars.
   sqlUnnestPipelineHead(
     isSingleton: boolean,
     sourceSQLExpression: string,
-    fieldList: DialectFieldList
+    fieldList: DialectFieldList,
+    isScalarArray = false
   ): string {
+    if (isScalarArray) {
+      const value = fieldList.find(f => f.rawName === 'value');
+      const type = value ? malloyTypeToJSONTableType(value.typeDef) : 'JSON';
+      return `JSON_TABLE(CAST(${sourceSQLExpression} AS JSON), '$[*]'
+        COLUMNS (${this.sqlQuoteIdentifier('value')} ${type} PATH '$')
+      )`;
+    }
     return this.jsonTable(sourceSQLExpression, fieldList, isSingleton);
   }
 
@@ -431,9 +449,25 @@ export class MySQLDialect extends Dialect {
     )}\n$$ LANGUAGE SQL;\n`;
   }
 
-  sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    // TODO:
-    return `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
+  // The last stage's rows as a JSON array, built the way a nest is: with
+  // GROUP_CONCAT, since JSON_ARRAYAGG keeps no order.
+  sqlCreateFunctionCombineLastStage(
+    lastStageName: string,
+    fieldList: DialectFieldList,
+    orderBy?: OrderBy[]
+  ): string {
+    const keys = (orderBy ?? []).flatMap(({field, dir}) => {
+      const name =
+        typeof field === 'number' ? fieldList[field - 1]?.rawName : field;
+      return name === undefined
+        ? []
+        : [
+            `${this.sqlQuoteIdentifier(name)} ${dir === 'desc' ? 'DESC' : 'ASC'}`,
+          ];
+    });
+    const order = keys.length > 0 ? ` ORDER BY ${keys.join(', ')}` : '';
+    const rows = `GROUP_CONCAT(JSON_OBJECT(${this.mapFields(fieldList)})${order} SEPARATOR ',')`;
+    return `SELECT COALESCE(JSON_EXTRACT(CONCAT('[', ${rows}, ']'), '$'), JSON_ARRAY()) FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(_alias: string, _fieldList: DialectFieldList) {

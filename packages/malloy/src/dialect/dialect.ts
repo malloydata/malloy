@@ -678,6 +678,13 @@ export abstract class Dialect {
   supportsCorrelatedArrayQueries = true;
 
   /**
+   * Whether the dialect computes some queries on an array in place
+   * (`sqlArrayAggregate`, `sqlArraySelect`); without it every query on an
+   * array is a correlated subquery.
+   */
+  computesArrayQueriesInPlace = false;
+
+  /**
    * Whether the rows a correlated subquery made for a query on an array can
    * be read further: unnested, to reach into them with a path, or queried
    * in place by another `->`. Databricks allows a correlated subquery only
