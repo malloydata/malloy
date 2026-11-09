@@ -494,6 +494,35 @@ export function arrayQueryOnlyAggregates(segment: QuerySegment): boolean {
  * `select:` of values. What an expression in it reads is checked only when
  * the SQL is written.
  */
+/**
+ * What, in a query on an array, keeps it from being one grouping: one stage
+ * of `group_by:` and `aggregate:` with no `having:`, `limit:`, `nest:` or
+ * `calculate:`, the only correlated subquery some dialects can run
+ * (`Dialect.correlatedArrayQueries`); undefined if it is one.
+ */
+export function arrayQueryNotOneGrouping(
+  pipeline: PipeSegment[]
+): string | undefined {
+  const [segment, ...moreSegments] = pipeline;
+  if (moreSegments.length > 0) return 'several stages';
+  if (segment === undefined || segment.type !== 'reduce') {
+    return 'this kind of query';
+  }
+  if (
+    (segment.filterList ?? []).some(f => !expressionIsScalar(f.expressionType))
+  ) {
+    return 'a `having:`';
+  }
+  if (segment.limit !== undefined) return 'a `limit:`';
+  for (const f of segment.queryFields) {
+    if (f.type === 'turtle') return 'a `nest:`';
+    if (f.type !== 'fieldref' && expressionIsAnalytic(f.expressionType)) {
+      return 'a `calculate:`';
+    }
+  }
+  return undefined;
+}
+
 export function arrayQueryNotInPlace(
   pipeline: PipeSegment[],
   {canSort = true}: {canSort?: boolean} = {}

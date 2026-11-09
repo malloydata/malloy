@@ -692,6 +692,15 @@ export abstract class Dialect {
    */
   supportsArraySortInPlace = true;
 
+  /**
+   * What the correlated subquery of a query on an array can be, where
+   * `supportsCorrelatedArrayQueries`: any query, or only one grouping, one
+   * stage of `group_by:` and `aggregate:` with no `having:`, `limit:`,
+   * `nest:` or `calculate:` (`arrayQueryNotOneGrouping`). Trino's
+   * optimizer can rewrite only that as a join.
+   */
+  correlatedArrayQueries: 'any' | 'one grouping' = 'any';
+
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 
   abstract sqlGenerateUUID(): string;

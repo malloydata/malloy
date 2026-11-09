@@ -142,12 +142,11 @@ export class TrinoDialect extends PostgresBase {
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
-  // A query on an array runs only where it is computed in place, with
-  // lambdas. Presto rejects correlated subqueries ("Given correlated
-  // subquery is not supported"); Trino has them, but its head for an array
-  // (sqlUnnestPipelineHead with isScalarArray) is not written yet.
+  // A query on an array is computed in place with lambdas where it can be,
+  // and otherwise as a correlated subquery over the unnested array, which
+  // Trino's optimizer can rewrite only for one plain grouping.
   supportsArrayQueries = true;
-  supportsCorrelatedArrayQueries = false;
+  correlatedArrayQueries: 'any' | 'one grouping' = 'one grouping';
   supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
@@ -417,13 +416,21 @@ export class TrinoDialect extends PostgresBase {
     return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
   }
 
+  // An array of rows unnests into a column for each field. An array of
+  // scalars unnests into one column, named `value` for the query to read.
   sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    _fieldList?: DialectFieldList,
+    isScalarArray = false
   ): string {
     let p = sourceSQLExpression;
     if (isSingleton) {
       p = `ARRAY[${p}]`;
+    }
+    if (isScalarArray) {
+      const value = this.sqlQuoteIdentifier('value');
+      return `(SELECT ${value} FROM UNNEST(${p}) AS __elements(${value}))`;
     }
     return `UNNEST(${p})`;
   }
@@ -827,6 +834,10 @@ ${indent(sql)}
 export class PrestoDialect extends TrinoDialect {
   name = 'presto';
   supportsPipelinesInViews = false; // what a drag...
+  // Presto rejects a correlated subquery over an array ("Given correlated
+  // subquery is not supported"), so a query on an array runs only where
+  // it is computed in place.
+  supportsCorrelatedArrayQueries = false;
   supportsLeftJoinUnnest = false; // we need to fix this....
 
   sqlGenerateUUID(): string {

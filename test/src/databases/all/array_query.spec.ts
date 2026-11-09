@@ -23,6 +23,9 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
   // them with a path.
   const unnestsSubquery =
     correlated && runtime.dialect.supportsReadingCorrelatedArrayRows;
+  // The correlated subquery can be any query, not only one grouping.
+  const subqueryAny =
+    correlated && runtime.dialect.correlatedArrayQueries === 'any';
   // An order_by: inside the arrow is sorted in place, or by the subquery.
   const sorts =
     supported && (correlated || runtime.dialect.supportsArraySortInPlace);
@@ -33,14 +36,16 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
           group_by: big is airport_count > 100
           aggregate: n is airport_count.sum()
         }
+        by_size_again is by_size`;
+  // And one which the subquery runs only where it can be any query.
+  const needAnySubquery = `
         busy_types is by_fac_type -> {
           group_by: fac_type
           aggregate: n is airport_count.sum()
         } -> {
           where: n > 50
           select: fac_type
-        }
-        by_size_again is by_size`;
+        }`;
   const model = `
     ##! experimental.array_queries
 
@@ -63,6 +68,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
           select: fac_type, double_count is airport_count * 2
         }
         ${correlated ? needSubquery : ''}
+        ${subqueryAny ? needAnySubquery : ''}
         none is by_fac_type -> { select: *; where: airport_count > 1000 }
     }
 
@@ -153,7 +159,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     await expect(query).toEqualResult(tm, [{d: 578}]);
   });
 
-  test.when(correlated)("the array query's own having:", async () => {
+  test.when(subqueryAny)("the array query's own having:", async () => {
     // Alaska has three facility types; a having: which no row passes leaves
     // no row, so no value
     await expect(
@@ -364,7 +370,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 578});
     });
 
-    test.when(unnestsSubquery)('several stages', async () => {
+    test.when(unnestsSubquery && subqueryAny)('several stages', async () => {
       await expect(`
         run: a -> {
           where: state = 'AK'
@@ -395,7 +401,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toEqualResult(tm, [{big: 578}]);
     });
 
-    test.when(correlated)(
+    test.when(subqueryAny)(
       'several stages ending in one aggregate',
       async () => {
         await expect(`
@@ -410,6 +416,33 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
           }
         }
       `).toEqualResult(tm, [{busy: [{c: 2}]}]);
+      }
+    );
+
+    test.when(correlated && !subqueryAny)(
+      'where the subquery is one grouping, other subquery shapes are errors',
+      async () => {
+        const sqlOf = (arrow: string) =>
+          runtime
+            .loadModel(model)
+            .loadQuery(
+              `run: a -> { where: state = 'AK'; select: d is by_fac_type -> ${arrow} }`
+            )
+            .getSQL();
+        for (const [arrow, reason] of [
+          ['{ aggregate: n is count(); having: n > 3 }', /having/],
+          [
+            '{ group_by: fac_type; aggregate: n is airport_count.sum() } -> { select: fac_type }',
+            /several stages/,
+          ],
+          ['{ group_by: fac_type; limit: 1 }', /limit/],
+          [
+            '{ group_by: fac_type; nest: t is { group_by: airport_count } }',
+            /nest/,
+          ],
+        ] as const) {
+          await expect(sqlOf(arrow)).rejects.toThrow(reason);
+        }
       }
     );
 
