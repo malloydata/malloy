@@ -43,6 +43,7 @@ registerConnectionType('databricks', {
           : typeof config['timeoutMs'] === 'string'
             ? parseInt(config['timeoutMs'], 10)
             : undefined,
+      proxy: typeof config['proxy'] === 'string' ? config['proxy'] : undefined,
     });
   },
   properties: [
@@ -105,6 +106,15 @@ registerConnectionType('databricks', {
       default: 600000,
       description:
         'Client-side query timeout in ms; the query is cancelled if it runs longer. Defaults to 600000 (10 min).',
+    },
+    {
+      name: 'proxy',
+      displayName: 'Proxy URL',
+      type: 'secret',
+      optional: true,
+      advanced: true,
+      description:
+        'HTTP(S) or SOCKS proxy for reaching the workspace, e.g. http://user:pass@host:3128 (percent-encode credentials). A TLS-intercepting proxy needs its CA in NODE_EXTRA_CA_CERTS.',
     },
   ],
 });

@@ -124,6 +124,75 @@ export interface DatabricksConfiguration {
   // longer. Defaults to TIMEOUT_MS (10 min); a non-positive value falls back
   // to that default.
   timeoutMs?: number;
+  // HTTP(S) or SOCKS proxy URL, e.g. http://user:pass@host:3128, with
+  // credentials percent-encoded. Needed because @databricks/sql ignores
+  // HTTPS_PROXY. TLS to the workspace is verified through the tunnel, so a
+  // TLS-intercepting proxy needs its CA in NODE_EXTRA_CA_CERTS.
+  proxy?: string;
+}
+
+export type DatabricksProxyOptions = NonNullable<
+  Parameters<DBSQLClient['connect']>[0]['proxy']
+>;
+
+const PROXY_DEFAULT_PORTS: Record<DatabricksProxyOptions['protocol'], number> =
+  {
+    http: 80,
+    https: 443,
+    socks: 1080,
+    socks4: 1080,
+    socks4a: 1080,
+    socks5: 1080,
+    socks5h: 1080,
+  };
+
+function isProxyProtocol(p: string): p is DatabricksProxyOptions['protocol'] {
+  return Object.prototype.hasOwnProperty.call(PROXY_DEFAULT_PORTS, p);
+}
+
+// Everything before the last '@' may be credentials, whether or not the
+// URL parses: an unencoded '/' in a password, or a missing scheme, leaves
+// them outside any userinfo a URL parser would find.
+function maskCredentials(proxyUrl: string): string {
+  const at = proxyUrl.lastIndexOf('@');
+  if (at < 0) return proxyUrl;
+  const scheme = /^[a-z][a-z0-9+.-]*:\/\//i.exec(proxyUrl)?.[0] ?? '';
+  return `${scheme}***${proxyUrl.slice(at)}`;
+}
+
+/**
+ * Turn a proxy URL into the driver's proxy options. Throws an error naming
+ * the setting when the URL is malformed or uses an unsupported scheme; the
+ * error never includes the URL's credentials.
+ */
+export function parseProxyUrl(proxyUrl: string): DatabricksProxyOptions {
+  const shown = maskCredentials(proxyUrl);
+  let u: URL;
+  try {
+    u = new URL(proxyUrl);
+  } catch {
+    throw new Error(
+      `Databricks proxy: invalid URL '${shown}' (expected e.g. http://host:3128)`
+    );
+  }
+  const protocol = u.protocol.replace(/:$/, '');
+  if (!isProxyProtocol(protocol) || !u.hostname) {
+    throw new Error(
+      `Databricks proxy: unsupported URL '${shown}' (expected ${Object.keys(PROXY_DEFAULT_PORTS).join('/')}://host[:port])`
+    );
+  }
+  const options: DatabricksProxyOptions = {
+    protocol,
+    host: u.hostname,
+    port: u.port ? Number(u.port) : PROXY_DEFAULT_PORTS[protocol],
+  };
+  if (u.username) {
+    // Leave these percent-encoded: @databricks/sql pastes them back into a
+    // proxy URL string without encoding them, and proxy-agent decodes them
+    // from there. Decoding here breaks passwords containing # / ? or %.
+    options.auth = {username: u.username, password: u.password};
+  }
+  return options;
 }
 
 /**
@@ -141,6 +210,7 @@ export class DatabricksConnection
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private session?: any;
   private connectPromise?: Promise<void>;
+  private readonly proxyOptions?: DatabricksProxyOptions;
   config: DatabricksConfiguration;
   queryOptions: QueryOptionsReader | undefined;
   public name: string;
@@ -156,6 +226,7 @@ export class DatabricksConnection
   ) {
     super();
     this.config = config;
+    this.proxyOptions = config.proxy ? parseProxyUrl(config.proxy) : undefined;
     this.queryOptions = queryOptions;
     this.name = name;
   }
@@ -186,6 +257,10 @@ export class DatabricksConnection
       connectOptions.oauthClientSecret = this.config.oauthClientSecret;
     } else if (this.config.token) {
       connectOptions.token = this.config.token;
+    }
+
+    if (this.proxyOptions) {
+      connectOptions.proxy = this.proxyOptions;
     }
 
     await this.client.connect(connectOptions);
