@@ -216,6 +216,11 @@ export class PostgresDialect extends PostgresBase {
     childName: string,
     childType: string
   ): string {
+    if (parentType === 'nest source') {
+      // A nest source's element is its `value` column
+      // (sqlUnnestPipelineHead), which a distinct key's wrapper keeps.
+      parentAlias = `${parentAlias}.value`;
+    }
     if (childName === '__row_id') {
       return `(${parentAlias}->>'__row_id')`;
     }
@@ -250,6 +255,9 @@ export class PostgresDialect extends PostgresBase {
   // no list lambdas to compute one in place. Nested records are JSONB, and
   // an array of scalars, which may be a native array, is made JSONB and
   // each element wrapped as {"value": v}, the way sqlUnnestAlias does.
+  // Each head's element is a JSONB column named `value`, as
+  // JSONB_ARRAY_ELEMENTS's is, so that it survives the wrapper which adds a
+  // distinct key to a query's source (`QueryQuery.generateSQLJoins`).
   sqlUnnestPipelineHead(
     isSingleton: boolean,
     sourceSQLExpression: string,
@@ -257,9 +265,9 @@ export class PostgresDialect extends PostgresBase {
     isScalarArray = false
   ): string {
     if (isSingleton) {
-      return `UNNEST(ARRAY((SELECT ${sourceSQLExpression})))`;
+      return `(SELECT __e AS value FROM UNNEST(ARRAY((SELECT ${sourceSQLExpression}))) AS __e)`;
     } else if (isScalarArray) {
-      return `(SELECT JSONB_BUILD_OBJECT('value', __v) AS base FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${sourceSQLExpression})) AS __v)`;
+      return `(SELECT JSONB_BUILD_OBJECT('value', __v) AS value FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${sourceSQLExpression})) AS __v)`;
     } else {
       return `JSONB_ARRAY_ELEMENTS(${sourceSQLExpression})`;
     }

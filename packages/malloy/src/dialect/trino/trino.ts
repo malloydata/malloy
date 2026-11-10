@@ -149,7 +149,7 @@ export class TrinoDialect extends PostgresBase {
   // and otherwise as a correlated subquery over the unnested array, which
   // Trino's optimizer can rewrite only for one plain grouping.
   arrayQueries: ArrayQuerySupport = {
-    inPlace: {sort: true},
+    inPlace: {sort: true, innerLambdaReadsOuter: true},
     subquery: 'one grouping',
     readsSubqueryRows: true,
   };
@@ -304,8 +304,20 @@ export class TrinoDialect extends PostgresBase {
     return lambdaArrayAggregate(aggregate, this.lambdaArrays);
   }
 
-  sqlArrayFilter(source: string, element: string, filter: string): string {
-    return `filter(${source}, ${element} -> ${filter})`;
+  sqlArrayFilter({
+    source,
+    element,
+    filter,
+    limit,
+  }: {
+    source: string;
+    element: string;
+    filter?: string;
+    limit?: number;
+  }): string {
+    const kept = filter ? `filter(${source}, ${element} -> ${filter})` : source;
+    // slice is 1-based; length n keeps the first n.
+    return limit === undefined ? kept : `slice(${kept}, 1, ${limit})`;
   }
 
   sqlArraySelect(select: ArraySelect): string | undefined {
@@ -778,7 +790,7 @@ export class PrestoDialect extends TrinoDialect {
   // subquery is not supported"), so a query on an array runs only where
   // it is computed in place.
   arrayQueries: ArrayQuerySupport = {
-    inPlace: {sort: true},
+    inPlace: {sort: true, innerLambdaReadsOuter: true},
     subquery: 'none',
     readsSubqueryRows: true,
   };

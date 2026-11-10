@@ -38,46 +38,62 @@ export interface LambdaArrayDialect {
   emptyArray: string;
 }
 
+/**
+ * An aggregate of an array inside the elements (`ArrayAggregate.nested`)
+ * as an aggregate of one array, where a lambda inside a lambda can read the
+ * outer one's parameter: the inner arrays of the chosen elements, filtered,
+ * and their values taken inside the lambda where the outer element is in
+ * scope, made one array, a null inner array taken as empty. The result is
+ * aggregated as an array of values, with no `value` or `filter` of its own.
+ * `fn` names the dialect's functions.
+ */
+export function flattenNested(
+  {source, element, value, filter, nested}: ArrayAggregate,
+  fn: {filter: string; transform: string; flatten: string; empty: string}
+): {source: string; element: string} | undefined {
+  if (nested === undefined) return undefined;
+  const outer = filter
+    ? `${fn.filter}(${source}, ${element} -> ${filter})`
+    : source;
+  const inner = nested.filter
+    ? `${fn.filter}(${nested.array}, ${nested.element} -> ${nested.filter})`
+    : nested.array;
+  const innerValues = value
+    ? `${fn.transform}(${inner}, ${nested.element} -> ${value})`
+    : inner;
+  return {
+    source: `${fn.flatten}(${fn.transform}(${outer}, ${element} -> COALESCE(${innerValues}, ${fn.empty})))`,
+    element: nested.element,
+  };
+}
+
 // An aggregate ignores null values. A sum or average skips them as it
 // folds, in one pass, so the array, which for an array inside the elements
 // is the whole flattened expression, is written once. array_max and
 // array_min are null if any element is, on Trino, so null values are
 // filtered out before those, and before counting distinct values.
 export function lambdaArrayAggregate(
-  {
+  aggregate: ArrayAggregate,
+  d: LambdaArrayDialect
+): string {
+  const {
     source,
     element,
     function: func,
     value,
     filter,
     resultType,
-    nested,
-  }: ArrayAggregate,
-  d: LambdaArrayDialect
-): string {
-  if (nested) {
-    // The inner arrays of the chosen elements, filtered, and their values
-    // taken inside the lambda where the outer element is in scope, made
-    // one array; then aggregated as an array of values. A null inner array
-    // is empty: flatten is null if one is, on Databricks.
-    const outer = filter
-      ? `filter(${source}, ${element} -> ${filter})`
-      : source;
-    const inner = nested.filter
-      ? `filter(${nested.array}, ${nested.element} -> ${nested.filter})`
-      : nested.array;
-    const innerValues = value
-      ? `transform(${inner}, ${nested.element} -> ${value})`
-      : inner;
-    return lambdaArrayAggregate(
-      {
-        source: `flatten(transform(${outer}, ${element} -> COALESCE(${innerValues}, ${d.emptyArray})))`,
-        element: nested.element,
-        function: func,
-        resultType,
-      },
-      d
-    );
+  } = aggregate;
+  // flatten is null if any inner array is, on Databricks, so a null inner
+  // array is made empty.
+  const flat = flattenNested(aggregate, {
+    filter: 'filter',
+    transform: 'transform',
+    flatten: 'flatten',
+    empty: d.emptyArray,
+  });
+  if (flat) {
+    return lambdaArrayAggregate({...flat, function: func, resultType}, d);
   }
   const elements = filter
     ? `filter(${source}, ${element} -> ${filter})`

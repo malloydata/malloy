@@ -58,18 +58,21 @@ export type DialectFieldList = DialectField[];
 export interface ArrayQuerySupport {
   /**
    * Whether some shapes are computed in place with the dialect's array
-   * functions (`sqlArrayAggregate`, `sqlArraySelect`), and whether an
-   * `order_by:` is among them.
+   * functions (`sqlArrayAggregate`, `sqlArraySelect`); whether an
+   * `order_by:` is among them; and whether a lambda inside a lambda can
+   * read the outer one's parameter, which an aggregate of an array inside
+   * the elements needs when one condition, or its value, reads both an
+   * element and the inner array (`NestedArrayAggregate.readsOuter`).
    */
-  inPlace: {sort: boolean} | false;
+  inPlace: {sort: boolean; innerLambdaReadsOuter: boolean} | false;
   /**
    * The correlated subquery the other shapes are written as, over the
    * array's elements (`sqlUnnestPipelineHead` with `isScalarArray`): any
    * query, only one grouping, or none. Trino's optimizer rewrites only a
    * plain grouping as a join, with no WHERE, HAVING or LIMIT, so for one
    * grouping (`arrayQueryNotOneGrouping`) the compiler filters the array
-   * before the subquery (`sqlArrayFilter`), and filters and limits the rows
-   * after it (`sqlArraySelect`).
+   * before the subquery, and filters and limits the rows after it, with
+   * `sqlArrayFilter`.
    */
   subquery: 'any' | 'one grouping' | 'none';
   /**
@@ -733,16 +736,17 @@ export abstract class Dialect {
   }
 
   /**
-   * The elements of the array `source` for which `filter` holds, `element`
-   * naming one, as `ArraySelect.element` does; undefined where the dialect
-   * cannot. Needed only where `ArrayQuerySupport.subquery` is
-   * 'one grouping'.
+   * The elements of the array `source` for which `filter` holds, in order,
+   * the first `limit` of them; `element` names one in `filter`, as
+   * `ArraySelect.element` does. Undefined where the dialect cannot. Needed
+   * only where `ArrayQuerySupport.subquery` is 'one grouping'.
    */
-  sqlArrayFilter(
-    _source: string,
-    _element: string,
-    _filter: string
-  ): string | undefined {
+  sqlArrayFilter(_filter: {
+    source: string;
+    element: string;
+    filter?: string;
+    limit?: number;
+  }): string | undefined {
     return undefined;
   }
 

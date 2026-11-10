@@ -110,7 +110,7 @@ export class DatabricksDialect extends Dialect {
   // where it can be, and otherwise as a correlated subquery over the
   // exploded array.
   arrayQueries: ArrayQuerySupport = {
-    inPlace: {sort: true},
+    inPlace: {sort: true, innerLambdaReadsOuter: true},
     subquery: 'any',
     readsSubqueryRows: false,
   };

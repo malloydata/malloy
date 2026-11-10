@@ -14,6 +14,7 @@ import type {
 } from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
+  ArrayQueryExpr,
   Expr,
   FilterCondition,
   TurtleDef,
@@ -69,6 +70,7 @@ import {
   groupingKey,
   caseGroup,
   exprWalk,
+  exprMapDeep,
 } from './utils';
 import type {JoinInstance} from './join_instance';
 import {
@@ -2588,9 +2590,10 @@ export class QueryQuery extends QueryField {
   /**
    * What both in-place forms of `array -> { ... }` need: an element struct
    * to compile expressions on, and the `where:` conditions compiled for it.
-   * Undefined, so that the query is written as a correlated subquery, when
-   * any condition is not of one element (a `having:` is an aggregate), or
-   * when `filters` or `values` read anything but an element's own fields.
+   * `why` instead, a clause for an error, when the query must be written
+   * as a correlated subquery: when any condition is not of one element (a
+   * `having:` is an aggregate), or when `filters` or `values` read anything
+   * but an element's own fields.
    *
    * An aggregate whose `structPath` passes through an array inside the
    * elements is over that inner array's elements, all in one: the inner
@@ -2609,20 +2612,23 @@ export class QueryQuery extends QueryField {
         filter: string | undefined;
         nested?: NestedArrayAggregate;
       }
-    | undefined {
+    | {why: string} {
     if (!filters.every(f => expressionIsScalar(f.expressionType))) {
-      return undefined;
+      return {why: 'it has a `having:`'};
     }
     const element = this.arrayElementStruct(array);
-    if (element === undefined) return undefined;
+    if (element === undefined) {
+      throw new Error('Internal Error: an array element has no parent');
+    }
     const inner = structPath && this.innerArrayElement(element, structPath);
-    if (
-      inner === false ||
-      ![...values, ...filters.map(f => f.e)].every(e =>
-        this.readsOnlyElementsOf(element, e)
-      )
-    ) {
-      return undefined;
+    if (inner === false) {
+      return {
+        why: `it aggregates \`${structPath?.join('.')}\`, through more than one array inside the elements`,
+      };
+    }
+    for (const e of [...values, ...filters.map(f => f.e)]) {
+      const read = this.notOwnRead(element, e);
+      if (read !== undefined) return {why: `it reads ${read}`};
     }
     const sql = (e: Expr) => exprToSQL(this.rootResult, element, e);
     const and = (conditions: string[]) =>
@@ -2644,6 +2650,16 @@ export class QueryQuery extends QueryField {
     }
     for (const value of values) {
       readsOuter ||= this.lambdaReads(element, value, inner.struct).outer;
+    }
+    const support = this.parent.dialect.arrayQueries;
+    if (
+      readsOuter &&
+      support?.inPlace &&
+      !support.inPlace.innerLambdaReadsOuter
+    ) {
+      return {
+        why: `one condition, or the aggregated value, reads both \`${inner.name}\` and the elements' other fields; give each its own condition`,
+      };
     }
     return {
       element,
@@ -2667,9 +2683,10 @@ export class QueryQuery extends QueryField {
   private innerArrayElement(
     element: QueryStruct,
     structPath: string[]
-  ): {struct: QueryStruct; arraySQL: string} | undefined | false {
+  ): {struct: QueryStruct; arraySQL: string; name: string} | undefined | false {
     let struct = element;
-    let found: {struct: QueryStruct; arraySQL: string} | undefined;
+    let found:
+      {struct: QueryStruct; arraySQL: string; name: string} | undefined;
     for (const [i, name] of structPath.entries()) {
       const child = struct.getChildByName(name);
       if (!(child instanceof QueryFieldStruct)) return false;
@@ -2686,7 +2703,11 @@ export class QueryQuery extends QueryField {
       const inner = this.arrayElementStruct(child.queryStruct);
       if (inner === undefined) return false;
       child.queryStruct = inner;
-      found = {struct: inner, arraySQL};
+      found = {
+        struct: inner,
+        arraySQL,
+        name: structPath.slice(0, i + 1).join('.'),
+      };
       struct = inner;
     }
     return found;
@@ -2744,7 +2765,7 @@ export class QueryQuery extends QueryField {
     array: QueryStruct,
     arraySQL: string,
     pipeline: PipeSegment[]
-  ): string | undefined {
+  ): string | {why: string} | undefined {
     const [segment, ...moreSegments] = pipeline;
     if (moreSegments.length > 0 || segment?.type !== 'reduce') {
       return undefined;
@@ -2783,9 +2804,9 @@ export class QueryQuery extends QueryField {
       value ? [value] : [],
       measure.structPath
     );
-    if (inPlace === undefined) return undefined;
+    if ('why' in inPlace) return inPlace;
     const {element, filter, nested} = inPlace;
-    return array.dialect.sqlArrayAggregate({
+    const sql = array.dialect.sqlArrayAggregate({
       source: arraySQL,
       element: element.getIdentifier(),
       function: measure.function,
@@ -2794,6 +2815,7 @@ export class QueryQuery extends QueryField {
       resultType: isAtomic(field) ? TD.atomicDef(field) : undefined,
       nested,
     });
+    return sql ?? {why: `the ${array.dialect.name} dialect cannot compute it`};
   }
 
   /**
@@ -2833,7 +2855,7 @@ export class QueryQuery extends QueryField {
     array: QueryStruct,
     arraySQL: string,
     pipeline: PipeSegment[]
-  ): string | undefined {
+  ): string | {why: string} | undefined {
     const [segment, ...moreSegments] = pipeline;
     if (moreSegments.length > 0 || segment?.type !== 'project') {
       return undefined;
@@ -2861,7 +2883,7 @@ export class QueryQuery extends QueryField {
       segment.filterList ?? [],
       values
     );
-    if (inPlace === undefined) return undefined;
+    if ('why' in inPlace) return inPlace;
     const {element, filter} = inPlace;
     const sql = (e: Expr, of = element) => exprToSQL(this.rootResult, of, e);
     const fields: DialectFieldList = [];
@@ -2899,7 +2921,7 @@ export class QueryQuery extends QueryField {
         keys: keys.map(k => ({left: sql(k, left), right: sql(k, right)})),
       };
     };
-    return array.dialect.sqlArraySelect({
+    const selected = array.dialect.sqlArraySelect({
       source: arraySQL,
       element: element.getIdentifier(),
       fields,
@@ -2908,40 +2930,45 @@ export class QueryQuery extends QueryField {
       comparator,
       limit: segment.limit,
     });
+    return (
+      selected ?? {why: `the ${array.dialect.name} dialect cannot compute it`}
+    );
   }
 
   /**
-   * Whether `e`, read from the array, reads only an element's own fields:
-   * through records, and through an array inside the elements only when it
-   * is read as a lambda element of its own (`innerArrayElement`), but not
-   * through any other array or a join, and with no aggregate of its own.
+   * What `e`, read from the array, reads which is not an element's own
+   * field, as a clause for an error; undefined if it reads only those. An
+   * element's own fields are read through records, and through an array
+   * inside the elements only when it is read as a lambda element of its own
+   * (`innerArrayElement`), but not through any other array or a join, and
+   * with no aggregate of its own.
    */
-  private readsOnlyElementsOf(array: QueryStruct, e: Expr): boolean {
+  private notOwnRead(array: QueryStruct, e: Expr): string | undefined {
     for (const node of exprWalk(e)) {
       if (node.node === 'aggregate' || node.node === 'outputField') {
-        return false;
+        return 'an aggregate';
       }
       if (node.node !== 'field') continue;
+      const notOwn = `\`${node.path.join('.')}\`, which is not one of its elements' own fields`;
       let struct: QueryStruct = array;
       for (const name of node.path) {
         const child = struct.getChildByName(name);
-        if (child === undefined) return false;
+        if (child === undefined) return notOwn;
         if (child instanceof QueryFieldStruct) {
           if (
             child.queryStruct.structDef.type !== 'record' &&
             !child.queryStruct.isLambdaElement
           ) {
-            return false;
+            return notOwn;
           }
           struct = child.queryStruct;
         } else if (hasExpression(child.fieldDef)) {
-          if (!this.readsOnlyElementsOf(child.parent, child.fieldDef.e)) {
-            return false;
-          }
+          const read = this.notOwnRead(child.parent, child.fieldDef.e);
+          if (read !== undefined) return read;
         }
       }
     }
-    return true;
+    return undefined;
   }
 
   /**
@@ -2982,11 +3009,7 @@ export class QueryQuery extends QueryField {
     }
     seen.add(array);
     for (const node of exprWalk(def.e)) {
-      if (
-        node.node === 'arrayQuery' &&
-        this.parent.dialect.arrayQueryRoutes(node.pipeline).inPlace !==
-          undefined
-      ) {
+      if (node.node === 'arrayQuery' && this.madeBySubquery(node, array)) {
         return activeName(def);
       }
       if (node.node === 'field' && array.parent !== undefined) {
@@ -3006,12 +3029,38 @@ export class QueryQuery extends QueryField {
   }
 
   /**
+   * Whether `query`, the expression of the computed array `array`, is
+   * compiled as a correlated subquery: its shape cannot be computed in
+   * place, or the in-place compile declines it (`arrayQuerySQL`). A query
+   * whose array is not a field of `array`'s parent is taken to be.
+   */
+  private madeBySubquery(query: ArrayQueryExpr, array: QueryStruct): boolean {
+    const {pipeline} = query;
+    if (this.parent.dialect.arrayQueryRoutes(pipeline).inPlace !== undefined) {
+      return true;
+    }
+    const of = query.kids.array;
+    if (of.node !== 'field' || array.parent === undefined) return true;
+    let read: QueryField;
+    try {
+      read = array.parent.getFieldByName(of.path);
+    } catch {
+      return true;
+    }
+    if (!(read instanceof QueryFieldStruct)) return true;
+    const inPlace = arrayQueryReturnsValue(pipeline)
+      ? this.arrayAggregateSQL(read.queryStruct, '', pipeline)
+      : this.arraySelectSQL(read.queryStruct, '', pipeline);
+    return typeof inPlace !== 'string';
+  }
+
+  /**
    * One grouping, the only correlated subquery a dialect whose
    * `ArrayQuerySupport.subquery` is 'one grouping' can run, has no WHERE,
-   * HAVING or LIMIT: its `where:` filters the array before it is unnested
-   * (`sqlArrayFilter`), and its `having:` and `limit:` are applied to the
-   * rows it makes (`sqlArraySelect`), which are in its order. The
-   * translator has allowed only a `having:` on the query's own fields
+   * HAVING or LIMIT. Its `where:` filters the array before it is unnested,
+   * and its `having:` and `limit:` are applied to the rows it makes, which
+   * are in its order, both with `sqlArrayFilter`. The translator has
+   * allowed only a `having:` on the query's own fields
    * (`arrayQueryNotOneGrouping`).
    */
   private oneGrouping(
@@ -3028,9 +3077,9 @@ export class QueryQuery extends QueryField {
       return {source: arraySQL, stages: pipeline, rows: undefined};
     }
     const dialect = this.parent.dialect;
-    const refuse = (what: string) =>
+    const refuse = (why: string) =>
       new MalloyCompileError(
-        `The ${dialect.name} dialect cannot group an array with ${what}`,
+        `The ${dialect.name} dialect cannot query this array: ${why}`,
         'array-query-not-in-place',
         undefined
       );
@@ -3040,47 +3089,35 @@ export class QueryQuery extends QueryField {
     let source = arraySQL;
     if (where.length > 0) {
       const inPlace = this.inPlaceElements(array, where, []);
-      const filtered =
-        inPlace?.filter &&
-        dialect.sqlArrayFilter(
-          arraySQL,
-          inPlace.element.getIdentifier(),
-          inPlace.filter
-        );
-      if (!filtered) {
-        throw refuse("a `where:` on anything but its elements' own fields");
-      }
+      if ('why' in inPlace) throw refuse(`its \`where:\` ${inPlace.why}`);
+      const filtered = dialect.sqlArrayFilter({
+        source: arraySQL,
+        element: inPlace.element.getIdentifier(),
+        filter: inPlace.filter,
+      });
+      if (filtered === undefined) throw refuse('it has a `where:`');
       source = filtered;
     }
-    // A query which returns one value has no `having:`, and a `limit:` of
-    // one row or more does not change it.
+    // One value is one row, which a `limit:` keeps.
     const limit = arrayQueryReturnsValue(pipeline) ? undefined : segment.limit;
     const stage: QuerySegment = {...segment, filterList: []};
-    if (limit !== undefined) delete stage.limit;
+    delete stage.limit;
     if (having.length === 0 && limit === undefined) {
       return {source, stages: [stage], rows: undefined};
     }
     const rows = (made: string) => {
-      const outputs = segment.outputStruct.fields;
       const madeArray = new QueryStruct(
-        mkArrayDef({type: 'record', fields: outputs}, 'rows'),
+        mkArrayDef(
+          {type: 'record', fields: segment.outputStruct.fields},
+          'rows'
+        ),
         undefined,
         {struct: array.parent ?? array},
         array.prepareResultOptions
       );
       const row = this.arrayElementStruct(madeArray);
-      if (row === undefined) throw refuse('a `having:` or `limit:`');
-      const fields: DialectFieldList = [];
-      for (const output of outputs) {
-        if (!isAtomic(output)) throw refuse('a `having:` or `limit:`');
-        fields.push({
-          rawName: output.name,
-          sqlExpression: exprToSQL(this.rootResult, row, {
-            node: 'field',
-            path: [output.name],
-          }),
-          typeDef: TD.atomicDef(output),
-        });
+      if (row === undefined) {
+        throw new Error('Internal Error: an array element has no parent');
       }
       // A `having:` names the query's fields as its output; here they are
       // the fields of a row.
@@ -3089,22 +3126,20 @@ export class QueryQuery extends QueryField {
           exprToSQL(
             this.rootResult,
             row,
-            JSON.parse(JSON.stringify(h.e), (_k, v) =>
-              v?.node === 'outputField' ? {node: 'field', path: [v.name]} : v
+            exprMapDeep(h.e, e =>
+              e.node === 'outputField' ? {node: 'field', path: [e.name]} : e
             )
           )
         )
         .join(' AND ');
-      const selected = dialect.sqlArraySelect({
+      const kept = dialect.sqlArrayFilter({
         source: made,
         element: row.getIdentifier(),
-        fields,
         filter: filter || undefined,
-        orderBy: [],
         limit,
       });
-      if (selected === undefined) throw refuse('a `having:` or `limit:`');
-      return selected;
+      if (kept === undefined) throw refuse('it has a `having:` or `limit:`');
+      return kept;
     };
     return {source, stages: [stage], rows};
   }
@@ -3128,21 +3163,21 @@ export class QueryQuery extends QueryField {
     const inPlace = returnsValue
       ? this.arrayAggregateSQL(array, arraySQL, pipeline)
       : this.arraySelectSQL(array, arraySQL, pipeline);
-    if (inPlace !== undefined) return inPlace;
+    if (typeof inPlace === 'string') return inPlace;
     const dialect = this.parent.dialect;
     // The translator refuses a shape which neither route can take
     // (`Dialect.arrayQueryRoutes`). A shape which reaches here could be
-    // computed in place, but reads something other than an element's own
-    // fields (`readsOnlyElementsOf`), or the dialect's array functions
-    // decline it (`sqlArraySelect`); it needs the subquery.
+    // computed in place, but the compile declined it, for `why`; it needs
+    // the subquery.
     const {subquery} = dialect.arrayQueryRoutes(pipeline);
     if (subquery !== undefined) {
-      const noSubquery =
-        dialect.arrayQueries?.subquery === 'none'
-          ? 'it has no correlated subquery to run it as'
-          : `its correlated subquery cannot have ${subquery}`;
+      const why = inPlace?.why ?? 'it cannot be computed';
+      const notGrouping =
+        dialect.arrayQueries?.subquery === 'one grouping'
+          ? `, and it is not one stage of group_by: and aggregate:, since it has ${subquery}`
+          : '';
       throw new MalloyCompileError(
-        `The ${dialect.name} dialect cannot compute this query on an array in place: it reads something other than its elements' own fields, or the dialect's array functions cannot express it; and ${noSubquery}`,
+        `The ${dialect.name} dialect cannot query this array: ${why}${notGrouping}`,
         'array-query-not-in-place',
         undefined
       );

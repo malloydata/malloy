@@ -238,6 +238,25 @@ export function exprMap(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
   }
   return mapFunc(mapExpr);
 }
+/**
+ * `eNode` with `mapFunc` applied to every node, its children first, as
+ * `exprMap` applies it to the node and its immediate children only.
+ */
+export function exprMapDeep(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
+  // exprMap calls `mapFunc` on each child, then on its copy of the node.
+  const children = new Set<Expr>();
+  if (exprHasKids(eNode)) {
+    for (const kid of Object.values(eNode.kids)) {
+      for (const k of Array.isArray(kid) ? kid : [kid]) {
+        if (k !== null) children.add(k);
+      }
+    }
+  }
+  if (exprHasE(eNode)) children.add(eNode.e);
+  return exprMap(eNode, e =>
+    children.has(e) ? exprMapDeep(e, mapFunc) : mapFunc(e)
+  );
+}
 export type SQLExprElement = string | Expr;
 
 /**

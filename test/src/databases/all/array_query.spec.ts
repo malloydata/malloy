@@ -114,6 +114,11 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
             where: by_fac_type.fac_type = 'HELIPORT' or county = 'JEFFERSON'
           }
         }
+        // A select: whose shape is computed in place, but which reads an
+        // array inside the elements, so is a correlated subquery.
+        fanned is by_county -> {
+          select: county, t is by_fac_type.airport_count
+        }
     }
   `;
   const tm = wrapTestModel(runtime, model);
@@ -276,12 +281,12 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       }
     );
 
-    // Snowflake's lambda inside a lambda cannot read the outer element, so
-    // one condition on both is computed only by the other dialects. On
-    // Postgres it runs as a correlated subquery, whose head loses its
-    // elements when it is given a distinct key, as this count needs; that
-    // is a gap in Postgres's subqueries, not in computing in place.
-    test.when(supported && db !== 'snowflake' && db !== 'postgres')(
+    // In place, one condition on both needs a lambda inside a lambda which
+    // reads the outer one's parameter.
+    const readsBoth =
+      supported &&
+      (support.inPlace === false || support.inPlace.innerLambdaReadsOuter);
+    test.when(readsBoth)(
       'a condition on both the outer and the inner element',
       async () => {
         // Of the 4,991 county and facility type groups, 1,590 are heliports
@@ -292,8 +297,8 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       }
     );
 
-    test.when(db === 'snowflake')(
-      'on Snowflake, a condition on both is an error',
+    test.when(supported && !readsBoth)(
+      'where an inner lambda cannot read the outer one, a condition on both is an error',
       async () => {
         await expect(
           runtime
@@ -302,7 +307,9 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
               'run: states -> { aggregate: n is heliport_or_jefferson.sum() }'
             )
             .getSQL()
-        ).rejects.toThrow(/cannot compute this query on an array in place/);
+        ).rejects.toThrow(
+          /reads both `by_fac_type` and the elements' other fields/
+        );
       }
     );
   });
@@ -592,6 +599,12 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
             "run: a -> { where: state = 'AK'; aggregate: n is by_size_again.n.sum() }"
           )
         ).rejects.toThrow(/'by_size_again' reads 'by_size'/);
+        // A shape computed in place, which the compile sends to a subquery
+        await expect(
+          sqlOf(
+            "run: states -> { where: state = 'AK'; aggregate: n is fanned.t.sum() }"
+          )
+        ).rejects.toThrow(/'fanned' is made by a correlated subquery/);
       }
     );
 

@@ -132,9 +132,10 @@ export class SnowflakeDialect extends Dialect {
   supportsComplexFilteredSources = false;
   // A query on an array is computed in place, with higher-order functions.
   // Snowflake rejects a correlated subquery over FLATTEN ("Unsupported
-  // subquery type cannot be evaluated"), and ARRAY_SORT takes no key.
+  // subquery type cannot be evaluated"), ARRAY_SORT takes no key, and a
+  // lambda inside a lambda cannot read the outer one's parameter.
   arrayQueries: ArrayQuerySupport = {
-    inPlace: {sort: false},
+    inPlace: {sort: false, innerLambdaReadsOuter: false},
     subquery: 'none',
     readsSubqueryRows: true,
   };
@@ -327,12 +328,15 @@ export class SnowflakeDialect extends Dialect {
   // An array's elements are VARIANTs, so a null field is filtered out
   // before its value is taken: once in an array it is a JSON null, which
   // IS NOT NULL does not see. ARRAY_MIN and ARRAY_MAX return a VARIANT,
-  // cast back to the aggregate's type. A lambda inside a lambda cannot read
-  // the outer one's parameter, so an aggregate of an array inside the
-  // elements is computed only when its value and filter read just the inner
-  // element: the inner arrays of the chosen elements are made one array,
-  // which is then aggregated. A missing inner array is a JSON null, or not
-  // there, and is taken as empty.
+  // cast back to the aggregate's type. REDUCE has no finishing function, so
+  // an average folds a sum and a count into an object, which a lambda over
+  // a one-element array divides: the array is written once.
+  //
+  // An aggregate of an array inside the elements reaches here only when its
+  // value and inner filter read just the inner element
+  // (`innerLambdaReadsOuter` is false): the inner arrays of the chosen
+  // elements are made one array, which is then aggregated. AS_ARRAY is null
+  // for a missing inner array, or a JSON null, which is taken as empty.
   sqlArrayAggregate({
     source,
     element,
@@ -341,13 +345,12 @@ export class SnowflakeDialect extends Dialect {
     filter,
     resultType,
     nested,
-  }: ArrayAggregate): string | undefined {
+  }: ArrayAggregate): string {
     if (nested) {
-      if (nested.readsOuter) return undefined;
       const outer = filter
         ? `FILTER(${source}, ${element} -> ${filter})`
         : source;
-      const inner = `IFF(IS_ARRAY(${nested.array}), ${nested.array}::ARRAY, ARRAY_CONSTRUCT())`;
+      const inner = `COALESCE(AS_ARRAY(${nested.array}), ARRAY_CONSTRUCT())`;
       return this.sqlArrayAggregate({
         source: `ARRAY_FLATTEN(TRANSFORM(${outer}, ${element} -> ${inner}))`,
         element: nested.element,
@@ -367,16 +370,19 @@ export class SnowflakeDialect extends Dialect {
       ? `TRANSFORM(${nonNull}, ${element} -> ${value})`
       : nonNull;
     const acc = `${element}_acc`;
-    const sum = `REDUCE(${nonNull}, 0::DOUBLE, (${acc}, ${element}) -> ${acc} + (${value}))`;
     switch (func) {
       case 'count':
         return `COALESCE(ARRAY_SIZE(${elements}), 0)`;
       case 'distinct':
         return `COALESCE(ARRAY_SIZE(ARRAY_DISTINCT(${values})), 0)`;
       case 'sum':
-        return `COALESCE(${sum}, 0)`;
-      case 'avg':
-        return `${sum} / NULLIF(ARRAY_SIZE(${nonNull}), 0)`;
+        return `COALESCE(REDUCE(${nonNull}, 0::DOUBLE, (${acc}, ${element}) -> ${acc} + (${value})), 0)`;
+      case 'avg': {
+        const state = (s: string, n: string) =>
+          `OBJECT_CONSTRUCT('s', ${s}, 'n', ${n})`;
+        const folded = `REDUCE(${nonNull}, ${state('0::DOUBLE', '0')}, (${acc}, ${element}) -> ${state(`${acc}:s::DOUBLE + (${value})`, `${acc}:n::NUMBER + 1`)})`;
+        return `TRANSFORM(ARRAY_CONSTRUCT(${folded}), ${acc} -> ${acc}:s::DOUBLE / NULLIF(${acc}:n::NUMBER, 0))[0]::DOUBLE`;
+      }
       case 'min':
       case 'max': {
         const cast = resultType

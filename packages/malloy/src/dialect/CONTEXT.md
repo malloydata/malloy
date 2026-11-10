@@ -112,23 +112,23 @@ Tests:
 There are two routes:
 
 - **In place**, with the dialect's array functions: `sqlArrayAggregate` for one aggregate, `sqlArraySelect` for a `select:` of values with `where:`, `order_by:` and `limit:`. Dialects whose functions are `filter`, `transform`, `array_sort` with a comparator and `slice` (Trino, Presto, Databricks) share one implementation, `array_lambdas.ts`, and supply only what differs.
-  An aggregate of an array inside the elements (`items -> { aggregate: n is tags.count() }`) is in place too: the compiler reads the inner array through a lambda element of its own (`ArrayAggregate.nested`), conditions on the outer element choose the outer elements, and conditions on the inner one go in a lambda inside the lambda, where the outer element's parameter is still in scope. The inner arrays are flattened into one and aggregated. Snowflake's inner lambda cannot see the outer parameter, so it declines when a condition or the value reads both.
-- **A correlated subquery** over the elements: `sqlUnnestPipelineHead` with `isScalarArray` is its FROM, read `AS base`, and `sqlCreateFunctionCombineLastStage` collects its rows back into an array, in the stage's order.
+  An aggregate of an array inside the elements (`items -> { aggregate: n is tags.count() }`) is in place too: the compiler reads the inner array through a lambda element of its own (`ArrayAggregate.nested`), conditions on the outer element choose the outer elements, and conditions on the inner one go in a lambda inside the lambda, where the outer element's parameter is still in scope. The inner arrays are flattened into one (`flattenNested`, for the dialects whose inner lambda can see the outer parameter) and aggregated. Where it cannot (`inPlace.innerLambdaReadsOuter` false: Snowflake), the compiler refuses a condition or value which reads both.
+- **A correlated subquery** over the elements: `sqlUnnestPipelineHead` with `isScalarArray` is its FROM, read `AS base`, and `sqlCreateFunctionCombineLastStage` collects its rows back into an array, in the stage's order. The head may be wrapped to add a distinct key (`QueryQuery.generateSQLJoins`), so a dialect whose fields of a nest source read `base` itself must read a named column instead: Postgres's heads all make a JSONB column `value`.
 
 `Dialect.arrayQueryRoutes(pipeline)` says why a pipeline cannot take each route, from the shape alone (`arrayQueryNotInPlace`, `arrayQueryNotOneGrouping` in `malloy_types.ts`). It is the one statement of the rule:
 
 - the translator (`ExprArrayQuery`) refuses a pipeline which neither route can take, with `array-query-not-in-place`;
-- the compiler (`QueryQuery.arrayQuerySQL`) tries in place first. A shape which could be in place but reads something other than an element's own fields, or which the dialect's functions decline, goes to the subquery, and is a compile error where the subquery route is closed;
-- where `readsSubqueryRows` is false, the compiler refuses to unnest, or to query again with `->`, an array a subquery made, following the computed arrays an expression reads (`refuseReadingSubqueryRows`).
+- the compiler (`QueryQuery.arrayQuerySQL`) tries in place first. A shape which could be in place but reads something other than an element's own fields, or which the dialect's functions decline, goes to the subquery, and is a compile error naming why where the subquery route is closed;
+- where `readsSubqueryRows` is false, the compiler refuses to unnest, or to query again with `->`, an array a subquery made, following the computed arrays an expression reads (`refuseReadingSubqueryRows`). Which arrays a subquery made is decided by the route the compile takes (`madeBySubquery`), not the shape alone.
 
 | Dialect | In place | Subquery | Reads a subquery's rows | Why |
 |---|---|---|---|---|
 | DuckDB | yes, sorts | any | yes | A correlated subquery over `UNNEST` is a full join, so list functions come first; `LIST_GRADE_UP` sorts one key or all ascending, and declines the rest |
 | BigQuery | no | any | yes | |
 | Postgres | no | any | yes | No list lambdas |
-| Trino | yes, sorts | one grouping | yes | The optimizer rewrites only a plain grouping as a join, with no WHERE, HAVING or LIMIT; others fail with "Given correlated subquery is not supported". So the compiler filters the array before the subquery (`sqlArrayFilter`) for a `where:`, and filters and slices its rows after (`sqlArraySelect`) for a `having:` on the query's own fields and a `limit:` (`QueryQuery.oneGrouping`) |
+| Trino | yes, sorts | one grouping | yes | The optimizer rewrites only a plain grouping as a join, with no WHERE, HAVING or LIMIT; others fail with "Given correlated subquery is not supported". So the compiler filters the array before the subquery for a `where:`, and filters and slices its rows after for a `having:` on the query's own fields and a `limit:`, both with `sqlArrayFilter` (`QueryQuery.oneGrouping`) |
 | Presto | yes, sorts | none | n/a | Rejects a correlated subquery over an array |
-| Snowflake | yes, no sort | none | n/a | `ARRAY_SORT` takes no key; a correlated subquery over `FLATTEN` is "Unsupported subquery type" |
+| Snowflake | yes, no sort | none | n/a | `ARRAY_SORT` takes no key; an inner lambda cannot read the outer one's parameter; a correlated subquery over `FLATTEN` is "Unsupported subquery type" |
 | Databricks | yes, sorts | any | no | A correlated subquery cannot feed `EXPLODE` or a higher-order function |
 | MySQL | no | any | no | No lambdas; a table function's argument cannot reference an outer table from inside a subquery |
 
