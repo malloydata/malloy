@@ -32,11 +32,13 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  ArrayAggregate,
   CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
   IntegerTypeMapping,
   QueryInfo,
+  ArrayQuerySupport,
 } from '../dialect';
 import {
   CivilTime,
@@ -127,6 +129,15 @@ export class SnowflakeDialect extends Dialect {
   supportsQualify = false;
   supportsPipelinesInViews = false;
   supportsComplexFilteredSources = false;
+  // A query on an array computes one value, with higher-order functions.
+  // Snowflake rejects a correlated subquery over FLATTEN ("Unsupported
+  // subquery type cannot be evaluated"), so it returns no arrays, and a
+  // lambda inside a lambda cannot read the outer one's parameter.
+  arrayQueries: ArrayQuerySupport = {
+    value: 'lambdas',
+    innerLambdaReadsOuter: false,
+    arrays: false,
+  };
 
   // Snowflake bare-identifier continuation allows `$` (verified against
   // the live engine).
@@ -274,33 +285,111 @@ export class SnowflakeDialect extends Dialect {
     childType: string
   ): string {
     const sqlName = this.sqlQuoteIdentifier(childName);
-    if (childName === '__row_id') {
+    if (parentType.startsWith('element')) {
+      // An element named by a lambda parameter is the VARIANT itself.
+      const elementRef =
+        parentType === 'element[record]'
+          ? `${parentAlias}:${sqlName}`
+          : parentAlias;
+      return `${elementRef}::${this.variantCastType(childType)}`;
+    } else if (childName === '__row_id') {
       return `"${parentAlias}".INDEX::varchar`;
     } else if (parentType.startsWith('array')) {
       let arrayRef = `"${parentAlias}".value`;
       if (parentType === 'array[record]') {
         arrayRef += `:${sqlName}`;
       }
-      switch (childType) {
-        case 'record':
-        case 'array':
-          childType = 'VARIANT';
-          break;
-        case 'string':
-          childType = 'VARCHAR';
-          break;
-        case 'number':
-          childType = 'DOUBLE';
-          break;
-        case 'struct':
-          throw new Error('NOT STRUCT PLEASE');
-        // boolean and timestamp and date are all ok
-      }
-      return `${arrayRef}::${childType}`;
+      return `${arrayRef}::${this.variantCastType(childType)}`;
     } else if (parentType === 'record') {
       return `${parentAlias}:${sqlName}`;
     }
     return `${parentAlias}.${sqlName}`;
+  }
+
+  // The SQL type a field read out of a VARIANT is cast to.
+  private variantCastType(childType: string): string {
+    switch (childType) {
+      case 'record':
+      case 'array':
+        return 'VARIANT';
+      case 'string':
+        return 'VARCHAR';
+      case 'number':
+        return 'DOUBLE';
+      case 'struct':
+        throw new Error('NOT STRUCT PLEASE');
+      // boolean and timestamp and date are all ok
+      default:
+        return childType;
+    }
+  }
+
+  // An array's elements are VARIANTs, so a null field is filtered out
+  // before its value is taken: once in an array it is a JSON null, which
+  // IS NOT NULL does not see. ARRAY_MIN and ARRAY_MAX return a VARIANT,
+  // cast back to the aggregate's type. REDUCE has no finishing function, so
+  // an average folds a sum and a count into an object, which a lambda over
+  // a one-element array divides: the array is written once.
+  //
+  // An aggregate of an array inside the elements reaches here only when its
+  // value and inner filter read just the inner element
+  // (`innerLambdaReadsOuter` is false): the inner arrays of the chosen
+  // elements are made one array, which is then aggregated. AS_ARRAY is null
+  // for a missing inner array, or a JSON null, which is taken as empty.
+  sqlArrayAggregate({
+    source,
+    element,
+    function: func,
+    value,
+    filter,
+    resultType,
+    nested,
+  }: ArrayAggregate): string {
+    if (nested) {
+      const outer = filter
+        ? `FILTER(${source}, ${element} -> ${filter})`
+        : source;
+      const inner = `COALESCE(AS_ARRAY(${nested.array}), ARRAY_CONSTRUCT())`;
+      return this.sqlArrayAggregate({
+        source: `ARRAY_FLATTEN(TRANSFORM(${outer}, ${element} -> ${inner}))`,
+        element: nested.element,
+        function: func,
+        value,
+        filter: nested.filter,
+        resultType,
+      });
+    }
+    const elements = filter
+      ? `FILTER(${source}, ${element} -> ${filter})`
+      : source;
+    const nonNull = value
+      ? `FILTER(${elements}, ${element} -> (${value}) IS NOT NULL)`
+      : elements;
+    const values = value
+      ? `TRANSFORM(${nonNull}, ${element} -> ${value})`
+      : nonNull;
+    const acc = `${element}_acc`;
+    switch (func) {
+      case 'count':
+        return `COALESCE(ARRAY_SIZE(${elements}), 0)`;
+      case 'distinct':
+        return `COALESCE(ARRAY_SIZE(ARRAY_DISTINCT(${values})), 0)`;
+      case 'sum':
+        return `COALESCE(REDUCE(${nonNull}, 0::DOUBLE, (${acc}, ${element}) -> ${acc} + (${value})), 0)`;
+      case 'avg': {
+        const state = (s: string, n: string) =>
+          `OBJECT_CONSTRUCT('s', ${s}, 'n', ${n})`;
+        const folded = `REDUCE(${nonNull}, ${state('0::DOUBLE', '0')}, (${acc}, ${element}) -> ${state(`${acc}:s::DOUBLE + (${value})`, `${acc}:n::NUMBER + 1`)})`;
+        return `TRANSFORM(ARRAY_CONSTRUCT(${folded}), ${acc} -> ${acc}:s::DOUBLE / NULLIF(${acc}:n::NUMBER, 0))[0]::DOUBLE`;
+      }
+      case 'min':
+      case 'max': {
+        const cast = resultType
+          ? `::${this.malloyTypeToSQLType(resultType)}`
+          : '';
+        return `${func === 'min' ? 'ARRAY_MIN' : 'ARRAY_MAX'}(${values})${cast}`;
+      }
+    }
   }
 
   sqlUnnestPipelineHead(

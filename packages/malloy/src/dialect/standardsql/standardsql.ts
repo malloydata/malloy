@@ -33,6 +33,7 @@ import type {
   IntegerTypeMapping,
   OrderByRequest,
   QueryInfo,
+  ArrayQuerySupport,
 } from '../dialect';
 import {
   CivilTime,
@@ -103,7 +104,9 @@ export class StandardSQLDialect extends Dialect {
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
-  supportsArrayQueries = true;
+  // A query on an array is a correlated subquery over UNNEST, whatever it
+  // returns.
+  arrayQueries: ArrayQuerySupport = {value: 'subquery', arrays: true};
   supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.

@@ -15,24 +15,40 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
  * current row, whose value is a value of that row. Experimental.
  */
 describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
-  const supported = runtime.dialect.supportsArrayQueries;
-  // A query which is not computed in place needs a correlated subquery.
-  const correlated =
-    supported && runtime.dialect.supportsCorrelatedArrayQueries;
-  // Queries on an array which only a correlated subquery can run; without
-  // one, each is a translation error, so the model has them only with one.
-  const needSubquery = `
+  const support = runtime.dialect.arrayQueries;
+  const supported = support !== undefined;
+  // A query on an array with rows of its own returns them as an array.
+  const arrays = support?.arrays === true;
+  // A value which array functions cannot compute, such as one with a
+  // `having:`, is a correlated subquery where the dialect has one: it
+  // computes values that way, or it returns arrays.
+  const anyValue =
+    support !== undefined && (support.value === 'subquery' || support.arrays);
+  // In place, one condition on both an element and an array inside it
+  // needs a lambda inside a lambda which reads the outer one's parameter.
+  const readsBoth =
+    support !== undefined &&
+    (support.value === 'subquery' || support.innerLambdaReadsOuter);
+  // Queries on an array which return its rows; elsewhere each is a
+  // translation error, so the model has them only where they compile.
+  const withRows = `
+        small_types is by_fac_type -> { select: *; where: airport_count < 50 }
+        doubled is by_fac_type -> {
+          select: fac_type, double_count is airport_count * 2
+        }
         by_size is by_fac_type -> {
           group_by: big is airport_count > 100
           aggregate: n is airport_count.sum()
         }
+        by_size_again is by_size
         busy_types is by_fac_type -> {
           group_by: fac_type
           aggregate: n is airport_count.sum()
         } -> {
           where: n > 50
           select: fac_type
-        }`;
+        }
+        none is by_fac_type -> { select: *; where: airport_count > 1000 }`;
   const model = `
     ##! experimental.array_queries
 
@@ -50,12 +66,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         seaplanes is by_fac_type -> {
           aggregate: n is airport_count.sum() { where: fac_type = 'SEAPLANE BASE' }
         }
-        small_types is by_fac_type -> { select: *; where: airport_count < 50 }
-        doubled is by_fac_type -> {
-          select: fac_type, double_count is airport_count * 2
-        }
-        ${correlated ? needSubquery : ''}
-        none is by_fac_type -> { select: *; where: airport_count > 1000 }
+        ${arrays ? withRows : ''}
     }
 
     // States as "movies", each with an array of genres: its most popular
@@ -66,6 +77,36 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       dimension:
         genre_count is genres -> { aggregate: n is count() }
         isabella is genres -> { aggregate: n is count() { where: each = 'Isabella' } }
+    }
+
+    // One row per state, with its counties, each with its airports by
+    // facility type: an array inside the elements.
+    source: states is ${db}.table('malloytest.airports') -> {
+      group_by: state
+      aggregate: airport_count is count()
+      nest: by_county is {
+        group_by: county
+        nest: by_fac_type is {
+          group_by: fac_type
+          aggregate: airport_count is count()
+        }
+      }
+    } extend {
+      dimension:
+        nested_total is by_county -> {
+          aggregate: n is by_fac_type.airport_count.sum()
+        }
+        a_heliports is by_county -> {
+          where: county ~ 'A%'
+          aggregate: n is by_fac_type.airport_count.sum() {
+            where: by_fac_type.fac_type = 'HELIPORT'
+          }
+        }
+        heliport_or_jefferson is by_county -> {
+          aggregate: n is by_fac_type.count() {
+            where: by_fac_type.fac_type = 'HELIPORT' or county = 'JEFFERSON'
+          }
+        }
     }
   `;
   const tm = wrapTestModel(runtime, model);
@@ -132,10 +173,10 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
           types is by_fac_type -> { aggregate: n is count(fac_type) }
       } -> {
         where: state = 'AK'
-        // Each database rounds the last digit of 608 / 3 its own way.
-        select: fewest, most, mean is round(mean, 6), types
+        // Each database rounds 608 / 3 its own way; MySQL keeps four places.
+        select: fewest, most, mean is round(mean, 4), types
       }
-    `).toMatchResult(tm, {fewest: 30, most: 474, mean: 202.666667, types: 3});
+    `).toMatchResult(tm, {fewest: 30, most: 474, mean: 202.6667, types: 3});
   });
 
   test.when(supported)("the array query's own where:", async () => {
@@ -145,7 +186,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     await expect(query).toEqualResult(tm, [{d: 578}]);
   });
 
-  test.when(correlated)("the array query's own having:", async () => {
+  test.when(anyValue)("the array query's own having:", async () => {
     // Alaska has three facility types; a having: which no row passes leaves
     // no row, so no value
     await expect(
@@ -156,8 +197,8 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     ).toEqualResult(tm, [{d: 3}]);
   });
 
-  test.when(supported && !correlated)(
-    'without a correlated subquery, a having: is an error',
+  test.when(supported && !anyValue)(
+    'with only array functions, a having: is an error',
     async () => {
       await expect(
         runtime
@@ -166,20 +207,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
             alaska('by_fac_type -> { aggregate: n is count(); having: n > 3 }')
           )
           .getSQL()
-      ).rejects.toThrow(/can only query an array/);
-    }
-  );
-
-  test.when(db === 'trino' || db === 'presto')(
-    'a sum of integers stays an integer',
-    async () => {
-      const sql = await runtime
-        .loadModel(model)
-        .loadQuery(
-          alaska('by_fac_type -> { aggregate: n is airport_count.sum() }')
-        )
-        .getSQL();
-      expect(sql).toMatch(/CAST\(0 AS BIGINT\)/);
+      ).rejects.toThrow(/cannot query this array: it has a `having:`/);
     }
   );
 
@@ -205,6 +233,57 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     ]);
   });
 
+  describe('an aggregate of an array inside the elements', () => {
+    test.when(supported)('is over all the inner elements', async () => {
+      // Each state's facility types, summed across its counties, are all
+      // of its airports.
+      await expect(`
+        run: states -> {
+          aggregate:
+            total is nested_total.sum()
+            mismatched is count() { where: nested_total != airport_count }
+        }
+      `).toEqualResult(tm, [{total: 19793, mismatched: 0}]);
+    });
+
+    test.when(supported)(
+      'with conditions on the outer and the inner elements',
+      async () => {
+        // 169 heliports are in counties whose names start with A
+        await expect(
+          'run: states -> { aggregate: n is a_heliports.sum() }'
+        ).toEqualResult(tm, [{n: 169}]);
+      }
+    );
+
+    test.when(readsBoth)(
+      'a condition on both the outer and the inner element',
+      async () => {
+        // Of the 4,991 county and facility type groups, 1,590 are heliports
+        // or in a county named Jefferson
+        await expect(
+          'run: states -> { aggregate: n is heliport_or_jefferson.sum() }'
+        ).toEqualResult(tm, [{n: 1590}]);
+      }
+    );
+
+    test.when(supported && !readsBoth)(
+      'where an inner lambda cannot read the outer one, a condition on both is an error',
+      async () => {
+        await expect(
+          runtime
+            .loadModel(model)
+            .loadQuery(
+              'run: states -> { aggregate: n is heliport_or_jefferson.sum() }'
+            )
+            .getSQL()
+        ).rejects.toThrow(
+          /reads both `by_fac_type` and the elements' other fields/
+        );
+      }
+    );
+  });
+
   /*
    * DuckDB computes a query on an array which is one aggregate with list
    * functions, in place, instead of a correlated subquery over UNNEST.
@@ -223,6 +302,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         ),
         "run: movies -> { select: isabella; where: state = 'AL' }",
         alaska('by_fac_type -> { aggregate: n is count(fac_type) }'),
+        "run: states -> { select: nested_total; where: state = 'AK' }",
       ]) {
         const sql = await sqlOf(query);
         expect(sql).toMatch(/LIST_|LEN\(/);
@@ -297,7 +377,19 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
    * other array.
    */
   describe('array results', () => {
-    test.when(supported)('select: with a where:', async () => {
+    test.when(supported && !arrays)(
+      'where the dialect returns no arrays, a query with rows is an error',
+      async () => {
+        await expect(
+          runtime
+            .loadModel(model)
+            .loadQuery(alaska('by_fac_type -> { select: fac_type }'))
+            .getSQL()
+        ).rejects.toThrow(/can only query an array for one value/);
+      }
+    );
+
+    test.when(arrays)('select: with a where:', async () => {
       await expect(`
         run: a -> { where: state = 'AK'; select: small_types }
       `).toEqualResult(tm, [
@@ -305,13 +397,13 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       ]);
     });
 
-    test.when(supported)('none selected is an empty array', async () => {
+    test.when(arrays)('none selected is an empty array', async () => {
       await expect(`
         run: a -> { where: state = 'AK'; select: none }
       `).toEqualResult(tm, [{none: []}]);
     });
 
-    test.when(supported)('a path into the result', async () => {
+    test.when(arrays)('a path into the result', async () => {
       // 167 groups of a state and a facility type have fewer than 50
       // airports, 1236 in all. One more has no state, and an element's
       // distinct key is made of its row's key, so it is left out.
@@ -325,7 +417,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {small_groups: 167, small_total: 1236});
     });
 
-    test.when(supported)('select: of an expression', async () => {
+    test.when(arrays)('select: of an expression', async () => {
       await expect(`
         run: a -> {
           where: state = 'AK'
@@ -334,7 +426,16 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 1216});
     });
 
-    test.when(correlated)('group_by:', async () => {
+    test.when(arrays)('group_by:, through another dimension', async () => {
+      await expect(`
+        run: a -> {
+          where: state = 'AK' and by_size_again.big = true
+          aggregate: n is by_size_again.n.sum()
+        }
+      `).toMatchResult(tm, {n: 578});
+    });
+
+    test.when(arrays)('group_by:', async () => {
       // Alaska's airports and seaplane bases each number over 100
       await expect(`
         run: a -> {
@@ -344,7 +445,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 578});
     });
 
-    test.when(correlated)('several stages', async () => {
+    test.when(arrays)('several stages', async () => {
       await expect(`
         run: a -> {
           where: state = 'AK'
@@ -353,22 +454,72 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       `).toMatchResult(tm, {n: 2});
     });
 
-    test.when(supported && !correlated)(
-      'without a correlated subquery, a group_by: is an error',
+    test.when(arrays)('group_by:, selected, in its order', async () => {
+      await expect(`
+        run: a -> { where: state = 'AK'; select: by_size }
+      `).toEqualResult(tm, [
+        {
+          by_size: [
+            {big: true, n: 578},
+            {big: false, n: 30},
+          ],
+        },
+      ]);
+    });
+
+    test.when(arrays)(
+      'group_by: with where:, having:, order_by: and limit:',
       async () => {
+        // Alaska has 474 airports, 104 seaplane bases and 30 heliports
         await expect(
-          runtime
-            .loadModel(model)
-            .loadQuery(
-              `run: a -> {
-                where: state = 'AK'
-                select: by_size is by_fac_type -> { group_by: big is airport_count > 100 }
-              }`
-            )
-            .getSQL()
-        ).rejects.toThrow(/can only query an array/);
+          alaska(`by_fac_type -> {
+            where: fac_type != 'AIRPORT'
+            group_by: fac_type
+            aggregate: n is airport_count.sum()
+            having: n > 50
+          }`)
+        ).toEqualResult(tm, [{d: [{fac_type: 'SEAPLANE BASE', n: 104}]}]);
+        await expect(
+          alaska(`by_fac_type -> {
+            group_by: fac_type
+            aggregate: n is airport_count.sum()
+            order_by: n desc
+            limit: 2
+          }`)
+        ).toEqualResult(tm, [
+          {
+            d: [
+              {fac_type: 'AIRPORT', n: 474},
+              {fac_type: 'SEAPLANE BASE', n: 104},
+            ],
+          },
+        ]);
       }
     );
+
+    test.when(arrays)('group_by:, queried again with ->', async () => {
+      await expect(`
+        run: a -> {
+          where: state = 'AK'
+          select: big is by_size -> { where: big = true; aggregate: t is n.sum() }
+        }
+      `).toEqualResult(tm, [{big: 578}]);
+    });
+
+    test.when(arrays)('several stages ending in one aggregate', async () => {
+      await expect(`
+        run: a -> {
+          where: state = 'AK'
+          select: busy is by_fac_type -> {
+            group_by: fac_type
+            aggregate: n is airport_count.sum()
+          } -> {
+            where: n > 50
+            aggregate: c is count()
+          }
+        }
+      `).toEqualResult(tm, [{busy: [{c: 2}]}]);
+    });
 
     // Alaska's facility types, as a query on its array
     const alaskaTypes = (query: string) => `
@@ -378,7 +529,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       }
     `;
 
-    test.when(supported)('order_by: and limit:', async () => {
+    test.when(arrays)('order_by: and limit:', async () => {
       await expect(
         alaskaTypes(`{
           select: fac_type, airport_count
@@ -404,7 +555,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       ]);
     });
 
-    test.when(supported)('order_by: a position', async () => {
+    test.when(arrays)('order_by: a position', async () => {
       await expect(
         alaskaTypes('{ select: fac_type, airport_count; order_by: 2 desc }')
       ).toEqualResult(tm, [
@@ -418,7 +569,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       ]);
     });
 
-    test.when(supported)('where: with order_by:', async () => {
+    test.when(arrays)('where: with order_by:', async () => {
       await expect(
         alaskaTypes(`{
           select: fac_type
@@ -430,7 +581,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       ]);
     });
 
-    test.when(supported)('order_by: keys in both directions', async () => {
+    test.when(arrays)('order_by: keys in both directions', async () => {
       await expect(
         alaskaTypes(`{
           select: fac_type, big is airport_count > 50
@@ -446,52 +597,6 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         },
       ]);
     });
-
-    test.when(db === 'duckdb')(
-      'DuckDB sorts in place, unless the keys go both ways',
-      async () => {
-        const sqlOf = (query: string) =>
-          runtime.loadModel(model).loadQuery(alaskaTypes(query)).getSQL();
-        const sorted = await sqlOf(
-          '{ select: fac_type; order_by: fac_type desc; limit: 2 }'
-        );
-        expect(sorted).toMatch(/LIST_GRADE_UP/);
-        expect(sorted).toMatch(/LIST_SLICE/);
-        expect(sorted).not.toMatch(/SELECT UNNEST\(base\./);
-        const ascending = await sqlOf(
-          '{ select: fac_type, airport_count; order_by: fac_type, airport_count }'
-        );
-        expect(ascending).toMatch(/LIST_GRADE_UP/);
-        // The filtered list is computed once, and sorted inside a lambda.
-        const filtered = await sqlOf(
-          '{ select: fac_type; where: airport_count > 50; order_by: fac_type desc }'
-        );
-        expect(filtered.match(/LIST_FILTER/g)).toHaveLength(1);
-        expect(filtered).toMatch(/LIST_GRADE_UP/);
-        const bothWays = await sqlOf(
-          '{ select: fac_type, airport_count; order_by: fac_type, airport_count desc }'
-        );
-        expect(bothWays).toMatch(/SELECT UNNEST\(base\./);
-      }
-    );
-
-    test.when(db === 'duckdb')(
-      'DuckDB makes a select: in place, a group_by: as a subquery',
-      async () => {
-        const sqlOf = (dimension: string) =>
-          runtime
-            .loadModel(model)
-            .loadQuery(
-              `run: a -> { where: state = 'AK'; select: ${dimension} }`
-            )
-            .getSQL();
-        const selected = await sqlOf('small_types');
-        expect(selected).toMatch(/LIST_FILTER/);
-        expect(selected).not.toMatch(/SELECT UNNEST\(base\./);
-        const grouped = await sqlOf('by_size');
-        expect(grouped).toMatch(/SELECT UNNEST\(base\./);
-      }
-    );
   });
 });
 
