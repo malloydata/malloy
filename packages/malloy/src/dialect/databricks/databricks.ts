@@ -400,10 +400,11 @@ export class DatabricksDialect extends Dialect {
 
   private readonly lambdaArrays: LambdaArrayDialect = {
     // size() of a null array is -1 or null, depending on the session's
-    // legacy setting, so the empty count is written out.
-    size: a => `CASE WHEN ${a} IS NULL THEN 0 ELSE size(${a}) END`,
-    sum: (a, zero, acc, v) =>
-      `aggregate(${a}, ${zero}, (${acc}, ${v}) -> ${acc} + ${v})`,
+    // legacy setting, so a null array is made empty first.
+    size: a => `size(COALESCE(${a}, array()))`,
+    reduce: (a, init, acc, v, step, finish) =>
+      `aggregate(${a}, ${init}, (${acc}, ${v}) -> ${step}, ${acc} -> ${finish})`,
+    sumCount: (s, n) => `named_struct('s', ${s}, 'n', ${n})`,
     record: fields => this.buildNamedStructExpression(fields),
     emptyArray: 'array()',
   };

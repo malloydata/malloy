@@ -292,8 +292,9 @@ export class TrinoDialect extends PostgresBase {
   }
   private readonly lambdaArrays: LambdaArrayDialect = {
     size: a => `COALESCE(cardinality(${a}), 0)`,
-    sum: (a, zero, acc, v) =>
-      `reduce(${a}, ${zero}, (${acc}, ${v}) -> ${acc} + ${v}, ${acc} -> ${acc})`,
+    reduce: (a, init, acc, v, step, finish) =>
+      `reduce(${a}, ${init}, (${acc}, ${v}) -> ${step}, ${acc} -> ${finish})`,
+    sumCount: (s, n) => `CAST(ROW(${s}, ${n}) AS ROW(s DOUBLE, n BIGINT))`,
     record: fields =>
       `CAST(ROW(${fields.map(f => f.sqlExpression).join(', ')}) AS ROW(${this.buildTypeExpression(fields)}))`,
     emptyArray: 'ARRAY[]',

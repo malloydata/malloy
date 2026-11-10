@@ -14,17 +14,35 @@ import type {ArrayAggregate, ArraySelect, DialectFieldList} from './dialect';
 export interface LambdaArrayDialect {
   /** The number of elements of `array`, 0 for a null array. */
   size(array: string): string;
-  /** `array`'s elements added to `zero`, with `acc` and `v` as names. */
-  sum(array: string, zero: string, acc: string, v: string): string;
+  /**
+   * A fold of `array` from `init`: `step` is the next state from the state
+   * `acc` and the element `v`, and `finish` the result from the last state,
+   * null for a null array.
+   */
+  reduce(
+    array: string,
+    init: string,
+    acc: string,
+    v: string,
+    step: string,
+    finish: string
+  ): string;
+  /**
+   * A record of a DOUBLE sum and a BIGINT count, read as `.s` and `.n`: the
+   * state of an average.
+   */
+  sumCount(s: string, n: string): string;
   /** A record of `fields`, each valued by its `sqlExpression`. */
   record(fields: DialectFieldList): string;
   /** An empty array, which a null array becomes. */
   emptyArray: string;
 }
 
-// array_max and array_min are null if any element is, on Trino, so null
-// values are filtered out before any aggregate, as an aggregate ignores
-// them.
+// An aggregate ignores null values. A sum or average skips them as it
+// folds, in one pass, so the array, which for an array inside the elements
+// is the whole flattened expression, is written once. array_max and
+// array_min are null if any element is, on Trino, so null values are
+// filtered out before those, and before counting distinct values.
 export function lambdaArrayAggregate(
   {
     source,
@@ -70,6 +88,8 @@ export function lambdaArrayAggregate(
   const v = `${element}_value`;
   const acc = `${element}_acc`;
   const nonNull = `filter(${values}, ${v} -> ${v} IS NOT NULL)`;
+  const skipNull = (next: string) =>
+    `CASE WHEN ${v} IS NULL THEN ${acc} ELSE ${next} END`;
   switch (func) {
     case 'count':
       return d.size(elements);
@@ -83,10 +103,25 @@ export function lambdaArrayAggregate(
         (resultType.numberType === 'integer' ||
           resultType.numberType === 'bigint');
       const zero = `CAST(0 AS ${integral ? 'BIGINT' : 'DOUBLE'})`;
-      return `COALESCE(${d.sum(nonNull, zero, acc, v)}, 0)`;
+      const sum = d.reduce(
+        values,
+        zero,
+        acc,
+        v,
+        skipNull(`${acc} + ${v}`),
+        acc
+      );
+      return `COALESCE(${sum}, 0)`;
     }
     case 'avg':
-      return `${d.sum(nonNull, 'CAST(0 AS DOUBLE)', acc, v)} / NULLIF(${d.size(nonNull)}, 0)`;
+      return d.reduce(
+        values,
+        d.sumCount('CAST(0 AS DOUBLE)', 'CAST(0 AS BIGINT)'),
+        acc,
+        v,
+        skipNull(d.sumCount(`${acc}.s + ${v}`, `${acc}.n + 1`)),
+        `${acc}.s / NULLIF(${acc}.n, 0)`
+      );
     case 'min':
       return `array_min(${nonNull})`;
     case 'max':
