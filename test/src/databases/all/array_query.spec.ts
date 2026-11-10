@@ -22,8 +22,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
   // A value which array functions cannot compute, such as one with a
   // `having:`, is a correlated subquery where the dialect has one: it
   // computes values that way, or it returns arrays.
-  const anyValue =
-    support !== undefined && (support.value === 'subquery' || support.arrays);
+  const anyValue = runtime.dialect.arrayQueryHasSubquery();
   // In place, one condition on both an element and an array inside it
   // needs a lambda inside a lambda which reads the outer one's parameter.
   const readsBoth =
@@ -178,6 +177,20 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       }
     `).toMatchResult(tm, {fewest: 30, most: 474, mean: 202.6667, types: 3});
   });
+
+  // A fold's state has one type; a sum of integers must not be a DOUBLE.
+  test.when(support?.value === 'lambdas')(
+    'a sum of integers is not folded as a DOUBLE',
+    async () => {
+      const sql = await runtime
+        .loadModel(model)
+        .loadQuery(
+          alaska('by_fac_type -> { aggregate: n is airport_count.sum() }')
+        )
+        .getSQL();
+      expect(sql).not.toMatch(/0 AS DOUBLE\)|0::DOUBLE/i);
+    }
+  );
 
   test.when(supported)("the array query's own where:", async () => {
     const query = alaska(

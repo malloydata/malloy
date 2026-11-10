@@ -2662,7 +2662,6 @@ export class QueryQuery extends QueryField {
         array: inner.arraySQL,
         element: inner.struct.getIdentifier(),
         filter: and(innerConditions),
-        readsOuter,
       },
     };
   }
@@ -2894,9 +2893,9 @@ export class QueryQuery extends QueryField {
     if (returnsValue && support?.value === 'lambdas') {
       const inPlace = this.arrayAggregateSQL(array, arraySQL, pipeline);
       if (typeof inPlace === 'string') return inPlace;
-      // A dialect which returns arrays has the correlated subquery to fall
-      // back on; the translator has refused what no route can take.
-      if (!support.arrays) {
+      // A dialect with a correlated subquery falls back on it; the
+      // translator has refused what no route can take.
+      if (!dialect.arrayQueryHasSubquery()) {
         throw new MalloyCompileError(
           `The ${dialect.name} dialect cannot query this array: ${inPlace?.why ?? 'it is not one aggregate'}`,
           'array-query-not-in-place',

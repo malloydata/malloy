@@ -374,8 +374,16 @@ export class SnowflakeDialect extends Dialect {
         return `COALESCE(ARRAY_SIZE(${elements}), 0)`;
       case 'distinct':
         return `COALESCE(ARRAY_SIZE(ARRAY_DISTINCT(${values})), 0)`;
-      case 'sum':
-        return `COALESCE(REDUCE(${nonNull}, 0::DOUBLE, (${acc}, ${element}) -> ${acc} + (${value})), 0)`;
+      case 'sum': {
+        // A fold's state has one type: a sum of integers is a NUMBER, so
+        // that it stays exact, and any other sum a DOUBLE.
+        const integral =
+          resultType?.type === 'number' &&
+          (resultType.numberType === 'integer' ||
+            resultType.numberType === 'bigint');
+        const type = integral ? 'NUMBER(38, 0)' : 'DOUBLE';
+        return `COALESCE(REDUCE(${nonNull}, 0::${type}, (${acc}, ${element}) -> ${acc} + (${value})::${type}), 0)`;
+      }
       case 'avg': {
         const state = (s: string, n: string) =>
           `OBJECT_CONSTRUCT('s', ${s}, 'n', ${n})`;

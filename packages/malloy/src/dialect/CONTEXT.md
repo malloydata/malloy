@@ -109,13 +109,13 @@ Tests:
 
 `array -> { ... }` (experimental) runs a query on the elements of an array of the current row. A dialect declares how in `arrayQueries` (`ArrayQuerySupport`, in `dialect.ts`); undefined means the translator refuses the arrow. It has two forms:
 
-- **One value**: one stage of `aggregate:` with one field (`arrayQueryReturnsValue`), on every dialect with `arrayQueries`. Where `value` is `'lambdas'` it is computed in place by `sqlArrayAggregate`; the lambda dialects other than DuckDB and Snowflake share `array_lambdas.ts`. An aggregate of an array inside the elements (`tags.count()` on `items`) is computed in place too: the compiler reads the inner array through a lambda element of its own (`ArrayAggregate.nested`), and conditions which read it go in a lambda inside the lambda (`flattenNested`). Where `innerLambdaReadsOuter` is false (Snowflake), one condition or value which reads both an element and the inner array is refused. Where `value` is `'subquery'` it is a correlated subquery over the elements: `sqlUnnestPipelineHead` with `isScalarArray` is its FROM, read `AS base`.
+- **One value**: one stage of `aggregate:` with one field (`arrayQueryReturnsValue`), on every dialect with `arrayQueries`. Where `value` is `'lambdas'` it is computed in place by `sqlArrayAggregate`; Trino, Presto and Databricks share `array_lambdas.ts`, and DuckDB uses its `flattenNested`. An aggregate of an array inside the elements (`tags.count()` on `items`) is computed in place too: the compiler reads the inner array through a lambda element of its own (`ArrayAggregate.nested`), and conditions which read it go in a lambda inside the lambda (`flattenNested`). Where `innerLambdaReadsOuter` is false (Snowflake), one condition or value which reads both an element and the inner array is refused. Where `value` is `'subquery'` it is a correlated subquery over the elements: `sqlUnnestPipelineHead` with `isScalarArray` is its FROM, read `AS base`.
 - **An array**: any other query returns its rows as an array of records, only where `arrays` is true, and always as a correlated subquery, whose rows `sqlCreateFunctionCombineLastStage` collects in the stage's order.
 
 The rule is enforced in two places:
 
 - the translator (`ExprArrayQuery`) refuses an array where `arrays` is false, and, where array functions are the only route, a value which is not one aggregate or has a `having:` (`arrayValueNotOneAggregate`);
-- the compiler (`QueryQuery.arrayQuerySQL`) computes a value in place where it can. One which reads something other than an element's own fields is a correlated subquery where the dialect returns arrays, and otherwise a compile error naming what it reads.
+- the compiler (`QueryQuery.arrayQuerySQL`) computes a value in place where it can. One which reads something other than an element's own fields is a correlated subquery where the dialect has one (`Dialect.arrayQueryHasSubquery`: it computes values that way, or returns arrays), and otherwise a compile error naming what it reads.
 
 A correlated subquery's head may be wrapped to add a distinct key (`QueryQuery.generateSQLJoins`), so a dialect whose fields of a nest source read `base` itself must read a named column instead: Postgres's heads all make a JSONB column `value`.
 
@@ -123,7 +123,7 @@ A correlated subquery's head may be wrapped to add a distinct key (`QueryQuery.g
 |---|---|---|---|
 | DuckDB | lambdas | yes | A correlated subquery over `UNNEST` is a full join, so list functions come first |
 | BigQuery | subquery | yes | |
-| Postgres | subquery | no | No list lambdas |
+| Postgres | subquery | no | No list lambdas. Its subquery could return arrays; it does not, to keep arrays to two dialects |
 | MySQL | subquery | no | No lambdas; a table function's argument cannot reference an outer table from inside a subquery, so an array a subquery made could only be selected |
 | Trino | lambdas | no | Its optimizer rewrites only a plain grouping's correlated subquery as a join |
 | Presto | lambdas | no | No correlated subquery over an array |

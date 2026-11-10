@@ -62,7 +62,7 @@ export type ArrayQuerySupport =
        * Whether a lambda inside a lambda can read the outer one's
        * parameter, which an aggregate of an array inside the elements needs
        * when one condition, or its value, reads both an element and the
-       * inner array (`NestedArrayAggregate.readsOuter`).
+       * inner array.
        */
       innerLambdaReadsOuter: boolean;
       arrays: boolean;
@@ -100,14 +100,13 @@ export interface ArrayAggregate {
  * the outer element, and chooses the elements whose arrays are taken;
  * `filter` chooses among the inner elements, and `value` is of an inner
  * element. Both name an inner element `element`, and they may read the
- * outer element too, which `readsOuter` says.
+ * outer element too, where `innerLambdaReadsOuter` allows it.
  */
 export interface NestedArrayAggregate {
   /** The inner array, read from the outer element. */
   array: string;
   element: string;
   filter?: string;
-  readsOuter: boolean;
 }
 
 /**
@@ -677,6 +676,19 @@ export abstract class Dialect {
    * Experimental.
    */
   arrayQueries: ArrayQuerySupport | undefined = undefined;
+
+  /**
+   * Whether this dialect has a correlated subquery for a query on an array:
+   * it computes values that way, or it returns arrays, which are always
+   * one. A value which its array functions cannot compute is then that
+   * subquery.
+   */
+  arrayQueryHasSubquery(): boolean {
+    const support = this.arrayQueries;
+    return (
+      support !== undefined && (support.value === 'subquery' || support.arrays)
+    );
+  }
 
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 

@@ -113,11 +113,11 @@ export class ExprArrayQuery extends ExpressionDef {
           'The aggregate of a query on an array must be a value'
         );
       }
-      // Array functions take one aggregate; a dialect which also returns
-      // arrays runs anything else as its correlated subquery.
+      // Array functions take one aggregate; a dialect with a correlated
+      // subquery runs anything else as that.
       const notOneAggregate =
-        support?.value === 'lambdas' &&
-        !support.arrays &&
+        dialect !== undefined &&
+        !dialect.arrayQueryHasSubquery() &&
         isQuerySegment(segment)
           ? arrayValueNotOneAggregate(segment)
           : undefined;
