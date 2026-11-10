@@ -4,6 +4,11 @@ import type {Cell, RecordCell} from './cells';
 import type {DrillEntry, DrillValue} from './types';
 import type {ArrayField, RecordField} from './fields';
 
+function equalityToMalloy(expression: string, value: Cell): string {
+  if (value.isNull()) return `${expression} is null`;
+  return `${expression} = ${valueToMalloy(value)}`;
+}
+
 export function canDrill(cell: Cell): boolean {
   let current: Cell | undefined = cell;
   while (current) {
@@ -123,7 +128,7 @@ export function getDrillValues(cell: Cell): DrillValue[] {
         } else {
           const expression = dimension.drillExpression();
           newClauses.push({
-            where: `${expression} = ${valueToMalloy(dimensionCell)}`,
+            where: equalityToMalloy(expression, dimensionCell),
           });
         }
       }
@@ -138,8 +143,7 @@ export function getDrillExpressions(cell: Cell): string[] {
   const drillValues = getDrillValues(cell);
   return drillValues.map(drill => {
     if ('where' in drill) return drill.where;
-    const valueStr = valueToMalloy(drill.value);
-    return `${drill.field.drillExpression()} = ${valueStr}`;
+    return equalityToMalloy(drill.field.drillExpression(), drill.value);
   });
 }
 

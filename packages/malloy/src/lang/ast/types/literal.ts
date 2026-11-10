@@ -13,6 +13,7 @@ import {
   LiteralYear,
 } from '../expressions/time-literal';
 import {ExprNumber} from '../expressions/expr-number';
+import {ExprNULL} from '../expressions/expr-null';
 import type {ExpressionDef} from './expression-def';
 
 export type Literal =
@@ -23,7 +24,8 @@ export type Literal =
   | LiteralYear
   | ExprNumber
   | ExprString
-  | Boolean;
+  | Boolean
+  | ExprNULL;
 
 export function isLiteral(value: ExpressionDef) {
   return (
@@ -34,6 +36,7 @@ export function isLiteral(value: ExpressionDef) {
     value instanceof LiteralYear ||
     value instanceof ExprNumber ||
     value instanceof ExprString ||
-    value instanceof Boolean
+    value instanceof Boolean ||
+    value instanceof ExprNULL
   );
 }

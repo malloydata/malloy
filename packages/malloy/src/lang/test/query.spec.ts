@@ -1745,6 +1745,45 @@ describe('query:', () => {
       expect(f.length).toBe(1);
       expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
     });
+    test.each([
+      ['is null', 'by_ai.ai is null', []],
+      ['= null (deprecated)', 'by_ai.ai = null', ['sql-is-null']],
+    ])('drill a null value with %s', (_name, clause, warnings) => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill: ${clause}
+          group_by: astr
+        }
+      `);
+      expect(m.translate().modelDef).toBeDefined();
+      expect(m.problems().map(p => p.code)).toEqual(warnings);
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {is-null ai}}');
+      expect(f[0].stableFilter).toEqual({
+        kind: 'literal_equality',
+        expression: {kind: 'field_reference', name: 'ai', path: ['by_ai']},
+        value: {kind: 'null_literal'},
+      });
+    });
+    test('a where: is null filter has a stable form', () => {
+      const m = new TestTranslator(
+        'run: a -> { where: ai is null; select: * }'
+      );
+      expect(m).toTranslate();
+      const f = m.modelDef.queryList[0].pipeline[0].filterList!;
+      expect(f[0].stableFilter).toEqual({
+        kind: 'literal_equality',
+        expression: {kind: 'field_reference', name: 'ai', path: []},
+        value: {kind: 'null_literal'},
+      });
+    });
     test('do not double-collect view filters for multiple dimensions in the same nest', () => {
       const m = new TestTranslator(`
         source: aext is a extend {

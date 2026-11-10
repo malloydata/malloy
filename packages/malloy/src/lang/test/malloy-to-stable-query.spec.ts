@@ -501,6 +501,40 @@ describe('Malloy to Stable Query', () => {
         }
       );
     });
+    test('drill a null value', () => {
+      idempotent('run: a -> { drill: a.b is null }', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {kind: 'source_reference', name: 'a'},
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'drill',
+                  filter: {
+                    kind: 'literal_equality',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'b',
+                      path: ['a'],
+                    },
+                    value: {kind: 'null_literal'},
+                  },
+                },
+              ],
+            },
+          },
+        },
+        logs: [],
+      });
+    });
+    test('drill = null is written back as is null', () => {
+      simplified(
+        'run: a -> { drill: a.b = null }',
+        'run: a -> { drill: a.b is null }'
+      );
+    });
   });
   describe('filters', () => {
     test('where clause with one filter', () => {
