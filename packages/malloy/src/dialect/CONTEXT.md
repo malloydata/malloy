@@ -126,7 +126,7 @@ There are two routes:
 | DuckDB | yes, sorts | any | yes | A correlated subquery over `UNNEST` is a full join, so list functions come first; `LIST_GRADE_UP` sorts one key or all ascending, and declines the rest |
 | BigQuery | no | any | yes | |
 | Postgres | no | any | yes | No list lambdas |
-| Trino | yes, sorts | one grouping | yes | The optimizer rewrites only one plain grouping as a join; others fail with "Given correlated subquery is not supported" |
+| Trino | yes, sorts | one grouping | yes | The optimizer rewrites only a plain grouping as a join, with no WHERE, HAVING or LIMIT; others fail with "Given correlated subquery is not supported". So the compiler filters the array before the subquery (`sqlArrayFilter`) for a `where:`, and filters and slices its rows after (`sqlArraySelect`) for a `having:` on the query's own fields and a `limit:` (`QueryQuery.oneGrouping`) |
 | Presto | yes, sorts | none | n/a | Rejects a correlated subquery over an array |
 | Snowflake | yes, no sort | none | n/a | `ARRAY_SORT` takes no key; a correlated subquery over `FLATTEN` is "Unsupported subquery type" |
 | Databricks | yes, sorts | any | no | A correlated subquery cannot feed `EXPLODE` or a higher-order function |

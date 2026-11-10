@@ -55,6 +55,7 @@ import {
   isJoinedSource,
   isBasicArray,
   arrayQueryReturnsValue,
+  mkArrayDef,
   isIndexSegment,
   isBaseTable,
   expressionIsAnalytic,
@@ -3005,6 +3006,110 @@ export class QueryQuery extends QueryField {
   }
 
   /**
+   * One grouping, the only correlated subquery a dialect whose
+   * `ArrayQuerySupport.subquery` is 'one grouping' can run, has no WHERE,
+   * HAVING or LIMIT: its `where:` filters the array before it is unnested
+   * (`sqlArrayFilter`), and its `having:` and `limit:` are applied to the
+   * rows it makes (`sqlArraySelect`), which are in its order. The
+   * translator has allowed only a `having:` on the query's own fields
+   * (`arrayQueryNotOneGrouping`).
+   */
+  private oneGrouping(
+    array: QueryStruct,
+    arraySQL: string,
+    pipeline: PipeSegment[]
+  ): {
+    source: string;
+    stages: PipeSegment[];
+    rows: ((made: string) => string) | undefined;
+  } {
+    const [segment] = pipeline;
+    if (segment?.type !== 'reduce') {
+      return {source: arraySQL, stages: pipeline, rows: undefined};
+    }
+    const dialect = this.parent.dialect;
+    const refuse = (what: string) =>
+      new MalloyCompileError(
+        `The ${dialect.name} dialect cannot group an array with ${what}`,
+        'array-query-not-in-place',
+        undefined
+      );
+    const filters = segment.filterList ?? [];
+    const where = filters.filter(f => expressionIsScalar(f.expressionType));
+    const having = filters.filter(f => !expressionIsScalar(f.expressionType));
+    let source = arraySQL;
+    if (where.length > 0) {
+      const inPlace = this.inPlaceElements(array, where, []);
+      const filtered =
+        inPlace?.filter &&
+        dialect.sqlArrayFilter(
+          arraySQL,
+          inPlace.element.getIdentifier(),
+          inPlace.filter
+        );
+      if (!filtered) {
+        throw refuse("a `where:` on anything but its elements' own fields");
+      }
+      source = filtered;
+    }
+    // A query which returns one value has no `having:`, and a `limit:` of
+    // one row or more does not change it.
+    const limit = arrayQueryReturnsValue(pipeline) ? undefined : segment.limit;
+    const stage: QuerySegment = {...segment, filterList: []};
+    if (limit !== undefined) delete stage.limit;
+    if (having.length === 0 && limit === undefined) {
+      return {source, stages: [stage], rows: undefined};
+    }
+    const rows = (made: string) => {
+      const outputs = segment.outputStruct.fields;
+      const madeArray = new QueryStruct(
+        mkArrayDef({type: 'record', fields: outputs}, 'rows'),
+        undefined,
+        {struct: array.parent ?? array},
+        array.prepareResultOptions
+      );
+      const row = this.arrayElementStruct(madeArray);
+      if (row === undefined) throw refuse('a `having:` or `limit:`');
+      const fields: DialectFieldList = [];
+      for (const output of outputs) {
+        if (!isAtomic(output)) throw refuse('a `having:` or `limit:`');
+        fields.push({
+          rawName: output.name,
+          sqlExpression: exprToSQL(this.rootResult, row, {
+            node: 'field',
+            path: [output.name],
+          }),
+          typeDef: TD.atomicDef(output),
+        });
+      }
+      // A `having:` names the query's fields as its output; here they are
+      // the fields of a row.
+      const filter = having
+        .map(h =>
+          exprToSQL(
+            this.rootResult,
+            row,
+            JSON.parse(JSON.stringify(h.e), (_k, v) =>
+              v?.node === 'outputField' ? {node: 'field', path: [v.name]} : v
+            )
+          )
+        )
+        .join(' AND ');
+      const selected = dialect.sqlArraySelect({
+        source: made,
+        element: row.getIdentifier(),
+        fields,
+        filter: filter || undefined,
+        orderBy: [],
+        limit,
+      });
+      if (selected === undefined) throw refuse('a `having:` or `limit:`');
+      return selected;
+    };
+    return {source, stages: [stage], rows};
+  }
+
+  /**
    * SQL for `array -> { ... }`: computed in place by the dialect where it
    * can be, and otherwise the pipeline compiled as a query whose source is
    * the row's array, `arraySQL`, written as a correlated subquery. This is
@@ -3042,12 +3147,16 @@ export class QueryQuery extends QueryField {
         undefined
       );
     }
+    const {source, stages, rows} =
+      dialect.arrayQueries?.subquery === 'one grouping'
+        ? this.oneGrouping(array, arraySQL, pipeline)
+        : {source: arraySQL, stages: pipeline, rows: undefined};
     const elements: NestSourceDef = {
       type: 'nest_source',
       name: '~array~',
       pipeSQL: dialect.sqlUnnestPipelineHead(
         false,
-        arraySQL,
+        source,
         getDialectFieldList(array.structDef, dialect),
         isBasicArray(array.structDef)
       ),
@@ -3066,7 +3175,7 @@ export class QueryQuery extends QueryField {
       this.stageWriter
     );
     const query = QueryQuery.makeQuery(
-      {type: 'turtle', name: '~array_query~', pipeline},
+      {type: 'turtle', name: '~array_query~', pipeline: stages},
       qs,
       stageWriter,
       this.isJoinedSubquery,
@@ -3074,9 +3183,10 @@ export class QueryQuery extends QueryField {
     );
     const {outputStruct} = query.generateSQLFromPipeline(stageWriter);
     if (!returnsValue) {
-      return dialect.sqlArrayOrEmpty(
+      const made = dialect.sqlArrayOrEmpty(
         `(${stageWriter.generateCoorelatedSubQuery(dialect, outputStruct)})`
       );
+      return rows ? rows(made) : made;
     }
     const [result] = outputStruct.fields;
     if (result === undefined) {

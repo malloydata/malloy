@@ -481,6 +481,38 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       ]);
     });
 
+    // Where the subquery is one grouping, the `where:` filters the array
+    // before it, and the `having:` and `limit:` are applied to its rows.
+    test.when(correlated)(
+      'group_by: with where:, having:, order_by: and limit:',
+      async () => {
+        // Alaska has 474 airports, 104 seaplane bases and 30 heliports
+        await expect(
+          alaska(`by_fac_type -> {
+            where: fac_type != 'AIRPORT'
+            group_by: fac_type
+            aggregate: n is airport_count.sum()
+            having: n > 50
+          }`)
+        ).toEqualResult(tm, [{d: [{fac_type: 'SEAPLANE BASE', n: 104}]}]);
+        await expect(
+          alaska(`by_fac_type -> {
+            group_by: fac_type
+            aggregate: n is airport_count.sum()
+            order_by: n desc
+            limit: 2
+          }`)
+        ).toEqualResult(tm, [
+          {
+            d: [
+              {fac_type: 'AIRPORT', n: 474},
+              {fac_type: 'SEAPLANE BASE', n: 104},
+            ],
+          },
+        ]);
+      }
+    );
+
     test.when(unnestsSubquery)('group_by:, queried again with ->', async () => {
       await expect(`
         run: a -> {
@@ -524,7 +556,10 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
             '{ group_by: fac_type; aggregate: n is airport_count.sum() } -> { select: fac_type }',
             /several stages/,
           ],
-          ['{ group_by: fac_type; limit: 1 }', /limit/],
+          [
+            '{ group_by: fac_type; aggregate: n is airport_count.sum(); having: count() > 1 }',
+            /having/,
+          ],
           [
             '{ group_by: fac_type; nest: t is { group_by: airport_count } }',
             /nest/,

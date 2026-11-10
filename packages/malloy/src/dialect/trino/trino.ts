@@ -304,6 +304,10 @@ export class TrinoDialect extends PostgresBase {
     return lambdaArrayAggregate(aggregate, this.lambdaArrays);
   }
 
+  sqlArrayFilter(source: string, element: string, filter: string): string {
+    return `filter(${source}, ${element} -> ${filter})`;
+  }
+
   sqlArraySelect(select: ArraySelect): string | undefined {
     return lambdaArraySelect(select, this.lambdaArrays);
   }

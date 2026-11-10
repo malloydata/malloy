@@ -489,9 +489,12 @@ export function arrayQueryOnlyAggregates(segment: QuerySegment): boolean {
 
 /**
  * What, in a query on an array, keeps it from being one grouping: one stage
- * of `group_by:` and `aggregate:` with no `having:`, `limit:`, `nest:` or
- * `calculate:`, the only correlated subquery some dialects can run
- * (`ArrayQuerySupport.subquery`); undefined if it is one.
+ * of `group_by:` and `aggregate:` with no `nest:` or `calculate:`, the only
+ * correlated subquery some dialects can run (`ArrayQuerySupport.subquery`);
+ * undefined if it is one. Its `where:`, `having:` and `limit:` are applied
+ * around the subquery, to the array and to the rows it makes
+ * (`QueryQuery.oneGrouping`), so a `having:` may name only the query's own
+ * fields, and a query which returns one value has none.
  */
 export function arrayQueryNotOneGrouping(
   pipeline: PipeSegment[]
@@ -501,12 +504,15 @@ export function arrayQueryNotOneGrouping(
   if (segment === undefined || segment.type !== 'reduce') {
     return 'this kind of query';
   }
-  if (
-    (segment.filterList ?? []).some(f => !expressionIsScalar(f.expressionType))
-  ) {
+  const having = (segment.filterList ?? []).filter(
+    f => !expressionIsScalar(f.expressionType)
+  );
+  if (having.length > 0 && arrayQueryReturnsValue(pipeline)) {
     return 'a `having:`';
   }
-  if (segment.limit !== undefined) return 'a `limit:`';
+  if (having.some(f => readsAnAggregate(f.e))) {
+    return 'a `having:` on an aggregate which is not one of its fields';
+  }
   for (const f of segment.queryFields) {
     if (f.type === 'turtle') return 'a `nest:`';
     if (f.type !== 'fieldref' && expressionIsAnalytic(f.expressionType)) {
@@ -514,6 +520,19 @@ export function arrayQueryNotOneGrouping(
     }
   }
   return undefined;
+}
+
+/** Whether `e` computes an aggregate of its own. */
+function readsAnAggregate(e: Expr): boolean {
+  if (e.node === 'aggregate') return true;
+  if (exprHasKids(e)) {
+    for (const kid of Object.values(e.kids)) {
+      for (const k of Array.isArray(kid) ? kid : [kid]) {
+        if (k !== null && readsAnAggregate(k)) return true;
+      }
+    }
+  }
+  return exprHasE(e) && readsAnAggregate(e.e);
 }
 
 /**

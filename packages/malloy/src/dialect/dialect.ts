@@ -65,8 +65,11 @@ export interface ArrayQuerySupport {
   /**
    * The correlated subquery the other shapes are written as, over the
    * array's elements (`sqlUnnestPipelineHead` with `isScalarArray`): any
-   * query, only one grouping (`arrayQueryNotOneGrouping`; Trino's optimizer
-   * rewrites only that as a join), or none.
+   * query, only one grouping, or none. Trino's optimizer rewrites only a
+   * plain grouping as a join, with no WHERE, HAVING or LIMIT, so for one
+   * grouping (`arrayQueryNotOneGrouping`) the compiler filters the array
+   * before the subquery (`sqlArrayFilter`), and filters and limits the rows
+   * after it (`sqlArraySelect`).
    */
   subquery: 'any' | 'one grouping' | 'none';
   /**
@@ -726,6 +729,20 @@ export abstract class Dialect {
    * elements, or a null array, it is an empty array.
    */
   sqlArraySelect(_select: ArraySelect): string | undefined {
+    return undefined;
+  }
+
+  /**
+   * The elements of the array `source` for which `filter` holds, `element`
+   * naming one, as `ArraySelect.element` does; undefined where the dialect
+   * cannot. Needed only where `ArrayQuerySupport.subquery` is
+   * 'one grouping'.
+   */
+  sqlArrayFilter(
+    _source: string,
+    _element: string,
+    _filter: string
+  ): string | undefined {
     return undefined;
   }
 
