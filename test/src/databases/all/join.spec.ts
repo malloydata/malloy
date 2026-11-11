@@ -228,6 +228,69 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   // that automatically works, but what is a problem is inferring the join tree
   // from the ordering of usages. Inverting the "on" comparison in this test
   // caused it to fail when the previous one passed.
+  // malloydata/malloy#1762: a join_many child is the leafiest join, so its
+  // count skips DISTINCT, but its rows come through a LEFT JOIN. A parent with
+  // no children yields one row of NULLs, which a count must not count.
+  describe('count() of a leafiest join_many child', () => {
+    const childCounts = `
+      source: models_with_aircraft is ${databaseName}.table('malloytest.aircraft_models') extend {
+        primary_key: aircraft_model_code
+        join_many: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
+          primary_key: tail_num
+          measure: aircraft_count is count()
+        } on aircraft.aircraft_model_code = aircraft_model_code
+      }
+    `;
+    const rowsOf = async (query: string) =>
+      (
+        await runtime.loadQuery(childCounts + query).run({rowLimit: 100})
+      ).data.toObject();
+
+    it('does not count a parent with no children', async () => {
+      const [row] = await rowsOf(`
+        run: models_with_aircraft -> {
+          aggregate:
+            child_count is aircraft.count()
+            declared_count is aircraft.aircraft_count
+            key_count is count(aircraft.tail_num)
+        }
+      `);
+      expect(row['child_count']).toBe(row['key_count']);
+      expect(row['declared_count']).toBe(row['key_count']);
+    });
+
+    it('gives a childless parent zero, per group and under a filter', async () => {
+      const rows = await rowsOf(`
+        run: models_with_aircraft -> {
+          group_by: manufacturer
+          order_by: manufacturer
+          limit: 100
+          aggregate:
+            child_count is aircraft.count()
+            filtered_count is aircraft.count() { where: aircraft.year_built > 0 }
+            key_count is count(aircraft.tail_num)
+            filtered_key_count is count(aircraft.tail_num) { where: aircraft.year_built > 0 }
+        }
+      `);
+      // Most manufacturers' models have no registered aircraft: the case under test.
+      expect(rows.some(r => r['key_count'] === 0)).toBe(true);
+      for (const r of rows) {
+        expect(r['child_count']).toBe(r['key_count']);
+        expect(r['filtered_count']).toBe(r['filtered_key_count']);
+      }
+    });
+
+    it('leaves the root source count unchanged', async () => {
+      const [joined] = await rowsOf(
+        'run: models_with_aircraft -> { aggregate: n is count(), c is aircraft.count() }'
+      );
+      const [alone] = await rowsOf(
+        'run: models_with_aircraft -> { aggregate: n is count() }'
+      );
+      expect(joined['n']).toBe(alone['n']);
+    });
+  });
+
   it('join issue440', async () => {
     await expect(`
       source: aircraft is ${databaseName}.table('malloytest.aircraft')

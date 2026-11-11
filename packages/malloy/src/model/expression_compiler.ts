@@ -1105,6 +1105,12 @@ export function generateCountFragment(
   if (!join.leafiest || join.makeUniqueKey) {
     func = 'COUNT(DISTINCT ';
     thing = getDistinctKeySQL(struct, resultSet);
+  } else if (join.parent !== undefined) {
+    // The leafiest joined source is not fanned out, so it needs no DISTINCT.
+    // But its rows come through a LEFT JOIN, where a parent with no match
+    // yields one row of NULLs that COUNT(1) would count (#1762). Its key is
+    // NULL there, so counting the key counts only the source's own rows.
+    thing = getDistinctKeySQL(struct, resultSet);
   }
 
   if (state.whereSQL) {
