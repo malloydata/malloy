@@ -867,6 +867,72 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `).toMatchResult(testModel, {grandchild_state: 'AL'});
       }
     );
+    // An array is a column of the join above it: the subquery packs that
+    // column, and the array is unnested outside the subquery from it.
+    describe('an array two levels below', () => {
+      const arrayChain = (filterTwo: string) => `
+        source: sf is ${databaseName}.table('malloytest.state_facts')
+        source: three is ${databaseName}.table('malloytest.airports') -> {
+          group_by: state
+          nest: types is { group_by: fac_type; aggregate: c is count() }
+        }
+        source: two is sf extend {
+          ${filterTwo}
+          join_one: three on three.state = state
+        }
+        source: one is sf extend {
+          where: state ~ 'A%'
+          join_one: two on two.state = state
+        }
+        source: zero is sf extend { join_one: one on one.state = state }
+      `;
+
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'read and aggregated',
+        async () => {
+          await expect(`
+            ${arrayChain('')}
+            run: zero -> {
+              group_by: s is one.two.three.state
+              aggregate:
+                n is one.two.three.types.count()
+                t is one.two.three.types.c.sum()
+              order_by: s
+              limit: 2
+            }
+          `).toMatchResult(
+            testModel,
+            {s: 'AK', n: 3, t: 608},
+            {s: 'AL', n: 5, t: 260}
+          );
+
+          await expect(`
+            ${arrayChain('')}
+            run: zero -> {
+              where: one.two.three.state = 'AK'
+              group_by: fac_type is one.two.three.types.fac_type
+              order_by: fac_type
+              limit: 1
+            }
+          `).toMatchResult(testModel, {fac_type: 'AIRPORT'});
+        }
+      );
+
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'below two filtered joins',
+        async () => {
+          await expect(`
+            ${arrayChain("where: state != 'AK'")}
+            run: zero -> {
+              group_by: s is one.two.three.state
+              aggregate: n is one.two.three.types.count()
+              order_by: s
+              limit: 1
+            }
+          `).toMatchResult(testModel, {s: 'AL', n: 5});
+        }
+      );
+    });
   });
 
   test('joined filtered explores with NO dependencies', async () => {

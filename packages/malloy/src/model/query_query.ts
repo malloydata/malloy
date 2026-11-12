@@ -221,6 +221,10 @@ function pushDialectField(dl: DialectFieldList, f: DialectFieldArg) {
 }
 
 /** Query builder object. */
+function isArrayJoin(ji: JoinInstance): boolean {
+  return ji.queryStruct.structDef.type === 'array';
+}
+
 export class QueryQuery extends QueryField {
   fieldDef: TurtleDef;
   firstSegment: PipeSegment;
@@ -1038,10 +1042,19 @@ export class QueryQuery extends QueryField {
     };
   }
 
+  /**
+   * `hoisted` is set while writing the joins inside a filtered join's
+   * subquery. An array beneath such a join is unnested outside the
+   * subquery, from the column the subquery projects, so it goes on that list
+   * instead of being written here: the unnest's element and row number are
+   * then plain columns of the outer query, as for any other array, rather
+   * than columns hidden inside the subquery.
+   */
   generateSQLJoinBlock(
     stageWriter: StageWriter,
     ji: JoinInstance,
-    depth: number
+    depth: number,
+    hoisted?: JoinInstance[]
   ): string {
     let s = '';
     const qs = ji.queryStruct;
@@ -1138,11 +1151,21 @@ export class QueryQuery extends QueryField {
           }
           const readFrom = from ?? (j.isSubquery() ? j.alias : undefined);
           for (const below of j.children) {
-            projectJoin(below, readFrom);
+            if (!isArrayJoin(below)) projectJoin(below, readFrom);
           }
         };
+        const arrays = hoisted ?? [];
         for (const childJoin of ji.children) {
-          joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
+          if (isArrayJoin(childJoin)) {
+            arrays.push(childJoin);
+            continue;
+          }
+          joins += this.generateSQLJoinBlock(
+            stageWriter,
+            childJoin,
+            depth + 1,
+            arrays
+          );
           projectJoin(childJoin, undefined);
         }
         select += `\nFROM ${structSQL} AS ${
@@ -1151,6 +1174,12 @@ export class QueryQuery extends QueryField {
         s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
           ji.alias
         }\n  ON ${onCondition}\n`;
+        // A subquery inside another leaves its arrays to the outermost one.
+        if (hoisted === undefined) {
+          for (const arrayJoin of arrays) {
+            s += this.generateSQLJoinBlock(stageWriter, arrayJoin, depth + 1);
+          }
+        }
         return s;
       }
     } else if (qsDef.type === 'array') {
@@ -1197,7 +1226,16 @@ export class QueryQuery extends QueryField {
       throw new Error(`Join type not implemented ${qs.structDef.type}`);
     }
     for (const childJoin of ji.children) {
-      s += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
+      if (hoisted !== undefined && isArrayJoin(childJoin)) {
+        hoisted.push(childJoin);
+      } else {
+        s += this.generateSQLJoinBlock(
+          stageWriter,
+          childJoin,
+          depth + 1,
+          hoisted
+        );
+      }
     }
     return s;
   }
@@ -1205,8 +1243,8 @@ export class QueryQuery extends QueryField {
   /**
    * Which column of which join a reference needs, or undefined when it needs
    * none.  Walking `path` from `from`, the answer is the member of the
-   * innermost join along it -- a record is kept whole, since a reference into
-   * one is a reference to the column holding it.
+   * innermost join along it -- a record or an array is kept whole, since a
+   * reference into one is a reference to the column holding it.
    *
    * Two kinds of path need no column.  One ending at a computed field
    * contributes that field's name, which is no column of the source; the
@@ -1236,7 +1274,12 @@ export class QueryQuery extends QueryField {
         break;
       }
       struct = child.queryStruct;
-      if (struct.getJoinableParent() === struct) {
+      // A record or an array is a column of the join above it: an array is
+      // unnested from that column, so it is packed like a record.
+      const isJoin =
+        struct.structDef.type !== 'array' &&
+        struct.getJoinableParent() === struct;
+      if (isJoin) {
         // A join: what the path named above it says nothing about what this
         // one has to pack.
         alias = struct.getIdentifier();
