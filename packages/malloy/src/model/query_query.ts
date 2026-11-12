@@ -69,6 +69,7 @@ import {
   exprWalk,
 } from './utils';
 import type {JoinInstance} from './join_instance';
+import {PACKED_ROW_ID, arraysReadBy} from './join_instance';
 import {
   QueryStruct,
   isBasicAggregate,
@@ -243,18 +244,18 @@ function isArrayJoin(ji: JoinInstance): boolean {
 }
 
 /**
- * Where an array beneath a filtered join's subquery is unnested: outside
+ * Where an array beneath a join's subquery is unnested: outside
  * the subquery, from the column the subquery packs, or inside it, when the
  * subquery reads the array itself. See `placeArraysBeneathSubqueries`.
  */
 type ArrayPlacement = 'inside' | 'outside';
 
 /**
- * The placement of every array beneath a filtered join's subquery. An array
- * which the subquery reads in its own `where:`, or in the `on` or `where:`
- * of a join inside it, is unnested inside, since the filter applies there;
- * any other is unnested outside, where its element and row number are
- * columns of the outer query like any other array's. An array inside an
+ * The placement of every array beneath a join's subquery. An array which the
+ * subquery reads in its own `on` or `where:`, or in the `on` or `where:` of
+ * a join inside it, is unnested inside, since the condition is applied
+ * there; any other is unnested outside, where its element and row number
+ * are columns of the outer query like any other array's. An array inside an
  * array is unnested with it.
  */
 function placeArraysBeneathSubqueries(
@@ -281,46 +282,36 @@ function placeArraysBeneathSubqueries(
 }
 
 /**
- * The aliases of the arrays a filtered join's subquery reads itself: in its
- * own `where:`, and in the `on` or `where:` of a join inside it, directly or
- * through a computed field.
+ * The aliases of the arrays a join's subquery reads itself: in its own `on`
+ * or `where:`, and in the `on` or `where:` of a join inside it, directly or
+ * through a computed field. The subquery's own `on` is written outside it,
+ * but an array it reads through is unnested inside, since outside the
+ * subquery the `on` comes before anything joined after it.
  */
 function arrayAliasesReadIn(ji: JoinInstance): Set<string> {
   const found = new Set<string>();
+  // A read of the whole array, as an array query makes, reads a column of
+  // the join above it, which the subquery has whether or not it unnests the
+  // array.
   const readFrom = (e: Expr, from: QueryStruct) => {
-    for (const node of exprWalk(e)) {
-      if (node.node !== 'field') continue;
-      let struct = from;
-      for (const name of node.path) {
-        const child = struct.getChildByName(name);
-        if (child instanceof QueryFieldStruct) {
-          struct = child.queryStruct;
-          if (struct.structDef.type === 'array') {
-            found.add(struct.getIdentifier());
-          }
-        } else {
-          if (child !== undefined && hasExpression(child.fieldDef)) {
-            readFrom(child.fieldDef.e, child.parent);
-          }
-          break;
-        }
-      }
+    for (const {array, through} of arraysReadBy(e, from)) {
+      if (through) found.add(array.getIdentifier());
     }
   };
-  const visit = (j: JoinInstance, isTop: boolean) => {
+  const visit = (j: JoinInstance) => {
     const qs = j.queryStruct;
     for (const f of j.joinFilterConditions ?? []) {
       if (f.fieldDef.e) readFrom(f.fieldDef.e, qs);
     }
     const sd = qs.structDef;
-    if (!isTop && isJoinedSource(sd) && sd.onExpression && qs.parent) {
+    if (isJoinedSource(sd) && sd.onExpression && qs.parent) {
       readFrom(sd.onExpression, qs.parent);
     }
     for (const below of j.children) {
-      if (!isArrayJoin(below)) visit(below, false);
+      if (!isArrayJoin(below)) visit(below);
     }
   };
-  visit(ji, true);
+  visit(ji);
   return found;
 }
 
@@ -728,6 +719,12 @@ export class QueryQuery extends QueryField {
 
       // Calculate symmetric aggregates based on the joins
       this.rootResult.calculateSymmetricAggregates();
+
+      // The join tree is complete, so every array beneath a subquery can be
+      // placed, which says where its row number is read.
+      for (const ji of this.rootResult.joins.values()) {
+        ji.placedInSubquery = this.arrayPlacement(ji) === 'inside';
+      }
 
       this.prepared = true;
     }
@@ -1145,7 +1142,7 @@ export class QueryQuery extends QueryField {
   }
 
   /**
-   * `unnestAfter` is set while writing the joins inside a filtered join's
+   * `unnestAfter` is set while writing the joins inside a join's
    * subquery: the arrays placed outside it (`arrayPlacement`) are collected
    * there instead of being written, and the outermost subquery writes them
    * after itself.
@@ -1239,15 +1236,11 @@ export class QueryQuery extends QueryField {
         // whole subtree into columns, so everything under it is read from that
         // child rather than packed a second time.
         const projectJoin = (j: JoinInstance, from: string | undefined) => {
-          const fieldList = this.joinProjectionFieldList(j);
-          if (fieldList.length > 0) {
+          for (const [column, sql] of this.joinProjection(j)) {
             select +=
               from === undefined
-                ? `, ${this.parent.dialect.sqlSelectAliasAsStruct(
-                    j.alias,
-                    fieldList
-                  )} AS ${j.alias}`
-                : `, ${from}.${j.alias} AS ${j.alias}`;
+                ? `, ${sql} AS ${column}`
+                : `, ${from}.${column} AS ${column}`;
           }
           const readFrom = from ?? (j.isSubquery() ? j.alias : undefined);
           for (const below of j.children) {
@@ -1270,9 +1263,12 @@ export class QueryQuery extends QueryField {
           );
           projectJoin(childJoin, undefined);
         }
-        select += `\nFROM ${structSQL} AS ${
-          ji.alias
-        }\n${joins}\nWHERE ${conditions?.join(' AND ')}\n`;
+        // Each join block ends its own line, so the WHERE, when there is
+        // one, starts a line of its own after them.
+        select += `\nFROM ${structSQL} AS ${ji.alias}\n${joins}`;
+        if (conditions !== undefined && conditions.length > 0) {
+          select += `WHERE ${conditions.join(' AND ')}\n`;
+        }
         s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
           ji.alias
         }\n  ON ${onCondition}\n`;
@@ -1343,7 +1339,7 @@ export class QueryQuery extends QueryField {
   }
 
   /**
-   * Where an array beneath a filtered join's subquery is unnested; undefined
+   * Where an array beneath a join's subquery is unnested; undefined
    * for any other join. Decided once for the query's join tree.
    */
   private arrayPlacement(ji: JoinInstance): ArrayPlacement | undefined {
@@ -1400,11 +1396,15 @@ export class QueryQuery extends QueryField {
         break;
       }
       struct = child.queryStruct;
-      // A record or an array is a column of the join above it: an array is
-      // unnested from that column, so it is packed like a record.
+      // A record or an array is a column of the join above it: an array
+      // unnested outside the subquery is unnested from that column, so it is
+      // packed like a record. One placed inside is packed as a join of its
+      // own, whose element the subquery carries out.
       const packsOwnColumns =
-        struct.structDef.type !== 'array' &&
-        struct.getJoinableParent() === struct;
+        struct.structDef.type === 'array'
+          ? this.rootResult.joins.get(struct.getIdentifier())
+              ?.placedInSubquery === true
+          : struct.getJoinableParent() === struct;
       if (packsOwnColumns) {
         // A join: what the path named above it says nothing about what this
         // one has to pack.
@@ -1414,7 +1414,13 @@ export class QueryQuery extends QueryField {
         column ??= name;
       }
     }
-    return column === undefined ? undefined : [alias, column];
+    if (column === undefined) return undefined;
+    // An array of scalars has one column, `value`; its `each` is computed
+    // from it, and nothing else names `value` on the computation's behalf.
+    if (isBasicArray(struct.structDef) && alias === struct.getIdentifier()) {
+      column = 'value';
+    }
+    return [alias, column];
   }
 
   /**
@@ -1470,30 +1476,67 @@ export class QueryQuery extends QueryField {
     return this.packedColumns;
   }
 
-  // What a join contributes to the SELECT of a filtered join's subquery: every
-  // column named outside the subquery, and the generated __distinct_key when
-  // the join needed one. A field is packed under the column it reads, which
-  // is how references outside the subquery name it; a `rename:` leaves that
-  // different from the name the query knows the field by.
-  private joinProjectionFieldList(ji: JoinInstance): DialectFieldList {
+  /**
+   * The columns a join below a subquery adds to the subquery's SELECT, as
+   * `[column, sql]` pairs, empty when nothing outside reads the join.
+   *
+   * A join is carried out as one struct column under its own alias, holding
+   * every column named outside the subquery, and what its distinct key is
+   * made of when it needs one: a source's generated `__distinct_key`, or an
+   * unnest's row number. A dialect which names an unnested scalar by its
+   * alias alone gets the bare value under the alias instead, with the row
+   * number in a column beside it (`JoinInstance.packsAsValue`).
+   *
+   * A field is packed under the column it reads, which is how references
+   * outside the subquery name it; a `rename:` leaves that different from the
+   * name the query knows the field by.
+   */
+  private joinProjection(ji: JoinInstance): [string, string][] {
     const packed = this.packedColumnsByJoin().get(ji.alias);
-    const dialect = ji.queryStruct.dialect;
-    const fieldList: DialectFieldList = ji.queryStruct.structDef.fields
+    const qs = ji.queryStruct;
+    const dialect = qs.dialect;
+    const carriesRowId = isArrayJoin(ji) && ji.makeUniqueKey;
+    if (ji.packsAsValue()) {
+      const columns: [string, string][] = [];
+      if (packed?.has('value')) {
+        columns.push([ji.alias, qs.sqlSimpleChildReference('value')]);
+      }
+      if (carriesRowId) {
+        columns.push([
+          dialect.sqlQuoteIdentifier(ji.packedRowIdColumn()),
+          ji.innerRowIdSQL(),
+        ]);
+      }
+      return columns;
+    }
+    const fieldList: DialectFieldList = qs.structDef.fields
       .filter(fieldIsIntrinsic)
       .filter(f => packed?.has(activeName(f)))
       .map(f => ({
         typeDef: f,
-        sqlExpression: dialect.sqlQuoteIdentifier(f.name),
+        sqlExpression: qs.sqlSimpleChildReference(f.name),
         rawName: f.name,
       }));
-    if (ji.makeUniqueKey) {
+    if (carriesRowId) {
+      fieldList.push({
+        typeDef: {type: 'number', numberType: 'bigint'},
+        sqlExpression: ji.innerRowIdSQL(),
+        rawName: PACKED_ROW_ID,
+      });
+    } else if (ji.makeUniqueKey) {
       fieldList.push({
         typeDef: {type: 'string'},
-        sqlExpression: dialect.sqlQuoteIdentifier('__distinct_key'),
+        sqlExpression: dialect.sqlFieldReference(
+          ji.alias,
+          'table',
+          '__distinct_key',
+          'string'
+        ),
         rawName: '__distinct_key',
       });
     }
-    return fieldList;
+    if (fieldList.length === 0) return [];
+    return [[ji.alias, dialect.sqlSelectAliasAsStruct(ji.alias, fieldList)]];
   }
 
   // BigQuery has wildcard psudo columns that are treated differently
@@ -1567,7 +1610,7 @@ export class QueryQuery extends QueryField {
   /**
    * Collect all array joins from the join tree in depth-first order.
    * This ordering ensures parent arrays are ordered before child arrays.
-   * An array placed inside a filtered join's subquery (`arrayPlacement`),
+   * An array placed inside a join's subquery (`arrayPlacement`),
    * with the arrays inside it, is out of reach of the outer query, so it is
    * left out.
    */

@@ -140,22 +140,12 @@ export class FieldInstanceField implements FieldInstance {
         const parentKeySQL = keyField.generateExpression();
         return this.f.parent.dialect.sqlMakeUnnestKey(
           parentKeySQL,
-          this.f.parent.dialect.sqlFieldReference(
-            this.f.parent.getIdentifier(),
-            'table',
-            '__row_id',
-            'string'
-          )
+          unnestRowIdSQL(this.parent, this.f.parent)
         );
       }
       return this.f.parent.dialect.sqlMakeUnnestKey(
         '',
-        this.f.parent.dialect.sqlFieldReference(
-          this.f.parent.getIdentifier(),
-          'table',
-          '__row_id',
-          'string'
-        )
+        unnestRowIdSQL(this.parent, this.f.parent)
       );
     } else {
       return this.f.parent.dialect.sqlFieldReference(
@@ -706,6 +696,29 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
       }
     }
   }
+}
+
+/**
+ * An unnest's row number as this query reads it: from what a subquery
+ * carried out, when the unnest is placed inside one, or where the unnest is
+ * written (`JoinInstance.rowIdSQL`). An unnest which is no join of this
+ * query, as an array an aggregate reads in place has none, is read where
+ * it is.
+ */
+export function unnestRowIdSQL(
+  resultSet: FieldInstanceResult,
+  unnest: QueryStruct
+): string {
+  const join = resultSet.root().joins.get(unnest.getIdentifier());
+  return (
+    join?.rowIdSQL() ??
+    unnest.dialect.sqlFieldReference(
+      unnest.getIdentifier(),
+      'table',
+      '__row_id',
+      'string'
+    )
+  );
 }
 
 export function sqlFullChildReference(

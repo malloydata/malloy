@@ -340,11 +340,11 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   sqlSelectAliasAsStruct(
-    alias: string,
+    _alias: string,
     dialectFieldList: DialectFieldList
   ): string {
     return `STRUCT_PACK(${dialectFieldList
-      .map(d => `${alias}.${this.sqlQuoteIdentifier(d.rawName)}`)
+      .map(d => `${this.sqlQuoteIdentifier(d.rawName)} := ${d.sqlExpression}`)
       .join(', ')})`;
   }
 

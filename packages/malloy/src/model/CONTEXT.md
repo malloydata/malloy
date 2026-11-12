@@ -215,8 +215,8 @@ four expanded fields below; how it does both is in `lang/CONTEXT.md`,
 the compiler reads: what an entry means, what a path is rooted at, and what the
 two readers do with it. The expanded summary is the single source of truth for
 "what does this query touch"; the compiler never walks expressions to find out,
-with one exception: which arrays a filtered join's subquery reads itself (see
-"Arrays beneath a filtered join"), which no segment's summary records.
+with one exception: which arrays a join's subquery reads itself (see
+"Joins written as subqueries"), which no segment's summary records.
 
 ### Field usage entries
 
@@ -308,9 +308,10 @@ from `prepare()`, builds the join tree and decides what each join needs:
 It reads no field names — each entry collapses to which join it is and whether
 that join needs a key. `QueryQuery.packedColumnsByJoin` is the reader that does
 use the names: it resolves each path to the column the innermost join on it has
-to supply, which is how a filtered join's subquery knows what to pack for each
-join below it. An array on a path is a column of the join above it, as a record
-is, so a path through an array, weak or not, needs the array itself.
+to supply, which is how a join's subquery knows what to pack for each join
+below it. An array on a path is a column of the join above it, as a record
+is, so a path through an array, weak or not, needs the array itself, unless
+the array is unnested inside the subquery (below).
 
 **What the compiler reaches for that no entry names** is a join's declared
 `primary_key`. It is the distinct key for a symmetric aggregate over that join
@@ -338,26 +339,64 @@ cross between the two. `addDependantPath` crosses one way with
 of it, and because a record or an array on the path is a column of the join
 above it rather than a join of its own.
 
-### Arrays beneath a filtered join
+### Joins written as subqueries
 
-A join with a `where:` (on a dialect with `supportsComplexFilteredSources`) is
-written as a subquery, and every join beneath it is packed into a struct
-column of that subquery. An array beneath it is unnested **outside** the
-subquery, from the packed column of the join above it, so its element and row
-number are columns of the outer query like any other array's. The exception is
-an array the subquery reads itself, in the filtered join's own `where:` or in
-the `on` or `where:` of a join inside it: that array, and any array inside it,
-is unnested **inside**, since the filter applies there, and the outer query
-cannot reach it.
+A join is written as a subquery, its own joins inside it, when
+`JoinInstance.isSubquery()` holds. Two kinds of join need that, on a dialect
+with `supportsComplexFilteredSources`:
 
-The placement is decided once per query (`placeArraysBeneathSubqueries`,
-read through `QueryQuery.arrayPlacement`), and three places must agree with
-it: `generateSQLJoinBlock` writes each array where it is placed;
-`packedColumnFor` packs the array's column into the join above it; and
-`collectArrayJoins` leaves arrays placed inside out of a `select:` query's
-ordering by row number. Which arrays a subquery reads is found by walking the
-filter and `on` expressions (`arrayAliasesReadIn`), since no reference summary
-records them per join.
+- **a filtered join**, a source with a `where:`, whose filter applies before
+  the join, not to the joined rows;
+- **a join whose `on` reads through an array inside it**,
+  `join_many: orders on product_id = orders.items.product_id`
+  (`JoinInstance.onReadsNested`). The unnest of `items` is written after the
+  join's ON, so outside a subquery the ON would name an alias which does not
+  exist yet. An `on` which reads the whole array, as an array query
+  (`orders.items -> { ... }`) does, needs no unnest and no subquery.
+
+Every join beneath a subquery is packed into a struct column of it
+(`QueryQuery.joinProjection`), under its own alias, so that outside the
+subquery a reference such as `customers_0."name"` reads the same text it read
+inside. `sqlSelectAliasAsStruct` writes each field from its own expression
+under its own name.
+
+**Where an array beneath a subquery is unnested.** An array is unnested
+**outside** the subquery, from the packed column of the join above it, so its
+element and row number are columns of the outer query like any other
+array's. The exception is an array the subquery reads itself, in its own `on`
+or `where:` or in the `on` or `where:` of a join inside it: that array, and any
+array inside it, is unnested **inside**, since the condition is applied there.
+The subquery's own `on` is written outside it, but what it reads has to have
+been unnested before it.
+
+The placement is decided once per query (`placeArraysBeneathSubqueries`, read
+through `QueryQuery.arrayPlacement`) and recorded on each join as
+`JoinInstance.placedInSubquery` at the end of `prepare()`. Four places must
+agree with it: `generateSQLJoinBlock` writes each array where it is placed;
+`packedColumnFor` packs an array placed outside as a column of the join above
+it, and one placed inside as a join of its own; `collectArrayJoins` leaves
+arrays placed inside out of a `select:` query's ordering by row number; and
+`JoinInstance.rowIdSQL` reads the row number. Which arrays a subquery reads
+is found by walking its filter and `on` expressions (`arraysReadBy`), since no
+reference summary records them per join.
+
+**An array placed inside** is carried out of the subquery as a struct of its
+element's fields under its alias. Two things are not fields of the element
+and are carried explicitly:
+
+- **its row number**, which its distinct key is made of, packed as
+  `__packed_row_id`, because each dialect names the row number its own way
+  where the unnest is written (`_outer.__row_id` on DuckDB,
+  `__row_id_from_<alias>` on Trino). `JoinInstance.rowIdSQL()` is where every
+  reference to an unnest's row number is written, placed inside or not.
+- **a scalar on DuckDB**: DuckDB names an unnested scalar by the unnest's
+  alias alone, so a struct under that alias would read as the wrong type. Such
+  an unnest is carried as the bare value under its alias, with its row number
+  in a column beside it (`JoinInstance.packsAsValue()`).
+
+An unnest has a row where it has an element, so an aggregate at it tells its
+rows from unmatched ones by its row number, not by its distinct key, which is
+NULL wherever its parent's key is (`withSourceRowFilter`).
 
 `this.firstSegment` is set in the `QueryQuery` constructor, so
 `this.firstSegment.expandedFieldUsage` is in hand in any method of the class,

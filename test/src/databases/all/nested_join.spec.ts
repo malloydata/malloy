@@ -165,6 +165,30 @@ describe.each(runtimes.runtimeList)(
       ]);
     });
 
+    test.when(supported && runtime.dialect.arrayQueries !== undefined)(
+      'an array query reads the whole array the on clause unnests',
+      async () => {
+        // Through the join, `movies.genres` is unnested and the on clause
+        // keeps the one genre which matches. An array query reads the
+        // array itself, a column of the movie, so it sees both genres.
+        await expect(`
+        ##! experimental.array_queries
+        run: genre_list -> {
+          where: genre = 'Emma'
+          select:
+            movies.state
+            matching is movies.genres.each
+            genre_count is movies.genres -> { aggregate: n is count() }
+          order_by: state
+          limit: 2
+        }
+      `).toEqualResult(tm, [
+          {state: 'AL', matching: 'Emma', genre_count: 2},
+          {state: 'AR', matching: 'Emma', genre_count: 2},
+        ]);
+      }
+    );
+
     test.when(supported)(
       'a join on a plain column is not a subquery',
       async () => {

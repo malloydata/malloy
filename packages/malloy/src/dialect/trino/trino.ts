@@ -386,10 +386,8 @@ ${indent(sql)}
     return `SELECT ARRAY_AGG(CAST(ROW(${fields}) as ROW(${definitions}))${o}) FROM ${lastStageName}\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList): string {
-    const fields = fieldList
-      .map(f => `${alias}.${this.sqlQuoteIdentifier(f.rawName)}`)
-      .join(', ');
+  sqlSelectAliasAsStruct(_alias: string, fieldList: DialectFieldList): string {
+    const fields = fieldList.map(f => f.sqlExpression).join(', ');
     const definitions = this.buildTypeExpression(fieldList);
     return `CAST(ROW(${fields}) as ROW(${definitions}))`;
   }

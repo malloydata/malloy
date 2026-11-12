@@ -44,6 +44,7 @@ import {
 } from '@malloydata/malloy-filter';
 import {
   sqlFullChildReference,
+  unnestRowIdSQL,
   type FieldInstanceResult,
   type FieldInstanceField,
   type UngroupSet,
@@ -1276,12 +1277,7 @@ function generateDistinctKeySQL(
     }
     return parent.dialect.sqlMakeUnnestKey(
       parentKeySQL,
-      parent.dialect.sqlFieldReference(
-        parent.getIdentifier(),
-        'table',
-        '__row_id',
-        'string'
-      )
+      unnestRowIdSQL(resultSet, parent)
     );
   } else {
     return parent.dialect.sqlFieldReference(
@@ -1328,12 +1324,7 @@ function withSourceRowFilter(
   // whose key is NULL would make every one of its elements look unmatched.
   const rowKey =
     struct.structDef.type === 'array'
-      ? struct.dialect.sqlFieldReference(
-          struct.getIdentifier(),
-          'table',
-          '__row_id',
-          'string'
-        )
+      ? unnestRowIdSQL(resultSet, struct)
       : getDistinctKeySQL(struct, resultSet);
   const sourceRowExists = `${rowKey} IS NOT NULL`;
   return state.withWhere(
