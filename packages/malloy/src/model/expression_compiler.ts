@@ -61,6 +61,7 @@ import {
 } from './utils';
 import {QueryFieldStruct, isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
+import type {JoinInstance} from './join_instance';
 import type {Dialect, QueryInfo} from '../dialect';
 import {MalloyCompileError} from './malloy_compile_error';
 import {lookupGivenValue} from './given_binding';
@@ -525,14 +526,15 @@ function generateAsymmetricStringAggExpression(
   distinctKey: string,
   orderBy: FunctionOrderBy[] | undefined,
   dialectName: string,
-  state: GenerateState
+  state: GenerateState,
+  operandState: GenerateState
 ): string {
   if (orderBy) {
     throw new Error(
       `Function \`string_agg\` does not support fanning out with an order by in ${dialectName}`
     );
   }
-  const valueSQL = generateDimFragment(resultSet, context, value, state);
+  const valueSQL = generateDimFragment(resultSet, context, value, operandState);
   const separatorSQL = separator
     ? generateDimFragment(resultSet, context, separator, state)
     : '';
@@ -658,10 +660,14 @@ export function generateFunctionCallExpression(
   const overload = frag.overload;
   const args = frag.kids.args;
   const isSymmetric = frag.overload.isSymmetric ?? false;
+  const isAsymmetricAggregate =
+    expressionIsAggregate(overload.returnType.expressionType) && !isSymmetric;
   const distinctKey =
-    expressionIsAggregate(overload.returnType.expressionType) &&
-    !isSymmetric &&
+    isAsymmetricAggregate &&
     generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
+  const operandState = isAsymmetricAggregate
+    ? withSourceRowFilter(resultSet, context, frag.structPath, state)
+    : state;
   const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
   if (
     frag.name === 'string_agg' &&
@@ -677,7 +683,8 @@ export function generateFunctionCallExpression(
       distinctKey,
       frag.kids.orderBy,
       context.dialect.name,
-      state
+      state,
+      operandState
     );
   }
   if (distinctKey) {
@@ -687,7 +694,7 @@ export function generateFunctionCallExpression(
       );
     }
     const argsExpressions = args.map(arg => {
-      return generateDimFragment(resultSet, context, arg, state);
+      return generateDimFragment(resultSet, context, arg, operandState);
     });
     const orderBys = frag.kids.orderBy ?? [];
     const orderByExpressions = orderBys.map(ob => {
@@ -695,7 +702,7 @@ export function generateFunctionCallExpression(
         overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
       const expr =
         ob.node === 'functionOrderBy' ? ob.e : args[defaultOrderByArgIndex];
-      return generateDimFragment(resultSet, context, expr, state);
+      return generateDimFragment(resultSet, context, expr, operandState);
     });
     return context.dialect.sqlAggDistinct(
       distinctKey,
@@ -756,7 +763,7 @@ export function generateFunctionCallExpression(
           return param.allowedTypes.every(t => isLiteral(t.evalSpace))
             ? arg
             : composeSQLExpr([
-                generateDimFragment(resultSet, context, arg, state),
+                generateDimFragment(resultSet, context, arg, operandState),
               ]);
         })
       : args;
@@ -764,7 +771,7 @@ export function generateFunctionCallExpression(
       ? getFunctionOrderBy(
           resultSet,
           context,
-          state,
+          operandState,
           frag.kids.orderBy,
           args,
           overload
@@ -1018,7 +1025,12 @@ export function generateSumFragment(
   expr: AggregateExpr,
   state: GenerateState
 ): string {
-  const dimSQL = generateDimFragment(resultSet, context, expr.e, state);
+  const dimSQL = generateDimFragment(
+    resultSet,
+    context,
+    expr.e,
+    withSourceRowFilter(resultSet, context, expr.structPath, state)
+  );
   const distinctKeySQL = generateDistinctKeyIfNecessary(
     resultSet,
     context,
@@ -1055,7 +1067,12 @@ export function generateAvgFragment(
   expr: AggregateExpr,
   state: GenerateState
 ): string {
-  const dimSQL = generateDimFragment(resultSet, context, expr.e, state);
+  const dimSQL = generateDimFragment(
+    resultSet,
+    context,
+    expr.e,
+    withSourceRowFilter(resultSet, context, expr.structPath, state)
+  );
   const distinctKeySQL = generateDistinctKeyIfNecessary(
     resultSet,
     context,
@@ -1090,22 +1107,17 @@ export function generateCountFragment(
   expr: AggregateExpr,
   state: GenerateState
 ): string {
-  let func = 'COUNT(';
-  let thing = '1';
-
-  let struct = context;
-  if (expr.structPath) {
-    struct = context.getStructByName(expr.structPath);
-  }
-  const joinName = struct.getJoinableParent().getIdentifier();
-  const join = resultSet.root().joins.get(joinName);
-  if (!join) {
-    throw new Error(`Join ${joinName} not found in result set`);
-  }
-  if (!join.leafiest || join.makeUniqueKey) {
-    func = 'COUNT(DISTINCT ';
-    thing = getDistinctKeySQL(struct, resultSet);
-  }
+  const struct = expr.structPath
+    ? context.getStructByName(expr.structPath)
+    : context;
+  const join = joinOf(struct, resultSet);
+  const func = join.leafiest ? 'COUNT(' : 'COUNT(DISTINCT ';
+  // Counting the key counts only this source's own rows: the key is NULL on
+  // a row where the source is unmatched.
+  const thing =
+    !join.leafiest || join.canBeUnmatched
+      ? getDistinctKeySQL(struct, resultSet)
+      : '1';
 
   if (state.whereSQL) {
     return `${func}CASE WHEN ${state.whereSQL} THEN ${thing} END)`;
@@ -1277,14 +1289,38 @@ function generateDistinctKeySQL(
   }
 }
 
+function joinOf(qs: QueryStruct, resultSet: FieldInstanceResult): JoinInstance {
+  const joinName = qs.getJoinableParent().getIdentifier();
+  const join = resultSet.root().joins.get(joinName);
+  if (join) {
+    return join;
+  }
+  throw new Error(`Join ${joinName} not found in result set`);
+}
+
 function needsSymetricCalculation(
   qs: QueryStruct,
   resultSet: FieldInstanceResult
 ): boolean {
-  const joinName = qs.getJoinableParent().getIdentifier();
-  const join = resultSet.root().joins.get(joinName);
-  if (join) {
-    return !join.leafiest;
+  return !joinOf(qs, resultSet).leafiest;
+}
+
+// An aggregate computed at a source aggregates that source's rows. Where the
+// source is unmatched there is no such row, but an expression can still have
+// a value there (a constant, a `??`, a column of another source), so the
+// aggregate's operand is made NULL on those rows.
+function withSourceRowFilter(
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  structPath: string[] | undefined,
+  state: GenerateState
+): GenerateState {
+  const struct = structPath ? context.getStructByName(structPath) : context;
+  if (!joinOf(struct, resultSet).canBeUnmatched) {
+    return state;
   }
-  throw new Error(`Join ${joinName} not found in result set`);
+  const sourceRowExists = `${getDistinctKeySQL(struct, resultSet)} IS NOT NULL`;
+  return state.withWhere(
+    new AndChain(state.whereSQL).add(sourceRowExists).sql()
+  );
 }

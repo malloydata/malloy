@@ -313,7 +313,15 @@ the join above it.
 **What the compiler reaches for that no entry names** is a join's declared
 `primary_key`. It is the distinct key for a symmetric aggregate over that join
 (`generateDistinctKeyExpression`, `generateDistinctKeySQL`), so the SQL can read
-`two_0."ai"` with no expression in the query having named `ai`. When the key is
+`two_0."ai"` with no expression in the query having named `ai`. It is also how
+an aggregate tells a joined source's rows from the rows where that source is
+**unmatched** — the row of NULLs an outer join writes where nothing matched.
+An aggregate computed at a source aggregates that source's rows only, so
+`count()` counts the key and every other asymmetric aggregate makes its operand
+NULL where the key is NULL (`withSourceRowFilter` in `expression_compiler.ts`);
+a new aggregate path has to do the same. A joined source with no declared key
+gets a manufactured one (`JoinInstance.makeUniqueKey`) whenever an asymmetric
+aggregate is computed at it. When the key is
 a computed dimension the SQL reads not its name but the columns its expression
 reads, so anything deciding what a join must supply adds the primary key's own
 field usage, not the key's name.
