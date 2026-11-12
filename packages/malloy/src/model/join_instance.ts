@@ -15,6 +15,10 @@ export class JoinInstance {
   uniqueKeyRequirement?: UniqueKeyRequirement;
   makeUniqueKey = false;
   leafiest = false;
+  // The joined result can have rows with no row from this source, as an
+  // outer join writes where nothing matched. An inner join is not told
+  // apart, which costs it a key test that is always true.
+  canBeUnmatched = false;
   joinFilterConditions?: QueryFieldBoolean[];
   children: JoinInstance[] = [];
   constructor(

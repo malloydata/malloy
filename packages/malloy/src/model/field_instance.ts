@@ -668,26 +668,27 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
       }
     }
     // console.log(`LEAFIEST: ${leafiest}`);
+
+    // A right or full join writes unmatched rows for the sources before it,
+    // down to the query's own source.
+    const rootCanBeUnmatched = [...this.joins.values()].some(j =>
+      j.forceAllSymmetricCalculations()
+    );
     for (const [name, join] of this.joins) {
       join.leafiest = name === leafiest;
+      join.canBeUnmatched = join.parent !== undefined || rootCanBeUnmatched;
     }
 
     // figure out which joins we need to manufacture distinct keys for.
     //  Nested Unique keys are dependant on the primary key of the parent
     //  and the table.
     for (const [_name, join] of this.joins) {
-      // in a one_to_many join we need a key to count there may be a failed
-      //  match in a left join.
-      // users -> {
-      //   group_by: user_id
-      //   aggregate: order_count is orders.count()
+      // An asymmetric aggregate needs the key of its source when the source
+      //  is fanned out, to count each row once, and when the source can be
+      //  unmatched, to tell its rows from the unmatched ones.
       if (
-        // we have a leafiest count() joined subtree
-        (join.leafiest &&
-          join.parent !== undefined &&
-          join.uniqueKeyRequirement?.isCount) ||
-        // or not leafiest and we use an asymetric function
-        (!join.leafiest && join.uniqueKeyRequirement)
+        join.uniqueKeyRequirement &&
+        (!join.leafiest || join.canBeUnmatched)
       ) {
         let j: JoinInstance | undefined = join;
         while (j) {

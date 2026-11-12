@@ -6,7 +6,12 @@
 import {RuntimeList, allDatabases, testFileSpace} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel} from '@malloydata/malloy/test';
+import {
+  extendTestModel,
+  mkTestModel,
+  TV,
+  wrapTestModel,
+} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -349,5 +354,264 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       testFileSpace.deleteFile(baseURL);
       testFileSpace.deleteFile(userURL);
     }
+  });
+
+  // Carol is the customer no order matches: in the joined result she has one
+  // row, in which the order is all NULLs.
+  describe('aggregate at a joined source with an unmatched row', () => {
+    // float, because Databricks overflows on the fanned-out sum of a 32 bit
+    // integer column.
+    const num = TV.float;
+    const unmatched = extendTestModel(
+      mkTestModel(runtime, {
+        customers: [
+          {customer_id: 1, name: 'Alice', credit: num(100)},
+          {customer_id: 2, name: 'Bob', credit: num(400)},
+          {customer_id: 3, name: 'Carol', credit: num(5000)},
+        ],
+        order_rows: [
+          {order_id: 10, customer_id: 1, amount: num(5)},
+          {order_id: 11, customer_id: 1, amount: num(7)},
+          {order_id: 12, customer_id: 2, amount: num(11)},
+        ],
+        tags: [
+          {customer_id: 1, tag: 'a'},
+          {customer_id: 1, tag: 'b'},
+          {customer_id: 2, tag: 'c'},
+        ],
+        profiles: [
+          {customer_id: 1, score: num(7)},
+          {customer_id: 2, score: num(9)},
+        ],
+      }),
+      `
+        source: keyless_orders is order_rows extend {
+          measure:
+            order_count is count()
+            padded_total is sum((amount ?? 0) + 1)
+            tripled_avg is avg((amount ?? 0) * 3)
+        }
+        source: keyed_orders is keyless_orders extend { primary_key: order_id }
+        source: buyers is customers extend {
+          primary_key: customer_id
+          join_many: keyed is keyed_orders on keyed.customer_id = customer_id
+          join_many: keyless is keyless_orders on keyless.customer_id = customer_id
+          join_many: tags on tags.customer_id = customer_id
+          join_one: keyed_profile is profiles extend {
+            primary_key: customer_id
+          } on keyed_profile.customer_id = customer_id
+          join_one: keyless_profile is profiles
+            on keyless_profile.customer_id = customer_id
+        }
+      `
+    );
+
+    // A second join_many fans the orders out, which changes how every
+    // aggregate at the orders is written.
+    const shapes = [
+      {orders: 'keyed', fanOut: ''},
+      {orders: 'keyed', fanOut: 'tag_count is tags.count()'},
+      {orders: 'keyless', fanOut: ''},
+      {orders: 'keyless', fanOut: 'tag_count is tags.count()'},
+    ].map(s => ({...s, shape: `${s.orders}${s.fanOut ? ', fanned out' : ''}`}));
+
+    describe.each(shapes)('$shape', ({orders, fanOut}) => {
+      it('count, sum and avg skip the unmatched row', async () => {
+        await expect(`
+          run: buyers -> {
+            group_by: name
+            aggregate:
+              order_count is ${orders}.count()
+              big_credit_count is ${orders}.count() { where: credit > 100 }
+              credit_sum is ${orders}.sum(credit)
+              big_credit_sum is ${orders}.sum(credit) { where: credit > 100 }
+              credit_avg is ${orders}.avg(credit)
+              amount_plus_one is ${orders}.sum((${orders}.amount ?? 0) + 1)
+              amount_sum is ${orders}.amount.sum()
+              ${fanOut}
+            order_by: name
+          }
+        `).toMatchResult(
+          unmatched,
+          {
+            name: 'Alice',
+            order_count: 2,
+            big_credit_count: 0,
+            credit_sum: 200,
+            big_credit_sum: 0,
+            credit_avg: 100,
+            amount_plus_one: 14,
+            amount_sum: 12,
+          },
+          {
+            name: 'Bob',
+            order_count: 1,
+            big_credit_count: 1,
+            credit_sum: 400,
+            big_credit_sum: 400,
+            credit_avg: 400,
+            amount_plus_one: 12,
+            amount_sum: 11,
+          },
+          {
+            name: 'Carol',
+            order_count: 0,
+            big_credit_count: 0,
+            credit_sum: 0,
+            big_credit_sum: 0,
+            credit_avg: null,
+            amount_plus_one: 0,
+            amount_sum: 0,
+          }
+        );
+      });
+
+      it('a measure is the same through the join as on its own source', async () => {
+        const measures = ['order_count', 'padded_total', 'tripled_avg'];
+        const onItsOwn = await unmatched.model
+          .loadQuery(
+            `run: ${orders}_orders -> { aggregate: ${measures.join(', ')} }`
+          )
+          .run();
+        await expect(`
+          run: buyers -> {
+            aggregate:
+              ${measures.map(m => `${orders}.${m}`).join('\n')}
+              ${fanOut}
+          }
+        `).toMatchResult(unmatched, onItsOwn.data.toObject()[0]);
+      });
+
+      it('totals skip the unmatched row', async () => {
+        await expect(`
+          run: buyers -> {
+            aggregate:
+              order_count is ${orders}.count()
+              credit_sum is ${orders}.sum(credit)
+              credit_avg is ${orders}.avg(credit)
+              customer_count is count()
+              ${fanOut}
+          }
+        `).toMatchResult(unmatched, {
+          order_count: 3,
+          credit_sum: 600,
+          credit_avg: 200,
+          customer_count: 3,
+        });
+      });
+
+      const canStringAgg =
+        fanOut === '' ||
+        !['snowflake', 'mysql', 'sqlserver'].includes(databaseName);
+      it.when(canStringAgg)(
+        'an aggregate function skips the unmatched row',
+        async () => {
+          await expect(`
+            run: buyers -> {
+              group_by: name
+              aggregate:
+                name_chars is length(${orders}.string_agg(name, ',')) ?? 0
+                ${fanOut}
+              order_by: name
+            }
+          `).toMatchResult(
+            unmatched,
+            {name: 'Alice', name_chars: 11},
+            {name: 'Bob', name_chars: 3},
+            {name: 'Carol', name_chars: 0}
+          );
+        }
+      );
+    });
+
+    describe.each(['keyed_profile', 'keyless_profile'])(
+      'join_one %s',
+      profile => {
+        it('count, sum and avg skip the unmatched row', async () => {
+          await expect(`
+            run: buyers -> {
+              group_by: name
+              aggregate:
+                profile_count is ${profile}.count()
+                credit_sum is ${profile}.sum(credit)
+                credit_avg is ${profile}.avg(credit)
+                score_plus_one is ${profile}.sum((${profile}.score ?? 0) + 1)
+              order_by: name
+            }
+          `).toMatchResult(
+            unmatched,
+            {
+              name: 'Alice',
+              profile_count: 1,
+              credit_sum: 100,
+              credit_avg: 100,
+              score_plus_one: 8,
+            },
+            {
+              name: 'Bob',
+              profile_count: 1,
+              credit_sum: 400,
+              credit_avg: 400,
+              score_plus_one: 10,
+            },
+            {
+              name: 'Carol',
+              profile_count: 0,
+              credit_sum: 0,
+              credit_avg: null,
+              score_plus_one: 0,
+            }
+          );
+        });
+      }
+    );
+
+    // An empty array unnests to one unmatched row.
+    it.when(databaseName === 'duckdb')(
+      'an aggregate at an array skips an empty array',
+      async () => {
+        await expect(`
+          run: ${databaseName}.sql("""
+            SELECT 'Alice' as name, 100 as credit, [5, 7] as amounts
+            UNION ALL SELECT 'Carol', 5000, []::INTEGER[]
+          """) -> {
+            group_by: name
+            aggregate:
+              amount_count is amounts.count()
+              credit_sum is amounts.sum(credit)
+              credit_avg is amounts.avg(credit)
+            order_by: name
+          }
+        `).toMatchResult(
+          unmatched,
+          {name: 'Alice', amount_count: 2, credit_sum: 200, credit_avg: 100},
+          {name: 'Carol', amount_count: 0, credit_sum: 0, credit_avg: null}
+        );
+      }
+    );
+
+    // A right join leaves the query's own source unmatched: Carol's row has
+    // no order in it.
+    it('the query source skips its own unmatched row', async () => {
+      await expect(`
+        ##! experimental.join_types
+        run: keyed_orders -> {
+          extend: {
+            join_one: customers right on customers.customer_id = customer_id
+          }
+          group_by: customers.name
+          aggregate:
+            order_count is count()
+            ones is sum(1)
+            amount_avg is avg(amount ?? 0)
+          order_by: name
+        }
+      `).toMatchResult(
+        unmatched,
+        {name: 'Alice', order_count: 2, ones: 2, amount_avg: 6},
+        {name: 'Bob', order_count: 1, ones: 1, amount_avg: 11},
+        {name: 'Carol', order_count: 0, ones: 0, amount_avg: null}
+      );
+    });
   });
 });

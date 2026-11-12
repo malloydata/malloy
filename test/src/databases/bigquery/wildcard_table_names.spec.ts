@@ -90,7 +90,7 @@ describe('Wildcard BigQuery Tables', () => {
         {state: 'OK', aircraft_count: 1},
         {state: 'OR', aircraft_count: 2},
         {state: 'TX', aircraft_count: 1},
-        {state: null, aircraft_count: 43},
+        {state: null, aircraft_count: 0},
       ]);
     }
   });
@@ -123,7 +123,7 @@ describe('Wildcard BigQuery Tables', () => {
         {state: 'LA', aircraft_count: 1},
         {state: 'OK', aircraft_count: 1},
         {state: 'OR', aircraft_count: 1},
-        {state: null, aircraft_count: 47},
+        {state: null, aircraft_count: 0},
       ]);
     }
   });
@@ -180,7 +180,7 @@ describe('Wildcard BigQuery Tables', () => {
         .run();
       expect(result.data.value).toStrictEqual([
         {_TABLE_SUFFIX: '02', aircraft_count: 4},
-        {_TABLE_SUFFIX: null, aircraft_count: 47},
+        {_TABLE_SUFFIX: null, aircraft_count: 0},
       ]);
     }
   });
