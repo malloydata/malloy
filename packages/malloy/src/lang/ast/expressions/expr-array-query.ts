@@ -29,7 +29,8 @@ import {StaticSourceSpace} from '../field-space/static-space';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
-import type {FieldSpace} from '../types/field-space';
+import type {FieldName, FieldSpace} from '../types/field-space';
+import type {LookupError} from '../types/lookup-result';
 import {ExpressionDef} from '../types/expression-def';
 import type {View} from '../view-elements/view';
 import type {ExprIdReference} from './expr-id-reference';
@@ -64,8 +65,18 @@ export class ExprArrayQuery extends ExpressionDef {
         `The ${dialect.name} dialect cannot query an array with ->`
       );
     }
-    const arrayValue = this.array.getExpression(fs);
-    const entry = this.array.fieldReference.getField(fs).found;
+    const lookup = this.array.fieldReference.getField(fs);
+    if (lookup.found === undefined) {
+      // Reports that the name is not defined, once.
+      return this.array.getExpression(fs);
+    }
+    if (lookup.isOutputField) {
+      return this.loggedErrorExpr(
+        'array-query-not-array',
+        `'${this.array.refString}' is an output field of this query; only an array of the source can be queried with ->`
+      );
+    }
+    const entry = lookup.found;
     const arrayDef =
       entry instanceof StructSpaceFieldBase ? entry.fieldDef() : undefined;
     if (arrayDef?.type !== 'array') {
@@ -74,6 +85,7 @@ export class ExprArrayQuery extends ExpressionDef {
         `'${this.array.refString}' is not an array; only an array can be queried with ->`
       );
     }
+    const arrayValue = this.array.getExpression(fs);
     const elements: NestSourceDef = {
       type: 'nest_source',
       name: arrayDef.name,
@@ -83,7 +95,7 @@ export class ExprArrayQuery extends ExpressionDef {
       dialect: fs.dialectName(),
     };
     const {pipeline: written, outputStruct} = this.view.pipelineComp(
-      new StaticSourceSpace(elements, 'public')
+      new ArrayElementSpace(elements, fs, this.array.refString)
     );
     // Each stage's usage is expanded, as a query's are, so that the query
     // on the elements knows which joins of its own (an array inside the
@@ -110,9 +122,10 @@ export class ExprArrayQuery extends ExpressionDef {
     const [segment, ...moreSegments] = pipeline;
     if (arrayQueryReturnsValue(pipeline) && result !== undefined) {
       if (!TD.isAtomic(result)) {
+        // An aggregate is always a value; reaching here is a bug.
         return this.loggedErrorExpr(
           'array-query-not-scalar',
-          'The aggregate of a query on an array must be a value'
+          `Internal error, likely a compiler bug: the aggregate \`${result.name}\` of a query on an array is a ${result.type}, not a value`
         );
       }
       // Array functions take one aggregate; a dialect with a correlated
@@ -165,6 +178,42 @@ export class ExprArrayQuery extends ExpressionDef {
       },
       from,
     });
+  }
+}
+
+/**
+ * The source of a query on an array: the fields of its elements. A name
+ * that is not one of them but is a field or parameter of the row is
+ * reported as such, since the query after `->` sees only the elements.
+ */
+class ArrayElementSpace extends StaticSourceSpace {
+  constructor(
+    elements: NestSourceDef,
+    private readonly row: FieldSpace,
+    private readonly arrayName: string
+  ) {
+    super(elements, 'public');
+  }
+
+  explainMissing(path: FieldName[]): LookupError | undefined {
+    const [head] = path;
+    if (head === undefined || this.entry(head.refString) !== undefined) {
+      return undefined;
+    }
+    const outer = this.row.lookup([head]);
+    if (outer.found === undefined) return undefined;
+    const what =
+      outer.found.refType === 'parameter'
+        ? 'a parameter of the source'
+        : 'a field of the row';
+    return {
+      error: {
+        message: `'${head.refString}' is ${what}; the query after '${this.arrayName} ->' sees only the fields of its elements`,
+        code: 'field-not-found',
+        at: head,
+      },
+      found: undefined,
+    };
   }
 }
 

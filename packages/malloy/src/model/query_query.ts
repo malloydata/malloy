@@ -12,6 +12,7 @@ import type {
 } from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
+  DocumentLocation,
   Expr,
   FilterCondition,
   TurtleDef,
@@ -251,8 +252,8 @@ export class QueryQuery extends QueryField {
     super(fieldDef, parent);
     this.fieldDef = fieldDef;
     this.rootResult = new FieldInstanceResultRoot(fieldDef);
-    this.rootResult.compileArrayQuery = (array, arraySQL, pipeline) =>
-      this.arrayQuerySQL(array, arraySQL, pipeline);
+    this.rootResult.compileArrayQuery = (array, arraySQL, pipeline, at) =>
+      this.arrayQuerySQL(array, arraySQL, pipeline, at);
     this.stageWriter = stageWriter;
     // do some magic here to get the first segment.
     this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
@@ -2944,7 +2945,8 @@ export class QueryQuery extends QueryField {
   private arrayQuerySQL(
     array: QueryStruct,
     arraySQL: string,
-    pipeline: PipeSegment[]
+    pipeline: PipeSegment[],
+    at: DocumentLocation | undefined
   ): string {
     const dialect = this.parent.dialect;
     const support = dialect.arrayQueries;
@@ -2953,7 +2955,7 @@ export class QueryQuery extends QueryField {
       throw new MalloyCompileError(
         `The ${dialect.name} dialect can only query an array for one value: one stage of \`aggregate:\` with one field`,
         'array-query-not-supported',
-        undefined
+        at
       );
     }
     if (returnsValue && support?.value === 'lambdas') {
@@ -2965,7 +2967,7 @@ export class QueryQuery extends QueryField {
         throw new MalloyCompileError(
           `The ${dialect.name} dialect cannot query this array: ${inPlace?.why ?? 'it is not one aggregate'}`,
           'array-query-not-in-place',
-          undefined
+          at
         );
       }
     }

@@ -1209,10 +1209,9 @@ export function* stringsFromSQLExpression(
   }
 }
 
-// Add this function to expression_compiler.ts
-
-// `array -> { ... }`: a correlated subquery over the row's array, which the
-// query compiler writes.
+// `array -> { ... }`, which the query compiler writes: in place with the
+// dialect's array functions, or as a correlated subquery over the row's
+// array.
 function generateArrayQueryFragment(
   resultSet: FieldInstanceResult,
   context: QueryStruct,
@@ -1229,7 +1228,12 @@ function generateArrayQueryFragment(
   ) {
     throw new Error('Internal Error: an array query needs a named array');
   }
-  return compile(arrayField.queryStruct, array.sql, expr.pipeline);
+  return compile(
+    arrayField.queryStruct,
+    array.sql,
+    expr.pipeline,
+    array.node === 'field' ? array.at : undefined
+  );
 }
 
 function generateDistinctKeySQL(

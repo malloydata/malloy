@@ -12,9 +12,14 @@
  */
 
 import type {AccessModifierLabel, SourceDef} from '../../../model';
+import type {LookupResult} from '../types/lookup-result';
 import type {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {Join} from '../source-properties/join';
-import type {QueryFieldSpace} from '../types/field-space';
+import type {
+  FieldName,
+  QueryFieldSpace,
+  SourceFieldSpace,
+} from '../types/field-space';
 import type {QueryOperationSpace} from './query-spaces';
 import {RefinedSpace} from './refined-space';
 
@@ -30,9 +35,18 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
   constructor(
     input: SourceDef,
     private queryOutput: QueryOperationSpace,
-    public readonly _accessProtectionLevel: AccessModifierLabel
+    public readonly _accessProtectionLevel: AccessModifierLabel,
+    private readonly from?: SourceFieldSpace
   ) {
     super(input);
+  }
+
+  lookup(path: FieldName[], accessLevel?: AccessModifierLabel): LookupResult {
+    const result = super.lookup(path, accessLevel);
+    if (result.error?.code === 'field-not-found') {
+      return this.from?.explainMissing?.(path) ?? result;
+    }
+    return result;
   }
 
   extendSource(extendField: Join | AtomicFieldDeclaration): void {

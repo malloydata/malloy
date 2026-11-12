@@ -6,6 +6,7 @@
 import type {QueryInfo} from '../dialect';
 import type {QueryStruct} from './query_node';
 import type {
+  DocumentLocation,
   Expr,
   OrderBy,
   PipeSegment,
@@ -615,7 +616,8 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
   compileArrayQuery?: (
     array: QueryStruct,
     arraySQL: string,
-    pipeline: PipeSegment[]
+    pipeline: PipeSegment[],
+    at: DocumentLocation | undefined
   ) => string;
 
   constructor(turtleDef: TurtleDef) {

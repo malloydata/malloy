@@ -107,7 +107,8 @@ export abstract class QueryOperationSpace
     this.exprSpace = new QueryInputSpace(
       queryInputSpace.structDef(),
       this,
-      queryInputSpace.accessProtectionLevel()
+      queryInputSpace.accessProtectionLevel(),
+      queryInputSpace
     );
     if (refineThis) this.addRefineFromFields(refineThis);
   }
