@@ -10,7 +10,7 @@ import type {
   StructDef,
 } from '../../../model/malloy_types';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
-import type {LookupResult} from './lookup-result';
+import type {LookupError, LookupResult} from './lookup-result';
 import {MalloyElement} from './malloy-element';
 import type {SpaceEntry} from './space-entry';
 
@@ -81,6 +81,12 @@ export interface FieldSpace {
 export interface SourceFieldSpace extends FieldSpace {
   structDef(): SourceDef;
   emptyStructDef(): SourceDef;
+  /**
+   * Why `path` names nothing here, when this space knows better than
+   * "not defined". A query built on this space asks it before reporting a
+   * name it cannot find.
+   */
+  explainMissing?(path: FieldName[]): LookupError | undefined;
 }
 
 export interface QueryFieldSpace extends SourceFieldSpace {

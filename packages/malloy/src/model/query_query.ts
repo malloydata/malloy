@@ -12,6 +12,7 @@ import type {
 } from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
+  DocumentLocation,
   Expr,
   FilterCondition,
   TurtleDef,
@@ -220,6 +221,109 @@ function pushDialectField(dl: DialectFieldList, f: DialectFieldArg) {
   }
 }
 
+/**
+ * What an aggregate's path through an element binds
+ * (`bindInnerArrayElement`): nothing, when it passes through records only;
+ * one inner array, then read through a lambda element of its own; or
+ * nothing a lambda can read, when it passes through more than one array.
+ */
+type InnerArrayBinding =
+  | {kind: 'none'}
+  | {kind: 'one'; struct: QueryStruct; arraySQL: string; name: string}
+  | {kind: 'unreadable'};
+
+/** An array's lambda element, and the inner array bound inside it. */
+interface LambdaElements {
+  element: QueryStruct;
+  inner: InnerArrayBinding;
+}
+
+function isArrayJoin(ji: JoinInstance): boolean {
+  return ji.queryStruct.structDef.type === 'array';
+}
+
+/**
+ * Where an array beneath a filtered join's subquery is unnested: outside
+ * the subquery, from the column the subquery packs, or inside it, when the
+ * subquery reads the array itself. See `placeArraysBeneathSubqueries`.
+ */
+type ArrayPlacement = 'inside' | 'outside';
+
+/**
+ * The placement of every array beneath a filtered join's subquery. An array
+ * which the subquery reads in its own `where:`, or in the `on` or `where:`
+ * of a join inside it, is unnested inside, since the filter applies there;
+ * any other is unnested outside, where its element and row number are
+ * columns of the outer query like any other array's. An array inside an
+ * array is unnested with it.
+ */
+function placeArraysBeneathSubqueries(
+  root: JoinInstance
+): Map<JoinInstance, ArrayPlacement> {
+  const placement = new Map<JoinInstance, ArrayPlacement>();
+  const visit = (j: JoinInstance, readInside: Set<string> | undefined) => {
+    const reads = j.isSubquery()
+      ? new Set([...(readInside ?? []), ...arrayAliasesReadIn(j)])
+      : readInside;
+    for (const child of j.children) {
+      if (reads !== undefined && isArrayJoin(child)) {
+        const outer = isArrayJoin(j) ? placement.get(j) : undefined;
+        placement.set(
+          child,
+          outer ?? (reads.has(child.alias) ? 'inside' : 'outside')
+        );
+      }
+      visit(child, reads);
+    }
+  };
+  visit(root, undefined);
+  return placement;
+}
+
+/**
+ * The aliases of the arrays a filtered join's subquery reads itself: in its
+ * own `where:`, and in the `on` or `where:` of a join inside it, directly or
+ * through a computed field.
+ */
+function arrayAliasesReadIn(ji: JoinInstance): Set<string> {
+  const found = new Set<string>();
+  const readFrom = (e: Expr, from: QueryStruct) => {
+    for (const node of exprWalk(e)) {
+      if (node.node !== 'field') continue;
+      let struct = from;
+      for (const name of node.path) {
+        const child = struct.getChildByName(name);
+        if (child instanceof QueryFieldStruct) {
+          struct = child.queryStruct;
+          if (struct.structDef.type === 'array') {
+            found.add(struct.getIdentifier());
+          }
+        } else {
+          if (child !== undefined && hasExpression(child.fieldDef)) {
+            readFrom(child.fieldDef.e, child.parent);
+          }
+          break;
+        }
+      }
+    }
+  };
+  const visit = (j: JoinInstance, isTop: boolean) => {
+    const qs = j.queryStruct;
+    for (const f of j.joinFilterConditions ?? []) {
+      if (f.fieldDef.e) readFrom(f.fieldDef.e, qs);
+    }
+    const sd = qs.structDef;
+    if (!isTop && isJoinedSource(sd) && sd.onExpression && qs.parent) {
+      readFrom(sd.onExpression, qs.parent);
+    }
+    for (const below of j.children) {
+      if (!isArrayJoin(below)) visit(below, false);
+    }
+  };
+  visit(ji, true);
+  return found;
+}
+
 /** Query builder object. */
 export class QueryQuery extends QueryField {
   fieldDef: TurtleDef;
@@ -229,6 +333,8 @@ export class QueryQuery extends QueryField {
   maxGroupSet = 0;
   rootResult: FieldInstanceResultRoot;
   private packedColumns: Map<string, Set<string>> | undefined;
+  private lambdaElementCache = new Map<string, LambdaElements>();
+  private arrayPlacements: Map<JoinInstance, ArrayPlacement> | undefined;
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
   isJoinedSubquery: boolean; // this query is a joined subquery.
@@ -247,8 +353,8 @@ export class QueryQuery extends QueryField {
     super(fieldDef, parent);
     this.fieldDef = fieldDef;
     this.rootResult = new FieldInstanceResultRoot(fieldDef);
-    this.rootResult.compileArrayQuery = (array, arraySQL, pipeline) =>
-      this.arrayQuerySQL(array, arraySQL, pipeline);
+    this.rootResult.compileArrayQuery = (array, arraySQL, pipeline, at) =>
+      this.arrayQuerySQL(array, arraySQL, pipeline, at);
     this.stageWriter = stageWriter;
     // do some magic here to get the first segment.
     this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
@@ -1038,10 +1144,17 @@ export class QueryQuery extends QueryField {
     };
   }
 
+  /**
+   * `unnestAfter` is set while writing the joins inside a filtered join's
+   * subquery: the arrays placed outside it (`arrayPlacement`) are collected
+   * there instead of being written, and the outermost subquery writes them
+   * after itself.
+   */
   generateSQLJoinBlock(
     stageWriter: StageWriter,
     ji: JoinInstance,
-    depth: number
+    depth: number,
+    unnestAfter?: JoinInstance[]
   ): string {
     let s = '';
     const qs = ji.queryStruct;
@@ -1138,11 +1251,23 @@ export class QueryQuery extends QueryField {
           }
           const readFrom = from ?? (j.isSubquery() ? j.alias : undefined);
           for (const below of j.children) {
-            projectJoin(below, readFrom);
+            if (this.arrayPlacement(below) !== 'outside') {
+              projectJoin(below, readFrom);
+            }
           }
         };
+        const after = unnestAfter ?? [];
         for (const childJoin of ji.children) {
-          joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
+          if (this.unnestsAfterSubquery(childJoin)) {
+            after.push(childJoin);
+            continue;
+          }
+          joins += this.generateSQLJoinBlock(
+            stageWriter,
+            childJoin,
+            depth + 1,
+            after
+          );
           projectJoin(childJoin, undefined);
         }
         select += `\nFROM ${structSQL} AS ${
@@ -1151,6 +1276,12 @@ export class QueryQuery extends QueryField {
         s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
           ji.alias
         }\n  ON ${onCondition}\n`;
+        // The outermost subquery writes the arrays placed outside it.
+        if (unnestAfter === undefined) {
+          for (const arrayJoin of after) {
+            s += this.generateSQLJoinBlock(stageWriter, arrayJoin, depth + 1);
+          }
+        }
         return s;
       }
     } else if (qsDef.type === 'array') {
@@ -1197,16 +1328,49 @@ export class QueryQuery extends QueryField {
       throw new Error(`Join type not implemented ${qs.structDef.type}`);
     }
     for (const childJoin of ji.children) {
-      s += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
+      if (unnestAfter !== undefined && this.unnestsAfterSubquery(childJoin)) {
+        unnestAfter.push(childJoin);
+      } else {
+        s += this.generateSQLJoinBlock(
+          stageWriter,
+          childJoin,
+          depth + 1,
+          unnestAfter
+        );
+      }
     }
     return s;
   }
 
   /**
+   * Where an array beneath a filtered join's subquery is unnested; undefined
+   * for any other join. Decided once for the query's join tree.
+   */
+  private arrayPlacement(ji: JoinInstance): ArrayPlacement | undefined {
+    if (this.arrayPlacements === undefined) {
+      const [[, root]] = this.rootResult.joins;
+      this.arrayPlacements = placeArraysBeneathSubqueries(root);
+    }
+    return this.arrayPlacements.get(ji);
+  }
+
+  /**
+   * An array placed outside its subquery which is not inside another array
+   * (that one is written with the array it is in).
+   */
+  private unnestsAfterSubquery(ji: JoinInstance): boolean {
+    return (
+      this.arrayPlacement(ji) === 'outside' &&
+      ji.parent !== undefined &&
+      !isArrayJoin(ji.parent)
+    );
+  }
+
+  /**
    * Which column of which join a reference needs, or undefined when it needs
    * none.  Walking `path` from `from`, the answer is the member of the
-   * innermost join along it -- a record is kept whole, since a reference into
-   * one is a reference to the column holding it.
+   * innermost join along it -- a record or an array is kept whole, since a
+   * reference into one is a reference to the column holding it.
    *
    * Two kinds of path need no column.  One ending at a computed field
    * contributes that field's name, which is no column of the source; the
@@ -1236,7 +1400,12 @@ export class QueryQuery extends QueryField {
         break;
       }
       struct = child.queryStruct;
-      if (struct.getJoinableParent() === struct) {
+      // A record or an array is a column of the join above it: an array is
+      // unnested from that column, so it is packed like a record.
+      const packsOwnColumns =
+        struct.structDef.type !== 'array' &&
+        struct.getJoinableParent() === struct;
+      if (packsOwnColumns) {
         // A join: what the path named above it says nothing about what this
         // one has to pack.
         alias = struct.getIdentifier();
@@ -1382,8 +1551,8 @@ export class QueryQuery extends QueryField {
     // Sort children to ensure array joins are processed before table joins that might reference them
     //
     const sortedChildren = [...ji.children].sort((a, b) => {
-      const aIsArray = a.queryStruct.structDef.type === 'array';
-      const bIsArray = b.queryStruct.structDef.type === 'array';
+      const aIsArray = isArrayJoin(a);
+      const bIsArray = isArrayJoin(b);
       if (aIsArray && !bIsArray) return -1;
       if (!aIsArray && bIsArray) return 1;
       return 0;
@@ -1398,10 +1567,14 @@ export class QueryQuery extends QueryField {
   /**
    * Collect all array joins from the join tree in depth-first order.
    * This ordering ensures parent arrays are ordered before child arrays.
+   * An array placed inside a filtered join's subquery (`arrayPlacement`),
+   * with the arrays inside it, is out of reach of the outer query, so it is
+   * left out.
    */
   collectArrayJoins(ji: JoinInstance): JoinInstance[] {
+    if (this.arrayPlacement(ji) === 'inside') return [];
     const result: JoinInstance[] = [];
-    if (ji.queryStruct.structDef.type === 'array') {
+    if (isArrayJoin(ji)) {
       result.push(ji);
     }
     for (const child of ji.children) {
@@ -2613,12 +2786,8 @@ export class QueryQuery extends QueryField {
     // Each condition joined by a top-level `and` is placed on its own, so
     // that one which reads only the outer element can filter it.
     const conditions = filters.flatMap(f => conjuncts(f.e));
-    const element = this.arrayElementStruct(array);
-    if (element === undefined) {
-      throw new Error('Internal Error: an array element has no parent');
-    }
-    const inner = structPath && this.bindInnerArrayElement(element, structPath);
-    if (inner === false) {
+    const {element, inner} = this.bindLambdaElements(array, structPath);
+    if (inner.kind === 'unreadable') {
       return {
         why: `it aggregates \`${structPath?.join('.')}\`, through more than one array inside the elements`,
       };
@@ -2631,7 +2800,7 @@ export class QueryQuery extends QueryField {
     // Each condition is parenthesized: a compiled `or` is not.
     const and = (sqls: string[]) =>
       sqls.length > 0 ? sqls.map(c => `(${c})`).join(' AND ') : undefined;
-    if (!inner) {
+    if (inner.kind === 'none') {
       return {element, filter: and(conditions.map(sql))};
     }
     const outerConditions: string[] = [];
@@ -2675,37 +2844,63 @@ export class QueryQuery extends QueryField {
   }
 
   /**
+   * The element struct for an aggregate over `array` in place, with the
+   * array inside the elements that `structPath` passes through bound to a
+   * lambda element of its own (`bindInnerArrayElement`). Each is built once
+   * per query, for each array and path: binding changes the element struct,
+   * so an element bound for one path is not shared with another.
+   */
+  private bindLambdaElements(
+    array: QueryStruct,
+    structPath: string[] | undefined
+  ): LambdaElements {
+    const key = JSON.stringify([array.getIdentifier(), structPath ?? []]);
+    let found = this.lambdaElementCache.get(key);
+    if (found === undefined) {
+      const element = this.arrayElementStruct(array);
+      if (element === undefined) {
+        throw new Error('Internal Error: an array element has no parent');
+      }
+      const inner: InnerArrayBinding = structPath
+        ? this.bindInnerArrayElement(element, structPath)
+        : {kind: 'none'};
+      found = {element, inner};
+      this.lambdaElementCache.set(key, found);
+    }
+    return found;
+  }
+
+  /**
    * Binds the array inside the elements which `structPath`, an aggregate's
    * locality, passes through to a lambda element of its own: `element`'s
    * child is replaced, so that expressions compiled on `element` read the
-   * inner array's fields through that lambda's parameter. Returns the inner
-   * element and the array's SQL; undefined if the path passes through
-   * records only, and false if through more than one array.
+   * inner array's fields through that lambda's parameter.
    */
   private bindInnerArrayElement(
     element: QueryStruct,
     structPath: string[]
-  ): {struct: QueryStruct; arraySQL: string; name: string} | undefined | false {
+  ): InnerArrayBinding {
+    const unreadable: InnerArrayBinding = {kind: 'unreadable'};
     let struct = element;
-    let found:
-      {struct: QueryStruct; arraySQL: string; name: string} | undefined;
+    let found: InnerArrayBinding = {kind: 'none'};
     for (const [i, name] of structPath.entries()) {
       const child = struct.getChildByName(name);
-      if (!(child instanceof QueryFieldStruct)) return false;
+      if (!(child instanceof QueryFieldStruct)) return unreadable;
       const type = child.queryStruct.structDef.type;
       if (type === 'record') {
         struct = child.queryStruct;
         continue;
       }
-      if (type !== 'array' || found !== undefined) return false;
+      if (type !== 'array' || found.kind !== 'none') return unreadable;
       const arraySQL = exprToSQL(this.rootResult, element, {
         node: 'field',
         path: structPath.slice(0, i + 1),
       });
       const inner = this.arrayElementStruct(child.queryStruct);
-      if (inner === undefined) return false;
+      if (inner === undefined) return unreadable;
       child.queryStruct = inner;
       found = {
+        kind: 'one',
         struct: inner,
         arraySQL,
         name: structPath.slice(0, i + 1).join('.'),
@@ -2835,7 +3030,7 @@ export class QueryQuery extends QueryField {
    */
   private arrayElementStruct(array: QueryStruct): QueryStruct | undefined {
     if (array.parent === undefined) return undefined;
-    const element = new QueryStruct(
+    return new QueryStruct(
       {
         ...array.structDef,
         name: `__${activeName(array.structDef)}_element`,
@@ -2843,10 +3038,9 @@ export class QueryQuery extends QueryField {
       },
       undefined,
       {struct: array.parent},
-      array.prepareResultOptions
+      array.prepareResultOptions,
+      true
     );
-    element.isLambdaElement = true;
-    return element;
   }
 
   /**
@@ -2901,7 +3095,8 @@ export class QueryQuery extends QueryField {
   private arrayQuerySQL(
     array: QueryStruct,
     arraySQL: string,
-    pipeline: PipeSegment[]
+    pipeline: PipeSegment[],
+    at: DocumentLocation | undefined
   ): string {
     const dialect = this.parent.dialect;
     const support = dialect.arrayQueries;
@@ -2910,7 +3105,7 @@ export class QueryQuery extends QueryField {
       throw new MalloyCompileError(
         `The ${dialect.name} dialect can only query an array for one value: one stage of \`aggregate:\` with one field`,
         'array-query-not-supported',
-        undefined
+        at
       );
     }
     if (returnsValue && support?.value === 'lambdas') {
@@ -2922,7 +3117,7 @@ export class QueryQuery extends QueryField {
         throw new MalloyCompileError(
           `The ${dialect.name} dialect cannot query this array: ${inPlace?.why ?? 'it is not one aggregate'}`,
           'array-query-not-in-place',
-          undefined
+          at
         );
       }
     }

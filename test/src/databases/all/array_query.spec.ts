@@ -247,6 +247,35 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     }
   );
 
+  // What only the compiler can tell, it reports at the array the arrow
+  // queries.
+  test.when(supported && !anyValue)(
+    'with only array functions, a read of an inner array is an error at the arrow',
+    async () => {
+      const query = `run: states -> {
+        where: state = 'AK'
+        select: d is by_county -> {
+          aggregate: n is count() { where: by_fac_type.fac_type = 'HELIPORT' }
+        }
+      }`;
+      let problems: {code: string; at?: unknown}[] = [];
+      try {
+        await runtime.loadModel(model).loadQuery(query).getSQL();
+      } catch (e) {
+        problems = e.problems ?? [];
+      }
+      expect(problems).toEqual([
+        expect.objectContaining({
+          code: 'array-query-not-in-place',
+          message: expect.stringMatching(
+            /it reads `by_fac_type.fac_type`, from an array inside the elements/
+          ),
+          at: expect.objectContaining({range: expect.anything()}),
+        }),
+      ]);
+    }
+  );
+
   test.when(supported)('a where: and a filter with an or', async () => {
     // Of Alaska's facility types, only heliports number under 50. Read as
     // (n < 50 and heliport) or seaplane base, it would be 2.

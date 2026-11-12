@@ -450,11 +450,12 @@ export interface CompositeFieldExpr extends ExprLeaf {
 }
 
 /**
- * A query run on the elements of an array of the current row, whose one
- * result is a value of that row: `items -> { aggregate: price.sum() }`.
- * `kids.array` is the array, and `pipeline` runs with its elements as the
- * source, the way a later stage of a nest runs on the stage before it.
- * Experimental (`##! experimental.array_queries`).
+ * A query run on the elements of an array of the current row, whose result
+ * is a value of that row: one value, `items -> { aggregate: price.sum() }`
+ * (`arrayQueryReturnsValue`), or otherwise its rows, as an array of
+ * records. `kids.array` is the array, and `pipeline` runs with its elements
+ * as the source, the way a later stage of a nest runs on the stage before
+ * it. Experimental (`##! experimental.array_queries`).
  */
 export interface ArrayQueryExpr extends ExprWithKids {
   node: 'arrayQuery';

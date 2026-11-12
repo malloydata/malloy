@@ -114,8 +114,8 @@ Tests:
 
 The rule is enforced in two places:
 
-- the translator (`ExprArrayQuery`) refuses an array where `arrays` is false, and, where array functions are the only route, a value which is not one aggregate or has a `having:` (`arrayValueNotOneAggregate`);
-- the compiler (`QueryQuery.arrayQuerySQL`) computes a value in place where it can. One which reads something other than an element's own fields is a correlated subquery where the dialect has one (`Dialect.arrayQueryHasSubquery`: it computes values that way, or returns arrays), and otherwise a compile error naming what it reads.
+- the translator (`ExprArrayQuery`) refuses an array where `arrays` is false, and, where array functions are the only route, a value which is not one aggregate or has a `having:` (`arrayValueNotOneAggregate`); it also refuses an arrow on an output field of the query;
+- the compiler (`QueryQuery.arrayQuerySQL`) computes a value in place where it can. One which reads something other than an element's own fields is a correlated subquery where the dialect has one (`Dialect.arrayQueryHasSubquery`: it computes values that way, or returns arrays), and otherwise a compile error naming what it reads, located at the array the arrow queries.
 
 A correlated subquery's head may be wrapped to add a distinct key (`QueryQuery.generateSQLJoins`), so a dialect whose fields of a nest source read `base` itself must read a named column instead: Postgres's heads all make a JSONB column `value`.
 

@@ -33,6 +33,13 @@ The grammar uses `#labelName` in grammar rules to create type-safe visitor metho
 - A list is written `X (COMMA? X)* COMMA?`, the form the existing list rules use. The more compact `X (COMMA | X)*` looks equivalent and is not (it admits consecutive commas).
 - Annotations are not allowed between `is` and the value. `isDefine` accepts them in the grammar only so the AST builder can report that case with a targeted error (`malloy-to-ast.ts` does this for `given:`); a new statement either uses plain `IS` or does the same.
 
+**Custom syntax-error messages:** `syntax-errors/malloy-parser-error-listener.ts`
+rewrites the parser's message for an input that fails to parse; it never
+changes what parses. Each case matches the rule being parsed and the tokens
+around the offending one, and the first case that matches wins. Where the
+tokens cannot tell two mistakes apart (an unnamed `group_by:` arrow, or a stage
+missing its `}`), the message names both.
+
 **Building the parser:**
 When modifying grammar files, regenerate the parser:
 ```bash
@@ -117,6 +124,14 @@ The translator defines the interface for transforming AST into IR.
 **FieldSpace:**
 - Used by translator to construct and comprehend `StructDef` objects
 - Manages namespace and field resolution during translation
+- A query's input space (`QueryInputSpace`) is built from the `structDef` of
+  the space the query runs on. When a name is not found, it asks that space
+  first (`SourceFieldSpace.explainMissing`, optional), so a space which knows
+  why can say so: the elements of an array query report a field of the row or
+  a parameter of the source as such.
+- A nest's view (`NestFieldDeclaration`) is built against the query's input
+  space whichever space asks for it, the output space included (a `having:`
+  which names the nest), and the definition is built once and kept.
 
 #### Steps
 
@@ -196,6 +211,14 @@ The expanded fields are a summary of finished IR and are correct only after
 step 2. Nothing in the translator should read one while it is still building
 IR, and no node should compute a closure of its own; a node that forwards
 another node's references takes its `refSummary` through `mapFieldUsage`.
+
+A query on an array (`ExprArrayQuery`, `array -> { ... }`) is the one node that
+holds a whole query: the query on the elements is finished IR when the node is
+built, and is expanded there against the elements. The node's field usage is
+its first stage's `refSummary` re-rooted through the array with
+`mapFieldUsage`, each path weak (`inPlaceDepth`). Its given usage is that of
+the expanded query, every stage and nest (`computeQueryGivenUsage`), as for
+any query.
 
 What an entry means, what a path is rooted at, and what the compiler does with
 the four fields are the contract in

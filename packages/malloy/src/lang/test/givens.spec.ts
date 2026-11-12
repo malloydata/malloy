@@ -818,6 +818,51 @@ describe('given: per-Query givenUsage summary', () => {
     });
   });
 
+  describe('givens inside an array query', () => {
+    test('every stage and nest of the arrow reaches the Query', () => {
+      const t = new TestTranslator(
+        `
+        ##! experimental.givens
+        ##! experimental.array_queries
+        given:
+          A :: number is 1
+          B :: number is 2
+          C :: number is 3
+          D :: number is 4
+          E :: number is 5
+        source: s is a extend {
+          dimension:
+            first is astruct -> {
+              where: column > $A
+              aggregate: n is count() { where: column > $B }
+            }
+            later is astruct -> { select: column } -> {
+              aggregate: n is count() { where: column > $C }
+            }
+            extended is astruct -> {
+              extend: { dimension: d is column + $D }
+              aggregate: n is d.sum()
+            }
+            nested is astruct -> {
+              group_by: column
+              nest: x is { group_by: column } -> {
+                select: column
+                where: column > $E
+              }
+            }
+        }
+        run: s -> { select: first, later, extended, nested }
+      `,
+        {compilerFlags: ['experimental.givens']}
+      );
+      expect(t).toTranslate();
+      const md = t.translate().modelDef!;
+      expect(queryGivenIds(md.queryList[0])).toEqual(
+        givenIds(md, 'A', 'B', 'C', 'D', 'E')
+      );
+    });
+  });
+
   describe('givens hidden inside a query-source', () => {
     test('input source is a QuerySourceDef wrapping a query that uses $X', () => {
       const md = translateOK(`
