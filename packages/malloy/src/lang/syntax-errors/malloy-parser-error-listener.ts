@@ -55,12 +55,12 @@ export const malloyCustomErrorCases: ErrorCase[] = [
   },
   // A statement's first entry, a name followed by more than a field
   // reference can be: an expression, a function call, or an arrow.
+  // `aggregate:` has its own cases, above and below.
   ...(
     [
       [MalloyParser.GROUP_BY, 'group_by:'],
       [MalloyParser.SELECT, 'select:'],
       [MalloyParser.CALCULATE, 'calculate:'],
-      [MalloyParser.AGGREGATE, 'aggregate:'],
     ] as const
   ).map(([token, statement]) => ({
     errorMessage: `'${statement}' entries must include a name (ex: \`some_name is ...\`)`,
