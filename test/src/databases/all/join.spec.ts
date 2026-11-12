@@ -613,5 +613,24 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         {name: 'Carol', order_count: 0, ones: 0, amount_avg: null}
       );
     });
+
+    // An unnest's row is there where it has an element, whatever its
+    // parent's key is: one group has a NULL state, and its 23 airports are
+    // summed like any other's.
+    it('an unnest under a NULL key is matched', async () => {
+      await expect(`
+        source: by_state is ${databaseName}.table('malloytest.airports') -> {
+          group_by: state
+          nest: by_fac_type is {
+            group_by: fac_type
+            aggregate: airport_count is count()
+          }
+        }
+        run: by_state -> {
+          where: by_fac_type.fac_type = 'AIRPORT'
+          aggregate: airport_count is by_fac_type.airport_count.sum()
+        }
+      `).toMatchResult(testModel, {airport_count: 13925});
+    });
   });
 });

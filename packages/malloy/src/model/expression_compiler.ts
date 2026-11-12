@@ -1323,7 +1323,19 @@ function withSourceRowFilter(
   if (!joinOf(struct, resultSet).canBeUnmatched) {
     return state;
   }
-  const sourceRowExists = `${getDistinctKeySQL(struct, resultSet)} IS NOT NULL`;
+  // An unnest has a row where it has an element, which its row number says.
+  // Its distinct key is its parent's key with the row number, so a parent
+  // whose key is NULL would make every one of its elements look unmatched.
+  const rowKey =
+    struct.structDef.type === 'array'
+      ? struct.dialect.sqlFieldReference(
+          struct.getIdentifier(),
+          'table',
+          '__row_id',
+          'string'
+        )
+      : getDistinctKeySQL(struct, resultSet);
+  const sourceRowExists = `${rowKey} IS NOT NULL`;
   return state.withWhere(
     new AndChain(state.whereSQL).add(sourceRowExists).sql()
   );
