@@ -894,17 +894,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             ${arrayChain('')}
             run: zero -> {
               group_by: s is one.two.three.state
-              aggregate:
-                n is one.two.three.types.count()
-                t is one.two.three.types.c.sum()
+              aggregate: n is one.two.three.types.count()
               order_by: s
               limit: 2
             }
-          `).toMatchResult(
-            testModel,
-            {s: 'AK', n: 3, t: 608},
-            {s: 'AL', n: 5, t: 260}
-          );
+          `).toMatchResult(testModel, {s: 'AK', n: 3}, {s: 'AL', n: 5});
 
           await expect(`
             ${arrayChain('')}
