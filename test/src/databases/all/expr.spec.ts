@@ -460,7 +460,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   it('many_field.sum() has correct locality', async () => {
     await expect(`
-      source: a is ${databaseName}.table('malloytest.aircraft')
+      source: a is ${databaseName}.table('malloytest.aircraft') extend {
+        primary_key: tail_num
+      }
       source: am is ${databaseName}.table('malloytest.aircraft_models') extend {
         join_many: a on a.aircraft_model_code = a.aircraft_model_code
         dimension: a_year_built is a.year_built
