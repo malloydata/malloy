@@ -818,6 +818,31 @@ describe('given: per-Query givenUsage summary', () => {
     });
   });
 
+  describe('givens inside an array query', () => {
+    test('a given read only inside the arrow reaches the Query', () => {
+      const t = new TestTranslator(
+        `
+        ##! experimental.givens
+        ##! experimental.array_queries
+        given:
+          A :: number is 1
+          B :: number is 2
+        source: s is a extend {
+          dimension: big is astruct -> {
+            where: column > $A
+            aggregate: n is count() { where: column > $B }
+          }
+        }
+        run: s -> { select: big }
+      `,
+        {compilerFlags: ['experimental.givens']}
+      );
+      expect(t).toTranslate();
+      const md = t.translate().modelDef!;
+      expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'A', 'B'));
+    });
+  });
+
   describe('givens hidden inside a query-source', () => {
     test('input source is a QuerySourceDef wrapping a query that uses $X', () => {
       const md = translateOK(`

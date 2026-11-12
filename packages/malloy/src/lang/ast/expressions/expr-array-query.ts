@@ -6,18 +6,19 @@
 import type {
   ArrayQueryExpr,
   FieldDef,
-  FieldUsage,
   NestSourceDef,
   PipeSegment,
+  RefSummary,
   SourceDef,
 } from '../../../model/malloy_types';
 import {
   TD,
   arrayQueryOnlyAggregates,
   arrayQueryReturnsValue,
+  activeName,
   arrayValueNotOneAggregate,
-  fieldUsageFrom,
   isQuerySegment,
+  mapFieldUsage,
 } from '../../../model/malloy_types';
 import {
   getExpandedSegment,
@@ -95,13 +96,14 @@ export class ExprArrayQuery extends ExpressionDef {
     };
     // What the query reads from the elements is read in place, through the
     // array, without fanning the row out.
-    const reads = mergeRefSummaries(arrayValue.refSummary, {
-      fieldUsage: readsThroughArray(
+    const reads = mergeRefSummaries(
+      arrayValue.refSummary,
+      readsThroughArray(
         this.array.fieldReference.path,
         arrayDef.fields,
-        pipeline[0]
-      ),
-    });
+        written[0]
+      )
+    );
     const from: ExprValue[] = [{...arrayValue, refSummary: reads}];
 
     const [result, ...moreResults] = outputStruct.fields;
@@ -183,30 +185,40 @@ function expandedPipeline(
 
 /**
  * What the first stage of a query on an array reads from the elements, as
- * paths through the array, `arrayPath`. Each is a weak reference
+ * the stage's own `refSummary` re-rooted through the array, `arrayPath`,
+ * with its givens carried along. Each path is a weak reference
  * (`inPlaceDepth`): it names the array and the element fields it reads, and
- * activates no join from the array down. What the query needs to compute
- * its own aggregates, over the elements, is not a need of the row's query,
- * so no entry carries a distinct-key requirement or a window function. A
- * later stage reads the stage before it, not the array, and a `having:` or
- * `calculate:` names the query's own output; neither is a read of the
- * elements.
+ * activates no join from the array down. Expanding the row's query follows
+ * a computed element field from there, keeping it weak.
+ *
+ * What the stage needs to compute its own aggregates, over the elements, is
+ * not a need of the row's query, so no entry keeps a distinct-key
+ * requirement or a window function; left in, they would unnest the array.
+ * A later stage reads the stage before it, not the array. A `having:` or
+ * `calculate:` names the stage's own output, which is not a read of the
+ * elements; those entries are dropped here rather than left to resolve to
+ * nothing.
  */
 function readsThroughArray(
   arrayPath: string[],
   elementFields: FieldDef[],
   firstStage: PipeSegment | undefined
-): FieldUsage {
-  if (firstStage === undefined || firstStage.type === 'raw') return [];
-  const inner =
-    firstStage.expandedFieldUsage ?? fieldUsageFrom(firstStage.refSummary);
+): RefSummary | undefined {
+  if (firstStage === undefined || firstStage.type === 'raw') return undefined;
+  const reads = mapFieldUsage(firstStage.refSummary, u => ({
+    path: [...arrayPath, ...u.path],
+    ...(u.at && {at: u.at}),
+    inPlaceDepth: 1 + u.path.length,
+  }));
+  if (reads === undefined) return undefined;
   const isElementField = (name: string) =>
-    elementFields.some(f => (f.as ?? f.name) === name);
-  return inner
-    .filter(u => u.path.length > 0 && isElementField(u.path[0]))
-    .map(u => ({
-      path: [...arrayPath, ...u.path],
-      ...(u.at && {at: u.at}),
-      inPlaceDepth: 1 + u.path.length,
-    }));
+    elementFields.some(f => activeName(f) === name);
+  return {
+    ...reads,
+    fieldUsage: reads.fieldUsage.filter(
+      u =>
+        u.path.length > arrayPath.length &&
+        isElementField(u.path[arrayPath.length])
+    ),
+  };
 }
