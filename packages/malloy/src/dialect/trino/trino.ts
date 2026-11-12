@@ -315,7 +315,9 @@ export class TrinoDialect extends PostgresBase {
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const hashKey = this.sqlSumDistinctHashedKey(key);
     const scale = 100000000;
-    const v = `CAST(COALESCE(${value},0)*${scale} as ${TrinoDialect.dtype})`;
+    // Scale in DOUBLE: an INTEGER or BIGINT value (e.g. a count() in a nest's
+    // ROW type) would otherwise be multiplied in its own type and overflow.
+    const v = `CAST(CAST(COALESCE(${value},0) AS DOUBLE)*${scale} as ${TrinoDialect.dtype})`;
 
     const sqlSum = `CAST(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}) AS DOUBLE)/${scale}`;
     if (funcName === 'SUM') {
