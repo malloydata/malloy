@@ -105,6 +105,33 @@ Tests:
 - `packages/malloy/src/lang/test/table-path-validation.spec.ts` — end-to-end translator-error tests with source-range assertions.
 - `test/src/databases/duckdb-all/duckdb.spec.ts` — DuckDB-specific shapes (file paths, globs).
 
+## Queries on arrays
+
+`array -> { ... }` (experimental) runs a query on the elements of an array of the current row. A dialect declares how in `arrayQueries` (`ArrayQuerySupport`, in `dialect.ts`); undefined means the translator refuses the arrow. It has two forms:
+
+- **One value**: one stage of `aggregate:` with one field (`arrayQueryReturnsValue`), on every dialect with `arrayQueries`. Where `value` is `'lambdas'` it is computed in place by `sqlArrayAggregate`; Trino, Presto and Databricks share `array_lambdas.ts`; DuckDB uses its `flattenNested` too. An aggregate of an array inside the elements (`tags.count()` or `tags.weight.max()` on `items`) is computed in place too: the compiler reads the inner array through a lambda element of its own (`ArrayAggregate.nested`), found from the aggregate's locality or, for `min`, `max` and `count(x)`, which have none, from the array its value reads. Conditions joined by a top-level `and` are placed separately: one which reads the inner array goes in a lambda inside the lambda (`flattenNested`), the rest filter the outer elements. Where `innerLambdaReadsOuter` is false (Snowflake), one condition, or the value, which reads both an element's own fields and the inner array is refused. Where `value` is `'subquery'` it is a correlated subquery over the elements: `sqlUnnestPipelineHead` with `isScalarArray` is its FROM, read `AS base`.
+- **An array**: any other query returns its rows as an array of records, only where `arrays` is true, and always as a correlated subquery, whose rows `sqlCreateFunctionCombineLastStage` collects in the stage's order.
+
+The rule is enforced in two places:
+
+- the translator (`ExprArrayQuery`) refuses an array where `arrays` is false, and, where array functions are the only route, a value which is not one aggregate or has a `having:` (`arrayValueNotOneAggregate`);
+- the compiler (`QueryQuery.arrayQuerySQL`) computes a value in place where it can. One which reads something other than an element's own fields is a correlated subquery where the dialect has one (`Dialect.arrayQueryHasSubquery`: it computes values that way, or returns arrays), and otherwise a compile error naming what it reads.
+
+A correlated subquery's head may be wrapped to add a distinct key (`QueryQuery.generateSQLJoins`), so a dialect whose fields of a nest source read `base` itself must read a named column instead: Postgres's heads all make a JSONB column `value`.
+
+| Dialect | One value | Arrays | Why |
+|---|---|---|---|
+| DuckDB | lambdas | yes | A correlated subquery over `UNNEST` is a full join, so list functions come first |
+| BigQuery | subquery | yes | |
+| Postgres | subquery | no | No list lambdas. Its subquery could return arrays; it does not, to keep arrays to two dialects |
+| MySQL | subquery | no | No lambdas; a table function's argument cannot reference an outer table from inside a subquery, so an array a subquery made could only be selected |
+| Trino | lambdas | no | Its optimizer rewrites only a plain grouping's correlated subquery as a join |
+| Presto | lambdas | no | No correlated subquery over an array |
+| Snowflake | lambdas | no | No correlated subquery over `FLATTEN`; an inner lambda cannot read the outer one's parameter |
+| Databricks | lambdas | no | A correlated subquery cannot feed `EXPLODE` or a higher-order function |
+
+`test/src/databases/all/array_query.spec.ts` gates each test on these facts.
+
 ## Key Source Files
 
 | File | Purpose |
@@ -114,6 +141,7 @@ Tests:
 | `{dialect}/function_overrides.ts` | Dialect's overrides for standard library |
 | `{dialect}/dialect_functions.ts` | Dialect-unique function definitions |
 | `dialect.ts` | Abstract Dialect base class |
+| `array_lambdas.ts` | Aggregates over an array in place, shared by the lambda dialects |
 | `dialect_map.ts` | Dialect registry |
 | `../lang/ast/expressions/expr-func.ts` | Parser-side: function call AST, overload resolution |
 | `../lang/ast/types/global-name-space.ts` | Assembles standard functions + overrides across all dialects |

@@ -108,28 +108,59 @@ describe('array queries', () => {
     expect(segment.activeJoins).toEqual([{path: ['astruct']}]);
   });
 
-  test('without a correlated subquery, a shape which cannot run in place is a translation error', () => {
-    const presto = (arrow: string) => model`
+  test('where the dialect returns no arrays, only one value', () => {
+    const onPresto = (arrow: string) => model`
       ##! experimental.array_queries
       source: p is _presto_.table('aTable')
       run: p -> { group_by: t is ${arrow} }
     `;
-    expect(presto('astruct -> { aggregate: n is column.sum() }')).toTranslate();
     expect(
-      presto('astruct -> { select: column; where: column > 1 }')
+      onPresto('astruct -> { aggregate: n is column.sum() }')
     ).toTranslate();
-    expect(presto('astruct -> { group_by: column }')).toLog(
-      errorMessage(/can only query an array.*group_by/)
+    for (const arrow of [
+      'astruct -> { select: column; where: column > 1 }',
+      'astruct -> { group_by: column }',
+      'astruct -> { aggregate: n is count() } -> { select: n }',
+    ]) {
+      expect(onPresto(arrow)).toLog(
+        errorMessage(/can only query an array for one value/)
+      );
+    }
+  });
+
+  test('array functions compute one aggregate, and no having:', () => {
+    const onPresto = (arrow: string) => model`
+      ##! experimental.array_queries
+      source: p is _presto_.table('aTable')
+      run: p -> { group_by: t is ${arrow} }
+    `;
+    const onPostgres = (arrow: string) => model`
+      ##! experimental.array_queries
+      source: p is _pg_.table('aTable')
+      run: p -> { group_by: t is ${arrow} }
+    `;
+    const onDuckDB = (arrow: string) => model`
+      ##! experimental.array_queries
+      run: a -> { group_by: t is ${arrow} }
+    `;
+    const having = 'astruct -> { aggregate: n is count(); having: n > 1 }';
+    const notOne = 'astruct -> { aggregate: n is column.sum() / count() }';
+    // Presto has only its array functions
+    expect(onPresto(having)).toLog(
+      errorMessage(/cannot query this array: it has a `having:`/)
     );
-    expect(
-      presto('astruct -> { aggregate: n is count(); having: n > 1 }')
-    ).toLog(errorMessage(/can only query an array.*having/));
-    expect(presto('astruct -> { select: column } -> { select: column }')).toLog(
-      errorMessage(/can only query an array.*several stages/)
+    expect(onPresto(notOne)).toLog(
+      errorMessage(/cannot query this array: `n` is not one aggregate/)
     );
-    expect(
-      presto('astruct -> { aggregate: n is column.sum() / count() }')
-    ).toLog(errorMessage(/can only query an array.*not one aggregate/));
+    // Postgres computes one value as a correlated subquery, and DuckDB
+    // falls back on one, so neither is limited to one aggregate
+    for (const on of [onPostgres, onDuckDB]) {
+      expect(on(having)).toTranslate();
+      expect(on(notOne)).toTranslate();
+    }
+    expect(onPostgres('astruct -> { select: column }')).toLog(
+      errorMessage(/can only query an array for one value/)
+    );
   });
 
   test('an array of scalars, through each', () => {
@@ -227,7 +258,7 @@ describe('array queries', () => {
     });
   });
 
-  test('for now, not several aggregates', () => {
+  test('several aggregates are refused', () => {
     expect(model`
       ##! experimental.array_queries
       run: a -> {

@@ -45,32 +45,29 @@ interface DialectField {
 export type DialectFieldList = DialectField[];
 
 /**
- * The elements of an array made into records (`Dialect.sqlArraySelect`):
- * those for which `filter` holds, in the order of `orderBy`, the first
- * `limit` of them, each as a record with a field for each of `fields`,
- * valued by its `sql`. Each `orderBy` key is an expression of `element`,
- * and its nulls sort last.
+ * How a dialect compiles `array -> { ... }`, a query on the elements of an
+ * array of the current row (`Dialect.arrayQueries`).
+ *
+ * A query which returns one value (`arrayQueryReturnsValue`) compiles on
+ * every dialect which has this: with the dialect's array functions, in
+ * place (`sqlArrayAggregate`), or as a correlated subquery over the
+ * elements (`sqlUnnestPipelineHead` with `isScalarArray`). Any other query
+ * returns its rows as an array of records, always as a correlated subquery,
+ * and only where `arrays` is true.
  */
-export interface ArraySelect {
-  source: string;
-  element: string;
-  fields: {name: string; sql: string; typeDef: AtomicTypeDef}[];
-  filter?: string;
-  orderBy?: {sql: string; dir: 'asc' | 'desc'}[];
-  /**
-   * The `orderBy` keys of the two elements a comparator compares, named
-   * `left` and `right`: compiled only when called, by a dialect which sorts
-   * with a comparator.
-   */
-  comparator?: () => ArrayComparator;
-  limit?: number;
-}
-
-export interface ArrayComparator {
-  left: string;
-  right: string;
-  keys: {left: string; right: string}[];
-}
+export type ArrayQuerySupport =
+  | {
+      value: 'lambdas';
+      /**
+       * Whether a lambda inside a lambda can read the outer one's
+       * parameter, which an aggregate of an array inside the elements needs
+       * when one condition, or its value, reads both an element and the
+       * inner array.
+       */
+      innerLambdaReadsOuter: boolean;
+      arrays: boolean;
+    }
+  | {value: 'subquery'; arrays: boolean};
 
 /**
  * One aggregate over the elements of an array (`Dialect.sqlArrayAggregate`):
@@ -82,11 +79,34 @@ export interface ArrayComparator {
  */
 export interface ArrayAggregate {
   source: string;
+  /**
+   * The lambda parameter which names an element in `value` and `filter`:
+   * an alias of its own, which no column in scope shares, since a column
+   * would hide a lambda parameter of its name.
+   */
   element: string;
   function: 'sum' | 'avg' | 'count' | 'distinct' | 'min' | 'max';
   value?: string;
   filter?: string;
   resultType?: AtomicTypeDef;
+  /** Set for an aggregate of an array inside the elements. */
+  nested?: NestedArrayAggregate;
+}
+
+/**
+ * An aggregate of an array inside the elements, `items -> { aggregate:
+ * n is tags.count() }`: the aggregate is over the elements of each
+ * element's `array`, all in one. `ArrayAggregate.filter` then reads only
+ * the outer element, and chooses the elements whose arrays are taken;
+ * `filter` chooses among the inner elements, and `value` is of an inner
+ * element. Both name an inner element `element`, and they may read the
+ * outer element too, where `innerLambdaReadsOuter` allows it.
+ */
+export interface NestedArrayAggregate {
+  /** The inner array, read from the outer element. */
+  array: string;
+  element: string;
+  filter?: string;
 }
 
 /**
@@ -633,25 +653,12 @@ export abstract class Dialect {
 
   /**
    * An aggregate over the elements of an array of the current row, computed
-   * in place without unnesting the array, or undefined where the dialect has
-   * no way to; the query on the array is then written as a correlated
-   * subquery. `element` names an element in `value` and `filter`. Sums and
-   * counts are 0, and the others null, over no elements, as the subquery's
-   * would be.
+   * in place without unnesting the array, where `arrayQueries.value` is
+   * 'lambdas'; undefined where the dialect's functions cannot express it.
+   * Sums and counts are 0, and the others null, over no elements, as a
+   * subquery's would be.
    */
   sqlArrayAggregate(_aggregate: ArrayAggregate): string | undefined {
-    return undefined;
-  }
-
-  /**
-   * The elements of an array of the current row which `filter` holds for,
-   * each made into a record of `fields`, computed in place without
-   * unnesting the array; or undefined where the dialect has no way to, and
-   * the query on the array is written as a correlated subquery. `element`
-   * names an element in `filter` and in each field's `sql`. Over no
-   * elements, or a null array, it is an empty array.
-   */
-  sqlArraySelect(_select: ArraySelect): string | undefined {
     return undefined;
   }
 
@@ -664,18 +671,24 @@ export abstract class Dialect {
   }
 
   /**
-   * Whether `array -> { ... }`, a query on the elements of an array of the
-   * current row, compiles in this dialect.
+   * How `array -> { ... }`, a query on the elements of an array of the
+   * current row, compiles in this dialect; undefined where it does not.
    * Experimental.
    */
-  supportsArrayQueries = false;
+  arrayQueries: ArrayQuerySupport | undefined = undefined;
 
   /**
-   * Whether a query on an array which the dialect cannot compute in place
-   * (`sqlArrayAggregate`, `sqlArraySelect`) can be written as a correlated
-   * subquery instead. Without it such a query is a compile error.
+   * Whether this dialect has a correlated subquery for a query on an array:
+   * it computes values that way, or it returns arrays, which are always
+   * one. A value which its array functions cannot compute is then that
+   * subquery.
    */
-  supportsCorrelatedArrayQueries = true;
+  arrayQueryHasSubquery(): boolean {
+    const support = this.arrayQueries;
+    return (
+      support !== undefined && (support.value === 'subquery' || support.arrays)
+    );
+  }
 
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 

@@ -38,6 +38,7 @@ import type {
   FieldReferenceType,
   OrderByClauseType,
   QueryInfo,
+  ArrayQuerySupport,
 } from '../dialect';
 import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
@@ -167,6 +168,12 @@ export class MySQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
+  // A query on an array computes one value, as a correlated subquery over
+  // JSON_TABLE: MySQL has no lambdas. JSON_TABLE's argument cannot be a
+  // correlated subquery's result ("Unknown table in a table function
+  // argument"), so an array such a subquery made could only be selected;
+  // it returns no arrays.
+  arrayQueries: ArrayQuerySupport = {value: 'subquery', arrays: false};
   // MySQL builds nested arrays with GROUP_CONCAT (not an array type), which has
   // no in-expression slice; limiting would need query-level ROW_NUMBER plumbing
   // the sqlAggregateTurtle seam doesn't expose. Left false (default) explicitly.
@@ -363,11 +370,21 @@ export class MySQLDialect extends Dialect {
       )} as ${alias} ON 1=1`;
   }
 
+  // A typed column for each field of a record, or one `value` column for
+  // an array of scalars.
   sqlUnnestPipelineHead(
     isSingleton: boolean,
     sourceSQLExpression: string,
-    fieldList: DialectFieldList
+    fieldList: DialectFieldList,
+    isScalarArray = false
   ): string {
+    if (isScalarArray) {
+      const value = fieldList.find(f => f.rawName === 'value');
+      const type = value ? malloyTypeToJSONTableType(value.typeDef) : 'JSON';
+      return `JSON_TABLE(CAST(${sourceSQLExpression} AS JSON), '$[*]'
+        COLUMNS (${this.sqlQuoteIdentifier('value')} ${type} PATH '$')
+      )`;
+    }
     return this.jsonTable(sourceSQLExpression, fieldList, isSingleton);
   }
 

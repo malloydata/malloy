@@ -13,9 +13,9 @@ import type {
 } from '../../../model/malloy_types';
 import {
   TD,
-  arrayQueryNotInPlace,
   arrayQueryOnlyAggregates,
   arrayQueryReturnsValue,
+  arrayValueNotOneAggregate,
   fieldUsageFrom,
   isQuerySegment,
 } from '../../../model/malloy_types';
@@ -40,8 +40,9 @@ import type {ExprIdReference} from './expr-id-reference';
  * The view runs with the array's elements as its source: a record's fields,
  * or `value` and `each` for an array of scalars. One stage of `aggregate:`
  * alone, with one field, returns that field's value; any other query
- * returns its rows, as an array of records. One stage of `aggregate:` with
- * several fields, which would be a record, is still to come.
+ * returns its rows, as an array of records, where the dialect returns
+ * arrays (`ArrayQuerySupport.arrays`). One stage of `aggregate:` with
+ * several fields, which would be a record, is refused.
  */
 export class ExprArrayQuery extends ExpressionDef {
   elementType = 'arrayQuery';
@@ -55,7 +56,8 @@ export class ExprArrayQuery extends ExpressionDef {
 
   protected computeExpression(fs: FieldSpace): ExprValue {
     const dialect = fs.dialectObj();
-    if (dialect !== undefined && !dialect.supportsArrayQueries) {
+    const support = dialect?.arrayQueries;
+    if (dialect !== undefined && support === undefined) {
       return this.loggedErrorExpr(
         'array-query-not-supported',
         `The ${dialect.name} dialect cannot query an array with ->`
@@ -102,23 +104,27 @@ export class ExprArrayQuery extends ExpressionDef {
     });
     const from: ExprValue[] = [{...arrayValue, refSummary: reads}];
 
-    const notInPlace =
-      dialect !== undefined && !dialect.supportsCorrelatedArrayQueries
-        ? arrayQueryNotInPlace(pipeline)
-        : undefined;
-    if (notInPlace !== undefined) {
-      return this.loggedErrorExpr(
-        'array-query-not-in-place',
-        `The ${dialect?.name} dialect can only query an array with one aggregate, or with a select: of its elements' values, so not with ${notInPlace}`
-      );
-    }
-
     const [result, ...moreResults] = outputStruct.fields;
+    const [segment, ...moreSegments] = pipeline;
     if (arrayQueryReturnsValue(pipeline) && result !== undefined) {
       if (!TD.isAtomic(result)) {
         return this.loggedErrorExpr(
           'array-query-not-scalar',
           'The aggregate of a query on an array must be a value'
+        );
+      }
+      // Array functions take one aggregate; a dialect with a correlated
+      // subquery runs anything else as that.
+      const notOneAggregate =
+        dialect !== undefined &&
+        !dialect.arrayQueryHasSubquery() &&
+        isQuerySegment(segment)
+          ? arrayValueNotOneAggregate(segment)
+          : undefined;
+      if (notOneAggregate !== undefined) {
+        return this.loggedErrorExpr(
+          'array-query-not-in-place',
+          `The ${dialect?.name} dialect cannot query this array: ${notOneAggregate}`
         );
       }
       return computedExprValue({
@@ -129,7 +135,6 @@ export class ExprArrayQuery extends ExpressionDef {
     }
     // One stage of `aggregate:` alone with several fields returns one row,
     // which would be a record.
-    const [segment, ...moreSegments] = pipeline;
     if (
       result === undefined ||
       (moreResults.length > 0 &&
@@ -139,10 +144,16 @@ export class ExprArrayQuery extends ExpressionDef {
     ) {
       return this.loggedErrorExpr(
         'array-query-not-scalar',
-        'A query on an array with only `aggregate:` must, for now, have one field'
+        'A query on an array with only `aggregate:` must have one field'
       );
     }
     // Any other query returns rows, which make an array of records.
+    if (dialect !== undefined && support?.arrays === false) {
+      return this.loggedErrorExpr(
+        'array-query-not-supported',
+        `The ${dialect.name} dialect can only query an array for one value: one stage of \`aggregate:\` with one field`
+      );
+    }
     return computedExprValue({
       value,
       dataType: {

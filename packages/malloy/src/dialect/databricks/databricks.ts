@@ -26,6 +26,7 @@ import {
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import type {
+  ArrayAggregate,
   CivilTime,
   BooleanTypeSupport,
   CompiledOrderBy,
@@ -35,10 +36,13 @@ import type {
   OrderByClauseType,
   OrderByRequest,
   QueryInfo,
+  ArrayQuerySupport,
 } from '../dialect';
 import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
+import type {LambdaArrayDialect} from '../array_lambdas';
+import {lambdaArrayAggregate} from '../array_lambdas';
 import {DATABRICKS_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DATABRICKS_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -100,6 +104,14 @@ export class DatabricksDialect extends Dialect {
   experimental = false;
   supportsFullJoin = true;
   supportsPipelinesInViews = false;
+  // A query on an array computes one value, with higher-order functions.
+  // A correlated subquery cannot feed EXPLODE or a higher-order function,
+  // so an array one made could only be selected; it returns no arrays.
+  arrayQueries: ArrayQuerySupport = {
+    value: 'lambdas',
+    innerLambdaReadsOuter: true,
+    arrays: false,
+  };
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
@@ -364,14 +376,31 @@ export class DatabricksDialect extends Dialect {
 
   sqlFieldReference(
     parentAlias: string,
-    _parentType: FieldReferenceType,
+    parentType: FieldReferenceType,
     childName: string,
     _childType: string
   ): string {
+    if (parentType === 'element[scalar]') {
+      return parentAlias;
+    }
     if (childName === '__row_id') {
       return `__row_id_from_${parentAlias}`;
     }
     return `${parentAlias}.${this.sqlQuoteIdentifier(childName)}`;
+  }
+
+  private readonly lambdaArrays: LambdaArrayDialect = {
+    // size() of a null array is -1 or null, depending on the session's
+    // legacy setting, so a null array is made empty first.
+    size: a => `size(COALESCE(${a}, array()))`,
+    reduce: (a, init, acc, v, step, finish) =>
+      `aggregate(${a}, ${init}, (${acc}, ${v}) -> ${step}, ${acc} -> ${finish})`,
+    sumCount: (s, n) => `named_struct('s', ${s}, 'n', ${n})`,
+    emptyArray: 'array()',
+  };
+
+  sqlArrayAggregate(aggregate: ArrayAggregate): string {
+    return lambdaArrayAggregate(aggregate, this.lambdaArrays);
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

@@ -488,33 +488,18 @@ export function arrayQueryOnlyAggregates(segment: QuerySegment): boolean {
 }
 
 /**
- * What, in a query on an array, keeps it from being computed in place, as
- * a dialect without a correlated subquery must; undefined if its shape can
- * be. The shapes which can are one stage of one aggregate, or of a
- * `select:` of values. What an expression in it reads is checked only when
- * the SQL is written.
+ * Why a query on an array which returns one value cannot be computed with
+ * a dialect's array functions (`ArrayQuerySupport.value` 'lambdas'), which
+ * take one aggregate, filtered or not; undefined if it can be. What an
+ * expression in it reads is checked only when the SQL is written.
  */
-export function arrayQueryNotInPlace(
-  pipeline: PipeSegment[]
+export function arrayValueNotOneAggregate(
+  segment: QuerySegment
 ): string | undefined {
-  const [segment, ...moreSegments] = pipeline;
-  if (moreSegments.length > 0) return 'several stages';
-  if (segment === undefined || !isQuerySegment(segment)) {
-    return 'this kind of query';
-  }
-  if (segment.type === 'project') {
-    const notValue = segment.outputStruct.fields.find(
-      f => f.type === 'record' || f.type === 'array' || f.type === 'turtle'
-    );
-    return notValue && `selecting \`${notValue.name}\`, which is not a value`;
-  }
-  if (segment.type !== 'reduce' || !arrayQueryReturnsValue(pipeline)) {
-    return 'a `group_by:`, `nest:` or `calculate:`';
-  }
   if (
     (segment.filterList ?? []).some(f => !expressionIsScalar(f.expressionType))
   ) {
-    return 'a `having:`';
+    return 'it has a `having:`';
   }
   const [field] = segment.queryFields;
   if (
@@ -524,10 +509,7 @@ export function arrayQueryNotInPlace(
   ) {
     const e = field.e.node === 'filteredExpr' ? field.e.kids.e : field.e;
     if (e.node !== 'aggregate') {
-      return `\`${field.name}\`, which is not one aggregate`;
-    }
-    if (e.structPath !== undefined) {
-      return `\`${field.name}\`, an aggregate of an array inside the elements`;
+      return `\`${field.name}\` is not one aggregate`;
     }
   }
   return undefined;

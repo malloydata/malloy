@@ -27,6 +27,7 @@ import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import {
   turtleGroupSetCondition,
   type CompiledOrderBy,
+  type ArrayQuerySupport,
   type DialectFieldList,
   type FieldReferenceType,
   type QueryInfo,
@@ -94,7 +95,9 @@ export class PostgresDialect extends PostgresBase {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
-  supportsArrayQueries = true;
+  // A query on an array computes one value, as a correlated subquery:
+  // Postgres has no list lambdas.
+  arrayQueries: ArrayQuerySupport = {value: 'subquery', arrays: false};
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   supportsSafeCast = false;
@@ -211,6 +214,11 @@ export class PostgresDialect extends PostgresBase {
     childName: string,
     childType: string
   ): string {
+    if (parentType === 'nest source') {
+      // A nest source's element is its `value` column
+      // (sqlUnnestPipelineHead), which a distinct key's wrapper keeps.
+      parentAlias = `${parentAlias}.value`;
+    }
     if (childName === '__row_id') {
       return `(${parentAlias}->>'__row_id')`;
     }
@@ -241,10 +249,12 @@ export class PostgresDialect extends PostgresBase {
     }
   }
 
-  // A query on an array is always a correlated subquery here: Postgres has
-  // no list lambdas to compute one in place. Nested records are JSONB, and
-  // an array of scalars, which may be a native array, is made JSONB and
-  // each element wrapped as {"value": v}, the way sqlUnnestAlias does.
+  // The head of a query over an array. Nested records are JSONB, and an
+  // array of scalars, which may be a native array, is made JSONB and each
+  // element wrapped as {"value": v}, the way sqlUnnestAlias does. Each
+  // head's element is a JSONB column named `value`, as
+  // JSONB_ARRAY_ELEMENTS's is, so that it survives the wrapper which adds a
+  // distinct key to a query's source (`QueryQuery.generateSQLJoins`).
   sqlUnnestPipelineHead(
     isSingleton: boolean,
     sourceSQLExpression: string,
@@ -252,17 +262,12 @@ export class PostgresDialect extends PostgresBase {
     isScalarArray = false
   ): string {
     if (isSingleton) {
-      return `UNNEST(ARRAY((SELECT ${sourceSQLExpression})))`;
+      return `(SELECT __e AS value FROM UNNEST(ARRAY((SELECT ${sourceSQLExpression}))) AS __e)`;
     } else if (isScalarArray) {
-      return `(SELECT JSONB_BUILD_OBJECT('value', __v) AS base FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${sourceSQLExpression})) AS __v)`;
+      return `(SELECT JSONB_BUILD_OBJECT('value', __v) AS value FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${sourceSQLExpression})) AS __v)`;
     } else {
       return `JSONB_ARRAY_ELEMENTS(${sourceSQLExpression})`;
     }
-  }
-
-  // JSONB_AGG over no rows is null.
-  sqlArrayOrEmpty(arraySQL: string): string {
-    return `COALESCE(${arraySQL}, '[]'::jsonb)`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
