@@ -50,7 +50,7 @@ jobs:
           PRESTO_CATALOG: hive
           PRESTO_SCHEMA: malloytest
           PRESTO_HOST: http://localhost
-          PRESTO_PORT: 8080
+          PRESTO_PORT: 8090
           PRESTO_USER: malloy-ci
       # - name: Show docker logs
       #   if: always()

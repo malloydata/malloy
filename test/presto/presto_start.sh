@@ -13,7 +13,7 @@ DATADIR=$ROOTDIR/test/data/malloytest-parquet
 PRESTO_VERSION=0.287
 USE_SLIM=false
 CONTAINER_NAME="presto-malloy"
-PORT=${PRESTO_PORT:-8080}
+PORT=${PRESTO_PORT:-8090}
 
 # Parse arguments
 for arg in "$@"; do
