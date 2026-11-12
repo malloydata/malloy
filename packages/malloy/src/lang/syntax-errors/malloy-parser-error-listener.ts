@@ -53,9 +53,10 @@ export const malloyCustomErrorCases: ErrorCase[] = [
     precedingTokenOptions: [[MalloyParser.AGGREGATE]],
     lookAheadOptions: [[-MalloyParser.IS]],
   },
-  // A statement's first entry, a name followed by more than a field
-  // reference can be: an expression or a function call. `aggregate:` has
-  // its own cases, above and below.
+  // The first entry of `group_by:`, `select:` or `calculate:` is a name
+  // followed by an operator, a call or `->`: an expression without a name.
+  // `*` is not among the operators: after a name it reads as a wildcard,
+  // and the error comes later. `aggregate:` has cases of its own.
   ...(
     [
       [MalloyParser.GROUP_BY, 'group_by:'],
@@ -91,7 +92,7 @@ export const malloyCustomErrorCases: ErrorCase[] = [
   },
   {
     errorMessage:
-      "Missing '}' before '->', or '->' on an expression; '->' can follow only the name of an array, so make the expression a dimension first",
+      "Missing '}' before '->', or '->' on an expression: define the expression as a dimension and query that",
     offendingSymbol: MalloyParser.ARROW,
     ruleContextOptions: ['queryProperties', 'exploreProperties'],
     precedingTokenOptions: [[MalloyParser.CBRACK], [MalloyParser.CPAREN]],

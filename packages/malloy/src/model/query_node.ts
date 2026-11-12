@@ -249,8 +249,6 @@ export function isBasicScalar(f: QueryField): f is QueryBasicField {
 // Parent interface for QueryStruct
 export interface ParentQueryStruct {
   struct: QueryStruct;
-  /** The new struct is an array's element read through a lambda's parameter. */
-  isLambdaElement?: boolean;
 }
 
 // Interface for model - provides struct lookup capability
@@ -290,7 +288,13 @@ export class QueryStruct {
     public structDef: StructDef,
     readonly sourceArguments: Record<string, Argument> | undefined,
     parent: ParentQueryStruct | ParentQueryModel,
-    readonly prepareResultOptions: PrepareResultOptions
+    readonly prepareResultOptions: PrepareResultOptions,
+    /**
+     * An array's struct whose identifier names an element inside a dialect's
+     * lambda, where the array is computed on in place: its fields are then
+     * read as `element[...]` references.
+     */
+    readonly isLambdaElement = false
   ) {
     if ('model' in parent) {
       this.model = parent.model;
@@ -302,7 +306,6 @@ export class QueryStruct {
       }
     } else {
       this.parent = parent.struct;
-      this.isLambdaElement = parent.isLambdaElement === true;
       this.model = this.getModel();
       this.pathAliasMap = this.root().pathAliasMap;
       this.connectionName = this.root().connectionName;
@@ -480,13 +483,6 @@ export class QueryStruct {
       return this.getIdentifier();
     }
   }
-
-  /**
-   * Set on an array's struct whose identifier names an element inside a
-   * dialect's lambda, where the array is computed on in place: its fields
-   * are then read as `element[...]` references.
-   */
-  readonly isLambdaElement: boolean = false;
 
   /** What a field of this struct is read from, for `sqlFieldReference`. */
   fieldReferenceType(): FieldReferenceType {

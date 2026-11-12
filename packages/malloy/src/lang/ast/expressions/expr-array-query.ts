@@ -6,9 +6,9 @@
 import type {
   ArrayQueryExpr,
   FieldDef,
+  FieldUsage,
   NestSourceDef,
   PipeSegment,
-  RefSummary,
   SourceDef,
 } from '../../../model/malloy_types';
 import {
@@ -17,6 +17,7 @@ import {
   arrayQueryReturnsValue,
   activeName,
   arrayValueNotOneAggregate,
+  fieldUsageFrom,
   isQuerySegment,
   mapFieldUsage,
   mkRefSummary,
@@ -109,16 +110,19 @@ export class ExprArrayQuery extends ExpressionDef {
       pipeline,
     };
     // What the query reads from the elements is read in place, through the
-    // array, without fanning the row out. Its givens are those of every
-    // stage, expanded, and of the nests inside them, as for any query.
+    // array, without fanning the row out. The query on the elements is
+    // finished IR, expanded above, so its givens are those of a query: every
+    // stage's and every nest's (`computeQueryGivenUsage`).
     const reads = mergeRefSummaries(
       arrayValue.refSummary,
-      readsThroughArray(
-        this.array.fieldReference.path,
-        arrayDef.fields,
-        written[0]
-      ),
-      mkRefSummary({givenUsage: computeQueryGivenUsage(pipeline)})
+      mkRefSummary({
+        fieldUsage: readsThroughArray(
+          this.array.fieldReference.path,
+          arrayDef.fields,
+          written[0]
+        ),
+        givenUsage: computeQueryGivenUsage(pipeline),
+      })
     );
     const from: ExprValue[] = [{...arrayValue, refSummary: reads}];
 
@@ -126,10 +130,10 @@ export class ExprArrayQuery extends ExpressionDef {
     const [segment, ...moreSegments] = pipeline;
     if (arrayQueryReturnsValue(pipeline) && result !== undefined) {
       if (!TD.isAtomic(result)) {
-        // An aggregate is always a value; reaching here is a bug.
+        // An aggregate is always a value.
         return this.loggedErrorExpr(
           'array-query-not-scalar',
-          `Internal error, likely a compiler bug: the aggregate \`${result.name}\` of a query on an array is a ${result.type}, not a value`
+          `Internal error in the translator: the aggregate \`${result.name}\` of a query on an array is a ${result.type}, not a value`
         );
       }
       // Array functions take one aggregate; a dialect with a correlated
@@ -204,6 +208,8 @@ class ArrayElementSpace extends StaticSourceSpace {
     if (head === undefined || this.entry(head.refString) !== undefined) {
       return undefined;
     }
+    // Looked up as any name is, so the reference to the row's field is
+    // recorded.
     const outer = this.row.lookup([head]);
     if (outer.found === undefined) return undefined;
     const what =
@@ -237,9 +243,9 @@ function expandedPipeline(
 }
 
 /**
- * What the first stage of a query on an array reads from the elements, as
- * the stage's own `refSummary` re-rooted through the array, `arrayPath`,
- * with its givens carried along. Each path is a weak reference
+ * What the first stage of a query on an array reads from the elements: the
+ * field usage of the stage's own `refSummary`, re-rooted through the array,
+ * `arrayPath`. Each path is a weak reference
  * (`inPlaceDepth`): it names the array and the element fields it reads, and
  * activates no join from the array down. Expanding the row's query follows
  * a computed element field from there, keeping it weak.
@@ -256,22 +262,18 @@ function readsThroughArray(
   arrayPath: string[],
   elementFields: FieldDef[],
   firstStage: PipeSegment | undefined
-): RefSummary | undefined {
-  if (firstStage === undefined || firstStage.type === 'raw') return undefined;
+): FieldUsage {
+  if (firstStage === undefined || firstStage.type === 'raw') return [];
   const reads = mapFieldUsage(firstStage.refSummary, u => ({
     path: [...arrayPath, ...u.path],
     ...(u.at && {at: u.at}),
     inPlaceDepth: 1 + u.path.length,
   }));
-  if (reads === undefined) return undefined;
   const isElementField = (name: string) =>
     elementFields.some(f => activeName(f) === name);
-  return {
-    ...reads,
-    fieldUsage: reads.fieldUsage.filter(
-      u =>
-        u.path.length > arrayPath.length &&
-        isElementField(u.path[arrayPath.length])
-    ),
-  };
+  return fieldUsageFrom(reads).filter(
+    u =>
+      u.path.length > arrayPath.length &&
+      isElementField(u.path[arrayPath.length])
+  );
 }

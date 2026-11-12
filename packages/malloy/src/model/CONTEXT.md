@@ -214,7 +214,9 @@ four expanded fields below; how it does both is in `lang/CONTEXT.md`,
 "Reference summaries: collection and expansion". This section is the contract
 the compiler reads: what an entry means, what a path is rooted at, and what the
 two readers do with it. The expanded summary is the single source of truth for
-"what does this query touch"; the compiler never walks expressions to find out.
+"what does this query touch"; the compiler never walks expressions to find out,
+with one exception: which arrays a filtered join's subquery reads itself (see
+"Arrays beneath a filtered join"), which no segment's summary records.
 
 ### Field usage entries
 
@@ -307,8 +309,8 @@ It reads no field names — each entry collapses to which join it is and whether
 that join needs a key. `QueryQuery.packedColumnsByJoin` is the reader that does
 use the names: it resolves each path to the column the innermost join on it has
 to supply, which is how a filtered join's subquery knows what to pack for each
-join below it. For a weak entry the column is the array itself, a column of
-the join above it.
+join below it. An array on a path is a column of the join above it, as a record
+is, so a path through an array, weak or not, needs the array itself.
 
 **What the compiler reaches for that no entry names** is a join's declared
 `primary_key`. It is the distinct key for a symmetric aggregate over that join
@@ -325,8 +327,29 @@ alias** (`two_0`), not by Malloy path, so a consumer holding usage paths has to
 cross between the two. `addDependantPath` crosses one way with
 `getFieldByName(path)`; `packedColumnFor` crosses the other by walking the
 `QueryStruct` tree a name at a time, because it needs the join *and* the member
-of it, and because a record on the path is a column of the join above it rather
-than a join of its own.
+of it, and because a record or an array on the path is a column of the join
+above it rather than a join of its own.
+
+### Arrays beneath a filtered join
+
+A join with a `where:` (on a dialect with `supportsComplexFilteredSources`) is
+written as a subquery, and every join beneath it is packed into a struct
+column of that subquery. An array beneath it is unnested **outside** the
+subquery, from the packed column of the join above it, so its element and row
+number are columns of the outer query like any other array's. The exception is
+an array the subquery reads itself, in the filtered join's own `where:` or in
+the `on` or `where:` of a join inside it: that array, and any array inside it,
+is unnested **inside**, since the filter applies there, and the outer query
+cannot reach it.
+
+The placement is decided once per query (`placeArraysBeneathSubqueries`,
+read through `QueryQuery.arrayPlacement`), and three places must agree with
+it: `generateSQLJoinBlock` writes each array where it is placed;
+`packedColumnFor` packs the array's column into the join above it; and
+`collectArrayJoins` leaves arrays placed inside out of a `select:` query's
+ordering by row number. Which arrays a subquery reads is found by walking the
+filter and `on` expressions (`arrayAliasesReadIn`), since no reference summary
+records them per join.
 
 `this.firstSegment` is set in the `QueryQuery` constructor, so
 `this.firstSegment.expandedFieldUsage` is in hand in any method of the class,

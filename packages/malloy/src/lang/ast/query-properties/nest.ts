@@ -33,9 +33,8 @@ export class NestFieldDeclaration
   getFieldDef(fs: FieldSpace): model.TurtleDef {
     if (this.turtleDef) return this.turtleDef;
     if (fs.isQueryFieldSpace()) {
-      // A nest runs on the query's input. A `having:` that names the nest
-      // reaches it from the output space first, and the definition is kept,
-      // so it must not be built against the output fields.
+      // A nest's view runs on the query's input, whichever space asks for
+      // it; the definition is built once and kept.
       const input = fs.inputSpace();
       const {pipeline, annotations} = this.view.pipelineComp(
         input,

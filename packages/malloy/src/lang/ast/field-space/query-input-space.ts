@@ -36,7 +36,7 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
     input: SourceDef,
     private queryOutput: QueryOperationSpace,
     public readonly _accessProtectionLevel: AccessModifierLabel,
-    private readonly from?: SourceFieldSpace
+    private readonly origin?: SourceFieldSpace
   ) {
     super(input);
   }
@@ -44,7 +44,7 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
   lookup(path: FieldName[], accessLevel?: AccessModifierLabel): LookupResult {
     const result = super.lookup(path, accessLevel);
     if (result.error?.code === 'field-not-found') {
-      return this.from?.explainMissing?.(path) ?? result;
+      return this.origin?.explainMissing?.(path) ?? result;
     }
     return result;
   }

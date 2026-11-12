@@ -521,6 +521,17 @@ describe('query:', () => {
         }
       `).toTranslate();
       });
+      // A nest's view is built against the query's input, even when a
+      // `having:` reaches the nest through the output space first.
+      test('a having: which names a nest does not rebuild the nest', () => {
+        expect(`
+          run: a -> {
+            group_by: ai
+            nest: types is { group_by: astr; aggregate: c is count() }
+            having: types.c > 3
+          }
+        `).toLog(errorMessage("'types' is not defined"));
+      });
       test('use a having on a self-named aggregate', () => {
         expect(`
         run: a -> {

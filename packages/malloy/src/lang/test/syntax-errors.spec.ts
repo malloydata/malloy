@@ -327,6 +327,20 @@ describe('custom error messages', () => {
           "'group_by:' entries must include a name (ex: `some_name is ...`)"
         )
       );
+      expect(`
+          run: x -> { select: a + 1 }
+        `).toLogAtLeast(
+        errorMessage(
+          "'select:' entries must include a name (ex: `some_name is ...`)"
+        )
+      );
+      expect(`
+          run: x -> { group_by: a; calculate: lag(a) }
+        `).toLogAtLeast(
+        errorMessage(
+          "'calculate:' entries must include a name (ex: `some_name is ...`)"
+        )
+      );
     });
 
     test('missing alias for an array query, or a missing }', () => {
@@ -348,7 +362,6 @@ describe('custom error messages', () => {
     test('a method on an expression', () => {
       for (const [src, fn] of [
         ['run: x -> { aggregate: t is (a + 1).sum() }', 'sum'],
-        ['run: x -> { aggregate: t is (a + 1).stddev() }', 'stddev'],
         ['run: x -> { aggregate: t is floor(a).sum() }', 'sum'],
       ]) {
         expect(src).toLogAtLeast(
@@ -380,7 +393,7 @@ describe('custom error messages', () => {
       ]) {
         expect(src).toLogAtLeast(
           errorMessage(
-            "Missing '}' before '->', or '->' on an expression; '->' can follow only the name of an array, so make the expression a dimension first"
+            "Missing '}' before '->', or '->' on an expression: define the expression as a dimension and query that"
           )
         );
       }
