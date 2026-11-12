@@ -310,6 +310,69 @@ describe('custom error messages', () => {
   });
 
   describe('run', () => {
+    test('missing alias for a group_by: expression', () => {
+      expect(`
+          run: x -> {
+            group_by: concat(a, 'x')
+          }
+        `).toLogAtLeast(
+        errorMessage(
+          "'group_by:' entries must include a name (ex: `some_name is ...`)"
+        )
+      );
+      expect(`
+          run: x -> { group_by: a + 1 }
+        `).toLogAtLeast(
+        errorMessage(
+          "'group_by:' entries must include a name (ex: `some_name is ...`)"
+        )
+      );
+    });
+
+    test('missing alias for an array query', () => {
+      expect(`
+          ##! experimental.array_queries
+          run: x -> {
+            group_by: items -> { aggregate: n is count() }
+          }
+        `).toLogAtLeast(
+        errorMessage(
+          "'group_by:' entries must include a name (ex: `some_name is ...`)"
+        )
+      );
+    });
+
+    test('an aggregate method on an expression in parentheses', () => {
+      expect(`
+          run: x -> { aggregate: t is (a + 1).sum() }
+        `).toLogAtLeast(
+        errorMessage(
+          'An aggregate of an expression is written `sum(expression)`, not as a method of the expression in parentheses'
+        )
+      );
+    });
+
+    test('a field of an expression in parentheses', () => {
+      expect(`
+          run: x -> { select: t is (a).b }
+        `).toLogAtLeast(
+        errorMessage(
+          "'.b' must follow a field name; a field cannot be read from an expression in parentheses"
+        )
+      );
+    });
+
+    test('an arrow on an expression', () => {
+      expect(`
+          ##! experimental.array_queries
+          run: x -> { select: t is ['a', 'b'] -> { aggregate: n is count() } }
+        `).toLogAtLeast(
+        errorMessage(
+          "'->' must follow the name of an array; to query an expression, make it a dimension first"
+        )
+      );
+    });
+
     test('missing alias for aggregate entry', () => {
       expect(`
           run: x -> {
