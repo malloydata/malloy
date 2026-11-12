@@ -912,6 +912,44 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       );
 
+      // An array the filtered join reads itself, in its `where:` or in an
+      // `on` inside it, stays inside the subquery.
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'read by the filtered join itself',
+        async () => {
+          const twoArrays = `
+            source: sf is ${databaseName}.table('malloytest.state_facts')
+            source: three is ${databaseName}.table('malloytest.airports') -> {
+              group_by: state
+              nest: types is { group_by: fac_type; aggregate: c is count() }
+            }
+            source: two is sf extend {
+              join_one: three on three.state = state
+              join_one: sf2 is sf on sf2.state = three.types.fac_type
+            }`;
+          // Of Alabama's facility types, only airports number over 100
+          await expect(`
+            ${twoArrays}
+            source: one is two extend { where: three.types.c > 100 }
+            source: zero is sf extend { join_one: one on one.state = state }
+            run: zero -> {
+              where: state = 'AL'
+              select: state, x is one.three.state
+            }
+          `).toMatchResult(testModel, {state: 'AL', x: 'AL'});
+          // No facility type is a state's name
+          await expect(`
+            ${twoArrays}
+            source: one is two extend { where: state ~ 'A%' }
+            source: zero is sf extend { join_one: one on one.state = state }
+            run: zero -> {
+              where: state = 'AL'
+              aggregate: n is count(one.sf2.state)
+            }
+          `).toMatchResult(testModel, {n: 0});
+        }
+      );
+
       test.when(runtime.dialect.supportsComplexFilteredSources)(
         'below two filtered joins',
         async () => {

@@ -233,6 +233,74 @@ function isArrayJoin(ji: JoinInstance): boolean {
   return ji.queryStruct.structDef.type === 'array';
 }
 
+/**
+ * The arrays beneath a filtered join to unnest outside its subquery
+ * (`arrays`), and those the subquery reads itself, which stay inside it
+ * (`keep`, by alias). See `generateSQLJoinBlock`.
+ */
+interface Hoisting {
+  arrays: JoinInstance[];
+  keep: Set<string>;
+}
+
+/**
+ * Whether an array is unnested outside the subquery: an array whose parent
+ * is a join, not another array (an array inside an array goes with it),
+ * and which nothing inside the subquery reads.
+ */
+function hoists(hoisting: Hoisting, ji: JoinInstance): boolean {
+  return (
+    isArrayJoin(ji) &&
+    ji.parent !== undefined &&
+    !isArrayJoin(ji.parent) &&
+    !hoisting.keep.has(ji.alias)
+  );
+}
+
+/**
+ * The aliases of the arrays a filtered join's subquery reads itself: in its
+ * own `where:`, and in the `on` or `where:` of a join inside it, directly or
+ * through a computed field.
+ */
+function arraysReadIn(ji: JoinInstance): Set<string> {
+  const found = new Set<string>();
+  const readFrom = (e: Expr, from: QueryStruct) => {
+    for (const node of exprWalk(e)) {
+      if (node.node !== 'field') continue;
+      let struct = from;
+      for (const name of node.path) {
+        const child = struct.getChildByName(name);
+        if (child instanceof QueryFieldStruct) {
+          struct = child.queryStruct;
+          if (struct.structDef.type === 'array') {
+            found.add(struct.getIdentifier());
+          }
+        } else {
+          if (child !== undefined && hasExpression(child.fieldDef)) {
+            readFrom(child.fieldDef.e, child.parent);
+          }
+          break;
+        }
+      }
+    }
+  };
+  const visit = (j: JoinInstance, isTop: boolean) => {
+    const qs = j.queryStruct;
+    for (const f of j.joinFilterConditions ?? []) {
+      if (f.fieldDef.e) readFrom(f.fieldDef.e, qs);
+    }
+    const sd = qs.structDef;
+    if (!isTop && isJoinedSource(sd) && sd.onExpression && qs.parent) {
+      readFrom(sd.onExpression, qs.parent);
+    }
+    for (const below of j.children) {
+      if (!isArrayJoin(below)) visit(below, false);
+    }
+  };
+  visit(ji, true);
+  return found;
+}
+
 export class QueryQuery extends QueryField {
   fieldDef: TurtleDef;
   firstSegment: PipeSegment;
@@ -1057,13 +1125,15 @@ export class QueryQuery extends QueryField {
    * subquery, from the column the subquery projects, so it goes on that list
    * instead of being written here: the unnest's element and row number are
    * then plain columns of the outer query, as for any other array, rather
-   * than columns hidden inside the subquery.
+   * than columns hidden inside the subquery. An array which the subquery
+   * itself reads, in its `where:` or in the `on` of a join inside it, is
+   * unnested inside it (`hoisted.keep`), since the filter must apply there.
    */
   generateSQLJoinBlock(
     stageWriter: StageWriter,
     ji: JoinInstance,
     depth: number,
-    hoisted?: JoinInstance[]
+    hoisted?: Hoisting
   ): string {
     let s = '';
     const qs = ji.queryStruct;
@@ -1160,20 +1230,23 @@ export class QueryQuery extends QueryField {
           }
           const readFrom = from ?? (j.isSubquery() ? j.alias : undefined);
           for (const below of j.children) {
-            if (!isArrayJoin(below)) projectJoin(below, readFrom);
+            if (!inner.arrays.includes(below)) projectJoin(below, readFrom);
           }
         };
-        const arrays = hoisted ?? [];
+        const inner: Hoisting = {
+          arrays: hoisted?.arrays ?? [],
+          keep: new Set([...(hoisted?.keep ?? []), ...arraysReadIn(ji)]),
+        };
         for (const childJoin of ji.children) {
-          if (isArrayJoin(childJoin)) {
-            arrays.push(childJoin);
+          if (inner.arrays.includes(childJoin) || hoists(inner, childJoin)) {
+            inner.arrays.push(childJoin);
             continue;
           }
           joins += this.generateSQLJoinBlock(
             stageWriter,
             childJoin,
             depth + 1,
-            arrays
+            inner
           );
           projectJoin(childJoin, undefined);
         }
@@ -1185,7 +1258,7 @@ export class QueryQuery extends QueryField {
         }\n  ON ${onCondition}\n`;
         // A subquery inside another leaves its arrays to the outermost one.
         if (hoisted === undefined) {
-          for (const arrayJoin of arrays) {
+          for (const arrayJoin of inner.arrays) {
             s += this.generateSQLJoinBlock(stageWriter, arrayJoin, depth + 1);
           }
         }
@@ -1235,8 +1308,8 @@ export class QueryQuery extends QueryField {
       throw new Error(`Join type not implemented ${qs.structDef.type}`);
     }
     for (const childJoin of ji.children) {
-      if (hoisted !== undefined && isArrayJoin(childJoin)) {
-        hoisted.push(childJoin);
+      if (hoisted !== undefined && hoists(hoisted, childJoin)) {
+        hoisted.arrays.push(childJoin);
       } else {
         s += this.generateSQLJoinBlock(
           stageWriter,
@@ -1450,14 +1523,24 @@ export class QueryQuery extends QueryField {
   /**
    * Collect all array joins from the join tree in depth-first order.
    * This ordering ensures parent arrays are ordered before child arrays.
+   * An array a filtered join's subquery reads itself is unnested inside the
+   * subquery (`arraysReadIn`), out of reach of the outer query, so it and
+   * the arrays inside it are left out.
    */
-  collectArrayJoins(ji: JoinInstance): JoinInstance[] {
+  collectArrayJoins(
+    ji: JoinInstance,
+    insideOnly: Set<string> = new Set()
+  ): JoinInstance[] {
+    if (isArrayJoin(ji) && insideOnly.has(ji.alias)) return [];
+    const keep = ji.isSubquery()
+      ? new Set([...insideOnly, ...arraysReadIn(ji)])
+      : insideOnly;
     const result: JoinInstance[] = [];
-    if (ji.queryStruct.structDef.type === 'array') {
+    if (isArrayJoin(ji)) {
       result.push(ji);
     }
     for (const child of ji.children) {
-      result.push(...this.collectArrayJoins(child));
+      result.push(...this.collectArrayJoins(child, keep));
     }
     return result;
   }
