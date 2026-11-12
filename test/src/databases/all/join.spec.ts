@@ -210,6 +210,30 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
+  // The nest's count() has an INTEGER type in dialects which declare the
+  // nest's ROW type (Trino, Presto). The symmetric sum scales the value
+  // before summing, which overflowed when the scaling was done in INTEGER.
+  test.when(runtime.supportsNesting)(
+    'symmetric sum of an integer nest field through a join',
+    async () => {
+      await expect(`
+        source: three is ${databaseName}.table('malloytest.airports') -> {
+          group_by: state
+          nest: types is { group_by: fac_type; aggregate: c is count() }
+        }
+        source: sf is ${databaseName}.table('malloytest.state_facts') extend {
+          join_one: three on three.state = state
+        }
+        run: sf -> {
+          where: state = 'AK'
+          aggregate:
+            n is three.types.count()
+            t is three.types.c.sum()
+        }
+      `).toMatchResult(joinModel, {n: 3, t: 608});
+    }
+  );
+
   it('activates parent join when fields in leaf join are referenced', async () => {
     await expect(`
       source: flights is ${databaseName}.table('malloytest.flights') extend {
