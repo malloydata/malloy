@@ -222,6 +222,13 @@ function pushDialectField(dl: DialectFieldList, f: DialectFieldArg) {
 }
 
 /** Query builder object. */
+/** An array's lambda element, and the inner array bound inside it. */
+interface LambdaElements {
+  element: QueryStruct;
+  inner:
+    {struct: QueryStruct; arraySQL: string; name: string} | undefined | false;
+}
+
 function isArrayJoin(ji: JoinInstance): boolean {
   return ji.queryStruct.structDef.type === 'array';
 }
@@ -234,6 +241,7 @@ export class QueryQuery extends QueryField {
   maxGroupSet = 0;
   rootResult: FieldInstanceResultRoot;
   private packedColumns: Map<string, Set<string>> | undefined;
+  private lambdaElementCache = new Map<string, LambdaElements>();
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
   isJoinedSubquery: boolean; // this query is a joined subquery.
@@ -2657,11 +2665,7 @@ export class QueryQuery extends QueryField {
     // Each condition joined by a top-level `and` is placed on its own, so
     // that one which reads only the outer element can filter it.
     const conditions = filters.flatMap(f => conjuncts(f.e));
-    const element = this.arrayElementStruct(array);
-    if (element === undefined) {
-      throw new Error('Internal Error: an array element has no parent');
-    }
-    const inner = structPath && this.bindInnerArrayElement(element, structPath);
+    const {element, inner} = this.lambdaElements(array, structPath);
     if (inner === false) {
       return {
         why: `it aggregates \`${structPath?.join('.')}\`, through more than one array inside the elements`,
@@ -2716,6 +2720,32 @@ export class QueryQuery extends QueryField {
         filter: and(innerConditions),
       },
     };
+  }
+
+  /**
+   * The element struct for an aggregate over `array` in place, with the
+   * array inside the elements that `structPath` passes through bound to a
+   * lambda element of its own (`bindInnerArrayElement`). Each is built once
+   * per query, for each array and path: binding changes the element struct,
+   * so an element bound for one path is not shared with another.
+   */
+  private lambdaElements(
+    array: QueryStruct,
+    structPath: string[] | undefined
+  ): LambdaElements {
+    const key = JSON.stringify([array.getIdentifier(), structPath ?? []]);
+    let found = this.lambdaElementCache.get(key);
+    if (found === undefined) {
+      const element = this.arrayElementStruct(array);
+      if (element === undefined) {
+        throw new Error('Internal Error: an array element has no parent');
+      }
+      const inner =
+        structPath && this.bindInnerArrayElement(element, structPath);
+      found = {element, inner};
+      this.lambdaElementCache.set(key, found);
+    }
+    return found;
   }
 
   /**
@@ -2879,18 +2909,16 @@ export class QueryQuery extends QueryField {
    */
   private arrayElementStruct(array: QueryStruct): QueryStruct | undefined {
     if (array.parent === undefined) return undefined;
-    const element = new QueryStruct(
+    return new QueryStruct(
       {
         ...array.structDef,
         name: `__${activeName(array.structDef)}_element`,
         as: undefined,
       },
       undefined,
-      {struct: array.parent},
+      {struct: array.parent, isLambdaElement: true},
       array.prepareResultOptions
     );
-    element.isLambdaElement = true;
-    return element;
   }
 
   /**

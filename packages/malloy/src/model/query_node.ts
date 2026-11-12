@@ -249,6 +249,8 @@ export function isBasicScalar(f: QueryField): f is QueryBasicField {
 // Parent interface for QueryStruct
 export interface ParentQueryStruct {
   struct: QueryStruct;
+  /** The new struct is an array's element read through a lambda's parameter. */
+  isLambdaElement?: boolean;
 }
 
 // Interface for model - provides struct lookup capability
@@ -300,6 +302,7 @@ export class QueryStruct {
       }
     } else {
       this.parent = parent.struct;
+      this.isLambdaElement = parent.isLambdaElement === true;
       this.model = this.getModel();
       this.pathAliasMap = this.root().pathAliasMap;
       this.connectionName = this.root().connectionName;
@@ -483,7 +486,7 @@ export class QueryStruct {
    * dialect's lambda, where the array is computed on in place: its fields
    * are then read as `element[...]` references.
    */
-  isLambdaElement = false;
+  readonly isLambdaElement: boolean = false;
 
   /** What a field of this struct is read from, for `sqlFieldReference`. */
   fieldReferenceType(): FieldReferenceType {
