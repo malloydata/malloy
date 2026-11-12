@@ -85,13 +85,36 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
       aggregate: airport_count is count()
       nest: by_county is {
         group_by: county
+        // Null for most counties
+        aggregate: high is max(elevation) { where: elevation > 8000 }
         nest: by_fac_type is {
+          group_by: fac_type
+          aggregate: airport_count is count()
+        }
+        // Empty for most counties
+        nest: heliports is {
+          where: fac_type = 'HELIPORT'
           group_by: fac_type
           aggregate: airport_count is count()
         }
       }
     } extend {
       dimension:
+        biggest_group is by_county -> {
+          aggregate: n is by_fac_type.airport_count.max()
+        }
+        type_count is by_county -> {
+          aggregate: n is count(by_fac_type.fac_type)
+        }
+        heliport_total is by_county -> {
+          aggregate: n is heliports.airport_count.sum()
+        }
+        heliport_most is by_county -> {
+          aggregate: n is heliports.airport_count.max()
+        }
+        high_sum is by_county -> { aggregate: n is high.sum() }
+        high_max is by_county -> { aggregate: n is high.max() }
+        high_avg is by_county -> { aggregate: n is high.avg() }
         nested_total is by_county -> {
           aggregate: n is by_fac_type.airport_count.sum()
         }
@@ -224,6 +247,18 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     }
   );
 
+  test.when(supported)('a where: and a filter with an or', async () => {
+    // Of Alaska's facility types, only heliports number under 50. Read as
+    // (n < 50 and heliport) or seaplane base, it would be 2.
+    const query = alaska(`by_fac_type -> {
+      where: airport_count < 50
+      aggregate: n is count() {
+        where: fac_type = 'HELIPORT' or fac_type = 'SEAPLANE BASE'
+      }
+    }`);
+    await expect(query).toEqualResult(tm, [{d: 1}]);
+  });
+
   test.when(supported)('a where: and a filtered aggregate', async () => {
     const query = alaska(`by_fac_type -> {
       where: airport_count > 50
@@ -260,6 +295,44 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
     });
 
     test.when(supported)(
+      'min, max and count(x) of the inner array',
+      async () => {
+        // Alaska's biggest county and facility type group is 41 airports,
+        // of 3 facility types
+        await expect(`
+        run: states -> {
+          where: state = 'AK'
+          select: biggest_group, type_count
+        }
+      `).toEqualResult(tm, [{biggest_group: 41, type_count: 3}]);
+      }
+    );
+
+    test.when(supported)('empty inner arrays and null values', async () => {
+      // Most counties have no heliports, and no airport above 8,000 feet.
+      // There are 5,135 heliports, at most 151 in one county; 4 states
+      // have airports above 8,000 feet, the highest at 12,442.
+      await expect(`
+        run: states -> {
+          aggregate:
+            heliports is heliport_total.sum()
+            most is heliport_most.max()
+            high_total is high_sum.sum()
+            highest is high_max.max()
+            high_states is count() { where: high_avg is not null }
+        }
+      `).toEqualResult(tm, [
+        {
+          heliports: 5135,
+          most: 151,
+          high_total: 350120,
+          highest: 12442,
+          high_states: 4,
+        },
+      ]);
+    });
+
+    test.when(supported)(
       'with conditions on the outer and the inner elements',
       async () => {
         // 169 heliports are in counties whose names start with A
@@ -291,7 +364,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
             )
             .getSQL()
         ).rejects.toThrow(
-          /reads both `by_fac_type` and the elements' other fields/
+          /one condition reads both `by_fac_type` and the elements' own fields/
         );
       }
     );

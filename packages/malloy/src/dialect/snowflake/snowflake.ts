@@ -5,6 +5,7 @@
 
 import {DateTime as LuxonDateTime} from 'luxon';
 import {indent} from '../../model/utils';
+import {sumsIntegers} from '../array_lambdas';
 import type {
   Sampling,
   AtomicTypeDef,
@@ -301,7 +302,8 @@ export class SnowflakeDialect extends Dialect {
       }
       return `${arrayRef}::${this.variantCastType(childType)}`;
     } else if (parentType === 'record') {
-      return `${parentAlias}:${sqlName}`;
+      // Cast, as an element's own field is: an uncast JSON null is not NULL.
+      return `${parentAlias}:${sqlName}::${this.variantCastType(childType)}`;
     }
     return `${parentAlias}.${sqlName}`;
   }
@@ -311,6 +313,8 @@ export class SnowflakeDialect extends Dialect {
     switch (childType) {
       case 'record':
       case 'array':
+      case 'json':
+      case 'sql native':
         return 'VARIANT';
       case 'string':
         return 'VARCHAR';
@@ -377,11 +381,7 @@ export class SnowflakeDialect extends Dialect {
       case 'sum': {
         // A fold's state has one type: a sum of integers is a NUMBER, so
         // that it stays exact, and any other sum a DOUBLE.
-        const integral =
-          resultType?.type === 'number' &&
-          (resultType.numberType === 'integer' ||
-            resultType.numberType === 'bigint');
-        const type = integral ? 'NUMBER(38, 0)' : 'DOUBLE';
+        const type = sumsIntegers(resultType) ? 'NUMBER(38, 0)' : 'DOUBLE';
         return `COALESCE(REDUCE(${nonNull}, 0::${type}, (${acc}, ${element}) -> ${acc} + (${value})::${type}), 0)`;
       }
       case 'avg': {

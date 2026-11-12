@@ -2610,50 +2610,58 @@ export class QueryQuery extends QueryField {
     if (!filters.every(f => expressionIsScalar(f.expressionType))) {
       return {why: 'it has a `having:`'};
     }
+    // Each condition joined by a top-level `and` is placed on its own, so
+    // that one which reads only the outer element can filter it.
+    const conditions = filters.flatMap(f => conjuncts(f.e));
     const element = this.arrayElementStruct(array);
     if (element === undefined) {
       throw new Error('Internal Error: an array element has no parent');
     }
-    const inner = structPath && this.innerArrayElement(element, structPath);
+    const inner = structPath && this.bindInnerArrayElement(element, structPath);
     if (inner === false) {
       return {
         why: `it aggregates \`${structPath?.join('.')}\`, through more than one array inside the elements`,
       };
     }
-    for (const e of [...values, ...filters.map(f => f.e)]) {
+    for (const e of [...values, ...conditions]) {
       const read = this.notOwnRead(element, e);
       if (read !== undefined) return {why: `it reads ${read}`};
     }
     const sql = (e: Expr) => exprToSQL(this.rootResult, element, e);
-    const and = (conditions: string[]) =>
-      conditions.length > 0 ? conditions.join(' AND ') : undefined;
+    // Each condition is parenthesized: a compiled `or` is not.
+    const and = (sqls: string[]) =>
+      sqls.length > 0 ? sqls.map(c => `(${c})`).join(' AND ') : undefined;
     if (!inner) {
-      return {element, filter: and(filters.map(f => sql(f.e)))};
+      return {element, filter: and(conditions.map(sql))};
     }
     const outerConditions: string[] = [];
     const innerConditions: string[] = [];
-    let readsOuter = false;
-    for (const f of filters) {
-      const reads = this.lambdaReads(element, f.e, inner.struct);
+    let conditionReadsBoth = false;
+    for (const e of conditions) {
+      const reads = this.lambdaReads(element, e, inner.struct);
       if (reads.inner) {
-        innerConditions.push(sql(f.e));
-        readsOuter ||= reads.outer;
+        innerConditions.push(sql(e));
+        conditionReadsBoth ||= reads.outer;
       } else {
-        outerConditions.push(sql(f.e));
+        outerConditions.push(sql(e));
       }
     }
-    for (const value of values) {
-      readsOuter ||= this.lambdaReads(element, value, inner.struct).outer;
-    }
+    const valueReadsBoth = values.some(
+      v => this.lambdaReads(element, v, inner.struct).outer
+    );
     const support = this.parent.dialect.arrayQueries;
-    if (
-      readsOuter &&
-      support?.value === 'lambdas' &&
-      !support.innerLambdaReadsOuter
-    ) {
-      return {
-        why: `one condition, or the aggregated value, reads both \`${inner.name}\` and the elements' other fields; give each its own condition`,
-      };
+    if (support?.value === 'lambdas' && !support.innerLambdaReadsOuter) {
+      const name = this.parent.dialect.name;
+      if (conditionReadsBoth) {
+        return {
+          why: `one condition reads both \`${inner.name}\` and the elements' own fields, which ${name} can read only in separate conditions`,
+        };
+      }
+      if (valueReadsBoth) {
+        return {
+          why: `the aggregated value reads both \`${inner.name}\` and the elements' own fields, which ${name} cannot combine`,
+        };
+      }
     }
     return {
       element,
@@ -2667,13 +2675,14 @@ export class QueryQuery extends QueryField {
   }
 
   /**
-   * The array inside the elements which `structPath`, an aggregate's
-   * locality, passes through, read from `element`; it is made a lambda
-   * element of its own, so that expressions compiled on `element` read its
-   * fields through that lambda's parameter. Undefined if the path passes
-   * through records only, and false if through more than one array.
+   * Binds the array inside the elements which `structPath`, an aggregate's
+   * locality, passes through to a lambda element of its own: `element`'s
+   * child is replaced, so that expressions compiled on `element` read the
+   * inner array's fields through that lambda's parameter. Returns the inner
+   * element and the array's SQL; undefined if the path passes through
+   * records only, and false if through more than one array.
    */
-  private innerArrayElement(
+  private bindInnerArrayElement(
     element: QueryStruct,
     structPath: string[]
   ): {struct: QueryStruct; arraySQL: string; name: string} | undefined | false {
@@ -2791,11 +2800,16 @@ export class QueryQuery extends QueryField {
     if ((measure.function === 'count') !== (value === undefined)) {
       return undefined;
     }
+    // `min`, `max` and `count(x)` carry no locality, since it doesn't change
+    // their result; an aggregate of an array inside the elements is then
+    // over the array its value reads.
+    const locality =
+      measure.structPath ?? (value && innerArrayPath(array, value));
     const inPlace = this.inPlaceElements(
       array,
       filters,
       value ? [value] : [],
-      measure.structPath
+      locality
     );
     if ('why' in inPlace) return inPlace;
     const {element, filter, nested} = inPlace;
@@ -2849,16 +2863,18 @@ export class QueryQuery extends QueryField {
         return 'an aggregate';
       }
       if (node.node !== 'field') continue;
-      const notOwn = `\`${node.path.join('.')}\`, which is not one of its elements' own fields`;
+      const path = `\`${node.path.join('.')}\``;
+      const notOwn = `${path}, which is not one of its elements' own fields`;
       let struct: QueryStruct = array;
       for (const name of node.path) {
         const child = struct.getChildByName(name);
         if (child === undefined) return notOwn;
         if (child instanceof QueryFieldStruct) {
-          if (
-            child.queryStruct.structDef.type !== 'record' &&
-            !child.queryStruct.isLambdaElement
-          ) {
+          const type = child.queryStruct.structDef.type;
+          if (type === 'array' && !child.queryStruct.isLambdaElement) {
+            return `${path}, from an array inside the elements, which only an aggregate over that array can read`;
+          }
+          if (type !== 'record' && !child.queryStruct.isLambdaElement) {
             return notOwn;
           }
           struct = child.queryStruct;
@@ -2890,6 +2906,13 @@ export class QueryQuery extends QueryField {
     const dialect = this.parent.dialect;
     const support = dialect.arrayQueries;
     const returnsValue = arrayQueryReturnsValue(pipeline);
+    if (!returnsValue && support?.arrays !== true) {
+      throw new MalloyCompileError(
+        `The ${dialect.name} dialect can only query an array for one value: one stage of \`aggregate:\` with one field`,
+        'array-query-not-supported',
+        undefined
+      );
+    }
     if (returnsValue && support?.value === 'lambdas') {
       const inPlace = this.arrayAggregateSQL(array, arraySQL, pipeline);
       if (typeof inPlace === 'string') return inPlace;
@@ -3375,3 +3398,34 @@ class QueryQueryRaw extends QueryQuery {
 }
 
 class QueryQueryReduce extends QueryQuery {}
+
+/** The conditions of `e`, split at each top-level `and`. */
+function conjuncts(e: Expr): Expr[] {
+  return e.node === 'and'
+    ? [...conjuncts(e.kids.left), ...conjuncts(e.kids.right)]
+    : [e];
+}
+
+/**
+ * The path to the one array inside the elements of `array` which `e` reads
+ * through, if it reads through exactly one; records on the way are passed
+ * through.
+ */
+function innerArrayPath(array: QueryStruct, e: Expr): string[] | undefined {
+  const found = new Map<string, string[]>();
+  for (const node of exprWalk(e)) {
+    if (node.node !== 'field') continue;
+    let struct = array;
+    for (const [i, name] of node.path.entries()) {
+      const child = struct.getChildByName(name);
+      if (!(child instanceof QueryFieldStruct)) break;
+      if (child.queryStruct.structDef.type === 'array') {
+        const path = node.path.slice(0, i + 1);
+        found.set(path.join('.'), path);
+        break;
+      }
+      struct = child.queryStruct;
+    }
+  }
+  return found.size === 1 ? [...found.values()][0] : undefined;
+}

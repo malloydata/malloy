@@ -270,11 +270,6 @@ export class PostgresDialect extends PostgresBase {
     }
   }
 
-  // JSONB_AGG over no rows is null.
-  sqlArrayOrEmpty(arraySQL: string): string {
-    return `COALESCE(${arraySQL}, '[]'::jsonb)`;
-  }
-
   sqlCreateFunction(id: string, funcText: string): string {
     return `CREATE FUNCTION ${id}(JSONB) RETURNS JSONB AS $$\n${indent(
       funcText

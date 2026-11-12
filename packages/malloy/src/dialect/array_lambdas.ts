@@ -3,7 +3,16 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type {AtomicTypeDef} from '../model/malloy_types';
 import type {ArrayAggregate} from './dialect';
+
+/** Whether a sum of type `resultType` is of integers, and so stays exact. */
+export function sumsIntegers(resultType: AtomicTypeDef | undefined): boolean {
+  return (
+    resultType?.type === 'number' &&
+    (resultType.numberType === 'integer' || resultType.numberType === 'bigint')
+  );
+}
 
 /**
  * What differs between dialects whose higher-order functions are
@@ -112,11 +121,7 @@ export function lambdaArrayAggregate(
     case 'sum': {
       // A fold's state has one type, so a sum of integers is a BIGINT, and
       // any other sum a DOUBLE.
-      const integral =
-        resultType?.type === 'number' &&
-        (resultType.numberType === 'integer' ||
-          resultType.numberType === 'bigint');
-      const zero = `CAST(0 AS ${integral ? 'BIGINT' : 'DOUBLE'})`;
+      const zero = `CAST(0 AS ${sumsIntegers(resultType) ? 'BIGINT' : 'DOUBLE'})`;
       const sum = d.reduce(
         values,
         zero,

@@ -169,10 +169,10 @@ export class MySQLDialect extends Dialect {
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
   // A query on an array computes one value, as a correlated subquery over
-  // JSON_TABLE: MySQL has no lambdas. A table function's argument cannot
-  // reference an outer table from inside a subquery ("Unknown table in a
-  // table function argument"), so an array such a subquery made could only
-  // be selected; it returns no arrays.
+  // JSON_TABLE: MySQL has no lambdas. JSON_TABLE's argument cannot be a
+  // correlated subquery's result ("Unknown table in a table function
+  // argument"), so an array such a subquery made could only be selected;
+  // it returns no arrays.
   arrayQueries: ArrayQuerySupport = {value: 'subquery', arrays: false};
   // MySQL builds nested arrays with GROUP_CONCAT (not an array type), which has
   // no in-expression slice; limiting would need query-level ROW_NUMBER plumbing
