@@ -329,48 +329,61 @@ describe('custom error messages', () => {
       );
     });
 
-    test('missing alias for an array query', () => {
-      expect(`
-          ##! experimental.array_queries
+    test('missing alias for an array query, or a missing }', () => {
+      for (const src of [
+        `##! experimental.array_queries
           run: x -> {
             group_by: items -> { aggregate: n is count() }
-          }
-        `).toLogAtLeast(
-        errorMessage(
-          "'group_by:' entries must include a name (ex: `some_name is ...`)"
-        )
-      );
+          }`,
+        'run: x -> { group_by: a -> { aggregate: c is count() }',
+      ]) {
+        expect(src).toLogAtLeast(
+          errorMessage(
+            "Missing '}' before '->', or a 'group_by:' entry without a name (ex: `some_name is ...`)"
+          )
+        );
+      }
     });
 
-    test('an aggregate method on an expression in parentheses', () => {
-      expect(`
-          run: x -> { aggregate: t is (a + 1).sum() }
-        `).toLogAtLeast(
-        errorMessage(
-          'An aggregate of an expression is written `sum(expression)`, not as a method of the expression in parentheses'
-        )
-      );
+    test('a method on an expression', () => {
+      for (const [src, fn] of [
+        ['run: x -> { aggregate: t is (a + 1).sum() }', 'sum'],
+        ['run: x -> { aggregate: t is (a + 1).stddev() }', 'stddev'],
+        ['run: x -> { aggregate: t is floor(a).sum() }', 'sum'],
+      ]) {
+        expect(src).toLogAtLeast(
+          errorMessage(
+            `A function of an expression is written \`${fn}(expression)\`; a method can follow only a field name`
+          )
+        );
+      }
     });
 
-    test('a field of an expression in parentheses', () => {
-      expect(`
-          run: x -> { select: t is (a).b }
-        `).toLogAtLeast(
-        errorMessage(
-          "'.b' must follow a field name; a field cannot be read from an expression in parentheses"
-        )
-      );
+    test('a field, or a misspelled timeframe, after an expression', () => {
+      for (const src of [
+        'run: x -> { select: t is (a).b }',
+        'run: x -> { group_by: m is (ats).mnth }',
+      ]) {
+        expect(src).toLogAtLeast(
+          errorMessage(
+            "Expected a timeframe after '.', such as `.month`; a field cannot be read from an expression"
+          )
+        );
+      }
     });
 
-    test('an arrow on an expression', () => {
-      expect(`
-          ##! experimental.array_queries
-          run: x -> { select: t is ['a', 'b'] -> { aggregate: n is count() } }
-        `).toLogAtLeast(
-        errorMessage(
-          "'->' must follow the name of an array; to query an expression, make it a dimension first"
-        )
-      );
+    test('an arrow on an expression, or a missing }', () => {
+      for (const src of [
+        `##! experimental.array_queries
+          run: x -> { select: t is ['a', 'b'] -> { aggregate: n is count() } }`,
+        'run: x -> { where: a in (1, 2) -> { select: * }',
+      ]) {
+        expect(src).toLogAtLeast(
+          errorMessage(
+            "Missing '}' before '->', or '->' on an expression; '->' can follow only the name of an array, so make the expression a dimension first"
+          )
+        );
+      }
     });
 
     test('missing alias for aggregate entry', () => {

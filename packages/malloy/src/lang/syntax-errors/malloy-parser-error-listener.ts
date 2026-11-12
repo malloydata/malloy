@@ -54,35 +54,44 @@ export const malloyCustomErrorCases: ErrorCase[] = [
     lookAheadOptions: [[-MalloyParser.IS]],
   },
   // A statement's first entry, a name followed by more than a field
-  // reference can be: an expression, a function call, or an arrow.
-  // `aggregate:` has its own cases, above and below.
+  // reference can be: an expression or a function call. `aggregate:` has
+  // its own cases, above and below.
   ...(
     [
       [MalloyParser.GROUP_BY, 'group_by:'],
       [MalloyParser.SELECT, 'select:'],
       [MalloyParser.CALCULATE, 'calculate:'],
     ] as const
-  ).map(([token, statement]) => ({
-    errorMessage: `'${statement}' entries must include a name (ex: \`some_name is ...\`)`,
-    precedingTokenOptions: [[MalloyParser.IDENTIFIER, token]],
-    offendingSymbolTextOptions: ['->', '(', '+', '-', '/', '%', '??'],
-  })),
+  ).flatMap(([token, statement]) => [
+    {
+      errorMessage: `'${statement}' entries must include a name (ex: \`some_name is ...\`)`,
+      precedingTokenOptions: [[MalloyParser.IDENTIFIER, token]],
+      offendingSymbolTextOptions: ['(', '+', '-', '/', '%', '??'],
+    },
+    // An unnamed arrow reads the same as a stage missing its '}'.
+    {
+      errorMessage: `Missing '}' before '->', or a '${statement}' entry without a name (ex: \`some_name is ...\`)`,
+      precedingTokenOptions: [[MalloyParser.IDENTIFIER, token]],
+      offendingSymbol: MalloyParser.ARROW,
+    },
+  ]),
+  // After `(...).`, the parser expects a timeframe.
   {
     errorMessage:
-      'An aggregate of an expression is written `${offendingSymbol}(expression)`, not as a method of the expression in parentheses',
+      'A function of an expression is written `${offendingSymbol}(expression)`; a method can follow only a field name',
     ruleContextOptions: ['timeframe'],
     precedingTokenOptions: [[MalloyParser.DOT, MalloyParser.CPAREN]],
-    offendingSymbolTextOptions: ['sum', 'avg', 'min', 'max', 'count'],
+    lookAheadOptions: [[MalloyParser.OPAREN]],
   },
   {
     errorMessage:
-      "'.${offendingSymbol}' must follow a field name; a field cannot be read from an expression in parentheses",
+      "Expected a timeframe after '.', such as `.month`; a field cannot be read from an expression",
     ruleContextOptions: ['timeframe'],
     precedingTokenOptions: [[MalloyParser.DOT, MalloyParser.CPAREN]],
   },
   {
     errorMessage:
-      "'->' must follow the name of an array; to query an expression, make it a dimension first",
+      "Missing '}' before '->', or '->' on an expression; '->' can follow only the name of an array, so make the expression a dimension first",
     offendingSymbol: MalloyParser.ARROW,
     ruleContextOptions: ['queryProperties', 'exploreProperties'],
     precedingTokenOptions: [[MalloyParser.CBRACK], [MalloyParser.CPAREN]],

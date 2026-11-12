@@ -19,8 +19,10 @@ import {
   arrayValueNotOneAggregate,
   isQuerySegment,
   mapFieldUsage,
+  mkRefSummary,
 } from '../../../model/malloy_types';
 import {
+  computeQueryGivenUsage,
   getExpandedSegment,
   mergeRefSummaries,
 } from '../../composite-source-utils';
@@ -107,14 +109,16 @@ export class ExprArrayQuery extends ExpressionDef {
       pipeline,
     };
     // What the query reads from the elements is read in place, through the
-    // array, without fanning the row out.
+    // array, without fanning the row out. Its givens are those of every
+    // stage, expanded, and of the nests inside them, as for any query.
     const reads = mergeRefSummaries(
       arrayValue.refSummary,
       readsThroughArray(
         this.array.fieldReference.path,
         arrayDef.fields,
         written[0]
-      )
+      ),
+      mkRefSummary({givenUsage: computeQueryGivenUsage(pipeline)})
     );
     const from: ExprValue[] = [{...arrayValue, refSummary: reads}];
 

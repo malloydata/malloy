@@ -841,6 +841,43 @@ describe('given: per-Query givenUsage summary', () => {
       const md = t.translate().modelDef!;
       expect(queryGivenIds(md.queryList[0])).toEqual(givenIds(md, 'A', 'B'));
     });
+
+    test('a given in a later stage, an extend:, or a nest inside the arrow', () => {
+      const t = new TestTranslator(
+        `
+        ##! experimental.givens
+        ##! experimental.array_queries
+        given:
+          A :: number is 1
+          B :: number is 2
+          C :: number is 3
+        source: s is a extend {
+          dimension:
+            later is astruct -> { select: column } -> {
+              aggregate: n is count() { where: column > $A }
+            }
+            extended is astruct -> {
+              extend: { dimension: d is column + $B }
+              aggregate: n is d.sum()
+            }
+            nested is astruct -> {
+              group_by: column
+              nest: x is { group_by: column } -> {
+                select: column
+                where: column > $C
+              }
+            }
+        }
+        run: s -> { select: later, extended, nested }
+      `,
+        {compilerFlags: ['experimental.givens']}
+      );
+      expect(t).toTranslate();
+      const md = t.translate().modelDef!;
+      expect(queryGivenIds(md.queryList[0])).toEqual(
+        givenIds(md, 'A', 'B', 'C')
+      );
+    });
   });
 
   describe('givens hidden inside a query-source', () => {
