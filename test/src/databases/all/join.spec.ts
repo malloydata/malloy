@@ -210,9 +210,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
-  // The nest's count() has an INTEGER type in dialects which declare the
-  // nest's ROW type (Trino, Presto). The symmetric sum scales the value
-  // before summing, which overflowed when the scaling was done in INTEGER.
+  // Trino and Presto declare the nest's count() as INTEGER in its ROW type.
+  // The symmetric sum scales each value by 10^8 before summing, a product
+  // an INTEGER cannot hold.
   test.when(runtime.supportsNesting)(
     'symmetric sum of an integer nest field through a join',
     async () => {
