@@ -226,7 +226,7 @@ with one exception: which arrays a filtered join's subquery reads itself (see
 interface FieldUsageEntry {
   path: string[];                            // rooted where the expression is written
   at?: DocumentLocation;
-  uniqueKeyRequirement?: {isCount: boolean}; // asymmetric aggregate needs a distinct key
+  uniqueKeyRequirement?: boolean;            // asymmetric aggregate needs a distinct key
   analyticFunctionUse?: boolean;             // this is a window function
   inPlaceDepth?: number;                     // a weak reference through an array query; see its doc comment
 }

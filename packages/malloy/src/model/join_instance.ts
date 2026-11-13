@@ -6,13 +6,13 @@
 import type {QueryStruct} from './query_node';
 import {QueryFieldBoolean} from './query_node';
 import {getDialectFieldList} from './utils';
-import type {JoinRelationship, UniqueKeyRequirement} from './malloy_types';
+import type {JoinRelationship} from './malloy_types';
 
 import {isSourceDef, isJoined, isJoinedSource} from './malloy_types';
 import type {DialectFieldList} from '../dialect';
 
 export class JoinInstance {
-  uniqueKeyRequirement?: UniqueKeyRequirement;
+  uniqueKeyRequirement = false;
   makeUniqueKey = false;
   leafiest = false;
   // The joined result can have rows with no row from this source, as an
@@ -79,10 +79,9 @@ export class JoinInstance {
     );
   }
 
-  // For now, we force all symmetric calculations for full and right joins
-  //  because we need distinct keys for COUNT(xx) operations.  Don't really need
-  //  this for sums.  This will produce correct results and we can optimize this
-  //  at some point..
+  // A right or full join can leave the sources before it unmatched. Every
+  // aggregate then takes the fanned-out form, which is correct but more than
+  // the unmatched rows alone require.
   forceAllSymmetricCalculations(): boolean {
     if (this.queryStruct.parent === undefined) {
       return false;

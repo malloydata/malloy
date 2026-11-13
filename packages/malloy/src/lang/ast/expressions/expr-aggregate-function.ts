@@ -188,7 +188,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
             ...returnExpr.refSummary,
             fieldUsage: [
               ...fieldUsageFrom(returnExpr.refSummary),
-              {path: structPath || [], uniqueKeyRequirement: {isCount: false}},
+              {path: structPath || [], uniqueKeyRequirement: true},
             ],
           };
       return {

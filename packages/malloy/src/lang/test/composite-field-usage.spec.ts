@@ -928,23 +928,19 @@ function checkForFieldUsage(
     let found = false;
     const refKey = pathToKey(ref.path);
     let needAnalytic = ref.analyticFunctionUse || false;
-    let needCount = ref.uniqueKeyRequirement?.isCount || false;
-    let needAsymmetric = ref.uniqueKeyRequirement?.isCount === false;
+    let needUniqueKey = ref.uniqueKeyRequirement || false;
     for (const fu of usages) {
       if (pathToKey(fu.path) !== refKey) continue;
       found = true;
       if (needAnalytic && fu.analyticFunctionUse) needAnalytic = false;
-      if (needAsymmetric && fu.uniqueKeyRequirement?.isCount === false)
-        needAsymmetric = false;
-      if (needCount && fu?.uniqueKeyRequirement?.isCount) needCount = false;
+      if (needUniqueKey && fu.uniqueKeyRequirement) needUniqueKey = false;
     }
     if (!found) {
       errors.push(`Did not find usage reference to path ${pathStr}`);
     } else {
       const missing: string[] = [];
       if (needAnalytic) missing.push('analytic');
-      if (needCount) missing.push('count');
-      if (needAsymmetric) missing.push('asymmetric');
+      if (needUniqueKey) missing.push('uniqueKey');
       if (missing.length > 0) {
         errors.push(
           `Missing properties for path ${pathStr}: ${missing.join(',')}`
@@ -1014,7 +1010,7 @@ describe('field usage with compiler extensions', () => {
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(mq, {
       path: [],
-      uniqueKeyRequirement: {isCount: true},
+      uniqueKeyRequirement: true,
     });
     expect(found, message).toBeTruthy();
   });
@@ -1026,7 +1022,7 @@ describe('field usage with compiler extensions', () => {
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(mq, {
       path: [],
-      uniqueKeyRequirement: {isCount: true},
+      uniqueKeyRequirement: true,
     });
     expect(found, message).toBeTruthy();
   });
@@ -1038,7 +1034,7 @@ describe('field usage with compiler extensions', () => {
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(mq, {
       path: ['b'],
-      uniqueKeyRequirement: {isCount: true},
+      uniqueKeyRequirement: true,
     });
     expect(found, message).toBeTruthy();
   });
@@ -1050,7 +1046,7 @@ describe('field usage with compiler extensions', () => {
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(mq, {
       path: [],
-      uniqueKeyRequirement: {isCount: false},
+      uniqueKeyRequirement: true,
     });
     expect(found, message).toBeTruthy();
   });
@@ -1061,7 +1057,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const [found, message] = checkForFieldUsage(
       mTest.translator.getQuery(0),
-      {path: [], uniqueKeyRequirement: {isCount: false}},
+      {path: [], uniqueKeyRequirement: true},
       {path: ['ai']}
     );
     expect(found, message).toBeTruthy();
@@ -1073,7 +1069,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const [found, message] = checkForFieldUsage(
       mTest.translator.getQuery(0),
-      {path: ['b'], uniqueKeyRequirement: {isCount: false}},
+      {path: ['b'], uniqueKeyRequirement: true},
       {path: ['b', 'ai']}
     );
     expect(found, message).toBeTruthy();
@@ -1087,7 +1083,7 @@ describe('field usage with compiler extensions', () => {
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(mq, {
       path: [],
-      uniqueKeyRequirement: {isCount: false},
+      uniqueKeyRequirement: true,
     });
     expect(found, message).toBeTruthy();
   });
@@ -1098,7 +1094,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const [found, message] = checkForFieldUsage(
       mTest.translator.getQuery(0),
-      {path: ['b'], uniqueKeyRequirement: {isCount: false}},
+      {path: ['b'], uniqueKeyRequirement: true},
       {path: ['b', 'ai']}
     );
     expect(found, message).toBeTruthy();
@@ -1130,7 +1126,7 @@ describe('field usage with compiler extensions', () => {
     const mq = mTest.translator.getQuery(0);
     let [found, message] = checkForFieldUsage(mq, {
       path: [],
-      uniqueKeyRequirement: {isCount: true},
+      uniqueKeyRequirement: true,
     });
     expect(found, message).toBeTruthy();
     [found, message] = checkForFieldUsage(mq, {
@@ -1159,7 +1155,7 @@ describe('field usage with compiler extensions', () => {
     const mq = mTest.translator.getQuery(0);
     let [found, message] = checkForFieldUsage(mq, {
       path: [],
-      uniqueKeyRequirement: {isCount: true},
+      uniqueKeyRequirement: true,
     });
     expect(found, message).toBeTruthy();
     [found, message] = checkForFieldUsage(mq, {
@@ -1304,7 +1300,7 @@ describe('field usage with compiler extensions', () => {
     expect(mq).toBeDefined();
     const [found, message] = checkForFieldUsage(mq, {
       path: ['astr'],
-      uniqueKeyRequirement: {isCount: true},
+      uniqueKeyRequirement: true,
     });
     expect(found, message).toBeTruthy();
   });
@@ -1328,7 +1324,7 @@ describe('field usage with compiler extensions', () => {
     const query = m.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(query, {
       path: ['items'],
-      uniqueKeyRequirement: {isCount: true},
+      uniqueKeyRequirement: true,
     });
     expect(found, message).toBeTruthy();
   });

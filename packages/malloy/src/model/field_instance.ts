@@ -11,7 +11,6 @@ import type {
   OrderBy,
   PipeSegment,
   TurtleDef,
-  UniqueKeyRequirement,
 } from './malloy_types';
 import {MalloyCompileError} from './malloy_compile_error';
 import {
@@ -22,7 +21,6 @@ import {
   expressionIsAnalytic,
   hasExpression,
   isAtomic,
-  mergeUniqueKeyRequirement,
   isTemporalType,
 } from './malloy_types';
 import {AndChain, caseGroup, type GenerateState} from './utils';
@@ -474,18 +472,12 @@ export class FieldInstanceResult implements FieldInstance {
     return [];
   }
 
-  addStructToJoin(
-    qs: QueryStruct,
-    uniqueKeyRequirement: UniqueKeyRequirement
-  ): void {
+  addStructToJoin(qs: QueryStruct, uniqueKeyRequirement: boolean): void {
     const name = qs.getIdentifier();
 
     let join = this.root().joins.get(name);
     if (join) {
-      join.uniqueKeyRequirement = mergeUniqueKeyRequirement(
-        join.uniqueKeyRequirement,
-        uniqueKeyRequirement
-      );
+      join.uniqueKeyRequirement ||= uniqueKeyRequirement;
       return;
     }
 
@@ -494,7 +486,7 @@ export class FieldInstanceResult implements FieldInstance {
     const parentStruct = qs.parent?.getJoinableParent();
     if (parentStruct) {
       // add dependant expressions first...
-      this.addStructToJoin(parentStruct, undefined);
+      this.addStructToJoin(parentStruct, false);
       parent = this.root().joins.get(parentStruct.getIdentifier());
     }
 
@@ -502,10 +494,7 @@ export class FieldInstanceResult implements FieldInstance {
       join = new JoinInstance(qs, name, parent);
       this.root().joins.set(name, join);
     }
-    join.uniqueKeyRequirement = mergeUniqueKeyRequirement(
-      join.uniqueKeyRequirement,
-      uniqueKeyRequirement
-    );
+    join.uniqueKeyRequirement ||= uniqueKeyRequirement;
   }
 
   root(): FieldInstanceResultRoot {
