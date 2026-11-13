@@ -350,8 +350,10 @@ export class DatabricksDialect extends Dialect {
   // DECIMAL precision/overflow issues (Databricks max is DECIMAL(38,x)).
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const hashKey = this.sqlSumDistinctHashedKey(key);
-    const scale = 100000000.0;
-    const v = `CAST(COALESCE(${value},0)*${scale} AS DECIMAL(38,0))`;
+    const scale = 100000000;
+    // Scale in DOUBLE: an INT or BIGINT value would otherwise be multiplied
+    // in its own type and overflow.
+    const v = `CAST(CAST(COALESCE(${value},0) AS DOUBLE)*${scale} AS DECIMAL(38,0))`;
     const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))/${scale}`;
     if (funcName === 'SUM') {
       return sqlSum;

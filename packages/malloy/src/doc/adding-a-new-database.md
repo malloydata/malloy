@@ -47,7 +47,7 @@ Create `packages/malloy/src/dialect/{name}/` with four files:
 
 **Nesting** (`sqlAggregateTurtle`): How does your database aggregate rows into arrays of structs? Most use `JSON_AGG` or `ARRAY_AGG`; Databricks uses `COLLECT_LIST(NAMED_STRUCT(...))`. Ordering within nested results is where things get tricky — some databases support `ORDER BY` inside the aggregate function, others need `ARRAY_SORT` or similar.
 
-**Symmetric aggregates** (`sqlSumDistinct`): Malloy uses a hash-based technique to compute correct aggregates across joins. This requires integer arithmetic on a hash of the distinct key. Watch for `DECIMAL` overflow — Databricks, for example, needed careful scaling to stay within `DECIMAL(38,x)`. The value can be any numeric type, an INTEGER included (a `count()` read from a nest's ROW type on Trino), so scale it in a type that can hold the product: an integer literal scale multiplies an INTEGER value in INTEGER and overflows.
+**Symmetric aggregates** (`sqlSumDistinct`): Malloy uses a hash-based technique to compute correct aggregates across joins. This requires integer arithmetic on a hash of the distinct key. Watch for `DECIMAL` overflow — Databricks, for example, needed careful scaling to stay within `DECIMAL(38,x)`. The value can be any numeric type, a 32-bit integer included, so scale it in a type that can hold the product: an integer scale multiplies a 32-bit value in 32 bits and overflows. A JavaScript `100000000.0` reaches the SQL as `100000000`.
 
 **NULL ordering**: Malloy expects NULLS LAST for ascending order. If your database defaults otherwise, override `sqlOrderBy()`.
 
