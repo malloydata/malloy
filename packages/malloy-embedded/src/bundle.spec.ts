@@ -212,6 +212,7 @@ describe('malloy-embedded bundle', () => {
           grain: string;
           description?: string;
           definition?: string;
+          annotations: string[];
           usage: string;
           examples: string[];
         }[];
@@ -228,6 +229,7 @@ describe('malloy-embedded bundle', () => {
     #" Flights, one row per flight
     source: described is duckdb.table('flights') extend {
       #" How many flights
+      # number="#,###"
       measure: flight_count is count()
       join_many: carrier_rows is duckdb.table('carriers')
         on carrier_rows.code = carrier
@@ -254,6 +256,7 @@ describe('malloy-embedded bundle', () => {
       kind: 'measure',
       description: 'How many flights',
       definition: 'count()',
+      annotations: ['# number="#,###"'],
       examples: ['aggregate: flight_count'],
     });
     expect(field('carrier_rows')).toMatchObject({

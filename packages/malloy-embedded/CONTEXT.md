@@ -46,7 +46,8 @@ with a `catalog` for an interactive host to show: every source and named
 query the model can see, with its description (the `#"` annotation route,
 or `#(docs)`), primary key, source filters and parameters, and every field
 reachable from it through joins and nested data. Each field has its dotted
-`path`, `kind`, `type`, `description`, `definition` (the expression, if it
+`path`, `kind`, `type`, `description`, `annotations` (every other
+annotation, as written: `# number="####"`, `#(agent) ...`), `definition` (the expression, if it
 isn't a column), `grain` (the nearest `join_many`, `join_cross` or array on
 its path, whose rows it has one value per) and a one-line `usage` saying how
 a query uses it. Its rules are Malloy's: grouping by a field with a grain

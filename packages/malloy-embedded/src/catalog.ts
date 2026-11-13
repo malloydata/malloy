@@ -11,6 +11,7 @@ import {
   isJoined,
   isSourceDef,
   modelDefToModelInfo,
+  routeOf,
 } from '@malloydata/malloy';
 import type {FieldDef, ModelDef, StructDef} from '@malloydata/malloy';
 import {maybeQuoteIdentifier} from '@malloydata/malloy-interfaces';
@@ -30,6 +31,8 @@ export interface CatalogEntry {
   name: string;
   /** From `#"` annotations (Malloy's description route), or `#(docs)`. */
   description?: string;
+  /** Its other annotations, as written: `# bar_chart`, `#(agent) ...`. */
+  annotations: string[];
   primary_key?: string;
   /** Source-level `where:` filters, as written. */
   filters: string[];
@@ -53,6 +56,8 @@ export interface CatalogField {
    */
   grain: string;
   description?: string;
+  /** Its other annotations, as written: `# number="####"`, `#(agent) ...`. */
+  annotations: string[];
   /** The Malloy expression that defines it, if it isn't a column. */
   definition?: string;
   /** How a query uses it, in a sentence. */
@@ -78,6 +83,15 @@ function description(annotations: unknown): string | undefined {
     if (text) return text;
   }
   return undefined;
+}
+
+/** Every annotation except descriptions, which have their own field. */
+function tags(annotations: unknown): string[] {
+  return new Annotations(annotations as never)
+    .forRoute()
+    .filter(n => n.route !== '"' && n.route !== 'docs')
+    .map(n => n.text.trim())
+    .filter(t => t);
 }
 
 function nameOf(field: {name: string; as?: string}): string {
@@ -156,6 +170,7 @@ class Walker {
             kind: 'dimension',
             type: typeName(each),
             grain: fieldPath,
+            annotations: [],
             usage: `One value per element of ${fieldPath}; ${fieldPath}.value is the same`,
             examples: [`group_by: ${fieldPath}.each`],
           });
@@ -181,6 +196,7 @@ class Walker {
       type,
       grain,
       description: description(def.annotations),
+      annotations: tags(def.annotations),
       definition: def.code,
       ...usage(kind, type, path, parent, grain),
     });
@@ -193,6 +209,7 @@ class Walker {
       type: 'view',
       grain,
       description: description(def.annotations),
+      annotations: tags(def.annotations),
       usage: parent
         ? `A view of ${parent}`
         : `A query of ${quoteName(this.sourceName)}: run: ${quoteName(this.sourceName)} -> ${path}, or nest it`,
@@ -219,6 +236,7 @@ class Walker {
         type: typeName(def),
         grain,
         description: description(def.annotations),
+        annotations: tags(def.annotations),
         usage: many
           ? `Nested data, many elements per ${of}: grouping by an element field gives a row per element; ${path}.count() counts elements`
           : `Nested data, one per ${of}: its fields are ${path}.<field>`,
@@ -237,6 +255,7 @@ class Walker {
       type: `join_${relationship}`,
       grain,
       description: description(def.annotations),
+      annotations: tags(def.annotations),
       usage: many
         ? `Many ${path} per ${of}: grouping by a ${path} field gives a row per ${path}; aggregates of ${path} fields run over ${path} rows, each counted once`
         : `One ${path} per ${of}: its fields are ${path}.<field>; aggregates of them run over ${path} rows, each counted once`,
@@ -340,6 +359,7 @@ export function catalogOf(modelDef: ModelDef): Catalog {
         kind: 'source',
         name,
         description: description(source.annotations),
+        annotations: tags(source.annotations),
         primary_key: source.primaryKey,
         filters: (source.filterList ?? [])
           .map((f: Def) => f.code)
@@ -354,6 +374,7 @@ export function catalogOf(modelDef: ModelDef): Catalog {
         kind: 'query',
         name,
         description: description((def as Def).annotations),
+        annotations: tags((def as Def).annotations),
         filters: [],
         parameters: [],
         fields: (queryFields.get(name) ?? []).map(f => ({
@@ -368,6 +389,9 @@ export function catalogOf(modelDef: ModelDef): Catalog {
                   : f.kind,
           type: 'type' in f ? stableTypeName(f.type) : f.kind,
           grain: '',
+          annotations: (f.annotations ?? [])
+            .filter(a => !['"', 'docs'].includes(routeOf(a) ?? ''))
+            .map(a => a.value.trim()),
           usage: `A column of ${quoteName(name)}'s output`,
           examples: [],
         })) as CatalogField[],
