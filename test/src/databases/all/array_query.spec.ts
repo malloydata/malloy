@@ -407,7 +407,7 @@ describe.each(runtimes.runtimeList)('array queries %s', (db, runtime) => {
         }
       `);
       expect(sql).toMatch(/LIST_SUM/);
-      expect(sql).toMatch(/__by_fac_type_element_0 ->/);
+      expect(sql).toMatch(/lambda __by_fac_type_element_0:/);
     });
 
     test.when(duckdb)('empty and null arrays', async () => {

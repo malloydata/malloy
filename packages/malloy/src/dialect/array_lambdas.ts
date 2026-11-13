@@ -52,24 +52,32 @@ export interface LambdaArrayDialect {
  * and their values taken inside the lambda where the outer element is in
  * scope, made one array, a null inner array taken as empty. The result is
  * aggregated as an array of values, with no `value` or `filter` of its own.
- * `fn` names the dialect's functions.
+ * `fn` names the dialect's functions, and `fn.lambda`, if given, writes a
+ * lambda with one parameter (by default `param -> body`).
  */
 export function flattenNested(
   {source, element, value, filter, nested}: ArrayAggregate,
-  fn: {filter: string; transform: string; flatten: string; empty: string}
+  fn: {
+    filter: string;
+    transform: string;
+    flatten: string;
+    empty: string;
+    lambda?: (param: string, body: string) => string;
+  }
 ): {source: string; element: string} | undefined {
   if (nested === undefined) return undefined;
+  const lambda = fn.lambda ?? ((param, body) => `${param} -> ${body}`);
   const outer = filter
-    ? `${fn.filter}(${source}, ${element} -> ${filter})`
+    ? `${fn.filter}(${source}, ${lambda(element, filter)})`
     : source;
   const inner = nested.filter
-    ? `${fn.filter}(${nested.array}, ${nested.element} -> ${nested.filter})`
+    ? `${fn.filter}(${nested.array}, ${lambda(nested.element, nested.filter)})`
     : nested.array;
   const innerValues = value
-    ? `${fn.transform}(${inner}, ${nested.element} -> ${value})`
+    ? `${fn.transform}(${inner}, ${lambda(nested.element, value)})`
     : inner;
   return {
-    source: `${fn.flatten}(${fn.transform}(${outer}, ${element} -> COALESCE(${innerValues}, ${fn.empty})))`,
+    source: `${fn.flatten}(${fn.transform}(${outer}, ${lambda(element, `COALESCE(${innerValues}, ${fn.empty})`)}))`,
     element: nested.element,
   };
 }
