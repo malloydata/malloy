@@ -9,7 +9,6 @@ import '@malloydata/malloy/test/matchers';
 import {
   extendTestModel,
   mkTestModel,
-  TV,
   wrapTestModel,
 } from '@malloydata/malloy/test';
 
@@ -210,6 +209,30 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
+  // Trino and Presto declare the nest's count() as INTEGER in its ROW type.
+  // The symmetric sum scales each value by 10^8 before summing, a product
+  // an INTEGER cannot hold.
+  test.when(runtime.supportsNesting)(
+    'symmetric sum of an integer nest field through a join',
+    async () => {
+      await expect(`
+        source: three is ${databaseName}.table('malloytest.airports') -> {
+          group_by: state
+          nest: types is { group_by: fac_type; aggregate: c is count() }
+        }
+        source: sf is ${databaseName}.table('malloytest.state_facts') extend {
+          join_one: three on three.state = state
+        }
+        run: sf -> {
+          where: state = 'AK'
+          aggregate:
+            n is three.types.count()
+            t is three.types.c.sum()
+        }
+      `).toMatchResult(joinModel, {n: 3, t: 608});
+    }
+  );
+
   it('activates parent join when fields in leaf join are referenced', async () => {
     await expect(`
       source: flights is ${databaseName}.table('malloytest.flights') extend {
@@ -359,20 +382,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   // Carol is the customer no order matches: in the joined result she has one
   // row, in which the order is all NULLs.
   describe('aggregate at a joined source with an unmatched row', () => {
-    // float, because Databricks overflows on the fanned-out sum of a 32 bit
-    // integer column.
-    const num = TV.float;
     const unmatched = extendTestModel(
       mkTestModel(runtime, {
         customers: [
-          {customer_id: 1, name: 'Alice', credit: num(100)},
-          {customer_id: 2, name: 'Bob', credit: num(400)},
-          {customer_id: 3, name: 'Carol', credit: num(5000)},
+          {customer_id: 1, name: 'Alice', credit: 100},
+          {customer_id: 2, name: 'Bob', credit: 400},
+          {customer_id: 3, name: 'Carol', credit: 5000},
         ],
         order_rows: [
-          {order_id: 10, customer_id: 1, amount: num(5)},
-          {order_id: 11, customer_id: 1, amount: num(7)},
-          {order_id: 12, customer_id: 2, amount: num(11)},
+          {order_id: 10, customer_id: 1, amount: 5},
+          {order_id: 11, customer_id: 1, amount: 7},
+          {order_id: 12, customer_id: 2, amount: 11},
         ],
         tags: [
           {customer_id: 1, tag: 'a'},
@@ -380,8 +400,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           {customer_id: 2, tag: 'c'},
         ],
         profiles: [
-          {customer_id: 1, score: num(7)},
-          {customer_id: 2, score: num(9)},
+          {customer_id: 1, score: 7},
+          {customer_id: 2, score: 9},
         ],
       }),
       `
