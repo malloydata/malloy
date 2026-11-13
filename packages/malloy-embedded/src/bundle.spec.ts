@@ -19,6 +19,7 @@ interface Embedded {
   version: string;
   compileModel(requestJSON: string): string;
   compileModelContents(requestJSON: string): string;
+  compileModelCatalog(requestJSON: string): string;
   compileQuery(requestJSON: string): string;
   duckdbSchema(columnsJSON: string): string;
 }
@@ -170,6 +171,60 @@ describe('malloy-embedded bundle', () => {
         ['join', 'carriers'],
         ['view', 'by_carrier'],
       ])
+    );
+  });
+
+  test('catalogs sources: descriptions, definitions, joins and grain', () => {
+    FILES['file:///models/described.malloy'] = `
+      #" Flights, one row per flight
+      source: described is duckdb.table('flights') extend {
+        #" How many flights
+        measure: flight_count is count()
+        join_many: carrier_rows is duckdb.table('carriers')
+          on carrier_rows.code = carrier
+      }`;
+    const {response} = runNeedsLoop<
+      Malloy.CompileModelResponse & {
+        catalog?: {
+          entries: {
+            name: string;
+            description?: string;
+            fields: {
+              path: string;
+              kind: string;
+              type: string;
+              grain: string;
+              description?: string;
+              definition?: string;
+              usage: string;
+            }[];
+          }[];
+        };
+      }
+    >(embedded.compileModelCatalog, {
+      model_url: 'file:///models/described.malloy',
+    });
+    expect(response.logs ?? []).toEqual([]);
+    const entry = response.catalog?.entries.find(e => e.name === 'described');
+    expect(entry?.description).toBe('Flights, one row per flight');
+    const field = (path: string) => entry?.fields.find(f => f.path === path);
+    expect(field('flight_count')).toMatchObject({
+      kind: 'measure',
+      description: 'How many flights',
+      definition: 'count()',
+      usage: 'aggregate: flight_count',
+    });
+    expect(field('carrier_rows')).toMatchObject({
+      kind: 'join',
+      type: 'join_many',
+    });
+    expect(field('carrier_rows.nickname')).toMatchObject({
+      kind: 'dimension',
+      type: 'string',
+      grain: 'carrier_rows',
+    });
+    expect(field('carrier_rows.nickname')?.usage).toContain(
+      'group_by: carrier_rows.nickname for a row per carrier_rows'
     );
   });
 

@@ -20,9 +20,9 @@ pick up, not an npm package.
 
 ## The interface
 
-`malloyEmbedded` has `version` and five functions:
-`compileModel`, `compileModelContents`, `compileSource`, `compileQuery`, and
-`duckdbSchema`, described below.
+`malloyEmbedded` has `version` and six functions:
+`compileModel`, `compileModelContents`, `compileModelCatalog`,
+`compileSource`, `compileQuery`, and `duckdbSchema`, described below.
 Each takes a request as a JSON string and returns the response as a JSON
 string. Requests and responses are the stable
 `@malloydata/malloy-interfaces` types used by `API.stateless` (see
@@ -40,6 +40,21 @@ through the public `modelDefToModelInfo`.
 
 They never throw. An exception, including a request that is not valid JSON,
 comes back as a response whose `logs` holds one error.
+
+`compileModelCatalog` (`src/catalog.ts`) is `compileModel` answering
+with a `catalog` for an interactive host to show: every source and named
+query the model can see, with its description (the `#"` annotation route,
+or `#(docs)`), primary key, source filters and parameters, and every field
+reachable from it through joins and nested data. Each field has its dotted
+`path`, `kind`, `type`, `description`, `definition` (the expression, if it
+isn't a column), `grain` (the nearest `join_many`, `join_cross` or array on
+its path, whose rows it has one value per) and a one-line `usage` saying how
+a query uses it. Its rules are Malloy's: grouping by a field with a grain
+gives a row per grain row, and aggregating a joined field runs over the rows
+of the source it comes from, without double counting. It reads the
+`ModelDef` from the response's `translations`, so it relies on the IR's
+shape (`fields`, `join`, `code`, `expressionType`, `filterList`,
+`primaryKey`); the spec checks the parts hosts depend on.
 
 `duckdbSchema` is for hosts that are DuckDB. It takes
 `[[column_name, column_type], ...]` as DuckDB's `DESCRIBE` reports them and

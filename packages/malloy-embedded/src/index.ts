@@ -15,6 +15,7 @@ import {
   sourceDefToSourceInfo,
 } from '@malloydata/malloy';
 import type {ModelDef, TableSourceDef} from '@malloydata/malloy';
+import {compileModelCatalog} from './catalog';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
 declare const __MALLOY_VERSION__: string;
@@ -35,6 +36,7 @@ export interface MalloyEmbedded {
   version: string;
   compileModel(requestJSON: string): string;
   compileModelContents(requestJSON: string): string;
+  compileModelCatalog(requestJSON: string): string;
   compileSource(requestJSON: string): string;
   compileQuery(requestJSON: string): string;
   duckdbSchema(columnsJSON: string): string;
@@ -129,6 +131,7 @@ const malloyEmbedded: MalloyEmbedded = {
   version: __MALLOY_VERSION__,
   compileModel: wrap(API.stateless.compileModel),
   compileModelContents: wrap(compileModelContents),
+  compileModelCatalog: wrap(compileModelCatalog),
   compileSource: wrap(API.stateless.compileSource),
   compileQuery: wrap(API.stateless.compileQuery),
   duckdbSchema,
