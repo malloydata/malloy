@@ -82,6 +82,12 @@ jobs:
           echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
           for package in $PACKAGES; do
             PKG_NAME=$(jq -r .name ./$package/package.json)
+            # npm publish refuses a private package, which would stop the loop.
+            if [ "$(jq -r '.private // false' ./$package/package.json)" = "true" ]; then
+              echo "SKIPPED $PKG_NAME (private)"
+              echo "| \`$PKG_NAME\` | ⏭️ skipped (private) |" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
             if npm view "$PKG_NAME@$VERSION" version &>/dev/null; then
               echo "SKIPPED $PKG_NAME@$VERSION (already published)"
               echo "| \`$PKG_NAME\` | ⏭️ skipped (already published) |" >> "$GITHUB_STEP_SUMMARY"
