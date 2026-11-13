@@ -36,7 +36,6 @@ import type {
   OrderBy,
   Expression,
   TurtleDefPlusFilters,
-  UniqueKeyRequirement,
   Query,
   PrepareResultOptions,
 } from './malloy_types';
@@ -467,10 +466,7 @@ export class QueryQuery extends QueryField {
     return {as, field};
   }
 
-  private addDependantPath(
-    path: string[],
-    uniqueKeyRequirement: UniqueKeyRequirement
-  ) {
+  private addDependantPath(path: string[], uniqueKeyRequirement: boolean) {
     const node = this.parent.getFieldByName(path);
     const joinableParent =
       node instanceof QueryFieldStruct
@@ -490,7 +486,7 @@ export class QueryQuery extends QueryField {
     }
 
     for (const joinUsage of this.firstSegment.activeJoins || []) {
-      this.addDependantPath(joinUsage.path, undefined);
+      this.addDependantPath(joinUsage.path, false);
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
@@ -508,9 +504,9 @@ export class QueryQuery extends QueryField {
       }
       if (usage.uniqueKeyRequirement) {
         if (usage.path.length === 0) {
-          resultRoot.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
+          resultRoot.addStructToJoin(this.parent, true);
         } else {
-          this.addDependantPath(usage.path, usage.uniqueKeyRequirement);
+          this.addDependantPath(usage.path, true);
         }
       }
     }
@@ -715,7 +711,7 @@ export class QueryQuery extends QueryField {
     if (!this.prepared) {
       this.expandRecordExpressions(this.rootResult, this.parent);
       // Add the root base join to the joins map
-      this.rootResult.addStructToJoin(this.parent, undefined);
+      this.rootResult.addStructToJoin(this.parent, false);
 
       // Expand fields (just adds them to result, no dependency tracking)
       this.expandFields(this.rootResult);
@@ -736,7 +732,7 @@ export class QueryQuery extends QueryField {
   private findJoins(resultStruct: FieldInstanceResult): void {
     for (const dim of resultStruct.fields()) {
       if (!(dim.f instanceof QueryFieldStruct)) {
-        resultStruct.addStructToJoin(dim.f.getJoinableParent(), undefined);
+        resultStruct.addStructToJoin(dim.f.getJoinableParent(), false);
       }
     }
 
@@ -752,7 +748,7 @@ export class QueryQuery extends QueryField {
       for (const joinName of alwaysJoins) {
         const qs = this.parent.getChildByName(joinName);
         if (qs instanceof QueryFieldStruct) {
-          this.rootResult.addStructToJoin(qs.queryStruct, undefined);
+          this.rootResult.addStructToJoin(qs.queryStruct, false);
         }
       }
     }
