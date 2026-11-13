@@ -206,7 +206,7 @@ describe('malloy-embedded bundle', () => {
       {
         kind: 'dimension',
         name: 'n',
-        type: {kind: 'number_type', subtype: 'integer'},
+        type: {kind: 'number_type', subtype: 'bigint'},
       },
     ]);
   });
