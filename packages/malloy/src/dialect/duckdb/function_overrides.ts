@@ -8,7 +8,7 @@ import type {MalloyStandardFunctionImplementations as OverrideMap} from '../func
 function greatestOrLeastSQL(name: string) {
   return (
     'CASE' +
-    ' WHEN LEN(LIST_FILTER([${...values}], x -> x is null)) > 0' +
+    ' WHEN LEN(LIST_FILTER([${...values}], lambda x: x is null)) > 0' +
     ' THEN NULL' +
     ' ELSE ' +
     name +

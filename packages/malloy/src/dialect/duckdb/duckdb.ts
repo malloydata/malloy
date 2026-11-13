@@ -51,6 +51,11 @@ import {TinyParseError, TinyParser} from '../tiny_parser';
 import type {ValidateTablePathResult} from '../table-path';
 import {validateDuckDBTablePath} from './table-path-parser';
 
+// DuckDB 1.3 added `lambda x: body`; 2.0 refuses the older `x -> body`.
+function duckdbLambda(param: string, body: string): string {
+  return `lambda ${param}: ${body}`;
+}
+
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
 
@@ -291,15 +296,16 @@ export class DuckDBDialect extends PostgresBase {
       transform: 'LIST_TRANSFORM',
       flatten: 'FLATTEN',
       empty: '[]',
+      lambda: duckdbLambda,
     });
     if (flat) {
       return this.sqlArrayAggregate({...flat, function: func, resultType});
     }
     const elements = filter
-      ? `LIST_FILTER(${source}, ${element} -> ${filter})`
+      ? `LIST_FILTER(${source}, ${duckdbLambda(element, filter)})`
       : source;
     const values = value
-      ? `LIST_TRANSFORM(${elements}, ${element} -> ${value})`
+      ? `LIST_TRANSFORM(${elements}, ${duckdbLambda(element, value)})`
       : elements;
     switch (func) {
       case 'count':
