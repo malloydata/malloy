@@ -57,7 +57,10 @@ const FILES: Record<string, string> = {
     }`,
 };
 
-const TABLES: Record<string, [string, Malloy.AtomicType['kind']][]> = {
+// A column's type: a kind, or a whole type for nested columns.
+type ColumnType = Malloy.AtomicType['kind'] | Malloy.AtomicType;
+
+const TABLES: Record<string, [string, ColumnType][]> = {
   flights: [
     ['carrier', 'string_type'],
     ['distance', 'number_type'],
@@ -65,6 +68,25 @@ const TABLES: Record<string, [string, Malloy.AtomicType['kind']][]> = {
   carriers: [
     ['code', 'string_type'],
     ['nickname', 'string_type'],
+  ],
+  // Nested columns: an array, and an array of records.
+  aircraft: [
+    ['tail', 'string_type'],
+    ['seats', 'number_type'],
+    ['owners', {kind: 'array_type', element_type: {kind: 'string_type'}}],
+    [
+      'services',
+      {
+        kind: 'array_type',
+        element_type: {
+          kind: 'record_type',
+          fields: [
+            {name: 'shop', type: {kind: 'string_type'}},
+            {name: 'hours', type: {kind: 'number_type'}},
+          ],
+        },
+      },
+    ],
   ],
 };
 
@@ -97,10 +119,12 @@ function runNeedsLoop<T extends CompileResponse>(
       needs.table_schemas!.push({
         ...table,
         schema: {
-          fields: TABLES[table.name].map(([name, kind]) => ({
+          fields: TABLES[table.name].map(([name, type]) => ({
             kind: 'dimension',
             name,
-            type: {kind} as Malloy.AtomicType,
+            type: (typeof type === 'string'
+              ? {kind: type}
+              : type) as Malloy.AtomicType,
           })),
         },
       });
@@ -174,58 +198,113 @@ describe('malloy-embedded bundle', () => {
     );
   });
 
-  test('catalogs sources: descriptions, definitions, joins and grain', () => {
-    FILES['file:///models/described.malloy'] = `
-      #" Flights, one row per flight
-      source: described is duckdb.table('flights') extend {
-        #" How many flights
-        measure: flight_count is count()
-        join_many: carrier_rows is duckdb.table('carriers')
-          on carrier_rows.code = carrier
-      }`;
-    const {response} = runNeedsLoop<
-      Malloy.CompileModelResponse & {
-        catalog?: {
-          entries: {
-            name: string;
-            description?: string;
-            fields: {
-              path: string;
-              kind: string;
-              type: string;
-              grain: string;
-              description?: string;
-              definition?: string;
-              usage: string;
-            }[];
-          }[];
-        };
-      }
-    >(embedded.compileModelCatalog, {
-      model_url: 'file:///models/described.malloy',
-    });
+  type CatalogResponse = Malloy.CompileModelResponse & {
+    catalog?: {
+      entries: {
+        kind: string;
+        name: string;
+        description?: string;
+        primary_key?: string;
+        fields: {
+          path: string;
+          kind: string;
+          type: string;
+          grain: string;
+          description?: string;
+          definition?: string;
+          usage: string;
+          examples: string[];
+        }[];
+      }[];
+    };
+  };
+
+  FILES['file:///models/described.malloy'] = `
+    #" Planes
+    source: planes is duckdb.table('aircraft') extend {
+      primary_key: tail
+      measure: plane_count is count()
+    }
+    #" Flights, one row per flight
+    source: described is duckdb.table('flights') extend {
+      #" How many flights
+      measure: flight_count is count()
+      join_many: carrier_rows is duckdb.table('carriers')
+        on carrier_rows.code = carrier
+      join_one: plane is planes with carrier
+      view: by_carrier is { group_by: carrier; aggregate: flight_count }
+    }`;
+
+  function catalog() {
+    const {response} = runNeedsLoop<CatalogResponse>(
+      embedded.compileModelCatalog,
+      {model_url: 'file:///models/described.malloy'}
+    );
     expect(response.logs ?? []).toEqual([]);
-    const entry = response.catalog?.entries.find(e => e.name === 'described');
-    expect(entry?.description).toBe('Flights, one row per flight');
+    return response.catalog!;
+  }
+
+  test('catalogs sources: descriptions, definitions, joins and grain', () => {
+    const entry = catalog().entries.find(e => e.name === 'described');
+    expect(entry).toMatchObject({
+      description: 'Flights, one row per flight',
+    });
     const field = (path: string) => entry?.fields.find(f => f.path === path);
     expect(field('flight_count')).toMatchObject({
       kind: 'measure',
       description: 'How many flights',
       definition: 'count()',
-      usage: 'aggregate: flight_count',
+      examples: ['aggregate: flight_count'],
     });
     expect(field('carrier_rows')).toMatchObject({
       kind: 'join',
       type: 'join_many',
     });
     expect(field('carrier_rows.nickname')).toMatchObject({
-      kind: 'dimension',
       type: 'string',
       grain: 'carrier_rows',
     });
-    expect(field('carrier_rows.nickname')?.usage).toContain(
-      'group_by: carrier_rows.nickname for a row per carrier_rows'
-    );
+    expect(field('plane')).toMatchObject({
+      kind: 'join',
+      type: 'join_one',
+      description: 'Planes',
+    });
+    // Through the join_one, then into nested data in the joined source.
+    expect(field('plane.owners')).toMatchObject({type: 'string[]', grain: ''});
+    expect(field('plane.owners.each')).toMatchObject({grain: 'plane.owners'});
+    expect(field('plane.services')).toMatchObject({
+      type: '{shop :: string, hours :: number}[]',
+    });
+    // `hours` is a reserved word, so the path quotes it.
+    expect(field('plane.services.`hours`')).toMatchObject({
+      grain: 'plane.services',
+    });
+    expect(field('plane.plane_count')).toMatchObject({kind: 'measure'});
+  });
+
+  test('every example in the catalog compiles', () => {
+    const failures: string[] = [];
+    let compiled = 0;
+    for (const entry of catalog().entries) {
+      if (entry.kind !== 'source') continue;
+      for (const field of entry.fields) {
+        for (const example of field.examples) {
+          const query = `run: ${entry.name} -> { ${example} }`;
+          const {response} = runNeedsLoop<Malloy.CompileQueryResponse>(
+            embedded.compileQuery,
+            {model_url: 'file:///models/described.malloy', query_malloy: query}
+          );
+          compiled++;
+          if (!response.result) {
+            failures.push(
+              `${query}: ${response.logs?.map(l => l.message).join('; ')}`
+            );
+          }
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+    expect(compiled).toBeGreaterThan(20);
   });
 
   test('turns DuckDB column types into a schema, nested types included', () => {

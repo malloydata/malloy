@@ -20,9 +20,10 @@
   },
   "devDependencies": {
     "@malloydata/malloy": "0.0.438",
+    "@malloydata/malloy-interfaces": "0.0.438",
+    "@types/whatwg-url": "^13.0.0",
     "esbuild": "0.28.1",
     "rimraf": "^6.1.3",
-    "@types/whatwg-url": "^13.0.0",
     "whatwg-url": "^14.2.0"
   }
 }

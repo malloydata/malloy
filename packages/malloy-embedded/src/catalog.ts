@@ -13,6 +13,7 @@ import {
   modelDefToModelInfo,
 } from '@malloydata/malloy';
 import type {FieldDef, ModelDef, StructDef} from '@malloydata/malloy';
+import {maybeQuoteIdentifier} from '@malloydata/malloy-interfaces';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
 /**
@@ -54,8 +55,13 @@ export interface CatalogField {
   description?: string;
   /** The Malloy expression that defines it, if it isn't a column. */
   definition?: string;
-  /** One line on how a query uses it. */
+  /** How a query uses it, in a sentence. */
   usage: string;
+  /**
+   * Clauses that use it, each valid inside `run: <source> -> { ... }` as
+   * written: `group_by: carriers.nickname`, `aggregate: n is flights.count()`.
+   */
+  examples: string[];
 }
 
 /** How deep to follow joins of joins. */
@@ -78,9 +84,9 @@ function nameOf(field: {name: string; as?: string}): string {
   return field.as ?? field.name;
 }
 
-function quoteName(name: string): string {
-  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) ? name : `\`${name}\``;
-}
+// Backquotes a name if Malloy needs it to be: unusual characters, or a
+// reserved word (`hours`, `year`, `cast`...).
+const quoteName = maybeQuoteIdentifier;
 
 function join(path: string, name: string): string {
   return path ? `${path}.${quoteName(name)}` : quoteName(name);
@@ -141,11 +147,8 @@ class Walker {
     for (const def of joins) {
       const fieldPath = join(path, nameOf(def));
       const fans = def.join !== 'one';
-      if (
-        def.type === 'array' &&
-        def.elementTypeDef?.type !== 'record_element'
-      ) {
-        // A plain array: its element is `each` (`value` is the same).
+      if (isPlainArray(def)) {
+        // A plain array's element is `each` (`value` is the same).
         const each = def.fields.find((f: Def) => f.name === 'each');
         if (each) {
           this.fields.push({
@@ -153,7 +156,8 @@ class Walker {
             kind: 'dimension',
             type: typeName(each),
             grain: fieldPath,
-            usage: `group_by: ${fieldPath}.each for a row per element (${fieldPath}.value is the same)`,
+            usage: `One value per element of ${fieldPath}; ${fieldPath}.value is the same`,
+            examples: [`group_by: ${fieldPath}.each`],
           });
         }
         continue;
@@ -178,7 +182,7 @@ class Walker {
       grain,
       description: description(def.annotations),
       definition: def.code,
-      usage: usage(kind, type, path, parent, grain),
+      ...usage(kind, type, path, parent, grain),
     });
   }
 
@@ -190,45 +194,79 @@ class Walker {
       grain,
       description: description(def.annotations),
       usage: parent
-        ? `a view of ${parent}`
-        : `run: ${quoteName(this.sourceName)} -> ${path}, or nest: ${path}`,
+        ? `A view of ${parent}`
+        : `A query of ${quoteName(this.sourceName)}: run: ${quoteName(this.sourceName)} -> ${path}, or nest it`,
+      examples: parent ? [] : [`nest: ${path}`],
     });
   }
 
   private joinField(def: Def, path: string, grain: string) {
+    const column = firstField(def, () => true);
+    const number = firstField(def, f => f.type === 'number');
+    const measure = (def.fields as Def[]).find(
+      f =>
+        isPublic(f) && !isJoined(f) && expressionIsAggregate(f.expressionType)
+    );
+    const of = grain ? `${grain} row` : `${quoteName(this.sourceName)} row`;
     if (def.type === 'array' || def.type === 'record') {
-      const type = typeName(def);
       const many = def.type === 'array';
-      const record =
-        def.type === 'record' || def.elementTypeDef?.type === 'record_element';
+      const element = isPlainArray(def)
+        ? `${path}.each`
+        : column && join(path, nameOf(column));
       this.fields.push({
         path,
         kind: 'dimension',
-        type,
+        type: typeName(def),
         grain,
         description: description(def.annotations),
-        usage: !many
-          ? `its fields are ${path}.<field>`
-          : record
-            ? `group_by: ${path}.<field> for a row per element; ${path}.count() counts elements, except in a query grouped by a ${path} field, where count() does`
-            : `group_by: ${path}.each for a row per element; ${path}.count() counts elements`,
+        usage: many
+          ? `Nested data, many elements per ${of}: grouping by an element field gives a row per element; ${path}.count() counts elements`
+          : `Nested data, one per ${of}: its fields are ${path}.<field>`,
+        examples: [
+          ...(element ? [`group_by: ${element}`] : []),
+          ...(many ? [`aggregate: n is ${path}.count()`] : []),
+        ],
       });
       return;
     }
     const relationship = String(def.join);
-    const of = grain ? `${grain} row` : `${quoteName(this.sourceName)} row`;
+    const many = relationship !== 'one';
     this.fields.push({
       path,
       kind: 'join',
       type: `join_${relationship}`,
       grain,
       description: description(def.annotations),
-      usage:
-        relationship === 'one'
-          ? `one ${path} per ${of}: use its fields as ${path}.<field>, its measures as ${path}.<measure>`
-          : `many ${path} per ${of}: ${path}.count() counts them; ${path}.<field>.sum() and .avg() aggregate their fields without double counting; group_by a ${path} field for a row per ${path}`,
+      usage: many
+        ? `Many ${path} per ${of}: grouping by a ${path} field gives a row per ${path}; aggregates of ${path} fields run over ${path} rows, each counted once`
+        : `One ${path} per ${of}: its fields are ${path}.<field>; aggregates of them run over ${path} rows, each counted once`,
+      examples: [
+        ...(many ? [`aggregate: n is ${path}.count()`] : []),
+        ...(column ? [`group_by: ${join(path, nameOf(column))}`] : []),
+        ...(number
+          ? [`aggregate: total is ${join(path, nameOf(number))}.sum()`]
+          : []),
+        ...(measure ? [`aggregate: ${join(path, nameOf(measure))}`] : []),
+      ],
     });
   }
+}
+
+function isPlainArray(def: Def): boolean {
+  return def.type === 'array' && def.elementTypeDef?.type !== 'record_element';
+}
+
+/** The first public column-like field of a struct matching `test`. */
+function firstField(struct: Def, test: (f: Def) => boolean): Def | undefined {
+  return (struct.fields as Def[]).find(
+    f =>
+      isPublic(f) &&
+      f.type !== 'turtle' &&
+      !isJoined(f) &&
+      !expressionIsAggregate(f.expressionType) &&
+      !expressionIsAnalytic(f.expressionType) &&
+      test(f)
+  );
 }
 
 function usage(
@@ -237,27 +275,33 @@ function usage(
   path: string,
   parent: string,
   grain: string
-): string {
-  const numeric = type === 'number';
+): {usage: string; examples: string[]} {
+  // Grouping fans out only through a join_many, join_cross or array (the
+  // grain); aggregating a joined field runs over the rows of the source it
+  // comes from (the parent), each counted once.
+  const over = parent ? `, over ${parent} rows, each counted once` : '';
   switch (kind) {
     case 'measure':
-      return parent
-        ? `aggregate: ${path}, computed over ${parent} rows, without double counting`
-        : `aggregate: ${path}`;
+      return {
+        usage: parent
+          ? `A measure of ${parent}, computed over ${parent} rows, each counted once`
+          : 'A measure',
+        examples: [`aggregate: ${path}`],
+      };
     case 'calculation':
-      return `calculate: ${path}`;
+      return {usage: 'A calculation (window function)', examples: []};
     default: {
-      // Grouping fans out only through a join_many or an array (the grain);
-      // aggregating a joined field always runs over the rows of the source
-      // it comes from (the parent), each counted once.
-      const group = grain
-        ? `group_by: ${path} for a row per ${grain}`
-        : `group_by: ${path}`;
-      if (numeric) {
-        const over = parent ? ` over ${parent} rows, each counted once` : '';
-        return `${group}; ${path}.sum(), .avg(), .min(), .max() aggregate it${over}`;
+      const per = grain ? `; grouping by it gives a row per ${grain}` : '';
+      if (type === 'number') {
+        return {
+          usage: `A number${per}; .sum(), .avg(), .min() and .max() aggregate it${over}`,
+          examples: [`group_by: ${path}`, `aggregate: total is ${path}.sum()`],
+        };
       }
-      return `${group}; count(${path}) counts distinct values`;
+      return {
+        usage: `A ${type}${per}; count(${path}) counts its distinct values`,
+        examples: [`group_by: ${path}`, `aggregate: n is count(${path})`],
+      };
     }
   }
 }
@@ -324,7 +368,8 @@ export function catalogOf(modelDef: ModelDef): Catalog {
                   : f.kind,
           type: 'type' in f ? stableTypeName(f.type) : f.kind,
           grain: '',
-          usage: `a column of ${quoteName(name)}'s output`,
+          usage: `A column of ${quoteName(name)}'s output`,
+          examples: [],
         })) as CatalogField[],
       });
     }
