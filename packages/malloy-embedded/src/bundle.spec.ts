@@ -330,6 +330,43 @@ describe('malloy-embedded bundle', () => {
     });
   });
 
+  test('compiles time literals and filters without Intl', () => {
+    TABLES['events'] = [['ts', 'timestamp_type']];
+    const sqlOf = (query: string) =>
+      runNeedsLoop<Malloy.CompileQueryResponse>(embedded.compileQuery, {
+        model_url: 'file:///models/flights.malloy',
+        query_malloy: query,
+      }).response.result?.sql ?? '';
+    expect(
+      sqlOf(
+        "run: duckdb.table('events') -> { where: ts ? @2003-02; aggregate: n is count() }"
+      )
+    ).toContain(
+      '(base."ts">=TIMESTAMP \'2003-02-01 00:00:00\') and (base."ts"<TIMESTAMP \'2003-03-01 00:00:00\')'
+    );
+    expect(
+      sqlOf(
+        "run: duckdb.table('events') -> { where: ts ~ f'2003-01 to 2003-03'; aggregate: n is count() }"
+      )
+    ).toContain("TIMESTAMP '2003-03-01 00:00:00'");
+  });
+
+  test("the Intl fallback refuses what it can't answer", () => {
+    const {context} = loadBare();
+    expect(
+      vm.runInContext(
+        "new Intl.DateTimeFormat('en', {timeZone: 'UTC'}).resolvedOptions().timeZone",
+        context
+      )
+    ).toBe('UTC');
+    expect(() =>
+      vm.runInContext(
+        "new Intl.DateTimeFormat('en', {timeZone: 'America/Los_Angeles'})",
+        context
+      )
+    ).toThrow(/time zone/);
+  });
+
   test('decodes malformed UTF-8 to U+FFFD rather than throwing', () => {
     const {context} = loadBare();
     const decode = (bytes: number[]) =>

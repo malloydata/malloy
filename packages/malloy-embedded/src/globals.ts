@@ -127,3 +127,105 @@ if (typeof g.TextDecoder === 'undefined') {
     }
   };
 }
+
+// Intl, for luxon, which Malloy uses for time literals and filter
+// expressions. Malloy only asks it to parse and format fixed numeric
+// patterns (yyyy-MM-dd HH:mm:ss) and step calendar units; luxon reads the
+// system locale and zone from Intl along the way. This answers that much:
+// English with Latin digits, and the UTC zone. Anything that would need
+// real locale or time zone data (a named zone other than UTC, month names)
+// throws, so luxon reports it invalid rather than computing a wrong answer.
+if (typeof g.Intl === 'undefined') {
+  const LOCALE = 'en-US';
+  const isUTC = (zone: unknown) =>
+    zone === undefined || /^(utc|etc\/utc|gmt|etc\/gmt|z)$/i.test(String(zone));
+  const needsData = (what: string): never => {
+    throw new RangeError(
+      `${what} needs Intl locale or time zone data, which this JavaScript engine lacks`
+    );
+  };
+
+  class DateTimeFormat {
+    private readonly options: Record<string, unknown>;
+    constructor(_locales?: unknown, options: Record<string, unknown> = {}) {
+      if (!isUTC(options['timeZone'])) {
+        needsData(`The time zone ${String(options['timeZone'])}`);
+      }
+      this.options = options;
+    }
+    resolvedOptions() {
+      return {
+        locale: LOCALE,
+        calendar: 'gregory',
+        numberingSystem: 'latn',
+        timeZone: 'UTC',
+        ...this.options,
+      };
+    }
+    formatToParts(date?: Date | number) {
+      const d = new Date(date ?? Date.now());
+      const pad = (n: number, w = 2) => String(n).padStart(w, '0');
+      const parts: [string, string][] = [
+        ['month', pad(d.getUTCMonth() + 1)],
+        ['literal', '/'],
+        ['day', pad(d.getUTCDate())],
+        ['literal', '/'],
+        ['year', String(d.getUTCFullYear())],
+        ['literal', ', '],
+        ['hour', pad(d.getUTCHours())],
+        ['literal', ':'],
+        ['minute', pad(d.getUTCMinutes())],
+        ['literal', ':'],
+        ['second', pad(d.getUTCSeconds())],
+      ];
+      if (this.options['era']) parts.unshift(['era', 'AD'], ['literal', ' ']);
+      return parts.map(([type, value]) => ({type, value}));
+    }
+    format(date?: Date | number) {
+      return this.formatToParts(date)
+        .map(p => p.value)
+        .join('');
+    }
+    static supportedLocalesOf() {
+      return [LOCALE];
+    }
+  }
+
+  class NumberFormat {
+    private readonly options: Record<string, unknown>;
+    constructor(_locales?: unknown, options: Record<string, unknown> = {}) {
+      if (options['style'] && options['style'] !== 'decimal') {
+        needsData(`Number style ${String(options['style'])}`);
+      }
+      this.options = options;
+    }
+    resolvedOptions() {
+      return {locale: LOCALE, numberingSystem: 'latn', ...this.options};
+    }
+    format(n: number) {
+      const digits = Number(this.options['minimumIntegerDigits'] ?? 1);
+      const fraction = this.options['maximumFractionDigits'];
+      const text =
+        fraction === undefined
+          ? String(Math.abs(n))
+          : Math.abs(n).toFixed(Number(fraction));
+      return (n < 0 ? '-' : '') + text.padStart(digits, '0');
+    }
+  }
+
+  const unsupported = (name: string) =>
+    class {
+      constructor() {
+        needsData(`Intl.${name}`);
+      }
+    };
+
+  g.Intl = {
+    DateTimeFormat,
+    NumberFormat,
+    PluralRules: unsupported('PluralRules'),
+    RelativeTimeFormat: unsupported('RelativeTimeFormat'),
+    Locale: unsupported('Locale'),
+    getCanonicalLocales: () => [LOCALE],
+  };
+}

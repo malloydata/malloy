@@ -99,6 +99,7 @@ evaluating the bundle to use your own):
 | `performance.now` | compile timing | `Date.now` |
 | `URL`, `URLSearchParams` | import resolution | `whatwg-url` |
 | `TextEncoder`, `TextDecoder` | `whatwg-url` | UTF-8 only |
+| `Intl` | luxon (time literals, filters) | English and UTC only; see below |
 
 `process` is not a global. The `assert` polyfill that antlr4ts pulls in reads
 `process.env` when it loads, so esbuild `inject`s `src/process-shim.ts` in
@@ -108,16 +109,17 @@ global `process` appears.
 `src/globals.ts` must stay the first import in `src/index.ts`, because
 `whatwg-url` constructs a `TextEncoder` when it loads.
 
-## Known gap: `Intl`
+## `Intl`
 
-Timestamp literals (`@2003-01-15 10:00`), timezones and some filter
-expressions go through `luxon`, which needs `Intl` with timezone data.
-QuickJS has no `Intl`, so those compiles fail there. The `luxon` call sites
-are few (`lang/ast/expressions/time-literal.ts`, `model/filter_compilers.ts`,
-`model/given_binding.ts`, `api/row_data_utils.ts`, and Snowflake's dialect),
-so the likely fix is to route them through a small date and timezone
-interface that the host can supply, rather than to bundle an `Intl` polyfill
-with timezone data. Until then the spec avoids time literals.
+luxon, which Malloy uses for time literals (`@2003-01-15 10:00`) and
+filter expressions, reads `Intl` for the system locale and time zone. An
+engine without `Intl` (QuickJS) gets a fallback from `src/globals.ts`:
+English, Latin digits and the UTC zone, which is all Malloy's luxon calls
+need, since they only parse and format fixed numeric patterns and step
+calendar units; time-zone conversion is left to the database's SQL. The
+fallback throws for anything that would need real locale or zone data (a
+named zone other than UTC, month names), so luxon reports it invalid
+rather than computing a wrong answer.
 
 ## Building and testing
 
