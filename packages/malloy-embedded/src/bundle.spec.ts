@@ -18,6 +18,7 @@ const BUNDLE = path.join(__dirname, '../dist/malloy-embedded.js');
 interface Embedded {
   version: string;
   compileModel(requestJSON: string): string;
+  compileModelContents(requestJSON: string): string;
   compileQuery(requestJSON: string): string;
 }
 
@@ -141,6 +142,34 @@ describe('malloy-embedded bundle', () => {
     expect(response.logs ?? []).toEqual([]);
     // Imported sources are visible inside the model but not exported from it.
     expect(response.model?.entries.map(e => e.name)).toEqual(['flights']);
+  });
+
+  test('lists imported sources and named queries', () => {
+    FILES['file:///models/with_query.malloy'] = `
+      import 'flights.malloy'
+      query: top is flights -> by_carrier`;
+    const {response} = runNeedsLoop<Malloy.CompileModelResponse>(
+      embedded.compileModelContents,
+      {model_url: 'file:///models/with_query.malloy'}
+    );
+    expect(response.logs ?? []).toEqual([]);
+    // flights is imported, so compileModel would not list it. carriers is
+    // not visible here at all: flights.malloy imports it but does not export it.
+    const entries = response.model?.entries.map(e => [e.kind, e.name]);
+    expect(entries).toEqual([
+      ['source', 'flights'],
+      ['query', 'top'],
+    ]);
+    const flights = response.model?.entries.find(e => e.name === 'flights');
+    const fieldKinds = flights?.schema.fields.map(f => [f.kind, f.name]);
+    expect(fieldKinds).toEqual(
+      expect.arrayContaining([
+        ['dimension', 'carrier'],
+        ['measure', 'flight_count'],
+        ['join', 'carriers'],
+        ['view', 'by_carrier'],
+      ])
+    );
   });
 
   test('reports translation errors as logs', () => {

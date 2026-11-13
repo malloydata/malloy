@@ -20,12 +20,22 @@ pick up, not an npm package.
 
 ## The interface
 
-`malloyEmbedded` has `version` and three functions,
-`compileModel`, `compileSource` and `compileQuery`. Each takes a request as a
-JSON string and returns the response as a JSON string. Requests and
-responses are the stable `@malloydata/malloy-interfaces` types used by
-`API.stateless` (see [`packages/malloy/src/api/CONTEXT.md`](../malloy/src/api/CONTEXT.md)):
-the functions wrap that API and add nothing but the string boundary.
+`malloyEmbedded` has `version` and four functions,
+`compileModel`, `compileModelContents`, `compileSource` and `compileQuery`.
+Each takes a request as a JSON string and returns the response as a JSON
+string. Requests and responses are the stable
+`@malloydata/malloy-interfaces` types used by `API.stateless` (see
+[`packages/malloy/src/api/CONTEXT.md`](../malloy/src/api/CONTEXT.md)): three
+of the functions wrap that API and add nothing but the string boundary.
+
+`compileModelContents` is `compileModel` with a different answer to "what
+is in this model": its `entries` list every source and named query the
+model can see, including imported ones, where `compileModel` lists only
+what the model exports. That is what an interactive host shows when asked
+what can be queried. Named queries come back as `kind: 'query'` with their
+output schema (`compileModel` lists them as sources). It works from the
+`ModelDef` that the stateless response already carries in `translations`,
+through the public `modelDefToModelInfo`.
 
 They never throw. An exception, including a request that is not valid JSON,
 comes back as a response whose `logs` holds one error.
