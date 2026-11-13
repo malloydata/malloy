@@ -7,8 +7,14 @@
 // load. ES module evaluation follows import order.
 import './globals';
 import './url';
-import {API, modelDefToModelInfo} from '@malloydata/malloy';
-import type {ModelDef} from '@malloydata/malloy';
+import {
+  API,
+  DuckDBDialect,
+  mkFieldDef,
+  modelDefToModelInfo,
+  sourceDefToSourceInfo,
+} from '@malloydata/malloy';
+import type {ModelDef, TableSourceDef} from '@malloydata/malloy';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
 declare const __MALLOY_VERSION__: string;
@@ -31,6 +37,7 @@ export interface MalloyEmbedded {
   compileModelContents(requestJSON: string): string;
   compileSource(requestJSON: string): string;
   compileQuery(requestJSON: string): string;
+  duckdbSchema(columnsJSON: string): string;
 }
 
 /**
@@ -94,12 +101,37 @@ function wrap<Req extends {model_url: string}, Res>(
   };
 }
 
+const duckdbDialect = new DuckDBDialect();
+
+/**
+ * Turns DuckDB column types into the schema the compiler's needs loop takes
+ * for a table or SQL source, the same way Malloy's DuckDB connection does:
+ * `columnsJSON` is `[[column_name, column_type], ...]`, as DESCRIBE reports
+ * them, and the result is a `Malloy.Schema` as JSON. Types DuckDB's parser
+ * here does not understand become SQL-native types.
+ */
+function duckdbSchema(columnsJSON: string): string {
+  const columns = JSON.parse(columnsJSON) as [string, string][];
+  const sourceDef: TableSourceDef = {
+    type: 'table',
+    name: 'columns',
+    tablePath: 'columns',
+    connection: 'duckdb',
+    dialect: duckdbDialect.name,
+    fields: columns.map(([name, type]) =>
+      mkFieldDef(duckdbDialect.parseDuckDBType(type), name)
+    ),
+  };
+  return JSON.stringify(sourceDefToSourceInfo(sourceDef).schema);
+}
+
 const malloyEmbedded: MalloyEmbedded = {
   version: __MALLOY_VERSION__,
   compileModel: wrap(API.stateless.compileModel),
   compileModelContents: wrap(compileModelContents),
   compileSource: wrap(API.stateless.compileSource),
   compileQuery: wrap(API.stateless.compileQuery),
+  duckdbSchema,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

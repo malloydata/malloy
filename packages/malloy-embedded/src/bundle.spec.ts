@@ -20,6 +20,7 @@ interface Embedded {
   compileModel(requestJSON: string): string;
   compileModelContents(requestJSON: string): string;
   compileQuery(requestJSON: string): string;
+  duckdbSchema(columnsJSON: string): string;
 }
 
 function loadBare(): {embedded: Embedded; context: vm.Context} {
@@ -170,6 +171,44 @@ describe('malloy-embedded bundle', () => {
         ['view', 'by_carrier'],
       ])
     );
+  });
+
+  test('turns DuckDB column types into a schema, nested types included', () => {
+    const schema: Malloy.Schema = JSON.parse(
+      embedded.duckdbSchema(
+        JSON.stringify([
+          ['genres', 'VARCHAR[]'],
+          ['people', 'STRUCT(name VARCHAR, "job title" VARCHAR)[]'],
+          ['n', 'BIGINT'],
+        ])
+      )
+    );
+    expect(schema.fields).toEqual([
+      {
+        kind: 'dimension',
+        name: 'genres',
+        type: {kind: 'array_type', element_type: {kind: 'string_type'}},
+      },
+      {
+        kind: 'dimension',
+        name: 'people',
+        type: {
+          kind: 'array_type',
+          element_type: {
+            kind: 'record_type',
+            fields: [
+              {name: 'name', type: {kind: 'string_type'}},
+              {name: 'job title', type: {kind: 'string_type'}},
+            ],
+          },
+        },
+      },
+      {
+        kind: 'dimension',
+        name: 'n',
+        type: {kind: 'number_type', subtype: 'integer'},
+      },
+    ]);
   });
 
   test('reports translation errors as logs', () => {

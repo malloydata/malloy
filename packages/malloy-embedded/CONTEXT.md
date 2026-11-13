@@ -20,8 +20,9 @@ pick up, not an npm package.
 
 ## The interface
 
-`malloyEmbedded` has `version` and four functions,
-`compileModel`, `compileModelContents`, `compileSource` and `compileQuery`.
+`malloyEmbedded` has `version` and five functions:
+`compileModel`, `compileModelContents`, `compileSource`, `compileQuery`, and
+`duckdbSchema`, described below.
 Each takes a request as a JSON string and returns the response as a JSON
 string. Requests and responses are the stable
 `@malloydata/malloy-interfaces` types used by `API.stateless` (see
@@ -39,6 +40,13 @@ through the public `modelDefToModelInfo`.
 
 They never throw. An exception, including a request that is not valid JSON,
 comes back as a response whose `logs` holds one error.
+
+`duckdbSchema` is for hosts that are DuckDB. It takes
+`[[column_name, column_type], ...]` as DuckDB's `DESCRIBE` reports them and
+returns the `Malloy.Schema` to answer a table or SQL schema need with,
+converting the types exactly as Malloy's DuckDB connection does
+(`DuckDBDialect.parseDuckDBType`), `STRUCT` and `LIST` included. A host
+should use it rather than map types itself.
 
 ### The needs loop
 
