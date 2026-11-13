@@ -16,6 +16,8 @@ export const process = {
   version: '',
   versions: {} as Record<string, string>,
   platform: 'embedded',
+  // Runs the callback now, not on a later tick: enough for the assert
+  // polyfill, the only reader, but not a real nextTick.
   nextTick(fn: (...args: unknown[]) => void, ...args: unknown[]): void {
     fn(...args);
   },

@@ -30,6 +30,18 @@ function loadBare(): {embedded: Embedded; context: vm.Context} {
       `${BUNDLE} is missing; run \`npm run dev\` in packages/malloy-embedded`
     );
   }
+  // These tests run the built bundle, so a bundle older than its sources
+  // would quietly test old code.
+  const built = fs.statSync(BUNDLE).mtimeMs;
+  const sources = path.join(__dirname);
+  for (const file of fs.readdirSync(sources)) {
+    if (file.endsWith('.spec.ts')) continue;
+    if (fs.statSync(path.join(sources, file)).mtimeMs > built) {
+      throw new Error(
+        `${BUNDLE} is older than src/${file}; run \`npm run dev\` in packages/malloy-embedded`
+      );
+    }
+  }
   const context = vm.createContext({});
   vm.runInContext('delete globalThis.Intl;', context);
   vm.runInContext(fs.readFileSync(BUNDLE, 'utf8'), context, {
@@ -283,6 +295,52 @@ describe('malloy-embedded bundle', () => {
       grain: 'plane.services',
     });
     expect(field('plane.plane_count')).toMatchObject({kind: 'measure'});
+  });
+
+  test('catalogs parameters, query field descriptions and the model', () => {
+    FILES['file:///models/extras.malloy'] = `
+      ##" Flights for testing
+      ##! experimental.parameters
+      source: long_flights(min_distance::number is 100) is duckdb.table('flights') extend {
+        where: distance > min_distance
+      }
+      query: by_carrier is duckdb.table('flights') -> {
+        #" The airline
+        group_by: carrier
+      }`;
+    const {response} = runNeedsLoop<CatalogResponse>(
+      embedded.compileModelCatalog,
+      {model_url: 'file:///models/extras.malloy'}
+    );
+    expect(response.logs ?? []).toEqual([]);
+    const catalog = response.catalog as CatalogResponse['catalog'] & {
+      description?: string;
+    };
+    expect(catalog.description).toBe('Flights for testing');
+    const entry = (name: string) =>
+      catalog.entries.find(e => e.name === name) as
+        | ((typeof catalog.entries)[number] & {parameters?: string[]})
+        | undefined;
+    expect(entry('long_flights')?.parameters).toEqual([
+      'min_distance :: number',
+    ]);
+    expect(entry('by_carrier')?.fields[0]).toMatchObject({
+      path: 'carrier',
+      description: 'The airline',
+    });
+  });
+
+  test('decodes malformed UTF-8 to U+FFFD rather than throwing', () => {
+    const {context} = loadBare();
+    const decode = (bytes: number[]) =>
+      vm.runInContext(
+        `new TextDecoder().decode(new Uint8Array(${JSON.stringify(bytes)}))`,
+        context
+      );
+    expect(decode([0xf4, 0x90, 0x80, 0x80])).toBe('\ufffd'); // past U+10FFFF
+    expect(decode([0xe0, 0x80, 0xaf])).toBe('\ufffd'); // overlong
+    expect(decode([0xed, 0xa0, 0x80])).toBe('\ufffd'); // a surrogate
+    expect(decode([0xe2, 0x82, 0xac])).toBe('\u20ac'); // still decodes €
   });
 
   test('every example in the catalog compiles', () => {

@@ -116,7 +116,12 @@ if (typeof g.TextDecoder === 'undefined') {
           c = (c << 6) | (cont & 0x3f);
           i++;
         }
-        out += String.fromCodePoint(ok ? c : 0xfffd);
+        // Reject overlong forms, surrogates and code points past U+10FFFF,
+        // which String.fromCodePoint would throw on.
+        const min = [0, 0x80, 0x800, 0x10000][need];
+        const valid =
+          ok && c >= min && c <= 0x10ffff && !(c >= 0xd800 && c <= 0xdfff);
+        out += String.fromCodePoint(valid ? c : 0xfffd);
       }
       return out;
     }

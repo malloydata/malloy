@@ -14,8 +14,8 @@ import {
   modelDefToModelInfo,
   sourceDefToSourceInfo,
 } from '@malloydata/malloy';
-import type {ModelDef, TableSourceDef} from '@malloydata/malloy';
-import {compileModelCatalog} from './catalog';
+import type {TableSourceDef} from '@malloydata/malloy';
+import {compileModelCatalog, compileModelDef} from './catalog';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
 declare const __MALLOY_VERSION__: string;
@@ -29,8 +29,9 @@ declare const __MALLOY_VERSION__: string;
  * `@malloydata/malloy-interfaces`, exactly as for `API.stateless`; see
  * CONTEXT.md for the needs loop a host runs around them.
  *
- * None of these throw. An exception inside the compiler comes back as a
- * response whose `logs` holds one error.
+ * The compile functions never throw: an exception inside the compiler comes
+ * back as a response whose `logs` holds one error. `duckdbSchema`, a pure
+ * conversion, throws on input it can't read.
  */
 export interface MalloyEmbedded {
   version: string;
@@ -52,14 +53,10 @@ export interface MalloyEmbedded {
 function compileModelContents(
   request: Malloy.CompileModelRequest
 ): Malloy.CompileModelResponse {
-  const response = API.stateless.compileModel(request);
-  const json = response.translations?.find(
-    t => t.url === request.model_url
-  )?.compiled_model_json;
-  if (!response.model || json === undefined) {
+  const {response, modelDef} = compileModelDef(request);
+  if (!modelDef) {
     return response;
   }
-  const modelDef = JSON.parse(json) as ModelDef;
   const everything = modelDefToModelInfo({
     ...modelDef,
     exports: Object.keys(modelDef.contents),
@@ -105,6 +102,13 @@ function wrap<Req extends {model_url: string}, Res>(
 
 const duckdbDialect = new DuckDBDialect();
 
+// As malloy-db-duckdb's fillStructDefFromTypeMap: DESCRIBE can report a
+// column name in double quotes.
+function unquoteName(name: string): string {
+  const match = /^"(.*)"$/.exec(name);
+  return match ? match[1].replace(/""/g, '"') : name;
+}
+
 /**
  * Turns DuckDB column types into the schema the compiler's needs loop takes
  * for a table or SQL source, the same way Malloy's DuckDB connection does:
@@ -121,7 +125,7 @@ function duckdbSchema(columnsJSON: string): string {
     connection: 'duckdb',
     dialect: duckdbDialect.name,
     fields: columns.map(([name, type]) =>
-      mkFieldDef(duckdbDialect.parseDuckDBType(type), name)
+      mkFieldDef(duckdbDialect.parseDuckDBType(type), unquoteName(name))
     ),
   };
   return JSON.stringify(sourceDefToSourceInfo(sourceDef).schema);

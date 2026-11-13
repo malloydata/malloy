@@ -38,8 +38,9 @@ output schema (`compileModel` lists them as sources). It works from the
 `ModelDef` that the stateless response already carries in `translations`,
 through the public `modelDefToModelInfo`.
 
-They never throw. An exception, including a request that is not valid JSON,
-comes back as a response whose `logs` holds one error.
+The compile functions never throw. An exception, including a request that
+is not valid JSON, comes back as a response whose `logs` holds one error.
+`duckdbSchema`, a pure conversion, throws on input it can't read.
 
 `compileModelCatalog` (`src/catalog.ts`) is `compileModel` answering
 with a `catalog` for an interactive host to show: every source and named
@@ -52,7 +53,10 @@ isn't a column), `grain` (the nearest `join_many`, `join_cross` or array on
 its path, whose rows it has one value per) and a one-line `usage` saying how
 a query uses it. Its rules are Malloy's: grouping by a field with a grain
 gives a row per grain row, and aggregating a joined field runs over the rows
-of the source it comes from, without double counting. It reads the
+of the source it comes from, without double counting. The catalog also carries the model's own `##"` `description`; an entry
+whose fields couldn't be worked out has empty `fields` and a `problem`, so
+one bad named query doesn't hide the rest. Joins are followed up to four
+deep, never back into a source already on the path. It reads the
 `ModelDef` from the response's `translations`, so it relies on the IR's
 shape (`fields`, `join`, `code`, `expressionType`, `filterList`,
 `primaryKey`); the spec checks the parts hosts depend on.
@@ -60,8 +64,9 @@ shape (`fields`, `join`, `code`, `expressionType`, `filterList`,
 `duckdbSchema` is for hosts that are DuckDB. It takes
 `[[column_name, column_type], ...]` as DuckDB's `DESCRIBE` reports them and
 returns the `Malloy.Schema` to answer a table or SQL schema need with,
-converting the types exactly as Malloy's DuckDB connection does
-(`DuckDBDialect.parseDuckDBType`), `STRUCT` and `LIST` included. A host
+converting names and types exactly as Malloy's DuckDB connection does
+(unquoting `"names"`, and `DuckDBDialect.parseDuckDBType`), `STRUCT` and
+`LIST` included. A host
 should use it rather than map types itself.
 
 ### The needs loop
@@ -121,6 +126,6 @@ with timezone data. Until then the spec avoids time literals.
   is made from, so rebuild `packages/malloy` (root `npm run dev`) before
   bundling if you changed it.
 - `npx jest packages/malloy-embedded` (from the repo root) tests the built
-  bundle, not the sources, inside a `vm` context that has only the ECMAScript
+  bundle, not the sources, and fails if the bundle is older than `src/`, inside a `vm` context that has only the ECMAScript
   built-ins and no `Intl`. It fails with a pointer to `npm run dev` if the
   bundle has not been built. It runs in the `malloy-core` jest project.

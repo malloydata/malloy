@@ -10,7 +10,9 @@ import {
   expressionIsAnalytic,
   isJoined,
   isSourceDef,
+  annotationsForRoute,
   modelDefToModelInfo,
+  payloadOf,
   routeOf,
 } from '@malloydata/malloy';
 import type {FieldDef, ModelDef, StructDef} from '@malloydata/malloy';
@@ -23,6 +25,8 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
  * source, through joins and nested data, with how a query uses it.
  */
 export interface Catalog {
+  /** The model's own `##"` description. */
+  description?: string;
   entries: CatalogEntry[];
 }
 
@@ -40,6 +44,8 @@ export interface CatalogEntry {
   parameters: string[];
   /** Every field, the source's own first, then each join's, depth first. */
   fields: CatalogField[];
+  /** Why `fields` is empty, when describing this entry failed. */
+  problem?: string;
 }
 
 export interface CatalogField {
@@ -141,7 +147,13 @@ class Walker {
 
   constructor(readonly sourceName: string) {}
 
-  walk(struct: StructDef, path: string, grain: string, depth: number) {
+  walk(
+    struct: StructDef,
+    path: string,
+    grain: string,
+    depth: number,
+    entered: ReadonlySet<string> = new Set()
+  ) {
     // The struct's own fields first, then each join's, so a source's fields
     // read before its joins' fields.
     const joins: Def[] = [];
@@ -177,8 +189,13 @@ class Walker {
         }
         continue;
       }
-      if (depth < MAX_JOIN_DEPTH) {
-        this.walk(def, fieldPath, fans ? fieldPath : grain, depth + 1);
+      // Don't re-enter a source already on this path (a join back to the
+      // fact table, say): its fields are listed where it was first entered,
+      // and following it again multiplies the catalog by every join.
+      const identity = sourceIdentity(def);
+      if (depth < MAX_JOIN_DEPTH && !(identity && entered.has(identity))) {
+        const next = identity ? new Set([...entered, identity]) : entered;
+        this.walk(def, fieldPath, fans ? fieldPath : grain, depth + 1, next);
       }
     }
   }
@@ -271,6 +288,13 @@ class Walker {
   }
 }
 
+/** What identifies a joined source, for spotting a re-entry; none for
+    nested data (arrays and records), which can't cycle. */
+function sourceIdentity(def: Def): string | undefined {
+  if (def.type === 'array' || def.type === 'record') return undefined;
+  return def.sourceID ?? def.name;
+}
+
 function isPlainArray(def: Def): boolean {
   return def.type === 'array' && def.elementTypeDef?.type !== 'record_element';
 }
@@ -338,22 +362,51 @@ function stableTypeName(type: Malloy.AtomicType): string {
   }
 }
 
+/** The description on a stable annotation list: `#"`, else `#(docs)`. */
+function stableDescription(
+  annotations: Malloy.Annotation[] | undefined
+): string | undefined {
+  for (const route of ['"', 'docs']) {
+    const text = annotationsForRoute(annotations, route)
+      .map(a => payloadOf(a).trim())
+      .filter(t => t)
+      .join('\n');
+    if (text) return text;
+  }
+  return undefined;
+}
+
+/** A named query's output columns, from the stable conversion of just it. */
+function queryFields(modelDef: ModelDef, name: string): CatalogField[] {
+  const info = modelDefToModelInfo({...modelDef, exports: [name]});
+  const fields = info.entries.find(e => e.name === name)?.schema.fields ?? [];
+  return fields.map(f => ({
+    path: quoteName(f.name),
+    kind: f.kind === 'calculate' ? 'calculation' : f.kind,
+    type: 'type' in f ? stableTypeName(f.type) : f.kind,
+    grain: '',
+    description: stableDescription(f.annotations),
+    annotations: (f.annotations ?? [])
+      .filter(a => !['"', 'docs'].includes(routeOf(a) ?? ''))
+      .map(a => a.value.trim()),
+    usage: `A column of ${quoteName(name)}'s output`,
+    examples: [],
+  }));
+}
+
 /** Every source and named query in a compiled model, described. */
 export function catalogOf(modelDef: ModelDef): Catalog {
   const entries: CatalogEntry[] = [];
-  // Named queries' output schemas come from the stable conversion.
-  const stable = modelDefToModelInfo({
-    ...modelDef,
-    exports: Object.keys(modelDef.contents),
-  });
-  const queryFields = new Map<string, Malloy.FieldInfo[]>();
-  for (const entry of stable.entries) {
-    queryFields.set(entry.name, entry.schema.fields);
-  }
   for (const [name, def] of Object.entries(modelDef.contents)) {
     if (isSourceDef(def)) {
       const walker = new Walker(name);
-      walker.walk(def, '', '', 0);
+      walker.walk(
+        def,
+        '',
+        '',
+        0,
+        new Set([String((def as Def).sourceID ?? name)])
+      );
       const source = def as Def;
       entries.push({
         kind: 'source',
@@ -365,40 +418,49 @@ export function catalogOf(modelDef: ModelDef): Catalog {
           .map((f: Def) => f.code)
           .filter((c: unknown) => typeof c === 'string'),
         parameters: Object.values(source.parameters ?? {}).map(
-          (p: Def) => `${p.name} :: ${typeName(p.value ?? p)}`
+          (p: Def) => `${p.name} :: ${typeName(p)}`
         ),
         fields: walker.fields,
       });
     } else if ((def as Def).type === 'query') {
-      entries.push({
+      const entry: CatalogEntry = {
         kind: 'query',
         name,
         description: description((def as Def).annotations),
         annotations: tags((def as Def).annotations),
         filters: [],
         parameters: [],
-        fields: (queryFields.get(name) ?? []).map(f => ({
-          path: quoteName(f.name),
-          kind:
-            f.kind === 'join'
-              ? 'join'
-              : f.kind === 'view'
-                ? 'view'
-                : f.kind === 'calculate'
-                  ? 'calculation'
-                  : f.kind,
-          type: 'type' in f ? stableTypeName(f.type) : f.kind,
-          grain: '',
-          annotations: (f.annotations ?? [])
-            .filter(a => !['"', 'docs'].includes(routeOf(a) ?? ''))
-            .map(a => a.value.trim()),
-          usage: `A column of ${quoteName(name)}'s output`,
-          examples: [],
-        })) as CatalogField[],
-      });
+        fields: [],
+      };
+      // One query whose output can't be worked out shouldn't hide the rest.
+      try {
+        entry.fields = queryFields(modelDef, name);
+      } catch (e) {
+        entry.problem = e instanceof Error ? e.message : String(e);
+      }
+      entries.push(entry);
     }
   }
-  return {entries};
+  const own = (modelDef as Def).modelAnnotations?.[(modelDef as Def).modelID];
+  return {description: description(own?.ownNotes), entries};
+}
+
+/**
+ * Compiles a model, returning the stable response and, once the model has
+ * compiled, its ModelDef (from the response's `translations`).
+ */
+export function compileModelDef(request: Malloy.CompileModelRequest): {
+  response: Malloy.CompileModelResponse;
+  modelDef?: ModelDef;
+} {
+  const response = API.stateless.compileModel(request);
+  const json = response.translations?.find(
+    t => t.url === request.model_url
+  )?.compiled_model_json;
+  if (!response.model || json === undefined) {
+    return {response};
+  }
+  return {response, modelDef: JSON.parse(json) as ModelDef};
 }
 
 /**
@@ -408,12 +470,6 @@ export function catalogOf(modelDef: ModelDef): Catalog {
 export function compileModelCatalog(
   request: Malloy.CompileModelRequest
 ): Malloy.CompileModelResponse & {catalog?: Catalog} {
-  const response = API.stateless.compileModel(request);
-  const json = response.translations?.find(
-    t => t.url === request.model_url
-  )?.compiled_model_json;
-  if (!response.model || json === undefined) {
-    return response;
-  }
-  return {...response, catalog: catalogOf(JSON.parse(json) as ModelDef)};
+  const {response, modelDef} = compileModelDef(request);
+  return modelDef ? {...response, catalog: catalogOf(modelDef)} : response;
 }
