@@ -733,6 +733,23 @@ export class MalloyToQuery
   }
 
   getFilterExpr(cx: parse.FieldExprContext): Malloy.FilterOperation | null {
+    if (cx instanceof parse.ExprNullCheckContext && !cx.NOT()) {
+      const lhs = cx.fieldExpr();
+      if (lhs instanceof parse.ExprFieldPathContext) {
+        const {path, name} = this.getFieldPath(lhs.fieldPath());
+        return {
+          filter: {
+            kind: 'literal_equality',
+            expression: {
+              kind: 'field_reference',
+              name,
+              path,
+            },
+            value: {kind: 'null_literal'},
+          },
+        };
+      }
+    }
     if (cx instanceof parse.ExprCompareContext) {
       if (cx.compareOp().MATCH()) {
         const lhs = cx.fieldExpr()[0];

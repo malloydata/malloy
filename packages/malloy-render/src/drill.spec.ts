@@ -188,6 +188,50 @@ describe('drill query', () => {
     expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
+  test('drill query for a null cell in a view runs and finds its rows', async () => {
+    const model = `
+      source: deals is duckdb.sql("""
+        SELECT * FROM (VALUES ('Won', 10), ('Lost', 20), (NULL, 30)) AS t(status, amount)
+      """) extend {
+        view: by_status is { group_by: status aggregate: n is count() }
+      }
+    `;
+    const runtime = duckdb.loadModel(baseModel).extendModel(model);
+    const result = await runtime.loadQuery('run: deals -> by_status').run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const nullRow = table.rows.find(r => r.column('status').isNull());
+    expect(nullRow).toBeDefined();
+    const drillQuery = nullRow!.getStableDrillQueryMalloy();
+    expect(drillQuery).toEqual(
+      'run: deals -> { drill: by_status.status is null } + { select: * }'
+    );
+    const drilled = await runtime.loadQuery(drillQuery!).run();
+    expect(drilled.data.toObject()).toEqual([{status: null, amount: 30}]);
+  });
+
+  test('drill query for a null cell under a filter outside a view', async () => {
+    const model = `
+      source: deals is duckdb.sql("""
+        SELECT * FROM (VALUES ('Won', 10), ('Lost', 20), (NULL, 30)) AS t(status, amount)
+      """)
+    `;
+    const runtime = duckdb.loadModel(baseModel).extendModel(model);
+    const result = await runtime
+      .loadQuery('run: deals -> { where: amount > 15 group_by: status }')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const nullRow = table.rows.find(r => r.column('status').isNull());
+    expect(nullRow).toBeDefined();
+    const drillQuery = nullRow!.getDrillQueryMalloy();
+    expect(drillQuery).toEqual(`run: deals -> {
+  drill:
+    amount > 15,
+    status is null
+} + { select: * }`);
+    const drilled = await runtime.loadQuery(drillQuery).run();
+    expect(drilled.data.toObject()).toEqual([{status: null, amount: 30}]);
+  });
+
   test('can handle expression fields', async () => {
     const model = `
       source: flights is flights_base extend {
