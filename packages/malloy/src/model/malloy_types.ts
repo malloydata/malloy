@@ -450,11 +450,12 @@ export interface CompositeFieldExpr extends ExprLeaf {
 }
 
 /**
- * A query run on the elements of an array of the current row, whose one
- * result is a value of that row: `items -> { aggregate: price.sum() }`.
- * `kids.array` is the array, and `pipeline` runs with its elements as the
- * source, the way a later stage of a nest runs on the stage before it.
- * Experimental (`##! experimental.array_queries`).
+ * A query run on the elements of an array of the current row, whose result
+ * is a value of that row: one value, `items -> { aggregate: price.sum() }`
+ * (`arrayQueryReturnsValue`), or otherwise its rows, as an array of
+ * records. `kids.array` is the array, and `pipeline` runs with its elements
+ * as the source, the way a later stage of a nest runs on the stage before
+ * it. Experimental (`##! experimental.array_queries`).
  */
 export interface ArrayQueryExpr extends ExprWithKids {
   node: 'arrayQuery';
@@ -1432,7 +1433,12 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 export interface FieldUsageEntry {
   path: string[];
   at?: DocumentLocation;
-  uniqueKeyRequirement?: UniqueKeyRequirement;
+  /**
+   * An asymmetric aggregate (`count`, `sum`, `avg`, or an aggregate function
+   * which is not symmetric) is computed at this path, so the source there
+   * needs a key.
+   */
+  uniqueKeyRequirement?: boolean;
   analyticFunctionUse?: boolean;
   /**
    * A weak reference, made from inside an array query (`items -> { ... }`):
@@ -2418,30 +2424,6 @@ export const TD = {
     return x.type === y.type;
   },
 };
-
-/**
- * Aggregate functions carry this meta data. Used to determine if
- * a function requires the existence of a unique key. This used
- * be a pair of types: UniqueKeyUse and UniqueKeyPossibleUse.
- *
- * The three states are:
- *
- * 1. undefined - not recorded, symmetric  MIN/MAX/COUNT_DISTINCT
- * 2. {isCount: true} - this is a COUNT aggregate
- * 3. {isCount: false} - this is an asymmetric aggregate, SUM or AVG
- */
-export type UniqueKeyRequirement = undefined | {isCount: boolean};
-
-export function mergeUniqueKeyRequirement(
-  existing: UniqueKeyRequirement,
-  newInfo: UniqueKeyRequirement
-): UniqueKeyRequirement {
-  if (!existing) return newInfo;
-  if (!newInfo) return existing;
-  return {
-    isCount: existing.isCount || newInfo.isCount,
-  };
-}
 
 /**
  * Entry in a BuildManifest for a persisted table.

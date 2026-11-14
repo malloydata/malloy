@@ -266,4 +266,60 @@ describe('array queries', () => {
       }
     `).not.toTranslate();
   });
+
+  describe('messages', () => {
+    test('a name that is not defined is reported once', () => {
+      expect(model`
+        ##! experimental.array_queries
+        run: a -> { select: x is nosuch -> { aggregate: n is count() } }
+      `).toLog(errorMessage("'nosuch' is not defined"));
+    });
+
+    test('a field of the row, inside the arrow', () => {
+      expect(model`
+        ##! experimental.array_queries
+        run: a -> {
+          select: x is astruct -> {
+            aggregate: n is count() { where: ai > 1 }
+          }
+        }
+      `).toLog(
+        errorMessage(
+          "'ai' is a field of the row; the query after 'astruct ->' sees only the fields of its elements"
+        )
+      );
+    });
+
+    test('a parameter of the source, inside the arrow', () => {
+      expect(model`
+        ##! experimental.array_queries
+        ##! experimental.parameters
+        source: p(lim::number) is a extend {
+          dimension: x is astruct -> {
+            aggregate: n is count() { where: column > lim }
+          }
+        }
+        run: p(lim is 1) -> { select: x }
+      `).toLog(
+        errorMessage(
+          "'lim' is a parameter of the source; the query after 'astruct ->' sees only the fields of its elements"
+        )
+      );
+    });
+
+    test('an output field of the query', () => {
+      expect(model`
+        ##! experimental.array_queries
+        run: a -> {
+          group_by: ai
+          nest: types is { group_by: astr; aggregate: c is count() }
+          having: types -> { aggregate: n is count() } > 3
+        }
+      `).toLog(
+        errorMessage(
+          "'types' is an output field of this query; only an array of the source can be queried with ->"
+        )
+      );
+    });
+  });
 });

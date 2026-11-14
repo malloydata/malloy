@@ -551,11 +551,7 @@ function expandRefUsage(
       strengthened = true;
     }
     if (usage.uniqueKeyRequirement) {
-      existing.uniqueKeyRequirement = {
-        isCount:
-          existing.uniqueKeyRequirement?.isCount ||
-          usage.uniqueKeyRequirement.isCount,
-      };
+      existing.uniqueKeyRequirement = true;
     }
     if (usage.analyticFunctionUse) {
       existing.analyticFunctionUse = true;
@@ -1319,7 +1315,7 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         if (hasNestedUniqueKeyReqs) {
           fieldsReferenced.push({
             path: [],
-            uniqueKeyRequirement: {isCount: true},
+            uniqueKeyRequirement: true,
             at: head.referencedAt,
           });
         }

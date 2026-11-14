@@ -137,7 +137,7 @@ export class IndexBuilder implements QueryBuilder {
     // symmetric aggregation is enabled when joins are present.
     fieldUsage.push({
       path: [],
-      uniqueKeyRequirement: {isCount: true},
+      uniqueKeyRequirement: true,
     });
     indexSegment.refSummary = {...indexSegment.refSummary, fieldUsage};
 

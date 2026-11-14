@@ -53,6 +53,50 @@ export const malloyCustomErrorCases: ErrorCase[] = [
     precedingTokenOptions: [[MalloyParser.AGGREGATE]],
     lookAheadOptions: [[-MalloyParser.IS]],
   },
+  // The first entry of `group_by:`, `select:` or `calculate:` is a name
+  // followed by an operator, a call or `->`: an expression without a name.
+  // `*` is not among the operators: after a name it reads as a wildcard,
+  // and the error comes later. `aggregate:` has cases of its own.
+  ...(
+    [
+      [MalloyParser.GROUP_BY, 'group_by:'],
+      [MalloyParser.SELECT, 'select:'],
+      [MalloyParser.CALCULATE, 'calculate:'],
+    ] as const
+  ).flatMap(([token, statement]) => [
+    {
+      errorMessage: `'${statement}' entries must include a name (ex: \`some_name is ...\`)`,
+      precedingTokenOptions: [[MalloyParser.IDENTIFIER, token]],
+      offendingSymbolTextOptions: ['(', '+', '-', '/', '%', '??'],
+    },
+    // An unnamed arrow reads the same as a stage missing its '}'.
+    {
+      errorMessage: `Missing '}' before '->', or a '${statement}' entry without a name (ex: \`some_name is ...\`)`,
+      precedingTokenOptions: [[MalloyParser.IDENTIFIER, token]],
+      offendingSymbol: MalloyParser.ARROW,
+    },
+  ]),
+  // After `(...).`, the parser expects a timeframe.
+  {
+    errorMessage:
+      'A function of an expression is written `${offendingSymbol}(expression)`; a method can follow only a field name',
+    ruleContextOptions: ['timeframe'],
+    precedingTokenOptions: [[MalloyParser.DOT, MalloyParser.CPAREN]],
+    lookAheadOptions: [[MalloyParser.OPAREN]],
+  },
+  {
+    errorMessage:
+      "Expected a timeframe after '.', such as `.month`; a field cannot be read from an expression",
+    ruleContextOptions: ['timeframe'],
+    precedingTokenOptions: [[MalloyParser.DOT, MalloyParser.CPAREN]],
+  },
+  {
+    errorMessage:
+      "Missing '}' before '->', or '->' on an expression: define the expression as a dimension and query that",
+    offendingSymbol: MalloyParser.ARROW,
+    ruleContextOptions: ['queryProperties', 'exploreProperties'],
+    precedingTokenOptions: [[MalloyParser.CBRACK], [MalloyParser.CPAREN]],
+  },
   {
     errorMessage: "Expected ':' following 'source'",
     offendingSymbol: MalloyParser.SOURCE_KW,

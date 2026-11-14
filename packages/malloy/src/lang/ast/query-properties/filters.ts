@@ -12,6 +12,7 @@ import {
 import {isNotUndefined} from '../../utils';
 import {ExprCompare, ExprEquality} from '../expressions/expr-compare';
 import {ExprIdReference} from '../expressions/expr-id-reference';
+import {ExprIsNull, ExprNULL} from '../expressions/expr-null';
 import type {FieldReference} from '../query-items/field-references';
 
 import type {ExpressionDef} from '../types/expression-def';
@@ -44,6 +45,14 @@ export class FilterElement extends MalloyElement {
         kind: 'literal_equality',
         expression: lhs,
         value: this.expr.right.getStableLiteral(),
+      };
+    } else if (this.expr instanceof ExprIsNull && this.expr.op === '=') {
+      const lhs = this.expr.expr.drillExpression();
+      if (lhs === undefined) return undefined;
+      return {
+        kind: 'literal_equality',
+        expression: lhs,
+        value: {kind: 'null_literal'},
       };
     } else if (
       this.expr instanceof ExprCompare &&
@@ -128,6 +137,16 @@ export class FilterElement extends MalloyElement {
         reference: this.expr.left.fieldReference,
         value: this.expr.right as Literal,
       };
+    }
+    // `drill: view.field is null` names the same cell as `= null`
+    if (
+      this.expr instanceof ExprIsNull &&
+      this.expr.op === '=' &&
+      this.expr.expr instanceof ExprIdReference
+    ) {
+      const value = new ExprNULL();
+      this.has({value});
+      return {reference: this.expr.expr.fieldReference, value};
     }
     return undefined;
   }
