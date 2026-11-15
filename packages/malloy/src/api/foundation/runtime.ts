@@ -508,7 +508,9 @@ export class Runtime {
     options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
-    const compilable = source instanceof URL ? {url: source} : {source};
+    // Not `instanceof URL`: a URL made in another realm (an embedded
+    // engine's host, a vm context) is still a URL.
+    const compilable = typeof source === 'string' ? {source} : {url: source};
     return new ModelMaterializer(
       this,
       async () => {
@@ -915,7 +917,8 @@ export class ModelMaterializer extends FluentState<Model> {
       ...callQueryOptions,
     };
     return this.makeQueryMaterializer(async () => {
-      const compilable = query instanceof URL ? {url: query} : {source: query};
+      const compilable =
+        typeof query === 'string' ? {source: query} : {url: query};
       const queryModel = await Malloy.compile({
         ...compilable,
         urlReader: this.runtime.urlReader,
@@ -1011,7 +1014,7 @@ export class ModelMaterializer extends FluentState<Model> {
         const urlReader = this.runtime.urlReader;
         const connections = this.runtime.connections;
         const compilable =
-          query instanceof URL ? {url: query} : {source: query};
+          typeof query === 'string' ? {source: query} : {url: query};
         const model = await this.getModel();
         const queryModel = await Malloy.compile({
           ...compilable,

@@ -10,7 +10,24 @@
 const esbuild = require('esbuild');
 const path = require('path');
 
+const {execSync} = require('child_process');
+
 const malloyVersion = require('@malloydata/malloy/package.json').version;
+
+// The commit the bundle was built from, with "-dirty" when the checkout had
+// uncommitted changes; "unknown" outside a git checkout.
+function sourceCommit() {
+  try {
+    const git = cmd =>
+      execSync(`git ${cmd}`, {cwd: __dirname}).toString().trim();
+    return (
+      git('rev-parse --short HEAD') +
+      (git('status --porcelain') ? '-dirty' : '')
+    );
+  } catch {
+    return 'unknown';
+  }
+}
 
 esbuild
   .build({
@@ -26,7 +43,10 @@ esbuild
     sourcemap: 'external',
     legalComments: 'eof',
     inject: [path.join(__dirname, 'src/process-shim.ts')],
-    define: {__MALLOY_VERSION__: JSON.stringify(malloyVersion)},
+    define: {
+      __MALLOY_VERSION__: JSON.stringify(malloyVersion),
+      __MALLOY_COMMIT__: JSON.stringify(sourceCommit()),
+    },
     logLevel: 'warning',
   })
   .catch(() => process.exit(1));

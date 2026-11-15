@@ -14,6 +14,18 @@ import type {MalloyEmbedded} from './index';
 // crypto, performance, console, setTimeout) once Intl is removed, which
 // embedded engines such as QuickJS also lack.
 const BUNDLE = path.join(__dirname, '../dist/malloy-embedded.js');
+const PACKAGES = path.join(__dirname, '../..');
+const BUNDLED_DISTS = ['malloy', 'malloy-interfaces', 'malloy-db-duckdb'].map(
+  p => path.join(PACKAGES, p, 'dist')
+);
+
+function filesUnder(dir: string): string[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, {withFileTypes: true}).flatMap(entry => {
+    const full = path.join(dir, entry.name);
+    return entry.isDirectory() ? filesUnder(full) : [full];
+  });
+}
 
 function loadBare(): {embedded: MalloyEmbedded; context: vm.Context} {
   if (!fs.existsSync(BUNDLE)) {
@@ -21,16 +33,18 @@ function loadBare(): {embedded: MalloyEmbedded; context: vm.Context} {
       `${BUNDLE} is missing; run \`npm run dev\` in packages/malloy-embedded`
     );
   }
-  // These tests run the built bundle, so a bundle older than its sources
-  // would quietly test old code.
+  // These tests run the built bundle, so a bundle older than its sources,
+  // or than the built packages it is made from, would quietly test old code.
   const built = fs.statSync(BUNDLE).mtimeMs;
-  for (const file of fs.readdirSync(__dirname)) {
-    if (file.endsWith('.spec.ts')) continue;
-    if (fs.statSync(path.join(__dirname, file)).mtimeMs > built) {
-      throw new Error(
-        `${BUNDLE} is older than src/${file}; run \`npm run dev\` in packages/malloy-embedded`
-      );
-    }
+  const newer = [__dirname, ...BUNDLED_DISTS]
+    .flatMap(dir => filesUnder(dir))
+    .find(
+      file => !file.endsWith('.spec.ts') && fs.statSync(file).mtimeMs > built
+    );
+  if (newer) {
+    throw new Error(
+      `${BUNDLE} is older than ${path.relative(PACKAGES, newer)}; run \`npm run dev\` in packages/malloy-embedded`
+    );
   }
   const context = vm.createContext({});
   vm.runInContext('delete globalThis.Intl;', context);
@@ -59,10 +73,7 @@ const FILES: Record<string, string> = {
     }`,
 };
 
-// URLs are made with the bundle's own URL class, as code running inside the
-// engine would: Runtime tells a URL from Malloy text with `instanceof URL`.
-function makeHost(embedded: MalloyEmbedded, context: vm.Context) {
-  const EngineURL: typeof URL = context['URL'];
+function makeHost(embedded: MalloyEmbedded) {
   const tables: Record<string, [string, string][]> = {
     flights: [
       ['carrier', 'VARCHAR'],
@@ -76,6 +87,7 @@ function makeHost(embedded: MalloyEmbedded, context: vm.Context) {
   };
   const asked: string[] = [];
   const connection = new embedded.duckdb.HostDuckDBConnection('duckdb', {
+    digest: 'bundle-spec',
     query(sql) {
       asked.push(sql);
       const table = /^DESCRIBE SELECT \* FROM (\w+)$/.exec(sql)?.[1];
@@ -91,11 +103,16 @@ function makeHost(embedded: MalloyEmbedded, context: vm.Context) {
   const runtime = new embedded.malloy.Runtime({
     connection,
     urlReader: {
-      readURL: async (url: URL) => FILES[url.toString()],
+      readURL: async (url: URL) => {
+        const contents = FILES[url.toString()];
+        if (contents === undefined) throw new Error(`No file at ${url}`);
+        return contents;
+      },
     },
   });
+  // A URL made outside the engine, as a host's own code would make it.
   const flights = (options?: {refreshSchemaCache?: boolean}) =>
-    runtime.loadModel(new EngineURL('file:///models/flights.malloy'), options);
+    runtime.loadModel(new URL('file:///models/flights.malloy'), options);
   return {tables, asked, runtime, flights};
 }
 
@@ -104,13 +121,14 @@ describe('malloy-embedded bundle', () => {
 
   test('loads as the packages, without defining a global process', () => {
     expect(embedded.version).toMatch(/^\d+\.\d+\.\d+/);
+    expect(embedded.commit).toMatch(/^([0-9a-f]+(-dirty)?|unknown)$/);
     expect(typeof embedded.malloy.Runtime).toBe('function');
     expect(typeof embedded.interfaces.queryToMalloy).toBe('function');
     expect(vm.runInContext('typeof process', context)).toBe('undefined');
   });
 
-  test('a Runtime compiles through imports and a join, with no timers', async () => {
-    const {asked, flights} = makeHost(embedded, context);
+  test('a Runtime compiles through imports and a join, with no timers, from a host URL', async () => {
+    const {asked, flights} = makeHost(embedded);
     const sql = await flights()
       .loadQuery('run: flights -> by_carrier')
       .getSQL();
@@ -122,7 +140,7 @@ describe('malloy-embedded bundle', () => {
   });
 
   test('refreshSchemaCache sees a table the host changed', async () => {
-    const {tables, flights} = makeHost(embedded, context);
+    const {tables, flights} = makeHost(embedded);
     await flights().getModel();
     tables['flights'].push(['origin', 'VARCHAR']);
     // The table's schema belongs to the model, so the refresh goes there.
@@ -132,8 +150,16 @@ describe('malloy-embedded bundle', () => {
     expect(sql).toContain('base."origin"');
   });
 
+  test('a file the host does not have is reported by name', async () => {
+    const {runtime} = makeHost(embedded);
+    const missing = runtime.loadModel(new URL('file:///models/nope.malloy'));
+    await expect(missing.getModel()).rejects.toMatchObject({
+      message: expect.stringContaining('No file at file:///models/nope.malloy'),
+    });
+  });
+
   test('an error in extendModel text is located in that text', async () => {
-    const {flights} = makeHost(embedded, context);
+    const {flights} = makeHost(embedded);
     const extended = flights().extendModel(
       'source: f2 is flights extend {\n  dimension: x is nope + 1\n}'
     );
@@ -153,7 +179,7 @@ describe('malloy-embedded bundle', () => {
   });
 
   test('compiles time literals and filters without Intl', async () => {
-    const {flights} = makeHost(embedded, context);
+    const {flights} = makeHost(embedded);
     const sqlOf = (query: string) => flights().loadQuery(query).getSQL();
     expect(
       await sqlOf(

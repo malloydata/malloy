@@ -12,13 +12,17 @@ import * as interfaces from '@malloydata/malloy-interfaces';
 import * as duckdb from '@malloydata/db-duckdb/host';
 
 declare const __MALLOY_VERSION__: string;
+declare const __MALLOY_COMMIT__: string;
 
 /**
  * What the bundle installs as `globalThis.malloyEmbedded`: the public
  * exports of three packages, exactly as an npm consumer imports them.
  */
 export interface MalloyEmbedded {
+  /** `@malloydata/malloy`'s version. */
   version: string;
+  /** The commit the bundle was built from; `-dirty` if it had local changes. */
+  commit: string;
   /** `@malloydata/malloy` */
   malloy: typeof malloy;
   /** `@malloydata/malloy-interfaces` */
@@ -29,6 +33,7 @@ export interface MalloyEmbedded {
 
 const malloyEmbedded: MalloyEmbedded = {
   version: __MALLOY_VERSION__,
+  commit: __MALLOY_COMMIT__,
   malloy,
   interfaces,
   duckdb,
