@@ -19,6 +19,7 @@
     "test": "cd ../.. && jest packages/malloy-embedded"
   },
   "devDependencies": {
+    "@malloydata/db-duckdb": "0.0.439",
     "@malloydata/malloy": "0.0.439",
     "@malloydata/malloy-interfaces": "0.0.439",
     "@types/whatwg-url": "^13.0.0",

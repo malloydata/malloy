@@ -12,21 +12,28 @@ const path = require('path');
 
 const malloyVersion = require('@malloydata/malloy/package.json').version;
 
-esbuild
-  .build({
-    entryPoints: [path.join(__dirname, 'src/index.ts')],
-    outfile: path.join(__dirname, 'dist/malloy-embedded.js'),
-    bundle: true,
-    format: 'iife',
-    // Neutral, not browser: nothing may assume `window` or `document`.
-    platform: 'neutral',
-    mainFields: ['main', 'module'],
-    target: 'es2020',
-    minify: true,
-    sourcemap: 'external',
-    legalComments: 'eof',
-    inject: [path.join(__dirname, 'src/process-shim.ts')],
-    define: {__MALLOY_VERSION__: JSON.stringify(malloyVersion)},
-    logLevel: 'warning',
-  })
-  .catch(() => process.exit(1));
+const builds = [
+  ['src/index.ts', 'dist/malloy-embedded.js'],
+  // SPIKE: the Foundation API.
+  ['src/runtime.ts', 'dist/malloy-runtime.js'],
+];
+
+for (const [entry, out] of builds)
+  esbuild
+    .build({
+      entryPoints: [path.join(__dirname, entry)],
+      outfile: path.join(__dirname, out),
+      bundle: true,
+      format: 'iife',
+      // Neutral, not browser: nothing may assume `window` or `document`.
+      platform: 'neutral',
+      mainFields: ['main', 'module'],
+      target: 'es2020',
+      minify: true,
+      sourcemap: 'external',
+      legalComments: 'eof',
+      inject: [path.join(__dirname, 'src/process-shim.ts')],
+      define: {__MALLOY_VERSION__: JSON.stringify(malloyVersion)},
+      logLevel: 'warning',
+    })
+    .catch(() => process.exit(1));

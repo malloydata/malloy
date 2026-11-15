@@ -194,7 +194,10 @@ export function* walkPersistentDependencies(
     const found: SourceID[] = [];
     const seen = new Set<SourceID>();
     for (const part of parts) {
-      for (const id of yield* part) {
+      // Not `for (const id of yield* part)`: QuickJS cannot compile a
+      // `yield*` in a for-of head ("stack underflow").
+      const ids = yield* part;
+      for (const id of ids) {
         if (!seen.has(id)) {
           seen.add(id);
           found.push(id);

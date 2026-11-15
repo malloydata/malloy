@@ -25,6 +25,10 @@
       "browser": "./dist/duckdb_wasm_connection_browser.js",
       "node": "./dist/duckdb_wasm_connection_node.js",
       "types": "./dist/duckdb_wasm_connection_browser.d.ts"
+    },
+    "./common": {
+      "types": "./dist/duckdb_common.d.ts",
+      "default": "./dist/duckdb_common.js"
     }
   },
   "typesVersions": {

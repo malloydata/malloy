@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "description": "SPIKE harness: runs the bundles in QuickJS-ng (WASM) with a synchronous DuckDB host",
+  "type": "module",
+  "dependencies": {
+    "@jitl/quickjs-ng-wasmfile-release-sync": "0.32.0",
+    "acorn": "^8.14.0",
+    "quickjs-emscripten-core": "0.32.0"
+  }
+}
