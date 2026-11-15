@@ -154,6 +154,140 @@ export function createMeasureAxis({
   };
 }
 
+type HorizontalMeasureAxisOptions = {
+  title: string;
+  tickCount: number;
+  fieldPath: string;
+  labelPadding: number;
+  titlePadding: number;
+  vegaConfig?: Config;
+};
+
+/**
+ * The measure axis of a horizontal bar chart: along the bottom, reading the
+ * same 'yscale' (the measure scale) the vertical axis does. It returns the
+ * same pieces as createMeasureAxis: hovering the axis brushes the measure,
+ * and a vertical reference line marks the brushed value.
+ */
+export function createHorizontalMeasureAxis({
+  title,
+  tickCount,
+  fieldPath,
+  labelPadding,
+  titlePadding,
+  vegaConfig,
+}: HorizontalMeasureAxisOptions) {
+  const label = `renderMalloyNumber(malloyExplore, '${fieldPath}', datum.value, datum, item)`;
+  const axis: Axis = {
+    orient: 'bottom',
+    scale: 'yscale',
+    title,
+    tickCount,
+    grid: true,
+    labelOverlap: true,
+    labelPadding,
+    titlePadding,
+    encode: {
+      labels: {
+        enter: {text: {signal: label}},
+        update: {text: {signal: label}},
+      },
+    },
+  };
+
+  const opacity = {signal: 'brushMeasureIn === null || yIsBrushing ? 0 : 1'};
+  const xAtBrush =
+    'brushMeasureIn !== null ? scale("yscale", brushMeasureIn) : 0';
+  const valueText = {
+    signal: `brushMeasureIn ? renderMalloyNumber(malloyExplore, '${fieldPath}', brushMeasureIn) : ''`,
+  };
+  const backgroundColor = (vegaConfig?.background as string) || 'white';
+  const textStyle = {
+    align: {value: 'center' as const},
+    baseline: {value: 'bottom' as const},
+    dy: {value: -2},
+    fontSize: {value: 10},
+    fontWeight: {value: 'normal' as const},
+    font: {signal: 'referenceLineFont'},
+  };
+  const referenceLines: GroupMark = {
+    name: 'x_reference_line_group',
+    type: 'group',
+    marks: [
+      {
+        name: 'x_reference_lines',
+        type: 'rule',
+        encode: {
+          enter: {
+            y: {value: 0},
+            y2: {signal: 'height'},
+            stroke: {value: 'black'},
+            strokeOpacity: {value: 0.5},
+            strokeDash: {value: [4, 2]},
+          },
+          update: {x: {signal: xAtBrush}, opacity},
+        },
+      },
+      {
+        name: 'x_reference_line_label_backdrop',
+        type: 'text',
+        encode: {
+          enter: {
+            ...textStyle,
+            y: {value: 0},
+            fill: {value: backgroundColor},
+            stroke: {value: backgroundColor},
+            strokeWidth: {value: 3},
+          },
+          update: {x: {signal: xAtBrush}, text: valueText, opacity},
+        },
+      },
+      {
+        name: 'x_reference_line_label',
+        type: 'text',
+        encode: {
+          enter: {...textStyle, y: {value: 0}, fill: {value: grayMedium}},
+          update: {x: {signal: xAtBrush}, text: valueText, opacity},
+        },
+      },
+    ],
+  };
+
+  // Transparent hover target over the axis area below the plot.
+  const axisOverlay: RectMark = {
+    name: 'x_measure_axis_overlay',
+    type: 'rect',
+    encode: {
+      enter: {
+        x: {value: 0},
+        x2: {signal: 'width'},
+        y: {signal: 'height'},
+        y2: {signal: `height + ${labelPadding + 16}`},
+        fill: {value: 'transparent'},
+      },
+    },
+  };
+
+  const brushMeasureEvents = [
+    {
+      events: '@x_measure_axis_overlay:mousemove',
+      update:
+        "yIsBrushing ? null : { fieldRefId: measureFieldRefId, sourceId: brushMeasureSourceId, value: event.shiftKey ? invert('yscale',x(item())) : snapValue([domain('yscale')[0],domain('yscale')[1]], 1000,invert('yscale',x(item()))), type: 'measure'}",
+    },
+    {
+      events: '@x_measure_axis_overlay:mouseout',
+      update: 'null',
+    },
+  ];
+
+  return {
+    axis,
+    interactiveMarks: [referenceLines, axisOverlay],
+    interactiveSignals: [],
+    brushMeasureEvents,
+  };
+}
+
 type AxisOverlayOptions = {
   type: 'y';
   axisSettings: Partial<ChartLayoutSettings['yAxis']>;

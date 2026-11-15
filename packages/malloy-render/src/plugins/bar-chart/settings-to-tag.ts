@@ -44,6 +44,11 @@ export function barChartSettingsToTag(settings: BarChartSettings): Tag {
     tag = tag.set(['viz', 'stack'], null);
   }
 
+  // Add orientation if different from default
+  if (settings.orient !== defaultBarChartSettings.orient) {
+    tag = tag.set(['viz', 'orient'], settings.orient);
+  }
+
   // Add hide references if different from default
   if (settings.hideReferences !== defaultBarChartSettings.hideReferences) {
     if (settings.hideReferences) {

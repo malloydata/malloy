@@ -15,6 +15,7 @@ import {resolveBuiltInTags} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '@/component/tag-utils';
 import {COMBO_MARK_TYPES} from '@/plugins/combo-chart/combo-chart-settings';
+import {BAR_CHART_ORIENTS} from '@/plugins/bar-chart/bar-chart-settings';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -443,6 +444,20 @@ export class RenderFieldMetadata {
               vizTag.tag('mode')
             );
           }
+        }
+
+        // Bar chart orientation. An unknown value falls back to vertical in
+        // getBarChartSettings, so this warns rather than erroring.
+        const orientVal = vizTag.text('orient');
+        if (
+          orientVal !== undefined &&
+          convertLegacyToVizTag(tag).text('viz') === 'bar' &&
+          !(BAR_CHART_ORIENTS as readonly string[]).includes(orientVal)
+        ) {
+          log.warn(
+            `Unknown orient '${orientVal}' on field '${field.name}'. Valid values: ${BAR_CHART_ORIENTS.join(', ')}. Falling back to vertical.`,
+            vizTag.tag('orient')
+          );
         }
 
         // Combo-chart-only properties. `y/y2.chart` and the `y/y2.min|max`
