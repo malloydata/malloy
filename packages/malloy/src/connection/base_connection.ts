@@ -35,6 +35,11 @@ export interface SchemaNotFound {
 }
 export type CachedSchema<T extends StructDef> = SchemaFound<T> | SchemaNotFound;
 
+function errorMessage(thrown: unknown): string {
+  const message = (thrown as {message?: unknown} | undefined)?.message;
+  return typeof message === 'string' ? message : String(thrown);
+}
+
 export abstract class BaseConnection implements Connection {
   abstract runSQL(
     sql: string,
@@ -91,8 +96,9 @@ export abstract class BaseConnection implements Connection {
           this.schemaCache[schemaKey] = cached;
         }
       } catch (uncaught) {
-        // Don't cache errors - just return them
-        return {error: uncaught.message};
+        // Don't cache errors - just return them. A driver may throw a
+        // string, or an Error from another realm (an embedded engine).
+        return {error: errorMessage(uncaught)};
       }
     }
     if (cached.error) {

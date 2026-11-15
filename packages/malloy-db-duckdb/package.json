@@ -44,6 +44,9 @@
       ],
       "wasm": [
         "./dist/duckdb_wasm_connection_browser.d.ts"
+      ],
+      "host": [
+        "./dist/host_connection.d.ts"
       ]
     }
   },

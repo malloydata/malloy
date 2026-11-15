@@ -8,6 +8,7 @@ import type {
   QueryRecord,
   RunSQLOptions,
 } from '@malloydata/malloy';
+import {makeDigest} from '@malloydata/malloy';
 import {DuckDBCommon} from './duckdb_common';
 
 /**
@@ -17,10 +18,11 @@ import {DuckDBCommon} from './duckdb_common';
 export interface DuckDBHost {
   /**
    * Runs SQL in the host's database and returns its rows, now or as a
-   * promise. To compile, Malloy only sends `DESCRIBE SELECT * FROM <table>`
-   * and `DESCRIBE SELECT * FROM (<sql>)`, and reads the `column_name` and
-   * `column_type` of each row. Throw to report a failure; the message
-   * reaches the user.
+   * promise. Compiling sends `DESCRIBE SELECT * FROM <table>` and
+   * `DESCRIBE SELECT * FROM (<sql>)`, and reads each row's `column_name`
+   * and `column_type`. Running a query sends the query; `test()` sends
+   * `SELECT 1`; persisting a result sends `CREATE TEMPORARY TABLE`. Throw
+   * to report a failure; the message reaches the user.
    */
   query(sql: string): QueryRecord[] | Promise<QueryRecord[]>;
   /**
@@ -49,7 +51,7 @@ export class HostDuckDBConnection extends DuckDBCommon {
   }
 
   getDigest(): string {
-    return this.host.digest;
+    return makeDigest('duckdb-host', this.host.digest);
   }
 
   protected async setup(): Promise<void> {}
@@ -57,13 +59,7 @@ export class HostDuckDBConnection extends DuckDBCommon {
   protected async runDuckDBQuery(
     sql: string
   ): Promise<{rows: QueryRecord[]; totalRows: number}> {
-    let rows: QueryRecord[];
-    try {
-      rows = await this.host.query(sql);
-    } catch (e) {
-      // Embedding glue often throws a string; Malloy reports `.message`.
-      throw e instanceof Error ? e : new Error(String(e));
-    }
+    const rows = await this.host.query(sql);
     return {rows, totalRows: rows.length};
   }
 

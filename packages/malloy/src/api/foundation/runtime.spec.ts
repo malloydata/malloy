@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-import * as vm from 'vm';
 import {BaseConnection} from '../../connection/base_connection';
 import {MalloyConfig} from './config';
 import {Runtime} from './runtime';
@@ -489,14 +488,11 @@ describe('BaseConnection default idle', () => {
 
 describe('Runtime model sources', () => {
   // A host running Malloy in an embedded engine makes URLs with its own URL
-  // class, not the one Malloy was built against; Runtime must still read
-  // such an object as a URL, not as Malloy text.
-  it('reads a URL from another realm as a URL', async () => {
+  // class; Runtime must read such an object as a URL, not as Malloy text.
+  it('reads a URL that is not instanceof URL as a URL', async () => {
     const href = 'file:///models/m.malloy';
-    const foreign = vm.runInNewContext(
-      '({href, toString() { return this.href; }})',
-      {href}
-    ) as URL;
+    // Not a URL, but all of one Runtime uses: toString().
+    const foreign = {href, toString: () => href} as unknown as URL;
     const {reader, calls} = countingReader({[href]: '##" A model\n'});
     const runtime = new Runtime({
       urlReader: reader,
