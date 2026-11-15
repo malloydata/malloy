@@ -146,7 +146,8 @@ export class MalloyViz {
           const errorPlugin = ErrorPlugin.create(error.message);
           plugins.push(errorPlugin);
         },
-        this.logCollector
+        this.logCollector,
+        {dashboardTile: this.options.dashboardTile}
       );
     }
   }
