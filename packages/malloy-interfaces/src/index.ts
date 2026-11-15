@@ -6,7 +6,6 @@
 import type * as Malloy from './types';
 export * from './types';
 export {queryToMalloy, filterToMalloy} from './to_malloy';
-export {maybeQuoteIdentifier} from './util';
 export {
   nestUnions,
   unnestUnions,

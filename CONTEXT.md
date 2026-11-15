@@ -135,7 +135,6 @@ Each database has its own package with connection handling and dialect-specific 
 - `malloy-tag/` - Tagged template literal support (see [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md))
 - `malloy-query-builder/` - Programmatic query building
 - `malloy-malloy-sql/` - SQL integration utilities
-- `malloy-embedded/` - `@malloydata/malloy` and the DuckDB host connection bundled as one script for embedded JavaScript engines such as QuickJS; private, not published (see [packages/malloy-embedded/CONTEXT.md](packages/malloy-embedded/CONTEXT.md))
 
 ## Package Dependencies
 
