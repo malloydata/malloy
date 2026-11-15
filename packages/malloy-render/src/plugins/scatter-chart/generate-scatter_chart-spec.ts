@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {Field, Cell, RecordCell, RepeatedRecordCell} from '@/data_tree';
+import type {Field, Cell, NestField, RecordCell} from '@/data_tree';
 import type * as lite from 'vega-lite';
-import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
+import type {ChartTooltipEntry} from '@/component/types';
+import {CHART_VALUES_DATA} from '@/component/chart/chart-values-data';
 import {DEFAULT_SPEC} from '@/html/vega_spec';
-import {getColorScale, normalizeToTimezone} from '@/html/utils';
+import {normalizeToTimezone} from '@/html/utils';
+import {colorFieldScale, tooltipLine} from '@/component/vega/vega-lite-spec';
 
 function getDataType(
   field: Field
@@ -25,56 +27,75 @@ function getDataValue(data: Cell): Date | string | number | null {
   throw new Error('Invalid field type for scatter chart.');
 }
 
-function mapData(
-  rows: RecordCell[],
+/** One row's record for the scatter spec. */
+export function mapScatterRow(
+  row: RecordCell,
   timezone: string | undefined
-): Record<string, unknown>[] {
-  return rows.map(row => {
-    const mapped: Record<string, unknown> = {};
-    for (const f of row.field.fields) {
-      let value = getDataValue(row.column(f.name));
-      if (value instanceof Date) {
-        value = normalizeToTimezone(value, timezone);
-      }
-      mapped[f.name] = value;
+): Record<string, unknown> {
+  const mapped: Record<string, unknown> = {};
+  for (const f of row.field.fields) {
+    let value = getDataValue(row.column(f.name));
+    if (value instanceof Date) {
+      value = normalizeToTimezone(value, timezone);
     }
-    return mapped;
+    mapped[f.name] = value;
+  }
+  return mapped;
+}
+
+/** The scatter's columns, by position: x, y, then optional color, size, shape. */
+function scatterChannels(field: NestField) {
+  const [x, y, color, size, shape] = field.fields;
+  return {x, y, color, size, shape};
+}
+
+/** The tooltip for one point: each column the chart draws, labeled. */
+export function scatterTooltip(field: NestField) {
+  const {x, y, color, size, shape} = scatterChannels(field);
+  const drawn = [x, y, color, size, shape].filter(f => f !== undefined);
+  return (row: RecordCell): ChartTooltipEntry => ({
+    title: [],
+    entries: drawn.map(f => tooltipLine(row, f)),
   });
 }
 
-function getSize(field: Field): {height: number; width: number} {
-  return field.isRoot() ? {height: 350, width: 500} : {height: 175, width: 250};
-}
+// Vega-Lite reads config.color as a table of named colors and points the
+// category range at it, which would hide the theme's series colors.
+const {color: _namedColors, ...SCATTER_CONFIG} = DEFAULT_SPEC.config ?? {};
 
-export function generateScatterChartSpec(
-  data: RepeatedRecordCell,
-  field: Field,
-  vegaConfigOverride: Record<string, unknown> = {}
-): lite.TopLevelSpec {
-  const fields = data.field.fields;
-  const xField = fields[0];
-  const yField = fields[1];
-  const colorField = fields[2];
-  const sizeField = fields[3];
-  const shapeField = fields[4];
+/**
+ * The scatter chart's Vega-Lite spec. It reads its rows (see mapScatterRow)
+ * from ChartV2's values data source at render time.
+ */
+export function generateScatterChartSpec(field: NestField): lite.TopLevelSpec {
+  const {
+    x: xField,
+    y: yField,
+    color: colorField,
+    size: sizeField,
+    shape: shapeField,
+  } = scatterChannels(field);
 
   const xType = getDataType(xField);
   const yType = getDataType(yField);
-  const colorType = colorField ? getDataType(colorField) : undefined;
   const sizeType = sizeField ? getDataType(sizeField) : undefined;
   const shapeType = shapeField ? getDataType(shapeField) : undefined;
 
-  const timezone = field.root().queryTimezone;
-
-  const colorDef =
-    colorField !== undefined
-      ? {
-          field: colorField.name,
-          type: colorType,
-          legend: {title: colorField.getLabel()},
-          scale: getColorScale(colorType, false),
-        }
-      : {value: '#4285F4'};
+  let colorDef;
+  if (colorField !== undefined) {
+    const colorType = getDataType(colorField);
+    colorDef = {
+      field: colorField.name,
+      type: colorType,
+      legend: {title: colorField.getLabel()},
+      // No theme: its mapColor tints maps only.
+      scale: colorFieldScale(colorType),
+    };
+  } else {
+    // One constant on the category scale draws every point in the theme's
+    // first series color, whether the theme lists its colors or names a scheme.
+    colorDef = {datum: '', legend: null};
+  }
 
   const sizeDef = sizeField
     ? {
@@ -96,9 +117,9 @@ export function generateScatterChartSpec(
   const ySort = yType === 'nominal' ? null : undefined;
 
   const spec: lite.TopLevelSpec = {
-    ...DEFAULT_SPEC,
-    ...getSize(field),
-    data: {values: mapData(data.rows, timezone)},
+    $schema: DEFAULT_SPEC.$schema,
+    config: SCATTER_CONFIG,
+    data: {name: CHART_VALUES_DATA},
     mark: 'point',
     encoding: {
       x: {
@@ -121,8 +142,6 @@ export function generateScatterChartSpec(
     },
     background: 'transparent',
   };
-
-  spec.config = mergeVegaConfigs(spec.config ?? {}, vegaConfigOverride);
 
   return spec;
 }

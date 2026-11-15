@@ -46,7 +46,7 @@ revisit when we take the Vega 5→6 upgrade.
 
 ### Two Renderers
 - **New renderer** (`src/component/`) — Solid.js, the default.
-- **Legacy renderer** (`src/html/`) — HTML strings, activated with `## renderer_legacy`. Still publicly exported as `HTMLView`. A few renderers (scatter, maps) still exist only here.
+- **Legacy renderer** (`src/html/`) — HTML strings, activated with `## renderer_legacy`. Still publicly exported as `HTMLView`.
 
 ### Internal Data Model (the data tree)
 
@@ -225,6 +225,8 @@ The short version for plugin authors:
 
 - **`solidjs`** — return a `JSXElement` from `renderComponent()`. Used by built-in charts and tables.
 - **`dom`** — implement `renderToDOM(container, props)` for direct DOM manipulation (for third-party libraries that need a DOM node). Optional `cleanup(container)`.
+
+A chart written as a Vega-Lite spec (scatter, shape map, segment map) builds the spec in a Solid-free `generate-*-spec.ts`, using helpers from `src/component/vega/vega-lite-spec.ts`. It compiles the spec once in `beforeRender` with `compileVegaLiteChart` and draws it with `VegaLiteChart`, both in `src/component/vega/vega-lite-chart.tsx`. That routes it through `ChartV2` for the same tooltip and hover handling as the bar and line charts. `compileVegaLiteChart` parses with the base config, then the chart's own config, then the host's `vegaConfigOverride`, the same order the bar and line charts use, so the spec leaves series colors to the config's `category` range. The spec reads its rows from `CHART_VALUES_DATA`, and each chart supplies its own tooltip.
 
 ### Core Viz Plugins
 
