@@ -36,8 +36,15 @@ export interface SchemaNotFound {
 export type CachedSchema<T extends StructDef> = SchemaFound<T> | SchemaNotFound;
 
 function errorMessage(thrown: unknown): string {
-  const message = (thrown as {message?: unknown} | undefined)?.message;
-  return typeof message === 'string' ? message : String(thrown);
+  if (
+    typeof thrown === 'object' &&
+    thrown !== null &&
+    'message' in thrown &&
+    typeof thrown.message === 'string'
+  ) {
+    return thrown.message;
+  }
+  return String(thrown);
 }
 
 export abstract class BaseConnection implements Connection {

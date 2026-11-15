@@ -111,13 +111,6 @@ class FluentState<T> {
   }
 }
 
-// =============================================================================
-// Runtime
-// =============================================================================
-
-/**
- * An environment for compiling and running Malloy queries.
- */
 /**
  * Malloy text, or the URL of a file to read. Tested with `typeof`, not
  * `instanceof URL`: a host embedding Malloy may make URLs with its own URL
@@ -127,6 +120,13 @@ function compilableFrom(x: string | URL): {source: string} | {url: URL} {
   return typeof x === 'string' ? {source: x} : {url: x};
 }
 
+// =============================================================================
+// Runtime
+// =============================================================================
+
+/**
+ * An environment for compiling and running Malloy queries.
+ */
 export class Runtime {
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;

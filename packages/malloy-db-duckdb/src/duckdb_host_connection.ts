@@ -17,12 +17,23 @@ import {DuckDBCommon} from './duckdb_common';
  */
 export interface DuckDBHost {
   /**
-   * Runs SQL in the host's database and returns its rows, now or as a
-   * promise. Compiling sends `DESCRIBE SELECT * FROM <table>` and
-   * `DESCRIBE SELECT * FROM (<sql>)`, and reads each row's `column_name`
-   * and `column_type`. Running a query sends the query; `test()` sends
-   * `SELECT 1`; persisting a result sends `CREATE TEMPORARY TABLE`. Throw
-   * to report a failure; the message reaches the user.
+   * Runs one DuckDB statement in the host's database and returns its rows,
+   * now or as a promise. Throw to report a failure; the message reaches the
+   * user.
+   *
+   * - **Rows** are one object per row keyed by column name, with values as
+   *   DuckDB converts them to JSON (the Node connection reads
+   *   `getRowObjectsJson()`): BIGINT, HUGEINT and DECIMAL as strings, dates and
+   *   timestamps as strings, LISTs as arrays, STRUCTs as objects.
+   * - **Statements** can be any DuckDB SQL. A query may begin with a
+   *   metadata comment. Compiling sends `DESCRIBE SELECT * FROM <table>`
+   *   and `DESCRIBE SELECT * FROM (<sql>)` and reads each row's
+   *   `column_name` and `column_type`; `test()` sends `SELECT 1`; persisting
+   *   a result sends `CREATE TEMPORARY TABLE`.
+   * - **Session settings** are the host's. Malloy's generated SQL expects
+   *   what the Node connection sets up: `SET TimeZone='UTC'` and the `json`
+   *   and `icu` extensions loaded. A host that differs gets different
+   *   answers for time and JSON functions.
    */
   query(sql: string): QueryRecord[] | Promise<QueryRecord[]>;
   /**
@@ -38,7 +49,7 @@ export interface DuckDBHost {
  * connections; the host only runs SQL. A streamed query is read whole from
  * the host and then yielded.
  */
-export class HostDuckDBConnection extends DuckDBCommon {
+export class DuckDBHostConnection extends DuckDBCommon {
   public readonly name: string;
 
   constructor(
