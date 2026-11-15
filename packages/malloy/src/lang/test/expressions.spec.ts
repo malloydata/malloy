@@ -174,6 +174,35 @@ describe('expressions', () => {
         '{not {{"forty-two"} regex-match /fifty-four/}}'
       );
     });
+    test('match with a number range', () => {
+      expect('ai ~ 10 to 20').compilesTo('{{ai >= 10} and {ai < 20}}');
+    });
+    test('not match with a number range', () => {
+      expect('ai !~ 10 to 20').compilesTo('{{ai < 10} or {ai >= 20}}');
+    });
+    test('match with a granular literal uses range', () => {
+      expect('ad ~ @2020').compilesTo(
+        '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
+      );
+    });
+    test('not match with a granular literal uses range', () => {
+      expect('ad !~ @2020').compilesTo(
+        '{{ad < @2020-01-01} or {ad >= @2021-01-01}}'
+      );
+    });
+    test('match with a for range', () => {
+      expect(expr`ad ~ @2001 for 1 day`).toTranslate();
+    });
+    test('disallow match of a number to a number', () => {
+      expect(new BetaExpression('ai ~ 7')).toLog(
+        errorMessage("Cannot use the '~' operator with a number and a number")
+      );
+    });
+    test('disallow not match of a date to a number', () => {
+      expect(new BetaExpression('ad !~ 7')).toLog(
+        errorMessage("Cannot use the '!~' operator with a date and a number")
+      );
+    });
     test('apply as equality', () => {
       expect("'forty-two' ? 'fifty-four'").compilesTo(
         '{{"forty-two"} = {"fifty-four"}}'

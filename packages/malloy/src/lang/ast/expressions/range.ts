@@ -25,11 +25,15 @@ export class Range extends ExpressionDef {
     expr: ExpressionDef
   ): ExprValue {
     switch (op) {
+      // `val ~ begin to end` is the same range check as `val ? begin to end`
       case '=':
-      case '!=': {
-        const op1 = op === '=' ? '>=' : '<';
-        const op2 = op === '=' ? 'and' : 'or';
-        const op3 = op === '=' ? '<' : '>=';
+      case '~':
+      case '!=':
+      case '!~': {
+        const inRange = op === '=' || op === '~';
+        const op1 = inRange ? '>=' : '<';
+        const op2 = inRange ? 'and' : 'or';
+        const op3 = inRange ? '<' : '>=';
         const fromValue = this.first.apply(fs, op1, expr);
         const toValue = this.last.apply(fs, op3, expr);
         return computedExprValue({

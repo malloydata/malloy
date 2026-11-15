@@ -46,8 +46,6 @@ import {
 } from '@malloydata/malloy-filter';
 import {booleanValueError, COMPARE_HINT} from '../expressions/boolean-value';
 
-class TypeMismatch extends Error {}
-
 /**
  * Mark a value as belonging to everyone. Writing into a memoized value writes
  * into every other holder's copy and into whatever the IR already stored;
@@ -504,27 +502,31 @@ function equality(
       );
     }
   } else {
-    value = timeCompare(left, lhs, op, rhs) || {
-      node,
-      kids: {left: lhs.value, right: rhs.value},
-    };
-
+    const isMatch = op === '~' || op === '!~';
     if (
+      isMatch &&
       lhs.type !== 'error' &&
       rhs.type !== 'error' &&
-      (op === '~' || op === '!~')
+      (lhs.type !== 'string' || rhs.type !== 'string')
     ) {
-      if (lhs.type !== 'string' || rhs.type !== 'string') {
-        let regexCmp = regexEqual(lhs, rhs);
-        if (regexCmp) {
-          if (op[0] === '!') {
-            regexCmp = {node: 'not', e: {...regexCmp}};
-          }
-        } else {
-          throw new TypeMismatch("Incompatible types for match('~') operator");
-        }
-        value = regexCmp;
+      const regexCmp = regexEqual(lhs, rhs);
+      if (regexCmp === undefined) {
+        left.logError(
+          'match-operator-type-mismatch',
+          `Cannot use the '${op}' operator with a ${lhs.type} and a ${rhs.type}`
+        );
+        return computedErrorExprValue({
+          dataType: {type: 'boolean'},
+          error: 'match operator type mismatch',
+          from: [lhs, rhs],
+        });
       }
+      value = op === '!~' ? {node: 'not', e: {...regexCmp}} : regexCmp;
+    } else {
+      value = timeCompare(left, lhs, op, rhs) || {
+        node,
+        kids: {left: lhs.value, right: rhs.value},
+      };
     }
   }
 
