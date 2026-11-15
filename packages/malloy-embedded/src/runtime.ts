@@ -18,6 +18,7 @@ import {
 } from '@malloydata/malloy';
 import {DuckDBCommon} from '@malloydata/db-duckdb/common';
 import {HostDuckDBConnection} from './host_duckdb_connection';
+import {catalogOf} from './catalog';
 
 declare const __MALLOY_VERSION__: string;
 
@@ -30,6 +31,8 @@ const malloy = {
   MalloyError,
   DuckDBCommon,
   HostDuckDBConnection,
+  // SPIKE: the catalog still reads the ModelDef; see spike/README.md.
+  catalogOf,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

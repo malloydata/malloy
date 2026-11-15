@@ -32,6 +32,15 @@ export class HostDuckDBConnection extends DuckDBCommon {
     this.name = name;
   }
 
+  /**
+   * Drops cached schemas, so the next compile describes every table again
+   * in the host's current context. A host whose tables can change between
+   * calls caches compiled models itself and checks the schemas they used.
+   */
+  forgetSchemas(): void {
+    this.schemaCache = {};
+  }
+
   getDigest(): string {
     return `host-duckdb:${this.name}`;
   }
