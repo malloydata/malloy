@@ -61,6 +61,7 @@ const config: Config = {
       displayName: 'malloy-core',
       roots: [
         '<rootDir>/packages/malloy/',
+        '<rootDir>/packages/malloy-embedded/',
         '<rootDir>/packages/malloy-filter/',
         '<rootDir>/packages/malloy-interfaces/',
         '<rootDir>/packages/malloy-malloy-sql/',
