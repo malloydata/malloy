@@ -5,7 +5,9 @@ host API (`Runtime`, `URLReader`, `Connection`, `CacheManager`,
 `extendModel`) inside QuickJS, instead of the JSON-string wrapper around
 the experimental `API.stateless` that `src/index.ts` exposes?
 
-Answer: yes. See the numbers below.
+Answer: yes. The extension's own test suite (`test/sql/malloy.test`,
+66 statements) passes on the Foundation API, inside DuckDB, and repeat
+compiles take a third of the time. See "In the extension" below.
 
 ## What the spike adds
 
@@ -83,3 +85,45 @@ come back as a rejected promise with `MalloyError` problems.
   public API should be added to Foundation.
 - `HostDuckDBConnection` belongs in `malloy-db-duckdb`, next to the Node
   and WASM connections.
+
+## In the extension
+
+`malloy-duckdb.patch` (against lloydtabb/malloy-duckdb 479c5aa) ports the
+extension to this bundle:
+
+- `js/driver.js` keeps one `Runtime` and a `HostDuckDBConnection` whose only
+  SQL is `DESCRIBE SELECT * FROM x`, answered by the existing
+  `__malloyHost.describe`. There is no needs loop and no `duckdbSchema`.
+  `define` (adding to the session model) is `extendModel`, so error
+  positions are relative to the new statement. `compile` is
+  `PreparedResult.toStableResult()`. The catalog still comes from
+  `catalogOf(modelDef)`.
+- Models are cached across statements. A cached model records the files it
+  read and the DESCRIBE output of every table and SQL source it used; a hit
+  reads and describes them again, which costs little inside DuckDB, and
+  recompiles if anything differs. Foundation's `CacheManager` can't do this:
+  its invalidation keys cover files only, and in DuckDB a table can change
+  between statements (`CREATE OR REPLACE`) or exist only in one connection
+  (a temporary table). That is a gap worth fixing in Foundation.
+- `src/malloy_engine.cpp`: `Call` drains the job queue
+  (`JS_ExecutePendingJob`) when the driver returns a Promise. About 30
+  lines.
+- `CMakeLists.txt` embeds `js/malloy-runtime.js` (copied from
+  `dist/malloy-runtime.js`) in place of `js/malloy-embedded.js`.
+
+Built with `scripts/quick-build.sh` (DuckDB v1.5.6, QuickJS-ng d7215b0):
+
+- `scripts/run-tests-cli.py`: 66/66 pass, the same as the unmodified
+  extension.
+- `malloy_sql(...)` (compile only) against an installed model with a join,
+  timed by the DuckDB CLI over 10 different queries: about 105 ms each
+  before, about 33 ms each after.
+- After `CREATE OR REPLACE TABLE flights AS SELECT *, 1 AS extra FROM
+  flights`, a query grouping by `extra` compiles (100 ms, a recompile), so
+  the cache notices schema changes.
+- Cold start (the first Malloy statement in a process): about 3 s both
+  ways, from loading the bundle and running the first compile.
+
+The pinned QuickJS-ng compiles `for (const id of yield* part)` without
+trouble, so the persist_utils.ts rewrite above is needed only for the older
+QuickJS in the npm WASM builds.
