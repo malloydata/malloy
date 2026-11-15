@@ -24,9 +24,12 @@ function getConfig(
   f: Field,
   configOverride?: CellFormatConfig
 ): CellFormatConfig {
-  return (
-    configOverride ?? f.getTagConfig<CellFormatConfig>() ?? {mode: 'default'}
-  );
+  return configOverride ?? fieldFormat(f);
+}
+
+/** The field's own resolved cell format. */
+export function fieldFormat(f: Field): CellFormatConfig {
+  return f.getTagConfig<CellFormatConfig>() ?? {mode: 'default'};
 }
 
 /**

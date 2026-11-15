@@ -13,6 +13,7 @@
 
 export {
   NULL_SYMBOL,
+  axisCellFormat,
   formatDateTime,
   formatNumber,
   resolveCellFormat,

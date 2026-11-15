@@ -4,7 +4,12 @@
  */
 
 import {expressionFunction} from 'vega';
-import {renderNumericField, renderDateTimeField} from '../render-numeric-field';
+import {
+  renderNumericField,
+  renderDateTimeField,
+  fieldFormat,
+} from '../render-numeric-field';
+import {axisCellFormat} from '../../format/cell-format';
 import type {BrushData} from '../result-store/result-store';
 import {type RenderTimeStringOptions} from '../../util';
 import type {NestField} from '../../data_tree';
@@ -17,6 +22,22 @@ if (!expressionFunction('renderMalloyNumber')) {
         const field = explore.fieldAt(fieldPath);
         return field.isBasic()
           ? renderNumericField(field, value)
+          : String(value);
+      }
+      return String(value);
+    }
+  );
+}
+
+// Same as renderMalloyNumber, in the shorter form used for axis tick labels.
+if (!expressionFunction('renderMalloyAxisNumber')) {
+  expressionFunction(
+    'renderMalloyAxisNumber',
+    (explore: NestField, fieldPath: string, value: number) => {
+      if (explore) {
+        const field = explore.fieldAt(fieldPath);
+        return field.isBasic()
+          ? renderNumericField(field, value, axisCellFormat(fieldFormat(field)))
           : String(value);
       }
       return String(value);
