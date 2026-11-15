@@ -4,6 +4,20 @@
   height: 100%;
   overflow: auto;
   container-type: inline-size;
+  /* Where row headers stick, measured from the top of the scroll box. */
+  --malloy-render--dashboard-sticky-top: 0px;
+
+  /* The host page scrolls the dashboard (scrollEl was passed), so the
+     dashboard grows to its content instead of scrolling itself, and the host
+     says how far down its own fixed or sticky header reaches. */
+  &.external-scroll {
+    height: auto;
+    overflow: visible;
+    --malloy-render--dashboard-sticky-top: var(
+      --malloy-render--sticky-top,
+      0px
+    );
+  }
 
   * {
     box-sizing: border-box;
@@ -15,12 +29,12 @@
 
   .dashboard-row-header {
     position: sticky;
-    top: 0px;
+    top: var(--malloy-render--dashboard-sticky-top, 0px);
     background: var(--malloy-render--dashboard-bg, white);
     padding: 16px;
     padding-bottom: 0px;
     width: 100%;
-    z-index: 200;
+    z-index: var(--malloy-render--dashboard-header-z-index, 200);
   }
 
   .dashboard-row-header-separator {
