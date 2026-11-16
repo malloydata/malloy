@@ -84,10 +84,8 @@ export class DuckDBDialect extends PostgresBase {
   name = 'duckdb';
   experimental = false;
   defaultNumberType = 'DOUBLE';
-  defaultDecimalType = 'NUMERIC';
   hasFinalStage = false;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
@@ -235,7 +233,9 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
-    return 'uses sumDistinctFunction, should not be called';
+    throw new Error(
+      'DuckDB sums distinct rows without a hash, so asking it for one is a bug in the compiler'
+    );
   }
 
   sqlGenerateUUID(): string {
@@ -361,7 +361,7 @@ export class DuckDBDialect extends PostgresBase {
     throw new Error('Not implemented Yet');
   }
 
-  sqlSumDistinct(key: string, value: string, funcName: string): string {
+  sqlSumDistinct(key: string, value: string, funcName: 'SUM' | 'AVG'): string {
     // return `sum_distinct(list({key:${key}, val: ${value}}))`;
     return `(
       SELECT ${funcName}(a.val) as value

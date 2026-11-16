@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type {Dialect} from '@malloydata/malloy';
 import {RuntimeList, allDatabases, testFileSpace} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
@@ -210,6 +211,369 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
+  // Trino and Presto declare the nest's count() as INTEGER in its ROW type,
+  // which makes this the symmetric sum of a 32 bit value.
+  test.when(runtime.supportsNesting)(
+    'symmetric sum of an integer nest field through a join',
+    async () => {
+      await expect(`
+        source: three is ${databaseName}.table('malloytest.airports') -> {
+          group_by: state
+          nest: types is { group_by: fac_type; aggregate: c is count() }
+        }
+        source: sf is ${databaseName}.table('malloytest.state_facts') extend {
+          join_one: three on three.state = state
+        }
+        run: sf -> {
+          where: state = 'AK'
+          aggregate:
+            n is three.types.count()
+            t is three.types.c.sum()
+        }
+      `).toMatchResult(joinModel, {n: 3, t: 608});
+    }
+  );
+
+  // A dialect which sums a value by adding it to a hash of its row does
+  // arithmetic on the value, in whatever type its column has.
+  describe('symmetric sum and avg, by the type of the value', () => {
+    const accounts = mkTestModel(runtime, {
+      accounts: [
+        {
+          account_id: 1,
+          small: 474,
+          negative: -474,
+          negative_fraction: TV.float(-2.5),
+          big: TV.bigint(30000000001),
+          huge: TV.float(2 ** 84),
+          fraction: TV.float(0.1),
+        },
+        {
+          account_id: 2,
+          small: 22,
+          negative: -22,
+          negative_fraction: TV.float(-0.25),
+          big: TV.bigint(30000000004),
+          huge: TV.float(2 ** 85),
+          fraction: TV.float(0.2),
+        },
+        {
+          account_id: 3,
+          small: 1,
+          negative: -5,
+          negative_fraction: TV.float(-1.00000001),
+          big: TV.bigint(1),
+          huge: TV.float(0),
+          fraction: TV.float(1.00000001),
+        },
+      ],
+      entries: [
+        {account_id: 1, n: 1},
+        {account_id: 1, n: 2},
+        {account_id: 2, n: 3},
+        {account_id: 3, n: 4},
+        {account_id: 3, n: 5},
+      ],
+    });
+    const fannedOut = (aggregate: string) => `
+      run: accounts extend {
+        primary_key: account_id
+        join_many: entries on entries.account_id = account_id
+      } -> {
+        aggregate:
+          entry_count is entries.count()
+          ${aggregate}
+      }
+    `;
+
+    it('sums a negative 32 bit integer', async () => {
+      await expect(fannedOut('negative_sum is negative.sum()')).toMatchResult(
+        accounts,
+        {entry_count: 5, negative_sum: -501}
+      );
+    });
+
+    // -2.5 is half way between the whole numbers a value is split at.
+    it('sums a negative value with fractional digits', async () => {
+      await expect(
+        fannedOut('negative_fraction_sum is negative_fraction.sum()')
+      ).toMatchResult(accounts, {
+        entry_count: 5,
+        negative_fraction_sum: -3.75000001,
+      });
+    });
+
+    // 30000000001 * 10^8 is past 2^53, where a double stops holding every
+    // integer.
+    it('sums a bigint exactly', async () => {
+      await expect(fannedOut('big_sum is big.sum()')).toMatchResult(accounts, {
+        entry_count: 5,
+        big_sum: 60000000006,
+      });
+    });
+
+    // Powers of two, which a double and a decimal both hold exactly. The sum
+    // is divided back down because the Presto client cannot read a double
+    // that large.
+    it('sums values near 10^25', async () => {
+      await expect(
+        fannedOut('huge_ratio is huge.sum() / pow(2, 84)')
+      ).toMatchResult(accounts, {entry_count: 5, huge_ratio: 3});
+    });
+
+    it('keeps eight fractional digits', async () => {
+      await expect(fannedOut('fraction_sum is fraction.sum()')).toMatchResult(
+        accounts,
+        {entry_count: 5, fraction_sum: 1.30000001}
+      );
+    });
+
+    // 497 / 3, to ten digits past the point.
+    it('averages past the fractional digits of the sum', async () => {
+      await expect(
+        fannedOut('avg_digits is floor(small.avg() * 10000000000)')
+      ).toMatchResult(accounts, {entry_count: 5, avg_digits: 1656666666666});
+    });
+  });
+
+  // These run the SQL of the shifty sum on its own, and compare its result
+  // with the expected one inside the database. A result which has come
+  // through a query, a DOUBLE and a driver no longer shows whether every
+  // digit is right.
+  describe('the shifty sum, digit for digit', () => {
+    const byHash = runtime.dialect.sumDistinctByHash;
+    const isShifty = byHash?.form === 'shifty';
+    const roundsWideProducts =
+      byHash?.form === 'shifty' && byHash.roundsWideProducts;
+
+    // The dialect without the cast to its result type, which would round
+    // away the digits these tests compare.
+    const exact: Dialect = Object.create(runtime.dialect);
+    if (byHash) {
+      exact.sumDistinctByHash = {...byHash, resultType: undefined};
+    }
+
+    // A row of the source being summed: its key, and its value as the digits
+    // of a number, or undefined for NULL. A join which repeats a row is a key
+    // which appears more than once.
+    type Row = [key: number, value: string | undefined];
+
+    const TOP_VALUE = '9'.repeat(29) + '.99999999';
+
+    async function shiftySum(
+      funcName: 'SUM' | 'AVG',
+      valueType: string,
+      rows: Row[],
+      expected: string | undefined,
+      where = ''
+    ) {
+      const source = rows
+        .map(
+          ([key, value]) =>
+            `SELECT ${key} AS k, CAST(${
+              value === undefined ? 'NULL' : `'${value}'`
+            } AS ${valueType}) AS v`
+        )
+        .join(' UNION ALL ');
+      const sum = exact.sqlSumDistinct('t.k', 't.v', funcName);
+      const matches =
+        expected === undefined
+          ? `(${sum}) IS NULL`
+          : `(${sum}) = CAST('${expected}' AS DECIMAL(38,8))`;
+      const result = await runtime.connection.runSQL(
+        `SELECT ${matches} AS matches FROM (${source}) t ${where}`
+      );
+      return Object.values(result.rows[0])[0];
+    }
+
+    test.when(isShifty)(
+      'folds the rows a join repeated, and no others',
+      async () => {
+        const rows: Row[] = [
+          [1, '5'],
+          [1, '5'],
+          [1, '5'],
+          [2, '5'],
+          [3, '7'],
+        ];
+        expect(await shiftySum('SUM', 'INTEGER', rows, '17')).toBe(true);
+      }
+    );
+
+    test.when(isShifty)('sums the ends of a 32 bit integer', async () => {
+      const rows: Row[] = [
+        [1, '2147483647'],
+        [1, '2147483647'],
+        [2, '-2147483648'],
+        [3, '474'],
+      ];
+      expect(await shiftySum('SUM', 'INTEGER', rows, '473')).toBe(true);
+    });
+
+    test.when(isShifty)('sums the ends of a 64 bit integer', async () => {
+      const rows: Row[] = [
+        [1, '9223372036854775807'],
+        [1, '9223372036854775807'],
+        [2, '9223372036854775807'],
+        [3, '-9223372036854775807'],
+        [4, '1'],
+      ];
+      expect(
+        await shiftySum('SUM', 'BIGINT', rows, '9223372036854775808')
+      ).toBe(true);
+    });
+
+    test.when(isShifty)(
+      'rounds each value at its ninth fractional digit',
+      async () => {
+        const rows: Row[] = [
+          [1, '0.000000005'],
+          [2, '0.000000014'],
+          [3, '-0.000000015'],
+          [4, '0.000000004'],
+          [5, '0.999999995'],
+          [6, '-2.5'],
+          [6, '-2.5'],
+          [7, '2.5'],
+          [8, '0.12345678'],
+        ];
+        expect(
+          await shiftySum('SUM', 'DECIMAL(20,9)', rows, '1.12345678')
+        ).toBe(true);
+      }
+    );
+
+    test.when(isShifty)(
+      'sums a double as its nearest eight digits',
+      async () => {
+        const rows: Row[] = [
+          [1, '0.1'],
+          [1, '0.1'],
+          [2, '0.2'],
+          [3, '-1.00000001'],
+        ];
+        expect(await shiftySum('SUM', 'DOUBLE', rows, '-0.70000001')).toBe(
+          true
+        );
+      }
+    );
+
+    test.when(isShifty)('sums the largest value, of either sign', async () => {
+      const rows: Row[] = [
+        [1, TOP_VALUE],
+        [1, TOP_VALUE],
+        [2, `-${TOP_VALUE}`],
+        [3, '0.00000001'],
+      ];
+      expect(await shiftySum('SUM', 'DECIMAL(37,8)', rows, '0.00000001')).toBe(
+        true
+      );
+    });
+
+    test.when(isShifty)('fails on a value of 10^29', async () => {
+      const rows: Row[] = [[1, '1' + '0'.repeat(29)]];
+      await expect(
+        shiftySum('SUM', 'DECIMAL(38,0)', rows, undefined)
+      ).rejects.toThrow();
+    });
+
+    // Nine of the largest value: a tenth would pass 10^38 once shifted.
+    test.when(isShifty && !roundsWideProducts)(
+      'sums as far as 38 digits reach',
+      async () => {
+        const rows: Row[] = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(key => [
+          key,
+          TOP_VALUE,
+        ]);
+        expect(
+          await shiftySum(
+            'SUM',
+            'DECIMAL(37,8)',
+            rows,
+            '8' + '9'.repeat(29) + '.99999991'
+          )
+        ).toBe(true);
+      }
+    );
+
+    // Twenty, because Snowflake sums a little past 38 digits before it fails.
+    test.when(isShifty)(
+      'fails when the shifted values are more than the engine can sum',
+      async () => {
+        const rows: Row[] = [];
+        for (let key = 1; key <= 20; key++) {
+          rows.push([key, TOP_VALUE]);
+        }
+        await expect(
+          shiftySum('SUM', 'DECIMAL(37,8)', rows, undefined)
+        ).rejects.toThrow();
+      }
+    );
+
+    test.when(roundsWideProducts)(
+      'sums to just below 10^27 where a wide product is rounded',
+      async () => {
+        const top = '9'.repeat(27) + '.99999999';
+        const rows: Row[] = [
+          [1, top],
+          [1, top],
+        ];
+        expect(await shiftySum('SUM', 'DECIMAL(37,8)', rows, top)).toBe(true);
+      }
+    );
+
+    test.when(roundsWideProducts)(
+      'fails on a sum of 10^27 where a wide product is rounded',
+      async () => {
+        const half = '5' + '0'.repeat(26);
+        const rows: Row[] = [
+          [1, half],
+          [2, half],
+        ];
+        await expect(
+          shiftySum('SUM', 'DECIMAL(38,0)', rows, undefined)
+        ).rejects.toThrow();
+      }
+    );
+
+    test.when(isShifty)('counts a NULL value as zero', async () => {
+      const rows: Row[] = [
+        [1, undefined],
+        [2, '3'],
+        [2, '3'],
+      ];
+      expect(await shiftySum('SUM', 'INTEGER', rows, '3')).toBe(true);
+    });
+
+    test.when(isShifty)('is NULL when there are no rows', async () => {
+      const rows: Row[] = [[1, '3']];
+      expect(
+        await shiftySum('SUM', 'INTEGER', rows, undefined, 'WHERE t.k < 0')
+      ).toBe(true);
+    });
+
+    test.when(isShifty)(
+      'averages over the rows whose value is not NULL',
+      async () => {
+        const rows: Row[] = [
+          [1, '1'],
+          [1, '1'],
+          [2, '2'],
+          [3, undefined],
+        ];
+        expect(await shiftySum('AVG', 'INTEGER', rows, '1.5')).toBe(true);
+      }
+    );
+
+    test.when(isShifty)('keeps thirty rows apart', async () => {
+      const rows: Row[] = [];
+      for (let key = 1; key <= 30; key++) {
+        rows.push([key, '7'], [key, '7']);
+      }
+      expect(await shiftySum('SUM', 'INTEGER', rows, '210')).toBe(true);
+    });
+  });
+
   it('activates parent join when fields in leaf join are referenced', async () => {
     await expect(`
       source: flights is ${databaseName}.table('malloytest.flights') extend {
@@ -359,20 +723,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   // Carol is the customer no order matches: in the joined result she has one
   // row, in which the order is all NULLs.
   describe('aggregate at a joined source with an unmatched row', () => {
-    // float, because Databricks overflows on the fanned-out sum of a 32 bit
-    // integer column.
-    const num = TV.float;
     const unmatched = extendTestModel(
       mkTestModel(runtime, {
         customers: [
-          {customer_id: 1, name: 'Alice', credit: num(100)},
-          {customer_id: 2, name: 'Bob', credit: num(400)},
-          {customer_id: 3, name: 'Carol', credit: num(5000)},
+          {customer_id: 1, name: 'Alice', credit: 100},
+          {customer_id: 2, name: 'Bob', credit: 400},
+          {customer_id: 3, name: 'Carol', credit: 5000},
         ],
         order_rows: [
-          {order_id: 10, customer_id: 1, amount: num(5)},
-          {order_id: 11, customer_id: 1, amount: num(7)},
-          {order_id: 12, customer_id: 2, amount: num(11)},
+          {order_id: 10, customer_id: 1, amount: 5},
+          {order_id: 11, customer_id: 1, amount: 7},
+          {order_id: 12, customer_id: 2, amount: 11},
         ],
         tags: [
           {customer_id: 1, tag: 'a'},
@@ -380,8 +741,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           {customer_id: 2, tag: 'c'},
         ],
         profiles: [
-          {customer_id: 1, score: num(7)},
-          {customer_id: 2, score: num(9)},
+          {customer_id: 1, score: 7},
+          {customer_id: 2, score: 9},
         ],
       }),
       `

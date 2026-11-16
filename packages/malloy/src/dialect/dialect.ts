@@ -26,6 +26,7 @@ import {isRawCast, isBasicAtomic, TD, isDateUnit} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 import type {ValidateTablePathResult} from './table-path';
 import {validateDottedTablePath} from './table-path';
+import {sqlShiftySumDistinct} from './shifty_sum_distinct';
 
 /**
  * One field of a struct, for the dialect methods which emit SQL over it.
@@ -271,14 +272,47 @@ export interface IntegerTypeMapping {
   numberType: 'integer' | 'bigint';
 }
 
+/**
+ * How a dialect adds a value to the hash of its row, for a symmetric SUM or
+ * AVG. Which form depends on whether an exact decimal type can hold a sum of
+ * the dialect's hashes and still have fractional digits for a value.
+ */
+export type SumDistinctByHash = {
+  /** The SQL type the sum is cast to. Without one it stays an exact decimal. */
+  resultType?: string;
+} & (
+  | {
+      /**
+       * None can: a sum of these hashes needs all 38 digits of DECIMAL(38,0),
+       * so the value is shifted up to an integer. `sqlSumDistinctHashedKey`
+       * is an integer in [0, 2^92) typed DECIMAL(38,0).
+       */
+      form: 'shifty';
+      /**
+       * What the engine does with a decimal product too wide for 38 digits.
+       * True when it rounds fractional digits away, as Databricks and Trino
+       * do.
+       * False when it keeps them all and fails if the result does not fit.
+       */
+      roundsWideProducts: boolean;
+    }
+  | {
+      /** `decimalType` can. The value is cast to it and added to the hash. */
+      form: 'direct';
+      /**
+       * An exact decimal type. `sqlSumDistinctHashedKey` is a number of this
+       * type.
+       */
+      decimalType: string;
+    }
+);
+
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
-  abstract defaultDecimalType: string;
   abstract udfPrefix: string;
   abstract hasFinalStage: boolean;
   abstract divisionIsInteger: boolean;
-  abstract supportsSumDistinctFunction: boolean;
   abstract unnestWithNumbers: boolean;
   abstract defaultSampling: Sampling;
   abstract supportsAggDistinct: boolean;
@@ -1221,8 +1255,40 @@ export abstract class Dialect {
     }
   }
 
-  sqlSumDistinct(_key: string, _value: string, _funcName: string): string {
-    return 'sqlSumDistinct called but not implemented';
+  /**
+   * How this dialect computes a symmetric SUM or AVG by hashing. A dialect
+   * without one has its own `sqlSumDistinct`.
+   */
+  sumDistinctByHash: SumDistinctByHash | undefined = undefined;
+
+  /**
+   * SUM or AVG of a value over the distinct rows of a fanned-out join: each
+   * value is added to a hash of its row's key, so that SUM(DISTINCT) folds
+   * exactly the rows the join repeated.
+   */
+  sqlSumDistinct(key: string, value: string, funcName: 'SUM' | 'AVG'): string {
+    const byHash = this.sumDistinctByHash;
+    if (byHash === undefined) {
+      throw new Error(
+        `Dialect '${this.name}' has neither sumDistinctByHash nor its own sqlSumDistinct, which is a bug in the dialect`
+      );
+    }
+    const hashedKey = this.sqlSumDistinctHashedKey(key);
+    // The value is cast before any arithmetic, which would otherwise be done
+    // in the type of the value.
+    const exactSum =
+      byHash.form === 'direct'
+        ? `(SUM(DISTINCT ${hashedKey} + CAST(COALESCE(${value},0) AS ${byHash.decimalType})) - SUM(DISTINCT ${hashedKey}))`
+        : sqlShiftySumDistinct(hashedKey, value, byHash.roundsWideProducts);
+    const sqlSum = byHash.resultType
+      ? `CAST(${exactSum} AS ${byHash.resultType})`
+      : exactSum;
+    if (funcName === 'SUM') {
+      return sqlSum;
+    }
+    // The sum is cast to its result type before the division, so that the
+    // quotient has the precision of that type and not of the exact decimal.
+    return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
   }
 
   // Like sqlSumDistinct, but for an arbitrary aggregate expression

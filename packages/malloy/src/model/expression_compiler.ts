@@ -62,35 +62,9 @@ import {
 import {QueryFieldStruct, isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
 import type {JoinInstance} from './join_instance';
-import type {Dialect, QueryInfo} from '../dialect';
+import type {QueryInfo} from '../dialect';
 import {MalloyCompileError} from './malloy_compile_error';
 import {lookupGivenValue} from './given_binding';
-
-const NUMERIC_DECIMAL_PRECISION = 9;
-
-function sqlSumDistinct(
-  dialect: Dialect,
-  sqlExp: string,
-  sqlDistintKey: string
-) {
-  const precision = 9;
-  const uniqueInt = dialect.sqlSumDistinctHashedKey(sqlDistintKey);
-  const multiplier = 10 ** (precision - NUMERIC_DECIMAL_PRECISION);
-
-  // Ensure value is numeric and handle nulls
-  const safeValue = `CAST(COALESCE(${sqlExp}, 0) AS ${dialect.defaultDecimalType})`;
-  // Scale and round to eliminate floating point differences
-  const roundedValue = `ROUND(${safeValue}*${multiplier}, ${NUMERIC_DECIMAL_PRECISION})`;
-
-  const sumSQL = `(
-    SUM(DISTINCT ${roundedValue} + ${uniqueInt})
-    - SUM(DISTINCT ${uniqueInt})
-  )`;
-
-  let ret = `(${sumSQL}/${multiplier})`;
-  ret = `CAST(${ret} AS ${dialect.defaultNumberType})`;
-  return ret;
-}
 
 /**
  * Deep copies an expression tree, preserving structure and types.
@@ -1038,11 +1012,7 @@ export function generateSumFragment(
   );
   let ret;
   if (distinctKeySQL) {
-    if (context.dialect.supportsSumDistinctFunction) {
-      ret = context.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'SUM');
-    } else {
-      ret = sqlSumDistinct(context.dialect, dimSQL, distinctKeySQL);
-    }
+    ret = context.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'SUM');
   } else {
     ret = `SUM(${dimSQL})`;
   }
@@ -1079,23 +1049,7 @@ export function generateAvgFragment(
     expr.structPath
   );
   if (distinctKeySQL) {
-    let countDistinctKeySQL = distinctKeySQL;
-    if (state.whereSQL) {
-      countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
-    }
-    let sumDistinctSQL;
-    let avgDistinctSQL;
-    if (context.dialect.supportsSumDistinctFunction) {
-      avgDistinctSQL = context.dialect.sqlSumDistinct(
-        distinctKeySQL,
-        dimSQL,
-        'AVG'
-      );
-    } else {
-      sumDistinctSQL = sqlSumDistinct(context.dialect, dimSQL, distinctKeySQL);
-      avgDistinctSQL = `(${sumDistinctSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${dimSQL} IS NOT NULL THEN ${countDistinctKeySQL} END),0)`;
-    }
-    return avgDistinctSQL;
+    return context.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'AVG');
   } else {
     return `AVG(${dimSQL})`;
   }
