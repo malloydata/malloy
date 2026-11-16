@@ -84,7 +84,6 @@ export class DuckDBDialect extends PostgresBase {
   name = 'duckdb';
   experimental = false;
   defaultNumberType = 'DOUBLE';
-  defaultDecimalType = 'NUMERIC';
   hasFinalStage = false;
   divisionIsInteger = true;
   unnestWithNumbers = false;

@@ -137,7 +137,6 @@ export class TrinoDialect extends PostgresBase {
   name = 'trino';
   experimental = false;
   defaultNumberType = 'DOUBLE';
-  defaultDecimalType = 'DECIMAL';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = true;

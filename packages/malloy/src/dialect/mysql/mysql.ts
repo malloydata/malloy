@@ -147,7 +147,6 @@ export class MySQLDialect extends Dialect {
   identifierEscapeStyle = EscapeStyle.Doubled;
   identifierQuoteChar = '`';
   defaultNumberType = 'DOUBLE PRECISION';
-  defaultDecimalType = 'DECIMAL';
   udfPrefix = 'ms_temp.__udf';
   hasFinalStage = false;
   // TODO: this may not be enough for larger casts.

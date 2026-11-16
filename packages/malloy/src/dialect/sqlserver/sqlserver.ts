@@ -165,7 +165,6 @@ export class SQLServerDialect extends Dialect {
   identifierQuoteChar = '"';
 
   defaultNumberType = 'FLOAT(53)';
-  defaultDecimalType = 'DECIMAL(38, 9)';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = true;
@@ -390,7 +389,7 @@ export class SQLServerDialect extends Dialect {
   // The MD5 of the key as a 64-bit integer, widened so that hash + value is
   // exact at the value's scale.
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
-    return `CAST(CAST(HASHBYTES('MD5', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS BIGINT) AS ${this.defaultDecimalType})`;
+    return `CAST(CAST(HASHBYTES('MD5', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS BIGINT) AS DECIMAL(38, 9))`;
   }
 
   sqlAggDistinct(

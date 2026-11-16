@@ -310,7 +310,6 @@ export type SumDistinctByHash = {
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
-  abstract defaultDecimalType: string;
   abstract udfPrefix: string;
   abstract hasFinalStage: boolean;
   abstract divisionIsInteger: boolean;

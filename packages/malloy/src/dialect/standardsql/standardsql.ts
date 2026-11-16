@@ -97,7 +97,6 @@ export class StandardSQLDialect extends Dialect {
   identifierQuoteChar = '`';
   experimental = false;
   defaultNumberType = 'FLOAT64';
-  defaultDecimalType = 'NUMERIC';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = false;

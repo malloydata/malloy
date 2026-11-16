@@ -87,7 +87,6 @@ const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 export class PostgresDialect extends PostgresBase {
   name = 'postgres';
   defaultNumberType = 'DOUBLE PRECISION';
-  defaultDecimalType = 'NUMERIC';
   udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
   divisionIsInteger = true;

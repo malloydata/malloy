@@ -110,7 +110,6 @@ export class SnowflakeDialect extends Dialect {
   identifierEscapeStyle = EscapeStyle.Doubled;
   identifierQuoteChar = '"';
   defaultNumberType = 'NUMBER';
-  defaultDecimalType = 'NUMBER';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = false;

@@ -84,7 +84,6 @@ export class DatabricksDialect extends Dialect {
   identifierEscapeStyle = EscapeStyle.Doubled;
   identifierQuoteChar = '`';
   defaultNumberType = 'DOUBLE';
-  defaultDecimalType = 'DECIMAL';
   udfPrefix = '__udf';
   hasFinalStage = false;
   stringTypeName = 'STRING';
