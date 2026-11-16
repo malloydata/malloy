@@ -45,6 +45,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
   TimeOffset,
+  SumDistinctByHash,
 } from '../dialect';
 import {queryZone, turtleGroupSetCondition} from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
@@ -140,7 +141,12 @@ export class TrinoDialect extends PostgresBase {
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = true;
+  // DOUBLE, because Trino gives a decimal quotient no more fractional digits
+  // than its dividend, which would leave an average with the 8 of a sum.
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'shifty',
+    resultType: 'DOUBLE',
+  };
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
@@ -310,20 +316,6 @@ export class TrinoDialect extends PostgresBase {
     const upperPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 1, 15),16) as ${TrinoDialect.dtype}) * CAST('4294967296' AS ${TrinoDialect.dtype}) `;
     const lowerPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 16, 8),16) as ${TrinoDialect.dtype}) `;
     return `(${upperPart} + ${lowerPart})`;
-  }
-
-  sqlSumDistinct(key: string, value: string, funcName: string): string {
-    const hashKey = this.sqlSumDistinctHashedKey(key);
-    const scale = 100000000;
-    const v = `CAST(COALESCE(${value},0)*${scale} as ${TrinoDialect.dtype})`;
-
-    const sqlSum = `CAST(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}) AS DOUBLE)/${scale}`;
-    if (funcName === 'SUM') {
-      return sqlSum;
-    } else if (funcName === 'AVG') {
-      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
-    }
-    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   sqlGenerateUUID(): string {

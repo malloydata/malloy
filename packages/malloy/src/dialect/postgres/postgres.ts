@@ -91,7 +91,6 @@ export class PostgresDialect extends PostgresBase {
   udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
@@ -381,7 +380,7 @@ export class PostgresDialect extends PostgresBase {
   //   )`;
   // }
 
-  sqlSumDistinct(key: string, value: string, funcName: string): string {
+  sqlSumDistinct(key: string, value: string, funcName: 'SUM' | 'AVG'): string {
     const hashKey = this.sqlSumDistinctHashedKey(key);
 
     // PostgreSQL requires CAST to NUMERIC before ROUND, which is different
@@ -397,10 +396,8 @@ export class PostgresDialect extends PostgresBase {
 
     if (funcName === 'SUM') {
       return ret;
-    } else if (funcName === 'AVG') {
-      return `trim_scale((${sumSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0))`;
     }
-    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
+    return `trim_scale((${sumSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0))`;
   }
 
   // TODO this does not preserve the types of the arguments, meaning we have to hack

@@ -34,6 +34,7 @@ import type {
   OrderByRequest,
   QueryInfo,
   ArrayQuerySupport,
+  SumDistinctByHash,
 } from '../dialect';
 import {
   CivilTime,
@@ -100,7 +101,11 @@ export class StandardSQLDialect extends Dialect {
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = false;
-  supportsSumDistinctFunction = false;
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'direct',
+    decimalType: 'NUMERIC',
+    resultType: 'FLOAT64',
+  };
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
@@ -265,7 +270,8 @@ export class StandardSQLDialect extends Dialect {
     sqlDistinctKey = `CAST(${sqlDistinctKey} AS STRING)`;
     const upperPart = `cast(cast(concat('0x', substr(to_hex(md5(${sqlDistinctKey})), 1, 15)) as int64) as numeric) * 4294967296`;
     const lowerPart = `cast(cast(concat('0x', substr(to_hex(md5(${sqlDistinctKey})), 16, 8)) as int64) as numeric)`;
-    // See the comment below on `sql_sum_distinct` for why we multiply by this decimal
+    // Scaled down so that a sum of hashes fits in the 29 whole digits of a
+    // NUMERIC, the type a value is added to it in.
     const precisionShiftMultiplier = '0.000000001';
     return `(${upperPart} + ${lowerPart}) * ${precisionShiftMultiplier}`;
   }

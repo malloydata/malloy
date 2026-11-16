@@ -39,6 +39,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
   ArrayQuerySupport,
+  SumDistinctByHash,
 } from '../dialect';
 import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
@@ -152,7 +153,10 @@ export class MySQLDialect extends Dialect {
   // TODO: this may not be enough for larger casts.
   stringTypeName = 'VARCHAR(255)';
   divisionIsInteger = true;
-  supportsSumDistinctFunction = true;
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'direct',
+    decimalType: 'DECIMAL(55, 10)',
+  };
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
@@ -388,23 +392,11 @@ export class MySQLDialect extends Dialect {
     return this.jsonTable(sourceSQLExpression, fieldList, isSingleton);
   }
 
-  sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
-    return 'UNUSED';
-  }
-
-  sqlSumDistinct(key: string, value: string, funcName: string): string {
-    const sqlDistinctKey = `CONCAT(${key}, '')`;
+  sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
+    sqlDistinctKey = `CONCAT(${sqlDistinctKey}, '')`;
     const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(55, 10)) * 4294967296`;
     const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(55, 10))`;
-    const hashkey = `(${upperPart} + ${lowerPart})`;
-    const v = `CAST(COALESCE(${value},0) as DECIMAL(55, 10))`;
-    const sqlSum = `(SUM(DISTINCT ${hashkey} + ${v}) - SUM(DISTINCT ${hashkey}))`;
-    if (funcName === 'SUM') {
-      return sqlSum;
-    } else if (funcName === 'AVG') {
-      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
-    }
-    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
+    return `(${upperPart} + ${lowerPart})`;
   }
 
   sqlGenerateUUID(): string {

@@ -25,9 +25,9 @@ Start by copying a dialect close to your target — Databricks, for instance, be
 Create `packages/malloy/src/dialect/{name}/` with four files:
 
 1. **`{name}.ts`** — A class extending `Dialect`. This is the bulk of the work.
-   - Set boolean capability flags: `experimental`, `supportsSumDistinctFunction`, `supportUnnestArrayAgg`, `supportsAggDistinct`, `supportsCTEinCoorelatedSubQueries`, etc. Start with `experimental = true` — experimental dialects aren't required to pass the full test suite, and a model file must carry `##! experimental.dialect.{name}` to use one. The test harness accepts the dialect under test for the whole run, so the shared suites need no such line.
+   - Set boolean capability flags: `experimental`, `supportUnnestArrayAgg`, `supportsAggDistinct`, `supportsCTEinCoorelatedSubQueries`, etc. Start with `experimental = true` — experimental dialects aren't required to pass the full test suite, and a model file must carry `##! experimental.dialect.{name}` to use one. The test harness accepts the dialect under test for the whole run, so the shared suites need no such line.
    - Implement `sqlTypeToMalloyType()` to map your database's types to Malloy types.
-   - Implement the SQL-generation methods: `sqlGroupSetTable`, `sqlAnyValue`, `sqlAggregateTurtle`, `sqlSumDistinct`, `sqlGenerateUUID`, `sqlDateToString`, `sqlAlterTime`, `sqlCast`, `sqlRegexpMatch`, `sqlLiteralTime`, and others. The abstract base class makes it clear which are required.
+   - Implement the SQL-generation methods: `sqlGroupSetTable`, `sqlAnyValue`, `sqlAggregateTurtle`, `sqlSumDistinctHashedKey`, `sqlGenerateUUID`, `sqlDateToString`, `sqlAlterTime`, `sqlCast`, `sqlRegexpMatch`, `sqlLiteralTime`, and others. The abstract base class makes it clear which are required.
    - Implement `getDialectFunctionOverrides()` and `getDialectFunctions()`.
 
 2. **`function_overrides.ts`** — Overrides for standard library functions whose SQL differs in your database. Export a `MalloyStandardFunctionImplementations` object. You only need entries for functions that don't work with the default SQL.
@@ -47,7 +47,7 @@ Create `packages/malloy/src/dialect/{name}/` with four files:
 
 **Nesting** (`sqlAggregateTurtle`): How does your database aggregate rows into arrays of structs? Most use `JSON_AGG` or `ARRAY_AGG`; Databricks uses `COLLECT_LIST(NAMED_STRUCT(...))`. Ordering within nested results is where things get tricky — some databases support `ORDER BY` inside the aggregate function, others need `ARRAY_SORT` or similar.
 
-**Symmetric aggregates** (`sqlSumDistinct`): Malloy uses a hash-based technique to compute correct aggregates across joins. This requires integer arithmetic on a hash of the distinct key. Watch for `DECIMAL` overflow — Databricks, for example, needed careful scaling to stay within `DECIMAL(38,x)`.
+**Symmetric aggregates** (`sumDistinctByHash`): Malloy sums a value across a fanned-out join by adding each value to a hash of its row's key, so that `SUM(DISTINCT)` folds exactly the rows the join repeated. `Dialect.sqlSumDistinct` writes that SQL; your dialect supplies the hash in `sqlSumDistinctHashedKey` and says in `sumDistinctByHash` how a value fits beside it. If a sum of your hashes needs every digit of your widest exact decimal, use `{form: 'shifty'}` and return the hash as an integer below 2^92 typed `DECIMAL(38,0)`, as Trino, Databricks and Snowflake do; `dialect/shifty_sum_distinct.ts` explains the method and states its limits. Add `roundsWideProductsTo: 6` if your database, like Databricks, rounds a decimal product too wide for 38 digits where the others fail. If one decimal type holds that sum with fractional digits to spare, use `{form: 'direct', decimalType}` and return the hash in that type: MySQL has a 65 digit decimal, SQL Server hashes to 64 bits, and BigQuery scales its hash down. `resultType` casts the sum to the type your connection reads a number in. A database which can sum distinct rows without a hash overrides `sqlSumDistinct` itself, as DuckDB does.
 
 **NULL ordering**: Malloy expects NULLS LAST for ascending order. If your database defaults otherwise, override `sqlOrderBy()`.
 
@@ -131,7 +131,6 @@ With `experimental = true`, not all tests need to pass. Use `it.when(condition)`
 
 Useful capability flags for gating tests:
 - `runtime.dialect.supportsAggDistinct` — fanout aggregates
-- `runtime.dialect.supportsSumDistinctFunction` — SUM DISTINCT
 - `runtime.dialect.supportUnnestArrayAgg` — nesting
 - `runtime.dialect.hasTimestamptz` — timestamptz type support
 

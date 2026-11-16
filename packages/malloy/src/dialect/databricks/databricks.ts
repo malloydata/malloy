@@ -37,6 +37,7 @@ import type {
   OrderByRequest,
   QueryInfo,
   ArrayQuerySupport,
+  SumDistinctByHash,
 } from '../dialect';
 import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
@@ -88,7 +89,13 @@ export class DatabricksDialect extends Dialect {
   hasFinalStage = false;
   stringTypeName = 'STRING';
   divisionIsInteger = false;
-  supportsSumDistinctFunction = true;
+  // DOUBLE, because the driver reads a DECIMAL by dividing its digits by a
+  // power of ten in floating point, which is wrong once the digits pass 2^53.
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'shifty',
+    roundsWideProductsTo: 6,
+    resultType: 'DOUBLE',
+  };
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
@@ -337,28 +344,12 @@ export class DatabricksDialect extends Dialect {
   }
 
   // Two-chunk MD5 hash: upper 15 hex chars * 4294967296 + lower 8 hex chars
-  // gives ~88 bits of entropy, matching the pattern used by Snowflake/Trino.
+  // gives 92 bits of entropy, matching the pattern used by Snowflake/Trino.
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
     const castKey = `CAST(${sqlDistinctKey} AS STRING)`;
     const upper = `CAST(CONV(SUBSTRING(MD5(${castKey}), 1, 15), 16, 10) AS DECIMAL(38,0)) * 4294967296`;
     const lower = `CAST(CONV(SUBSTRING(MD5(${castKey}), 16, 8), 16, 10) AS DECIMAL(38,0))`;
     return `(${upper} + ${lower})`;
-  }
-
-  // Scale the value to integer before adding to hash, then divide after
-  // subtraction. This keeps all arithmetic in integer space and avoids
-  // DECIMAL precision/overflow issues (Databricks max is DECIMAL(38,x)).
-  sqlSumDistinct(key: string, value: string, funcName: string): string {
-    const hashKey = this.sqlSumDistinctHashedKey(key);
-    const scale = 100000000.0;
-    const v = `CAST(COALESCE(${value},0)*${scale} AS DECIMAL(38,0))`;
-    const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))/${scale}`;
-    if (funcName === 'SUM') {
-      return sqlSum;
-    } else if (funcName === 'AVG') {
-      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
-    }
-    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   sqlStringAggDistinct(

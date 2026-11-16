@@ -142,6 +142,7 @@ A correlated subquery's head may be wrapped to add a distinct key (`QueryQuery.g
 | `{dialect}/dialect_functions.ts` | Dialect-unique function definitions |
 | `dialect.ts` | Abstract Dialect base class |
 | `array_lambdas.ts` | Aggregates over an array in place, shared by the lambda dialects |
+| `shifty_sum_distinct.ts` | Symmetric SUM for the dialects whose hash is a 92 bit integer in a 38 digit decimal (Trino, Presto, Databricks, Snowflake); its header explains the method and states its limits |
 | `dialect_map.ts` | Dialect registry |
 | `../lang/ast/expressions/expr-func.ts` | Parser-side: function call AST, overload resolution |
 | `../lang/ast/types/global-name-space.ts` | Assembles standard functions + overrides across all dialects |
