@@ -336,7 +336,7 @@ BaseConnection wraps `fetchTableSchema()` and `fetchSelectSchema()` with a per-i
 
 ### Error Convention: Return Strings, Don't Throw
 
-`fetchTableSchema()` and `fetchSelectSchema()` return `StructDef | string`. Return a **string** for expected errors (table not found, invalid SQL, permission denied). BaseConnection wraps it into `{error: string}`. If you throw instead, BaseConnection catches it and uses `.message`, but returning strings is the convention.
+`fetchTableSchema()` and `fetchSelectSchema()` return `StructDef | string`. Return a **string** for expected errors (table not found, invalid SQL, permission denied). BaseConnection wraps it into `{error: string}`. If you throw instead, BaseConnection catches it and uses the thrown value's `message`, or the value as a string when it has none, but returning strings is the convention.
 
 ### Async Initialization Pattern
 
