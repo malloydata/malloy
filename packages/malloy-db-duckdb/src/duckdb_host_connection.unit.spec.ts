@@ -11,7 +11,7 @@ describe('DuckDBHostConnection', () => {
   test('a stream from a host answering with a promise keeps the row limit', async () => {
     const rows: QueryRecord[] = [{n: 1}, {n: 2}, {n: 3}];
     const connection = new DuckDBHostConnection('duckdb', {
-      digest: 'test-db',
+      databaseId: 'test-db',
       query: async () => rows,
     });
     const streamed: QueryRecord[] = [];
@@ -25,7 +25,7 @@ describe('DuckDBHostConnection', () => {
 
   test('the digest names the host database', () => {
     const connection = new DuckDBHostConnection('duckdb', {
-      digest: 'test-db',
+      databaseId: 'test-db',
       query: () => [],
     });
     expect(connection.getDigest()).toBe(makeDigest('duckdb-host', 'test-db'));
@@ -34,7 +34,7 @@ describe('DuckDBHostConnection', () => {
   test('a table schema is read from the host answering DESCRIBE', async () => {
     const sent: string[] = [];
     const connection = new DuckDBHostConnection('duckdb', {
-      digest: 'test-db',
+      databaseId: 'test-db',
       query: sql => {
         sent.push(sql);
         return [

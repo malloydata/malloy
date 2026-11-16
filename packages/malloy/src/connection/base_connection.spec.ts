@@ -6,7 +6,6 @@
 import * as vm from 'vm';
 import {BaseConnection} from './base_connection';
 
-// A connection whose driver fails with whatever it is given.
 function failingWith(thrown: () => unknown) {
   class Failing extends BaseConnection {
     get name() {

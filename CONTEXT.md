@@ -115,7 +115,7 @@ The actual SQL writing portion of a Dialect is implemented in packages/malloy/di
 
 Each database has its own package with connection handling and dialect-specific optimizations:
 - `malloy-db-bigquery/` - Google BigQuery adapter
-- `malloy-db-duckdb/` - DuckDB adapter (includes WASM support, and `/host`: a connection whose database belongs to the host, for Malloy embedded in DuckDB)
+- `malloy-db-duckdb/` - DuckDB adapter (includes WASM support, and `/host` for a host that is itself a DuckDB database)
 - `malloy-db-postgres/` - PostgreSQL adapter
 - `malloy-db-mysql/` - MySQL adapter
 - `malloy-db-sqlserver/` - SQL Server adapter

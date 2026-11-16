@@ -17,18 +17,17 @@ import {DuckDBCommon} from './duckdb_common';
  */
 export interface DuckDBHost {
   /**
-   * Runs one DuckDB statement in the host's database and returns its rows,
-   * now or as a promise. Throw to report a failure; the message reaches the
-   * user.
+   * Runs one DuckDB statement in the host's database and returns its rows.
+   * Throw to report a failure; the message reaches the user.
    *
    * - **Rows** are one object per row keyed by column name, with values as
    *   DuckDB converts them to JSON (the Node connection reads
    *   `getRowObjectsJson()`): BIGINT, HUGEINT and DECIMAL as strings, dates and
    *   timestamps as strings, LISTs as arrays, STRUCTs as objects.
    * - **Statements** can be any DuckDB SQL. A query may begin with a
-   *   metadata comment. Compiling sends `DESCRIBE SELECT * FROM <table>`
-   *   and `DESCRIBE SELECT * FROM (<sql>)` and reads each row's
-   *   `column_name` and `column_type`; `test()` sends `SELECT 1`; persisting
+   *   metadata comment. Reading a table's or a SQL source's schema sends
+   *   `DESCRIBE SELECT * FROM <table>` or `DESCRIBE SELECT * FROM (<sql>)`
+   *   and reads each row's `column_name` and `column_type`; `test()` sends `SELECT 1`; persisting
    *   a result sends `CREATE TEMPORARY TABLE`.
    * - **Session settings** are the host's. Malloy's generated SQL expects
    *   what the Node connection sets up: `SET TimeZone='UTC'` and the `json`
@@ -37,17 +36,17 @@ export interface DuckDBHost {
    */
   query(sql: string): QueryRecord[] | Promise<QueryRecord[]>;
   /**
-   * Identifies the host's database, for persist manifests: two connections
-   * with the same digest are taken to read the same tables.
+   * Any stable string identifying the host's database, as a database path
+   * does for the Node connection. The connection's digest is made from it,
+   * so two connections with the same `databaseId` are taken to read the
+   * same tables.
    */
-  digest: string;
+  databaseId: string;
 }
 
 /**
- * A DuckDB connection whose database belongs to the host. Schemas, the type
- * mapping and the schema cache are DuckDBCommon's, as for the Node and WASM
- * connections; the host only runs SQL. A streamed query is read whole from
- * the host and then yielded.
+ * A DuckDB connection whose database belongs to the host: the host runs the
+ * SQL. A streamed query is read whole from the host and then yielded.
  */
 export class DuckDBHostConnection extends DuckDBCommon {
   public readonly name: string;
@@ -62,7 +61,7 @@ export class DuckDBHostConnection extends DuckDBCommon {
   }
 
   getDigest(): string {
-    return makeDigest('duckdb-host', this.host.digest);
+    return makeDigest('duckdb-host', this.host.databaseId);
   }
 
   protected async setup(): Promise<void> {}

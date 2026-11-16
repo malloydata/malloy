@@ -487,8 +487,6 @@ describe('BaseConnection default idle', () => {
 });
 
 describe('Runtime model sources', () => {
-  // A host running Malloy in an embedded engine makes URLs with its own URL
-  // class; Runtime must read such an object as a URL, not as Malloy text.
   it('reads a URL that is not instanceof URL as a URL', async () => {
     const href = 'file:///models/m.malloy';
     // Not a URL, but all of one Runtime uses: toString().

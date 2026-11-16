@@ -418,6 +418,22 @@ registration, and credential injection.
 If Malloy later wants restricted execution for `duckdb_wasm`, design it
 explicitly for WASM instead of copying native policy semantics.
 
+## Host Scope
+
+`DuckDBHostConnection` (the `/host` entry point) runs SQL in a database that
+belongs to its host, such as a DuckDB extension running Malloy in an embedded
+JavaScript engine.
+
+- The `/host` entry point exists so such a host can load the connection
+  without the native driver. Its imports must stay free of `@duckdb/node-api`
+  and Node built-ins; `duckdb_host_connection.ts` imports only
+  `@malloydata/malloy` and `duckdb_common.ts`.
+- It applies no session baseline. The `TimeZone='UTC'` and extension loading
+  above are the native connection's; the host's session is the host's own,
+  and `DuckDBHost.query`'s doc tells a host what Malloy's SQL expects.
+- No security policy or config properties apply: the host decides what its
+  database can reach.
+
 ## Adding A New DuckDB Config Property
 
 When adding a new native DuckDB config property, update all relevant layers:
