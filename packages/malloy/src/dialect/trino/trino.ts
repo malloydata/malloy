@@ -141,11 +141,14 @@ export class TrinoDialect extends PostgresBase {
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = true;
+  // Trino 484 rounds a wide decimal product and Trino 476 fails on one. A
+  // dialect cannot tell which it is writing for, and the SQL for an engine
+  // which rounds is exact on both.
   // DOUBLE, because Trino gives a decimal quotient no more fractional digits
   // than its dividend, which would leave an average with the 8 of a sum.
   sumDistinctByHash: SumDistinctByHash = {
     form: 'shifty',
-    roundsWideProducts: false,
+    roundsWideProducts: true,
     resultType: 'DOUBLE',
   };
   unnestWithNumbers = false;
@@ -748,6 +751,11 @@ ${indent(sql)}
 
 export class PrestoDialect extends TrinoDialect {
   name = 'presto';
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'shifty',
+    roundsWideProducts: false,
+    resultType: 'DOUBLE',
+  };
   supportsPipelinesInViews = false; // what a drag...
   supportsLeftJoinUnnest = false; // we need to fix this....
 

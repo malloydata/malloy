@@ -11,8 +11,8 @@ const SCALE = 8;
 // wider of them, and rounds a fractional digit away when that passes
 // MAX_DIGITS. A value gets the whole digits that leaves.
 const VALUE_WHOLE_DIGITS = MAX_DIGITS - SCALE - 1;
-// The fractional digits Databricks rounds a product to when it is too wide
-// for MAX_DIGITS. A product with no more of them than this is exact.
+// The fractional digits Databricks and Trino round a product to when it is
+// too wide for MAX_DIGITS. A product with no more of them than this is exact.
 const ROUNDED_SCALE = 6;
 
 const VALUE_TYPE = `DECIMAL(${VALUE_WHOLE_DIGITS + SCALE},${SCALE})`;
@@ -56,10 +56,12 @@ function shiftDown(digits: number): string {
  * After the cast, shifting takes decimal products, and these engines differ
  * in what they do with a product which could have more than 38 digits:
  *
- *  - Trino, Presto and Snowflake keep the fractional digits of the operands
- *    and fail when the result does not fit in the digits left over. A
- *    DECIMAL(38,8) value times 10^8 fails once the value reaches 10^22.
- *  - Databricks rounds the result to 6 fractional digits, with no error.
+ *  - Presto and Snowflake, and Trino as of version 476, keep the fractional
+ *    digits of the operands and fail when the result does not fit in the
+ *    digits left over. A DECIMAL(38,8) value times 10^8 fails once the value
+ *    reaches 10^22.
+ *  - Databricks, and Trino as of version 484, round the result to 6
+ *    fractional digits, with no error.
  *
  * Shifting up gives none of them such a product, by shifting the whole part
  * and the fraction of a value separately. The whole part times 10^8 is a
@@ -67,12 +69,13 @@ function shiftDown(digits: number): string {
  * when it truly does not fit in 38 digits. The fraction is below 1, so its
  * product is narrow.
  *
- * Shifting down multiplies an integer by 10^-8. Trino, Presto and Snowflake
- * do that exactly. Databricks would round it to 6 fractional digits, so
- * there it is two products: by 10^-6, which has no more fractional digits
- * than Databricks keeps, and then by 10^-2, after a cast narrow enough that
- * the second product cannot pass 38 digits. That cast is what limits a sum
- * to 10^27 on Databricks.
+ * Shifting down multiplies an integer by 10^-8. An engine which fails on a
+ * wide product does that exactly. One which rounds would keep 6 fractional
+ * digits of it, so there it is two products: by 10^-6, which has no more
+ * fractional digits than such an engine keeps, and then by 10^-2, after a
+ * cast narrow enough that the second product cannot pass 38 digits. That
+ * cast is what limits a sum to 10^27 there. The two products are exact on an
+ * engine which fails as well, which is how one dialect serves both Trinos.
  *
  * Limits.
  *

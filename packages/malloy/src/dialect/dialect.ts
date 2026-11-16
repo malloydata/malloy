@@ -290,7 +290,8 @@ export type SumDistinctByHash = {
       form: 'shifty';
       /**
        * What the engine does with a decimal product too wide for 38 digits.
-       * True when it rounds fractional digits away, as Databricks does.
+       * True when it rounds fractional digits away, as Databricks and Trino
+       * do.
        * False when it keeps them all and fails if the result does not fit.
        */
       roundsWideProducts: boolean;
