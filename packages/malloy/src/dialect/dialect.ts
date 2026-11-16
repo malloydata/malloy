@@ -289,11 +289,11 @@ export type SumDistinctByHash = {
        */
       form: 'shifty';
       /**
-       * Set when the engine rounds a decimal product too wide for 38 digits
-       * to this many fractional digits. Unset, it keeps every fractional
-       * digit of such a product and fails if the result does not fit.
+       * What the engine does with a decimal product too wide for 38 digits.
+       * True when it rounds fractional digits away, as Databricks does.
+       * False when it keeps them all and fails if the result does not fit.
        */
-      roundsWideProductsTo?: 6;
+      roundsWideProducts: boolean;
     }
   | {
       /** `decimalType` can. The value is cast to it and added to the hash. */
@@ -1279,7 +1279,7 @@ export abstract class Dialect {
     const exactSum =
       byHash.form === 'direct'
         ? `(SUM(DISTINCT ${hashedKey} + CAST(COALESCE(${value},0) AS ${byHash.decimalType})) - SUM(DISTINCT ${hashedKey}))`
-        : sqlShiftySumDistinct(hashedKey, value, byHash.roundsWideProductsTo);
+        : sqlShiftySumDistinct(hashedKey, value, byHash.roundsWideProducts);
     const sqlSum = byHash.resultType
       ? `CAST(${exactSum} AS ${byHash.resultType})`
       : exactSum;

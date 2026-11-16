@@ -27,7 +27,7 @@ describe.each(runtimes.runtimeList)('%s', (_databaseName, runtime) => {
   const byHash = runtime.dialect.sumDistinctByHash;
   const shifty = byHash?.form === 'shifty';
   const roundsWideProducts =
-    byHash?.form === 'shifty' && byHash.roundsWideProductsTo !== undefined;
+    byHash?.form === 'shifty' && byHash.roundsWideProducts;
 
   // The dialect without the cast to its result type, which would round away
   // the digits these tests compare.

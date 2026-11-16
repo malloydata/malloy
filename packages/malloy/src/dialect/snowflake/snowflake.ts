@@ -114,7 +114,10 @@ export class SnowflakeDialect extends Dialect {
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = false;
-  sumDistinctByHash: SumDistinctByHash = {form: 'shifty'};
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'shifty',
+    roundsWideProducts: false,
+  };
   supportsSafeCast = true;
   supportsNesting = true;
   supportsNestedProjectionLimit = true;

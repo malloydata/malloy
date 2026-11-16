@@ -11,6 +11,9 @@ const SCALE = 8;
 // wider of them, and rounds a fractional digit away when that passes
 // MAX_DIGITS. A value gets the whole digits that leaves.
 const VALUE_WHOLE_DIGITS = MAX_DIGITS - SCALE - 1;
+// The fractional digits Databricks rounds a product to when it is too wide
+// for MAX_DIGITS. A product with no more of them than this is exact.
+const ROUNDED_SCALE = 6;
 
 const VALUE_TYPE = `DECIMAL(${VALUE_WHOLE_DIGITS + SCALE},${SCALE})`;
 const SHIFTED_TYPE = `DECIMAL(${MAX_DIGITS},0)`;
@@ -78,7 +81,7 @@ function shiftDown(digits: number): string {
  *  - (the number of distinct rows * 2^92) + (the sum of the magnitudes of
  *    the values * 10^8) must be below 10^38. 10^10 rows whose values total
  *    10^29 fit.
- *  - Where `roundsWideProductsTo` is set, the sum must also be below 10^27
+ *  - Where `roundsWideProducts` is true, the sum must also be below 10^27
  *    in magnitude.
  *
  * Inside the limits the result is exact. Past them a cast or a sum fails
@@ -91,13 +94,13 @@ function shiftDown(digits: number): string {
  * @param hashedKey SQL for an integer in [0, 2^92) typed DECIMAL(38,0), the
  *   same for every repeat of a row and different for different rows
  * @param value SQL for a number of any type, or NULL, which counts as 0
- * @param roundsWideProductsTo set for an engine which rounds a decimal
- *   product too wide for 38 digits to this many fractional digits
+ * @param roundsWideProducts true for an engine which rounds a decimal
+ *   product too wide for 38 digits, false for one which fails
  */
 export function sqlShiftySumDistinct(
   hashedKey: string,
   value: string,
-  roundsWideProductsTo?: 6
+  roundsWideProducts: boolean
 ): string {
   const fixed = `CAST(COALESCE(${value},0) AS ${VALUE_TYPE})`;
   // Whatever sign an engine gives a remainder, the whole part is the value
@@ -106,14 +109,14 @@ export function sqlShiftySumDistinct(
   const whole = `CAST(${fixed} - ${fraction} AS DECIMAL(${VALUE_WHOLE_DIGITS},0))`;
   const shifted = `CAST(${whole} AS ${SHIFTED_TYPE})*${SHIFT_UP} + CAST(CAST(${fraction} AS DECIMAL(${SCALE + 1},${SCALE}))*${SHIFT_UP} AS ${SHIFTED_TYPE})`;
   const shiftedSum = `(SUM(DISTINCT ${hashedKey} + ${shifted}) - SUM(DISTINCT ${hashedKey}))`;
-  if (roundsWideProductsTo === undefined) {
+  if (!roundsWideProducts) {
     return `CAST(${shiftedSum} * ${shiftDown(SCALE)} AS DECIMAL(${MAX_DIGITS},${SCALE}))`;
   }
   // A product has one more digit than its operands have together, and the
   // second product has to stay within MAX_DIGITS.
-  const restOfScale = SCALE - roundsWideProductsTo;
+  const restOfScale = SCALE - ROUNDED_SCALE;
   const partShiftedDigits = MAX_DIGITS - restOfScale - 1;
-  const sumWholeDigits = partShiftedDigits - roundsWideProductsTo - restOfScale;
-  const partShifted = `CAST(${shiftedSum} * ${shiftDown(roundsWideProductsTo)} AS DECIMAL(${partShiftedDigits},${roundsWideProductsTo}))`;
+  const sumWholeDigits = partShiftedDigits - ROUNDED_SCALE - restOfScale;
+  const partShifted = `CAST(${shiftedSum} * ${shiftDown(ROUNDED_SCALE)} AS DECIMAL(${partShiftedDigits},${ROUNDED_SCALE}))`;
   return `CAST(${partShifted} * ${shiftDown(restOfScale)} AS DECIMAL(${sumWholeDigits + SCALE},${SCALE}))`;
 }

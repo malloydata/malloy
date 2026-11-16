@@ -93,7 +93,7 @@ export class DatabricksDialect extends Dialect {
   // power of ten in floating point, which is wrong once the digits pass 2^53.
   sumDistinctByHash: SumDistinctByHash = {
     form: 'shifty',
-    roundsWideProductsTo: 6,
+    roundsWideProducts: true,
     resultType: 'DOUBLE',
   };
   unnestWithNumbers = false;

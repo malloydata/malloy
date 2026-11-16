@@ -145,6 +145,7 @@ export class TrinoDialect extends PostgresBase {
   // than its dividend, which would leave an average with the 8 of a sum.
   sumDistinctByHash: SumDistinctByHash = {
     form: 'shifty',
+    roundsWideProducts: false,
     resultType: 'DOUBLE',
   };
   unnestWithNumbers = false;
