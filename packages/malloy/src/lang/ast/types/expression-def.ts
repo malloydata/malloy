@@ -418,6 +418,24 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
   return undefined;
 }
 
+function matchMismatchMessage(
+  op: '~' | '!~',
+  lhs: ExprValue,
+  rhs: ExprValue
+): string {
+  if (rhs.type === 'null') {
+    return `'${op}' cannot match null, use '${op === '~' ? 'is null' : 'is not null'}' instead`;
+  }
+  if (rhs.type === 'string' || rhs.type === 'regular expression') {
+    return `'${op}' cannot match ${lhs.type} against a pattern, the left side of '${op}' must be a string`;
+  }
+  const eq = op === '~' ? '=' : '!=';
+  if (lhs.type === rhs.type) {
+    return `'${op}' does not compare two ${lhs.type} values, use '${eq}' instead`;
+  }
+  return `'${op}' does not compare ${lhs.type} to ${rhs.type}, use '${eq}' instead`;
+}
+
 /**
  * A boolean can only be compared, with anything, on a dialect with boolean
  * values. Every comparison operator, applied plainly, as a partial, or
@@ -508,9 +526,7 @@ function equality(
       if (regexCmp === undefined) {
         left.logError(
           'match-operator-type-mismatch',
-          lhs.type === rhs.type
-            ? `'${op}' does not compare two ${lhs.type} values, use '${op === '~' ? '=' : '!='}' instead`
-            : `'${op}' cannot match ${lhs.type} against ${rhs.type}; the right side of '${op}' must be a pattern, regular expression, range, or filter expression`
+          matchMismatchMessage(op, lhs, rhs)
         );
         return computedErrorExprValue({
           dataType: {type: 'boolean'},

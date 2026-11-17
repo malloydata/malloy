@@ -202,9 +202,19 @@ describe('expressions', () => {
     });
     test('disallow not match of a date to a number', () => {
       expect(new BetaExpression('ad !~ 7')).toLog(
+        errorMessage("'!~' does not compare date to number, use '!=' instead")
+      );
+    });
+    test('disallow match of a number to a pattern', () => {
+      expect(new BetaExpression("ai ~ 'x%'")).toLog(
         errorMessage(
-          "'!~' cannot match date against number; the right side of '!~' must be a pattern, regular expression, range, or filter expression"
+          "'~' cannot match number against a pattern, the left side of '~' must be a string"
         )
+      );
+    });
+    test('disallow match with null', () => {
+      expect(new BetaExpression('astr !~ null')).toLog(
+        errorMessage("'!~' cannot match null, use 'is not null' instead")
       );
     });
     test('apply as equality', () => {
