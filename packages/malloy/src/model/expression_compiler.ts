@@ -1218,16 +1218,9 @@ function generateDistinctKeySQL(
       new GenerateState()
     );
   } else if (parent.structDef.type === 'array') {
-    const parentDistinctKey = parent.parent?.getDistinctKey();
-    let parentKeySQL = '';
-    if (parentDistinctKey && parent.parent) {
-      parentKeySQL = generateFieldFragment(
-        resultSet,
-        parent.parent,
-        {node: 'field', path: ['__distinct_key']},
-        new GenerateState()
-      );
-    }
+    const parentKeySQL = parent.parent
+      ? getDistinctKeySQL(parent.parent, resultSet)
+      : '';
     return parent.dialect.sqlMakeUnnestKey(
       parentKeySQL,
       parent.dialect.sqlFieldReference(

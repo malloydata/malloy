@@ -404,6 +404,33 @@ describe.each(runtimes.runtimeList)(
           -> { select: odd is nums.odds.each }
         `).toEqualResult(testModel, [{odd: 1}, {odd: 3}]);
       });
+      // Both rows hold the same array, so the aggregates are only right if
+      // each element's key includes the row the record belongs to.
+      const twoRows = `${conName}.sql("""
+        SELECT 1 AS ${quote('id')} UNION ALL SELECT 2
+      """)`;
+      test('aggregate through array in a record column', async () => {
+        await expect(`
+          run: ${twoRows} -> { select: id, rec is {xs is [1, 2]} }
+          -> { aggregate: total is rec.xs.each.sum(), n is rec.xs.count() }
+        `).toMatchResult(testModel, {total: 6, n: 4});
+      });
+      test('aggregate through array in a record dimension', async () => {
+        await expect(`
+          run: ${twoRows} extend { dimension: rec is {xs is [1, 2]} }
+          -> { aggregate: total is rec.xs.each.sum(), n is rec.xs.count() }
+        `).toMatchResult(testModel, {total: 6, n: 4});
+      });
+      test('aggregate through array in a record in a record', async () => {
+        await expect(`
+          run: ${twoRows} -> { select: id, rec is {mid is {xs is [1, 2]}} }
+          -> {
+            aggregate:
+              total is rec.mid.xs.each.sum()
+              n is rec.mid.xs.count()
+          }
+        `).toMatchResult(testModel, {total: 6, n: 4});
+      });
       const abc = "rec is {a is 'a', bc is {b is 'b', c is 'c'}}";
       test('record with a record property', async () => {
         await expect(`
