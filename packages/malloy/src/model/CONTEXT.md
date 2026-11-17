@@ -312,21 +312,12 @@ to supply, which is how a filtered join's subquery knows what to pack for each
 join below it. An array on a path is a column of the join above it, as a record
 is, so a path through an array, weak or not, needs the array itself.
 
-**What the compiler reaches for that no entry names** is a join's declared
-`primary_key`. It is the distinct key for a symmetric aggregate over that join
-(`generateDistinctKeyExpression`, `generateDistinctKeySQL`), so the SQL can read
-`two_0."ai"` with no expression in the query having named `ai`. It is also how
-an aggregate tells a joined source's rows from the rows where that source is
-**unmatched** — the row of NULLs an outer join writes where nothing matched.
-An aggregate computed at a source aggregates that source's rows only, so
-`count()` counts the key and every other asymmetric aggregate makes its operand
-NULL where the key is NULL (`withSourceRowFilter` in `expression_compiler.ts`);
-a new aggregate path has to do the same. A joined source with no declared key
-gets a manufactured one (`JoinInstance.makeUniqueKey`) whenever an asymmetric
-aggregate is computed at it. When the key is
-a computed dimension the SQL reads not its name but the columns its expression
-reads, so anything deciding what a join must supply adds the primary key's own
-field usage, not the key's name.
+**What the compiler reaches for that no entry names** is a join's distinct key
+(see "Distinct keys", below), so the SQL can read `two_0."ai"` with no
+expression in the query having named `ai`. When the key is a computed
+dimension the SQL reads not its name but the columns its expression reads, so
+anything deciding what a join must supply adds the primary key's own field
+usage, not the key's name.
 
 ### Paths and join aliases
 
@@ -362,6 +353,30 @@ records them per join.
 `this.firstSegment` is set in the `QueryQuery` constructor, so
 `this.firstSegment.expandedFieldUsage` is in hand in any method of the class,
 including SQL generation.
+
+## Distinct keys
+
+A symmetric aggregate needs one value per row of the source it is computed at:
+the **distinct key**. `QueryStruct.getDistinctKey` (`query_node.ts`) finds the
+field that holds it, and `generateDistinctKeySQL` (`expression_compiler.ts`)
+writes its SQL. Where the key comes from depends on the struct:
+
+- **a source or join with a `primary_key`** — that field.
+- **a source or join without one** — a manufactured UUID column,
+  `__distinct_key`, added to its SQL (`JoinInstance.makeUniqueKey`) whenever an
+  asymmetric aggregate is computed at it.
+- **an array** — its parent's key joined to the element's row number
+  (`Dialect.sqlMakeUnnestKey`). It is never a column, so nothing can read an
+  array's key from a table or a packed struct.
+- **a record** — none of its own. A record is a column of its parent row, so it
+  has that row's grain and that row's key.
+
+The key is also how an aggregate tells a source's rows from the rows where that
+source is **unmatched** — the row of NULLs an outer join writes where nothing
+matched. An aggregate computed at a source aggregates that source's rows only,
+so `count()` counts the key and every other asymmetric aggregate makes its
+operand NULL where the key is NULL (`withSourceRowFilter`); a new aggregate
+path has to do the same.
 
 ## Compilation Pipeline
 
