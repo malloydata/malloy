@@ -25,7 +25,6 @@ export class Range extends ExpressionDef {
     expr: ExpressionDef
   ): ExprValue {
     switch (op) {
-      // `val ~ begin to end` is the same range check as `val ? begin to end`
       case '=':
       case '~':
       case '!=':

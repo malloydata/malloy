@@ -503,17 +503,14 @@ function equality(
     }
   } else {
     const isMatch = op === '~' || op === '!~';
-    if (
-      isMatch &&
-      lhs.type !== 'error' &&
-      rhs.type !== 'error' &&
-      (lhs.type !== 'string' || rhs.type !== 'string')
-    ) {
+    if (isMatch && (lhs.type !== 'string' || rhs.type !== 'string')) {
       const regexCmp = regexEqual(lhs, rhs);
       if (regexCmp === undefined) {
         left.logError(
           'match-operator-type-mismatch',
-          `Cannot use the '${op}' operator with a ${lhs.type} and a ${rhs.type}`
+          lhs.type === rhs.type
+            ? `'${op}' does not compare two ${lhs.type} values, use '${op === '~' ? '=' : '!='}' instead`
+            : `'${op}' cannot match ${lhs.type} against ${rhs.type}; the right side of '${op}' must be a pattern, regular expression, range, or filter expression`
         );
         return computedErrorExprValue({
           dataType: {type: 'boolean'},
@@ -521,7 +518,7 @@ function equality(
           from: [lhs, rhs],
         });
       }
-      value = op === '!~' ? {node: 'not', e: {...regexCmp}} : regexCmp;
+      value = op === '!~' ? {node: 'not', e: regexCmp} : regexCmp;
     } else {
       value = timeCompare(left, lhs, op, rhs) || {
         node,

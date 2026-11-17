@@ -191,16 +191,20 @@ describe('expressions', () => {
       );
     });
     test('match with a for range', () => {
-      expect(expr`ad ~ @2001 for 1 day`).toTranslate();
+      expect('ad ~ @2001 for 1 day').compilesTo(
+        '{{ad >= @2001-01-01} and {ad < {+day @2001-01-01 1}}}'
+      );
     });
     test('disallow match of a number to a number', () => {
       expect(new BetaExpression('ai ~ 7')).toLog(
-        errorMessage("Cannot use the '~' operator with a number and a number")
+        errorMessage("'~' does not compare two number values, use '=' instead")
       );
     });
     test('disallow not match of a date to a number', () => {
       expect(new BetaExpression('ad !~ 7')).toLog(
-        errorMessage("Cannot use the '!~' operator with a date and a number")
+        errorMessage(
+          "'!~' cannot match date against number; the right side of '!~' must be a pattern, regular expression, range, or filter expression"
+        )
       );
     });
     test('apply as equality', () => {
