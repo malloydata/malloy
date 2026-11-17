@@ -14,7 +14,6 @@ import type {
 } from './malloy_types';
 import {MalloyCompileError} from './malloy_compile_error';
 import {
-  activeName,
   isIndexSegment,
   isRawSegment,
   isJoined,
@@ -101,7 +100,10 @@ export class FieldInstanceField implements FieldInstance {
       this.f.fieldDef.type === 'string' &&
       this.f.fieldDef.name === '__distinct_key'
     ) {
-      return this.generateDistinctKeyExpression();
+      return FieldInstanceField.exprCompiler(this.parent, this.f.parent, {
+        node: 'field',
+        path: ['__distinct_key'],
+      });
     }
 
     // Normal field expression generation
@@ -123,46 +125,6 @@ export class FieldInstanceField implements FieldInstance {
           }
         : undefined
     );
-  }
-
-  private generateDistinctKeyExpression(): string {
-    if (this.f.parent.primaryKey()) {
-      const pk = this.f.parent.getPrimaryKeyField(this.f.fieldDef);
-      const pkName = activeName(pk.fieldDef);
-      const pkField = this.parent.getField(pkName);
-      return pkField.generateExpression();
-    } else if (this.f.parent.structDef.type === 'array') {
-      const parentDistinctKey = this.f.parent.parent?.getDistinctKey();
-      if (parentDistinctKey && this.parent.parent) {
-        const keyField = this.parent.parent.getField('__distinct_key');
-        const parentKeySQL = keyField.generateExpression();
-        return this.f.parent.dialect.sqlMakeUnnestKey(
-          parentKeySQL,
-          this.f.parent.dialect.sqlFieldReference(
-            this.f.parent.getIdentifier(),
-            'table',
-            '__row_id',
-            'string'
-          )
-        );
-      }
-      return this.f.parent.dialect.sqlMakeUnnestKey(
-        '',
-        this.f.parent.dialect.sqlFieldReference(
-          this.f.parent.getIdentifier(),
-          'table',
-          '__row_id',
-          'string'
-        )
-      );
-    } else {
-      return this.f.parent.dialect.sqlFieldReference(
-        this.f.parent.getIdentifier(),
-        'table',
-        '__distinct_key',
-        'string'
-      );
-    }
   }
 
   getAnalyticalSQL(forPartition: boolean): string {
