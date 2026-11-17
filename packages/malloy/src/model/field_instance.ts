@@ -472,13 +472,16 @@ export class FieldInstanceResult implements FieldInstance {
     return [];
   }
 
-  addStructToJoin(qs: QueryStruct, uniqueKeyRequirement: boolean): void {
+  addStructToJoin(
+    qs: QueryStruct,
+    uniqueKeyRequirement: boolean
+  ): JoinInstance {
     const name = qs.getIdentifier();
 
     let join = this.root().joins.get(name);
     if (join) {
       join.uniqueKeyRequirement ||= uniqueKeyRequirement;
-      return;
+      return join;
     }
 
     // if we have a parent, join it first.
@@ -486,8 +489,7 @@ export class FieldInstanceResult implements FieldInstance {
     const parentStruct = qs.parent?.getJoinableParent();
     if (parentStruct) {
       // add dependant expressions first...
-      this.addStructToJoin(parentStruct, false);
-      parent = this.root().joins.get(parentStruct.getIdentifier());
+      parent = this.addStructToJoin(parentStruct, false);
     }
 
     if (!(join = this.root().joins.get(name))) {
@@ -495,6 +497,7 @@ export class FieldInstanceResult implements FieldInstance {
       this.root().joins.set(name, join);
     }
     join.uniqueKeyRequirement ||= uniqueKeyRequirement;
+    return join;
   }
 
   root(): FieldInstanceResultRoot {
@@ -667,7 +670,15 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
     );
     for (const [name, join] of this.joins) {
       join.leafiest = name === leafiest;
-      join.canBeUnmatched = join.parent !== undefined || rootCanBeUnmatched;
+      // An inner join has no unmatched rows, but where the source declares a
+      // key, a row whose key is NULL is still skipped as though it were one,
+      // so that the answer does not depend on how the join is written. A
+      // manufactured key is never NULL, so without a declared key there is
+      // nothing to skip.
+      const skipsNullKeys =
+        !join.inner || join.queryStruct.primaryKey() !== undefined;
+      join.canBeUnmatched =
+        skipsNullKeys && (join.parent !== undefined || rootCanBeUnmatched);
     }
 
     // figure out which joins we need to manufacture distinct keys for.

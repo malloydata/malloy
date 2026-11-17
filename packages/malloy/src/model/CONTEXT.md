@@ -245,7 +245,7 @@ read by the compiler:
 | Field | What it holds |
 |---|---|
 | `expandedFieldUsage` | every field the segment reaches, transitively, source-rooted |
-| `activeJoins` | the joins needed, topologically sorted (dependencies first) |
+| `activeJoins` | the joins needed, topologically sorted (dependencies first), each marked `inner` when the segment's filters require a match |
 | `expandedGivenUsage` | every `GivenID` reachable from the segment |
 | `expandedUngroupings` | `all:`/`exclude:` ungroupings, path-adjusted through nests |
 
@@ -297,7 +297,11 @@ Two readers. `QueryQuery.dependenciesFromFieldUsage` (`query_query.ts`), called
 from `prepare()`, builds the join tree and decides what each join needs:
 
 1. it walks `activeJoins` in order, calling `addDependantPath` →
-   `addStructToJoin`;
+   `addStructToJoin`, and sets `JoinInstance.inner` on a join marked `inner`.
+   Such a join is written `INNER JOIN`. Without a declared key it is not
+   `canBeUnmatched` either, which spares it a manufactured key; with one it
+   is, so that a row whose key is NULL is skipped however the join is
+   written;
 2. it walks `expandedFieldUsage` for `uniqueKeyRequirement` (→
    `addStructToJoin` with the requirement, which `calculateSymmetricAggregates`
    later turns into `JoinInstance.makeUniqueKey`) and for `analyticFunctionUse`
@@ -319,11 +323,13 @@ is, so a path through an array, weak or not, needs the array itself.
 an aggregate tells a joined source's rows from the rows where that source is
 **unmatched** — the row of NULLs an outer join writes where nothing matched.
 An aggregate computed at a source aggregates that source's rows only, so
-`count()` counts the key and every other asymmetric aggregate makes its operand
-NULL where the key is NULL (`withSourceRowFilter` in `expression_compiler.ts`);
-a new aggregate path has to do the same. A joined source with no declared key
+where the source can be unmatched (`JoinInstance.canBeUnmatched`), `count()`
+counts the key and every other asymmetric aggregate makes its operand NULL
+where the key is NULL (`withSourceRowFilter` in `expression_compiler.ts`); a
+new aggregate path has to do the same. A joined source with no declared key
 gets a manufactured one (`JoinInstance.makeUniqueKey`) whenever an asymmetric
-aggregate is computed at it. When the key is
+aggregate is computed at it and it is fanned out or can be unmatched. When the
+key is
 a computed dimension the SQL reads not its name but the columns its expression
 reads, so anything deciding what a join must supply adds the primary key's own
 field usage, not the key's name.

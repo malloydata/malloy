@@ -206,6 +206,10 @@ references. The translator builds it in three steps:
    are active, in dependency order), `expandedGivenUsage` and
    `expandedUngroupings`. A distinct-key requirement or window-function use
    on an entry survives into `expandedFieldUsage` for the compiler to read.
+   An active join is marked `inner` when the segment's filters and its input
+   source's `where:` keep no row in which it is unmatched (`inner-joins.ts`). That is proved only from
+   operations which pass a NULL through; anything else proves nothing, and
+   the join stays a left join.
 
 The expanded fields are a summary of finished IR and are correct only after
 step 2. Nothing in the translator should read one while it is still building

@@ -15,9 +15,12 @@ export class JoinInstance {
   uniqueKeyRequirement = false;
   makeUniqueKey = false;
   leafiest = false;
+  // The segment's filters keep no row in which this join is unmatched
+  // (`ActiveJoin.inner`), so it is written INNER.
+  inner = false;
   // The joined result can have rows with no row from this source, as an
-  // outer join writes where nothing matched. An inner join is not told
-  // apart, which costs it a key test that is always true.
+  // outer join writes where nothing matched. A join declared inner is not
+  // told apart, which costs it a key test that is always true.
   canBeUnmatched = false;
   joinFilterConditions?: QueryFieldBoolean[];
   children: JoinInstance[] = [];

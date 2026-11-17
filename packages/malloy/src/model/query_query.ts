@@ -466,13 +466,19 @@ export class QueryQuery extends QueryField {
     return {as, field};
   }
 
-  private addDependantPath(path: string[], uniqueKeyRequirement: boolean) {
+  private addDependantPath(
+    path: string[],
+    uniqueKeyRequirement: boolean
+  ): JoinInstance {
     const node = this.parent.getFieldByName(path);
     const joinableParent =
       node instanceof QueryFieldStruct
         ? node.queryStruct.getJoinableParent()
         : node.parent.getJoinableParent();
-    this.rootResult.addStructToJoin(joinableParent, uniqueKeyRequirement);
+    return this.rootResult.addStructToJoin(
+      joinableParent,
+      uniqueKeyRequirement
+    );
   }
 
   private dependenciesFromFieldUsage() {
@@ -486,7 +492,10 @@ export class QueryQuery extends QueryField {
     }
 
     for (const joinUsage of this.firstSegment.activeJoins || []) {
-      this.addDependantPath(joinUsage.path, false);
+      const join = this.addDependantPath(joinUsage.path, false);
+      if (joinUsage.inner) {
+        join.inner = true;
+      }
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
@@ -1159,7 +1168,9 @@ export class QueryQuery extends QueryField {
     qs.maybeEmitParameterizedSourceUsage();
     if (isJoinedSource(qsDef)) {
       let structSQL = this.getStructSourceSQL(qs, stageWriter);
-      const matrixOperation = (qsDef.matrixOperation || 'left').toUpperCase();
+      const matrixOperation = ji.inner
+        ? 'INNER'
+        : (qsDef.matrixOperation || 'left').toUpperCase();
       if (!this.parent.dialect.supportsFullJoin && matrixOperation === 'FULL') {
         throw new Error('FULL JOIN not supported');
       }
