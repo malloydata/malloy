@@ -1209,7 +1209,7 @@ describe('field usage with compiler extensions', () => {
     expect(segment.activeJoins).toEqual([
       {path: ['root']},
       {path: ['branch']},
-      {path: ['leaf']},
+      {path: ['leaf'], inner: true},
     ]);
   });
   it('aggregate over a join activates that join', () => {

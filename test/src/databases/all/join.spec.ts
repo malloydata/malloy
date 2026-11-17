@@ -927,6 +927,75 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     );
 
+    // A `where:` which no unmatched row passes lets the join be written
+    // INNER, with the same answers.
+    describe.each(['keyed', 'keyless'])('a where: on the %s orders', orders => {
+      const aggregates = `
+        group_by: name
+        aggregate:
+          order_count is ${orders}.count()
+          amount_sum is ${orders}.amount.sum()
+          credit_sum is ${orders}.sum(credit)
+          customer_count is count()
+        order_by: name
+      `;
+
+      it('writes the join INNER', async () => {
+        const query = `run: buyers -> {
+          where: ${orders}.amount > 6
+          ${aggregates}
+        }`;
+        const sql = await unmatched.model.loadQuery(query).getSQL();
+        expect(sql).toContain('INNER JOIN');
+        await expect(query).toMatchResult(
+          unmatched,
+          {
+            name: 'Alice',
+            order_count: 1,
+            amount_sum: 7,
+            credit_sum: 100,
+            customer_count: 1,
+          },
+          {
+            name: 'Bob',
+            order_count: 1,
+            amount_sum: 11,
+            credit_sum: 400,
+            customer_count: 1,
+          }
+        );
+      });
+    });
+
+    it('an inner join still skips a row whose declared key is NULL', async () => {
+      const nullKey = extendTestModel(
+        mkTestModel(runtime, {
+          customers: [{customer_id: 1, name: 'Alice'}],
+          null_key_orders: [
+            {order_id: 10, customer_id: 1, amount: 5},
+            {order_id: null, customer_id: 1, amount: 7},
+          ],
+        }),
+        `
+          source: nk_buyers is customers extend {
+            join_many: o is null_key_orders extend {
+              primary_key: order_id
+            } on o.customer_id = customer_id
+          }
+        `
+      );
+      const query = `run: nk_buyers -> {
+        where: o.amount > 0
+        aggregate: order_count is o.count(), amount_sum is o.amount.sum()
+      }`;
+      const sql = await nullKey.model.loadQuery(query).getSQL();
+      expect(sql).toContain('INNER JOIN');
+      await expect(query).toMatchResult(nullKey, {
+        order_count: 1,
+        amount_sum: 5,
+      });
+    });
+
     // An empty array unnests to one unmatched row.
     it.when(databaseName === 'duckdb')(
       'an aggregate at an array skips an empty array',

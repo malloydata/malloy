@@ -245,7 +245,7 @@ read by the compiler:
 | Field | What it holds |
 |---|---|
 | `expandedFieldUsage` | every field the segment reaches, transitively, source-rooted |
-| `activeJoins` | the joins needed, topologically sorted (dependencies first) |
+| `activeJoins` | the joins needed, topologically sorted (dependencies first), each marked `inner` when the segment's filters require a match |
 | `expandedGivenUsage` | every `GivenID` reachable from the segment |
 | `expandedUngroupings` | `all:`/`exclude:` ungroupings, path-adjusted through nests |
 
@@ -297,7 +297,11 @@ Two readers. `QueryQuery.dependenciesFromFieldUsage` (`query_query.ts`), called
 from `prepare()`, builds the join tree and decides what each join needs:
 
 1. it walks `activeJoins` in order, calling `addDependantPath` →
-   `addStructToJoin`;
+   `addStructToJoin`, and sets `JoinInstance.inner` on a join marked `inner`.
+   Such a join is written `INNER JOIN`. Without a declared key it is not
+   `canBeUnmatched` either, which spares it a manufactured key; with one it
+   is, so that a row whose key is NULL is skipped however the join is
+   written;
 2. it walks `expandedFieldUsage` for `uniqueKeyRequirement` (→
    `addStructToJoin` with the requirement, which `calculateSymmetricAggregates`
    later turns into `JoinInstance.makeUniqueKey`) and for `analyticFunctionUse`
@@ -364,7 +368,8 @@ writes its SQL. Where the key comes from depends on the struct:
 - **a source or join with a `primary_key`** — that field.
 - **a source or join without one** — a manufactured UUID column,
   `__distinct_key`, added to its SQL (`JoinInstance.makeUniqueKey`) whenever an
-  asymmetric aggregate is computed at it.
+  asymmetric aggregate is computed at it and it is fanned out or can be
+  unmatched.
 - **an array** — its parent's key joined to the element's row number
   (`Dialect.sqlMakeUnnestKey`). It is never a column, so nothing can read an
   array's key from a table or a packed struct.
@@ -374,9 +379,10 @@ writes its SQL. Where the key comes from depends on the struct:
 The key is also how an aggregate tells a source's rows from the rows where that
 source is **unmatched** — the row of NULLs an outer join writes where nothing
 matched. An aggregate computed at a source aggregates that source's rows only,
-so `count()` counts the key and every other asymmetric aggregate makes its
-operand NULL where the key is NULL (`withSourceRowFilter`); a new aggregate
-path has to do the same.
+so where the source can be unmatched (`JoinInstance.canBeUnmatched`), `count()`
+counts the key and every other asymmetric aggregate makes its operand NULL
+where the key is NULL (`withSourceRowFilter`); a new aggregate path has to do
+the same.
 
 ## Compilation Pipeline
 

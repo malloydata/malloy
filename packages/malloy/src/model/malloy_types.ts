@@ -1408,8 +1408,18 @@ export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
  *   4) Each join path ending in an analytic funtion
  */
 
+export interface ActiveJoin {
+  path: string[];
+  /**
+   * The segment's filters keep no row in which this join is unmatched, so
+   * it may be written as an INNER join, and no row reaching an aggregate
+   * is one where it is unmatched.
+   */
+  inner?: true;
+}
+
 export interface SegmentUsageSummary {
-  activeJoins?: FieldUsage;
+  activeJoins?: ActiveJoin[];
   expandedFieldUsage?: FieldUsage;
   expandedGivenUsage?: GivenUsage;
   expandedUngroupings?: AggregateUngrouping[];
