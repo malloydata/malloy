@@ -317,10 +317,6 @@ For new files, this is the current correct copyright text (here in C/Java/Javasc
 
 This same header is also recorded in the root [`LICENSE`](LICENSE) file, in its "SOURCE FILE HEADER" section.
 
-## Commit and PR Guidelines
-
-Do not include AI attribution (e.g., "Generated with Claude Code", "Co-Authored-By: Claude") in commits or pull requests.
-
 ## Subsystem Context
 
 For deeper context on specific subsystems, see:
