@@ -6,7 +6,6 @@
 import type {InGivenExpr} from '../../../model/malloy_types';
 import {isRepeatedRecord, TD} from '../../../model/malloy_types';
 import {typeDefToString} from '../../../model/utils';
-import * as TDU from '../typedesc-utils';
 import {computedErrorExprValue} from '../types/expr-value';
 import type {
   BinaryMalloyOperator,
@@ -20,27 +19,8 @@ import type {FieldSpace} from '../types/field-space';
 import {BinaryBoolean} from './binary-boolean';
 import type {GivenReference} from './expr-given';
 
-const compareTypes = {
-  '~': [TDU.stringT],
-  '!~': [TDU.stringT],
-  '<': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
-  '<=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
-  '=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
-  '!=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
-  '>=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
-  '>': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
-};
-
 export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
   elementType = 'a<=>b';
-  constructor(
-    left: ExpressionDef,
-    op: CompareMalloyOperator,
-    right: ExpressionDef
-  ) {
-    super(left, op, right);
-    this.legalChildTypes = compareTypes[op];
-  }
 
   protected computeExpression(fs: FieldSpace): ExprValue {
     return this.right.apply(fs, this.op, this.left);

@@ -327,6 +327,7 @@ type MessageParameterTypes = {
   'failed-to-compute-output-schema': string;
   'invalid-timeframe-for-time-offset': string;
   'time-comparison-type-mismatch': string;
+  'match-operator-type-mismatch': string;
   'arithmetic-operation-type-mismatch': string;
   'time-offset-type-mismatch': string;
   'unexpected-binary-operator': string;
