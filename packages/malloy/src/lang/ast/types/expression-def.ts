@@ -429,8 +429,12 @@ function matchMismatchMessage(
   if (rhs.type === 'string' || rhs.type === 'regular expression') {
     return `'${op}' cannot match ${lhs.type} against a pattern, the left side of '${op}' must be a string`;
   }
+  const eq = op === '~' ? '=' : '!=';
   if (lhs.type === rhs.type) {
-    return `'${op}' does not compare two ${lhs.type} values, use '${op === '~' ? '=' : '!='}' instead`;
+    return `'${op}' does not compare two ${lhs.type} values, use '${eq}' instead`;
+  }
+  if (TD.isAnyTimestamp(lhs) && TD.isAnyTimestamp(rhs)) {
+    return `'${op}' does not compare ${lhs.type} to ${rhs.type}, use '${eq}' instead`;
   }
   return `'${op}' cannot compare ${lhs.type} to ${rhs.type}`;
 }

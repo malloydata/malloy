@@ -205,6 +205,13 @@ describe('expressions', () => {
         errorMessage("'!~' cannot compare date to number")
       );
     });
+    test('disallow match of a timestamp to a timestamptz', () => {
+      expect(new BetaExpression('ats ~ atstz')).toLog(
+        errorMessage(
+          "'~' does not compare timestamp to timestamptz, use '=' instead"
+        )
+      );
+    });
     test('disallow match of a number to a pattern', () => {
       expect(new BetaExpression("ai ~ 'x%'")).toLog(
         errorMessage(
