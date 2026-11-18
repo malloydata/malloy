@@ -232,6 +232,22 @@ export class DuckDBDialect extends PostgresBase {
     return `LEFT JOIN LATERAL UNNEST(${source}) WITH ORDINALITY as ${alias}_outer(${alias}, __row_id) ON true`;
   }
 
+  // The element is the column `alias`. The row number is read as a member of
+  // `alias_outer`, so it goes out as a struct of that name, and goes out
+  // always: unnested rows are ordered by it whether or not a key needs it.
+  sqlSelectUnnestedArray(
+    alias: string,
+    _fieldList: DialectFieldList,
+    _needDistinctKey: boolean,
+    _isArray: boolean
+  ): Map<string, string> {
+    const rowId = this.sqlFieldReference(alias, 'table', '__row_id', 'string');
+    return new Map([
+      [alias, alias],
+      [`${alias}_outer`, `STRUCT_PACK(${rowId})`],
+    ]);
+  }
+
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
     throw new Error(
       'DuckDB sums distinct rows without a hash, so asking it for one is a bug in the compiler'

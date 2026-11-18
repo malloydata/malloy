@@ -686,6 +686,24 @@ export abstract class Dialect {
   ): string;
 
   /**
+   * When a filtered join is compiled as a subquery, an array the subquery
+   * unnests itself (`sqlUnnestAlias`, given the same arguments) must be
+   * selected out of it for the outer query to read. Returns those columns,
+   * keyed by the name the outer query's references (`sqlFieldReference`)
+   * expect. Required of every dialect with `supportsComplexFilteredSources`.
+   */
+  sqlSelectUnnestedArray(
+    alias: string,
+    _fieldList: DialectFieldList,
+    _needDistinctKey: boolean,
+    _isArray: boolean
+  ): Map<string, string> {
+    throw new Error(
+      `The ${this.name} dialect writes a filtered join as a subquery but does not implement sqlSelectUnnestedArray, so array '${alias}' cannot be read from outside it`
+    );
+  }
+
+  /**
    * An aggregate over the elements of an array of the current row, computed
    * in place without unnesting the array, where `arrayQueries.value` is
    * 'lambdas'; undefined where the dialect's functions cannot express it.
