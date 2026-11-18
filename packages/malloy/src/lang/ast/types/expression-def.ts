@@ -433,7 +433,10 @@ function matchMismatchMessage(
   if (lhs.type === rhs.type) {
     return `'${op}' does not compare two ${lhs.type} values, use '${eq}' instead`;
   }
-  return `'${op}' does not compare ${lhs.type} to ${rhs.type}, use '${eq}' instead`;
+  if (TD.isAnyTimestamp(lhs) && TD.isAnyTimestamp(rhs)) {
+    return `'${op}' does not compare ${lhs.type} to ${rhs.type}, use '${eq}' instead`;
+  }
+  return `'${op}' cannot compare ${lhs.type} to ${rhs.type}`;
 }
 
 /**
