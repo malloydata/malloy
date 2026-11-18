@@ -265,6 +265,17 @@ export class StandardSQLDialect extends Dialect {
     }
   }
 
+  // Every unnest above leaves `alias` a struct holding the element, and the
+  // row number when there is one.
+  sqlSelectUnnestedArray(
+    alias: string,
+    _fieldList: DialectFieldList,
+    _needDistinctKey: boolean,
+    _isArray: boolean
+  ): Map<string, string> {
+    return new Map([[alias, alias]]);
+  }
+
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
     sqlDistinctKey = `CAST(${sqlDistinctKey} AS STRING)`;
     const upperPart = `cast(cast(concat('0x', substr(to_hex(md5(${sqlDistinctKey})), 1, 15)) as int64) as numeric) * 4294967296`;

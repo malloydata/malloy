@@ -299,6 +299,30 @@ export class TrinoDialect extends PostgresBase {
       return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore) ON TRUE`;
     }
   }
+
+  // A scalar element is the column `value` of the unnest named `alias`, read
+  // as `alias.value`, so it goes out as a ROW named `alias`; a record is
+  // already the column `alias`. The row number is its own column.
+  sqlSelectUnnestedArray(
+    alias: string,
+    fieldList: DialectFieldList,
+    needDistinctKey: boolean,
+    isArray: boolean
+  ): Map<string, string> {
+    const columns = new Map([
+      [alias, isArray ? this.sqlSelectAliasAsStruct(alias, fieldList) : alias],
+    ]);
+    if (needDistinctKey) {
+      const rowId = this.sqlFieldReference(
+        alias,
+        'table',
+        '__row_id',
+        'string'
+      );
+      columns.set(rowId, rowId);
+    }
+    return columns;
+  }
   private readonly lambdaArrays: LambdaArrayDialect = {
     size: a => `COALESCE(cardinality(${a}), 0)`,
     reduce: (a, init, acc, v, step, finish) =>

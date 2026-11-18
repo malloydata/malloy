@@ -1246,6 +1246,15 @@ export class QueryQuery extends QueryField {
         // whole subtree into columns, so everything under it is read from that
         // child rather than packed a second time.
         const projectJoin = (j: JoinInstance, from: string | undefined) => {
+          if (isArrayJoin(j)) {
+            for (const [name, sql] of this.selectUnnestedArray(j)) {
+              select += `, ${from === undefined ? sql : `${from}.${name}`} AS ${name}`;
+            }
+            for (const below of j.children) {
+              projectJoin(below, from);
+            }
+            return;
+          }
           const fieldList = this.joinProjectionFieldList(j);
           if (fieldList.length > 0) {
             select +=
@@ -1503,6 +1512,16 @@ export class QueryQuery extends QueryField {
     return fieldList;
   }
 
+  private selectUnnestedArray(ji: JoinInstance): Map<string, string> {
+    const sd = ji.queryStruct.structDef;
+    return ji.queryStruct.dialect.sqlSelectUnnestedArray(
+      ji.alias,
+      ji.getDialectFieldList(),
+      ji.makeUniqueKey,
+      sd.type === 'array' && isBasicArray(sd)
+    );
+  }
+
   // BigQuery has wildcard psudo columns that are treated differently
   //  SELECT * FROM xxx doesn't include these psuedo columns but we need them so
   //  filters can get pushed down properly when generating a UNIQUE key.
@@ -1574,12 +1593,8 @@ export class QueryQuery extends QueryField {
   /**
    * Collect all array joins from the join tree in depth-first order.
    * This ordering ensures parent arrays are ordered before child arrays.
-   * An array placed inside a filtered join's subquery (`arrayPlacement`),
-   * with the arrays inside it, is out of reach of the outer query, so it is
-   * left out.
    */
   collectArrayJoins(ji: JoinInstance): JoinInstance[] {
-    if (this.arrayPlacement(ji) === 'inside') return [];
     const result: JoinInstance[] = [];
     if (isArrayJoin(ji)) {
       result.push(ji);
@@ -1679,7 +1694,13 @@ export class QueryQuery extends QueryField {
 
     // Add array ordinality ordering for dialects that require it
     for (const aj of arrayJoins) {
-      o.push(`${aj.alias}_outer.__row_id ASC`);
+      const rowId = this.parent.dialect.sqlFieldReference(
+        aj.alias,
+        'table',
+        '__row_id',
+        'string'
+      );
+      o.push(`${rowId} ASC`);
     }
 
     return o;
