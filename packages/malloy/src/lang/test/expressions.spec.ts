@@ -202,7 +202,7 @@ describe('expressions', () => {
     });
     test('disallow not match of a date to a number', () => {
       expect(new BetaExpression('ad !~ 7')).toLog(
-        errorMessage("'!~' does not compare date to number, use '!=' instead")
+        errorMessage("'!~' cannot compare date to number")
       );
     });
     test('disallow match of a number to a pattern', () => {
