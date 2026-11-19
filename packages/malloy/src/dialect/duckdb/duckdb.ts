@@ -85,6 +85,8 @@ export class DuckDBDialect extends PostgresBase {
   experimental = false;
   defaultNumberType = 'DOUBLE';
   hasFinalStage = false;
+  // Both DuckDB connections return integers too large for a JS number as strings
+  supportsBigIntPrecision = true;
   divisionIsInteger = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
