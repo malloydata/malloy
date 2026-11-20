@@ -234,21 +234,61 @@ describe('numeric value reading', () => {
   });
 });
 
-describe('connection cleanup on query failure', () => {
-  // Each probed connection is tagged with its own `application_name`, so the
-  // session counts below are not fooled by unrelated sessions on a shared test
-  // database. The connection string is built from the same PG* environment the
-  // rest of this file connects with.
-  const newAppName = (prefix: string) =>
-    `${prefix}_${crypto.randomBytes(4).toString('hex')}`;
-  const taggedConnectionString = (appName: string, hostPort?: string) => {
-    const e = process.env;
-    const auth = `${encodeURIComponent(e['PGUSER'] ?? 'postgres')}:${encodeURIComponent(e['PGPASSWORD'] ?? '')}`;
-    const address =
-      hostPort ?? `${e['PGHOST'] ?? 'localhost'}:${e['PGPORT'] ?? '5432'}`;
-    return `postgresql://${auth}@${address}/${e['PGDATABASE'] ?? 'postgres'}?application_name=${appName}`;
+// Each probed connection is tagged with its own `application_name`, so the
+// session counts below are not fooled by unrelated sessions on a shared test
+// database. The connection string is built from the same PG* environment the
+// rest of this file connects with.
+const newAppName = (prefix: string) =>
+  `${prefix}_${crypto.randomBytes(4).toString('hex')}`;
+const taggedConnectionString = (appName: string, hostPort?: string) => {
+  const e = process.env;
+  const auth = `${encodeURIComponent(e['PGUSER'] ?? 'postgres')}:${encodeURIComponent(e['PGPASSWORD'] ?? '')}`;
+  const address =
+    hostPort ?? `${e['PGHOST'] ?? 'localhost'}:${e['PGPORT'] ?? '5432'}`;
+  return `postgresql://${auth}@${address}/${e['PGDATABASE'] ?? 'postgres'}?application_name=${appName}`;
+};
+// `hostPort` connects through something other than the test database's own
+// address, such as a proxy.
+interface ConnectionExtra {
+  hostPort?: string;
+  setupSQL?: string;
+}
+function newConnection(
+  pooled: true,
+  appName: string,
+  extra?: ConnectionExtra
+): PooledPostgresConnection;
+function newConnection(
+  pooled: boolean,
+  appName: string,
+  extra?: ConnectionExtra
+): PostgresConnection;
+function newConnection(
+  pooled: boolean,
+  appName: string,
+  extra: ConnectionExtra = {}
+): PostgresConnection {
+  const config = {
+    name: 'postgres',
+    connectionString: taggedConnectionString(appName, extra.hostPort),
+    setupSQL: extra.setupSQL,
   };
+  return pooled
+    ? new PooledPostgresConnection(config)
+    : new PostgresConnection(config);
+}
 
+// Listens on a free loopback port and returns it.
+const listenOnLoopback = async (server: net.Server): Promise<number> => {
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (address === null || typeof address === 'string') {
+    throw new Error(`Expected a TCP address, got ${address}`);
+  }
+  return address.port;
+};
+
+describe('connection cleanup on query failure', () => {
   // runSQL de-JSONs each row as `row.row`, so these queries wrap their result
   // in row_to_json to come back as plain objects.
   const adminSQL = async (sql: string): Promise<number> => {
@@ -465,16 +505,6 @@ describe('connection cleanup on query failure', () => {
         return step;
       }
     }
-  };
-
-  const newConnection = (pooled: boolean, appName: string) => {
-    const config = {
-      name: 'postgres',
-      connectionString: taggedConnectionString(appName),
-    };
-    return pooled
-      ? new PooledPostgresConnection(config)
-      : new PostgresConnection(config);
   };
 
   for (const pooled of [false, true]) {
@@ -723,14 +753,15 @@ describe('connection cleanup on query failure', () => {
     };
 
     // A local server stands in for Postgres and records every byte the cancel
-    // connection sends. It answers an SSLRequest with 'N' (no TLS), so with
-    // TLS settings nothing past the SSLRequest may arrive: the CancelRequest
-    // must never be sent in plain text.
+    // connection sends. It closes the connection after the first message, as
+    // Postgres does after a CancelRequest, and answers an SSLRequest with 'N'
+    // (no TLS), so with TLS settings nothing past the SSLRequest may arrive:
+    // the CancelRequest must never be sent in plain text.
     const SSL_REQUEST_CODE = 80877103;
     const CANCEL_REQUEST_CODE = 80877102;
     class CancellingConnection extends PostgresConnection {
-      public cancelWhenAborted(target: unknown, abortSignal: AbortSignal) {
-        return this.cancelOnAbort(target as Client, abortSignal);
+      public cancel(key: {processID: number; secretKey: number}) {
+        this.requestCancel(key);
       }
     }
     for (const tls of [true, false]) {
@@ -742,26 +773,20 @@ describe('connection cleanup on query failure', () => {
         });
         const server = net.createServer(socket => {
           socket.on('error', () => {});
-          // Postgres closes after a CancelRequest; 'N' refuses TLS.
           socket.once('data', () => (tls ? socket.end('N') : socket.end()));
           socket.on('data', data => bytes.push(data));
           socket.on('close', () => closed());
         });
-        await new Promise<void>(resolve =>
-          server.listen(0, '127.0.0.1', resolve)
-        );
+        const port = await listenOnLoopback(server);
         try {
-          const {port} = server.address() as net.AddressInfo;
           const connection = new CancellingConnection({
             name: 'postgres',
             host: '127.0.0.1',
             port,
             ssl: tls ? {rejectUnauthorized: false} : false,
           });
-          const controller = new AbortController();
           const target = {processID: 1234, secretKey: 5678};
-          connection.cancelWhenAborted(target, controller.signal);
-          controller.abort();
+          connection.cancel(target);
           expect(await settledWithin(settled(socketClosed), 5000)).toBe(
             'returned'
           );
@@ -799,15 +824,44 @@ describe('connection cleanup on query failure', () => {
         }
         downstream.pipe(upstream).pipe(downstream);
       });
-      await new Promise<void>(resolve =>
-        server.listen(0, '127.0.0.1', resolve)
-      );
       return {
-        port: (server.address() as net.AddressInfo).port,
+        port: await listenOnLoopback(server),
         dropAll: () => sockets.forEach(socket => socket.destroy()),
         close: () => new Promise(resolve => server.close(resolve)),
       };
     };
+
+    // pg emits 'error' on a client whose socket drops, even while a query runs
+    // on it, and pg-pool takes its own listener off a checked-out client. With
+    // no listener, that event is an uncaught exception. An unpooled client has
+    // its listener from getClient.
+    it('fails runSQL whose connection drops while it runs (pooled)', async () => {
+      const appName = newAppName('abort_test_dropped_runsql');
+      const proxy = await droppableProxy();
+      const connection = newConnection(true, appName, {
+        hostPort: `127.0.0.1:${proxy.port}`,
+      });
+      const outcome = connection.runSQL(sleepsBeforeFirstRow).then(
+        () => new Error('Expected runSQL to fail, but it returned rows'),
+        (e: Error) => e
+      );
+      try {
+        expect(
+          await pollFor(
+            () => countSleepingSessions(appName),
+            n => n === 1
+          )
+        ).toBe(1);
+        proxy.dropAll();
+        expect((await outcome).message).toMatch(/terminated unexpectedly/);
+      } finally {
+        // The server does not notice the dropped socket during the sleep.
+        await terminateSessionsByAppName(appName);
+        await outcome;
+        await connection.close();
+        await proxy.close();
+      }
+    });
 
     for (const pooled of [false, true]) {
       const kind = pooled ? 'pooled' : 'unpooled';
@@ -858,7 +912,7 @@ describe('connection cleanup on query failure', () => {
         }
       });
 
-      it(`yields no rows from a stream whose abortSignal is already aborted (${kind})`, async () => {
+      it(`rejects a stream whose abortSignal is already aborted, yielding no rows (${kind})`, async () => {
         const connection = newConnection(
           pooled,
           newAppName(`abort_test_pre_${kind}`)
@@ -867,9 +921,7 @@ describe('connection cleanup on query failure', () => {
         controller.abort();
         const rows: unknown[] = [];
         try {
-          // Ending and throwing are both a stop; what matters is that no row
-          // arrives.
-          await settled(
+          await expect(
             (async () => {
               for await (const row of connection.runSQLStream(tenRows, {
                 abortSignal: controller.signal,
@@ -877,7 +929,7 @@ describe('connection cleanup on query failure', () => {
                 rows.push(row);
               }
             })()
-          );
+          ).rejects.toThrow(/aborted before it started/);
           expect(rows).toEqual([]);
         } finally {
           await connection.close();
@@ -975,57 +1027,11 @@ describe('connection cleanup on query failure', () => {
         try {
           await expect(
             connection.runSQL(tenRows, {abortSignal: controller.signal})
-          ).rejects.toThrow();
+          ).rejects.toThrow(/aborted before it started/);
         } finally {
           await connection.close();
         }
       });
-
-      // pg emits 'error' on a client whose socket drops, even while a query
-      // runs on it, and pg-pool takes its own listener off a checked-out
-      // client. With no listener, that event is an uncaught exception.
-      for (const withSignal of [false, true]) {
-        it(`fails runSQL whose connection drops while it runs (${kind}, ${withSignal ? 'with' : 'without'} an abortSignal)`, async () => {
-          const appName = newAppName(`abort_test_dropped_runsql_${kind}`);
-          const proxy = await droppableProxy();
-          const config = {
-            name: 'postgres',
-            connectionString: taggedConnectionString(
-              appName,
-              `127.0.0.1:${proxy.port}`
-            ),
-          };
-          const connection = pooled
-            ? new PooledPostgresConnection(config)
-            : new PostgresConnection(config);
-          const outcome = connection
-            .runSQL(sleepsBeforeFirstRow, {
-              abortSignal: withSignal
-                ? new AbortController().signal
-                : undefined,
-            })
-            .then(
-              () => new Error('Expected runSQL to fail, but it returned rows'),
-              (e: Error) => e
-            );
-          try {
-            expect(
-              await pollFor(
-                () => countSleepingSessions(appName),
-                n => n === 1
-              )
-            ).toBe(1);
-            proxy.dropAll();
-            expect((await outcome).message).toMatch(/terminated unexpectedly/);
-          } finally {
-            // The server does not notice the dropped socket during the sleep.
-            await terminateSessionsByAppName(appName);
-            await outcome;
-            await connection.close();
-            await proxy.close();
-          }
-        });
-      }
     }
   });
 });
@@ -1071,49 +1077,33 @@ describe('setupSQL', () => {
   });
 
   // A statement must not run without its setup: with `SET ROLE`, it would run
-  // as the login user.
-  for (const pooled of [false, true]) {
-    const kind = pooled ? 'pooled' : 'unpooled';
-    it(`fails a query whose setup statement fails, without running it (${kind})`, async () => {
-      const config = {
-        name: 'postgres',
-        setupSQL: `SET ROLE no_such_role_${uid}`,
-      };
-      const connection = pooled
-        ? new PooledPostgresConnection(config)
-        : new PostgresConnection(config);
-      const whoAmI =
-        'SELECT row_to_json(t) AS row FROM (SELECT current_user AS u) t';
-      const setupFailed = new RegExp(
-        `role "no_such_role_${uid}" does not exist`
-      );
-      try {
-        for (const abortSignal of [undefined, new AbortController().signal]) {
-          await expect(
-            connection.runSQL(whoAmI, {abortSignal})
-          ).rejects.toThrow(setupFailed);
-          const rows: unknown[] = [];
-          await expect(
-            (async () => {
-              for await (const row of connection.runSQLStream(whoAmI, {
-                abortSignal,
-              })) {
-                rows.push(row);
-              }
-            })()
-          ).rejects.toThrow(setupFailed);
-          expect(rows).toEqual([]);
-        }
-        if (connection instanceof PooledPostgresConnection) {
-          const pool = await connection.getPool();
-          // Checked-out clients: anything a failed query did not release.
-          expect(pool.totalCount - pool.idleCount).toBe(0);
-        }
-      } finally {
-        await connection.close();
-      }
+  // as the login user. An unpooled statement runs after connectionSetup has
+  // awaited every setup statement; a pooled one waits on its own.
+  it('fails a query whose setup statement fails, without running it (pooled)', async () => {
+    const connection = newConnection(true, newAppName('setup_test_fails'), {
+      setupSQL: `SET ROLE no_such_role_${uid}`,
     });
-  }
+    const whoAmI =
+      'SELECT row_to_json(t) AS row FROM (SELECT current_user AS u) t';
+    const setupFailed = new RegExp(`role "no_such_role_${uid}" does not exist`);
+    try {
+      await expect(connection.runSQL(whoAmI)).rejects.toThrow(setupFailed);
+      const rows: unknown[] = [];
+      await expect(
+        (async () => {
+          for await (const row of connection.runSQLStream(whoAmI)) {
+            rows.push(row);
+          }
+        })()
+      ).rejects.toThrow(setupFailed);
+      expect(rows).toEqual([]);
+      const pool = await connection.getPool();
+      // Checked-out clients: anything a failed query did not release.
+      expect(pool.totalCount - pool.idleCount).toBe(0);
+    } finally {
+      await connection.close();
+    }
+  });
 
   it('handles multi-line statements', async () => {
     const table = `setup_multiline_${uid}`;
