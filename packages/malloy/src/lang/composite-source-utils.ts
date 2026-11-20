@@ -17,6 +17,7 @@ import {
 } from '@malloydata/malloy-filter';
 import type {MalloyElement} from './ast';
 import type {
+  ActiveJoin,
   FieldUsage,
   FieldUsageEntry,
   FieldDef,
@@ -51,6 +52,7 @@ import {
   mkRefSummary,
 } from '../model/malloy_types';
 import {isNotUndefined} from './utils';
+import {markInnerJoins} from './inner-joins';
 import {pathToKey} from '../model/utils';
 import {Annotations} from '../api/foundation/annotation';
 
@@ -418,7 +420,11 @@ export function getExpandedSegment(
     isQuerySegment(segment) || isIndexSegment(segment)
       ? (segment.alwaysJoins ?? [])
       : [];
-  const expanded = expandRefUsage(seed, fields, alwaysJoinNames);
+  const filters = [
+    ...(segment.filterList ?? []),
+    ...(inputSource.filterList ?? []),
+  ];
+  const expanded = expandRefUsage(seed, fields, alwaysJoinNames, filters);
 
   // Merge ungroupings from direct collection and field expansion
   const allUngroupings = [...collectedUngroupings, ...expanded.ungroupings];
@@ -451,8 +457,8 @@ function getJoin(
 
 function findActiveJoins(
   dependencies: Record<string, JoinDependency>
-): FieldUsage {
-  const sorted: FieldUsage = [];
+): ActiveJoin[] {
+  const sorted: ActiveJoin[] = [];
   const visited = new Set<string>();
   const visiting = new Set<string>();
 
@@ -500,17 +506,19 @@ function findActiveJoins(
  * - `fieldUsage`: The expanded field usage, including usages from necessary joins
  * - `givenUsage`: The expanded given usage, seed plus every traversed def/join
  * - `missingFields`: References to fields which could not be resolved
- * - `activeJoins`: Topologically sorted list of joins needed to resolve these uses
+ * - `activeJoins`: Topologically sorted list of joins needed to resolve these
+ *   uses, each marked `inner` when `filters` require it
  */
 function expandRefUsage(
   seed: RefSummary | undefined,
   fields: FieldDef[],
-  alwaysJoinNames: string[] = []
+  alwaysJoinNames: string[] = [],
+  filters: FilterCondition[] = []
 ): {
   fieldUsage: FieldUsage;
   givenUsage: GivenUsage;
   missingFields: FieldUsage;
-  activeJoins: FieldUsage;
+  activeJoins: ActiveJoin[];
   ungroupings: AggregateUngrouping[];
 } {
   const seen: Record<string, FieldUsageEntry> = {};
@@ -551,11 +559,7 @@ function expandRefUsage(
       strengthened = true;
     }
     if (usage.uniqueKeyRequirement) {
-      existing.uniqueKeyRequirement = {
-        isCount:
-          existing.uniqueKeyRequirement?.isCount ||
-          usage.uniqueKeyRequirement.isCount,
-      };
+      existing.uniqueKeyRequirement = true;
     }
     if (usage.analyticFunctionUse) {
       existing.analyticFunctionUse = true;
@@ -676,11 +680,17 @@ function expandRefUsage(
     }
   }
 
+  const activeJoins = markInnerJoins(
+    findActiveJoins(activeJoinGraph),
+    filters,
+    path => inNamespace(path, fieldNameSpace)
+  );
+
   return {
     fieldUsage: Object.values(seen),
     givenUsage,
     missingFields,
-    activeJoins: findActiveJoins(activeJoinGraph),
+    activeJoins,
     ungroupings,
   };
 }
@@ -1319,7 +1329,7 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         if (hasNestedUniqueKeyReqs) {
           fieldsReferenced.push({
             path: [],
-            uniqueKeyRequirement: {isCount: true},
+            uniqueKeyRequirement: true,
             at: head.referencedAt,
           });
         }

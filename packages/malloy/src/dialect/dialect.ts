@@ -26,6 +26,7 @@ import {isRawCast, isBasicAtomic, TD, isDateUnit} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 import type {ValidateTablePathResult} from './table-path';
 import {validateDottedTablePath} from './table-path';
+import {sqlShiftySumDistinct} from './shifty_sum_distinct';
 
 /**
  * One field of a struct, for the dialect methods which emit SQL over it.
@@ -45,32 +46,29 @@ interface DialectField {
 export type DialectFieldList = DialectField[];
 
 /**
- * The elements of an array made into records (`Dialect.sqlArraySelect`):
- * those for which `filter` holds, in the order of `orderBy`, the first
- * `limit` of them, each as a record with a field for each of `fields`,
- * valued by its `sql`. Each `orderBy` key is an expression of `element`,
- * and its nulls sort last.
+ * How a dialect compiles `array -> { ... }`, a query on the elements of an
+ * array of the current row (`Dialect.arrayQueries`).
+ *
+ * A query which returns one value (`arrayQueryReturnsValue`) compiles on
+ * every dialect which has this: with the dialect's array functions, in
+ * place (`sqlArrayAggregate`), or as a correlated subquery over the
+ * elements (`sqlUnnestPipelineHead` with `isScalarArray`). Any other query
+ * returns its rows as an array of records, always as a correlated subquery,
+ * and only where `arrays` is true.
  */
-export interface ArraySelect {
-  source: string;
-  element: string;
-  fields: {name: string; sql: string; typeDef: AtomicTypeDef}[];
-  filter?: string;
-  orderBy?: {sql: string; dir: 'asc' | 'desc'}[];
-  /**
-   * The `orderBy` keys of the two elements a comparator compares, named
-   * `left` and `right`: compiled only when called, by a dialect which sorts
-   * with a comparator.
-   */
-  comparator?: () => ArrayComparator;
-  limit?: number;
-}
-
-export interface ArrayComparator {
-  left: string;
-  right: string;
-  keys: {left: string; right: string}[];
-}
+export type ArrayQuerySupport =
+  | {
+      value: 'lambdas';
+      /**
+       * Whether a lambda inside a lambda can read the outer one's
+       * parameter, which an aggregate of an array inside the elements needs
+       * when one condition, or its value, reads both an element and the
+       * inner array.
+       */
+      innerLambdaReadsOuter: boolean;
+      arrays: boolean;
+    }
+  | {value: 'subquery'; arrays: boolean};
 
 /**
  * One aggregate over the elements of an array (`Dialect.sqlArrayAggregate`):
@@ -82,11 +80,34 @@ export interface ArrayComparator {
  */
 export interface ArrayAggregate {
   source: string;
+  /**
+   * The lambda parameter which names an element in `value` and `filter`:
+   * an alias of its own, which no column in scope shares, since a column
+   * would hide a lambda parameter of its name.
+   */
   element: string;
   function: 'sum' | 'avg' | 'count' | 'distinct' | 'min' | 'max';
   value?: string;
   filter?: string;
   resultType?: AtomicTypeDef;
+  /** Set for an aggregate of an array inside the elements. */
+  nested?: NestedArrayAggregate;
+}
+
+/**
+ * An aggregate of an array inside the elements, `items -> { aggregate:
+ * n is tags.count() }`: the aggregate is over the elements of each
+ * element's `array`, all in one. `ArrayAggregate.filter` then reads only
+ * the outer element, and chooses the elements whose arrays are taken;
+ * `filter` chooses among the inner elements, and `value` is of an inner
+ * element. Both name an inner element `element`, and they may read the
+ * outer element too, where `innerLambdaReadsOuter` allows it.
+ */
+export interface NestedArrayAggregate {
+  /** The inner array, read from the outer element. */
+  array: string;
+  element: string;
+  filter?: string;
 }
 
 /**
@@ -251,14 +272,47 @@ export interface IntegerTypeMapping {
   numberType: 'integer' | 'bigint';
 }
 
+/**
+ * How a dialect adds a value to the hash of its row, for a symmetric SUM or
+ * AVG. Which form depends on whether an exact decimal type can hold a sum of
+ * the dialect's hashes and still have fractional digits for a value.
+ */
+export type SumDistinctByHash = {
+  /** The SQL type the sum is cast to. Without one it stays an exact decimal. */
+  resultType?: string;
+} & (
+  | {
+      /**
+       * None can: a sum of these hashes needs all 38 digits of DECIMAL(38,0),
+       * so the value is shifted up to an integer. `sqlSumDistinctHashedKey`
+       * is an integer in [0, 2^92) typed DECIMAL(38,0).
+       */
+      form: 'shifty';
+      /**
+       * What the engine does with a decimal product too wide for 38 digits.
+       * True when it rounds fractional digits away, as Databricks and Trino
+       * do.
+       * False when it keeps them all and fails if the result does not fit.
+       */
+      roundsWideProducts: boolean;
+    }
+  | {
+      /** `decimalType` can. The value is cast to it and added to the hash. */
+      form: 'direct';
+      /**
+       * An exact decimal type. `sqlSumDistinctHashedKey` is a number of this
+       * type.
+       */
+      decimalType: string;
+    }
+);
+
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
-  abstract defaultDecimalType: string;
   abstract udfPrefix: string;
   abstract hasFinalStage: boolean;
   abstract divisionIsInteger: boolean;
-  abstract supportsSumDistinctFunction: boolean;
   abstract unnestWithNumbers: boolean;
   abstract defaultSampling: Sampling;
   abstract supportsAggDistinct: boolean;
@@ -632,26 +686,31 @@ export abstract class Dialect {
   ): string;
 
   /**
-   * An aggregate over the elements of an array of the current row, computed
-   * in place without unnesting the array, or undefined where the dialect has
-   * no way to; the query on the array is then written as a correlated
-   * subquery. `element` names an element in `value` and `filter`. Sums and
-   * counts are 0, and the others null, over no elements, as the subquery's
-   * would be.
+   * When a filtered join is compiled as a subquery, an array the subquery
+   * unnests itself (`sqlUnnestAlias`, given the same arguments) must be
+   * selected out of it for the outer query to read. Returns those columns,
+   * keyed by the name the outer query's references (`sqlFieldReference`)
+   * expect. Required of every dialect with `supportsComplexFilteredSources`.
    */
-  sqlArrayAggregate(_aggregate: ArrayAggregate): string | undefined {
-    return undefined;
+  sqlSelectUnnestedArray(
+    alias: string,
+    _fieldList: DialectFieldList,
+    _needDistinctKey: boolean,
+    _isArray: boolean
+  ): Map<string, string> {
+    throw new Error(
+      `The ${this.name} dialect writes a filtered join as a subquery but does not implement sqlSelectUnnestedArray, so array '${alias}' cannot be read from outside it`
+    );
   }
 
   /**
-   * The elements of an array of the current row which `filter` holds for,
-   * each made into a record of `fields`, computed in place without
-   * unnesting the array; or undefined where the dialect has no way to, and
-   * the query on the array is written as a correlated subquery. `element`
-   * names an element in `filter` and in each field's `sql`. Over no
-   * elements, or a null array, it is an empty array.
+   * An aggregate over the elements of an array of the current row, computed
+   * in place without unnesting the array, where `arrayQueries.value` is
+   * 'lambdas'; undefined where the dialect's functions cannot express it.
+   * Sums and counts are 0, and the others null, over no elements, as a
+   * subquery's would be.
    */
-  sqlArraySelect(_select: ArraySelect): string | undefined {
+  sqlArrayAggregate(_aggregate: ArrayAggregate): string | undefined {
     return undefined;
   }
 
@@ -664,18 +723,24 @@ export abstract class Dialect {
   }
 
   /**
-   * Whether `array -> { ... }`, a query on the elements of an array of the
-   * current row, compiles in this dialect.
+   * How `array -> { ... }`, a query on the elements of an array of the
+   * current row, compiles in this dialect; undefined where it does not.
    * Experimental.
    */
-  supportsArrayQueries = false;
+  arrayQueries: ArrayQuerySupport | undefined = undefined;
 
   /**
-   * Whether a query on an array which the dialect cannot compute in place
-   * (`sqlArrayAggregate`, `sqlArraySelect`) can be written as a correlated
-   * subquery instead. Without it such a query is a compile error.
+   * Whether this dialect has a correlated subquery for a query on an array:
+   * it computes values that way, or it returns arrays, which are always
+   * one. A value which its array functions cannot compute is then that
+   * subquery.
    */
-  supportsCorrelatedArrayQueries = true;
+  arrayQueryHasSubquery(): boolean {
+    const support = this.arrayQueries;
+    return (
+      support !== undefined && (support.value === 'subquery' || support.arrays)
+    );
+  }
 
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 
@@ -1208,8 +1273,40 @@ export abstract class Dialect {
     }
   }
 
-  sqlSumDistinct(_key: string, _value: string, _funcName: string): string {
-    return 'sqlSumDistinct called but not implemented';
+  /**
+   * How this dialect computes a symmetric SUM or AVG by hashing. A dialect
+   * without one has its own `sqlSumDistinct`.
+   */
+  sumDistinctByHash: SumDistinctByHash | undefined = undefined;
+
+  /**
+   * SUM or AVG of a value over the distinct rows of a fanned-out join: each
+   * value is added to a hash of its row's key, so that SUM(DISTINCT) folds
+   * exactly the rows the join repeated.
+   */
+  sqlSumDistinct(key: string, value: string, funcName: 'SUM' | 'AVG'): string {
+    const byHash = this.sumDistinctByHash;
+    if (byHash === undefined) {
+      throw new Error(
+        `Dialect '${this.name}' has neither sumDistinctByHash nor its own sqlSumDistinct, which is a bug in the dialect`
+      );
+    }
+    const hashedKey = this.sqlSumDistinctHashedKey(key);
+    // The value is cast before any arithmetic, which would otherwise be done
+    // in the type of the value.
+    const exactSum =
+      byHash.form === 'direct'
+        ? `(SUM(DISTINCT ${hashedKey} + CAST(COALESCE(${value},0) AS ${byHash.decimalType})) - SUM(DISTINCT ${hashedKey}))`
+        : sqlShiftySumDistinct(hashedKey, value, byHash.roundsWideProducts);
+    const sqlSum = byHash.resultType
+      ? `CAST(${exactSum} AS ${byHash.resultType})`
+      : exactSum;
+    if (funcName === 'SUM') {
+      return sqlSum;
+    }
+    // The sum is cast to its result type before the division, so that the
+    // quotient has the precision of that type and not of the exact decimal.
+    return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
   }
 
   // Like sqlSumDistinct, but for an arbitrary aggregate expression

@@ -115,7 +115,7 @@ The actual SQL writing portion of a Dialect is implemented in packages/malloy/di
 
 Each database has its own package with connection handling and dialect-specific optimizations:
 - `malloy-db-bigquery/` - Google BigQuery adapter
-- `malloy-db-duckdb/` - DuckDB adapter (includes WASM support)
+- `malloy-db-duckdb/` - DuckDB adapter (includes WASM support, and `/host` for a host that is itself a DuckDB database)
 - `malloy-db-postgres/` - PostgreSQL adapter
 - `malloy-db-mysql/` - MySQL adapter
 - `malloy-db-sqlserver/` - SQL Server adapter
@@ -316,10 +316,6 @@ For new files, this is the current correct copyright text (here in C/Java/Javasc
 **Do not copy the header from a neighboring file.** Most existing files were created when the project used a longer Google MIT header; the short SPDX form above is what every *new* file must use. The neighboring-file pattern is the most common way to end up with the wrong header by accident. Always use the exact block above for new files, regardless of what the rest of the directory looks like.
 
 This same header is also recorded in the root [`LICENSE`](LICENSE) file, in its "SOURCE FILE HEADER" section.
-
-## Commit and PR Guidelines
-
-Do not include AI attribution (e.g., "Generated with Claude Code", "Co-Authored-By: Claude") in commits or pull requests.
 
 ## Subsystem Context
 

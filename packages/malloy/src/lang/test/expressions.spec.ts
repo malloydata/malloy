@@ -174,6 +174,56 @@ describe('expressions', () => {
         '{not {{"forty-two"} regex-match /fifty-four/}}'
       );
     });
+    test('match with a number range', () => {
+      expect('ai ~ 10 to 20').compilesTo('{{ai >= 10} and {ai < 20}}');
+    });
+    test('not match with a number range', () => {
+      expect('ai !~ 10 to 20').compilesTo('{{ai < 10} or {ai >= 20}}');
+    });
+    test('match with a granular literal uses range', () => {
+      expect('ad ~ @2020').compilesTo(
+        '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
+      );
+    });
+    test('not match with a granular literal uses range', () => {
+      expect('ad !~ @2020').compilesTo(
+        '{{ad < @2020-01-01} or {ad >= @2021-01-01}}'
+      );
+    });
+    test('match with a for range', () => {
+      expect('ad ~ @2001 for 1 day').compilesTo(
+        '{{ad >= @2001-01-01} and {ad < {+day @2001-01-01 1}}}'
+      );
+    });
+    test('disallow match of a number to a number', () => {
+      expect(new BetaExpression('ai ~ 7')).toLog(
+        errorMessage("'~' does not compare two number values, use '=' instead")
+      );
+    });
+    test('disallow not match of a date to a number', () => {
+      expect(new BetaExpression('ad !~ 7')).toLog(
+        errorMessage("'!~' cannot compare date to number")
+      );
+    });
+    test('disallow match of a timestamp to a timestamptz', () => {
+      expect(new BetaExpression('ats ~ atstz')).toLog(
+        errorMessage(
+          "'~' does not compare timestamp to timestamptz, use '=' instead"
+        )
+      );
+    });
+    test('disallow match of a number to a pattern', () => {
+      expect(new BetaExpression("ai ~ 'x%'")).toLog(
+        errorMessage(
+          "'~' cannot match number against a pattern, the left side of '~' must be a string"
+        )
+      );
+    });
+    test('disallow match with null', () => {
+      expect(new BetaExpression('astr !~ null')).toLog(
+        errorMessage("'!~' cannot match null, use 'is not null' instead")
+      );
+    });
     test('apply as equality', () => {
       expect("'forty-two' ? 'fifty-four'").compilesTo(
         '{{"forty-two"} = {"fifty-four"}}'

@@ -263,7 +263,11 @@ describe.each(runtimes.runtimeList)(
         aggregate: aircraft.aircraft_count
         aggregate: model_count
       }
-    `).toMatchResult(joinTestModel, {model_count: 59104});
+    `).toMatchResult(joinTestModel, {
+        state: 'CA',
+        aircraft_count: 367,
+        model_count: 277,
+      });
     });
 
     it(`hand join symmetric agg - ${databaseName}`, async () => {
@@ -274,7 +278,7 @@ describe.each(runtimes.runtimeList)(
       }
     `).toMatchResult(joinTestModel, {
         total_seats: 452415,
-        aircraft_count: 62644,
+        aircraft_count: 3599,
       });
     });
   }

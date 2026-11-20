@@ -288,7 +288,13 @@ export class QueryStruct {
     public structDef: StructDef,
     readonly sourceArguments: Record<string, Argument> | undefined,
     parent: ParentQueryStruct | ParentQueryModel,
-    readonly prepareResultOptions: PrepareResultOptions
+    readonly prepareResultOptions: PrepareResultOptions,
+    /**
+     * An array's struct whose identifier names an element inside a dialect's
+     * lambda, where the array is computed on in place: its fields are then
+     * read as `element[...]` references.
+     */
+    readonly isLambdaElement = false
   ) {
     if ('model' in parent) {
       this.model = parent.model;
@@ -477,13 +483,6 @@ export class QueryStruct {
       return this.getIdentifier();
     }
   }
-
-  /**
-   * Set on an array's struct whose identifier names an element inside a
-   * dialect's lambda, where the array is computed on in place: its fields
-   * are then read as `element[...]` references.
-   */
-  isLambdaElement = false;
 
   /** What a field of this struct is read from, for `sqlFieldReference`. */
   fieldReferenceType(): FieldReferenceType {

@@ -33,8 +33,11 @@ export class NestFieldDeclaration
   getFieldDef(fs: FieldSpace): model.TurtleDef {
     if (this.turtleDef) return this.turtleDef;
     if (fs.isQueryFieldSpace()) {
+      // A nest's view runs on the query's input, whichever space asks for
+      // it; the definition is built once and kept.
+      const input = fs.inputSpace();
       const {pipeline, annotations} = this.view.pipelineComp(
-        fs,
+        input,
         fs.outputSpace()
       );
       const refSummary =

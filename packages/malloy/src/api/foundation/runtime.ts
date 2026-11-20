@@ -111,6 +111,15 @@ class FluentState<T> {
   }
 }
 
+/**
+ * Malloy text, or the URL of a file to read. Tested with `typeof`, not
+ * `instanceof URL`: a host embedding Malloy may make URLs with its own URL
+ * class, and Malloy only calls `toString()` on one.
+ */
+function compilableFrom(x: string | URL): {source: string} | {url: URL} {
+  return typeof x === 'string' ? {source: x} : {url: x};
+}
+
 // =============================================================================
 // Runtime
 // =============================================================================
@@ -508,7 +517,7 @@ export class Runtime {
     options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
-    const compilable = source instanceof URL ? {url: source} : {source};
+    const compilable = compilableFrom(source);
     return new ModelMaterializer(
       this,
       async () => {
@@ -915,7 +924,7 @@ export class ModelMaterializer extends FluentState<Model> {
       ...callQueryOptions,
     };
     return this.makeQueryMaterializer(async () => {
-      const compilable = query instanceof URL ? {url: query} : {source: query};
+      const compilable = compilableFrom(query);
       const queryModel = await Malloy.compile({
         ...compilable,
         urlReader: this.runtime.urlReader,
@@ -1010,8 +1019,7 @@ export class ModelMaterializer extends FluentState<Model> {
       async () => {
         const urlReader = this.runtime.urlReader;
         const connections = this.runtime.connections;
-        const compilable =
-          query instanceof URL ? {url: query} : {source: query};
+        const compilable = compilableFrom(query);
         const model = await this.getModel();
         const queryModel = await Malloy.compile({
           ...compilable,

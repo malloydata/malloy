@@ -17,6 +17,7 @@ async function main() {
     token: process.env['DATABRICKS_TOKEN'],
     defaultCatalog: process.env['DATABRICKS_CATALOG'],
     defaultSchema: process.env['DATABRICKS_SCHEMA'],
+    proxy: process.env['DATABRICKS_HTTPS_PROXY'],
   });
 
   const sql = process.argv[2];

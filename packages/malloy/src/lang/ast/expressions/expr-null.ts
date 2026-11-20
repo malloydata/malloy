@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {BinaryMalloyOperator, FieldSpace} from '..';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue, literalExprValue} from '../types/expr-value';
@@ -51,6 +52,10 @@ export class ExprNULL extends ExpressionDef {
       return doIsNull(fs, op, left);
     }
     return super.apply(fs, op, left, true);
+  }
+
+  getStableLiteral(): Malloy.LiteralValue {
+    return {kind: 'null_literal'};
   }
 }
 

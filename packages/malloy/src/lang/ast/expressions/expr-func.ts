@@ -492,7 +492,7 @@ export class ExprFunc extends ExpressionDef {
         path: structPath || [],
         at: this.location,
       };
-      if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
+      if (isAsymmetric) funcUsage.uniqueKeyRequirement = true;
       if (isAnalytic) funcUsage.analyticFunctionUse = true;
       aggregateFunctionUsage.push(funcUsage);
     }

@@ -108,28 +108,59 @@ describe('array queries', () => {
     expect(segment.activeJoins).toEqual([{path: ['astruct']}]);
   });
 
-  test('without a correlated subquery, a shape which cannot run in place is a translation error', () => {
-    const presto = (arrow: string) => model`
+  test('where the dialect returns no arrays, only one value', () => {
+    const onPresto = (arrow: string) => model`
       ##! experimental.array_queries
       source: p is _presto_.table('aTable')
       run: p -> { group_by: t is ${arrow} }
     `;
-    expect(presto('astruct -> { aggregate: n is column.sum() }')).toTranslate();
     expect(
-      presto('astruct -> { select: column; where: column > 1 }')
+      onPresto('astruct -> { aggregate: n is column.sum() }')
     ).toTranslate();
-    expect(presto('astruct -> { group_by: column }')).toLog(
-      errorMessage(/can only query an array.*group_by/)
+    for (const arrow of [
+      'astruct -> { select: column; where: column > 1 }',
+      'astruct -> { group_by: column }',
+      'astruct -> { aggregate: n is count() } -> { select: n }',
+    ]) {
+      expect(onPresto(arrow)).toLog(
+        errorMessage(/can only query an array for one value/)
+      );
+    }
+  });
+
+  test('array functions compute one aggregate, and no having:', () => {
+    const onPresto = (arrow: string) => model`
+      ##! experimental.array_queries
+      source: p is _presto_.table('aTable')
+      run: p -> { group_by: t is ${arrow} }
+    `;
+    const onPostgres = (arrow: string) => model`
+      ##! experimental.array_queries
+      source: p is _pg_.table('aTable')
+      run: p -> { group_by: t is ${arrow} }
+    `;
+    const onDuckDB = (arrow: string) => model`
+      ##! experimental.array_queries
+      run: a -> { group_by: t is ${arrow} }
+    `;
+    const having = 'astruct -> { aggregate: n is count(); having: n > 1 }';
+    const notOne = 'astruct -> { aggregate: n is column.sum() / count() }';
+    // Presto has only its array functions
+    expect(onPresto(having)).toLog(
+      errorMessage(/cannot query this array: it has a `having:`/)
     );
-    expect(
-      presto('astruct -> { aggregate: n is count(); having: n > 1 }')
-    ).toLog(errorMessage(/can only query an array.*having/));
-    expect(presto('astruct -> { select: column } -> { select: column }')).toLog(
-      errorMessage(/can only query an array.*several stages/)
+    expect(onPresto(notOne)).toLog(
+      errorMessage(/cannot query this array: `n` is not one aggregate/)
     );
-    expect(
-      presto('astruct -> { aggregate: n is column.sum() / count() }')
-    ).toLog(errorMessage(/can only query an array.*not one aggregate/));
+    // Postgres computes one value as a correlated subquery, and DuckDB
+    // falls back on one, so neither is limited to one aggregate
+    for (const on of [onPostgres, onDuckDB]) {
+      expect(on(having)).toTranslate();
+      expect(on(notOne)).toTranslate();
+    }
+    expect(onPostgres('astruct -> { select: column }')).toLog(
+      errorMessage(/can only query an array for one value/)
+    );
   });
 
   test('an array of scalars, through each', () => {
@@ -227,12 +258,68 @@ describe('array queries', () => {
     });
   });
 
-  test('for now, not several aggregates', () => {
+  test('several aggregates are refused', () => {
     expect(model`
       ##! experimental.array_queries
       run: a -> {
         group_by: t is astruct -> { aggregate: n is count(), m is column.sum() }
       }
     `).not.toTranslate();
+  });
+
+  describe('messages', () => {
+    test('a name that is not defined is reported once', () => {
+      expect(model`
+        ##! experimental.array_queries
+        run: a -> { select: x is nosuch -> { aggregate: n is count() } }
+      `).toLog(errorMessage("'nosuch' is not defined"));
+    });
+
+    test('a field of the row, inside the arrow', () => {
+      expect(model`
+        ##! experimental.array_queries
+        run: a -> {
+          select: x is astruct -> {
+            aggregate: n is count() { where: ai > 1 }
+          }
+        }
+      `).toLog(
+        errorMessage(
+          "'ai' is a field of the row; the query after 'astruct ->' sees only the fields of its elements"
+        )
+      );
+    });
+
+    test('a parameter of the source, inside the arrow', () => {
+      expect(model`
+        ##! experimental.array_queries
+        ##! experimental.parameters
+        source: p(lim::number) is a extend {
+          dimension: x is astruct -> {
+            aggregate: n is count() { where: column > lim }
+          }
+        }
+        run: p(lim is 1) -> { select: x }
+      `).toLog(
+        errorMessage(
+          "'lim' is a parameter of the source; the query after 'astruct ->' sees only the fields of its elements"
+        )
+      );
+    });
+
+    test('an output field of the query', () => {
+      expect(model`
+        ##! experimental.array_queries
+        run: a -> {
+          group_by: ai
+          nest: types is { group_by: astr; aggregate: c is count() }
+          having: types -> { aggregate: n is count() } > 3
+        }
+      `).toLog(
+        errorMessage(
+          "'types' is an output field of this query; only an array of the source can be queried with ->"
+        )
+      );
+    });
   });
 });

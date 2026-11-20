@@ -6,22 +6,20 @@
 import type {QueryInfo} from '../dialect';
 import type {QueryStruct} from './query_node';
 import type {
+  DocumentLocation,
   Expr,
   OrderBy,
   PipeSegment,
   TurtleDef,
-  UniqueKeyRequirement,
 } from './malloy_types';
 import {MalloyCompileError} from './malloy_compile_error';
 import {
-  activeName,
   isIndexSegment,
   isRawSegment,
   isJoined,
   expressionIsAnalytic,
   hasExpression,
   isAtomic,
-  mergeUniqueKeyRequirement,
   isTemporalType,
 } from './malloy_types';
 import {AndChain, caseGroup, type GenerateState} from './utils';
@@ -102,7 +100,10 @@ export class FieldInstanceField implements FieldInstance {
       this.f.fieldDef.type === 'string' &&
       this.f.fieldDef.name === '__distinct_key'
     ) {
-      return this.generateDistinctKeyExpression();
+      return FieldInstanceField.exprCompiler(this.parent, this.f.parent, {
+        node: 'field',
+        path: ['__distinct_key'],
+      });
     }
 
     // Normal field expression generation
@@ -124,46 +125,6 @@ export class FieldInstanceField implements FieldInstance {
           }
         : undefined
     );
-  }
-
-  private generateDistinctKeyExpression(): string {
-    if (this.f.parent.primaryKey()) {
-      const pk = this.f.parent.getPrimaryKeyField(this.f.fieldDef);
-      const pkName = activeName(pk.fieldDef);
-      const pkField = this.parent.getField(pkName);
-      return pkField.generateExpression();
-    } else if (this.f.parent.structDef.type === 'array') {
-      const parentDistinctKey = this.f.parent.parent?.getDistinctKey();
-      if (parentDistinctKey && this.parent.parent) {
-        const keyField = this.parent.parent.getField('__distinct_key');
-        const parentKeySQL = keyField.generateExpression();
-        return this.f.parent.dialect.sqlMakeUnnestKey(
-          parentKeySQL,
-          this.f.parent.dialect.sqlFieldReference(
-            this.f.parent.getIdentifier(),
-            'table',
-            '__row_id',
-            'string'
-          )
-        );
-      }
-      return this.f.parent.dialect.sqlMakeUnnestKey(
-        '',
-        this.f.parent.dialect.sqlFieldReference(
-          this.f.parent.getIdentifier(),
-          'table',
-          '__row_id',
-          'string'
-        )
-      );
-    } else {
-      return this.f.parent.dialect.sqlFieldReference(
-        this.f.parent.getIdentifier(),
-        'table',
-        '__distinct_key',
-        'string'
-      );
-    }
   }
 
   getAnalyticalSQL(forPartition: boolean): string {
@@ -475,17 +436,14 @@ export class FieldInstanceResult implements FieldInstance {
 
   addStructToJoin(
     qs: QueryStruct,
-    uniqueKeyRequirement: UniqueKeyRequirement
-  ): void {
+    uniqueKeyRequirement: boolean
+  ): JoinInstance {
     const name = qs.getIdentifier();
 
     let join = this.root().joins.get(name);
     if (join) {
-      join.uniqueKeyRequirement = mergeUniqueKeyRequirement(
-        join.uniqueKeyRequirement,
-        uniqueKeyRequirement
-      );
-      return;
+      join.uniqueKeyRequirement ||= uniqueKeyRequirement;
+      return join;
     }
 
     // if we have a parent, join it first.
@@ -493,18 +451,15 @@ export class FieldInstanceResult implements FieldInstance {
     const parentStruct = qs.parent?.getJoinableParent();
     if (parentStruct) {
       // add dependant expressions first...
-      this.addStructToJoin(parentStruct, undefined);
-      parent = this.root().joins.get(parentStruct.getIdentifier());
+      parent = this.addStructToJoin(parentStruct, false);
     }
 
     if (!(join = this.root().joins.get(name))) {
       join = new JoinInstance(qs, name, parent);
       this.root().joins.set(name, join);
     }
-    join.uniqueKeyRequirement = mergeUniqueKeyRequirement(
-      join.uniqueKeyRequirement,
-      uniqueKeyRequirement
-    );
+    join.uniqueKeyRequirement ||= uniqueKeyRequirement;
+    return join;
   }
 
   root(): FieldInstanceResultRoot {
@@ -615,7 +570,8 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
   compileArrayQuery?: (
     array: QueryStruct,
     arraySQL: string,
-    pipeline: PipeSegment[]
+    pipeline: PipeSegment[],
+    at: DocumentLocation | undefined
   ) => string;
 
   constructor(turtleDef: TurtleDef) {
@@ -668,26 +624,35 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
       }
     }
     // console.log(`LEAFIEST: ${leafiest}`);
+
+    // A right or full join writes unmatched rows for the sources before it,
+    // down to the query's own source.
+    const rootCanBeUnmatched = [...this.joins.values()].some(j =>
+      j.forceAllSymmetricCalculations()
+    );
     for (const [name, join] of this.joins) {
       join.leafiest = name === leafiest;
+      // An inner join has no unmatched rows, but where the source declares a
+      // key, a row whose key is NULL is still skipped as though it were one,
+      // so that the answer does not depend on how the join is written. A
+      // manufactured key is never NULL, so without a declared key there is
+      // nothing to skip.
+      const skipsNullKeys =
+        !join.inner || join.queryStruct.primaryKey() !== undefined;
+      join.canBeUnmatched =
+        skipsNullKeys && (join.parent !== undefined || rootCanBeUnmatched);
     }
 
     // figure out which joins we need to manufacture distinct keys for.
     //  Nested Unique keys are dependant on the primary key of the parent
     //  and the table.
     for (const [_name, join] of this.joins) {
-      // in a one_to_many join we need a key to count there may be a failed
-      //  match in a left join.
-      // users -> {
-      //   group_by: user_id
-      //   aggregate: order_count is orders.count()
+      // An asymmetric aggregate needs the key of its source when the source
+      //  is fanned out, to count each row once, and when the source can be
+      //  unmatched, to tell its rows from the unmatched ones.
       if (
-        // we have a leafiest count() joined subtree
-        (join.leafiest &&
-          join.parent !== undefined &&
-          join.uniqueKeyRequirement?.isCount) ||
-        // or not leafiest and we use an asymetric function
-        (!join.leafiest && join.uniqueKeyRequirement)
+        join.uniqueKeyRequirement &&
+        (!join.leafiest || join.canBeUnmatched)
       ) {
         let j: JoinInstance | undefined = join;
         while (j) {

@@ -25,9 +25,10 @@ import {
 import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import {flattenNested} from '../array_lambdas';
 import type {
   ArrayAggregate,
-  ArraySelect,
+  ArrayQuerySupport,
   CivilTime,
   CompiledOrderBy,
   DialectFieldList,
@@ -49,6 +50,11 @@ import type {TinyToken} from '../tiny_parser';
 import {TinyParseError, TinyParser} from '../tiny_parser';
 import type {ValidateTablePathResult} from '../table-path';
 import {validateDuckDBTablePath} from './table-path-parser';
+
+// DuckDB 1.3 added `lambda x: body`; 2.0 refuses the older `x -> body`.
+function duckdbLambda(param: string, body: string): string {
+  return `lambda ${param}: ${body}`;
+}
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
@@ -78,14 +84,20 @@ export class DuckDBDialect extends PostgresBase {
   name = 'duckdb';
   experimental = false;
   defaultNumberType = 'DOUBLE';
-  defaultDecimalType = 'NUMERIC';
   hasFinalStage = false;
+  // Both DuckDB connections return integers too large for a JS number as strings
+  supportsBigIntPrecision = true;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
-  supportsArrayQueries = true;
+  // An aggregate is computed with list functions; any other query on an
+  // array is a correlated subquery over UNNEST.
+  arrayQueries: ArrayQuerySupport = {
+    value: 'lambdas',
+    innerLambdaReadsOuter: true,
+    arrays: true,
+  };
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = true;
@@ -222,8 +234,26 @@ export class DuckDBDialect extends PostgresBase {
     return `LEFT JOIN LATERAL UNNEST(${source}) WITH ORDINALITY as ${alias}_outer(${alias}, __row_id) ON true`;
   }
 
+  // The element is the column `alias`. The row number is read as a member of
+  // `alias_outer`, so it goes out as a struct of that name, and goes out
+  // always: unnested rows are ordered by it whether or not a key needs it.
+  sqlSelectUnnestedArray(
+    alias: string,
+    _fieldList: DialectFieldList,
+    _needDistinctKey: boolean,
+    _isArray: boolean
+  ): Map<string, string> {
+    const rowId = this.sqlFieldReference(alias, 'table', '__row_id', 'string');
+    return new Map([
+      [alias, alias],
+      [`${alias}_outer`, `STRUCT_PACK(${rowId})`],
+    ]);
+  }
+
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
-    return 'uses sumDistinctFunction, should not be called';
+    throw new Error(
+      'DuckDB sums distinct rows without a hash, so asking it for one is a bug in the compiler'
+    );
   }
 
   sqlGenerateUUID(): string {
@@ -269,21 +299,31 @@ export class DuckDBDialect extends PostgresBase {
 
   // DuckDB runs a correlated subquery over UNNEST as a full unnest and join,
   // so a query on an array which is one aggregate is computed with list
-  // functions instead. The lambda parameter is named `element`, which the
-  // caller chooses so that no column of that name is in scope: a column
-  // would win over the parameter.
-  sqlArrayAggregate({
-    source,
-    element,
-    function: func,
-    value,
-    filter,
-  }: ArrayAggregate): string {
+  // functions instead.
+  sqlArrayAggregate(aggregate: ArrayAggregate): string {
+    const {
+      source,
+      element,
+      function: func,
+      value,
+      filter,
+      resultType,
+    } = aggregate;
+    const flat = flattenNested(aggregate, {
+      filter: 'LIST_FILTER',
+      transform: 'LIST_TRANSFORM',
+      flatten: 'FLATTEN',
+      empty: '[]',
+      lambda: duckdbLambda,
+    });
+    if (flat) {
+      return this.sqlArrayAggregate({...flat, function: func, resultType});
+    }
     const elements = filter
-      ? `LIST_FILTER(${source}, ${element} -> ${filter})`
+      ? `LIST_FILTER(${source}, ${duckdbLambda(element, filter)})`
       : source;
     const values = value
-      ? `LIST_TRANSFORM(${elements}, ${element} -> ${value})`
+      ? `LIST_TRANSFORM(${elements}, ${duckdbLambda(element, value)})`
       : elements;
     switch (func) {
       case 'count':
@@ -299,46 +339,6 @@ export class DuckDBDialect extends PostgresBase {
       case 'max':
         return `LIST_MAX(${values})`;
     }
-  }
-
-  // An order_by is LIST_GRADE_UP of the keys, which gives the elements'
-  // positions in order, and LIST_SELECT of those positions. It is not
-  // stable on long lists, so several keys are one sort on a record of them,
-  // not one sort per key. A record's nulls sort last ascending but not
-  // descending, so several keys are only done when all are ascending; the
-  // rest is left to the correlated subquery. The list is sorted inside a
-  // lambda over a one-element list, so that it is named once and computed
-  // once, rather than written out for both LIST_SELECT and LIST_GRADE_UP.
-  sqlArraySelect({
-    source,
-    element,
-    fields,
-    filter,
-    orderBy = [],
-    limit,
-  }: ArraySelect): string | undefined {
-    if (orderBy.length > 1 && orderBy.some(o => o.dir === 'desc')) {
-      return undefined;
-    }
-    let elements = filter
-      ? `LIST_FILTER(${source}, ${element} -> ${filter})`
-      : source;
-    if (orderBy.length > 0) {
-      const key =
-        orderBy.length === 1
-          ? `(${orderBy[0].sql})`
-          : `{${orderBy.map((o, i) => `'k${i}': (${o.sql})`).join(', ')}}`;
-      const dir = orderBy[0].dir === 'desc' ? 'DESC' : 'ASC';
-      const list = `${element}_list`;
-      elements = `LIST_TRANSFORM([${elements}], ${list} -> LIST_SELECT(${list}, LIST_GRADE_UP(LIST_TRANSFORM(${list}, ${element} -> ${key}), '${dir}', 'NULLS LAST')))[1]`;
-    }
-    if (limit !== undefined) {
-      elements = `LIST_SLICE(${elements}, 1, ${limit})`;
-    }
-    const record = fields
-      .map(f => `${this.sqlQuoteIdentifier(f.name)} := ${f.sql}`)
-      .join(', ');
-    return `COALESCE(LIST_TRANSFORM(${elements}, ${element} -> STRUCT_PACK(${record})), [])`;
   }
 
   // LIST() over no rows is null.
@@ -379,7 +379,7 @@ export class DuckDBDialect extends PostgresBase {
     throw new Error('Not implemented Yet');
   }
 
-  sqlSumDistinct(key: string, value: string, funcName: string): string {
+  sqlSumDistinct(key: string, value: string, funcName: 'SUM' | 'AVG'): string {
     // return `sum_distinct(list({key:${key}, val: ${value}}))`;
     return `(
       SELECT ${funcName}(a.val) as value

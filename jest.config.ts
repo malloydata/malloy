@@ -145,6 +145,7 @@ const config: Config = {
         '<rootDir>/packages/malloy-db-duckdb/',
         '<rootDir>/test/src/databases/duckdb-all/',
       ],
+      testPathIgnorePatterns: connectorUnitIgnored,
     },
     {
       ...defaultConfig,

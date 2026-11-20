@@ -460,7 +460,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   it('many_field.sum() has correct locality', async () => {
     await expect(`
-      source: a is ${databaseName}.table('malloytest.aircraft')
+      source: a is ${databaseName}.table('malloytest.aircraft') extend {
+        primary_key: tail_num
+      }
       source: am is ${databaseName}.table('malloytest.aircraft_models') extend {
         join_many: a on a.aircraft_model_code = a.aircraft_model_code
         dimension: a_year_built is a.year_built
@@ -867,6 +869,219 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `).toMatchResult(testModel, {grandchild_state: 'AL'});
       }
     );
+    // An array is a column of the join above it: the subquery packs that
+    // column, and the array is unnested outside the subquery from it.
+    describe('an array two levels below', () => {
+      const arrayChain = (filterTwo: string) => `
+        source: sf is ${databaseName}.table('malloytest.state_facts')
+        source: three is ${databaseName}.table('malloytest.airports') -> {
+          group_by: state
+          nest: types is { group_by: fac_type; aggregate: c is count() }
+        }
+        source: two is sf extend {
+          ${filterTwo}
+          join_one: three on three.state = state
+        }
+        source: one is sf extend {
+          where: state ~ 'A%'
+          join_one: two on two.state = state
+        }
+        source: zero is sf extend { join_one: one on one.state = state }
+      `;
+
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'read and aggregated',
+        async () => {
+          await expect(`
+            ${arrayChain('')}
+            run: zero -> {
+              group_by: s is one.two.three.state
+              aggregate: n is one.two.three.types.count()
+              order_by: s
+              limit: 2
+            }
+          `).toMatchResult(testModel, {s: 'AK', n: 3}, {s: 'AL', n: 5});
+
+          await expect(`
+            ${arrayChain('')}
+            run: zero -> {
+              where: one.two.three.state = 'AK'
+              group_by: fac_type is one.two.three.types.fac_type
+              order_by: fac_type
+              limit: 1
+            }
+          `).toMatchResult(testModel, {fac_type: 'AIRPORT'});
+        }
+      );
+
+      // An array the filtered join reads itself, in its `where:` or in an
+      // `on` inside it, stays inside the subquery.
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'read by the filtered join itself',
+        async () => {
+          const twoArrays = `
+            source: sf is ${databaseName}.table('malloytest.state_facts')
+            source: three is ${databaseName}.table('malloytest.airports') -> {
+              group_by: state
+              nest: types is { group_by: fac_type; aggregate: c is count() }
+            }
+            source: two is sf extend {
+              join_one: three on three.state = state
+              join_one: sf2 is sf on sf2.state = three.types.fac_type
+            }`;
+          // Of Alabama's facility types, only airports number over 100
+          await expect(`
+            ${twoArrays}
+            source: one is two extend { where: three.types.c > 100 }
+            source: zero is sf extend { join_one: one on one.state = state }
+            run: zero -> {
+              where: state = 'AL'
+              select: state, x is one.three.state
+            }
+          `).toMatchResult(testModel, {state: 'AL', x: 'AL'});
+          // No facility type is a state's name
+          await expect(`
+            ${twoArrays}
+            source: one is two extend { where: state ~ 'A%' }
+            source: zero is sf extend { join_one: one on one.state = state }
+            run: zero -> {
+              where: state = 'AL'
+              aggregate: n is count(one.sf2.state)
+            }
+          `).toMatchResult(testModel, {n: 0});
+        }
+      );
+
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'below two filtered joins',
+        async () => {
+          await expect(`
+            ${arrayChain("where: state != 'AK'")}
+            run: zero -> {
+              group_by: s is one.two.three.state
+              aggregate: n is one.two.three.types.count()
+              order_by: s
+              limit: 1
+            }
+          `).toMatchResult(testModel, {s: 'AL', n: 5});
+        }
+      );
+    });
+
+    // An array the filtered join's `where:` reads is unnested inside its
+    // subquery; read from outside, it answers as the filtered source does on
+    // its own.
+    describe('an array the filtered join reads, read outside it', () => {
+      // Ten values, as the result matchers read at most ten rows
+      const countdown = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
+      const readArrays = `
+        source: sf is ${databaseName}.table('malloytest.state_facts')
+        source: by_state is ${databaseName}.table('malloytest.airports') -> {
+          group_by: state
+          nest: types is { group_by: fac_type; aggregate: c is count() }
+        }
+        source: big is by_state extend { where: types.c > 100 }
+        source: nums is sf -> { select: state, top is [1, 2, 3] }
+        source: big_nums is nums extend { where: top.each > 1 }
+        source: long is sf -> { select: state, la is [${countdown.join(', ')}] }
+        source: long_f is long extend { where: la.each > 0 }
+        source: zero is sf extend {
+          join_one: b is big on b.state = state
+          join_one: bn is big_nums on bn.state = state
+          join_one: lf is long_f on lf.state = state
+        }
+      `;
+
+      test.when(
+        runtime.dialect.supportsComplexFilteredSources &&
+          runtime.dialect.requiresExplicitUnnestOrdering
+      )('array of values keeps its order', async () => {
+        await expect(`
+          ${readArrays}
+          run: zero -> {
+            where: state = 'AL'
+            select: state, e is lf.la.each
+            order_by: state
+          }
+        `).toEqualResult(
+          testModel,
+          countdown.filter(n => n > 0).map(e => ({state: 'AL', e}))
+        );
+      });
+
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'array of records aggregated',
+        async () => {
+          await expect(`
+            ${readArrays}
+            run: zero -> {
+              where: state ~ 'A%'
+              group_by: state
+              aggregate:
+                rows is b.count()
+                n is b.types.count()
+                total is b.types.c.sum()
+              order_by: state
+              limit: 2
+            }
+          `).toMatchResult(
+            testModel,
+            {state: 'AK', rows: 1, n: 2, total: 578},
+            {state: 'AL', rows: 1, n: 1, total: 180}
+          );
+        }
+      );
+
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'array of records selected',
+        async () => {
+          await expect(`
+            ${readArrays}
+            run: zero -> {
+              where: state = 'AK'
+              select: state, fac_type is b.types.fac_type, c is b.types.c
+              order_by: fac_type
+            }
+          `).toEqualResult(testModel, [
+            {state: 'AK', fac_type: 'AIRPORT', c: 474},
+            {state: 'AK', fac_type: 'SEAPLANE BASE', c: 104},
+          ]);
+        }
+      );
+
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'array of values aggregated',
+        async () => {
+          await expect(`
+            ${readArrays}
+            run: zero -> {
+              where: state = 'AL'
+              aggregate:
+                rows is bn.count()
+                n is bn.top.count()
+                total is bn.top.each.sum()
+            }
+          `).toMatchResult(testModel, {rows: 1, n: 2, total: 5});
+        }
+      );
+
+      test.when(runtime.dialect.supportsComplexFilteredSources)(
+        'array of values selected',
+        async () => {
+          await expect(`
+            ${readArrays}
+            run: zero -> {
+              where: state = 'AL'
+              select: state, e is bn.top.each
+              order_by: e
+            }
+          `).toEqualResult(testModel, [
+            {state: 'AL', e: 2},
+            {state: 'AL', e: 3},
+          ]);
+        }
+      );
+    });
   });
 
   test('joined filtered explores with NO dependencies', async () => {

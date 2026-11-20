@@ -33,9 +33,11 @@ import {
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {LambdaArrayDialect} from '../array_lambdas';
+import {lambdaArrayAggregate} from '../array_lambdas';
 import type {
   ArrayAggregate,
-  ArraySelect,
+  ArrayQuerySupport,
   CivilTime,
   CompiledOrderBy,
   DialectFieldList,
@@ -43,6 +45,7 @@ import type {
   OrderByClauseType,
   QueryInfo,
   TimeOffset,
+  SumDistinctByHash,
 } from '../dialect';
 import {queryZone, turtleGroupSetCondition} from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
@@ -134,20 +137,31 @@ export class TrinoDialect extends PostgresBase {
   name = 'trino';
   experimental = false;
   defaultNumberType = 'DOUBLE';
-  defaultDecimalType = 'DECIMAL';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = true;
+  // Trino 484 rounds a wide decimal product and Trino 476 fails on one. A
+  // dialect cannot tell which it is writing for, and the SQL for an engine
+  // which rounds is exact on both.
+  // DOUBLE, because Trino gives a decimal quotient no more fractional digits
+  // than its dividend, which would leave an average with the 8 of a sum.
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'shifty',
+    roundsWideProducts: true,
+    resultType: 'DOUBLE',
+  };
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
-  // A query on an array runs only where it is computed in place, with
-  // lambdas. Presto rejects correlated subqueries ("Given correlated
-  // subquery is not supported"); Trino has them, but its head for an array
-  // (sqlUnnestPipelineHead with isScalarArray) is not written yet.
-  supportsArrayQueries = true;
-  supportsCorrelatedArrayQueries = false;
+  // A query on an array computes one value, with lambdas. Its correlated
+  // subquery would run only for a plain grouping (Trino's optimizer
+  // rewrites nothing else as a join; Presto has none), so it returns no
+  // arrays.
+  arrayQueries: ArrayQuerySupport = {
+    value: 'lambdas',
+    innerLambdaReadsOuter: true,
+    arrays: false,
+  };
   supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
@@ -285,92 +299,40 @@ export class TrinoDialect extends PostgresBase {
       return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore) ON TRUE`;
     }
   }
-  // Arrays are computed on in place with lambdas: filter, transform,
-  // reduce, array_sort with a comparator, and slice. Lambda parameters are
-  // named after the element so that they cannot be hidden by a column.
-  // array_max and array_min are null if any element is, so nulls are
-  // filtered out first, as an aggregate ignores them.
-  sqlArrayAggregate({
-    source,
-    element,
-    function: func,
-    value,
-    filter,
-    resultType,
-  }: ArrayAggregate): string {
-    const elements = filter
-      ? `filter(${source}, ${element} -> ${filter})`
-      : source;
-    const values = value
-      ? `transform(${elements}, ${element} -> ${value})`
-      : elements;
-    const v = `${element}_value`;
-    const acc = `${element}_acc`;
-    const nonNull = `filter(${values}, ${v} -> ${v} IS NOT NULL)`;
-    switch (func) {
-      case 'count':
-        return `COALESCE(cardinality(${elements}), 0)`;
-      case 'distinct':
-        return `COALESCE(cardinality(array_distinct(${nonNull})), 0)`;
-      case 'sum': {
-        // reduce's state has one type, so a sum of integers is a BIGINT, and
-        // any other sum a DOUBLE.
-        const integral =
-          resultType?.type === 'number' &&
-          (resultType.numberType === 'integer' ||
-            resultType.numberType === 'bigint');
-        const zero = `CAST(0 AS ${integral ? 'BIGINT' : 'DOUBLE'})`;
-        return `COALESCE(reduce(${nonNull}, ${zero}, (${acc}, ${v}) -> ${acc} + ${v}, ${acc} -> ${acc}), 0)`;
-      }
-      case 'avg': {
-        const state = 'ROW(s DOUBLE, n BIGINT)';
-        return `reduce(${nonNull}, CAST(ROW(0.0, 0) AS ${state}), (${acc}, ${v}) -> CAST(ROW(${acc}.s + ${v}, ${acc}.n + 1) AS ${state}), ${acc} -> IF(${acc}.n = 0, NULL, ${acc}.s / ${acc}.n))`;
-      }
-      case 'min':
-        return `array_min(${nonNull})`;
-      case 'max':
-        return `array_max(${nonNull})`;
-    }
-  }
 
-  sqlArraySelect({
-    source,
-    element,
-    fields,
-    filter,
-    orderBy = [],
-    comparator,
-    limit,
-  }: ArraySelect): string | undefined {
-    let elements = filter
-      ? `filter(${source}, ${element} -> ${filter})`
-      : source;
-    if (orderBy.length > 0) {
-      if (comparator === undefined) {
-        return undefined;
-      }
-      const {left, right, keys} = comparator();
-      // Each key in turn, nulls last either way; equal on every key is 0.
-      let compare = '0';
-      for (let i = orderBy.length - 1; i >= 0; i--) {
-        const [before, after] =
-          orderBy[i].dir === 'desc' ? ['1', '-1'] : ['-1', '1'];
-        const l = `(${keys[i].left})`;
-        const r = `(${keys[i].right})`;
-        compare = `CASE WHEN ${l} IS NULL AND ${r} IS NULL THEN ${compare} WHEN ${l} IS NULL THEN 1 WHEN ${r} IS NULL THEN -1 WHEN ${l} < ${r} THEN ${before} WHEN ${l} > ${r} THEN ${after} ELSE ${compare} END`;
-      }
-      elements = `array_sort(${elements}, (${left}, ${right}) -> ${compare})`;
+  // A scalar element is the column `value` of the unnest named `alias`, read
+  // as `alias.value`, so it goes out as a ROW named `alias`; a record is
+  // already the column `alias`. The row number is its own column.
+  sqlSelectUnnestedArray(
+    alias: string,
+    fieldList: DialectFieldList,
+    needDistinctKey: boolean,
+    isArray: boolean
+  ): Map<string, string> {
+    const columns = new Map([
+      [alias, isArray ? this.sqlSelectAliasAsStruct(alias, fieldList) : alias],
+    ]);
+    if (needDistinctKey) {
+      const rowId = this.sqlFieldReference(
+        alias,
+        'table',
+        '__row_id',
+        'string'
+      );
+      columns.set(rowId, rowId);
     }
-    if (limit !== undefined) {
-      elements = `slice(${elements}, 1, ${limit})`;
-    }
-    const fieldList: DialectFieldList = fields.map(f => ({
-      typeDef: f.typeDef,
-      sqlExpression: f.sql,
-      rawName: f.name,
-    }));
-    const record = `CAST(ROW(${fields.map(f => f.sql).join(', ')}) AS ROW(${this.buildTypeExpression(fieldList)}))`;
-    return `COALESCE(transform(${elements}, ${element} -> ${record}), ARRAY[])`;
+    return columns;
+  }
+  private readonly lambdaArrays: LambdaArrayDialect = {
+    size: a => `COALESCE(cardinality(${a}), 0)`,
+    reduce: (a, init, acc, v, step, finish) =>
+      `reduce(${a}, ${init}, (${acc}, ${v}) -> ${step}, ${acc} -> ${finish})`,
+    sumCount: (s, n) => `CAST(ROW(${s}, ${n}) AS ROW(s DOUBLE, n BIGINT))`,
+    emptyArray: 'ARRAY[]',
+  };
+
+  sqlArrayAggregate(aggregate: ArrayAggregate): string {
+    return lambdaArrayAggregate(aggregate, this.lambdaArrays);
   }
 
   static dtype = 'DECIMAL(38,0)';
@@ -381,20 +343,6 @@ export class TrinoDialect extends PostgresBase {
     const upperPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 1, 15),16) as ${TrinoDialect.dtype}) * CAST('4294967296' AS ${TrinoDialect.dtype}) `;
     const lowerPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 16, 8),16) as ${TrinoDialect.dtype}) `;
     return `(${upperPart} + ${lowerPart})`;
-  }
-
-  sqlSumDistinct(key: string, value: string, funcName: string): string {
-    const hashKey = this.sqlSumDistinctHashedKey(key);
-    const scale = 100000000;
-    const v = `CAST(COALESCE(${value},0)*${scale} as ${TrinoDialect.dtype})`;
-
-    const sqlSum = `CAST(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}) AS DOUBLE)/${scale}`;
-    if (funcName === 'SUM') {
-      return sqlSum;
-    } else if (funcName === 'AVG') {
-      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
-    }
-    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   sqlGenerateUUID(): string {
@@ -826,6 +774,11 @@ ${indent(sql)}
 
 export class PrestoDialect extends TrinoDialect {
   name = 'presto';
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'shifty',
+    roundsWideProducts: false,
+    resultType: 'DOUBLE',
+  };
   supportsPipelinesInViews = false; // what a drag...
   supportsLeftJoinUnnest = false; // we need to fix this....
 

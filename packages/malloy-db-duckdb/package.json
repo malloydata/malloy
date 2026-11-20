@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-duckdb",
-  "version": "0.0.438",
+  "version": "0.0.439",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,6 +25,10 @@
       "browser": "./dist/duckdb_wasm_connection_browser.js",
       "node": "./dist/duckdb_wasm_connection_node.js",
       "types": "./dist/duckdb_wasm_connection_browser.d.ts"
+    },
+    "./host": {
+      "types": "./dist/duckdb_host_connection.d.ts",
+      "default": "./dist/duckdb_host_connection.js"
     }
   },
   "typesVersions": {
@@ -40,6 +44,9 @@
       ],
       "wasm": [
         "./dist/duckdb_wasm_connection_browser.d.ts"
+      ],
+      "host": [
+        "./dist/duckdb_host_connection.d.ts"
       ]
     }
   },
@@ -61,7 +68,7 @@
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.33.1-dev57.0",
     "@duckdb/node-api": "1.5.5-r.4",
-    "@malloydata/malloy": "0.0.438",
+    "@malloydata/malloy": "0.0.439",
     "@motherduck/wasm-client": "0.6.6",
     "apache-arrow": "^17.0.0",
     "web-worker": "^1.5.0"

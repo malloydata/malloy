@@ -46,8 +46,6 @@ import {
 } from '@malloydata/malloy-filter';
 import {booleanValueError, COMPARE_HINT} from '../expressions/boolean-value';
 
-class TypeMismatch extends Error {}
-
 /**
  * Mark a value as belonging to everyone. Writing into a memoized value writes
  * into every other holder's copy and into whatever the IR already stored;
@@ -420,6 +418,27 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
   return undefined;
 }
 
+function matchMismatchMessage(
+  op: '~' | '!~',
+  lhs: ExprValue,
+  rhs: ExprValue
+): string {
+  if (rhs.type === 'null') {
+    return `'${op}' cannot match null, use '${op === '~' ? 'is null' : 'is not null'}' instead`;
+  }
+  if (rhs.type === 'string' || rhs.type === 'regular expression') {
+    return `'${op}' cannot match ${lhs.type} against a pattern, the left side of '${op}' must be a string`;
+  }
+  const eq = op === '~' ? '=' : '!=';
+  if (lhs.type === rhs.type) {
+    return `'${op}' does not compare two ${lhs.type} values, use '${eq}' instead`;
+  }
+  if (TD.isAnyTimestamp(lhs) && TD.isAnyTimestamp(rhs)) {
+    return `'${op}' does not compare ${lhs.type} to ${rhs.type}, use '${eq}' instead`;
+  }
+  return `'${op}' cannot compare ${lhs.type} to ${rhs.type}`;
+}
+
 /**
  * A boolean can only be compared, with anything, on a dialect with boolean
  * values. Every comparison operator, applied plainly, as a partial, or
@@ -504,27 +523,26 @@ function equality(
       );
     }
   } else {
-    value = timeCompare(left, lhs, op, rhs) || {
-      node,
-      kids: {left: lhs.value, right: rhs.value},
-    };
-
-    if (
-      lhs.type !== 'error' &&
-      rhs.type !== 'error' &&
-      (op === '~' || op === '!~')
-    ) {
-      if (lhs.type !== 'string' || rhs.type !== 'string') {
-        let regexCmp = regexEqual(lhs, rhs);
-        if (regexCmp) {
-          if (op[0] === '!') {
-            regexCmp = {node: 'not', e: {...regexCmp}};
-          }
-        } else {
-          throw new TypeMismatch("Incompatible types for match('~') operator");
-        }
-        value = regexCmp;
+    const isMatch = op === '~' || op === '!~';
+    if (isMatch && (lhs.type !== 'string' || rhs.type !== 'string')) {
+      const regexCmp = regexEqual(lhs, rhs);
+      if (regexCmp === undefined) {
+        left.logError(
+          'match-operator-type-mismatch',
+          matchMismatchMessage(op, lhs, rhs)
+        );
+        return computedErrorExprValue({
+          dataType: {type: 'boolean'},
+          error: 'match operator type mismatch',
+          from: [lhs, rhs],
+        });
       }
+      value = op === '!~' ? {node: 'not', e: regexCmp} : regexCmp;
+    } else {
+      value = timeCompare(left, lhs, op, rhs) || {
+        node,
+        kids: {left: lhs.value, right: rhs.value},
+      };
     }
   }
 

@@ -632,6 +632,9 @@ function filterToFragments(filter: Malloy.Filter): Fragment[] {
         quoteFilter(filter.filter),
       ];
     case 'literal_equality':
+      if (filter.value.kind === 'null_literal') {
+        return [...expressionToFragments(filter.expression), ' is null'];
+      }
       return [
         ...expressionToFragments(filter.expression),
         ' = ',

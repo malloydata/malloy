@@ -38,6 +38,8 @@ import type {
   FieldReferenceType,
   OrderByClauseType,
   QueryInfo,
+  ArrayQuerySupport,
+  SumDistinctByHash,
 } from '../dialect';
 import {Dialect, EscapeStyle, turtleGroupSetCondition} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
@@ -145,13 +147,15 @@ export class MySQLDialect extends Dialect {
   identifierEscapeStyle = EscapeStyle.Doubled;
   identifierQuoteChar = '`';
   defaultNumberType = 'DOUBLE PRECISION';
-  defaultDecimalType = 'DECIMAL';
   udfPrefix = 'ms_temp.__udf';
   hasFinalStage = false;
   // TODO: this may not be enough for larger casts.
   stringTypeName = 'VARCHAR(255)';
   divisionIsInteger = true;
-  supportsSumDistinctFunction = true;
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'direct',
+    decimalType: 'DECIMAL(55, 10)',
+  };
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
@@ -167,6 +171,12 @@ export class MySQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
+  // A query on an array computes one value, as a correlated subquery over
+  // JSON_TABLE: MySQL has no lambdas. JSON_TABLE's argument cannot be a
+  // correlated subquery's result ("Unknown table in a table function
+  // argument"), so an array such a subquery made could only be selected;
+  // it returns no arrays.
+  arrayQueries: ArrayQuerySupport = {value: 'subquery', arrays: false};
   // MySQL builds nested arrays with GROUP_CONCAT (not an array type), which has
   // no in-expression slice; limiting would need query-level ROW_NUMBER plumbing
   // the sqlAggregateTurtle seam doesn't expose. Left false (default) explicitly.
@@ -363,31 +373,29 @@ export class MySQLDialect extends Dialect {
       )} as ${alias} ON 1=1`;
   }
 
+  // A typed column for each field of a record, or one `value` column for
+  // an array of scalars.
   sqlUnnestPipelineHead(
     isSingleton: boolean,
     sourceSQLExpression: string,
-    fieldList: DialectFieldList
+    fieldList: DialectFieldList,
+    isScalarArray = false
   ): string {
+    if (isScalarArray) {
+      const value = fieldList.find(f => f.rawName === 'value');
+      const type = value ? malloyTypeToJSONTableType(value.typeDef) : 'JSON';
+      return `JSON_TABLE(CAST(${sourceSQLExpression} AS JSON), '$[*]'
+        COLUMNS (${this.sqlQuoteIdentifier('value')} ${type} PATH '$')
+      )`;
+    }
     return this.jsonTable(sourceSQLExpression, fieldList, isSingleton);
   }
 
-  sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
-    return 'UNUSED';
-  }
-
-  sqlSumDistinct(key: string, value: string, funcName: string): string {
-    const sqlDistinctKey = `CONCAT(${key}, '')`;
+  sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
+    sqlDistinctKey = `CONCAT(${sqlDistinctKey}, '')`;
     const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(55, 10)) * 4294967296`;
     const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(55, 10))`;
-    const hashkey = `(${upperPart} + ${lowerPart})`;
-    const v = `CAST(COALESCE(${value},0) as DECIMAL(55, 10))`;
-    const sqlSum = `(SUM(DISTINCT ${hashkey} + ${v}) - SUM(DISTINCT ${hashkey}))`;
-    if (funcName === 'SUM') {
-      return sqlSum;
-    } else if (funcName === 'AVG') {
-      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
-    }
-    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
+    return `(${upperPart} + ${lowerPart})`;
   }
 
   sqlGenerateUUID(): string {

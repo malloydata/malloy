@@ -450,11 +450,12 @@ export interface CompositeFieldExpr extends ExprLeaf {
 }
 
 /**
- * A query run on the elements of an array of the current row, whose one
- * result is a value of that row: `items -> { aggregate: price.sum() }`.
- * `kids.array` is the array, and `pipeline` runs with its elements as the
- * source, the way a later stage of a nest runs on the stage before it.
- * Experimental (`##! experimental.array_queries`).
+ * A query run on the elements of an array of the current row, whose result
+ * is a value of that row: one value, `items -> { aggregate: price.sum() }`
+ * (`arrayQueryReturnsValue`), or otherwise its rows, as an array of
+ * records. `kids.array` is the array, and `pipeline` runs with its elements
+ * as the source, the way a later stage of a nest runs on the stage before
+ * it. Experimental (`##! experimental.array_queries`).
  */
 export interface ArrayQueryExpr extends ExprWithKids {
   node: 'arrayQuery';
@@ -488,33 +489,18 @@ export function arrayQueryOnlyAggregates(segment: QuerySegment): boolean {
 }
 
 /**
- * What, in a query on an array, keeps it from being computed in place, as
- * a dialect without a correlated subquery must; undefined if its shape can
- * be. The shapes which can are one stage of one aggregate, or of a
- * `select:` of values. What an expression in it reads is checked only when
- * the SQL is written.
+ * Why a query on an array which returns one value cannot be computed with
+ * a dialect's array functions (`ArrayQuerySupport.value` 'lambdas'), which
+ * take one aggregate, filtered or not; undefined if it can be. What an
+ * expression in it reads is checked only when the SQL is written.
  */
-export function arrayQueryNotInPlace(
-  pipeline: PipeSegment[]
+export function arrayValueNotOneAggregate(
+  segment: QuerySegment
 ): string | undefined {
-  const [segment, ...moreSegments] = pipeline;
-  if (moreSegments.length > 0) return 'several stages';
-  if (segment === undefined || !isQuerySegment(segment)) {
-    return 'this kind of query';
-  }
-  if (segment.type === 'project') {
-    const notValue = segment.outputStruct.fields.find(
-      f => f.type === 'record' || f.type === 'array' || f.type === 'turtle'
-    );
-    return notValue && `selecting \`${notValue.name}\`, which is not a value`;
-  }
-  if (segment.type !== 'reduce' || !arrayQueryReturnsValue(pipeline)) {
-    return 'a `group_by:`, `nest:` or `calculate:`';
-  }
   if (
     (segment.filterList ?? []).some(f => !expressionIsScalar(f.expressionType))
   ) {
-    return 'a `having:`';
+    return 'it has a `having:`';
   }
   const [field] = segment.queryFields;
   if (
@@ -524,10 +510,7 @@ export function arrayQueryNotInPlace(
   ) {
     const e = field.e.node === 'filteredExpr' ? field.e.kids.e : field.e;
     if (e.node !== 'aggregate') {
-      return `\`${field.name}\`, which is not one aggregate`;
-    }
-    if (e.structPath !== undefined) {
-      return `\`${field.name}\`, an aggregate of an array inside the elements`;
+      return `\`${field.name}\` is not one aggregate`;
     }
   }
   return undefined;
@@ -1425,8 +1408,18 @@ export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
  *   4) Each join path ending in an analytic funtion
  */
 
+export interface ActiveJoin {
+  path: string[];
+  /**
+   * The segment's filters keep no row in which this join is unmatched, so
+   * it may be written as an INNER join, and no row reaching an aggregate
+   * is one where it is unmatched.
+   */
+  inner?: true;
+}
+
 export interface SegmentUsageSummary {
-  activeJoins?: FieldUsage;
+  activeJoins?: ActiveJoin[];
   expandedFieldUsage?: FieldUsage;
   expandedGivenUsage?: GivenUsage;
   expandedUngroupings?: AggregateUngrouping[];
@@ -1450,7 +1443,12 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 export interface FieldUsageEntry {
   path: string[];
   at?: DocumentLocation;
-  uniqueKeyRequirement?: UniqueKeyRequirement;
+  /**
+   * An asymmetric aggregate (`count`, `sum`, `avg`, or an aggregate function
+   * which is not symmetric) is computed at this path, so the source there
+   * needs a key.
+   */
+  uniqueKeyRequirement?: boolean;
   analyticFunctionUse?: boolean;
   /**
    * A weak reference, made from inside an array query (`items -> { ... }`):
@@ -2436,30 +2434,6 @@ export const TD = {
     return x.type === y.type;
   },
 };
-
-/**
- * Aggregate functions carry this meta data. Used to determine if
- * a function requires the existence of a unique key. This used
- * be a pair of types: UniqueKeyUse and UniqueKeyPossibleUse.
- *
- * The three states are:
- *
- * 1. undefined - not recorded, symmetric  MIN/MAX/COUNT_DISTINCT
- * 2. {isCount: true} - this is a COUNT aggregate
- * 3. {isCount: false} - this is an asymmetric aggregate, SUM or AVG
- */
-export type UniqueKeyRequirement = undefined | {isCount: boolean};
-
-export function mergeUniqueKeyRequirement(
-  existing: UniqueKeyRequirement,
-  newInfo: UniqueKeyRequirement
-): UniqueKeyRequirement {
-  if (!existing) return newInfo;
-  if (!newInfo) return existing;
-  return {
-    isCount: existing.isCount || newInfo.isCount,
-  };
-}
 
 /**
  * Entry in a BuildManifest for a persisted table.

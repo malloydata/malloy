@@ -214,7 +214,9 @@ four expanded fields below; how it does both is in `lang/CONTEXT.md`,
 "Reference summaries: collection and expansion". This section is the contract
 the compiler reads: what an entry means, what a path is rooted at, and what the
 two readers do with it. The expanded summary is the single source of truth for
-"what does this query touch"; the compiler never walks expressions to find out.
+"what does this query touch"; the compiler never walks expressions to find out,
+with one exception: which arrays a filtered join's subquery reads itself (see
+"Arrays beneath a filtered join"), which no segment's summary records.
 
 ### Field usage entries
 
@@ -224,7 +226,7 @@ two readers do with it. The expanded summary is the single source of truth for
 interface FieldUsageEntry {
   path: string[];                            // rooted where the expression is written
   at?: DocumentLocation;
-  uniqueKeyRequirement?: {isCount: boolean}; // asymmetric aggregate needs a distinct key
+  uniqueKeyRequirement?: boolean;            // asymmetric aggregate needs a distinct key
   analyticFunctionUse?: boolean;             // this is a window function
   inPlaceDepth?: number;                     // a weak reference through an array query; see its doc comment
 }
@@ -243,7 +245,7 @@ read by the compiler:
 | Field | What it holds |
 |---|---|
 | `expandedFieldUsage` | every field the segment reaches, transitively, source-rooted |
-| `activeJoins` | the joins needed, topologically sorted (dependencies first) |
+| `activeJoins` | the joins needed, topologically sorted (dependencies first), each marked `inner` when the segment's filters require a match |
 | `expandedGivenUsage` | every `GivenID` reachable from the segment |
 | `expandedUngroupings` | `all:`/`exclude:` ungroupings, path-adjusted through nests |
 
@@ -295,7 +297,11 @@ Two readers. `QueryQuery.dependenciesFromFieldUsage` (`query_query.ts`), called
 from `prepare()`, builds the join tree and decides what each join needs:
 
 1. it walks `activeJoins` in order, calling `addDependantPath` →
-   `addStructToJoin`;
+   `addStructToJoin`, and sets `JoinInstance.inner` on a join marked `inner`.
+   Such a join is written `INNER JOIN`. Without a declared key it is not
+   `canBeUnmatched` either, which spares it a manufactured key; with one it
+   is, so that a row whose key is NULL is skipped however the join is
+   written;
 2. it walks `expandedFieldUsage` for `uniqueKeyRequirement` (→
    `addStructToJoin` with the requirement, which `calculateSymmetricAggregates`
    later turns into `JoinInstance.makeUniqueKey`) and for `analyticFunctionUse`
@@ -307,16 +313,15 @@ It reads no field names — each entry collapses to which join it is and whether
 that join needs a key. `QueryQuery.packedColumnsByJoin` is the reader that does
 use the names: it resolves each path to the column the innermost join on it has
 to supply, which is how a filtered join's subquery knows what to pack for each
-join below it. For a weak entry the column is the array itself, a column of
-the join above it.
+join below it. An array on a path is a column of the join above it, as a record
+is, so a path through an array, weak or not, needs the array itself.
 
-**What the compiler reaches for that no entry names** is a join's declared
-`primary_key`. It is the distinct key for a symmetric aggregate over that join
-(`generateDistinctKeyExpression`, `generateDistinctKeySQL`), so the SQL can read
-`two_0."ai"` with no expression in the query having named `ai`. When the key is
-a computed dimension the SQL reads not its name but the columns its expression
-reads, so anything deciding what a join must supply adds the primary key's own
-field usage, not the key's name.
+**What the compiler reaches for that no entry names** is a join's distinct key
+(see "Distinct keys", below), so the SQL can read `two_0."ai"` with no
+expression in the query having named `ai`. When the key is a computed
+dimension the SQL reads not its name but the columns its expression reads, so
+anything deciding what a join must supply adds the primary key's own field
+usage, not the key's name.
 
 ### Paths and join aliases
 
@@ -325,12 +330,61 @@ alias** (`two_0`), not by Malloy path, so a consumer holding usage paths has to
 cross between the two. `addDependantPath` crosses one way with
 `getFieldByName(path)`; `packedColumnFor` crosses the other by walking the
 `QueryStruct` tree a name at a time, because it needs the join *and* the member
-of it, and because a record on the path is a column of the join above it rather
-than a join of its own.
+of it, and because a record or an array on the path is a column of the join
+above it rather than a join of its own.
+
+### Arrays beneath a filtered join
+
+A join with a `where:` (on a dialect with `supportsComplexFilteredSources`) is
+written as a subquery, and every join beneath it is packed into a struct
+column of that subquery. An array beneath it is unnested **outside** the
+subquery, from the packed column of the join above it, so its element and row
+number are columns of the outer query like any other array's. The exception is
+an array the subquery reads itself, in the filtered join's own `where:` or in
+the `on` or `where:` of a join inside it: that array, and any array inside it,
+is unnested **inside**, since the filter applies there. The subquery selects
+what the outer query reads of it, named the way the outer query refers to an
+unnested array (`Dialect.sqlSelectUnnestedArray`), so the outer query reads it
+as though the array were unnested there. Read from outside, such an array has
+only the elements the filter keeps.
+
+The placement is decided once per query (`placeArraysBeneathSubqueries`,
+read through `QueryQuery.arrayPlacement`), and two places must agree with it:
+`generateSQLJoinBlock` writes each array where it is placed, and selects what
+the outer query reads of the ones placed inside; and `packedColumnFor` packs
+the array's column into the join above it. Which arrays a subquery reads is
+found by walking the filter and `on` expressions (`arrayAliasesReadIn`),
+since no reference summary records them per join.
 
 `this.firstSegment` is set in the `QueryQuery` constructor, so
 `this.firstSegment.expandedFieldUsage` is in hand in any method of the class,
 including SQL generation.
+
+## Distinct keys
+
+A symmetric aggregate needs one value per row of the source it is computed at:
+the **distinct key**. `QueryStruct.getDistinctKey` (`query_node.ts`) finds the
+field that holds it, and `generateDistinctKeySQL` (`expression_compiler.ts`)
+writes its SQL. Where the key comes from depends on the struct:
+
+- **a source or join with a `primary_key`** — that field.
+- **a source or join without one** — a manufactured UUID column,
+  `__distinct_key`, added to its SQL (`JoinInstance.makeUniqueKey`) whenever an
+  asymmetric aggregate is computed at it and it is fanned out or can be
+  unmatched.
+- **an array** — its parent's key joined to the element's row number
+  (`Dialect.sqlMakeUnnestKey`). It is never a column, so nothing can read an
+  array's key from a table or a packed struct.
+- **a record** — none of its own. A record is a column of its parent row, so it
+  has that row's grain and that row's key.
+
+The key is also how an aggregate tells a source's rows from the rows where that
+source is **unmatched** — the row of NULLs an outer join writes where nothing
+matched. An aggregate computed at a source aggregates that source's rows only,
+so where the source can be unmatched (`JoinInstance.canBeUnmatched`), `count()`
+counts the key and every other asymmetric aggregate makes its operand NULL
+where the key is NULL (`withSourceRowFilter`); a new aggregate path has to do
+the same.
 
 ## Compilation Pipeline
 

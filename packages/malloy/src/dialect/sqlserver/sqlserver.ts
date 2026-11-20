@@ -29,6 +29,7 @@ import type {
   FieldReferenceType,
   GroupByClauseType,
   QueryInfo,
+  SumDistinctByHash,
 } from '../dialect';
 import {CivilTime, Dialect, EscapeStyle} from '../dialect';
 import type {ValidateTablePathResult} from '../table-path';
@@ -164,11 +165,14 @@ export class SQLServerDialect extends Dialect {
   identifierQuoteChar = '"';
 
   defaultNumberType = 'FLOAT(53)';
-  defaultDecimalType = 'DECIMAL(38, 9)';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = true;
+  sumDistinctByHash: SumDistinctByHash = {
+    form: 'direct',
+    decimalType: 'DECIMAL(38, 9)',
+    resultType: 'FLOAT(53)',
+  };
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = false;
@@ -385,19 +389,7 @@ export class SQLServerDialect extends Dialect {
   // The MD5 of the key as a 64-bit integer, widened so that hash + value is
   // exact at the value's scale.
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
-    return `CAST(CAST(HASHBYTES('MD5', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS BIGINT) AS ${this.defaultDecimalType})`;
-  }
-
-  sqlSumDistinct(key: string, value: string, funcName: string): string {
-    const hashKey = this.sqlSumDistinctHashedKey(key);
-    const v = `CAST(COALESCE(${value}, 0) AS ${this.defaultDecimalType})`;
-    const sqlSum = `CAST((SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey})) AS ${this.defaultNumberType})`;
-    if (funcName === 'SUM') {
-      return sqlSum;
-    } else if (funcName === 'AVG') {
-      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0)`;
-    }
-    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
+    return `CAST(CAST(HASHBYTES('MD5', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS BIGINT) AS DECIMAL(38, 9))`;
   }
 
   sqlAggDistinct(

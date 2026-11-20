@@ -485,3 +485,19 @@ describe('BaseConnection default idle', () => {
     await expect(c.idle()).resolves.toBeUndefined();
   });
 });
+
+describe('Runtime model sources', () => {
+  it('reads a URL that is not instanceof URL as a URL', async () => {
+    const href = 'file:///models/m.malloy';
+    // Not a URL, but all of one Runtime uses: toString().
+    const foreign = {href, toString: () => href} as unknown as URL;
+    const {reader, calls} = countingReader({[href]: '##" A model\n'});
+    const runtime = new Runtime({
+      urlReader: reader,
+      connection: mockConnection('mydb'),
+    });
+    const model = await runtime.loadModel(foreign).getModel();
+    expect(calls).toEqual([href]);
+    expect(model.annotations.texts('"')).toEqual(['##" A model\n']);
+  });
+});
