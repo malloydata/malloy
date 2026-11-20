@@ -160,6 +160,79 @@ function failStreamOnClientError(
   return () => client.removeListener('error', onError);
 }
 
+// What a query stopped by its abortSignal throws, worded as the other
+// connectors word it.
+function abortedBeforeStart(): Error {
+  return new Error('Postgres query was aborted before it started.');
+}
+function abortedBeforeEnd(): Error {
+  return new Error('Postgres query was aborted before it completed.');
+}
+
+// The setup statements a pool's 'acquire' queued on a checked-out client. A
+// pooled statement awaits this promise before it runs, so it never runs without
+// its setup, and a cancel never lands on a setup statement.
+const poolClientSetups = new WeakMap<ClientBase, Promise<unknown>>();
+
+// pg 8.7.3 has these at runtime; @types/pg does not declare them.
+declare module 'pg' {
+  interface ClientBase {
+    // From the server's BackendKeyData; null until the client has connected.
+    processID: number | null;
+    secretKey: number | null;
+  }
+  interface Client {
+    connection: Connection;
+  }
+  interface Connection {
+    connect(portOrPath: number | string, host?: string): void;
+    requestSsl(): void;
+    cancel(processID: number, secretKey: number): void;
+  }
+}
+
+// What a CancelRequest names: the backend running the statement, and its key.
+interface BackendKey {
+  processID: number;
+  secretKey: number;
+}
+
+function backendKey(client: ClientBase): BackendKey | undefined {
+  const {processID, secretKey} = client;
+  return processID !== null && secretKey !== null
+    ? {processID, secretKey}
+    : undefined;
+}
+
+// Sends the protocol's CancelRequest for the statement running on the backend
+// `key` names, from `canceller`, a client that is not connected, built with the
+// same settings. It opens the connection the way pg's Client.connect does: when
+// the settings ask for TLS, it negotiates TLS first and sends the request inside
+// it. pg's own Client.cancel writes the request as soon as TCP connects, in
+// plain text, even when the query's connection uses TLS.
+function sendCancelRequest(canceller: Client, key: BackendKey): void {
+  const con = canceller.connection;
+  // The server closes this connection once it has read the request.
+  con.on('error', () => {});
+  const send = () => con.cancel(key.processID, key.secretKey);
+  con.once('connect', () => (canceller.ssl ? con.requestSsl() : send()));
+  con.once('sslconnect', send);
+  if (canceller.host && canceller.host.startsWith('/')) {
+    con.connect(`${canceller.host}/.s.PGSQL.${canceller.port}`);
+  } else {
+    con.connect(canceller.port, canceller.host);
+  }
+}
+
+// What cancelOnAbort returns.
+interface AbortWatch {
+  // Whether the signal fired before detach(), which requests the cancel.
+  fired(): boolean;
+  // Removes the abort listener. Safe to call more than once.
+  detach(): void;
+}
+const UNWATCHED: AbortWatch = {fired: () => false, detach: () => {}};
+
 /**
  * Decode a canonical Postgres dotted-table path into its underlying
  * identifier strings as they appear in `information_schema`. The schema
@@ -317,31 +390,102 @@ export class PostgresConnection
     return client;
   }
 
+  // Sends a CancelRequest for the statement running on `client` when
+  // `abortSignal` fires. Call it once that statement is the only one left to
+  // run on `client`, and detach() once it has ended. The request can land after
+  // the statement ends, so a client a cancel was sent for must be closed, or
+  // released with an error so the pool discards it.
+  protected cancelOnAbort(
+    client: ClientBase,
+    abortSignal: AbortSignal | undefined
+  ): AbortWatch {
+    if (!abortSignal) {
+      return UNWATCHED;
+    }
+    let fired = false;
+    const onAbort = () => {
+      fired = true;
+      const key = backendKey(client);
+      if (key) {
+        this.requestCancel(key);
+      }
+    };
+    abortSignal.addEventListener('abort', onAbort, {once: true});
+    return {
+      fired: () => fired,
+      detach: () => abortSignal.removeEventListener('abort', onAbort),
+    };
+  }
+
+  // Sends a CancelRequest for the statement running on the backend `key`
+  // names, over a connection of its own that never logs in.
+  protected requestCancel(key: BackendKey): void {
+    void this.getClient()
+      .then(canceller => sendCancelRequest(canceller, key))
+      .catch(() => {});
+  }
+
+  // Runs one statement on a connected client whose setup has run.
+  protected async queryClient(
+    client: ClientBase,
+    sqlCommand: string,
+    deJSON: boolean,
+    values: unknown[] | undefined,
+    abortSignal: AbortSignal | undefined
+  ): Promise<MalloyQueryData> {
+    if (abortSignal?.aborted) {
+      throw abortedBeforeStart();
+    }
+    const abort = this.cancelOnAbort(client, abortSignal);
+    let result;
+    try {
+      result = await client.query(sqlCommand, values);
+    } catch (e) {
+      throw abort.fired() ? abortedBeforeEnd() : e;
+    } finally {
+      abort.detach();
+    }
+    // Finished before the cancel landed. It still throws, so a pooled client
+    // the cancel was sent for is discarded rather than reused.
+    if (abort.fired()) {
+      throw abortedBeforeEnd();
+    }
+    if (Array.isArray(result)) {
+      result = result.pop();
+    }
+    if (deJSON) {
+      for (let i = 0; i < result.rows.length; i++) {
+        result.rows[i] = result.rows[i].row;
+      }
+    }
+    return {
+      rows: result.rows as QueryData,
+      totalRows: result.rows.length,
+    };
+  }
+
   protected async runPostgresQuery(
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
     deJSON: boolean,
-    values?: unknown[]
+    values?: unknown[],
+    abortSignal?: AbortSignal
   ): Promise<MalloyQueryData> {
+    if (abortSignal?.aborted) {
+      throw abortedBeforeStart();
+    }
     const client = await this.getClient();
     try {
       await this.withTlsHint(() => client.connect());
       await this.connectionSetup(client);
-
-      let result = await client.query(sqlCommand, values);
-      if (Array.isArray(result)) {
-        result = result.pop();
-      }
-      if (deJSON) {
-        for (let i = 0; i < result.rows.length; i++) {
-          result.rows[i] = result.rows[i].row;
-        }
-      }
-      return {
-        rows: result.rows as QueryData,
-        totalRows: result.rows.length,
-      };
+      return await this.queryClient(
+        client,
+        sqlCommand,
+        deJSON,
+        values,
+        abortSignal
+      );
     } finally {
       closeClient(client);
     }
@@ -558,7 +702,9 @@ export class PostgresConnection
       this.sqlWithQueryMetadata(sql, options.queryMetadata),
       options.rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
-      true
+      true,
+      undefined,
+      options.abortSignal
     );
   }
 
@@ -567,14 +713,22 @@ export class PostgresConnection
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
     const {rowLimit, abortSignal} = options;
+    if (abortSignal?.aborted) {
+      throw abortedBeforeStart();
+    }
     const query = new QueryStream(
       this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
     );
     const client = await this.getClient();
     let detach = () => {};
+    let abort = UNWATCHED;
     try {
       await this.withTlsHint(() => client.connect());
       await this.connectionSetup(client);
+      if (abortSignal?.aborted) {
+        throw abortedBeforeStart();
+      }
+      abort = this.cancelOnAbort(client, abortSignal);
       const rowStream = client.query(query);
       detach = failStreamOnClientError(client, rowStream);
       let index = 0;
@@ -589,7 +743,10 @@ export class PostgresConnection
           break;
         }
       }
+    } catch (e) {
+      throw abort.fired() ? abortedBeforeEnd() : e;
     } finally {
+      abort.detach();
       detach();
       closeClient(client);
     }
@@ -658,15 +815,16 @@ export class PooledPostgresConnection
       // the event would be an uncaught exception.
       this._pool.on('error', () => {});
       this._pool.on('acquire', client => {
-        client.query("SET TIME ZONE 'UTC'");
+        const setup = [client.query("SET TIME ZONE 'UTC'")];
         if (this.setupSQL) {
           for (const stmt of this.setupSQL.split(';\n')) {
             const trimmed = stmt.trim();
             if (trimmed) {
-              client.query(trimmed);
+              setup.push(client.query(trimmed));
             }
           }
         }
+        poolClientSetups.set(client, Promise.all(setup));
       });
     }
     return this._pool;
@@ -677,23 +835,39 @@ export class PooledPostgresConnection
     _pageSize: number,
     _rowIndex: number,
     deJSON: boolean,
-    values?: unknown[]
+    values?: unknown[],
+    abortSignal?: AbortSignal
   ): Promise<MalloyQueryData> {
+    if (abortSignal?.aborted) {
+      throw abortedBeforeStart();
+    }
+    // What pool.query does, on a client of our own: the statement waits for
+    // the client's setup statements, and a cancel knows which backend to stop.
     const pool = await this.getPool();
-    let result = await this.withTlsHint(() => pool.query(sqlCommand, values));
-
-    if (Array.isArray(result)) {
-      result = result.pop();
+    const client = await this.withTlsHint(() => pool.connect());
+    // pg-pool takes its own 'error' listener off a client while it is checked
+    // out. When the socket drops, the running statement fails on its own; this
+    // listener, like the one pool.query adds, keeps the event itself from
+    // being an uncaught exception.
+    const ignoreError = () => {};
+    client.on('error', ignoreError);
+    let failed = true;
+    try {
+      await poolClientSetups.get(client);
+      const data = await this.queryClient(
+        client,
+        sqlCommand,
+        deJSON,
+        values,
+        abortSignal
+      );
+      failed = false;
+      return data;
+    } finally {
+      client.removeListener('error', ignoreError);
+      // As pool.query does: a client a statement failed on is discarded.
+      client.release(failed);
     }
-    if (deJSON) {
-      for (let i = 0; i < result.rows.length; i++) {
-        result.rows[i] = result.rows[i].row;
-      }
-    }
-    return {
-      rows: result.rows as QueryData,
-      totalRows: result.rows.length,
-    };
   }
 
   public async *runSQLStream(
@@ -701,6 +875,9 @@ export class PooledPostgresConnection
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryRecord> {
     const {rowLimit, abortSignal} = options;
+    if (abortSignal?.aborted) {
+      throw abortedBeforeStart();
+    }
     const query = new QueryStream(
       this.sqlWithQueryMetadata(sqlCommand, options.queryMetadata)
     );
@@ -716,7 +893,13 @@ export class PooledPostgresConnection
     // surfacing as an uncaught exception.
     const detach = failStreamOnClientError(client, query);
     let drained = false;
+    let abort = UNWATCHED;
     try {
+      await poolClientSetups.get(client);
+      if (abortSignal?.aborted) {
+        throw abortedBeforeStart();
+      }
+      abort = this.cancelOnAbort(client, abortSignal);
       const resultStream: QueryStream = client.query(query);
       for await (const row of resultStream) {
         yield row.row as QueryRecord;
@@ -734,6 +917,8 @@ export class PooledPostgresConnection
         }
       }
       drained = true;
+    } catch (e) {
+      throw abort.fired() ? abortedBeforeEnd() : e;
     } finally {
       // release(), not end(): this client came from pool.connect(), so it goes
       // back to the pool rather than closing its session. Nothing else returns
@@ -742,10 +927,12 @@ export class PooledPostgresConnection
       //
       // A stream that stopped before its end can leave a fetch in flight on
       // the client, so it is released with an error, which makes the pool
-      // discard it instead of handing the next caller a client mid-query.
+      // discard it instead of handing the next caller a client mid-query. So
+      // is a client a cancel was sent for, which could still land.
+      abort.detach();
       detach();
       client.release(
-        drained
+        drained && !abort.fired()
           ? undefined
           : new Error('row stream stopped before reading all its rows')
       );
