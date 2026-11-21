@@ -18,6 +18,7 @@ import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
 import {mergeGroupedBys, type ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
+import {settle} from '../types/morphic-value';
 import type {FieldPropStatement} from '../types/field-prop-statement';
 import type {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
@@ -129,11 +130,13 @@ export class ExprProps extends ExpressionDef {
     }
     const resultExpr =
       this.expr instanceof ExprFunc
-        ? this.expr.getPropsExpression(fs, {
-            partitionBys,
-            limit,
-            orderBys,
-          })
+        ? settle(
+            this.expr.getPropsExpression(fs, {
+              partitionBys,
+              limit,
+              orderBys,
+            })
+          )
         : this.expr.getExpression(fs);
     const filteredExpr = this.getFilteredExpression(fs, resultExpr, wheres);
     return this.getGroupedBys(fs, filteredExpr, groupedBys);

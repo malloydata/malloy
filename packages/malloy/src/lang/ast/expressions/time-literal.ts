@@ -13,12 +13,18 @@ import type {
 } from '../../../model/malloy_types';
 import {isTemporalType, TD} from '../../../model/malloy_types';
 
-import type {ExprValue} from '../types/expr-value';
 import {literalTimeResult} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 import {ExprTime} from './expr-time';
-import {ExpressionDef, getMorphicValue} from '../types/expression-def';
+import {ExpressionDef} from '../types/expression-def';
+import type {
+  MorphicValue,
+  RangeValue,
+  Unsettled,
+  ValueOrRange,
+} from '../types/morphic-value';
+import {settleAgainst} from '../types/morphic-value';
 import type {TimeResult} from '../types/time-result';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import {isComparison} from '../types/binary_operators';
@@ -164,11 +170,11 @@ export abstract class TimeLiteral extends ExpressionDef {
     });
   }
 
-  protected computeExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ValueOrRange {
     return this.makeValue(fs, this.literalPart, this.timeType);
   }
 
-  getNext(fs: FieldSpace): ExprValue | undefined {
+  getNext(fs: FieldSpace): Unsettled | undefined {
     if (this.nextLit) {
       return this.makeValue(fs, this.nextLit, this.timeType);
     }
@@ -239,17 +245,18 @@ class GranularLiteral extends TimeLiteral {
     fs: FieldSpace,
     op: BinaryMalloyOperator,
     left: ExpressionDef
-  ): ExprValue {
+  ): Unsettled {
     // The literal stands for its range only in a comparison
     if (!isComparison(op)) {
       return super.apply(fs, op, left);
     }
     // We have a chance to write our own range comparison will all constants.
-    let rangeStart = this.getExpression(fs);
-    let rangeEnd = this.getNext(fs);
+    const next = this.getNext(fs);
 
-    if (rangeEnd) {
+    if (next) {
       const testValue = left.getExpression(fs);
+      const rangeStart = settleAgainst(this.getUnsettled(fs), testValue);
+      const rangeEnd = settleAgainst(next, testValue);
 
       if (testValue.type === 'date' && op === '=' && this.units === 'day') {
         // TODO remove the === 'day' check above and warn
@@ -277,23 +284,15 @@ class GranularLiteral extends TimeLiteral {
         return super.apply(fs, op, left);
       }
 
-      if (TD.isAnyTimestamp(testValue)) {
-        const newStart = getMorphicValue(rangeStart, 'timestamp');
-        const newEnd = getMorphicValue(rangeEnd, 'timestamp');
-        if (newStart && newEnd) {
-          rangeStart = newStart;
-          rangeEnd = newEnd;
-        } else {
-          return super.apply(fs, op, left);
-        }
+      if (TD.isAnyTimestamp(testValue) && rangeStart.type !== 'timestamp') {
+        return super.apply(fs, op, left);
       }
 
-      // Compiler is unsure about rangeEnd = newEnd for some reason
-      if (rangeEnd && isTemporalType(testValue.type)) {
+      if (isTemporalType(testValue.type)) {
         const rangeType = testValue.type;
         const range = new Range(
-          new ExprTime(rangeType, rangeStart.value),
-          new ExprTime(rangeType, rangeEnd.value)
+          ExprTime.of(rangeType, rangeStart.value),
+          ExprTime.of(rangeType, rangeEnd.value)
         );
         return range.apply(fs, op, left);
       }
@@ -336,26 +335,26 @@ abstract class DateBasedLiteral extends GranularLiteral {
     super(tm, units, 'date', nextLit);
   }
 
-  protected computeExpression(fs: FieldSpace): ExprValue {
-    const dateValue = this.makeValue(fs, this.literalPart, 'date');
-    const timestamp = this.makeLiteral(
-      fs,
-      `${this.literalPart} 00:00:00`,
-      'timestamp',
-      this.units
-    );
-    return {...dateValue, morphic: {timestamp}, evalSpace: 'literal'};
+  private morphic(fs: FieldSpace, day: string): MorphicValue {
+    return {
+      type: 'morphic',
+      forms: [
+        this.makeValue(fs, day, 'date'),
+        this.makeValue(fs, `${day} 00:00:00`, 'timestamp'),
+      ],
+    };
   }
 
-  getNext(fs: FieldSpace): ExprValue | undefined {
-    const dateValue = this.makeValue(fs, this.nextLit, 'date');
-    const timestamp = this.makeLiteral(
-      fs,
-      `${this.nextLit} 00:00:00`,
-      'timestamp',
-      this.units
-    );
-    return {...dateValue, morphic: {timestamp}};
+  protected computeExpression(fs: FieldSpace): RangeValue {
+    return {
+      type: 'range',
+      start: this.morphic(fs, this.literalPart),
+      end: this.getNext(fs),
+    };
+  }
+
+  getNext(fs: FieldSpace): MorphicValue {
+    return this.morphic(fs, this.nextLit);
   }
 }
 

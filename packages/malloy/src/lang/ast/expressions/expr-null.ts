@@ -8,6 +8,7 @@ import type {BinaryMalloyOperator, FieldSpace} from '..';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue, literalExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
+import type {Unsettled} from '../types/morphic-value';
 import {booleanValueError, CONDITION_HINT} from './boolean-value';
 
 function doIsNull(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
@@ -47,7 +48,7 @@ export class ExprNULL extends ExpressionDef {
     fs: FieldSpace,
     op: BinaryMalloyOperator,
     left: ExpressionDef
-  ): ExprValue {
+  ): Unsettled {
     if (op === '!=' || op === '=') {
       return doIsNull(fs, op, left);
     }

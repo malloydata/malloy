@@ -16,6 +16,8 @@ import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef, booleanAgainstString} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import type {ValueOrRange} from '../types/morphic-value';
+import {settleAgainst} from '../types/morphic-value';
 import {BinaryBoolean} from './binary-boolean';
 import {ExprAlternationTree} from './expr-alternation-tree';
 import type {GivenReference} from './expr-given';
@@ -23,7 +25,7 @@ import type {GivenReference} from './expr-given';
 export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
   elementType = 'a<=>b';
 
-  protected computeExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ValueOrRange {
     return this.right.apply(fs, this.op, this.left);
   }
 }
@@ -42,7 +44,7 @@ export class ExprEquality extends ExprCompare {
     super(left, op, right);
   }
 
-  protected computeExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): ValueOrRange {
     // Always true here; the test is what narrows the type of op
     if (this.right instanceof ExprAlternationTree && isEquality(this.op)) {
       return this.right.applyEquality(fs, this.op, this.left);
@@ -64,7 +66,9 @@ export class ExprLegacyIn extends ExpressionDef {
 
   protected computeExpression(fs: FieldSpace): ExprValue {
     const lookFor = this.expr.getExpression(fs);
-    const oneOf = this.choices.map(e => e.getExpression(fs));
+    const oneOf = this.choices.map(e =>
+      settleAgainst(e.getUnsettled(fs), lookFor)
+    );
     for (const [i, choice] of oneOf.entries()) {
       const noCompare = booleanAgainstString(this.choices[i], lookFor, choice);
       if (noCompare) return noCompare;

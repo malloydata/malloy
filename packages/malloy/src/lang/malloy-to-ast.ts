@@ -1238,8 +1238,7 @@ export class MalloyToAST
       if (timeframe) {
         expr = new ast.ExprGranularTime(
           new ast.ExprIdReference(ref),
-          this.visitTimeframe(timeframe).text,
-          true
+          this.visitTimeframe(timeframe).text
         );
       }
       const agg = refExpr.aggregate();
@@ -1954,8 +1953,7 @@ export class MalloyToAST
   visitExprTimeTrunc(pcx: parse.ExprTimeTruncContext): ast.ExprGranularTime {
     return new ast.ExprGranularTime(
       this.getFieldExpr(pcx.fieldExpr()),
-      this.visitTimeframe(pcx.timeframe()).text,
-      true
+      this.visitTimeframe(pcx.timeframe()).text
     );
   }
 

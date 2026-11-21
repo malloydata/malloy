@@ -109,8 +109,11 @@ describe('literals', () => {
   test.each(morphicLiterals)('morphic value for %s is %s', (expr, morphic) => {
     const exprModel = new BetaExpression(expr);
     expect(exprModel).toTranslate();
-    const ir = exprModel.generated();
-    const morphTo = ir.morphic && ir.morphic['timestamp'];
+    const ir = exprModel.generatedUnsettled();
+    const morphTo =
+      ir.type === 'morphic'
+        ? ir.forms.find(f => f.type === 'timestamp')?.value
+        : undefined;
     if (morphic) {
       expect(morphTo).toBeDefined();
       if (morphTo) {

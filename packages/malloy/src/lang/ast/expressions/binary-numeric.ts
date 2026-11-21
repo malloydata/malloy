@@ -5,7 +5,7 @@
 
 import * as TDU from '../typedesc-utils';
 import type {ArithmeticMalloyOperator} from '../types/binary_operators';
-import type {ExprValue} from '../types/expr-value';
+import type {Unsettled} from '../types/morphic-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 
@@ -22,7 +22,7 @@ export abstract class BinaryNumeric<
     this.legalChildTypes = [TDU.numberT];
   }
 
-  protected computeExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): Unsettled {
     return this.right.apply(fs, this.op, this.left);
   }
 }

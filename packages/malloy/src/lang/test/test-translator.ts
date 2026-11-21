@@ -42,6 +42,7 @@ import type {
 } from '../translate-response';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
 import type {ExprValue} from '../ast/types/expr-value';
+import type {Unsettled} from '../ast/types/morphic-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
 import type {
   LogSeverity,
@@ -676,6 +677,7 @@ export class TestTranslator extends MalloyTranslator {
 
 export class BetaExpression extends TestTranslator {
   private compiled?: ExprValue;
+  private unsettled?: Unsettled;
   constructor(
     src: string,
     model?: ModelDef,
@@ -701,6 +703,7 @@ export class BetaExpression extends TestTranslator {
       const tstFS = this.testFS();
       const exprDef = exprAst.getExpression(tstFS);
       this.compiled = exprDef;
+      this.unsettled = exprAst.getUnsettled(tstFS);
       if (TestTranslator.inspectCompile) {
         console.log('EXPRESSION: ', pretty(exprDef));
       }
@@ -710,6 +713,13 @@ export class BetaExpression extends TestTranslator {
       const whatIsIt = exprAst?.toString() || 'NO AST GENERATED';
       throw new Error(`Not an expression: ${whatIsIt}`);
     }
+  }
+
+  generatedUnsettled(): Unsettled {
+    if (!this.unsettled) {
+      throw new Error('Must compile expression before fetching generated code');
+    }
+    return this.unsettled;
   }
 
   generated(): ExprValue {
