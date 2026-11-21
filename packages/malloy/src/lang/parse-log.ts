@@ -89,6 +89,7 @@ type MessageParameterTypes = {
   'pick-missing-else': {};
   'pick-missing-value': {};
   'pick-illegal-partial': {};
+  'applied-is-not-a-test': {resultType: ExpressionValueType};
   'pick-when-must-be-boolean': {whenType: ExpressionValueType};
   'pick-non-atomic-type': string;
   'experiment-not-enabled': {experimentId: string};
@@ -327,6 +328,7 @@ type MessageParameterTypes = {
   'failed-to-compute-output-schema': string;
   'invalid-timeframe-for-time-offset': string;
   'time-comparison-type-mismatch': string;
+  'comparison-type-mismatch': string;
   'match-operator-type-mismatch': string;
   'arithmetic-operation-type-mismatch': string;
   'time-offset-type-mismatch': string;
@@ -487,11 +489,16 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `'${e.dialect}' does not support a multi-stage pipeline ('->') in a nested query`,
   'nested-projection-limit-unsupported': e =>
     `'${e.dialect}' does not support 'limit:' on a nested 'select:'`,
-  'pick-missing-else': "pick incomplete, missing 'else'",
-  'pick-missing-value': 'pick with no value can only be used with apply',
-  'pick-illegal-partial': 'pick with partial when can only be used with apply',
+  'pick-missing-else':
+    "pick incomplete, missing 'else'; only a pick applied to a value with '?' can leave it out",
+  'applied-is-not-a-test': e =>
+    `This is applied to a value, so it must be a test which results in a boolean, and it results in '${e.resultType}'`,
+  'pick-missing-value':
+    "A 'pick' with nothing before its 'when' picks the value it is applied to, so the pick must be applied to a value with '?'",
+  'pick-illegal-partial':
+    "This 'when' is not a condition, so the pick must be applied to a value with '?'",
   'pick-when-must-be-boolean': e =>
-    `when expression must be boolean, not ${e.whenType}`,
+    `when expression must be boolean, not ${e.whenType}; to test a value against each 'when', apply the pick to the value with '?'`,
   'sql-native-not-allowed-in-expression': e => ({
     message: `Unsupported SQL native type '${e.rawType}' not allowed in expression`,
     tag: 'unsupported-sql-native-type-not-allowed-in-expression',

@@ -32,7 +32,7 @@ A parameter or return type is a Malloy type (`'string'`, `'number'`, …) or `'a
 ## Implementation styles
 
 - **`{function: 'NAME'}`** → `NAME(arg1, arg2, …)`. For plain wrappers.
-- **`{sql: '…'}`** → a template string. `${param}` interpolates a parameter's SQL, `${...param}` spreads a variadic (comma-separated), `${order_by:}` / `${limit:}` expand to the aggregate clauses (or empty).
+- **`{sql: '…'}`** → a template string. `${param}` interpolates a parameter's SQL, `${...param}` spreads a variadic (comma-separated), `${order_by:}` / `${limit:}` expand to the aggregate clauses (or empty). The SQL of a `${param}` is a single term (an argument such as `a + b` arrives as `(a+b)`), so a template can write an operator beside it; the elements of a `${...param}` are not parenthesized, and are only safe separated by commas.
 - **`{expr: sql\`…\`}`** → an expression tree, for when arguments need per-element wrapping. Built with the `sql`, `arg`, and `spread` helpers, e.g. `sql\`CONCAT(${spread(arg('values'), 'CAST(', ' AS VARCHAR)')})\``.
 
 ## Overloads

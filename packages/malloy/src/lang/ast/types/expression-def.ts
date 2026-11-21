@@ -71,12 +71,14 @@ function shareable(v: ExprValue): ExprValue {
   return v;
 }
 
-/** Node types in an alternation tree */
+/** What a node is as a choice in an alternation tree */
 export enum ATNodeType {
   And,
   Or,
+  /** A plain value, which an or-list of plain values lists in one IN */
   Value,
-  Partial,
+  /** A choice which is applied by itself and never listed in an IN */
+  Applied,
 }
 
 /**
@@ -228,13 +230,18 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param fs The symbol table
    * @param op The operator being applied
    * @param left The "other" (besides 'this') value
+   * @param _byApplyOperator True when `?` is doing the applying. `?` passes
+   * `=` as its operator, and this is how a node which treats the two
+   * differently tells them apart. A node which hands the application it was
+   * given on to nodes it holds passes this on; a node which applies an
+   * operator of its own does not.
    * @return The translated expression
    */
   apply(
     fs: FieldSpace,
     op: BinaryMalloyOperator,
     left: ExpressionDef,
-    _warnOnComplexTree = false
+    _byApplyOperator = false
   ): ExprValue {
     if (isEquality(op)) {
       return equality(fs, left, op, this);
@@ -273,12 +280,12 @@ export abstract class ExpressionDef extends MalloyElement {
     return expressionIsAggregate(expr.expressionType);
   }
 
-  atNodeType(): ATNodeType {
+  /**
+   * @param _byApplyOperator True when `?` is applying the tree, for a node
+   * which is one kind of choice to `?` and another to a written operator
+   */
+  atNodeType(_byApplyOperator = false): ATNodeType {
     return ATNodeType.Value;
-  }
-
-  atExpr(): ExpressionDef {
-    return this;
   }
 }
 
@@ -456,6 +463,30 @@ function booleanCompare(
   return booleanValueError(fs, val, `compared with ${op}`, side, COMPARE_HINT);
 }
 
+/**
+ * A boolean and a string are never the same value, whatever a database is
+ * willing to cast to make them comparable.
+ */
+export function booleanAgainstString(
+  logAt: ExpressionDef,
+  lhs: ExprValue,
+  rhs: ExprValue
+): ExprValue | undefined {
+  const types = [lhs.type, rhs.type];
+  if (types.includes('boolean') && types.includes('string')) {
+    logAt.logError(
+      'comparison-type-mismatch',
+      `Cannot compare a ${lhs.type} to a ${rhs.type}`
+    );
+    return computedErrorExprValue({
+      dataType: {type: 'boolean'},
+      error: 'boolean compared with string',
+      from: [lhs, rhs],
+    });
+  }
+  return undefined;
+}
+
 function equality(
   fs: FieldSpace,
   left: ExpressionDef,
@@ -539,6 +570,8 @@ function equality(
       }
       value = op === '!~' ? {node: 'not', e: regexCmp} : regexCmp;
     } else {
+      const noCompare = booleanAgainstString(left, lhs, rhs);
+      if (noCompare) return noCompare;
       value = timeCompare(left, lhs, op, rhs) || {
         node,
         kids: {left: lhs.value, right: rhs.value},
@@ -571,6 +604,8 @@ function compare(
   if (noCompare) {
     return {...noCompare, type: 'boolean'};
   }
+  const mismatch = booleanAgainstString(left, lhs, rhs);
+  if (mismatch) return mismatch;
   const value = timeCompare(left, lhs, op, rhs) || {
     node: getExprNode(op),
     kids: {left: lhs.value, right: rhs.value},
@@ -697,6 +732,18 @@ function divmod(
   return errorFor('divide type mismatch');
 }
 
+/**
+ * A node made during translation has no parent, and a node without one
+ * cannot log. This one takes the place in the tree of the node it is made
+ * around.
+ */
+function durationAround(n: ExpressionDef, unit: TimestampUnit): ExprDuration {
+  const inTree = n.parent;
+  const duration = new ExprDuration(n, unit);
+  duration.parent = inTree;
+  return duration;
+}
+
 function delta(
   fs: FieldSpace,
   left: ExpressionDef,
@@ -717,11 +764,19 @@ function delta(
 
   if (timeLHS) {
     let duration: ExpressionDef = right;
+    if (rhs.type === 'duration' && !(right instanceof ExprDuration)) {
+      // Only an ExprDuration knows its number and unit. Anything else with
+      // a duration for a value would send the offset straight back here.
+      return right.loggedErrorExpr(
+        'time-offset-type-mismatch',
+        'Can not offset time by a computed duration, write the number and unit of the duration here'
+      );
+    }
     if (rhs.type !== 'duration') {
       if (isGranularResult(lhs)) {
-        duration = new ExprDuration(right, lhs.timeframe);
+        duration = durationAround(right, lhs.timeframe);
       } else if (lhs.type === 'date') {
-        duration = new ExprDuration(right, 'day');
+        duration = durationAround(right, 'day');
       } else {
         return left.loggedErrorExpr(
           'time-offset-type-mismatch',

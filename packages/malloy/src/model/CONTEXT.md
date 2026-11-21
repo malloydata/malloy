@@ -487,6 +487,36 @@ on one without. The translator refuses a boolean anywhere SQL would want a value
 compiler does not look for one; the design and the list of refused uses are in
 [`doc/boolean-none.md`](../doc/boolean-none.md).
 
+**Grouping comes from the tree, never from SQL precedence.** The translator
+writes no record of the source's parentheses into the IR: the shape of the
+tree is the grouping. So the SQL for a node must be a **single term** wherever
+it is written beside other SQL: text which reads as one operand whatever is
+on either side of it, such as a name, a literal, a function call, or anything
+inside parentheses. `compileExpr` makes it so for the children of a node: it
+parenthesizes a node with `kids`, and the few others `operandNeedsParens`
+names. Everything else which writes a node's SQL into other SQL keeps the
+rule for itself:
+
+- a reference to a field, an output field, a parameter or a given writes the
+  expression it stands for as a single term;
+- `expandFunctionCall` does so for an argument substituted into a function's
+  SQL template;
+- the expression of a record is parenthesized in front of a field access;
+- a whole condition written beside `AND` — a join's `on`, each filter of a
+  joined source, a `where:` or `having:` after a `group_set` test — is
+  parenthesized there;
+- a computed field of a nested `select:` is parenthesized in the field list
+  handed to the dialect.
+
+A dialect or a function template which writes SQL around an expression can
+rely on that expression being a single term. A dialect which *returns* SQL for
+a node must return a single term, unless the node is one `compileExpr`
+parenthesizes.
+
+The `'()'` node is written as parentheses around what it holds. The compiler
+makes one around a function argument; the translator makes none; and one
+found in IR, wherever that IR came from, is honored.
+
 ### 3. Dialect System
 
 The compiler supports multiple SQL dialects through a plugin architecture.

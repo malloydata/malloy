@@ -31,6 +31,6 @@ export class Apply extends ExprCompare {
     if (right instanceof ExprGranularTime) {
       return right.toRange(fs).apply(fs, this.op, this.left);
     }
-    return super.computeExpression(fs);
+    return this.right.apply(fs, this.op, this.left, true);
   }
 }

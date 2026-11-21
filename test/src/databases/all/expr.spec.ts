@@ -1291,6 +1291,114 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       no_paren: 'no',
     });
   });
+
+  describe('an operand with one operand of its own keeps its grouping', () => {
+    const tm = mkTestModel(runtime, {nums: [{a: 7, c: 2}]});
+
+    test('negation beside a minus', async () => {
+      await expect(`run: nums -> {
+        select:
+          minus_paren_neg is c - (-a)
+          minus_neg is c - -a
+          neg_paren_neg is -(-a)
+          neg_neg is - -a
+      }`).toMatchResult(tm, {
+        minus_paren_neg: 9,
+        minus_neg: 9,
+        neg_paren_neg: 7,
+        neg_neg: 7,
+      });
+    });
+
+    test.when(runtime.dialect.booleanType !== 'none')(
+      'a null check on the right of =',
+      async () => {
+        await expect(`run: nums -> {
+          select:
+            is_null is pick 'yes' when (a = 1) = (c is null) else 'no'
+            is_not_null is pick 'yes' when (a = 1) = (c is not null) else 'no'
+        }`).toMatchResult(tm, {is_null: 'yes', is_not_null: 'no'});
+      }
+    );
+  });
+
+  describe('an expression written into other SQL keeps its grouping', () => {
+    const tm = mkTestModel(runtime, {nums: [{a: 7, c: 2}]});
+
+    test('as the argument of a function', async () => {
+      await expect(`run: nums -> {
+        select:
+          paren_divisor is div(10, (c + 3))
+          bare_divisor is div(10, c + 3)
+          dividend is div(a - 1, c)
+      }`).toMatchResult(tm, {paren_divisor: 2, bare_divisor: 2, dividend: 3});
+    });
+
+    test('as a computed field of a nested select', async () => {
+      await expect(`run: nums -> {
+        group_by: a
+        nest: n is { select: m is a % c }
+      }`).toMatchResult(tm, {a: 7, n: [{m: 1}]});
+    });
+
+    test('as the value of a parameter', async () => {
+      await expect(`
+        ##! experimental.parameters
+        source: nums_p(neg :: number is -5, diff :: number is 1 - 2) is nums extend {
+          dimension:
+            minus_neg is c - neg
+            times_diff is c * diff
+        }
+        run: nums_p -> { select: minus_neg, times_diff }
+      `).toMatchResult(tm, {minus_neg: 7, times_diff: -2});
+    });
+
+    test('as the value of a given', async () => {
+      await expect(`
+        ##! experimental.givens
+        given: NEG :: number is -5
+        given: DIFF :: number is 1 - 2
+        run: nums -> {
+          select:
+            minus_neg is c - $NEG
+            times_diff is c * $DIFF
+        }
+      `).toMatchResult(tm, {minus_neg: 7, times_diff: -2});
+    });
+  });
+
+  test('a condition of a join is a single term beside the others', async () => {
+    // Flags are numbers so that the same rows mean the same on every dialect
+    const tm = mkTestModel(runtime, {
+      rws: [
+        {k: 1, ai: 1, bi: 9, fa: 0, fb: 0},
+        {k: 2, ai: 2, bi: 9, fa: 1, fb: 0},
+      ],
+    });
+    await expect(`
+      source: only_a is rws extend { where: fa = 1 }
+      source: two_filters is rws extend { where: (fa = 1 or fb = 1), k > 5 }
+      run: rws extend {
+        join_one: by_or is only_a on (by_or.k = ai or by_or.k = bi)
+        join_one: filtered is two_filters on filtered.k = ai
+      } -> {
+        aggregate:
+          or_matched is by_or.count()
+          filter_matched is filtered.count()
+      }
+    `).toMatchResult(tm, {or_matched: 1, filter_matched: 0});
+  });
+
+  test('a symmetric average is a single term of a larger expression', async () => {
+    await expect(`
+      run: ${databaseName}.table('malloytest.aircraft') extend {
+        join_one: aircraft_models is ${databaseName}.table('malloytest.aircraft_models')
+          on aircraft_model_code = aircraft_models.aircraft_model_code
+      } -> {
+        aggregate: back_to_100 is
+          round(100 / aircraft_models.seats.avg() * aircraft_models.seats.avg())
+      }`).toMatchResult(testModel, {back_to_100: 100});
+  });
 });
 
 afterAll(async () => {

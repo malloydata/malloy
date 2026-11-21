@@ -8,15 +8,16 @@ import {isRepeatedRecord, TD} from '../../../model/malloy_types';
 import {typeDefToString} from '../../../model/utils';
 import {computedErrorExprValue} from '../types/expr-value';
 import type {
-  BinaryMalloyOperator,
   CompareMalloyOperator,
   EqualityMalloyOperator,
 } from '../types/binary_operators';
+import {isEquality} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
+import {ExpressionDef, booleanAgainstString} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import {BinaryBoolean} from './binary-boolean';
+import {ExprAlternationTree} from './expr-alternation-tree';
 import type {GivenReference} from './expr-given';
 
 export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
@@ -28,10 +29,8 @@ export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
 }
 
 /**
- * The parser makes equality nodes, an application of ?
- * makes an ExprCompare node with operator =. This is how
- * the special rules for how apply works for equality
- * nodes gets implemented.
+ * An equality operator written in the source. The other maker of an `=`
+ * comparison is `?`, which is an `Apply`.
  */
 export class ExprEquality extends ExprCompare {
   elementType = 'a~=b';
@@ -44,15 +43,11 @@ export class ExprEquality extends ExprCompare {
   }
 
   protected computeExpression(fs: FieldSpace): ExprValue {
-    return this.right.apply(fs, this.op, this.left, true);
-  }
-
-  apply(
-    fs: FieldSpace,
-    op: BinaryMalloyOperator,
-    left: ExpressionDef
-  ): ExprValue {
-    return super.apply(fs, op, left, true);
+    // Always true here; the test is what narrows the type of op
+    if (this.right instanceof ExprAlternationTree && isEquality(this.op)) {
+      return this.right.applyEquality(fs, this.op, this.left);
+    }
+    return super.computeExpression(fs);
   }
 }
 
@@ -70,6 +65,10 @@ export class ExprLegacyIn extends ExpressionDef {
   protected computeExpression(fs: FieldSpace): ExprValue {
     const lookFor = this.expr.getExpression(fs);
     const oneOf = this.choices.map(e => e.getExpression(fs));
+    for (const [i, choice] of oneOf.entries()) {
+      const noCompare = booleanAgainstString(this.choices[i], lookFor, choice);
+      if (noCompare) return noCompare;
+    }
     return computedExprValue({
       dataType: {type: 'boolean'},
       value: {

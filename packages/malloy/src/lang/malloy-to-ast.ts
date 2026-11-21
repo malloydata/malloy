@@ -8,6 +8,10 @@ import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import type * as parse from './lib/Malloy/MalloyParser';
+import {
+  ExprExprContext,
+  PartialAllowedFieldExprContext,
+} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import type {
   LogMessageOptions,
@@ -300,10 +304,17 @@ export class MalloyToAST
     return cxList.map(cx => this.getFieldDef(cx, makeFieldDef));
   }
 
-  protected getFieldExpr(cx: parse.FieldExprContext): ast.ExpressionDef {
+  protected getFieldExpr(
+    cx: parse.FieldExprContext | parse.PartialAllowedFieldExprContext
+  ): ast.ExpressionDef {
     const element = this.visit(cx);
     if (element instanceof ast.ExpressionDef) {
-      return this.astAt(element, cx);
+      // Parentheses make no node, and what they hold keeps its own location.
+      // A partial position has located what it holds, parentheses or not.
+      return cx instanceof ExprExprContext ||
+        cx instanceof PartialAllowedFieldExprContext
+        ? element
+        : this.astAt(element, cx);
     }
     throw this.internalError(
       cx,
@@ -1681,8 +1692,8 @@ export class MalloyToAST
     return new ast.ExprNULL();
   }
 
-  visitExprExpr(pcx: parse.ExprExprContext): ast.ExprParens {
-    return new ast.ExprParens(this.getFieldExpr(pcx.fieldExpr()));
+  visitExprExpr(pcx: parse.ExprExprContext): ast.ExpressionDef {
+    return this.getFieldExpr(pcx.fieldExpr());
   }
 
   visitExprMinus(pcx: parse.ExprMinusContext): ast.ExprMinus {
