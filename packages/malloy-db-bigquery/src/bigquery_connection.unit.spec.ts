@@ -24,11 +24,17 @@ const complete =
   cb =>
     cb(null, rows, null, {jobComplete: true, totalRows: String(rows.length)});
 
-// A BigQueryConnection with its BigQuery SDK and timeout config stubbed, so
-// runSQL drives the real createBigQueryJob -> getQueryResultsUntilComplete seam
-// (deadline wiring, and that a jobComplete:false response never surfaces as
-// data) without a live warehouse.
-function hermeticConnection(steps: Step[], timeoutMs?: string) {
+// A BigQueryConnection with its BigQuery SDK and config stubbed, so runSQL
+// drives the real createBigQueryJob -> getQueryResultsUntilComplete seam
+// without a live warehouse.
+function hermeticConnection(
+  steps: Step[],
+  {
+    timeoutMs,
+    cancel = jest.fn(),
+    duringCreate = () => {},
+  }: {timeoutMs?: string; cancel?: jest.Mock; duringCreate?: () => void} = {}
+) {
   const conn = new BigQueryConnection('hermetic');
   let i = 0;
   const getQueryResults = jest.fn((_options: unknown, cb: Cb) => {
@@ -36,8 +42,11 @@ function hermeticConnection(steps: Step[], timeoutMs?: string) {
     i++;
     step(cb);
   });
-  const job = {getQueryResults, cancel: jest.fn()};
-  const createQueryJob = jest.fn(async (_options: unknown) => [job]);
+  const job = {getQueryResults, cancel};
+  const createQueryJob = jest.fn(async (_options: unknown) => {
+    duringCreate();
+    return [job];
+  });
   (conn as unknown as {bigQuery: unknown}).bigQuery = {createQueryJob};
   (conn as unknown as {config: {timeoutMs?: string}}).config = {timeoutMs};
   return {conn, getQueryResults, createQueryJob};
@@ -48,10 +57,9 @@ describe('BigQueryConnection.runSQL (hermetic, stubbed job)', () => {
     // 0 falls back to the default (like blank or non-numeric); it means neither
     // "wait 0ms" nor "wait forever". (Poll-through is covered separately, so
     // this stays a single completed poll to avoid the real inter-poll wait.)
-    const {conn, createQueryJob} = hermeticConnection(
-      [complete([{n: 5}])],
-      '0'
-    );
+    const {conn, createQueryJob} = hermeticConnection([complete([{n: 5}])], {
+      timeoutMs: '0',
+    });
     const data = await conn.runSQL('SELECT 1');
     expect(data.rows).toEqual([{n: 5}]);
     expect(createQueryJob.mock.calls[0][0]).toMatchObject({
@@ -60,10 +68,9 @@ describe('BigQueryConnection.runSQL (hermetic, stubbed job)', () => {
   });
 
   it('passes a positive timeoutMs through to the job as jobTimeoutMs', async () => {
-    const {conn, createQueryJob} = hermeticConnection(
-      [complete([{n: 7}])],
-      '300000'
-    );
+    const {conn, createQueryJob} = hermeticConnection([complete([{n: 7}])], {
+      timeoutMs: '300000',
+    });
     await conn.runSQL('SELECT 1');
     expect(createQueryJob.mock.calls[0][0]).toMatchObject({
       jobTimeoutMs: 300000,
@@ -73,10 +80,9 @@ describe('BigQueryConnection.runSQL (hermetic, stubbed job)', () => {
   it('treats a whitespace-only timeoutMs as the default', async () => {
     // Number('   ') is 0, so a naive parse could go wrong here; it must fall
     // back to the default (TIMEOUT_MS, 600000ms) like any other blank value.
-    const {conn, createQueryJob} = hermeticConnection(
-      [complete([{n: 1}])],
-      '   '
-    );
+    const {conn, createQueryJob} = hermeticConnection([complete([{n: 1}])], {
+      timeoutMs: '   ',
+    });
     await conn.runSQL('SELECT 1');
     expect(createQueryJob.mock.calls[0][0]).toMatchObject({
       jobTimeoutMs: 600000,
@@ -87,10 +93,9 @@ describe('BigQueryConnection.runSQL (hermetic, stubbed job)', () => {
     // Number('-5') is -5, which is truthy, so a bare `|| TIMEOUT_MS` would let
     // it through as jobTimeoutMs: -5 and blow the deadline on the first poll.
     // A non-positive value must fall back to the default.
-    const {conn, createQueryJob} = hermeticConnection(
-      [complete([{n: 1}])],
-      '-5'
-    );
+    const {conn, createQueryJob} = hermeticConnection([complete([{n: 1}])], {
+      timeoutMs: '-5',
+    });
     await conn.runSQL('SELECT 1');
     expect(createQueryJob.mock.calls[0][0]).toMatchObject({
       jobTimeoutMs: 600000,
@@ -106,6 +111,53 @@ describe('BigQueryConnection.runSQL (hermetic, stubbed job)', () => {
     expect(data.rows).toEqual([{n: 1}, {n: 2}]);
     expect(data.totalRows).toBe(2);
     expect(getQueryResults).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('BigQueryConnection.runSQL abort', () => {
+  // A poll that never answers, so only the abort can end runSQL.
+  const neverAnswers: Step = () => {};
+  // Aborting after this reaches runSQL through its abort listener, not through
+  // the check for an abort that landed while the job was being created.
+  const untilPolling = () => new Promise(r => setImmediate(r));
+
+  it('does not leak a rejection when cancelling the job fails', async () => {
+    const cancel = jest.fn(async () => {
+      throw new Error('job already finished');
+    });
+    const {conn} = hermeticConnection([neverAnswers], {cancel});
+    const ac = new AbortController();
+    const run = conn.runSQL('SELECT 1', {abortSignal: ac.signal});
+    await untilPolling();
+    ac.abort();
+    await expect(run).rejects.toThrow(/aborted/);
+    // A leaked cancel rejection surfaces a tick later; let it land inside this
+    // test so Jest fails the test instead of crashing the worker.
+    await new Promise(r => setImmediate(r));
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels a job when the signal aborts while the job is being created', async () => {
+    const cancel = jest.fn(async () => [{}]);
+    const ac = new AbortController();
+    const {conn} = hermeticConnection([neverAnswers], {
+      cancel,
+      duringCreate: () => ac.abort(),
+    });
+    await expect(
+      conn.runSQL('SELECT 1', {abortSignal: ac.signal})
+    ).rejects.toThrow(/aborted/);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates no job when the signal is already aborted', async () => {
+    const {conn, createQueryJob} = hermeticConnection([neverAnswers]);
+    const ac = new AbortController();
+    ac.abort();
+    await expect(
+      conn.runSQL('SELECT 1', {abortSignal: ac.signal})
+    ).rejects.toThrow(/aborted/);
+    expect(createQueryJob).not.toHaveBeenCalled();
   });
 });
 

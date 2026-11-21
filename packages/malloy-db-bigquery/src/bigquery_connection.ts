@@ -415,7 +415,7 @@ async function cancelJobQuietly(job: Pick<Job, 'cancel'>): Promise<void> {
     await job.cancel();
   } catch {
     // Best-effort: the job may already be finishing or gone; the caller still
-    // reports the timeout that prompted the cancel.
+    // reports the timeout or abort that prompted the cancel.
   }
 }
 
@@ -1167,14 +1167,21 @@ export class BigQueryConnection
     PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
   > {
     try {
+      if (abortSignal?.aborted) {
+        throw new Error('BigQuery query was aborted before it started.');
+      }
       const job = await this.createBigQueryJob({
         query: sqlCommand,
         ...createQueryJobOptions,
       });
       const cancel = () => {
-        job.cancel();
+        void cancelJobQuietly(job);
       };
-      abortSignal?.addEventListener('abort', cancel);
+      abortSignal?.addEventListener('abort', cancel, {once: true});
+      // An abort during job creation fired before the listener existed.
+      if (abortSignal?.aborted) {
+        cancel();
+      }
 
       try {
         // Poll for results until the job completes or the connection's
