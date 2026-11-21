@@ -168,7 +168,7 @@ function serializeDateAsLiteral(
       return `@${year}`;
     }
     case 'quarter': {
-      const quarter = Math.floor(+month / 3) + 1;
+      const quarter = Math.floor((+month - 1) / 3) + 1;
       return `@${year}-Q${quarter}`;
     }
     case 'month': {
