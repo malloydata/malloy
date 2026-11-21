@@ -308,6 +308,15 @@ abstract fetchSelectSchema(sqlSource: SQLSourceRequest): Promise<SQLSourceDef | 
 
 BaseConnection provides default no-op implementations for: `close()`, `idle()`, `estimateQueryCost()`, `fetchMetadata()`, `fetchTableMetadata()`. The type guards `isPool()`, `canPersist()`, `canStream()` all default to `false`.
 
+### Honoring `abortSignal`
+
+An `abortSignal` in `RunSQLOptions` means the caller has stopped waiting. If the database can cancel a running query, `runSQL()` and `runSQLStream()` should cancel it on abort, not just return early. Follow these rules:
+
+- If the signal is already aborted, throw before submitting anything.
+- An abort can fire during any `await` that runs before your abort listener is attached. So once the listener is attached, check `aborted` again and cancel if it's set.
+- Make the cancel unable to reject. Swallow a failed cancel (the query already finished, the network dropped); left unhandled, that rejection can crash the host process.
+- Remove the listener once the query settles.
+
 ### Connection Lifecycle: `close` vs `idle`
 
 `Connection` exposes two release methods with different post-conditions. Backends can override both, just `close()`, or neither.
