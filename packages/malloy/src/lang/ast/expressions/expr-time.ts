@@ -14,21 +14,29 @@ import type {FieldSpace} from '../types/field-space';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
+import type {Unsettled} from '../types/morphic-value';
 
 export class ExprTime extends ExpressionDef {
   elementType = 'timestampOrDate';
-  readonly translationValue: ExprValue;
-  constructor(timeType: TemporalFieldType, value: Expr, from?: ExprValue[]) {
+  /** A time already computed, which may be morphic */
+  constructor(readonly translationValue: Unsettled) {
     super();
-    this.elementType = timeType;
-    this.translationValue = computedExprValue({
-      dataType: {type: timeType},
-      value,
-      from: from ?? [],
-    });
   }
 
-  protected computeExpression(_fs: FieldSpace): ExprValue {
+  /** A time of this type with this value */
+  static of(
+    timeType: TemporalFieldType,
+    value: Expr,
+    from: ExprValue[] = []
+  ): ExprTime {
+    const time = new ExprTime(
+      computedExprValue({dataType: {type: timeType}, value, from})
+    );
+    time.elementType = timeType;
+    return time;
+  }
+
+  protected computeExpression(_fs: FieldSpace): Unsettled {
     return this.translationValue;
   }
 
@@ -46,6 +54,6 @@ export class ExprTime extends ExpressionDef {
       }
       value = toTs;
     }
-    return new ExprTime(timeType, value, [expr]);
+    return ExprTime.of(timeType, value, [expr]);
   }
 }

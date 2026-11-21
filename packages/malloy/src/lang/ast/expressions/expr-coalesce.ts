@@ -3,12 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model';
-import {mergeRefSummaries} from '../../composite-source-utils';
 import * as TDU from '../typedesc-utils';
-import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import type {ValueOrRange} from '../types/morphic-value';
+import {choice, isMisfit, settle, startOf} from '../types/morphic-value';
 import {booleanValueError, CONDITION_HINT} from './boolean-value';
 
 export class ExprCoalesce extends ExpressionDef {
@@ -21,9 +20,9 @@ export class ExprCoalesce extends ExpressionDef {
     super({expr, altExpr});
   }
 
-  protected computeExpression(fs: FieldSpace): ExprValue {
-    const maybeNull = this.expr.getExpression(fs);
-    const whenNull = this.altExpr.getExpression(fs);
+  protected computeExpression(fs: FieldSpace): ValueOrRange {
+    const maybeNull = this.expr.getValueOrRange(fs);
+    const whenNull = this.altExpr.getValueOrRange(fs);
     const noCoalesce = booleanValueError(
       fs,
       maybeNull,
@@ -35,40 +34,22 @@ export class ExprCoalesce extends ExpressionDef {
     if (maybeNull.type === 'null') {
       return whenNull;
     }
-    /**
-     * Could maybe walk altExpr to combine all the times that altExpr
-     * is also an ExprCoalesce into a single fragment. Not doing that now.
-     *
-     * Also this should maybe generate a dialect fragment and not write
-     * SQL, but I decided that is will happen when the "expressions are true
-     * trees" rewrite happens.
-     */
-    if (!TDU.typeEq(maybeNull, whenNull)) {
-      this.logError(
+    const coalesced = choice([maybeNull, whenNull], ([left, right]) => ({
+      node: 'coalesce',
+      kids: {left, right},
+    }));
+    if (isMisfit(coalesced)) {
+      return this.loggedErrorExpr(
         'mismatched-coalesce-types',
-        `Mismatched types for coalesce (${maybeNull.type}, ${whenNull.type})`
+        `Mismatched types for coalesce (${coalesced.expected}, ${coalesced.found})`
       );
     }
-    const srcForType = maybeNull.type === 'error' ? whenNull : maybeNull;
-    // If both are numbers but subtypes differ, strip the subtype
-    const stripNumberType =
-      srcForType.type === 'number' &&
-      maybeNull.type === 'number' &&
-      whenNull.type === 'number' &&
-      maybeNull.numberType !== whenNull.numberType;
-    return {
-      ...srcForType,
-      ...(stripNumberType ? {numberType: undefined} : {}),
-      expressionType: maxExpressionType(
-        maybeNull.expressionType,
-        whenNull.expressionType
-      ),
-      value: {
-        node: 'coalesce',
-        kids: {left: maybeNull.value, right: whenNull.value},
-      },
-      evalSpace: mergeEvalSpaces(maybeNull.evalSpace, whenNull.evalSpace),
-      refSummary: mergeRefSummaries(maybeNull.refSummary, whenNull.refSummary),
-    };
+    if (whenNull.type === 'null' && maybeNull.type !== 'error') {
+      return this.loggedErrorExpr(
+        'mismatched-coalesce-types',
+        `Mismatched types for coalesce (${settle(startOf(maybeNull)).type}, null)`
+      );
+    }
+    return coalesced;
   }
 }

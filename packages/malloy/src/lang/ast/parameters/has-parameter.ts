@@ -49,7 +49,7 @@ export class HasParameter extends MalloyElement {
       name: this.name,
     };
     if (this.default !== undefined) {
-      const constant = this.default.constantValue();
+      const constant = this.default.constantValue(this.type);
       if (
         this.type &&
         this.type !== constant.type &&

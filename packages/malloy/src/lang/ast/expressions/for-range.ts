@@ -6,12 +6,13 @@
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import {castTo, resolution, timeOffset} from '../time-utils';
-import {TD} from '../../../model/malloy_types';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import {isComparison} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {computedErrorExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
+import type {Unsettled} from '../types/morphic-value';
+import {settle} from '../types/morphic-value';
 import type {FieldSpace} from '../types/field-space';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
@@ -32,11 +33,11 @@ export class ForRange extends ExpressionDef {
     fs: FieldSpace,
     op: BinaryMalloyOperator,
     expr: ExpressionDef
-  ): ExprValue {
+  ): Unsettled {
     if (!isComparison(op)) {
       return super.apply(fs, op, expr);
     }
-    const startV = this.from.getExpression(fs);
+    const start = this.from.getUnsettled(fs);
     const checkV = expr.getExpression(fs);
     if (!this.typeCheck(expr, checkV)) {
       return errorFor('no time for range');
@@ -52,7 +53,7 @@ export class ForRange extends ExpressionDef {
       return computedErrorExprValue({
         dataType: {type: 'boolean'},
         error: 'for not number',
-        from: [startV, checkV],
+        from: [settle(start), checkV],
       });
     }
     const units = this.timeframe.text;
@@ -63,15 +64,20 @@ export class ForRange extends ExpressionDef {
 
     // Next, if the beginning of the range is a timestamp or timestamptz, then we
     // also have to do the computation as a timestamp (or timestamptz)
-    if (TD.isAnyTimestamp(startV)) {
-      rangeType = startV.type;
+    const startType = settle(start).type;
+    if (startType === 'timestamp' || startType === 'timestamptz') {
+      rangeType = startType;
     }
 
+    // A morphic start is a date only when everything is dates
+    const allDates = checkV.type === 'date' && rangeType === 'date';
+    const startV = settle(start, allDates ? 'date' : 'timestamp');
+
     // everything is dates, do date math
-    if (checkV.type === 'date' && rangeType === 'date') {
+    if (allDates) {
       const rangeStart = this.from;
       const rangeEndV = timeOffset('date', startV.value, '+', nV.value, units);
-      const rangeEnd = new ExprTime('date', rangeEndV);
+      const rangeEnd = ExprTime.of('date', rangeEndV);
       return this.inTree(new Range(rangeStart, rangeEnd)).apply(fs, op, expr);
     }
 
@@ -82,16 +88,11 @@ export class ForRange extends ExpressionDef {
     let rangeStart = this.from;
     let from = startV.value;
     if (startV.type === 'date') {
-      const tsVersion = startV.morphic && startV.morphic['timestamp'];
-      if (tsVersion) {
-        from = tsVersion;
-      } else {
-        from = castTo({type: 'timestamp'}, from, 'date');
-      }
-      rangeStart = new ExprTime('timestamp', from, [startV]);
+      from = castTo({type: 'timestamp'}, from, 'date');
+      rangeStart = ExprTime.of('timestamp', from, [startV]);
     }
     const to = timeOffset('timestamp', from, '+', nV.value, units);
-    const rangeEnd = new ExprTime('timestamp', to, [startV, nV]);
+    const rangeEnd = ExprTime.of('timestamp', to, [startV, nV]);
 
     return this.inTree(new Range(rangeStart, rangeEnd)).apply(fs, op, applyTo);
   }

@@ -6,6 +6,7 @@
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {
   Expr,
+  ExpressionValueType,
   TimestampUnit,
   BasicExpressionType,
   FilterMatchExpr,
@@ -21,6 +22,8 @@ import {
 import * as TDU from '../typedesc-utils';
 import {errorFor} from '../ast-utils';
 import type {ExprValue} from './expr-value';
+import type {Unsettled, ValueOrRange} from './morphic-value';
+import {settle, settlePair, startOf, typeDefOf} from './morphic-value';
 import {
   computedErrorExprValue,
   computedExprValue,
@@ -53,11 +56,19 @@ import {booleanValueError, COMPARE_HINT} from '../expressions/boolean-value';
  * line which did it. Own fields only -- walking every Expr on every
  * evaluation would cost more than the memo saves.
  */
-function shareable(v: ExprValue): ExprValue {
+function shareable<T extends ValueOrRange>(v: T): T {
   Object.freeze(v);
+  if (v.type === 'range') {
+    shareable(v.start);
+    shareable(v.end);
+    return v;
+  }
+  if (v.type === 'morphic') {
+    v.forms.forEach(shareable);
+    return v;
+  }
   for (const share of [
     v.value,
-    v.morphic,
     v.refSummary,
     v.refSummary?.fieldUsage,
     v.refSummary?.givenUsage,
@@ -94,20 +105,35 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * Returns the "translation" or Expr tree for SQL generation. When asking
-   * for a translation you may pass the types you can accept, allowing
-   * the translation code a chance to convert to match your expectations
+   * Returns the "translation" or Expr tree for SQL generation, settled: a
+   * morphic value comes back as its form of type `as`, else its default.
    * @param space Namespace for looking up field references
-   *
-   * THE RETURNED ExprValue IS SHARED -- TREAT IT AS IMMUTABLE. Asking twice
-   * yields the same object, so to derive a value from one, build a new one:
-   * `{...operand, type: 'boolean'}` or `computedExprValue({…, from: [operand]})`.
-   *
-   * DO NOT OVERRIDE THIS. Nodes implement `computeExpression`; an override
-   * here bypasses the memo, which for `+`/`-` chains is the difference
-   * between linear and exponential compile time.
    */
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(fs: FieldSpace, as?: ExpressionValueType): ExprValue {
+    return settle(this.getUnsettled(fs), as);
+  }
+
+  /**
+   * The translation, which may be morphic, for a caller which can use more
+   * than one form. A range is its start.
+   */
+  getUnsettled(fs: FieldSpace): Unsettled {
+    return startOf(this.getValueOrRange(fs));
+  }
+
+  /**
+   * The translation as computed, which may be a range, for a node which
+   * makes a range, passes one on, or reads one.
+   *
+   * THE RETURNED VALUE IS SHARED -- TREAT IT AS IMMUTABLE. Asking twice
+   * yields the same object, so to derive a value from one, build a new one
+   * with `computedExprValue({dataType, value, from: [operand]})`.
+   *
+   * DO NOT OVERRIDE THIS, getUnsettled OR getExpression. Nodes implement
+   * `computeExpression`; an override bypasses the memo, which for `+`/`-`
+   * chains is the difference between linear and exponential compile time.
+   */
+  getValueOrRange(fs: FieldSpace): ValueOrRange {
     const initialGeneration = fs.generation();
     if (
       this.memoValue !== undefined &&
@@ -125,7 +151,7 @@ export abstract class ExpressionDef extends MalloyElement {
 
     if (this.memoFs !== undefined && this.memoGen === undefined) {
       throw this.internalError(
-        `ExpressionDef.getExpression memoization failure on ${this.elementType}`
+        `ExpressionDef.getValueOrRange memoization failure on ${this.elementType}`
       );
     }
 
@@ -166,13 +192,13 @@ export abstract class ExpressionDef extends MalloyElement {
    */
   private memoFs?: FieldSpace;
   private memoGen?: number;
-  private memoValue?: ExprValue;
+  private memoValue?: ValueOrRange;
 
   /**
    * Evaluate this node. Implemented by every expression node; called only
-   * by `getExpression` above, never directly.
+   * by `getValueOrRange` above, never directly.
    */
-  protected abstract computeExpression(fs: FieldSpace): ExprValue;
+  protected abstract computeExpression(fs: FieldSpace): ValueOrRange;
   legalChildTypes = TDU.anyAtomicT;
 
   /**
@@ -242,7 +268,7 @@ export abstract class ExpressionDef extends MalloyElement {
     op: BinaryMalloyOperator,
     left: ExpressionDef,
     _byApplyOperator = false
-  ): ExprValue {
+  ): Unsettled {
     if (isEquality(op)) {
       return equality(fs, left, op, this);
     }
@@ -303,7 +329,7 @@ export class ExprDuration extends ExpressionDef {
     fs: FieldSpace,
     op: BinaryMalloyOperator,
     left: ExpressionDef
-  ): ExprValue {
+  ): Unsettled {
     const lhs = left.getExpression(fs);
     this.typeCheck(this, lhs);
     if (isTemporalType(lhs.type) && (op === '+' || op === '-')) {
@@ -348,30 +374,6 @@ export class ExprDuration extends ExpressionDef {
   }
 }
 
-function willMorphTo(ev: ExprValue, t: MorphicType): Expr | undefined {
-  if (ev.type === t || (t === 'timestamp' && ev.type === 'timestamptz')) {
-    return ev.value;
-  }
-  return ev.morphic && ev.morphic[t];
-}
-
-export type MorphicType = 'date' | 'timestamp';
-export function getMorphicValue(
-  mv: ExprValue,
-  mt: MorphicType
-): ExprValue | undefined {
-  if (mv.type === mt) {
-    return mv;
-  }
-  if (mv.morphic && mv.morphic[mt]) {
-    return computedExprValue({
-      dataType: {type: mt},
-      value: mv.morphic[mt],
-      from: [mv],
-    });
-  }
-}
-
 function timeCompare(
   left: ExpressionDef,
   lhs: ExprValue,
@@ -382,13 +384,10 @@ function timeCompare(
   const rightIsTime = isTemporalType(rhs.type);
   const node = getExprNode(op);
   if (leftIsTime && rightIsTime) {
-    if (lhs.type !== rhs.type) {
-      const lval = willMorphTo(lhs, 'timestamp');
-      const rval = willMorphTo(rhs, 'timestamp');
-      if (lval && rval) {
-        return {node, kids: {left: lval, right: rval}};
-      }
-    } else {
+    if (
+      lhs.type === rhs.type ||
+      (TD.isAnyTimestamp(lhs) && TD.isAnyTimestamp(rhs))
+    ) {
       return {node, kids: {left: lhs.value, right: rhs.value}};
     }
   }
@@ -493,8 +492,7 @@ function equality(
   op: EqualityMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.getExpression(fs);
-  const rhs = right.getExpression(fs);
+  const [lhs, rhs] = settlePair(left.getUnsettled(fs), right.getUnsettled(fs));
   const node = getExprNode(op);
 
   const err =
@@ -592,8 +590,7 @@ function compare(
   op: CompareMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.getExpression(fs);
-  const rhs = right.getExpression(fs);
+  const [lhs, rhs] = settlePair(left.getUnsettled(fs), right.getUnsettled(fs));
 
   const err =
     errorCascade('boolean', lhs, rhs) ||
@@ -749,7 +746,7 @@ function delta(
   left: ExpressionDef,
   op: '+' | '-',
   right: ExpressionDef
-): ExprValue {
+): Unsettled {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
   const noGo = unsupportError(left, lhs, right, rhs);
@@ -773,10 +770,24 @@ function delta(
       );
     }
     if (rhs.type !== 'duration') {
+      // An offset with no unit steps by the granularity. A choice among
+      // spans of different widths, or of a span and a single value, has
+      // none to step by.
+      if (left.getValueOrRange(fs).type === 'range' && !isGranularResult(lhs)) {
+        return left.loggedErrorExpr(
+          'time-offset-type-mismatch',
+          `The choices have different granularities, so there is no unit to offset by; write the unit, as in '${op} 1 month'`
+        );
+      }
       if (isGranularResult(lhs)) {
         duration = durationAround(right, lhs.timeframe);
       } else if (lhs.type === 'date') {
         duration = durationAround(right, 'day');
+      } else if (rhs.type === 'number') {
+        return left.loggedErrorExpr(
+          'time-offset-type-mismatch',
+          `A ${lhs.type} with no granularity has no unit to offset by; write the unit, as in '${op} 1 day'`
+        );
       } else {
         return left.loggedErrorExpr(
           'time-offset-type-mismatch',
@@ -812,7 +823,7 @@ function unsupportError(
   rhs: ExprValue
 ): ExprValue | undefined {
   const ret = computedExprValue({
-    dataType: lhs,
+    dataType: typeDefOf(lhs),
     value: {node: 'error', message: 'sql-native unsupported'},
     from: [lhs, rhs],
   });

@@ -14,7 +14,8 @@ import {
 
 import type {ExprValue} from '../types/expr-value';
 import {computedErrorExprValue, computedExprValue} from '../types/expr-value';
-import {ExpressionDef, getMorphicValue} from '../types/expression-def';
+import {ExpressionDef} from '../types/expression-def';
+import {settlePair} from '../types/morphic-value';
 import type {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 
@@ -59,8 +60,10 @@ export class ExprTimeExtract extends ExpressionDef {
       }
       const from = this.args[0];
       if (from instanceof Range) {
-        let first = from.first.getExpression(fs);
-        let last = from.last.getExpression(fs);
+        const [first, last] = settlePair(
+          from.first.getUnsettled(fs),
+          from.last.getUnsettled(fs)
+        );
         if (first.type === 'error' || last.type === 'error') {
           return computedErrorExprValue({
             dataType: {type: 'number'},
@@ -80,29 +83,16 @@ export class ExprTimeExtract extends ExpressionDef {
             `Cannot extract ${extractTo} from '${last.type}'`
           );
         }
-        let valueType = first.type;
-        if (!TD.eq(first, last)) {
-          let cannotMeasure = true;
-          valueType = 'timestamp';
-          if (first.type === 'date') {
-            const newFirst = getMorphicValue(first, 'timestamp');
-            if (newFirst) {
-              first = newFirst;
-              cannotMeasure = false;
-            }
-          } else {
-            const newLast = getMorphicValue(last, 'timestamp');
-            if (newLast) {
-              last = newLast;
-              cannotMeasure = false;
-            }
-          }
-          if (cannotMeasure) {
-            return from.first.loggedErrorExpr(
-              'invalid-types-for-time-measurement',
-              `Cannot measure from ${first.type} to ${last.type}`
-            );
-          }
+        // Both kinds of timestamp are instants, so either measures to the other
+        const bothInstants =
+          TD.isAnyTimestamp(first) && TD.isAnyTimestamp(last);
+        const valueType =
+          bothInstants && first.type !== last.type ? 'timestamp' : first.type;
+        if (!TD.eq(first, last) && !bothInstants) {
+          return from.first.loggedErrorExpr(
+            'invalid-types-for-time-measurement',
+            `Cannot measure from ${first.type} to ${last.type}`
+          );
         }
         if (
           ['week', 'month', 'quarter', 'year'].includes(extractTo) &&

@@ -7,6 +7,7 @@ import type {CompareMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import type {Unsettled} from '../types/morphic-value';
 
 export class PartialCompare extends ExpressionDef {
   elementType = '<=> a';
@@ -21,7 +22,7 @@ export class PartialCompare extends ExpressionDef {
     return this.right.granular();
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  apply(fs: FieldSpace, op: string, expr: ExpressionDef): Unsettled {
     return this.right.apply(fs, this.op, expr);
   }
 

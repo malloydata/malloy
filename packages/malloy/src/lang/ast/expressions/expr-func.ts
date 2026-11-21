@@ -53,6 +53,15 @@ import type {PartitionBy} from './partition_by';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
+import type {Unsettled, UnsettledTypeDef} from '../types/morphic-value';
+import {
+  commonType,
+  inEachForm,
+  settle,
+  typeDefOf,
+  withoutGranularity,
+  typeOf,
+} from '../types/morphic-value';
 import type {FieldSpace} from '../types/field-space';
 import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
@@ -99,7 +108,7 @@ export class ExprFunc extends ExpressionDef {
     return true;
   }
 
-  protected computeExpression(fs: FieldSpace): ExprValue {
+  protected computeExpression(fs: FieldSpace): Unsettled {
     if (this.isRaw && this.isRestricted()) {
       const typeStr = this.explicitType
         ? typeDefToString(this.explicitType)
@@ -152,9 +161,10 @@ export class ExprFunc extends ExpressionDef {
       orderBys?: FunctionOrdering[];
       limit?: Limit;
     }
-  ): ExprValue {
-    const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
+  ): Unsettled {
+    const unsettledArgs = this.args.map(arg => arg.getUnsettled(fs));
     if (this.isRaw) {
+      const argExprsWithoutImplicit = unsettledArgs.map(arg => settle(arg));
       for (const [i, argExpr] of argExprsWithoutImplicit.entries()) {
         const noArg = booleanValueError(
           fs,
@@ -174,7 +184,14 @@ export class ExprFunc extends ExpressionDef {
       });
       funcCall.push(')');
 
-      const inferredType = argExprsWithoutImplicit[0] ?? {type: 'number'};
+      // The type of the first argument, without its granularity: what a SQL
+      // function does to a granular time is not known.
+      const first = argExprsWithoutImplicit[0];
+      const inferredType: ExpressionValueTypeDef = !first
+        ? {type: 'number'}
+        : TD.isTemporal(first)
+          ? {type: first.type}
+          : typeDefOf(first);
       const dataType: ExpressionValueTypeDef =
         this.explicitType ?? inferredType;
       return computedExprValue({
@@ -228,19 +245,19 @@ export class ExprFunc extends ExpressionDef {
       }
     }
     // Construct the full args list including the implicit arg.
-    const argExprs = [
-      ...(implicitExpr ? [implicitExpr] : []),
-      ...argExprsWithoutImplicit,
-    ];
-    const result = findOverload(func, argExprs);
+    const allArgs = [...(implicitExpr ? [implicitExpr] : []), ...unsettledArgs];
+    const result = findOverload(func, allArgs);
     if (result === undefined) {
       return this.loggedErrorExpr(
         'no-matching-function-overload',
-        `No matching overload for function ${this.name}(${argExprs
-          .map(e => e.type)
+        `No matching overload for function ${this.name}(${allArgs
+          .map(e => settle(e).type)
           .join(', ')})`
       );
     }
+    // Each argument is what its parameter takes. What follows is the same
+    // for every form of a call which stays morphic.
+    const argExprs = result.args.map(arg => settle(arg));
     const {
       overload,
       expressionTypeErrors,
@@ -509,15 +526,34 @@ export class ExprFunc extends ExpressionDef {
 
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
-    return {
+    // A function call has no granularity: what it does to a unit of time is
+    // not known. Truncate the result to give it one.
+    const called = (
+      returns: ExpressionValueTypeDef,
+      value: Expr
+    ): ExprValue => ({
       // TODO need to handle this???
-      ...(isAtomic(returnType) ? TDU.atomicDef(returnType) : returnType),
+      ...(isAtomic(returns) ? withoutGranularity(typeDefOf(returns)) : returns),
       expressionType,
-      value: funcCall,
+      value,
       evalSpace,
       refSummary,
       ungroupings,
-    };
+    });
+    const {returnForms} = result;
+    const morphicArg = result.args.findIndex(a => a.type === 'morphic');
+    if (returnForms && funcCall === frag && morphicArg >= 0) {
+      // The call returns its morphic argument's type, so it is computed once
+      // for each form of that argument
+      return inEachForm(result.args, settled => {
+        const form = settled[morphicArg];
+        return called(
+          returnForms.find(f => f.type === form.type) ?? typeDefOf(form),
+          {...frag, kids: {...frag.kids, args: settled.map(a => a.value)}}
+        );
+      });
+    }
+    return called(returnType, funcCall);
   }
 }
 
@@ -542,7 +578,7 @@ type NullabilityError = {
 
 function findOverload(
   func: FunctionDef,
-  args: ExprValue[]
+  unsettledArgs: Unsettled[]
 ):
   | {
       overload: FunctionOverloadDef;
@@ -551,11 +587,21 @@ function findOverload(
       nullabilityErrors: NullabilityError[];
       returnType: ExpressionValueTypeDef;
       returnTypeError?: AnyMessageCodeAndParameters;
+      /**
+       * The arguments, each settled to what its parameter takes, except those
+       * bound to a returned generic which is still morphic
+       */
+      args: Unsettled[];
+      /** The forms of a returned generic which is still morphic */
+      returnForms?: ExpressionValueTypeDef[];
     }
   | undefined {
+  // Everything but the type of a morphic argument is the same in every form
+  const args = unsettledArgs.map(arg => settle(arg));
   for (const overload of func.overloads) {
     // Map from generic name to selected type
-    const genericsSelected = new Map<string, ExpressionValueTypeDef>();
+    const genericsSelected = new Map<string, UnsettledTypeDef>();
+    const takenAs: (FunctionParameterTypeDef | undefined)[] = [];
     let paramIndex = 0;
     let ok = true;
     let matchedVariadic = false;
@@ -575,11 +621,14 @@ function findOverload(
         const {dataTypeMatch, genericsSet} = isDataTypeMatch(
           genericsSelected,
           overload.genericTypes ?? [],
-          arg,
+          typeOf(unsettledArgs[argIndex]),
           paramT
         );
         for (const genericSet of genericsSet) {
           genericsSelected.set(genericSet.name, genericSet.type);
+        }
+        if (dataTypeMatch) {
+          takenAs[argIndex] = paramT;
         }
         // Check expression type errors
         if (paramT.expressionType) {
@@ -644,10 +693,22 @@ function findOverload(
     ) {
       continue;
     }
-    const resolveReturnType = resolveGenerics(
-      overload.returnType,
-      genericsSelected
-    );
+    // A call stays morphic when what it returns is its generic type and
+    // that is still morphic. Any other morphic generic is its default form.
+    const returns = overload.returnType;
+    const returnedGeneric =
+      returns.type === 'generic' ? returns.generic : undefined;
+    const returnedType =
+      returnedGeneric !== undefined
+        ? genericsSelected.get(returnedGeneric)
+        : undefined;
+    const returnForms =
+      returnedType?.type === 'morphic' ? returnedType.forms : undefined;
+    const generics = new Map<string, ExpressionValueTypeDef>();
+    for (const [name, type] of genericsSelected) {
+      generics.set(name, type.type === 'morphic' ? type.forms[0] : type);
+    }
+    const resolveReturnType = resolveGenerics(overload.returnType, generics);
     const returnType = resolveReturnType.returnType ?? {type: 'number'};
     if (ok) {
       return {
@@ -657,9 +718,31 @@ function findOverload(
         nullabilityErrors,
         returnTypeError: resolveReturnType.error,
         returnType,
+        returnForms,
+        args: unsettledArgs.map((arg, i) => {
+          const taken = takenAs[i];
+          if (taken?.type !== 'generic') {
+            return settleToParameter(arg, taken);
+          }
+          if (returnForms && taken.generic === returnedGeneric) {
+            return arg;
+          }
+          return settle(arg, generics.get(taken.generic)?.type);
+        }),
       };
     }
   }
+}
+
+/** A morphic argument takes the form its parameter names, else its default */
+function settleToParameter(
+  arg: Unsettled,
+  param: FunctionParameterTypeDef | undefined
+): ExprValue {
+  if (arg.type !== 'morphic' || param === undefined) {
+    return settle(arg);
+  }
+  return arg.forms.find(f => f.type === param.type) ?? settle(arg);
 }
 
 type InterpolationPart =
@@ -694,17 +777,63 @@ function parseSQLInterpolation(template: string): InterpolationPart[] {
   return parts;
 }
 
-type GenericAssignment = {name: string; type: ExpressionValueTypeDef};
+type GenericAssignment = {name: string; type: UnsettledTypeDef};
 
 function isDataTypeMatch(
-  genericsAlreadySelected: Map<string, ExpressionValueTypeDef>,
+  genericsAlreadySelected: Map<string, UnsettledTypeDef>,
   genericTypes: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[],
-  arg: ExpressionValueTypeDef,
-  paramT: FunctionGenericTypeDef | FunctionParameterTypeDef
+  arg: UnsettledTypeDef,
+  paramT: FunctionGenericTypeDef | FunctionParameterTypeDef | UnsettledTypeDef
 ): {
   dataTypeMatch: boolean;
   genericsSet: GenericAssignment[];
 } {
+  const noMatch = {dataTypeMatch: false, genericsSet: []};
+  if (paramT.type === 'generic') {
+    // A generic bound to times is the type its arguments have in common. One
+    // bound only to null has no type yet, and is matched like an unbound one.
+    const alreadySelected = genericsAlreadySelected.get(paramT.generic);
+    const common =
+      alreadySelected &&
+      alreadySelected.type !== 'null' &&
+      alreadySelected.type !== 'error' &&
+      commonType(alreadySelected, arg);
+    if (
+      common &&
+      (arg.type === 'morphic' ||
+        alreadySelected.type === 'morphic' ||
+        TD.isTemporal(arg))
+    ) {
+      return {
+        dataTypeMatch: true,
+        genericsSet: [{name: paramT.generic, type: common}],
+      };
+    }
+  }
+  if (paramT.type === 'morphic') {
+    return noMatch;
+  }
+  if (arg.type === 'morphic') {
+    // A morphic argument fits a parameter which takes one of its forms
+    const fits = (t: {type: string}) =>
+      t.type === 'any' || arg.forms.some(f => f.type === t.type);
+    if (paramT.type !== 'generic') {
+      return {dataTypeMatch: fits(paramT), genericsSet: []};
+    }
+    const allowed =
+      genericTypes.find(t => t.name === paramT.generic)?.acceptibleTypes ?? [];
+    // A generic bound only to null or an error is still open
+    const bound = genericsAlreadySelected.get(paramT.generic);
+    const open =
+      bound === undefined || bound.type === 'null' || bound.type === 'error';
+    if (!open || !allowed.some(fits)) {
+      return noMatch;
+    }
+    return {
+      dataTypeMatch: true,
+      genericsSet: [{name: paramT.generic, type: arg}],
+    };
+  }
   if (
     TD.eq(paramT, arg) ||
     paramT.type === 'any' ||
@@ -759,9 +888,10 @@ function isDataTypeMatch(
       const result = isDataTypeMatch(
         new Map([
           ...genericsAlreadySelected.entries(),
-          ...genericsSet.map(
-            x => [x.name, x.type] as [string, ExpressionValueTypeDef]
-          ),
+          ...genericsSet.map((x): [string, UnsettledTypeDef] => [
+            x.name,
+            x.type,
+          ]),
         ]),
         genericTypes,
         field,

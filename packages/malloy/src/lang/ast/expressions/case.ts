@@ -4,24 +4,14 @@
  */
 
 import type {ExprValue} from '../types/expr-value';
-import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
+import type {ValueOrRange} from '../types/morphic-value';
+import {choice, isMisfit} from '../types/morphic-value';
 import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import * as TDU from '../typedesc-utils';
 import type {CaseExpr} from '../../../model';
 import {booleanValueError, CHOICE_HINT} from './boolean-value';
-
-interface Choice {
-  then: ExprValue;
-  when: ExprValue;
-}
-
-function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
-  return ev1 === undefined || ev1.type === 'null' || ev1.type === 'error'
-    ? ev2
-    : ev1;
-}
 
 export class Case extends ExpressionDef {
   elementType = 'case';
@@ -34,14 +24,7 @@ export class Case extends ExpressionDef {
     this.has({elseValue, value});
   }
 
-  protected computeExpression(fs: FieldSpace): ExprValue {
-    const resultExpr: CaseExpr = {
-      node: 'case',
-      kids: {
-        caseWhen: [],
-        caseThen: [],
-      },
-    };
+  protected computeExpression(fs: FieldSpace): ValueOrRange {
     const dependents: ExprValue[] = [];
     let value: ExprValue | undefined = undefined;
     if (this.value) {
@@ -55,67 +38,67 @@ export class Case extends ExpressionDef {
       );
       if (noSubject) return noSubject;
       dependents.push(v);
-      resultExpr.kids.caseValue = v.value;
       value = v;
     }
-    const choiceValues: Choice[] = [];
-    for (const c of this.choices) {
-      const when = c.when.getExpression(fs);
-      const then = c.then.getExpression(fs);
-      choiceValues.push({when, then});
-      dependents.push(when, then);
-    }
-    let returnType: ExprValue | undefined;
-    for (const aChoice of choiceValues) {
+    const whens = this.choices.map(c => c.when.getExpression(fs));
+    for (const when of whens) {
       if (value !== undefined) {
-        if (!TDU.typeEq(aChoice.when, value)) {
+        if (!TDU.typeEq(when, value)) {
           return this.loggedErrorExpr('case-when-type-does-not-match', {
-            whenType: aChoice.when.type,
+            whenType: when.type,
             valueType: value.type,
           });
         }
       } else {
-        if (!TDU.typeEq(aChoice.when, TDU.boolT)) {
+        if (!TDU.typeEq(when, TDU.boolT)) {
           return this.loggedErrorExpr('case-when-must-be-boolean', {
-            whenType: aChoice.when.type,
+            whenType: when.type,
           });
         }
       }
-      if (returnType && !TDU.typeEq(returnType, aChoice.then, true)) {
-        return this.loggedErrorExpr('case-then-type-does-not-match', {
-          thenType: aChoice.then.type,
-          returnType: returnType.type,
-        });
-      }
-      returnType = typeCoalesce(returnType, aChoice.then);
-      resultExpr.kids.caseWhen.push(aChoice.when.value);
-      resultExpr.kids.caseThen.push(aChoice.then.value);
     }
-    if (this.elseValue) {
-      const elseValue = this.elseValue.getExpression(fs);
-      if (returnType && !TDU.typeEq(returnType, elseValue, true)) {
-        return this.loggedErrorExpr('case-else-type-does-not-match', {
-          elseType: elseValue.type,
-          returnType: returnType.type,
-        });
-      }
-      returnType = typeCoalesce(returnType, elseValue);
-      dependents.push(elseValue);
-      resultExpr.kids.caseElse = elseValue.value;
-    }
-    const noCase = booleanValueError(
-      fs,
-      returnType,
-      'as the result of a case',
-      this,
-      CHOICE_HINT
+    const thens = this.choices.map(c => c.then.getValueOrRange(fs));
+    const elseValue = this.elseValue?.getValueOrRange(fs);
+    const result = choice(
+      elseValue ? [...thens, elseValue] : thens,
+      values => {
+        const resultExpr: CaseExpr = {
+          node: 'case',
+          kids: {
+            caseWhen: whens.map(w => w.value),
+            caseThen: values.slice(0, thens.length),
+          },
+        };
+        if (value) {
+          resultExpr.kids.caseValue = value.value;
+        }
+        if (elseValue) {
+          resultExpr.kids.caseElse = values[thens.length];
+        }
+        return resultExpr;
+      },
+      [...dependents, ...whens]
     );
-    if (noCase) return noCase;
-    return computedExprValue({
-      value: resultExpr,
-      dataType: returnType ? TDU.atomicDef(returnType) : {type: 'null'},
-      from: dependents,
-    });
+    if (isMisfit(result)) {
+      return result.misfitAt < thens.length
+        ? this.loggedErrorExpr('case-then-type-does-not-match', {
+            thenType: result.found,
+            returnType: result.expected,
+          })
+        : this.loggedErrorExpr('case-else-type-does-not-match', {
+            elseType: result.found,
+            returnType: result.expected,
+          });
+    }
+    return (
+      booleanValueError(
+        fs,
+        result,
+        'as the result of a case',
+        this,
+        CHOICE_HINT
+      ) ?? result
+    );
   }
 }
 

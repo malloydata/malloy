@@ -64,6 +64,11 @@ describe('a boolean on a dialect without boolean values', () => {
         m`source: m2 is m extend { dimension: small is not big; measure: none is n = 0 }`
       ).toTranslate();
     });
+    test('in ? applied to a pick of granular values', () => {
+      expect(
+        m`run: m -> { where: ad ? (pick @2020 when big else @2021-03); aggregate: n }`
+      ).toTranslate();
+    });
   });
 
   describe('is refused as a value', () => {

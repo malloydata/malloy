@@ -3,11 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {
-  Expr,
-  TemporalTypeDef,
-  TimestampUnit,
-} from '../../../model/malloy_types';
+import type {TemporalTypeDef, TimestampUnit} from '../../../model/malloy_types';
 import {
   isBasicAtomicType,
   isDateUnit,
@@ -17,13 +13,10 @@ import {
 
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
-import {timeOffset} from '../time-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import type {GranularResult} from '../types/granular-result';
-import {ExprTime} from './expr-time';
-import {Range} from './range';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
 /**
@@ -39,8 +32,7 @@ export class ExprGranularTime extends ExpressionDef {
   legalChildTypes = [TDU.timestampT, TDU.timestamptzT, TDU.dateT];
   constructor(
     readonly expr: ExpressionDef,
-    readonly units: TimestampUnit,
-    readonly truncate: boolean
+    readonly units: TimestampUnit
   ) {
     super({expr: expr});
   }
@@ -63,8 +55,9 @@ export class ExprGranularTime extends ExpressionDef {
   }
 
   protected computeExpression(fs: FieldSpace): ExprValue {
-    const timeframe = this.units;
+    // A truncation reads a date literal as the date it is
     const exprVal = this.expr.getExpression(fs);
+    const timeframe = this.units;
     let timeType: TemporalTypeDef;
     let tsVal: GranularResult;
     if (TD.isTemporal(exprVal)) {
@@ -86,15 +79,11 @@ export class ExprGranularTime extends ExpressionDef {
           timeType = {type: 'timestamp', timeframe};
         }
       }
-      if (this.truncate) {
-        tsVal.value = {
-          node: 'trunc',
-          e: mkTemporal(exprVal.value, timeType),
-          units: timeframe,
-        };
-      } else {
-        tsVal.value = exprVal.value;
-      }
+      tsVal.value = {
+        node: 'trunc',
+        e: mkTemporal(exprVal.value, timeType),
+        units: timeframe,
+      };
       return tsVal;
     }
     if (exprVal.type !== 'error') {
@@ -154,22 +143,4 @@ export class ExprGranularTime extends ExpressionDef {
 
   //   */
   // }
-
-  toRange(fs: FieldSpace): Range {
-    const begin = this.getExpression(fs);
-    const one: Expr = {node: 'numberLiteral', literal: '1'};
-    if (TD.isAnyTimestamp(begin)) {
-      const beginTS = ExprTime.fromValue(begin.type, begin);
-      const endTS = new ExprTime(
-        begin.type,
-        timeOffset(begin.type, begin.value, '+', one, this.units),
-        [begin]
-      );
-      return new Range(beginTS, endTS);
-    }
-    const beginDate = new ExprTime('date', begin.value, [begin]);
-    const endAt = timeOffset('date', begin.value, '+', one, this.units);
-    const endDate = new ExprTime('date', endAt, [begin]);
-    return new Range(beginDate, endDate);
-  }
 }

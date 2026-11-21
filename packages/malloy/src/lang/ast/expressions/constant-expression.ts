@@ -3,10 +3,16 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {AccessModifierLabel, StructDef} from '../../../model/malloy_types';
+import type {
+  AccessModifierLabel,
+  ExpressionValueType,
+  StructDef,
+} from '../../../model/malloy_types';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 
 import type {ExprValue} from '../types/expr-value';
+import type {Unsettled} from '../types/morphic-value';
+import {settle} from '../types/morphic-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {currentGeneration} from '../types/field-space';
@@ -68,8 +74,8 @@ export class ConstantExpression extends ExpressionDef {
     super({expr: expr});
   }
 
-  protected computeExpression(_fs: FieldSpace): ExprValue {
-    return this.constantValue();
+  protected computeExpression(_fs: FieldSpace): Unsettled {
+    return this.expr.getUnsettled(this.constantFs);
   }
 
   private get constantFs(): FieldSpace {
@@ -79,8 +85,9 @@ export class ConstantExpression extends ExpressionDef {
     return this.cfs;
   }
 
-  constantValue(): ExprValue {
-    return this.expr.getExpression(this.constantFs);
+  /** The value, a morphic one read as the type it is declared to be */
+  constantValue(as?: ExpressionValueType): ExprValue {
+    return settle(this.expr.getUnsettled(this.constantFs), as);
   }
 
   apply(
@@ -88,7 +95,7 @@ export class ConstantExpression extends ExpressionDef {
     op: BinaryMalloyOperator,
     expr: ExpressionDef,
     byApplyOperator = false
-  ): ExprValue {
+  ): Unsettled {
     return this.expr.apply(fs, op, expr, byApplyOperator);
   }
 

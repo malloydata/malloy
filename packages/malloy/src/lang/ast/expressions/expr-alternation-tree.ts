@@ -18,16 +18,21 @@ import type {
 } from '../types/binary_operators';
 import {isComparison, isEquality} from '../types/binary_operators';
 import {booleanValueError, COMPARE_HINT} from './boolean-value';
+import type {Unsettled} from '../types/morphic-value';
+import {settle, settleAgainst, startOf} from '../types/morphic-value';
+import {applyTest, spanOf} from './apply-test';
 
 /**
  * Return a flattened version of an alternation tree, if the tree is
- * composed entirely values and "or"s.
+ * composed entirely values and "or"s. Under `?` a value which stands for a
+ * span of time is tested as that span, so it is not one of the values.
  *
  * @param node Root of the tree
  * @param byApplyOperator True when `?` is applying the tree
  * @returns Undefined if other nodes are found in the tree
  */
 function flattenOrTree(
+  fs: FieldSpace,
   node: ExpressionDef,
   byApplyOperator: boolean
 ): ExpressionDef[] | undefined {
@@ -37,9 +42,9 @@ function flattenOrTree(
       return undefined;
     case ATNodeType.Or: {
       if (node instanceof ExprAlternationTree) {
-        const left = flattenOrTree(node.left, byApplyOperator);
+        const left = flattenOrTree(fs, node.left, byApplyOperator);
         if (left) {
-          const right = flattenOrTree(node.right, byApplyOperator);
+          const right = flattenOrTree(fs, node.right, byApplyOperator);
           if (right) {
             return [...left, ...right];
           }
@@ -48,7 +53,10 @@ function flattenOrTree(
       return undefined;
     }
     default:
-      return node.granular() ? undefined : [node];
+      if (node.granular() || (byApplyOperator && spanOf(fs, node))) {
+        return undefined;
+      }
+      return [node];
   }
 }
 
@@ -68,7 +76,7 @@ export class ExprAlternationTree extends ExpressionDef {
     applyOp: BinaryMalloyOperator,
     expr: ExpressionDef,
     byApplyOperator = false
-  ): ExprValue {
+  ): Unsettled {
     if (!isComparison(applyOp)) {
       return super.apply(fs, applyOp, expr);
     }
@@ -95,10 +103,10 @@ export class ExprAlternationTree extends ExpressionDef {
     warnOnComplexTree: boolean
   ): ExprValue {
     if (isEquality(applyOp)) {
-      const inList = flattenOrTree(this, byApplyOperator) ?? [];
+      const inList = flattenOrTree(fs, this, byApplyOperator) ?? [];
       if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
         const isIn = expr.getExpression(fs);
-        const values = inList.map(v => v.getExpression(fs));
+        const values = inList.map(v => settleAgainst(v.getUnsettled(fs), isIn));
         // A boolean on either side of the comparison, the tested value or
         // any of the choices, is a boolean compared with something.
         for (const [el, val] of [
@@ -135,8 +143,11 @@ export class ExprAlternationTree extends ExpressionDef {
         );
       }
     }
+    // Under `?` each item is read as it would be read alone after `?`
     const [choice1, choice2] = [this.left, this.right].map(choice => {
-      const applied = choice.apply(fs, applyOp, expr, byApplyOperator);
+      const applied = byApplyOperator
+        ? settle(startOf(applyTest(fs, expr, choice, this)))
+        : settle(choice.apply(fs, applyOp, expr));
       return applied.type === 'boolean' || applied.type === 'error'
         ? applied
         : choice.loggedErrorExpr('applied-is-not-a-test', {

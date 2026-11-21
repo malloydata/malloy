@@ -10,6 +10,8 @@ import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import type {Unsettled} from '../types/morphic-value';
+import {settle} from '../types/morphic-value';
 
 export class Range extends ExpressionDef {
   elementType = 'range';
@@ -24,7 +26,7 @@ export class Range extends ExpressionDef {
     fs: FieldSpace,
     op: BinaryMalloyOperator,
     expr: ExpressionDef
-  ): ExprValue {
+  ): Unsettled {
     if (!isComparison(op)) {
       return super.apply(fs, op, expr);
     }
@@ -37,8 +39,8 @@ export class Range extends ExpressionDef {
         const op1 = inRange ? '>=' : '<';
         const op2 = inRange ? 'and' : 'or';
         const op3 = inRange ? '<' : '>=';
-        const fromValue = this.first.apply(fs, op1, expr);
-        const toValue = this.last.apply(fs, op3, expr);
+        const fromValue = settle(this.first.apply(fs, op1, expr));
+        const toValue = settle(this.last.apply(fs, op3, expr));
         return computedExprValue({
           dataType: {type: 'boolean'},
           value: {

@@ -20,6 +20,7 @@ import {
   TEST_DIALECT,
 } from './test-translator';
 import './parse-expects';
+import {exprToStr} from './expr-to-str';
 
 describe('expressions', () => {
   describe('timeframes', () => {
@@ -273,6 +274,15 @@ describe('expressions', () => {
         errorMessage('Cannot measure from date to timestamp')
       );
     });
+    test('measure between timestamptz and timestamp', () => {
+      expect(expr`hours(atstz to now)`).compilesTo('{atstz timeDiff {now}}');
+      expect(expr`hours(now to atstz)`).compilesTo('{{now} timeDiff atstz}');
+    });
+    test('measure from timestamptz to a date literal', () => {
+      expect(expr`days(atstz to @2020)`).compilesTo(
+        '{atstz timeDiff @2020-01-01 00:00:00}'
+      );
+    });
     test('compare to truncation uses straight comparison', () => {
       expect('ad = ad.quarter').compilesTo('{ad = {timeTrunc-quarter ad}}');
     });
@@ -504,18 +514,20 @@ describe('expressions', () => {
           expr`ai ? pick 1 when (${'pick 2 when > 3 else 4'}) else 5`
         ).toLog(error('applied-is-not-a-test', {resultType: 'number'}));
       });
-      test('a pick of dates is not the timestamp its first choice could be', () => {
+      test('a pick of date literals compares with a timestamp as the timestamp it picks', () => {
         expect('ad = pick @2020 when abool else @2021').compilesTo(
           '{ad = {case when abool then @2020-01-01 else @2021-01-01}}'
         );
-        expect(expr`ats = pick @2020 when abool else @2021`).toLog(
-          error('time-comparison-type-mismatch')
+        expect(expr`ats = pick @2020 when abool else @2021`).compilesTo(
+          '{ats = {case when abool then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}'
         );
       });
-      test('an applied pick of dates is not the timestamp its first choice could be', () => {
+      test('an applied pick of date literals compares with a timestamp as the timestamp it picks', () => {
         expect(
           expr`ats > (ad ? pick @2020-01-01 when < @2001 else @2021-01-01)`
-        ).toLog(error('time-comparison-type-mismatch'));
+        ).compilesTo(
+          '{ats > {case when {ad < @2001-01-01} then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}'
+        );
       });
       test('= between a boolean and a pick of strings is refused', () => {
         expect(expr`${'abool'} = pick 'yes' when true else 'no'`).toLog(
@@ -555,7 +567,7 @@ describe('expressions', () => {
       });
       test('? with a pick of granular values is a range test', () => {
         expect('ad ? pick @2020 when abool else @2021').compilesTo(
-          '{{ad >= {case when abool then @2020-01-01 else @2021-01-01}} and {ad < {+year {case when abool then @2020-01-01 else @2021-01-01} 1}}}'
+          '{{ad >= {case when abool then @2020-01-01 else @2021-01-01}} and {ad < {case when abool then @2021-01-01 else @2022-01-01}}}'
         );
       });
     });
@@ -2166,5 +2178,238 @@ describe('number subtype propagation', () => {
       ' or '
     );
     expect(model`run: a -> { where: ${where}; group_by: astr }`).toTranslate();
+  });
+});
+
+describe('a date literal used as a timestamp', () => {
+  test('pick of date literals', () => {
+    expect(expr`ats > (pick @2020 when astr = 'a' else @2021)`).compilesTo(
+      '{ats > {case when {astr = {"a"}} then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}'
+    );
+  });
+  test('applied pick of date literals', () => {
+    expect(expr`ats > (astr ? pick @2020 when 'a' else @2021)`).compilesTo(
+      '{ats > {case when {astr = {"a"}} then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}'
+    );
+  });
+  test('pick of a date literal and a timestamp is a timestamp', () => {
+    expect(expr`ats > (pick @2020 when astr = 'a' else ats)`).compilesTo(
+      '{ats > {case when {astr = {"a"}} then @2020-01-01 00:00:00 else ats}}'
+    );
+  });
+  test('coalesce of date literals', () => {
+    expect(expr`ats > (@2020 ?? @2021)`).compilesTo(
+      '{ats > {@2020-01-01 00:00:00 coalesce @2021-01-01 00:00:00}}'
+    );
+  });
+  test('truncated date literal is a date', () => {
+    expect(expr`ats > @2020-03-04.month`).toLog(
+      errorMessage('Cannot compare a timestamp to a date')
+    );
+  });
+  test('truncated date literal starts a for range as a date', () => {
+    expect(expr`ats ? @2020-03-04.month for 3 days`).compilesTo(
+      '{{ats >= {cast {timeTrunc-month @2020-03-04}}} and {ats < {+day {cast {timeTrunc-month @2020-03-04}} 3}}}'
+    );
+  });
+  test('in with date literals', () => {
+    expect(expr`ats in (@2020, @2021)`).compilesTo(
+      '{ats in {@2020-01-01 00:00:00,@2021-01-01 00:00:00}}'
+    );
+  });
+  test('pick of a date literal and a timestamptz is refused', () => {
+    expect(expr`atstz > (pick @2020 when abool else atstz)`).toLog(
+      errorMessage('else type `timestamptz` does not match return type `date`')
+    );
+  });
+  test('raw function of a date literal is a date', () => {
+    expect(expr`ats > last_day!(@2020-03-04)`).toLog(
+      errorMessage('Cannot compare a timestamp to a date')
+    );
+  });
+  test('aggregate of a date literal is a date', () => {
+    expect(expr`max(ats) > max(@2020)`).toLog(
+      errorMessage('Cannot compare a timestamp to a date')
+    );
+  });
+  test('filtered aggregate of a date literal is a date', () => {
+    expect(expr`max(ats) > max(@2020) { where: astr = 'x' }`).toLog(
+      errorMessage('Cannot compare a timestamp to a date')
+    );
+  });
+});
+
+describe('granularity of a choice', () => {
+  function granularity(src: string) {
+    const e = new BetaExpression(src);
+    e.compile();
+    const result = e.generated();
+    return 'timeframe' in result ? result.timeframe : undefined;
+  }
+  test('is kept when every branch shares it', () => {
+    expect(granularity('pick ad.month when abool else null')).toBe('month');
+    expect(granularity('ad.month ?? @1970-01')).toBe('month');
+  });
+  test('is lost when the branches differ', () => {
+    expect(
+      granularity('pick ad.month when abool else ad.year')
+    ).toBeUndefined();
+  });
+  test('is lost through a function call, even when shared', () => {
+    expect(granularity('greatest(ats.month, ats.month)')).toBeUndefined();
+    expect(expr`ad ? greatest(ad.month, ad.month)`).compilesTo(
+      '{ad = {?function_call}}'
+    );
+  });
+  test('comes back by truncating the result of a function call', () => {
+    expect(granularity('greatest(ats.month, ats.month).month')).toBe('month');
+  });
+});
+
+describe('an offset with no unit', () => {
+  test('steps by the granularity every choice shares', () => {
+    expect(expr`(pick ad.month when abool else ad.month) + 1`).compilesTo(
+      '{+month {case when abool then {timeTrunc-month ad} else {timeTrunc-month ad}} 1}'
+    );
+    expect(expr`(pick ad.month when abool else null) + 1`).compilesTo(
+      '{+month {case when abool then {timeTrunc-month ad} else {null}} 1}'
+    );
+  });
+  test.each([
+    '(pick ad.month when abool else ad.year) + 1',
+    '(pick ad.month when abool else ad.year) - 1',
+    "(astr ? pick ad.month when 'a' else ad.year) + 1",
+    '(ad.month ?? ad.year) + 1',
+    '(pick ad.month when abool else ad) + 1',
+  ])('is refused when the choices differ in granularity: %s', src => {
+    expect(new BetaExpression(src)).toLog(
+      errorMessage(/The choices have different granularities/)
+    );
+  });
+  test('works with a unit written', () => {
+    expect(expr`(pick ad.month when abool else ad.year) + 1 month`).compilesTo(
+      '{+month {case when abool then {timeTrunc-month ad} else {timeTrunc-year ad}} 1}'
+    );
+  });
+  test('on a timestamp with no granularity says to write the unit', () => {
+    expect(new BetaExpression('ats + 1')).toLog(
+      errorMessage(
+        "A timestamp with no granularity has no unit to offset by; write the unit, as in '+ 1 day'"
+      )
+    );
+  });
+});
+
+describe('a generic function', () => {
+  test('refuses a type the generic does not accept after a null', () => {
+    expect(expr`greatest(null, atstz)`).toLog(
+      errorMessage(
+        'No matching overload for function greatest(null, timestamptz)'
+      )
+    );
+  });
+  test('takes a date literal after a null', () => {
+    expect(expr`ad > coalesce(null, @2021)`).toTranslate();
+  });
+  test('refuses a date literal after a number', () => {
+    expect(expr`greatest(1, @2020)`).toLog(
+      errorMessage('No matching overload for function greatest(number, date)')
+    );
+  });
+});
+
+describe('coalesce', () => {
+  test('of an error and null reports only the error', () => {
+    expect(expr`badref ?? null`).toLog(errorMessage("'badref' is not defined"));
+  });
+});
+
+describe('apply to a pick of granular values', () => {
+  test('tests the span each branch stands for', () => {
+    expect(expr`ad ? (pick @2020 when abool else @2021-03)`).compilesTo(
+      '{{ad >= {case when abool then @2020-01-01 else @2021-03-01}} and {ad < {case when abool then @2021-01-01 else @2021-04-01}}}'
+    );
+  });
+  test('against a timestamp', () => {
+    expect(expr`ats ? (pick @2020 when abool else @2021-03)`).compilesTo(
+      '{{ats >= {case when abool then @2020-01-01 00:00:00 else @2021-03-01 00:00:00}} and {ats < {case when abool then @2021-01-01 00:00:00 else @2021-04-01 00:00:00}}}'
+    );
+  });
+  test('with granular expressions', () => {
+    expect(expr`ad ? (pick ad.month when abool else ad.year)`).compilesTo(
+      '{{ad >= {case when abool then {timeTrunc-month ad} else {timeTrunc-year ad}}} and {ad < {case when abool then {+month {timeTrunc-month ad} 1} else {+year {timeTrunc-year ad} 1}}}}'
+    );
+  });
+  test('a null branch is a null range', () => {
+    expect(expr`ad ? (pick ad.month when abool else null)`).compilesTo(
+      '{{ad >= {case when abool then {timeTrunc-month ad} else {null}}} and {ad < {case when abool then {+month {timeTrunc-month ad} 1} else {null}}}}'
+    );
+  });
+  test('the same through more parentheses', () => {
+    expect(expr`ad ? ((pick @2020 when abool else @2021-03))`).compilesTo(
+      '{{ad >= {case when abool then @2020-01-01 else @2021-03-01}} and {ad < {case when abool then @2021-01-01 else @2021-04-01}}}'
+    );
+  });
+  test('a branch with no granularity is a span of no width', () => {
+    expect(expr`ad ? (pick @2020 when abool else ad)`).compilesTo(
+      '{{ad >= {case when abool then @2020-01-01 else ad}} and {{ad < {case when abool then @2021-01-01 else ad}} or {ad = {case when abool then @2020-01-01 else ad}}}}'
+    );
+  });
+  test('= is an equality', () => {
+    expect(expr`ad = (pick @2020 when abool else @2021-03)`).compilesTo(
+      '{ad = {case when abool then @2020-01-01 else @2021-03-01}}'
+    );
+  });
+  test('a pick of granular timestamps is still a timestamp', () => {
+    expect(expr`@2021 < (pick ats.month when abool else ats.year)`).compilesTo(
+      '{@2021-01-01 00:00:00 < {case when abool then {timeTrunc-month ats} else {timeTrunc-year ats}}}'
+    );
+    expect(expr`days(@2020 to (ats.day ?? ats.month))`).compilesTo(
+      '{@2020-01-01 00:00:00 timeDiff {{timeTrunc-day ats} coalesce {timeTrunc-month ats}}}'
+    );
+    expect(
+      expr`ad ? (pick ats.month when abool else ats.year) for 3 days`
+    ).compilesTo(
+      '{{{cast ad} >= {case when abool then {timeTrunc-month ats} else {timeTrunc-year ats}}} and {{cast ad} < {+day {case when abool then {timeTrunc-month ats} else {timeTrunc-year ats}} 3}}}'
+    );
+  });
+  test.each([
+    [
+      "ad ? (astr ? pick @2020 when 'a' else @2021-03)",
+      "ad ? (pick @2020 when astr = 'a' else @2021-03)",
+    ],
+    [
+      "ad ? (astr ? pick @2020 when 'a' else @2021)",
+      "ad ? (pick @2020 when astr = 'a' else @2021)",
+    ],
+  ])('an applied pick is the same range: %s', (applied, plain) => {
+    const ir = (src: string) => {
+      const e = new BetaExpression(src);
+      e.compile();
+      return exprToStr(e.generated().value, undefined);
+    };
+    expect(ir(applied)).toEqual(ir(plain));
+    expect(ir(applied)).toMatch(/ad </);
+  });
+  test('a parenthesized date literal against a timestamp', () => {
+    expect(expr`ats ? (@2020)`).compilesTo(
+      '{{ats >= @2020-01-01 00:00:00} and {ats < @2021-01-01 00:00:00}}'
+    );
+  });
+});
+
+describe('a | list under ?', () => {
+  test('reads each truncation as the span it is alone', () => {
+    expect(expr`ats ? ats.month | ats.year`).compilesTo(
+      '{{{ats >= {timeTrunc-month ats}} and {ats < {+month {timeTrunc-month ats} 1}}} or {{ats >= {timeTrunc-year ats}} and {ats < {+year {timeTrunc-year ats} 1}}}}'
+    );
+  });
+  test('reads a pick of granular values as its span', () => {
+    expect(expr`ad ? (pick @2020 when abool else @2021) | @2003`).compilesTo(
+      '{{{ad >= {case when abool then @2020-01-01 else @2021-01-01}} and {ad < {case when abool then @2021-01-01 else @2022-01-01}}} or {{ad >= @2003-01-01} and {ad < @2004-01-01}}}'
+    );
+  });
+  test('of plain values is still an in', () => {
+    expect(expr`ai ? 1 | 2 | 3`).compilesTo('{ai in {1,2,3}}');
   });
 });

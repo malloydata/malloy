@@ -3,7 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {error, errorMessage, markSource} from './test-translator';
+import {
+  error,
+  errorMessage,
+  markSource,
+  TestTranslator,
+} from './test-translator';
 import './parse-expects';
 
 describe('parameters', () => {
@@ -24,6 +29,25 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number is 7 + 7) is ab
     `).toTranslate();
+  });
+  test('date literal default for a timestamp parameter', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::timestamp is @2020) is ab
+    `).toTranslate();
+  });
+  test('date literal argument for a timestamp parameter is a timestamp', () => {
+    const t = new TestTranslator(`
+      ##! experimental.parameters
+      source: ab_new(param::timestamp) is ab
+      source: foo is ab_new(param is @2020)
+    `);
+    const foo = t.translate().modelDef?.contents['foo'];
+    const args = foo && 'arguments' in foo ? foo.arguments : undefined;
+    expect(args?.['param']?.value).toMatchObject({
+      node: 'timestampLiteral',
+      literal: '2020-01-01 00:00:00',
+    });
   });
   test('cannot specify default value with incompatible type', () => {
     expect(markSource`
