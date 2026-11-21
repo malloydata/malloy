@@ -278,6 +278,10 @@ describe('expressions', () => {
       expect(expr`hours(atstz to now)`).compilesTo('{atstz timeDiff {now}}');
       expect(expr`hours(now to atstz)`).compilesTo('{{now} timeDiff atstz}');
     });
+    test('measure between a timestamp and a timestamptz, either way', () => {
+      expect(expr`hours(ats to atstz)`).compilesTo('{ats timeDiff atstz}');
+      expect(expr`hours(atstz to ats)`).compilesTo('{atstz timeDiff ats}');
+    });
     test('measure from timestamptz to a date literal', () => {
       expect(expr`days(atstz to @2020)`).compilesTo(
         '{atstz timeDiff @2020-01-01 00:00:00}'
@@ -2355,6 +2359,26 @@ describe('apply to a pick of granular values', () => {
       '{{ad >= {case when abool then @2020-01-01 else ad}} and {{ad < {case when abool then @2021-01-01 else ad}} or {ad = {case when abool then @2020-01-01 else ad}}}}'
     );
   });
+  test('a span of no width inside a nested choice is still matched', () => {
+    expect(
+      expr`ad ? (pick (pick @2020 when abool else ad) when astr = 'a' else @2021)`
+    ).compilesTo(
+      '{{ad >= {case when {astr = {"a"}} then {case when abool then @2020-01-01 else ad} else @2021-01-01}} and {{ad < {case when {astr = {"a"}} then {case when abool then @2021-01-01 else ad} else @2022-01-01}} or {ad = {case when {astr = {"a"}} then {case when abool then @2020-01-01 else ad} else @2021-01-01}}}}'
+    );
+    expect(
+      expr`ad ? (pick @2021 when astr = 'a' else (pick @2020 when abool else ad))`
+    ).compilesTo(
+      '{{ad >= {case when {astr = {"a"}} then @2021-01-01 else {case when abool then @2020-01-01 else ad}}} and {{ad < {case when {astr = {"a"}} then @2022-01-01 else {case when abool then @2021-01-01 else ad}}} or {ad = {case when {astr = {"a"}} then @2021-01-01 else {case when abool then @2020-01-01 else ad}}}}}'
+    );
+    expect(expr`ad ? ((pick @2020 when abool else ad) ?? @2021)`).compilesTo(
+      '{{ad >= {{case when abool then @2020-01-01 else ad} coalesce @2021-01-01}} and {{ad < {{case when abool then @2021-01-01 else ad} coalesce @2022-01-01}} or {ad = {{case when abool then @2020-01-01 else ad} coalesce @2021-01-01}}}}'
+    );
+    expect(
+      expr`ad ? (astr ? pick (pick @2020 when abool else ad) when 'a' else @2021)`
+    ).compilesTo(
+      '{{ad >= {case when {astr = {"a"}} then {case when abool then @2020-01-01 else ad} else @2021-01-01}} and {{ad < {case when {astr = {"a"}} then {case when abool then @2021-01-01 else ad} else @2022-01-01}} or {ad = {case when {astr = {"a"}} then {case when abool then @2020-01-01 else ad} else @2021-01-01}}}}'
+    );
+  });
   test('= is an equality', () => {
     expect(expr`ad = (pick @2020 when abool else @2021-03)`).compilesTo(
       '{ad = {case when abool then @2020-01-01 else @2021-03-01}}'
@@ -2394,6 +2418,31 @@ describe('apply to a pick of granular values', () => {
   test('a parenthesized date literal against a timestamp', () => {
     expect(expr`ats ? (@2020)`).compilesTo(
       '{{ats >= @2020-01-01 00:00:00} and {ats < @2021-01-01 00:00:00}}'
+    );
+  });
+});
+
+describe('the when of an applied pick', () => {
+  test('reads a truncation as the span it is alone', () => {
+    expect(expr`ad ? pick 1 when ad.month else 2`).compilesTo(
+      '{case when {{ad >= {timeTrunc-month ad}} and {ad < {+month {timeTrunc-month ad} 1}}} then 1 else 2}'
+    );
+  });
+  test('reads a pick of granular values as its span', () => {
+    expect(
+      expr`ad ? pick 1 when (pick @2020 when abool else @2021-03) else 2`
+    ).compilesTo(
+      '{case when {{ad >= {case when abool then @2020-01-01 else @2021-03-01}} and {ad < {case when abool then @2021-01-01 else @2021-04-01}}} then 1 else 2}'
+    );
+  });
+  test('a written operator compares with the truncation', () => {
+    expect(expr`ad ? pick 1 when = ad.month else 2`).compilesTo(
+      '{case when {ad = {timeTrunc-month ad}} then 1 else 2}'
+    );
+  });
+  test('a plain value is an equality', () => {
+    expect(expr`ai ? pick 1 when 7 else 2`).compilesTo(
+      '{case when {ai = 7} then 1 else 2}'
     );
   });
 });

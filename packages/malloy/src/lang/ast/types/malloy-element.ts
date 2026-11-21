@@ -43,6 +43,18 @@ import type {NameSpace} from './name-space';
 import type {Noteable} from './noteable';
 import {extendOwnAnnotation, isNoteable} from './noteable';
 
+/**
+ * A node made during translation has no parent, and a node without one
+ * cannot log. This makes `owner` the parent of `made`.
+ */
+export function inTree<T extends MalloyElement>(
+  made: T,
+  owner: MalloyElement
+): T {
+  made.parent = owner;
+  return made;
+}
+
 export abstract class MalloyElement {
   abstract elementType: string;
   codeLocation?: DocumentLocation;

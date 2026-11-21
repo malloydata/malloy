@@ -14,6 +14,7 @@ import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {Unsettled} from '../types/morphic-value';
 import {settle} from '../types/morphic-value';
 import type {FieldSpace} from '../types/field-space';
+import {inTree} from '../types/malloy-element';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
 import type {Timeframe} from './time-frame';
@@ -78,12 +79,12 @@ export class ForRange extends ExpressionDef {
       const rangeStart = this.from;
       const rangeEndV = timeOffset('date', startV.value, '+', nV.value, units);
       const rangeEnd = ExprTime.of('date', rangeEndV);
-      return this.inTree(new Range(rangeStart, rangeEnd)).apply(fs, op, expr);
+      return inTree(new Range(rangeStart, rangeEnd), this).apply(fs, op, expr);
     }
 
     // Now it doesn't matter if the range is a date or a timestamp,
     // the comparison will be in timestamp space,
-    const applyTo = this.inTree(ExprTime.fromValue('timestamp', checkV));
+    const applyTo = inTree(ExprTime.fromValue('timestamp', checkV), this);
 
     let rangeStart = this.from;
     let from = startV.value;
@@ -94,14 +95,7 @@ export class ForRange extends ExpressionDef {
     const to = timeOffset('timestamp', from, '+', nV.value, units);
     const rangeEnd = ExprTime.of('timestamp', to, [startV, nV]);
 
-    return this.inTree(new Range(rangeStart, rangeEnd)).apply(fs, op, applyTo);
-  }
-
-  // A node made during translation has no parent, and a node without one
-  // cannot log.
-  private inTree<T extends ExpressionDef>(made: T): T {
-    made.parent = this;
-    return made;
+    return inTree(new Range(rangeStart, rangeEnd), this).apply(fs, op, applyTo);
   }
 
   requestExpression(_fs: FieldSpace): undefined {

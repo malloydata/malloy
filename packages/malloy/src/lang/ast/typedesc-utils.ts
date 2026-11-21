@@ -79,21 +79,11 @@ export function typeIn(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
 }
 
 /**
- * Checks if the base types, ignoring expressionType, are equal
- * @param left Left type
- * @param right Right type
- * @param nullOk True if a NULL is an acceptable match
+ * Checks if the base types, ignoring expressionType, are equal. An error
+ * matches anything, so one mistake is reported once.
  */
-export function typeEq(
-  left: TypeDesc,
-  right: TypeDesc,
-  nullOk = false,
-  errorOk = true
-): boolean {
-  const maybeEq = TD.eq(left, right);
-  const nullEq = nullOk && (left.type === 'null' || right.type === 'null');
-  const errorEq = errorOk && (left.type === 'error' || right.type === 'error');
-  return maybeEq || nullEq || errorEq;
+export function typeEq(left: TypeDesc, right: TypeDesc): boolean {
+  return TD.eq(left, right) || left.type === 'error' || right.type === 'error';
 }
 
 /**

@@ -524,16 +524,21 @@ export class ExprFunc extends ExpressionDef {
       []
     );
 
-    // TODO consider if I can use `computedExprValue` here...
-    // seems like the rules for the evalSpace is a bit different from normal though
     // A function call has no granularity: what it does to a unit of time is
     // not known. Truncate the result to give it one.
+    const resultType = (
+      returns: ExpressionValueTypeDef
+    ): ExpressionValueTypeDef =>
+      isAtomic(returns) ? withoutGranularity(typeDefOf(returns)) : returns;
+
+    // TODO consider if I can use `computedExprValue` here...
+    // seems like the rules for the evalSpace is a bit different from normal though
     const called = (
       returns: ExpressionValueTypeDef,
       value: Expr
     ): ExprValue => ({
       // TODO need to handle this???
-      ...(isAtomic(returns) ? withoutGranularity(typeDefOf(returns)) : returns),
+      ...resultType(returns),
       expressionType,
       value,
       evalSpace,

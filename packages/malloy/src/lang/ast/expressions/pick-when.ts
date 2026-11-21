@@ -11,6 +11,7 @@ import type {Misfit, Unsettled, ValueOrRange} from '../types/morphic-value';
 import {choice, isMisfit, settle, startOf} from '../types/morphic-value';
 import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import {applyTest} from './apply-test';
 import {booleanValueError, CHOICE_HINT} from './boolean-value';
 
 export class Pick extends ExpressionDef {
@@ -108,7 +109,8 @@ export class Pick extends ExpressionDef {
   applyValueOrRange(fs: FieldSpace, expr: ExpressionDef): ValueOrRange {
     const whens: ExprValue[] = [];
     for (const c of this.choices) {
-      const when = settle(c.when.apply(fs, '=', expr, true));
+      // Each `when` is read as it would be read alone after `?`
+      const when = settle(startOf(applyTest(fs, expr, c.when, this)));
       if (when.type !== 'boolean' && when.type !== 'error') {
         return c.when.loggedErrorExpr('applied-is-not-a-test', {
           resultType: when.type,

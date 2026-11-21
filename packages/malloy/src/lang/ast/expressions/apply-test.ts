@@ -6,11 +6,11 @@
 import {computedExprValue} from '../types/expr-value';
 import type {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import {inTree} from '../types/malloy-element';
 import type {RangeValue, ValueOrRange} from '../types/morphic-value';
 import {rangeOf, settle} from '../types/morphic-value';
 import {ExprGranularTime} from './expr-granular-time';
 import {ExprTime} from './expr-time';
-import {Pick} from './pick-when';
 import {Range} from './range';
 
 /**
@@ -28,10 +28,7 @@ export function applyTest(
   if (span) {
     return testSpan(fs, left, span, owner);
   }
-  if (right instanceof Pick) {
-    return right.applyValueOrRange(fs, left);
-  }
-  return right.apply(fs, '=', left, true);
+  return right.applyValueOrRange(fs, left);
 }
 
 /**
@@ -82,11 +79,4 @@ function testSpan(
     },
     from: [from, before, at],
   });
-}
-
-// A node made during translation has no parent, and a node without one
-// cannot log
-function inTree<T extends ExpressionDef>(made: T, owner: ExpressionDef): T {
-  made.parent = owner;
-  return made;
 }

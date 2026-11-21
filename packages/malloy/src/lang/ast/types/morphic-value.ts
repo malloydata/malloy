@@ -33,8 +33,8 @@ export type Unsettled = ExprValue | MorphicValue;
 
 /**
  * A span of time which `?` can test, from `start` up to but not including
- * `end`: a granular literal, or a choice among spans. To anything but `?` it
- * is its `start`.
+ * `end`: a granular literal, or a choice among spans. To anything which does
+ * not ask for a range it is its `start`.
  *
  * A choice may mix spans with single values. A single value is a span of no
  * width, with its end at its start, and `withMoments` says some alternative
@@ -50,7 +50,7 @@ export interface RangeValue {
   withMoments?: true;
 }
 
-/** What a node computes: a value, or a span of time only `?` reads */
+/** What a node computes: a value, or a span of time for `?` to test */
 export type ValueOrRange = Unsettled | RangeValue;
 
 /** The value of something which may be a range: a range is its start */
@@ -169,7 +169,6 @@ function granularityOf(t: UnsettledTypeDef): TimestampUnit | undefined {
   return TD.isTemporal(t) ? t.timeframe : undefined;
 }
 
-/** The same type with no granularity */
 export function withoutGranularity(
   t: ExpressionValueTypeDef
 ): ExpressionValueTypeDef {
@@ -344,6 +343,9 @@ function choiceRange(
     const range = a.type === 'null' ? undefined : rangeOf(a);
     if (range) {
       spans += 1;
+      if (range.withMoments) {
+        moments += 1;
+      }
     } else if (a.type !== 'null') {
       moments += 1;
     }

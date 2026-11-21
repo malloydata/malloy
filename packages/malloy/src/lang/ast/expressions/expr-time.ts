@@ -23,7 +23,6 @@ export class ExprTime extends ExpressionDef {
     super();
   }
 
-  /** A time of this type with this value */
   static of(
     timeType: TemporalFieldType,
     value: Expr,

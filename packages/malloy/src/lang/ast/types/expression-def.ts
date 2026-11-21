@@ -290,6 +290,15 @@ export abstract class ExpressionDef extends MalloyElement {
     );
   }
 
+  /**
+   * This node applied to `left` by `?`, once `applyTest` has found it is not
+   * a span of time. A node whose application can be a range, an applied
+   * pick, answers with the range.
+   */
+  applyValueOrRange(fs: FieldSpace, left: ExpressionDef): ValueOrRange {
+    return this.apply(fs, '=', left, true);
+  }
+
   canSupportPartitionBy() {
     return false;
   }

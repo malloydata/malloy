@@ -76,8 +76,8 @@ since its alternatives differ and there is no unit to step by.
   as its start. A caller that can use another form asks for it.
 - `getValueOrRange(fs)` returns what the node computed, possibly a range. Only a node
   that makes a range (a choice), passes one on (an applied pick, through
-  `Pick.applyValueOrRange`) or reads one (`applyTest` and `delta`, through `rangeOf`)
-  asks for it.
+  `Pick.applyValueOrRange`) or reads one (`applyTest`, through `rangeOf`, and
+  `delta`) asks for it.
 
 A caller of `getUnsettled` settles the value itself, usually through one of these:
 
@@ -143,7 +143,8 @@ Both classes also:
 ### How `?` (apply) uses this
 
 `Apply` extends `ExprCompare` with `op = '='`. It reads its right side through
-`applyTest` (`apply-test.ts`), which ends, for anything that is not a span, in:
+`applyTest` (`apply-test.ts`), which ends, for anything that is not a span, in
+`right.applyValueOrRange(fs, left)`. For every node but a pick that is:
 
 ```ts
 // simplified
@@ -153,10 +154,19 @@ return right.apply(fs, '=', left, true);
 So `x ? > 5` → `PartialCompare(>, 5).apply(fs, '=', x)` → `x > 5`.
 And `x ? 5 | 6 | 7` → `ExprAlternationTree.apply(fs, '=', x)` → `x IN (5, 6, 7)`.
 
-One thing only `?` does, which is why it lives in `applyTest` and not in `apply`:
-a right side which stands for a span of time is tested as that span. `x ? ad.month`
-tests the month, and `x ? (pick @2020 when c else @2021-03)` tests the year or the
-month the pick selects. `=` against the same pick is a single equality.
+`Pick` overrides `applyValueOrRange`, which is what `Pick.apply` does without
+reading the result as its start, so the range an applied pick's alternatives
+make reaches whatever holds the `?`. Each `when` of an applied
+pick, like each item of a `|` list under `?`, is itself read through
+`applyTest`: it means what it would mean alone after `?`, so `when ad.month`
+tests the month.
+
+A truncation, or a choice among spans, is tested as a span only by `?`, which is
+why that lives in `applyTest` and not in `apply`. `x ? ad.month` tests the month,
+and `x ? (pick @2020 when c else @2021-03)` tests the year or the month the pick
+selects; `=` against either is a single equality. A granular literal is the
+exception: it builds its own range test in `apply`, so `x = @2020` is a range
+test as `x ? @2020` is.
 
 The same `apply` hook is used by `pick … when`, which also puts a
 `partialAllowedFieldExpr` on its right. The right side of `?`, `|`, `&` and
@@ -170,8 +180,9 @@ node) passes `true` when it hands its right side the `=`. Every other caller
 leaves it false, which is right both for an operator written in the source
 and for a node applying an operator of its own, as a range does with `>=` and
 `<` and a `PartialCompare` does with the operator it holds. A node which
-hands the application it was given on to nodes it holds — an alternation tree
-to its choices, a pick to its `when`s — passes the argument on.
+hands the `?` it was reached by on to nodes it holds, an alternation tree to
+its choices and an applied pick to its `when`s, does so through `applyTest`,
+which passes `true` again.
 
 For a range, a granular literal and `null` the difference does not matter:
 each means the same under `?` as under `=`. An alternation tree uses it to
@@ -196,9 +207,9 @@ not (an applied pick of numbers, say) is the error `applied-is-not-a-test`.
 
 Before either form, `applyTest` asks its right side for a value
 (`requestExpression`), and one which stands for a span is tested as that span.
-So a pick in the value form whose value is a span, as the right side of `?` or
-as one item of a `|` list under `?`, is a range test and does not reach
-`Pick.apply`.
+So a pick in the value form whose value is a span, as the right side of `?`,
+as one item of a `|` list under `?` or as a `when` of an applied pick, is a
+range test and does not reach `Pick.apply`.
 
 A range, a granular literal and an alternation tree answer only a comparison
 operator. Handed any other operator they fall through to the base `apply`,
