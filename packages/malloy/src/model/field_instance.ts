@@ -685,11 +685,12 @@ export function sqlFullChildReference(
         'Expression compiler not registered with FieldInstanceField'
       );
     }
-    parentRef = FieldInstanceField.exprCompiler(
+    // Written in front of a field access, so it must be a single term
+    parentRef = `(${FieldInstanceField.exprCompiler(
       expand.result,
       struct.parent,
       struct.structDef.e
-    );
+    )})`;
   }
   const child = struct.getChildByName(name);
   const childType = child?.fieldDef.type || 'unknown';

@@ -6,9 +6,17 @@
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
-import {ATNodeType, ExpressionDef} from '../types/expression-def';
-import type {BinaryMalloyOperator} from '../types/binary_operators';
-import {isEquality} from '../types/binary_operators';
+import {
+  ATNodeType,
+  ExpressionDef,
+  booleanAgainstString,
+} from '../types/expression-def';
+import type {
+  BinaryMalloyOperator,
+  CompareMalloyOperator,
+  EqualityMalloyOperator,
+} from '../types/binary_operators';
+import {isComparison, isEquality} from '../types/binary_operators';
 import {booleanValueError, COMPARE_HINT} from './boolean-value';
 
 /**
@@ -16,19 +24,22 @@ import {booleanValueError, COMPARE_HINT} from './boolean-value';
  * composed entirely values and "or"s.
  *
  * @param node Root of the tree
+ * @param byApplyOperator True when `?` is applying the tree
  * @returns Undefined if other nodes are found in the tree
  */
-function flattenOrTree(inNode: ExpressionDef): ExpressionDef[] | undefined {
-  const node = inNode.atExpr();
-  switch (node.atNodeType()) {
+function flattenOrTree(
+  node: ExpressionDef,
+  byApplyOperator: boolean
+): ExpressionDef[] | undefined {
+  switch (node.atNodeType(byApplyOperator)) {
     case ATNodeType.And:
-    case ATNodeType.Partial:
+    case ATNodeType.Applied:
       return undefined;
     case ATNodeType.Or: {
       if (node instanceof ExprAlternationTree) {
-        const left = flattenOrTree(node.left);
+        const left = flattenOrTree(node.left, byApplyOperator);
         if (left) {
-          const right = flattenOrTree(node.right);
+          const right = flattenOrTree(node.right, byApplyOperator);
           if (right) {
             return [...left, ...right];
           }
@@ -43,7 +54,6 @@ function flattenOrTree(inNode: ExpressionDef): ExpressionDef[] | undefined {
 
 export class ExprAlternationTree extends ExpressionDef {
   elementType = 'alternation';
-  inList?: ExpressionDef[];
   constructor(
     readonly left: ExpressionDef,
     readonly op: '|' | '&',
@@ -53,21 +63,39 @@ export class ExprAlternationTree extends ExpressionDef {
     this.elementType = `${op}alternation${op}`;
   }
 
-  equalityList(): ExpressionDef[] {
-    if (this.inList === undefined) {
-      this.inList = flattenOrTree(this) || [];
-    }
-    return this.inList;
-  }
-
   apply(
     fs: FieldSpace,
     applyOp: BinaryMalloyOperator,
     expr: ExpressionDef,
+    byApplyOperator = false
+  ): ExprValue {
+    if (!isComparison(applyOp)) {
+      return super.apply(fs, applyOp, expr);
+    }
+    return this.applyTree(fs, applyOp, expr, byApplyOperator, false);
+  }
+
+  /**
+   * `apply`, plus the `or-choices-only` warning when the tree is more than a
+   * list of values.
+   */
+  applyEquality(
+    fs: FieldSpace,
+    op: EqualityMalloyOperator,
+    expr: ExpressionDef
+  ): ExprValue {
+    return this.applyTree(fs, op, expr, false, true);
+  }
+
+  private applyTree(
+    fs: FieldSpace,
+    applyOp: CompareMalloyOperator,
+    expr: ExpressionDef,
+    byApplyOperator: boolean,
     warnOnComplexTree: boolean
   ): ExprValue {
     if (isEquality(applyOp)) {
-      const inList = this.equalityList();
+      const inList = flattenOrTree(this, byApplyOperator) ?? [];
       if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
         const isIn = expr.getExpression(fs);
         const values = inList.map(v => v.getExpression(fs));
@@ -86,6 +114,10 @@ export class ExprAlternationTree extends ExpressionDef {
           );
           if (noIn) return noIn;
         }
+        for (const [i, val] of values.entries()) {
+          const noCompare = booleanAgainstString(inList[i], isIn, val);
+          if (noCompare) return noCompare;
+        }
         return computedExprValue({
           dataType: {type: 'boolean'},
           value: {
@@ -103,8 +135,14 @@ export class ExprAlternationTree extends ExpressionDef {
         );
       }
     }
-    const choice1 = this.left.apply(fs, applyOp, expr);
-    const choice2 = this.right.apply(fs, applyOp, expr);
+    const [choice1, choice2] = [this.left, this.right].map(choice => {
+      const applied = choice.apply(fs, applyOp, expr, byApplyOperator);
+      return applied.type === 'boolean' || applied.type === 'error'
+        ? applied
+        : choice.loggedErrorExpr('applied-is-not-a-test', {
+            resultType: applied.type,
+          });
+    });
     return computedExprValue({
       dataType: {type: 'boolean'},
       value: {

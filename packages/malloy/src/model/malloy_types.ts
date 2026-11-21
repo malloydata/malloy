@@ -133,6 +133,11 @@ export interface BinaryExpr extends ExprWithKids {
   kids: {left: Expr; right: Expr};
 }
 
+/**
+ * `'()'` is written as parentheses around what it holds. The translator makes
+ * none, and one found in IR is honored: see "Grouping comes from the tree" in
+ * the CONTEXT.md beside this file.
+ */
 export type UnaryOperator = '()' | 'not' | 'unary-' | 'is-null' | 'is-not-null';
 export interface UnaryExpr extends ExprE {
   node: UnaryOperator;

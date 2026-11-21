@@ -46,6 +46,31 @@ describe('givens — runtime supply path (Stage 4)', () => {
     expect(result.data.toObject().length).toBe(1);
   });
 
+  test('a supplied negative number keeps its sign beside a minus', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: NEG :: number
+      query: q is duckdb.sql("SELECT 2 as c") -> { select: x is c - $NEG }
+    `);
+    const result = await model.loadQueryByName('q').run({givens: {NEG: -5}});
+    expect(result.data.path(0, 'x').value).toBe(7);
+  });
+
+  test('membership in a supplied array is one term of a comparison', async () => {
+    const model = runtime.loadModel(`
+      ##! experimental.givens
+      given: ARR :: number[]
+      query: q is duckdb.sql("SELECT 2 as c, true as t") -> {
+        select: x is c in $ARR = t
+      }
+    `);
+    const q = model.loadQueryByName('q');
+    const sql = await q.getSQL({givens: {ARR: [2, -2]}});
+    expect(sql).toMatch(/\(base\."c" IN \(2,-2\)\)=base\."t"/);
+    const result = await q.run({givens: {ARR: [2, -2]}});
+    expect(result.data.path(0, 'x').value).toBe(true);
+  });
+
   test('number given drives a where comparison', async () => {
     const model = runtime.loadModel(`
       ##! experimental.givens

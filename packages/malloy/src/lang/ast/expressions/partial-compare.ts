@@ -37,6 +37,6 @@ export class PartialCompare extends ExpressionDef {
   }
 
   atNodeType(): ATNodeType {
-    return ATNodeType.Partial;
+    return ATNodeType.Applied;
   }
 }

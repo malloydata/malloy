@@ -86,9 +86,10 @@ export class ConstantExpression extends ExpressionDef {
   apply(
     fs: FieldSpace,
     op: BinaryMalloyOperator,
-    expr: ExpressionDef
+    expr: ExpressionDef,
+    byApplyOperator = false
   ): ExprValue {
-    return this.expr.apply(fs, op, expr);
+    return this.expr.apply(fs, op, expr, byApplyOperator);
   }
 
   requestExpression(fs: FieldSpace): ExprValue | undefined {

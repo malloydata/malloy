@@ -32,6 +32,17 @@ Each dialect provides functions through three collections: the cross-database **
 - To **write** a function or dialect SQL for one: [`functions/CONTEXT.md`](./functions/CONTEXT.md).
 - To understand how a call is **resolved and emitted** at runtime: [`../doc/functions.md`](../doc/functions.md).
 
+## SQL a dialect returns for an expression
+
+When a dialect writes the SQL for an expression node (`exprToSQL` and the `sql…` methods it
+calls), the SQL of each child arrives as a **single term**: text which reads as one operand
+whatever is written on either side of it. It can be written beside an operator without adding
+parentheses. What the dialect returns is in turn written beside other SQL. The compiler
+parenthesizes it for a node with `kids` and for the few others `operandNeedsParens` names; for
+every other node (a cast, a truncation, an extraction, a literal) the dialect must return a
+single term itself. "Grouping comes from the tree" in
+[`../model/CONTEXT.md`](../model/CONTEXT.md) has the whole rule.
+
 ## Adding a New Dialect
 
 See [adding-a-new-database.md](../doc/adding-a-new-database.md) for a complete step-by-step guide covering both the Dialect and Connection sides, test data setup, and CI configuration.

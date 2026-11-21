@@ -63,9 +63,9 @@ There is a `switch()` statement which checks for the node type, and then generat
 for each node type (or dispatches to a method call for the appropriate node type). There are a few things things that happen before the switch statement, which you should know about.
 
 1) All the node's children are translated, and each child node will have it's translation stored in `.sql`. Thus when translating a node, the translations of the children have already been computed and can be composed into the translated result.
-  * If a child is NOT a leaf node, the `.sql` of the
-    child node will be wrapped in `()` to it should always be safe to simply use the `.sql` without
-    adding extra parens.
+  * The `.sql` of a child is a single term: the compiler has wrapped it in `()` wherever it could
+    need that, so it is always safe to use the `.sql` without adding parens. The rule, and the
+    other places it is kept, are under "Grouping comes from the tree" in `model/CONTEXT.md`.
 2) After the child nodes are translated, before the main siwtch statement in `QueryField`, the dialect is consulted and given a chance to translate the Expr. This is how all dialect specific actions like time and date operations are handled, and how dialect specific actions like modifying the division operator also happen.
 
 Here's an example of QueryField generating a translation ...

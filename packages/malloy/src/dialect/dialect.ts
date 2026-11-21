@@ -250,7 +250,7 @@ export function turtleGroupSetCondition(
     return filterSQL;
   }
   return filterSQL
-    ? `group_set=${groupSet} AND ${filterSQL}`
+    ? `group_set=${groupSet} AND (${filterSQL})`
     : `group_set=${groupSet}`;
 }
 

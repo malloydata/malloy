@@ -5,9 +5,10 @@
 
 import {errorFor} from '../ast-utils';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
+import {isComparison} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
+import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 
 export class Range extends ExpressionDef {
@@ -24,6 +25,9 @@ export class Range extends ExpressionDef {
     op: BinaryMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
+    if (!isComparison(op)) {
+      return super.apply(fs, op, expr);
+    }
     switch (op) {
       case '=':
       case '~':
@@ -63,11 +67,14 @@ export class Range extends ExpressionDef {
       case '<=':
         return this.last.apply(fs, '<', expr);
     }
-    throw new Error('mysterious error in range computation');
   }
 
   requestExpression(_fs: FieldSpace): undefined {
     return undefined;
+  }
+
+  atNodeType(): ATNodeType {
+    return ATNodeType.Applied;
   }
 
   protected computeExpression(_fs: FieldSpace): ExprValue {

@@ -680,7 +680,8 @@ export class QueryQuery extends QueryField {
         ) {
           const parent = qs.parent;
           const e = qs.structDef.e;
-          qs.computeRecordExpression = () => exprToSQL(resultStruct, parent, e);
+          qs.computeRecordExpression = () =>
+            `(${exprToSQL(resultStruct, parent, e)})`;
         }
 
         // Recurse into this structure
@@ -1207,6 +1208,7 @@ export class QueryQuery extends QueryField {
       let filters = '';
       let conditions: string[] | undefined = undefined;
       if (ji.joinFilterConditions) {
+        // Each is a whole condition, and is written beside AND
         conditions = ji.joinFilterConditions.map(qf => {
           const tempInstance = new FieldInstanceField(
             qf,
@@ -1214,7 +1216,7 @@ export class QueryQuery extends QueryField {
             this.rootResult,
             undefined
           );
-          return tempInstance.generateExpression();
+          return `(${tempInstance.generateExpression()})`;
         });
       }
 
@@ -1234,7 +1236,8 @@ export class QueryQuery extends QueryField {
         // }
 
         if (conditions !== undefined && conditions.length >= 1) {
-          filters = ` AND (${conditions.join(' AND ')})`;
+          filters = ` AND ${conditions.join(' AND ')}`;
+          onCondition = `(${onCondition})`;
         }
         s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
@@ -1959,7 +1962,7 @@ export class QueryQuery extends QueryField {
           .havings.add(
             `(group_set<>${resultSet.groupSet} OR (group_set=${
               resultSet.groupSet
-            } AND ${having.sql()}))`
+            } AND (${having.sql()})))`
           );
       } else {
         resultSet.hasHaving = true;
@@ -1992,7 +1995,7 @@ export class QueryQuery extends QueryField {
             const groupSets = fir.childGroups.join(',');
             wheres.add(
               `(group_set NOT IN (${groupSets})` +
-                ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
+                ` OR (group_set IN (${groupSets}) AND (${turtleWhere.sql()})))`
             );
           }
         }
@@ -2575,9 +2578,11 @@ export class QueryQuery extends QueryField {
         field instanceof FieldInstanceField &&
         field.fieldUsage.type === 'result'
       ) {
+        // A dialect writes this beside other SQL, a cast for one
+        const sql = field.generateExpression();
         pushDialectField(dialectFieldList, {
           fieldDef: field.f.fieldDef,
-          sqlExpression: field.generateExpression(),
+          sqlExpression: hasExpression(field.f.fieldDef) ? `(${sql})` : sql,
           rawName: name,
         });
       }

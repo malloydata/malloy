@@ -8,9 +8,10 @@ import * as TDU from '../typedesc-utils';
 import {castTo, resolution, timeOffset} from '../time-utils';
 import {TD} from '../../../model/malloy_types';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
+import {isComparison} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {computedErrorExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
+import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
@@ -32,6 +33,9 @@ export class ForRange extends ExpressionDef {
     op: BinaryMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
+    if (!isComparison(op)) {
+      return super.apply(fs, op, expr);
+    }
     const startV = this.from.getExpression(fs);
     const checkV = expr.getExpression(fs);
     if (!this.typeCheck(expr, checkV)) {
@@ -68,12 +72,12 @@ export class ForRange extends ExpressionDef {
       const rangeStart = this.from;
       const rangeEndV = timeOffset('date', startV.value, '+', nV.value, units);
       const rangeEnd = new ExprTime('date', rangeEndV);
-      return new Range(rangeStart, rangeEnd).apply(fs, op, expr);
+      return this.inTree(new Range(rangeStart, rangeEnd)).apply(fs, op, expr);
     }
 
     // Now it doesn't matter if the range is a date or a timestamp,
     // the comparison will be in timestamp space,
-    const applyTo = ExprTime.fromValue('timestamp', checkV);
+    const applyTo = this.inTree(ExprTime.fromValue('timestamp', checkV));
 
     let rangeStart = this.from;
     let from = startV.value;
@@ -89,11 +93,22 @@ export class ForRange extends ExpressionDef {
     const to = timeOffset('timestamp', from, '+', nV.value, units);
     const rangeEnd = new ExprTime('timestamp', to, [startV, nV]);
 
-    return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
+    return this.inTree(new Range(rangeStart, rangeEnd)).apply(fs, op, applyTo);
+  }
+
+  // A node made during translation has no parent, and a node without one
+  // cannot log.
+  private inTree<T extends ExpressionDef>(made: T): T {
+    made.parent = this;
+    return made;
   }
 
   requestExpression(_fs: FieldSpace): undefined {
     return undefined;
+  }
+
+  atNodeType(): ATNodeType {
+    return ATNodeType.Applied;
   }
 
   protected computeExpression(_fs: FieldSpace): ExprValue {

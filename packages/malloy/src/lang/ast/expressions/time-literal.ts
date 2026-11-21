@@ -21,6 +21,7 @@ import {ExprTime} from './expr-time';
 import {ExpressionDef, getMorphicValue} from '../types/expression-def';
 import type {TimeResult} from '../types/time-result';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
+import {isComparison} from '../types/binary_operators';
 import {Dialect} from '../../../dialect/dialect';
 
 export class TimeFormatError extends Error {}
@@ -239,6 +240,10 @@ class GranularLiteral extends TimeLiteral {
     op: BinaryMalloyOperator,
     left: ExpressionDef
   ): ExprValue {
+    // The literal stands for its range only in a comparison
+    if (!isComparison(op)) {
+      return super.apply(fs, op, left);
+    }
     // We have a chance to write our own range comparison will all constants.
     let rangeStart = this.getExpression(fs);
     let rangeEnd = this.getNext(fs);

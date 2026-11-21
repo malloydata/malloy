@@ -51,7 +51,7 @@ export class ExprNULL extends ExpressionDef {
     if (op === '!=' || op === '=') {
       return doIsNull(fs, op, left);
     }
-    return super.apply(fs, op, left, true);
+    return super.apply(fs, op, left);
   }
 
   getStableLiteral(): Malloy.LiteralValue {
@@ -81,7 +81,7 @@ export class PartialIsNull extends ExpressionDef {
   }
 
   atNodeType(): ATNodeType {
-    return ATNodeType.Partial;
+    return ATNodeType.Applied;
   }
 }
 

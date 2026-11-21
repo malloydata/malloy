@@ -89,6 +89,30 @@ function deepCopyExpr<T extends Expr>(expr: T): T {
 }
 
 /**
+ * The tree decides how an expression groups, never SQL precedence: the SQL
+ * for a node is parenthesized where it becomes an operand, unless that SQL is
+ * a single term wherever it is written. A node with kids is always
+ * parenthesized. Of the others, these are not a single term: `a--b` is a
+ * comment, `a=b IS NULL` is `(a=b) IS NULL`, and `a=b IN (c)` is
+ * `(a=b) IN (c)` to some databases.
+ */
+function operandNeedsParens(expr: Expr): boolean {
+  if (exprHasKids(expr)) {
+    return true;
+  }
+  switch (expr.node) {
+    case 'unary-':
+    case 'is-null':
+    case 'is-not-null':
+    case 'inGiven':
+      return true;
+    case 'numberLiteral':
+      return expr.literal.startsWith('-');
+  }
+  return false;
+}
+
+/**
  * Compiles an expression tree by mutating it in-place to set all .sql fields.
  * Assumes the expression tree is already a copy that can be mutated.
  */
@@ -105,7 +129,8 @@ function compileExpr<T extends Expr>(
    * it will have access to the translated children.
    */
   if (exprHasE(expr)) {
-    compileExpr(resultSet, context, expr.e, state);
+    // A '()' node is the parentheses for what it holds
+    compileExpr(resultSet, context, expr.e, state, expr.node !== '()');
   } else if (exprHasKids(expr)) {
     for (const kidExpr of Object.values(expr.kids)) {
       if (kidExpr === null) continue;
@@ -125,7 +150,8 @@ function compileExpr<T extends Expr>(
   const qi = resultSet.getQueryInfo();
   const dialectSQL = context.dialect.exprToSQL(qi, expr);
   if (dialectSQL) {
-    expr.sql = wrap && exprHasKids(expr) ? `(${dialectSQL})` : dialectSQL;
+    expr.sql =
+      wrap && operandNeedsParens(expr) ? `(${dialectSQL})` : dialectSQL;
     return expr;
   }
 
@@ -297,7 +323,7 @@ function compileExpr<T extends Expr>(
     }
   })();
 
-  expr.sql = wrap && exprHasKids(expr) ? `(${sql})` : sql;
+  expr.sql = wrap && operandNeedsParens(expr) ? `(${sql})` : sql;
   return expr;
 }
 
@@ -318,6 +344,20 @@ export function exprToSQL(
   const compiled = compileExpr(resultSet, context, exprCopy, state, false);
 
   return compiled.sql!;
+}
+
+/**
+ * The SQL for an expression which will be written beside other SQL text, as
+ * an operand of whatever that text does.
+ */
+function operandToSQL(
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  operand: Expr,
+  state: GenerateState
+): string {
+  return compileExpr(resultSet, context, deepCopyExpr(operand), state, true)
+    .sql!;
 }
 
 function generateAppliedFilter(
@@ -471,7 +511,9 @@ function expandFunctionCall(
         const spread = entry.argIndexes.map(argIndex => args[argIndex]);
         return composeSQLExpr(withCommas(spread));
       } else {
-        return args[entry.argIndexes[0]];
+        // The template writes other SQL beside its argument
+        const arg = args[entry.argIndexes[0]];
+        return operandNeedsParens(arg) ? {node: '()', e: arg} : arg;
       }
     } else if (fragment.node === 'aggregate_order_by') {
       return orderBy
@@ -840,7 +882,7 @@ export function generateParameterFragment(
   context.eventStream?.emit('source-argument-compiled', {name});
   const argument = safeRecordGet(context.arguments(), name);
   if (argument?.value) {
-    return exprToSQL(resultSet, context, argument.value, state);
+    return operandToSQL(resultSet, context, argument.value, state);
   }
   throw new MalloyCompileError(
     `Parameter '${expr.path.join('.')}' has no value supplied.`,
@@ -881,7 +923,7 @@ export function generateGivenFragment(
   // The bound expr may itself be a `$OTHER`-bearing expression; recursive
   // compile handles default chains.
   const bound = resolveGivenBoundExpr(context, expr);
-  return exprToSQL(resultSet, context, bound, state);
+  return operandToSQL(resultSet, context, bound, state);
 }
 
 function unsatisfiedGivenMessage(refName: string): string {
@@ -1049,7 +1091,8 @@ export function generateAvgFragment(
     expr.structPath
   );
   if (distinctKeySQL) {
-    return context.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'AVG');
+    // A quotient, which is not a single term
+    return `(${context.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'AVG')})`;
   } else {
     return `AVG(${dimSQL})`;
   }

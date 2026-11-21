@@ -4,7 +4,7 @@ Expression-shaped AST nodes all extend `ExpressionDef` (`../types/expression-def
 The two integration points are:
 
 - **`computeExpression(fs: FieldSpace): ExprValue`** — evaluate this node and return an IR value + type. This is what a node implements. Callers never invoke it directly; they call `getExpression`, which is sealed on `ExpressionDef` and memoizes.
-- **`apply(fs, op, left): ExprValue`** — called when this node appears as the *right* operand of a binary operator; allows the node to override how the comparison is assembled (see below).
+- **`apply(fs, op, left, byApplyOperator): ExprValue`** — called when this node appears as the *right* operand of a binary operator; allows the node to override how the comparison is assembled (see below).
 
 ## ExprValue is shared — treat it as immutable
 
@@ -58,14 +58,64 @@ Both classes also:
 
 ```ts
 // simplified
-return this.right.apply(fs, '=', this.left);
+return this.right.apply(fs, '=', this.left, true);
 ```
 
 So `x ? > 5` → `PartialCompare(>, 5).apply(fs, '=', x)` → `x > 5`.
 And `x ? 5 | 6 | 7` → `ExprAlternationTree.apply(fs, '=', x)` → `x IN (5, 6, 7)`.
 
 The same `apply` hook is used by `pick … when`, which also puts a
-`partialAllowedFieldExpr` on its right.
+`partialAllowedFieldExpr` on its right. The right side of `?`, `|`, `&` and
+`when` are the **partial positions**: the places a partial may be written.
+
+### `?` and a written operator reach the right side the same way
+
+Both call `right.apply`, and `?` passes `'='` as its operator. What tells them
+apart is the fourth argument of `apply`, `byApplyOperator`: `Apply` (the `?`
+node) passes `true` when it hands its right side the `=`. Every other caller
+leaves it false, which is right both for an operator written in the source
+and for a node applying an operator of its own, as a range does with `>=` and
+`<` and a `PartialCompare` does with the operator it holds. A node which
+hands the application it was given on to nodes it holds — an alternation tree
+to its choices, a pick to its `when`s — passes the argument on.
+
+For a range, a granular literal and `null` the difference does not matter:
+each means the same under `?` as under `=`. An alternation tree uses it to
+decide whether a pick among its choices is a value to list in an `IN` or a
+choice to apply. (The tree's `or-choices-only` warning is a separate matter:
+`ExprEquality` asks for it, through `applyEquality`, when the tree is its
+right side.) It matters most for `Pick`, which has two forms:
+
+| reached by | form | `when` holds |
+|---|---|---|
+| `?` | the **applied form**, like a partial: the left side is applied to each `when` | a partial position |
+| a written operator, or standing alone | the **value form**, like a case statement; the operator works on its value | a boolean expression |
+
+So `Pick.apply` builds the applied form only when `byApplyOperator` is true.
+Otherwise it falls through to the base `apply`, which asks the pick for its
+value, and a pick not written in the value form reports why, in words which
+name `?`.
+
+What is applied must test the value: each choice of an alternation tree and
+each `when` of an applied pick has to come back boolean, and one which does
+not (an applied pick of numbers, say) is the error `applied-is-not-a-test`.
+
+Before either form, `Apply` asks its right side for a value
+(`requestExpression`), and a granular one is tested as a range. So a pick in
+the value form with a granular value, when it is the whole right side of `?`,
+is a range test and does not reach `Pick.apply`.
+
+A range, a granular literal and an alternation tree answer only a comparison
+operator. Handed any other operator they fall through to the base `apply`,
+which asks for their value: an error for a range or an alternation, the
+literal's own value for a granular literal.
+
+### Parentheses make no node
+
+`(expr)` in the source is the node for `expr`, at the location of `expr`, so
+an expression means the same thing in parentheses as out of them. Grouping
+reaches the SQL through the shape of the tree alone; how the compiler honors
+that is in `model/CONTEXT.md`.
 
 ## Why `in [...]` does not work as a partial
 

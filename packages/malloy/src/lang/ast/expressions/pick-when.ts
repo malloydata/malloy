@@ -6,9 +6,10 @@
 import type {CaseExpr} from '../../../model/malloy_types';
 
 import * as TDU from '../typedesc-utils';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
+import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {booleanValueError, CHOICE_HINT} from './boolean-value';
@@ -29,6 +30,15 @@ function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
     }
   }
   return ev1;
+}
+
+/**
+ * The type of a pick is the type of a choice, and a choice is a whole value.
+ * Its `morphic` is that one choice written another way, which is not the
+ * pick written another way.
+ */
+function typeOfPick(choice: ExprValue): ExprValue {
+  return {...choice, morphic: undefined};
 }
 
 export class Pick extends ExpressionDef {
@@ -60,7 +70,19 @@ export class Pick extends ExpressionDef {
     return this.getExpression(fs);
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  /**
+   * `?` applies a pick, an operator written in the source compares with the
+   * value of a pick.
+   */
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    expr: ExpressionDef,
+    byApplyOperator = false
+  ): ExprValue {
+    if (!byApplyOperator) {
+      return super.apply(fs, op, expr);
+    }
     const caseValue: CaseExpr = {
       node: 'case',
       kids: {
@@ -71,7 +93,12 @@ export class Pick extends ExpressionDef {
     let returnType: ExprValue | undefined;
     const dependents: ExprValue[] = [];
     for (const choice of this.choices) {
-      const whenExpr = choice.when.apply(fs, '=', expr);
+      const whenExpr = choice.when.apply(fs, '=', expr, true);
+      if (whenExpr.type !== 'boolean' && whenExpr.type !== 'error') {
+        return choice.when.loggedErrorExpr('applied-is-not-a-test', {
+          resultType: whenExpr.type,
+        });
+      }
       const thenExpr = choice.pick
         ? choice.pick.getExpression(fs)
         : expr.getExpression(fs);
@@ -121,10 +148,14 @@ export class Pick extends ExpressionDef {
     if (noPick) return noPick;
     caseValue.kids.caseElse = defaultVal.value;
     return computedExprValue({
-      dataType: definedReturnType,
+      dataType: typeOfPick(definedReturnType),
       value: caseValue,
       from: dependents,
     });
+  }
+
+  atNodeType(byApplyOperator = false): ATNodeType {
+    return byApplyOperator ? ATNodeType.Applied : ATNodeType.Value;
   }
 
   protected computeExpression(fs: FieldSpace): ExprValue {
@@ -135,27 +166,26 @@ export class Pick extends ExpressionDef {
         caseThen: [],
       },
     };
+    // The shapes which make this a pick to be applied are reported first, as
+    // the way out of all of them is the same.
+    for (const c of this.choices) {
+      if (c.pick === undefined) {
+        return this.loggedErrorExpr('pick-missing-value', {});
+      }
+      if (c.when.requestExpression(fs) === undefined) {
+        return c.when.loggedErrorExpr('pick-illegal-partial', {});
+      }
+    }
     if (this.elsePick === undefined) {
-      return this.loggedErrorExpr(
-        'pick-missing-else',
-        "pick incomplete, missing 'else'"
-      );
+      return this.loggedErrorExpr('pick-missing-else', {});
     }
 
     const choiceValues: Choice[] = [];
     const dependents: ExprValue[] = [];
     for (const c of this.choices) {
       if (c.pick === undefined) {
-        return this.loggedErrorExpr(
-          'pick-missing-value',
-          'pick with no value can only be used with apply'
-        );
-      }
-      const caseWhen = c.when.requestExpression(fs);
-      if (caseWhen === undefined) {
-        this.loggedErrorExpr(
-          'pick-illegal-partial',
-          'pick with partial when can only be used with apply'
+        throw this.internalError(
+          'a pick with nothing to pick was already refused'
         );
       }
       const pick = c.pick.getExpression(fs);
@@ -205,7 +235,7 @@ export class Pick extends ExpressionDef {
     if (noPick) return noPick;
     pick.kids.caseElse = defVal.value;
     return computedExprValue({
-      dataType: definedReturnType,
+      dataType: typeOfPick(definedReturnType),
       value: pick,
       from: dependents,
     });

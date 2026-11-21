@@ -317,8 +317,247 @@ describe('expressions', () => {
     });
     test('apply followed by another condition, with parenthesis', () => {
       expect('(ai ? (10 | 20)) and ai is not null').compilesTo(
-        '{({ai in {10,20}}) and {is-not-null ai}}'
+        '{{ai in {10,20}} and {is-not-null ai}}'
       );
+    });
+    test.each(['=', '!=', '<', '<=', '>', '>='])(
+      'a boolean %s a string is refused',
+      op => {
+        expect(expr`${'abool'} ${op} 'yes'`).toLog(
+          error('comparison-type-mismatch')
+        );
+        expect(expr`${"'yes'"} ${op} abool`).toLog(
+          error('comparison-type-mismatch')
+        );
+      }
+    );
+    test('a boolean against a list of strings is refused', () => {
+      expect(expr`abool ? ${"'yes'"} | 'no'`).toLog(
+        error('comparison-type-mismatch')
+      );
+    });
+    test('a boolean in a list of strings is refused', () => {
+      expect(expr`abool in ('yes', 'no')`).toLog(
+        warning('sql-in'),
+        error('comparison-type-mismatch')
+      );
+    });
+    test('a boolean = a number is left to the database', () => {
+      expect('abool = 1').compilesTo('{abool = 1}');
+    });
+    describe('an or-list lists only plain values in its IN', () => {
+      test('a range is a choice of its own', () => {
+        expect('ai ? 1 to 5 | 9').compilesTo(
+          '{{{ai >= 1} and {ai < 5}} or {ai = 9}}'
+        );
+        expect('ai ? 1 | 2 | 100 to 200 | 3').compilesTo(
+          '{{ai = 1} or {{ai = 2} or {{{ai >= 100} and {ai < 200}} or {ai = 3}}}}'
+        );
+      });
+      test('a for range is a choice of its own', () => {
+        expect(expr`ats ? now | (ats for 1 day)`).toTranslate();
+      });
+      test('? applies a pick as a choice of its own', () => {
+        expect('ai ? 9 | (pick true when > 5 else false)').compilesTo(
+          '{{ai = 9} or {case when {ai > 5} then true else false}}'
+        );
+      });
+      test('= lists the value of a pick', () => {
+        expect('ai = 9 | (pick 7 when abool else 8)').compilesTo(
+          '{ai in {9,{case when abool then 7 else 8}}}'
+        );
+      });
+    });
+    describe('parentheses group, and what they hold means what it means bare', () => {
+      test('= (null) is a null check', () => {
+        expect('ai = (null)').compilesTo('{is-null ai}');
+      });
+      test('!= (null) is a not-null check', () => {
+        expect('ai != (null)').compilesTo('{is-not-null ai}');
+      });
+      test('= (granular literal) is a range check', () => {
+        expect('ad = (@2020)').compilesTo(
+          '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
+        );
+      });
+      test('> (granular literal) is after the end of the literal', () => {
+        expect('ad > (@2020)').compilesTo('{ad >= @2021-01-01}');
+      });
+      test('= (range) is a range check', () => {
+        expect('ai = (1 to 9)').compilesTo('{{ai >= 1} and {ai < 9}}');
+      });
+      test('? (partial pick) applies the pick', () => {
+        expect('ai ? (pick 7 when > 5 else 8)').compilesTo(
+          '{case when {ai > 5} then 7 else 8}'
+        );
+      });
+      test('= (pick) compares to the value of the pick', () => {
+        expect('ai = (pick 7 when abool else 8)').compilesTo(
+          '{ai = {case when abool then 7 else 8}}'
+        );
+      });
+      test('? (pick written like a case statement) applies the pick', () => {
+        expect('ai ? (pick 7 when abool else 8)').compilesTo(
+          '{case when {ai = abool} then 7 else 8}'
+        );
+      });
+      test('? (null) is a null check', () => {
+        expect('ai ? (null)').compilesTo('{is-null ai}');
+      });
+      test('~ (range) and !~ (range) are range checks', () => {
+        expect('ai ~ (10 to 20)').compilesTo('{{ai >= 10} and {ai < 20}}');
+        expect('ai !~ (10 to 20)').compilesTo('{{ai < 10} or {ai >= 20}}');
+      });
+      test('= (for range) is a range check', () => {
+        expect('ad = (@2001 for 1 day)').compilesTo(
+          '{{ad >= @2001-01-01} and {ad < {+day @2001-01-01 1}}}'
+        );
+      });
+      test('+ (duration) is an offset', () => {
+        expect('ats + (1 day)').compilesTo('{+day ats 1}');
+      });
+      test('arithmetic does not reach into a range or an alternation', () => {
+        expect(expr`ai + (${'1 to 9'})`).toLog(error('range-as-value'));
+        expect(expr`ai + (${'ats for 1 day'})`).toLog(error('range-as-value'));
+        expect(expr`ai + (${'1 & 2'})`).toLog(error('alternation-as-value'));
+        expect(expr`ai + (${'1 | 2'})`).toLog(error('alternation-as-value'));
+      });
+      test('an error inside parentheses is located inside them', () => {
+        expect(expr`ai ? 9 | (${'pick 7 when abool else 8'})`).toLog(
+          error('applied-is-not-a-test', {resultType: 'number'})
+        );
+        expect(expr`pick 7 when (${'> 5'}) else 8`).toLog(
+          error('pick-illegal-partial')
+        );
+      });
+      test('a wrong operand in parentheses is reported', () => {
+        expect(expr`ad + (pick 'a' when abool else 'b')`).toLog(
+          error('invalid-duration-quantity')
+        );
+        expect(expr`ad - (@2003)`).toLog(error('invalid-duration-quantity'));
+        expect(expr`ats - (@2003)`).toLog(error('time-offset-type-mismatch'));
+        expect(expr`ats ? ('x' for 2 days)`).toLog(
+          error('time-comparison-type-mismatch')
+        );
+      });
+    });
+    // A pick can stand as a value when every `when` is a condition, every
+    // pick has a value, and it has an `else`.
+    describe('a pick on the right of = or ?', () => {
+      test('= compares to the value of a pick', () => {
+        expect('ai = pick 7 when abool else 8').compilesTo(
+          '{ai = {case when abool then 7 else 8}}'
+        );
+      });
+      test('= does not apply a pick', () => {
+        expect(expr`ai = pick 7 when ${'> 5'} else 8`).toLog(
+          error('pick-illegal-partial')
+        );
+        expect(expr`ai = pick 7 when ${'> 5'}`).toLog(
+          error('pick-illegal-partial')
+        );
+        expect(expr`astr = pick 'x' when 'a' else 'y'`).toLog(
+          error('pick-when-must-be-boolean', {whenType: 'string'})
+        );
+        expect(expr`ai = ${'pick when 7 else 8'}`).toLog(
+          error('pick-missing-value')
+        );
+        expect(expr`ai = ${'pick 7 when abool'}`).toLog(
+          error('pick-missing-else')
+        );
+      });
+      test('a partial = compares to the value of a pick', () => {
+        expect('ai ? = pick 7 when abool else 8').compilesTo(
+          '{ai = {case when abool then 7 else 8}}'
+        );
+      });
+      test('= reaches a pick in an alternation as a written operator', () => {
+        expect('ai = (pick 7 when abool else 8) | > 100').compilesTo(
+          '{{ai = {case when abool then 7 else 8}} or {ai > 100}}'
+        );
+        expect(expr`ai = (pick 7 when > 5 else 8) | > 100`).toLog(
+          warning('or-choices-only'),
+          error('pick-illegal-partial')
+        );
+      });
+      test('? reaches a pick in an alternation as an applied pick', () => {
+        expect('ai ? (pick true when > 5 else false) | > 100').compilesTo(
+          '{{case when {ai > 5} then true else false} or {ai > 100}}'
+        );
+      });
+      test('? reaches a pick anywhere in an alternation', () => {
+        expect('ai ? 3 & ((pick true when > 5 else false) | > 100)').compilesTo(
+          '{{ai = 3} and {{case when {ai > 5} then true else false} or {ai > 100}}}'
+        );
+      });
+      test('= with a tree which is not a list of values warns once', () => {
+        expect(expr`ai = 1 | (2 & 3) | > 4`).toLog(warning('or-choices-only'));
+      });
+      test('the = of a partial does not warn about its tree', () => {
+        expect(expr`ai ? = 1 | > 5`).toLog();
+      });
+      test('what is applied must test the value', () => {
+        expect(expr`ai ? (${'pick 7 when > 5 else 8'}) | > 100`).toLog(
+          error('applied-is-not-a-test', {resultType: 'number'})
+        );
+        expect(
+          expr`ai ? pick 1 when (${'pick 2 when > 3 else 4'}) else 5`
+        ).toLog(error('applied-is-not-a-test', {resultType: 'number'}));
+      });
+      test('a pick of dates is not the timestamp its first choice could be', () => {
+        expect('ad = pick @2020 when abool else @2021').compilesTo(
+          '{ad = {case when abool then @2020-01-01 else @2021-01-01}}'
+        );
+        expect(expr`ats = pick @2020 when abool else @2021`).toLog(
+          error('time-comparison-type-mismatch')
+        );
+      });
+      test('an applied pick of dates is not the timestamp its first choice could be', () => {
+        expect(
+          expr`ats > (ad ? pick @2020-01-01 when < @2001 else @2021-01-01)`
+        ).toLog(error('time-comparison-type-mismatch'));
+      });
+      test('= between a boolean and a pick of strings is refused', () => {
+        expect(expr`${'abool'} = pick 'yes' when true else 'no'`).toLog(
+          error('comparison-type-mismatch')
+        );
+      });
+      test('a pick of durations cannot offset a time', () => {
+        expect(expr`ats + ${'pick 1 day when abool else 2 days'}`).toLog(
+          error('time-offset-type-mismatch')
+        );
+      });
+      test('arithmetic takes the value of a pick', () => {
+        expect('ai + pick 7 when abool else 8').compilesTo(
+          '{ai + {case when abool then 7 else 8}}'
+        );
+      });
+      test.each(['!=', '>', '>=', '<', '<='])(
+        '%s compares to the value of a pick',
+        op => {
+          expect(`ai ${op} pick 7 when abool else 8`).compilesTo(
+            `{ai ${op} {case when abool then 7 else 8}}`
+          );
+        }
+      );
+      test('~ compares to the value of a pick', () => {
+        expect("astr ~ pick 'a%' when abool else 'b%'").compilesTo(
+          '{astr like {case when abool then {"a%"} else {"b%"}}}'
+        );
+      });
+      test('? applies a pick written like a case statement', () => {
+        expect('ai ? pick 7 when abool else 8').compilesTo(
+          '{case when {ai = abool} then 7 else 8}'
+        );
+      });
+      test('? applies a pick with partial whens, without a warning', () => {
+        expect(expr`ai ? pick 7 when > 5 else 8`).toTranslate();
+      });
+      test('? with a pick of granular values is a range test', () => {
+        expect('ad ? pick @2020 when abool else @2021').compilesTo(
+          '{{ad >= {case when abool then @2020-01-01 else @2021-01-01}} and {ad < {+year {case when abool then @2020-01-01 else @2021-01-01} 1}}}'
+        );
+      });
     });
     test('apply or-tree granular-literal doesnt turn into IN', () => {
       expect('ad ? @2020 | @2022').compilesTo(
@@ -1478,7 +1717,7 @@ describe('expressions', () => {
     });
   });
   test('paren and applied div', () => {
-    expect('1+(3/4)').compilesTo('{1 + ({3 / 4})}');
+    expect('1+(3/4)').compilesTo('{1 + {3 / 4}}');
   });
   test.each([
     ['ats', 'timestamp'],
