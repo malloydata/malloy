@@ -1367,29 +1367,27 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  test.when(runtime.dialect.booleanType !== 'none')(
-    'a condition of a join is a single term beside the others',
-    async () => {
-      const tm = mkTestModel(runtime, {
-        rws: [
-          {k: 1, ai: 1, bi: 9, abool: false, bbool: false},
-          {k: 2, ai: 2, bi: 9, abool: true, bbool: false},
-        ],
-      });
-      await expect(`
-        source: only_a is rws extend { where: abool }
-        source: two_filters is rws extend { where: (abool or bbool), k > 5 }
-        run: rws extend {
-          join_one: by_or is only_a on (by_or.k = ai or by_or.k = bi)
-          join_one: filtered is two_filters on filtered.k = ai
-        } -> {
-          aggregate:
-            or_matched is by_or.count()
-            filter_matched is filtered.count()
-        }
-      `).toMatchResult(tm, {or_matched: 1, filter_matched: 0});
-    }
-  );
+  test('a condition of a join is a single term beside the others', async () => {
+    // Flags are numbers so that the same rows mean the same on every dialect
+    const tm = mkTestModel(runtime, {
+      rws: [
+        {k: 1, ai: 1, bi: 9, fa: 0, fb: 0},
+        {k: 2, ai: 2, bi: 9, fa: 1, fb: 0},
+      ],
+    });
+    await expect(`
+      source: only_a is rws extend { where: fa = 1 }
+      source: two_filters is rws extend { where: (fa = 1 or fb = 1), k > 5 }
+      run: rws extend {
+        join_one: by_or is only_a on (by_or.k = ai or by_or.k = bi)
+        join_one: filtered is two_filters on filtered.k = ai
+      } -> {
+        aggregate:
+          or_matched is by_or.count()
+          filter_matched is filtered.count()
+      }
+    `).toMatchResult(tm, {or_matched: 1, filter_matched: 0});
+  });
 
   test('a symmetric average is a single term of a larger expression', async () => {
     await expect(`
