@@ -1053,6 +1053,67 @@ describe('Malloy to Stable Query', () => {
       }
     );
   });
+  describe('quarter literals', () => {
+    function quarterQuery(value: Malloy.LiteralValue): Malloy.Query {
+      return {
+        definition: {
+          kind: 'arrow',
+          source: {kind: 'source_reference', name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'literal_equality',
+                  expression: {kind: 'field_reference', name: 'dep_time'},
+                  value,
+                },
+              },
+            ],
+          },
+        },
+      };
+    }
+
+    const months: [string, number][] = [
+      ['01', 1],
+      ['03', 1],
+      ['04', 2],
+      ['06', 2],
+      ['07', 3],
+      ['09', 3],
+      ['10', 4],
+      ['12', 4],
+    ];
+
+    test.each(months)('date literal in month %s is Q%d', (month, quarter) => {
+      expect(
+        Malloy.queryToMalloy(
+          quarterQuery({
+            kind: 'date_literal',
+            date_value: `2000-${month}-15`,
+            granularity: 'quarter',
+          })
+        )
+      ).toContain(`dep_time = @2000-Q${quarter}`);
+    });
+
+    test.each(months)(
+      'timestamp literal in month %s is Q%d',
+      (month, quarter) => {
+        expect(
+          Malloy.queryToMalloy(
+            quarterQuery({
+              kind: 'timestamp_literal',
+              timestamp_value: `2000-${month}-15 12:34:56`,
+              granularity: 'quarter',
+            })
+          )
+        ).toContain(`dep_time = @2000-Q${quarter}`);
+      }
+    );
+  });
   describe('annotation printing', () => {
     const annotationValues = [
       '# bar_chart\n',
