@@ -396,9 +396,9 @@ describe('expressions', () => {
           '{ai = {case when abool then 7 else 8}}'
         );
       });
-      test('? (complete pick) compares with the value chosen', () => {
+      test('? (pick written like a case statement) applies the pick', () => {
         expect('ai ? (pick 7 when abool else 8)').compilesTo(
-          '{ai = {case when abool then 7 else 8}}'
+          '{case when {ai = abool} then 7 else 8}'
         );
       });
       test('? (null) is a null check', () => {
@@ -423,7 +423,7 @@ describe('expressions', () => {
         expect(expr`ai + (${'1 | 2'})`).toLog(error('alternation-as-value'));
       });
       test('an error inside parentheses is located inside them', () => {
-        expect(expr`ai ? 9 | (${'pick 7 when > 5 else 8'})`).toLog(
+        expect(expr`ai ? 9 | (${'pick 7 when abool else 8'})`).toLog(
           error('applied-is-not-a-test', {resultType: 'number'})
         );
         expect(expr`pick 7 when (${'> 5'}) else 8`).toLog(
@@ -519,26 +519,6 @@ describe('expressions', () => {
           '{ats > {case when {ad < @2001-01-01} then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}'
         );
       });
-      test('? between a boolean and a complete pick of numbers names the spelling which matches', () => {
-        expect(expr`${'abool'} ? pick 1 when ai > 5 else 0`).toLog(
-          errorMessage(
-            '`abool` is compared with the value the pick chooses, which is a number, not a boolean. To match `abool` against each `when`, write `pick 1 when (not abool) = (not (ai > 5)) else 0`'
-          )
-        );
-      });
-      test('? matches a when of true or false, so that pick is waiting for the left side', () => {
-        expect('abool ? pick 1 when true else 0').compilesTo(
-          '{case when {abool = true} then 1 else 0}'
-        );
-        expect('ai ? pick 1 when false else 0').compilesTo(
-          '{case when {ai = false} then 1 else 0}'
-        );
-      });
-      test('? between a boolean and a complete pick of booleans compares them', () => {
-        expect('abool ? pick abool when abool else abool').compilesTo(
-          '{abool = {case when abool then abool else abool}}'
-        );
-      });
       test('= between a boolean and a pick of strings is refused', () => {
         expect(expr`${'abool'} = pick 'yes' when true else 'no'`).toLog(
           error('comparison-type-mismatch')
@@ -567,9 +547,9 @@ describe('expressions', () => {
           '{astr like {case when abool then {"a%"} else {"b%"}}}'
         );
       });
-      test('? compares with the value of a complete pick', () => {
+      test('? applies a pick written like a case statement', () => {
         expect('ai ? pick 7 when abool else 8').compilesTo(
-          '{ai = {case when abool then 7 else 8}}'
+          '{case when {ai = abool} then 7 else 8}'
         );
       });
       test('? applies a pick with partial whens, without a warning', () => {

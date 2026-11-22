@@ -19,7 +19,9 @@ definitions already handed out.
 Derive instead — `{...operand, type: 'boolean'}`, or `computedExprValue({…, from: [operand]})`.
 A value built from another is built from a clean type and the other's parts,
 never by carrying the other value's extra forms along: those live only in
-`Forms`, which no `ExprValue` holds.
+`Forms`, which no `ExprValue` holds. A granularity is part of the type, so
+copying an operand keeps its granularity, and with it the range of its unit;
+a node whose value is not its operand's value must drop the unit.
 
 The memo is why `+`/`-` chains compile in linear rather than exponential time:
 `delta()` evaluates both operands and then hands the *nodes* to `numeric()`, which
@@ -126,14 +128,13 @@ never one of a value's forms.
 
 ### How `?` (apply) uses this
 
-`x ? r` does one of two things, decided by `r` alone (`applyTest`,
-`apply-test.ts`):
+`x ? r` does one of two things (`applyTestForms`, `apply-test.ts`):
 
-- If `r` is waiting for a left side — `requestExpression` returns nothing,
-  as for a partial, an alternation, a range, and a pick waiting for `x` — `x`
-  is applied to it: `r.apply(fs, '=', x, true)`.
-- Otherwise `x` is tested against `r`'s range, in the reading paired with `x`,
-  or compared for equality when `r` has no range.
+- If `r` has a value (`requestExpression`) and that value has a range, `x`
+  is tested against the range, in the reading paired with `x`.
+- Otherwise `x` is applied to `r` (`r.applyForms`, which is
+  `r.apply(fs, '=', x, true)`): a partial, an alternation, a range, a pick,
+  and a value with no range, which is equality.
 
 A time literal writes its own test with constant ends, so `applyTest` hands
 it straight to its `apply`.
@@ -142,11 +143,12 @@ So `x ? > 5` → `PartialCompare(>, 5).apply(fs, '=', x)` → `x > 5`,
 `x ? 5 | 6 | 7` → `x IN (5, 6, 7)`, and `x ? t.month` tests the month.
 
 The right side of `?`, `|`, `&` and `when` are the **partial positions**: the
-places a partial may be written. Under `?`, each item of a `|` or `&` list and
-each `when` of a pick waiting for `x` goes through `applyTest` too, so it is
-read as it would be read alone after `?`: `x ? t.month | t.year` is two range
-tests. A list of plain values is still one `IN`, and a value with a range is
-never one of its values.
+places a partial may be written. Each item of a `|` or `&` list written
+directly after `?` goes through `applyTest` too (`ExprAlternationTree.applyForms`),
+so it is read as it would be read alone after `?`: `x ? t.month | t.year` is
+two range tests. A list of plain values is still one `IN`, and a value with a
+range is never one of its values. A list inside a pick's `when` is reached
+through `apply` instead, and is applied as on main.
 
 ### `?` and a written operator reach the right side the same way
 
@@ -164,36 +166,24 @@ value to list in an `IN` or a choice to apply. (The tree's `or-choices-only`
 warning is a separate matter: `ExprEquality` asks for it, through
 `applyEquality`, when the tree is its right side.)
 
-### The pick rule
+### Pick after `?`
 
-Under `?` there are two kinds of pick, told apart by looking at the pick
-alone (`Pick.requestExpression`):
-
-- A **complete pick** could be written anywhere as a value: it has an `else`,
-  every arm has a result, and every `when` is a condition other than the
-  literal `true` or `false`, which are values to match against. It has a
-  value, so `?` tests `x` against what it chooses, as a range when it has
-  one.
-- A **pick waiting for `x`** is any other pick. `?` applies `x` to each
-  `when` (`Pick.applyForms`), and the result is the first arm which matches.
-  That result is a choice like any other, with every form its arms share,
-  and the `?` node hands those forms on: `ats > (astr ? pick @2020 when 'a'
-  else @2021)` compares timestamps.
+A pick has a value (`Pick.requestExpression`) when it has an `else`, a result
+in every arm, and a condition in every `when`. After `?`, such a pick whose
+value has a range is tested as that range; any other pick is applied
+(`Pick.applyForms`): `x` is applied to each `when` with `when.apply`, as on
+main, and the result is the first arm which matches. That result is a choice
+like any other, with every form its arms share, and the `?` node hands those
+forms on: `ats > (astr ? pick @2020 when 'a' else @2021)` compares
+timestamps.
 
 A written operator always takes the value: `x = pick …` compares `x` with the
-value the pick chooses, and a pick waiting for `x` after a written operator
-reports why it has no value, in words which name `?`. A boolean `x` with
-boolean `when`s is a complete pick; `when = b` matches `x` against `b`. When
-that pick's arms are not boolean, numbers included, `x ? pick …` is an error
-which shows the pick rewritten to match `x` against each `when`
-(`Pick.testEquality`), since the author almost certainly meant that. When
-the arms are boolean, either reading is plausible: `x` is compared with the
-arm chosen, with the warning `pick-boolean-compared-with-arm`, which names
-`when = w` as the way to match.
+value the pick chooses, and a pick with no value after a written operator
+reports why, in words which name `?`.
 
 What is applied must test the value: each choice of an alternation tree and
-each `when` of a pick waiting for `x` has to come back boolean, and one which
-does not (a pick of numbers waiting for `x`, say) is the error
+each `when` of an applied pick has to come back boolean, and one which does
+not (an applied pick of numbers, say) is the error
 `applied-is-not-a-test`.
 
 A range, a granular literal and an alternation tree answer only a comparison

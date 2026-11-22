@@ -18,7 +18,8 @@ import type {
 } from '../types/binary_operators';
 import {isComparison, isEquality} from '../types/binary_operators';
 import {booleanValueError, COMPARE_HINT} from './boolean-value';
-import {readingFor} from '../types/forms';
+import type {Forms} from '../types/forms';
+import {formsOf, readingFor} from '../types/forms';
 import {applyTest} from './apply-test';
 
 /**
@@ -27,12 +28,14 @@ import {applyTest} from './apply-test';
  *
  * @param node Root of the tree
  * @param byApplyOperator True when `?` is applying the tree
+ * @param itemsAlone True when each item is read as it would be alone after `?`
  * @returns Undefined if other nodes are found in the tree
  */
 function flattenOrTree(
   fs: FieldSpace,
   node: ExpressionDef,
-  byApplyOperator: boolean
+  byApplyOperator: boolean,
+  itemsAlone: boolean
 ): ExpressionDef[] | undefined {
   switch (node.atNodeType(byApplyOperator)) {
     case ATNodeType.And:
@@ -40,9 +43,14 @@ function flattenOrTree(
       return undefined;
     case ATNodeType.Or: {
       if (node instanceof ExprAlternationTree) {
-        const left = flattenOrTree(fs, node.left, byApplyOperator);
+        const left = flattenOrTree(fs, node.left, byApplyOperator, itemsAlone);
         if (left) {
-          const right = flattenOrTree(fs, node.right, byApplyOperator);
+          const right = flattenOrTree(
+            fs,
+            node.right,
+            byApplyOperator,
+            itemsAlone
+          );
           if (right) {
             return [...left, ...right];
           }
@@ -51,10 +59,10 @@ function flattenOrTree(
       return undefined;
     }
     default: {
-      // Under `?` a value with a range is tested as that range
+      // Read alone after `?`, a value with a range is tested as that range
       const isRange =
         node.granular() ||
-        (byApplyOperator && node.getForms(fs).readings[0].range !== undefined);
+        (itemsAlone && node.getForms(fs).readings[0].range !== undefined);
       return isRange ? undefined : [node];
     }
   }
@@ -80,7 +88,15 @@ export class ExprAlternationTree extends ExpressionDef {
     if (!isComparison(applyOp)) {
       return super.apply(fs, applyOp, expr);
     }
-    return this.applyTree(fs, applyOp, expr, byApplyOperator, false);
+    return this.applyTree(fs, applyOp, expr, byApplyOperator, false, false);
+  }
+
+  /**
+   * The list written directly after `?`: each item is read as it would be
+   * read alone after `?`. A list in a pick's `when` is applied instead.
+   */
+  applyForms(fs: FieldSpace, left: ExpressionDef): Forms {
+    return formsOf(this.applyTree(fs, '=', left, true, false, true));
   }
 
   /**
@@ -92,7 +108,7 @@ export class ExprAlternationTree extends ExpressionDef {
     op: EqualityMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
-    return this.applyTree(fs, op, expr, false, true);
+    return this.applyTree(fs, op, expr, false, true, false);
   }
 
   private applyTree(
@@ -100,10 +116,11 @@ export class ExprAlternationTree extends ExpressionDef {
     applyOp: CompareMalloyOperator,
     expr: ExpressionDef,
     byApplyOperator: boolean,
-    warnOnComplexTree: boolean
+    warnOnComplexTree: boolean,
+    itemsAlone: boolean
   ): ExprValue {
     if (isEquality(applyOp)) {
-      const inList = flattenOrTree(fs, this, byApplyOperator) ?? [];
+      const inList = flattenOrTree(fs, this, byApplyOperator, itemsAlone) ?? [];
       if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
         const isIn = expr.getExpression(fs);
         const values = inList.map(
@@ -146,8 +163,7 @@ export class ExprAlternationTree extends ExpressionDef {
       }
     }
     const [choice1, choice2] = [this.left, this.right].map(choice => {
-      // Under `?` each choice is read as it would be read alone after `?`
-      const applied = byApplyOperator
+      const applied = itemsAlone
         ? applyTest(fs, expr, choice, this)
         : choice.apply(fs, applyOp, expr, byApplyOperator);
       return applied.type === 'boolean' || applied.type === 'error'

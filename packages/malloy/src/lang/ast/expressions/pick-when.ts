@@ -13,14 +13,7 @@ import type {FieldSpace} from '../types/field-space';
 import type {Forms, Misfit} from '../types/forms';
 import {choose, defaultMoment, formsOf, isMisfit} from '../types/forms';
 import {MalloyElement} from '../types/malloy-element';
-import {applyTest} from './apply-test';
-import {Boolean} from './boolean';
 import {booleanValueError, CHOICE_HINT} from './boolean-value';
-
-/** Source text as one operand of `not`, `and` or `=` */
-function operand(text: string): string {
-  return /^[\w.$`]+$/.test(text) ? text : `(${text})`;
-}
 
 /** A `CASE` of these conditions, choosing among `parts`, the last the else */
 function caseOf(whens: Expr[]): (parts: Expr[]) => CaseExpr {
@@ -45,18 +38,15 @@ export class Pick extends ExpressionDef {
   }
 
   /**
-   * A complete pick has a value: an `else`, a result in every arm, and a
+   * A pick has a value when it has an `else`, a result in every arm, and a
    * condition in every `when`. Any other pick is waiting for a left side.
-   * The literal `true` or `false` is something to match against, not a
-   * condition: a flag which a database holds as a number is not a boolean
-   * here, and `flag ? pick 1 when true else 0` must still match it.
    */
   requestExpression(fs: FieldSpace): ExprValue | undefined {
     if (this.elsePick === undefined) {
       return undefined;
     }
     for (const c of this.choices) {
-      if (c.pick === undefined || c.when instanceof Boolean) {
+      if (c.pick === undefined) {
         return undefined;
       }
       const whenResp = c.when.requestExpression(fs);
@@ -68,9 +58,9 @@ export class Pick extends ExpressionDef {
   }
 
   /**
-   * `?` reaches this only for a pick waiting for a left side: the left side
-   * is applied to each `when`. An operator written in the source compares
-   * with the value of the pick.
+   * `?` applies a pick, except one with a value which has a range: the left
+   * side is applied to each `when`. An operator written in the source
+   * compares with the value of the pick.
    */
   apply(
     fs: FieldSpace,
@@ -84,11 +74,11 @@ export class Pick extends ExpressionDef {
     return defaultMoment(this.applyForms(fs, expr));
   }
 
-  /** The pick waiting for `expr`, applied to it: a choice like any other */
+  /** The pick applied to `expr`: a choice like any other */
   applyForms(fs: FieldSpace, expr: ExpressionDef): Forms {
     const whens: ExprValue[] = [];
     for (const choice of this.choices) {
-      const whenExpr = applyTest(fs, expr, choice.when, this);
+      const whenExpr = choice.when.apply(fs, '=', expr, true);
       if (whenExpr.type !== 'boolean' && whenExpr.type !== 'error') {
         return formsOf(
           choice.when.loggedErrorExpr('applied-is-not-a-test', {
@@ -107,60 +97,6 @@ export class Pick extends ExpressionDef {
       return formsOf(this.logMisfit(chosen, this));
     }
     return this.checked(fs, chosen);
-  }
-
-  /**
-   * A boolean `x` against a complete pick is compared with the value the
-   * pick chooses. When that value is not a boolean, the author almost
-   * certainly meant to match `x` against each `when`, so this is an error
-   * which shows that pick written without `?`, even where a database would
-   * compare the two. When it is a boolean, either reading is plausible, so
-   * this is a warning which shows the spelling that matches.
-   */
-  testEquality(fs: FieldSpace, left: ExpressionDef): ExprValue {
-    const x = left.getExpression(fs);
-    const value = this.getExpression(fs);
-    if (
-      x.type === 'boolean' &&
-      !['boolean', 'null', 'error'].includes(value.type)
-    ) {
-      return left.loggedErrorExpr(
-        'comparison-type-mismatch',
-        `\`${left.code}\` is compared with the value the pick chooses, which is a ${value.type}, not a boolean. To match \`${left.code}\` against each \`when\`, write \`${this.matchingSpelling(fs, left.code)}\``
-      );
-    }
-    if (x.type === 'boolean' && value.type === 'boolean') {
-      left.logWarning(
-        'pick-boolean-compared-with-arm',
-        `\`${left.code}\` is compared with the arm the pick chooses. To match \`${left.code}\` against each \`when\` instead, write \`${left.code} ? ${this.equalsSpelling()}\``
-      );
-    }
-    return super.testEquality(fs, left);
-  }
-
-  /** This pick, with each `when` written as `when = w` */
-  private equalsSpelling(): string {
-    const arms = this.choices.map(
-      c => `pick ${c.pick?.code ?? ''} when = ${c.when.code}`
-    );
-    const otherwise = this.elsePick ? ` else ${this.elsePick.code}` : '';
-    return `${arms.join(' ')}${otherwise}`;
-  }
-
-  /** This pick, with each `when` matching `x` instead of testing a condition */
-  private matchingSpelling(fs: FieldSpace, x: string): string {
-    const noBooleans = fs.dialectObj()?.booleanType === 'none';
-    const matches = (when: ExpressionDef): string => {
-      const [a, b] = [operand(x), operand(when.code)];
-      return noBooleans
-        ? `(${a} and ${b}) or (not ${a} and not ${b})`
-        : `(not ${a}) = (not ${b})`;
-    };
-    const arms = this.choices.map(
-      c => `pick ${c.pick?.code ?? x} when ${matches(c.when)}`
-    );
-    const otherwise = this.elsePick ? ` else ${this.elsePick.code}` : '';
-    return `${arms.join(' ')}${otherwise}`;
   }
 
   atNodeType(byApplyOperator = false): ATNodeType {

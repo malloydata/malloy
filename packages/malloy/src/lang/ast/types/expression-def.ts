@@ -299,14 +299,6 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * `left ? this`, when this node has a value and that value has no range:
-   * an equality.
-   */
-  testEquality(fs: FieldSpace, left: ExpressionDef): ExprValue {
-    return this.apply(fs, '=', left);
-  }
-
-  /**
    * `?` applying `left` to this node, in every form of the result. Only a
    * node whose applied result is a choice, and so can have more than one
    * form, overrides this.

@@ -56,11 +56,11 @@ const rows: [string, string][] = [
   ],
   [
     'ad ? pick 1 when ad.month else 2',
-    'number :: {case when {{ad >= {timeTrunc-month ad}} and {ad < {+month {timeTrunc-month ad} 1}}} then 1 else 2}',
+    'number :: {case when {ad = {timeTrunc-month ad}} then 1 else 2}',
   ],
   [
     'ad ? pick 1 when ad.month | ad.year else 2',
-    'number :: {case when {{{ad >= {timeTrunc-month ad}} and {ad < {+month {timeTrunc-month ad} 1}}} or {{ad >= {timeTrunc-year ad}} and {ad < {+year {timeTrunc-year ad} 1}}}} then 1 else 2}',
+    'number :: {case when {{ad = {timeTrunc-month ad}} or {ad = {timeTrunc-year ad}}} then 1 else 2}',
   ],
   [
     'ad ? pick 1 when @2020 else 2',
@@ -266,10 +266,6 @@ const rows: [string, string][] = [
     'boolean :: {{ad >= {case when abool then @2020-01-01 else @2021-01-01}} and {ad < {case when abool then @2021-01-01 else @2022-01-01}}}',
   ],
   [
-    "ats > (astr ? pick @2020 when 'a' else @2021)",
-    'boolean :: {ats > {case when {astr = {"a"}} then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}',
-  ],
-  [
     "astr ? pick @2020 when 'a' else @2021",
     'date.year :: {case when {astr = {"a"}} then @2020-01-01 else @2021-01-01}',
   ],
@@ -292,7 +288,7 @@ const rows: [string, string][] = [
   ],
   [
     'ai ? pick 7 when abool else 8',
-    'boolean :: {ai = {case when abool then 7 else 8}}',
+    'number :: {case when {ai = abool} then 7 else 8}',
   ],
   ['pick 7 when abool else 8.5', 'number :: {case when abool then 7 else 8.5}'],
   [
@@ -511,7 +507,7 @@ const rows: [string, string][] = [
   ['ats ? @2020 to ad', 'ERROR: Cannot compare a timestamp to a date'],
   [
     'ai ? (pick 7 when abool else 8)',
-    'boolean :: {ai = {case when abool then 7 else 8}}',
+    'number :: {case when {ai = abool} then 7 else 8}',
   ],
   [
     'ai = (pick 7 when abool else 8)',
@@ -519,11 +515,11 @@ const rows: [string, string][] = [
   ],
   [
     "astr ? pick 'x' when abool else 'y'",
-    'boolean :: {astr = {case when abool then {"x"} else {"y"}}}',
+    'ERROR: Cannot compare a string to a boolean',
   ],
   [
     'ad ? (pick ad when abool else ad)',
-    'boolean :: {ad = {case when abool then ad else ad}}',
+    'ERROR: Cannot compare a date to a boolean',
   ],
   [
     "ai ? pick 'big' when > 100 else 'small'",
@@ -551,11 +547,11 @@ const rows: [string, string][] = [
   ],
   [
     "abool ? pick 'same' when abool else 'different'",
-    "ERROR: `abool` is compared with the value the pick chooses, which is a string, not a boolean. To match `abool` against each `when`, write `pick 'same' when (not abool) = (not abool) else 'different'`",
+    'string :: {case when {abool = abool} then {"same"} else {"different"}}',
   ],
   [
     'abool ? pick true when abool else false',
-    'boolean :: {abool = {case when abool then true else false}}  [warns: pick-boolean-compared-with-arm]',
+    'boolean :: {case when {abool = abool} then true else false}',
   ],
   [
     'abool ? pick abool when = abool else abool',
@@ -603,6 +599,10 @@ const rows: [string, string][] = [
   [
     'ats ? max(ats.month)',
     'boolean :: {{ats >= {aggregate {timeTrunc-month ats}}} and {ats < {+month {aggregate {timeTrunc-month ats}} 1}}}',
+  ],
+  [
+    "ats > (astr ? pick @2020 when 'a' else @2021)",
+    'boolean :: {ats > {case when {astr = {"a"}} then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}',
   ],
 ];
 

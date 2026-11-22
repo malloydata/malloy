@@ -16,11 +16,11 @@ import {TimeLiteral} from './time-literal';
 
 /**
  * `left ? right`, and each item of a `|` or `&` list, or `when` of a pick,
- * which `?` reaches. What `right` is decides what happens: something waiting
- * for a left side (a partial, an alternation, a range, a pick waiting for
- * `left`) has `left` applied to it, and anything with a value of its own is
- * tested against that value's range, or for equality when it has none.
- * `owner` is the node the test belongs to.
+ * which `?` reaches. Anything with a value which has a range is tested
+ * against that range, in the reading paired with `left`; anything else has
+ * `left` applied to it, which for a value is equality and for a partial, an
+ * alternation, a range or a pick is that node's own application. `owner` is
+ * the node the test belongs to.
  */
 export function applyTest(
   fs: FieldSpace,
@@ -32,8 +32,8 @@ export function applyTest(
 }
 
 /**
- * `applyTest`, in every form of the result. Applying `left` to a pick
- * waiting for it is a choice, which can be read more than one way.
+ * `applyTest`, in every form of the result. Applying `left` to a pick is a
+ * choice, which can be read more than one way.
  */
 export function applyTestForms(
   fs: FieldSpace,
@@ -42,14 +42,13 @@ export function applyTestForms(
   owner: ExpressionDef
 ): Forms {
   // A time literal writes its own range test, with constant ends
-  if (right instanceof TimeLiteral || !right.requestExpression(fs)) {
-    return right.applyForms(fs, left);
+  if (!(right instanceof TimeLiteral) && right.requestExpression(fs)) {
+    const [, reading] = readingPair(left.getForms(fs), right.getForms(fs));
+    if (reading.range !== undefined) {
+      return formsOf(rangeTest(fs, left, reading, owner));
+    }
   }
-  const [, reading] = readingPair(left.getForms(fs), right.getForms(fs));
-  if (reading.range === undefined) {
-    return formsOf(right.testEquality(fs, left));
-  }
-  return formsOf(rangeTest(fs, left, reading, owner));
+  return right.applyForms(fs, left);
 }
 
 /**
