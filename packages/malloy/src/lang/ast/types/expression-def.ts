@@ -29,6 +29,8 @@ import {
 import {timeOffset} from '../time-utils';
 import type {FieldSpace} from './field-space';
 import {isGranularResult} from './granular-result';
+import type {Forms} from './forms';
+import {defaultMoment, formsOf, readingPair} from './forms';
 import {MalloyElement} from './malloy-element';
 import type {
   ArithmeticMalloyOperator,
@@ -57,7 +59,6 @@ function shareable(v: ExprValue): ExprValue {
   Object.freeze(v);
   for (const share of [
     v.value,
-    v.morphic,
     v.refSummary,
     v.refSummary?.fieldUsage,
     v.refSummary?.givenUsage,
@@ -69,6 +70,20 @@ function shareable(v: ExprValue): ExprValue {
     }
   }
   return v;
+}
+
+/** `shareable`, for every value a node's forms hold */
+function shareableForms(f: Forms): Forms {
+  for (const r of f.readings) {
+    shareable(r.moment);
+    if (r.range) {
+      shareable(r.range.end);
+      Object.freeze(r.range);
+    }
+    Object.freeze(r);
+  }
+  Object.freeze(f.readings);
+  return Object.freeze(f);
 }
 
 /** What a node is as a choice in an alternation tree */
@@ -94,27 +109,37 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * Returns the "translation" or Expr tree for SQL generation. When asking
-   * for a translation you may pass the types you can accept, allowing
-   * the translation code a chance to convert to match your expectations
-   * @param space Namespace for looking up field references
+   * The plain value of this node: its IR, its type and everything else
+   * computed with it. This is what every place asks for which has no use for
+   * another form of the value.
    *
    * THE RETURNED ExprValue IS SHARED -- TREAT IT AS IMMUTABLE. Asking twice
    * yields the same object, so to derive a value from one, build a new one:
    * `{...operand, type: 'boolean'}` or `computedExprValue({…, from: [operand]})`.
-   *
-   * DO NOT OVERRIDE THIS. Nodes implement `computeExpression`; an override
-   * here bypasses the memo, which for `+`/`-` chains is the difference
-   * between linear and exponential compile time.
    */
   getExpression(fs: FieldSpace): ExprValue {
+    return defaultMoment(this.getForms(fs));
+  }
+
+  /**
+   * Every form of this node's value, for the few places which can use more
+   * than the plain value: what `?`, a comparison, a choice, a function
+   * overload or a declared type can choose among. The plain value is the
+   * first reading's moment.
+   *
+   * DO NOT OVERRIDE THIS. Nodes implement `computeExpression`, or
+   * `computeForms` when they have more than one form; an override here
+   * bypasses the memo, which for `+`/`-` chains is the difference between
+   * linear and exponential compile time.
+   */
+  getForms(fs: FieldSpace): Forms {
     const initialGeneration = fs.generation();
     if (
-      this.memoValue !== undefined &&
+      this.memoForms !== undefined &&
       this.memoFs === fs &&
       this.memoGen === initialGeneration
     ) {
-      return this.memoValue;
+      return this.memoForms;
     }
 
     // If we get here and memoFs is set and memoGen is not set, then somewhere
@@ -125,19 +150,19 @@ export abstract class ExpressionDef extends MalloyElement {
 
     if (this.memoFs !== undefined && this.memoGen === undefined) {
       throw this.internalError(
-        `ExpressionDef.getExpression memoization failure on ${this.elementType}`
+        `ExpressionDef.getForms memoization failure on ${this.elementType}`
       );
     }
 
     this.memoFs = fs;
     this.memoGen = undefined;
     try {
-      const value = this.computeExpression(fs);
+      const forms = this.computeForms(fs);
       if (initialGeneration === fs.generation()) {
         this.memoGen = initialGeneration;
-        this.memoValue = shareable(value);
+        this.memoForms = shareableForms(forms);
       }
-      return value;
+      return forms;
     } finally {
       if (this.memoGen === undefined) {
         // Threw, or a name was rebound while we ran. Leave no stamp: a caller
@@ -148,13 +173,13 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * The last value this node computed, and what it was computed against.
+   * The last forms this node computed, and what they were computed against.
    * Three states, distinguished by memoGen:
    *
    *   memoFs undefined              -- nothing computed, or abandoned
    *   memoFs set, memoGen undefined -- computing right now, and only that,
    *                                    since abandoning clears memoFs
-   *   memoFs set, memoGen set       -- memoValue is that computation's result
+   *   memoFs set, memoGen set       -- memoForms is that computation's result
    *
    * Both halves of the stamp are needed: a node can be evaluated under more
    * than one field space -- ConstantExpression evaluates its child against a
@@ -166,13 +191,22 @@ export abstract class ExpressionDef extends MalloyElement {
    */
   private memoFs?: FieldSpace;
   private memoGen?: number;
-  private memoValue?: ExprValue;
+  private memoForms?: Forms;
 
   /**
-   * Evaluate this node. Implemented by every expression node; called only
-   * by `getExpression` above, never directly.
+   * Evaluate this node to its plain value. Called only by `computeForms`
+   * below, never directly.
    */
   protected abstract computeExpression(fs: FieldSpace): ExprValue;
+
+  /**
+   * Evaluate this node to every form of its value. Called only by
+   * `getForms`. A node with only its plain value, and the range of its unit
+   * when it has a granularity, need not override this.
+   */
+  protected computeForms(fs: FieldSpace): Forms {
+    return formsOf(this.computeExpression(fs));
+  }
   legalChildTypes = TDU.anyAtomicT;
 
   /**
@@ -264,6 +298,23 @@ export abstract class ExpressionDef extends MalloyElement {
     );
   }
 
+  /**
+   * `left ? this`, when this node has a value and that value has no range:
+   * an equality.
+   */
+  testEquality(fs: FieldSpace, left: ExpressionDef): ExprValue {
+    return this.apply(fs, '=', left);
+  }
+
+  /**
+   * `?` applying `left` to this node, in every form of the result. Only a
+   * node whose applied result is a choice, and so can have more than one
+   * form, overrides this.
+   */
+  applyForms(fs: FieldSpace, left: ExpressionDef): Forms {
+    return formsOf(this.apply(fs, '=', left, true));
+  }
+
   canSupportPartitionBy() {
     return false;
   }
@@ -348,30 +399,6 @@ export class ExprDuration extends ExpressionDef {
   }
 }
 
-function willMorphTo(ev: ExprValue, t: MorphicType): Expr | undefined {
-  if (ev.type === t || (t === 'timestamp' && ev.type === 'timestamptz')) {
-    return ev.value;
-  }
-  return ev.morphic && ev.morphic[t];
-}
-
-export type MorphicType = 'date' | 'timestamp';
-export function getMorphicValue(
-  mv: ExprValue,
-  mt: MorphicType
-): ExprValue | undefined {
-  if (mv.type === mt) {
-    return mv;
-  }
-  if (mv.morphic && mv.morphic[mt]) {
-    return computedExprValue({
-      dataType: {type: mt},
-      value: mv.morphic[mt],
-      from: [mv],
-    });
-  }
-}
-
 function timeCompare(
   left: ExpressionDef,
   lhs: ExprValue,
@@ -381,16 +408,13 @@ function timeCompare(
   const leftIsTime = isTemporalType(lhs.type);
   const rightIsTime = isTemporalType(rhs.type);
   const node = getExprNode(op);
-  if (leftIsTime && rightIsTime) {
-    if (lhs.type !== rhs.type) {
-      const lval = willMorphTo(lhs, 'timestamp');
-      const rval = willMorphTo(rhs, 'timestamp');
-      if (lval && rval) {
-        return {node, kids: {left: lval, right: rval}};
-      }
-    } else {
-      return {node, kids: {left: lhs.value, right: rhs.value}};
-    }
+  if (
+    leftIsTime &&
+    rightIsTime &&
+    (lhs.type === rhs.type ||
+      (TD.isAnyTimestamp(lhs) && TD.isAnyTimestamp(rhs)))
+  ) {
+    return {node, kids: {left: lhs.value, right: rhs.value}};
   }
   if (
     (leftIsTime || rightIsTime) &&
@@ -487,14 +511,26 @@ export function booleanAgainstString(
   return undefined;
 }
 
+/**
+ * The two sides of a comparison, each read as the type of the other where it
+ * can be: a date literal beside a timestamp is a timestamp.
+ */
+function comparedValues(
+  fs: FieldSpace,
+  left: ExpressionDef,
+  right: ExpressionDef
+): [ExprValue, ExprValue] {
+  const [l, r] = readingPair(left.getForms(fs), right.getForms(fs));
+  return [l.moment, r.moment];
+}
+
 function equality(
   fs: FieldSpace,
   left: ExpressionDef,
   op: EqualityMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.getExpression(fs);
-  const rhs = right.getExpression(fs);
+  const [lhs, rhs] = comparedValues(fs, left, right);
   const node = getExprNode(op);
 
   const err =
@@ -592,8 +628,7 @@ function compare(
   op: CompareMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.getExpression(fs);
-  const rhs = right.getExpression(fs);
+  const [lhs, rhs] = comparedValues(fs, left, right);
 
   const err =
     errorCascade('boolean', lhs, rhs) ||
@@ -773,10 +808,22 @@ function delta(
       );
     }
     if (rhs.type !== 'duration') {
+      const byNumber = rhs.type === 'number';
       if (isGranularResult(lhs)) {
         duration = durationAround(right, lhs.timeframe);
+      } else if (byNumber && left.getForms(fs).readings[0].range) {
+        // A range with no granularity is a choice among different units
+        return left.loggedErrorExpr(
+          'time-offset-type-mismatch',
+          "The choices have different granularities, so there is no unit to offset by; write the unit, as in '+ 1 month'"
+        );
       } else if (lhs.type === 'date') {
         duration = durationAround(right, 'day');
+      } else if (byNumber) {
+        return left.loggedErrorExpr(
+          'time-offset-type-mismatch',
+          `A ${lhs.type} with no granularity has no unit to offset by; write the unit, as in '+ 1 day'`
+        );
       } else {
         return left.loggedErrorExpr(
           'time-offset-type-mismatch',

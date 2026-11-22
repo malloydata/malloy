@@ -18,6 +18,8 @@ import type {
 } from '../types/binary_operators';
 import {isComparison, isEquality} from '../types/binary_operators';
 import {booleanValueError, COMPARE_HINT} from './boolean-value';
+import {readingFor} from '../types/forms';
+import {applyTest} from './apply-test';
 
 /**
  * Return a flattened version of an alternation tree, if the tree is
@@ -28,6 +30,7 @@ import {booleanValueError, COMPARE_HINT} from './boolean-value';
  * @returns Undefined if other nodes are found in the tree
  */
 function flattenOrTree(
+  fs: FieldSpace,
   node: ExpressionDef,
   byApplyOperator: boolean
 ): ExpressionDef[] | undefined {
@@ -37,9 +40,9 @@ function flattenOrTree(
       return undefined;
     case ATNodeType.Or: {
       if (node instanceof ExprAlternationTree) {
-        const left = flattenOrTree(node.left, byApplyOperator);
+        const left = flattenOrTree(fs, node.left, byApplyOperator);
         if (left) {
-          const right = flattenOrTree(node.right, byApplyOperator);
+          const right = flattenOrTree(fs, node.right, byApplyOperator);
           if (right) {
             return [...left, ...right];
           }
@@ -47,8 +50,13 @@ function flattenOrTree(
       }
       return undefined;
     }
-    default:
-      return node.granular() ? undefined : [node];
+    default: {
+      // Under `?` a value with a range is tested as that range
+      const isRange =
+        node.granular() ||
+        (byApplyOperator && node.getForms(fs).readings[0].range !== undefined);
+      return isRange ? undefined : [node];
+    }
   }
 }
 
@@ -95,10 +103,12 @@ export class ExprAlternationTree extends ExpressionDef {
     warnOnComplexTree: boolean
   ): ExprValue {
     if (isEquality(applyOp)) {
-      const inList = flattenOrTree(this, byApplyOperator) ?? [];
+      const inList = flattenOrTree(fs, this, byApplyOperator) ?? [];
       if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
         const isIn = expr.getExpression(fs);
-        const values = inList.map(v => v.getExpression(fs));
+        const values = inList.map(
+          v => readingFor(v.getForms(fs), isIn.type).moment
+        );
         // A boolean on either side of the comparison, the tested value or
         // any of the choices, is a boolean compared with something.
         for (const [el, val] of [
@@ -136,7 +146,10 @@ export class ExprAlternationTree extends ExpressionDef {
       }
     }
     const [choice1, choice2] = [this.left, this.right].map(choice => {
-      const applied = choice.apply(fs, applyOp, expr, byApplyOperator);
+      // Under `?` each choice is read as it would be read alone after `?`
+      const applied = byApplyOperator
+        ? applyTest(fs, expr, choice, this)
+        : choice.apply(fs, applyOp, expr, byApplyOperator);
       return applied.type === 'boolean' || applied.type === 'error'
         ? applied
         : choice.loggedErrorExpr('applied-is-not-a-test', {

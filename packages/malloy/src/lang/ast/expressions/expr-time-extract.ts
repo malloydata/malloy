@@ -14,7 +14,8 @@ import {
 
 import type {ExprValue} from '../types/expr-value';
 import {computedErrorExprValue, computedExprValue} from '../types/expr-value';
-import {ExpressionDef, getMorphicValue} from '../types/expression-def';
+import {ExpressionDef} from '../types/expression-def';
+import {readingPair} from '../types/forms';
 import type {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 
@@ -59,8 +60,12 @@ export class ExprTimeExtract extends ExpressionDef {
       }
       const from = this.args[0];
       if (from instanceof Range) {
-        let first = from.first.getExpression(fs);
-        let last = from.last.getExpression(fs);
+        const [firstReading, lastReading] = readingPair(
+          from.first.getForms(fs),
+          from.last.getForms(fs)
+        );
+        const first = firstReading.moment;
+        const last = lastReading.moment;
         if (first.type === 'error' || last.type === 'error') {
           return computedErrorExprValue({
             dataType: {type: 'number'},
@@ -82,27 +87,14 @@ export class ExprTimeExtract extends ExpressionDef {
         }
         let valueType = first.type;
         if (!TD.eq(first, last)) {
-          let cannotMeasure = true;
-          valueType = 'timestamp';
-          if (first.type === 'date') {
-            const newFirst = getMorphicValue(first, 'timestamp');
-            if (newFirst) {
-              first = newFirst;
-              cannotMeasure = false;
-            }
-          } else {
-            const newLast = getMorphicValue(last, 'timestamp');
-            if (newLast) {
-              last = newLast;
-              cannotMeasure = false;
-            }
-          }
-          if (cannotMeasure) {
+          // Two instants measure against each other whatever their types
+          if (!(TD.isAnyTimestamp(first) && TD.isAnyTimestamp(last))) {
             return from.first.loggedErrorExpr(
               'invalid-types-for-time-measurement',
               `Cannot measure from ${first.type} to ${last.type}`
             );
           }
+          valueType = 'timestamp';
         }
         if (
           ['week', 'month', 'quarter', 'year'].includes(extractTo) &&

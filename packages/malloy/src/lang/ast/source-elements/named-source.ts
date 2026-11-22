@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+import {valueAs} from '../types/forms';
 import type {
   Argument,
   InvokedStructRef,
@@ -197,7 +198,10 @@ export class NamedSource extends Source {
       } else {
         const paramSpace =
           parameterSpace ?? new ParameterSpace(parametersOut ?? []);
-        const pVal = argument.value.getExpression(paramSpace);
+        const pVal = valueAs(
+          argument.value.getForms(paramSpace),
+          parameter.type
+        );
         let value = pVal.value;
         if (
           pVal.type === 'filter expression' &&

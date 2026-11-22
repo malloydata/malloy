@@ -82,12 +82,12 @@ export class ForRange extends ExpressionDef {
     let rangeStart = this.from;
     let from = startV.value;
     if (startV.type === 'date') {
-      const tsVersion = startV.morphic && startV.morphic['timestamp'];
-      if (tsVersion) {
-        from = tsVersion;
-      } else {
-        from = castTo({type: 'timestamp'}, from, 'date');
-      }
+      const asTimestamp = this.from
+        .getForms(fs)
+        .readings.find(r => r.moment.type === 'timestamp');
+      from = asTimestamp
+        ? asTimestamp.moment.value
+        : castTo({type: 'timestamp'}, from, 'date');
       rangeStart = new ExprTime('timestamp', from, [startV]);
     }
     const to = timeOffset('timestamp', from, '+', nV.value, units);

@@ -18,7 +18,8 @@ import {literalTimeResult} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 import {ExprTime} from './expr-time';
-import {ExpressionDef, getMorphicValue} from '../types/expression-def';
+import {ExpressionDef} from '../types/expression-def';
+import type {Forms, Reading} from '../types/forms';
 import type {TimeResult} from '../types/time-result';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import {isComparison} from '../types/binary_operators';
@@ -168,12 +169,6 @@ export abstract class TimeLiteral extends ExpressionDef {
     return this.makeValue(fs, this.literalPart, this.timeType);
   }
 
-  getNext(fs: FieldSpace): ExprValue | undefined {
-    if (this.nextLit) {
-      return this.makeValue(fs, this.nextLit, this.timeType);
-    }
-  }
-
   granular(): boolean {
     return this.nextLit !== undefined;
   }
@@ -235,6 +230,22 @@ class GranularLiteral extends TimeLiteral {
     super(tm, units, timeType);
   }
 
+  protected computeForms(fs: FieldSpace): Forms {
+    return {readings: [this.rangeReading(fs, this.timeType, '')]};
+  }
+
+  /** This literal read as `type`, `suffix` making the text of that type */
+  protected rangeReading(
+    fs: FieldSpace,
+    type: TemporalFieldType,
+    suffix: string
+  ): Reading {
+    return {
+      moment: this.makeValue(fs, `${this.literalPart}${suffix}`, type),
+      range: {end: this.makeValue(fs, `${this.nextLit}${suffix}`, type)},
+    };
+  }
+
   apply(
     fs: FieldSpace,
     op: BinaryMalloyOperator,
@@ -245,58 +256,53 @@ class GranularLiteral extends TimeLiteral {
       return super.apply(fs, op, left);
     }
     // We have a chance to write our own range comparison will all constants.
-    let rangeStart = this.getExpression(fs);
-    let rangeEnd = this.getNext(fs);
+    const forms = this.getForms(fs);
+    let reading = forms.readings[0];
+    const testValue = left.getExpression(fs);
 
-    if (rangeEnd) {
-      const testValue = left.getExpression(fs);
+    if (testValue.type === 'date' && op === '=' && this.units === 'day') {
+      // TODO remove the === 'day' check above and warn
+      // if (this.units !== 'day') {
+      //   this.logWarning(
+      //     'time-equality-not-granular',
+      //     `Equality comparisons of a date to a literal ${this.units} will compare the first day of the ${this.units}; use a literal day instead, or use \`?\` to check whether the date is within the ${this.units}.`
+      //   );
+      // }
+      return super.apply(fs, op, left);
+    }
 
-      if (testValue.type === 'date' && op === '=' && this.units === 'day') {
-        // TODO remove the === 'day' check above and warn
-        // if (this.units !== 'day') {
-        //   this.logWarning(
-        //     'time-equality-not-granular',
-        //     `Equality comparisons of a date to a literal ${this.units} will compare the first day of the ${this.units}; use a literal day instead, or use \`?\` to check whether the date is within the ${this.units}.`
-        //   );
-        // }
+    if (
+      TD.isAnyTimestamp(testValue) &&
+      op === '=' &&
+      this.units === undefined
+    ) {
+      // TODO remove the === 'second' check above and warn
+      // if (this.units !== 'second') {
+      //   this.logWarning(
+      //     'time-equality-not-granular',
+      //     `Equality comparisons of a timestamp to a literal ${this.units} will compare the first instant of the ${this.units}; use a literal timestamp (to the second) instead, or use \`?\` to check whether the date is within the ${this.units}.`
+      //   );
+      // }
+      return super.apply(fs, op, left);
+    }
+
+    if (TD.isAnyTimestamp(testValue)) {
+      const asTimestamp = forms.readings.find(
+        r => r.moment.type === 'timestamp'
+      );
+      if (asTimestamp === undefined) {
         return super.apply(fs, op, left);
       }
+      reading = asTimestamp;
+    }
 
-      if (
-        TD.isAnyTimestamp(testValue) &&
-        op === '=' &&
-        this.units === undefined
-      ) {
-        // TODO remove the === 'second' check above and warn
-        // if (this.units !== 'second') {
-        //   this.logWarning(
-        //     'time-equality-not-granular',
-        //     `Equality comparisons of a timestamp to a literal ${this.units} will compare the first instant of the ${this.units}; use a literal timestamp (to the second) instead, or use \`?\` to check whether the date is within the ${this.units}.`
-        //   );
-        // }
-        return super.apply(fs, op, left);
-      }
-
-      if (TD.isAnyTimestamp(testValue)) {
-        const newStart = getMorphicValue(rangeStart, 'timestamp');
-        const newEnd = getMorphicValue(rangeEnd, 'timestamp');
-        if (newStart && newEnd) {
-          rangeStart = newStart;
-          rangeEnd = newEnd;
-        } else {
-          return super.apply(fs, op, left);
-        }
-      }
-
-      // Compiler is unsure about rangeEnd = newEnd for some reason
-      if (rangeEnd && isTemporalType(testValue.type)) {
-        const rangeType = testValue.type;
-        const range = new Range(
-          new ExprTime(rangeType, rangeStart.value),
-          new ExprTime(rangeType, rangeEnd.value)
-        );
-        return range.apply(fs, op, left);
-      }
+    if (reading.range && isTemporalType(testValue.type)) {
+      const rangeType = testValue.type;
+      const range = new Range(
+        new ExprTime(rangeType, reading.moment.value),
+        new ExprTime(rangeType, reading.range.end.value)
+      );
+      return range.apply(fs, op, left);
     }
     return super.apply(fs, op, left);
   }
@@ -336,26 +342,13 @@ abstract class DateBasedLiteral extends GranularLiteral {
     super(tm, units, 'date', nextLit);
   }
 
-  protected computeExpression(fs: FieldSpace): ExprValue {
-    const dateValue = this.makeValue(fs, this.literalPart, 'date');
-    const timestamp = this.makeLiteral(
-      fs,
-      `${this.literalPart} 00:00:00`,
-      'timestamp',
-      this.units
-    );
-    return {...dateValue, morphic: {timestamp}, evalSpace: 'literal'};
-  }
-
-  getNext(fs: FieldSpace): ExprValue | undefined {
-    const dateValue = this.makeValue(fs, this.nextLit, 'date');
-    const timestamp = this.makeLiteral(
-      fs,
-      `${this.nextLit} 00:00:00`,
-      'timestamp',
-      this.units
-    );
-    return {...dateValue, morphic: {timestamp}};
+  protected computeForms(fs: FieldSpace): Forms {
+    return {
+      readings: [
+        this.rangeReading(fs, 'date', ''),
+        this.rangeReading(fs, 'timestamp', ' 00:00:00'),
+      ],
+    };
   }
 }
 

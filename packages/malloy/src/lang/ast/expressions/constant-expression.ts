@@ -10,6 +10,8 @@ import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {currentGeneration} from '../types/field-space';
+import type {Forms} from '../types/forms';
+import {valueAs} from '../types/forms';
 import type {LookupResult} from '../types/lookup-result';
 import type {SpaceEntry} from '../types/space-entry';
 
@@ -72,6 +74,10 @@ export class ConstantExpression extends ExpressionDef {
     return this.constantValue();
   }
 
+  protected computeForms(_fs: FieldSpace): Forms {
+    return this.constantForms();
+  }
+
   private get constantFs(): FieldSpace {
     if (!this.cfs) {
       this.cfs = new ConstantFieldSpace();
@@ -83,6 +89,15 @@ export class ConstantExpression extends ExpressionDef {
     return this.expr.getExpression(this.constantFs);
   }
 
+  constantForms(): Forms {
+    return this.expr.getForms(this.constantFs);
+  }
+
+  /** The value as the declared `type`, when it can be read as one */
+  constantValueAs(type: string | undefined): ExprValue {
+    return valueAs(this.constantForms(), type);
+  }
+
   apply(
     fs: FieldSpace,
     op: BinaryMalloyOperator,
@@ -90,6 +105,10 @@ export class ConstantExpression extends ExpressionDef {
     byApplyOperator = false
   ): ExprValue {
     return this.expr.apply(fs, op, expr, byApplyOperator);
+  }
+
+  applyForms(fs: FieldSpace, left: ExpressionDef): Forms {
+    return this.expr.applyForms(fs, left);
   }
 
   requestExpression(fs: FieldSpace): ExprValue | undefined {

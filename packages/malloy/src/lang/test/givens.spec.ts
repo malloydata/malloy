@@ -452,7 +452,7 @@ describe('given: IR generation', () => {
     );
   });
 
-  test('date literal accepted for declared timestamp (morphic)', () => {
+  test('date literal accepted for declared timestamp', () => {
     expect(givensModel`
       given: X :: timestamp is @2001-02-02
     `).toTranslate();

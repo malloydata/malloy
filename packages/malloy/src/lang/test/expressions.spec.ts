@@ -396,9 +396,9 @@ describe('expressions', () => {
           '{ai = {case when abool then 7 else 8}}'
         );
       });
-      test('? (pick written like a case statement) applies the pick', () => {
+      test('? (complete pick) compares with the value chosen', () => {
         expect('ai ? (pick 7 when abool else 8)').compilesTo(
-          '{case when {ai = abool} then 7 else 8}'
+          '{ai = {case when abool then 7 else 8}}'
         );
       });
       test('? (null) is a null check', () => {
@@ -423,7 +423,7 @@ describe('expressions', () => {
         expect(expr`ai + (${'1 | 2'})`).toLog(error('alternation-as-value'));
       });
       test('an error inside parentheses is located inside them', () => {
-        expect(expr`ai ? 9 | (${'pick 7 when abool else 8'})`).toLog(
+        expect(expr`ai ? 9 | (${'pick 7 when > 5 else 8'})`).toLog(
           error('applied-is-not-a-test', {resultType: 'number'})
         );
         expect(expr`pick 7 when (${'> 5'}) else 8`).toLog(
@@ -504,18 +504,40 @@ describe('expressions', () => {
           expr`ai ? pick 1 when (${'pick 2 when > 3 else 4'}) else 5`
         ).toLog(error('applied-is-not-a-test', {resultType: 'number'}));
       });
-      test('a pick of dates is not the timestamp its first choice could be', () => {
+      test('a pick of dates beside a timestamp is a pick of timestamps', () => {
         expect('ad = pick @2020 when abool else @2021').compilesTo(
           '{ad = {case when abool then @2020-01-01 else @2021-01-01}}'
         );
-        expect(expr`ats = pick @2020 when abool else @2021`).toLog(
-          error('time-comparison-type-mismatch')
+        expect('ats = pick @2020 when abool else @2021').compilesTo(
+          '{ats = {case when abool then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}'
         );
       });
-      test('an applied pick of dates is not the timestamp its first choice could be', () => {
+      test('an applied pick of dates beside a timestamp is a pick of timestamps', () => {
         expect(
-          expr`ats > (ad ? pick @2020-01-01 when < @2001 else @2021-01-01)`
-        ).toLog(error('time-comparison-type-mismatch'));
+          'ats > (ad ? pick @2020-01-01 when < @2001 else @2021-01-01)'
+        ).compilesTo(
+          '{ats > {case when {ad < @2001-01-01} then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}'
+        );
+      });
+      test('? between a boolean and a complete pick of numbers names the spelling which matches', () => {
+        expect(expr`${'abool'} ? pick 1 when ai > 5 else 0`).toLog(
+          errorMessage(
+            '`abool` is compared with the value the pick chooses, which is a number, not a boolean. To match `abool` against each `when`, write `pick 1 when (not abool) = (not (ai > 5)) else 0`'
+          )
+        );
+      });
+      test('? matches a when of true or false, so that pick is waiting for the left side', () => {
+        expect('abool ? pick 1 when true else 0').compilesTo(
+          '{case when {abool = true} then 1 else 0}'
+        );
+        expect('ai ? pick 1 when false else 0').compilesTo(
+          '{case when {ai = false} then 1 else 0}'
+        );
+      });
+      test('? between a boolean and a complete pick of booleans compares them', () => {
+        expect('abool ? pick abool when abool else abool').compilesTo(
+          '{abool = {case when abool then abool else abool}}'
+        );
       });
       test('= between a boolean and a pick of strings is refused', () => {
         expect(expr`${'abool'} = pick 'yes' when true else 'no'`).toLog(
@@ -545,9 +567,9 @@ describe('expressions', () => {
           '{astr like {case when abool then {"a%"} else {"b%"}}}'
         );
       });
-      test('? applies a pick written like a case statement', () => {
+      test('? compares with the value of a complete pick', () => {
         expect('ai ? pick 7 when abool else 8').compilesTo(
-          '{case when {ai = abool} then 7 else 8}'
+          '{ai = {case when abool then 7 else 8}}'
         );
       });
       test('? applies a pick with partial whens, without a warning', () => {
@@ -555,7 +577,7 @@ describe('expressions', () => {
       });
       test('? with a pick of granular values is a range test', () => {
         expect('ad ? pick @2020 when abool else @2021').compilesTo(
-          '{{ad >= {case when abool then @2020-01-01 else @2021-01-01}} and {ad < {+year {case when abool then @2020-01-01 else @2021-01-01} 1}}}'
+          '{{ad >= {case when abool then @2020-01-01 else @2021-01-01}} and {ad < {case when abool then @2021-01-01 else @2022-01-01}}}'
         );
       });
     });

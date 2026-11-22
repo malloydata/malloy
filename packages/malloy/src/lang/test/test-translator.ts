@@ -41,6 +41,8 @@ import type {
   TranslateResponse,
 } from '../translate-response';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
+import type {Forms} from '../ast/types/forms';
+import {defaultMoment} from '../ast/types/forms';
 import type {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
 import type {
@@ -675,7 +677,7 @@ export class TestTranslator extends MalloyTranslator {
 }
 
 export class BetaExpression extends TestTranslator {
-  private compiled?: ExprValue;
+  private compiled?: Forms;
   constructor(
     src: string,
     model?: ModelDef,
@@ -699,10 +701,10 @@ export class BetaExpression extends TestTranslator {
     const exprAst = this.ast();
     if (exprAst instanceof ExpressionDef) {
       const tstFS = this.testFS();
-      const exprDef = exprAst.getExpression(tstFS);
-      this.compiled = exprDef;
+      const forms = exprAst.getForms(tstFS);
+      this.compiled = forms;
       if (TestTranslator.inspectCompile) {
-        console.log('EXPRESSION: ', pretty(exprDef));
+        console.log('EXPRESSION: ', pretty(forms));
       }
     } else if (this.logger.hasErrors()) {
       return;
@@ -713,6 +715,11 @@ export class BetaExpression extends TestTranslator {
   }
 
   generated(): ExprValue {
+    return defaultMoment(this.forms());
+  }
+
+  /** Every form of the expression's value */
+  forms(): Forms {
     if (!this.compiled) {
       throw new Error('Must compile expression before fetching generated code');
     }

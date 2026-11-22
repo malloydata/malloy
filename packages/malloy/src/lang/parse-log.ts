@@ -92,6 +92,7 @@ type MessageParameterTypes = {
   'applied-is-not-a-test': {resultType: ExpressionValueType};
   'pick-when-must-be-boolean': {whenType: ExpressionValueType};
   'pick-non-atomic-type': string;
+  'pick-boolean-compared-with-arm': string;
   'experiment-not-enabled': {experimentId: string};
   'array-query-not-array': string;
   'array-query-not-scalar': string;

@@ -236,10 +236,9 @@ describe('givens — runtime supply path (Stage 4)', () => {
     expect(rSp.data.path(0, 'ct').value).toBe(1);
   });
 
-  test('date-literal default morphs to timestamp and filters flights.dep_time', async () => {
-    // Exercises the morphic default path in define-given: the declared
-    // type is `timestamp`, the default `@2003-01-01` is a date literal,
-    // and the AST converts it to a timestamp expression so the default
+  test('date-literal default is a timestamp and filters flights.dep_time', async () => {
+    // The declared type is `timestamp` and the default `@2003-01-01` is a
+    // date literal, so the default is the literal's timestamp reading and
     // can drive a timestamp-column comparison at runtime.
     const model = runtime.loadModel(`
       ##! experimental.givens
