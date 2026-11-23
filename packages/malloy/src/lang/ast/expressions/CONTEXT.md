@@ -17,9 +17,9 @@ modify: retyping or appending to one reaches every other holder, including field
 definitions already handed out.
 
 Derive instead — `{...operand, type: 'boolean'}`, or `computedExprValue({…, from: [operand]})`.
-A value built from another is built from a clean type and the other's parts,
-never by carrying the other value's extra forms along: those live only in
-`Forms`, which no `ExprValue` holds. A granularity is part of the type, so
+An `ExprValue` holds only its own value, never another form of it (those
+live only in `Forms`), so copying one cannot carry another form along. What
+a copy does carry is the type. A granularity is part of the type, so
 copying an operand keeps its granularity, and with it the range of its unit;
 a node whose value is not its operand's value must drop the unit.
 
@@ -68,7 +68,7 @@ Moment or range is chosen by the consumer:
 | consumer | a time literal | anything else with a range |
 |---|---|---|
 | `?` | the range | the range |
-| `=` `!=` `<` `<=` `>` `>=` | the range (written by the literal's own `apply`) | the moment |
+| `=` `!=` `<` `<=` `>` `>=` | the range when the literal is on the right (written by the literal's own `apply`); the moment when it is on the left | the moment |
 | anything else that needs a value | the moment | the moment |
 
 `+ n` and `- n` with no unit step by the granularity. A value with a range and

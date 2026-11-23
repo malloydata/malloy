@@ -58,9 +58,9 @@ export class Pick extends ExpressionDef {
   }
 
   /**
-   * `?` applies a pick, except one with a value which has a range: the left
-   * side is applied to each `when`. An operator written in the source
-   * compares with the value of the pick.
+   * With `byApplyOperator`, the left side is applied to each `when`. An
+   * operator written in the source compares with the value of the pick.
+   * Whether `?` applies a pick at all is decided in `applyTestForms`.
    */
   apply(
     fs: FieldSpace,

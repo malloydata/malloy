@@ -56,7 +56,12 @@ import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import type {Forms, Reading} from '../types/forms';
-import {defaultMoment, formsOf, typeWithoutGranularity} from '../types/forms';
+import {
+  defaultMoment,
+  formsOf,
+  typeWithoutGranularity,
+  valueAs,
+} from '../types/forms';
 import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
 import {composeSQLExpr} from '../../../model/utils';
@@ -611,11 +616,7 @@ function readingsOfArguments(argForms: Forms[]): ExprValue[][] {
   if (types.length === 0) {
     return [argForms.map(defaultMoment)];
   }
-  return types.map(t =>
-    argForms.map(
-      f => (f.readings.find(r => r.moment.type === t) ?? f.readings[0]).moment
-    )
-  );
+  return types.map(t => argForms.map(f => valueAs(f, t)));
 }
 
 type ExpressionTypeError = {
