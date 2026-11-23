@@ -17,6 +17,7 @@ import {computedErrorExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {readingPair} from '../types/forms';
 import type {FieldSpace} from '../types/field-space';
+import {asTimeType} from '../time-utils';
 import {Range} from './range';
 
 export class ExprTimeExtract extends ExpressionDef {
@@ -117,8 +118,8 @@ export class ExprTimeExtract extends ExpressionDef {
             node: 'timeDiff',
             units: extractTo,
             kids: {
-              left: mkTemporal(first.value, valueType),
-              right: mkTemporal(last.value, valueType),
+              left: asTimeType(valueType, first),
+              right: asTimeType(valueType, last),
             },
           },
           from: [first, last],

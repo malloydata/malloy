@@ -198,6 +198,10 @@ const rows: [string, string][] = [
     'atstz ? @2020 for 3 days',
     'boolean :: {{{cast atstz} >= @2020-01-01 00:00:00} and {{cast atstz} < {+day @2020-01-01 00:00:00 3}}}',
   ],
+  [
+    'ats ? atstz for 3 days',
+    'boolean :: {{ats >= atstz} and {ats < {+day {cast atstz} 3}}}',
+  ],
   ['atstz > @2020', 'boolean :: {atstz >= @2021-01-01 00:00:00}'],
   [
     'atstz ? @2020',
@@ -211,8 +215,13 @@ const rows: [string, string][] = [
     'atstz ? (pick @2020 when abool else @2021)',
     'boolean :: {{atstz >= {case when abool then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}} and {atstz < {case when abool then @2021-01-01 00:00:00 else @2022-01-01 00:00:00}}}',
   ],
-  ['hours(ats to atstz)', 'number :: {ats timeDiff atstz}'],
-  ['hours(atstz to ats)', 'number :: {atstz timeDiff ats}'],
+  ['hours(ats to atstz)', 'number :: {ats timeDiff {cast atstz}}'],
+  ['hours(atstz to ats)', 'number :: {{cast atstz} timeDiff ats}'],
+  ['hours(atstz to atstz)', 'number :: {atstz timeDiff atstz}'],
+  [
+    'days(@2020 to atstz)',
+    'number :: {@2020-01-01 00:00:00 timeDiff {cast atstz}}',
+  ],
   ['days(@2020 to @2021)', 'number :: {@2020-01-01 timeDiff @2021-01-01}'],
   ['days(@2020 to ats)', 'number :: {@2020-01-01 00:00:00 timeDiff ats}'],
   ['days(ad to @2020)', 'number :: {ad timeDiff @2020-01-01}'],
