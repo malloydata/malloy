@@ -14,6 +14,7 @@ import type {Forms, Misfit} from '../types/forms';
 import {choose, defaultMoment, formsOf, isMisfit} from '../types/forms';
 import {MalloyElement} from '../types/malloy-element';
 import {booleanValueError, CHOICE_HINT} from './boolean-value';
+import {valueTest} from './apply-test';
 
 /** A `CASE` of these conditions, choosing among `parts`, the last the else */
 function caseOf(whens: Expr[]): (parts: Expr[]) => CaseExpr {
@@ -58,9 +59,9 @@ export class Pick extends ExpressionDef {
   }
 
   /**
-   * With `byApplyOperator`, the left side is applied to each `when`. An
-   * operator written in the source compares with the value of the pick.
-   * Whether `?` applies a pick at all is decided in `applyTestForms`.
+   * With `byApplyOperator`, the left side is handed to the pick (see
+   * `applyForms`). An operator written in the source compares with the
+   * value of the pick.
    */
   apply(
     fs: FieldSpace,
@@ -74,8 +75,15 @@ export class Pick extends ExpressionDef {
     return defaultMoment(this.applyForms(fs, expr));
   }
 
-  /** The pick applied to `expr`: a choice like any other */
+  /**
+   * A pick handed a left side. A pick with a value of its own is tested:
+   * `expr` against the value it chooses. Any other pick is applied: `expr`
+   * is applied to each `when`, and the result is a choice like any other.
+   */
   applyForms(fs: FieldSpace, expr: ExpressionDef): Forms {
+    if (this.requestExpression(fs) !== undefined) {
+      return formsOf(valueTest(fs, expr, this, this));
+    }
     const whens: ExprValue[] = [];
     for (const choice of this.choices) {
       const whenExpr = choice.when.apply(fs, '=', expr, true);

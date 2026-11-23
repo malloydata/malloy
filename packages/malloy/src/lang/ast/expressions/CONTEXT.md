@@ -133,8 +133,9 @@ never one of a value's forms.
 - If `r` has a value (`requestExpression`) and that value has a range, `x`
   is tested against the range, in the reading paired with `x`.
 - Otherwise `x` is applied to `r` (`r.applyForms`, which by default is
-  `r.apply(fs, '=', x, true)`): a partial, an alternation, a range, a pick,
-  and a value with no range, which is equality. A list and a pick override
+  `r.apply(fs, '=', x, true)`): a partial, an alternation, a range, a pick
+  with no value, and a value with no range, which is equality. A pick with
+  a value is tested against that value. A list and a pick override
   `applyForms`; see below.
 
 A time literal writes its own test with constant ends, so `applyTest` hands
@@ -172,10 +173,16 @@ warning is a separate matter: `ExprEquality` asks for it, through
 ### Pick after `?`
 
 A pick has a value (`Pick.requestExpression`) when it has an `else`, a result
-in every arm, and a condition in every `when`. After `?`, such a pick whose
-value has a range is tested as that range; any other pick is applied
-(`Pick.applyForms`): `x` is applied to each `when` with `when.apply`, so
-`x ? pick 1 when t.month else 2` compares `x` with the start of the month,
+in every arm, and a condition in every `when`. A pick handed a left side
+(`Pick.applyForms`), after `?` or as the `when` of an applied pick, is tested
+when it has a value: `x` against the value it chooses, in its range when it
+has one and otherwise for equality (`valueTest`), so
+`x ? pick 7 when c else 8` is `x = CASE WHEN c THEN 7 ELSE 8 END`. Nothing
+is read from the arms: a boolean `when` is always a condition, never a value
+to match `x` with.
+
+Any other pick is applied: `x` is applied to each `when` with `when.apply`,
+so `x ? pick 1 when t.month else 2` compares `x` with the start of the month,
 and the result is the first arm which matches. That result is a choice
 like any other, with every form its arms share, and the `?` node hands those
 forms on: `ats > (astr ? pick @2020 when 'a' else @2021)` compares

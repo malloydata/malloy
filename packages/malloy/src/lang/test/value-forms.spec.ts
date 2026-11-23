@@ -292,7 +292,7 @@ const rows: [string, string][] = [
   ],
   [
     'ai ? pick 7 when abool else 8',
-    'number :: {case when {ai = abool} then 7 else 8}',
+    'boolean :: {ai = {case when abool then 7 else 8}}',
   ],
   ['pick 7 when abool else 8.5', 'number :: {case when abool then 7 else 8.5}'],
   [
@@ -513,7 +513,7 @@ const rows: [string, string][] = [
   ['ats ? @2020 to ad', 'ERROR: Cannot compare a timestamp to a date'],
   [
     'ai ? (pick 7 when abool else 8)',
-    'number :: {case when {ai = abool} then 7 else 8}',
+    'boolean :: {ai = {case when abool then 7 else 8}}',
   ],
   [
     'ai = (pick 7 when abool else 8)',
@@ -521,11 +521,11 @@ const rows: [string, string][] = [
   ],
   [
     "astr ? pick 'x' when abool else 'y'",
-    'ERROR: Cannot compare a string to a boolean',
+    'boolean :: {astr = {case when abool then {"x"} else {"y"}}}',
   ],
   [
     'ad ? (pick ad when abool else ad)',
-    'ERROR: Cannot compare a date to a boolean',
+    'boolean :: {ad = {case when abool then ad else ad}}',
   ],
   [
     "ai ? pick 'big' when > 100 else 'small'",
@@ -545,7 +545,7 @@ const rows: [string, string][] = [
   ],
   [
     "abool ? pick 'yes' when true else 'no'",
-    'string :: {case when {abool = true} then {"yes"} else {"no"}}',
+    'ERROR: Cannot compare a boolean to a string',
   ],
   [
     "abool ? pick 'yes' when = true else 'no'",
@@ -553,11 +553,23 @@ const rows: [string, string][] = [
   ],
   [
     "abool ? pick 'same' when abool else 'different'",
-    'string :: {case when {abool = abool} then {"same"} else {"different"}}',
+    'ERROR: Cannot compare a boolean to a string',
   ],
   [
     'abool ? pick true when abool else false',
-    'boolean :: {case when {abool = abool} then true else false}',
+    'boolean :: {abool = {case when abool then true else false}}',
+  ],
+  [
+    "ai ? pick 'small' when (pick 1 when abool else 2) else 'big'",
+    'string :: {case when {ai = {case when abool then 1 else 2}} then {"small"} else {"big"}}',
+  ],
+  [
+    "ad ? pick 'a' when (pick ad.month when abool else ad.year) else 'b'",
+    'string :: {case when {{ad >= {case when abool then {timeTrunc-month ad} else {timeTrunc-year ad}}} and {ad < {case when abool then {+month {timeTrunc-month ad} 1} else {+year {timeTrunc-year ad} 1}}}} then {"a"} else {"b"}}',
+  ],
+  [
+    'ai ? (pick 1 when abool else 2) | 3',
+    'boolean :: {{ai = {case when abool then 1 else 2}} or {ai = 3}}',
   ],
   [
     'abool ? pick abool when = abool else abool',

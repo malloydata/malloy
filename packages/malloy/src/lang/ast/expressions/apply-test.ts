@@ -44,12 +44,38 @@ export function applyTestForms(
 ): Forms {
   // A time literal writes its own range test, with constant ends
   if (!(right instanceof TimeLiteral) && right.requestExpression(fs)) {
-    const [, reading] = readingPair(left.getForms(fs), right.getForms(fs));
-    if (reading.range !== undefined) {
-      return formsOf(rangeTest(fs, left, reading, owner));
+    const tested = rangeTestOf(fs, left, right, owner);
+    if (tested !== undefined) {
+      return formsOf(tested);
     }
   }
   return right.applyForms(fs, left);
+}
+
+/**
+ * `left` tested against the value of `right`: in its range when the value
+ * has one, and otherwise equal to it.
+ */
+export function valueTest(
+  fs: FieldSpace,
+  left: ExpressionDef,
+  right: ExpressionDef,
+  owner: ExpressionDef
+): ExprValue {
+  return rangeTestOf(fs, left, right, owner) ?? right.apply(fs, '=', left);
+}
+
+function rangeTestOf(
+  fs: FieldSpace,
+  left: ExpressionDef,
+  right: ExpressionDef,
+  owner: ExpressionDef
+): ExprValue | undefined {
+  const [, reading] = readingPair(left.getForms(fs), right.getForms(fs));
+  if (reading.range === undefined) {
+    return undefined;
+  }
+  return rangeTest(fs, left, reading, owner);
 }
 
 /**

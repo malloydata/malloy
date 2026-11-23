@@ -396,9 +396,9 @@ describe('expressions', () => {
           '{ai = {case when abool then 7 else 8}}'
         );
       });
-      test('? (pick written like a case statement) applies the pick', () => {
+      test('? (pick written like a case statement) tests the pick', () => {
         expect('ai ? (pick 7 when abool else 8)').compilesTo(
-          '{case when {ai = abool} then 7 else 8}'
+          '{ai = {case when abool then 7 else 8}}'
         );
       });
       test('? (null) is a null check', () => {
@@ -423,7 +423,7 @@ describe('expressions', () => {
         expect(expr`ai + (${'1 | 2'})`).toLog(error('alternation-as-value'));
       });
       test('an error inside parentheses is located inside them', () => {
-        expect(expr`ai ? 9 | (${'pick 7 when abool else 8'})`).toLog(
+        expect(expr`ai ? 9 | (${'pick 7 when > 5 else 8'})`).toLog(
           error('applied-is-not-a-test', {resultType: 'number'})
         );
         expect(expr`pick 7 when (${'> 5'}) else 8`).toLog(
@@ -569,9 +569,9 @@ describe('expressions', () => {
           '{astr like {case when abool then {"a%"} else {"b%"}}}'
         );
       });
-      test('? applies a pick written like a case statement', () => {
+      test('? tests a pick written like a case statement', () => {
         expect('ai ? pick 7 when abool else 8').compilesTo(
-          '{case when {ai = abool} then 7 else 8}'
+          '{ai = {case when abool then 7 else 8}}'
         );
       });
       test('? applies a pick with partial whens, without a warning', () => {
