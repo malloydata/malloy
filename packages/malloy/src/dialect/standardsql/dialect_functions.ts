@@ -74,6 +74,7 @@ const max_by: DefinitionBlueprint = {
     'order_by_val': {dimension: 'any'},
   },
   returns: {measure: T},
+  selector: true,
   impl: {function: 'MAX_BY'},
   isSymmetric: true,
 };
@@ -85,6 +86,7 @@ const min_by: DefinitionBlueprint = {
     'order_by_val': {dimension: 'any'},
   },
   returns: {measure: T},
+  selector: true,
   impl: {function: 'MIN_BY'},
   isSymmetric: true,
 };

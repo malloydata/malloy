@@ -4,8 +4,10 @@
  */
 
 import {exprToStr} from './expr-to-str';
-import {BetaExpression} from './test-translator';
+import {BetaExpression, model} from './test-translator';
+import './parse-expects';
 import {isGranularResult} from '../ast/types/granular-result';
+import {isQuerySegment, TD} from '../../model/malloy_types';
 
 /**
  * What an expression translates to, as one line: its type (with its
@@ -76,10 +78,10 @@ const rows: [string, string][] = [
     'boolean :: {{ats >= {case when abool then @2020-01-01 00:00:00 else ats}} and {{ats < {case when abool then @2021-01-01 00:00:00 else ats}} or {ats = {case when abool then @2020-01-01 00:00:00 else ats}}}}',
   ],
   ['ats > greatest(@2020, @2021)', 'boolean :: {ats > {?function_call}}'],
-  ['greatest(@2020, @2021)', 'date :: {?function_call}'],
+  ['greatest(@2020, @2021)', 'date.year :: {?function_call}'],
   ['greatest(@2020, ats)', 'timestamp :: {?function_call}'],
   ['greatest(ats, @2020)', 'timestamp :: {?function_call}'],
-  ['coalesce(null, @2021)', 'date :: {?function_call}'],
+  ['coalesce(null, @2021)', 'date.year :: {?function_call}'],
   ['ifnull(ats, @2020)', 'timestamp :: {?function_call}'],
   ['nullif(@2020, ats)', 'timestamp :: {?function_call}'],
   [
@@ -88,10 +90,10 @@ const rows: [string, string][] = [
   ],
   ['greatest(ad, @2020)', 'date :: {?function_call}'],
   ['ats > greatest(ad, @2020)', 'ERROR: Cannot compare a timestamp to a date'],
-  ['greatest(@2020, null)', 'date :: {?function_call}'],
+  ['greatest(@2020, null)', 'date.year :: {?function_call}'],
   ['greatest(ats.month, ats.year)', 'timestamp :: {?function_call}'],
-  ['greatest(ats.month, ats.month)', 'timestamp :: {?function_call}'],
-  ['greatest(ad.month, ad.month)', 'date :: {?function_call}'],
+  ['greatest(ats.month, ats.month)', 'timestamp.month :: {?function_call}'],
+  ['greatest(ad.month, ad.month)', 'date.month :: {?function_call}'],
   [
     'greatest(null, atstz)',
     'ERROR: No matching overload for function greatest(null, timestamptz)',
@@ -100,7 +102,7 @@ const rows: [string, string][] = [
     'greatest(atstz, atstz)',
     'ERROR: No matching overload for function greatest(timestamptz, timestamptz)',
   ],
-  ['coalesce(ats.month, ats.month)', 'timestamp :: {?function_call}'],
+  ['coalesce(ats.month, ats.month)', 'timestamp.month :: {?function_call}'],
   ["concat('a', @2020)", 'string :: {?function_call}'],
   ['@2020 + 1', 'date.year :: {+year @2020-01-01 1}'],
   ['ats > @2020 + 1 year', 'ERROR: Cannot compare a timestamp to a date'],
@@ -359,7 +361,12 @@ const rows: [string, string][] = [
     'ats in (@2020, ad)',
     'boolean :: {ats in {@2020-01-01 00:00:00,ad}}  [warns: sql-in]',
   ],
-  ['lag(@2020)', 'date :: {?function_call}'],
+  ['lag(@2020)', 'date.year :: {?function_call}'],
+  [
+    'coalesce(ad.month, ad.month) + 1',
+    'date.month :: {+month {?function_call} 1}',
+  ],
+  ['coalesce(ad.month, ad.year) + 1', 'date :: {+day {?function_call} 1}'],
   ['min(@2020)', 'date.year :: {aggregate @2020-01-01}'],
   ['max(ad.month)', 'date.month :: {aggregate {timeTrunc-month ad}}'],
   ['count(@2020)', 'number :: {aggregate @2020-01-01}'],
@@ -481,11 +488,11 @@ const rows: [string, string][] = [
   ],
   [
     'ats ? greatest(ats.month, ats.month)',
-    'boolean :: {ats = {?function_call}}',
+    'boolean :: {{ats >= {?function_call}} and {ats < {+month {?function_call} 1}}}',
   ],
   [
     'ats ? coalesce(ats.month, ats.month)',
-    'boolean :: {ats = {?function_call}}',
+    'boolean :: {{ats >= {?function_call}} and {ats < {+month {?function_call} 1}}}',
   ],
   ['year(@2020)', 'number :: {extract @2020-01-01}'],
   ['day_of_week(@2020)', 'number :: {extract @2020-01-01}'],
@@ -630,4 +637,64 @@ describe('time values, ranges and pick', () => {
       expect(translated(src)).toEqual(want);
     });
   }
+});
+
+/**
+ * The type of each output of a query, with its granularity, and its value
+ * when it is computed in the query.
+ */
+function outputs(query: string): string[] {
+  const m = model`${query}`;
+  expect(m).toTranslate();
+  const segment = m.translator.getQuery(0)?.pipeline[0];
+  if (segment === undefined || !isQuerySegment(segment)) {
+    throw new Error('query did not translate to a segment');
+  }
+  return segment.queryFields.map(f => {
+    if (f.type === 'fieldref' || f.type === 'turtle') {
+      return f.type;
+    }
+    const type =
+      TD.isTemporal(f) && f.timeframe ? `${f.type}.${f.timeframe}` : f.type;
+    return f.e ? `${f.name} ${type} :: ${exprToStr(f.e, undefined)}` : f.name;
+  });
+}
+
+describe('a function which returns one of its values keeps their granularity', () => {
+  test('the window functions which return a value of their argument', () => {
+    expect(
+      outputs(`run: a -> {
+        group_by: dm is ad.month, tm is ats.month
+        calculate:
+          lag_dm is lag(dm)
+          lead_tm is lead(tm, 2)
+          first_dm is first_value(dm)
+          last_tm is last_value(tm)
+          min_dm is min_window(dm)
+          max_tm is max_cumulative(tm)
+          avg_tm is avg_moving(tm, 1)
+      }`).slice(2)
+    ).toEqual([
+      'lag_dm date.month :: {?function_call}',
+      'lead_tm timestamp.month :: {?function_call}',
+      'first_dm date.month :: {?function_call}',
+      'last_tm timestamp.month :: {?function_call}',
+      'min_dm date.month :: {?function_call}',
+      'max_tm timestamp.month :: {?function_call}',
+      'avg_tm timestamp :: {?function_call}',
+    ]);
+  });
+  test('lag with a default keeps the unit it shares with the default', () => {
+    expect(
+      outputs(`run: a -> {
+        group_by: dm is ad.month
+        calculate:
+          same is lag(dm, 1, @2019-06)
+          other is lag(dm, 1, @2019-06-20)
+      }`).slice(1)
+    ).toEqual([
+      'same date.month :: {?function_call}',
+      'other date :: {?function_call}',
+    ]);
+  });
 });

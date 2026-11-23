@@ -154,6 +154,7 @@ const coalesce: DefinitionFor<Standard['coalesce']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {variadic: {generic: 'T'}}},
   returns: {generic: 'T'},
+  selector: true,
   impl: {function: 'COALESCE'},
 };
 
@@ -208,6 +209,7 @@ const greatest: DefinitionFor<Standard['greatest']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'values': {variadic: {generic: 'T'}}},
   returns: {generic: 'T'},
+  selector: true,
   impl: {function: 'GREATEST'},
 };
 
@@ -215,6 +217,7 @@ const ifnull: DefinitionFor<Standard['ifnull']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {generic: 'T'}, 'default': {generic: 'T'}},
   returns: {generic: 'T'},
+  selector: true,
   impl: {function: 'IFNULL'},
 };
 
@@ -279,6 +282,7 @@ const nullif: DefinitionFor<Standard['nullif']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value1': {generic: 'T'}, 'value2': {generic: 'T'}},
   returns: {generic: 'T'},
+  selector: true,
   impl: {function: 'NULLIF'},
 };
 
@@ -493,6 +497,7 @@ const first_value: DefinitionFor<Standard['first_value']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
+  selector: true,
   impl: {function: 'FIRST_VALUE', needsWindowOrderBy: true},
 };
 
@@ -511,6 +516,7 @@ const lag: DefinitionFor<Standard['lag']> = {
       'value': {measure: {generic: 'T'}},
     },
     returns: {calculation: {generic: 'T'}},
+    selector: true,
     impl: {function: 'LAG', needsWindowOrderBy: true},
   },
   'with_offset': {
@@ -520,6 +526,7 @@ const lag: DefinitionFor<Standard['lag']> = {
       'offset': {literal: 'number'},
     },
     returns: {calculation: {generic: 'T'}},
+    selector: true,
     impl: {function: 'LAG', needsWindowOrderBy: true},
   },
   'with_default': {
@@ -530,6 +537,7 @@ const lag: DefinitionFor<Standard['lag']> = {
       'default': {constant: {generic: 'T'}}, // TODO needs to be constant max aggregate?
     },
     returns: {calculation: {generic: 'T'}},
+    selector: true,
     impl: {function: 'LAG', needsWindowOrderBy: true},
   },
 };
@@ -538,6 +546,7 @@ const last_value: DefinitionFor<Standard['last_value']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
+  selector: true,
   impl: {
     function: 'LAST_VALUE',
     needsWindowOrderBy: true,
@@ -564,6 +573,7 @@ const max_cumulative: DefinitionFor<Standard['max_cumulative']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
+  selector: true,
   impl: {function: 'MAX', needsWindowOrderBy: true},
 };
 
@@ -571,6 +581,7 @@ const max_window: DefinitionFor<Standard['max_window']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
+  selector: true,
   impl: {function: 'MAX', needsWindowOrderBy: false},
 };
 
@@ -578,6 +589,7 @@ const min_cumulative: DefinitionFor<Standard['min_cumulative']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
+  selector: true,
   impl: {function: 'MIN', needsWindowOrderBy: true},
 };
 
@@ -585,6 +597,7 @@ const min_window: DefinitionFor<Standard['min_window']> = {
   generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
+  selector: true,
   impl: {function: 'MIN', needsWindowOrderBy: false},
 };
 

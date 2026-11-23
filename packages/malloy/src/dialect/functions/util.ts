@@ -33,6 +33,7 @@ export interface DialectFunctionOverloadDef {
   supportsOrderBy?: boolean | 'only_default';
   defaultOrderByArgIndex?: number;
   supportsLimit?: boolean;
+  selector?: true;
   between: {preceding: number | string; following: number | string} | undefined;
 }
 
@@ -240,6 +241,13 @@ export interface SignatureBlueprint {
   supportsOrderBy?: boolean | 'only_default';
   supportsLimit?: boolean;
   isSymmetric?: boolean;
+  /**
+   * The result is always one of the values bound to the generic it returns,
+   * never a value computed from them, as with `lag` or `coalesce`, so it
+   * keeps the granularity those values share. Only a function which returns
+   * a generic can be a selector.
+   */
+  selector?: true;
 }
 
 interface ImplementationBlueprintBase {
@@ -597,10 +605,15 @@ function expandGenericDefinitions(
 function expandBlueprint(
   blueprint: DefinitionBlueprint
 ): DialectFunctionOverloadDef {
+  const returnType = expandReturnTypeBlueprint(blueprint.returns);
+  if (blueprint.selector && returnType.type !== 'generic') {
+    throw new Error('Only a function which returns a generic is a selector');
+  }
   return {
-    returnType: expandReturnTypeBlueprint(blueprint.returns),
+    returnType,
     params: expandParamsBlueprints(blueprint.takes),
     isSymmetric: blueprint.isSymmetric,
+    selector: blueprint.selector,
     supportsOrderBy: blueprint.supportsOrderBy,
     supportsLimit: blueprint.supportsLimit,
     genericTypes: expandGenericDefinitions(blueprint.generic),

@@ -87,6 +87,7 @@ export function getDialectFunctions(): Map<string, FunctionDef> {
         supportsLimit: baseOverload.supportsLimit,
         genericTypes: baseOverload.genericTypes,
         isSymmetric: baseOverload.isSymmetric,
+        selector: baseOverload.selector,
       };
       for (const dialect of dialects) {
         const overloads = dialectOverrides[dialect.name][name] ?? [];

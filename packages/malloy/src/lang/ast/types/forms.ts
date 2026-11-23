@@ -136,7 +136,7 @@ function cleanType(v: ExpressionValueTypeDef): ExpressionValueTypeDef {
 }
 
 /** A temporal type with this granularity, or with none */
-function withGranularity(
+export function withGranularity(
   t: ExpressionValueTypeDef,
   units: TimestampUnit | undefined
 ): ExpressionValueTypeDef {
@@ -158,7 +158,7 @@ export function typeWithoutGranularity(
   return withGranularity(cleanType(v), undefined);
 }
 
-function gives(v: ExprValue): boolean {
+function gives(v: ExpressionValueTypeDef): boolean {
   return v.type === 'null' || v.type === 'error';
 }
 
@@ -211,12 +211,13 @@ function choiceTypes(alternatives: Forms[]): ExpressionValueTypeDef[] | Misfit {
  * differ, except that a date with none is a day: a date steps by a day, so a
  * plain date beside a day shares the day.
  */
-function sharedGranularity(alternatives: Forms[]): TimestampUnit | undefined {
+export function sharedGranularity(
+  alternatives: ExpressionValueTypeDef[]
+): TimestampUnit | undefined {
   let shared: TimestampUnit | undefined;
   let first = true;
   let anyUnit = false;
-  for (const alt of alternatives) {
-    const v = defaultMoment(alt);
+  for (const v of alternatives) {
     if (gives(v)) {
       continue;
     }
@@ -253,7 +254,7 @@ export function choose(
   if (isMisfit(types)) {
     return types;
   }
-  const units = sharedGranularity(alternatives);
+  const units = sharedGranularity(alternatives.map(defaultMoment));
   const hasRange = alternatives.some(a => a.readings[0].range !== undefined);
   const noWidth = alternatives.some(a => {
     const r = a.readings[0];

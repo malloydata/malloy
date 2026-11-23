@@ -46,15 +46,20 @@ range. A range always starts at the moment, so only the end is held.
 | value | readings |
 |---|---|
 | a plain value | one reading, no range |
-| a value with a granularity: a truncation, a field defined with one, `min`/`max` of one | one reading, ending one unit later (the default `computeForms`) |
+| a value with a granularity: a truncation, a field defined with one, `min`/`max` of one, a selector's result | one reading, ending one unit later (the default `computeForms`) |
 | `@2020` | a date reading and a timestamp reading, each with a constant end |
 | a choice: `pick`, `??`, `case` | a reading for each type every alternative can be read as, and a range when some alternative has one |
-| a function call | a reading for each type a date-literal argument can be read as which matches an overload; never a range |
+| a function call | a reading for each type a date-literal argument can be read as which matches an overload; a range only from a selector's granularity |
 
 A form which is not the plain value cannot reach a field or the IR: nothing
 in `malloy_types` can hold `Forms`, and ordinary code asks for
-`getExpression` and sees one type and one expression. A function call, a
-cast, a given and a parameter have no granularity, so they have no range.
+`getExpression` and sees one type and one expression. A cast, a given and a
+parameter have no granularity, so they have no range. Neither does a function
+call, unless its definition marks it a **selector**, a function whose result
+is always one of the values bound to the generic it returns (`lag`,
+`coalesce`, `greatest`): its result keeps the granularity those arguments
+share, by the rule a choice uses, and so the range of that unit. A selector
+never has a range of different widths; `??` is the way to write that.
 
 ### Who takes which form
 
