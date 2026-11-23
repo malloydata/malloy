@@ -25,6 +25,7 @@ const example: DefinitionBlueprint = {
 - **`takes`** — an *ordered* map of parameter name → type. Order is the positional signature.
 - **`returns`** — the return type.
 - **`impl`** — how it compiles to SQL (below).
+- **`selector: true`** — the result is always one of the values bound to the generic the function returns, never a value computed from them (`lag`, `coalesce`, `greatest`, but not `avg_moving`). The result then keeps the granularity those arguments share, as a truncated value would. The return type can't say this, since `avg_moving` is declared generic-in, generic-out too, so a function which returns one of its arguments' values must be marked.
 - Aggregate-only options (`supportsOrderBy`, `supportsLimit`, `isSymmetric`) and analytic options exist too; see `util.ts`.
 
 A parameter or return type is a Malloy type (`'string'`, `'number'`, …) or `'any'`, optionally wrapped to constrain it: `{literal: T}`, `{constant: T}`, `{dimension: T}`, `{measure: T}`, `{calculation: T}` set the expression space; `{variadic: T}`, `{array: T}`, `{record: {…}}`, `{generic: 'T'}`, `{sql_native: '…'}` set the shape. On a parameter the space is the *maximum* accepted; on a return it's the *minimum* produced. `['string', 'number']` accepts either.

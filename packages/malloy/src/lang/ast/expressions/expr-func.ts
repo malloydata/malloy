@@ -26,6 +26,7 @@ import type {
   FieldUsageEntry,
   FunctionOrderBy as ModelFunctionOrderBy,
   AggregateUngrouping,
+  TimestampUnit,
 } from '../../../model/malloy_types';
 import {
   activeName,
@@ -59,8 +60,10 @@ import type {Forms, Reading} from '../types/forms';
 import {
   defaultMoment,
   formsOf,
+  sharedGranularity,
   typeWithoutGranularity,
   valueAs,
+  withGranularity,
 } from '../types/forms';
 import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
@@ -174,7 +177,8 @@ export class ExprFunc extends ExpressionDef {
    * The call, in each type its result can be read as. A generic argument
    * which can be read as more than one type (a date literal) is read as the
    * type which matches an overload, and when more than one does, the result
-   * has a reading for each. A result never has a granularity.
+   * has a reading for each. Only a selector's result has a granularity:
+   * the one shared by the values it can be.
    */
   private getPropsForms(
     fs: FieldSpace,
@@ -566,16 +570,21 @@ export class ExprFunc extends ExpressionDef {
     // seems like the rules for the evalSpace is a bit different from normal though
     const resultOf = (
       type: ExpressionValueTypeDef,
-      value: Expr
-    ): ExprValue => ({
-      ...typeWithoutGranularity(type),
-      expressionType,
-      value,
-      evalSpace,
-      refSummary,
-      ungroupings,
-    });
-    const readings: Reading[] = [{moment: resultOf(returnType, funcCall)}];
+      value: Expr,
+      args: ExprValue[]
+    ): Reading =>
+      formsOf({
+        ...withGranularity(
+          typeWithoutGranularity(type),
+          selectedGranularity(overload, args)
+        ),
+        expressionType,
+        value,
+        evalSpace,
+        refSummary,
+        ungroupings,
+      }).readings[0];
+    const readings: Reading[] = [resultOf(returnType, funcCall, argExprs)];
     // Each other reading of the arguments which matches an overload gives
     // the result as another type
     if (funcCall === frag) {
@@ -584,17 +593,46 @@ export class ExprFunc extends ExpressionDef {
         if (readings.some(r => r.moment.type === otherType.type)) {
           continue;
         }
-        readings.push({
-          moment: resultOf(otherType, {
-            ...frag,
-            overload: other.found.overload,
-            kids: {...frag.kids, args: other.args.map(a => a.value)},
-          }),
-        });
+        readings.push(
+          resultOf(
+            otherType,
+            {
+              ...frag,
+              overload: other.found.overload,
+              kids: {...frag.kids, args: other.args.map(a => a.value)},
+            },
+            other.args
+          )
+        );
       }
     }
     return {readings};
   }
+}
+
+/**
+ * The granularity a selector's result keeps: the one shared by its arguments
+ * bound to the generic it returns.
+ */
+function selectedGranularity(
+  overload: FunctionOverloadDef,
+  args: ExprValue[]
+): TimestampUnit | undefined {
+  const returned = overload.returnType;
+  if (!overload.selector || returned.type !== 'generic') {
+    return undefined;
+  }
+  const bound: ExpressionValueTypeDef[] = [];
+  for (const [i, arg] of args.entries()) {
+    // Arguments past the last parameter are more of a variadic last one
+    const param = overload.params[Math.min(i, overload.params.length - 1)];
+    for (const t of param.allowedTypes) {
+      if (t.type === 'generic' && t.generic === returned.generic) {
+        bound.push(arg);
+      }
+    }
+  }
+  return sharedGranularity(bound);
 }
 
 /**

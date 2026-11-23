@@ -1996,6 +1996,8 @@ export interface FunctionOverloadDef {
   params: FunctionParameterDef[];
   supportsOrderBy?: boolean | 'only_default';
   supportsLimit?: boolean;
+  /** The result is one of the values bound to the generic it returns */
+  selector?: true;
   genericTypes?: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[];
   dialect: {
     [dialect: string]: {
