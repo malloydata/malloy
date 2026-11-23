@@ -529,6 +529,28 @@ describe('expressions', () => {
           error('time-offset-type-mismatch')
         );
       });
+      test('a when of the wrong type does not hide an error in a result', () => {
+        expect(expr`pick badref when ai else 2`).toLog(
+          errorMessage("'badref' is not defined"),
+          errorMessage(/when expression must be boolean, not number/)
+        );
+        expect(expr`case when ai then badref end`).toLog(
+          warningMessage(/Use a `pick` statement instead of `case`/),
+          errorMessage("'badref' is not defined"),
+          errorMessage('Case when expression must be boolean, not number')
+        );
+      });
+      test('a choice of a plain date and a day steps by a day', () => {
+        expect('(ad ?? @2020-01-01) + 1').compilesTo(
+          '{+day {ad coalesce @2020-01-01} 1}'
+        );
+        expect('(pick ad when abool else @2020-01-01) - 7').compilesTo(
+          '{-day {case when abool then ad else @2020-01-01} 7}'
+        );
+        expect(expr`(ad ?? @2020) + 1`).toLog(
+          errorMessage(/The choices do not share a granularity/)
+        );
+      });
       test('arithmetic takes the value of a pick', () => {
         expect('ai + pick 7 when abool else 8').compilesTo(
           '{ai + {case when abool then 7 else 8}}'

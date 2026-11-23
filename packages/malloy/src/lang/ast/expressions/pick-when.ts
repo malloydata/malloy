@@ -121,7 +121,20 @@ export class Pick extends ExpressionDef {
     if (this.elsePick === undefined) {
       return formsOf(this.loggedErrorExpr('pick-missing-else', {}));
     }
-    const whens = this.choices.map(c => c.when.getExpression(fs));
+    // Every arm is evaluated before any is checked, so an error inside a
+    // result is reported along with a `when` of the wrong type
+    const results: Forms[] = [];
+    const whens: ExprValue[] = [];
+    for (const c of this.choices) {
+      if (c.pick === undefined) {
+        throw this.internalError(
+          'a pick with nothing to pick was already refused'
+        );
+      }
+      results.push(c.pick.getForms(fs));
+      whens.push(c.when.getExpression(fs));
+    }
+    results.push(this.elsePick.getForms(fs));
     for (const when of whens) {
       if (!TDU.typeEq(when, TDU.boolT)) {
         return formsOf(
@@ -131,16 +144,6 @@ export class Pick extends ExpressionDef {
         );
       }
     }
-    const results: Forms[] = [];
-    for (const c of this.choices) {
-      if (c.pick === undefined) {
-        throw this.internalError(
-          'a pick with nothing to pick was already refused'
-        );
-      }
-      results.push(c.pick.getForms(fs));
-    }
-    results.push(this.elsePick.getForms(fs));
     const chosen = choose(results, caseOf(whens.map(w => w.value)), whens);
     if (isMisfit(chosen)) {
       return formsOf(this.logMisfit(chosen, this.elsePick));

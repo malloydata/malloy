@@ -31,7 +31,7 @@ import type {FieldSpace} from './field-space';
 import {isGranularResult} from './granular-result';
 import type {Forms} from './forms';
 import {defaultMoment, formsOf, readingPair} from './forms';
-import {MalloyElement} from './malloy-element';
+import {inTree, MalloyElement} from './malloy-element';
 import type {
   ArithmeticMalloyOperator,
   BinaryMalloyOperator,
@@ -299,9 +299,9 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 
   /**
-   * `?` applying `left` to this node, in every form of the result. Only a
-   * node whose applied result is a choice, and so can have more than one
-   * form, overrides this.
+   * `?` applying `left` to this node, in every form of the result. A node
+   * overrides this when what `?` does to it differs from what `apply` with
+   * `=` does, or when its applied result can have more than one form.
    */
   applyForms(fs: FieldSpace, left: ExpressionDef): Forms {
     return formsOf(this.apply(fs, '=', left, true));
@@ -760,15 +760,12 @@ function divmod(
 }
 
 /**
- * A node made during translation has no parent, and a node without one
- * cannot log. This one takes the place in the tree of the node it is made
- * around.
+ * A duration made around `n` during translation, in `n`'s place in the tree.
+ * Making it re-parents `n`, so the place is read first.
  */
 function durationAround(n: ExpressionDef, unit: TimestampUnit): ExprDuration {
-  const inTree = n.parent;
-  const duration = new ExprDuration(n, unit);
-  duration.parent = inTree;
-  return duration;
+  const place = n.parent;
+  return inTree(new ExprDuration(n, unit), place);
 }
 
 function delta(
@@ -807,7 +804,7 @@ function delta(
         // A range with no granularity is a choice among different units
         return left.loggedErrorExpr(
           'time-offset-type-mismatch',
-          "The choices have different granularities, so there is no unit to offset by; write the unit, as in '+ 1 month'"
+          "The choices do not share a granularity, so there is no unit to offset by; write the unit, as in '+ 1 month'"
         );
       } else if (lhs.type === 'date') {
         duration = durationAround(right, 'day');

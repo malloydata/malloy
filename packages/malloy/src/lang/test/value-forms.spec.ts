@@ -111,11 +111,11 @@ const rows: [string, string][] = [
   ],
   [
     '(pick ad.month when abool else ad.year) + 1',
-    "ERROR: The choices have different granularities, so there is no unit to offset by; write the unit, as in '+ 1 month'",
+    "ERROR: The choices do not share a granularity, so there is no unit to offset by; write the unit, as in '+ 1 month'",
   ],
   [
     '(pick ats.month when abool else ats) + 1',
-    "ERROR: The choices have different granularities, so there is no unit to offset by; write the unit, as in '+ 1 month'",
+    "ERROR: The choices do not share a granularity, so there is no unit to offset by; write the unit, as in '+ 1 month'",
   ],
   ['ad.month + 1', 'date.month :: {+month {timeTrunc-month ad} 1}'],
   [
@@ -180,6 +180,8 @@ const rows: [string, string][] = [
     'ad ? @2020 for 3 days',
     'boolean :: {{ad >= @2020-01-01} and {ad < {+day @2020-01-01 3}}}',
   ],
+  // Today's behaviour, not a rule: the date value `ad` becomes a timestamp
+  // here without a cast. Whether that should be refused is not decided.
   [
     'ad ? @2020 for 3 hours',
     'boolean :: {{{cast ad} >= @2020-01-01 00:00:00} and {{cast ad} < {+hour @2020-01-01 00:00:00 3}}}',
@@ -188,6 +190,8 @@ const rows: [string, string][] = [
     'ats ? (pick @2020 when abool else @2021) for 3 days',
     'boolean :: {{ats >= {case when abool then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}} and {ats < {+day {case when abool then @2020-01-01 00:00:00 else @2021-01-01 00:00:00} 3}}}',
   ],
+  // Today's behaviour, not a rule: #3085 says this cast of `atstz` is off by
+  // the zone offset under a query time zone.
   [
     'atstz ? @2020 for 3 days',
     'boolean :: {{{cast atstz} >= @2020-01-01 00:00:00} and {{cast atstz} < {+day @2020-01-01 00:00:00 3}}}',
@@ -304,6 +308,8 @@ const rows: [string, string][] = [
     'ats ? @2020-01-01 10:00',
     'boolean :: {{ats >= @2020-01-01 10:00:00} and {ats < @2020-01-01 10:01:00}}',
   ],
+  // Today's behaviour, not a rule: #3259 says a date tested against a
+  // minute- or hour-resolution literal should be refused.
   [
     'ad ? @2020-01-01 10:00',
     'boolean :: {{ad >= @2020-01-01 10:00:00} and {ad < @2020-01-01 10:01:00}}',

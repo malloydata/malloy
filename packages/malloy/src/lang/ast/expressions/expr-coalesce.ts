@@ -61,7 +61,7 @@ export class ExprCoalesce extends ExpressionDef {
       );
     }
     if (isMisfit(chosen)) {
-      return formsOf(maybeNull.type === 'error' ? whenNull : maybeNull);
+      return formsOf(maybeNull);
     }
     return chosen;
   }

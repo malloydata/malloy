@@ -44,9 +44,14 @@ export class Case extends ExpressionDef {
       dependents.push(v);
       value = v;
     }
-    const whens: ExprValue[] = [];
-    for (const c of this.choices) {
-      const when = c.when.getExpression(fs);
+    // Every arm is evaluated before any is checked, so an error inside a
+    // result is reported along with a `when` of the wrong type
+    const whens = this.choices.map(c => c.when.getExpression(fs));
+    const results = this.choices.map(c => c.then.getForms(fs));
+    if (this.elseValue) {
+      results.push(this.elseValue.getForms(fs));
+    }
+    for (const when of whens) {
       if (value !== undefined) {
         if (!TDU.typeEq(when, value)) {
           return formsOf(
@@ -63,13 +68,8 @@ export class Case extends ExpressionDef {
           })
         );
       }
-      whens.push(when);
     }
     dependents.push(...whens);
-    const results = this.choices.map(c => c.then.getForms(fs));
-    if (this.elseValue) {
-      results.push(this.elseValue.getForms(fs));
-    }
     const caseValue = value?.value;
     const caseWhen = whens.map(w => w.value);
     const chosen = choose(

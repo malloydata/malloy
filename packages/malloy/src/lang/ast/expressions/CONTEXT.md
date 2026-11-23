@@ -4,15 +4,15 @@ Expression-shaped AST nodes all extend `ExpressionDef` (`../types/expression-def
 The integration points are:
 
 - **`computeExpression(fs: FieldSpace): ExprValue`** — evaluate this node and return an IR value + type. This is what a node implements. Callers never invoke it directly.
-- **`computeForms(fs: FieldSpace): Forms`** — implemented instead by the few nodes whose value has more than one form (below). The default wraps `computeExpression`.
+- **`computeForms(fs: FieldSpace): Forms`** — implemented as well by the few nodes whose value has more than one form (below); `getForms` calls it, and their `computeExpression` only reads the plain value out of it. The default wraps `computeExpression`.
 - **`getExpression(fs)`** and **`getForms(fs)`** — what callers use. Both are sealed on `ExpressionDef`; `getForms` memoizes, and `getExpression` is the plain value read out of it.
 - **`apply(fs, op, left, byApplyOperator): ExprValue`** — called when this node appears as the *right* operand of a binary operator; allows the node to override how the comparison is assembled (see below).
 
 ## ExprValue is shared — treat it as immutable
 
 `getForms` remembers the last forms it computed, keyed on the field space and
-that space's `generation()`. Asking a node twice returns **the same object**, and that
-object is also what gets stored into the IR. So a value you receive is not yours to
+that space's `generation()`. Asking a node twice returns **the same object**, and the
+plain value in it is also what gets stored into the IR. So a value you receive is not yours to
 modify: retyping or appending to one reaches every other holder, including field
 definitions already handed out.
 
@@ -81,7 +81,7 @@ error which says to write the unit.
 brought to the readings they all have (a null or an error takes the others'
 type), each reading's moment is the choice among the alternatives' moments,
 and the choice keeps a granularity only when every alternative which is not
-null shares it. When some alternative has a range, each reading's end is the
+null shares it, a date with none counting as a day. When some alternative has a range, each reading's end is the
 choice among the alternatives' ends, with the same conditions, so each
 alternative keeps its own width. A plain alternative is a range of no width,
 its end its start, and the range records that it has one
@@ -132,9 +132,10 @@ never one of a value's forms.
 
 - If `r` has a value (`requestExpression`) and that value has a range, `x`
   is tested against the range, in the reading paired with `x`.
-- Otherwise `x` is applied to `r` (`r.applyForms`, which is
+- Otherwise `x` is applied to `r` (`r.applyForms`, which by default is
   `r.apply(fs, '=', x, true)`): a partial, an alternation, a range, a pick,
-  and a value with no range, which is equality.
+  and a value with no range, which is equality. A list and a pick override
+  `applyForms`; see below.
 
 A time literal writes its own test with constant ends, so `applyTest` hands
 it straight to its `apply`.
@@ -148,11 +149,13 @@ directly after `?` goes through `applyTest` too (`ExprAlternationTree.applyForms
 so it is read as it would be read alone after `?`: `x ? t.month | t.year` is
 two range tests. A list of plain values is still one `IN`, and a value with a
 range is never one of its values. A list inside a pick's `when` is reached
-through `apply` instead, and is applied as on main.
+through `apply` instead, so each item is applied: `x ? pick 1 when t.month |
+t.year else 2` compares `x` with the start of each unit.
 
 ### `?` and a written operator reach the right side the same way
 
-Both call `right.apply`, and `?` passes `'='` as its operator. What tells them
+Both reach `right.apply`, `?` through `right.applyForms`, passing `'='` as
+its operator. What tells them
 apart is the fourth argument of `apply`, `byApplyOperator`: it is true only
 when `?` hands its right side the `=` to apply. Every other caller leaves it
 false, which is right both for an operator written in the source and for a
@@ -171,8 +174,9 @@ warning is a separate matter: `ExprEquality` asks for it, through
 A pick has a value (`Pick.requestExpression`) when it has an `else`, a result
 in every arm, and a condition in every `when`. After `?`, such a pick whose
 value has a range is tested as that range; any other pick is applied
-(`Pick.applyForms`): `x` is applied to each `when` with `when.apply`, as on
-main, and the result is the first arm which matches. That result is a choice
+(`Pick.applyForms`): `x` is applied to each `when` with `when.apply`, so
+`x ? pick 1 when t.month else 2` compares `x` with the start of the month,
+and the result is the first arm which matches. That result is a choice
 like any other, with every form its arms share, and the `?` node hands those
 forms on: `ats > (astr ? pick @2020 when 'a' else @2021)` compares
 timestamps.

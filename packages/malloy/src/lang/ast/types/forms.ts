@@ -23,8 +23,9 @@ import {isGranularResult} from './granular-result';
 export interface Forms {
   /**
    * One reading per type the value can take, the default first. A date
-   * literal, and a choice among them, has a date reading and a timestamp
-   * reading; everything else has one.
+   * literal, a choice among them, and a function call whose result depends
+   * on one, has a date reading and a timestamp reading; everything else has
+   * one.
    */
   readings: Reading[];
 }
@@ -71,7 +72,8 @@ export function defaultMoment(f: Forms): ExprValue {
 
 /**
  * The value as a declared type: the reading of that type, otherwise the
- * default, which the declaration then refuses.
+ * default, which the declaration then checks or converts as it would any
+ * value.
  */
 export function valueAs(f: Forms, type: string | undefined): ExprValue {
   return (f.readings.find(r => r.moment.type === type) ?? f.readings[0]).moment;
@@ -206,17 +208,21 @@ function choiceTypes(alternatives: Forms[]): ExpressionValueTypeDef[] | Misfit {
 /**
  * The granularity every alternative which is not null shares, or none when
  * they differ. One alternative with a granularity beside one with none
- * differ.
+ * differ, except that a date with none is a day: a date steps by a day, so a
+ * plain date beside a day shares the day.
  */
 function sharedGranularity(alternatives: Forms[]): TimestampUnit | undefined {
   let shared: TimestampUnit | undefined;
   let first = true;
+  let anyUnit = false;
   for (const alt of alternatives) {
     const v = defaultMoment(alt);
     if (gives(v)) {
       continue;
     }
-    const units = TD.isTemporal(v) ? v.timeframe : undefined;
+    const written = TD.isTemporal(v) ? v.timeframe : undefined;
+    anyUnit ||= written !== undefined;
+    const units = written ?? (v.type === 'date' ? 'day' : undefined);
     if (first) {
       shared = units;
       first = false;
@@ -224,7 +230,8 @@ function sharedGranularity(alternatives: Forms[]): TimestampUnit | undefined {
       return undefined;
     }
   }
-  return shared;
+  // Plain dates alone are still plain
+  return anyUnit ? shared : undefined;
 }
 
 /**

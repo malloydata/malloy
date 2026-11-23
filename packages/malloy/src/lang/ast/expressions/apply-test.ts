@@ -8,6 +8,7 @@ import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import type {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import {inTree} from '../types/malloy-element';
 import type {Forms, Reading} from '../types/forms';
 import {defaultMoment, formsOf, readingPair} from '../types/forms';
 import {ExprTime} from './expr-time';
@@ -15,8 +16,8 @@ import {Range} from './range';
 import {TimeLiteral} from './time-literal';
 
 /**
- * `left ? right`, and each item of a `|` or `&` list, or `when` of a pick,
- * which `?` reaches. Anything with a value which has a range is tested
+ * `left ? right`, and each item of a `|` or `&` list written directly after
+ * `?`. Anything with a value which has a range is tested
  * against that range, in the reading paired with `left`; anything else has
  * `left` applied to it, which for a value is equality and for a partial, an
  * alternation, a range or a pick is that node's own application. `owner` is
@@ -92,13 +93,4 @@ function rangeTest(
     },
     from: [from, before, at],
   });
-}
-
-/**
- * A node made during translation has no parent, and a node without one
- * cannot log. This one belongs to `owner`.
- */
-function inTree<T extends ExpressionDef>(made: T, owner: ExpressionDef): T {
-  made.parent = owner;
-  return made;
 }

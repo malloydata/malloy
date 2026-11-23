@@ -32,8 +32,7 @@ export class ExprGranularTime extends ExpressionDef {
   legalChildTypes = [TDU.timestampT, TDU.timestamptzT, TDU.dateT];
   constructor(
     readonly expr: ExpressionDef,
-    readonly units: TimestampUnit,
-    readonly truncate: boolean
+    readonly units: TimestampUnit
   ) {
     super({expr: expr});
   }
@@ -79,15 +78,11 @@ export class ExprGranularTime extends ExpressionDef {
           timeType = {type: 'timestamp', timeframe};
         }
       }
-      if (this.truncate) {
-        tsVal.value = {
-          node: 'trunc',
-          e: mkTemporal(exprVal.value, timeType),
-          units: timeframe,
-        };
-      } else {
-        tsVal.value = exprVal.value;
-      }
+      tsVal.value = {
+        node: 'trunc',
+        e: mkTemporal(exprVal.value, timeType),
+        units: timeframe,
+      };
       return tsVal;
     }
     if (exprVal.type !== 'error') {
