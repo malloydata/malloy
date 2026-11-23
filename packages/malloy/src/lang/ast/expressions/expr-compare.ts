@@ -16,6 +16,7 @@ import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef, booleanAgainstString} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import {readingFor} from '../types/forms';
 import {BinaryBoolean} from './binary-boolean';
 import {ExprAlternationTree} from './expr-alternation-tree';
 import type {GivenReference} from './expr-given';
@@ -64,7 +65,9 @@ export class ExprLegacyIn extends ExpressionDef {
 
   protected computeExpression(fs: FieldSpace): ExprValue {
     const lookFor = this.expr.getExpression(fs);
-    const oneOf = this.choices.map(e => e.getExpression(fs));
+    const oneOf = this.choices.map(
+      e => readingFor(e.getForms(fs), lookFor.type).moment
+    );
     for (const [i, choice] of oneOf.entries()) {
       const noCompare = booleanAgainstString(this.choices[i], lookFor, choice);
       if (noCompare) return noCompare;

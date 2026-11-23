@@ -98,7 +98,7 @@ describe('literals', () => {
     }
     expect(ir.value).toEqual(expect.objectContaining(result));
   });
-  const morphicLiterals: [string, string | undefined][] = [
+  const dateLiterals: [string, string | undefined][] = [
     ['@1960', '1960-01-01 00:00:00'],
     ['@1960-Q2', '1960-04-01 00:00:00'],
     ['@1960-06', '1960-06-01 00:00:00'],
@@ -106,20 +106,27 @@ describe('literals', () => {
     ['@1960-06-30', '1960-06-30 00:00:00'],
     ['@1960-06-30 00:00', undefined],
   ];
-  test.each(morphicLiterals)('morphic value for %s is %s', (expr, morphic) => {
-    const exprModel = new BetaExpression(expr);
-    expect(exprModel).toTranslate();
-    const ir = exprModel.generated();
-    const morphTo = ir.morphic && ir.morphic['timestamp'];
-    if (morphic) {
-      expect(morphTo).toBeDefined();
-      if (morphTo) {
-        expect(morphTo).toEqual(expect.objectContaining({literal: morphic}));
+  // A date literal is also read as a timestamp; a timestamp literal is not
+  // read as anything else
+  test.each(dateLiterals)(
+    'timestamp reading of %s is %s',
+    (expr, timestamp) => {
+      const exprModel = new BetaExpression(expr);
+      expect(exprModel).toTranslate();
+      const [, otherReading] = exprModel.forms().readings;
+      const asTimestamp = otherReading?.moment.value;
+      if (timestamp) {
+        expect(asTimestamp).toBeDefined();
+        if (asTimestamp) {
+          expect(asTimestamp).toEqual(
+            expect.objectContaining({literal: timestamp})
+          );
+        }
+      } else {
+        expect(asTimestamp).toBeUndefined();
       }
-    } else {
-      expect(morphTo).toBeUndefined();
     }
-  });
+  );
   test('minute+locale', () => {
     expect(expr`@1960-06-30 10:30[America/Los_Angeles]`).toTranslate();
   });

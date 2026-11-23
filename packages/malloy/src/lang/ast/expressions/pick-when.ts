@@ -3,42 +3,28 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {CaseExpr} from '../../../model/malloy_types';
+import type {CaseExpr, Expr} from '../../../model/malloy_types';
 
 import * as TDU from '../typedesc-utils';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
-import {computedExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import type {Forms, Misfit} from '../types/forms';
+import {choose, defaultMoment, formsOf, isMisfit} from '../types/forms';
 import {MalloyElement} from '../types/malloy-element';
 import {booleanValueError, CHOICE_HINT} from './boolean-value';
 
-interface Choice {
-  pick: ExprValue;
-  when: ExprValue;
-}
-
-function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
-  if (ev1 === undefined || ev1.type === 'null' || ev1.type === 'error') {
-    return ev2;
-  }
-  // If both are numbers but subtypes differ, strip the subtype
-  if (ev1.type === 'number' && ev2.type === 'number') {
-    if (ev1.numberType !== ev2.numberType) {
-      return {...ev1, numberType: undefined};
-    }
-  }
-  return ev1;
-}
-
-/**
- * The type of a pick is the type of a choice, and a choice is a whole value.
- * Its `morphic` is that one choice written another way, which is not the
- * pick written another way.
- */
-function typeOfPick(choice: ExprValue): ExprValue {
-  return {...choice, morphic: undefined};
+/** A `CASE` of these conditions, choosing among `parts`, the last the else */
+function caseOf(whens: Expr[]): (parts: Expr[]) => CaseExpr {
+  return parts => ({
+    node: 'case',
+    kids: {
+      caseWhen: whens,
+      caseThen: parts.slice(0, whens.length),
+      caseElse: parts[whens.length],
+    },
+  });
 }
 
 export class Pick extends ExpressionDef {
@@ -51,9 +37,11 @@ export class Pick extends ExpressionDef {
     this.has({elsePick});
   }
 
+  /**
+   * A pick has a value when it has an `else`, a result in every arm, and a
+   * condition in every `when`. Any other pick is waiting for a left side.
+   */
   requestExpression(fs: FieldSpace): ExprValue | undefined {
-    // pick statements are sometimes partials which must be applied
-    // and sometimes have a value.
     if (this.elsePick === undefined) {
       return undefined;
     }
@@ -63,7 +51,6 @@ export class Pick extends ExpressionDef {
       }
       const whenResp = c.when.requestExpression(fs);
       if (whenResp === undefined || whenResp.type !== 'boolean') {
-        // If when is not a boolean, we'll treat it like a partial compare
         return undefined;
       }
     }
@@ -71,8 +58,9 @@ export class Pick extends ExpressionDef {
   }
 
   /**
-   * `?` applies a pick, an operator written in the source compares with the
-   * value of a pick.
+   * With `byApplyOperator`, the left side is applied to each `when`. An
+   * operator written in the source compares with the value of the pick.
+   * Whether `?` applies a pick at all is decided in `applyTestForms`.
    */
   apply(
     fs: FieldSpace,
@@ -83,75 +71,32 @@ export class Pick extends ExpressionDef {
     if (!byApplyOperator) {
       return super.apply(fs, op, expr);
     }
-    const caseValue: CaseExpr = {
-      node: 'case',
-      kids: {
-        caseWhen: [],
-        caseThen: [],
-      },
-    };
-    let returnType: ExprValue | undefined;
-    const dependents: ExprValue[] = [];
+    return defaultMoment(this.applyForms(fs, expr));
+  }
+
+  /** The pick applied to `expr`: a choice like any other */
+  applyForms(fs: FieldSpace, expr: ExpressionDef): Forms {
+    const whens: ExprValue[] = [];
     for (const choice of this.choices) {
       const whenExpr = choice.when.apply(fs, '=', expr, true);
       if (whenExpr.type !== 'boolean' && whenExpr.type !== 'error') {
-        return choice.when.loggedErrorExpr('applied-is-not-a-test', {
-          resultType: whenExpr.type,
-        });
+        return formsOf(
+          choice.when.loggedErrorExpr('applied-is-not-a-test', {
+            resultType: whenExpr.type,
+          })
+        );
       }
-      const thenExpr = choice.pick
-        ? choice.pick.getExpression(fs)
-        : expr.getExpression(fs);
-      dependents.push(whenExpr, thenExpr);
-      if (returnType && !TDU.typeEq(returnType, thenExpr, true)) {
-        return this.loggedErrorExpr('pick-type-does-not-match', {
-          pickType: thenExpr.type,
-          returnType: returnType.type,
-        });
-      }
-      returnType = typeCoalesce(returnType, thenExpr);
-      caseValue.kids.caseWhen.push(whenExpr.value);
-      caseValue.kids.caseThen.push(thenExpr.value);
+      whens.push(whenExpr);
     }
-    const elseVal = this.elsePick?.getExpression(fs);
-    const exprVal = expr.getExpression(fs);
-    dependents.push(exprVal);
-    if (elseVal) dependents.push(elseVal);
-    const defaultVal = elseVal ?? exprVal;
-    const definedReturnType = typeCoalesce(returnType, defaultVal);
-    if (!TDU.typeEq(definedReturnType, defaultVal, true)) {
-      if (this.elsePick) {
-        return this.loggedErrorExpr('pick-else-type-does-not-match', {
-          elseType: defaultVal.type,
-          returnType: definedReturnType.type,
-        });
-      } else {
-        return this.loggedErrorExpr('pick-default-type-does-not-match', {
-          defaultType: defaultVal.type,
-          returnType: definedReturnType.type,
-        });
-      }
+    const results = [
+      ...this.choices.map(c => (c.pick ?? expr).getForms(fs)),
+      (this.elsePick ?? expr).getForms(fs),
+    ];
+    const chosen = choose(results, caseOf(whens.map(w => w.value)), whens);
+    if (isMisfit(chosen)) {
+      return formsOf(this.logMisfit(chosen, this));
     }
-    if (definedReturnType.type === 'filter expression') {
-      return this.loggedErrorExpr(
-        'filter-expression-error',
-        'Pick statments cannot have filter expression values'
-      );
-    }
-    const noPick = booleanValueError(
-      fs,
-      definedReturnType,
-      'as the result of a pick',
-      this,
-      CHOICE_HINT
-    );
-    if (noPick) return noPick;
-    caseValue.kids.caseElse = defaultVal.value;
-    return computedExprValue({
-      dataType: typeOfPick(definedReturnType),
-      value: caseValue,
-      from: dependents,
-    });
+    return this.checked(fs, chosen);
   }
 
   atNodeType(byApplyOperator = false): ATNodeType {
@@ -159,86 +104,95 @@ export class Pick extends ExpressionDef {
   }
 
   protected computeExpression(fs: FieldSpace): ExprValue {
-    const pick: CaseExpr = {
-      node: 'case',
-      kids: {
-        caseWhen: [],
-        caseThen: [],
-      },
-    };
-    // The shapes which make this a pick to be applied are reported first, as
-    // the way out of all of them is the same.
+    return defaultMoment(this.computeForms(fs));
+  }
+
+  protected computeForms(fs: FieldSpace): Forms {
+    // The shapes which make this a pick waiting for a left side are reported
+    // first, as the way out of all of them is the same.
     for (const c of this.choices) {
       if (c.pick === undefined) {
-        return this.loggedErrorExpr('pick-missing-value', {});
+        return formsOf(this.loggedErrorExpr('pick-missing-value', {}));
       }
       if (c.when.requestExpression(fs) === undefined) {
-        return c.when.loggedErrorExpr('pick-illegal-partial', {});
+        return formsOf(c.when.loggedErrorExpr('pick-illegal-partial', {}));
       }
     }
     if (this.elsePick === undefined) {
-      return this.loggedErrorExpr('pick-missing-else', {});
+      return formsOf(this.loggedErrorExpr('pick-missing-else', {}));
     }
-
-    const choiceValues: Choice[] = [];
-    const dependents: ExprValue[] = [];
+    // Every arm is evaluated before any is checked, so an error inside a
+    // result is reported along with a `when` of the wrong type
+    const results: Forms[] = [];
+    const whens: ExprValue[] = [];
     for (const c of this.choices) {
       if (c.pick === undefined) {
         throw this.internalError(
           'a pick with nothing to pick was already refused'
         );
       }
-      const pick = c.pick.getExpression(fs);
-      const when = c.when.getExpression(fs);
-      choiceValues.push({pick, when});
-      dependents.push(pick, when);
+      results.push(c.pick.getForms(fs));
+      whens.push(c.when.getExpression(fs));
     }
-    let returnType: ExprValue | undefined;
-    for (const aChoice of choiceValues) {
-      if (!TDU.typeEq(aChoice.when, TDU.boolT)) {
-        return this.loggedErrorExpr('pick-when-must-be-boolean', {
-          whenType: aChoice.when.type,
-        });
+    results.push(this.elsePick.getForms(fs));
+    for (const when of whens) {
+      if (!TDU.typeEq(when, TDU.boolT)) {
+        return formsOf(
+          this.loggedErrorExpr('pick-when-must-be-boolean', {
+            whenType: when.type,
+          })
+        );
       }
-      if (returnType && !TDU.typeEq(returnType, aChoice.pick, true)) {
-        return this.loggedErrorExpr('pick-type-does-not-match', {
-          pickType: aChoice.pick.type,
-          returnType: returnType.type,
-        });
-      }
-      returnType = typeCoalesce(returnType, aChoice.pick);
-      pick.kids.caseWhen.push(aChoice.when.value);
-      pick.kids.caseThen.push(aChoice.pick.value);
     }
-    const defVal = this.elsePick.getExpression(fs);
-    dependents.push(defVal);
-    const definedReturnType = typeCoalesce(returnType, defVal);
-    if (!TDU.typeEq(definedReturnType, defVal, true)) {
-      return this.elsePick.loggedErrorExpr('pick-else-type-does-not-match', {
-        elseType: defVal.type,
-        returnType: definedReturnType.type,
+    const chosen = choose(results, caseOf(whens.map(w => w.value)), whens);
+    if (isMisfit(chosen)) {
+      return formsOf(this.logMisfit(chosen, this.elsePick));
+    }
+    return this.checked(fs, chosen);
+  }
+
+  /**
+   * The error for an arm whose type does not fit the arms before it; one
+   * about the `else` is logged at `elseAt`.
+   */
+  private logMisfit(misfit: Misfit, elseAt: MalloyElement): ExprValue {
+    if (misfit.misfitAt < this.choices.length) {
+      return this.loggedErrorExpr('pick-type-does-not-match', {
+        pickType: misfit.found,
+        returnType: misfit.expected,
       });
     }
-    if (definedReturnType.type === 'filter expression') {
-      return this.loggedErrorExpr(
-        'filter-expression-error',
-        'Pick statments cannot have filter expression values'
+    if (this.elsePick) {
+      return elseAt.loggedErrorExpr('pick-else-type-does-not-match', {
+        elseType: misfit.found,
+        returnType: misfit.expected,
+      });
+    }
+    return this.loggedErrorExpr('pick-default-type-does-not-match', {
+      defaultType: misfit.found,
+      returnType: misfit.expected,
+    });
+  }
+
+  /** The choice, or the error for a result a pick cannot have */
+  private checked(fs: FieldSpace, chosen: Forms): Forms {
+    const value = defaultMoment(chosen);
+    if (value.type === 'filter expression') {
+      return formsOf(
+        this.loggedErrorExpr(
+          'filter-expression-error',
+          'Pick statments cannot have filter expression values'
+        )
       );
     }
     const noPick = booleanValueError(
       fs,
-      definedReturnType,
+      value,
       'as the result of a pick',
       this,
       CHOICE_HINT
     );
-    if (noPick) return noPick;
-    pick.kids.caseElse = defVal.value;
-    return computedExprValue({
-      dataType: typeOfPick(definedReturnType),
-      value: pick,
-      from: dependents,
-    });
+    return noPick ? formsOf(noPick) : chosen;
   }
 }
 

@@ -13,7 +13,7 @@ A `FunctionDef` (`model/malloy_types.ts`) is `{type: 'function', overloads: Func
 
 ## Three call paths
 
-`ExprFunc` (`lang/ast/expressions/expr-func.ts`) is the AST node for every `name(args)`. Which path it takes is decided in `getExpression` / `getPropsExpression`:
+`ExprFunc` (`lang/ast/expressions/expr-func.ts`) is the AST node for every `name(args)`. Which path it takes is decided in `computeForms` / `getPropsForms`:
 
 1. **Resolved call** — the name matches a `FunctionDef`. The normal path; overload resolution runs (below).
 2. **Raw call, `name!(args)` or `name!type(args)`** — `isRaw`. No resolution: the arguments are compiled and emitted verbatim as `name(arg, …)`. Return type is the explicit `!type` if given, else inferred from the first argument (defaulting to `number`). This is the escape hatch for any SQL function Malloy doesn't model. An unknown plain name errors with exactly this suggestion: *"Unknown function 'x'. Use 'x!(...)' to call a SQL function directly."*

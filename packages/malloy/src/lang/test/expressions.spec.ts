@@ -504,18 +504,20 @@ describe('expressions', () => {
           expr`ai ? pick 1 when (${'pick 2 when > 3 else 4'}) else 5`
         ).toLog(error('applied-is-not-a-test', {resultType: 'number'}));
       });
-      test('a pick of dates is not the timestamp its first choice could be', () => {
+      test('a pick of dates beside a timestamp is a pick of timestamps', () => {
         expect('ad = pick @2020 when abool else @2021').compilesTo(
           '{ad = {case when abool then @2020-01-01 else @2021-01-01}}'
         );
-        expect(expr`ats = pick @2020 when abool else @2021`).toLog(
-          error('time-comparison-type-mismatch')
+        expect('ats = pick @2020 when abool else @2021').compilesTo(
+          '{ats = {case when abool then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}'
         );
       });
-      test('an applied pick of dates is not the timestamp its first choice could be', () => {
+      test('an applied pick of dates beside a timestamp is a pick of timestamps', () => {
         expect(
-          expr`ats > (ad ? pick @2020-01-01 when < @2001 else @2021-01-01)`
-        ).toLog(error('time-comparison-type-mismatch'));
+          'ats > (ad ? pick @2020-01-01 when < @2001 else @2021-01-01)'
+        ).compilesTo(
+          '{ats > {case when {ad < @2001-01-01} then @2020-01-01 00:00:00 else @2021-01-01 00:00:00}}'
+        );
       });
       test('= between a boolean and a pick of strings is refused', () => {
         expect(expr`${'abool'} = pick 'yes' when true else 'no'`).toLog(
@@ -525,6 +527,28 @@ describe('expressions', () => {
       test('a pick of durations cannot offset a time', () => {
         expect(expr`ats + ${'pick 1 day when abool else 2 days'}`).toLog(
           error('time-offset-type-mismatch')
+        );
+      });
+      test('a when of the wrong type does not hide an error in a result', () => {
+        expect(expr`pick badref when ai else 2`).toLog(
+          errorMessage("'badref' is not defined"),
+          errorMessage(/when expression must be boolean, not number/)
+        );
+        expect(expr`case when ai then badref end`).toLog(
+          warningMessage(/Use a `pick` statement instead of `case`/),
+          errorMessage("'badref' is not defined"),
+          errorMessage('Case when expression must be boolean, not number')
+        );
+      });
+      test('a choice of a plain date and a day steps by a day', () => {
+        expect('(ad ?? @2020-01-01) + 1').compilesTo(
+          '{+day {ad coalesce @2020-01-01} 1}'
+        );
+        expect('(pick ad when abool else @2020-01-01) - 7').compilesTo(
+          '{-day {case when abool then ad else @2020-01-01} 7}'
+        );
+        expect(expr`(ad ?? @2020) + 1`).toLog(
+          errorMessage(/The choices do not share a granularity/)
         );
       });
       test('arithmetic takes the value of a pick', () => {
@@ -555,7 +579,7 @@ describe('expressions', () => {
       });
       test('? with a pick of granular values is a range test', () => {
         expect('ad ? pick @2020 when abool else @2021').compilesTo(
-          '{{ad >= {case when abool then @2020-01-01 else @2021-01-01}} and {ad < {+year {case when abool then @2020-01-01 else @2021-01-01} 1}}}'
+          '{{ad >= {case when abool then @2020-01-01 else @2021-01-01}} and {ad < {case when abool then @2021-01-01 else @2022-01-01}}}'
         );
       });
     });

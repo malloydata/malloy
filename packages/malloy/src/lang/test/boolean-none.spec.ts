@@ -212,6 +212,20 @@ describe('a boolean on a dialect without boolean values', () => {
     });
   });
 
+  // `?` against a choice with a range compares values with the CASE of the
+  // starts and the CASE of the ends, never a condition chosen by a CASE
+  test('? against a choice with a range is a condition', () => {
+    expect(
+      m`run: m -> {
+        where:
+          ad ? (pick @2020 when ai > 5 else @2021-03),
+          ad ? (pick @2020 when ai > 5 else ad),
+          ats ? (ats.month ?? ats.year)
+        select: ai
+      }`
+    ).toTranslate();
+  });
+
   test('the same boolean is a value on a dialect with booleans', () => {
     expect(model`
       source: d is _db_.table('aTable') extend { dimension: big is ai > 5 }

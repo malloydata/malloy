@@ -10,6 +10,7 @@ import type {
   ExpressionType,
   FunctionCallNode,
   FunctionDef,
+  ExpressionValueType,
   ExpressionValueTypeDef,
   FunctionGenericTypeDef,
   FunctionOverloadDef,
@@ -54,6 +55,13 @@ import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
+import type {Forms, Reading} from '../types/forms';
+import {
+  defaultMoment,
+  formsOf,
+  typeWithoutGranularity,
+  valueAs,
+} from '../types/forms';
 import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
 import {composeSQLExpr} from '../../../model/utils';
@@ -100,16 +108,22 @@ export class ExprFunc extends ExpressionDef {
   }
 
   protected computeExpression(fs: FieldSpace): ExprValue {
+    return defaultMoment(this.computeForms(fs));
+  }
+
+  protected computeForms(fs: FieldSpace): Forms {
     if (this.isRaw && this.isRestricted()) {
       const typeStr = this.explicitType
         ? typeDefToString(this.explicitType)
         : '';
-      return this.loggedErrorExpr(
-        'restricted-construct-forbidden',
-        `\`${this.name}!${typeStr}(...)\` cannot be used in a restricted query — direct SQL function calls (\`!type(...)\`) are not permitted.`
+      return formsOf(
+        this.loggedErrorExpr(
+          'restricted-construct-forbidden',
+          `\`${this.name}!${typeStr}(...)\` cannot be used in a restricted query — direct SQL function calls (\`!type(...)\`) are not permitted.`
+        )
       );
     }
-    return this.getPropsExpression(fs);
+    return this.getPropsForms(fs);
   }
 
   private findFunctionDef(
@@ -153,7 +167,25 @@ export class ExprFunc extends ExpressionDef {
       limit?: Limit;
     }
   ): ExprValue {
-    const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
+    return defaultMoment(this.getPropsForms(fs, props));
+  }
+
+  /**
+   * The call, in each type its result can be read as. A generic argument
+   * which can be read as more than one type (a date literal) is read as the
+   * type which matches an overload, and when more than one does, the result
+   * has a reading for each. A result never has a granularity.
+   */
+  private getPropsForms(
+    fs: FieldSpace,
+    props?: {
+      partitionBys?: PartitionBy[];
+      orderBys?: FunctionOrdering[];
+      limit?: Limit;
+    }
+  ): Forms {
+    const argForms = this.args.map(arg => arg.getForms(fs));
+    const argExprsWithoutImplicit = argForms.map(defaultMoment);
     if (this.isRaw) {
       for (const [i, argExpr] of argExprsWithoutImplicit.entries()) {
         const noArg = booleanValueError(
@@ -163,7 +195,7 @@ export class ExprFunc extends ExpressionDef {
           this.args[i],
           NUMBER_HINT
         );
-        if (noArg) return noArg;
+        if (noArg) return formsOf(noArg);
       }
       const funcCall: SQLExprElement[] = [`${this.name}(`];
       argExprsWithoutImplicit.forEach((expr, i) => {
@@ -174,19 +206,23 @@ export class ExprFunc extends ExpressionDef {
       });
       funcCall.push(')');
 
-      const inferredType = argExprsWithoutImplicit[0] ?? {type: 'number'};
+      const inferredType: ExpressionValueTypeDef = argExprsWithoutImplicit[0]
+        ? typeWithoutGranularity(argExprsWithoutImplicit[0])
+        : {type: 'number'};
       const dataType: ExpressionValueTypeDef =
         this.explicitType ?? inferredType;
-      return computedExprValue({
-        dataType,
-        value: composeSQLExpr(funcCall),
-        from: argExprsWithoutImplicit,
-      });
+      return formsOf(
+        computedExprValue({
+          dataType,
+          value: composeSQLExpr(funcCall),
+          from: argExprsWithoutImplicit,
+        })
+      );
     }
     const dialect = fs.dialectObj()?.name;
     const {found: func, error} = this.findFunctionDef(dialect);
     if (func === undefined) {
-      return errorFor(error);
+      return formsOf(errorFor(error));
     }
     // Find the 'implicit argument' for aggregate functions called like `some_join.some_field.agg(...args)`
     // where the full arg list is `(some_field, ...args)`.
@@ -214,9 +250,11 @@ export class ExprFunc extends ExpressionDef {
           structPath = this.source.path.slice(0, -1);
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-            return this.loggedErrorExpr(
-              'invalid-aggregate-source',
-              `Aggregate source cannot be a ${footType.type}`
+            return formsOf(
+              this.loggedErrorExpr(
+                'invalid-aggregate-source',
+                `Aggregate source cannot be a ${footType.type}`
+              )
             );
           }
         }
@@ -228,17 +266,24 @@ export class ExprFunc extends ExpressionDef {
       }
     }
     // Construct the full args list including the implicit arg.
-    const argExprs = [
-      ...(implicitExpr ? [implicitExpr] : []),
+    const implicitArgs = implicitExpr ? [implicitExpr] : [];
+    const matches = readingsOfArguments(argForms).flatMap(args => {
+      const found = findOverload(func, [...implicitArgs, ...args]);
+      return found ? [{args: [...implicitArgs, ...args], found}] : [];
+    });
+    const argExprs = matches[0]?.args ?? [
+      ...implicitArgs,
       ...argExprsWithoutImplicit,
     ];
-    const result = findOverload(func, argExprs);
+    const result = matches[0]?.found;
     if (result === undefined) {
-      return this.loggedErrorExpr(
-        'no-matching-function-overload',
-        `No matching overload for function ${this.name}(${argExprs
-          .map(e => e.type)
-          .join(', ')})`
+      return formsOf(
+        this.loggedErrorExpr(
+          'no-matching-function-overload',
+          `No matching overload for function ${this.name}(${argExprs
+            .map(e => e.type)
+            .join(', ')})`
+        )
       );
     }
     const {
@@ -256,7 +301,7 @@ export class ExprFunc extends ExpressionDef {
         this.args[i - (implicitExpr ? 1 : 0)] ?? this,
         NUMBER_HINT
       );
-      if (noArg) return noArg;
+      if (noArg) return formsOf(noArg);
     }
     // Report errors for expression type mismatch
     for (const error of expressionTypeErrors) {
@@ -316,11 +361,13 @@ export class ExprFunc extends ExpressionDef {
       !expressionIsAggregate(overload.returnType.expressionType) &&
       this.source !== undefined
     ) {
-      return this.loggedErrorExpr(
-        'non-aggregate-function-with-source',
-        `Cannot call function ${this.name}(${argExprs
-          .map(e => e.type)
-          .join(', ')}) with source`
+      return formsOf(
+        this.loggedErrorExpr(
+          'non-aggregate-function-with-source',
+          `Cannot call function ${this.name}(${argExprs
+            .map(e => e.type)
+            .join(', ')}) with source`
+        )
       );
     }
     const frag: FunctionCallNode = {
@@ -405,15 +452,19 @@ export class ExprFunc extends ExpressionDef {
     const sqlFunctionFieldUsage: FieldUsage = [];
     if (SQL_FUNCTION_NAMES.includes(func.name)) {
       if (this.isRestricted()) {
-        return this.loggedErrorExpr(
-          'restricted-construct-forbidden',
-          `\`${this.name}(...)\` cannot be used in a restricted query — the \`sql_*\` function family emits user-supplied SQL directly, which is not permitted.`
+        return formsOf(
+          this.loggedErrorExpr(
+            'restricted-construct-forbidden',
+            `\`${this.name}(...)\` cannot be used in a restricted query — the \`sql_*\` function family emits user-supplied SQL directly, which is not permitted.`
+          )
         );
       }
       if (!this.inExperiment('sql_functions', true)) {
-        return this.loggedErrorExpr(
-          'sql-functions-experiment-not-enabled',
-          `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`
+        return formsOf(
+          this.loggedErrorExpr(
+            'sql-functions-experiment-not-enabled',
+            `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`
+          )
         );
       }
 
@@ -438,16 +489,20 @@ export class ExprFunc extends ExpressionDef {
             this.has({names});
             const result = fs.lookup(names);
             if (result.found === undefined) {
-              return this.loggedErrorExpr(
-                'sql-function-interpolation-not-found',
-                `Invalid interpolation: ${result.error.message}`
+              return formsOf(
+                this.loggedErrorExpr(
+                  'sql-function-interpolation-not-found',
+                  `Invalid interpolation: ${result.error.message}`
+                )
               );
             }
             const typeDesc = result.found.typeDesc();
             if (typeDesc.type === 'filter expression') {
-              return this.loggedErrorExpr(
-                'filter-expression-error',
-                'Filter expressions cannot be used in sql_ functions'
+              return formsOf(
+                this.loggedErrorExpr(
+                  'filter-expression-error',
+                  'Filter expressions cannot be used in sql_ functions'
+                )
               );
             }
             if (result.found.refType === 'parameter') {
@@ -509,16 +564,59 @@ export class ExprFunc extends ExpressionDef {
 
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
-    return {
-      // TODO need to handle this???
-      ...(isAtomic(returnType) ? TDU.atomicDef(returnType) : returnType),
+    const resultOf = (
+      type: ExpressionValueTypeDef,
+      value: Expr
+    ): ExprValue => ({
+      ...typeWithoutGranularity(type),
       expressionType,
-      value: funcCall,
+      value,
       evalSpace,
       refSummary,
       ungroupings,
-    };
+    });
+    const readings: Reading[] = [{moment: resultOf(returnType, funcCall)}];
+    // Each other reading of the arguments which matches an overload gives
+    // the result as another type
+    if (funcCall === frag) {
+      for (const other of matches.slice(1)) {
+        const otherType = other.found.returnType;
+        if (readings.some(r => r.moment.type === otherType.type)) {
+          continue;
+        }
+        readings.push({
+          moment: resultOf(otherType, {
+            ...frag,
+            overload: other.found.overload,
+            kids: {...frag.kids, args: other.args.map(a => a.value)},
+          }),
+        });
+      }
+    }
+    return {readings};
   }
+}
+
+/**
+ * The ways the arguments can be read: as their plain values, and when some
+ * can be read as more than one type, as each such type in turn, the others
+ * as their plain values.
+ */
+function readingsOfArguments(argForms: Forms[]): ExprValue[][] {
+  const types: ExpressionValueType[] = [];
+  for (const f of argForms) {
+    if (f.readings.length > 1) {
+      for (const r of f.readings) {
+        if (!types.includes(r.moment.type)) {
+          types.push(r.moment.type);
+        }
+      }
+    }
+  }
+  if (types.length === 0) {
+    return [argForms.map(defaultMoment)];
+  }
+  return types.map(t => argForms.map(f => valueAs(f, t)));
 }
 
 type ExpressionTypeError = {

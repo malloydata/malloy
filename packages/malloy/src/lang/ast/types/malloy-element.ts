@@ -836,3 +836,15 @@ export class Document extends MalloyElement implements NameSpace {
     return ns;
   }
 }
+
+/**
+ * A node made during translation has no parent, and a node without one
+ * cannot log. This places `made` in the tree under `owner`.
+ */
+export function inTree<T extends MalloyElement>(
+  made: T,
+  owner: MalloyElement | null
+): T {
+  made.parent = owner;
+  return made;
+}
