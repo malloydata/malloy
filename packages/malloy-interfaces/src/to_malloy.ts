@@ -175,7 +175,11 @@ function serializeDateAsLiteral(
       return `@${year}-${month}`;
     }
     case 'week': {
-      return `@${year}-${month}-${day}-WK`;
+      const date = new Date(0);
+      date.setUTCFullYear(+year, +month - 1, +day);
+      date.setUTCDate(date.getUTCDate() - date.getUTCDay());
+      const [sunday] = date.toISOString().split('T');
+      return `@${sunday}-WK`;
     }
     case 'day': {
       return `@${year}-${month}-${day}`;

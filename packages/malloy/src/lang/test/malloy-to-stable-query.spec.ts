@@ -889,6 +889,34 @@ describe('Malloy to Stable Query', () => {
       });
     });
   });
+  function literalQuery(value: Malloy.LiteralValue): Malloy.Query {
+    return {
+      definition: {
+        kind: 'arrow',
+        source: {kind: 'source_reference', name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [
+            {
+              kind: 'where',
+              filter: {
+                kind: 'literal_equality',
+                expression: {kind: 'field_reference', name: 'dep_time'},
+                value,
+              },
+            },
+          ],
+        },
+      },
+    };
+  }
+
+  function expectLiteral(value: Malloy.LiteralValue, literal: string) {
+    const malloy = Malloy.queryToMalloy(literalQuery(value));
+    expect(malloy).toContain(`dep_time = ${literal}`);
+    expect(malloyToQuery(malloy).logs).toEqual([]);
+  }
+
   describe('escaping', () => {
     const awkwardStrings = [
       'plain',
@@ -997,32 +1025,12 @@ describe('Malloy to Stable Query', () => {
     });
 
     function timestampQuery(timezone: string, minute?: 'minute'): Malloy.Query {
-      return {
-        definition: {
-          kind: 'arrow',
-          source: {kind: 'source_reference', name: 'flights'},
-          view: {
-            kind: 'segment',
-            operations: [
-              {
-                kind: 'where',
-                filter: {
-                  kind: 'literal_equality',
-                  expression: {kind: 'field_reference', name: 'dep_time'},
-                  value: {
-                    kind: 'timestamp_literal',
-                    timestamp_value: minute
-                      ? '2020-01-01 12:34:00'
-                      : '2020-01-01 12:34:56',
-                    granularity: minute,
-                    timezone,
-                  },
-                },
-              },
-            ],
-          },
-        },
-      };
+      return literalQuery({
+        kind: 'timestamp_literal',
+        timestamp_value: minute ? '2020-01-01 12:34:00' : '2020-01-01 12:34:56',
+        granularity: minute,
+        timezone,
+      });
     }
 
     const timezones = [
@@ -1054,28 +1062,6 @@ describe('Malloy to Stable Query', () => {
     );
   });
   describe('quarter literals', () => {
-    function quarterQuery(value: Malloy.LiteralValue): Malloy.Query {
-      return {
-        definition: {
-          kind: 'arrow',
-          source: {kind: 'source_reference', name: 'flights'},
-          view: {
-            kind: 'segment',
-            operations: [
-              {
-                kind: 'where',
-                filter: {
-                  kind: 'literal_equality',
-                  expression: {kind: 'field_reference', name: 'dep_time'},
-                  value,
-                },
-              },
-            ],
-          },
-        },
-      };
-    }
-
     const months: [string, number][] = [
       ['01', 1],
       ['03', 1],
@@ -1088,31 +1074,40 @@ describe('Malloy to Stable Query', () => {
     ];
 
     test.each(months)('date literal in month %s is Q%d', (month, quarter) => {
-      expect(
-        Malloy.queryToMalloy(
-          quarterQuery({
-            kind: 'date_literal',
-            date_value: `2000-${month}-15`,
-            granularity: 'quarter',
-          })
-        )
-      ).toContain(`dep_time = @2000-Q${quarter}`);
+      expectLiteral(
+        {
+          kind: 'date_literal',
+          date_value: `2000-${month}-15`,
+          granularity: 'quarter',
+        },
+        `@2000-Q${quarter}`
+      );
     });
 
-    test.each(months)(
-      'timestamp literal in month %s is Q%d',
-      (month, quarter) => {
-        expect(
-          Malloy.queryToMalloy(
-            quarterQuery({
-              kind: 'timestamp_literal',
-              timestamp_value: `2000-${month}-15 12:34:56`,
-              granularity: 'quarter',
-            })
-          )
-        ).toContain(`dep_time = @2000-Q${quarter}`);
-      }
-    );
+    test('timestamp literal in month 12 is Q4', () => {
+      expectLiteral(
+        {
+          kind: 'timestamp_literal',
+          timestamp_value: '2000-12-15 12:34:56',
+          granularity: 'quarter',
+        },
+        '@2000-Q4'
+      );
+    });
+  });
+  describe('week literals', () => {
+    test.each([
+      ['2000-12-10', '2000-12-10'],
+      ['2000-12-15', '2000-12-10'],
+      ['2000-12-16', '2000-12-10'],
+      ['2000-03-01', '2000-02-27'],
+      ['2001-01-03', '2000-12-31'],
+    ])('date literal %s is the week of %s', (date, sunday) => {
+      expectLiteral(
+        {kind: 'date_literal', date_value: date, granularity: 'week'},
+        `@${sunday}-WK`
+      );
+    });
   });
   describe('annotation printing', () => {
     const annotationValues = [
