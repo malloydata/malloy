@@ -10,6 +10,7 @@ import type {
   TimestampUnit,
   TypecastExpr,
   TimeDeltaExpr,
+  TimeExpr,
   ExpressionValueType,
 } from '../../model/malloy_types';
 import {
@@ -65,6 +66,15 @@ export function castTo(
     cast.srcType = {type: fromType};
   }
   return cast;
+}
+
+export function asTimeType(
+  timeType: TemporalFieldType,
+  v: {type: ExpressionValueType; value: Expr}
+): TimeExpr {
+  const e =
+    v.type === timeType ? v.value : castTo({type: timeType}, v.value, v.type);
+  return mkTemporal(e, timeType);
 }
 
 export function resolution(timeframe: string): TemporalFieldType {

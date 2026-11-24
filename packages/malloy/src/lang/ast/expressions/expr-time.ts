@@ -3,12 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {
-  Expr,
-  TemporalFieldType,
-  TypecastExpr,
-} from '../../../model/malloy_types';
-import {isTemporalType} from '../../../model/malloy_types';
+import type {Expr, TemporalFieldType} from '../../../model/malloy_types';
+
+import {asTimeType} from '../time-utils';
 
 import type {FieldSpace} from '../types/field-space';
 import type {ExprValue} from '../types/expr-value';
@@ -33,19 +30,6 @@ export class ExprTime extends ExpressionDef {
   }
 
   static fromValue(timeType: TemporalFieldType, expr: ExprValue): ExprTime {
-    let value = expr.value;
-    if (timeType !== expr.type) {
-      const toTs: TypecastExpr = {
-        node: 'cast',
-        safe: false,
-        dstType: {type: timeType},
-        e: expr.value,
-      };
-      if (isTemporalType(expr.type)) {
-        toTs.srcType = {type: expr.type};
-      }
-      value = toTs;
-    }
-    return new ExprTime(timeType, value, [expr]);
+    return new ExprTime(timeType, asTimeType(timeType, expr), [expr]);
   }
 }

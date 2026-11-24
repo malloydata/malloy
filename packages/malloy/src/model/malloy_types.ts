@@ -275,6 +275,11 @@ function canMakeTemporal(
 ): e is Exclude<Expr, ArrayLiteralNode | RecordLiteralNode> {
   return e.node !== 'arrayLiteral' && e.node !== 'recordLiteral';
 }
+/**
+ * Labels e with its own time type; it does not convert. A node which
+ * already has a typeDef keeps it, and one without gets whatever type is
+ * passed, so passing any type but e's own makes the IR lie about e.
+ */
 export function mkTemporal(
   e: Expr,
   timeType: TemporalTypeDef | TemporalFieldType

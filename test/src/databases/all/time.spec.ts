@@ -363,6 +363,23 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         lt_digits: 'yes',
       });
     });
+
+    test.when(timestamptz)('measure to and from a timestamp', async () => {
+      await expect(`
+        run: tzdata -> {
+          select:
+            to_tstz is minutes(same_digits to tstz)
+            from_tstz is minutes(tstz to same_digits)
+            to_zoned is minutes(same_digits to @2020-01-30 20:00:00[America/Mexico_City])
+            from_zoned is minutes(@2020-01-30 20:00:00[America/Mexico_City] to same_digits)
+        }
+      `).toMatchResult(tzModel(), {
+        to_tstz: 360,
+        from_tstz: -360,
+        to_zoned: 360,
+        from_zoned: -360,
+      });
+    });
   });
 
   describe('date truncation', () => {
@@ -1011,6 +1028,17 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         same: 'yes',
         back: 'yes',
       });
+    });
+
+    test.when(timestamptz)('a range starting at it', async () => {
+      await expect(`
+        run: tzdata -> {
+          timezone: '${zone}'
+          select:
+            before_end is pick 'in' when same_instant + 23 hours ? tstz for 1 day else 'out'
+            after_end is pick 'in' when same_instant + 25 hours ? tstz for 1 day else 'out'
+        }
+      `).toMatchResult(tzModel(), {before_end: 'in', after_end: 'out'});
     });
   });
 

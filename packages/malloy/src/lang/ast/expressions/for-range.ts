@@ -5,7 +5,8 @@
 
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
-import {castTo, resolution, timeOffset} from '../time-utils';
+import {asTimeType, resolution, timeOffset} from '../time-utils';
+import type {TimeExpr} from '../../../model/malloy_types';
 import {TD} from '../../../model/malloy_types';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import {isComparison} from '../types/binary_operators';
@@ -62,10 +63,8 @@ export class ForRange extends ExpressionDef {
     // to do the computaion with timestamps.
     let rangeType = resolution(units);
 
-    // Next, if the beginning of the range is a timestamp or timestamptz, then we
-    // also have to do the computation as a timestamp (or timestamptz)
     if (TD.isAnyTimestamp(startV)) {
-      rangeType = startV.type;
+      rangeType = 'timestamp';
     }
 
     // everything is dates, do date math
@@ -81,15 +80,15 @@ export class ForRange extends ExpressionDef {
     const applyTo = inTree(ExprTime.fromValue('timestamp', checkV), this);
 
     let rangeStart = this.from;
-    let from = startV.value;
+    let from: TimeExpr;
     if (startV.type === 'date') {
       const asTimestamp = this.from
         .getForms(fs)
         .readings.find(r => r.moment.type === 'timestamp');
-      from = asTimestamp
-        ? asTimestamp.moment.value
-        : castTo({type: 'timestamp'}, from, 'date');
+      from = asTimeType('timestamp', asTimestamp?.moment ?? startV);
       rangeStart = new ExprTime('timestamp', from, [startV]);
+    } else {
+      from = asTimeType('timestamp', startV);
     }
     const to = timeOffset('timestamp', from, '+', nV.value, units);
     const rangeEnd = new ExprTime('timestamp', to, [startV, nV]);
