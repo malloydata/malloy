@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-bigquery",
-  "version": "0.0.440",
+  "version": "0.0.441",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,6 +25,6 @@
   "dependencies": {
     "@google-cloud/bigquery": "7.9.4",
     "@google-cloud/paginator": "5.0.2",
-    "@malloydata/malloy": "0.0.440"
+    "@malloydata/malloy": "0.0.441"
   }
 }
