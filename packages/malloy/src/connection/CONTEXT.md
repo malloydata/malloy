@@ -228,6 +228,18 @@ nothing itself: it forwards the whole `RunSQLOptions` to the remote publisher,
 whose own connector applies the bag there. There is no connection-level default;
 metadata is per call only.
 
+## Aborting a query (`abortSignal`)
+
+`RunSQLOptions.abortSignal` applies to `runSQL()` as well as `runSQLStream()`.
+A connector that honours it runs nothing and throws when the signal is already
+aborted. When the signal fires while the statement runs, it stops waiting,
+throws, and stops the statement on the server where the backend has a way to:
+Postgres sends the protocol's CancelRequest from a second connection, over TLS
+when the query's connection uses TLS. The cancel can land after the statement
+has ended, so a connection a cancel was sent for is never reused for another
+statement; Postgres closes it, or releases a pooled one with an error so the
+pool discards it.
+
 ## Key Types
 
 ```typescript
@@ -382,7 +394,7 @@ All backends support `setupSQL` but execute it differently:
 | **Run once at init** | DuckDB | Splits on `;\n`, executes each statement during `init()`. All subsequent queries see the effects. |
 | **Prepend to every query** | BigQuery | Concatenates setupSQL before each query in the same job. Runs every time. |
 | **Run per client** | Postgres (non-pooled) | Runs before every query since each query gets a fresh client. |
-| **Run on pool acquire** | Postgres (pooled) | Runs via `pool.on('acquire')` event — each client from the pool gets setup when checked out. |
+| **Run on pool acquire** | Postgres (pooled) | Runs via `pool.on('acquire')` event — each client from the pool gets setup when checked out. Each statement waits for its client's setup statements before it runs, and fails without running if one of them fails. |
 
 All backends include setupSQL in `getDigest()` since it can change query behavior.
 
@@ -402,7 +414,7 @@ After getting raw database types, map them to Malloy types via `dialect.sqlTypeT
 
 **Streaming** (`canStream()` → `StreamingConnection`):
 - Implement `runSQLStream()` returning `AsyncIterableIterator<QueryRecord>`
-- Must respect `rowLimit` and `abortSignal` from options
+- Must respect `rowLimit` and `abortSignal` from options (see [Aborting a query](#aborting-a-query-abortsignal))
 - Clean up resources (close streams, release connections) on abort or completion
 
 **Persistence** (`canPersist()` → `PersistSQLResults`):
