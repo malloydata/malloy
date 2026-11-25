@@ -168,14 +168,18 @@ function serializeDateAsLiteral(
       return `@${year}`;
     }
     case 'quarter': {
-      const quarter = Math.floor(+month / 3) + 1;
+      const quarter = Math.floor((+month - 1) / 3) + 1;
       return `@${year}-Q${quarter}`;
     }
     case 'month': {
       return `@${year}-${month}`;
     }
     case 'week': {
-      return `@${year}-${month}-${day}-WK`;
+      const date = new Date(0);
+      date.setUTCFullYear(+year, +month - 1, +day);
+      date.setUTCDate(date.getUTCDate() - date.getUTCDay());
+      const [sunday] = date.toISOString().split('T');
+      return `@${sunday}-WK`;
     }
     case 'day': {
       return `@${year}-${month}-${day}`;
