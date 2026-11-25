@@ -230,8 +230,17 @@ export class DuckDBDialect extends PostgresBase {
         ${arrayLen},
         1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
     }
-    // Use WITH ORDINALITY to preserve array element order via __row_id
-    return `LEFT JOIN LATERAL UNNEST(${source}) WITH ORDINALITY as ${alias}_outer(${alias}, __row_id) ON true`;
+    // DuckDB runs a LEFT JOIN LATERAL as a delim join, hashing every row,
+    // array included, to unnest the distinct ones and join them back, which
+    // costs several times what the unnest does. A CROSS JOIN LATERAL over a
+    // select-list UNNEST is rewritten into a plain unnest of each row. The
+    // CASE keeps a row with an empty or null array, once, with a null element
+    // and row number, as the LEFT JOIN did. The two UNNESTs run in step, so
+    // each element is paired with its position.
+    const keep = `LEN(${source}) > 0`;
+    const elements = `CASE WHEN ${keep} THEN ${source} ELSE [NULL] END`;
+    const rowIds = `CASE WHEN ${keep} THEN GENERATE_SERIES(1, LEN(${source})) ELSE [NULL] END`;
+    return `CROSS JOIN LATERAL (SELECT UNNEST(${elements}) AS ${alias}, UNNEST(${rowIds}) AS __row_id) AS ${alias}_outer`;
   }
 
   // The element is the column `alias`. The row number is read as a member of
