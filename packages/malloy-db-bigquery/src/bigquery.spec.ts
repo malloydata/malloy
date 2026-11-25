@@ -129,7 +129,7 @@ describe('db:BigQuery', () => {
             false,
             false
           );
-        }).rejects.toThrowError(`Dataset ${datasetName} does not exist`);
+        }).rejects.toThrow(`Dataset ${datasetName} does not exist`);
       });
 
       it('creates dataset if createDataset=true', async () => {
@@ -161,7 +161,7 @@ describe('db:BigQuery', () => {
             false,
             true
           );
-        }).rejects.toThrowError(`Table ${tableName} already exists`);
+        }).rejects.toThrow(`Table ${tableName} already exists`);
       });
 
       it('manifests a table', async () => {
@@ -329,39 +329,39 @@ describe('db:BigQuery', () => {
 
     it('caches table schema', async () => {
       await bq.fetchSchemaForTables({'test1': 'table1'}, {});
-      expect(getTableFieldSchema).toBeCalledTimes(1);
+      expect(getTableFieldSchema).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await bq.fetchSchemaForTables({'test1': 'table1'}, {});
-      expect(getTableFieldSchema).toBeCalledTimes(1);
+      expect(getTableFieldSchema).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes table schema', async () => {
       await bq.fetchSchemaForTables({'test2': 'table2'}, {});
-      expect(getTableFieldSchema).toBeCalledTimes(1);
+      expect(getTableFieldSchema).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await bq.fetchSchemaForTables(
         {'test2': 'table2'},
         {refreshTimestamp: Date.now() + 10}
       );
-      expect(getTableFieldSchema).toBeCalledTimes(2);
+      expect(getTableFieldSchema).toHaveBeenCalledTimes(2);
     });
 
     it('caches sql schema', async () => {
       await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
-      expect(getSQLBlockSchema).toBeCalledTimes(1);
+      expect(getSQLBlockSchema).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
-      expect(getSQLBlockSchema).toBeCalledTimes(1);
+      expect(getSQLBlockSchema).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes sql schema', async () => {
       await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
-      expect(getSQLBlockSchema).toBeCalledTimes(1);
+      expect(getSQLBlockSchema).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
         refreshTimestamp: Date.now() + 10,
       });
-      expect(getSQLBlockSchema).toBeCalledTimes(2);
+      expect(getSQLBlockSchema).toHaveBeenCalledTimes(2);
     });
   });
 });

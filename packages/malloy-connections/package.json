@@ -6,7 +6,7 @@
   "types": "./dist/index.d.ts",
   "sideEffects": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "exports": {
     ".": {

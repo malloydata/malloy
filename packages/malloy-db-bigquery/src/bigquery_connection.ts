@@ -14,8 +14,6 @@ import type {
 import {BigQuery as BigQuerySDK} from '@google-cloud/bigquery';
 import type bigquery from '@google-cloud/bigquery/build/src/types';
 import type {ResourceStream} from '@google-cloud/paginator';
-import * as googleCommon from '@google-cloud/common';
-import {GaxiosError} from 'gaxios';
 import type {
   Connection,
   ConnectionConfig,
@@ -276,34 +274,6 @@ interface SchemaInfo {
   needsPartitionTimePseudoColumn: boolean;
   needsPartitionDatePseudoColumn: boolean;
 }
-
-// BigQuery SDK apparently throws various authentication errors from Gaxios (https://github.com/googleapis/gaxios) and from
-// @google-cloud/common (https://www.npmjs.com/package/@google-cloud/common)
-// catching and rewriting here a single kind of authentication error we can consistently catch further up the stack
-export class BigQueryAuthenticationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'BigQueryAuthenticationError';
-  }
-}
-
-const maybeRewriteError = (e: Error | unknown): Error => {
-  // GaxiosError happens if credentials are revoked (for example, client.revokeCredentials()) or if
-  // the refresh token is invalid
-  // ApiErrors happen if token is revoked (for example, client.revokeToken(creds.access_token!))
-
-  if (e instanceof Error) {
-    if (
-      (e instanceof GaxiosError && e.code === '400') ||
-      (e instanceof googleCommon.ApiError && e.code === 401)
-    ) {
-      return new BigQueryAuthenticationError(e.message);
-    } else return e;
-  } else {
-    // something throw a non-Error, and we didn't expect that
-    throw e;
-  }
-};
 
 /**
  * Default maximumBytesBilled value, 25GiB
@@ -711,39 +681,33 @@ export class BigQueryConnection
       this.queryMetadataBag(options.queryMetadata)
     );
 
-    try {
-      const queryResultsOptions: QueryResultsOptions = {
-        maxResults: pageSize,
-        startIndex: rowIndex.toString(),
-      };
+    const queryResultsOptions: QueryResultsOptions = {
+      maxResults: pageSize,
+      startIndex: rowIndex.toString(),
+    };
 
-      const jobResult = await this.createBigQueryJobAndGetResults(
-        sqlCommand,
-        perCallLabels ? {labels: perCallLabels} : undefined,
-        queryResultsOptions,
-        abortSignal
-      );
+    const jobResult = await this.createBigQueryJobAndGetResults(
+      sqlCommand,
+      perCallLabels ? {labels: perCallLabels} : undefined,
+      queryResultsOptions,
+      abortSignal
+    );
 
-      const totalRows = +(jobResult[2]?.totalRows
-        ? jobResult[2].totalRows
-        : '0');
+    const totalRows = +(jobResult[2]?.totalRows ? jobResult[2].totalRows : '0');
 
-      // jobComplete is guaranteed here: getQueryResultsUntilComplete only
-      // returns once BigQuery reports the job complete (it polls otherwise).
-      const queryCostBytes = jobResult[2]?.totalBytesProcessed;
-      const data: MalloyQueryData = {
-        rows: jobResult[0],
-        totalRows,
-        runStats: {
-          queryCostBytes: queryCostBytes ? +queryCostBytes : undefined,
-        },
-      };
-      const schema = jobResult[2]?.schema;
+    // jobComplete is guaranteed here: getQueryResultsUntilComplete only
+    // returns once BigQuery reports the job complete (it polls otherwise).
+    const queryCostBytes = jobResult[2]?.totalBytesProcessed;
+    const data: MalloyQueryData = {
+      rows: jobResult[0],
+      totalRows,
+      runStats: {
+        queryCostBytes: queryCostBytes ? +queryCostBytes : undefined,
+      },
+    };
+    const schema = jobResult[2]?.schema;
 
-      return {data, schema};
-    } catch (e) {
-      throw maybeRewriteError(e);
-    }
+    return {data, schema};
   }
 
   public async runSQL(
@@ -785,16 +749,12 @@ export class BigQueryConnection
   }
 
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
-    try {
-      const [result] = await this.bigQuery.createQueryJob({
-        location: this.location,
-        query: this.prependSetupSQL(sqlCommand),
-        dryRun: true,
-      });
-      return result;
-    } catch (e) {
-      throw maybeRewriteError(e);
-    }
+    const [result] = await this.bigQuery.createQueryJob({
+      location: this.location,
+      query: this.prependSetupSQL(sqlCommand),
+      dryRun: true,
+    });
+    return result;
   }
 
   public async estimateQueryCost(sqlCommand: string): Promise<QueryRunStats> {
@@ -839,35 +799,31 @@ export class BigQueryConnection
     }
     const [projectId, datasetNamePart, tableNamePart] = segments;
 
-    try {
-      // TODO The `dataset` API has no way to set a different `projectId` than the one stored in the BQ
-      //      instance. So we hack it until a better way exists: we set the `this.bigQuery.projectId`
-      //      to the `projectId` for the dataset, then put it back when we're done. Importantly, we
-      //      set it back _before_ we await the promise, thus avoiding a "concurrency" issue. We've decided
-      //      this is better than creating a new BQ instance every time we need to get a table schema.
-      if (projectId) this.bigQuery.projectId = projectId;
-      const needTableSuffixPseudoColumn =
-        tableNamePart !== undefined &&
-        tableNamePart[tableNamePart.length - 1] === '*';
-      const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
-      const metadataPromise = table.getMetadata();
-      this.bigQuery.projectId = this.billingProjectId;
-      const [metadata] = await metadataPromise;
-      return {
-        schema: metadata.schema,
-        description: metadata.description,
-        needsTableSuffixPseudoColumn: needTableSuffixPseudoColumn,
-        needsPartitionTimePseudoColumn:
-          metadata.timePartitioning?.type !== undefined &&
-          metadata.timePartitioning?.field === undefined,
-        needsPartitionDatePseudoColumn:
-          metadata.timePartitioning?.type !== undefined &&
-          metadata.timePartitioning?.field === undefined &&
-          metadata.timePartitioning!.type === 'DAY',
-      };
-    } catch (e) {
-      throw maybeRewriteError(e);
-    }
+    // TODO The `dataset` API has no way to set a different `projectId` than the one stored in the BQ
+    //      instance. So we hack it until a better way exists: we set the `this.bigQuery.projectId`
+    //      to the `projectId` for the dataset, then put it back when we're done. Importantly, we
+    //      set it back _before_ we await the promise, thus avoiding a "concurrency" issue. We've decided
+    //      this is better than creating a new BQ instance every time we need to get a table schema.
+    if (projectId) this.bigQuery.projectId = projectId;
+    const needTableSuffixPseudoColumn =
+      tableNamePart !== undefined &&
+      tableNamePart[tableNamePart.length - 1] === '*';
+    const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
+    const metadataPromise = table.getMetadata();
+    this.bigQuery.projectId = this.billingProjectId;
+    const [metadata] = await metadataPromise;
+    return {
+      schema: metadata.schema,
+      description: metadata.description,
+      needsTableSuffixPseudoColumn: needTableSuffixPseudoColumn,
+      needsPartitionTimePseudoColumn:
+        metadata.timePartitioning?.type !== undefined &&
+        metadata.timePartitioning?.field === undefined,
+      needsPartitionDatePseudoColumn:
+        metadata.timePartitioning?.type !== undefined &&
+        metadata.timePartitioning?.field === undefined &&
+        metadata.timePartitioning!.type === 'DAY',
+    };
   }
 
   public async executeSQLRaw(sqlCommand: string): Promise<QueryData> {
@@ -904,41 +860,36 @@ export class BigQueryConnection
     if (tempTableName !== undefined) {
       return tempTableName;
     } else {
-      try {
-        const [job] = await this.bigQuery.createQueryJob({
-          location: this.location,
-          query: sqlCommand,
-        });
+      const [job] = await this.bigQuery.createQueryJob({
+        location: this.location,
+        query: sqlCommand,
+      });
 
-        let [metaData] = await job.getMetadata();
+      let [metaData] = await job.getMetadata();
 
-        // wait for job to complete, because we need the table name
-        // TODO just because a job is "DONE" doesn't mean it ended correctly, should probably also confirm
-        // status is successful & that table was created
-        // TODO this needs better error handling and a timeout so that issues dont result in infinite looping
-        while (metaData.status.state !== 'DONE') {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          [metaData] = await job.getMetadata();
-        }
+      // wait for job to complete, because we need the table name
+      // TODO just because a job is "DONE" doesn't mean it ended correctly, should probably also confirm
+      // status is successful & that table was created
+      // TODO this needs better error handling and a timeout so that issues dont result in infinite looping
+      while (metaData.status.state !== 'DONE') {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        [metaData] = await job.getMetadata();
+      }
 
-        // save table name
-        if (
-          metaData.configuration &&
-          metaData.configuration.query &&
-          metaData.configuration.query.destinationTable
-        ) {
-          const destinationTable =
-            metaData.configuration.query.destinationTable;
-          const fullTableName = `${destinationTable.projectId}.${destinationTable.datasetId}.${destinationTable.tableId}`;
-          this.temporaryTables.set(hash, fullTableName);
-          return fullTableName;
-        } else {
-          throw new Error(
-            'bigquery.job.getMetadata() - metadata should have configuration but does not'
-          );
-        }
-      } catch (e) {
-        throw maybeRewriteError(e);
+      // save table name
+      if (
+        metaData.configuration &&
+        metaData.configuration.query &&
+        metaData.configuration.query.destinationTable
+      ) {
+        const destinationTable = metaData.configuration.query.destinationTable;
+        const fullTableName = `${destinationTable.projectId}.${destinationTable.datasetId}.${destinationTable.tableId}`;
+        this.temporaryTables.set(hash, fullTableName);
+        return fullTableName;
+      } else {
+        throw new Error(
+          'bigquery.job.getMetadata() - metadata should have configuration but does not'
+        );
       }
     }
   }
@@ -1166,52 +1117,48 @@ export class BigQueryConnection
   ): Promise<
     PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
   > {
-    try {
-      if (abortSignal?.aborted) {
-        throw new Error('BigQuery query was aborted before it started.');
-      }
-      const job = await this.createBigQueryJob({
-        query: sqlCommand,
-        ...createQueryJobOptions,
-      });
-      const cancel = () => {
-        void cancelJobQuietly(job);
-      };
-      abortSignal?.addEventListener('abort', cancel, {once: true});
-      // An abort during job creation fired before the listener existed.
-      if (abortSignal?.aborted) {
-        cancel();
-      }
+    if (abortSignal?.aborted) {
+      throw new Error('BigQuery query was aborted before it started.');
+    }
+    const job = await this.createBigQueryJob({
+      query: sqlCommand,
+      ...createQueryJobOptions,
+    });
+    const cancel = () => {
+      void cancelJobQuietly(job);
+    };
+    abortSignal?.addEventListener('abort', cancel, {once: true});
+    // An abort during job creation fired before the listener existed.
+    if (abortSignal?.aborted) {
+      cancel();
+    }
 
-      try {
-        // Poll for results until the job completes or the connection's
-        // configured timeout elapses; a single getQueryResults call can't wait
-        // out a long-running query (see getQueryResultsUntilComplete). The
-        // deadline is the same resolved timeout that bounds the job's
-        // jobTimeoutMs, so the client stops waiting right about when BigQuery
-        // stops running the job.
-        return await getQueryResultsUntilComplete(
-          job,
-          {
-            wrapIntegers: {
-              integerTypeCastFunction: (val: string | number) => {
-                const num = Number(val);
-                if (Number.isSafeInteger(num)) {
-                  return num;
-                }
-                return String(val);
-              },
+    try {
+      // Poll for results until the job completes or the connection's
+      // configured timeout elapses; a single getQueryResults call can't wait
+      // out a long-running query (see getQueryResultsUntilComplete). The
+      // deadline is the same resolved timeout that bounds the job's
+      // jobTimeoutMs, so the client stops waiting right about when BigQuery
+      // stops running the job.
+      return await getQueryResultsUntilComplete(
+        job,
+        {
+          wrapIntegers: {
+            integerTypeCastFunction: (val: string | number) => {
+              const num = Number(val);
+              if (Number.isSafeInteger(num)) {
+                return num;
+              }
+              return String(val);
             },
-            ...getQueryResultsOptions,
           },
-          this.resolvedTimeoutMs(),
-          {abortSignal}
-        );
-      } finally {
-        abortSignal?.removeEventListener('abort', cancel);
-      }
-    } catch (e) {
-      throw maybeRewriteError(e);
+          ...getQueryResultsOptions,
+        },
+        this.resolvedTimeoutMs(),
+        {abortSignal}
+      );
+    } finally {
+      abortSignal?.removeEventListener('abort', cancel);
     }
   }
 

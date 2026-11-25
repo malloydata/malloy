@@ -2,24 +2,26 @@
 
 Non-obvious things; the code and `package.json` say the rest.
 
-## `snowflake-sdk` is pinned exactly at `2.3.1` — deliberate, do not float it
+## `snowflake-sdk` is exact at `3.4.1`, and loaded on first use
 
-`package.json` pins `"snowflake-sdk": "2.3.1"` with **no caret**. This is
-intentional, not a stale lockfile: the SDK pulls platform-specific native bits and
-a large transitive tree, and floating it thrashes that native connector chain.
-Bumps are made deliberately and verified against the live Snowflake CI env
-(`db-snowflake.yaml`), never by a Dependabot range.
+`package.json` pins `"snowflake-sdk": "3.4.1"` with **no caret**: Snowflake minors
+change runtime behavior that reaches every app embedding Malloy, so each bump is read
+and tested on purpose — live Snowflake CI (`db-snowflake.yaml`) plus a Snowflake query
+from the bundled VS Code extension and the standalone CLI binary.
 
-**What the pin costs** — visible on Security → Dependabot alerts, never as a
-mergeable PR: the held SDK keeps open transitive advisories in `fast-xml-parser`
-(including critical/high), `axios`, and `bn.js`. Some of those leaves are *also*
-pulled by other connectors (e.g. `fast-xml-parser` via BigQuery's
-`@google-cloud/storage`), so bumping Snowflake alone won't zero them — they clear
-only when every owner moves.
+`snowflake_executor.ts` loads the SDK with `require()` the first time an executor is
+built, not with a top-level import. Loading the SDK starts its telemetry platform
+detection, which probes cloud metadata endpoints and calls AWS STS with whatever AWS
+credentials the user has; `@malloydata/malloy-connections` imports this package just to
+register the type, so a top-level import would run that in every app, Snowflake user or
+not. Keep SDK value imports out of every other module here — `import type` is fine.
 
-**Revisit** when doing a deliberate `snowflake-sdk` upgrade: move the exact pin,
-run the live Snowflake suite, confirm the native chain still builds on every
-platform. The cross-cutting pin ledger is [`docs/dependency-management/CONTEXT.md`](../../docs/dependency-management/CONTEXT.md);
+The apps that bundle Malloy (VS Code extension, malloy-cli) also define
+`process.env.SNOWFLAKE_DISABLE_MINICORE` and
+`process.env.SNOWFLAKE_DISABLE_PLATFORM_DETECTION` at build time. minicore is a
+telemetry-only native binary esbuild can't bundle.
+
+The cross-cutting pin ledger is [`docs/dependency-management/CONTEXT.md`](../../docs/dependency-management/CONTEXT.md);
 the Dependabot flow is in [`.github/CONTEXT.md`](../../.github/CONTEXT.md).
 
 ## `~/.snowflake/connections.toml` is read with the *driver's* schema, not Snowflake's

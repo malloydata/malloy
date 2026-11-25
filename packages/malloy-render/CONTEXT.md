@@ -18,19 +18,16 @@ Two non-obvious consequences:
 - **`@malloydata/malloy-tag` is a runtime dependency for type resolution only.** The UMD inlines malloy-tag (vite `external: []`); nothing escapes to `require()` at runtime. But the published `.d.ts` files (`api/plugin-types.d.ts`, `data_tree/fields/base.d.ts`, `util.d.ts`, etc.) re-export `Tag`, so consumer TypeScript needs the package installed.
 - **The main bundle cannot be loaded in Node without a DOM stub** (either condition; `./format` can). Solid.js calls `delegateEvents()` at module-eval time and reads `window.document`. The headless validator (`@malloydata/render-validator`) installs and removes global `window`/`document`/`navigator` stubs around its `require()` of this package; any other Node consumer must do the same.
 
-## Vega is pinned at v5 — a deliberate hold
+## `vega-lite` is held at v5 — a deliberate hold
 
-The renderer is built on **Vega 5** (via `vega-lite ^5`). Moving to the current
-Vega (6) is a major across the whole render stack — the `vega-lite` peer, the
-chart runtime, our typings — i.e. a deliberate renderer upgrade, not a dependency
-bump.
+Render depends on `vega` 6 directly; `vega-lite` 5 brings its own nested `vega` 5 copy
+for its peer. vega-lite 6 builds and passes render's tests, but it is ESM-only all the
+way down, so jest needs the vega/d3 stack added to `transformIgnoreModules`. It moves
+with the renderer work (#3111).
 
-**What the pin costs** — visible on Security → Dependabot alerts: `vega`,
-`vega-functions`, and `vega-expression` carry open advisories (high) whose only
-fix is Vega 6. These are render-owned — nothing else in the monorepo pulls them —
-so the renderer is the sole place that clears them. Recorded in the cross-cutting
-pin ledger [`docs/dependency-management/CONTEXT.md`](../../docs/dependency-management/CONTEXT.md);
-revisit when we take the Vega 5→6 upgrade.
+**What the hold costs** — the nested vega 5 copy's `vega`, `vega-functions` and
+`vega-expression` advisories (high), visible on Security → Dependabot alerts. Recorded
+in the cross-cutting pin ledger [`docs/dependency-management/CONTEXT.md`](../../docs/dependency-management/CONTEXT.md).
 
 ### Public API
 

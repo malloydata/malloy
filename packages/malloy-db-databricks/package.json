@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
@@ -24,6 +24,6 @@
   "dependencies": {
     "@databricks/sql": "1.15.0",
     "@malloydata/malloy": "0.0.440",
-    "@types/node": "^22.20.0"
+    "@types/node": "^24.19.2"
   }
 }

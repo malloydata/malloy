@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
@@ -26,6 +26,6 @@
     "@malloydata/malloy": "0.0.440"
   },
   "devDependencies": {
-    "peggy": "^4.2.0"
+    "peggy": "^5.1.1"
   }
 }

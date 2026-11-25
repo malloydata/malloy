@@ -1,7 +1,7 @@
 # npm security audit — the shipped-dependency security sweep
 
 Driven by `npm audit`, not Dependabot — Dependabot only appears at the edges (dismissing
-an accepted alert with a reason in §6). The monthly version-update pass *is* the
+an accepted alert with a reason in §6). The quarterly version-update pass *is* the
 Dependabot one; this isn't, which is why it's named for its actual engine.
 
 An agent-agnostic runbook — plain procedure a human or any coding agent can follow. Bind it
@@ -9,7 +9,7 @@ to whatever tool you use; the knowledge lives here in the tree so no contributor
 into a particular AI. This is a living document — if a step is unclear or wrong when you run
 it, fix it here.
 
-The security pass. Not the monthly version-update rhythm — that's [`dependabot-monthly.md`](dependabot-monthly.md).
+The security pass. Not the quarterly version-update rhythm — that's [`dependabot-monthly.md`](dependabot-monthly.md).
 This runs whenever, and its job is to make an unbounded alert surface **painless**: whoever
 runs it should read a few lines, approve one PR, and answer at most a couple of questions.
 
@@ -104,8 +104,7 @@ Security sweep — N prod findings
 37 vulnerabilities (4 low, 19 moderate, 13 high, 1 critical)   ← npm's own summary line
 
 Every CRITICAL and HIGH mapped to the pin it reconciles to (low/moderate stay a count):
-  critical  fast-xml-parser              → Snowflake hold (snowflake-sdk 2.3.1)
-  high      fast-xml-parser              → Snowflake hold
+  high      axios                        → Trino axios pin (trino-js-client exact axios 1.19.0)
   high      thrift                       → Databricks hold (@databricks/sql 1.15.0)
   high      vega ×6                      → Vega v5 renderer hold (vega-lite ^5)
   high      ws, tmp, socket.io-parser    → dev tooling, never ships (out of scope)
@@ -151,7 +150,7 @@ Separate from the sweep: for every hold in the ledger, ask *can we release it ye
 work-triggered, not advisory-triggered.
 
 - **Read each blocking issue, one sentence of status.** `gh issue view <N>` for the issue a
-  hold names (#2950 motherduck, #2918 vscode-textmate, #2928 pg, #2932 bigquery, …). Many holds
+  hold names (#3036 motherduck, #2918 vscode-textmate, #3111 vega-lite, #2932 bigquery, …). Many holds
   wait on **our own** work — they won't close themselves, so this is the moment to decide to
   pick one up. Note the cheapest if one stands out.
 - **Upstream moved?** `npm view <pkg> version` — did the awaited release ship? **Trap — version

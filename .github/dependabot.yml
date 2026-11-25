@@ -3,16 +3,16 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "quarterly"
     open-pull-requests-limit: 10
     ignore:
-      # @types/node tracks the Node major; keep it pinned to our runtime (24)
-      # rather than chasing the current/odd Node line.
+      # @types/node is held at 24, the Node the VS Code extension host runs, so core
+      # can't use APIs that runtime lacks. Move it to 26 when VS Code ships an
+      # Electron with Node 26.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # @types/jasmine tracks the jasmine-core major, which malloy-syntax-highlight
-      # holds at 5. Ignore the major (currently 6) so it stops re-proposing until a
-      # deliberate jasmine-core 5->6 bump moves both together.
+      # @types/jasmine tracks the jasmine-core major in malloy-syntax-highlight;
+      # ignore its major so the two move together.
       - dependency-name: "@types/jasmine"
         update-types: ["version-update:semver-major"]
       # @motherduck/wasm-client held at ^0.6.6: the duckdb-wasm connector
@@ -22,18 +22,12 @@ updates:
       # it is a deliberate connector migration. No update-types = hold all
       # versions (matches the @dependabot ignore comment). See docs/dependency-management/CONTEXT.md.
       - dependency-name: "@motherduck/wasm-client"
-      # vscode-textmate held at 9.0.0: our generateMonarchGrammar.ts deep-imports
-      # internal paths (vscode-textmate/release/theme, /rawGrammar) and rule types
-      # that 9.3.2 — an in-range MINOR — stopped exporting, breaking the
-      # syntax-highlight codegen in #2911. Also exact-pinned in
-      # malloy-syntax-highlight/package.json (^9.0.0 would resolve the breaker on a
-      # fresh install). The real fix is issue #2918; see docs/dependency-management/CONTEXT.md.
+      # vscode-textmate held at 9.0.0: scripts/generateMonarchGrammar.ts imports
+      # types from internal paths (vscode-textmate/release/theme, /rawGrammar) that
+      # later releases no longer ship, so syntax-highlight codegen fails to
+      # type-check. Also exact-pinned in malloy-syntax-highlight/package.json. The
+      # real fix is issue #2918; see docs/dependency-management/CONTEXT.md.
       - dependency-name: "vscode-textmate"
-      # snowflake-sdk is exact-pinned (2.3.1) in malloy-db-snowflake; ignore here
-      # so Dependabot stops proposing bumps that would otherwise ride the
-      # connectors group. Deliberate bumps happen by hand against live Snowflake
-      # CI. See docs/dependency-management/CONTEXT.md.
-      - dependency-name: "snowflake-sdk"
       # @databricks/sql exact-pinned (1.15.0) in malloy-db-databricks: 1.16.0 ships a
       # native Rust kernel (eight @databricks/databricks-sql-kernel-* .node binaries)
       # esbuild can't bundle, breaking the vscode-extension/malloy-cli builds. malloy's
@@ -43,27 +37,16 @@ updates:
       # docs/dependency-management/CONTEXT.md.
       - dependency-name: "@databricks/*"
       # vega-lite held at v5 (the renderer's Vega 5->6 upgrade is deferred). It's a
-      # direct dep, so its major opens a recurring monthly PR; ignore the major so
+      # direct dep, so its major opens a recurring PR; ignore the major so
       # it stops squatting the limit. v5 minors still flow. See docs/dependency-management/CONTEXT.md.
       - dependency-name: "vega-lite"
         update-types: ["version-update:semver-major"]
-      # pg + pg-query-stream held: pg-query-stream pulls pg-cursor, which
-      # deep-imports pg's internal lib/result.js. Bumping pg (8.7->8.22 in the
-      # connectors group, #2923) skewed those versions and broke module resolution
-      # in EVERY dialect's test suite (the shared harness loads the postgres path).
-      # pg is also exact-pinned (8.7.3) in malloy-db-postgres/package.json since
-      # ^8.7.1 would resolve the breaker on a fresh install. They're a coupled set
-      # (pg/pg-cursor/pg-query-stream move together); the real fix is issue #2928.
-      - dependency-name: "pg"
-      - dependency-name: "pg-query-stream"
-      # axios exact-pinned (1.19.0) at the root to match the exact pin inside
-      # @trinodb/trino-js-client. Any other version resolves a second, nested copy
-      # under the connector instead of one hoisted axios. The pin is not ours to
-      # keep: trinodb/trino-js-client#956 drops axios for native fetch in their
-      # 1.0.0, and this clears when we take that. See
-      # docs/dependency-management/CONTEXT.md.
+      # axios is exact-pinned (1.19.0) at the root to match the exact pin inside
+      # @trinodb/trino-js-client; any other version nests a second copy under the
+      # connector. It clears when trinodb/trino-js-client#956 (native fetch)
+      # ships. See docs/dependency-management/CONTEXT.md.
       - dependency-name: "axios"
-      # @google-cloud/bigquery + common + paginator held at v7/v5 (a coupled set).
+      # @google-cloud/bigquery + paginator held at v7/v5 (they move together).
       # bigquery 8 -> common 6 -> google-auth-library 10 -> gaxios 7, and gaxios 7
       # does an ESM-only dynamic import() that fails under jest without
       # --experimental-vm-modules; that flag can't be made invisible for
@@ -71,7 +54,6 @@ updates:
       # malloy-db-bigquery/package.json. Unpin per issue #2932 (jest->vitest, or
       # the ESM-only import going away).
       - dependency-name: "@google-cloud/bigquery"
-      - dependency-name: "@google-cloud/common"
       - dependency-name: "@google-cloud/paginator"
       # uuid + @noble/hashes held below their ESM-only majors. uuid 12+ and
       # @noble/hashes 2+ dropped CommonJS (pure ESM), which breaks every downstream
@@ -88,7 +70,7 @@ updates:
       # Not for fragmentation (the per-platform node-bindings are transitive here,
       # so they never fan out). It's a deliberate callout: a duckdb bump has
       # downstream blast radius, so it gets its own PR to be merged on purpose
-      # instead of buried in the monthly minor/patch pile.
+      # instead of buried in the routine minor/patch pile.
       duckdb:
         patterns:
           - "@duckdb/*"
@@ -107,7 +89,7 @@ updates:
       # bump lands as its own deliberate PR instead of riding the routine
       # minor/patch merge (which is how a @databricks/sql bump slipped in, and how
       # the motherduck/vscode-textmate breakers poisoned #2911). Held connectors
-      # (snowflake-sdk, @motherduck/*) are also in the ignore list, so they won't
+      # (@databricks/*, @motherduck/*) are also in the ignore list, so they won't
       # appear here. Placed before minor-and-patch so connector deps match here first.
       connectors:
         patterns:

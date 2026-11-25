@@ -10,7 +10,7 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
@@ -24,9 +24,7 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "7.9.4",
-    "@google-cloud/common": "5.0.2",
     "@google-cloud/paginator": "5.0.2",
-    "@malloydata/malloy": "0.0.440",
-    "gaxios": "^4.2.0"
+    "@malloydata/malloy": "0.0.440"
   }
 }

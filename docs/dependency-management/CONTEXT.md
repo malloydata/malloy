@@ -5,7 +5,7 @@ what we hold, why, what it costs, and when to revisit. The **procedures** live b
 agent-agnostic runbooks (plain markdown any human or coding agent can follow — no tool is
 imposed on contributors):
 
-- [`dependabot-monthly.md`](dependabot-monthly.md) — the monthly Dependabot version-update pass.
+- [`dependabot-monthly.md`](dependabot-monthly.md) — the quarterly Dependabot version-update pass.
 - [`npm-security-audit.md`](npm-security-audit.md) — the `npm audit`-driven security sweep + pin release-walk.
 
 ## Methodology
@@ -13,10 +13,10 @@ imposed on contributors):
 We used a tiered strategy, using GitHub's Dependabot as input.  We group these, roughly into these catgories.
 
 1. Security reports. We plan to stay on top of these as soon as they appear.
-2. Minor version upgrades. We check these once a month and pull in as many of them as we can.
-3. Major version upgrade. These also are checked once a month, however we are likely to simply file an issue and not actually incorporate the new version until another reason appears to make the upgrade.
+2. Minor version upgrades. We check these once a quarter and pull in as many of them as we can.
+3. Major version upgrade. These also are checked once a quarter, however we are likely to simply file an issue and not actually incorporate the new version until another reason appears to make the upgrade.
 
-The monthly Dependabot runs (`.github/dependabot.yml`), with version updates are
+The quarterly Dependabot runs (`.github/dependabot.yml`), with version updates are
 collected into groups so a bump lands as one reviewable PR with a clear blast radius
 instead of a scatter of one-offs:
 
@@ -61,7 +61,7 @@ and are listed under each entry as the cost.)
 letting CJS-line minors/patches and their security fixes flow (uuid, @noble/hashes,
 vega-lite, `@types/*` all work this way). Drop to a hard **exact pin** (no caret) only
 when you hit a wall: the breaker is *in-range*, so a caret would still resolve it on a
-fresh install (databricks `1.15.0`, pg `8.7.3`, vscode-textmate `9.0.0`). Exact is the
+fresh install (databricks `1.15.0`, snowflake-sdk `3.4.1`, vscode-textmate `9.0.0`). Exact is the
 escalation, not the default.
 
 ### ESM-only majors — and the downstream-leak trap
@@ -102,71 +102,52 @@ at CJS 0.6, so it doesn't actually exercise the transform.)
 Each of these is `ignore`d only until the linked fix lands — the new version breaks
 *our* build, tests, or codegen, so the hold clears when we do the work.
 
-### Renderer — Vega held at v5 (via `vega-lite ^5`)
-Owned by `packages/malloy-render` (see its CONTEXT.md). The fix is Vega 6, a major
-across the whole render stack. `vega-lite` is a *direct* dep, so its major opens a
-recurring monthly PR — its **major** is `ignore`d in `dependabot.yml` so it stops
-squatting the limit; the v5 minors still flow.
+### Renderer — `vega-lite` held at v5
+Owned by `packages/malloy-render` (see its CONTEXT.md). Render depends on `vega` 6
+directly; `vega-lite` 5 brings a nested `vega` 5 copy for its own peer. vega-lite's
+**major** is `ignore`d in `dependabot.yml`; v5 minors still flow.
 
-Holds open: `vega`, `vega-functions`, `vega-expression` — 3×high (transitive,
-alert-only). Render-owned only (nothing else pulls them), so the renderer is the
-sole place that clears them.
+vega-lite 6 works. Render's published bundle inlines its dependencies
+(`external: []`), so vega-lite 6 being ESM-only doesn't reach consumers. The cost is
+our own jest: the vega/d3 stack is ESM-only all the way down, so about 30 package
+patterns have to join `transformIgnoreModules` in both jest configs.
 
-Revisit when: the planned renderer **rewrite**, which replaces this stack wholesale.
-There is deliberately no standalone Vega 5→6 issue — we don't intend to bump Vega in
-place; v6 comes for free with the rewrite, or not at all. (The exception to "majors
-get a tracking issue": the upgrade is subsumed by larger planned work.)
+While vega-lite is on 5, a blanket `npm update` fails on its `vega ^5` peer (render
+has `vega` 6). Update packages by name instead.
 
-### duckdb-wasm — `@motherduck/wasm-client` held at `^0.6.6`
+Holds open: the nested vega 5 copy's `vega`, `vega-functions`, `vega-expression`
+advisories (high, alert-only).
+
+Revisit when: #3111, with the renderer work.
+
+### duckdb-wasm — `@motherduck/wasm-client` held at `0.6.6`
 Owned by `packages/malloy-db-duckdb` (the duckdb-wasm browser connector,
-`src/duckdb_wasm_connection_browser.ts`). Held because that code is written
-against the old 0.6 API: `0.8` renamed the type exports (`DuckDBDate`,
-`DuckDBDecimal`, `DuckDBList`, the `DuckDBTimestamp*` family, …) and reshaped
-`SpecialDuckDBValue`, so the bump fails `tsc`. It rode the minor/patch group as a
-"minor" — the **0.x trap**, where a 0.x minor is allowed to break — and broke the
-#2911 group build. Now ignored for **all** versions in `dependabot.yml`, matching
-the `@dependabot ignore @motherduck/wasm-client` comment on #2911. (That comment
-lives only in Dependabot's memory; this row + the `ignore` are the durable record.)
+`src/duckdb_wasm_connection_browser.ts`), which is written against the 0.6 API: 0.8
+renamed the type exports (`DuckDBDate`, `DuckDBDecimal`, `DuckDBList`, the
+`DuckDBTimestamp*` family, …) and reshaped `SpecialDuckDBValue`. A 0.x minor is
+allowed to break, so it's `ignore`d for **all** versions.
 
-Cost: the duckdb-wasm connector can't take `@motherduck/wasm-client` updates, and
-latest is `1.5.3-r.2` — so it's far behind, and the gap grows.
+It also holds `apache-arrow` at `^17`: wasm-client 0.6 requires arrow `^17`, so arrow
+21 installs as an invalid peer. Nothing in CI exercises the MotherDuck path, so the
+tests stay green either way; `npm ls` is what shows it.
 
-Revisit when: issue #2950 — migrate `duckdb_wasm_connection_browser.ts` to the
-`@motherduck/wasm-client` 1.x API, then unpin (drop the `^0.6.6` range and the
-`ignore`).
+Revisit when: #3036 replaces this path with the DuckDB extension model.
 
 ### syntax-highlight — `vscode-textmate` held at `9.0.0`
-Owned by `packages/malloy-syntax-highlight`. Unlike the others, the dep isn't the
-problem — *our code is*. `scripts/generateMonarchGrammar.ts` deep-imports internal
-paths (`vscode-textmate/release/theme`, `/rawGrammar`) and relies on
-`TextMateBeginEndRule`'s private shape. `9.3.2` — an **in-range minor** — stopped
-exporting those internals, breaking the syntax-highlight codegen in the #2911
-group. Exact-pinned to `9.0.0` (the `^9.0.0` range would otherwise resolve the
-breaker) and `ignore`d in `dependabot.yml`.
+Owned by `packages/malloy-syntax-highlight`. `scripts/generateMonarchGrammar.ts`
+imports types from internal paths (`vscode-textmate/release/theme`, `/rawGrammar`) and
+relies on `TextMateBeginEndRule`'s private shape. Later releases (9.3.2 included) don't
+ship those type files, so the codegen step fails to type-check. Exact-pinned to `9.0.0`
+(a caret would resolve the breaker on a fresh install) and `ignore`d in
+`dependabot.yml`.
 
-Cost: held one minor behind; no security advisory rides on it.
+Cost: held a minor behind; no security advisory rides on it.
 
-Revisit when: issue #2918 — stop deep-importing vscode-textmate internals, then
-unpin. (Relates to the textmate-grammar-rebuild work.)
+Revisit when: #2918 removes the deep imports; then unpin.
 
-### Postgres — `pg` + `pg-query-stream` held as a coupled set
-Owned by `packages/malloy-db-postgres`. `pg-query-stream` pulls `pg-cursor`, which
-**deep-imports `pg`'s internal `lib/result.js`**. The connectors-group PR #2923
-bumped `pg` 8.7→8.22, skewing those versions, and `pg-cursor` could no longer
-resolve the internal path — which broke module resolution in **every** dialect's
-test suite (the shared harness loads the postgres path), not just postgres. `pg`,
-`pg-cursor`, and `pg-query-stream` are a **coupled set** that must move together
-(like the gts/eslint cluster). `pg` is exact-pinned to `8.7.3` in `package.json`
-(the `^8.7.1` range admitted the breaker on a fresh install); both are `ignore`d.
-
-Cost: postgres connector held a few minors behind; no security advisory rides on it.
-
-Revisit when: issue #2928 — bump `pg` + `pg-cursor` + `pg-query-stream` together to
-compatible versions, verify `db-postgres` + the shared harness, then unpin.
-
-### BigQuery — `@google-cloud/bigquery` + `common` + `paginator` held at v7/v5
+### BigQuery — `@google-cloud/bigquery` + `paginator` held at v7/v5
 Owned by `packages/malloy-db-bigquery`, exact-pinned to **best-v7** (`7.9.4` /
-`5.0.2` / `5.0.2`) as a coupled set. bigquery **8** pulls `@google-cloud/common@6`
+`5.0.2`) as a pair. bigquery **8** pulls `@google-cloud/common@6`
 → `google-auth-library@10` → `gaxios@7`, and gaxios 7 does an **ESM-only dynamic
 `import()`** in its token/request path. Under jest's CommonJS VM that throws
 `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG`, surfaced as "Unexpected Gaxios
@@ -183,8 +164,10 @@ v8 stack would clear stays open.
 
 Revisit when: issue #2932 — when the test runner handles the ESM-only import
 without the experimental flag (jest → vitest, or jest gains stable ESM), or gaxios
-drops the ESM-only `import()`. Then bump the trio together, confirm `db-bigquery`
+drops the ESM-only `import()`. Then bump the pair together, confirm `db-bigquery`
 **and** the ci-core bigquery `streaming.spec` pass **without** the flag, and unpin.
+jest 30 on Node 26 still needs the flag, and bigquery 9's gaxios 8 still `import()`s
+the ESM-only node-fetch.
 
 ## Held for reasons outside this repo's build
 
@@ -192,46 +175,24 @@ These don't break malloy's own build — the hold protects something else: an up
 regression, a native chain too volatile to float, or a break that only lands in the
 downstream apps that embed us.
 
-### Snowflake — `snowflake-sdk` pinned exactly at `2.3.1`
-Owned by `packages/malloy-db-snowflake` (see its CONTEXT.md). The exact pin (no
-caret) is intentional: floating the SDK thrashes the native connector chain, so
-bumps are made deliberately, not by a lockfile range. Also `ignore`d in
-`dependabot.yml` so Dependabot stops proposing bumps (it would otherwise pull
-snowflake-sdk into the connectors group).
+### Snowflake — `snowflake-sdk` exact at `3.4.1`
+Owned by `packages/malloy-db-snowflake` (see its CONTEXT.md). Exact because Snowflake
+minors change runtime behavior that reaches every app embedding Malloy, so each bump is
+read and tested on purpose. It is not `ignore`d; bumps arrive in the `connectors` group.
 
-**Judging a fix version — don't probe, defer to this boundary.** `2.3.1` is the **last
-pre-native** release; the pin is a point *inside* the 2.x line, not a semver-major cap.
-A newer 2.x (`2.4.3`, …) is on the *far* side of the native boundary — same npm major,
-wrong side of the line. npm metadata **cannot** tell you which side: the native binary
-loads via a bundled `.node` + `eval('require')` (see below), invisible to `npm view
-version`, `optionalDependencies`, `dependencies`, and install `scripts` alike — a
-security sweep once floated `2.3.1 → 2.4.3` as a "cheap same-major fix" off exactly that
-blind check. It isn't: bumping across this line is the native-chain thrash the pin
-exists to hold, so the `fast-xml-parser` critical below stays a standing cost until a
-deliberate, native-aware bump verified against live Snowflake CI. Same trap on every
-boundary pin — `@databricks/sql 1.15.0` (last pre-native), `uuid ^11` / `@noble/hashes
-^1` (last CJS): the ledger's boundary is authoritative; npm metadata won't show you the
-binary.
+Two runtime behaviors matter to the embedding apps:
+- **minicore** — a native `.node` binary loaded through `eval('require')`, used only
+  for telemetry. esbuild can't bundle it; when it's missing, the SDK records the
+  failure and carries on. The apps define `process.env.SNOWFLAKE_DISABLE_MINICORE` at
+  build time so the SDK doesn't try.
+- **platform detection** — when the module loads, the SDK probes cloud metadata
+  endpoints and calls AWS STS with the user's AWS credentials. `snowflake_executor.ts`
+  therefore loads the SDK with `require()` on first use, so registering connections
+  doesn't load it, and the apps define `process.env.SNOWFLAKE_DISABLE_PLATFORM_DETECTION`.
 
-There's also a **downstream-bundling** dimension, the same family of problem as
-Databricks: snowflake-sdk's native form loads its binary via `eval('require')`, which
-is invisible to esbuild, so it can't be bundled cleanly into the embedding apps. Part
-of what we're waiting for is Snowflake **restructuring their npm package** so the
-native pieces externalize/bundle properly downstream. *(Current understanding, not yet
-tied to a specific Snowflake issue — verify before acting on it.)*
-
-Holds open (alert-only — no PR):
-- `fast-xml-parser` — 2×critical, 4×high *(also pulled by BigQuery's
-  `@google-cloud/storage`; clears only when every owner moves)*
-- `bn.js` — 2×medium
-
-Snowflake's `axios` resolves to the tree's single hoisted copy, held at `1.19.0` by
-the Trino axios pin below. No axios advisory is open against it.
-
-Waiting for: a security advisory to force our hand (the held `fast-xml-parser` /
-`bn.js` alerts are the standing cost, reviewed monthly), **or** Snowflake
-restructuring the npm package so it bundles downstream. Either way the bump is
-deliberate, verified against the live Snowflake CI env — never a lockfile float.
+Before taking a bump: live Snowflake CI, plus a Snowflake query from the bundled VS Code
+extension and from the standalone CLI binary. Malloy's own CI can't see bundling
+problems.
 
 ### Databricks — `@databricks/sql` pinned exactly at `1.15.0` (last pre-native release)
 Owned by `packages/malloy-db-databricks`. **1.16.0 introduced a native Rust
@@ -239,6 +200,7 @@ kernel** — eight optional `@databricks/databricks-sql-kernel-*@0.2.0` packages
 each shipping a `.node` binary. esbuild can't inline `.node`, so the bump breaks
 the **downstream embedding apps' bundles** (the vscode extension and malloy-cli),
 where `check-native` fails on kernel packages absent from `approved-native-deps.json`.
+Through 3.1.0 every release still ships the kernel, and 3.x adds `lz4-napi`.
 
 This hold is unlike the ones above in *where* it bites: **malloy's own CI passes** —
 malloy uses the SDK in plain Node, which loads `.node` fine — so nothing here
@@ -277,40 +239,22 @@ them in each — then take 1.16.0+ and verify against the live Databricks CI env
 then it's supported-or-rots: the connector is welded to the embedding apps' bundlers,
 so it can't float.
 
-### Trino — `axios` pinned exactly at `1.19.0` to match the connector's own pin
-Owned by the **root** `package.json`. `@trinodb/trino-js-client` declares `axios` as
-an exact version, not a range; no upstream rationale is recorded. npm hoists one
-`axios` only while the root resolves to that same version. At any other value — a
-routine in-range float to `1.20.0` included — a **second copy** nests under
-`node_modules/@trinodb/trino-js-client`, and the advisories land on it.
+### Trino — `axios` exact at `1.19.0`, moving with `@trinodb/trino-js-client`
+Owned by the **root** `package.json`. `@trinodb/trino-js-client` (exact `1.0.0` in
+`packages/malloy-db-trino`) declares `axios` as an exact version. npm hoists one copy
+only while the root resolves to that same version; any other value nests a second copy
+under the connector. The two move together: any `@trinodb` bump moves the root `axios`
+pin to that release's axios in the same PR. `axios` is `ignore`d in `dependabot.yml`;
+`@trinodb/*` stays in the `connectors` group so its releases still arrive.
 
-Both surfaces: exact `1.19.0` in the root `package.json` **and** `ignore: axios` in
-`dependabot.yml`.
+The publisher declares `axios ^1.19.0` — a floor, so consumers resolve above older
+advisory ranges; the hoisted copy satisfies it.
 
-**The connector is exact-pinned too — `@trinodb/trino-js-client` at `0.3.2` in
-`packages/malloy-db-trino` — and the two move together.** Upstream ships releases
-whose only change is the axios pin (`0.3.0`/`0.3.1` carried `1.13.2`; `0.3.2` carries
-`1.19.0` and nothing else). Under a caret, such a release lands a connector whose
-exact axios no longer matches the root, npm nests a second copy, and the `ignore`
-above guarantees nothing ever proposes re-converging it. **Any `@trinodb` bump must
-move the root `axios` pin to that release's exact axios, in the same PR.**
+Cost: 1.19.0 carries advisories fixed in axios 1.20.0. They stand. An `overrides` entry
+would fix this repo's tree but not consumers (npm applies `overrides` only in the
+top-level project), and CI would then test a different axios than ships.
 
-Deliberately *not* in the `ignore` list: it stays in the `connectors` group so their
-`1.0.0` still arrives as a standalone PR. The group is the notification; the rule
-above is the guard.
-
-The publisher declares `axios ^1.19.0` — a floor, not a pin. `malloy-db-publisher`
-is published, so its range is what downstream consumers resolve; the floor keeps them
-above the advisory range rather than inheriting it. `1.19.0` satisfies it here, so the
-hoisted copy still serves it and there is nothing extra to unwind.
-
-Cost: axios security fixes arrive on the connector's release cadence, not npm's. An
-advisory against `1.19.0` is answered by a `@trinodb/trino-js-client` release
-carrying a newer pin, not by bumping axios here.
-
-Waiting for: **trinodb/trino-js-client#956** — drops axios for native `fetch` +
-`undici`, public API unchanged, targeted at their `1.0.0` (their #982). Taking that
-release ends the constraint and the root returns to a caret.
+Waiting for: **trinodb/trino-js-client#956** — native `fetch`, no axios.
 
 ### uuid + @noble/hashes — held below their ESM-only majors
 Owned by `packages/malloy` (core, published as `@malloydata/malloy`). **uuid 12+ and
@@ -328,38 +272,30 @@ Held: `uuid ^11.1.1` and `@noble/hashes ^1.8.0` in `packages/malloy/package.json
 (`/sha2.js`→`/sha256`, drop the `.js`); the digest is byte-identical. Both are out of
 `transformIgnoreModules` now — they're CJS again, so no transform is needed.
 
-Cost: held on uuid 11 / @noble 1; no security advisory rides on either today.
+Cost: held on uuid 11 / @noble 1; no security advisory rides on either today. jest 30
+on Node 26 still can't `require` an ESM-only uuid, so consumers testing under jest
+still break.
 
 Revisit when: consumers can take ESM — the embedding apps' bundler **and** test runner
 handle ESM-only deps, or `@malloydata/malloy` ships a **bundled** artifact that inlines
 its runtime deps (making consumer module-format moot, and retiring this whole class of
 leak). Until then, the core stays CJS-consumable.
 
-### Node runtime — pinned at `24.16.0` via `.node-version`
-Not a dependency, but a deliberate hold that belongs here. Node **24.17.0** carries
-a `http.Agent` keep-alive socket-reuse regression that makes `node-fetch` (under
-`google-auth-library`/`gaxios`) throw a false `ERR_STREAM_PREMATURE_CLOSE` —
-surfaced as `Invalid response body while trying to fetch
-https://www.googleapis.com/oauth2/v4/token: Premature close` — whenever Google's
-OAuth endpoint closes a pooled idle connection. It hits the ci-core bigquery
-`streaming.spec` (which authenticates to BigQuery and runs live queries), and
-because socket reuse is timing-dependent it presents as an **intermittent** failure,
-not every run.
+### Node runtime — `.node-version` at `26.13.1`
+Not a dependency, but it belongs here. `.node-version` tracks the current Node LTS and
+is the single source: the CI workflows read it through `actions/setup-node`
+`node-version-file`, and `scripts/ci-env-sanity-check.sh` asserts it exists.
 
-`.node-version` pins `24.16.0`; the CI workflows read it via
-`actions/setup-node` `node-version-file: '.node-version'` (they previously floated
-`node-version: 24.x` and so silently picked up 24.17.0 while ignoring the committed
-pin). `scripts/ci-env-sanity-check.sh` already asserts `.node-version` exists, so the
-pin has one authoritative source.
+`engines` is `>=24` in every package. The VS Code extension host runs Malloy on VS
+Code's own Node (Electron), which is Node 24, so that's the floor Malloy has to work
+on. Pull-request CI runs on `.node-version`; the release gate (`precheck` in
+`.github/workflows/release.yaml`) runs on the floor, so nothing is published that
+breaks on it.
 
-Cost: held one Node patch behind until the regression is fixed upstream.
-
-Two horizons. **Patch:** the `24.16.0`-vs-`.17` hold clears when Node ships the
-keep-alive fix (or `google-auth-library`/`gaxios` stops reusing the socket) — then
-bump `.node-version` within the 24 line and confirm the bigquery `streaming.spec` is
-stable across repeated runs. **Major:** the long-term plan is to **stay on the Node 24
-major until it leaves active LTS** — we don't chase Node majors; 24 holds until LTS
-itself moves on, at which point we move with it.
+**Moving the floor** is one change in four places: `engines.node` in the root and every
+package `package.json`, the `node-version` of the release `precheck` job, the
+`@types/node` range, and the `@types/node` comment in `dependabot.yml`. The trigger is
+VS Code shipping an Electron on the new Node, not the Node LTS date.
 
 ## Tracking ignores — `@types/*` slaved to another major
 
@@ -368,15 +304,15 @@ package locked to the major of the thing it types. Both are `ignore`d for the
 **major only** in `dependabot.yml` (minors/patches still flow); both are documented
 here only because the rule is "everything ignored is written down."
 
-- **`@types/node`** — held to the Node **runtime** major (24). Moves when the runtime
-  major moves (see the Node runtime hold above), not on @types/node's own schedule.
-- **`@types/jasmine`** — held to **jasmine-core**'s major (5). Clears with a
-  deliberate jasmine-core 5→6 bump, which moves both together.
+- **`@types/node`** — held at 24, the Node the VS Code extension host runs, so core
+  can't use APIs that runtime lacks. Moves to 26 when VS Code ships an Electron with
+  Node 26.
+- **`@types/jasmine`** — tracks **jasmine-core**'s major (7); the two move together.
 
 ## Not pins — context, so this list stays short
 
-- **Connector SDKs other than Snowflake and Databricks** (`@trinodb/*`,
-  `@google-cloud/*`, `mysql2`, …) aren't pinned — just not-yet-upgraded.
+- **Connector SDKs other than Snowflake, Databricks and Trino** (`@google-cloud/*`,
+  `mysql2`, …) aren't pinned — just not-yet-upgraded.
   Their transitive advisories (`thrift`, `fast-xml-parser`, `uuid`) clear
   by a deliberate per-dialect SDK bump, each verified against that dialect's live
   CI env. They're collected into the `connectors` group in `dependabot.yml` so a
@@ -386,5 +322,5 @@ here only because the rule is "everything ignored is written down."
   `shell-quote`, `ws`, `tmp`, `minimatch`, `js-yaml`, `markdown-it`, `basic-ftp`,
   `@babel/*` and friends arrive transitively via lerna/nx/storybook/karma/eslint/
   node-gyp/typedoc — all `devDependencies`, absent from anything consumers install.
-  They clear as those tools update (the monthly minor/patch group folds in what's
+  They clear as those tools update (the minor/patch group folds in what's
   in range). Not pinned, not enumerated.
