@@ -651,8 +651,6 @@ describe('setupSQL', () => {
       setupSQL: `CREATE TEMP TABLE IF NOT EXISTS ${table} (v int)`,
     });
     try {
-      // Query through the pool directly — the acquire hook runs setupSQL,
-      // creating the temp table on the same client before our query executes.
       const pool = await connection.getPool();
       const result = await pool.query(
         `SELECT count(*)::integer AS n FROM ${table}`
@@ -693,6 +691,64 @@ describe('setupSQL', () => {
         `SELECT count(*)::integer AS n FROM ${table}`
       );
       expect(result.rows[0].n).toBe(0);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('runs once per connection, not once per query', async () => {
+    const counter = `malloy_test.setup_runs_${uid}`;
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      setupSQL: `SELECT set_config('${counter}', (coalesce(nullif(current_setting('${counter}', true), ''), '0')::int + 1)::text, false)`,
+    });
+    try {
+      const pool = await connection.getPool();
+      let connects = 0;
+      pool.on('connect', () => {
+        connects += 1;
+      });
+      const readCounter = `SELECT row_to_json(t) AS row FROM (SELECT current_setting('${counter}') AS n) t`;
+      const runs: unknown[] = [];
+      for (let i = 0; i < 2; i++) {
+        runs.push((await connection.runSQL(readCounter)).rows[0]);
+        for await (const row of connection.runSQLStream(readCounter)) {
+          runs.push(row);
+        }
+      }
+      expect(connects).toBe(1);
+      expect(runs).toEqual([{n: '1'}, {n: '1'}, {n: '1'}, {n: '1'}]);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('fails runSQL with the error of a failing statement', async () => {
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      setupSQL: 'SELECT no_such_column',
+    });
+    try {
+      await expect(connection.runSQL('SELECT 1')).rejects.toThrow(
+        /no_such_column/
+      );
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('fails runSQLStream with the error of a failing statement', async () => {
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      setupSQL: 'SELECT no_such_column',
+    });
+    try {
+      const read = async () => {
+        for await (const _row of connection.runSQLStream('SELECT 1')) {
+          // The setup failure rejects before any row arrives.
+        }
+      };
+      await expect(read()).rejects.toThrow(/no_such_column/);
     } finally {
       await connection.close();
     }
