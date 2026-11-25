@@ -283,9 +283,16 @@ Implementation specifics:
 
 URL-based (not filesystem-based) so the helper works in browser-safe environments through `URLReader`.
 
+## `CacheManager` and a `ModelCache` that outlives it
+
+`CacheManager` keeps two in-memory maps (a model's dependency tree, and each file's invalidation key) and stores compiled models in a `ModelCache`. When the maps have no entry for a URL, `getCachedModelDef` asks the `ModelCache` anyway: the store may outlive the manager (a host's disk or database cache after a restart) or be shared by several managers. Every stored invalidation key is checked against the reader before the entry is used, and a hit fills the maps so later lookups take the in-memory path. Any failure on that path (the store throws, the reader no longer has a file) is a miss, never an error.
+
+Invalidation keys cover only Malloy source files. A compiled model also embeds table schemas fetched through its connections, so a store shared by runtimes with different connections must be keyed by more than the URL (see the `ModelCache` doc comment).
+
 ## Testing Notes
 
 - `config.spec.ts` covers the constructor pipeline, section compilers, overlay resolution, property defaults, `includeDefaultConnections` fabrication (name-based skip), reference failure modes, and the manifest URL state table.
+- `cache.spec.ts` covers a fresh `CacheManager` over a `ModelCache` it did not fill: a hit with no schema fetch, misses for an edited entry file or import, a throwing store, and null or missing keys.
 - `runtime.spec.ts` covers the manifest lazy-read, explicit `buildManifest` wins, `EMPTY_BUILD_MANIFEST`, `shutdown` forwarding (close + idle modes; deprecated `releaseConnections` alias), and the givens supply path (file resolution, cache invalidation, `getGivens()` merge, undefined rejection at construction).
 - When adding a new backend with a registry default that references an overlay, add a test that the default is dropped (not errored) when the overlay is the no-op.
 
