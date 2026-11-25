@@ -35,10 +35,13 @@ jobs:
           name: workspace
       - name: Extract workspace
         run: tar --use-compress-program='zstd -d -T0' -xf workspace.tzst && rm workspace.tzst
-      - name: Use Node.js
+      # The release gate runs on the oldest Node we support: the `engines.node`
+      # floor in package.json. setup-node resolves a range like ">=24" to the
+      # newest Node, so the floor is named here and moves with `engines`.
+      - name: Use Node.js (engines floor)
         uses: actions/setup-node@v5
         with:
-          node-version-file: '.node-version'
+          node-version: '24'
       - name: Precheck (dialect-agnostic tests + duckdb)
         run: npm run precheck
 

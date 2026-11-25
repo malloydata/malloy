@@ -10,7 +10,7 @@ import type {
   ConnectionOptions,
   Binds,
 } from 'snowflake-sdk';
-import snowflake from 'snowflake-sdk';
+import type * as SnowflakeSDK from 'snowflake-sdk';
 import type {Pool, Options as PoolOptions} from 'generic-pool';
 import * as toml from 'toml';
 import * as fs from 'fs';
@@ -19,8 +19,21 @@ import type {Readable} from 'stream';
 import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
 import {toAsyncGenerator} from '@malloydata/malloy';
 
-// Disable snowflake-sdk logging by default (issue #2565)
-snowflake.configure({logLevel: 'OFF'});
+// snowflake-sdk starts telemetry work the moment it loads: it probes cloud
+// metadata endpoints and calls AWS STS with whatever AWS credentials the user
+// has. Every app that registers the standard connections imports this package,
+// Snowflake user or not, so the SDK is loaded with require() on first use
+// rather than with a top-level import.
+let snowflakeSDK: typeof SnowflakeSDK | undefined;
+function loadSnowflakeSDK(): typeof SnowflakeSDK {
+  if (snowflakeSDK === undefined) {
+    const sdk: typeof SnowflakeSDK = require('snowflake-sdk');
+    // Disable snowflake-sdk logging by default (issue #2565)
+    sdk.configure({logLevel: 'OFF'});
+    snowflakeSDK = sdk;
+  }
+  return snowflakeSDK;
+}
 
 // Snowflake QUERY_TAG is a single free-form string, max 2000 chars.
 const MAX_QUERY_TAG_LENGTH = 2000;
@@ -91,7 +104,7 @@ export class SnowflakeExecutor {
     setupSQL?: string
   ) {
     this.setupSQL = setupSQL;
-    this.pool_ = snowflake.createPool(connOptions, {
+    this.pool_ = loadSnowflakeSDK().createPool(connOptions, {
       ...SnowflakeExecutor.defaultPoolOptions_,
       ...(poolOptions ?? {}),
     });

@@ -14,7 +14,7 @@
   ],
   "homepage": "https://github.com/malloydata/malloy#readme",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "repository": {
     "type": "git",

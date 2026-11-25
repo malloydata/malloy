@@ -9,7 +9,7 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "scripts": {
@@ -25,7 +25,7 @@
   "dependencies": {
     "@malloydata/malloy": "0.0.440",
     "generic-pool": "^3.9.0",
-    "snowflake-sdk": "2.3.1",
-    "toml": "^3.0.0"
+    "snowflake-sdk": "3.4.1",
+    "toml": "^5.0.1"
   }
 }

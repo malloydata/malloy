@@ -9,7 +9,7 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "codegen": "node ../../scripts/femto-build.js codegen",
@@ -26,9 +26,9 @@
     "luxon": "^3.7.2"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.2",
+    "@types/luxon": "^3.7.6",
     "jest-diff": "^30.4.1",
-    "peggy": "^4.2.0",
+    "peggy": "^5.1.1",
     "rimraf": "^6.1.3"
   }
 }

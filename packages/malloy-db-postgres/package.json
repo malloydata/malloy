@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
@@ -24,8 +24,8 @@
   },
   "dependencies": {
     "@malloydata/malloy": "0.0.440",
-    "@types/pg": "^8.6.1",
-    "pg": "8.7.3",
-    "pg-query-stream": "4.2.3"
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.1",
+    "pg-query-stream": "^4.17.1"
   }
 }

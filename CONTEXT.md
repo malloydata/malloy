@@ -125,7 +125,7 @@ Each database has its own package with connection handling and dialect-specific 
 
 #### Native-dependency pins (do not loosen casually)
 
-`snowflake-sdk` (`2.3.1`) and `@databricks/sql` (`1.15.0`) are pinned to exact, pre-native versions, not `^` ranges. Why isn't visible here: downstream clients (the VS Code extension, `malloy-cli`) bundle with esbuild, which can't bundle native `.node` binaries. Newer driver releases ship them, so an unpinned range floats one in and breaks those builds — caught only in their CI. Bumping past these requires externalize-and-ship work in each client first (their `check-native` guard trips otherwise). Full pin ledger, methodology, and revisit triggers: [`docs/dependency-management/CONTEXT.md`](docs/dependency-management/CONTEXT.md).
+`@databricks/sql` (`1.15.0`) is pinned to its last pre-native release, not a `^` range. Why isn't visible here: downstream clients (the VS Code extension, `malloy-cli`) bundle with esbuild, which can't bundle native `.node` binaries. Newer releases ship one, so an unpinned range floats it in and breaks those builds — caught only in their CI (their `check-native` guard). `snowflake-sdk` (`3.4.1`) is exact for a different reason: its minors change runtime behavior every embedding app inherits, and it is loaded on first use (see [`packages/malloy-db-snowflake/CONTEXT.md`](packages/malloy-db-snowflake/CONTEXT.md)). Full pin ledger, methodology, and revisit triggers: [`docs/dependency-management/CONTEXT.md`](docs/dependency-management/CONTEXT.md).
 
 ### Supporting Libraries
 - `malloy-interfaces/` - TypeScript interfaces and Thrift-generated types

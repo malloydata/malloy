@@ -1,11 +1,11 @@
-# Dependabot — monthly version-update pass
+# Dependabot — quarterly version-update pass
 
 An agent-agnostic runbook. It's plain procedure — a human, or any coding agent, can follow
 it. Bind it to whatever tool you use however you like; the knowledge lives here, in the
 tree, so no contributor is forced into a particular AI. This is a living document — if a
 step is unclear or wrong when you run it, fix it here.
 
-The once-a-month walk over Dependabot's **version-update PRs** (`.github/dependabot.yml`
+The once-a-quarter walk over Dependabot's **version-update PRs** (`.github/dependabot.yml`
 groups). Not the security alert tab, and not the pin ledger's release review — those are the
 npm-security-audit runbook (`npm-security-audit.md`), run on advisory publication
 rather than this cadence.
@@ -29,7 +29,7 @@ Do these in roughly this order.
 
 ## 2. The minor-and-patch group — the only thing that auto-merges
 
-If there's no open minor-and-patch PR this month, say so and move on.
+If there's no open minor-and-patch PR this quarter, say so and move on.
 
 **Anomaly gates first — read the PR body's bump list and check all three. Any trip → halt,
 name it, do not merge:**
@@ -67,7 +67,7 @@ the user's call. Three buckets:
 - **File an issue and defer** — the default for a major with no reason-to-move yet.
 
 **The `duckdb` group is a glance, not a decision.** It's carved out of the auto-merge and
-gets its own PR precisely so a duckdb bump is taken on purpose — but month to month the
+gets its own PR precisely so a duckdb bump is taken on purpose — but run to run the
 answer is usually skip. The signal for when to actually take it is the **publish-age of the
 version we're pinned to**, read live: `npm view <pkg> time --json` for each `@duckdb/*`
 dep, look up our pinned version's publish date, and report "ours is N months old (latest is
@@ -76,7 +76,7 @@ skip". Don't count releases-behind for `@duckdb/duckdb-wasm` — it ships daily 
 (400+ versions), so publish-age is the only sane measure. Taking it early for a feature
 needs no bookkeeping: the age is read from npm each run, so the clock resets itself.
 
-Note the recurring case: a major that reappears every month is a major with **no ignore** —
+Note the recurring case: a major that reappears every run is a major with **no ignore** —
 either take it or silence it, or it nags forever. That's the whole point of "everything
 ignored is written down."
 

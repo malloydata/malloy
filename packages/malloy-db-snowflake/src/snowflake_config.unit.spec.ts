@@ -90,7 +90,11 @@ describe('Snowflake key-pair auth from a Malloy config', () => {
     expect(found).toBeInstanceOf(SnowflakeConnection);
     if (found instanceof SnowflakeConnection) conn = found;
     expect(createPool).toHaveBeenCalledTimes(1);
-    return createPool.mock.calls[0][0];
+    const opts = createPool.mock.calls[0][0];
+    if (opts === undefined) {
+      throw new Error('createPool was called without connection options');
+    }
+    return opts;
   }
 
   it('reaches the driver as key-pair auth with no authenticator written', async () => {

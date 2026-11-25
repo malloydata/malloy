@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
@@ -24,12 +24,12 @@
   },
   "dependencies": {
     "@malloydata/malloy": "0.0.440",
-    "@types/node": "^22.20.0",
+    "@types/node": "^24.19.2",
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "luxon": "^3.7.2",
-    "mysql2": "^3.22.5"
+    "mysql2": "^3.24.6"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.2"
+    "@types/luxon": "^3.7.6"
   }
 }
