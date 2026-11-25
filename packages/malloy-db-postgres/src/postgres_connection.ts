@@ -535,7 +535,7 @@ export class PostgresConnection
     await this.runSQL('SELECT 1');
   }
 
-  public async connectionSetup(client: Client): Promise<void> {
+  public async connectionSetup(client: ClientBase): Promise<void> {
     await client.query("SET TIME ZONE 'UTC'");
     if (this.setupSQL) {
       for (const stmt of this.setupSQL.split(';\n')) {
@@ -651,23 +651,18 @@ export class PooledPostgresConnection
 
   async getPool(): Promise<Pool> {
     if (!this._pool) {
-      this._pool = new Pool(this.buildClientConfig(await this.readConfig()));
+      this._pool = new Pool({
+        ...this.buildClientConfig(await this.readConfig()),
+        // Session setup belongs to the session, so it runs once, when the pool
+        // opens a connection. If it fails, the pool discards the connection
+        // and the query that asked for it fails with the setup error.
+        onConnect: client => this.connectionSetup(client),
+      });
       // An idle client whose socket drops reaches the pool as an 'error' event.
       // pg-pool has already removed the dead client by then, and there is no
       // caller to report to, so there is nothing to act on; without a listener
       // the event would be an uncaught exception.
       this._pool.on('error', () => {});
-      this._pool.on('acquire', client => {
-        client.query("SET TIME ZONE 'UTC'");
-        if (this.setupSQL) {
-          for (const stmt of this.setupSQL.split(';\n')) {
-            const trimmed = stmt.trim();
-            if (trimmed) {
-              client.query(trimmed);
-            }
-          }
-        }
-      });
     }
     return this._pool;
   }
