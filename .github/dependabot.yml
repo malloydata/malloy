@@ -22,6 +22,12 @@ updates:
       # it is a deliberate connector migration. No update-types = hold all
       # versions (matches the @dependabot ignore comment). See docs/dependency-management/CONTEXT.md.
       - dependency-name: "@motherduck/wasm-client"
+      # vscode-textmate held at 9.0.0: scripts/generateMonarchGrammar.ts imports
+      # types from internal paths (vscode-textmate/release/theme, /rawGrammar) that
+      # later releases no longer ship, so syntax-highlight codegen fails to
+      # type-check. Also exact-pinned in malloy-syntax-highlight/package.json. The
+      # real fix is issue #2918; see docs/dependency-management/CONTEXT.md.
+      - dependency-name: "vscode-textmate"
       # @databricks/sql exact-pinned (1.15.0) in malloy-db-databricks: 1.16.0 ships a
       # native Rust kernel (eight @databricks/databricks-sql-kernel-* .node binaries)
       # esbuild can't bundle, breaking the vscode-extension/malloy-cli builds. malloy's

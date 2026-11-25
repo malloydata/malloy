@@ -61,7 +61,7 @@ and are listed under each entry as the cost.)
 letting CJS-line minors/patches and their security fixes flow (uuid, @noble/hashes,
 vega-lite, `@types/*` all work this way). Drop to a hard **exact pin** (no caret) only
 when you hit a wall: the breaker is *in-range*, so a caret would still resolve it on a
-fresh install (databricks `1.15.0`, snowflake-sdk `3.4.1`, vscode-textmate `9.3.2`). Exact is the
+fresh install (databricks `1.15.0`, snowflake-sdk `3.4.1`, vscode-textmate `9.0.0`). Exact is the
 escalation, not the default.
 
 ### ESM-only majors — and the downstream-leak trap
@@ -133,15 +133,17 @@ tests stay green either way; `npm ls` is what shows it.
 
 Revisit when: #3036 replaces this path with the DuckDB extension model.
 
-### syntax-highlight — `vscode-textmate` exact at `9.3.2`
+### syntax-highlight — `vscode-textmate` held at `9.0.0`
 Owned by `packages/malloy-syntax-highlight`. `scripts/generateMonarchGrammar.ts`
-deep-imports internal paths (`vscode-textmate/release/theme`, `/rawGrammar`) and relies
-on `TextMateBeginEndRule`'s private shape, which a minor can move. The exact pin keeps a
-fresh install from floating; it is not `ignore`d, so new versions arrive as Dependabot
-PRs. Before taking one, run `npm run gen-malloy-monarch` (its output must not change)
-and the grammar tests.
+imports types from internal paths (`vscode-textmate/release/theme`, `/rawGrammar`) and
+relies on `TextMateBeginEndRule`'s private shape. Later releases (9.3.2 included) don't
+ship those type files, so the codegen step fails to type-check. Exact-pinned to `9.0.0`
+(a caret would resolve the breaker on a fresh install) and `ignore`d in
+`dependabot.yml`.
 
-Revisit when: #2918 removes the deep imports; then a caret.
+Cost: held a minor behind; no security advisory rides on it.
+
+Revisit when: #2918 removes the deep imports; then unpin.
 
 ### BigQuery — `@google-cloud/bigquery` + `paginator` held at v7/v5
 Owned by `packages/malloy-db-bigquery`, exact-pinned to **best-v7** (`7.9.4` /
