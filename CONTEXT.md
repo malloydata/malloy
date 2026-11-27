@@ -155,7 +155,6 @@ npm install                    # Install dependencies for all packages
 npm run dev                    # Fast build: codegen + tsc (for iterating)
 npm run build                  # Full build: codegen + tsc + flow types + render
 npm run clean                  # Clean build artifacts from all packages
-npm run watch                  # Watch for TypeScript changes across the repo
 ```
 
 ### Capturing output from long commands
