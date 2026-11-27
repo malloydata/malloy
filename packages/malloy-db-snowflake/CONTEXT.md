@@ -40,7 +40,7 @@ and ignores the other's key.
 `snowflake-sdk` 2.3.5 fixed this upstream (`normalizeConnectionOptions()`), but our
 parser bypasses the driver's loader, so the bump alone won't pick it up.
 
-## Every connection gets the same driver defaults
+## Every connection this package builds gets the same driver defaults
 
 `SnowflakeExecutor.defaultConnectionOptions` (session keep-alive, and
 `jsTreatIntegerAsBigInt` so integers keep their precision) is added under a
