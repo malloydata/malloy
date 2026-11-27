@@ -111,7 +111,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
     }),
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
-      const hasTag = fieldTag.has('shape_map');
+      const hasTag = field.vizType() === 'shape_map';
       const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
       if (hasTag && !isRepeatedRecord) {

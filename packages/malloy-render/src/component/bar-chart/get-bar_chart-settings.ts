@@ -7,7 +7,7 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {Channel} from '../types';
 import type {RepeatedRecordField} from '../../data_tree';
 import {walkFields} from '../../util';
-import {convertLegacyToVizTag} from '../tag-utils';
+import {normalizedVizTag} from '../tag-utils';
 
 export type BarChartSettings = {
   xChannel: Channel;
@@ -22,7 +22,7 @@ export function getBarChartSettings(
   explore: RepeatedRecordField,
   tagOverride?: Tag
 ): BarChartSettings {
-  const normalizedTag = convertLegacyToVizTag(tagOverride ?? explore.tag);
+  const normalizedTag = normalizedVizTag(explore, tagOverride);
 
   if (normalizedTag.text('viz') !== 'bar') {
     throw new Error(

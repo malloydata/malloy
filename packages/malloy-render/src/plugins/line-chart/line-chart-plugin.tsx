@@ -24,7 +24,7 @@ import {
   resolveChartDisplayConfig,
   type ChartDisplayConfig,
 } from '@/component/chart/resolve-chart-display';
-import {convertLegacyToVizTag} from '@/component/tag-utils';
+import {normalizedVizTag} from '@/component/tag-utils';
 import {type Config, parse, type Runtime} from 'vega';
 import 'vega-interpreter';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
@@ -73,9 +73,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
       // Match repeated record fields with line chart tags
-      const hasLineChartTag = fieldTag.has('viz')
-        ? fieldTag.text('viz') === 'line'
-        : fieldTag.has('line_chart');
+      const hasLineChartTag = field.vizType() === 'line';
 
       const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
@@ -120,7 +118,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
       // Resolve chart display tags (title, subtitle, size) at setup time so
       // chart.tsx and chart-layout-settings.ts don't need to read tags at
       // render time.
-      const normalizedTag = convertLegacyToVizTag(field.tag);
+      const normalizedTag = normalizedVizTag(field);
       const vizTag = normalizedTag.tag('viz')!;
       const chartDisplay = resolveChartDisplayConfig(field, vizTag);
 
