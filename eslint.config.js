@@ -79,8 +79,8 @@ module.exports = defineConfig([
     },
   },
   {
-    // A package's tests use only that package. The tests that need a
-    // database, or another package's connection, live in test/src.
+    // A package's tests use only that package. A test that needs the test/src
+    // harness, or another package's connection, lives in test/src.
     files: [
       'packages/**/*.spec.ts',
       'packages/**/*.spec.tsx',

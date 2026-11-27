@@ -40,7 +40,7 @@ A named Malloy feature that behaves its own way on one database goes in the feat
 
 ## The test database
 
-`test/src/test_database.ts` is the harness.
+`test/src/test_database.ts` is the harness. It builds on `test/src/core_database.ts`, which holds the pieces that import nothing from beside them, so the renderer's tests can import that file directly.
 
 - **`testDatabase`** is this run's database: the stand-in (`duckdb`) in a plain spec, `MALLOY_DATABASE` in a database file. `.name` is its name in the test config, `.dialect` its dialect and `.canStream` whether its connection streams (both from `databases.ts`, checked against the connection on the first query), `.runtime` a `Runtime` whose one connection is named `db`. All of these are available while the file loads, so they can gate tests with `test.when`; the connection is made on the first query. `await testDatabase.connection()` returns the connection for a test that runs SQL on it directly. Call `afterAll(() => testDatabase.shutdown())` in any file that uses it.
 - **`coreDatabase()`** is a new read-only DuckDB connection on the test data, for a run-once test that depends on DuckDB itself. Same shape; `connection()` returns the `DuckDBConnection`. Shut it down the same way. A test that writes builds its own `DuckDBConnection`.

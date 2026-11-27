@@ -5,7 +5,7 @@
 
 import type {Item, View} from 'vega';
 import {API} from '@malloydata/malloy';
-// The renderer's tests read the shared test data through the test harness.
+// The chart tests run their queries on the test harness's DuckDB.
 // eslint-disable-next-line no-restricted-imports
 import {coreDatabase} from '../../../../../test/src/core_database';
 import {RenderFieldMetadata} from '@/render-field-metadata';

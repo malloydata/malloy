@@ -214,7 +214,7 @@ function chooseMessage(): string {
 
 /**
  * The database named by MALLOY_DATABASE, or undefined if it is unset. Throws
- * if it names something which is not a database.
+ * if it is a list, or names something which is not a database.
  */
 export function selectedDatabase(): string | undefined {
   const selected = process.env['MALLOY_DATABASE'];

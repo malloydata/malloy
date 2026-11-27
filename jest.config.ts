@@ -47,7 +47,8 @@ const defaultConfig: Config = {
   },
 };
 
-// Every spec file, relative to the repo root.
+// Every spec file, relative to the repo root. The consumer canary runs under
+// its own config (test/consumer-canary), so it is left out.
 const specFiles = fs
   .globSync('{packages,test,scripts}/**/*.spec.{ts,tsx,js,jsx}', {
     cwd: import.meta.dirname,
@@ -59,7 +60,6 @@ const specFiles = fs
   })
   .sort();
 
-// The consumer canary runs under its own config (test/consumer-canary).
 const RENDER_PACKAGE = 'packages/malloy-render/';
 const RENDER_TESTS = 'test/src/render/';
 

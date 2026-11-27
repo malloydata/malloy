@@ -3,9 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
-// The parts of the test harness the renderer's tests use. The renderer's
-// build type-checks this file against its own rootDir, which admits no
-// import of a file beside it, so everything here imports only packages.
+// The test harness pieces that need nothing from beside them: coreDatabase(),
+// the URL reader and cache manager every test runtime shares, and the
+// TestDatabase shape. test_database.ts builds on these and re-exports them.
+// The renderer's tests import this file directly, and the renderer's build
+// type-checks it against the renderer's own rootDir, which rejects any import
+// of a file next to this one; so this file imports only packages.
 
 import {EventEmitter} from 'events';
 import type {
@@ -56,8 +59,8 @@ export class TestURLReader extends InMemoryURLReader {
 export const testFileSpace = new TestURLReader();
 
 /**
- * A database a test runs on. `name`, `dialect` and `runtime` are usable while
- * the test file loads; no connection is made until the first query.
+ * A database a test runs on. Its properties are usable while the test file
+ * loads; no connection is made until the first query.
  */
 export interface TestDatabase {
   /**

@@ -43,11 +43,11 @@ parser bypasses the driver's loader, so the bump alone won't pick it up.
 ## Every connection gets the same driver defaults
 
 `SnowflakeExecutor.defaultConnectionOptions` (session keep-alive, and
-`jsTreatIntegerAsBigInt` so integers keep their precision) is added under
-whatever options a connection is given, whichever way it is built: from the
-environment, from `connections.toml`, or by the registered factory from a Malloy
-config. A connection built another way that skipped them would read integers as
-JavaScript numbers.
+`jsTreatIntegerAsBigInt` so integers keep their precision) is added under a
+connection's own options by each of the three ways this package builds them:
+from the environment, from `connections.toml`, and by the registered factory
+from a Malloy config. A connection constructed with options directly does not
+get them, and reads integers as JavaScript numbers.
 
 ## Test-harness env vars are named after the Snowflake CLI's
 

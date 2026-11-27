@@ -4,7 +4,8 @@ permissions: {}
 on: workflow_call
 
 # The required CI for this experimental dialect. `npm run dbtest sqlserver`
-# runs the shared files listed in its dbAllPassing (test/src/databases.ts).
+# runs its connection tests, its db-sqlserver files, and the shared db-all
+# files its dbAllPassing lists (test/src/databases.ts).
 jobs:
   test-sqlserver:
     runs-on: ubuntu-latest

@@ -86,7 +86,11 @@ export class SnowflakeExecutor {
     testOnBorrow: true,
     testOnReturn: true,
   };
-  /** What every connection gets unless its options say otherwise. */
+  /**
+   * Added under a connection's own options by the env and toml helpers and by
+   * the registered factory. A connection constructed with options directly
+   * does not get them.
+   */
   static readonly defaultConnectionOptions = {
     clientSessionKeepAlive: true, // default = false
     clientSessionKeepAliveHeartbeatFrequency: 900, // default = 3600
