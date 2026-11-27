@@ -243,6 +243,7 @@ export function Dashboard(props: {
   return (
     <div
       class="malloy-dashboard"
+      classList={{'external-scroll': !!props.scrollEl}}
       style={dashboardStyle()}
       ref={el => {
         if (!props.scrollEl) scrollEl = el;

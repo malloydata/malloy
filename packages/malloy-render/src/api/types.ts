@@ -97,6 +97,13 @@ export interface MalloyRendererOptions {
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
   modalElement?: HTMLElement;
+  /**
+   * The element that scrolls the rendering, when it is not the rendering
+   * itself (for example the page). Tables and dashboards then grow to their
+   * content instead of scrolling, and pin their headers to this element. Set
+   * `--malloy-render--sticky-top` on any ancestor to pin them below a host
+   * header.
+   */
   scrollEl?: HTMLElement;
   onError?: (error: Error) => void;
   plugins?: RenderPluginFactory[];
