@@ -10,7 +10,7 @@ import path from 'path';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
-import {mkArrayDef} from '@malloydata/malloy';
+import {DuckDBDialect, mkArrayDef} from '@malloydata/malloy';
 import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
 import '@malloydata/malloy/test/matchers';
 
@@ -543,7 +543,7 @@ describe('DuckDBConnection', () => {
         'elementTypeDef': {type: 'record_element'},
         'join': 'many',
         'fields': [
-          {'name': 'professor_id', 'type': 'sql native', 'rawType': 'UUID'},
+          {'name': 'professor_id', 'type': 'sql native', 'rawType': 'uuid'},
           {'name': 'name', 'type': 'string'},
           {'name': 'age', 'numberType': 'bigint', 'type': 'number'},
           {'name': 'total_sections', 'numberType': 'bigint', 'type': 'number'},
@@ -577,7 +577,13 @@ describe('DuckDBConnection', () => {
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
         'type': 'sql native',
-        'rawType': 'UUID',
+        'rawType': 'uuid',
+      });
+      // A cast to the same type must produce an identical type, or the
+      // column and the cast value could not be compared
+      expect(new DuckDBDialect().sqlTypeToMalloyType('UUID')).toEqual({
+        'type': 'sql native',
+        'rawType': 'uuid',
       });
     });
 

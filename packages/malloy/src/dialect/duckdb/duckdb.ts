@@ -497,7 +497,7 @@ export class DuckDBDialect extends PostgresBase {
       return parser.typeDef();
     } catch (e) {
       if (e instanceof TinyParseError) {
-        return {type: 'sql native', rawType: sqlType};
+        return {type: 'sql native', rawType: sqlType.toLowerCase()};
       } else {
         throw e;
       }
@@ -660,9 +660,11 @@ class DuckDBTypeParser extends TinyParser {
         if (this.eof()) {
           idEnd = this.input.length;
         }
+        // Lowercase to match sqlTypeToMalloyType(), so a schema column and a
+        // `::"uuid"` cast of the same native type compare as the same type.
         baseType = {
           type: 'sql native',
-          rawType: this.input.slice(wantID.cursor, idEnd),
+          rawType: this.input.slice(wantID.cursor, idEnd).toLowerCase(),
         };
       } else {
         throw this.parseError('Could not understand type');
