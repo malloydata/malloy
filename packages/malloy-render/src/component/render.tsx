@@ -153,8 +153,7 @@ export function MalloyRenderInner(props: {
   });
 
   const metadata = createMemo(() => {
-    // TODO Do we even need this anymore...
-    const resultMetadata = getResultMetadata(rootCell().field, {
+    const options = {
       renderFieldMetadata: props.renderFieldMetadata,
       getVegaConfigOverride: props.vegaConfigOverride,
       parentSize: {
@@ -163,33 +162,17 @@ export function MalloyRenderInner(props: {
       },
       useVegaInterpreter: props.useVegaInterpreter,
       explicitTheme: props.theme,
-    });
+    };
 
-    // Collect style overrides from plugins
-    const styleOverrides: Record<string, string> = {};
-    props.renderFieldMetadata?.getAllFields().forEach(field => {
-      const plugins =
-        props.renderFieldMetadata?.getPluginsForField(field.key) ?? [];
-      plugins.forEach(plugin => {
-        plugin.beforeRender?.(resultMetadata, {
-          renderFieldMetadata: props.renderFieldMetadata,
-          getVegaConfigOverride: props.vegaConfigOverride,
-          parentSize: {
-            width: parentSize().width - CHART_SIZE_BUFFER,
-            height: parentSize().height - CHART_SIZE_BUFFER,
-          },
-          useVegaInterpreter: props.useVegaInterpreter,
-          explicitTheme: props.theme,
-        });
+    // TODO Do we even need this anymore...
+    const resultMetadata = getResultMetadata(rootCell().field, options);
 
-        // Collect style overrides from plugin
-        if (plugin.getStyleOverrides) {
-          Object.assign(styleOverrides, plugin.getStyleOverrides());
-        }
-      });
-    });
-
-    resultMetadata.styleOverrides = styleOverrides;
+    // Runs the plugins' beforeRender hooks and collects their style overrides.
+    // Guarded inside RenderFieldMetadata: nothing a plugin does may throw out
+    // of this memo, because every reader of metadata() (style(), showRendering(),
+    // _setParentSize) would then see it as undefined and report the failure as a
+    // styleOverrides TypeError instead of the plugin's actual error.
+    props.renderFieldMetadata?.runPluginsBeforeRender(resultMetadata, options);
 
     return resultMetadata;
   });
