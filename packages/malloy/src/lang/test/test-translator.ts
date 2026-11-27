@@ -410,6 +410,7 @@ export interface TestTranslatorOptions {
   internalModel?: ModelDef;
   restrictedMode?: boolean;
   virtualMap?: VirtualMap;
+  finalizedGivens?: ReadonlySet<string>;
   /**
    * Each entry is a compiler-flag tag fragment — the content that
    * would follow `##! ` in a Malloy source annotation. Rendered to
@@ -537,7 +538,8 @@ export class TestTranslator extends MalloyTranslator {
       null,
       options.eventStream ?? null,
       options.restrictedMode ?? false,
-      options.virtualMap
+      options.virtualMap,
+      options.finalizedGivens
     );
     this.grammarRule = options.rootRule ?? 'malloyDocument';
     this.importZone.define(testURI, testSrc);

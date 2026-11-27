@@ -6,7 +6,12 @@
 import {DateTime} from 'luxon';
 import {closestMatch} from '../util/closest_match';
 import {inlineExpr} from './inline_expr';
-import {isRepeatedRecord, mkSafeRecord, TD} from './malloy_types';
+import {
+  isRepeatedRecord,
+  mkSafeRecord,
+  safeRecordGet,
+  TD,
+} from './malloy_types';
 import type {
   AtomicTypeDef,
   Expr,
@@ -61,10 +66,16 @@ export function resolveSuppliedGivens(
         if (v.type === 'given') surfaceNames.push(k);
       }
       const suggestion = closestMatch(name, surfaceNames);
-      const hint = suggestion ? ` (did you mean '${suggestion}'?)` : '';
+      const others = surfaceNames.filter(n => n !== suggestion);
+      const hints: string[] = [];
+      if (suggestion) hints.push(`did you mean '${suggestion}'?`);
+      if (others.length > 0) {
+        const label = suggestion ? 'Other alternatives' : 'alternatives';
+        hints.push(`${label}: [${others.join(', ')}]`);
+      }
+      const hint = hints.length > 0 ? ` (${hints.join(' ')})` : '.';
       throw new MalloyCompileError(
-        `givens: unknown given '${name}'${hint}. ` +
-          `Model surfaces [${surfaceNames.join(', ')}]`,
+        `givens: unknown given '${name}'${hint}`,
         'runtime-given-unknown',
         undefined
       );
@@ -80,6 +91,30 @@ export function resolveSuppliedGivens(
     out.set(entry.id, valueToExpr(name, decl.type, value));
   }
   return out;
+}
+
+/**
+ * Config-file values are written without sight of any query, so one can't be
+ * meant for a given declared in restricted text. It has to throw: skipping the
+ * value would let the query run on the default.
+ */
+export function refuseFileValuesForRestrictedGivens(
+  fileGivens: Record<string, GivenValue> | undefined,
+  modelDef: ModelDef
+): void {
+  if (!fileGivens) return;
+  for (const name of Object.keys(fileGivens)) {
+    const entry = safeRecordGet(modelDef.contents, name);
+    if (entry?.type !== 'given') continue;
+    const decl = modelDef.givens?.[entry.id];
+    if (decl?.restricted) {
+      throw new MalloyCompileError(
+        `\`given: ${name}\` cannot be declared in a restricted query — the name \`${name}\` is reserved. Use a different name.`,
+        'runtime-given-unknown',
+        decl.location
+      );
+    }
+  }
 }
 
 /**

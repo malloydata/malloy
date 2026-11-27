@@ -302,7 +302,7 @@ Where a name lives.
 | Name | File | What |
 |---|---|---|
 | `Runtime.getBuildTargets` | `api/foundation/runtime.ts` | The builder entry point |
-| `Runtime._givensFor` | `api/foundation/runtime.ts` | File → constructor → per-call merge, refusing a finalized name; queries and builds |
+| `Runtime._givensFor` | `api/foundation/runtime.ts` | File → constructor → per-call merge, refusing a finalized name and a file value for a restricted given; queries and builds |
 | `bindGivens` | `model/given_binding.ts` | Supplied values plus inline folds, as `resolvedGivens`; queries and builds |
 | `givenUsageOfRelation` | `model/sql_compiled.ts` | The givens a relation reads |
 | `mkBuildTargets` | `api/foundation/build_targets.ts` | Folds the walk into targets and `unbuildable` |
