@@ -1,46 +1,54 @@
 # Test Infrastructure
 
-This directory contains the test infrastructure for Malloy, including cross-database tests, database-specific tests, and custom testing utilities.
+Which tests run where, and the rules for where a test goes, are in the Testing section of the [root CONTEXT.md](../CONTEXT.md#testing). This file covers the mechanics of `test/src`.
 
-## Test Organization
+## Layout of `test/src`
 
-Tests are organized into several categories:
+The directory is the subject; the filename's `db-` part says which databases run it.
 
-### Core Tests (`test/src/core/`)
-Tests for core Malloy functionality. The directory holds two flavors:
+| Directory | Subject |
+|---|---|
+| `sources/` | `table()`, a source from a query, `extend`, `rename:`, `primary_key:`, `accept:`/`except:`, source `where:`. Sub-features: `sql.*` (`conn.sql(...)`, `%{ }` interpolation), `composite.*` (`compose(...)`, partition composites), `virtual.*` (`conn.virtual()`, `type:` and `::Shape`, the virtualMap) |
+| `joins/` | `join_one`/`join_many`/`join_cross`, `with`/`on`, join types, filtered joins |
+| `aggregates/` | `count`/`sum`/`avg`/`min`/`max`, locality, symmetric aggregates, filtered measures, `all()`/`exclude()` |
+| `expressions/` | operators, `pick`/`case`, `::` and `:::`, `??`, `like`/regex, apply `?` and alternation |
+| `functions/` | functions that don't need `calculate:` (stdlib, `name!type()`, `sql_*`) |
+| `calculations/` | `calculate:`, windows, `partition_by:` |
+| `filters/` | `where:` and `having:` |
+| `filter_expressions/` | the `f'…'` filter language |
+| `time/` | truncation, extraction, literals, ranges, measurement, `timestamptz`, `timezone:` |
+| `nesting/` | `nest:` |
+| `views/` | `view:`, refinement with `+` |
+| `queries/` | `run:`, `query:`, pipelines, output naming |
+| `ordering/` | top-level `order_by:` and `limit:` |
+| `datatypes/` | `basic_atomic.*` (integers, bigint, floats, booleans, `sql native`), `compound_atomic.*` (arrays, records, repeated records, unnesting, array queries) |
+| `index/` | `index:`, `sample:`, the search index |
+| `quoting/` | literal escaping, identifier quoting, reserved words |
+| `tags/` | annotations |
+| `parameters/` | source parameters |
+| `givens/` | `given:` |
+| `persistence/` | `#@ persist`, build plans, manifests |
+| `restricted_mode/` | restricted queries |
+| `experimental_dialects/` | the `##! experimental.dialect` gate |
+| `api/` | `Runtime`, materializers, `validate()`, events, caching, `MalloyConfig`, streaming |
+| `render/` | render tags, rendering a result |
+| `bigquery/`, `duckdb/`, `postgres/`, `presto_trino/`, `sqlserver/` | what only that database has: its functions, native types, table-path syntax |
+| `test_tools/` | `TestSelect` and the result matchers |
+| `malloy_npm/` | the published packages themselves: circular imports across `packages/` |
 
-- **Pure translator/IR tests** — AST generation, IR generation, type checking, error handling (no SQL execution).
-- **End-to-end query tests** — single-dialect tests (almost always DuckDB) that load a Malloy model, run a query, and assert on results. They exercise the full Foundation API path (`runtime.loadModel(...).loadQueryByName(...).run(...)`) including SQL generation and execution against the loaded test database.
+A named Malloy feature that behaves its own way on one database goes in the feature's directory, in that database's file: `time/time.db-postgres.spec.ts`.
 
-Both live here. The end-to-end ones use `runtimeFor('duckdb')` and read from the `malloytest.*` tables (e.g. `state_facts`, `aircraft`, `flights`) loaded into `test/data/duckdb/duckdb_test.db` by `npm run build-duckdb-db`. They follow the dialect-gating pattern with `MALLOY_DATABASE` so they auto-skip when DuckDB isn't selected:
+## The test database
 
-```ts
-let describe = globalThis.describe;
-if (!envDatabases.includes('duckdb')) describe = describe.skip;
-```
+`test/src/test_database.ts` is the harness. It builds on `test/src/core_database.ts`, which holds the pieces that import nothing from beside them, so the renderer's tests can import that file directly.
 
-This is the right home for any feature test that requires SQL execution but only needs to verify *language behavior* (not dialect-specific quirks). For features whose behavior must hold across every dialect, write a cross-database test in `test/src/databases/all/` instead.
-
-### Database-Specific Tests (`test/src/databases/{database}/`)
-Tests that verify database-specific behavior:
-- `test/src/databases/bigquery/` - BigQuery-specific tests
-- `test/src/databases/postgres/` - PostgreSQL-specific tests
-- `test/src/databases/duckdb/` - DuckDB-specific tests
-- etc.
-
-Each database may have unique features, SQL syntax, or limitations that require specific testing.
-
-### Cross-Database Tests (`test/src/databases/all/`)
-Tests that run against **all** supported databases to ensure consistent behavior across dialects:
-- Query semantics
-- Data type handling
-- Function behavior
-- Join operations
-- Aggregations
-
-These tests are particularly important for verifying that Malloy's abstraction works correctly across all supported SQL dialects.
-
-An experimental dialect is not in `allDatabases`; run the shared suite on one with `MALLOY_DATABASE=<name>` (`ci-<name>`) and expect failures. What CI runs for an experimental dialect is decided per dialect; see [adding-a-new-database.md](../packages/malloy/src/doc/adding-a-new-database.md). The files carry no `##! experimental.dialect.<name>` lines: `runtimeFor` in `runtimes.ts` calls `acceptExperimental()` on the dialect under test once per process, which is the only place that acknowledgment is waived.
+- **`testDatabase`** is this run's database: the stand-in (`duckdb`) in a plain spec, `MALLOY_DATABASE` in a database file. `.name` is its name in the test config, `.dialect` its dialect and `.canStream` whether its connection streams (both from `databases.ts`, checked against the connection on the first query), `.runtime` a `Runtime` whose one connection is named `db`. All of these are available while the file loads, so they can gate tests with `test.when`; the connection is made on the first query. `await testDatabase.connection()` returns the connection for a test that runs SQL on it directly. Call `afterAll(() => testDatabase.shutdown())` in any file that uses it.
+- **`coreDatabase()`** is a new read-only DuckDB connection on the test data, for a run-once test that depends on DuckDB itself. Same shape; `connection()` returns the `DuckDBConnection`. Shut it down the same way. A test that writes builds its own `DuckDBConnection`.
+- `wrapTestModel(testDatabase, source)` and `mkTestModel(testDatabase, sources)` (from `@malloydata/malloy/test`) make a `TestModel` for the result matchers.
+- A test that applies to particular databases checks `testDatabase.name` (`testDatabase.name === 'presto'`), not the dialect: `duckdb_wasm` shares DuckDB's dialect.
+- An experimental dialect under test is accepted once per process when its runtime is made, so the shared files carry no `##! experimental.dialect.NAME` lines. What CI runs for an experimental dialect is set by `dbAllPassing`/`dbAllSkip` in `databases.ts`; see [adding-a-new-database.md](../packages/malloy/src/doc/adding-a-new-database.md).
+- The connection is built from `malloy-config.json` through the connection registry. The `duckdb_wasm` entry builds the Node WASM class through a registration that exists only in the harness, since the registered type builds the browser class. Likewise the `postgres` entry builds `PooledPostgresConnection`: the registered type's unpooled connection opens a session per query, so the temporary table `model.search()` makes is gone before the query that reads it. The pooled connection passes only because tests run one query at a time and reuse one session.
+- The `motherduck` entry has never been run. It passes no token and relies on DuckDB reading `MOTHERDUCK_TOKEN` from the environment, which is what `db-motherduck.yaml` sets; `npm run dbtest motherduck` with a real token is the check.
 
 ### Consumer-contract canary (`test/consumer-canary/`)
 Not a normal test — it consumes the *built* `@malloydata/*` packages the way a downstream app does (esbuild bundle + plain ts-jest, no babel) to catch native/ESM leaks that malloy's own CI is blind to. Run locally with `npm run test-consumer-canary` (it builds first). See [`test/consumer-canary/CONTEXT.md`](consumer-canary/CONTEXT.md).
@@ -56,13 +64,13 @@ diagnose a dialect issue). There is **no** `malloyResultMatches` matcher (an old
 name; these replaced it).
 
 **Setup:** `import '@malloydata/malloy/test/matchers';` to register them, and build a
-`TestModel` (`{model, dialect}`) — `wrapTestModel(runtime, source)` makes one from a
-live DB runtime, or `mkTestModel(...)` to define inline data.
+`TestModel` (`{model, dialect}`) — `wrapTestModel(testDatabase, source)` makes one from
+the test database, or `mkTestModel(testDatabase, ...)` to define inline data.
 
 **Usage:**
 ```typescript
-const tm = wrapTestModel(runtime, '');           // or mkTestModel(...)
-await expect(`run: ${db}.table('malloytest.state_facts') -> { ... }`)
+const tm = wrapTestModel(testDatabase, '');      // or mkTestModel(...)
+await expect(`run: db.table('malloytest.state_facts') -> { ... }`)
   .toMatchResult(tm, {f1: 'A', names: [{popular_name: 'Ava'}]});  // partial: extra rows/fields ok
 await expect(`run: ...`).toEqualResult(tm, [{...}, {...}]);        // exact rows + fields
 await expect(`run: ...`).toMatchPaths(tm, {'by2.names.popular_name': 'Ava'}); // dotted-path probe
@@ -79,7 +87,7 @@ For a test that only applies to some dialects/conditions, use `test.when` —
 **not** an `if` wrapping a `test()` call.
 
 ```typescript
-test.when(runtime.dialect.supportsNestedProjectionLimit)(
+test.when(testDatabase.dialect.supportsNestedProjectionLimit)(
   'limit on a projection nest caps array length',
   async () => { ... }
 );
@@ -128,17 +136,6 @@ Snowflake tests require:
 - Access to test databases
 - Proper environment variables set
 
-## CI-Specific Test Commands
-
-The CI system runs different test suites optimized for parallel execution:
-
-- **`npm run ci-core`** - Core tests (no database required)
-- **`npm run ci-duckdb`** - DuckDB-specific tests only
-- **`npm run ci-bigquery`** - BigQuery-specific tests only
-- **`npm run ci-postgres`** - PostgreSQL-specific tests only
-
-These commands are optimized for CI and may not work correctly in local development environments.
-
 ## Test Data
 
 ### The test corpus
@@ -168,7 +165,7 @@ The shared cross-database parquet files live in `test/data/malloytest-parquet/` 
 
 ### Common pattern
 
-All cross-database tests (`test/src/databases/all/`) reference tables as `malloytest.{table}` (schema-qualified). Every dialect must create a `malloytest` schema containing these tables with matching data.
+Tests reference tables as `db.table('malloytest.{table}')` (schema-qualified). Every dialect must create a `malloytest` schema containing these tables with matching data.
 
 ### How each dialect loads test data
 
@@ -177,7 +174,7 @@ All cross-database tests (`test/src/databases/all/`) reference tables as `malloy
 | DuckDB | DuckDB `CREATE TABLE AS SELECT FROM read_parquet()` | `test/duckdb/load_test_data.sh` (wraps `load_test_data.ts`) | Run via `sh test/duckdb/load_test_data.sh` (or `npm run build-duckdb-db`). Creates `test/data/duckdb/duckdb_test.db` |
 | PostgreSQL | DuckDB's `postgres` extension: `ATTACH` the server, `CREATE TABLE AS SELECT FROM read_parquet()` | `test/postgres/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/postgres/postgres_start.sh` and by CI against a running server; connects with the `PG*` variables. No `ga_sample` (no anonymous record type) |
 | MySQL | DuckDB's `mysql` extension, likewise | `test/mysql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mysql/mysql_start.sh`; connects with the `MYSQL_*` variables. No `ga_sample`, and `alltypes` without its array columns |
-| SQL Server | DuckDB's community `mssql` extension, likewise | `test/mssql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mssql/mssql_start.sh`, which sets the `MSSQL_*` variables for the loader; the tests and both SQL Server test runtimes (`sqlserver`, `mssql_via_duckdb`) read the same variables from their own environment. Waits for the server itself. Same table set as MySQL. In CI, `db-sqlserver.yaml` runs the same script on SQL Server 2017, the oldest the dialect supports |
+| SQL Server | DuckDB's community `mssql` extension, likewise | `test/mssql/load_test_data.sh` (wraps `load_test_data.ts`) | Run by `test/mssql/mssql_start.sh`, which sets the `MSSQL_*` variables for the loader; the `sqlserver` and `mssql_via_duckdb` entries in `test/src/malloy-config.json` read the same variables. Waits for the server itself. Same table set as MySQL. In CI, `db-sqlserver.yaml` runs the same script on SQL Server 2017, the oldest the dialect supports |
 | Trino/Presto | The hive connector reads the parquet in place: each file is mounted into the container and declared as an external table | `test/trino/hive_ddl.ts`, `test/trino/hive.properties`, `test/presto/hive.properties` | `trino_start.sh` / `presto_start.sh` derive the DDL from the parquet schemas at container start. The hive metastore lowercases names, so a table with nested columns (`ga_sample`) is a `_hive` table plus a view that casts the nested field names back; top-level column names stay lowercase, since Trino lowercases those in every connector |
 | BigQuery | Pre-loaded manually in `malloydata-org` project | (none) | No loader script in repo. Data assumed to exist. |
 | Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/load_test_data.sh` (wraps `load_test_data.sql`) | Run via `sh test/snowflake/load_test_data.sh` (needs the `snowsql` CLI) |
@@ -204,7 +201,7 @@ An ideal future state would be publishing the parquets to a well-known cloud sto
 
 When a test programmatically constructs Malloy source (e.g. injecting adversarial values for escape testing), be aware that Malloy has several string-literal forms with different escape rules. The `r'...'` and `/.../` regex forms — and all triple-quoted strings — are *raw*: backslash is preserved verbatim, no escape processing. Doubling backslashes on the JavaScript side will produce a different string than intended.
 
-The full table is in [`../packages/malloy/src/lang/CONTEXT.md`](../packages/malloy/src/lang/CONTEXT.md) under "String literal forms". `test/src/databases/all/escape.spec.ts` is a worked example.
+The full table is in [`../packages/malloy/src/lang/CONTEXT.md`](../packages/malloy/src/lang/CONTEXT.md) under "String literal forms". `test/src/quoting/` holds a worked example.
 
 ## Important Notes
 

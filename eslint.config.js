@@ -79,6 +79,40 @@ module.exports = defineConfig([
     },
   },
   {
+    // A package's tests use only that package. A test that needs the test/src
+    // harness, or another package's connection, lives in test/src.
+    files: [
+      'packages/**/*.spec.ts',
+      'packages/**/*.spec.tsx',
+      'packages/**/spec-test-support/**',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {group: ['@malloydata/malloy/src/*']},
+            {
+              group: ['**/test/src', '**/test/src/**'],
+              message: 'A package test does not use the test/src harness.',
+            },
+            {
+              group: ['@malloydata/db-*'],
+              message:
+                "A package test does not use another package's connection.",
+            },
+          ],
+          paths: [
+            {
+              name: 'lodash',
+              message: 'Import [module] from lodash/[module] instead',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.js', '**/*.cjs'],
     languageOptions: {
       sourceType: 'commonjs',

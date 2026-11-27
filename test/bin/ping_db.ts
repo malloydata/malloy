@@ -5,16 +5,17 @@
 
 /* eslint-disable no-console */
 
-import {runtimeFor} from '../src/runtimes';
+import {testDatabaseNamed} from '../src/test_database';
 
 const main = async () => {
   if (process.argv.length < 3) {
     console.info(`usage ${process.argv[1]} [database]`);
     process.exit(1);
   }
-  const runtime = runtimeFor(process.argv[2]);
+  const database = testDatabaseNamed(process.argv[2]);
   try {
-    await runtime.connection.runSQL('SELECT 1');
+    await (await database.connection()).runSQL('SELECT 1');
+    await database.shutdown();
     console.log('Success');
   } catch (e) {
     console.error('Failed', e.toString());

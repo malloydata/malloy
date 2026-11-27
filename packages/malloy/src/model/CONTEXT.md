@@ -455,8 +455,8 @@ flags that `precheck` (duckdb) does not exercise: the explicit carry-forward lis
 reached **only** by Trino (`supportsSelectReplace=false`), the group_set remap **only**
 by Databricks (`hasLateralColumnAliasInSelect`), and the lateral-join-bag `GROUP BY` by
 BigQuery/standardsql and Databricks (`cantPartitionWindowFunctionsOnExpressions`). A
-green duckdb precheck says nothing about them — run `ci-trino`/`ci-databricks`/
-`ci-bigquery` (or a single-dialect connection).
+green duckdb precheck says nothing about them — run `npm run dbtest trino`/
+`databricks`/`bigquery` (or a single-dialect connection).
 
 ### 2. Expression Compiler (expression_compiler.ts)
 

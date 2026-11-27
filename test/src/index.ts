@@ -7,6 +7,5 @@ export {mkSqlEqWith, runQuery} from './util';
 
 export * from './util/db-jest-matchers';
 
-export {allDatabaseTestSets} from './databases/shared/test_list';
-
-export {RuntimeList, testRuntimeFor} from './runtimes';
+export {coreDatabase, testDatabase, testDatabaseNamed} from './test_database';
+export type {CoreDatabase, TestDatabase} from './test_database';

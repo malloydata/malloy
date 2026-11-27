@@ -18,6 +18,6 @@ jobs:
         with:
           node-version-file: '.node-version'
       - name: Test
-        run: npm run ci-duckdb-wasm
+        run: npm run dbtest duckdb_wasm -- --runInBand
         env:
           CI: true

@@ -5,7 +5,9 @@
 
 import type {Item, View} from 'vega';
 import {API} from '@malloydata/malloy';
-import {runtimeFor} from '../../../../../test/src/runtimes';
+// The chart tests run their queries on the test harness's DuckDB.
+// eslint-disable-next-line no-restricted-imports
+import {coreDatabase} from '../../../../../test/src/core_database';
 import {RenderFieldMetadata} from '@/render-field-metadata';
 import {getDataTree, type RootField} from '@/data_tree';
 import type {RepeatedRecordCell} from '@/data_tree';
@@ -16,10 +18,10 @@ import {
 import type {VegaChartProps} from '@/component/types';
 import {MEASURE_SERIES_LABEL_SCALE} from '@/component/vega/measure-series-label-scale';
 
-const duckdb = runtimeFor('duckdb');
+const core = coreDatabase();
 
 export async function closeChartTestRuntime() {
-  await duckdb.connection.close();
+  await core.shutdown();
 }
 
 export interface ChartQueryResult {
@@ -36,7 +38,7 @@ export async function runChartQuery(
   source: string,
   query: string
 ): Promise<ChartQueryResult> {
-  const result = await duckdb.loadModel(source).loadQuery(query).run();
+  const result = await core.runtime.loadModel(source).loadQuery(query).run();
   const malloyResult = API.util.wrapResult(result);
   const rfm = new RenderFieldMetadata(malloyResult);
   const rootCell = getDataTree(malloyResult, rfm);
@@ -62,7 +64,7 @@ export function fakeTooltipView(): View {
 }
 
 const DATA =
-  'duckdb.sql("SELECT * FROM (VALUES ' +
+  'db.sql("SELECT * FROM (VALUES ' +
   "('Total Universe (HH)', 75, '1Q26'), " +
   "('1Q26: High Income Earners', 28, '1Q26'), " +
   "('1Q26: Auto Intenders', 25, '2Q26')) " +
@@ -71,7 +73,7 @@ const DATA =
 export const SOURCE = `source: data is ${DATA}`;
 
 const DATA4 =
-  'duckdb.sql("SELECT * FROM (VALUES ' +
+  'db.sql("SELECT * FROM (VALUES ' +
   "('Total Universe (HH)', 75, '1Q26', 'East'), " +
   "('1Q26: High Income Earners', 28, '1Q26', 'West'), " +
   "('1Q26: Auto Intenders', 25, '2Q26', 'East')) " +
@@ -80,7 +82,7 @@ const DATA4 =
 export const SOURCE4 = `source: data4 is ${DATA4}`;
 
 const YOY_DATA =
-  'duckdb.sql("SELECT * FROM (VALUES ' +
+  'db.sql("SELECT * FROM (VALUES ' +
   "(DATE '2024-01-15', 10), (DATE '2024-04-15', 20), " +
   "(DATE '2025-01-15', 12), (DATE '2025-04-15', 24)) " +
   'AS t(event_date, sales)")';

@@ -9,7 +9,7 @@ import type {RecordLiteralNode} from '../model/malloy_types';
 
 // Byte-exact encoding for backslash-style dialects. Catches a regression to a
 // different-but-decodable form; the real engine round-trip lives in the e2e
-// spec, test/src/databases/all/escape-e2e.spec.ts.
+// spec, test/src/quoting/quoting.db-all.spec.ts.
 describe('backslash-style exact encoding', () => {
   const bq = getDialects().find(d => d.name === 'standardsql')!;
 

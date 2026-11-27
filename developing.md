@@ -13,9 +13,9 @@ npm run build
 
 Use the [VS Code ESLint extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) for code formatting, or run `npm run lint --fix`.
 
-The tests can be run via the [VS Code Jest Runner extension](https://marketplace.visualstudio.com/items?itemName=firsttris.vscode-jest-runner). Alternatively, use `npm run test`, or a specific file, like `npm run test test/nomodel.spec.ts`.
+The tests can be run via the [VS Code Jest Runner extension](https://marketplace.visualstudio.com/items?itemName=firsttris.vscode-jest-runner) or from the command line. Which tests run where, and how to run them, are in the Testing section of the [root CONTEXT.md](CONTEXT.md#testing).
 
-Some of the Postgres tests depend on static tables (i.e. `test/src/nomodel.spec.ts`). To set up the database locally for these tests, run `./test/postgres/postgres_start.sh`, which starts a container and loads the tables from `test/data/malloytest-parquet`.
+To run the tests on Postgres locally, run `./test/postgres/postgres_start.sh`, which starts a container and loads the tables from `test/data/malloytest-parquet`.
 
 ### VS Code tips
 

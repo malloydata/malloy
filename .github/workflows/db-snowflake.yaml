@@ -24,7 +24,7 @@ jobs:
         with:
           node-version-file: '.node-version'
       - name: Test
-        run: npm run ci-snowflake
+        run: npm run dbtest snowflake -- --maxWorkers=8
         env:
           CI: true
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOW_CI_ACCOUNT }}

@@ -1,0 +1,86 @@
+{
+  "connections": {
+    "duckdb": {
+      "is": "duckdb",
+      "databasePath": "test/data/duckdb/duckdb_test.db",
+      "readOnly": true
+    },
+    "duckdb_wasm": {
+      "is": "duckdb_wasm",
+      "databasePath": "test/data/duckdb/duckdb_test.db"
+    },
+    "motherduck": {
+      "is": "duckdb",
+      "databasePath": "md:my_db"
+    },
+    "bigquery": {
+      "is": "bigquery",
+      "projectId": "malloydata-org"
+    },
+    "postgres": {
+      "is": "postgres"
+    },
+    "mysql": {
+      "is": "mysql",
+      "host": {"env": "MYSQL_HOST"},
+      "port": {"env": "MYSQL_PORT"},
+      "user": {"env": "MYSQL_USER"},
+      "password": {"env": "MYSQL_PASSWORD"},
+      "database": {"env": "MYSQL_DATABASE"}
+    },
+    "snowflake": {
+      "is": "snowflake",
+      "account": {"env": "SNOWFLAKE_ACCOUNT"},
+      "username": {"env": "SNOWFLAKE_USER"},
+      "password": {"env": "SNOWFLAKE_PASSWORD"},
+      "role": {"env": "SNOWFLAKE_ROLE"},
+      "warehouse": {"env": "SNOWFLAKE_WAREHOUSE"},
+      "database": {"env": "SNOWFLAKE_DATABASE"},
+      "schema": {"env": "SNOWFLAKE_SCHEMA"},
+      "authenticator": {"env": "SNOWFLAKE_AUTHENTICATOR"},
+      "privateKey": {"env": "SNOWFLAKE_PRIVATE_KEY_RAW"},
+      "privateKeyPath": {"env": "SNOWFLAKE_PRIVATE_KEY_FILE"},
+      "privateKeyPass": {"env": "SNOWFLAKE_PRIVATE_KEY_PASSPHRASE"}
+    },
+    "trino": {
+      "is": "trino",
+      "server": {"env": "TRINO_SERVER"},
+      "user": {"env": "TRINO_USER"},
+      "password": {"env": "TRINO_PASSWORD"},
+      "catalog": {"env": "TRINO_CATALOG"},
+      "schema": {"env": "TRINO_SCHEMA"}
+    },
+    "presto": {
+      "is": "presto",
+      "server": {"env": "PRESTO_HOST"},
+      "port": {"env": "PRESTO_PORT"},
+      "user": {"env": "PRESTO_USER"},
+      "password": {"env": "PRESTO_PASSWORD"},
+      "catalog": {"env": "PRESTO_CATALOG"},
+      "schema": {"env": "PRESTO_SCHEMA"}
+    },
+    "databricks": {
+      "is": "databricks",
+      "host": {"env": "DATABRICKS_HOST"},
+      "path": {"env": "DATABRICKS_PATH"},
+      "token": {"env": "DATABRICKS_TOKEN"},
+      "defaultCatalog": {"env": "DATABRICKS_CATALOG"},
+      "defaultSchema": {"env": "DATABRICKS_SCHEMA"},
+      "proxy": {"env": "DATABRICKS_HTTPS_PROXY"}
+    },
+    "sqlserver": {
+      "is": "sqlserver",
+      "server": {"env": "MSSQL_HOST"},
+      "port": {"env": "MSSQL_PORT"},
+      "user": {"env": "MSSQL_USER"},
+      "password": {"env": "MSSQL_PASSWORD"},
+      "database": {"env": "MSSQL_DATABASE"},
+      "trustServerCertificate": {"env": "MSSQL_TRUST_SERVER_CERTIFICATE"}
+    },
+    "mssql_via_duckdb": {
+      "is": "duckdb",
+      "additionalExtensions": "mssql",
+      "setupSQL": {"test": "mssqlAttach"}
+    }
+  }
+}

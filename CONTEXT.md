@@ -162,7 +162,7 @@ npm run watch                  # Watch for TypeScript changes across the repo
 
 Builds, tests, and lints in this repo are slow. The wrong instinct is to re-run a command with different flags or verbosity to dig into a failure. The right instinct is to **capture the full output once and grep the saved log**.
 
-Pattern for any long-running command (build, dev, jest, lint, ci-*, precheck) — plain redirection, no `&&` / `||` / `;` chaining:
+Pattern for any long-running command (build, dev, jest, lint, dbtest, ci-core, precheck) — plain redirection, no `&&` / `||` / `;` chaining:
 
 ```
 CMD > /tmp/CMD.log 2>&1
@@ -238,60 +238,65 @@ Then add to `package.json`: `"codegen": "node ../../scripts/femto-build.js targe
 
 **IMPORTANT**: Malloy has a large test suite which cannot run end-to-end on a development machine. A CI run is needed to fully verify a change.
 
-#### The one canonical invocation
+A **database** is an entry in `test/src/malloy-config.json` and `test/src/databases.ts`: `duckdb`, `duckdb_wasm`, `motherduck`, `bigquery`, `postgres`, `mysql`, `snowflake`, `trino`, `presto`, `databricks`, `sqlserver`, `mssql_via_duckdb`. The **stand-in** is `duckdb`, read-only on `test/data/duckdb/duckdb_test.db`; plain specs run on it. **Core** is the CI job that runs every plain spec.
+
+#### Kinds of test
+
+1. **Run once.** `*.spec.ts` with no `db-` part, anywhere except a connection package or the renderer. It runs in core. Inside `packages/` it uses only its own package. Outside `packages/` it may open an in-process database (today, DuckDB).
+2. **Run on every database.** `test/src/**/*.db-all.spec.ts`, once for each database. A database that isn't fully supported has its CI run narrowed by `dbAllPassing` and `dbAllSkip`.
+3. **Run on named databases.** `test/src/**/*.db-NAME.spec.ts`, where NAME is a database or a set from `databaseSets` (`nesting.db-presto_trino.spec.ts`).
+4. **Connection tests.** Everything in `packages/malloy-db-X/`, run for each database whose `databases.ts` entry names that package in `connectionTests`. A connection package no entry names (`malloy-db-publisher`) holds plain specs, which run in core.
+5. **Renderer tests.** `packages/malloy-render` and `test/src/render`. They run in core, and they don't yet follow these rules.
+
+In `test/src` the directory is the subject: `joins/`, `time/`, `sources/`, and so on (the list is in [test/CONTEXT.md](test/CONTEXT.md)). If DuckDB is what a test is testing, the file is `.db-duckdb`; if DuckDB is only a tool the test uses, the file is plain. A sub-feature is a file in its feature's directory: `sources/sql.spec.ts`, `sources/sql.db-all.spec.ts`.
+
+Every file ends in `.spec.ts`. Words in file and directory names are separated by `_`; `-` appears only in the `db-` marker, and in `malloy-config.json`, the name every Malloy config file has. A `db-` part that names no database or set fails the run, so a typo can't leave a file that never runs.
+
+In `packages/**/*.spec.ts`, importing from `test/src` or from another package's `@malloydata/db-*` is a lint error.
+
+#### Running tests
 
 ```
 npx jest <FILE_OR_DIRECTORY> -t <TEST_PATTERN>
 ```
 
-Run it from the repo root, through `npx`, selecting tests with a path and `-t` — that pair is the whole supported surface. Combine with the capture-output pattern above:
+Run it from the repo root. A plain spec runs on the stand-in. A database file runs on `MALLOY_DATABASE`, which names one database; with it unset, the file fails with a message saying how to set it. A database file given explicitly that the selected database doesn't run gets a message saying which database does. The VS Code runner behaves the same way.
 
 ```
-npx jest <path> -t <pattern> > /tmp/jest.log 2>&1
+MALLOY_DATABASE=postgres npx jest test/src/joins/joins.db-all.spec.ts -t <pattern>
 ```
 
-Broader runs go through the root scripts below: `precheck` and `ci-<dialect>`. In a package whose tests are self-contained and need no database server, `npm test` runs them; elsewhere it points back to this section.
+The broader runs:
 
-On exit 0, move on — don't read `/tmp/jest.log`. On non-zero exit, `tail` or `grep` the log; if one pass doesn't surface the failing test, grep differently rather than re-running with new jest flags.
+| Command | Runs |
+|---|---|
+| `npm run precheck` | `npm run typecheck`, then `MALLOY_DATABASE=duckdb npm test`. The "did I break anything" check. |
+| `npm test` | Core, plus everything selected for `MALLOY_DATABASE`, ignoring `dbAllPassing`/`dbAllSkip`. `MALLOY_DATABASE=sqlserver npm test` is the inventory of what SQL Server can't do yet. |
+| `npm run dbtest NAME` | Exactly what NAME's CI job runs: its connection tests, its `db-NAME` and set files, and its `db-all` files, narrowed. |
+| `npm run ci-core` | The core CI job. |
 
-#### Database-iterating tests (`test/src/databases/`)
+Long runs go through the capture-output pattern above. On exit 0, move on; on non-zero, `tail` or `grep` the log.
 
-Tests under `test/src/databases/` loop over a connection set whose default is **all** Malloy backends. On a dev machine that fails. Always scope them with `MALLOY_DATABASE` (one connection) or `MALLOY_DATABASES` (a fixed set):
+#### The database files
 
-```
-MALLOY_DATABASE=duckdb npx jest test/src/databases/all/<file>.spec.ts -t <pattern>
-MALLOY_DATABASES=duckdb,postgres npx jest test/src/databases/all/<file>.spec.ts -t <pattern>
-```
+**`test/src/malloy-config.json`** holds the bare minimum needed to make each connection, in the [Malloy config format](https://docs.malloydata.dev/documentation/setup/config). A setting is written as `{"env": "..."}` only where the connection doesn't read it from the environment itself. `{"test": "NAME"}` is a test-only reference, resolved by `test/src/test_database.ts`.
 
-If a test path lives under `test/src/databases/`, assume it needs this and add it.
+**`test/src/databases.ts`** is data only, read by `jest.config.ts`. Each entry names its dialect, whether its connection streams (`canStream`), and its `connectionTests` glob; the first query checks the dialect and `canStream` against the real connection. A set in `databaseSets` names databases by what they are, never by what they can do; capabilities go in `test.when`. `dbAllPassing`, if present, limits `dbtest` to the `db-all` files it matches; `dbAllSkip` leaves out the files it matches. A glob that matches no files fails the run.
 
-#### Mirroring CI locally
+#### A test file
 
-`npm run ci-<connection>` runs the **exact same tests CI runs** for that connection type — same scope, same dialect, same selection:
+```ts
+import {testDatabase} from '../test_database';
 
-```
-npm run ci-core         # malloy-core + malloy-render
-npm run ci-duckdb       # DuckDB connection
-npm run ci-bigquery     # BigQuery
-npm run ci-postgres     # PostgreSQL
-```
+afterAll(() => testDatabase.shutdown());
 
-Use these when you want a local pass that matches what CI will do.
+const model = wrapTestModel(testDatabase, `
+  query: isabellaN is db.table('malloytest.state_facts') -> { ... }`);
 
-#### `npm run precheck` — "did I break anything?"
-
-```
-npm run precheck        # the broad regression check (alias for test-duckdb)
-npm run test-publisher  # same shape, publisher as the dialect
+test.when(testDatabase.dialect.supportsNesting)('one-stage nest is in the order it asked for', async () => { ... });
 ```
 
-The broadest check a dev machine can run before declaring a change done. `precheck` runs every test in every package, choosing duckdb wherever a dialect must be picked. If `precheck` passes, anything still failing in CI is dialect-specific.
-
-Different shape from `ci-<dialect>` above: `ci-duckdb` runs the duckdb CI job's specific selection; `precheck` runs **everything**. They're not interchangeable.
-
-Slow. Wrap in the capture-output pattern.
-
-For more details on test organization and infrastructure, see [test/CONTEXT.md](test/CONTEXT.md).
+`testDatabase` is this run's database: the stand-in in a plain spec, `MALLOY_DATABASE` in a database file. Its connection is named `db`. `coreDatabase()` is for a run-once test that depends on DuckDB itself. No file loops over databases, and test names carry no database name. [test/CONTEXT.md](test/CONTEXT.md) has the details.
 
 ### Code Quality
 ```bash

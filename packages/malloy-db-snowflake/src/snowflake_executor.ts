@@ -86,7 +86,12 @@ export class SnowflakeExecutor {
     testOnBorrow: true,
     testOnReturn: true,
   };
-  private static defaultConnectionOptions = {
+  /**
+   * Added under a connection's own options by the env and toml helpers and by
+   * the registered factory. A connection constructed with options directly
+   * does not get them.
+   */
+  static readonly defaultConnectionOptions = {
     clientSessionKeepAlive: true, // default = false
     clientSessionKeepAliveHeartbeatFrequency: 900, // default = 3600
     // Return integers as native JS BigInt to preserve precision

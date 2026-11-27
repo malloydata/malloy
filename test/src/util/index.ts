@@ -3,12 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {
-  QueryMaterializer,
-  Result,
-  Runtime,
-  SingleConnectionRuntime,
-} from '@malloydata/malloy';
+import type {QueryMaterializer, Result, Runtime} from '@malloydata/malloy';
 export * from '@malloydata/malloy/test';
 
 interface InitValues {
@@ -24,7 +19,7 @@ function sqlSafe(str: string): string {
 }
 
 export function mkSqlEqWith(
-  runtime: SingleConnectionRuntime,
+  runtime: Runtime,
   cName: string,
   initV?: InitValues
 ) {

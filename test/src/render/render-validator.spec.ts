@@ -1,11 +1,15 @@
-import {runtimeFor} from '../runtimes';
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import {coreDatabase} from '../test_database';
 import {validateRenderTags} from '@malloydata/render-validator';
 
-const runtime = runtimeFor('duckdb');
+const core = coreDatabase();
+const runtime = core.runtime;
 
-afterAll(async () => {
-  await runtime.connection.close();
-});
+afterAll(() => core.shutdown());
 
 interface LogMessage {
   severity: string;
@@ -42,8 +46,8 @@ function expectNoWarnings(logs: LogMessage[]) {
 }
 
 // Reusable SQL fragments
-const NUM_FIELD = 'duckdb.sql("SELECT 1 as val")';
-const STR_FIELD = 'duckdb.sql("SELECT \'hello\' as val")';
+const NUM_FIELD = 'db.sql("SELECT 1 as val")';
+const STR_FIELD = 'db.sql("SELECT \'hello\' as val")';
 
 describe('render tag validation', () => {
   describe('tags on wrong field types', () => {
@@ -157,7 +161,7 @@ describe('render tag validation', () => {
 
     it('errors on invalid viz mode', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as x, 2 as y") extend {
+        source: s is db.sql("SELECT 1 as x, 2 as y") extend {
           # viz=line viz { mode=sparkle }
           view: q is { group_by: x; aggregate: y is count() }
         }
@@ -246,7 +250,7 @@ describe('render tag validation', () => {
   describe('big_value', () => {
     it('errors when big_value view has group_by fields', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'Acme' as manufacturer, 5 as recall_count") extend {
+        source: s is db.sql("SELECT 'Acme' as manufacturer, 5 as recall_count") extend {
           # big_value
           view: q is {
             group_by: manufacturer
@@ -276,7 +280,7 @@ describe('render tag validation', () => {
 
     it('no error when big_value view has nests for sparklines', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as val, DATE '2024-01-01' as dt") extend {
+        source: s is db.sql("SELECT 1 as val, DATE '2024-01-01' as dt") extend {
           # big_value
           view: q is {
             aggregate: total is count()
@@ -301,7 +305,7 @@ describe('render tag validation', () => {
 
     it('no error when aggregate has big_value comparison config', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as val") extend {
+        source: s is db.sql("SELECT 1 as val") extend {
           # big_value
           view: q is {
             aggregate: total is count()
@@ -317,7 +321,7 @@ describe('render tag validation', () => {
 
     it('no error when aggregate has big_value sparkline config', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as val, DATE '2024-01-01' as dt") extend {
+        source: s is db.sql("SELECT 1 as val, DATE '2024-01-01' as dt") extend {
           # big_value
           view: q is {
             aggregate: total is count()
@@ -337,7 +341,7 @@ describe('render tag validation', () => {
 
     it('errors when big_value child config is on a nested child field', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as val, DATE '2024-01-01' as dt") extend {
+        source: s is db.sql("SELECT 1 as val, DATE '2024-01-01' as dt") extend {
           # big_value
           view: q is {
             aggregate: total is count()
@@ -356,7 +360,7 @@ describe('render tag validation', () => {
 
     it('errors when big_value child config is on the big_value parent field', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as val") extend {
+        source: s is db.sql("SELECT 1 as val") extend {
           # big_value { comparison_field=total }
           view: q is {
             aggregate: total is count()
@@ -370,7 +374,7 @@ describe('render tag validation', () => {
 
     it('errors when big_value child config is outside big_value context', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as val") extend {
+        source: s is db.sql("SELECT 1 as val") extend {
           view: q is {
             aggregate:
               total is count()
@@ -390,7 +394,7 @@ describe('render tag validation', () => {
       // activating big_value. The renderer declines to match it, so this error
       // must surface (now recorded on the field and rendered, see apply-renderer).
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as val") extend {
+        source: s is db.sql("SELECT 1 as val") extend {
           # big_value { sparkline=trend }
           view: q is {
             aggregate: total is count()
@@ -405,7 +409,7 @@ describe('render tag validation', () => {
   describe('dashboard', () => {
     it('errors when # dashboard.columns is non-positive', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a") extend {
+        source: s is db.sql("SELECT 1 as a") extend {
           # dashboard { columns=0 }
           view: q is {
             group_by: grp is 'all'
@@ -419,7 +423,7 @@ describe('render tag validation', () => {
 
     it('errors when # dashboard.gap is negative', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a") extend {
+        source: s is db.sql("SELECT 1 as a") extend {
           # dashboard { gap=-5 }
           view: q is {
             group_by: grp is 'all'
@@ -433,7 +437,7 @@ describe('render tag validation', () => {
 
     it('does not error when # dashboard.gap is zero', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a") extend {
+        source: s is db.sql("SELECT 1 as a") extend {
           # dashboard { gap=0 }
           view: q is {
             group_by: grp is 'all'
@@ -447,7 +451,7 @@ describe('render tag validation', () => {
 
     it('errors when # colspan is zero', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a") extend {
+        source: s is db.sql("SELECT 1 as a") extend {
           # dashboard { columns=3 }
           view: q is {
             group_by: grp is 'all'
@@ -463,7 +467,7 @@ describe('render tag validation', () => {
 
     it('errors when # colspan is non-numeric', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a") extend {
+        source: s is db.sql("SELECT 1 as a") extend {
           # dashboard { columns=3 }
           view: q is {
             group_by: grp is 'all'
@@ -483,7 +487,7 @@ describe('render tag validation', () => {
 
     it('colspan validity error names the bad value and a fix', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a") extend {
+        source: s is db.sql("SELECT 1 as a") extend {
           # dashboard { columns=3 }
           view: q is {
             group_by: grp is 'all'
@@ -504,7 +508,7 @@ describe('render tag validation', () => {
 
     it('honors # colspan in columns mode with no diagnostic', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b") extend {
           # dashboard { columns=3 }
           view: q is {
             group_by: grp is 'all'
@@ -522,7 +526,7 @@ describe('render tag validation', () => {
 
     it('warns when # colspan exceeds the column count', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b") extend {
           # dashboard { columns=3 }
           view: q is {
             group_by: grp is 'all'
@@ -548,7 +552,7 @@ describe('render tag validation', () => {
 
     it('warns "Ignored" when # colspan is used in flex mode (no columns)', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b") extend {
           # dashboard
           view: q is {
             group_by: grp is 'all'
@@ -570,7 +574,7 @@ describe('render tag validation', () => {
 
     it('gap alone does not enable # colspan (still flex mode)', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b") extend {
           # dashboard { gap=16 }
           view: q is {
             group_by: grp is 'all'
@@ -592,7 +596,7 @@ describe('render tag validation', () => {
 
     it('warns flex-mode (not exceeds) for # colspan when columns is invalid', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b") extend {
           # dashboard { columns=0 }
           view: q is {
             group_by: grp is 'all'
@@ -618,7 +622,7 @@ describe('render tag validation', () => {
 
     it('a single invalid # colspan yields one diagnostic (no double warning)', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a") extend {
+        source: s is db.sql("SELECT 1 as a") extend {
           # dashboard
           view: q is {
             group_by: grp is 'all'
@@ -643,7 +647,7 @@ describe('render tag validation', () => {
 
     it('coerces a unit-suffixed # colspan (e.g. "2px") to its numeric prefix', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b") extend {
           # dashboard { columns=3 }
           view: q is {
             group_by: grp is 'all'
@@ -666,7 +670,7 @@ describe('render tag validation', () => {
   describe('chart y-channel must be numeric', () => {
     it('errors when # y is on a non-numeric dimension in a bar chart', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as label, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 'B' as label, 1 as val") extend {
           # viz=bar
           view: q is {
             group_by:
@@ -683,7 +687,7 @@ describe('render tag validation', () => {
 
     it('errors when # y is on a non-numeric dimension in a line chart', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as x_val, 'B' as label, 1 as val") extend {
+        source: s is db.sql("SELECT 1 as x_val, 'B' as label, 1 as val") extend {
           # viz=line
           view: q is {
             group_by:
@@ -700,7 +704,7 @@ describe('render tag validation', () => {
 
     it('errors when viz.y references a non-numeric field', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as label, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 'B' as label, 1 as val") extend {
           # viz=bar { y=label }
           view: q is {
             group_by: cat, label
@@ -714,7 +718,7 @@ describe('render tag validation', () => {
 
     it('no error when # y is on a numeric dimension in a bar chart', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 5 as num_dim, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 5 as num_dim, 1 as val") extend {
           # viz=bar
           view: q is {
             group_by:
@@ -731,7 +735,7 @@ describe('render tag validation', () => {
 
     it('no error when # y is on a measure in a bar chart', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 1 as val") extend {
           # viz=bar
           view: q is {
             group_by: cat
@@ -750,7 +754,7 @@ describe('render tag validation', () => {
       // the intended x dimension, the implicit-x picker must skip the y-tagged
       // field rather than double-assigning it as both x and y.
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 100 as total_sales, 'A' as brand") extend {
+        source: s is db.sql("SELECT 100 as total_sales, 'A' as brand") extend {
           # viz=bar
           view: q is {
             group_by:
@@ -768,7 +772,7 @@ describe('render tag validation', () => {
       // Legacy # bar_chart { ... } tag must be validated through the same
       // rules as # viz=bar.
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as label, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 'B' as label, 1 as val") extend {
           # bar_chart
           view: q is {
             group_by:
@@ -785,7 +789,7 @@ describe('render tag validation', () => {
 
     it('errors when legacy # line_chart references a non-numeric y via viz.y', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as x_val, 'B' as label, 1 as val") extend {
+        source: s is db.sql("SELECT 1 as x_val, 'B' as label, 1 as val") extend {
           # line_chart { y=label }
           view: q is {
             group_by: x_val, label
@@ -802,7 +806,7 @@ describe('render tag validation', () => {
       // source location — the chart must still render rather than replacing
       // itself with a red-box plugin-creation error.
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 1 as val") extend {
           # viz=bar { x=nonexistent }
           view: q is {
             group_by: cat
@@ -819,7 +823,7 @@ describe('render tag validation', () => {
 
     it('logs (not throws) when # viz.y references a nonexistent field on a line chart', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as x_val, 1 as val") extend {
+        source: s is db.sql("SELECT 1 as x_val, 1 as val") extend {
           # viz=line { y=nonexistent }
           view: q is {
             group_by: x_val
@@ -840,7 +844,7 @@ describe('render tag validation', () => {
       // should skip it and leave xChannel empty. Bar chart then correctly
       // reports that no x dimension is available.
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 100 as total_sales") extend {
+        source: s is db.sql("SELECT 100 as total_sales") extend {
           # viz=bar
           view: q is {
             group_by:
@@ -868,7 +872,7 @@ describe('render tag validation', () => {
 
     it('no errors for # link on a string', async () => {
       const logs = await getValidationLogs(`
-        query: q is duckdb.sql("SELECT 'http://example.com' as url") -> {
+        query: q is db.sql("SELECT 'http://example.com' as url") -> {
           select:
             # link
             url
@@ -879,7 +883,7 @@ describe('render tag validation', () => {
 
     it('no errors for # number on a date', async () => {
       const logs = await getValidationLogs(`
-        query: q is duckdb.sql("SELECT DATE '2024-01-01' as dt") -> {
+        query: q is db.sql("SELECT DATE '2024-01-01' as dt") -> {
           select:
             # number
             dt
@@ -892,7 +896,7 @@ describe('render tag validation', () => {
   describe('owned paths suppress unread warnings', () => {
     it('no warnings for # image with alt.field', async () => {
       const logs = await getValidationLogs(`
-        query: q is duckdb.sql("SELECT 'http://img.png' as logo, 'Alt text' as alt_text") -> {
+        query: q is db.sql("SELECT 'http://img.png' as logo, 'Alt text' as alt_text") -> {
           select:
             # image { alt { field=alt_text } height=32 }
             logo
@@ -905,7 +909,7 @@ describe('render tag validation', () => {
 
     it('no warnings for # link with url_template', async () => {
       const logs = await getValidationLogs(`
-        query: q is duckdb.sql("SELECT 'hello' as val") -> {
+        query: q is db.sql("SELECT 'hello' as val") -> {
           select:
             # link { url_template='http://example.com/{val}' }
             val
@@ -929,7 +933,7 @@ describe('render tag validation', () => {
 
     it('no warnings for # break on dashboard child fields', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b") extend {
           # dashboard
           view: q is {
             group_by: grp is 'all'
@@ -947,7 +951,7 @@ describe('render tag validation', () => {
 
     it('no warnings for # colspan, # subtitle, # borderless on dashboard child fields', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b, 3 as c") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b, 3 as c") extend {
           # dashboard { columns=3 }
           view: q is {
             group_by: grp is 'all'
@@ -968,7 +972,7 @@ describe('render tag validation', () => {
 
     it('no warnings for # tooltip on chart child fields', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as category, 1 as value, 'hello' as note") extend {
+        source: s is db.sql("SELECT 'A' as category, 1 as value, 'hello' as note") extend {
           # viz=bar
           view: q is {
             group_by:
@@ -986,7 +990,7 @@ describe('render tag validation', () => {
 
     it('no warnings for embedded channel tags on child fields', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b") extend {
           # viz=bar
           view: q is {
             group_by:
@@ -1005,7 +1009,7 @@ describe('render tag validation', () => {
 
     it('no warnings for bar chart top-level channel tags', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as series_val, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 'B' as series_val, 1 as val") extend {
           # viz=bar { x=cat y=val series=series_val stack }
           view: q is {
             group_by: cat, series_val
@@ -1020,7 +1024,7 @@ describe('render tag validation', () => {
 
     it('no warnings for bar chart channel settings (independent and limits)', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as series_val, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 'B' as series_val, 1 as val") extend {
           # viz=bar { x.independent=true y.independent=true series.independent=false series.limit=5 x.limit=10 }
           view: q is {
             group_by: cat, series_val
@@ -1035,7 +1039,7 @@ describe('render tag validation', () => {
 
     it('no warnings for bar chart disable_embedded and mode tags', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 1 as val") extend {
           # viz=bar { disable_embedded mode=normal }
           view: q is {
             group_by: cat
@@ -1050,7 +1054,7 @@ describe('render tag validation', () => {
 
     it('no warnings for line chart channel settings and mode', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 1 as val") extend {
           # viz=line { x.independent=true y.independent=true series.independent=false series.limit=5 zero_baseline=true mode=normal disableEmbedded }
           view: q is {
             group_by: cat
@@ -1065,7 +1069,7 @@ describe('render tag validation', () => {
 
     it('no warnings for bar chart legacy bar_chart tag', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 1 as val") extend {
           # bar_chart
           view: q is {
             group_by: cat
@@ -1080,7 +1084,7 @@ describe('render tag validation', () => {
 
     it('no warnings for line chart legacy line_chart tag', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as x_val, 2 as y_val") extend {
+        source: s is db.sql("SELECT 1 as x_val, 2 as y_val") extend {
           # line_chart
           view: q is {
             group_by: x_val
@@ -1095,7 +1099,7 @@ describe('render tag validation', () => {
 
     it('no warnings for chart title and subtitle', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+        source: s is db.sql("SELECT 'A' as cat, 1 as val") extend {
           # viz=bar { title="My Chart" subtitle="Some data" }
           view: q is {
             group_by: cat
@@ -1125,7 +1129,7 @@ describe('render tag validation', () => {
 
     it('warns on # break outside dashboard context', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+        source: s is db.sql("SELECT 1 as a, 2 as b") extend {
           view: q is {
             aggregate:
               a_total is a.sum()
@@ -1142,7 +1146,7 @@ describe('render tag validation', () => {
 
     it('warns on # colspan outside dashboard context', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 1 as a") extend {
+        source: s is db.sql("SELECT 1 as a") extend {
           view: q is {
             aggregate:
               # colspan=2
@@ -1158,7 +1162,7 @@ describe('render tag validation', () => {
 
     it('warns on # tooltip outside chart context', async () => {
       const logs = await getValidationLogs(`
-        source: s is duckdb.sql("SELECT 'A' as category, 'hello' as note") extend {
+        source: s is db.sql("SELECT 'A' as category, 'hello' as note") extend {
           view: q is {
             group_by:
               category

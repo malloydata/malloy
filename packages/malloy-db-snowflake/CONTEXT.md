@@ -40,11 +40,19 @@ and ignores the other's key.
 `snowflake-sdk` 2.3.5 fixed this upstream (`normalizeConnectionOptions()`), but our
 parser bypasses the driver's loader, so the bump alone won't pick it up.
 
+## Every connection gets the same driver defaults
+
+`SnowflakeExecutor.defaultConnectionOptions` (session keep-alive, and
+`jsTreatIntegerAsBigInt` so integers keep their precision) is added under a
+connection's own options by each of the three ways this package builds them:
+from the environment, from `connections.toml`, and by the registered factory
+from a Malloy config. A connection constructed with options directly does not
+get them, and reads integers as JavaScript numbers.
+
 ## Test-harness env vars are named after the Snowflake CLI's
 
 `getConnectionOptionsFromEnv` is not user-facing config — only this package's spec
-and `test/src/runtimes.ts` call it. `SNOWFLAKE_ACCOUNT` gates it; unset, callers
-fall back to the TOML.
+calls it. `SNOWFLAKE_ACCOUNT` gates it; unset, callers fall back to the TOML.
 
 The names match `snow`'s, so a name never means two things:
 `SNOWFLAKE_PRIVATE_KEY_RAW` → `privateKey` (PEM text), `..._FILE` → `privateKeyPath`,
