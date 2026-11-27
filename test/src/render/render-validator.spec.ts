@@ -1173,4 +1173,37 @@ describe('render tag validation', () => {
       expect(warnings.some(w => w.message.includes('tooltip'))).toBe(true);
     });
   });
+
+  describe('bar_chart orient', () => {
+    const BAR = (tag: string) => `
+      source: s is duckdb.sql("SELECT 'A' as category, 1 as a") extend {
+        ${tag}
+        view: q is { group_by: category; aggregate: a_total is a.sum() }
+      }
+      query: q is s -> q
+    `;
+
+    it('accepts orient=horizontal', async () => {
+      const logs = await getValidationLogs(
+        BAR('# bar_chart { orient=horizontal }')
+      );
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('warns on an unknown orient', async () => {
+      const logs = await getValidationLogs(
+        BAR('# bar_chart { orient=sideways }')
+      );
+      expect(logs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            severity: 'warn',
+            message:
+              "Unknown orient 'sideways' on field 'root'. Valid values: vertical, horizontal. Falling back to vertical.",
+          }),
+        ])
+      );
+    });
+  });
 });
