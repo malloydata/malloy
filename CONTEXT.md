@@ -241,15 +241,15 @@ A **database** is an entry in `test/src/malloy-config.json` and `test/src/databa
 
 #### Kinds of test
 
-1. **Run once.** `*.spec.ts` with no `db-` part, anywhere except a connection package or the renderer. It runs in core. Inside `packages/` it uses only its own package. Outside `packages/` it may open an in-process database (today, DuckDB).
+1. **Run once.** `*.spec.ts` with no `db-` part, anywhere except a connection package or the renderer. It runs in core. Inside `packages/` it uses neither the `test/src` harness nor another package's connection. Outside `packages/` it may open an in-process database (today, DuckDB).
 2. **Run on every database.** `test/src/**/*.db-all.spec.ts`, once for each database. A database that isn't fully supported has its CI run narrowed by `dbAllPassing` and `dbAllSkip`.
-3. **Run on named databases.** `test/src/**/*.db-NAME.spec.ts`, where NAME is a database or a set from `databaseSets` (`nesting.db-presto_trino.spec.ts`).
+3. **Run on named databases.** `test/src/**/*.db-NAME.spec.ts`, where NAME is a database or a set from `databaseSets` (`sources/sql.db-presto_trino.spec.ts`).
 4. **Connection tests.** Everything in `packages/malloy-db-X/`, run for each database whose `databases.ts` entry names that package in `connectionTests`. A connection package no entry names (`malloy-db-publisher`) holds plain specs, which run in core.
 5. **Renderer tests.** `packages/malloy-render` and `test/src/render`. They run in core, and they don't yet follow these rules.
 
-In `test/src` the directory is the subject: `joins/`, `time/`, `sources/`, and so on (the list is in [test/CONTEXT.md](test/CONTEXT.md)). If DuckDB is what a test is testing, the file is `.db-duckdb`; if DuckDB is only a tool the test uses, the file is plain. A sub-feature is a file in its feature's directory: `sources/sql.spec.ts`, `sources/sql.db-all.spec.ts`.
+In `test/src` the directory is the subject: `joins/`, `time/`, `sources/`, and so on (the list is in [test/CONTEXT.md](test/CONTEXT.md)). If DuckDB is what a test is testing, the file is `.db-duckdb` or `.db-duckdb_all` (which also runs on `duckdb_wasm`); if DuckDB is only a tool the test uses, the file is plain. A sub-feature is a file in its feature's directory: `sources/sql.spec.ts`, `sources/sql.db-all.spec.ts`.
 
-Every file ends in `.spec.ts`. Words in file and directory names are separated by `_`; `-` appears only in the `db-` marker, and in `malloy-config.json`, the name every Malloy config file has. A `db-` part that names no database or set fails the run, so a typo can't leave a file that never runs.
+Every file ends in `.spec.ts`. In `test/src`, words in file and directory names are separated by `_`; `-` appears only in the `db-` marker, and in `malloy-config.json`, the name every Malloy config file has. A `db-` part that names no database or set fails the run, so a typo can't leave a file that never runs.
 
 In `packages/**/*.spec.ts`, importing from `test/src` or from another package's `@malloydata/db-*` is a lint error.
 
@@ -271,7 +271,7 @@ The broader runs:
 |---|---|
 | `npm run precheck` | `npm run typecheck`, then `MALLOY_DATABASE=duckdb npm test`. The "did I break anything" check. |
 | `npm test` | Core, plus everything selected for `MALLOY_DATABASE`, ignoring `dbAllPassing`/`dbAllSkip`. `MALLOY_DATABASE=sqlserver npm test` is the inventory of what SQL Server can't do yet. |
-| `npm run dbtest NAME` | Exactly what NAME's CI job runs: its connection tests, its `db-NAME` and set files, and its `db-all` files, narrowed. |
+| `npm run dbtest NAME` | Exactly what NAME's CI job runs: its connection tests, its `db-NAME` and set files, and its `db-all` files, narrowed. `mssql_via_duckdb` and `motherduck` have no CI job; for them it is a local run only. |
 | `npm run ci-core` | The core CI job. |
 
 Long runs go through the capture-output pattern above. On exit 0, move on; on non-zero, `tail` or `grep` the log.
