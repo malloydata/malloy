@@ -11,7 +11,10 @@ import type {
 } from '@/registry/types';
 import {RenderLogCollector} from '@/component/render-log-collector';
 import type {Tag} from '@malloydata/malloy-tag';
-import {resolveBuiltInTags} from '@/component/tag-configs';
+import {
+  resolveBuiltInTags,
+  resolveDashboardChildTags,
+} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '@/component/tag-utils';
 import {COMBO_MARK_TYPES} from '@/plugins/combo-chart/combo-chart-settings';
@@ -25,6 +28,41 @@ export type OnPluginCreateError = (
   plugins: RenderPluginInstance[]
 ) => void;
 
+export interface RenderFieldMetadataOptions {
+  /** See MalloyRendererOptions.dashboardTile. */
+  dashboardTile?: boolean;
+}
+
+interface FieldLog {
+  warn(message: string, t?: Tag): void;
+  error(message: string, t?: Tag): void;
+}
+
+/**
+ * A tile's # colspan if it is a positive integer. Otherwise logs why not and
+ * returns undefined; an absent colspan returns undefined without a log.
+ */
+function validColspan(tile: Field, log: FieldLog): number | undefined {
+  const colspan = tile.tag.numeric('colspan');
+  if (tile.tag.has('colspan') && colspan === undefined) {
+    // Present but non-numeric (e.g. "foo", "half"). numeric() drops it
+    // to undefined, so flag it rather than let the colspan silently vanish.
+    log.error(
+      `Invalid # colspan on '${tile.name}': expected a positive integer, got a non-numeric value. Fix: # colspan=2.`,
+      tile.tag.tag('colspan')
+    );
+    return undefined;
+  }
+  if (colspan !== undefined && (!Number.isInteger(colspan) || colspan < 1)) {
+    log.error(
+      `Invalid # colspan on '${tile.name}': expected a positive integer, got ${colspan}. Fix: # colspan=2.`,
+      tile.tag.tag('colspan')
+    );
+    return undefined;
+  }
+  return colspan;
+}
+
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
   private rootField: RootField;
@@ -35,7 +73,8 @@ export class RenderFieldMetadata {
     private pluginRegistry: RenderPluginFactory[] = [],
     private pluginOptions: Record<string, unknown> = {},
     private onPluginCreateError?: OnPluginCreateError,
-    logCollector?: RenderLogCollector
+    logCollector?: RenderLogCollector,
+    private options: RenderFieldMetadataOptions = {}
   ) {
     this.logCollector = logCollector ?? new RenderLogCollector();
     this.registry = new Map();
@@ -126,6 +165,9 @@ export class RenderFieldMetadata {
       // Resolve tag configs for built-in renderers (image, link, etc.)
       // at setup time so components never read tags at render time.
       resolveBuiltInTags(field);
+      if (field.isRoot() && this.options.dashboardTile) {
+        resolveDashboardChildTags(field);
+      }
 
       // Run semantic validation on this field's tags
       this.validateFieldTags(field);
@@ -580,23 +622,11 @@ export class RenderFieldMetadata {
 
       // Validate dashboard-owned child tags
       for (const child of field.fields) {
-        const childColspan = child.tag.numeric('colspan');
-        if (child.tag.has('colspan') && childColspan === undefined) {
-          // Present but non-numeric (e.g. "foo", "half"). numeric() drops it
-          // to undefined, so flag it rather than let the colspan silently vanish.
-          log.error(
-            `Invalid # colspan on '${child.name}': expected a positive integer, got a non-numeric value. Fix: # colspan=2.`,
-            child.tag.tag('colspan')
-          );
-        } else if (childColspan !== undefined) {
-          if (!Number.isInteger(childColspan) || childColspan < 1) {
-            log.error(
-              `Invalid # colspan on '${child.name}': expected a positive integer, got ${childColspan}. Fix: # colspan=2.`,
-              child.tag.tag('colspan')
-            );
-          } else if (!columnsActive) {
-            // Well-formed but inert here: "Ignored", not "Invalid". The else-if
-            // keeps this from co-firing with the validity error above.
+        const childColspan = validColspan(child, log);
+        if (childColspan !== undefined) {
+          if (!columnsActive) {
+            // Well-formed but inert here: "Ignored", not "Invalid".
+            // validColspan already reported an invalid value.
             log.warn(
               `Ignored # colspan on '${child.name}': colspan only applies in columns mode. Fix: add # dashboard { columns=N } to '${field.name}', or remove # colspan.`,
               child.tag.tag('colspan')
@@ -609,6 +639,12 @@ export class RenderFieldMetadata {
           }
         }
       }
+    }
+
+    // A result drawn as one tile of a host's dashboard: its own top-level
+    // colspan is the host's layout setting, so check it like a tile's.
+    if (field.isRoot() && this.options.dashboardTile) {
+      validColspan(field, log);
     }
 
     // --- Number verbose properties ---

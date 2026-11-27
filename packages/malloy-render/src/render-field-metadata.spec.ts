@@ -181,6 +181,32 @@ describe('dispatch (shouldRenderAs) on the compiled schema', () => {
 });
 
 describe('setup-time tag resolvers (tag-configs)', () => {
+  test('dashboardTile: the root carries its tile settings', async () => {
+    const pr = await runtime
+      .loadModel(
+        `
+        # colspan=2 subtitle='Last 30 days' break borderless
+        query: q is ${SQL_SOURCE} -> { group_by: str }
+      `
+      )
+      .loadQueryByName('q')
+      .getPreparedResult();
+    const metadata = new RenderFieldMetadata(
+      pr.toStableResult(),
+      [],
+      {},
+      undefined,
+      undefined,
+      {dashboardTile: true}
+    );
+    expect(metadata.getRootField().getDashboardChildConfig()).toEqual({
+      colspan: 2,
+      subtitle: 'Last 30 days',
+      break: true,
+      borderless: true,
+    });
+  });
+
   test('# transpose.limit lands in the table nest config', async () => {
     const metadata = await metadataFor(`
       query: q is ${SQL_SOURCE} -> {
