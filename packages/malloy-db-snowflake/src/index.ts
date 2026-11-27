@@ -10,6 +10,7 @@ import {registerConnectionType} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import type {ConnectionOptions} from 'snowflake-sdk';
 import {SnowflakeConnection} from './snowflake_connection';
+import {SnowflakeExecutor} from './snowflake_executor';
 import {buildPoolOptions} from './snowflake_pool_options';
 
 registerConnectionType('snowflake', {
@@ -28,12 +29,21 @@ registerConnectionType('snowflake', {
       poolTestOnBorrow,
       ...props
     } = config;
-    // ConnectionConfig values are trusted to match ConnectionOptions fields
-    // because the property definitions below declare matching names/types.
-    // The double cast bridges Malloy's generic config to snowflake-sdk's
-    // external typed interface — unavoidable without enumerating every
-    // ConnectionOptions field.
-    const connOptions = props as unknown as ConnectionOptions;
+    // An entry with no connection options at all leaves them empty, so the
+    // connection reads ~/.snowflake/connections.toml, which adds the defaults
+    // itself.
+    const connOptions =
+      Object.keys(props).length > 0
+        ? {
+            ...SnowflakeExecutor.defaultConnectionOptions,
+            // ConnectionConfig values are trusted to match ConnectionOptions
+            // fields because the property definitions below declare matching
+            // names/types. The double cast bridges Malloy's generic config to
+            // snowflake-sdk's external typed interface — unavoidable without
+            // enumerating every ConnectionOptions field.
+            ...(props as unknown as ConnectionOptions),
+          }
+        : {};
     return new SnowflakeConnection(name, {
       connOptions,
       setupSQL: typeof setupSQL === 'string' ? setupSQL : undefined,

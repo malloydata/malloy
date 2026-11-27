@@ -34,7 +34,7 @@ jobs:
       - name: Test
         run: |
           sh test/postgres/load_test_data.sh
-          npm run ci-postgres
+          npm run dbtest postgres
         env:
           PGHOST: localhost
           PGPORT: 5432

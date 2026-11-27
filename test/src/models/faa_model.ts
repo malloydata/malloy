@@ -4,23 +4,23 @@
  */
 
 const faaModel = `
-  source: aircraft_models is bigquery.table('malloytest.aircraft_models') extend {
+  source: aircraft_models is db.table('malloytest.aircraft_models') extend {
     primary_key: aircraft_model_code
 
     measure:
       total_seats is seats.sum()
   }
 
-  source: airports is bigquery.table('malloytest.airports') extend {
+  source: airports is db.table('malloytest.airports') extend {
     primary_key: code
     measure: \`count\` is count()
   }
 
-  source: carriers is bigquery.table('malloytest.carriers') extend {
+  source: carriers is db.table('malloytest.carriers') extend {
     primary_key: code
   }
 
-  source: aircraft is bigquery.table('malloytest.aircraft') extend {
+  source: aircraft is db.table('malloytest.aircraft') extend {
     primary_key: tail_num
 
     join_one: aircraft_models on aircraft_model_code = aircraft_models.aircraft_model_code
@@ -30,7 +30,7 @@ const faaModel = `
       total_engines is aircraft_models.engines.sum()
   }
 
-  source: flights is bigquery.table('malloytest.flights') extend {
+  source: flights is db.table('malloytest.flights') extend {
     primary_key: id2
 
     rename:
@@ -49,7 +49,7 @@ const faaModel = `
 
     join_one: destination is airports on destination_code = destination.code
 
-    join_one: aircraft_facts is  bigquery.table('malloytest.flights') -> {
+    join_one: aircraft_facts is  db.table('malloytest.flights') -> {
       group_by: tail_num
       aggregate: lifetime_distance is distance.sum()
     } extend {

@@ -86,7 +86,8 @@ export class SnowflakeExecutor {
     testOnBorrow: true,
     testOnReturn: true,
   };
-  private static defaultConnectionOptions = {
+  /** What every connection gets unless its options say otherwise. */
+  static readonly defaultConnectionOptions = {
     clientSessionKeepAlive: true, // default = false
     clientSessionKeepAliveHeartbeatFrequency: 900, // default = 3600
     // Return integers as native JS BigInt to preserve precision

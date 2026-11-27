@@ -70,7 +70,11 @@ export function createTestRuntime<T extends Connection>(
 export {TV} from './test-values';
 export type {TypedValue} from './test-values';
 export {mkTestModel, wrapTestModel, extendTestModel} from './test-models';
-export type {TestModelSources, TestModel} from './test-models';
+export type {
+  TestModelSources,
+  TestModel,
+  TestDatabaseLike,
+} from './test-models';
 
 // Query execution
 export {runQuery} from './runQuery';
@@ -84,18 +88,22 @@ export type {ExpectedRow, MatcherOptions} from './resultMatchers';
  */
 
 /**
- * Accepts databases in env, either via comma-separated dialect list
- * (MALLOY_DATABASES=) or a single database (MALLOY_DATABASE=). returns either
- *  databases defined in env or a default list that was passed.
+ * The database named by MALLOY_DATABASE as a one-element list, or the
+ * default list when it is unset. MALLOY_DATABASE names one database.
  */
 export function databasesFromEnvironmentOr(
   defaultDatabases: string[]
 ): string[] {
-  return process.env['MALLOY_DATABASES']
-    ? process.env['MALLOY_DATABASES'].split(',')
-    : process.env['MALLOY_DATABASE']
-      ? [process.env['MALLOY_DATABASE']]
-      : defaultDatabases;
+  const selected = process.env['MALLOY_DATABASE'];
+  if (!selected) {
+    return defaultDatabases;
+  }
+  if (selected.includes(',')) {
+    throw new Error(
+      `MALLOY_DATABASE names one database, not a list: "${selected}"`
+    );
+  }
+  return [selected];
 }
 
 /**

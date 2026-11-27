@@ -10,7 +10,7 @@ This guide draws on the experience of adding the Databricks dialect. We're happy
 packages/malloy/src/dialect/{name}/     ← Dialect (SQL generation)
 packages/malloy-db-{name}/             ← Connection (database communication)
 .github/workflows/db-{name}.yaml       ← CI workflow
-test/src/runtimes.ts                    ← Test runtime registration
+test/src/databases.ts, malloy-config.json ← Test database entry
 test/{name}/                            ← Data loader, container start/stop scripts
 ```
 
@@ -68,7 +68,7 @@ Create `packages/malloy-db-{name}/`. See [connection CONTEXT.md](../connection/C
 ### Wire it into the monorepo
 
 - Add to `packages/malloy-connections/` (`package.json`, `src/index.ts`, `tsconfig.json`)
-- Add to root `package.json` workspaces, root `tsconfig.json` references, and `jest.config.ts`
+- Add to root `package.json` workspaces and root `tsconfig.json` references
 - Add a line for your database to the remedy map in `scripts/check_dialect_connection.ts`, which the package's `test` script calls
 
 The root `workspaces` entry is what publishes the package: the next release sends every workspace package to npm. A package name npm has never seen must be created there, and given a trusted publisher, by a maintainer before that release. Say in your PR that it adds a published package. See [workflows CONTEXT.md](../../../../.github/workflows/CONTEXT.md).
@@ -97,9 +97,9 @@ Cloud warehouses can't read local files via SQL, so you'll need an upload mechan
 
 A database that runs in a container gets `test/{name}/{name}_start.sh` and `{name}_stop.sh`. Start creates the container and loads the tables, so one command gives anyone a working test database, and CI runs the same script.
 
-### Runtime configuration
+### Test database entry
 
-Add a case for your database in `test/src/runtimes.ts` that creates a connection from environment variables.
+Add your database to `test/src/malloy-config.json` with the bare minimum needed to make its connection, and to `test/src/databases.ts` with its dialect, `canStream` and `connectionTests` glob. Import the package in `test/src/test_database.ts`, which registers its connection type, and add it to `test/package.json`'s dependencies. The rules for both files, and for which tests run where, are in the Testing section of the [root CONTEXT.md](../../../../CONTEXT.md#testing).
 
 ## Step 4: Set Up CI
 
@@ -111,15 +111,11 @@ of known working pieces of the dialect, while making progress towards full suppo
 only way to solve this problem, and if this doesn't work for the next experimental dialect, we will
 have to figure something else out.
 
-Add two npm scripts to the root `package.json`:
-- `ci-{name}` runs the shared suite and your connection's tests: the `db-all` and `db-{name}` jest projects with `MALLOY_DATABASE={name}`
-- `ci-{name}-smoketest` runs a subset of the full tests, maybe the `db-{name}` project alone
-
-While the dialect is experimental, CI runs the smoke test, and it must stay green. `ci-{name}` is the inventory of what the dialect can't do yet: run it by hand and expect failures, which shrink as features land (Step 5).
+Support can be partial. `dbAllPassing` in the database's `databases.ts` entry lists the `db-all` files CI runs on it (globs, from `test/src`); `dbAllSkip` lists the ones it leaves out. `npm run dbtest {name}` runs exactly what CI runs: the connection tests, the `db-{name}` files, and the `db-all` files those lists allow. Start with `dbAllPassing: []`, so CI runs only the connection tests and the database's own files, and add files as they pass; CI must stay green. `MALLOY_DATABASE={name} npm test` runs every `db-all` file regardless, which is the inventory of what the dialect can't do yet: run it by hand and expect failures, which shrink as features land (Step 5).
 
 Create `.github/workflows/db-{name}.yaml` by copying an existing one: `db-postgres.yaml` for a database that runs in a container, `db-snowflake.yaml` for one reached with a credential.
 - `workflow_call` trigger, declaring any secrets it needs, and `permissions: {}`
-- Steps: download and unpack the `workspace` artifact, set up Node, start or load the database, `npm run ci-{name}-smoketest`
+- Steps: download and unpack the `workspace` artifact, set up Node, start or load the database, `npm run dbtest {name}`
 
 In `run-tests.yaml`, add a job that calls your workflow with `needs: pull_and_build`, and add it to the `malloy-tests` needs list so the gate job waits for it. A job that receives secrets also needs `check-permission`. [workflows CONTEXT.md](../../../../.github/workflows/CONTEXT.md) is the authority on what a CI job may do and why.
 
@@ -130,9 +126,9 @@ A pull request from a fork runs the workflow files on `main`, not its own, so th
 With `experimental = true`, not all tests need to pass. Use `it.when(condition)` to skip tests for known limitations — this keeps skipped tests visible in output rather than silently absent.
 
 Useful capability flags for gating tests:
-- `runtime.dialect.supportsAggDistinct` — fanout aggregates
-- `runtime.dialect.supportUnnestArrayAgg` — nesting
-- `runtime.dialect.hasTimestamptz` — timestamptz type support
+- `testDatabase.dialect.supportsAggDistinct` — fanout aggregates
+- `testDatabase.dialect.supportUnnestArrayAgg` — nesting
+- `testDatabase.dialect.hasTimestamptz` — timestamptz type support
 
 ### Where to expect trouble
 
@@ -148,7 +144,7 @@ Useful capability flags for gating tests:
 
 ## Moving from Experimental to Fully Supported
 
-When `ci-{name}` passes, remove `experimental = true` and switch the workflow from `ci-{name}-smoketest` to `ci-{name}`:
+When every `db-all` file passes, remove `experimental = true` and remove `dbAllPassing` from the database's entry:
 - Users won't need `##! experimental.dialect.{name}` in their model files
 - CI will run the complete test suite against your dialect
 - The Malloy team will maintain your dialect as part of ongoing refactors

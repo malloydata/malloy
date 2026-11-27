@@ -5,8 +5,10 @@
 
 /**
  * The SQL Server the mssql tests and loader connect to, from the MSSQL_*
- * variables mssql_start.sh exports. The test runtimes read the same
- * variables through SQLServerExecutor.getConnectionOptionsFromEnv.
+ * variables mssql_start.sh exports. The `sqlserver` and `mssql_via_duckdb`
+ * test databases read the same variables: the first through
+ * test/src/malloy-config.json, the second through
+ * SQLServerExecutor.getConnectionOptionsFromEnv.
  */
 function required(name: string): string {
   const value = process.env[name];

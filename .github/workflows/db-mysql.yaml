@@ -20,7 +20,7 @@ jobs:
       - name: Test
         run: |
           ./test/mysql/mysql_start.sh
-          npm run ci-mysql
+          npm run dbtest mysql
           ./test/mysql/mysql_stop.sh
         env:
           MYSQL_HOST: '127.0.0.1'

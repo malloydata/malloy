@@ -13,6 +13,9 @@
  * setup-time tag resolvers without a DOM, Solid, or Vega.
  */
 
+// The renderer has no in-package way to describe inline SQL, so it borrows
+// DuckDB.
+// eslint-disable-next-line no-restricted-imports
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {SingleConnectionRuntime} from '@malloydata/malloy';
 import {RenderFieldMetadata} from './render-field-metadata';

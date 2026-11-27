@@ -20,7 +20,7 @@ jobs:
       - name: Test
         run: |
           ./test/trino/trino_start.sh
-          npm run ci-trino
+          npm run dbtest trino
           ./test/trino/trino_stop.sh
         env:
           TRINO_CATALOG: hive

@@ -26,6 +26,6 @@ jobs:
         with:
           credentials_json: '${{ secrets.BIGQUERY_KEY }}'
       - name: Test
-        run: npm run ci-bigquery
+        run: npm run dbtest bigquery
         env:
           CI: true

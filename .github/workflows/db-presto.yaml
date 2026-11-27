@@ -44,7 +44,7 @@ jobs:
           key: ${{ steps.presto-image.outputs.cache-primary-key }}
       - name: Test
         run: |
-          npm run ci-presto
+          npm run dbtest presto
           ./test/presto/presto_stop.sh
         env:
           PRESTO_CATALOG: hive

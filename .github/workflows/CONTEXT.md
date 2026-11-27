@@ -6,11 +6,11 @@ Dependabot (config, the alerts-vs-PRs distinction, and the deliberate-pin ledger
 
 ## CI
 
-`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job `needs: pull_and_build`, downloads the artifact, and runs only its dialect-specific setup + `npm run ci-<dialect>` — no per-job rebuild. Fan-out goes to reusable workflows — `main.yaml` (two jobs: `main` runs the dialect-agnostic `ci-core`; `lint` runs `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. `db-motherduck.yaml` is commented out of CI. The `main` job keeps that name because branch protection requires the check `main / main`.
+`run-tests.yaml` is the entry point (runs on PRs and pushes to `main`). It first runs a `pull_and_build` job that does `npm ci` + `npm run build` + `npm run build-duckdb-db` once, tars the workspace (excluding `.git`) with zstd, and uploads it as an artifact. Every downstream test job `needs: pull_and_build`, downloads the artifact, and runs only its database's setup + `npm run dbtest <database>` — no per-job rebuild. Which tests each job runs is set out in the Testing section of the [root CONTEXT.md](../../CONTEXT.md#testing). Fan-out goes to reusable workflows — `main.yaml` (two jobs: `main` runs `ci-core`, the plain specs; `lint` runs `lint` and the `scripts/ci-*-sanity-check.sh` guards) and one `db-<dialect>.yaml` per dialect — then a `malloy-tests` rollup job that `needs:` them all. `db-motherduck.yaml` and `db-publisher.yaml` are commented out of CI. The `main` job keeps that name because branch protection requires the check `main / main`.
 
-`scripts/ci-test-sanity-check.sh` (run by the `lint` job) fails if any `*.spec.ts(x)` isn't wired into a `jest.config.ts` project — so no test can be silently absent from CI.
+`scripts/ci-test-sanity-check.sh` (run by the `lint` job) fails if any `*.spec.ts(x)` is selected neither by core nor by any database's `dbtest` — so no test can be silently absent from CI.
 
-Wall clock is `pull_and_build` plus the slowest dialect job. The dialect jobs are bound by warehouse round-trip latency (about one query per test), not CPU, so `ci-snowflake` runs more jest workers than the runner has cores. The others use jest's default: databricks queues under that concurrency; the trino/presto containers serve the repo's parquet and share the runner's CPU; and bigquery stays at the default because overlapping CI runs stall single queries past the test timeout. `ci-core` runs in parallel; the duckdb test connection is read-only and the writers use `:memory:`.
+Wall clock is `pull_and_build` plus the slowest dialect job. The dialect jobs are bound by warehouse round-trip latency (about one query per test), not CPU, so the snowflake job runs more jest workers than the runner has cores. The others use jest's default: databricks queues under that concurrency; the trino/presto containers serve the repo's parquet and share the runner's CPU; and bigquery stays at the default because overlapping CI runs stall single queries past the test timeout. `ci-core` runs in parallel; the duckdb test connection is read-only and the writers use `:memory:`.
 
 ### The design: why external-PR CI is shaped this way — do not break this
 
@@ -75,17 +75,13 @@ discipline is load-bearing, not decorative: the repo's `default_workflow_permiss
 **`main` is deliberately pre-gate.** It carries no secrets, so external contributors get
 lint and the ~3000 dialect-agnostic tests immediately, without waiting for a maintainer —
 that is the point, and it is most of the value external PR CI provides. It stays that way
-only while `ci-core` is pinned: the script sets `MALLOY_DATABASES=duckdb,postgres` so specs
-cannot fall back to the default database lists hardcoded in their own source. Unpinned,
-`ci-core` is the **only** `ci-*` script that lets such a default select a credentialed
-warehouse — which is exactly how `main` came to require `BIGQUERY_KEY` for a single spec
-file. Both halves matter and catch different mistakes: the pin neutralizes the
-env-driven route, and the absent credential catches a hardcoded one (a literal
-`bigquery.table(...)` in a core spec), which fails loudly rather than quietly spending a
-key, because the harness treats an unreachable connection as an error and not a skip. That
-tripwire assumes the runner carries no ambient cloud credential — true for GitHub-hosted
-runners, and something that would silently void on self-hosted runners with an attached
-service account.
+because no plain spec reaches a database server: a plain spec runs on the stand-in, an
+in-process DuckDB, and only a `db-` file runs on `MALLOY_DATABASE`, which `ci-core` never
+selects. A hardcoded connection to a credentialed warehouse in a core spec fails loudly
+rather than quietly spending a key, because the harness treats an unreachable connection
+as an error and not a skip. That tripwire assumes the runner carries no ambient cloud
+credential — true for GitHub-hosted runners, and something that would silently void on
+self-hosted runners with an attached service account.
 
 ### The security stance on pull_and_build, stated honestly
 

@@ -65,7 +65,7 @@ For `EscapeStyle.Backslash` (BigQuery, Snowflake, MySQL, Databricks), both the l
 
 A raw newline is also the one value plain `EscapeStyle.Doubled` (`''`) quoting cannot carry safely: the literal is valid SQL, but the SQL indenter (`indent()` in `model/utils.ts`) injects whitespace after every newline, corrupting a multi-line literal. So `PostgresBase.sqlLiteralString` encodes a newline-bearing literal as a Postgres/DuckDB `E'…'` escape string, and `TrinoDialect` overrides that with a Trino/Presto `U&'…'` Unicode-escape literal. These are the only overrides of the base literal methods.
 
-The contract is verified at two levels. `packages/malloy/src/dialect/escape.spec.ts` (connection-free) asserts, for every registered dialect, the byte-exact encoding, fail-fast on a missing flag, field-name injection containment, and the table-path grammar. `test/src/databases/all/escape-e2e.spec.ts` round-trips an adversarial corpus through the real engines — the only honest decode check. A new dialect is covered automatically once registered in `dialect_map.ts`; extend the e2e corpus when you add a character class the escapers must handle.
+The contract is verified at two levels. `packages/malloy/src/dialect/escape.spec.ts` (connection-free) asserts, for every registered dialect, the byte-exact encoding, fail-fast on a missing flag, field-name injection containment, and the table-path grammar. `test/src/quoting/quoting.db-all.spec.ts` round-trips an adversarial corpus through the real engines — the only honest decode check. A new dialect is covered automatically once registered in `dialect_map.ts`; extend the e2e corpus when you add a character class the escapers must handle.
 
 ### Table-path validation contract
 
@@ -114,7 +114,7 @@ When the validator rejects an input:
 Tests:
 - `packages/malloy/src/dialect/escape.spec.ts` — per-dialect unit tests with corpora reflecting the live engines' actual behavior.
 - `packages/malloy/src/lang/test/table-path-validation.spec.ts` — end-to-end translator-error tests with source-range assertions.
-- `test/src/databases/duckdb-all/duckdb.spec.ts` — DuckDB-specific shapes (file paths, globs).
+- `test/src/duckdb/table_paths.db-duckdb_all.spec.ts` — DuckDB-specific shapes (file paths, globs).
 
 ## Queries on arrays
 
@@ -141,7 +141,7 @@ A correlated subquery's head may be wrapped to add a distinct key (`QueryQuery.g
 | Snowflake | lambdas | no | No correlated subquery over `FLATTEN`; an inner lambda cannot read the outer one's parameter |
 | Databricks | lambdas | no | A correlated subquery cannot feed `EXPLODE` or a higher-order function |
 
-`test/src/databases/all/array_query.spec.ts` gates each test on these facts.
+`test/src/datatypes/compound_atomic.db-all.spec.ts` gates each array-query test on these facts.
 
 ## Key Source Files
 

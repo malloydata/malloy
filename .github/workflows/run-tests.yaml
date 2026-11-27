@@ -91,9 +91,11 @@ jobs:
   db-postgres:
     needs: pull_and_build
     uses: './.github/workflows/db-postgres.yaml'
-  db-publisher:
-    needs: pull_and_build
-    uses: './.github/workflows/db-publisher.yaml'
+  # The Publisher job tests nothing yet: see
+  # https://github.com/malloydata/malloy/issues/3284
+  # db-publisher:
+  #   needs: pull_and_build
+  #   uses: './.github/workflows/db-publisher.yaml'
   db-snowflake:
     needs: [check-permission, pull_and_build]
     uses: './.github/workflows/db-snowflake.yaml'
@@ -135,7 +137,7 @@ jobs:
       - db-presto
       - db-duckdb-wasm
       - db-trino
-      - db-publisher
+      # - db-publisher
       - db-postgres
       # - db-motherduck
       - db-mysql

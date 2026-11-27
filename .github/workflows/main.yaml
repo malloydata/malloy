@@ -1,12 +1,9 @@
-# The "Core" job runs through all the tests which are not dialect specific.
-# This includes tests which don't touch the database at all, and tests
-# which touch some combination of duckdb and postgres but do not need to
-# be run once for each dialect.
+# The "Core" job runs every test which runs once: the plain specs, which use
+# no database or an in-process DuckDB, and the renderer's tests.
 #
 # These jobs hold no secrets, so they run without waiting for
 # check-permission — they are the feedback external contributors get for
-# free. Keep it that way: ci-core pins MALLOY_DATABASES to credential-free
-# dialects, and postgres comes from the service container below. If a test
+# free. Keep it that way: no plain spec reaches a database server. If a test
 # here ever reaches a credentialed warehouse it will fail rather than
 # silently spend a key, which is the intended tripwire.
 name: Core
@@ -42,20 +39,6 @@ jobs:
   main:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_USER: root
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -67,12 +50,6 @@ jobs:
         with:
           node-version-file: '.node-version'
       - name: Test
-        run: |
-          sh test/postgres/load_test_data.sh
-          npm run ci-core
+        run: npm run ci-core
         env:
           CI: true
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: root
-          PGPASSWORD: postgres

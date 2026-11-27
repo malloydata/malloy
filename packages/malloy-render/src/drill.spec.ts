@@ -5,20 +5,22 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import {runtimeFor} from '../../../test/src/runtimes';
+// The renderer's tests read the shared test data through the test harness.
+// eslint-disable-next-line no-restricted-imports
+import {coreDatabase} from '../../../test/src/core_database';
 import {getDataTree} from './data_tree';
 import {API} from '@malloydata/malloy';
 
-const duckdb = runtimeFor('duckdb');
+const core = coreDatabase();
 
 // Base model with common sources that all tests will use
 const baseModel = `
   ##! experimental { parameters }
-  source: carriers is duckdb.table('test/data/malloytest-parquet/carriers.parquet') extend {
+  source: carriers is db.table('test/data/malloytest-parquet/carriers.parquet') extend {
     primary_key: code
     measure: carrier_count is count()
   }
-  source: flights_base is duckdb.table('test/data/duckdb/flights/part.*.parquet') extend {
+  source: flights_base is db.table('test/data/duckdb/flights/part.*.parquet') extend {
     primary_key: id2
     // rename some fields as from their physical names
     rename: \`Origin Code\` is origin
@@ -40,7 +42,10 @@ describe('drill query', () => {
         limit: 1
       }
     `;
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights_base -> { drill: carriers.nickname = "Southwest" } + { select: * }';
@@ -55,7 +60,10 @@ describe('drill query', () => {
         aggregate: flight_count
       }
     `;
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights_base -> { drill: dep_time.month = @2005-12 } + { select: * }';
@@ -71,7 +79,10 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights_base -> { drill: dep_time.month = @2005-12 } + { select: * }';
@@ -97,7 +108,10 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights_base -> {
   drill:
@@ -123,7 +137,10 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights_base -> { drill: carrier = "WN" } + { select: * }';
@@ -140,7 +157,10 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights_base -> { drill: carriers.nickname = "Southwest" } + { select: * }';
@@ -157,7 +177,10 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights_base -> { drill: carrier = "WN" } + { select: * }';
@@ -176,7 +199,7 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb
+    const result = await core.runtime
       .loadModel(baseModel)
       .extendModel(model)
       .loadQuery('run: flights -> top_carriers')
@@ -190,13 +213,13 @@ describe('drill query', () => {
 
   test('drill query for a null cell in a view runs and finds its rows', async () => {
     const model = `
-      source: deals is duckdb.sql("""
+      source: deals is db.sql("""
         SELECT * FROM (VALUES ('Won', 10), ('Lost', 20), (NULL, 30)) AS t(status, amount)
       """) extend {
         view: by_status is { group_by: status aggregate: n is count() }
       }
     `;
-    const runtime = duckdb.loadModel(baseModel).extendModel(model);
+    const runtime = core.runtime.loadModel(baseModel).extendModel(model);
     const result = await runtime.loadQuery('run: deals -> by_status').run();
     const table = getDataTree(API.util.wrapResult(result));
     const nullRow = table.rows.find(r => r.column('status').isNull());
@@ -211,11 +234,11 @@ describe('drill query', () => {
 
   test('drill query for a null cell under a filter outside a view', async () => {
     const model = `
-      source: deals is duckdb.sql("""
+      source: deals is db.sql("""
         SELECT * FROM (VALUES ('Won', 10), ('Lost', 20), (NULL, 30)) AS t(status, amount)
       """)
     `;
-    const runtime = duckdb.loadModel(baseModel).extendModel(model);
+    const runtime = core.runtime.loadModel(baseModel).extendModel(model);
     const result = await runtime
       .loadQuery('run: deals -> { where: amount > 15 group_by: status }')
       .run();
@@ -243,7 +266,7 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb
+    const result = await core.runtime
       .loadModel(baseModel)
       .extendModel(model)
       .loadQuery('run: flights -> over_time')
@@ -266,7 +289,7 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb
+    const result = await core.runtime
       .loadModel(baseModel)
       .extendModel(model)
       .loadQuery('run: flights -> by_origin')
@@ -287,7 +310,7 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb
+    const result = await core.runtime
       .loadModel(baseModel)
       .extendModel(model)
       .loadQuery('run: flights -> no_filter')
@@ -308,7 +331,7 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb
+    const result = await core.runtime
       .loadModel(baseModel)
       .extendModel(model)
       .loadQuery('run: flights -> cool_carriers')
@@ -340,7 +363,10 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights -> {
   drill:
@@ -380,7 +406,7 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb
+    const result = await core.runtime
       .loadModel(baseModel)
       .extendModel(model)
       .loadQuery('run: flights -> deeply_nested')
@@ -413,7 +439,10 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights -> { drill: tc.nickname = "Southwest" } + { select: * }';
@@ -442,7 +471,10 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights -> {
   drill:
@@ -493,7 +525,10 @@ describe('drill query', () => {
       } + over_time
     `;
 
-    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+    const result = await core.runtime
+      .loadModel(baseModel)
+      .loadQuery(query)
+      .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights -> {
   drill:
@@ -516,7 +551,7 @@ describe('drill query', () => {
       }
     `;
 
-    const result = await duckdb
+    const result = await core.runtime
       .loadModel(baseModel)
       .extendModel(model)
       .loadQuery('run: flights -> negative_value')
@@ -584,7 +619,10 @@ describe('drill query', () => {
         ) -> top_carriers
       `;
 
-      const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+      const result = await core.runtime
+        .loadModel(baseModel)
+        .loadQuery(query)
+        .run();
       const table = getDataTree(API.util.wrapResult(result));
       const expDrillQuery = `run: flights_with_parameters(
   number_param is 1,
@@ -614,7 +652,10 @@ describe('drill query', () => {
         ) -> top_carriers
       `;
 
-      const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
+      const result = await core.runtime
+        .loadModel(baseModel)
+        .loadQuery(query)
+        .run();
       const table = getDataTree(API.util.wrapResult(result));
       const expDrillQuery =
         'run: flights_with_timestamp_param(timestamp_param is @2004-01-01 10:00:00[America/Los_Angeles]) -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
@@ -640,7 +681,7 @@ describe('drill query', () => {
         }
       `;
 
-      const result = await duckdb
+      const result = await core.runtime
         .loadModel(baseModel)
         .extendModel(model)
         .loadQuery('run: flights_with_parameters -> top_carriers')
@@ -655,5 +696,5 @@ describe('drill query', () => {
 });
 
 afterAll(async () => {
-  await duckdb.connection.close();
+  await core.shutdown();
 });

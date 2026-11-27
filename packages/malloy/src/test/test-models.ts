@@ -4,7 +4,7 @@
  */
 
 import type {
-  SingleConnectionRuntime,
+  Runtime,
   ModelMaterializer,
   Dialect,
   Expr,
@@ -12,7 +12,7 @@ import type {
   ArrayLiteralNode,
   RecordLiteralNode,
 } from '..';
-import {constantExprToSQL, mkFieldDef} from '..';
+import {SingleConnectionRuntime, constantExprToSQL, mkFieldDef} from '..';
 import type {TypedValue} from './test-values';
 
 /**
@@ -41,6 +41,34 @@ interface TestDataRow {
  */
 export interface TestModelSources {
   [sourceName: string]: TestDataRow[];
+}
+
+/**
+ * A database to run test models on: a runtime, the dialect of its
+ * connection, and the name a model uses for that connection.
+ */
+export interface TestDatabaseLike {
+  readonly runtime: Runtime;
+  /** The dialect of the connection the runtime looks up by `connectionName`. */
+  readonly dialect: Dialect;
+  /**
+   * The name a model uses for the connection, as in `db.table(...)`. Not the
+   * name of the database it reaches.
+   */
+  readonly connectionName: string;
+}
+
+function asTestDatabase(
+  on: SingleConnectionRuntime | TestDatabaseLike
+): TestDatabaseLike {
+  if (on instanceof SingleConnectionRuntime) {
+    return {
+      runtime: on,
+      dialect: on.dialect,
+      connectionName: on.connection.name,
+    };
+  }
+  return on;
 }
 
 const nullExpr: Expr = {node: 'null'};
@@ -327,16 +355,15 @@ function generateSQL(dialect: Dialect, rows: TestDataRow[]): string {
  * await expect('run: users -> { select: * }')
  *   .toMatchResult(tm, {id: 1, name: 'alice'}, {id: 2, name: 'bob'});
  *
- * @param runtime - SingleConnectionRuntime with dialect and connection info
+ * @param on - A SingleConnectionRuntime, or a test database
  * @param sources - Object mapping source names to arrays of test data rows
  * @returns TestModel with the model and dialect
  */
 export function mkTestModel(
-  runtime: SingleConnectionRuntime,
+  on: SingleConnectionRuntime | TestDatabaseLike,
   sources: TestModelSources
 ): TestModel {
-  const dialect = runtime.dialect;
-  const connectionName = runtime.connection.name;
+  const {runtime, dialect, connectionName} = asTestDatabase(on);
 
   // Generate source definitions
   const sourceDefinitions: string[] = [];
@@ -373,10 +400,11 @@ export function mkTestModel(
  * await expect(`run: ${db}.sql("""...""")`).toMatchResult(tm, {...});
  */
 export function wrapTestModel(
-  runtime: SingleConnectionRuntime,
+  on: SingleConnectionRuntime | TestDatabaseLike,
   source: string
 ): TestModel {
-  return {model: runtime.loadModel(source), dialect: runtime.dialect};
+  const {runtime, dialect} = asTestDatabase(on);
+  return {model: runtime.loadModel(source), dialect};
 }
 
 /**

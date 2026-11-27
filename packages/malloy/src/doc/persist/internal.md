@@ -332,12 +332,12 @@ Where a name lives.
 
 ### Tests and samples
 
-- `test/src/core/persist.spec.ts` — dependency paths, substitution, strict
+- `test/src/persistence/persistence.spec.ts` — dependency paths, substitution, strict
   mode, cross-model imports, Runtime manifest, givens, data equivalence
 - `packages/malloy/src/api/foundation/build-targets.spec.ts` — the merge, the
   ordering, givens, and build SQL, without a connection
 - `packages/malloy/src/lang/test/givens.spec.ts` — the import-time check,
   under "imported persisted sources"
-- `scripts/simple_builder/` — a teaching builder. Its spec runs in the
-  `simple-builder` jest project (part of `test-duckdb` / `ci-duckdb`), so the
+- `scripts/simple_builder/` — a teaching builder. Its spec is a plain spec
+  that runs in core, so the
   file the docs cite as an example cannot drift out of true unnoticed

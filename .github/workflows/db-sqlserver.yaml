@@ -3,8 +3,8 @@ permissions: {}
 
 on: workflow_call
 
-# The required CI for this experimental dialect. This is currently the
-# expanding (we hope) subset of ci-sqlserver that is known to pass.
+# The required CI for this experimental dialect. `npm run dbtest sqlserver`
+# runs the shared files listed in its dbAllPassing (test/src/databases.ts).
 jobs:
   test-sqlserver:
     runs-on: ubuntu-latest
@@ -22,7 +22,7 @@ jobs:
       - name: SQL Server Smoke test
         run: |
           bash test/mssql/mssql_start.sh
-          npm run ci-sqlserver-smoketest
+          npm run dbtest sqlserver
           bash test/mssql/mssql_stop.sh
         env:
           MSSQL_IMAGE: mcr.microsoft.com/mssql/server:2017-latest

@@ -39,7 +39,7 @@ I think the rules are something like this.
 * field_instance includes query_node
 * query_node can't include anything, it needs to be leafy
 
-If you break the rules, tests in test/src/core/dependencies.spec.ts will fail and you have some thinking to do.
+If you break the rules, tests in test/src/malloy_npm/dependencies.spec.ts will fail and you have some thinking to do.
 
 ## the death of addDependentExpr()
 

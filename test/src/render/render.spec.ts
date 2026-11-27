@@ -3,8 +3,13 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {API, type ModelMaterializer, type Result} from '@malloydata/malloy';
-import {RuntimeList, runtimeFor} from '../runtimes';
+import {
+  API,
+  type ModelMaterializer,
+  type Result,
+  type Runtime,
+} from '@malloydata/malloy';
+import {coreDatabase, testDatabaseNamed} from '../test_database';
 import {describeIfDatabaseAvailable} from '../util';
 import {JSDOM} from 'jsdom';
 
@@ -16,16 +21,16 @@ function convertResultToMalloyResult(result: Result) {
 
 async function runUnsupportedRenderTest(
   connectionName: string,
-  runtimes: RuntimeList,
+  runtimes: Map<string, Runtime>,
   expr: string,
   rendered: string
 ) {
-  const runtime = runtimes.runtimeMap.get(connectionName);
+  const runtime = runtimes.get(connectionName);
   expect(runtime).toBeDefined();
   if (runtime) {
     const src = `
       query: q is
-        ${connectionName}.sql("""SELECT ${expr} AS test""")
+        db.sql("""SELECT ${expr} AS test""")
         -> { select: * }
     `;
     const result = await runtime.loadModel(src).loadQueryByName('q').run();
@@ -49,9 +54,10 @@ const [describe, databases] = describeIfDatabaseAvailable([
   'postgres',
   'duckdb',
 ]);
-const duckdb = runtimeFor('duckdb');
+const duckdb = coreDatabase();
 describe.skip('rendering results', () => {
-  const runtimes = new RuntimeList(databases);
+  const testDatabases = databases.map(testDatabaseNamed);
+  const runtimes = new Map(testDatabases.map(d => [d.name, d.runtime]));
 
   beforeAll(async () => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -75,15 +81,18 @@ describe.skip('rendering results', () => {
   });
 
   afterAll(async () => {
-    await runtimes.closeAll();
+    for (const d of testDatabases) {
+      await d.shutdown();
+    }
+    await duckdb.shutdown();
   });
 
   test.when(databases.includes('bigquery'))('can render table', async () => {
-    const runtime = runtimes.runtimeMap.get('bigquery');
+    const runtime = runtimes.get('bigquery');
     expect(runtime).toBeDefined();
     if (runtime) {
       const src = `
-        run: bigquery.table('malloydata-org.malloytest.flights') -> {
+        run: db.table('malloydata-org.malloytest.flights') -> {
           group_by: carrier
           aggregate: flight_count is count()
         }
@@ -250,7 +259,7 @@ describe.skip('rendering results', () => {
       beforeAll(async () => {
         const src = `
       # line_chart
-      source: height is duckdb.sql("""
+      source: height is db.sql("""
         SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
         UNION ALL SELECT 'Pedro', 2, 25, 3.4, 100, 1
         UNION ALL SELECT 'Pedro', 3, 38, 3.6, 200, 0
@@ -293,14 +302,14 @@ describe.skip('rendering results', () => {
       # transpose
       query: by_name_transposed is height -> by_name
 
-      source: names is duckdb.sql("""SELECT 'Pedro' as nm
+      source: names is db.sql("""SELECT 'Pedro' as nm
       UNION ALL SELECT 'Sebastian'
       UNION ALL SELECT 'Alex'
       UNION ALL SELECT 'Miguel'""") extend {
         join_many: height on nm = height.nm
       }
       `;
-        model = await duckdb.loadModel(src);
+        model = await duckdb.runtime.loadModel(src);
       });
 
       test('regular table', async () => {
@@ -337,7 +346,7 @@ describe.skip('rendering results', () => {
         const src = `
           source: height
             # line_chart
-            is duckdb.sql("""SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
+            is db.sql("""SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
             UNION ALL SELECT 'Pedro', 2, 25, 3.4, 100, 1
             UNION ALL SELECT 'Sebastian', 1, 23, 2, 400, 1
             UNION ALL SELECT 'Sebastian', 2, 28, 2.6, 500, 1 """) extend {
@@ -382,7 +391,7 @@ describe.skip('rendering results', () => {
           query: by_name is height -> by_name
           query: by_name_db is height -> by_name_db
         `;
-        modelMaterializer = duckdb.loadModel(src);
+        modelMaterializer = duckdb.runtime.loadModel(src);
       });
 
       test('rendered correctly table', async () => {
@@ -419,7 +428,7 @@ describe.skip('rendering results', () => {
     test('pivot table renders correctly', async () => {
       const src = `
           source: height
-          is duckdb.sql("""SELECT 'Pedro' as nm, 'Monday' as dayito, 1 as loc, 2 as lac, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine, 'A' as btype
+          is db.sql("""SELECT 'Pedro' as nm, 'Monday' as dayito, 1 as loc, 2 as lac, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine, 'A' as btype
           UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 2, 25, 3.4, 100, 1, 'B'
           UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 3, 38, 3.6, 200, 0, 'A'
           UNION ALL SELECT 'Pedro', 'Wednesday', 1, 2, 4, 45, 3.7, 300, 1, 'O'
@@ -466,7 +475,7 @@ describe.skip('rendering results', () => {
 
           query: by_name is height -> by_name
       `;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('by_name')
         .run();
@@ -485,7 +494,7 @@ describe.skip('rendering results', () => {
     test('flattened nests render correctly', async () => {
       const src = `
           source: height
-          is duckdb.sql("""SELECT 'Pedro' as nm, 'Monday' as dayito, 1 as loc, 2 as lac, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine, 'A' as btype
+          is db.sql("""SELECT 'Pedro' as nm, 'Monday' as dayito, 1 as loc, 2 as lac, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine, 'A' as btype
           UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 2, 25, 3.4, 100, 1, 'B'
           UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 3, 38, 3.6, 200, 0, 'A'
           UNION ALL SELECT 'Pedro', 'Wednesday', 1, 2, 4, 45, 3.7, 300, 1, 'O'
@@ -522,7 +531,7 @@ describe.skip('rendering results', () => {
 
           query: flatten is height -> flatten
       `;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('flatten')
         .run();
@@ -542,12 +551,12 @@ describe.skip('rendering results', () => {
   describe('date renderer', () => {
     test('date with timezone rendered correctly', async () => {
       const src = `
-        query: mex_query is duckdb.sql('SELECT 1 as one ') -> {
+        query: mex_query is db.sql('SELECT 1 as one ') -> {
           timezone: 'America/Mexico_City'
           select: mex_time is @2021-02-24 03:05:06
         }
       `;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('mex_query')
         .run();
@@ -565,7 +574,7 @@ describe.skip('rendering results', () => {
 
     test('truncated date no explicit timezone rendered correctly', async () => {
       const src = `
-      source: timeDataTrunc is duckdb.sql("""
+      source: timeDataTrunc is db.sql("""
                     SELECT CAST('2021-12-11 10:20:00' AS datetime) as times
           UNION ALL SELECT CAST('2021-01-01 05:40:00' AS datetime)
           UNION ALL SELECT CAST('2021-04-01 00:59:00' AS datetime)""")
@@ -575,7 +584,7 @@ describe.skip('rendering results', () => {
             select: yr is times.year, qt is times.quarter, mt is times.month, dy is times.day
         }
       `;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('data_trunc')
         .run();
@@ -596,13 +605,13 @@ describe.skip('rendering results', () => {
     test('date with timezone rendered correctly', async () => {
       const src = `
         query: mex_query is # bar_chart
-          duckdb.sql('SELECT 1 as one') -> {
+          db.sql('SELECT 1 as one') -> {
             timezone: 'America/Mexico_City'
             group_by: mex_time is @2021-02-24 03:05:06
             aggregate: value is sum(1)
           }
       `;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('mex_query')
         .run();
@@ -621,7 +630,7 @@ describe.skip('rendering results', () => {
 
   describe('point map renderer', () => {
     test('date with timezone rendered correctly', async () => {
-      const src = `source: timeData is duckdb.sql("""
+      const src = `source: timeData is db.sql("""
         SELECT 43.839187 as latitude, -113.849795 as longitude, CAST('2021-11-10' AS datetime) as times, 200 as size
           UNION ALL SELECT 32.8647113, -117.1998042, CAST('2021-11-12' AS datetime), 400 as size""")
 
@@ -631,7 +640,7 @@ describe.skip('rendering results', () => {
             aggregate:
               sizeSum is sum(size)
         }`;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('mexico_point_map')
         .run();
@@ -651,7 +660,7 @@ describe.skip('rendering results', () => {
   describe('number renderer', () => {
     test('value format tags works correctly', async () => {
       const src = `
-        query: number_query is duckdb.sql('SELECT 12.345 as anumber') -> {
+        query: number_query is db.sql('SELECT 12.345 as anumber') -> {
           select:
             anumber
             # number= "#,##0.0000"
@@ -660,7 +669,7 @@ describe.skip('rendering results', () => {
             shorter is anumber
         }
       `;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('number_query')
         .run();
@@ -680,7 +689,7 @@ describe.skip('rendering results', () => {
   describe('data volume renderer', () => {
     test('data volume tags works correctly', async () => {
       const src = `
-        query: bytes_query is duckdb.sql('SELECT 1 as one') -> {
+        query: bytes_query is db.sql('SELECT 1 as one') -> {
           select:
           # data_volume = bytes
           usage_b is 3758
@@ -694,7 +703,7 @@ describe.skip('rendering results', () => {
           usage_tb is 3758096384000
         }
       `;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('bytes_query')
         .run();
@@ -714,7 +723,7 @@ describe.skip('rendering results', () => {
   describe('link renderer', () => {
     test('data volume tags works correctly', async () => {
       const src = `
-        query: bytes_query is duckdb.sql('SELECT 1 as one') -> {
+        query: bytes_query is db.sql('SELECT 1 as one') -> {
           select:
           # link
           just_link is "http://123.com"
@@ -727,7 +736,7 @@ describe.skip('rendering results', () => {
           key is "4"
         }
       `;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('bytes_query')
         .run();
@@ -747,7 +756,7 @@ describe.skip('rendering results', () => {
   describe('duration renderer', () => {
     test('duration tags works correctly', async () => {
       const src = `
-        query: duration_query is duckdb.sql('SELECT 1 as one') -> {
+        query: duration_query is db.sql('SELECT 1 as one') -> {
           select:
           # duration = nanoseconds
           ns1 is 1
@@ -795,7 +804,7 @@ describe.skip('rendering results', () => {
           d2 is 300
         }
       `;
-      const result = await duckdb
+      const result = await duckdb.runtime
         .loadModel(src)
         .loadQueryByName('duration_query')
         .run();

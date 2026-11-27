@@ -1,17 +1,7 @@
 ## Tests
-The test infrastructure is complicated because some tests are meant to be run once, and some tests are meant to be run once for each dialect, or once for each dialect from a set of dialects. Work is happening to clean this up and clarify how to deal with this.  
-  
-At one time you could run `npm run test`  and all tests would run against all databases. The number of dialects has grown so that this is no longer feasible. If you have made changes and want general assurance that your changes might be safe, run `npm run test-duckdb` which runs the full test suite, but only against the DuckDB database which is fast and local.  
-  
-If you have the credentials and the test server set up, there is an `npm run ci-DIALECTNAME` test for each dialect which will run just the portion of the test suite which communicates with the database.  
-  
-Pushing A PR will require it to pass CI for all dialects.  
-  
-If you have a multi-dialect test (such as the ones in `test/src/databases/all`) most of the time a developer will set up one database to test against when something is broken (commonly duckdb, but it could be anything where a server is available) and the command to run that one test file is ..  
-  
-`MALLOY_DATABASE=duckdb npx jest test/src/databases/all/MY_FILE.spec.ts`  
-  
-_(another common setup is to set the environment variable `MALLOY_DATABASE=duckdb` before launching VS Code, and then running tests inside the IDE with the "JestRunner" extension will pick that up and run the tests against only that dialect)_
+Which tests run where, how to run them, and where a new test goes are in the Testing section of the [root CONTEXT.md](../CONTEXT.md#testing). In short: `npm run precheck` is the broad local check, `npx jest <file>` runs one file (set `MALLOY_DATABASE` for a `db-` file), and `npm run dbtest <database>` runs exactly what that database's CI job runs.
+
+_(Setting `MALLOY_DATABASE=duckdb` before launching VS Code makes the Jest runner extension run `db-` files on that database.)_
 
 # Building test database for DuckDB
 
@@ -39,7 +29,7 @@ import {mkTestModel, TV} from '@malloydata/malloy/test';
 Use `mkTestModel` to create in-memory test tables with type-safe data:
 
 ```typescript
-const tm = mkTestModel(runtime, {
+const tm = mkTestModel(testDatabase, {
   users: [
     {id: 1, name: 'alice', active: true},
     {id: 2, name: 'bob', active: false},
@@ -54,7 +44,7 @@ await expect('run: users -> { select: * }').toMatchResult(tm, {name: 'alice'});
 Most types are inferred, but some need explicit hints:
 
 ```typescript
-const tm = mkTestModel(runtime, {
+const tm = mkTestModel(testDatabase, {
   data: [
     {
       count: 42,              // inferred as integer
@@ -169,7 +159,7 @@ Syntax errors show the query with a `!!!!!` marker at the error:
 ```
 Error in query compilation
     |
-    |         rug: duckdb.sql("""
+    |         rug: db.sql("""
 !!!!!         ^ no viable alternative at input 'rug'
     |           SELECT 42 as num
     |         """)
@@ -200,7 +190,7 @@ This is useful when developing tests to see what data is actually returned.
 Set the `MALLOY_LOG_SQL` environment variable to log the generated SQL to the console before each query run by the test matchers (`toMatchResult`, `toMatchRows`, `toEqualResult`, `toMatchPaths`):
 
 ```sh
-MALLOY_LOG_SQL=1 npx jest test/src/databases/all/expr.spec.ts
+MALLOY_LOG_SQL=1 MALLOY_DATABASE=duckdb npx jest test/src/expressions/expressions.db-all.spec.ts
 ```
 
 This is useful for debugging SQL generation issues without modifying test code.

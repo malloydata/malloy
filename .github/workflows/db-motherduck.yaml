@@ -22,7 +22,7 @@ jobs:
         with:
           node-version-file: '.node-version'
       - name: Test
-        run: npm run ci-motherduck
+        run: npm run dbtest motherduck
         env:
           CI: true
           MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
